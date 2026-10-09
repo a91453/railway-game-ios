@@ -11,16 +11,15 @@ import SwiftUI
 ///
 /// Like Apple's map it follows the game's camera, top-down and north up
 /// (``OpenStreetMapBase/camera(of:in:width:height:)``), takes no gestures of
-/// its own, and keeps the strip at its bottom (``AppleMapBackground/attributionHeight``)
-/// for the credit OpenFreeMap asks for and MapLibre's attribution button.
+/// its own, and keeps the band at its bottom (``AppleMapBackground/attributionHeight``)
+/// for the credit OpenFreeMap asks for and MapLibre's attribution button,
+/// which the game draws round (decision 120).
 /// Its place labels are in the player's language
 /// (``OpenStreetMapBase/labelText(in:)``), and Taiwan's real railways are
 /// drawn on it as on Apple's: over the roads, under the labels.
 struct OSMMapBackground: UIViewRepresentable {
     let realWorld: RealWorldFrame
-    /// The game's camera. Its view is the top of this one, which is
-    /// ``AppleMapBackground/attributionHeight`` and the safe area's bottom
-    /// taller.
+    /// The game's camera, whose view is this one.
     let camera: PlanCamera
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
     let railways: RealRailways?
@@ -29,6 +28,9 @@ struct OSMMapBackground: UIViewRepresentable {
     /// The screen's safe area (decision 120): the map reaches the screen's
     /// edges, and the credit and attribution button keep inside this.
     let safeArea: EdgeInsets
+    /// Told where the attribution button and the credit are
+    /// (``AppleMapBackground/onAttributionFrames``).
+    let onAttributionFrames: @MainActor ([CGRect]) -> Void
 
     func makeUIView(context: Context) -> FollowingMapLibreView {
         FollowingMapLibreView(frame: .zero)
@@ -50,6 +52,7 @@ struct OSMMapBackground: UIViewRepresentable {
             credits: (DataSourceCredits.openStreetMapBaseMap(in: language), DataSourceCredits.railwaysOnMap(in: language))
         )
         map.screenSafeArea = safeArea
+        map.onAttributionFrames = onAttributionFrames
         map.follow(realWorld, camera: camera)
     }
 }
@@ -76,6 +79,9 @@ final class FollowingMapLibreView: MLNMapView {
     private var creditTexts = (map: "", railways: "")
     /// MapLibre's delegate, which the map view holds weakly.
     private var observer: StyleObserver?
+    /// Told where the attribution is (``AppleMapBackground/onAttributionFrames``).
+    var onAttributionFrames: (@MainActor ([CGRect]) -> Void)?
+    private var reportedAttribution: [CGRect]?
     /// The screen's safe area, as SwiftUI gives it (decision 120).
     var screenSafeArea = EdgeInsets() {
         didSet {
@@ -159,6 +165,19 @@ final class FollowingMapLibreView: MLNMapView {
         apply()
         placeAttributionButton()
         placeCredit()
+        reportAttribution()
+    }
+
+    /// Tells the game where the attribution button and the credit are,
+    /// when that has changed: after this layout, not during SwiftUI's.
+    private func reportAttribution() {
+        var frames = [attributionButton.frame]
+        if !(credit.text ?? "").isEmpty {
+            frames.append(credit.frame)
+        }
+        guard frames != reportedAttribution, let report = onAttributionFrames else { return }
+        reportedAttribution = frames
+        Task { @MainActor in report(frames) }
     }
 
     override func safeAreaInsetsDidChange() {
@@ -328,7 +347,7 @@ final class FollowingMapLibreView: MLNMapView {
     // MARK: - Credit
 
     /// OpenFreeMap's credit, and the railways' while they are drawn, on the
-    /// left of the strip at the bottom, clear of the attribution button on
+    /// left of the band at the bottom, clear of the attribution button on
     /// the right.
     private func placeCredit() {
         credit.text = railwayLayers.isEmpty ? creditTexts.map : "\(creditTexts.map) · \(creditTexts.railways)"

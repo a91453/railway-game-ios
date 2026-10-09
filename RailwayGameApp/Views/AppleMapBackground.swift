@@ -47,19 +47,19 @@ enum AppleMapStyle: String, CaseIterable, Identifiable {
 /// over the 16 km map.
 ///
 /// The map takes no gestures of its own, but its view stays interactive:
-/// Apple's logo and legal link sit in a strip at its bottom
-/// (``attributionHeight``) that nothing of the game covers, and the link
+/// Apple's logo and legal link sit in a band at its bottom
+/// (``attributionHeight``); the game draws nothing over them, and the link
 /// can be tapped (Attachment 6 §2.1 of the Apple Developer Program License
-/// Agreement: no Apple logo or legal notice may be obscured).
+/// Agreement: no Apple logo or legal notice may be obscured; decision 120:
+/// the game's map goes round them to the bottom edge).
 ///
 /// Taiwan's real railways (the `Railway/` site's lines and stations) are
 /// drawn on it as the site draws them on its map: over the roads, under the
 /// labels, in the colours of the player's track display. The site's credit
-/// for them sits in the middle of the strip, between Apple's logo and link.
+/// for them sits in the middle of the band, between Apple's logo and link.
 struct AppleMapBackground: UIViewRepresentable {
     let realWorld: RealWorldFrame
-    /// The game's camera. Its view is the top of this one, which is
-    /// ``attributionHeight`` and the safe area's bottom taller.
+    /// The game's camera, whose view is this one.
     let camera: PlanCamera
     let style: AppleMapStyle
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
@@ -69,10 +69,14 @@ struct AppleMapBackground: UIViewRepresentable {
     /// The screen's safe area (decision 120): the map reaches the screen's
     /// edges, and the logo and legal link keep inside this.
     let safeArea: EdgeInsets
+    /// Told where the logo, the legal link and the credit are, in the
+    /// view's coordinates, whenever that changes: the game draws nothing
+    /// there and leaves the touches there to them (decision 120).
+    let onAttributionFrames: @MainActor ([CGRect]) -> Void
 
-    /// The strip at the bottom of the map view kept clear for Apple's logo
-    /// and legal link, above the home indicator (the safe area's bottom,
-    /// which the strip takes too).
+    /// The band along the bottom of the map view, above the home
+    /// indicator, where Apple's logo and legal link and the credit are:
+    /// the map's buttons stay above it.
     static let attributionHeight: CGFloat = 30
 
     func makeUIView(context: Context) -> FollowingMapView {
@@ -83,7 +87,7 @@ struct AppleMapBackground: UIViewRepresentable {
         map.isPitchEnabled = false
         map.showsCompass = false
         map.showsScale = false
-        // The logo and legal link go in the strip at the bottom, and only
+        // The logo and legal link go in the band at the bottom, and only
         // there: the margins say where (``updateUIView(_:context:)``), not
         // UIKit's safe area.
         map.insetsLayoutMarginsFromSafeArea = false
@@ -100,6 +104,7 @@ struct AppleMapBackground: UIViewRepresentable {
         if map.layoutMargins != margins {
             map.layoutMargins = margins
         }
+        map.onAttributionFrames = onAttributionFrames
         if map.appliedStyle != style {
             map.appliedStyle = style
             map.preferredConfiguration = style.configuration
@@ -127,6 +132,9 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// The style last set, so a redraw of the game does not set it again.
     var appliedStyle: AppleMapStyle?
     private var placement: (realWorld: RealWorldFrame, camera: PlanCamera)?
+    /// Told where the attribution is (``AppleMapBackground/onAttributionFrames``).
+    var onAttributionFrames: (@MainActor ([CGRect]) -> Void)?
+    private var reportedAttribution: [CGRect]?
 
     /// How the real railways are drawn: set again only when it changes.
     struct RailwayLook: Equatable {
@@ -177,6 +185,56 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         super.layoutSubviews()
         apply()
         placeCredit()
+        reportAttribution()
+    }
+
+    // MARK: - Attribution
+
+    /// Tells the game where the logo, the legal link and the credit are,
+    /// when that has changed: after this layout, not during SwiftUI's.
+    private func reportAttribution() {
+        let frames = attributionFrames()
+        guard frames != reportedAttribution, let report = onAttributionFrames else { return }
+        reportedAttribution = frames
+        Task { @MainActor in report(frames) }
+    }
+
+    /// The small views MapKit puts in the band along the bottom margin
+    /// (its logo and legal link; MapKit says nothing of how it nests
+    /// them, so they are looked for a few levels down), and the credit.
+    /// Where none is found, the corners where they go.
+    private func attributionFrames() -> [CGRect] {
+        let bandTop = bounds.height - layoutMargins.bottom - 40
+        var frames: [CGRect] = []
+        func look(in view: UIView, depth: Int) {
+            for subview in view.subviews where subview !== credit && !subview.isHidden && subview.alpha > 0.01 {
+                let frame = subview.convert(subview.bounds, to: self)
+                if frame.minY >= bandTop, frame.width > 0, frame.height > 0, frame.width < bounds.width / 2, frame.height < 60 {
+                    frames.append(frame)
+                } else if depth < 3 {
+                    look(in: subview, depth: depth + 1)
+                }
+            }
+        }
+        look(in: self, depth: 0)
+        if frames.isEmpty {
+            let height: CGFloat = 24
+            let top = bounds.height - layoutMargins.bottom - height
+            frames = [
+                CGRect(x: layoutMargins.left - 4, y: top, width: 80, height: height),
+                CGRect(x: bounds.width - layoutMargins.right - 96, y: top, width: 100, height: height),
+            ]
+        }
+        if !credit.isHidden {
+            frames.append(credit.frame)
+        }
+        return frames
+    }
+
+    /// MapKit may put its logo and legal link in place after its last
+    /// layout, once the map has drawn.
+    func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
+        reportAttribution()
     }
 
     private func apply() {
@@ -263,7 +321,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         return (square, StationDotsRenderer(overlay: square, dots: dots, middle: look.theme.casing))
     }
 
-    /// The credit in the middle of the strip at the bottom, clear of
+    /// The credit in the middle of the band at the bottom, clear of
     /// Apple's logo on the left and legal link on the right.
     private func placeCredit() {
         guard !credit.isHidden else { return }

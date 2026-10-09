@@ -90,6 +90,11 @@ struct MapView: View {
     /// How far down the column at the top of the map (the status banner,
     /// the construction HUD or the traffic key) reaches.
     @State private var topColumnDepth: CGFloat = 0
+    /// Where a real-world map's attribution sits (decision 120): Apple's
+    /// logo and legal link, or MapLibre's attribution button, and the
+    /// credits. Nothing of the game is drawn there, and a touch there
+    /// reaches them.
+    @State private var attributionFrames: [CGRect] = []
     /// What the map shows of traffic control (Stage V4e), worked out when
     /// the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -118,20 +123,21 @@ struct MapView: View {
     var body: some View {
         GeometryReader { proxy in
             let bounds = session.world.bounds
-            // A real-world map (Stage E2) keeps a strip at its bottom for
-            // Apple's logo and legal link, above the home indicator; the
-            // game's map is the rest.
             let realWorld = RealWorldFrame(world: session.world)
-            let strip = realWorld == nil ? 0 : AppleMapBackground.attributionHeight + safeArea.bottom
             // Decision 120: the map reaches the screen's edges, and what
-            // floats over it keeps inside the safe area (the strip takes
-            // the bottom's part) and clear of the screen's controls.
+            // floats over it keeps inside the safe area and clear of the
+            // screen's controls. A real-world map (Stage E2) has Apple's
+            // logo and legal link and the credits along its bottom, above
+            // the home indicator: the buttons stay above them, and the
+            // game's drawing goes round them to the bottom edge.
+            let attributionBand = realWorld == nil ? 0 : AppleMapBackground.attributionHeight
             let screenEdges = EdgeInsets(
                 top: safeArea.top, leading: safeArea.leading,
-                bottom: strip > 0 ? 0 : safeArea.bottom, trailing: safeArea.trailing
+                bottom: safeArea.bottom + attributionBand, trailing: safeArea.trailing
             )
             let clear = insets.adding(screenEdges)
-            let viewport = ScreenSize(width: proxy.size.width, height: max(proxy.size.height - strip, 1))
+            let attribution = AttributionCutout(holes: realWorld == nil ? [] : attributionFrames)
+            let viewport = ScreenSize(width: proxy.size.width, height: max(proxy.size.height, 1))
             // Whether the bottom-trailing buttons stand beside the trailing
             // controls (``EnvironmentValues/mapTrailingInsetDepth``): under a
             // folded control card the edge is free.
@@ -168,8 +174,12 @@ struct MapView: View {
                     )
                     .equatable()
                 }
+                .mask { attribution.fill() }
+                // The gestures take the touches, and let those on the
+                // attribution go to it.
+                .allowsHitTesting(false)
                 .overlay {
-                    MapGestures(camera: projection, onCameraChange: { moved in
+                    MapGestures(camera: projection, passesThrough: attribution.holes, onCameraChange: { moved in
                         camera = moved
                         cellTooltip = nil
                         cityTooltip = nil
@@ -343,6 +353,9 @@ struct MapView: View {
                         top: max(clear.top, topColumnDepth), leading: clear.leading,
                         bottom: clear.bottom, trailing: clear.trailing
                     ))
+                    // Its flags and ring are where the track and the site
+                    // are, which may be by the attribution.
+                    .mask { attribution.fill() }
                 }
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
@@ -355,6 +368,7 @@ struct MapView: View {
                 // Decision 117: something just put up.
                 .overlay(alignment: .topLeading) {
                     BuildPulseMark(pulse: session.buildPulse, camera: projection)
+                        .mask { attribution.fill() }
                 }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
@@ -364,12 +378,12 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     if let cellTooltip {
                         PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(clear.leading + 8, min(cellTooltip.at.x + 12, viewport.width - clear.trailing - 220)), y: max(clear.top + 8, min(cellTooltip.at.y + 12, viewport.height - 80)))
+                            .offset(x: max(clear.leading + 8, min(cellTooltip.at.x + 12, viewport.width - clear.trailing - 220)), y: max(clear.top + 8, min(cellTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
                             .allowsHitTesting(false)
                     }
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - 130)))
+                            .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -377,12 +391,6 @@ struct MapView: View {
                 .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
                 .animation(.easeInOut(duration: 0.2), value: mapLayers.popTravelMode)
                 .frame(height: viewport.height)
-                if strip > 0 {
-                    // Nothing of the game over the strip: Apple's map shows
-                    // through, and its legal link can be tapped.
-                    Color.clear
-                        .frame(height: strip)
-                }
             }
             .background {
                 if let realWorld {
@@ -396,7 +404,8 @@ struct MapView: View {
                                 railways: session.railways,
                                 trackStyle: trackStyle,
                                 language: session.language,
-                                safeArea: safeArea
+                                safeArea: safeArea,
+                                onAttributionFrames: { attributionFrames = $0 }
                             )
                         } else {
                             AppleMapBackground(
@@ -406,20 +415,19 @@ struct MapView: View {
                                 railways: session.railways,
                                 trackStyle: trackStyle,
                                 language: session.language,
-                                safeArea: safeArea
+                                safeArea: safeArea,
+                                onAttributionFrames: { attributionFrames = $0 }
                             )
                         }
                     }
                     // Phase 6d: under the land use layer Apple's map, with
                     // its own buildings, is washed out so the cells' uses
-                    // read clearly; its legal strip stays as it is.
+                    // read clearly; its attribution stays as it is.
                     .overlay {
                         if mapLayers.popTravelMode == .landUse {
-                            VStack(spacing: 0) {
-                                Color(uiColor: .systemBackground).opacity(0.6)
-                                Color.clear.frame(height: strip)
-                            }
-                            .allowsHitTesting(false)
+                            Color(uiColor: .systemBackground).opacity(0.6)
+                                .mask { attribution.fill() }
+                                .allowsHitTesting(false)
                         }
                     }
                 }
@@ -1053,11 +1061,41 @@ enum MapPaintPhase {
     case cancelled
 }
 
+/// The map's whole rectangle but for a hole round each of `holes`: where
+/// the game draws nothing, so a real-world map's attribution shows
+/// (decision 120).
+private struct AttributionCutout: Shape {
+    let holes: [CGRect]
+
+    func path(in rect: CGRect) -> Path {
+        guard !holes.isEmpty else { return Path(rect) }
+        var cut = Path()
+        for hole in holes {
+            cut.addRoundedRect(in: hole.insetBy(dx: -4, dy: -4), cornerSize: CGSize(width: 6, height: 6))
+        }
+        return Path(rect).subtracting(cut)
+    }
+}
+
+/// The view the map's gestures are on. A touch inside `passesThrough`
+/// is not its, so it reaches what is under the map there.
+private final class MapGestureView: UIView {
+    var passesThrough: [CGRect] = []
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard super.point(inside: point, with: event) else { return false }
+        return !passesThrough.contains { $0.insetBy(dx: -4, dy: -4).contains(point) }
+    }
+}
+
 /// UIKit recognizers arbitrate taps, single-finger drags and pinches:
 /// navigating must never also select a point for the construction tool.
 /// A pinch uses its starting camera and centroid, including centroid drift.
 private struct MapGestures: UIViewRepresentable {
     let camera: PlanCamera
+    /// Where a touch goes past the gestures to what is under the map: a
+    /// real-world map's attribution (decision 120).
+    let passesThrough: [CGRect]
     let onCameraChange: (PlanCamera) -> Void
     /// Whether a one-finger drag that begins at a point paints (decision
     /// 98's zoning, decision 102's track) rather than moving the map:
@@ -1076,8 +1114,8 @@ private struct MapGestures: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+    func makeUIView(context: Context) -> MapGestureView {
+        let view = MapGestureView()
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
@@ -1104,12 +1142,13 @@ private struct MapGestures: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
+    func updateUIView(_ uiView: MapGestureView, context: Context) {
+        uiView.passesThrough = passesThrough
         context.coordinator.parent = self
         context.coordinator.cameraDidUpdate(to: camera)
     }
 
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+    static func dismantleUIView(_ uiView: MapGestureView, coordinator: Coordinator) {
         coordinator.stopGliding()
         coordinator.stopEdgeScroll()
     }
