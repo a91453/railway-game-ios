@@ -3555,6 +3555,16 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫 `Simulator/` 手機版的進階選項在預設關閉的抽屜（`.mobile-sheet-handle`，控制分頁）；`Ci/` 的費用膠囊（`.metro-cost-preview-pill`）已經是決策 102 的 `MapConstructionHUD`。作者的 SimCity BuildIt 截圖在拉好的路徑與擺好的建築旁放 ✗ 與 ✓、起終點插旗；OpenTTD Android（`build_confirmation_gui.cpp`，GPL-2.0）與 Mindustry（`MobileInput.java`，GPL-3.0）在拖曳結束處確認，只看做法。程式是本專案自己寫的。
 
+### 108. 車站選址：涵蓋圈、800 公尺內的居民與工作、顯示人口
+
+2026-10-09，UI/UX 改版第二輪的 UX-5d：鐵道經營最好玩的決定之一是「車站蓋在哪裡」，但以前要蓋好車站、打開車站面板才看得到它服務多少人。只改 App 與 GamePresentation：GameCore、存檔、golden、replay 都不變。
+
+1. **選了月台位置就看得到它服務誰**：路網工具的月台模式在軌道上點了位置時（`GameSession.platformSitePlanPoint`），`platformSiteCatchment` 給出那裡 800 公尺內的居民與工作：GameCore 車站需求用的同一份土地（`Land.totals(within: Land.catchmentRadius, of:)`），所以空白地圖與實景地圖都一樣，數字就是車站蓋好後實際的客源。實景地圖車站面板的「涵蓋人口」用的是人口格網（`stationCatchmentPopulation`），兩者來源不同，這裡用會影響運量的那一份。
+2. **地圖上**：那個位置畫出 800 公尺的虛線涵蓋圈，旁邊的膠囊（決策 107 的 `MapBuildConfirm`）上方一行「800 公尺內：居民 N · 工作 M」（`catchmentText`），下面「✗ 取消／✓ 在這裡加月台」（`addNetworkPlatform`，和細節卡片的「加月台」相同）。無障礙名稱不和卡片的按鈕同名。
+3. **顯示人口分布**：月台模式的選項多一顆「顯示人口分布」，把地圖的人口與交通圖層切到人口（`mapPopTravelMode` 偏好，和圖層選單是同一個）；圖層的圖例可以關掉它。
+
+**參考**：參考庫沒有可以移植的選址提示（`Ci/` 的車站服務範圍是建好之後畫的 800 m 圈，決策 84 的 `showsCatchmentRings`）。作者的 SimCity BuildIt 截圖在擺放中的建築上顯示它帶來的效果（「+0 👥」），TheoTown 擺放時把地面染成好或不好；只看做法。程式是本專案自己寫的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
