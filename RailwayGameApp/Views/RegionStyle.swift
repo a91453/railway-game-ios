@@ -17,12 +17,19 @@ struct RegionStyle: Sendable {
     let nameboard: Color
     /// Text on ``nameboard``, at least 4.5:1 on it in both appearances.
     let onNameboard: Color
+    /// The station master's cap and the badge on it (decision 118).
+    let stationMasterCap: Color
+    let stationMasterBadge: Color
 
     /// Taiwan: the 藍皮 blue nameboard with white text (8.1:1); a lighter
-    /// blue in dark mode with navy text (7.3:1).
+    /// blue in dark mode with navy text (7.3:1). The station master wears
+    /// TRA's dark navy cap with a gold badge (close matches, as the
+    /// nameboard's).
     static let taiwan = RegionStyle(
         nameboard: RegionStyle.dynamic(light: 0x1D4F91, dark: 0x8DB6EE),
-        onNameboard: RegionStyle.dynamic(light: 0xFFFFFF, dark: 0x162544)
+        onNameboard: RegionStyle.dynamic(light: 0xFFFFFF, dark: 0x162544),
+        stationMasterCap: RegionStyle.dynamic(light: 0x1B2A47, dark: 0x2A3D63),
+        stationMasterBadge: RegionStyle.dynamic(light: 0xD4A72C, dark: 0xE6BE4F)
     )
 
     private static func dynamic(light: UInt32, dark: UInt32) -> Color {

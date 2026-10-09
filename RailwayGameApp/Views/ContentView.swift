@@ -217,6 +217,19 @@ struct ContentView: View {
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     .padding(.bottom, strip)
                 }
+                // Decision 118: the station master beside the dock, not in
+                // the tutorial, whose card has the station master.
+                .overlay(alignment: .bottomLeading) {
+                    if session.tutorial == nil {
+                        let trailing = sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0
+                        StationMasterCorner(
+                            session: session,
+                            maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52
+                        )
+                        .padding(.leading, dockSize.width + margin)
+                        .padding(.bottom, strip + margin)
+                    }
+                }
                 .overlay(alignment: .trailing) {
                     if let sidePanel {
                         self.sidePanel(sidePanel)

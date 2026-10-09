@@ -251,17 +251,21 @@ private struct TutorialCard: View {
 
     private var explanation: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Theme.primary)
-                    .monospacedDigit()
-                    .accessibilityIdentifier("tutorial.progress")
-                Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                // Decision 118: the station master gives the tutorial.
+                StationMasterAvatar(size: 28)
+                HStack(spacing: 6) {
+                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.primary)
+                        .monospacedDigit()
+                        .accessibilityIdentifier("tutorial.progress")
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Theme.primary.opacity(0.14), in: Capsule())
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Theme.primary.opacity(0.14), in: Capsule())
 
             Text(verbatim: tutorial.step.title(in: session.language))
                 .font(.headline.weight(.bold))
