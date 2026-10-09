@@ -1,0 +1,927 @@
+{
+  "schemaVersion": 48,
+  "description": "Track over the ground (ARCHITECTURE decision 124, the design's second step): free play, 131072 x 65536 units (2 x 1 blocks), track 100 a pricing length (1024 units). mapGround gives the world ground before any is read: groundHeight at (2048, 1024) is not found, and a node at (1024, 2048) is groundNotLoaded. Block (0, 0) is a valley 20 m deep: corner columns 20, 20, 0, 0, then 20 m to column 16, every row alike. An automatic edge at 20 m (1280) from x = 1024 to 17408 along y = 2048 has 16 lengths; their middles 1536 + 1024 i stand 0, 0, 0, 160, 480, 800, 1120, 1280 (four times), 1120, 800, 480, 160, 0 above the ground: surface (up to 128) 3, embankment (up to 512) 2, viaduct 8, and the last three on the ground, a run shorter than 4, join the viaduct beside them: surface 3, embankment 2, viaduct 11. Cost: 3 + 2 + 11 x 3 = 38 prices, 3800; earthwork on the embankment (h = |delta| - 128 = 32 and 352): 7 x 32 x (1280 + 96) + 7 x 352 x (1280 + 1056) = 6064128, x 100 / 3276800 = 185.06, 185; piers past 15 m (960) on the viaduct: 160 + 4 x 320 + 160 = 1600, x 100 / 640 = 250; 4235 in all. Block (0, 1) is flat at 0 m and cell (0, 18) is a lake (x 73728 to 77824). Nodes at 8 m (512) at x = 66560 and 82944 on y = 2048: elevated track over the lake is trackOverWater; automatic, the 16 lengths stand 512 above the ground: embankment on land (h = 384), a bridge (at least 4 m over the water) on lengths 7 to 10 over the lake: embankment 7, bridge 4, embankment 5. Cost: 12 + 4 x 4 = 28 prices, 2800; earthwork 12 x 7 x 384 x 2432 = 78446592, x 100 / 3276800 = 2394.0, 2394; no piers; 5194 in all. A station on the lake is onWater (0, 18). Balance 100000 - 4235 - 5194 = 90571.",
+  "initialState": {
+    "worldWidth": 131072,
+    "worldHeight": 65536,
+    "balance": 100000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "mapGround"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "mapGround"
+      },
+      "expect": {
+        "result": "invalidGround"
+      }
+    },
+    {
+      "observe": {
+        "type": "groundHeight",
+        "point": {
+          "x": 2048,
+          "y": 1024
+        }
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 2048,
+        "z": 1280
+      },
+      "expect": {
+        "result": "groundNotLoaded"
+      }
+    },
+    {
+      "command": {
+        "type": "setGround",
+        "blocks": [
+          {
+            "row": 0,
+            "column": 0,
+            "heights": [
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              0,
+              0,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20,
+              20
+            ]
+          },
+          {
+            "row": 0,
+            "column": 1,
+            "heights": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "groundHeight",
+        "point": {
+          "x": 6144,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "found": true,
+        "groundHeight": 640
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1024,
+        "y": 2048,
+        "z": 1280
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 17408,
+        "y": 2048,
+        "z": 1280
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 1,
+        "to": 2,
+        "curve": {
+          "type": "straight"
+        },
+        "structure": "automatic"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setWater",
+        "runs": [
+          {
+            "row": 0,
+            "column": 18,
+            "count": 1
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 66560,
+        "y": 2048,
+        "z": 512
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 82944,
+        "y": 2048,
+        "z": 512
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 3,
+        "to": 4,
+        "curve": {
+          "type": "straight"
+        },
+        "structure": "elevated"
+      },
+      "expect": {
+        "result": "trackOverWater"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackEdge",
+        "from": 3,
+        "to": 4,
+        "curve": {
+          "type": "straight"
+        },
+        "structure": "automatic"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Lake",
+        "point": {
+          "x": 75776,
+          "y": 2048
+        }
+      },
+      "expect": {
+        "result": "onWater",
+        "row": 0,
+        "column": 18
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 90571,
+    "gameMinutes": 0,
+    "lines": [],
+    "network": {
+      "nodes": [
+        {
+          "id": 1,
+          "x": 1024,
+          "y": 2048,
+          "z": 1280
+        },
+        {
+          "id": 2,
+          "x": 17408,
+          "y": 2048,
+          "z": 1280
+        },
+        {
+          "id": 3,
+          "x": 66560,
+          "y": 2048,
+          "z": 512
+        },
+        {
+          "id": 4,
+          "x": 82944,
+          "y": 2048,
+          "z": 512
+        }
+      ],
+      "edges": [
+        {
+          "id": 1,
+          "from": 1,
+          "to": 2,
+          "curve": {
+            "type": "straight"
+          },
+          "length": 16384,
+          "profile": {
+            "startTransition": 0,
+            "endTransition": 0
+          },
+          "structure": "automatic",
+          "sections": [
+            {
+              "kind": "surface",
+              "lengths": 3
+            },
+            {
+              "kind": "embankment",
+              "lengths": 2
+            },
+            {
+              "kind": "viaduct",
+              "lengths": 11
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "from": 3,
+          "to": 4,
+          "curve": {
+            "type": "straight"
+          },
+          "length": 16384,
+          "profile": {
+            "startTransition": 0,
+            "endTransition": 0
+          },
+          "structure": "automatic",
+          "sections": [
+            {
+              "kind": "embankment",
+              "lengths": 7
+            },
+            {
+              "kind": "bridge",
+              "lengths": 4
+            },
+            {
+              "kind": "embankment",
+              "lengths": 5
+            }
+          ]
+        }
+      ],
+      "platforms": []
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [],
+    "trafficControl": false,
+    "trains": [],
+    "groundBlocks": 2,
+    "water": 1
+  }
+}
