@@ -43,7 +43,8 @@ public struct RailwaySnapshot: Hashable, Sendable {
         /// The platform: its station, edge, start and end.
         public let platform: TrackPlatform
         /// The platform's level: the height of the track along it, which is
-        /// level, and what carries the track there.
+        /// level, and what carries the track there (on an automatic edge,
+        /// the section's structure, never `automatic`).
         public let height: Int64
         public let structure: TrackStructure
         /// The centre line along the platform, from its start to its end.
@@ -112,8 +113,11 @@ extension GameWorld {
         let edges = network.edges.compactMap { trackAlignment(of: $0.id) }
         let platforms = network.platforms.compactMap { platform -> RailwaySnapshot.Platform? in
             guard let edge = network.edge(platform.edge), let geometry = network.geometry(of: platform.edge) else { return nil }
+            // Decision 124: on an automatic edge, what carries the section
+            // the platform starts in.
+            let structure = edge.sectionSpans.first { $0.start <= platform.start && platform.start < $0.end }?.kind.structure ?? edge.structure
             return RailwaySnapshot.Platform(
-                platform: platform, height: geometry.height(at: platform.start), structure: edge.structure,
+                platform: platform, height: geometry.height(at: platform.start), structure: structure,
                 points: geometry.points(from: platform.start, to: platform.end)
             )
         }

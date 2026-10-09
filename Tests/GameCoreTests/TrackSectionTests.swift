@@ -97,6 +97,14 @@ final class TrackSectionTests: XCTestCase {
         XCTAssertEqual(cost, 3_800 + 185 + 250)
         XCTAssertEqual(edge.sectionSpans.map(\.start), [0, 3_072, 5_120])
         XCTAssertEqual(edge.sectionSpans.last?.end, 16_384)
+
+        // A renderer reads a platform on the surface section as on the
+        // surface and one on the viaduct as elevated, in their order along
+        // the edge.
+        let station = try world.buildStation(named: "Valley", at: PlanPoint(x: 9_216, y: Self.row)).id
+        try world.addTrackPlatform(station, on: edge.id, from: 8_192, to: 9_216)
+        try world.addTrackPlatform(station, on: edge.id, from: 0, to: 1_024)
+        XCTAssertEqual(world.railwaySnapshot().platforms.map(\.structure), [.surface, .elevated])
     }
 
     /// The edge's own ends stand on the ground; a node goes at most 64 m
