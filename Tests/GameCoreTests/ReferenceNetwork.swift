@@ -265,6 +265,9 @@ extension ReferenceWorld {
         case .elevated: 3
         case .bridge: 4
         case .tunnel: 5
+        // Decision 124: priced length by length against the ground
+        // (`TrackSectionTests`); fixtures that build one are not run here.
+        case .automatic: preconditionFailure("the reference network has no automatic structure")
         }
         let price = costs.track * factor * max(1, (length + 1023) / 1024)
         if let error = funds(price) { return error }

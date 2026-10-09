@@ -105,19 +105,27 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, or with `anchor` on a real-world
     /// map with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        begin(
-            .newGame(
-                anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
-                steep: anchor.map(steep(at:)) ?? []
-            ),
-            keepingAutosave: true
+        let world = GameWorld.newGame(
+            anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
+            steep: anchor.map(steep(at:)) ?? []
         )
+        begin(anchor == nil ? world : grounded(world), keepingAutosave: true)
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
     /// read in round each station as it is built.
     public func startWholeTaiwan() {
-        begin(.newWholeTaiwanGame(eventSeed: .random(in: .min ... .max)), keepingAutosave: true)
+        begin(grounded(.newWholeTaiwanGame(eventSeed: .random(in: .min ... .max))), keepingAutosave: true)
+    }
+
+    /// `world`, a new real-world game, with ground (decision 124) when the
+    /// app has its heights file: the network tool reads the ground in as
+    /// track comes to it. Without the file the map stays flat, as before.
+    private func grounded(_ world: GameWorld) -> GameWorld {
+        guard heights != nil else { return world }
+        var world = world
+        try? world.mapGround()
+        return world
     }
 
     /// Starts a new game on a blank map with `challenge`'s goals (decision

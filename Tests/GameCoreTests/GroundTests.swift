@@ -135,8 +135,10 @@ final class GroundTests: XCTestCase {
             try JSONDecoder().decode(GameWorld.self, from: Data((base + #","ground":\#(ground)}"#).utf8))
         }
         XCTAssertNoThrow(try decode(#"{"blocks":[{"row":3,"column":3,"heights":\#(heights)}]}"#))
+        // Since save version 28 a world can have ground with no block read
+        // yet (`mapGround()`).
+        XCTAssertTrue(try decode(#"{"blocks":[]}"#).ground.isMapped)
         for bad in [
-            #"{"blocks":[]}"#,
             #"{"blocks":[{"row":4,"column":0,"heights":\#(heights)}]}"#,
             #"{"blocks":[{"row":-1,"column":0,"heights":\#(heights)}]}"#,
             #"{"blocks":[{"row":0,"column":0,"heights":[0]}]}"#,

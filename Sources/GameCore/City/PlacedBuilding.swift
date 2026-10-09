@@ -233,11 +233,12 @@ extension GameWorld {
     /// The lowest numbered edge whose centre line comes closer than the
     /// clearance to `building`'s square (its points `minX ... maxX` by
     /// `minY ... maxY`), or `nil`: one passing a whole clearance away is
-    /// clear, and so (decision 95) is one in a tunnel, which passes under.
+    /// clear, and so (decision 95) is one in a tunnel, which passes under
+    /// (decision 124: an automatic edge's tunnel sections).
     private func edgeInTheWay(of building: PlacedBuilding) -> TrackEdgeID? {
         for edge in network.edges.sorted(by: { $0.id < $1.id }) where edge.structure != .tunnel {
-            guard let points = network.geometry(of: edge.id)?.points.map(\.plan) else { continue }
-            if Self.line(points, comesNear: building) {
+            guard let stretches = network.geometry(of: edge.id).map(edge.openStretches(of:)) else { continue }
+            if stretches.contains(where: { Self.line($0, comesNear: building) }) {
                 return edge.id
             }
         }

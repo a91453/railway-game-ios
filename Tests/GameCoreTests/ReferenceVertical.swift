@@ -75,6 +75,10 @@ extension ReferenceWorld {
         case .surface: abs(height) <= 128
         case .elevated, .bridge: height >= 0
         case .tunnel: height <= 0
+        // Decision 124: the automatic structure is judged length by length
+        // against the ground (`TrackSectionTests`); this model of decision
+        // 30 never builds one.
+        case .automatic: preconditionFailure("the reference model of decision 30 has no automatic structure")
         }
     }
 

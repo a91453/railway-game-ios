@@ -141,8 +141,12 @@ extension GameSession {
             ))
             return
         }
+        // Decision 124: the ground at both ends first, so a new point stands
+        // on it.
+        var prepared = world
+        try? prepared.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
         let plan: EdgePlan
-        switch edgePlan(from: start, to: end) {
+        switch edgePlan(from: start, to: end, in: prepared) {
         case .success(let found): plan = found
         case .failure(let problem):
             message = StatusMessage(kind: .failure, text: problem.text(in: language))
@@ -150,9 +154,10 @@ extension GameSession {
         }
         var built: (edge: TrackEdgeID, to: TrackNodeID)?
         let balance = world.economy.balance
+        let heights = heights
         perform { world throws(GameError) in
             var draft = world
-            let result = try plan.build(in: &draft, structure: networkStructure)
+            let result = try plan.build(in: &draft, structure: networkStructure, heights: heights)
             let cleared = world.placedBuildings(clearedIn: draft).count
             world = draft
             built = result
@@ -177,14 +182,18 @@ extension GameSession {
     }
 
     private func preview(from start: NetworkAnchor, to end: NetworkAnchor) -> NetworkPreview? {
+        // Decision 124: on a copy, the ground at both ends first, so a new
+        // point stands on it; the rest of the way as it is built.
+        var draft = world
+        try? draft.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
         let plan: EdgePlan
-        switch edgePlan(from: start, to: end) {
+        switch edgePlan(from: start, to: end, in: draft) {
         case .success(let found): plan = found
         case .failure(let problem):
             // No curve: the straight line between the ends, drawn as one
             // that cannot be built, and the reason. Without the ends (a node
             // was removed) there is nothing to show.
-            guard let from = world.position(of: start, height: networkHeight), let to = world.position(of: end, height: networkHeight) else {
+            guard let from = draft.position(of: start, height: networkHeight), let to = draft.position(of: end, height: networkHeight) else {
                 return nil
             }
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
@@ -193,11 +202,10 @@ extension GameSession {
                 startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)
             )
         }
-        var draft = world
         let cost: Money?
         let problem: String?
         do throws(GameError) {
-            _ = try plan.build(in: &draft, structure: networkStructure)
+            _ = try plan.build(in: &draft, structure: networkStructure, heights: heights)
             cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
             problem = nil
         } catch {
@@ -215,7 +223,7 @@ extension GameSession {
     /// The edge the picked ends make: where they are, the curve that
     /// continues the track at each end that has some (when
     /// ``networkFollowsTrack`` is on), and the vertical profile.
-    private func edgePlan(from start: NetworkAnchor, to end: NetworkAnchor) -> Result<EdgePlan, NetworkProblem> {
+    private func edgePlan(from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld) -> Result<EdgePlan, NetworkProblem> {
         guard let from = world.position(of: start, height: networkHeight), let to = world.position(of: end, height: networkHeight) else {
             return .failure(.missingNode)
         }
@@ -511,8 +519,10 @@ struct EdgePlan {
 
     var length: Int64 { geometry?.length ?? 0 }
 
-    /// Builds it in `world`: a node for each new end, then the edge.
-    func build(in world: inout GameWorld, structure: TrackStructure) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
+    /// Builds it in `world`: a node for each new end, then the edge, with
+    /// the ground under its way read in first from `heights` (decision 124).
+    func build(in world: inout GameWorld, structure: TrackStructure, heights: HeightGrid?) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
+        try world.readGround(under: [from.plan, to.plan] + (geometry?.points.map(\.plan) ?? []), from: heights)
         let first = try node(for: start, at: from, in: &world)
         let last = try node(for: end, at: to, in: &world)
         let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
@@ -551,6 +561,25 @@ extension TrackStructure {
         case .elevated: language.text("Elevated", "高架")
         case .bridge: language.text("Bridge", "橋樑")
         case .tunnel: language.text("Tunnel", "隧道")
+        case .automatic: language.text("Automatic", "自動")
+        }
+    }
+
+    /// The structures in the order the network tool offers them: the
+    /// automatic one first (decision 124), then the ones it forces.
+    public static let offered: [TrackStructure] = [.automatic, .surface, .elevated, .bridge, .tunnel]
+}
+
+extension TrackSectionKind {
+    /// What carries a stretch of track, for the edge summary (decision 124).
+    public func name(in language: DisplayLanguage) -> String {
+        switch self {
+        case .surface: language.text("surface", "地面")
+        case .embankment: language.text("embankment", "路堤")
+        case .cutting: language.text("cutting", "路塹")
+        case .viaduct: language.text("viaduct", "高架")
+        case .bridge: language.text("bridge", "橋")
+        case .tunnel: language.text("tunnel", "隧道")
         }
     }
 }
@@ -654,6 +683,12 @@ extension GameWorld {
     public func trackEdgeSummary(_ id: TrackEdgeID, in language: DisplayLanguage) -> String? {
         guard let edge = network.edge(id), let geometry = trackGeometry(of: id) else { return nil }
         var parts = [id.displayText(in: language), NetworkBuilding.lengthText(edge.length, in: language), edge.structure.name(in: language)]
+        // Decision 124: what the ground made of an automatic edge, stretch
+        // by stretch.
+        if edge.structure == .automatic {
+            let stretches = edge.sectionSpans.map { "\($0.kind.name(in: language)) \(NetworkBuilding.lengthText($0.end - $0.start, in: language))" }
+            parts[2] = language.text("Automatic: \(stretches.joined(separator: ", "))", "自動：\(stretches.joined(separator: "、"))")
+        }
         let start = NetworkBuilding.lengthText(geometry.startHeight, in: language)
         if geometry.startHeight == geometry.endHeight {
             parts.append(start)

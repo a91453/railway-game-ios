@@ -96,7 +96,8 @@ public struct TrackProfileSegment: Hashable, Sendable {
 }
 
 /// What carries an edge's track. The whole edge has one structure: where
-/// the structure changes there is a node.
+/// the structure changes there is a node, except on an automatic edge
+/// (decision 124), whose sections the ground decides.
 public enum TrackStructure: String, Hashable, CaseIterable, Sendable {
     /// On the ground, on a low embankment or in a shallow cutting.
     case surface
@@ -108,6 +109,10 @@ public enum TrackStructure: String, Hashable, CaseIterable, Sendable {
     /// Underground. A node where a tunnel edge and another edge end is a
     /// portal (see ``RailwayNetwork/isTunnelPortal(_:)``).
     case tunnel
+    /// Whatever the ground under it asks for (decision 124): every 16 m a
+    /// surface, embankment, cutting, viaduct, bridge or tunnel, kept as
+    /// the edge's ``TrackEdge/sections``.
+    case automatic
 
     /// The least height difference, rail to rail, between two tracks that
     /// cross in plan without a shared node: 512 units (8 m).
@@ -118,14 +123,17 @@ public enum TrackStructure: String, Hashable, CaseIterable, Sendable {
     /// surface tracks can never pass over each other.
     public static let embankment: Int64 = 128
 
-    /// Whether this structure can carry track at `height`: surface track
-    /// within ``embankment`` of the ground (0), elevated track and bridges
-    /// at or above it, tunnels at or below it.
+    /// Whether this structure can carry track `height` above the ground
+    /// (since decision 124 the ground under it, 0 in a world without
+    /// ground): surface track within ``embankment`` of it, elevated track
+    /// and bridges at or above it, tunnels at or below it. The automatic
+    /// structure is judged length by length (``TrackSectionKind``).
     public func allows(height: Int64) -> Bool {
         switch self {
         case .surface: -Self.embankment <= height && height <= Self.embankment
         case .elevated, .bridge: height >= 0
         case .tunnel: height <= 0
+        case .automatic: true
         }
     }
 
@@ -135,7 +143,7 @@ public enum TrackStructure: String, Hashable, CaseIterable, Sendable {
     /// S3.
     public var costFactor: Int64 {
         switch self {
-        case .surface: 1
+        case .surface, .automatic: 1
         case .elevated: 3
         case .bridge: 4
         case .tunnel: 5

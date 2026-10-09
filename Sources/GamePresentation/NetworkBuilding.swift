@@ -216,11 +216,13 @@ extension GameWorld {
         return best?.direction
     }
 
-    /// Where `anchor` lies, at `height` for a new point.
+    /// Where `anchor` lies: a new point `height` above the ground there
+    /// (decision 124; the ground is 0 m in a world without ground, and taken
+    /// as 0 where a world with ground has not read it).
     func position(of anchor: NetworkAnchor, height: Int64) -> WorldCoordinate? {
         switch anchor {
         case .node(let id): network.node(id)?.position
-        case .point(let point): WorldCoordinate(x: point.x, y: point.y, z: height)
+        case .point(let point): WorldCoordinate(x: point.x, y: point.y, z: (groundHeight(at: point) ?? 0) + height)
         case .track(let point):
             trackGeometry(of: point.edge).flatMap { geometry in
                 (0...geometry.length).contains(point.distance) ? geometry.location(at: point.distance).position : nil
@@ -239,5 +241,22 @@ extension GameWorld {
         let forward = along.dx * chord.dx + along.dy * chord.dy >= 0
         let direction = forward ? along : along.reversed
         return NetworkBuilding.turnsAtMostRightAngle(direction, toward: chord) ? direction : nil
+    }
+}
+
+extension GameWorld {
+    /// Reads in the ground of the blocks under `points` that a world with
+    /// ground has not read (decision 124), from the app's heights file:
+    /// what the network tool does before it previews or builds track, so a
+    /// block is read where track first comes to it. Nothing in a world
+    /// without ground.
+    ///
+    /// - Throws: ``GameError/groundNotLoaded`` when a block is missing and
+    ///   there is no heights file or the world is not on the Earth.
+    mutating func readGround(under points: [PlanPoint], from heights: HeightGrid?) throws(GameError) {
+        let missing = missingGroundBlocks(under: points)
+        guard !missing.isEmpty else { return }
+        guard let heights, let frame = RealWorldFrame(world: self) else { throw .groundNotLoaded }
+        try setGround(heights.ground(of: missing, frame: frame))
     }
 }

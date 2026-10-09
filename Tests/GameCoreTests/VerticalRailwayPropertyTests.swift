@@ -39,7 +39,9 @@ final class VerticalRailwayPropertyTests: XCTestCase {
     /// The structure that suits a stretch between two heights, now and then
     /// a wrong one.
     private static func structure(_ a: Int64, _ b: Int64, using random: inout SplitMix64) -> TrackStructure {
-        if random.chance(1, in: 10) { return random.element(of: TrackStructure.allCases) }
+        // The four of decision 30, as `allCases` listed them before decision
+        // 124 added the automatic one: the campaign draws the same numbers.
+        if random.chance(1, in: 10) { return random.element(of: [.surface, .elevated, .bridge, .tunnel]) }
         if a <= 0, b <= 0, min(a, b) < -128 { return .tunnel }
         if abs(a) <= 128, abs(b) <= 128, random.chance(3, in: 4) { return .surface }
         if a >= 0, b >= 0 { return random.chance(1, in: 3) ? .bridge : .elevated }

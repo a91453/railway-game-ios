@@ -208,6 +208,15 @@ public enum GameError: Error, Hashable, Sendable {
     /// water or steep and the first is steep (decision 115): that cell.
     case onSteepSlope(row: Int, column: Int)
     /// The ground's heights (decision 124) are for no block, or for a block
-    /// outside the world, listed twice or already read.
+    /// outside the world, listed twice or already read; or the world is
+    /// asked to have ground when it has it already or has track.
     case invalidGround
+    /// Track or a node where a world with ground has not read the ground
+    /// (decision 124).
+    case groundNotLoaded
+    /// Track over water on the surface or a viaduct, or a bridge or tunnel
+    /// too close to the water (decision 124).
+    case trackOverWater
+    /// A viaduct or bridge more than 64 m above the ground (decision 124).
+    case structureTooHigh
 }

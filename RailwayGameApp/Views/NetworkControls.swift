@@ -120,7 +120,7 @@ struct NetworkControls: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Picker("Structure", selection: $session.networkStructure) {
-                    ForEach(TrackStructure.allCases, id: \.self) { structure in
+                    ForEach(TrackStructure.offered, id: \.self) { structure in
                         Text(structure.name(in: session.language)).tag(structure)
                     }
                 }
