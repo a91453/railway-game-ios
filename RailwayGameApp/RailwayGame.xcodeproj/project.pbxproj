@@ -80,6 +80,7 @@
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
+		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
 		DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */; };
 		DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */; };
@@ -121,6 +122,7 @@
 		2A779D8969EEF8D75DD97FF5 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		2C7E3045294CC098C802F9DA /* railway-game-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "railway-game-ios"; path = ..; sourceTree = SOURCE_ROOT; };
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_water.json; sourceTree = "<group>"; };
 		31AA7BB032ACE4E009B42AF1 /* station_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_names.json; sourceTree = "<group>"; };
 		360D54F266227011F79894B4 /* tymc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc_times.json; sourceTree = "<group>"; };
 		37971520DEDE438F5E6272D6 /* music-loop.caf */ = {isa = PBXFileReference; path = "music-loop.caf"; sourceTree = "<group>"; };
@@ -219,6 +221,7 @@
 			children = (
 				894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */,
 				6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */,
+				31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */,
 			);
 			path = RealWorld;
 			sourceTree = "<group>";
@@ -485,6 +488,7 @@
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,
 				8163932343EEB39A635118DD /* taiwan_places.json in Resources */,
 				19E3457A000AB98921141272 /* taiwan_population.json in Resources */,
+				D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */,
 				AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */,
 				0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */,
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
