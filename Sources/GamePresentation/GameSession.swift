@@ -1029,6 +1029,27 @@ public final class GameSession {
         )
     }
 
+    /// Starts a new line at the selected station (decision 112): a new
+    /// draft with it as the first stop, and the next station tapped on the
+    /// map as the next. A draft already begun is dropped. Never changes
+    /// the world.
+    public func startLineFromSelectedStation() {
+        guard let station = selectedStation else {
+            addSelectedStationToLineDraft()
+            return
+        }
+        clearLineDraft()
+        appendToLineDraft(station.id)
+        isPickingLineStops = true
+        message = StatusMessage(
+            kind: .success,
+            text: language.text(
+                "The line starts at \(station.name). Tap its last station on the map.",
+                "路線從\(station.name)出發。在地圖上點它的終點站。"
+            )
+        )
+    }
+
     /// Stops adding tapped stations to the new line; the draft stays.
     public func stopPickingLineStops() {
         isPickingLineStops = false
