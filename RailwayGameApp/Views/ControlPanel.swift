@@ -38,7 +38,11 @@ struct ControlPanel: View {
             }
         case .details:
             VStack(alignment: .leading, spacing: 12) {
-                InspectorView(session: session)
+                // The building tool's taps pick a site, not a station: the
+                // selection row only took the room its kinds need.
+                if session.tool != .building {
+                    InspectorView(session: session)
+                }
                 ToolOptions(session: session)
                     .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
                 ActionButton(session: session)
@@ -201,14 +205,16 @@ private struct BuildingControls: View {
 
     @ViewBuilder
     private var buildOptions: some View {
-        HStack(spacing: 6) {
+        // Three a row, as the zones: five in one row cut a phone's names to
+        // "小…" and "漁…".
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
             ForEach(PlacedBuildingKind.allCases, id: \.self) { kind in
                 let isActive = session.buildingKind == kind
                 Button {
                     session.buildingKind = kind
                 } label: {
                     VStack(spacing: 2) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             kind.mapGlyph.image
                                 .resizable()
                                 .scaledToFit()
@@ -217,7 +223,7 @@ private struct BuildingControls: View {
                             Text(kind.title(in: session.language))
                                 .font(.subheadline.weight(isActive ? .bold : .medium))
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.8)
+                                .minimumScaleFactor(0.75)
                         }
                         // Decision 103: what each costs before its land.
                         if let cost = session.buildingStartingCost(kind) {
@@ -264,7 +270,8 @@ private struct BuildingControls: View {
                 .foregroundStyle(Theme.textSecondary)
             }
         } else {
-            Label("Tap the map to choose where it goes. It cannot stand on track or another of your buildings; a city building in the way is bought out.", systemImage: "hand.tap")
+            // Short: where it cannot stand, the preview says when it is so.
+            Label("Tap the map to choose a site. A city building in the way is bought out.", systemImage: "hand.tap")
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
             if let quote = session.buildingQuoteText {

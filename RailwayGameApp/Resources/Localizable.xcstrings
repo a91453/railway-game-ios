@@ -2823,12 +2823,12 @@
         }
       }
     },
-    "Tap the map to choose where it goes. It cannot stand on track or another of your buildings; a city building in the way is bought out." : {
+    "Tap the map to choose a site. A city building in the way is bought out." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "點地圖選擇位置。不能蓋在軌道或自己的其他建物上；擋到的城市建物會被收購拆除。"
+            "value" : "點地圖選位置；擋到的城市建物會被收購拆除。"
           }
         }
       }
