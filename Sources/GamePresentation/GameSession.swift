@@ -259,8 +259,11 @@ public final class GameSession {
 
     /// Taiwan's ground height (decision 124), which the network tool shows
     /// at the ends it picked on a real-world map; `nil` without the app's
-    /// file.
-    @ObservationIgnored public var heights: HeightGrid?
+    /// file. It can arrive after a game opened: a track preview worked out
+    /// without it is worked out again.
+    @ObservationIgnored public var heights: HeightGrid? {
+        didSet { networkPreviewMemo = nil }
+    }
 
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are

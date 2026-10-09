@@ -184,4 +184,20 @@ final class HeightGridTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.network.edges.count, 1)
     }
+    /// The heights file can arrive after a saved game with ground opened:
+    /// the preview worked out without it is not kept once it is there.
+    func testThePreviewIsWorkedOutAgainWhenTheHeightsArrive() throws {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0818, longitudeDegrees: 120.5385))
+        var world = GameWorld.newGame(anchor: anchor)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.network)
+        let block = Land.blockLength
+        session.tapNetwork(at: PlanPoint(x: 5 * block + 4_096, y: 5 * block + 4_096), reach: 512)
+        session.tapNetwork(at: PlanPoint(x: 5 * block + 32_768, y: 5 * block + 4_096), reach: 512)
+        XCTAssertNotNil(session.networkPreview?.problem, "no ground to read yet")
+        session.heights = Self.grid
+        XCTAssertNil(session.networkPreview?.problem)
+        XCTAssertNotNil(session.networkPreview?.cost)
+    }
 }
