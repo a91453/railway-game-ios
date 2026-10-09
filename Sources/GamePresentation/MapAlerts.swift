@@ -57,8 +57,11 @@ extension GameWorld {
     /// line's first stop at once gets both.
     public func mapAlerts() -> [MapAlert] {
         var alerts: [MapAlert] = []
+        // Worked out for every frame the map draws: the counts in one pass,
+        // not a search of the records for each station.
+        let counts = MapLayers.waitingPassengerCounts(in: self)
         for station in stations {
-            let waiting = waitingPassengers(at: station.id).reduce(Int64(0)) { $0 + $1.count }
+            let waiting = counts[station.id] ?? 0
             if waiting >= StationPassengers.capacity {
                 alerts.append(MapAlert(kind: .full(waiting: waiting), station: station.id, location: station.location))
             } else if waiting * 2 >= StationPassengers.capacity {

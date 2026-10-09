@@ -59,7 +59,7 @@ final class RealWorldMapUITests: XCTestCase {
         // The demo's button is the start screen's last: scroll to it.
         let demo = app.buttons["start.realWorldDemo"]
         XCTAssertTrue(demo.waitForExistence(timeout: 10), "Missing button: start.realWorldDemo")
-        for _ in 0..<4 where !demo.isHittable { app.swipeUp() }
+        app.bringStartButtonIntoView(demo)
         tappable(app.buttons.matching(identifier: "start.realWorldDemo"), name: "start.realWorldDemo").tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")

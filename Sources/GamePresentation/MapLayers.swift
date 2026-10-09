@@ -79,10 +79,19 @@ public enum MapLayers {
     ///
     /// Provides explicit Equatable dependency for MapCanvas to redraw when waiting counts change.
     public static func waitingPassengerCounts(in world: GameWorld) -> [StationID: Int64] {
+        // One pass over the stations' passenger records: asking the world
+        // station by station searches them each time, which on the whole
+        // of Taiwan's hundreds of stations took most of a frame.
+        var waiting: [StationID: Int64] = [:]
+        waiting.reserveCapacity(world.passengers.count)
+        // The first record of a station, as `waitingPassengers(at:)` reads.
+        for record in world.passengers where waiting[record.station] == nil {
+            waiting[record.station] = record.waiting.reduce(Int64(0)) { $0 + $1.count }
+        }
         var counts: [StationID: Int64] = [:]
         counts.reserveCapacity(world.stations.count)
         for station in world.stations {
-            counts[station.id] = world.waitingPassengers(at: station.id).reduce(Int64(0)) { $0 + $1.count }
+            counts[station.id] = waiting[station.id] ?? 0
         }
         return counts
     }
