@@ -26,11 +26,20 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case buildSecondStation
     /// Stations, but no line.
     case createLine
+    /// Decision 128: a station whose town grows served too few of its
+    /// passengers yesterday (`percent`, under ``LandDemand/upgradeService``)
+    /// for its buildings to rise.
+    case underserved(station: StationID, name: String, percent: Int64)
+    /// Decision 128: the town round a station grew yesterday, by `tenths`
+    /// of a percent: the most of any.
+    case townGrew(station: StationID, name: String, tenths: Int64)
 
     /// The advice for `world`, or `nil` when all runs well. The worries
     /// first (debt, a full station, a line no one rides, a crowded
     /// station; the lowest ID of each), then the next step of building a
-    /// first line.
+    /// first line, then how the towns grow (decision 128): a station that
+    /// served too few to grow taller (the lowest ID), else the town that
+    /// grew most.
     public init?(world: GameWorld) {
         if world.accounts.mode == .management, world.economy.balance < .zero {
             self = .inDebt
@@ -60,9 +69,29 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .buildSecondStation
         } else if world.lines.isEmpty {
             self = .createLine
+        } else if let growth = Self.growth(in: world) {
+            self = growth
         } else {
             return nil
         }
+    }
+
+    /// Decision 128: what the last midnight's growth says, where the land
+    /// grows (``GameWorld/landDemand``). A station's service is measured
+    /// from the first midnight it was seen (0 until then, so 0 is left out).
+    private static func growth(in world: GameWorld) -> StationMasterAdvice? {
+        guard world.landDemand, let places = world.townGrowth?.places else { return nil }
+        let open = places.filter { world.station(id: $0.station).map { $0.operationMode != .closed } ?? false }
+        let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
+        if let short = open.first(where: { $0.lastService > 0 && $0.lastService < LandDemand.upgradeService }) {
+            return .underserved(station: short.station, name: name(short.station), percent: short.lastService / 10)
+        }
+        // The first of the most grown, as `places` is by station.
+        if let grown = open.filter({ $0.lastGrowth > 0 }).max(by: { $0.lastGrowth < $1.lastGrowth || ($0.lastGrowth == $1.lastGrowth && $0.station > $1.station) }) {
+            // Thousandths of the town are tenths of a percent.
+            return .townGrew(station: grown.station, name: name(grown.station), tenths: grown.lastGrowth)
+        }
+        return nil
     }
 
     /// What the station master says when tapped with no advice to give
@@ -114,6 +143,16 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "Stations ready. Open Lines and join them into a line.",
                 "車站都好了。打開路線，把它們連成一條路線。"
             )
+        case .underserved(_, let name, let percent):
+            language.text(
+                "Only \(percent)% of \(name)'s passengers got a train yesterday. At 80% the town round it grows taller: run more trains.",
+                "昨天「\(name)」只有 \(percent)% 的旅客搭上車。到 80% 附近的城市才會長高，加開列車吧。"
+            )
+        case .townGrew(_, let name, let tenths):
+            language.text(
+                "The town round \(name) grew \(tenths / 10).\(tenths % 10)% yesterday. Good service keeps it growing.",
+                "「\(name)」附近的城市昨天成長了 \(tenths / 10).\(tenths % 10)%。服務好，城市就會繼續長大。"
+            )
         }
     }
 
@@ -121,8 +160,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded: true
-        case .buildTrack, .buildStation, .buildSecondStation, .createLine: false
+        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved: true
+        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew: false
         }
     }
 }

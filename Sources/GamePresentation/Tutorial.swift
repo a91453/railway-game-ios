@@ -31,6 +31,10 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case buildingTool = "tool.building"
     /// The train tool's Buy button.
     case buyTrain = "train.buy"
+    /// The lines panel's Buy … and Start Service, for a line without
+    /// trains (decision 101); the first line's trains in the tutorial
+    /// (decision 125).
+    case staffLine = "line.staff.start"
     /// The network tool's modes: build, platform, remove.
     case networkModes = "network.modes"
     /// The button that applies the tool: Build Track, Add Platform, Place
@@ -44,6 +48,8 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case linesButton = "hud.lines"
     /// Pause, play and the speed menu (the reference's `#bottombar`).
     case speedControl = "hud.speed"
+    /// The cash in the status pill, where fares come in (decision 125).
+    case cash = "hud.cash"
     /// The game menu: save, export, back to the start screen.
     case gameMenu = "hud.menu"
 
@@ -79,12 +85,13 @@ public enum TutorialGoal: Hashable, Sendable {
     /// Create a service line: one that was not there when the step was
     /// shown.
     case createLine
-    /// Put a train on the track: one that was not on it when the step was
-    /// shown.
-    case placeTrain
     /// Start a line's service: assign a train that was not assigned when
     /// the step was shown to a line that is set to run trains.
     case startService
+    /// Earn a fare (decision 125): a settlement written since the step was
+    /// shown took fares in. A free game, which charges none, has nothing
+    /// to wait for.
+    case earnFare
     /// Change the game's speed, by pausing, resuming or choosing another
     /// (the reference's `speedOrPause`): it differs from what it was when
     /// the step was shown.
@@ -213,8 +220,6 @@ public struct Tutorial: Hashable, Sendable {
             return world.stations.contains { !before.stations.contains($0.id) }
         case .createLine:
             return world.lines.contains { !before.lines.contains($0.id) }
-        case .placeTrain:
-            return world.trains.contains { $0.position != nil && !before.placedTrains.contains($0.id) }
         case .startService:
             return world.trains.contains { train in
                 guard !before.assignedTrains.contains(train.id),
@@ -228,6 +233,9 @@ public struct Tutorial: Hashable, Sendable {
             }
         case .changeSpeed:
             return world.clock.speed != before.speed
+        case .earnFare:
+            return world.accounts.mode == .free
+                || CompanyAccounts.income(writtenAfter: before.lastEntry, in: world.accounts.entries, of: [.fareRevenue]) > .zero
         case .moveMap:
             return movedMapOn.contains(index)
         }
@@ -238,17 +246,18 @@ public struct Tutorial: Hashable, Sendable {
         let edges: Set<TrackEdgeID>
         let stations: Set<StationID>
         let lines: Set<LineID>
-        let placedTrains: Set<TrainID>
         let assignedTrains: Set<TrainID>
         let speed: GameSpeed
+        /// The newest ledger row, which the fares are counted after.
+        let lastEntry: LedgerEntry?
 
         init(of world: GameWorld) {
             edges = Set(world.network.edges.map(\.id))
             stations = Set(world.stations.map(\.id))
             lines = Set(world.lines.map(\.id))
-            placedTrains = Set(world.trains.filter { $0.position != nil }.map(\.id))
             assignedTrains = Set(world.trains.map(\.id).filter { world.assignedLine(of: $0) != nil })
             speed = world.clock.speed
+            lastEntry = world.accounts.entries.last
         }
     }
 }
@@ -256,9 +265,9 @@ public struct Tutorial: Hashable, Sendable {
 extension Tutorial {
     /// The tutorial's steps: the reference's content steps (`Ci/`
     /// `TUTORIAL_STEPS` 0–1, 4, 7, 10 and 11) rewritten for touch and this
-    /// app's tools, in the order a first line is built and run. Its mouse
-    /// and keyboard shortcut steps (2, 3, 5, 6, 8 and 9) have no touch
-    /// counterpart.
+    /// app's tools, in the order a first line is built and run, until its
+    /// first fares come in (decision 125). Its mouse and keyboard shortcut
+    /// steps (2, 3, 5, 6, 8 and 9) have no touch counterpart.
     ///
     /// The first two steps keep the order the app's UI tests rely on (the
     /// network tool, then a stretch of track). Moving the map follows them
@@ -340,30 +349,46 @@ extension Tutorial {
                 "點「路線」，再按「在地圖上選站」。在地圖上點第一座車站，再點另一座：軌道沿途經過的車站會自動找出。然後按「建立路線」。第一站是列車出發的地方。"
             )
         ),
-        // No reference step: the reference's lines come with their trains.
+        // Reference step 7, "开始列车运营": the reference's lines come with
+        // their trains. Decision 125: the lines panel's one step (decision
+        // 101) buys, places and assigns them, so the first line runs from
+        // the panel the line was made in.
         TutorialStep(
-            id: "train.place",
-            targets: [.trainTool, .buyTrain, .actionButton],
-            goal: .placeTrain,
-            title: ("Buy a train and place it", "購買並放置列車"),
-            body: (
-                "Tap Train, then Buy. Select the line's first station on the map and tap Place … Here: "
-                    + "the train waits there until the line sends it out.",
-                "點「列車」，再按「購買」。在地圖上選取路線的第一站，按「把…放在這裡」，列車會在那裡等路線派它出發。"
-            )
-        ),
-        // Reference step 7, "开始列车运营": the trains in service per period.
-        TutorialStep(
-            id: "line.service",
-            targets: [.linesButton],
+            id: "line.staff",
+            targets: [.staffLine, .linesButton],
             goal: .startService,
             title: ("Start service", "開始營運"),
             body: (
-                "Open Lines, pick your line and tap Assign … Here to give it your train. A line that runs no trains yet "
-                    + "then runs it at every time of day; change how many it runs for peak, off-peak or low there. "
-                    + "It leaves once it has waited at the first stop.",
-                "打開「路線」，選你的路線，按「把…指派到這裡」把列車交給它。還沒有上線列車的路線，"
-                    + "會在各時段都讓這列車上線；尖峰、離峰、低峰的上線列數可以在那裡調整。它在第一站等候後就會出發。"
+                "Your new line is selected in Lines. Choose how often a train should come, then tap Buy … and Start Service: "
+                    + "the trains are bought, placed at the first stop and sent out one after another.",
+                "新路線已在「路線」裡選好。選擇多久來一班車，再按「購買…列並開始營運」：列車會自動購買、放到第一站，依班距陸續出發。"
+            )
+        ),
+        // Reference step 10, "控制模拟". Decision 125: it follows the line's
+        // trains, while building has the game paused (decision 99).
+        TutorialStep(
+            id: "time.speed",
+            targets: [.speedControl],
+            goal: .changeSpeed,
+            title: ("Control time", "控制時間"),
+            body: (
+                "Time stops while you build. Press play, or pick a speed from the menu: trains and passengers move only while time passes.",
+                "建造時時間會暫停。按繼續，或從選單選倍速：時間流動，列車和乘客才會動。"
+            )
+        ),
+        // No reference step: decision 125 waits for the line's first fares,
+        // which the hour's settlement pays into the cash.
+        TutorialStep(
+            id: "first.fare",
+            targets: [.cash, .speedControl],
+            goal: .earnFare,
+            title: ("Your first fares", "第一筆車資"),
+            body: (
+                "Let time run. Passengers board at your stations, and at the end of each hour the fares they paid "
+                    + "come into the cash at the top. Wait for your first; a faster speed gets there sooner. "
+                    + "No one coming? Stations need people living or working within 800 m.",
+                "讓時間繼續走。乘客會在你的車站上車，每小時結束時，他們付的車資會進到上方的現金。等第一筆車資進帳吧，倍速調快會更快看到。"
+                    + "一直沒有人搭車？車站 800 公尺內要有人住或工作。"
             )
         ),
         // No reference step: its stations carry their ridership in the line
@@ -375,19 +400,8 @@ extension Tutorial {
             title: ("Passengers", "乘客"),
             body: (
                 "Select a station on the map, then tap the people icon (Ridership) to see the trips it starts by the hour "
-                    + "and the passengers waiting. The fares they pay are your income; the cash in the top bar follows.",
-                "在地圖上選一座車站，點人形圖示（客源），可以看它每小時的進出站人次和候車的乘客。乘客付的票價是你的收入，上方的現金會跟著變。"
-            )
-        ),
-        // Reference step 10, "控制模拟".
-        TutorialStep(
-            id: "time.speed",
-            targets: [.speedControl],
-            goal: .changeSpeed,
-            title: ("Control time", "控制時間"),
-            body: (
-                "Pause or resume, and pick a speed from the menu. Trains and passengers move only while time passes. Try changing it.",
-                "用暫停／繼續，並從選單選倍速。時間流動，列車和乘客才會動。試著改變一下。"
+                    + "and the passengers waiting. The more people live and work near your stations, the more ride.",
+                "在地圖上選一座車站，點人形圖示（客源），可以看它每小時的進出站人次和候車的乘客。車站附近住和工作的人越多，搭車的人就越多。"
             )
         ),
         // Reference step 11, "导览结束".

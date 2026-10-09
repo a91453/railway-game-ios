@@ -312,6 +312,24 @@ extension GameSession {
     /// (``newStationDemand(at:)``), unless the land does (Phase 6b). All or
     /// nothing. A new station then serves the next platform, so a second
     /// track beside it joins the same station.
+    /// Decision 128: who a new station reaches, said when it opens, where
+    /// the land sets ridership: " Within 800 m: …" (decision 108's count),
+    /// or that no one lives or works there yet. Empty elsewhere.
+    func openingReach(of station: Station, in world: GameWorld) -> String {
+        guard !world.land.isEmpty else { return "" }
+        let totals = world.land.totals(within: Land.catchmentRadius, of: station.location)
+        guard totals.residents + totals.jobs > 0 else {
+            return language.text(
+                " No one lives or works within 800 m yet: it will see few passengers.",
+                "800 公尺內還沒有人住或工作，搭車的人會很少。"
+            )
+        }
+        return language.text(" ", "") + catchmentText(totals) + language.text(
+            ". Serve it well and the town round it grows.",
+            "。服務好，附近的城市就會長大。"
+        )
+    }
+
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
@@ -343,7 +361,7 @@ extension GameSession {
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                )
+                ) + openingReach(of: station, in: draft)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"

@@ -457,6 +457,7 @@ enum MapArt {
     static func drawBase(
         bounds worldBounds: WorldBounds,
         drawsLand: Bool,
+        skyline: CitySkyline?,
         layer: PopTravelLayer?,
         projection: some MapProjection,
         in context: GraphicsContext
@@ -470,6 +471,9 @@ enum MapArt {
                 screenPoint(bounds.minX, bounds.maxY, projection)
             ])
             context.fill(land, with: .color(Palette.land))
+        }
+        if let skyline {
+            drawSkyline(skyline, projection: projection, in: context)
         }
         guard let layer else { return }
         switch layer.content {
@@ -488,6 +492,81 @@ enum MapArt {
     private static func drawCity(_ map: CityMap, mode: PopTravelMode, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
         let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
+    }
+
+    /// Below this many points a 64 m cell, the town is too small to draw.
+    private static let skylineMinimumCellPoints = 3.0
+    /// From this many points a cell, buildings rise by their density;
+    /// below it they are flat footprints.
+    private static let skylineRisingCellPoints = 9.0
+    /// From this many points a footprint, a D3 or D4 building shows its
+    /// floors as bands across its wall.
+    private static let skylineBandsMinimumSide = 14.0
+
+    /// The city's buildings (decision 126, ``CitySkyline``): each the
+    /// middle square of its cell, a pale roof in its use's hue raised over
+    /// a deeper wall by its density, edged in navy; parks and farms as open
+    /// ground. Drawn row by row from the north, so a building in front
+    /// covers the foot of the ones behind; each row's shapes are filled a
+    /// colour at a time. Flat when zoomed out, nothing when a cell is a few
+    /// points.
+    private static func drawSkyline(_ skyline: CitySkyline, projection: some MapProjection, in context: GraphicsContext) {
+        let cellPoints = Double(Land.cellLength) * projection.pointsPerUnit
+        guard !skyline.isEmpty, cellPoints >= skylineMinimumCellPoints else { return }
+        let rises = cellPoints >= skylineRisingCellPoints
+        let lots = skyline.lots(in: drawingRegion(projection), rowsBelow: rises ? CitySkyline.rowsRisenOver : 0)
+        let length = Double(Land.cellLength), side = Double(PlacedBuildingRules.cityBuildingSide), inset = (length - side) / 2
+        let lineWidth = cellPoints < 14 ? 0.6 : 1
+        var ground: [LandUse: Path] = [:], walls: [LandUse: Path] = [:], roofs: [LandUse: Path] = [:], outlines = Path()
+        func drawRow() {
+            for use in LandUse.allCases {
+                if let path = ground[use] { context.fill(path, with: .color(Palette.cityRoof(use))) }
+            }
+            for use in LandUse.allCases {
+                if let path = walls[use] { context.fill(path, with: .color(Palette.cityWall(use))) }
+                if let path = roofs[use] { context.fill(path, with: .color(Palette.cityRoof(use))) }
+            }
+            context.stroke(outlines, with: .color(Palette.cityOutline), lineWidth: lineWidth)
+            ground = [:]
+            walls = [:]
+            roofs = [:]
+            outlines = Path()
+        }
+        var row = lots.first?.row
+        for lot in lots {
+            if lot.row != row {
+                drawRow()
+                row = lot.row
+            }
+            let minX = Double(lot.column) * length, minY = Double(lot.row) * length
+            if lot.isOpenGround {
+                let rect = screenRect(minX: minX, minY: minY, maxX: minX + length, maxY: minY + length, projection)
+                ground[lot.use, default: Path()].addRect(rect)
+                continue
+            }
+            let foot = screenRect(minX: minX + inset, minY: minY + inset, maxX: minX + inset + side, maxY: minY + inset + side, projection)
+            let rise = rises ? foot.height * CitySkyline.heightShare(density: lot.density) : 0
+            let roof = foot.offsetBy(dx: 0, dy: -rise)
+            let whole = CGRect(x: foot.minX, y: roof.minY, width: foot.width, height: foot.maxY - roof.minY)
+            walls[lot.use, default: Path()].addRect(whole)
+            var top = Path(roof)
+            // A tall building's floors, as pale bands down its wall.
+            if rise > 0, lot.density >= 3, foot.width >= skylineBandsMinimumSide {
+                let step = foot.width * 0.28
+                var y = roof.maxY + foot.width * 0.12
+                while y + foot.width * 0.1 <= foot.maxY - foot.width * 0.05 {
+                    top.addRect(CGRect(x: foot.minX + foot.width * 0.18, y: y, width: foot.width * 0.64, height: foot.width * 0.1))
+                    y += step
+                }
+            }
+            roofs[lot.use, default: Path()].addPath(top)
+            outlines.addRect(whole)
+            if rise > 0 {
+                outlines.move(to: CGPoint(x: roof.minX, y: roof.maxY))
+                outlines.addLine(to: CGPoint(x: roof.maxX, y: roof.maxY))
+            }
+        }
+        drawRow()
     }
 
     /// The narrowest a player's building is drawn, in points, with its
