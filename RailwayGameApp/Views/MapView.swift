@@ -181,6 +181,20 @@ struct MapView: View {
                             case .cancelled: session.cancelNetworkDrag()
                             }
                         }
+                    }, holdsAt: { location in
+                        // Decision 119: holding a station, while only
+                        // looking at the map, opens its panel.
+                        guard session.tool == .select, screen.panel != .lines else { return false }
+                        let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                        return session.world.station(near: projection.planPoint(at: location), within: reach) != nil
+                    }, onHold: { location in
+                        let reach = projection.worldDistance(NetworkBuilding.touchRadius)
+                        if session.holdMap(at: projection.planPoint(at: location), reach: reach) != nil {
+                            cellTooltip = nil
+                            cityTooltip = nil
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            screen.panel = .station
+                        }
                     }) { location in
                         let point = projection.planPoint(at: location)
                         let reach = projection.worldDistance(NetworkBuilding.touchRadius)
@@ -290,6 +304,10 @@ struct MapView: View {
                 // Decision 109: what needs the player, over its stations.
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: insets)
+                }
+                // Decision 119: the station selected, looked at.
+                .overlay(alignment: .topLeading) {
+                    MapStationTagView(session: session, camera: projection, viewport: viewport, insets: insets)
                 }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
@@ -1000,6 +1018,11 @@ private struct MapGestures: UIViewRepresentable {
     /// the map that way, and where it began moves with the map.
     let paintsFrom: (ScreenPoint) -> Bool
     let onPaint: (ScreenPoint, ScreenPoint, MapPaintPhase) -> Void
+    /// Whether a finger held still at a point picks something there
+    /// (decision 119), and what holding it does. Where it picks nothing,
+    /// the touch stays a tap however long it is held.
+    let holdsAt: (ScreenPoint) -> Bool
+    let onHold: (ScreenPoint) -> Void
     let onTap: (ScreenPoint) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -1013,14 +1036,21 @@ private struct MapGestures: UIViewRepresentable {
         // as they scrolled the ScrollView it replaced.
         pan.allowedScrollTypesMask = .all
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
+        let hold = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.hold(_:)))
+        hold.minimumPressDuration = 0.45
         tap.delegate = context.coordinator
         pan.delegate = context.coordinator
         pinch.delegate = context.coordinator
+        hold.delegate = context.coordinator
         tap.require(toFail: pan)
         tap.require(toFail: pinch)
+        // A hold that picks something is not also a tap; one that picks
+        // nothing fails as it would begin, and the touch is a tap.
+        tap.require(toFail: hold)
         view.addGestureRecognizer(tap)
         view.addGestureRecognizer(pan)
         view.addGestureRecognizer(pinch)
+        view.addGestureRecognizer(hold)
         context.coordinator.panRecognizer = pan
         return view
     }
@@ -1092,6 +1122,18 @@ private struct MapGestures: UIViewRepresentable {
                 glideStopper = nil
             }
             return true
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard gestureRecognizer is UILongPressGestureRecognizer else { return true }
+            let point = gestureRecognizer.location(in: gestureRecognizer.view)
+            return parent.holdsAt(ScreenPoint(x: point.x, y: point.y))
+        }
+
+        @objc func hold(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began else { return }
+            let point = gesture.location(in: gesture.view)
+            parent.onHold(ScreenPoint(x: point.x, y: point.y))
         }
 
         @objc func tap(_ gesture: UITapGestureRecognizer) {
