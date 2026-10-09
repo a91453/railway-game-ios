@@ -25,6 +25,9 @@ struct OSMMapBackground: UIViewRepresentable {
     let railways: RealRailways?
     let trackStyle: RealRailways.TrackStyle
     let language: DisplayLanguage
+    /// The game's stations (decision 123), so the map's place names make
+    /// way for the names the game draws under them.
+    let stations: [StationMark]
     /// The screen's safe area (decision 120): the map reaches the screen's
     /// edges, and the credit and attribution button keep inside this.
     let safeArea: EdgeInsets
@@ -51,9 +54,26 @@ struct OSMMapBackground: UIViewRepresentable {
             look: look,
             credits: (DataSourceCredits.openStreetMapBaseMap(in: language), DataSourceCredits.railwaysOnMap(in: language))
         )
+        map.stations = stations
         map.screenSafeArea = safeArea
         map.onAttributionFrames = onAttributionFrames
         map.follow(realWorld, camera: camera)
+    }
+
+    /// A station of the game, where the map has it, and the name the game
+    /// draws there.
+    struct StationMark: Equatable {
+        let name: String
+        let latitude: Double
+        let longitude: Double
+    }
+
+    /// The marks of `world`'s stations in `frame`.
+    static func stationMarks(of world: GameWorld, in frame: RealWorldFrame) -> [StationMark] {
+        world.stations.map { station in
+            let place = frame.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+            return StationMark(name: station.name, latitude: place.latitude, longitude: place.longitude)
+        }
     }
 }
 
@@ -76,6 +96,13 @@ final class FollowingMapLibreView: MLNMapView {
     /// The railways' shape sources, kept for the next drawing: a source is
     /// given a new shape rather than removed.
     private var railwaySources: Set<String> = []
+    /// The game's stations, and those the loaded style makes way for.
+    var stations: [OSMMapBackground.StationMark] = [] {
+        didSet {
+            if stations != oldValue { decorate() }
+        }
+    }
+    private var clearedFor: [OSMMapBackground.StationMark]?
     private var creditTexts = (map: "", railways: "")
     /// MapLibre's delegate, which the map view holds weakly.
     private var observer: StyleObserver?
@@ -218,6 +245,7 @@ final class FollowingMapLibreView: MLNMapView {
         styleLoaded = true
         labelled = nil
         drawn = nil
+        clearedFor = nil
         railwayLayers = []
         railwaySources = []
         decorate()
@@ -234,6 +262,55 @@ final class FollowingMapLibreView: MLNMapView {
             drawRailways(in: style)
             setNeedsLayout()
         }
+        if clearedFor != stations {
+            clearedFor = stations
+            makeWay(for: stations, in: style)
+        }
+    }
+
+    // MARK: - Room for the game's station names
+
+    private static let stationRoom = "game.stations.room"
+
+    /// The game draws each station's name on a plate under it, over this
+    /// map; the map's own place names did not know, and a village named as
+    /// its station printed its name a second time under the game's
+    /// (Sijiaoting, in the owner's screenshots). An invisible label for each
+    /// station, as long as its name and above every other label layer, is
+    /// placed first and keeps the map's labels out of where the game's name
+    /// goes. MapLibre places the symbols of higher layers first; this one
+    /// is drawn at no opacity, may overlap anything, and others may not
+    /// overlap it.
+    private func makeWay(for stations: [OSMMapBackground.StationMark], in style: MLNStyle) {
+        let points = stations.map { station in
+            let point = MLNPointFeature()
+            point.coordinate = CLLocationCoordinate2D(latitude: station.latitude, longitude: station.longitude)
+            point.attributes = ["name": station.name]
+            return point
+        }
+        let shape = MLNShapeCollectionFeature(shapes: points)
+        if let source = style.source(withIdentifier: Self.stationRoom) as? MLNShapeSource {
+            source.shape = shape
+            return
+        }
+        let source = MLNShapeSource(identifier: Self.stationRoom, shape: shape, options: nil)
+        style.addSource(source)
+        let layer = MLNSymbolStyleLayer(identifier: Self.stationRoom, source: source)
+        layer.text = NSExpression(forKeyPath: "name")
+        // The style's own font, whose glyphs its server has.
+        let labels = style.layers.compactMap { $0 as? MLNSymbolStyleLayer }
+        if let font = labels.first(where: { $0.textFontNames != nil })?.textFontNames {
+            layer.textFontNames = font
+        }
+        layer.textFontSize = NSExpression(forConstantValue: 13)
+        layer.textAnchor = NSExpression(forConstantValue: "top")
+        // From just above the station's mark to under its name.
+        layer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -0.6)))
+        layer.textPadding = NSExpression(forConstantValue: 8)
+        layer.textOpacity = NSExpression(forConstantValue: 0)
+        layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+        layer.textIgnoresPlacement = NSExpression(forConstantValue: false)
+        style.addLayer(layer)
     }
 
     // MARK: - Labels

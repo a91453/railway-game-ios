@@ -416,6 +416,7 @@ struct MapView: View {
                                 railways: session.railways,
                                 trackStyle: trackStyle,
                                 language: session.language,
+                                stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 }
                             )
