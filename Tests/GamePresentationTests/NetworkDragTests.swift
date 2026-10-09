@@ -41,6 +41,9 @@ final class NetworkDragTests: XCTestCase {
         session.dragNetwork(from: near, to: Self.b, reach: Self.reach)
         session.endNetworkDrag(from: near, to: Self.b, reach: Self.reach)
         XCTAssertEqual(session.networkEnd, .point(Self.b), "the end follows the finger")
+        // Decision 107: where the map puts its flags and build button.
+        XCTAssertEqual(session.networkStartPlanPoint, Self.a)
+        XCTAssertEqual(session.networkEndPlanPoint, Self.b)
         XCTAssertEqual(session.world, start, "nothing built or spent")
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertNotNil(preview.cost, "the preview says what it costs")
@@ -63,6 +66,7 @@ final class NetworkDragTests: XCTestCase {
         session.dragNetwork(from: Self.b, to: Self.c, reach: Self.reach)
         session.endNetworkDrag(from: Self.b, to: Self.c, reach: Self.reach)
         XCTAssertEqual(session.networkStart, .node(built.to))
+        XCTAssertEqual(session.networkStartPlanPoint, Self.b, "a node stands where it was built")
         XCTAssertEqual(session.networkEnd, .point(Self.c))
         XCTAssertNotNil(session.networkPreview)
 
@@ -95,6 +99,7 @@ final class NetworkDragTests: XCTestCase {
         session.endNetworkDrag(from: Self.a, to: PlanPoint(x: Self.a.x + 10, y: Self.a.y), reach: Self.reach)
         XCTAssertNotNil(session.networkStart)
         XCTAssertNil(session.networkEnd)
+        XCTAssertNil(session.networkEndPlanPoint)
         XCTAssertNil(session.networkPreview)
     }
 }

@@ -268,6 +268,11 @@ struct MapView: View {
                     // Above the dock (decision 106).
                     .padding(.bottom, insets.bottom)
                 }
+                // Decision 107: flags at the ends of the track previewed,
+                // and beside it, or the building shown, cancel and build.
+                .overlay(alignment: .topLeading) {
+                    MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: insets)
+                }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
                 // And after the other overlays, so the legend and the zoom
