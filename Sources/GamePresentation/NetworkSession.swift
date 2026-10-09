@@ -204,19 +204,25 @@ extension GameSession {
         }
         let cost: Money?
         let problem: String?
+        var longSection: TrackLongSection?
         do throws(GameError) {
-            _ = try plan.build(in: &draft, structure: networkStructure, heights: heights)
+            let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
             cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
             problem = nil
+            longSection = draft.longSection(of: built.edge)
         } catch {
             cost = nil
             problem = error.playerMessage(in: language)
         }
+        let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
         return NetworkPreview(
             curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
             length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
             joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem,
-            cleared: problem == nil ? world.placedBuildings(clearedIn: draft) : []
+            cleared: cleared,
+            // Decision 124, H3: what it costs, part by part.
+            costParts: longSection.map { NetworkCostParts(track: $0.cost, demolition: world.clearingCost(of: cleared)) },
+            longSection: longSection
         )
     }
 

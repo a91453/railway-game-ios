@@ -115,6 +115,18 @@ public struct HeightGrid: Sendable {
             return Double(heights[column])
         }
 
+        /// Forgets the rows read north of `row`: a caller going south
+        /// keeps only the rows it may still need.
+        mutating func forgetRows(above row: Int) {
+            rows = rows.filter { $0.key >= row }
+        }
+
+        /// The grid row whose middle lies at or north of `latitude`: the
+        /// first row ``height(latitude:longitude:)`` reads there.
+        func row(at latitude: Double) -> Int {
+            Int(((grid.north - latitude) / grid.cellDegrees - 0.5).rounded(.down))
+        }
+
         /// The height at `latitude`, `longitude`, in metres: the bilinear
         /// blend of the four cells whose middles surround it.
         mutating func height(latitude: Double, longitude: Double) -> Double {

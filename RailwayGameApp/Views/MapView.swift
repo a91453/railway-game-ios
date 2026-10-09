@@ -84,6 +84,12 @@ struct MapView: View {
     @State private var skylineVersion = 0
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
+    /// Decision 124, H3: the height and steep slope layer's map
+    /// (``TerrainMap``), made only while it is shown, and a number that
+    /// changes with it; and the tooltip of the last tapped cell.
+    @State private var terrainMap: TerrainMap?
+    @State private var terrainMapVersion = 0
+    @State private var terrainTooltip: (lines: [String], at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
@@ -200,6 +206,7 @@ struct MapView: View {
                         camera = moved
                         cellTooltip = nil
                         cityTooltip = nil
+                        terrainTooltip = nil
                         session.mapDidMove()
                     }, paintsFrom: { location in
                         // Decision 98: zoning, one finger drags out the
@@ -251,6 +258,7 @@ struct MapView: View {
                         if session.holdMap(at: projection.planPoint(at: location), reach: reach) != nil {
                             cellTooltip = nil
                             cityTooltip = nil
+                            terrainTooltip = nil
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             screen.panel = .station
                         }
@@ -317,11 +325,13 @@ struct MapView: View {
                                 hour: Bindable(screen).popTravelHour,
                                 isPlaying: screen.isPlayingPopTravel,
                                 onTogglePlay: togglePopTravelPlay,
-                                nothingZoned: session.world.zones.isEmpty
+                                nothingZoned: session.world.zones.isEmpty,
+                                isFlat: terrainMap?.isFlat ?? false
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
                                 cityTooltip = nil
+                                terrainTooltip = nil
                                 popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
@@ -404,6 +414,11 @@ struct MapView: View {
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
                             .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
+                            .allowsHitTesting(false)
+                    }
+                    if let terrainTooltip {
+                        TerrainCellTooltip(lines: terrainTooltip.lines, language: session.language)
+                            .offset(x: max(clear.leading + 8, min(terrainTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(terrainTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
                             .allowsHitTesting(false)
                     }
                 }
@@ -543,6 +558,21 @@ struct MapView: View {
                 cityMapVersion &+= 1
             }
         }
+        .task(id: TerrainMapKey(world: session.world, hasHeights: session.heights != nil, isShown: mapLayers.popTravelMode == .terrain)) {
+            // Decision 124, H3: the heights at the cells' corners, sampled
+            // once for the map, off the main thread.
+            guard mapLayers.popTravelMode == .terrain else {
+                terrainMap = nil
+                terrainMapVersion &+= 1
+                return
+            }
+            let world = session.world, heights = session.heights
+            let map = await Task.detached(priority: .userInitiated) { TerrainMap(world: world, heights: heights) }.value
+            if !Task.isCancelled {
+                terrainMap = map
+                terrainMapVersion &+= 1
+            }
+        }
         .task(id: SkylineKey(world: session.world)) {
             // Decision 126: what the plain map shows of the city, worked out
             // off the main thread when the land or its buildings change
@@ -562,6 +592,7 @@ struct MapView: View {
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
             cityTooltip = nil
+            terrainTooltip = nil
             if mode?.usesHour != true { stopPopTravelPlay() }
         }
         .onChange(of: session.world.network, initial: true) { _, network in
@@ -597,6 +628,9 @@ struct MapView: View {
         case .landUse, .landValue, .coverage, .zoning:
             guard let cityMap else { return nil }
             return PopTravelLayer(content: .city(cityMap, mode), key: .city(version: cityMapVersion, mode: mode), opacity: alpha)
+        case .terrain:
+            guard let terrainMap, !terrainMap.isFlat else { return nil }
+            return PopTravelLayer(content: .terrain(terrainMap), key: .terrain(version: terrainMapVersion), opacity: alpha)
         }
     }
 
@@ -641,6 +675,16 @@ struct MapView: View {
     /// layer is on (the reference's `pop-grid-tooltip`); a tap where no one
     /// lives hides it. The tap still selects as it always does.
     private func showCellTooltip(at location: ScreenPoint, projection: PlanCamera) {
+        // Decision 124, H3: the height layer's tooltip says the cell's
+        // height and whether it is steep.
+        if mapLayers.popTravelMode == .terrain {
+            cellTooltip = nil
+            cityTooltip = nil
+            let place = projection.worldPosition(at: location)
+            terrainTooltip = terrainMap?.cellLines(atX: place.x, y: place.y, in: session.language).map { ($0, location) }
+            return
+        }
+        terrainTooltip = nil
         // Phase 6d: a city layer's tooltip says the cell's use, people and
         // land value.
         if mapLayers.popTravelMode?.isCityLayer == true {
@@ -766,7 +810,7 @@ struct MapView: View {
         let moved = projection.centered(atX: center.x, y: center.y)
         // The tooltip is pinned to a screen point: once the map moves under
         // it, it would describe another cell, as after a pan.
-        if moved != projection { cellTooltip = nil; cityTooltip = nil }
+        if moved != projection { cellTooltip = nil; cityTooltip = nil; terrainTooltip = nil }
         camera = moved
     }
 }
@@ -940,6 +984,8 @@ struct PopTravelLayer: Equatable {
         case travel([TravelDemandMap.Tile])
         /// A city layer (Phase 6d), drawn from the city map in view.
         case city(CityMap, PopTravelMode)
+        /// The height and steep slope layer (decision 124, H3).
+        case terrain(TerrainMap)
     }
 
     enum Key: Equatable {
@@ -947,6 +993,7 @@ struct PopTravelLayer: Equatable {
         case travel(version: Int)
         case land(version: Int)
         case city(version: Int, mode: PopTravelMode)
+        case terrain(version: Int)
     }
 
     let content: Content
@@ -1056,6 +1103,53 @@ private struct SkylineKey: Equatable {
         let drawn = world.geoAnchor == nil
         land = drawn ? world.land : nil
         buildings = drawn ? world.buildings : nil
+    }
+}
+
+/// What the height and steep slope layer is worked out from (decision
+/// 124, H3): the map, its water and steep slopes, and, without the heights
+/// file, the ground the world has read; nothing while it is not shown.
+private struct TerrainMapKey: Equatable {
+    let bounds: WorldBounds?
+    let anchor: GeoAnchor?
+    let terrain: Terrain?
+    let ground: Ground?
+    let hasHeights: Bool
+    let isShown: Bool
+
+    init(world: GameWorld, hasHeights: Bool, isShown: Bool) {
+        self.isShown = isShown
+        self.hasHeights = hasHeights
+        bounds = isShown ? world.bounds : nil
+        anchor = isShown ? world.geoAnchor : nil
+        terrain = isShown ? world.terrain : nil
+        // With the file a real-world map's heights are the file's; the
+        // ground the world reads as track is built changes nothing then.
+        ground = isShown && !(hasHeights && world.geoAnchor != nil) ? world.ground : nil
+    }
+}
+
+/// A tapped cell on the height and steep slope layer (decision 124, H3):
+/// its height and whether it is steep.
+private struct TerrainCellTooltip: View {
+    let lines: [String]
+    let language: DisplayLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: language.text("Ground", "地面"))
+                .font(.caption.weight(.bold))
+            ForEach(lines, id: \.self) { line in
+                Text(verbatim: line)
+                    .font(.caption2.monospacedDigit())
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("map.terrainTooltip")
     }
 }
 

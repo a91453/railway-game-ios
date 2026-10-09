@@ -28,6 +28,9 @@ struct PopulationLegendView: View {
     /// Whether the player has zoned nothing yet: the zoning layer then shows
     /// nothing, and says so (decision 123).
     var nothingZoned = false
+    /// Whether the map has no ground to show (decision 124, H3): the height
+    /// layer then shows nothing, and says so.
+    var isFlat = false
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -57,7 +60,7 @@ struct PopulationLegendView: View {
 
             scale
 
-            if mode != .coverage, mode != .zoning {
+            if mode != .coverage, mode != .zoning, mode != .terrain {
                 HStack {
                     Text(verbatim: lowText)
                     Spacer()
@@ -115,7 +118,7 @@ struct PopulationLegendView: View {
         case .population: language.text("Population grid", "人口網格")
         case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
-        case .landUse, .landValue, .coverage, .zoning: mode.title(in: language)
+        case .landUse, .landValue, .coverage, .zoning, .terrain: mode.title(in: language)
         }
     }
 
@@ -126,7 +129,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Decrease", "減少")
         case .landUse: language.text("Low-rise (D1)", "低層（D1）")
         case .landValue: "$ 0"
-        case .coverage, .zoning: ""
+        case .coverage, .zoning, .terrain: ""
         }
     }
 
@@ -137,7 +140,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Increase", "增加")
         case .landUse: language.text("Towers (D4)", "超高層（D4）")
         case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
-        case .coverage, .zoning: ""
+        case .coverage, .zoning, .terrain: ""
         }
     }
 
@@ -256,6 +259,41 @@ struct PopulationLegendView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             }
+        case .terrain:
+            // Decision 124, H3: the tints by height, and the hatching.
+            VStack(alignment: .leading, spacing: 3) {
+                LinearGradient(
+                    stops: TerrainMap.tints.map { Gradient.Stop(color: Color($0.color), location: $0.metres / (TerrainMap.tints.last?.metres ?? 1)) },
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(height: 12)
+                .clipShape(Capsule())
+                HStack {
+                    Text(verbatim: language.text("0 m", "0 公尺"))
+                    Spacer()
+                    Text(verbatim: language.text("3,500 m", "3,500 公尺"))
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.textSecondary)
+                HStack(spacing: 6) {
+                    SteepSwatch()
+                        .frame(width: 14, height: 10)
+                    Text(verbatim: language.text("Steep slope, over 30%", "陡坡（超過 30%）"))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                if isFlat {
+                    Text(verbatim: language.text(
+                        "This map is flat: only real-world maps have hills.",
+                        "這張地圖是平地：實景地圖才有起伏。"
+                    ))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .accessibilityIdentifier("map.terrainLegend")
         }
     }
 
@@ -283,5 +321,21 @@ struct PopulationLegendView: View {
             .accessibilityLabel(Text(verbatim: language.text("Play or pause", "播放或暫停")))
             .accessibilityIdentifier("map.popTravel.play")
         }
+    }
+}
+
+/// The steep slopes' hatching in the height layer's key (decision 124,
+/// H3), as the map draws it.
+private struct SteepSwatch: View {
+    var body: some View {
+        Canvas { context, size in
+            var lines = Path()
+            for k in stride(from: 0.0, through: size.width + size.height, by: 4) {
+                lines.move(to: CGPoint(x: max(0, k - size.height), y: min(size.height, k)))
+                lines.addLine(to: CGPoint(x: min(size.width, k), y: max(0, k - size.width)))
+            }
+            context.stroke(lines, with: .color(Color(TerrainMap.steepColor)), lineWidth: 0.75)
+        }
+        .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Color(TerrainMap.steepColor).opacity(0.5), lineWidth: 0.5))
     }
 }

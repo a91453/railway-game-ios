@@ -1212,6 +1212,25 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）「過水要用橋」；Simutrans（Artistic 1.0）「高架不能在水上」；GraphHopper（Apache-2.0）`EdgeElevationInterpolator`：橋與隧道內部不跟 DEM 起伏，和這裡「邊的高度由兩端與縱斷面決定，只拿來和地面比」一致。
 
+## 畫面（決策 124 的 H3）
+
+第三步（H3）：縱斷面、費用分項、邊坡與高度圖層。參考 `05d7000`，六個來源都重查了這四樣。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js:399–402`（`raster-dem`、terrarium）與 `landscape-hillshade` 圖層（`hillshade-illumination-direction` 315、`hillshade-exaggeration` 0.42、shadow `#5c785f`、highlight `#fff4d6`、accent `#90a580`） | `TerrainMap.shade(_:eastward:southward:)`、`TerrainMap.shadow`／`highlight` | adapted：同樣的光向、強度與兩種顏色，算在 64 m 格的區塊上（App 不用 MapLibre 的 DEM 圖層）；accent 沒有用（陡坡另畫斜線） |
+| `rail-3d/environment/sun.mjs:205–211`（暈渲隨日照變化） | — | 不用：圖層不跟著時間變 |
+| `MapBuilder/reference_snapshot/_next/static/chunks/352-cc4c9866d08d4d04.js`（`topographic`：Mapbox `contour` 等高線，計曲線金色、其他綠色） | — | 只取想法：等高線要 Mapbox 的向量圖磚，不用；改成依高度著色 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js:18`（`FILL_SLOPE`、`BED_TOP_W`、`BED_BOTTOM_MAX`）、`:35` 路基色 `#c6c0b1` | `TrackSlope`（邊坡寬 = 高差 × 1.5，路基寬 10 m，和 H2 的土方斷面相同）、`Palette.embankment` | adapted：參考只有 3D 的填方，斷面用 H2 的；路基色取來當路堤的顏色 |
+| `Simulator/reference_snapshot/_next/static/chunks/5758-131911c5f04a436f.js` 模組 41611（`shallowBores`：隧道上方的地面低於軌面加隧道高 45 mm 就提示「覆土不足」） | — | 留給之後（設計說明第 10 節）：遊戲的自動隧道都在地面下 11 m 以上，只有強制的隧道會淺 |
+| `rail-3d/physical/level-profiles.json`（真實路線的 `offsetM`、`coverM`） | — | 資料，不是圖；留給全島步驟 C |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js:129` `showMetroCostPreview(amount, label)`（`#metro-cost-preview-pill`：一個總額，沒有人呼叫） | `CostPartsView`、`NetworkCostParts.lines(in:)` | 只取「預覽旁顯示費用」，分項是原生 |
+| （參考沒有） | `GameWorld.longSection(of:)`、`TrackLongSection`、`TrackGroundSample`、`TrackCostParts`、`LongSectionChart`／`LongSectionView`、路堤與路塹的平面畫法、`TerrainMap` 依高度的配色、`PopTravelMode.terrain` | gap → 原生 |
+
+比例：1 世界單位 = 1/64 m；縱斷面的點在兩端與每 1,024 單位（16 m）的中點；圖表上下各留一成，至少 1,024 單位（16 m）。邊坡寬 = |Δ| × 1.5，路基半寬 320 單位（5 m），每 256 單位（4 m）一條短線。圖層的角點每 4,096 單位（64 m），最多 1,025 個寬。
+
+外部專案（只取想法，沒有程式碼）：GDAL `gdaldem hillshade`（MIT）的暈渲公式（法向量與光向的內積）；地形圖以短線（hachure）表示路堤與路塹的慣例。
+
 ## 地圖圖示（決策 121）
 
 查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。
