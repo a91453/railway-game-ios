@@ -285,7 +285,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.networkDraftText(), "From a new node. Tap where it ends, or drag there from the start.")
             XCTAssertNil(session.networkPreview)
             session.tapNetwork(at: Self.b, reach: Self.reach)
-            XCTAssertEqual(session.networkDraftText(), "a new node → a new node")
+            XCTAssertEqual(session.networkDraftText(), "A new stretch of track")
 
             let preview = session.networkPreview
             XCTAssertEqual(preview?.curve, .straight)
