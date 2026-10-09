@@ -433,7 +433,7 @@ public struct RealWorldData: Sendable {
     }
 
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
-    /// `taiwan_water.json`, `taiwan_heights.bin` and the railways' files
+    /// `taiwan_water.json`, `taiwan_heights.dat` and the railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
     /// read (their rows decoded only when asked): call it off the
@@ -451,7 +451,7 @@ public struct RealWorldData: Sendable {
         let population = grid("taiwan_population", PopulationGrid.init(data:))
         let places = grid("taiwan_places", PlaceGrid.init(data:))
         let water = grid("taiwan_water", WaterGrid.init(data:))
-        let heights = grid("taiwan_heights", ext: "bin", HeightGrid.init(data:))
+        let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let railways = RealRailways.load(file: file)
         return RealWorldData(
             population: population, places: places, water: water, heights: heights, railways: railways.railways, issues: issues + railways.issues

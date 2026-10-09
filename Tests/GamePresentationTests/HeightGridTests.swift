@@ -10,7 +10,7 @@ import XCTest
 final class HeightGridTests: XCTestCase {
     private static let grid: HeightGrid = {
         do {
-            return try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "bin"))
+            return try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
         } catch {
             preconditionFailure("\(error)")
         }

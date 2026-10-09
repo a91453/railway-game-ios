@@ -2,14 +2,14 @@
 """Mark Taiwan's steep slopes on the water file's grid, and add them to the
 app's `Resources/RealWorld/taiwan_water.json` as its `steep` (ARCHITECTURE
 decision 115); with a fourth argument, also write the ground's height on
-the same grid, the app's `Resources/RealWorld/taiwan_heights.bin`
+the same grid, the app's `Resources/RealWorld/taiwan_heights.dat`
 (decision 124).
 
     python3 tools/real-world-population/build_slope_grid.py \\
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
         copernicus-dem/ \\
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
-        RailwayGameApp/Resources/RealWorld/taiwan_heights.bin
+        RailwayGameApp/Resources/RealWorld/taiwan_heights.dat
 
 The water file (`build_water_grid.py`) gives the grid: 1.875″ cells, some
 58 × 53 m; its other contents are kept as they are. The folder holds the

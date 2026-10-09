@@ -72,7 +72,7 @@
 
 - 3.75″ 的平均誤差 4.8 m、p95 達 15 m，和路堤／高架（約 8 m）、路塹／隧道（約 11 m）的分界同一個量級，同一條線在不同的格網上會選出不同的結構物。所以建議 1.875″（第 9 節第 4 題）。
 - App 的資源現在共 11 MB，加上 1.875″ 約多 8–11 MB。App Store 的下載本身會再壓縮。日後若太大，可以改成 On-Demand Resources，只在開實景遊戲時下載。
-- **檔案**：`taiwan_heights.bin`，表頭照水域檔（north、west、cellDegrees、rows、columns）；內容是逐列差分的 Int16，以 zlib 壓縮（Apple 的 Compression 框架與 Python 都有，不用新的相依）。
+- **檔案**：`taiwan_heights.dat`，表頭照水域檔（north、west、cellDegrees、rows、columns）；內容是逐列差分的 Int16，以 zlib 壓縮（Apple 的 Compression 框架與 Python 都有，不用新的相依）。
 - **產生**：擴充 `build_slope_grid.py`，同一次執行寫出坡度與高度。工具說明補在 `tools/real-world-population/README.md`。
 - **授權**：`DataSourceCredits` 已經有 Copernicus 的 "Produced using Copernicus WorldDEM-30 …" 聲明。授權另要求附上「Copernicus 計畫的負責機構不為使用負責」那一句，實作時一起補上。
 - 內政部的 20 m DTM 在這個環境回 403，也沒有金門、馬祖（決策 115 第 2 點），所以不用。
@@ -179,8 +179,8 @@
 
 | PR | 內容 | 存檔 | golden |
 | --- | --- | --- | --- |
-| H1 地面高度層 | `taiwan_heights.bin` 與工具；GameCore 的區塊、雙線性內插、`setGround`、存讀檔；新實景遊戲標記「有地面」、App 沿新軌道讀入區塊；地圖顯示點的地面高度。規則還不讀它 | +1 | +1（`ground-height.json`：內插的手算值、區塊順序、重複與越界的拒絕） |
-| H2 規則與造價 | 5、6 節：節點範圍相對地面、每 16 m 的區段、`automatic`、水的規則、土方與墩高費、車站不在水上；renderer 快照多區段；平衡報告量過再定數字 | +1（新的結構物 `automatic`） | +1（`terrain-track.json`：每個類別的分界、併段、水上的拒絕、費用逐項手算）；既有的預期值不變 |
+| H1 地面高度層 ✅（決策 124） | `taiwan_heights.dat` 與工具；GameCore 的區塊、雙線性內插、`setGround`、存讀檔；路網卡片顯示點的地面海拔。規則還不讀它。**實作時的改變**：一塊存 17 × 17 個角點（自己就能內插）；檔案改成純 Swift 可解的逐列 varint（GameCore 與 Linux 沒有 zlib，大小差不多）；新實景遊戲的「讀入地面」移到 H2，和量地面的規則一起打開（現在的軌道蓋在 0 m，先讀入地面會讓 H2 時的舊軌道不合法）。見決策 124 | +1 | +1（`ground-height.json`：內插的手算值、區塊順序、重複與越界的拒絕） |
+| H2 規則與造價 | 新實景遊戲讀入地面、App 沿新軌道讀入區塊（從 H1 移來）；5、6 節：節點範圍相對地面、每 16 m 的區段、`automatic`、水的規則、土方與墩高費、車站不在水上；renderer 快照多區段；平衡報告量過再定數字 | +1（新的結構物 `automatic`） | +1（`terrain-track.json`：每個類別的分界、併段、水上的拒絕、費用逐項手算）；既有的預期值不變 |
 | H3 畫面 | 縱斷面預覽、費用分項、區段的畫法、高度與陡坡圖層、結構物選單的「自動」 | 不動 | 不動 |
 
 之後（依 ROADMAP）：玩家挖湖與填海造陸（改的是同一層的角點）、墓地的遷葬費、空白地圖由種子產生的地形。全島步驟 C 若要預先鋪好高鐵，可以用參考的 `level-profiles.json` 的橋、隧道區段（第 10 節）。
@@ -240,6 +240,6 @@
 | [Simutrans](https://github.com/simutrans/simutrans) | Artistic 1.0（不在 CLAUDE.md 的寬鬆授權清單） | 高架不能在水上，只有橋可以 | 只看想法：5.3 節「高架不在水上」 |
 | [GraphHopper](https://github.com/graphhopper/graphhopper) `reader/dem` | Apache-2.0 | `EdgeElevationInterpolator`：橋與隧道內部不讀 DEM，兩端之間線性；`BridgeTunnelTowerCorrection`：修正 DEM 在橋頭偏低、隧道口偏高 | 只看想法：和現有縱斷面「節點之間由公式決定、不跟地面起伏」一致；修正法留給匯入真實路線時 |
 | [A/B Street](https://github.com/a-b-street/abstreet) `convert_osm/src/elevation.rs` | Apache-2.0 | 只在節點取高度、邊的坡度由兩端推導 | 只看想法 |
-| [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js) `dem_data.ts` | BSD-3-Clause | terrarium／mapbox 兩種高度編碼 | 這一步不用：App 不以 `raster-dem` 顯示，H3 的圖層直接讀 `taiwan_heights.bin` |
+| [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js) `dem_data.ts` | BSD-3-Clause | terrarium／mapbox 兩種高度編碼 | 這一步不用：App 不以 `raster-dem` 顯示，H3 的圖層直接讀 `taiwan_heights.dat` |
 
 造價比例的出處：[JICA 越南高鐵研究](https://openjicareport.jica.go.jp/pdf/12345716_02.pdf)（路堤約 9 m 改高架）、[Caltrain 立體化成本](https://caltrain.com/media/1260/download)（開挖約 3.5 倍、明挖覆蓋約 5 倍、隧道約 7 倍，表格欄位不清楚，僅供參考）、[關鍵評論網](https://www.thenewslens.com/article/51665)與[聯合報](https://udn.com/news/story/7327/9161225)（高架每公里約 30 億、地下約 60 億）。台灣的每立方公尺土方單價找不到可靠來源，所以 `costs.earthwork` 是遊戲自訂的數字。

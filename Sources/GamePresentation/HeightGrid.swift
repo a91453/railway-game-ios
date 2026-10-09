@@ -5,7 +5,7 @@ import GameCore
 // the Copernicus DEM (GLO-30; GLO-90 where only that is released) on the
 // water file's grid (1.875″, some 58 × 53 m), the 3 × 3 median heights the
 // steep slopes are found from, in whole metres, water at 0. Bundled as
-// `Resources/RealWorld/taiwan_heights.bin` by
+// `Resources/RealWorld/taiwan_heights.dat` by
 // `tools/real-world-population/build_slope_grid.py`, whose docstring gives
 // the format: each row on its own, as varint differences with runs of
 // zeros, so a block's corners read only the rows they need of the

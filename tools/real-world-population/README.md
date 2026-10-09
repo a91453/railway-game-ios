@@ -64,7 +64,7 @@
 
 ## 地面高度（決策 124）
 
-同一次執行給第四個參數，就把同樣的中位數高度（四捨五入到公尺）寫成 `taiwan_heights.bin`：和水域同一個 1.875″ 格網，水與沒有圖磚的地方是 0（海面）。每一列各自以「和前一格的差」存成 varint，連續的 0 另外記長度，所以 App 只解它要的列（`HeightGrid`）；檔案格式寫在 `build_slope_grid.py` 的說明裡。
+同一次執行給第四個參數，就把同樣的中位數高度（四捨五入到公尺）寫成 `taiwan_heights.dat`：和水域同一個 1.875″ 格網，水與沒有圖磚的地方是 0（海面）。每一列各自以「和前一格的差」存成 varint，連續的 0 另外記長度，所以 App 只解它要的列（`HeightGrid`）；檔案格式寫在 `build_slope_grid.py` 的說明裡。
 
 - 2026-10-09 的資料：11,643,079 個乾格，−9 到 3,901 m，11,990,289 bytes（壓縮成 zip 約 8.4 MB，App Store 的下載會再壓縮）。阿里山車站 2,221 m（實際 2,216 m），合歡山武嶺 3,270 m（3,275 m），玉山 3,901 m（3,952 m，3 × 3 中位數把山頂削平）。
 - 已知的偏差：Copernicus 是地表模型（含建物），3 × 3 中位數去不完密集的市區，台北車站一帶讀成約 20 m（實際約 7 m）。只影響市中心的絕對高度；軌道與地面的高差（下一步的規則）用的是同一份資料，所以整片市區一起偏高時不受影響。
@@ -124,7 +124,7 @@ python3 tools/real-world-population/build_slope_grid.py \
   RailwayGameApp/Resources/RealWorld/taiwan_water.json \
   copernicus-dem/ \
   RailwayGameApp/Resources/RealWorld/taiwan_water.json \
-  RailwayGameApp/Resources/RealWorld/taiwan_heights.bin
+  RailwayGameApp/Resources/RealWorld/taiwan_heights.dat
 ```
 
 重新產生高度後要一起更新 `HeightGridTests` 的數字。
