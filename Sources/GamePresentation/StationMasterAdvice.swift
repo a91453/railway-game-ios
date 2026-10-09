@@ -90,8 +90,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .buildTrack:
             language.text(
-                "Welcome! Choose the track tool and lay some track to begin.",
-                "歡迎！先選軌道工具，鋪一段軌道吧。"
+                "Welcome! Tap Build, then Network, and lay some track to begin.",
+                "歡迎！點「建設」，再選「路網」，鋪一段軌道吧。"
             )
         case .buildStation:
             language.text(
