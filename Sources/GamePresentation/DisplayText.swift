@@ -412,6 +412,11 @@ extension GameError {
             language.text("The hillside is too steep to build or zone on.", "坡度太陡，不能蓋建物，也不能劃分區。")
         case .needsShore:
             language.text("A wharf or a marina goes on the shore, part over the water.", "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
+        case .invalidGround:
+            language.text(
+                "Each block of the ground's heights must lie in the world and be read once.",
+                "每個地面高度的區塊須在世界範圍內，而且只讀入一次。"
+            )
         case .invalidTerrain:
             language.text(
                 "Each cell of water must lie in the world, appear once and have no land on it.",

@@ -207,4 +207,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// A building would stand on a steep slope, or every cell to zone is
     /// water or steep and the first is steep (decision 115): that cell.
     case onSteepSlope(row: Int, column: Int)
+    /// The ground's heights (decision 124) are for no block, or for a block
+    /// outside the world, listed twice or already read.
+    case invalidGround
 }
