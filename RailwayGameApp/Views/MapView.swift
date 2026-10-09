@@ -793,10 +793,12 @@ private struct TrafficLegend: View {
             let deadlocked = traffic.waits.filter(\.isDeadlocked).count
             // Theme: kept for Phase 8. The counts are in the traffic
             // overlay's colours on the map.
+            // Each count says what it counts (decision 123): "●3" alone
+            // meant nothing to a player.
             HStack(spacing: 8) {
-                count(traffic.authorities.count, Palette.metroGreen)
-                count(traffic.waits.count - deadlocked, Palette.metroAmber)
-                count(deadlocked, Palette.metroRed)
+                count(traffic.authorities.count, Palette.metroGreen, language.text("cleared", "可行駛"))
+                count(traffic.waits.count - deadlocked, Palette.metroAmber, language.text("waiting", "等候"))
+                count(deadlocked, Palette.metroRed, language.text("deadlocked", "死結"))
             }
             .font(.caption2.monospacedDigit().weight(.semibold))
             .padding(.horizontal, 8)
@@ -811,11 +813,11 @@ private struct TrafficLegend: View {
     }
 
     @ViewBuilder
-    private func count(_ value: Int, _ color: Color) -> some View {
+    private func count(_ value: Int, _ color: Color, _ name: String) -> some View {
         if value > 0 {
             HStack(spacing: 3) {
                 Circle().fill(color).frame(width: 8, height: 8)
-                Text(verbatim: "\(value)")
+                Text(verbatim: "\(value) \(name)")
             }
         }
     }
