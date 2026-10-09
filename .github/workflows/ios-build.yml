@@ -236,35 +236,27 @@ jobs:
           fi
           echo "The Debug app carries the Debug-only marker."
 
-      - name: Select an available iPhone Simulator
+      # A new device rather than the preinstalled one, whose first boot
+      # migrates its data (see the boot step and the script).
+      - name: Create an iPhone Simulator
         run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
-          iphones = [device for runtime, group in devices.items()
-                     if ".iOS-" in runtime for device in group
-                     if device["isAvailable"] and device["name"].startswith("iPhone")]
-          if not iphones:
-              raise SystemExit("No available iPhone Simulator")
-          device = iphones[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"SIMULATOR_UDID={device['udid']}\n")
-          PY
+          python3 .github/scripts/create-simulator.py iPhone SIMULATOR_UDID
 
       # Booted only after the build: booting while the app built (#211) slowed
       # the build from 1.4 to 4.8 minutes on the runner's 3 cores and saved
       # only 0.6 of the boot's 3, so the job took longer.
       # Boot explicitly before XCTest installs its runner. A cold Simulator
       # otherwise leaves xcodebuild waiting without any test progress logs.
-      # A never-booted device's first boot migrates its data first: run
-      # 37121712618 spent 7m38s in "Waiting on Data Migration" (locationd)
-      # and was stopped at 8 minutes; others took up to 6m28s.
-      - name: Boot the selected iPhone Simulator
+      # A never-booted preinstalled device's first boot migrates its data
+      # first: run 37121712618 spent 7m38s in "Waiting on Data Migration"
+      # (locationd) and was stopped at 8 minutes; others took up to 6m28s
+      # (6m36s on #287's head). The step summary records each boot's time.
+      - name: Boot the iPhone Simulator
         timeout-minutes: 14
-        run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+        run: |
+          started="$(date +%s)"
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          echo "- **iPhone Simulator boot:** $(($(date +%s) - started)) s" | tee -a "$GITHUB_STEP_SUMMARY"
 
       # The first launch on a freshly booted device is the slow one: in run
       # 37112399702 xcodebuild did not start launching the app for 80 s and
@@ -437,29 +429,19 @@ jobs:
           xcodebuild -version
           echo "iOS Simulator SDK: $(xcrun --sdk iphonesimulator --show-sdk-version)"
 
-      - name: Select an available iPad Simulator
+      # A new device, as in the iPhone job.
+      - name: Create an iPad Simulator
         run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/ipad-simulators.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "ipad-simulators.json").read_text())["devices"]
-          ipads = [device for runtime, group in devices.items()
-                   if ".iOS-" in runtime for device in group
-                   if device["isAvailable"] and device["name"].startswith("iPad")]
-          if not ipads:
-              raise SystemExit("No available iPad Simulator")
-          device = ipads[0]
-          print(f"Selected {device['name']} ({device['udid']})")
-          with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"IPAD_SIMULATOR_UDID={device['udid']}\n")
-          PY
+          python3 .github/scripts/create-simulator.py iPad IPAD_SIMULATOR_UDID
 
-      - name: Boot the selected iPad Simulator
-        # A first boot's data migration can take most of 8 minutes (see the
-        # iPhone job).
+      - name: Boot the iPad Simulator
+        # A preinstalled device's first boot can take most of 8 minutes (see
+        # the iPhone job).
         timeout-minutes: 14
-        run: xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
+        run: |
+          started="$(date +%s)"
+          xcrun simctl bootstatus "$IPAD_SIMULATOR_UDID" -b
+          echo "- **iPad Simulator boot:** $(($(date +%s) - started)) s" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: iPad tutorial tests (bilingual and large text)
         id: ipad-tutorial
