@@ -58,6 +58,9 @@ struct LinesPanel: View {
                     }
                 }
             }
+            // The tutorial counts its first line's Start Service button only
+            // where the form shows it (decision 125).
+            .tutorialClip()
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
             // The pattern's stops are indices into the selected line's:
@@ -614,6 +617,8 @@ struct LinesPanel: View {
                 .buttonStyle(ThemeProminentButtonStyle())
                 .disabled(session.world.economy.balance < plan.cost)
                 .accessibilityIdentifier("line.staff.start")
+                // Decision 125: the tutorial's first line starts here.
+                .tutorialTarget(.staffLine)
             } else {
                 Text(verbatim: language.text(
                     "Build track joining the line's stations, with a platform at each, and its trains can run.",

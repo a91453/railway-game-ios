@@ -13,13 +13,14 @@ final class TutorialSessionTests: XCTestCase {
 
     private static let stepIDs = [
         "build.network", "build.track", "map.move", "build.firstStation", "build.secondStation", "line.create",
-        "train.place", "line.service", "station.ridership", "time.speed", "end",
+        "line.staff", "time.speed", "first.fare", "station.ridership", "end",
     ]
 
     /// Next waits for each step's goal, in the order a first line is built
-    /// and run: the network tool, track, moving the map, two stations, a line, a train
-    /// placed at the first stop, the line set to run it, a change of speed;
-    /// the last two steps need only reading, and Done ends the tutorial.
+    /// and run: the network tool, track, moving the map, two stations, a
+    /// line, its trains bought and set running in one step (decision 125),
+    /// a change of speed and its first fares; the last two steps need only
+    /// reading, and Done ends the tutorial.
     /// A new game and the demo map, which already has all of it, are both
     /// walked through: each goal asks for something new.
     func testNextWaitsForEachStepAndDoneEndsTheTutorial() async throws {
@@ -52,6 +53,16 @@ final class TutorialSessionTests: XCTestCase {
     /// that nothing short of the whole of it is enough.
     @MainActor
     private static func carryOut(_ index: Int, in session: GameSession) {
+        // A new game's line goes through its first town, the middle of the
+        // map, so its first fares come (decision 125); the demo's own lines
+        // earn them, and its middle is taken. Only the track and station
+        // steps use the place, all before the walk-through's line.
+        let origin = session.world.lines.isEmpty && !session.world.land.isEmpty
+            ? PlanPoint(x: session.world.bounds.width / 2 - 8 * Self.tile, y: session.world.bounds.height / 2 - 6 * Self.tile)
+            : PlanPoint(x: 0, y: 0)
+        func point(_ x: Int64, _ y: Int64) -> PlanPoint {
+            PlanPoint(x: origin.x + x, y: origin.y + y)
+        }
         let y = 6 * Self.tile
         switch index {
         case 0:
@@ -60,8 +71,8 @@ final class TutorialSessionTests: XCTestCase {
         case 1:
             // A stretch of track; the ends only preview it.
             Self.expect(session, step: 1, goal: .buildTrack, targets: [.map, .actionButton])
-            session.tapNetwork(at: PlanPoint(x: 2 * Self.tile, y: y), reach: Self.reach)
-            session.tapNetwork(at: PlanPoint(x: 7 * Self.tile, y: y), reach: Self.reach)
+            session.tapNetwork(at: point(2 * Self.tile, y), reach: Self.reach)
+            session.tapNetwork(at: point(7 * Self.tile, y), reach: Self.reach)
             XCTAssertFalse(session.isTutorialStepDone, "a preview builds nothing")
             session.buildNetworkTrack()
         case 2:
@@ -72,19 +83,19 @@ final class TutorialSessionTests: XCTestCase {
             // The first station: a platform on that track.
             Self.expect(session, step: 3, goal: .buildStation, targets: [.networkModes, .map, .actionButton])
             session.setNetworkMode(.platform)
-            session.tapNetwork(at: PlanPoint(x: 4 * Self.tile, y: y), reach: Self.reach)
+            session.tapNetwork(at: point(4 * Self.tile, y), reach: Self.reach)
             XCTAssertFalse(session.isTutorialStepDone, "picking the place builds nothing")
             session.addNetworkPlatform()
         case 4:
             // The second station, further along new track.
             Self.expect(session, step: 4, goal: .buildStation, targets: [.networkModes, .map, .actionButton])
             session.setNetworkMode(.build)
-            session.tapNetwork(at: PlanPoint(x: 7 * Self.tile, y: y), reach: Self.reach)
-            session.tapNetwork(at: PlanPoint(x: 13 * Self.tile, y: y), reach: Self.reach)
+            session.tapNetwork(at: point(7 * Self.tile, y), reach: Self.reach)
+            session.tapNetwork(at: point(13 * Self.tile, y), reach: Self.reach)
             session.buildNetworkTrack()
             XCTAssertFalse(session.isTutorialStepDone, "track is not a station")
             session.setNetworkMode(.platform)
-            session.tapNetwork(at: PlanPoint(x: 11 * Self.tile, y: y), reach: Self.reach)
+            session.tapNetwork(at: point(11 * Self.tile, y), reach: Self.reach)
             session.addNetworkPlatform()
         case 5:
             // The line through both stations.
@@ -97,30 +108,37 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertFalse(session.isTutorialStepDone, "a draft is not a line")
             session.createLineFromDraft()
         case 6:
-            // A train bought and placed at the line's first stop.
-            Self.expect(session, step: 6, goal: .placeTrain, targets: [.trainTool, .buyTrain, .actionButton])
-            session.selectTool(.train)
-            session.purchaseTrain()
-            XCTAssertFalse(session.isTutorialStepDone, "an unplaced train is not on the track")
-            session.selectStation(Self.newStations(session).first)
-            session.placeSelectedTrain()
-            XCTAssertNotNil(session.selectedTrain?.position)
+            // Decision 125: the new line, still selected, gets its trains
+            // in the lines panel's one step (decision 101).
+            Self.expect(session, step: 6, goal: .startService, targets: [.staffLine, .linesButton])
+            XCTAssertEqual(session.selectedLine?.trains.isEmpty, true)
+            session.staffSelectedLine(headway: 10)
+            XCTAssertFalse(session.selectedLine?.trains.isEmpty ?? true, "the line has its trains")
+            XCTAssertEqual(session.selectedLine?.targetHeadways, TargetHeadways(peak: 10, offPeak: 10, low: 10))
         case 7:
-            // The line runs the train: it is assigned and wanted.
-            Self.expect(session, step: 7, goal: .startService, targets: [.linesButton])
-            session.assignSelectedTrainToSelectedLine()
-            XCTAssertNotNil(session.world.assignedLine(of: session.selectedTrainID!))
-            // A line that ran no trains now runs the one assigned.
-            XCTAssertEqual(session.selectedLine?.trainsInService, TrainsInService(peak: 1, offPeak: 1, low: 1))
+            Self.expect(session, step: 7, goal: .changeSpeed, targets: [.speedControl])
+            session.setSpeed(.fast)
         case 8:
-            Self.expect(session, step: 8, goal: .read, targets: [.map])
+            // Decision 125: the first fares, settled at the end of an hour.
+            Self.expect(session, step: 8, goal: .earnFare, targets: [.cash, .speedControl])
+            Self.runUntilFares(session)
         case 9:
-            Self.expect(session, step: 9, goal: .changeSpeed, targets: [.speedControl])
-            session.setSpeed(.x10)
+            Self.expect(session, step: 9, goal: .read, targets: [.map])
         default:
             Self.expect(session, step: 10, goal: .read, targets: [.gameMenu])
         }
         XCTAssertTrue(session.isTutorialStepDone, "step \(index) is done")
+    }
+
+    /// Runs time until the step on screen is done, at most two game days;
+    /// fails if it never is.
+    @MainActor
+    private static func runUntilFares(_ session: GameSession, line: UInt = #line) {
+        let end = session.world.clock.now.seconds + 2 * GameTime.secondsPerDay
+        while !session.isTutorialStepDone, session.world.clock.now.seconds < end {
+            session.advance(realElapsed: GameSession.maximumStepDuration)
+        }
+        XCTAssertTrue(session.isTutorialStepDone, "no fares in two days", line: line)
     }
 
     /// The two stations the walk-through built, in the order built.
@@ -305,8 +323,8 @@ final class TutorialSessionTests: XCTestCase {
         let names = TutorialTarget.allCases.map(\.rawValue)
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(names, [
-            "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "network.modes", "panel.action",
-            "map", "map.zoom", "hud.lines", "hud.speed", "hud.menu",
+            "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "line.staff.start", "network.modes",
+            "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
@@ -322,11 +340,11 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(Set(steps.map(\.id)).count, steps.count)
         XCTAssertEqual(steps.map { $0.title(in: .english) }, [
             "Start building a line", "Lay the track", "Move around the map", "Build a station", "A line needs two stations", "Create the line",
-            "Buy a train and place it", "Start service", "Passengers", "Control time", "That's the tour",
+            "Start service", "Control time", "Your first fares", "Passengers", "That's the tour",
         ])
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
             "開始建線", "鋪設軌道", "移動與縮放地圖", "建造車站", "路線至少要兩座車站", "建立路線",
-            "購買並放置列車", "開始營運", "乘客", "控制時間", "導覽結束",
+            "開始營運", "控制時間", "第一筆車資", "乘客", "導覽結束",
         ])
         XCTAssertEqual(steps[0].body(in: .traditionalChinese), "點「路網」。軌道、月台和車站都用它來建造。")
         for step in steps {
@@ -341,42 +359,74 @@ final class TutorialSessionTests: XCTestCase {
     }
 
     /// The speed step reads the clock as it is now: it is done while the
-    /// speed differs from the one it was shown at, and pausing counts.
+    /// speed differs from the one it was shown at, and resuming counts.
     func testTheSpeedStepIsDoneWhileTheSpeedDiffers() async throws {
         await MainActor.run {
             let session = GameSession(world: .newGame())
-            session.startTutorial()
-            for index in 0..<9 {
-                Self.carryOut(index, in: session)
-                Self.advance(session)
-            }
-            XCTAssertEqual(session.tutorial?.step.goal, .changeSpeed)
-            XCTAssertEqual(session.world.clock.speed, .normal)
-            XCTAssertFalse(session.isTutorialStepDone)
-            session.togglePause()
-            XCTAssertTrue(session.isTutorialStepDone, "paused")
-            session.togglePause()
-            XCTAssertFalse(session.isTutorialStepDone, "resumed at the speed it was shown at")
-            session.setSpeed(.x60)
-            XCTAssertTrue(session.isTutorialStepDone)
-            session.setSpeed(.normal)
-            XCTAssertFalse(session.isTutorialStepDone)
-        }
-    }
-
-    /// Starting service needs both a train given to the line and the line
-    /// set to run trains, in either order, and a train that was already
-    /// assigned when the step was shown does not count.
-    func testStartingServiceNeedsAnAssignedTrainAndATrainWanted() async throws {
-        await MainActor.run {
-            let session = GameSession(world: DemoWorld.make(in: .english))
             session.startTutorial()
             for index in 0..<7 {
                 Self.carryOut(index, in: session)
                 Self.advance(session)
             }
+            XCTAssertEqual(session.tutorial?.step.goal, .changeSpeed)
+            // Decision 125: the step follows the line's trains, still paused
+            // by the network tool (decision 99).
+            XCTAssertEqual(session.world.clock.speed, .paused)
+            XCTAssertFalse(session.isTutorialStepDone)
+            session.togglePause()
+            XCTAssertEqual(session.world.clock.speed, .normal)
+            XCTAssertTrue(session.isTutorialStepDone, "resumed")
+            session.togglePause()
+            XCTAssertFalse(session.isTutorialStepDone, "paused again, as it was shown")
+            session.setSpeed(.x60)
+            XCTAssertTrue(session.isTutorialStepDone)
+        }
+    }
+
+    /// Decision 125: the fare step waits for fares settled while it is
+    /// shown; a free game charges none, so it has nothing to wait for.
+    func testTheFareStepWaitsForFaresUnlessTheGameIsFree() async throws {
+        var free = GameWorld.newGame()
+        free.setEconomyMode(.free)
+        for (world, charges) in [(GameWorld.newGame(), true), (free, false)] {
+            await MainActor.run { [world] in
+                let session = GameSession(world: world)
+                session.startTutorial()
+                for index in 0..<8 {
+                    Self.carryOut(index, in: session)
+                    Self.advance(session)
+                }
+                XCTAssertEqual(session.tutorial?.step.id, "first.fare")
+                XCTAssertEqual(session.isTutorialStepDone, !charges)
+                guard charges else { return }
+                Self.runUntilFares(session)
+                // Going back and on again keeps the fares it waited for.
+                session.showPreviousTutorialStep()
+                session.showNextTutorialStep()
+                XCTAssertTrue(session.isTutorialStepDone)
+            }
+        }
+    }
+
+    /// Starting service needs both a train given to the line and the line
+    /// set to run trains, in either order, and a train that was already
+    /// assigned when the step was shown does not count. The lines panel's
+    /// one step does both (decision 125); doing it by hand still counts.
+    func testStartingServiceNeedsAnAssignedTrainAndATrainWanted() async throws {
+        await MainActor.run {
+            let session = GameSession(world: DemoWorld.make(in: .english))
+            session.startTutorial()
+            for index in 0..<6 {
+                Self.carryOut(index, in: session)
+                Self.advance(session)
+            }
             XCTAssertEqual(session.tutorial?.step.goal, .startService)
             XCTAssertFalse(session.isTutorialStepDone, "the demo's lines already run their own trains")
+            session.selectTool(.train)
+            session.purchaseTrain()
+            session.selectStation(Self.newStations(session).first)
+            session.placeSelectedTrain()
+            XCTAssertFalse(session.isTutorialStepDone, "a train placed is not in service")
 
             session.setSelectedLineTrains(1, at: .offPeak)
             XCTAssertFalse(session.isTutorialStepDone, "wanted, but no train assigned")
