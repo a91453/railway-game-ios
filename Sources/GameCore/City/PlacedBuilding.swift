@@ -171,7 +171,8 @@ extension GameWorld {
     ///   (decision 105) under any part of the square, by row and then
     ///   column, or for a kind that ``PlacedBuildingKind/standsOnShore``
     ///   ``GameError/needsShore`` (decision 111) unless the square has both water and land
-    ///   under it; ``GameError/idsExhausted``; or
+    ///   under it; ``GameError/onSteepSlope(row:column:)`` naming the first
+    ///   steep cell under it (decision 112); ``GameError/idsExhausted``; or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
@@ -190,6 +191,9 @@ extension GameWorld {
             guard straddlesShore(candidate) else { throw .needsShore }
         } else if let water = waterUnder(candidate) {
             throw .onWater(row: water.row, column: water.column)
+        }
+        if let steep = steepUnder(candidate) {
+            throw .onSteepSlope(row: steep.row, column: steep.column)
         }
         let (id, next) = try Self.allocateID(from: nextPlacedBuildingID)
         let quote = placedBuildingQuote(kind, at: centre) ?? PlacedBuildingQuote(building: .zero, land: .zero)

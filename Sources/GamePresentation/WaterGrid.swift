@@ -12,10 +12,16 @@ import GameCore
 // `tools/real-world-population/build_water_grid.py`. Like the population,
 // only the presentation reads it: a new game's water goes to GameCore
 // through `GameWorld.setWater(_:)`, a whole-island map's with each block of
-// land (`GameWorld.expandLand(_:cells:water:)`), and the world saves the
+// land (`GameWorld.expandLand(_:cells:water:steep:)`), and the world saves the
 // cells, so a save does not depend on the file.
+//
+// Since decision 112 the same file marks the steep slopes (`"steep"`, from
+// the Copernicus DEM by `tools/real-world-population/build_slope_grid.py`),
+// the hillsides of more than 30 % where nothing new is built: one file, so
+// the app's resources (and its Xcode project) do not change.
 
-/// Which cells of a grid over Taiwan are water.
+/// Which cells of a grid over Taiwan are water, and (decision 112) which
+/// are steep.
 public struct WaterGrid: Sendable {
     let north: Double
     let west: Double
@@ -25,6 +31,9 @@ public struct WaterGrid: Sendable {
     /// Each row's runs of water, as columns, in order and apart; empty for
     /// a row with none.
     let water: [[Range<Int>]]
+    /// Each row's runs of steep slope (decision 112), alike; all empty for
+    /// a file without them.
+    let steep: [[Range<Int>]]
 
     /// Reads the app's water file: the grid's north-west corner, cell size
     /// in degrees, rows and columns, and each row with water once, in
@@ -39,6 +48,7 @@ public struct WaterGrid: Sendable {
             let rows: Int
             let columns: Int
             let water: [[Int]]
+            let steep: [[Int]]?
         }
         func corrupt(_ why: String) -> DecodingError {
             DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: why))
@@ -47,35 +57,41 @@ public struct WaterGrid: Sendable {
         guard file.cellDegrees > 0, file.north.isFinite, file.west.isFinite, (1...1 << 20).contains(file.rows), (1...1 << 20).contains(file.columns) else {
             throw corrupt("The water grid needs a corner, a positive cell size and its rows and columns.")
         }
-        var water = Array(repeating: [Range<Int>](), count: file.rows)
-        var lastRow = -1
-        for numbers in file.water {
-            guard numbers.count >= 3, numbers.count % 2 == 1, let row = numbers.first, row > lastRow, row < file.rows else {
-                throw corrupt("Rows of water are [row, column, count, gap, count, …], in order, in the grid.")
-            }
-            lastRow = row
-            var runs: [Range<Int>] = []
-            var column = numbers[1]
-            guard column >= 0 else { throw corrupt("A run of water starts before the grid.") }
-            for index in stride(from: 2, to: numbers.count, by: 2) {
-                let count = numbers[index]
-                if index > 2 {
-                    let gap = numbers[index - 1]
-                    guard gap > 0 else { throw corrupt("Runs of water are apart.") }
-                    column += gap
+        func parse(_ lines: [[Int]]) throws -> [[Range<Int>]] {
+            var rows = Array(repeating: [Range<Int>](), count: file.rows)
+            var lastRow = -1
+            for numbers in lines {
+                guard numbers.count >= 3, numbers.count % 2 == 1, let row = numbers.first, row > lastRow, row < file.rows else {
+                    throw corrupt("Rows of terrain are [row, column, count, gap, count, …], in order, in the grid.")
                 }
-                guard count > 0, count <= file.columns - column else { throw corrupt("A run of water is empty or past the grid.") }
-                runs.append(column..<column + count)
-                column += count
+                lastRow = row
+                var runs: [Range<Int>] = []
+                var column = numbers[1]
+                guard column >= 0 else { throw corrupt("A run of terrain starts before the grid.") }
+                for index in stride(from: 2, to: numbers.count, by: 2) {
+                    let count = numbers[index]
+                    if index > 2 {
+                        let gap = numbers[index - 1]
+                        guard gap > 0 else { throw corrupt("Runs of terrain are apart.") }
+                        column += gap
+                    }
+                    guard count > 0, count <= file.columns - column else { throw corrupt("A run of terrain is empty or past the grid.") }
+                    runs.append(column..<column + count)
+                    column += count
+                }
+                rows[row] = runs
             }
-            water[row] = runs
+            return rows
         }
+        let water = try parse(file.water)
+        let steep = try parse(file.steep ?? [])
         north = file.north
         west = file.west
         cellDegrees = file.cellDegrees
         rows = file.rows
         columns = file.columns
         self.water = water
+        self.steep = steep
     }
 
     /// The row of the grid holding `latitude`, or `nil` outside it.
@@ -94,7 +110,17 @@ public struct WaterGrid: Sendable {
 
     /// Whether the cell at `row`, `column` of the grid is water.
     func isWater(row: Int, column: Int) -> Bool {
-        let runs = water[row]
+        Self.contains(water[row], column)
+    }
+
+    /// Whether the cell at `row`, `column` of the grid is steep (decision
+    /// 112).
+    func isSteep(row: Int, column: Int) -> Bool {
+        Self.contains(steep[row], column)
+    }
+
+    /// Whether `runs` (in order, apart) hold `column`.
+    static func contains(_ runs: [Range<Int>], _ column: Int) -> Bool {
         var low = 0, high = runs.count
         while low < high {
             let middle = (low + high) / 2
@@ -136,12 +162,23 @@ public struct WaterGrid: Sendable {
     /// that lie in them, so the water does not depend on which blocks are
     /// read first. By row and then column.
     public func cells(frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>? = nil) -> [CellPosition] {
+        cells(of: water, frame: frame, bounds: bounds, in: blocks)
+    }
+
+    /// The 64 m cells of steep slope (decision 112), as ``cells(frame:bounds:in:)``
+    /// gives the water's: a cell is steep when the grid's cell its middle
+    /// lies in is.
+    public func steepCells(frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>? = nil) -> [CellPosition] {
+        cells(of: steep, frame: frame, bounds: bounds, in: blocks)
+    }
+
+    private func cells(of runs: [[Range<Int>]], frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>?) -> [CellPosition] {
         let lookup = lookup(frame: frame, bounds: bounds)
         var cells: [CellPosition] = []
         func add(row: Int, columns: Range<Int>) {
-            guard let source = lookup.rows[row], !water[source].isEmpty else { return }
+            guard let source = lookup.rows[row], !runs[source].isEmpty else { return }
             for column in columns {
-                if let target = lookup.columns[column], isWater(row: source, column: target) {
+                if let target = lookup.columns[column], Self.contains(runs[source], target) {
                     cells.append(CellPosition(row: row, column: column))
                 }
             }

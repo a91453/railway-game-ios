@@ -408,6 +408,8 @@ extension GameError {
             )
         case .onWater:
             language.text("Nothing can be built or zoned on water.", "水上不能蓋建物，也不能劃分區。")
+        case .onSteepSlope:
+            language.text("The hillside is too steep to build or zone on.", "坡度太陡，不能蓋建物，也不能劃分區。")
         case .needsShore:
             language.text("A wharf or a marina goes on the shore, part over the water.", "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
         case .invalidTerrain:

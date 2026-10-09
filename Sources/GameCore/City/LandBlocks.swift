@@ -100,8 +100,9 @@ extension GameWorld {
     // MARK: - Commands
 
     /// Makes the world's land read in as it is needed (decision 88): it
-    /// has none yet, nor buildings, nor water (decision 105), and no block
-    /// has been read (``expandLand(_:cells:water:)`` reads them).
+    /// has none yet, nor buildings, nor water (decision 105) or steep
+    /// slopes (decision 112), and no block has been read
+    /// (``expandLand(_:cells:water:steep:)`` reads them).
     /// ``setLand(_:)`` and ``foundTowns(seed:)`` make the land whole again.
     public mutating func setLandOnDemand() {
         replaceLand(with: Land())
@@ -120,6 +121,8 @@ extension GameWorld {
     /// cells join the world's (``terrain``), but for a cell the land grew
     /// onto before its block was read, which stays land. Water is the
     /// blocks', so it joins up the same whatever order they are read in.
+    /// Since decision 112 they bring their `steep` slopes alike, on which
+    /// land may stand.
     ///
     /// - Throws: ``GameError/invalidLand`` for a world whose land is whole
     ///   (``landBlocks`` is `nil`), a block outside the world, listed twice
@@ -127,8 +130,11 @@ extension GameWorld {
     ///   negative count, more than ``Land/maximumPerCell`` residents or
     ///   jobs, or no one living or working there; ``GameError/invalidTerrain``
     ///   for water outside the blocks, listed twice, or under one of
-    ///   `cells`.
-    public mutating func expandLand(_ blocks: [LandBlock], cells: [LandCell], water: [CellPosition] = []) throws(GameError) {
+    ///   `cells`, or a steep cell outside the blocks, listed twice, or on
+    ///   water.
+    public mutating func expandLand(
+        _ blocks: [LandBlock], cells: [LandCell], water: [CellPosition] = [], steep: [CellPosition] = []
+    ) throws(GameError) {
         guard let read = landBlocks else { throw .invalidLand }
         let rows = Land.blockRows(in: bounds), columns = Land.blockColumns(in: bounds)
         let new = Set(blocks)
@@ -145,6 +151,11 @@ extension GameWorld {
               zip(wet, wet.dropFirst()).allSatisfy({ $0 < $1 }),
               !Self.intersect(sorted.map(\.position), wet)
         else { throw .invalidTerrain }
+        let slopes = steep.sorted()
+        guard slopes.allSatisfy({ new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
+              zip(slopes, slopes.dropFirst()).allSatisfy({ $0 < $1 }),
+              !Self.intersect(slopes, wet)
+        else { throw .invalidTerrain }
         var fresh: [LandCell] = []
         // Decision 95: nor on a cell one of the company's buildings claims.
         for cell in sorted where land.cell(row: cell.row, column: cell.column) == nil
@@ -159,6 +170,7 @@ extension GameWorld {
         }
         land.merge(fresh)
         terrain.add(wet.filter { land.cell(row: $0.row, column: $0.column) == nil })
+        terrain.addSteep(slopes)
         landBlocks = (read + blocks).sorted()
         refreshLandDemand()
     }

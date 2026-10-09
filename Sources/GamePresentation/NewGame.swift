@@ -25,11 +25,12 @@ extension GameWorld {
     /// (Phase 6c-1, ARCHITECTURE decision 74) stand on that land.
     ///
     /// Its `water` (decision 105) is a real-world map's sea, rivers and
-    /// lakes (``WaterGrid``), under which there is no land; a blank map has
-    /// none.
+    /// lakes (``WaterGrid``), under which there is no land, and its `steep`
+    /// slopes (decision 112), where nothing new is built; a blank map has
+    /// neither.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
-        land: [LandCell]? = nil, water: [CellPosition] = []
+        land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
     ) -> GameWorld {
         do {
             var world = GameWorld(
@@ -61,6 +62,7 @@ extension GameWorld {
             world.setGeoAnchor(anchor)
             // Decision 105: the ground first, then the city on it.
             try world.setWater(water)
+            try world.setSteep(steep)
             // Phase 6a: the city the railway serves.
             if let land {
                 try world.setLand(land)

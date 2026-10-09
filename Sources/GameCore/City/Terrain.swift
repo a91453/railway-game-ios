@@ -15,13 +15,19 @@
 // the runs of the blocks read join up the same whatever order they came
 // in.
 //
+// Since decision 112 the terrain also marks steep slopes: dry cells on a
+// hillside of more than 30 %, where the city puts up nothing new and raises
+// nothing, and the player neither builds nor zones. Land may stand on them
+// (people live on Jiufen's hillside); only what is new is held back. They
+// are kept as runs too, never on water.
+//
 // The owner's references keep water the same way, as a kind of ground
 // (`taipei_gta_reference`'s `surfaceAt` gives `'water'`, and its
 // placement samples a building's footprint against the ground it may
 // stand on); its rules and numbers here are this project's (gap).
 
-/// Cells of water next to each other along a row: `count` cells from
-/// `column`.
+/// Cells of water (or, since decision 112, of steep slope) next to each
+/// other along a row: `count` cells from `column`.
 public struct WaterRun: Hashable, Codable, Sendable {
     public let row: Int
     public let column: Int
@@ -37,25 +43,29 @@ public struct WaterRun: Hashable, Codable, Sendable {
     var end: Int { column + count }
 }
 
-/// The world's terrain (decision 105): which of its 64 m cells are water.
+/// The world's terrain (decision 105): which of its 64 m cells are water,
+/// and (decision 112) which are steep.
 public struct Terrain: Hashable, Sendable {
     /// The water, by ascending row and then column: runs that neither
     /// overlap nor touch (two touching runs are one), so one set of cells
     /// is always the same runs.
     public private(set) var water: [WaterRun]
+    /// The steep slopes (decision 112), runs as the water's, none on water.
+    public private(set) var steep: [WaterRun] = []
 
     public init() {
         water = []
     }
 
-    /// The terrain whose water is `cells`, in any order. A cell listed more
-    /// than once is water once.
-    public init(water cells: [CellPosition]) {
+    /// The terrain whose water is `cells`, and steep slopes `steep`, in any
+    /// order. A cell listed more than once counts once.
+    public init(water cells: [CellPosition], steep: [CellPosition] = []) {
         water = Self.runs(of: cells.sorted())
+        self.steep = Self.runs(of: steep.sorted())
     }
 
     public var isEmpty: Bool {
-        water.isEmpty
+        water.isEmpty && steep.isEmpty
     }
 
     /// How many cells are water.
@@ -63,20 +73,35 @@ public struct Terrain: Hashable, Sendable {
         water.reduce(0) { $0 + $1.count }
     }
 
+    /// How many cells are steep (decision 112).
+    public var steepCellCount: Int {
+        steep.reduce(0) { $0 + $1.count }
+    }
+
     /// Whether the cell at `row`, `column` is water.
     public func isWater(row: Int, column: Int) -> Bool {
+        Self.contains(water, row: row, column: column)
+    }
+
+    /// Whether the cell at `row`, `column` is steep (decision 112).
+    public func isSteep(row: Int, column: Int) -> Bool {
+        Self.contains(steep, row: row, column: column)
+    }
+
+    /// Whether `runs` (sorted, apart) hold the cell at `row`, `column`.
+    static func contains(_ runs: [WaterRun], row: Int, column: Int) -> Bool {
         // The last run starting at or before the cell.
-        var low = 0, high = water.count
+        var low = 0, high = runs.count
         while low < high {
             let middle = (low + high) / 2
-            if (water[middle].row, water[middle].column) <= (row, column) {
+            if (runs[middle].row, runs[middle].column) <= (row, column) {
                 low = middle + 1
             } else {
                 high = middle
             }
         }
         guard low > 0 else { return false }
-        let run = water[low - 1]
+        let run = runs[low - 1]
         return run.row == row && column < run.end
     }
 
@@ -121,10 +146,26 @@ public struct Terrain: Hashable, Sendable {
         return false
     }
 
+    /// Replaces the water with `cells`, sorted and each once.
+    mutating func setWater(_ cells: [CellPosition]) {
+        water = Self.runs(of: cells)
+    }
+
+    /// Replaces the steep slopes with `cells`, sorted and each once.
+    mutating func setSteep(_ cells: [CellPosition]) {
+        steep = Self.runs(of: cells)
+    }
+
     /// Adds `cells`, in any order, to the water.
     mutating func add(_ cells: [CellPosition]) {
         guard !cells.isEmpty else { return }
         water = Self.union(water, Self.runs(of: cells.sorted()))
+    }
+
+    /// Adds `cells`, in any order, to the steep slopes (decision 112).
+    mutating func addSteep(_ cells: [CellPosition]) {
+        guard !cells.isEmpty else { return }
+        steep = Self.union(steep, Self.runs(of: cells.sorted()))
     }
 
     /// The runs of `cells`, sorted (a cell listed twice counts once).
@@ -165,16 +206,23 @@ public struct Terrain: Hashable, Sendable {
         return merged
     }
 
-    /// Why the water breaks a rule in a world of `bounds`, or `nil`: each
-    /// run in the world, not empty, in order, neither overlapping nor
-    /// touching the one before.
+    /// Why the water or the steep slopes break a rule in a world of
+    /// `bounds`, or `nil`: each run in the world, not empty, in order,
+    /// neither overlapping nor touching the one before; no steep cell on
+    /// water.
     func problem(in bounds: WorldBounds) -> String? {
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
-        guard water.allSatisfy({ (0..<rows).contains($0.row) && $0.column >= 0 && $0.count > 0 && $0.count <= columns - $0.column }) else {
-            return "A run of water is empty or outside the world."
+        for runs in [water, steep] {
+            guard runs.allSatisfy({ (0..<rows).contains($0.row) && $0.column >= 0 && $0.count > 0 && $0.count <= columns - $0.column }) else {
+                return "A run of terrain is empty or outside the world."
+            }
+            guard zip(runs, runs.dropFirst()).allSatisfy({ $0.row < $1.row || ($0.row == $1.row && $0.end < $1.column) }) else {
+                return "Terrain must list its runs in order, apart from each other."
+            }
         }
-        guard zip(water, water.dropFirst()).allSatisfy({ $0.row < $1.row || ($0.row == $1.row && $0.end < $1.column) }) else {
-            return "Water must list its runs in order, apart from each other."
+        if !steep.isEmpty, !water.isEmpty,
+           steep.contains(where: { run in (run.column..<run.end).contains { isWater(row: run.row, column: $0) } }) {
+            return "A steep slope lies on water."
         }
         return nil
     }
@@ -187,20 +235,44 @@ extension GameWorld {
     /// 105): a real-world map's sea, rivers and lakes, from
     /// GamePresentation's `WaterGrid`. An empty list clears it. Only for a
     /// world whose land is whole: one read as it is needed reads its water
-    /// with each block (``expandLand(_:cells:water:)``).
+    /// with each block (``expandLand(_:cells:water:steep:)``).
     ///
     /// - Throws: ``GameError/invalidTerrain`` for a world whose land is read
     ///   as it is needed, a cell outside the world, listed twice, or where
     ///   there is land (the land goes on the ground, so a real-world map
-    ///   sets its water first).
+    ///   sets its water first) or a steep slope (decision 112).
     public mutating func setWater(_ cells: [CellPosition]) throws(GameError) {
         guard landBlocks == nil else { throw .invalidTerrain }
         let sorted = cells.sorted()
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
-        guard sorted.allSatisfy({ (0..<rows).contains($0.row) && (0..<columns).contains($0.column) && land.cell(row: $0.row, column: $0.column) == nil }),
+        guard sorted.allSatisfy({
+                  (0..<rows).contains($0.row) && (0..<columns).contains($0.column) && land.cell(row: $0.row, column: $0.column) == nil
+                      && !terrain.isSteep(row: $0.row, column: $0.column)
+              }),
               zip(sorted, sorted.dropFirst()).allSatisfy({ $0 < $1 })
         else { throw .invalidTerrain }
-        terrain = Terrain(water: sorted)
+        terrain.setWater(sorted)
+    }
+
+    /// Replaces the world's steep slopes with `cells`, in any order
+    /// (decision 112): a real-world map's hillsides of more than 30 %, from
+    /// GamePresentation's `WaterGrid`. An empty list clears them. Land may
+    /// stand on them. Only for a world whose land is whole, as
+    /// ``setWater(_:)``.
+    ///
+    /// - Throws: ``GameError/invalidTerrain`` for a world whose land is read
+    ///   as it is needed, a cell outside the world, listed twice, or on
+    ///   water.
+    public mutating func setSteep(_ cells: [CellPosition]) throws(GameError) {
+        guard landBlocks == nil else { throw .invalidTerrain }
+        let sorted = cells.sorted()
+        let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
+        guard sorted.allSatisfy({
+                  (0..<rows).contains($0.row) && (0..<columns).contains($0.column) && !terrain.isWater(row: $0.row, column: $0.column)
+              }),
+              zip(sorted, sorted.dropFirst()).allSatisfy({ $0 < $1 })
+        else { throw .invalidTerrain }
+        terrain.setSteep(sorted)
     }
 
     // MARK: - Queries
@@ -208,6 +280,25 @@ extension GameWorld {
     /// Whether the cell at `row`, `column` is water.
     public func isWater(row: Int, column: Int) -> Bool {
         terrain.isWater(row: row, column: column)
+    }
+
+    /// Whether the cell at `row`, `column` is steep (decision 112).
+    public func isSteep(row: Int, column: Int) -> Bool {
+        terrain.isSteep(row: row, column: column)
+    }
+
+    /// The steep cell under any part of `building`'s square (decision
+    /// 112), the first by row and then column, or `nil`.
+    func steepUnder(_ building: PlacedBuilding) -> CellPosition? {
+        guard !terrain.steep.isEmpty else { return nil }
+        let firstRow = Land.cellIndex(building.minY), lastRow = Land.cellIndex(building.maxY - 1)
+        let firstColumn = Land.cellIndex(building.minX), lastColumn = Land.cellIndex(building.maxX - 1)
+        for row in firstRow...lastRow {
+            for column in firstColumn...lastColumn where terrain.isSteep(row: row, column: column) {
+                return CellPosition(row: row, column: column)
+            }
+        }
+        return nil
     }
 
     /// Whether `building`'s square has both water and land under it: it
@@ -240,7 +331,7 @@ extension GameWorld {
 
     /// Why the terrain breaks a rule, or `nil`: its runs in the world and in
     /// order, no land on water, and, for land read as it is needed, water
-    /// only in the blocks read.
+    /// and steep slopes only in the blocks read.
     func terrainProblem() -> String? {
         if let problem = terrain.problem(in: bounds) {
             return problem
@@ -251,10 +342,10 @@ extension GameWorld {
         }
         if let landBlocks {
             let read = Set(landBlocks)
-            for run in terrain.water {
+            for run in terrain.water + terrain.steep {
                 let first = LandBlock(cellRow: run.row, column: run.column), last = LandBlock(cellRow: run.row, column: run.end - 1)
                 guard (first.column...last.column).allSatisfy({ read.contains(LandBlock(row: first.row, column: $0)) }) else {
-                    return "Water lies outside the blocks of land read."
+                    return "Terrain lies outside the blocks of land read."
                 }
             }
         }
@@ -266,26 +357,35 @@ extension GameWorld {
 
 extension Terrain: Codable {
     private enum CodingKeys: String, CodingKey {
-        case water
+        case water, steep
     }
 
-    /// Decodes `{"water": [{"row", "column", "count"}, …]}`. The runs must
-    /// be in order and apart; the world checks they lie in its bounds.
+    /// Decodes `{"water": [{"row", "column", "count"}, …]}` and, since save
+    /// version 26 (decision 112), `"steep"` alike, each left out when
+    /// empty. The runs must be in order and apart; the world checks they
+    /// lie in its bounds and no steep cell is water.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let water = try container.decodeIfPresent([WaterRun].self, forKey: .water) ?? []
-        guard water.allSatisfy({ $0.row >= 0 && $0.column >= 0 && $0.count > 0 && $0.count <= Int.max - $0.column }),
-              zip(water, water.dropFirst()).allSatisfy({ $0.row < $1.row || ($0.row == $1.row && $0.end < $1.column) })
-        else {
-            throw DecodingError.dataCorruptedError(forKey: .water, in: container, debugDescription: "Water must list its runs in order, apart and not empty.")
+        func runs(_ key: CodingKeys) throws -> [WaterRun] {
+            let runs = try container.decodeIfPresent([WaterRun].self, forKey: key) ?? []
+            guard runs.allSatisfy({ $0.row >= 0 && $0.column >= 0 && $0.count > 0 && $0.count <= Int.max - $0.column }),
+                  zip(runs, runs.dropFirst()).allSatisfy({ $0.row < $1.row || ($0.row == $1.row && $0.end < $1.column) })
+            else {
+                throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Terrain must list its runs in order, apart and not empty.")
+            }
+            return runs
         }
-        self.water = water
+        water = try runs(.water)
+        steep = try runs(.steep)
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if !water.isEmpty {
             try container.encode(water, forKey: .water)
+        }
+        if !steep.isEmpty {
+            try container.encode(steep, forKey: .steep)
         }
     }
 }

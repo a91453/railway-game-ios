@@ -393,11 +393,12 @@ extension GameWorld {
     /// Replaces the world's land with the towns a blank map starts with,
     /// drawn from `seed` (see ``Land/towns(seed:in:)``), and, with the
     /// city's buildings on, their buildings. Their cells on water are left
-    /// out (decision 105: a real-world map with no people, on the coast).
+    /// out (decision 105: a real-world map with no people, on the coast),
+    /// and on steep slopes (decision 112: in the mountains).
     public mutating func foundTowns(seed: UInt32) {
         var towns = Land.towns(seed: seed, in: bounds)
         if !terrain.isEmpty {
-            towns.cells.removeAll { terrain.isWater(row: $0.row, column: $0.column) }
+            towns.cells.removeAll { terrain.isWater(row: $0.row, column: $0.column) || terrain.isSteep(row: $0.row, column: $0.column) }
         }
         replaceLand(with: towns)
         landBlocks = nil

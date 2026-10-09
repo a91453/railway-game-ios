@@ -241,6 +241,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidTerrain` | — | 水域的格在世界外、列了兩次、上面有土地，或世界的土地是按需展開的（schema 44，決策 105） |
 | `onWater` | `row`、`column` | 玩家建物蓋在水上，或要劃分區的矩形每一格都是水（schema 44，決策 105）；指名第一格水（依列、行） |
 | `needsShore` | — | 漁人碼頭（`wharf`）或遊艇港（`marina`）沒有蓋在岸邊：正方形下面要同時有水和陸地（schema 45，決策 111） |
+| `onSteepSlope` | `row`、`column` | 玩家建物蓋在陡坡上，或要劃分區的矩形沒有能劃的格而第一格是陡坡（schema 46，決策 112）；指名那一格 |
 | `invalidFareRules` | — | 票價規則不成立：票價不在 0…1e9、沒有段或超過 64 段、第一段不從 0 起、段之間有缺口、`to` 小於 `from`、最後一段之外沒有終點、最後一段有終點，或距離超過 1e7 m（schema 22） |
 
 ### 觀察（`observe.type`）
@@ -694,3 +695,8 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新結果 `needsShore`，`landValue` 觀察多了選填的 `waterPremium`（不是 0 時才寫：中點離水格不到 160 m 的格 600），`placeBuilding` 的 `kind` 多了 `wharf`、`marina`（ARCHITECTURE 決策 111）。沒有水的世界地價沒有 `waterPremium`，舊的 fixture 不必改，schema 30 到 44 照樣讀取：**沒有任何既有 fixture 的預期值改變**（`water-terrain.json` 沒有觀察地價，也沒有蓋成建物）。
 - `waterfront.json`：自由模式、8 × 8 格、第 0、1 列是水。遊艇港整個在陸地或整個在水上都是 `needsShore`；跨第 1／2 列的漁人碼頭與遊艇港蓋得起來；小住宅跨岸是 `onWater`。地價：水格 (0, 0) 與離水 128 m 的 (3, 4) 是 1,600（加 600），192 m 的 (4, 4) 與 (7, 7) 是 1,000。每個值都手算，寫在 description 裡。
+
+## 決策 112：陡坡（schema 46）
+
+- 新指令 `setSteep`（`runs`：`[{ "row", "column", "count" }]`，每段 1 到 65,536 格，和 `setWater` 一樣）、觀察 `steep`（`{ "steep": true }`）、結果 `onSteepSlope`（帶 `row`、`column`），最終狀態選填的 `steep`（陡坡格數；沒有時不寫）（ARCHITECTURE 決策 112）。舊的 fixture 不必改，schema 30 到 45 照樣讀取：**沒有任何既有 fixture 的預期值改變**（空白地圖沒有陡坡）。
+- `steep-slopes.json`：自由模式、8 × 8 格、第 0 列是水、第 4–7 列 × 第 4–7 欄是陡坡。陡坡蓋在水上是 `invalidTerrain`；小住宅蓋在 (5, 5) 是 `onSteepSlope`；整個陡坡的矩形劃分區是 `onSteepSlope`（指名第一格 (4, 4)），跨平地與陡坡的矩形只劃到平地的三格；陡坡不改地價（1,000）。每個值都手算，寫在 description 裡。
