@@ -292,7 +292,7 @@ extension GameSession {
         let name = stationName
         let demand = newStationDemand(at: middle)
         var built: StationID?
-        perform { world throws(GameError) in
+        let added = perform { world throws(GameError) in
             var draft = world
             let station: Station
             if let chosen {
@@ -318,6 +318,9 @@ extension GameSession {
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
                 )
+        }
+        if added {
+            notePutUp(at: middle)
         }
         if let built {
             // The typed name went to the new station: suggest the next.

@@ -54,6 +54,14 @@
 
 2026-10-09 的資料（osmtoday.com 2026-10-06 的整包檔）：9,296 × 8,064 格、82,806 段、530 KB；704 個海岸線的環（1 個被切斷、不算）、44,102 個水體；陸地 36,381.6 km²、陸地上的河湖 798.4 km²。和內政部的海岸線比：99.79% 的格一致，內政部算陸地、OSM 算海的 434.5 km²，反過來 53.1 km²。約 30 秒，需要 pyosmium 與 numpy。
 
+## 陡坡（決策 115）
+
+坡度超過 30% 的乾格是陡坡（建築技術規則建築設計施工編第 262 條：山坡地平均坡度超過 30% 的部分不得開發建築）：城市不在上面擴張或升級，玩家建物與分區都不行；已有的土地照舊。`build_slope_grid.py` 把它加進同一個 `taiwan_water.json` 的 `"steep"`（和 `"water"` 同樣的格式；同一個檔，App 的資源與 Xcode 專案不必改）：
+
+- 高度：Copernicus DEM GLO-30（1″，約 30 m；馬祖 N26 E119 那一塊只有 GLO-90，3″），公開的 `copernicus-dem-30m`、`copernicus-dem-90m` S3 bucket，授權要求標示出處（資料來源畫面已列）。內政部 20 m 數值地形模型的下載站（tgos.tw）在雲端環境回 403，而且沒有金門、馬祖。
+- 每個水域格取中點的高度；3 × 3 中位數（約 170 m）去掉地表模型裡的高樓與樹；坡度是東西、南北跨兩格的中央差分較陡的一個；超過 30%、而且周圍 3 × 3 至少 5 格也是，才算陡坡。水不算。
+- 2026-10-09 的資料：陸地 35,583 km² 中 17,059 km² 是陡坡（326,886 段），`taiwan_water.json` 530 KB → 2.1 MB。台北、台中、高雄市中心 0–0.1%，九份 55%，陽明山 41%，玉山 95%。
+
 ## 重新產生
 
 ```sh
@@ -95,7 +103,20 @@ python3 tools/real-world-population/build_water_grid.py \
   taiwan_land.json
 ```
 
-重新產生水域後要一起更新 `WaterGridTests` 的格數與地圖的數字。
+重新產生水域後要一起更新 `WaterGridTests` 的格數與地圖的數字。水域重新產生會蓋掉陡坡，所以之後要再跑一次陡坡（Copernicus 的圖磚放在一個資料夾，約 260 MB；第一個參數是水域檔，其他內容原樣保留，約 1 分鐘，需要 `pip install tifffile imagecodecs numpy`）：
+
+```sh
+for t in N21_00_E120 N22_00_E120 N22_00_E121 N23_00_E119 N23_00_E120 N23_00_E121 N24_00_E118 N24_00_E120 N24_00_E121 N25_00_E119 N25_00_E121 N26_00_E120; do
+  n=Copernicus_DSM_COG_10_${t}_00_DEM; curl -o copernicus-dem/$n.tif https://copernicus-dem-30m.s3.amazonaws.com/$n/$n.tif
+done
+for t in N24_00_E119 N26_00_E119; do
+  n=Copernicus_DSM_COG_30_${t}_00_DEM; curl -o copernicus-dem/$n.tif https://copernicus-dem-90m.s3.amazonaws.com/$n/$n.tif
+done
+python3 tools/real-world-population/build_slope_grid.py \
+  RailwayGameApp/Resources/RealWorld/taiwan_water.json \
+  copernicus-dem/ \
+  RailwayGameApp/Resources/RealWorld/taiwan_water.json
+```
 
 沒有整包檔時也可以問 Overpass（只用 Python 內建模組；伺服器忙的時候可以用逗號列出幾個，輪流使用，一塊一直失敗會切成四小塊再問，可能要幾個小時）：
 

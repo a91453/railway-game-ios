@@ -1163,3 +1163,18 @@ V 實際放行 → T、U（保證不互穿）
 固定小數：臨水的距離 10,240 單位（160 m），比較的是中點距離的平方（整數）；溢價 600 美分／m²，和公園、公司建物的溢價相同。
 
 外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）的碼頭要蓋在海岸格；Cities: Skylines（商業遊戲）的港口沿著岸線放。
+
+## 地形：陡坡（決策 115）
+
+延續決策 105 的檢查（`a91453/railway-reference-private` `a7e377b`，六個來源），這次找高度、坡度與地形格。參考沒有「陡坡不能開發」的規則或資料；找到的都是軌道與地形那一層（下一步）的材料。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Simulator/reference_snapshot/_next/static/chunks/5758-131911c5f04a436f.js`（模組 19021：稀疏地形格 `cells[{col,row,layers}]`、`cellMm`／`layerMm`、B-spline 取樣；地形筆刷） | 這一步只存「是不是陡坡」的段（`Terrain.steep`）；高度怎麼存留給下一步 | 下一步的候選：稀疏格加平滑取樣 |
+| `Railway/site_archive_clean/rail-3d/terrain-source.js`、`terrain.js`、`integration/terrain-elevation.js`（Mapterhorn DEM 圖磚；海邊 0 m 是有效值，不是缺資料） | `build_slope_grid.py`：水格的高度當 0，DEM 缺的地方（NaN）不算陡坡 | 只取想法；DEM 改用 Copernicus（Mapterhorn 的圖磚沒有存在參考裡，授權也沒有寫） |
+| `Railway/railway_game_reference_clean/relevant_source_paths.txt`（OpenTTD `heightmap.cpp`、`terraform_cmd.cpp`，只有路徑） | — | 沒有收錄原始碼；OpenTTD 是 GPL，只能取想法 |
+| （參考沒有） | 陡坡的門檻與規則、`setSteep`、`expandLand(...steep:)`、`onSteepSlope`、`WaterGrid.steepCells`、存檔版本 26、golden schema 46 | gap → 原生 |
+
+比例：水域格 1.875″；DEM 1″（馬祖 3″）取最近的樣本；3 × 3 中位數約 170 m；坡度用跨兩格（約 106–116 m）的中央差分；門檻 0.30；3 × 3 至少 5 格。
+
+外部專案（只取想法）：SimCity 4、Cities: Skylines（商業遊戲）的建物不放在太陡的地形上。資料：Copernicus DEM GLO-30／GLO-90（ESA，授權要求標示出處，資料來源畫面已列）。門檻依據：建築技術規則建築設計施工編第 262 條（平均坡度超過 30% 不得開發建築）。

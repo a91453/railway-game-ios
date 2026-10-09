@@ -164,7 +164,7 @@ extension GameSession {
     public func placeBuilding(at point: PlanPoint) -> Bool {
         let kind = buildingKind
         let cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
-        return perform { world throws(GameError) in
+        let placed = perform { world throws(GameError) in
             let building = try world.placeBuilding(kind, at: point)
             let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
             let bought = cleared == 0 ? ("", "") : (
@@ -179,6 +179,10 @@ extension GameSession {
                 "蓋好\(chinese) #\(id)，花費 \(building.cost.moneyText)\(bought.1)。"
             )
         }
+        if placed {
+            notePutUp(at: point)
+        }
+        return placed
     }
 
     /// Demolishes the company's building `id` with

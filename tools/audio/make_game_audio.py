@@ -3,7 +3,8 @@
 
 The same synth as the first promo video's soundtrack, so the game sounds as
 the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
-in C, a station chime, a whoosh and a rail joint. Everything is made here from
+in C, a station chime, a whoosh, a rail joint, and the sounds of something
+put up and of money coming in (decision 117). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
@@ -158,6 +159,23 @@ def main(out_dir):
     joint[: len(a)] += a
     joint[int(0.13 * SR) : int(0.13 * SR) + len(a)] += 0.8 * a
     write_wav(os.path.join(out_dir, "rail-joint.wav"), normalized(joint, 0.6))
+
+    # Decision 117: something put up, a soft thud under a rising pluck
+    # (G, then C an octave up), and money in, two bright bells a fifth apart.
+    done = np.zeros(int(0.8 * SR))
+    thud = clack()
+    done[: len(thud)] += 0.7 * thud
+    rise = pluck(79, 0.5)
+    done[int(0.04 * SR) : int(0.04 * SR) + len(rise)] += 0.8 * rise
+    top = pluck(84, 0.6)
+    done[int(0.12 * SR) : int(0.12 * SR) + len(top)] += top
+    write_wav(os.path.join(out_dir, "build-done.wav"), normalized(done, 0.6))
+    coins = np.zeros(int(0.9 * SR))
+    for i, (m, at) in enumerate([(96, 0.0), (103, 0.09)]):
+        ding = bell(m, 0.8)
+        start = int(at * SR)
+        coins[start : start + len(ding)] += (1.0 - 0.25 * i) * ding[: len(coins) - start]
+    write_wav(os.path.join(out_dir, "coins.wav"), normalized(coins, 0.5))
 
 
 if __name__ == "__main__":

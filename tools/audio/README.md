@@ -16,6 +16,8 @@ python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 | `station-chime.wav` | 兩個音的到站鈴 | 營運中的列車到站 |
 | `rail-joint.wav` | 「喀噠、喀噠」的鐵軌接縫聲 | 建好一段軌道 |
 | `whoosh.wav` | 一秒的「咻」聲 | 換工具、開始或離開遊戲 |
+| `build-done.wav` | 輕輕的「咚」加上往上的兩個撥弦音（G、高八度的 C） | 放好建物、加好月台或車站（決策 117） |
+| `coins.wav` | 兩個相隔五度的高音鈴 | 每小時結算收到車資、每日收到租金（決策 117） |
 
 ## 來源與授權
 

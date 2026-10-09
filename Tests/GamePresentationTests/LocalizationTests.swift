@@ -33,9 +33,9 @@ final class LocalizationTests: XCTestCase {
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
             .buildingOverlaps(PlacedBuildingID(rawValue: 2)), .buildingOnTrack(.edge(3)), .buildingOnStation(StationID(rawValue: 1)),
             .unknownPlacedBuilding(PlacedBuildingID(rawValue: 4)), .invalidZoneArea,
-            .invalidTerrain, .onWater(row: 3, column: 4), .needsShore,
+            .invalidTerrain, .onWater(row: 3, column: 4), .needsShore, .onSteepSlope(row: 5, column: 6),
         ]
-        XCTAssertEqual(Set(errors).count, 54, "one of every case")
+        XCTAssertEqual(Set(errors).count, 55, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")

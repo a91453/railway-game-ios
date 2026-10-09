@@ -14,6 +14,11 @@ public enum SoundCue: Hashable, Sendable {
     case track
     /// The player moved to another tool, or into or out of a game: a whoosh.
     case transition
+    /// The player put up a building or a platform (decision 117): a
+    /// rising pluck over a soft thud.
+    case built
+    /// Fares or rent came in (decision 117): a bright double ding.
+    case income
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at

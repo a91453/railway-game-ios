@@ -123,6 +123,8 @@ final class GameAudio {
         case .arrival(watched: false): ("station-chime", 0.2)
         case .track: ("rail-joint", 0.7)
         case .transition: ("whoosh", 0.3)
+        case .built: ("build-done", 0.6)
+        case .income: ("coins", 0.35)
         }
         let players = (0..<3).compactMap { _ in Self.player(named: name, extension: "wav", volume: volume) }
         sounds[cue] = players
@@ -136,6 +138,10 @@ final class GameAudio {
         case .arrival(watched: false): .seconds(6)
         case .track: .milliseconds(100)
         case .transition: .milliseconds(250)
+        case .built: .milliseconds(150)
+        // At high speed an hour settles every second or two: one ding
+        // stands for several.
+        case .income: .seconds(3)
         }
     }
 
