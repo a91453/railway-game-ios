@@ -29,6 +29,13 @@ description: 這個遊戲的畫風與畫圖流程。畫或改任何圖時先讀�
 
 - 單色圖示只有實心形狀，挖空用 `fill-rule="evenodd"`（挖空的洞要整個在外形裡面）；筆畫要粗到 10–16 點還看得出來。
 - 地圖物件用自己的圖示；工具列、面板、表單的按鈕照舊用 SF Symbols（決策 121 第 4 點）。
+- **整組地圖圖示要像同一套**（玩家常同時看到好幾種，例如車站、建物、泡泡）：
+  - 留白一致：圖形畫在 24 格裡約 1.5–22.5 的範圍，不貼邊；
+  - 看起來一樣重：簡單的形狀（一個圓、一個三角）畫大一點，複雜的（辦公大樓、人群）減細節，放在一起沒有哪個特別黑或特別淡；
+  - 光學修正：尖角、三角形要比方形稍微超出一點（約 0.5 格）才會看起來一樣大；左右不對稱的圖（例如有煙囪的房子）往重量少的那邊挪一點，看起來才置中；
+  - 座標盡量取整數或 .5，最多兩位小數；
+  - 新加一個圖示時，和現有的整組並排看一次。
+- **深色底會顯粗**：淺色圖形放在深色地圖上，看起來比深色圖形放在淺底上粗。深色模式下的圖示若顯得太重，挖空的地方開大一點，不要只靠縮小。
 - 新的 imageset 放進 `Assets.xcassets` 不用重新產生 xcodeproj（Asset Catalog 在專案裡是一整個資料夾）；**新的 Swift 檔要**（CLAUDE.md 的 XcodeGen 步驟）。
 
 ## 3. Xcode 吃得下的 SVG
@@ -61,7 +68,12 @@ Xcode 的 Asset Catalog 只支援 SVG 的一部分。這些已經在 CI 的 Rele
 1. **先讀**：`docs/UI_THEME.md`、相關的決策、現有的同類圖（一致比新奇重要）。
 2. **給 2–4 種差異明顯的方案讓作者挑**，不是同一個想法的小變化；每種寫一句它的感覺與取捨，說出你推薦哪個、為什麼。
 3. **作者說哪裡不好，就只改那裡。** 不要順手改朝向、角度、比例或整個造型：這次站長一路從側面改到正面、3/4，作者說「感覺變了、沒那麼好看了」，最後回到最初那張只換眼睛。
-4. **每一版都檢查**：淺色、深色兩種底，從大到小（插圖 120／64／44／28 點，圖示 48／24／16 點）。用這個 skill 的預覽腳本，輸出到 scratchpad：
+4. **每一版都檢查**，用這個 skill 的預覽腳本（輸出到 scratchpad）：
+   - 四種底：面板的淺色、深色，地圖的淺色、深色（圖示實際畫在地圖上，不能只在白底上看）；
+   - 從大到小：插圖 120／64／44／28 點，圖示 48／24／16 點；
+   - **模糊**：只剩剪影還認得出是什麼？玩家在地圖上只會掃一眼；
+   - **灰階**：沒有顏色時各部分還分得開？色弱的玩家看到的接近這樣，不能只靠色相區分（例如狀態不能只靠紅綠，要有不同的形狀）；
+   - **眼熟**：它會不會讓人想到別的角色、吉祥物、表情符號或品牌？會的話先改掉再給作者看（站長第二批草稿「App 圖示的黃點長出臉」就是太像別的表情符號角色，被作者退回）。
 
    ```sh
    # <scratchpad> 是系統提示裡的 scratchpad 目錄
@@ -71,9 +83,10 @@ Xcode 的 Asset Catalog 只支援 SVG 的一部分。這些已經在 CI 的 Rele
      --out <scratchpad>/glyphs.png --sizes 48,24,16 --template x.svg  # 單色圖示
    ```
 
-   它用環境裡預裝的 Chromium（Playwright），不下載任何東西。自己先看過（Read 那張 PNG），再用 SendUserFile 傳給作者。
-5. **放進 App 之後**，比對 commit 的 SVG 和作者看過的預覽是同一張。
-6. **寫下來**：新的決策（或補在原本的決策）、`docs/UI_THEME.md` 的顏色、`docs/RAILWAY_REFERENCE_MAPPING.md` 的參考對照（參考庫有沒有可用的圖、外部參考與授權）。
+   每一列最後兩格就是模糊與灰階（`--no-checks` 拿掉）。它用環境裡預裝的 Chromium（Playwright），不下載任何東西。自己先看過（Read 那張 PNG），再用 SendUserFile 傳給作者。
+5. **作者問「你覺得怎樣」時**：先說兩秒內的第一印象（陌生人會叫它什麼），再說哪裡好，最後列最該改的三件事，按影響大小排、每件都具體到怎麼改（「眼睛改成實心豆豆眼」，不是「表情再生動一點」）。也可以從玩家的角度說：玩家在遊戲裡會注意到什麼、會不會想點它。
+6. **放進 App 之後**，比對 commit 的 SVG 和作者看過的預覽是同一張。
+7. **寫下來**：新的決策（或補在原本的決策）、`docs/UI_THEME.md` 的顏色、`docs/RAILWAY_REFERENCE_MAPPING.md` 的參考對照（參考庫有沒有可用的圖、外部參考與授權）。
 
 ## 6. 驗證
 
@@ -83,4 +96,9 @@ Linux 不能建置 App：Swift 檔只能 `swiftc -parse`（語法），`Contents
 
 - 參考庫（`a91453/railway-reference-private`）的圖：`Ci/` 的小圖示有 icons8 的（要標示出處），`Railway/taipei_gta_reference/` 的標題圖與人物是寫實風、另一個品牌，都和這個畫風不合；取用途、重畫，不搬檔。
 - 商業遊戲（SimCity BuildIt、TheoTown 等）只看做法，不取素材。
-- 外部的畫圖 skill 也只取做法：`neonwatty/logo-designer-skill`（MIT）的「幾種方案讓人挑、深淺色與小尺寸檢查」已經寫在上面的流程裡；`supermemoryai/skills` 的 `svg-animations` 沒有授權，只讀想法。
+- 外部的畫圖 skill 也只取做法，用自己的話寫在上面，沒有複製它們的文字或腳本：
+  - [`neonwatty/logo-designer-skill`](https://github.com/neonwatty/logo-designer-skill)（MIT）：幾種方案讓人挑、深淺色與小尺寸檢查；
+  - [`kaankiziltug/logo-design-skill`](https://github.com/kaankiziltug/logo-design-skill)（MIT）：模糊、灰階、眼熟測試，深色底顯粗，批評時先說第一印象再列三件事；
+  - [`jezweb/claude-skills`](https://github.com/jezweb/claude-skills) 的 `icon-set-generator`（MIT）：整組圖示一樣重、留白一致、光學修正、座標取整；
+  - [`supermemoryai/skills`](https://github.com/supermemoryai/skills) 的 `svg-animations`（沒有授權）：只讀想法。
+  - 沒有採用：logo 專用的檢查（印刷、刺繡、商標、鏡像）和 1,400 個 logo 的參考庫，這個遊戲用不到。
