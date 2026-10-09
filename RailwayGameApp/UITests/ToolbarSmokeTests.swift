@@ -188,7 +188,11 @@ extension XCUIApplication {
         let area = list.map(\.frame) ?? frame
         let top = list == nil ? frame.minY + 140 : area.minY + 8
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
-        for _ in 0..<16 {
+        // A panel beside the map on a phone on its side is short, and a
+        // line's list there runs to some 23 screens (main's e48285f): long
+        // drags until the row exists, then short ones that cannot carry it
+        // past the band.
+        for _ in 0..<(list == nil ? 16 : 40) {
             if element.exists {
                 let place = element.frame
                 if place.minY >= top, place.maxY <= bottom, element.isHittable { return true }
@@ -198,8 +202,10 @@ extension XCUIApplication {
                     drag(in: area, from: 0.45, to: 0.65)
                     continue
                 }
+                drag(in: area, from: 0.75, to: 0.5)
+            } else {
+                drag(in: area, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
             }
-            drag(in: area, from: 0.75, to: 0.5)
         }
         return false
     }

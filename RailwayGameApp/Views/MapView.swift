@@ -263,9 +263,12 @@ struct MapView: View {
                                 popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
-                        } else {
+                        } else if insets.trailing == 0 {
                             // Decision 116: the whole map, small; it gives
-                            // way to a layer's legend, which needs the height.
+                            // way to a layer's legend, which needs the height,
+                            // and to the details card or a panel at the
+                            // trailing side: beside them it would stand in
+                            // the middle of a phone's map, under the finger.
                             MiniMapView(map: miniMap, visible: projection.visibleRegion, language: session.language) { point in
                                 if session.followedTrain != nil { session.stopFollowingTrain() }
                                 camera = projection.centered(atX: point.x, y: point.y)
