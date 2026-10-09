@@ -154,6 +154,40 @@ final class GoalsTests: XCTestCase {
         XCTAssertTrue(world.isMet(.equity(Money(1))))
     }
 
+    /// Riders are judged on the day that ended, however the time came: one
+    /// advance skipping idle minutes past midnight, or a minute at a time.
+    func testDailyRidersAreJudgedOnTheDayThatEndedHoweverTimeIsAdvanced() throws {
+        var (world, _) = try makeStations()
+        var today = DayAccount(day: 0)
+        today.fareTrips = 5
+        world.accounts.days = [today]
+        try world.startScenario(scenario([.dailyRiders(1)]))
+        var stepped = world
+        try world.advance(ticks: 1_441)
+        for _ in 0..<1_441 {
+            try stepped.advance(ticks: 1)
+        }
+        XCTAssertEqual(stepped.scenario?.achieved, [0])
+        XCTAssertEqual(world.scenario, stepped.scenario)
+    }
+
+    /// A scenario started on the stroke of a midnight not yet settled is
+    /// judged from its own first day, so the save stays loadable.
+    func testAScenarioStartedAtAnUnsettledMidnightKeepsALoadableSave() throws {
+        var (world, _) = try makeStations()
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.clock.now, GameTime(seconds: GameTime.secondsPerDay))
+        try world.startScenario(scenario([.equity(Money(1))]))
+        XCTAssertEqual(world.scenario?.startDay, 1)
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.scenario?.achieved, [nil], "day 0 ended before the scenario began")
+        XCTAssertNil(world.scenario?.outcome)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(world.scenario?.achieved, [1])
+    }
+
     func testTheErasTrainTypesAreTheOnlyOnesAllowed() throws {
         var (world, _) = try makeStations()
         let train = try world.purchaseTrain(named: "T1").id
