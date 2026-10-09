@@ -81,6 +81,11 @@ extension GameSession {
     /// GameCore refused; `nil` when the diagonals came out joined at the
     /// middle (crossing too shallowly to tell apart).
     func build(_ plan: ScissorsPlan, in world: inout GameWorld, structure: TrackStructure) throws(GameError) -> [TrackEdgeID]? {
+        // Decision 124: the ground under the places, the middle and halfway
+        // between them, read in first.
+        let places = plan.places.map(\.position.plan)
+        let halfways = places.map { PlanPoint(x: ($0.x + plan.middle.x) / 2, y: ($0.y + plan.middle.y) / 2) }
+        try world.readGround(under: places + [plan.middle.plan] + halfways, from: heights)
         var nodes: [TrackNodeID] = []
         for place in plan.places {
             // An earlier split may have cut the same edge: find the place

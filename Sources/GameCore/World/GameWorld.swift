@@ -111,7 +111,8 @@ public struct GameWorld: Equatable, Sendable {
     /// new world, and every blank map, has none.
     public internal(set) var terrain = Terrain()
     /// The ground's height where it has been read (decision 124). A new
-    /// world, and every blank map, has none, and is flat at 0 m.
+    /// world, and every blank map, has none, and is flat at 0 m; a new
+    /// real-world game has ground (``mapGround()``).
     public internal(set) var ground = Ground()
     /// The scenario being played, its goals and how far they are met
     /// (decision 86), or `nil`: a game without goals.
@@ -192,14 +193,20 @@ public struct GameWorld: Equatable, Sendable {
     /// edges. Returns the new node's ID, ``TrackNodeID/node(_:)``, numbered
     /// in order from 1 and never reused.
     ///
-    /// The node must lie in the world's ``bounds``, at a height in
-    /// ``RailwayNetwork/heightRange`` (Stage S4; 0 is the ground), where no
-    /// node stands yet.
+    /// The node must lie in the world's ``bounds``, at a height within
+    /// ``RailwayNetwork/heightRange`` of the ground there (Stage S4; since
+    /// decision 124 the ground under it, 0 in a world without ground),
+    /// where no node stands yet.
     ///
     /// - Throws, checked in this order: ``GameError/invalidTrackGeometry``
-    ///   or ``GameError/idsExhausted``.
+    ///   outside the bounds; ``GameError/groundNotLoaded`` where the world
+    ///   has ground but has not read it there; ``GameError/invalidTrackGeometry``
+    ///   too far above or below it, or where a node stands; or
+    ///   ``GameError/idsExhausted``.
     @discardableResult
     public mutating func buildTrackNode(at position: WorldCoordinate) throws(GameError) -> TrackNodeID {
+        guard bounds.contains(position.plan) else { throw .invalidTrackGeometry }
+        guard groundHeight(at: position.plan) != nil else { throw .groundNotLoaded }
         guard isInWorld(position), !network.hasNode(at: position) else { throw .invalidTrackGeometry }
         let (_, next) = try Self.allocateID(from: network.nextNodeNumber)
 
@@ -292,7 +299,8 @@ public struct GameWorld: Equatable, Sendable {
               let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
         guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
-        guard structure.allows(height: start.position.z), structure.allows(height: end.position.z) else { throw .invalidTrackStructure }
+        // Decision 124: what carries it, measured from the ground.
+        let sections = try sections(of: geometry, structure: structure)
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackConflict(other)
         }
@@ -305,14 +313,19 @@ public struct GameWorld: Equatable, Sendable {
         }) {
             throw .trackReserved(train.id)
         }
-        let price = try edgeCost(length: geometry.length, structure: structure)
+        let price = try edgeCost(of: geometry, structure: structure, sections: sections)
         // Decision 95: the company's buildings in its way come down, for
-        // what demolishing them costs; track in a tunnel passes under.
-        let cleared = structure == .tunnel ? [] : placedBuildings(inTheWayOf: geometry.points.map(\.plan))
+        // what demolishing them costs; track in a tunnel passes under
+        // (decision 124: an automatic edge's tunnel sections).
+        let edge = TrackEdge(id: .edge(0), from: from, to: to, curve: curve, length: geometry.length, structure: structure, sections: sections)
+        let open = edge.openStretches(of: geometry)
+        let cleared = placedBuildings.filter { building in open.contains { Self.line($0, comesNear: building) } }
         try checkFunds(price, clearing: cleared)
         try economy.spend(price)
 
-        let id = network.addEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, geometry: geometry, next: next)
+        let id = network.addEdge(
+            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, geometry: geometry, next: next
+        )
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
         acquireAsset(.track, owner: id.networkNumber ?? 0, cost: price)
@@ -412,7 +425,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   for the lowest numbered line whose chosen path runs along it or
     ///   stops at a platform on it; ``GameError/trackConflict(_:)`` or
     ///   ``GameError/trackTooClose(_:)`` when a part would meet other track;
-    ///   or ``GameError/idsExhausted``.
+    ///   or ``GameError/idsExhausted``. Since decision 124, before the trains,
+    ///   what ``buildTrackEdge(from:to:curve:profile:structure:)`` throws when
+    ///   a part's structure does not suit the ground under it.
     @discardableResult
     public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
         guard let edge = network.edge(id), let geometry = network.geometry(of: id),
@@ -447,6 +462,10 @@ public struct GameWorld: Equatable, Sendable {
               let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first),
               let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second)
         else { throw .invalidTrackGeometry }
+        // Decision 124: each part is carried as the ground under it asks,
+        // an automatic edge's sections worked out again for each.
+        let firstSections = try sections(of: firstGeometry, structure: edge.structure)
+        let secondSections = try sections(of: secondGeometry, structure: edge.structure)
 
         var after = network
         let platforms = after.platforms(on: id)
@@ -462,13 +481,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: .uniform, structure: edge.structure,
-                                  geometry: firstGeometry, next: firstNext)
+                                  sections: firstSections, geometry: firstGeometry, next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: .uniform, structure: edge.structure,
-                                   geometry: secondGeometry, next: secondNext)
+                                   sections: secondSections, geometry: secondGeometry, next: secondNext)
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track
         // beside it.
@@ -710,20 +729,14 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Whether a node at `position` would lie in the world's ``bounds``, at
-    /// a height in ``RailwayNetwork/heightRange``.
+    /// a height within ``RailwayNetwork/heightRange`` of the ground there
+    /// (decision 124; 0 in a world without ground), which the world has
+    /// read.
     private func isInWorld(_ position: WorldCoordinate) -> Bool {
-        RailwayNetwork.heightRange.contains(position.z) && bounds.contains(position.plan)
+        guard bounds.contains(position.plan), let ground = groundHeight(at: position.plan) else { return false }
+        return RailwayNetwork.heightRange.contains(position.z - ground)
     }
 
-    /// What an edge `length` long on `structure` costs:
-    /// ``ConstructionCosts/track`` times the structure's
-    /// ``TrackStructure/costFactor`` for every
-    /// ``ConstructionCosts/trackPricingLength`` of its length, rounded up,
-    /// and at least one.
-    ///
-    /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
-    ///   the price does not even fit in a ``Money``, so no balance could pay
-    ///   it; `required` is then the largest amount there is.
     /// Throws ``GameError/insufficientFunds(required:available:)`` unless
     /// the balance covers `price` and clearing `cleared` together
     /// (decision 95).
@@ -734,14 +747,6 @@ public struct GameWorld: Equatable, Sendable {
         }
     }
 
-    private func edgeCost(length: Int64, structure: TrackStructure) throws(GameError) -> Money {
-        let priced = ConstructionCosts.trackPricingLength
-        let lengths = max(1, (length + priced - 1) / priced)
-        let (units, overflowFactor) = lengths.multipliedReportingOverflow(by: structure.costFactor)
-        let (price, overflow) = economy.costs.track.amount.multipliedReportingOverflow(by: units)
-        guard !overflowFactor, !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
-        return Money(price)
-    }
 
     /// Builds a station standing at `point` (Stage F1) and charges
     /// ``ConstructionCosts/station``. Other stations may stand anywhere
@@ -752,13 +757,19 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
     ///   ``GameError/outOfBounds(_:)`` naming `point` when it lies outside
-    ///   the world's ``bounds``, ``GameError/idsExhausted``, or
+    ///   the world's ``bounds``, ``GameError/onWater(row:column:)`` in a
+    ///   world with ground when `point` lies over water (decision 124),
+    ///   ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)`` for the
     ///   station and the clearing together.
     @discardableResult
     public mutating func buildStation(named name: String, at point: PlanPoint) throws(GameError) -> Station {
         guard Self.isValidName(name) else { throw .invalidName }
         guard bounds.contains(point) else { throw .outOfBounds(point) }
+        // Decision 124: in a world with ground, not on water (a platform
+        // may still lie on a bridge).
+        let row = Land.cellIndex(point.y), column = Land.cellIndex(point.x)
+        if ground.isMapped, terrain.isWater(row: row, column: column) { throw .onWater(row: row, column: column) }
         let (id, nextID) = try Self.allocateID(from: nextStationID)
         let cleared = placedBuildings(inTheWayOf: [point])
         try checkFunds(economy.costs.station, clearing: cleared)
@@ -3540,7 +3551,7 @@ extension GameWorld: Codable {
         if !terrain.isEmpty {
             try container.encode(terrain, forKey: .terrain)
         }
-        if !ground.isEmpty {
+        if ground.isMapped {
             try container.encode(ground, forKey: .ground)
         }
     }
@@ -3820,8 +3831,8 @@ extension GameWorld: Codable {
             guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else {
                 return "Track edge \(edge.id) is steeper than the maximum grade."
             }
-            guard edge.structure.allows(height: geometry.startHeight), edge.structure.allows(height: geometry.endHeight) else {
-                return "Track edge \(edge.id)'s structure cannot carry it at its heights."
+            if let problem = structureProblem(of: edge, geometry: geometry) {
+                return problem
             }
         }
         if let (a, b) = network.firstConflictingPair(geometries: geometries) {

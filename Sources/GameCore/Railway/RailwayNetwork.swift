@@ -88,10 +88,14 @@ public struct TrackEdge: Hashable, Sendable {
     public let profile: TrackProfile
     /// What carries the track (Stage S4).
     public let structure: TrackStructure
+    /// An automatic edge's sections (decision 124), from its `from` node,
+    /// covering every pricing length once; empty for an explicit
+    /// structure (see ``sectionSpans``).
+    public let sections: [TrackSection]
 
     init(
         id: TrackEdgeID, from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, length: Int64,
-        profile: TrackProfile = .uniform, structure: TrackStructure = .surface
+        profile: TrackProfile = .uniform, structure: TrackStructure = .surface, sections: [TrackSection] = []
     ) {
         self.id = id
         self.from = from
@@ -100,6 +104,7 @@ public struct TrackEdge: Hashable, Sendable {
         self.length = length
         self.profile = profile
         self.structure = structure
+        self.sections = sections
     }
 
     /// The node a traversal of this edge ends at.
@@ -329,10 +334,13 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// Whether node `id` is a tunnel portal (Stage S4): a tunnel edge and
     /// an edge that is not a tunnel both end there, so trains pass between
     /// underground and the open there. Derived from the edges, never saved.
+    /// Since decision 124 it reads what carries each edge at the node: an
+    /// automatic edge's first or last section. A portal inside an automatic
+    /// edge is where its sections change (``TrackEdge/sectionSpans``).
     public func isTunnelPortal(_ id: TrackNodeID) -> Bool {
         guard let node = node(id) else { return false }
-        let structures = node.ends.compactMap { edge($0.edge)?.structure }
-        return structures.contains(.tunnel) && structures.contains { $0 != .tunnel }
+        let kinds = node.ends.compactMap { edge($0.edge)?.kind(at: id) }
+        return kinds.contains(.tunnel) && kinds.contains { $0 != .tunnel }
     }
 
     /// The centre line of edge `id` (see ``TrackGeometry``), or `nil` if
@@ -358,10 +366,13 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// caller has checked the number can be handed out. Updates the ends of
     /// both nodes.
     mutating func addEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, geometry: TrackGeometry, next: Int
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, sections: [TrackSection] = [],
+        geometry: TrackGeometry, next: Int
     ) -> TrackEdgeID {
         let id = TrackEdgeID.edge(nextEdgeNumber)
-        edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure))
+        edges.append(TrackEdge(
+            id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections
+        ))
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
         attach(id, direction: geometry.endDirection, at: to)
@@ -436,7 +447,7 @@ extension RailwayNetwork: Codable {
     }
 
     private enum EdgeKeys: String, CodingKey {
-        case id, from, to, curve, profile, structure
+        case id, from, to, curve, profile, structure, sections
     }
 
     /// Decodes `{"nodes", "edges", "nextNodeID", "nextEdgeID"}`: nodes as
@@ -493,6 +504,8 @@ extension RailwayNetwork: Codable {
             let curve = try edge.decode(TrackCurve.self, forKey: .curve)
             let profile = edge.contains(.profile) ? try edge.decode(TrackProfile.self, forKey: .profile) : .uniform
             let structure = edge.contains(.structure) ? try edge.decode(TrackStructure.self, forKey: .structure) : .surface
+            // Decision 124: an automatic edge's sections, and only its.
+            let sections = edge.contains(.sections) ? try edge.decode([TrackSection].self, forKey: .sections) : []
             guard number >= 1, number < nextEdgeNumber, number > lastEdge else {
                 throw corrupt("Track edge IDs must be ascending, from 1 and below nextEdgeID.")
             }
@@ -503,8 +516,17 @@ extension RailwayNetwork: Codable {
             guard let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile) else {
                 throw corrupt("Track edge \(number)'s curve or profile does not make an edge between its nodes.")
             }
+            let priced = ConstructionCosts.trackPricingLength
+            guard (structure == .automatic) == !sections.isEmpty, sections.allSatisfy({ $0.lengths > 0 }),
+                  zip(sections, sections.dropFirst()).allSatisfy({ $0.kind != $1.kind }),
+                  sections.isEmpty || sections.reduce(0, { $0 + Int64($1.lengths) }) == max(1, (geometry.length + priced - 1) / priced)
+            else {
+                throw corrupt("Track edge \(number)'s sections must cover an automatic edge's every length once, runs apart, and only an automatic edge has them.")
+            }
             let id = TrackEdgeID.edge(number)
-            edges.append(TrackEdge(id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure))
+            edges.append(TrackEdge(
+                id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections
+            ))
             attach(id, direction: geometry.startDirection, at: from)
             attach(id, direction: geometry.endDirection, at: to)
         }
@@ -552,6 +574,9 @@ extension RailwayNetwork: Codable {
             }
             if edge.structure != .surface {
                 try entry.encode(edge.structure, forKey: .structure)
+            }
+            if !edge.sections.isEmpty {
+                try entry.encode(edge.sections, forKey: .sections)
             }
         }
         try container.encode(nextNodeNumber, forKey: .nextNodeID)

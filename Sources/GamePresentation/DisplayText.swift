@@ -412,6 +412,15 @@ extension GameError {
             language.text("The hillside is too steep to build or zone on.", "坡度太陡，不能蓋建物，也不能劃分區。")
         case .needsShore:
             language.text("A wharf or a marina goes on the shore, part over the water.", "漁人碼頭與遊艇港要蓋在岸邊，一部分在水上。")
+        case .groundNotLoaded:
+            language.text("The ground there has not been read yet.", "那裡的地面高度還沒有讀入。")
+        case .trackOverWater:
+            language.text(
+                "Track crosses water only on a bridge at least 4 m above it, or in a tunnel at least 10 m below.",
+                "軌道要過水只能用橋（離水面至少 4 公尺）或隧道（水面下至少 10 公尺）。"
+            )
+        case .structureTooHigh:
+            language.text("A viaduct or bridge stands at most 64 m above the ground.", "高架或橋離地面最多 64 公尺。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",

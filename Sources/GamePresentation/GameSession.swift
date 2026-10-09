@@ -211,9 +211,11 @@ public final class GameSession {
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
-    /// What carries the next stretch of track.
-    public var networkStructure: TrackStructure = .surface
-    /// How high a new node goes, in world units (64 to a metre).
+    /// What carries the next stretch of track: what the ground asks for
+    /// (decision 124) unless the player forces a structure.
+    public var networkStructure: TrackStructure = .automatic
+    /// How high a new node goes above the ground there (decision 124; in a
+    /// world without ground, above 0 m), in world units (64 to a metre).
     public var networkHeight: Int64 = 0
     /// Whether the next stretch continues the track at its ends smoothly
     /// (the default), or runs straight.

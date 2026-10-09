@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 47
+    static let schemaVersion = 48
 
     var description: String
     var initialState: InitialState
@@ -183,7 +183,8 @@ struct GoldenScenario: Decodable {
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
                  .command(.setZone, _), .observe(.zone, _), .command(.setWater, _), .observe(.water, _), .command(.setSteep, _), .observe(.steep, _),
-                 .command(.setGround, _), .observe(.groundHeight, _): true
+                 .command(.setGround, _), .observe(.groundHeight, _), .command(.mapGround, _),
+                 .command(.buildTrackEdge(_, _, _, _, .automatic), _): true
             default: false
             }
         }
@@ -520,6 +521,8 @@ enum ScenarioCommand: Equatable {
     case setSteep([WaterRun])
     /// Schema 47 (decision 124): the ground's heights of some blocks.
     case setGround([GroundBlock])
+    /// Schema 48 (decision 124): a world with ground before any is read.
+    case mapGround
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -631,6 +634,8 @@ enum ScenarioCommand: Equatable {
                 try world.setSteep(runs.flatMap { run in (run.column..<run.column + run.count).map { CellPosition(row: run.row, column: $0) } })
             case .setGround(let blocks):
                 try world.setGround(blocks)
+            case .mapGround:
+                try world.mapGround()
             }
             return .ok
         } catch {
@@ -705,6 +710,9 @@ extension ScenarioCommand: Decodable {
         // "column", "heights": [17 × 17 metres]}]`.
         case "setGround":
             self = try .setGround(container.decode([GroundBlock].self, forKey: .blocks))
+        // Schema 48: a world with ground (decision 124).
+        case "mapGround":
+            self = .mapGround
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -1035,6 +1043,13 @@ extension StepOutcome: Codable {
         // Schema 47 (decision 124).
         case "invalidGround":
             self = .rejected(.invalidGround)
+        // Schema 48 (decision 124).
+        case "groundNotLoaded":
+            self = .rejected(.groundNotLoaded)
+        case "trackOverWater":
+            self = .rejected(.trackOverWater)
+        case "structureTooHigh":
+            self = .rejected(.structureTooHigh)
         // Schema 46 (decision 115).
         case "onSteepSlope":
             self = try .rejected(.onSteepSlope(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
@@ -1213,6 +1228,12 @@ extension StepOutcome: Codable {
             try container.encode("invalidTerrain", forKey: .result)
         case .rejected(.invalidGround):
             try container.encode("invalidGround", forKey: .result)
+        case .rejected(.groundNotLoaded):
+            try container.encode("groundNotLoaded", forKey: .result)
+        case .rejected(.trackOverWater):
+            try container.encode("trackOverWater", forKey: .result)
+        case .rejected(.structureTooHigh):
+            try container.encode("structureTooHigh", forKey: .result)
         case .rejected(.needsShore):
             try container.encode("needsShore", forKey: .result)
         case .rejected(.onSteepSlope(let row, let column)):
@@ -2019,6 +2040,9 @@ struct WorldSummary: Codable, Equatable {
             var length: Int64
             var profile: ProfileSummary
             var structure: StructureName
+            /// Schema 48 (decision 124): an automatic edge's sections, `[{"kind",
+            /// "lengths"}]`; left out for an explicit structure.
+            var sections: [TrackSection]?
         }
 
         init(_ network: RailwayNetwork) {
@@ -2026,7 +2050,7 @@ struct WorldSummary: Codable, Equatable {
             edges = network.edges.map {
                 EdgeSummary(
                     id: $0.id.number, from: $0.from.number, to: $0.to.number, curve: CurveSummary($0.curve), length: $0.length,
-                    profile: ProfileSummary($0.profile), structure: StructureName($0.structure)
+                    profile: ProfileSummary($0.profile), structure: StructureName($0.structure), sections: $0.sections.isEmpty ? nil : $0.sections
                 )
             }
             platforms = network.platforms.map(PlatformSummary.init)
@@ -3624,8 +3648,9 @@ struct ProfileSummary: Codable, Equatable {
     }
 }
 
-/// A structure as a fixture value: `"surface"`, `"elevated"`, `"bridge"` or
-/// `"tunnel"`, spelled out here rather than borrowed from GameCore.
+/// A structure as a fixture value: `"surface"`, `"elevated"`, `"bridge"`,
+/// `"tunnel"` or (schema 48) `"automatic"`, spelled out here rather than
+/// borrowed from GameCore.
 struct StructureName: Codable, Equatable {
     var structure: TrackStructure
 
@@ -3633,7 +3658,9 @@ struct StructureName: Codable, Equatable {
         self.structure = structure
     }
 
-    private static let names: [(String, TrackStructure)] = [("surface", .surface), ("elevated", .elevated), ("bridge", .bridge), ("tunnel", .tunnel)]
+    private static let names: [(String, TrackStructure)] = [
+        ("surface", .surface), ("elevated", .elevated), ("bridge", .bridge), ("tunnel", .tunnel), ("automatic", .automatic),
+    ]
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()

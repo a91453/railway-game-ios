@@ -13,9 +13,14 @@
 // is GamePresentation's (`HeightGrid`), as the water is (`WaterGrid`); a
 // block's corners come in through ``GameWorld/setGround(_:)``. A world that
 // has read none, every blank map and every save before version 27, is flat
-// at 0 m, as the railway has always taken it to be (decision 30). No rule
-// reads the ground yet: the track's structures and earthworks measured
-// from it are the design's second step.
+// at 0 m, as the railway has always taken it to be (decision 30).
+//
+// Since the design's second step a world *has ground* from the moment it
+// reads its first block, or from ``GameWorld/mapGround()``, which a new
+// real-world game calls before it has any track: from then on the ground
+// is unknown wherever no block has been read, track is measured from it
+// (``TrackSectionKind``), and its water needs a bridge or a tunnel. A
+// world without ground keeps Stage S4's rules.
 //
 // The references hold no ground the game can use (gap): the `Railway/`
 // site's 3D view reads Mapterhorn DEM tiles that are not in the snapshot,
@@ -51,6 +56,10 @@ public struct GroundBlock: Hashable, Sendable {
 public struct Ground: Hashable, Sendable {
     /// The heights read, by block.
     public private(set) var blocks: [LandBlock: GroundBlock] = [:]
+    /// Whether the world has ground: its heights are real where read and
+    /// unknown elsewhere, and track is measured from them. A world without
+    /// ground is flat at 0 m.
+    public private(set) var isMapped = false
 
     public init() {}
 
@@ -85,8 +94,10 @@ public struct Ground: Hashable, Sendable {
         return Self.floorDivision(sum + divisor / 2, by: divisor)
     }
 
-    /// Adds `fresh`, none of them read yet.
+    /// Adds `fresh`, none of them read yet; the world has ground from now
+    /// on.
     mutating func add(_ fresh: [GroundBlock]) {
+        isMapped = true
         for block in fresh {
             blocks[block.block] = block
         }
@@ -111,7 +122,8 @@ public struct Ground: Hashable, Sendable {
 extension GameWorld {
     /// Adds the heights of `blocks`, in any order (decision 124): a
     /// real-world map's ground, from GamePresentation's `HeightGrid`. A
-    /// block's ground is read once and does not change.
+    /// block's ground is read once and does not change. The world has
+    /// ground from now on.
     ///
     /// - Throws: ``GameError/invalidGround`` when `blocks` is empty, or
     ///   lists a block outside the world, twice, or already read.
@@ -127,13 +139,36 @@ extension GameWorld {
         ground.add(sorted)
     }
 
+    /// Gives a world ground before it has read any (decision 124): a new
+    /// real-world game, whose blocks the app reads as track comes to them.
+    ///
+    /// - Throws: ``GameError/invalidGround`` when the world has ground
+    ///   already or has track: track built on a flat world is not measured
+    ///   from ground that came later.
+    public mutating func mapGround() throws(GameError) {
+        guard !ground.isMapped, network.nodes.isEmpty else { throw .invalidGround }
+        ground.add([])
+    }
+
     /// The ground's height at `point`, in world units (decision 124): 0 m
-    /// anywhere in a world that has read no ground (a blank map, or a save
-    /// before version 27); otherwise `nil` outside the world or the blocks
-    /// read.
+    /// anywhere in a world without ground (a blank map, or a save before
+    /// version 27); otherwise `nil` outside the world or the blocks read.
     public func groundHeight(at point: PlanPoint) -> Int64? {
         guard bounds.contains(point) else { return nil }
-        return ground.isEmpty ? 0 : ground.height(at: point)
+        return ground.isMapped ? ground.height(at: point) : 0
+    }
+
+    /// The blocks a world with ground has not read whose ground `points`
+    /// stand on (decision 124), by row and then column: what the app reads
+    /// before it builds there. Empty in a world without ground.
+    public func missingGroundBlocks(under points: [PlanPoint]) -> [LandBlock] {
+        guard ground.isMapped else { return [] }
+        var missing: Set<LandBlock> = []
+        for point in points where bounds.contains(point) {
+            let block = LandBlock(row: Int(point.y / Land.blockLength), column: Int(point.x / Land.blockLength))
+            if ground.blocks[block] == nil { missing.insert(block) }
+        }
+        return missing.sorted()
     }
 }
 
@@ -173,13 +208,14 @@ extension Ground: Codable {
     }
 
     /// Decodes `{"blocks": [block, …]}` by row and then column, none twice;
-    /// the world checks they lie in its bounds.
+    /// the world checks they lie in its bounds. Present, the world has
+    /// ground, even with no block read yet (save version 28).
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let list = try container.decode([GroundBlock].self, forKey: .blocks)
-        guard !list.isEmpty, zip(list, list.dropFirst()).allSatisfy({ $0.block < $1.block }) else {
+        guard zip(list, list.dropFirst()).allSatisfy({ $0.block < $1.block }) else {
             throw DecodingError.dataCorruptedError(
-                forKey: .blocks, in: container, debugDescription: "Ground lists its blocks in order, none twice, and at least one."
+                forKey: .blocks, in: container, debugDescription: "Ground lists its blocks in order, none twice."
             )
         }
         add(list)

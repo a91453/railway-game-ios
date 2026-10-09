@@ -207,12 +207,17 @@ enum MapArt {
             }
         }
         for drawing in edges {
-            // A tunnel is dashed: cut where the view ends, its dashes would
-            // restart at the cut and shift as the map pans. Draw it whole.
-            let line = drawing.edge.structure == .tunnel
-                ? wholePolyline(drawing.geometry.points, projection: projection)
-                : polyline(drawing.geometry.points, projection: projection)
-            drawEdge(line, structure: drawing.edge.structure, detail: detail, referenceSize: referenceSize, in: context)
+            // Decision 124: an automatic edge stretch by stretch, as the
+            // ground carries it; an explicit one whole.
+            let spans = drawing.edge.sectionSpans
+            for span in spans {
+                let points = spans.count == 1 ? drawing.geometry.points : drawing.geometry.points(from: span.start, to: span.end)
+                // A tunnel is dashed: cut where the view ends, its dashes
+                // would restart at the cut and shift as the map pans. Draw
+                // it whole.
+                let line = span.kind == .tunnel ? wholePolyline(points, projection: projection) : polyline(points, projection: projection)
+                drawEdge(line, structure: span.kind.structure, detail: detail, referenceSize: referenceSize, in: context)
+            }
         }
         guard detail == .full else { return }
         let radius = max(1.5, referenceSize * 0.08)
@@ -301,7 +306,7 @@ enum MapArt {
             context.stroke(line, with: .color(Palette.track.opacity(0.6)), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.14), lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.3), max(2, referenceSize * 0.2)]))
         case (_, .overview):
             context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.16), lineCap: .round, lineJoin: .round))
-        case (.surface, .full):
+        case (.surface, .full), (.automatic, .full):
             context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .round, lineJoin: .round))
             context.stroke(line, with: .color(Palette.trackCentre), style: centre)
         case (.elevated, .full), (.bridge, .full):
@@ -337,7 +342,10 @@ enum MapArt {
             let points = drawing.geometry.points(from: stretch.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
             let path = offsetPolyline(points, by: stretch.offset * width)
             let color = Palette.lineColor(stretch.line, custom: stretch.color)
-            context.stroke(path, with: .color(drawing.edge.structure == .tunnel ? color.opacity(0.5) : color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+            // Decision 124: in an automatic edge's tunnel too.
+            let middle = (stretch.start + end) / 2
+            let inTunnel = drawing.edge.sectionSpans.first { $0.start <= middle && middle <= $0.end }?.kind == .tunnel
+            context.stroke(path, with: .color(inTunnel ? color.opacity(0.5) : color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
         }
     }
 
