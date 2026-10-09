@@ -577,6 +577,18 @@ extension TrackStructure {
 
 extension GameSession {
     /// What the network tool has picked so far and what to tap next.
+    /// The ground's height at `anchors` on a real-world map (decision
+    /// 124), from the app's heights file, to the metre: "ground 20 m → 35 m";
+    /// `nil` on a blank map or without the file. The track's own height
+    /// does not follow the ground yet.
+    func groundText(at anchors: [NetworkAnchor]) -> String? {
+        guard let heights, let frame = RealWorldFrame(world: world) else { return nil }
+        let metres = anchors.compactMap { planPoint(of: $0) }.map { Int(heights.height(at: $0, frame: frame).rounded()) }
+        guard metres.count == anchors.count, !metres.isEmpty else { return nil }
+        let joined = metres.map(String.init).joined(separator: " → ")
+        return language.text("ground \(joined) m", "地面海拔 \(joined) 公尺")
+    }
+
     public func networkDraftText() -> String {
         switch networkMode {
         case .build:
@@ -587,9 +599,10 @@ extension GameSession {
                 )
             }
             guard let end = networkEnd else {
+                let ground = groundText(at: [start]).map { language.text(" (\($0))", "（\($0)）") } ?? ""
                 return language.text(
-                    "From \(start.text(in: language)). Tap where it ends, or drag there from the start.",
-                    "從\(start.text(in: language))開始。請點終點，或從起點拖曳過去。"
+                    "From \(start.text(in: language))\(ground). Tap where it ends, or drag there from the start.",
+                    "從\(start.text(in: language))\(ground)開始。請點終點，或從起點拖曳過去。"
                 )
             }
             // Two new nodes say nothing an arrow between them would add.
@@ -599,8 +612,8 @@ extension GameSession {
             } else {
                 ends = "\(start.text(in: language)) → \(end.text(in: language))"
             }
-            guard let real = realTrackSectionText(from: start, to: end) else { return ends }
-            return "\(ends) · \(real)"
+            let parts = [ends, realTrackSectionText(from: start, to: end), groundText(at: [start, end])].compactMap(\.self)
+            return parts.joined(separator: " · ")
         case .platform:
             guard let stretch = networkPlatformStretch else {
                 return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")

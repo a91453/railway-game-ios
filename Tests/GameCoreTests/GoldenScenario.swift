@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 46
+    static let schemaVersion = 47
 
     var description: String
     var initialState: InitialState
@@ -182,7 +182,8 @@ struct GoldenScenario: Decodable {
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
-                 .command(.setZone, _), .observe(.zone, _), .command(.setWater, _), .observe(.water, _), .command(.setSteep, _), .observe(.steep, _): true
+                 .command(.setZone, _), .observe(.zone, _), .command(.setWater, _), .observe(.water, _), .command(.setSteep, _), .observe(.steep, _),
+                 .command(.setGround, _), .observe(.groundHeight, _): true
             default: false
             }
         }
@@ -245,7 +246,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -289,6 +290,9 @@ extension GoldenScenario.Step: Decodable {
             case .steep:
                 try requireOnly([.steep], answering: "steep")
                 self = try .observe(observation, expect: .steep(expect.decode(Bool.self, forKey: .steep)))
+            case .groundHeight:
+                try requireOnly([.found, .groundHeight], answering: "groundHeight")
+                self = try .observe(observation, expect: .groundHeight(Self.found(expect, .groundHeight, Int64.self)))
             case .landValue:
                 try requireOnly([.found, .landValue], answering: "landValue")
                 self = try .observe(observation, expect: .landValue(Self.found(expect, .landValue, LandValueSummary.self)))
@@ -514,6 +518,8 @@ enum ScenarioCommand: Equatable {
     case setWater([WaterRun])
     /// Schema 46 (decision 115): a real-world map's steep slopes, as runs.
     case setSteep([WaterRun])
+    /// Schema 47 (decision 124): the ground's heights of some blocks.
+    case setGround([GroundBlock])
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -623,6 +629,8 @@ enum ScenarioCommand: Equatable {
                 try world.setWater(runs.flatMap { run in (run.column..<run.column + run.count).map { CellPosition(row: run.row, column: $0) } })
             case .setSteep(let runs):
                 try world.setSteep(runs.flatMap { run in (run.column..<run.column + run.count).map { CellPosition(row: run.row, column: $0) } })
+            case .setGround(let blocks):
+                try world.setGround(blocks)
             }
             return .ok
         } catch {
@@ -642,6 +650,7 @@ extension ScenarioCommand: Decodable {
         case kind, building
         case zone, rows, columns
         case runs
+        case blocks
     }
 
     init(from decoder: any Decoder) throws {
@@ -692,6 +701,10 @@ extension ScenarioCommand: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .runs, in: container, debugDescription: "setSteep's runs hold 1 to 65,536 cells.")
             }
             self = .setSteep(runs)
+        // Schema 47: the ground's height (decision 124), `"blocks": [{"row",
+        // "column", "heights": [17 × 17 metres]}]`.
+        case "setGround":
+            self = try .setGround(container.decode([GroundBlock].self, forKey: .blocks))
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -1019,6 +1032,9 @@ extension StepOutcome: Codable {
         // Schema 44 (decision 105).
         case "invalidTerrain":
             self = .rejected(.invalidTerrain)
+        // Schema 47 (decision 124).
+        case "invalidGround":
+            self = .rejected(.invalidGround)
         // Schema 46 (decision 115).
         case "onSteepSlope":
             self = try .rejected(.onSteepSlope(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
@@ -1195,6 +1211,8 @@ extension StepOutcome: Codable {
             try container.encode("invalidZoneArea", forKey: .result)
         case .rejected(.invalidTerrain):
             try container.encode("invalidTerrain", forKey: .result)
+        case .rejected(.invalidGround):
+            try container.encode("invalidGround", forKey: .result)
         case .rejected(.needsShore):
             try container.encode("needsShore", forKey: .result)
         case .rejected(.onSteepSlope(let row, let column)):
@@ -1286,6 +1304,9 @@ enum ScenarioObservation: Equatable {
     case water(row: Int, column: Int)
     /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
+    /// Schema 47 (decision 124): the ground's height at a point, in world
+    /// units.
+    case groundHeight(PlanPoint)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1305,6 +1326,8 @@ enum ScenarioObservation: Equatable {
             .water(world.isWater(row: row, column: column))
         case .steep(let row, let column):
             .steep(world.isSteep(row: row, column: column))
+        case .groundHeight(let point):
+            .groundHeight(world.groundHeight(at: point))
         case .building(let row, let column):
             .building(world.buildings.building(row: row, column: column).flatMap { building in
                 world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
@@ -1400,6 +1423,7 @@ extension ScenarioObservation: Decodable {
         case type, from, to, train, station, line, gameMinutes, level, pattern, cars, building
         case edge, direction, distance, node, period
         case row, column
+        case point
     }
 
     init(from decoder: any Decoder) throws {
@@ -1438,6 +1462,9 @@ extension ScenarioObservation: Decodable {
         // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
+        // Schema 47: the ground's height (decision 124).
+        case "groundHeight":
+            self = try .groundHeight(container.decode(PlanPoint.self, forKey: .point))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1614,6 +1641,7 @@ enum ObservationAnswer: Equatable {
     case zone(Zone?)
     case water(Bool)
     case steep(Bool)
+    case groundHeight(Int64?)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1624,7 +1652,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1709,7 +1737,8 @@ extension ObservationAnswer: Encodable {
         case .lateness(let lateness?):
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
-        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil):
+        case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil),
+             .groundHeight(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1736,6 +1765,9 @@ extension ObservationAnswer: Encodable {
             try container.encode(water, forKey: .water)
         case .steep(let steep):
             try container.encode(steep, forKey: .steep)
+        case .groundHeight(let height?):
+            try container.encode(true, forKey: .found)
+            try container.encode(height, forKey: .groundHeight)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1832,6 +1864,9 @@ struct WorldSummary: Codable, Equatable {
     /// How many cells are steep (schema 46, decision 115); left out when
     /// none is.
     var steep: Int?
+    /// How many blocks of the ground's height are read (schema 47, decision
+    /// 124); left out when none is.
+    var groundBlocks: Int?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -2046,6 +2081,7 @@ struct WorldSummary: Codable, Equatable {
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }
         water = world.terrain.water.isEmpty ? nil : world.terrain.waterCellCount
         steep = world.terrain.steep.isEmpty ? nil : world.terrain.steepCellCount
+        groundBlocks = world.ground.isEmpty ? nil : world.ground.blocks.count
     }
 }
 

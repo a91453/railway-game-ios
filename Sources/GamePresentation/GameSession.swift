@@ -255,6 +255,11 @@ public final class GameSession {
     /// land is read as it is needed; `nil` without the app's file.
     @ObservationIgnored public var water: WaterGrid?
 
+    /// Taiwan's ground height (decision 124), which the network tool shows
+    /// at the ends it picked on a real-world map; `nil` without the app's
+    /// file.
+    @ObservationIgnored public var heights: HeightGrid?
+
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are
     /// there, a station name still as first suggested is suggested again

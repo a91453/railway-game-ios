@@ -46,6 +46,9 @@ public final class GameLauncher {
     /// (decision 105), handed to every game it starts
     /// (``GameSession/water``).
     public var water: WaterGrid?
+    /// Taiwan's ground height (decision 124), from the app's heights file;
+    /// `nil` until it is read, or without it.
+    public var heights: HeightGrid?
 
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
@@ -263,6 +266,7 @@ public final class GameLauncher {
         started.population = population
         started.places = places
         started.water = water
+        started.heights = heights
         started.railways = railways
         // Decision 88: land not read round a station built while the app
         // had no population.
@@ -302,12 +306,14 @@ public final class GameLauncher {
         population = data.population
         places = data.places
         water = data.water
+        heights = data.heights
         railways = data.railways
         realWorldIssues = data.issues
         if let session {
             session.population = population
             session.places = places
             session.water = water
+            session.heights = heights
             session.railways = railways
         }
         isLoadingRealWorldData = false
@@ -407,38 +413,48 @@ public struct RealWorldData: Sendable {
     public let population: PopulationGrid?
     public let places: PlaceGrid?
     public let water: WaterGrid?
+    /// Taiwan's ground height (decision 124).
+    public let heights: HeightGrid?
     public let railways: RealRailways?
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
 
-    public init(population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, railways: RealRailways?, issues: [RealDataLoadIssue]) {
+    public init(
+        population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, heights: HeightGrid? = nil, railways: RealRailways?,
+        issues: [RealDataLoadIssue]
+    ) {
         self.population = population
         self.places = places
         self.water = water
+        self.heights = heights
         self.railways = railways
         self.issues = issues
     }
 
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
-    /// `taiwan_water.json` and the railways' files
+    /// `taiwan_water.json`, `taiwan_heights.dat` and the railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
-    /// to its contents). About 5.3 MB of JSON is decoded: call it off the
+    /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
+    /// read (their rows decoded only when asked): call it off the
     /// main actor.
     public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []
-        func grid<Grid>(_ name: String, _ make: (Data) throws -> Grid) -> Grid? {
+        func grid<Grid>(_ name: String, ext: String = "json", _ make: (Data) throws -> Grid) -> Grid? {
             do {
-                return try make(file(name, "json"))
+                return try make(file(name, ext))
             } catch {
-                issues.append(RealDataLoadIssue(file: "\(name).json", error: error))
+                issues.append(RealDataLoadIssue(file: "\(name).\(ext)", error: error))
                 return nil
             }
         }
         let population = grid("taiwan_population", PopulationGrid.init(data:))
         let places = grid("taiwan_places", PlaceGrid.init(data:))
         let water = grid("taiwan_water", WaterGrid.init(data:))
+        let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
         let railways = RealRailways.load(file: file)
-        return RealWorldData(population: population, places: places, water: water, railways: railways.railways, issues: issues + railways.issues)
+        return RealWorldData(
+            population: population, places: places, water: water, heights: heights, railways: railways.railways, issues: issues + railways.issues
+        )
     }
 }

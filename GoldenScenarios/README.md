@@ -181,6 +181,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `placeBuilding`（schema 41） | `kind`（`"house"`、`"shop"` 或 `"office"`）、`point`（`{ "x", "y" }`，建物的中心） | `placeBuilding(_:at:)` |
 | `setZone`（schema 43） | `zone`（必填：`"residential"`、`"commercial"`、`"office"`、`"industrial"`、`"civic"`、`"leisure"`、`"noDevelopment"`、`"reserved"`，或 `null` 清除）、`rows`、`columns`（各是 `[first, last]`，含兩端） | `setZone(_:rows:columns:)` |
 | `setWater`（schema 44） | `runs`（`[{ "row", "column", "count" }]`，水域的格，同一列連續的一段；每段 1 到 65,536 格） | `setWater(_:)`（每段展開成格） |
+| `setGround`（schema 47） | `blocks`（`[{ "row", "column", "heights" }]`，1 km 區塊與它 17 × 17 個 64 m 角點的高度，公尺，逐列由北而南） | `setGround(_:)` |
 
 ### 結果（`expect.result`）
 
@@ -239,6 +240,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `buildingOnStation` | `station` | 新建物離這座車站的點不到 128（schema 41） |
 | `invalidZoneArea` | — | 要劃分區的矩形超出世界，或一邊超過 128 格（schema 43，決策 98） |
 | `invalidTerrain` | — | 水域的格在世界外、列了兩次、上面有土地，或世界的土地是按需展開的（schema 44，決策 105） |
+| `invalidGround` | — | 地面高度沒有區塊，或區塊在世界外、列了兩次、已經讀過（schema 47，決策 124） |
 | `onWater` | `row`、`column` | 玩家建物蓋在水上，或要劃分區的矩形每一格都是水（schema 44，決策 105）；指名第一格水（依列、行） |
 | `needsShore` | — | 漁人碼頭（`wharf`）或遊艇港（`marina`）沒有蓋在岸邊：正方形下面要同時有水和陸地（schema 45，決策 111） |
 | `onSteepSlope` | `row`、`column` | 玩家建物蓋在陡坡上，或要劃分區的矩形沒有能劃的格而第一格是陡坡（schema 46，決策 115）；指名那一格 |
@@ -295,6 +297,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `placedBuilding`（schema 41） | `building` | `{ "found": true, "placedBuilding": { "id", "kind", "x", "y" } }`：玩家建物的種類與中心；沒有這棟時 `{ "found": false }` | `placedBuilding(id:)` |
 | `zone`（schema 43） | `row`、`column` | `{ "found": true, "zone": "commercial" }`：那一格的分區；沒有分區時 `{ "found": false }` | `zones.zone(row:column:)` |
 | `water`（schema 44） | `row`、`column` | `{ "water": true }`：那一格是不是水 | `isWater(row:column:)` |
+| `groundHeight`（schema 47） | `point`（`{ "x", "y" }`） | `{ "found": true, "groundHeight": n }`：那一點的地面高度（世界單位）；沒有讀過任何地面的世界處處是 0；世界外或沒有讀過的區塊 `{ "found": false }` | `groundHeight(at:)` |
 | `building`（schema 37） | `row`、`column` | `{ "found": true, "building": { "id", "kind", "use", "density", "residents", "jobs" } }`：那一格的建物（`kind` 是 `"city"` 或 `"existingStock"`，`density` 1 到 4）與它在那一格容納的居民、就業；沒有建物時 `{ "found": false }` | `buildings.building(row:column:)`、`buildingCapacity(row:column:)` |
 
 列車規則（完整說明見 [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) 決策 14、29）：
@@ -700,3 +703,9 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `setSteep`（`runs`：`[{ "row", "column", "count" }]`，每段 1 到 65,536 格，和 `setWater` 一樣）、觀察 `steep`（`{ "steep": true }`）、結果 `onSteepSlope`（帶 `row`、`column`），最終狀態選填的 `steep`（陡坡格數；沒有時不寫）（ARCHITECTURE 決策 115）。舊的 fixture 不必改，schema 30 到 45 照樣讀取：**沒有任何既有 fixture 的預期值改變**（空白地圖沒有陡坡）。
 - `steep-slopes.json`：自由模式、8 × 8 格、第 0 列是水、第 4–7 列 × 第 4–7 欄是陡坡。陡坡蓋在水上是 `invalidTerrain`；小住宅蓋在 (5, 5) 是 `onSteepSlope`；整個陡坡的矩形劃分區是 `onSteepSlope`（指名第一格 (4, 4)），跨平地與陡坡的矩形只劃到平地的三格；陡坡不改地價（1,000）。每個值都手算，寫在 description 裡。
+
+## 決策 124：地面高度（schema 47）
+
+- 新指令 `setGround`（`blocks`：`[{ "row", "column", "heights": [17 × 17 公尺] }]`）、觀察 `groundHeight`（`point`；`{ "found": true, "groundHeight": n }`，世界單位）、結果 `invalidGround`，最終狀態選填的 `groundBlocks`（讀過的區塊數；沒有時不寫）（ARCHITECTURE 決策 124，「軌道與地形的高度」的第一步）。這一步沒有規則讀地面高度，舊的 fixture 不必改，schema 30 到 46 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到地面的 fixture；`GroundTests` 另外手算驗證內插、捨入、區塊的邊與存檔。
+- `ground-height.json`：自由模式、2 × 1 個區塊。沒有讀過地面時 (2048, 1024) 是 0；區塊 (0, 0) 的角點是 10 r + c 公尺（一個平面，內插剛好是 (10 y + x) / 64）：(2048, 1024) 是 192，(31, 0) 是 0、(32, 0) 是 1（四捨五入時 0.5 進位），(65535, 61440) 是 10624；沒有讀過的區塊 (0, 1) 找不到。沒有區塊、重複讀 (0, 0)、或連同世界外的 (1, 0) 都是 `invalidGround` 而且什麼都不讀。區塊 (0, 1) 只有角點 (1, 1) 是 64 m：第一格的中點是 16 m（1024），四分之三處是 36 m（2304）。每個值都手算，寫在 description 裡。
+
