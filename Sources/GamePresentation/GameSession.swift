@@ -243,6 +243,10 @@ public final class GameSession {
     /// bundled grid, set by the launcher; never saved.
     @ObservationIgnored public var places: PlaceGrid?
 
+    /// Taiwan's water (decision 105), read in with the land of a map whose
+    /// land is read as it is needed; `nil` without the app's file.
+    @ObservationIgnored public var water: WaterGrid?
+
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are
     /// there, a station name still as first suggested is suggested again
@@ -1412,19 +1416,19 @@ public final class GameSession {
     /// (``perform(_:)`` does).
     /// Reads in the land round every station whose land is not read yet,
     /// on a map whose land is read in as it is needed (decision 88, see
-    /// ``readLand(roundStationsOf:population:places:)``). Every edit does
+    /// ``readLand(roundStationsOf:population:places:water:)``). Every edit does
     /// it (``performEdit(_:)``), so a station's land comes with it and
     /// Undo takes both back; a game that starts does it for the stations
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
-        Self.readLand(roundStationsOf: &world, population: population, places: places)
+        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water)
     }
 
     /// Reads in the land within `reach` of `point` (decision 95: under a
     /// building's site), as ``readLandRoundStations()`` does round
     /// stations. Not an edit.
     func readLand(within reach: Int64, of point: PlanPoint) {
-        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places)
+        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places, water: water)
     }
 
     @discardableResult
@@ -1434,7 +1438,7 @@ public final class GameSession {
         var edited = world
         let result = try command(&edited)
         // Decision 88: a new station's land comes with it.
-        Self.readLand(roundStationsOf: &edited, population: population, places: places)
+        Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water)
         guard edited != world else { return result }
         // Decision 100: the new line's route follows the track.
         let trackChanged = lineDraft.count >= 2 && edited.network != world.network

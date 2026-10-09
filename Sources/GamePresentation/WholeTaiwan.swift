@@ -71,17 +71,21 @@ extension GameSession {
     /// Reads in the land within ``WholeTaiwan/landReach`` of every station
     /// of `world` whose blocks are not read yet, on a map whose land is
     /// read in as it is needed (decision 88), from `population` and
-    /// `places` (``LandImport/cells(in:population:places:frame:bounds:)``);
-    /// nothing for any other map, or without the population.
-    static func readLand(roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?) {
-        readLand(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places)
+    /// `places` (``LandImport/cells(in:population:places:water:frame:bounds:)``)
+    /// and, since decision 105, the blocks' `water`
+    /// (``WaterGrid/cells(frame:bounds:in:)``); nothing for any other map,
+    /// or without the population.
+    static func readLand(roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil) {
+        readLand(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places, water: water)
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks
-    /// are not read yet, as ``readLand(roundStationsOf:population:places:)``
+    /// are not read yet, as ``readLand(roundStationsOf:population:places:water:)``
     /// does round stations: also under a building about to be placed
     /// (decision 95), so it buys out the city's buildings there.
-    static func readLand(within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?) {
+    static func readLand(
+        within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil
+    ) {
         guard let read = world.landBlocks, !points.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
         let have = Set(read)
         var wanted = Set<LandBlock>()
@@ -91,12 +95,14 @@ extension GameSession {
             }
         }
         guard !wanted.isEmpty else { return }
-        let cells = LandImport.cells(in: wanted, population: population, places: places, frame: frame, bounds: world.bounds)
+        let cells = LandImport.cells(in: wanted, population: population, places: places, water: water, frame: frame, bounds: world.bounds)
+        let wet = water?.cells(frame: frame, bounds: world.bounds, in: wanted) ?? []
         do throws(GameError) {
-            try world.expandLand(wanted.sorted(), cells: cells)
+            try world.expandLand(wanted.sorted(), cells: cells, water: wet)
         } catch {
             // The blocks are in the world and not read yet, and the cells
-            // lie in them, so failing here is a programming error.
+            // and the water lie in them, the cells off the water, so
+            // failing here is a programming error.
             preconditionFailure("Could not read in the land: \(error)")
         }
     }

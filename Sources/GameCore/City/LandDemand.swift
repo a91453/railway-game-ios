@@ -417,7 +417,7 @@ extension GameWorld {
 
     /// Builds the new cell of a growing `station` (see ``growLand(reached:)``),
     /// on an empty cell of its catchment that none of the company's
-    /// buildings claims (decision 95):
+    /// buildings claims (decision 95) and is not water (decision 105):
     ///
     /// - decision 98: if any such cell is zoned for a use, the one worth
     ///   most (``landValue(row:column:)``; then the nearest, then by row
@@ -444,8 +444,9 @@ extension GameWorld {
                 let dx = Int64(column) * length + length / 2 - point.x
                 let dy = Int64(row) * length + length / 2 - point.y
                 let squared = dx * dx + dy * dy
+                // Decision 105: nor on water.
                 guard squared < radius * radius, land.cell(row: row, column: column) == nil,
-                      !isClaimedByPlacedBuilding(row: row, column: column)
+                      !isClaimedByPlacedBuilding(row: row, column: column), !terrain.isWater(row: row, column: column)
                 else { continue }
                 if zoned, let zone = zones.zone(row: row, column: column) {
                     if let use = zone.use {

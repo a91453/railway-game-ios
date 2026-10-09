@@ -112,6 +112,35 @@ final class WholeTaiwanTests: XCTestCase {
         )
     }
 
+    /// Decision 105: the water of the blocks comes with their land, the
+    /// land off it, and two harbours read in either order give the same
+    /// water and land.
+    func testTheWaterOfTheBlocksComesWithTheirLandInAnyOrder() throws {
+        let water = try WaterGrid(data: Data(contentsOf: Self.root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_water.json")))
+        let keelung = point(25.1330324, 121.7392299), badouzi = point(25.1440, 121.7930)
+        func read(_ points: [PlanPoint]) throws -> GameWorld {
+            let session = GameSession(world: .newWholeTaiwanGame(), language: .english)
+            session.population = Self.population
+            session.places = Self.places
+            session.water = water
+            for (number, point) in points.enumerated() {
+                try session.performEdit { world throws(GameError) in _ = try world.buildStation(named: "H\(number)", at: point) }
+            }
+            return session.world
+        }
+        let westFirst = try read([keelung, badouzi]), eastFirst = try read([badouzi, keelung])
+        XCTAssertEqual(westFirst.terrain, eastFirst.terrain)
+        XCTAssertEqual(westFirst.land, eastFirst.land)
+        let blocks = try XCTUnwrap(westFirst.landBlocks)
+        XCTAssertEqual(westFirst.terrain, Terrain(water: water.cells(frame: frame, bounds: westFirst.bounds, in: Set(blocks))))
+        XCTAssertGreaterThan(westFirst.terrain.waterCellCount, 1_000, "the harbour and the sea")
+        XCTAssertFalse(westFirst.land.cells.contains { westFirst.isWater(row: $0.row, column: $0.column) })
+        XCTAssertEqual(
+            westFirst.land.cells,
+            LandImport.cells(in: Set(blocks), population: Self.population, places: Self.places, water: water, frame: frame, bounds: westFirst.bounds)
+        )
+    }
+
     /// Each edit that reads land in keeps a copy of the land for Undo, so
     /// only the last three such edits can be taken back; edits that read
     /// none in between still can.
