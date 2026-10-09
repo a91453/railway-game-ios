@@ -66,7 +66,7 @@ final class TutorialUITests: XCTestCase {
         var covered = [card.frame]
         if layers.exists { covered.append(layers.frame) }
         let free = action.exists
-            ? visibleMap.divided(atDistance: max(0, visibleMap.maxX - (action.frame.minX - 30)), from: .maxXEdge).remainder
+            ? visibleMap.divided(atDistance: max(0, visibleMap.maxX - (action.frame.minX - 20)), from: .maxXEdge).remainder
             : visibleMap
         guard let points = freePoints(in: free, avoiding: covered) else {
             return XCTFail("No free place on the map: map \(visibleMap), free \(free), card \(card.frame), layers \(layers.frame), action \(action.frame)")
