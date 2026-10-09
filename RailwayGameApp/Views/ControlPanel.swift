@@ -3,13 +3,15 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
-/// Tool picker, selection inspector, tool options and the action button,
-/// in two parts: the tool picker, always shown in the dock, and the
-/// details, in a card the screen shows only when there is something to
-/// show (``ContentView``).
+/// The way into building, selection inspector, tool options and the
+/// action button, in two parts: the Build entry, always shown in the dock,
+/// and the details, in a card the screen shows only when there is
+/// something to show (``ContentView``). The tools themselves are in a
+/// column at the map's edge while building (``BuildToolRail``, decision
+/// 114).
 struct ControlPanel: View {
     enum Arrangement {
-        /// The tool picker, the lines and the figures, and Undo, in a row.
+        /// The Build entry, the lines and the figures, and Undo, in a row.
         case tools
         /// The selection inspector, the tool's options and the action
         /// button, in one column.
@@ -23,7 +25,7 @@ struct ControlPanel: View {
         switch arrangement {
         case .tools:
             HStack(spacing: 8) {
-                ToolPicker(session: session)
+                BuildEntry(session: session)
                 // Decision 104: the lines and the company's figures, named,
                 // beside the tools.
                 QuickEntries(session: session)
@@ -45,43 +47,9 @@ struct ControlPanel: View {
     }
 }
 
-/// One button per tool the app offers, in a row. The active tool is
-/// filled and its name bold, so the state does not depend on colour alone.
-private struct ToolPicker: View {
-    let session: GameSession
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(ConstructionTool.networkTools, id: \.self) { tool in
-                let isActive = session.tool == tool
-                Button {
-                    // Decision 104: the active tool again goes back to
-                    // looking at the map; not in the tutorial, whose steps
-                    // wait for a tool to stay chosen.
-                    let leaves = isActive && tool != .select && session.tutorial == nil
-                    session.selectTool(leaves ? .select : tool)
-                } label: {
-                    TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
-                }
-                .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
-                .accessibilityLabel(tool.accessibilityName)
-                // Stable across localizations for the Traditional Chinese toolbar UI test.
-                .accessibilityIdentifier("tool.\(tool)")
-                .accessibilityAddTraits(isActive ? .isSelected : [])
-                .tutorialTarget(TutorialTarget(tool: tool))
-            }
-        }
-        .padding(3)
-        .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .strokeBorder(Theme.panelBorder, lineWidth: 1)
-        )
-    }
-}
-
 /// An icon over a short name, for the tools and the entries beside them
-/// (decision 104).
-private struct TabLabel: View {
+/// (decision 104), and the tools at the map's edge (decision 114).
+struct TabLabel: View {
     let systemImage: String
     let title: String
     var isActive = false
