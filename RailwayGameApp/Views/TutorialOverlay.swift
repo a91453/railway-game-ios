@@ -96,6 +96,9 @@ private struct TutorialCardLayout: Layout {
     /// The shortest a card is measured to leave the map free: the step's
     /// title, a few lines of its explanation and its buttons.
     private let minimumCardHeight: CGFloat = 200
+    /// The narrowest a card is measured to leave a band of the map free
+    /// beside it.
+    private let minimumCardWidth: CGFloat = 240
     /// Above covering any ordinary control with the whole card, below
     /// covering a sliver of the step's own controls.
     private let mapCoveredCost: CGFloat = 400_000
@@ -121,6 +124,24 @@ private struct TutorialCardLayout: Layout {
                 if retry.cost < best.cost {
                     size = shorter
                     best = retry
+                }
+            }
+        }
+        // A phone on its side (decision 106): the map between the status
+        // pill, the dock and the details card is wide but short, and a card
+        // of the full width can cover all of it. Narrower, a band of the map
+        // stays free beside it; tall, or measured shorter as above.
+        if best.cost >= mapCoveredCost, let map {
+            let narrow = max(minimumCardWidth, map.width - minimumFreeMap - gap)
+            if narrow < width {
+                let heights = [available.height, max(minimumCardHeight, map.height - minimumFreeMap - gap)]
+                for height in heights {
+                    let narrower = card.sizeThatFits(ProposedViewSize(width: narrow, height: height))
+                    let retry = placement(of: narrower, in: bounds, available: available)
+                    if retry.cost < best.cost {
+                        size = narrower
+                        best = retry
+                    }
                 }
             }
         }
