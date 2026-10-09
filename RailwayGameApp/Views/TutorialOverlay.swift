@@ -129,12 +129,13 @@ private struct TutorialCardLayout: Layout {
         }
         // A phone on its side (decision 106): the map between the status
         // pill, the dock and the details card is wide but short, and a card
-        // of the full width can cover all of it. Narrower, a band of the map
-        // stays free beside it; tall, or measured shorter as above.
+        // of the full width can cover all of it. Narrower, 20 points at a
+        // time, until a band of the map stays free beside it; tall, or
+        // measured shorter as above.
         if best.cost >= mapCoveredCost, let map {
-            let narrow = max(minimumCardWidth, map.width - minimumFreeMap - gap)
-            if narrow < width {
-                let heights = [available.height, max(minimumCardHeight, map.height - minimumFreeMap - gap)]
+            let heights = [available.height, max(minimumCardHeight, map.height - minimumFreeMap - gap)]
+            var narrow = width - 20
+            while narrow >= minimumCardWidth, best.cost >= mapCoveredCost {
                 for height in heights {
                     let narrower = card.sizeThatFits(ProposedViewSize(width: narrow, height: height))
                     let retry = placement(of: narrower, in: bounds, available: available)
@@ -143,6 +144,7 @@ private struct TutorialCardLayout: Layout {
                         best = retry
                     }
                 }
+                narrow -= 20
             }
         }
         card.place(at: best.origin, anchor: .topLeading, proposal: ProposedViewSize(size))
