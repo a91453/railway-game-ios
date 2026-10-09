@@ -270,4 +270,47 @@ final class TrackSectionTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: edited { $0["structure"] = "elevated" }), "sections on an explicit edge")
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: edited { $0["sections"] = nil }), "no sections on an automatic edge")
     }
+
+    // MARK: - Save version 28
+
+    /// The version 27 world (sea, river, steep hillside, ground of blocks
+    /// (0, 0), (0, 1) and (1, 0), block (r, c)'s corner (i, j) 100 r +
+    /// 10 c + i + j metres) with two automatic edges: one along y = 20,480
+    /// from x = 30,720 to 53,248 at 24 m, over the river (column 10) on a
+    /// bridge, and one along y = 40,960 from x = 4,096 to 12,288 at 0 m,
+    /// in a tunnel under ground 11 to 13 m high; run ten minutes more.
+    static func terrainTrackWorld() throws -> GameWorld {
+        var world = try GroundTests.groundWorld()
+        for (y, from, to, z) in [(Int64(20_480), Int64(30_720), Int64(53_248), Int64(1_536)), (40_960, 4_096, 12_288, 0)] {
+            let a = try world.buildTrackNode(at: WorldCoordinate(x: from, y: y, z: z))
+            let b = try world.buildTrackNode(at: WorldCoordinate(x: to, y: y, z: z))
+            try world.buildTrackEdge(from: a, to: b, structure: .automatic)
+        }
+        try world.advance(ticks: 10)
+        return world
+    }
+
+    /// Version 28 (decision 124): automatic track and its sections. It
+    /// saves byte for byte and is the world the build that wrote it makes.
+    func testVersionTwentyEightKeepsTheAutomaticTrack() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v28-terrain-track.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["TERRAIN_TRACK_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: try Self.terrainTrackWorld())).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 28)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, try Self.terrainTrackWorld())
+        XCTAssertTrue(world.ground.isMapped)
+        let kinds = world.network.edges.map { Set($0.sections.map(\.kind)) }
+        XCTAssertEqual(kinds.count, 2)
+        XCTAssertTrue(kinds[0].contains(.bridge))
+        XCTAssertEqual(kinds[1], [.tunnel])
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 28,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
 }

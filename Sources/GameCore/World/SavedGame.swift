@@ -136,9 +136,14 @@
 ///     version would drop it, and its next save would lose the ground the
 ///     track is measured from, so it says the save is newer than it
 ///     instead.
+/// 28. Track over the ground (decision 124): an edge can be
+///     `"automatic"`, with the `"sections"` the ground made of it, and a
+///     world can have `"ground"` with no block read yet. A build that reads
+///     only an earlier version would call such an edge damaged and such a
+///     world flat, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 27
+    public static let currentVersion = 28
 
     public let world: GameWorld
 
@@ -230,6 +235,9 @@ extension SavedGame: Codable {
         // and grows and builds as it did.
         // Version 26 to 27: a world without `"ground"` has read no ground,
         // and is flat at 0 m as before.
+        // Version 27 to 28: a world with `"ground"` has ground, and its
+        // track is measured from it; no build before 28 wrote ground with
+        // track (the app read none), and no edge was automatic.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
