@@ -10,15 +10,29 @@ name: Release Archive (unsigned)
 # Normally started by hand: Actions -> Release Archive (unsigned) -> Run workflow.
 # It also runs on pull requests that change the project settings, the app's
 # resources, its entry point (where the Debug-only launch arguments are) or
-# this workflow.
+# this workflow, and every night on main, which catches whatever else would
+# break a Release build.
+#
+# Since 2026-10-09 a pull request no longer runs it for the string catalog or
+# the regenerated Xcode project alone. Almost every app change touches one of
+# them (a new string, a new file), so it ran on most app pull requests and
+# waited up to 14 minutes for a macOS runner beside the iOS build. The
+# translations are checked by ios-build.yml; the project's settings come from
+# project.yml, which ios-build.yml proves the project matches; and a new file
+# reaches the Release build the same way a changed one does, which the
+# nightly run catches.
 
 on:
   workflow_dispatch:
+  # 18:47 UTC is 02:47 in Taipei, half an hour after ios-build.yml's nightly
+  # run. A scheduled run uses the default branch.
+  schedule:
+    - cron: "47 18 * * *"
   pull_request:
     paths:
       - RailwayGameApp/project.yml
-      - RailwayGameApp/RailwayGame.xcodeproj/**
       - RailwayGameApp/Resources/**
+      - "!RailwayGameApp/Resources/Localizable.xcstrings"
       - RailwayGameApp/App/**
       - .github/workflows/release-archive.yml
 
