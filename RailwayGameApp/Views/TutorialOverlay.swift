@@ -51,6 +51,8 @@ private struct TutorialOverlay: View {
                 let frame = frames[index]
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(Theme.accent, lineWidth: 3)
+                    // Decision 122: the station master's lantern lights it.
+                    .shadow(color: Theme.accent.opacity(0.8), radius: 8)
                     .background {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(Color.black.opacity(0.35), lineWidth: 5)
@@ -215,6 +217,8 @@ private struct TutorialCard: View {
     let session: GameSession
     let tutorial: Tutorial
     @AccessibilityFocusState private var focusesTitle: Bool
+    /// The lantern beside "Complete this step", as large as its text.
+    @ScaledMetric(relativeTo: .footnote) private var lanternSize = 14.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -253,7 +257,7 @@ private struct TutorialCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 // Decision 118: the station master gives the tutorial.
-                StationMasterAvatar(size: 28)
+                StationMasterAvatar(size: 28, mood: session.isTutorialStepDone ? .happy : .normal)
                 HStack(spacing: 6) {
                     Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
                         .font(.caption.weight(.bold))
@@ -277,9 +281,14 @@ private struct TutorialCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             if !session.isTutorialStepDone {
                 HStack(spacing: 6) {
-                    Image(systemName: "hand.tap.fill")
-                        .font(.caption.weight(.bold))
+                    // Decision 122: the station master's lantern.
+                    Image("StationMasterLantern")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: lanternSize, height: lanternSize)
                         .foregroundStyle(Theme.warning)
+                        .accessibilityHidden(true)
                     Text("Complete this step to continue.")
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(Theme.warning)

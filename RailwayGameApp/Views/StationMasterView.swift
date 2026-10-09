@@ -2,52 +2,36 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
-/// The station master's face (decision 118), drawn here rather than from
-/// art: a round face under a cap in the region's colours
-/// (``RegionStyle/stationMasterCap``) with a badge on it, in a circle.
+/// How the station master looks (decision 122): pleased when there is
+/// nothing to fix, worried (the lantern dimmed) over a worry.
+enum StationMasterMood: String {
+    case normal = "Normal"
+    case happy = "Happy"
+    case worried = "Worried"
+}
+
+/// The station master's face (decision 118): since decision 122 the
+/// region's character (``RegionStyle/stationMasterArt``), for Taiwan the
+/// yellow tit with its lantern, drawn as SVG in the asset catalog, in a
+/// circle.
 struct StationMasterAvatar: View {
     var size: CGFloat = 40
+    var mood: StationMasterMood = .normal
     @Environment(\.regionStyle) private var region
 
+    /// Narrower than this, the avatar shows the head alone, a size up, so
+    /// the face still reads (decision 122).
+    private static let headOnlyBelow: CGFloat = 60
+
     var body: some View {
-        ZStack {
-            Circle().fill(Theme.panel)
-            // The face.
-            Circle()
-                .fill(Color(red: 0.95, green: 0.80, blue: 0.66))
-                .frame(width: size * 0.52, height: size * 0.52)
-                .offset(y: size * 0.1)
-            // Eyes and a smile.
-            HStack(spacing: size * 0.12) {
-                Circle().frame(width: size * 0.05, height: size * 0.05)
-                Circle().frame(width: size * 0.05, height: size * 0.05)
-            }
-            .foregroundStyle(Color.black.opacity(0.75))
-            .offset(y: size * 0.1)
-            Capsule()
-                .trim(from: 0.55, to: 0.95)
-                .stroke(Color.black.opacity(0.6), lineWidth: max(1, size * 0.03))
-                .frame(width: size * 0.18, height: size * 0.1)
-                .rotationEffect(.degrees(180))
-                .offset(y: size * 0.2)
-            // The cap: its crown, its band and the visor.
-            UnevenRoundedRectangle(topLeadingRadius: size * 0.16, bottomLeadingRadius: 2, bottomTrailingRadius: 2, topTrailingRadius: size * 0.16)
-                .fill(region.stationMasterCap)
-                .frame(width: size * 0.62, height: size * 0.22)
-                .offset(y: -size * 0.17)
-            Capsule()
-                .fill(region.stationMasterCap)
-                .frame(width: size * 0.7, height: size * 0.07)
-                .offset(y: -size * 0.04)
-            Circle()
-                .fill(region.stationMasterBadge)
-                .frame(width: size * 0.12, height: size * 0.12)
-                .offset(y: -size * 0.17)
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
-        .accessibilityHidden(true)
+        Image(region.stationMasterArt + mood.rawValue)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .scaleEffect(size < Self.headOnlyBelow ? 1.45 : 1, anchor: UnitPoint(x: 0.44, y: 0.3))
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(Theme.panelBorder, lineWidth: 1))
+            .accessibilityHidden(true)
     }
 }
 
@@ -62,6 +46,7 @@ struct StationMasterCorner: View {
     @State private var isTalking = false
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
@@ -77,7 +62,15 @@ struct StationMasterCorner: View {
                     talk &+= 1
                 }
             } label: {
-                StationMasterAvatar(size: 44)
+                StationMasterAvatar(size: 44, mood: mood(advice))
+                    // Decision 122: a hop each time it speaks, not with
+                    // Reduce Motion.
+                    .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : talk) { content, lift in
+                        content.offset(y: -lift)
+                    } keyframes: { _ in
+                        SpringKeyframe(8, duration: 0.15)
+                        SpringKeyframe(0, duration: 0.35, spring: .bouncy)
+                    }
                     .overlay(alignment: .topTrailing) {
                         if let advice, !isTalking {
                             Circle()
@@ -121,6 +114,11 @@ struct StationMasterCorner: View {
             guard !Task.isCancelled else { return }
             isTalking = false
         }
+    }
+
+    private func mood(_ advice: StationMasterAdvice?) -> StationMasterMood {
+        guard let advice else { return .happy }
+        return advice.isWorry ? .worried : .normal
     }
 
     /// The advice in a glass bubble, its text laid out by `sized`.

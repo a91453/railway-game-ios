@@ -1193,3 +1193,15 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼或素材）：SimCity BuildIt（作者的截圖，商業遊戲）狀態泡泡裡的圓形圖示。
 
+## 站長的角色（決策 122）
+
+查 `a91453/railway-reference-private` `435350d` 裡的人物與角色：只有 `Railway/taipei_gta_reference/source/avatars/` 的八個 3D 人物（`casual-*`、`elder-*`、`student-*`、`jie`、`wen`，`.glb`，KTX2 貼圖，寫實），畫風與 App 圖示不合；其餘的來源沒有角色或吉祥物。
+
+| 參考檔案 | 目標 | 方式 |
+| --- | --- | --- |
+| `Railway/taipei_gta_reference/source/avatars/*.glb` | — | 不用（寫實的 3D，和扁平的 2D 不合） |
+| `Website/site/assets/app-icon-light.png`（黃點 `#FFC86B`） | 黃山雀的身體與燈的顏色 | 取顏色 |
+| （參考沒有） | `StationMasterTaiwan*`、`StationMasterLantern`、`StationMasterMood`、`RegionStyle.stationMasterArt` | gap → 原生 |
+
+外部只取想法，沒有用到素材：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（動物站長的前例）；作者提供的 [neonwatty/logo-designer-skill](https://github.com/neonwatty/logo-designer-skill)（MIT，取它的流程：幾種方案讓作者挑、深淺色與小尺寸檢查）與 [supermemoryai/skills 的 svg-animations](https://github.com/supermemoryai/skills/blob/main/svg-animations/SKILL.md)（沒有授權，只讀想法）。
+
