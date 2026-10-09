@@ -63,16 +63,24 @@ struct MapAlertBubbles: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: symbol(alert))
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(tint(alert))
+                // Decision 121: the map's glyph on a disc of the alert's
+                // colour, as the app icon's chips (5.5:1 or more).
+                glyph(alert).image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 13, height: 13)
+                    .foregroundStyle(Theme.panel)
+                    .frame(width: 20, height: 20)
+                    .background(tint(alert), in: Circle())
+                    .accessibilityHidden(true)
                 Text(verbatim: text)
                     .font(.caption.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
             }
-            .padding(.horizontal, 8)
+            .padding(.leading, 4)
+            .padding(.trailing, 8)
             .frame(minHeight: 28)
             .background(Theme.panel, in: Capsule())
             .overlay(Capsule().strokeBorder(tint(alert), lineWidth: 1.5))
@@ -91,11 +99,11 @@ struct MapAlertBubbles: View {
         return session.world.line(id: id)?.name
     }
 
-    private func symbol(_ alert: MapAlert) -> String {
+    private func glyph(_ alert: MapAlert) -> MapGlyph {
         switch alert.kind {
-        case .crowded: "person.3.fill"
-        case .full: "exclamationmark.octagon.fill"
-        case .lineWithoutTrains: "tram.fill"
+        case .crowded: .crowd
+        case .full: .full
+        case .lineWithoutTrains: .train
         }
     }
 
