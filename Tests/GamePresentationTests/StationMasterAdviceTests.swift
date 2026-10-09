@@ -22,6 +22,7 @@ final class StationMasterAdviceTests: XCTestCase {
         try world.buildStation(named: "Beta", at: TestLine.centre(3, 0))
         XCTAssertEqual(StationMasterAdvice(world: world), .createLine)
         XCTAssertEqual(StationMasterAdvice.createLine.text(in: .english), "Stations ready. Open Lines and join them into a line.")
+        XCTAssertEqual(StationMasterAdvice.allWellText(in: .traditionalChinese), "一切順利，繼續保持！")
         XCTAssertFalse(StationMasterAdvice.createLine.isWorry)
 
         try world.createLine(named: "Main", stops: [Self.alpha, Self.beta])

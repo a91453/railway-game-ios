@@ -57,7 +57,9 @@ struct StationMasterCorner: View {
             Button {
                 if isTalking {
                     isTalking = false
-                } else if advice != nil {
+                } else {
+                    // With nothing to advise it says all is well
+                    // (decision 123).
                     isTalking = true
                     talk &+= 1
                 }
@@ -83,14 +85,17 @@ struct StationMasterCorner: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(verbatim: session.language.text("Station master", "站長")))
-            .accessibilityValue(Text(verbatim: advice?.text(in: session.language) ?? ""))
+            .accessibilityValue(Text(verbatim: said(advice)))
             .accessibilityIdentifier("stationMaster")
-            if isTalking, let advice, maxBubbleWidth >= 140 {
+            if isTalking, maxBubbleWidth >= 140 {
                 let width = min(maxBubbleWidth, 320)
+                let worry = advice?.isWorry ?? false
                 // One line when it fits, else wrapped at the width it has.
                 ViewThatFits(in: .horizontal) {
-                    bubble(advice) { $0.fixedSize() }
-                    bubble(advice) { $0.fixedSize(horizontal: false, vertical: true).frame(width: width - 24, alignment: .leading) }
+                    bubble(said(advice), worry: worry) { $0.fixedSize() }
+                    bubble(said(advice), worry: worry) {
+                        $0.fixedSize(horizontal: false, vertical: true).frame(width: width - 24, alignment: .leading)
+                    }
                 }
                 .frame(maxWidth: width, alignment: .leading)
                 .onTapGesture { isTalking = false }
@@ -121,10 +126,15 @@ struct StationMasterCorner: View {
         return advice.isWorry ? .worried : .normal
     }
 
-    /// The advice in a glass bubble, its text laid out by `sized`.
-    private func bubble<Sized: View>(_ advice: StationMasterAdvice, sized: (Text) -> Sized) -> some View {
+    /// The advice, or that all is well.
+    private func said(_ advice: StationMasterAdvice?) -> String {
+        advice?.text(in: session.language) ?? StationMasterAdvice.allWellText(in: session.language)
+    }
+
+    /// What it says in a glass bubble, its text laid out by `sized`.
+    private func bubble<Sized: View>(_ text: String, worry: Bool, sized: (Text) -> Sized) -> some View {
         sized(
-            Text(verbatim: advice.text(in: session.language))
+            Text(verbatim: text)
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(Theme.textPrimary)
         )
@@ -133,7 +143,7 @@ struct StationMasterCorner: View {
         .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(advice.isWorry ? Theme.warning.opacity(0.6) : Theme.panelBorder, lineWidth: 1)
+                .strokeBorder(worry ? Theme.warning.opacity(0.6) : Theme.panelBorder, lineWidth: 1)
         )
     }
 }

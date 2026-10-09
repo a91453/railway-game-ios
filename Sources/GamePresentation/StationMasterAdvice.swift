@@ -65,6 +65,12 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// What the station master says when tapped with no advice to give
+    /// (decision 123): before, a tap then did nothing, as if it were broken.
+    public static func allWellText(in language: DisplayLanguage) -> String {
+        language.text("All running well. Keep it up!", "一切順利，繼續保持！")
+    }
+
     /// What the station master says.
     public func text(in language: DisplayLanguage) -> String {
         switch self {
