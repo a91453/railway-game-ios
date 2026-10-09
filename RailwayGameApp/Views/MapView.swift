@@ -309,6 +309,10 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapStationTagView(session: session, camera: projection, viewport: viewport, insets: insets)
                 }
+                // Decision 117: something just put up.
+                .overlay(alignment: .topLeading) {
+                    BuildPulseMark(pulse: session.buildPulse, camera: projection)
+                }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
                 // And after the other overlays, so the legend and the zoom
