@@ -108,7 +108,9 @@ final class RealWorldDataLoadTests: XCTestCase {
         let expected = LandImport.cells(population: population, places: launcher.places, water: water, frame: frame, bounds: GameWorld.newGameBounds)
         XCTAssertNotNil(expected)
         XCTAssertEqual(launcher.session?.world.land.cells, expected)
-        XCTAssertEqual(launcher.session?.world.terrain, Terrain(water: water.cells(frame: frame, bounds: GameWorld.newGameBounds)))
+        XCTAssertEqual(launcher.session?.world.terrain, Terrain(
+            water: water.cells(frame: frame, bounds: GameWorld.newGameBounds), steep: water.steepCells(frame: frame, bounds: GameWorld.newGameBounds)
+        ))
         XCTAssertTrue(launcher.session?.water != nil)
         XCTAssertNotNil(launcher.session?.railways)
 

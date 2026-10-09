@@ -204,27 +204,35 @@ extension GameWorld {
     /// zoned cells near the company's buildings are worth more
     /// (``landValue(row:column:)``). Returns how many cells changed.
     ///
-    /// Water is never zoned (decision 105): its cells in the rectangle are
-    /// left without a zone, and the rest zoned.
+    /// Water is never zoned (decision 105), nor a steep slope (decision
+    /// 115): their cells in the rectangle are left without a zone, and the
+    /// rest zoned.
     ///
     /// - Throws: ``GameError/invalidZoneArea`` for a rectangle reaching
     ///   outside the world or more than ``Zoning/maximumSide`` cells a side;
-    ///   ``GameError/onWater(row:column:)`` naming its first cell when every
-    ///   cell of the rectangle is water and `zone` is not `nil`.
+    ///   when no cell of the rectangle may be zoned and `zone` is not `nil`,
+    ///   ``GameError/onWater(row:column:)`` naming its first cell if that is
+    ///   water, else ``GameError/onSteepSlope(row:column:)``.
     @discardableResult
     public mutating func setZone(_ zone: Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>) throws(GameError) -> Int {
         guard rows.lowerBound >= 0, columns.lowerBound >= 0,
               rows.upperBound < Land.rows(in: bounds), columns.upperBound < Land.columns(in: bounds),
               rows.count <= Zoning.maximumSide, columns.count <= Zoning.maximumSide
         else { throw .invalidZoneArea }
-        guard zone != nil, terrain.hasWater(rows: rows, columns: columns) else {
+        guard zone != nil, !terrain.isEmpty else {
             return zones.set(zone, rows: rows, columns: columns)
         }
         let terrain = terrain
-        guard rows.contains(where: { row in columns.contains { !terrain.isWater(row: row, column: $0) } }) else {
-            throw .onWater(row: rows.lowerBound, column: columns.lowerBound)
+        func barred(_ row: Int, _ column: Int) -> Bool {
+            terrain.isWater(row: row, column: column) || terrain.isSteep(row: row, column: column)
         }
-        return zones.set(zone, rows: rows, columns: columns) { terrain.isWater(row: $0, column: $1) }
+        guard rows.contains(where: { row in columns.contains { !barred(row, $0) } }) else {
+            if terrain.isWater(row: rows.lowerBound, column: columns.lowerBound) {
+                throw .onWater(row: rows.lowerBound, column: columns.lowerBound)
+            }
+            throw .onSteepSlope(row: rows.lowerBound, column: columns.lowerBound)
+        }
+        return zones.set(zone, rows: rows, columns: columns, skipping: barred)
     }
 
     // MARK: - Growth

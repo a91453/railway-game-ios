@@ -144,4 +144,40 @@ final class WaterGridTests: XCTestCase {
         let world = GameWorld.newGame(anchor: frame.anchor, water: wet)
         XCTAssertTrue(world.land.isEmpty)
     }
+
+    // MARK: - Steep slopes (decision 115)
+
+    /// The same file marks the hillsides of more than 30 %: none on water,
+    /// few in the cities, most of Alishan; land stays on them, and a new
+    /// game takes them.
+    func testTheBundledGridKnowsTheSteepSlopes() throws {
+        let population = try Self.population(), places = try Self.places()
+        // (map, steep cells, land cells on them.)
+        let maps: [(String, Double, Double, Int, Int)] = [
+            ("Taipei", 25.047882, 121.517219, 2_959, 2_784),
+            ("Keelung", 25.1330324, 121.7392299, 7_628, 3_295),
+            ("Kaohsiung", 22.6395321, 120.3025585, 786, 785),
+            ("Magong", 23.5655, 119.5793, 20, 6),
+            ("Alishan", 23.5106, 120.8048, 51_912, 4_079),
+        ]
+        for (name, latitude, longitude, steepCells, landOnSteep) in maps {
+            let frame = try Self.frame(latitude, longitude)
+            let steep = Self.water.steepCells(frame: frame, bounds: GameWorld.newGameBounds)
+            let wet = Set(Self.water.cells(frame: frame, bounds: GameWorld.newGameBounds))
+            XCTAssertEqual(steep.count, steepCells, name)
+            XCTAssertFalse(steep.contains(where: wet.contains), "\(name): no steep water")
+            let land = try XCTUnwrap(LandImport.cells(population: population, places: places, water: Self.water, frame: frame, bounds: GameWorld.newGameBounds))
+            let slopes = Set(steep)
+            XCTAssertEqual(land.filter { slopes.contains($0.position) }.count, landOnSteep, "\(name): land stays on its hillsides")
+            let world = GameWorld.newGame(anchor: frame.anchor, land: land, water: Array(wet), steep: steep)
+            XCTAssertEqual(world.terrain.steepCellCount, steepCells, name)
+        }
+        XCTAssertFalse(Self.water.steep.flatMap { $0 }.isEmpty)
+        // Taipei Main Station's cell is flat.
+        let station = (row: try XCTUnwrap(Self.water.row(latitude: 25.0479)), column: try XCTUnwrap(Self.water.column(longitude: 121.5170)))
+        XCTAssertFalse(Self.water.isSteep(row: station.row, column: station.column))
+        // A file without them (as before decision 115) has none.
+        let old = try WaterGrid(data: Data(#"{"north": 25, "west": 121, "cellDegrees": 0.01, "rows": 2, "columns": 2, "water": []}"#.utf8))
+        XCTAssertTrue(old.steep.allSatisfy(\.isEmpty))
+    }
 }

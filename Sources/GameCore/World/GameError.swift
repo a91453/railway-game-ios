@@ -204,4 +204,7 @@ public enum GameError: Error, Hashable, Sendable {
     /// A wharf or a marina stands on the shore (decision 111): part of it
     /// over water and part on land.
     case needsShore
+    /// A building would stand on a steep slope, or every cell to zone is
+    /// water or steep and the first is steep (decision 115): that cell.
+    case onSteepSlope(row: Int, column: Int)
 }

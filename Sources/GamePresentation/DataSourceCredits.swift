@@ -41,6 +41,7 @@ public enum DataSourceCredits {
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
     static let repositoryURL = "https://github.com/a91453/railway-game-ios"
     static let worldPopURL = "https://www.worldpop.org"
+    static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
     static let openFreeMapURL = "https://openfreemap.org"
@@ -201,6 +202,20 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "MapLibre Native", url: mapLibreURL),
                             DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
+                        ]
+                    ),
+                    // Decision 115: the steep slopes, worked out from the
+                    // Copernicus DEM, whose licence asks for this notice.
+                    DataSourceCredit(
+                        id: "copernicusDEM",
+                        title: "Copernicus DEM",
+                        detail: language.text(
+                            "The heights of Taiwan, Penghu, Kinmen and Matsu (GLO-30, 30 m; Matsu GLO-90), from which the game works out the hillsides of more than 30 % where nothing new can be built.",
+                            "台灣、澎湖、金門與馬祖的地形高度（GLO-30，30 公尺；馬祖為 GLO-90），遊戲用它算出坡度超過 30%、不能新蓋的山坡地。"
+                        ),
+                        notice: "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+                        links: [
+                            DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
                         ]
                     ),
                 ]

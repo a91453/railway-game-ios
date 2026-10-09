@@ -127,9 +127,13 @@
 ///     `"wharf"` or a `"marina"`. A build that reads only an earlier version
 ///     would call such a building damaged, so it says the save is newer
 ///     than it instead.
+/// 26. Steep slopes (decision 115): the world's `"terrain"` can have
+///     `"steep"`. A build that reads only an earlier version would drop
+///     them, and its city would spread up the mountains again, so it says
+///     the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 25
+    public static let currentVersion = 26
 
     public let world: GameWorld
 
@@ -217,6 +221,8 @@ extension SavedGame: Codable {
         // grows and builds as it did.
         // Version 24 to 25: a version 24 world has no wharf or marina,
         // which version 25 reads as before.
+        // Version 25 to 26: terrain without `"steep"` has no steep slopes,
+        // and grows and builds as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
