@@ -76,7 +76,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         defer { app.terminate() }
         let demo = app.buttons["start.realWorldDemo"]
         XCTAssertTrue(demo.waitForExistence(timeout: 15))
-        if !demo.isHittable { app.swipeUp() }
+        app.bringStartButtonIntoView(demo)
         // Disabled until the real-world data, read in the background at
         // launch, is there.
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
@@ -124,14 +124,21 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(lowest.waitForNonExistence(timeout: 5), "The status message stayed over the list")
     }
 
-    /// Scrolls the Lines sheet until `row` lies wholly on screen
-    /// (``XCUIApplication/dragUntilWhollyOnScreen(_:)``). A fixed number
+    /// Scrolls the Lines panel until `row` lies wholly on screen
+    /// (``XCUIApplication/dragUntilWhollyOnScreen(_:in:)``). A fixed number
     /// of `swipeUp()` calls did not: one run stopped with the row's top
     /// 1 pt above the bottom of the screen (main a383f27: "hittable", but
     /// the tap at its centre opened no menu) and a slow one never brought
-    /// it into existence (main 11c511f).
+    /// it into existence (main 11c511f). Since decision 106 the panel is
+    /// beside the map, not a sheet: a drag down the middle of the screen
+    /// began on the dock or the map and never moved the list (main
+    /// e48285f), so the drag is made on the panel's own list.
     private func bringIntoView(_ row: XCUIElement, in app: XCUIApplication) {
-        guard app.dragUntilWhollyOnScreen(row) else {
+        let bar = app.navigationBars["Lines"].firstMatch
+        let list = bar.exists
+            ? app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+            : nil
+        guard app.dragUntilWhollyOnScreen(row, in: list) else {
             recordRouteUI("row never came into view", in: app)
             XCTFail("\(row) never lay wholly on screen")
             return
@@ -169,37 +176,67 @@ final class LineRoutePreferenceUITests: XCTestCase {
 
 @MainActor
 extension XCUIApplication {
-    /// Drags a sheet's list until `element` lies wholly on screen, clear of
-    /// the navigation bar at the top and the home indicator and a status
-    /// banner at the bottom; whether it does within 16 drags. How far a
-    /// `swipeUp()` flings a list depends on the synthesized event's
-    /// timing; each drag here holds before lifting, so the list moves by
-    /// the drag's length and does not fling. A sheet at its middle height
-    /// grows first, as a swipe would grow it.
-    func dragUntilWhollyOnScreen(_ element: XCUIElement) -> Bool {
-        let top = frame.minY + 140
-        let bottom = frame.maxY - 120
-        for _ in 0..<16 {
+    /// Drags a list until `element` lies wholly on screen; whether it does
+    /// within 16 drags. A sheet's list (`list` `nil`): clear of the
+    /// navigation bar at the top and the home indicator and a status
+    /// banner at the bottom, dragged down the middle of the screen; a sheet
+    /// at its middle height grows first, as a swipe would grow it. A panel
+    /// beside the map (decision 106): within `list`, dragged down its
+    /// middle, so the drag starts on the list and not on the map or the
+    /// dock beside it. How far a `swipeUp()` flings a list depends on the
+    /// synthesized event's timing; each drag here holds before lifting, so
+    /// the list moves by the drag's length and does not fling.
+    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil) -> Bool {
+        let area = list.map(\.frame) ?? frame
+        let top = list == nil ? frame.minY + 140 : area.minY + 8
+        let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
+        // A panel beside the map on a phone on its side is short, and a
+        // line's list there runs to some 23 screens (main's e48285f): long
+        // drags until the row exists, then short ones that cannot carry it
+        // past the band.
+        for _ in 0..<(list == nil ? 16 : 40) {
             if element.exists {
                 let place = element.frame
                 if place.minY >= top, place.maxY <= bottom, element.isHittable { return true }
                 // Above the band: move the list down. Each drag is shorter
                 // than the band less a row, so a row cannot jump over it.
                 if place.minY < top {
-                    drag(from: 0.45, to: 0.65)
+                    drag(in: area, from: 0.45, to: 0.65)
                     continue
                 }
+                drag(in: area, from: 0.75, to: 0.5)
+            } else {
+                drag(in: area, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
             }
-            drag(from: 0.75, to: 0.5)
         }
         return false
     }
 
-    /// Drags vertically between two heights given as fractions of the
-    /// screen and holds before lifting, so a list does not fling.
-    private func drag(from: CGFloat, to: CGFloat) {
-        let start = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: from))
-        let end = coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: to))
+    /// Drags vertically down the middle of `area` between two heights
+    /// given as fractions of it, and holds before lifting, so a list does
+    /// not fling.
+    private func drag(in area: CGRect, from: CGFloat, to: CGFloat) {
+        let origin = coordinate(withNormalizedOffset: .zero)
+        let x = area.midX - frame.minX
+        let start = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * from))
+        let end = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * to))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+    }
+
+    /// Scrolls the start screen's buttons until `button` can be tapped. A
+    /// phone on its side shows them in a column of their own beside the
+    /// title (decision 106): a `swipeUp()` at the middle of the screen
+    /// lands on the edge between the two and may scroll the title instead.
+    func bringStartButtonIntoView(_ button: XCUIElement) {
+        guard button.waitForExistence(timeout: 10), !button.isHittable else { return }
+        let column = scrollViews.containing(.button, identifier: button.identifier).firstMatch
+        for _ in 0..<6 where column.exists && !button.isHittable {
+            // Slowly, so the column does not fling past the button.
+            if button.frame.midY < column.frame.midY {
+                column.swipeDown(velocity: .slow)
+            } else {
+                column.swipeUp(velocity: .slow)
+            }
+        }
     }
 }
