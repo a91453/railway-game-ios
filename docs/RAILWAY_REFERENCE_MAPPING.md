@@ -1196,6 +1196,22 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）把高度存在格的角點；GraphHopper（Apache-2.0）的 `EdgeElevationInterpolator`（橋與隧道內部不跟 DEM 起伏）留給 H2。資料：Copernicus DEM GLO-30／GLO-90（授權要求標示出處與免責句，資料來源畫面已列）。
 
+## 軌道量地面（決策 124 的 H2）
+
+第二步（H2）。參考仍是 `05d7000`，設計說明第 10 節的清查不變；這裡只列 H2 用到的。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`（`VIADUCT_LIFT_M = 6`：填方超過 6 m 改畫高架；`FILL_SLOPE`、`BED_TOP_W`） | `TrackSectionRules.highestFill` = 512（8 m）；土方的梯形斷面（頂寬 10 m、邊坡 1:1.5） | adapted：遊戲用 8 m，是路堤土方與高架費一樣貴的地方；斷面改成單線路基加排水 |
+| `Railway/site_archive_clean/rail-3d/physical/level-profiles.json`（`basis`：地面不低於地表、高架至少離地 6 m、山岳隧道軌面直行；坡度上限） | 每 16 m 的 Δ 與類別（`GameWorld.survey`、`automaticSections`）；最大坡度 40‰ 不變 | adapted：只取分類的想法；6,283 條路線的資料留給全島步驟 C |
+| `Railway/site_archive_clean/rail-3d/integration/terrain-elevation.js`（沒有資料不當成海） | `groundNotLoaded`：有地面的世界在沒讀過的區塊不能蓋 | adapted |
+| `Ci/reference_snapshot` `metroEstimateLineConstructionCost`（回傳 0） | `GameWorld.price(of:track:extras:)`：土方與墩高費 | gap → 原生 |
+| （參考沒有） | `TrackStructure.automatic`、`TrackSection`、`mapGround()`、`trackOverWater`、`structureTooHigh`、水上的車站、隧道段不拆遷、存檔 28、golden schema 48 | gap → 原生 |
+
+比例：1 世界單位 = 1/64 m；區段每 1,024 單位（16 m）一段，取中點；分界 128（2 m）、512（8 m）、−704（−11 m）、水上 256（4 m）與 −640（−10 m）、最高 4,096（64 m）；土方 `track × Σ 7h(1280 + 3h) / 3,276,800`、墩高 `track × Σ(Δ − 960) / 640`，各四捨五入一次。
+
+外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）「過水要用橋」；Simutrans（Artistic 1.0）「高架不能在水上」；GraphHopper（Apache-2.0）`EdgeElevationInterpolator`：橋與隧道內部不跟 DEM 起伏，和這裡「邊的高度由兩端與縱斷面決定，只拿來和地面比」一致。
+
 ## 地圖圖示（決策 121）
 
 查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。

@@ -108,7 +108,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 位置與方向（location）：`{ "x", "y", "z", "dx", "dy" }`，`dx`、`dy` 是沒有正規化的方向。點：`{ "x", "y", "z" }`。
 - **立體鐵路**（schema 17，決策 30）：
   - 縱斷面（`profile`）：`{ "startTransition", "endTransition" }`，兩端豎曲線的長度（里程，0 是沒有）。`buildTrackEdge` 省略時是兩個 0。
-  - 結構物（`structure`）：`"surface"`、`"elevated"`、`"bridge"` 或 `"tunnel"`。`buildTrackEdge` 省略時是 `"surface"`。
+  - 結構物（`structure`）：`"surface"`、`"elevated"`、`"bridge"`、`"tunnel"` 或（schema 48）`"automatic"`。`buildTrackEdge` 省略時是 `"surface"`。自動的邊在最終狀態另有 `sections`（`[{ "kind", "lengths" }]`，由 `from` 起，每段 1024 的倍數，最後一段到邊的終點）。
   - 姿態（pose）：`{ "x", "y", "z", "dx", "dy", "rise", "run" }`，位置、沒有正規化的方向，以及沿這個方向的坡度 `rise / run`（最簡分數，`run` 為正，上坡為正；平坡是 `0 / 1`）。
   - 縱斷面的分段：`{ "kind", "start", "end" }`，`kind` 是 `"level"`、`"up"`、`"down"` 或 `"transition"`，里程從邊的 `from` 端量起。
   - 路網上的月台：`{ "edge", "start", "end" }`（邊的編號、從邊的 `from` 端量起的起訖里程）。
@@ -182,6 +182,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setZone`（schema 43） | `zone`（必填：`"residential"`、`"commercial"`、`"office"`、`"industrial"`、`"civic"`、`"leisure"`、`"noDevelopment"`、`"reserved"`，或 `null` 清除）、`rows`、`columns`（各是 `[first, last]`，含兩端） | `setZone(_:rows:columns:)` |
 | `setWater`（schema 44） | `runs`（`[{ "row", "column", "count" }]`，水域的格，同一列連續的一段；每段 1 到 65,536 格） | `setWater(_:)`（每段展開成格） |
 | `setGround`（schema 47） | `blocks`（`[{ "row", "column", "heights" }]`，1 km 區塊與它 17 × 17 個 64 m 角點的高度，公尺，逐列由北而南） | `setGround(_:)` |
+| `mapGround`（schema 48） | — | `mapGround()`：世界有地面，還沒讀任何區塊；已有地面或已有軌道是 `invalidGround` |
 
 ### 結果（`expect.result`）
 
@@ -241,6 +242,9 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `invalidZoneArea` | — | 要劃分區的矩形超出世界，或一邊超過 128 格（schema 43，決策 98） |
 | `invalidTerrain` | — | 水域的格在世界外、列了兩次、上面有土地，或世界的土地是按需展開的（schema 44，決策 105） |
 | `invalidGround` | — | 地面高度沒有區塊，或區塊在世界外、列了兩次、已經讀過（schema 47，決策 124） |
+| `groundNotLoaded` | — | 有地面的世界在沒讀過的區塊蓋節點或邊（schema 48，決策 124） |
+| `trackOverWater` | — | 強制的地面或高架經過水，或自動的邊某一段在水上卻當不了橋（離水 4 m 以上）或隧道（水下 10 m 以下）（schema 48） |
+| `structureTooHigh` | — | 高架或橋高於地面超過 64 m（schema 48） |
 | `onWater` | `row`、`column` | 玩家建物蓋在水上，或要劃分區的矩形每一格都是水（schema 44，決策 105）；指名第一格水（依列、行） |
 | `needsShore` | — | 漁人碼頭（`wharf`）或遊艇港（`marina`）沒有蓋在岸邊：正方形下面要同時有水和陸地（schema 45，決策 111） |
 | `onSteepSlope` | `row`、`column` | 玩家建物蓋在陡坡上，或要劃分區的矩形沒有能劃的格而第一格是陡坡（schema 46，決策 115）；指名那一格 |
@@ -709,3 +713,7 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 新指令 `setGround`（`blocks`：`[{ "row", "column", "heights": [17 × 17 公尺] }]`）、觀察 `groundHeight`（`point`；`{ "found": true, "groundHeight": n }`，世界單位）、結果 `invalidGround`，最終狀態選填的 `groundBlocks`（讀過的區塊數；沒有時不寫）（ARCHITECTURE 決策 124，「軌道與地形的高度」的第一步）。這一步沒有規則讀地面高度，舊的 fixture 不必改，schema 30 到 46 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到地面的 fixture；`GroundTests` 另外手算驗證內插、捨入、區塊的邊與存檔。
 - `ground-height.json`：自由模式、2 × 1 個區塊。沒有讀過地面時 (2048, 1024) 是 0；區塊 (0, 0) 的角點是 10 r + c 公尺（一個平面，內插剛好是 (10 y + x) / 64）：(2048, 1024) 是 192，(31, 0) 是 0、(32, 0) 是 1（四捨五入時 0.5 進位），(65535, 61440) 是 10624；沒有讀過的區塊 (0, 1) 找不到。沒有區塊、重複讀 (0, 0)、或連同世界外的 (1, 0) 都是 `invalidGround` 而且什麼都不讀。區塊 (0, 1) 只有角點 (1, 1) 是 64 m：第一格的中點是 16 m（1024），四分之三處是 36 m（2304）。每個值都手算，寫在 description 裡。
 
+## 決策 124 的 H2：軌道量地面（schema 48）
+
+- 新指令 `mapGround`（世界有地面，還沒讀任何區塊），`buildTrackEdge` 的 `structure` 多了 `"automatic"`，新結果 `groundNotLoaded`、`trackOverWater`、`structureTooHigh`，最終狀態的邊多了選填的 `sections`（`[{ "kind", "lengths" }]`，`kind` 是 `surface`、`embankment`、`cutting`、`viaduct`、`bridge`、`tunnel`；只有自動的邊有）。沒有地面的世界照 Stage S4 的規則與價格，舊的 fixture 不必改，schema 30 到 47 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到地面或自動結構物的 fixture；`TrackSectionTests` 另外手算驗證每個分界、併段、切邊、拆遷與存檔。
+- `terrain-track.json`：自由模式、2 × 1 個區塊、軌道每 16 m 100。`mapGround` 後 (2048, 1024) 找不到地面、蓋節點是 `groundNotLoaded`。區塊 (0, 0) 是 20 m 深的谷（角點欄 20、20、0、0、20 m）：20 m 高的自動邊 16 段，中點離地 0、0、0、160、480、800、1120、1280 × 4、1120、800、480、160、0，分成地面 3、路堤 2、高架 8，最後 3 段地面太短併入高架：地面 3、路堤 2、高架 11，費用 3800 + 土方 185 + 墩高 250 = 4235。區塊 (0, 1) 平地、(0, 18) 是湖：8 m 高的強制高架過湖是 `trackOverWater`；自動是路堤 7、橋 4、路堤 5，費用 2800 + 土方 2394 = 5194。湖上的車站是 `onWater`。每個值都手算，寫在 description 裡。
