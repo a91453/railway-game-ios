@@ -44,7 +44,7 @@ Xcode 的 Asset Catalog 只支援 SVG 的一部分。這些已經在 CI 的 Rele
 
 - 元素只用 `svg`、`path`、`circle`、`ellipse`、`rect`；
 - 屬性：`fill`、`stroke`、`stroke-width`、`stroke-linecap`、`stroke-linejoin`、`fill-rule`、`rx`；
-- 路徑指令：`M L H V Q A Z`（大寫、絕對座標）。
+- 路徑指令：`M L H V Q C A Z`（大寫、絕對座標）。
 
 不要用：`T`、`S` 這類簡寫（自己算出控制點改用 `Q`、`C`）、`transform`、`<g>` 的屬性繼承、`opacity`（改用算好的實心色）、漸層、濾鏡、`mask`、`clipPath`、`<text>`、`<use>`、CSS。
 

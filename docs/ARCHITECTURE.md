@@ -3750,7 +3750,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 2026-10-09，作者問遊戲該像《A 列車》還是 SimCity BuildIt，Claude Code 建議玩法照 A 列車的深度、外觀與操作照 BuildIt，作者同意，並要求先把地圖上的圖示換成同一個畫風。地圖鋪滿畫面之後（決策 106、120），地圖上的東西就是玩家最常看的畫面，但車站、泡泡和警告用的還是 Apple 的 SF Symbols，線條細，和 App 圖示的扁平、粗線、圓角對不起來。GameCore、存檔、golden、replay 都不變。
 
-1. **自己畫的圖示**：`Assets.xcassets` 的 `MapGlyph*` imageset，每個是 24 × 24 的 SVG，只用實心形狀（挖空用 even-odd），粗到縮成幾點也看得出來，轉角是圓的。共十個：列車（`MapGlyphTrain`）、住宅、商店、辦公、漁人碼頭、遊艇港、人群、客滿的車廂、警告，和警告的實心外形（墊在警告下面）。程式用 `MapGlyph`（`Palette.swift`）取用，不寫字串。
+1. **自己畫的圖示**：`Assets.xcassets` 的 `MapGlyph*` imageset，每個是 24 × 24 的 SVG，只用實心形狀（挖空用 even-odd），粗到縮成幾點也看得出來，轉角是圓的。共十個：列車（`MapGlyphTrain`）、住宅、商店、辦公、漁人碼頭、遊艇港、人群、客滿的車廂、警告，和警告的實心外形（墊在警告下面）。程式用 `MapGlyph`（`Palette.swift`）取用，不寫字串。（2026-10-09 照 art-style skill 檢查整組：漁人碼頭原本只有一條魚，比其他圖示小、淡很多，墨量 21%、高 9 格，其他是 32–43%、約 18 格；改成魚躍過一道浪，墨量 36%，16 點與模糊後也看得出是水邊。客滿的車廂試過四種新畫法，都沒有比原本好讀，保留。）
 2. **單色模板，顏色由程式給**：每個 imageset 都設 `template-rendering-intent: template`、保留向量，在哪裡畫就用那裡的顏色（Canvas 的 `shading`、SwiftUI 的 `foregroundStyle`）。一張圖同時用在淺色與深色，顏色仍只來自 `Theme` 與 `Palette`。
 3. **換掉的地方**（只換地圖上的東西）：
    - 車站徽章裡的符號：`tram.fill` → 列車，照舊是 `Palette.stationSymbol`。
