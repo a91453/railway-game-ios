@@ -83,6 +83,20 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 圖示的淺色軌道 `#12A08F` 對地面只有 2.81:1，不到圖形的 3:1，所以淺色模式壓暗到 `#10917F`。路線用 `Palette.lineColor`（路線面板的顏色）。
 
+## 地圖圖示（決策 121）
+
+2026-10-09 作者決定：地圖上的東西改用自己畫、和 App 圖示同一個畫風的圖示（`Assets.xcassets` 的 `MapGlyph*`，程式用 `MapGlyph`），取代 SF Symbols。介面的按鈕照舊用 SF Symbols。
+
+畫法：24 × 24 的 SVG，只有實心形狀，挖空用 even-odd；筆畫粗、轉角圓，縮到 10 點左右還看得出來。每個都是單色模板，顏色在畫的地方給，所以沒有深淺兩套。
+
+| 圖示 | 用在 | 顏色 | 對比 Light／Dark |
+| --- | --- | --- | --- |
+| `train` | 車站徽章（`station` 底） | `stationSymbol` | 8.69 |
+| `train`、`crowd`、`full` | 狀態泡泡：在 `primary`／`warning`／`error` 的圓上 | `Theme.panel` | 最低 5.50／5.54 |
+| `warning`（墊 `warningSolid`） | 死結 | `metroRed`，墊系統底色 | — |
+| `house`、`shop`、`office`、`wharf`、`marina` | 玩家建物（14 點以上），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上最低 3.11／4.72 |
+| `train` | 路線示意條的列車（路線色的圓上） | 白 | 跟路線色 |
+
 ## 刻意保留（程式碼裡標「Theme: kept」）
 
 ### 永久保留

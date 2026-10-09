@@ -163,6 +163,8 @@ private struct ToolOptions: View {
 /// one, or drag across a rectangle.
 private struct BuildingControls: View {
     @Bindable var session: GameSession
+    /// A kind's glyph, as large as the subheadline it sits beside.
+    @ScaledMetric(relativeTo: .subheadline) private var glyphSize = 18.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -207,8 +209,11 @@ private struct BuildingControls: View {
                 } label: {
                     VStack(spacing: 2) {
                         HStack(spacing: 6) {
-                            Image(systemName: kind.systemImage)
-                                .font(.subheadline.weight(.semibold))
+                            kind.mapGlyph.image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: glyphSize, height: glyphSize)
+                                .accessibilityHidden(true)
                             Text(kind.title(in: session.language))
                                 .font(.subheadline.weight(isActive ? .bold : .medium))
                                 .lineLimit(1)
@@ -320,13 +325,15 @@ extension BuildingControls {
 }
 
 extension PlacedBuildingKind {
-    var systemImage: String {
+    /// The kind's glyph, the same on its button and on the map
+    /// (decision 121).
+    var mapGlyph: MapGlyph {
         switch self {
-        case .house: "house.fill"
-        case .shop: "storefront.fill"
-        case .office: "building.2.fill"
-        case .wharf: "fish.fill"
-        case .marina: "sailboat.fill"
+        case .house: .house
+        case .shop: .shop
+        case .office: .office
+        case .wharf: .wharf
+        case .marina: .marina
         }
     }
 }

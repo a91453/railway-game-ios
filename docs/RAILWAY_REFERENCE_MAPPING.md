@@ -1178,3 +1178,18 @@ V 實際放行 → T、U（保證不互穿）
 比例：水域格 1.875″；DEM 1″（馬祖 3″）取最近的樣本；3 × 3 中位數約 170 m；坡度用跨兩格（約 106–116 m）的中央差分；門檻 0.30；3 × 3 至少 5 格。
 
 外部專案（只取想法）：SimCity 4、Cities: Skylines（商業遊戲）的建物不放在太陡的地形上。資料：Copernicus DEM GLO-30／GLO-90（ESA，授權要求標示出處，資料來源畫面已列）。門檻依據：建築技術規則建築設計施工編第 262 條（平均坡度超過 30% 不得開發建築）。
+
+## 地圖圖示（決策 121）
+
+查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/station-icon-residential__q_*.png`、`station-icon-shopping__q_*.png` | `MapGlyphHouse`、`MapGlyphShop` | 只取用途，重畫 |
+| `Ci/reference_snapshot/station-icon-waiting__q_*.png`、`hsr-train-icons/icons8-get-on-bus-100.png` | `MapGlyphCrowd`（擁擠的泡泡） | 只取用途，重畫；icons8 要標示出處，沒有帶進來 |
+| `MapBuilder/reference_snapshot/assets/map/station.png`、`transfer.png` | `MapGlyphTrain`（車站徽章裡）；轉乘照舊是決策 84 的白線黑框 | 只取用途，重畫 |
+| `Website/site/assets/app-icon-light.png`、`app-icon-dark.png` | 圖示的畫風：實心、粗線、圓角；顏色經 `Theme`／`Palette` | 取畫風 |
+| （參考沒有） | 客滿、死結警告、漁人碼頭、遊艇港、辦公的圖示；`MapGlyph`；泡泡的圓形底 | gap → 原生 |
+
+外部專案（只取想法，沒有程式碼或素材）：SimCity BuildIt（作者的截圖，商業遊戲）狀態泡泡裡的圓形圖示。
+

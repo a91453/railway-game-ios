@@ -44,6 +44,10 @@ enum Palette {
     /// sea teal.
     static let wharf = hex(light: 0xA0704A, dark: 0xC09070)
     static let marina = hex(light: 0x1F9E9A, dark: 0x4CC3BF)
+    /// Decision 121: the kind's glyph on a player's building, navy in
+    /// either appearance (the buildings' hues are light on the dark map,
+    /// so ``ink`` would not show): 3.11:1 or more on all ten.
+    static let buildingGlyph = hex(light: 0x262C57, dark: 0x262C57)
 
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))
@@ -99,5 +103,28 @@ enum Palette {
             let rgb = traits.userInterfaceStyle == .dark ? dark : light
             return UIColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1)
         })
+    }
+}
+
+/// The map's own glyphs (ARCHITECTURE decision 121): the app icon's style
+/// (filled, rounded, heavy enough to read at a few points) for what stands
+/// on the map, in place of SF Symbols. Each is a one-colour template SVG in
+/// the asset catalog, tinted where it is drawn, so one image serves both
+/// appearances. The interface's buttons keep SF Symbols.
+enum MapGlyph: String {
+    case train = "MapGlyphTrain"
+    case house = "MapGlyphHouse"
+    case shop = "MapGlyphShop"
+    case office = "MapGlyphOffice"
+    case wharf = "MapGlyphWharf"
+    case marina = "MapGlyphMarina"
+    case crowd = "MapGlyphCrowd"
+    case full = "MapGlyphFull"
+    case warning = "MapGlyphWarning"
+    /// ``warning``'s outline without its cut-out mark, drawn under it.
+    case warningSolid = "MapGlyphWarningSolid"
+
+    var image: Image {
+        Image(rawValue).renderingMode(.template)
     }
 }

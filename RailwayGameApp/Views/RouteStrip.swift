@@ -46,8 +46,10 @@ struct RouteStrip: View {
         let x = Self.stopWidth / 2 + Self.stopWidth * dot.position - size / 2
         // The line runs 9 points down the stop's top row.
         let y = dot.isOutbound ? 9 - size - 2 : 9 + 2
-        return Image(systemName: "tram.fill")
-            .font(.system(size: 9, weight: .bold))
+        return MapGlyph.train.image
+            .resizable()
+            .scaledToFit()
+            .frame(width: 10, height: 10)
             .foregroundStyle(.white)
             .frame(width: size, height: size)
             .background(color, in: Circle())

@@ -152,10 +152,16 @@ enum MapArt {
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
             context.stroke(ring, with: .color(wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber), lineWidth: 3)
             guard wait.isDeadlocked else { continue }
-            var sign = context.resolve(Image(systemName: "exclamationmark.triangle.fill"))
-            sign.shading = .color(Palette.metroRed)
+            // Decision 121: the sign on its own solid outline, a size up,
+            // so its mark reads over any map.
             let size = radius * 1.4
-            context.draw(sign, in: CGRect(x: center.x + radius * 0.6, y: center.y - radius * 0.6 - size, width: size, height: size))
+            let sign = CGRect(x: center.x + radius * 0.6, y: center.y - radius * 0.6 - size, width: size, height: size)
+            var halo = context.resolve(MapGlyph.warningSolid.image)
+            halo.shading = .color(Color(uiColor: .systemBackground))
+            context.draw(halo, in: sign.insetBy(dx: -size * 0.15, dy: -size * 0.15))
+            var mark = context.resolve(MapGlyph.warning.image)
+            mark.shading = .color(Palette.metroRed)
+            context.draw(mark, in: sign)
         }
     }
 
@@ -470,9 +476,14 @@ enum MapArt {
         drawTravel(map.tiles(for: mode, in: drawingRegion(projection), blockSize: blockSize), opacity: opacity, projection: projection, in: context)
     }
 
+    /// The narrowest a player's building is drawn, in points, with its
+    /// kind's glyph (decision 121): under it the glyph would be a smudge.
+    private static let glyphMinimumSide = 14.0
+
     /// The buildings the player placed (city building P0-A, decision 92):
     /// each a square in its kind's colour, edged in ink, always at least a
-    /// few points across so it stays visible zoomed out.
+    /// few points across so it stays visible zoomed out, with its kind's glyph
+    /// once it is large enough (decision 121).
     private static func drawPlacedBuildings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
         guard !world.placedBuildings.isEmpty else { return }
         let region = drawingRegion(projection)
@@ -494,6 +505,13 @@ enum MapArt {
             let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
             context.fill(shape, with: .color(colour))
             context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
+            // Decision 121: what it is, once there is room to read it.
+            let side = min(rect.width, rect.height)
+            guard side >= glyphMinimumSide else { continue }
+            var glyph = context.resolve(building.kind.mapGlyph.image)
+            glyph.shading = .color(Palette.buildingGlyph)
+            let size = side * 0.62
+            context.draw(glyph, in: CGRect(x: rect.midX - size / 2, y: rect.midY - size / 2, width: size, height: size))
         }
     }
 
@@ -709,7 +727,7 @@ enum MapArt {
     }
 
     private static func drawStationSymbol(at center: ScreenPoint, size: Double, context: GraphicsContext) {
-        var symbol = context.resolve(Image(systemName: "tram.fill"))
+        var symbol = context.resolve(MapGlyph.train.image)
         symbol.shading = .color(Palette.stationSymbol)
         let natural = symbol.size
         guard natural.width > 0, natural.height > 0 else { return }

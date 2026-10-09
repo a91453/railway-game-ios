@@ -3744,6 +3744,24 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫沒有 iOS 安全區域的對應（網頁版鋪滿瀏覽器視窗）。外部只看做法：Apple「地圖」（作者的截圖）地圖到邊緣、按鈕在安全區域內；MapLibre Native（BSD 2-Clause，已是依賴）讀它的原始碼確認版權按鈕的位置，沒有複製程式。程式是本專案自己寫的。
 
+### 121. 地圖上的圖示改用 App 圖示的畫風
+
+2026-10-09，作者問遊戲該像《A 列車》還是 SimCity BuildIt，Claude Code 建議玩法照 A 列車的深度、外觀與操作照 BuildIt，作者同意，並要求先把地圖上的圖示換成同一個畫風。地圖鋪滿畫面之後（決策 106、120），地圖上的東西就是玩家最常看的畫面，但車站、泡泡和警告用的還是 Apple 的 SF Symbols，線條細，和 App 圖示的扁平、粗線、圓角對不起來。GameCore、存檔、golden、replay 都不變。
+
+1. **自己畫的圖示**：`Assets.xcassets` 的 `MapGlyph*` imageset，每個是 24 × 24 的 SVG，只用實心形狀（挖空用 even-odd），粗到縮成幾點也看得出來，轉角是圓的。共十個：列車（`MapGlyphTrain`）、住宅、商店、辦公、漁人碼頭、遊艇港、人群、客滿的車廂、警告，和警告的實心外形（墊在警告下面）。程式用 `MapGlyph`（`Palette.swift`）取用，不寫字串。
+2. **單色模板，顏色由程式給**：每個 imageset 都設 `template-rendering-intent: template`、保留向量，在哪裡畫就用那裡的顏色（Canvas 的 `shading`、SwiftUI 的 `foregroundStyle`）。一張圖同時用在淺色與深色，顏色仍只來自 `Theme` 與 `Palette`。
+3. **換掉的地方**（只換地圖上的東西）：
+   - 車站徽章裡的符號：`tram.fill` → 列車，照舊是 `Palette.stationSymbol`。
+   - 死結的警告（`drawWaitMarks`）：先墊一個大一號、系統底色的實心外形，再畫紅色的警告，驚嘆號是挖空的，所以在任何底圖上都讀得到。
+   - 狀態泡泡（決策 109）：圖示改放在泡泡顏色的圓上，圖示用 `Theme.panel`（淺色 5.5:1 以上、深色 5.5:1 以上），像 App 圖示的膠囊；擁擠是人群、客滿是滿載的車廂、沒有列車是列車。
+   - 玩家建物（決策 92、111）：方塊有 14 點以上時，中間畫它種類的圖示，大小是邊長的 62%，用固定的藏青 `Palette.buildingGlyph`（建物的顏色在深色地圖上偏淺，跟著換色的 `ink` 會看不清；十種底色上最低 3.11:1）。建築工具的種類按鈕用同一組圖示（`PlacedBuildingKind.mapGlyph`，取代 `systemImage`），跟著字的大小縮放。
+   - 路線示意條（決策 113）上的列車：`tram.fill` → 列車。
+4. **照舊用 SF Symbols 的**：工具列、面板、表單裡的按鈕與標示。它們是介面，和系統的樣子一致比較好讀；地圖上的列車本身仍是圓點加車頭方向的短線。
+
+**沒有驗證的**：Linux 不能建置 App；Asset Catalog 的 SVG、Canvas 與按鈕上的樣子要看 CI 的 Xcode 建置與實機。
+
+**參考**：參考庫 `Ci/reference_snapshot/` 的車站與路線圖示（`station-icon-residential`、`-shopping`、`-scenic`、`-waiting`，icons8 的 `get-on-bus` 等）與 `MapBuilder/reference_snapshot/assets/map/` 的車站、轉乘標記是黑白的細線圖，只取它們標示的東西（住宅、商業、等車、轉乘），圖形重畫；icons8 的素材要標示出處，重畫就不用帶進來。外部只看做法：SimCity BuildIt（作者的截圖，商業遊戲）泡泡裡的圓形圖示。圖示和程式是本專案自己畫、自己寫的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
