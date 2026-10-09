@@ -309,7 +309,8 @@ struct MapView: View {
                                 opacity: opacityBinding(for: mode),
                                 hour: Bindable(screen).popTravelHour,
                                 isPlaying: screen.isPlayingPopTravel,
-                                onTogglePlay: togglePopTravelPlay
+                                onTogglePlay: togglePopTravelPlay,
+                                nothingZoned: session.world.zones.isEmpty
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
