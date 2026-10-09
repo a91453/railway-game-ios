@@ -59,6 +59,11 @@ extension GameSession {
             }
         case .platform:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
+            // The land a station there would reach, so the site's count
+            // (decision 108) has it; not an edit, as for the building tool.
+            if let site = networkEdgePoint.flatMap({ planPoint(of: .track($0)) }) {
+                readLand(within: WholeTaiwan.landReach, of: site)
+            }
             platformStationID = networkEdgePoint.flatMap { nearestStation(to: $0) }
             if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
                 let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -354,6 +359,9 @@ extension GameSession {
                 }
             }
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
+            // Decision 88: the land round a new station is read in after the
+            // edit; read it now, so the opening message counts who it reaches.
+            Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water)
             world = draft
             built = chosen == nil ? station.id : nil
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
