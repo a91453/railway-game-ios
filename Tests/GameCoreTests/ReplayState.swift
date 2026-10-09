@@ -120,6 +120,10 @@ enum ReplayState {
             let cells = building.cells.map { "\($0.row),\($0.column)" }.joined(separator: " ")
             line("building \(building.id.rawValue) \(building.kind.rawValue) \(building.use.rawValue) \(building.density.rawValue) \(cells)")
         }
+        // Decision 105: likewise only a world with water.
+        for run in world.terrain.water {
+            line("water \(run.row) \(run.column) \(run.count)")
+        }
         return lines.joined(separator: "\n")
     }
 }

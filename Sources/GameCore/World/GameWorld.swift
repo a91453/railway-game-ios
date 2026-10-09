@@ -107,6 +107,9 @@ public struct GameWorld: Equatable, Sendable {
     /// The cells the player zoned (decision 98), by row and then column. A
     /// new world has none.
     public internal(set) var zones = Zoning()
+    /// The ground under the land (decision 105): which cells are water. A
+    /// new world, and every blank map, has none.
+    public internal(set) var terrain = Terrain()
     /// The scenario being played, its goals and how far they are met
     /// (decision 86), or `nil`: a game without goals.
     public internal(set) var scenario: ScenarioState?
@@ -3317,7 +3320,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones
+        case placedBuildings, nextPlacedBuildingID, zones, terrain
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3413,6 +3416,7 @@ extension GameWorld: Codable {
         placedBuildings = container.contains(.placedBuildings) ? try container.decode([PlacedBuilding].self, forKey: .placedBuildings) : []
         nextPlacedBuildingID = container.contains(.nextPlacedBuildingID) ? try container.decode(Int.self, forKey: .nextPlacedBuildingID) : 1
         zones = container.contains(.zones) ? try container.decode(Zoning.self, forKey: .zones) : Zoning()
+        terrain = container.contains(.terrain) ? try container.decode(Terrain.self, forKey: .terrain) : Terrain()
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3446,7 +3450,7 @@ extension GameWorld: Codable {
     /// transfer groups has no `"transferGroups"`, and one that never had
     /// one no `"nextTransferGroupID"` (decision 81); likewise
     /// `"placedBuildings"` and `"nextPlacedBuildingID"` (decision 92), and
-    /// `"zones"` (decision 98). An explicit
+    /// `"zones"` (decision 98), and `"terrain"` (decision 105). An explicit
     /// `null` for any of them is
     /// rejected. The world's extent is written as `"bounds"`, in world units
     /// (Stage F3d).
@@ -3527,6 +3531,9 @@ extension GameWorld: Codable {
         }
         if !zones.isEmpty {
             try container.encode(zones, forKey: .zones)
+        }
+        if !terrain.isEmpty {
+            try container.encode(terrain, forKey: .terrain)
         }
     }
 
@@ -3729,7 +3736,7 @@ extension GameWorld: Codable {
             ?? townGrowthProblem() {
             return problem
         }
-        return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds)
+        return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

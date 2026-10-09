@@ -378,11 +378,13 @@ extension GameWorld {
     /// - Throws: ``GameError/invalidLand`` for a cell outside the world,
     ///   listed twice, with a negative count, more than
     ///   ``Land/maximumPerCell`` residents or jobs, or no one living or
-    ///   working there.
+    ///   working there, or (decision 105) on water.
     public mutating func setLand(_ cells: [LandCell]) throws(GameError) {
         var land = Land()
         land.cells = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
-        guard land.problem(in: bounds) == nil else { throw .invalidLand }
+        guard land.problem(in: bounds) == nil,
+              terrain.isEmpty || !land.cells.contains(where: { terrain.isWater(row: $0.row, column: $0.column) })
+        else { throw .invalidLand }
         replaceLand(with: land)
         landBlocks = nil
         refreshLandDemand()
@@ -390,9 +392,14 @@ extension GameWorld {
 
     /// Replaces the world's land with the towns a blank map starts with,
     /// drawn from `seed` (see ``Land/towns(seed:in:)``), and, with the
-    /// city's buildings on, their buildings.
+    /// city's buildings on, their buildings. Their cells on water are left
+    /// out (decision 105: a real-world map with no people, on the coast).
     public mutating func foundTowns(seed: UInt32) {
-        replaceLand(with: Land.towns(seed: seed, in: bounds))
+        var towns = Land.towns(seed: seed, in: bounds)
+        if !terrain.isEmpty {
+            towns.cells.removeAll { terrain.isWater(row: $0.row, column: $0.column) }
+        }
+        replaceLand(with: towns)
         landBlocks = nil
         refreshLandDemand()
     }

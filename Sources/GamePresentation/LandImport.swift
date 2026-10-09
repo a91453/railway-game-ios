@@ -37,6 +37,12 @@ import GameCore
 /// is one, among its farms, else its factories, else (parks only) all of
 /// them, which are then no park but the cell's use. The part inside of a
 /// WorldPop cell at the edge keeps the same people as without zones.
+///
+/// Decision 105: a 64 m cell of water (``WaterGrid``) has no land. The
+/// WorldPop cell's people, jobs and zones are those of its dry cells as
+/// above; a WorldPop cell whose cells in the world are all water keeps no
+/// one (they live on the part of it outside the world, or on a coast the
+/// grids draw differently).
 public enum LandImport {
     /// The jobs of each kind of place: a shop or restaurant 25, an office
     /// 500, a school 300 (its staff and pupils draw trips alike), a sight
@@ -60,21 +66,26 @@ public enum LandImport {
     /// The cells of a world of `bounds` laid over the Earth by `frame`, or
     /// `nil` where no one in the grid lives or works in it (a map outside
     /// Taiwan, or all sea), for which a new game founds towns instead.
-    /// Without `places`, every cell is homes without jobs.
-    public static func cells(population: PopulationGrid, places: PlaceGrid? = nil, frame: RealWorldFrame, bounds: WorldBounds) -> [LandCell]? {
-        let spread = spread(population: population, places: places, frame: frame, bounds: bounds, in: nil)
+    /// Without `places`, every cell is homes without jobs; without `water`,
+    /// none is water.
+    public static func cells(
+        population: PopulationGrid, places: PlaceGrid? = nil, water: WaterGrid? = nil, frame: RealWorldFrame, bounds: WorldBounds
+    ) -> [LandCell]? {
+        let spread = spread(population: population, places: places, water: water, frame: frame, bounds: bounds, in: nil)
         return spread.reachesTheWorld ? spread.cells : nil
     }
 
     /// The cells of `blocks` of a world whose land is read in as it is
     /// needed (decision 88): exactly the cells of those blocks that
-    /// ``cells(population:places:frame:bounds:)`` would give the whole
-    /// world, so the land does not depend on which blocks are read first.
+    /// ``cells(population:places:water:frame:bounds:)`` would give the
+    /// whole world, so the land does not depend on which blocks are read
+    /// first.
     public static func cells(
-        in blocks: Set<LandBlock>, population: PopulationGrid, places: PlaceGrid? = nil, frame: RealWorldFrame, bounds: WorldBounds
+        in blocks: Set<LandBlock>, population: PopulationGrid, places: PlaceGrid? = nil, water: WaterGrid? = nil,
+        frame: RealWorldFrame, bounds: WorldBounds
     ) -> [LandCell] {
         guard !blocks.isEmpty else { return [] }
-        return spread(population: population, places: places, frame: frame, bounds: bounds, in: blocks).cells
+        return spread(population: population, places: places, water: water, frame: frame, bounds: bounds, in: blocks).cells
     }
 
     /// The land of the world, or of `blocks` of it, by row and then column,
@@ -87,7 +98,7 @@ public enum LandImport {
     /// through every 64 m cell of the world (some 27 million for the whole
     /// of Taiwan).
     private static func spread(
-        population: PopulationGrid, places: PlaceGrid?, frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>?
+        population: PopulationGrid, places: PlaceGrid?, water: WaterGrid?, frame: RealWorldFrame, bounds: WorldBounds, in blocks: Set<LandBlock>?
     ) -> (cells: [LandCell], reachesTheWorld: Bool) {
         let grid = population.people
         let length = Double(Land.cellLength)
@@ -131,6 +142,12 @@ public enum LandImport {
             guard zoned, let places else { return nil }
             return places.zoneOfCell[GridCounts.Cell(row: zoneRows[row], column: zoneColumns[column])]
         }
+        // Decision 105: the water cell of each 64 m row and column, alike.
+        let wet = water.map { ($0, $0.lookup(frame: frame, bounds: bounds)) }
+        func isWater(row: Int, column: Int) -> Bool {
+            guard let (water, lookup) = wet, let source = lookup.rows[row], let target = lookup.columns[column] else { return false }
+            return water.isWater(row: source, column: target)
+        }
         var sources = Set(grid.counts.keys)
         if let places {
             for layer in places.layers.values {
@@ -156,15 +173,19 @@ public enum LandImport {
             let people = Int64(grid.counts[source] ?? 0)
             let work = jobs(source)
             let allJobs = work.office + work.shop + work.civic + work.leisure
-            // Its 64 m cells by zone, in row-major order (decision 93).
-            var zones: [PlaceGrid.Zone?] = []
+            // Its 64 m cells by zone, in row-major order (decision 93), and
+            // which are water (decision 105), whose zone does not count.
+            var zones: [PlaceGrid.Zone?] = [], wetCells: [Bool] = []
             for row in rowSpan {
                 for column in columnSpan {
                     zones.append(zone(row: row, column: column))
+                    wetCells.append(isWater(row: row, column: column))
                 }
             }
-            let working = zones.contains { $0 == .industrial || $0 == .farmland }
-            guard people > 0 || allJobs > 0 || zones.contains(where: { $0 != nil }) else { continue }
+            let dryZones = zip(zones, wetCells).filter { !$0.1 }.map(\.0)
+            guard !dryZones.isEmpty else { continue }
+            let working = dryZones.contains { $0 == .industrial || $0 == .farmland }
+            guard people > 0 || allJobs > 0 || dryZones.contains(where: { $0 != nil }) else { continue }
             if people > 0 || allJobs > 0 || working {
                 reachesTheWorld = true
             }
@@ -186,12 +207,12 @@ public enum LandImport {
             // Decision 93: the people and the places' jobs live and work in
             // the cells of no zone; where every cell is one, in its farms,
             // else its factories, else (parks only) in all of them.
-            let parksOnly = !zones.contains { $0 != .park }
-            let hostZone: PlaceGrid.Zone? = zones.contains { $0 == nil } ? nil : zones.contains(.farmland) ? .farmland : .industrial
+            let parksOnly = !dryZones.contains { $0 != .park }
+            let hostZone: PlaceGrid.Zone? = dryZones.contains { $0 == nil } ? nil : dryZones.contains(.farmland) ? .farmland : .industrial
             func hosts(_ zone: PlaceGrid.Zone?) -> Bool {
                 parksOnly || zone == hostZone
             }
-            let hostCount = Int64(zones.filter(hosts).count)
+            let hostCount = Int64(dryZones.filter(hosts).count)
             let (residents, placeJobs) = (kept(people), kept(allJobs))
             func share(_ total: Int64, _ index: Int) -> Int64 {
                 let (base, extra) = total.quotientAndRemainder(dividingBy: hostCount)
@@ -202,8 +223,10 @@ public enum LandImport {
                 for column in columnSpan {
                     let index = (row - rowSpan.lowerBound) * columnSpan.count + column - columnSpan.lowerBound
                     let cellZone = zones[index]
-                    let isHost = hosts(cellZone)
+                    // Water has no land (decision 105).
+                    let isHost = !wetCells[index] && hosts(cellZone)
                     defer { if isHost { host += 1 } }
+                    if wetCells[index] { continue }
                     if let blocks, !blocks.contains(LandBlock(cellRow: row, column: column)) { continue }
                     var (cellUse, cellResidents, cellJobs) = (use, Int64(0), Int64(0))
                     if isHost {

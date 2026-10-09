@@ -406,6 +406,13 @@ extension GameError {
                 "Zone cells inside the map, at most \(Zoning.maximumSide) cells a side at a time.",
                 "分區要在地圖內，一次最多 \(Zoning.maximumSide) × \(Zoning.maximumSide) 格。"
             )
+        case .onWater:
+            language.text("Nothing can be built or zoned on water.", "水上不能蓋建物，也不能劃分區。")
+        case .invalidTerrain:
+            language.text(
+                "Each cell of water must lie in the world, appear once and have no land on it.",
+                "每格水域須在世界範圍內、只列一次，而且上面沒有土地。"
+            )
         case .invalidLand:
             language.text(
                 "Each cell of land must lie in the world, appear once, and hold 0 to \(Money(Land.maximumPerCell).displayText) residents and jobs, not both 0.",
