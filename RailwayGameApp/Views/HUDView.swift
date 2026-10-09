@@ -129,6 +129,10 @@ struct HUDView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Decision 117: what just came in, under the cash.
+        .overlay(alignment: .bottom) {
+            IncomeFloat(pulse: session.incomePulse)
+        }
         .accessibilityLabel("Cash \(text)")
         .accessibilityHint("Shows fares, running costs and the ledger.")
     }
