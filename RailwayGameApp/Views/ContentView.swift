@@ -254,9 +254,12 @@ private struct MapTutorialTarget: View {
     @Environment(\.mapInsets) private var insets
 
     var body: some View {
+        // The target inside the padding: marked outside it, it would be the
+        // whole map, controls and all, and the tutorial's card would count
+        // the map under the details card as free (decision 106).
         Color.clear
-            .padding(insets)
             .tutorialTarget(.map)
+            .padding(insets)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
