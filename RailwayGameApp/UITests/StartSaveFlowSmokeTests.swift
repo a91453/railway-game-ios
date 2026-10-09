@@ -231,7 +231,16 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func requiredButton(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
+        // A phone on its side (decision 106) shows fewer of the start
+        // screen's buttons at once: scroll their column to the one wanted.
+        let button = app.buttons[identifier]
+        if identifier.hasPrefix("start."), button.waitForExistence(timeout: 10), !button.isHittable {
+            let column = app.scrollViews.containing(.button, identifier: identifier).firstMatch
+            for _ in 0..<3 where column.exists && !button.isHittable {
+                column.swipeUp()
+            }
+        }
+        return requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
     }
 
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {

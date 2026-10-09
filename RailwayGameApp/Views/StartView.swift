@@ -22,141 +22,46 @@ struct StartView: View {
     @State private var showsSettings = false
     @Environment(\.openURL) private var openURL
     @Environment(GameAudio.self) private var audio
+    /// Compact: a phone on its side.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 28) {
-                header
-                VStack(spacing: 12) {
-                    if let autosave = launcher.autosave {
-                        StartButton(
-                            title: String(localized: "Continue"),
-                            detail: detail(of: autosave),
-                            systemImage: "play.fill",
-                            isPrimary: true,
-                            tone: .primary
-                        ) {
-                            launcher.continueGame()
+        Group {
+            if verticalSizeClass == .compact {
+                // A phone on its side (decision 106): the title beside the
+                // buttons, so the first ones show without scrolling.
+                HStack(spacing: 0) {
+                    ScrollView {
+                        header
+                            .padding(.vertical, 24)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .frame(maxWidth: .infinity)
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            buttons
+                            footer
                         }
-                        .accessibilityIdentifier("start.continue")
+                        .frame(maxWidth: 420)
+                        .padding(.horizontal)
+                        .padding(.vertical, 16)
+                        .frame(maxWidth: .infinity)
                     }
-                    StartButton(
-                        title: String(localized: "New Game"),
-                        detail: String(localized: "An empty map and \(GameWorld.newGame().economy.balance.moneyText) to build with"),
-                        systemImage: "plus",
-                        isPrimary: launcher.autosave == nil,
-                        tone: .primary
-                    ) {
-                        launcher.startNewGame()
-                    }
-                    // Stable across localizations for the UI smoke tests.
-                    .accessibilityIdentifier("start.newGame")
-                    // The real-world maps wait for the real-world data,
-                    // read in the background at launch: a game started
-                    // before it is would have no people on its map.
-                    StartButton(
-                        title: String(localized: "Real-World Map"),
-                        detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Build on a map of a real place"),
-                        systemImage: "globe.asia.australia",
-                        tone: .plain
-                    ) {
-                        choosesPlace = true
-                    }
-                    .disabled(launcher.isLoadingRealWorldData)
-                    .accessibilityIdentifier("start.realWorld")
-                    StartButton(
-                        title: String(localized: "Tutorial"),
-                        detail: String(localized: "Learn to build and run a railway step by step"),
-                        systemImage: "hand.point.up.left",
-                        tone: .accent
-                    ) {
-                        launcher.startTutorial()
-                    }
-                    .accessibilityIdentifier("start.tutorial")
-                    StartButton(
-                        title: String(localized: "Demo Map"),
-                        detail: String(localized: "Three lines already running, in a city that grows"),
-                        systemImage: "tram.fill",
-                        tone: .accent
-                    ) {
-                        launcher.openDemo()
-                    }
-                    .accessibilityIdentifier("start.demoMap")
-                    if !launcher.otherSaves.isEmpty {
-                        StartButton(
-                            title: String(localized: "Saved Games"),
-                            detail: String(localized: "\(launcher.otherSaves.count) saves"),
-                            systemImage: "tray.full",
-                            tone: .plain
-                        ) {
-                            showsSaves = true
-                        }
-                        .accessibilityIdentifier("start.savedGames")
-                    }
-                    StartButton(
-                        title: String(localized: "Import a Save"),
-                        detail: String(localized: "A save file from Files or another device"),
-                        systemImage: "square.and.arrow.down",
-                        tone: .plain
-                    ) {
-                        importsSave = true
-                    }
-                    // Last, so the buttons the UI tests reach stay where
-                    // they were.
-                    StartButton(
-                        title: String(localized: "Real-World Demo"),
-                        detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
-                        systemImage: "map.fill",
-                        tone: .accent
-                    ) {
-                        if let railways = launcher.railways {
-                            launcher.openRealWorldDemo(railways: railways)
-                        }
-                    }
-                    // Without the railways' files (listed on the data
-                    // sources screen) there is no demo to open.
-                    .disabled(launcher.railways == nil)
-                    .accessibilityIdentifier("start.realWorldDemo")
-                    // Decision 86: a new game with goals. Last, after the
-                    // buttons the UI tests reach.
-                    StartButton(
-                        title: launcher.language.text("Challenges", "挑戰"),
-                        detail: launcher.language.text(
-                            "Goals to reach by a deadline, rated gold, silver or bronze",
-                            "在期限內達成目標，依完成速度拿金、銀、銅牌"
-                        ),
-                        systemImage: "flag.checkered",
-                        tone: .accent
-                    ) {
-                        choosesChallenge = true
-                    }
-                    .accessibilityIdentifier("start.challenges")
+                    .frame(maxWidth: .infinity)
                 }
-                if let message = launcher.message {
-                    HStack(spacing: 8) {
-                        Image(systemName: message.kind == .success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .font(.footnote.weight(.bold))
-                        Text(message.text)
-                            .font(.footnote.weight(.medium))
-                            .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ScrollView {
+                    VStack(spacing: 28) {
+                        header
+                        buttons
+                        footer
                     }
-                    .foregroundStyle(message.kind == .success ? Theme.success : Theme.warning)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Theme.panel, in: Capsule())
-                    .overlay(Capsule().strokeBorder((message.kind == .success ? Theme.success : Theme.warning).opacity(0.5), lineWidth: 1))
-                }
-                // One row while it fits; with large text on a phone, a
-                // column, rather than squeezing the labels.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) { chips }
-                    VStack(spacing: 10) { chips }
+                    .frame(maxWidth: 420)
+                    .padding(.horizontal)
+                    .padding(.vertical, 40)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .frame(maxWidth: 420)
-            .padding(.horizontal)
-            .padding(.vertical, 40)
-            .frame(maxWidth: .infinity)
         }
         .background(Theme.background)
         .sheet(isPresented: $showsSettings) {
@@ -187,6 +92,139 @@ struct StartView: View {
         }
         .onAppear {
             launcher.refresh()
+        }
+    }
+
+    /// The ways into a game.
+    private var buttons: some View {
+        VStack(spacing: 12) {
+            if let autosave = launcher.autosave {
+                StartButton(
+                    title: String(localized: "Continue"),
+                    detail: detail(of: autosave),
+                    systemImage: "play.fill",
+                    isPrimary: true,
+                    tone: .primary
+                ) {
+                    launcher.continueGame()
+                }
+                .accessibilityIdentifier("start.continue")
+            }
+            StartButton(
+                title: String(localized: "New Game"),
+                detail: String(localized: "An empty map and \(GameWorld.newGame().economy.balance.moneyText) to build with"),
+                systemImage: "plus",
+                isPrimary: launcher.autosave == nil,
+                tone: .primary
+            ) {
+                launcher.startNewGame()
+            }
+            // Stable across localizations for the UI smoke tests.
+            .accessibilityIdentifier("start.newGame")
+            // The real-world maps wait for the real-world data,
+            // read in the background at launch: a game started
+            // before it is would have no people on its map.
+            StartButton(
+                title: String(localized: "Real-World Map"),
+                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Build on a map of a real place"),
+                systemImage: "globe.asia.australia",
+                tone: .plain
+            ) {
+                choosesPlace = true
+            }
+            .disabled(launcher.isLoadingRealWorldData)
+            .accessibilityIdentifier("start.realWorld")
+            StartButton(
+                title: String(localized: "Tutorial"),
+                detail: String(localized: "Learn to build and run a railway step by step"),
+                systemImage: "hand.point.up.left",
+                tone: .accent
+            ) {
+                launcher.startTutorial()
+            }
+            .accessibilityIdentifier("start.tutorial")
+            StartButton(
+                title: String(localized: "Demo Map"),
+                detail: String(localized: "Three lines already running, in a city that grows"),
+                systemImage: "tram.fill",
+                tone: .accent
+            ) {
+                launcher.openDemo()
+            }
+            .accessibilityIdentifier("start.demoMap")
+            if !launcher.otherSaves.isEmpty {
+                StartButton(
+                    title: String(localized: "Saved Games"),
+                    detail: String(localized: "\(launcher.otherSaves.count) saves"),
+                    systemImage: "tray.full",
+                    tone: .plain
+                ) {
+                    showsSaves = true
+                }
+                .accessibilityIdentifier("start.savedGames")
+            }
+            StartButton(
+                title: String(localized: "Import a Save"),
+                detail: String(localized: "A save file from Files or another device"),
+                systemImage: "square.and.arrow.down",
+                tone: .plain
+            ) {
+                importsSave = true
+            }
+            // Last, so the buttons the UI tests reach stay where
+            // they were.
+            StartButton(
+                title: String(localized: "Real-World Demo"),
+                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
+                systemImage: "map.fill",
+                tone: .accent
+            ) {
+                if let railways = launcher.railways {
+                    launcher.openRealWorldDemo(railways: railways)
+                }
+            }
+            // Without the railways' files (listed on the data
+            // sources screen) there is no demo to open.
+            .disabled(launcher.railways == nil)
+            .accessibilityIdentifier("start.realWorldDemo")
+            // Decision 86: a new game with goals. Last, after the
+            // buttons the UI tests reach.
+            StartButton(
+                title: launcher.language.text("Challenges", "挑戰"),
+                detail: launcher.language.text(
+                    "Goals to reach by a deadline, rated gold, silver or bronze",
+                    "在期限內達成目標，依完成速度拿金、銀、銅牌"
+                ),
+                systemImage: "flag.checkered",
+                tone: .accent
+            ) {
+                choosesChallenge = true
+            }
+            .accessibilityIdentifier("start.challenges")
+        }
+    }
+
+    /// The last message, and Language, Data Sources and Settings.
+    @ViewBuilder private var footer: some View {
+        if let message = launcher.message {
+            HStack(spacing: 8) {
+                Image(systemName: message.kind == .success ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .font(.footnote.weight(.bold))
+                Text(message.text)
+                    .font(.footnote.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(message.kind == .success ? Theme.success : Theme.warning)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Theme.panel, in: Capsule())
+            .overlay(Capsule().strokeBorder((message.kind == .success ? Theme.success : Theme.warning).opacity(0.5), lineWidth: 1))
+        }
+        // One row while it fits; with large text on a phone, a
+        // column, rather than squeezing the labels.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { chips }
+            VStack(spacing: 10) { chips }
         }
     }
 
