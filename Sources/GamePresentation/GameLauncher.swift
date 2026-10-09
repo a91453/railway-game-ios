@@ -42,6 +42,11 @@ public final class GameLauncher {
     /// every game it starts (``GameSession/places``).
     public var places: PlaceGrid?
 
+    /// Taiwan's water, the sea, rivers and lakes, on real-world maps
+    /// (decision 105), handed to every game it starts
+    /// (``GameSession/water``).
+    public var water: WaterGrid?
+
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
     public var railways: RealRailways?
@@ -97,7 +102,10 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, or with `anchor` on a real-world
     /// map with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
-        begin(.newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:))), keepingAutosave: true)
+        begin(
+            .newGame(anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? []),
+            keepingAutosave: true
+        )
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
@@ -121,7 +129,10 @@ public final class GameLauncher {
                 ))
                 return
             }
-            begin(PingxiChallenge.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor)), keepingAutosave: true)
+            begin(
+                PingxiChallenge.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor)),
+                keepingAutosave: true
+            )
         }
     }
 
@@ -147,19 +158,29 @@ public final class GameLauncher {
     /// Opens ``RealWorldDemo``: Taiwan's Pingxi, Yilan and Shenao Lines
     /// built on `railways` and running over Apple's map.
     public func openRealWorldDemo(railways: RealRailways) {
-        begin(RealWorldDemo.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor)), keepingAutosave: true)
+        begin(
+            RealWorldDemo.make(in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor)),
+            keepingAutosave: true
+        )
     }
 
     /// The people and jobs of a new game's map with its middle at `anchor`
-    /// (Phase 6a–6b, ``LandImport``), or `nil` without the app's population
-    /// or where no one in it lives or works.
+    /// (Phase 6a–6b, ``LandImport``), off its water (decision 105), or
+    /// `nil` without the app's population or where no one in it lives or
+    /// works.
     func land(at anchor: GeoAnchor) -> [LandCell]? {
         population.flatMap {
             LandImport.cells(
-                population: $0, places: places,
+                population: $0, places: places, water: water,
                 frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds
             )
         }
+    }
+
+    /// The water of a new game's map with its middle at `anchor` (decision
+    /// 105, ``WaterGrid``): none without the app's water.
+    func water(at anchor: GeoAnchor) -> [CellPosition] {
+        water?.cells(frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds) ?? []
     }
 
     /// Starts a new game with the tutorial on its first step (the start
@@ -226,6 +247,7 @@ public final class GameLauncher {
         let started = GameSession(world: world, language: language)
         started.population = population
         started.places = places
+        started.water = water
         started.railways = railways
         // Decision 88: land not read round a station built while the app
         // had no population.
@@ -264,11 +286,13 @@ public final class GameLauncher {
     private func install(_ data: RealWorldData) {
         population = data.population
         places = data.places
+        water = data.water
         railways = data.railways
         realWorldIssues = data.issues
         if let session {
             session.population = population
             session.places = places
+            session.water = water
             session.railways = railways
         }
         isLoadingRealWorldData = false
@@ -361,27 +385,31 @@ public final class GameLauncher {
 }
 
 /// The real-world data the app bundles: who lives where in Taiwan, what
-/// there is around places there, and its real railways. Each is `nil` when
-/// its files cannot be read, and listed in ``issues``.
+/// there is around places there, its water (decision 105), and its real
+/// railways. Each is `nil` when its files cannot be read, and listed in
+/// ``issues``.
 public struct RealWorldData: Sendable {
     public let population: PopulationGrid?
     public let places: PlaceGrid?
+    public let water: WaterGrid?
     public let railways: RealRailways?
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
 
-    public init(population: PopulationGrid?, places: PlaceGrid?, railways: RealRailways?, issues: [RealDataLoadIssue]) {
+    public init(population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, railways: RealRailways?, issues: [RealDataLoadIssue]) {
         self.population = population
         self.places = places
+        self.water = water
         self.railways = railways
         self.issues = issues
     }
 
-    /// Reads `taiwan_population.json`, `taiwan_places.json` and the
-    /// railways' files (``RealRailways/load(file:)``) through `file` (a name
-    /// and extension to its contents). About 3.2 MB of JSON is
-    /// decoded: call it off the main actor.
+    /// Reads `taiwan_population.json`, `taiwan_places.json`,
+    /// `taiwan_water.json` and the railways' files
+    /// (``RealRailways/load(file:)``) through `file` (a name and extension
+    /// to its contents). About 3.7 MB of JSON is decoded: call it off the
+    /// main actor.
     public static func load(file: @escaping @Sendable (_ name: String, _ ext: String) throws -> Data) -> RealWorldData {
         var issues: [RealDataLoadIssue] = []
         func grid<Grid>(_ name: String, _ make: (Data) throws -> Grid) -> Grid? {
@@ -394,7 +422,8 @@ public struct RealWorldData: Sendable {
         }
         let population = grid("taiwan_population", PopulationGrid.init(data:))
         let places = grid("taiwan_places", PlaceGrid.init(data:))
+        let water = grid("taiwan_water", WaterGrid.init(data:))
         let railways = RealRailways.load(file: file)
-        return RealWorldData(population: population, places: places, railways: railways.railways, issues: issues + railways.issues)
+        return RealWorldData(population: population, places: places, water: water, railways: railways.railways, issues: issues + railways.issues)
     }
 }

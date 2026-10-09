@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 43
+    static let schemaVersion = 44
 
     var description: String
     var initialState: InitialState
@@ -182,7 +182,7 @@ struct GoldenScenario: Decodable {
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
-                 .command(.setZone, _), .observe(.zone, _): true
+                 .command(.setZone, _), .observe(.zone, _), .command(.setWater, _), .observe(.water, _): true
             default: false
             }
         }
@@ -245,7 +245,7 @@ extension GoldenScenario.Step: Decodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -283,6 +283,9 @@ extension GoldenScenario.Step: Decodable {
             case .zone:
                 try requireOnly([.found, .zone], answering: "zone")
                 self = try .observe(observation, expect: .zone(Self.found(expect, .zone, Zone.self)))
+            case .water:
+                try requireOnly([.water], answering: "water")
+                self = try .observe(observation, expect: .water(expect.decode(Bool.self, forKey: .water)))
             case .landValue:
                 try requireOnly([.found, .landValue], answering: "landValue")
                 self = try .observe(observation, expect: .landValue(Self.found(expect, .landValue, LandValueSummary.self)))
@@ -503,6 +506,9 @@ enum ScenarioCommand: Equatable {
     case removePlacedBuilding(PlacedBuildingID)
     /// Schema 43 (decision 98): zoning a rectangle of cells, or clearing it.
     case setZone(Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>)
+    /// Schema 44 (decision 105): a real-world map's water, as runs along
+    /// rows.
+    case setWater([WaterRun])
 
     /// Applies the command through the matching `GameWorld` command.
     func apply(to world: inout GameWorld) -> StepOutcome {
@@ -608,6 +614,8 @@ enum ScenarioCommand: Equatable {
                 try world.removePlacedBuilding(id)
             case .setZone(let zone, let rows, let columns):
                 try world.setZone(zone, rows: rows, columns: columns)
+            case .setWater(let runs):
+                try world.setWater(runs.flatMap { run in (run.column..<run.column + run.count).map { CellPosition(row: run.row, column: $0) } })
             }
             return .ok
         } catch {
@@ -626,6 +634,7 @@ extension ScenarioCommand: Decodable {
         case seed, cells
         case kind, building
         case zone, rows, columns
+        case runs
     }
 
     init(from decoder: any Decoder) throws {
@@ -661,6 +670,14 @@ extension ScenarioCommand: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .rows, in: container, debugDescription: "setZone's rows and columns are [first, last].")
             }
             self = try .setZone(container.decodeIfPresent(Zone.self, forKey: .zone), rows: rows[0]...rows[1], columns: columns[0]...columns[1])
+        // Schema 44: water (decision 105), `"runs": [{"row", "column",
+        // "count"}]`.
+        case "setWater":
+            let runs = try container.decode([WaterRun].self, forKey: .runs)
+            guard runs.allSatisfy({ $0.count > 0 && $0.count <= 1 << 16 }) else {
+                throw DecodingError.dataCorruptedError(forKey: .runs, in: container, debugDescription: "setWater's runs hold 1 to 65,536 cells.")
+            }
+            self = .setWater(runs)
         case "buildTrack", "buildTurnout", "buildCrossing", "removeTrack", "buildStation", "extendStation", "setTrainContinuation":
             // The grid's commands, which no fixture uses since Stage F3c
             // removed the grid (ARCHITECTURE decision 51).
@@ -841,6 +858,7 @@ enum StepOutcome: Equatable {
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
         case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains, trainType, building
+        case row, column
     }
 
     init(from decoder: any Decoder) throws {
@@ -984,6 +1002,11 @@ extension StepOutcome: Codable {
             self = .rejected(.unknownPlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building))))
         case "invalidZoneArea":
             self = .rejected(.invalidZoneArea)
+        // Schema 44 (decision 105).
+        case "invalidTerrain":
+            self = .rejected(.invalidTerrain)
+        case "onWater":
+            self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1150,6 +1173,12 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .station)
         case .rejected(.invalidZoneArea):
             try container.encode("invalidZoneArea", forKey: .result)
+        case .rejected(.invalidTerrain):
+            try container.encode("invalidTerrain", forKey: .result)
+        case .rejected(.onWater(let row, let column)):
+            try container.encode("onWater", forKey: .result)
+            try container.encode(row, forKey: .row)
+            try container.encode(column, forKey: .column)
         case .rejected(.unknownPlacedBuilding(let id)):
             try container.encode("unknownPlacedBuilding", forKey: .result)
             try container.encode(id.rawValue, forKey: .building)
@@ -1227,6 +1256,8 @@ enum ScenarioObservation: Equatable {
     case placedBuilding(PlacedBuildingID)
     /// Schema 43 (decision 98): a cell's zone.
     case zone(row: Int, column: Int)
+    /// Schema 44 (decision 105): whether a cell is water.
+    case water(row: Int, column: Int)
 
     func answer(in world: GameWorld) -> ObservationAnswer {
         switch self {
@@ -1242,6 +1273,8 @@ enum ScenarioObservation: Equatable {
             .placedBuilding(world.placedBuilding(id: id).map(PlacedBuildingSummary.init))
         case .zone(let row, let column):
             .zone(world.zones.zone(row: row, column: column))
+        case .water(let row, let column):
+            .water(world.isWater(row: row, column: column))
         case .building(let row, let column):
             .building(world.buildings.building(row: row, column: column).flatMap { building in
                 world.buildingCapacity(row: row, column: column).map { BuildingSummary(building, capacity: $0) }
@@ -1369,6 +1402,9 @@ extension ScenarioObservation: Decodable {
         // Schema 43: zoning (decision 98).
         case "zone":
             self = try .zone(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
+        // Schema 44: water (decision 105).
+        case "water":
+            self = try .water(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
         case "train":
             self = try .train(container.decodeTrain(forKey: .train))
         case "stationStops":
@@ -1543,6 +1579,7 @@ enum ObservationAnswer: Equatable {
     case landValue(LandValueSummary?)
     case placedBuilding(PlacedBuildingSummary?)
     case zone(Zone?)
+    case water(Bool)
 }
 
 extension ObservationAnswer: Encodable {
@@ -1553,7 +1590,7 @@ extension ObservationAnswer: Encodable {
         case pose, alignment, nodes, trackPlatforms, levels, trainPath, train
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
-        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone
+        case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1661,6 +1698,8 @@ extension ObservationAnswer: Encodable {
         case .zone(let zone?):
             try container.encode(true, forKey: .found)
             try container.encode(zone, forKey: .zone)
+        case .water(let water):
+            try container.encode(water, forKey: .water)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1751,6 +1790,9 @@ struct WorldSummary: Codable, Equatable {
     /// How many cells are zoned, in all and of each zone that has any
     /// (schema 43, decision 98); left out when none is.
     var zones: [String: Int]?
+    /// How many cells are water (schema 44, decision 105); left out when
+    /// none is.
+    var water: Int?
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -1963,6 +2005,7 @@ struct WorldSummary: Codable, Equatable {
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }
+        water = world.terrain.isEmpty ? nil : world.terrain.waterCellCount
     }
 }
 

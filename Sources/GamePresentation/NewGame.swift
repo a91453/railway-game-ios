@@ -23,9 +23,13 @@ extension GameWorld {
     /// ``Land/towns(seed:in:)`` draws from `eventSeed`: a blank map, or a
     /// real-world one where the app has no people. Its city's buildings
     /// (Phase 6c-1, ARCHITECTURE decision 74) stand on that land.
+    ///
+    /// Its `water` (decision 105) is a real-world map's sea, rivers and
+    /// lakes (``WaterGrid``), under which there is no land; a blank map has
+    /// none.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
-        land: [LandCell]? = nil
+        land: [LandCell]? = nil, water: [CellPosition] = []
     ) -> GameWorld {
         do {
             var world = GameWorld(
@@ -55,6 +59,8 @@ extension GameWorld {
             // Item 5: the towns round well-served stations grow.
             world.setTownGrowth(true)
             world.setGeoAnchor(anchor)
+            // Decision 105: the ground first, then the city on it.
+            try world.setWater(water)
             // Phase 6a: the city the railway serves.
             if let land {
                 try world.setLand(land)
@@ -69,9 +75,10 @@ extension GameWorld {
             world.setCityBuildings(true)
             return world
         } catch {
-            // An empty world has no trains to share track, and land comes
-            // from ``LandImport`` in this world's bounds, so failing here is
-            // a programming error.
+            // An empty world has no trains to share track, and land and
+            // water come from ``LandImport`` and ``WaterGrid`` in this
+            // world's bounds, the land off the water, so failing here is a
+            // programming error.
             preconditionFailure("Could not create the new-game world: \(error)")
         }
     }

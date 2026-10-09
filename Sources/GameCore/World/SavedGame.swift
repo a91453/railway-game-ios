@@ -119,9 +119,13 @@
 ///     reads only an earlier version would drop them, and its next save
 ///     would lose the player's zones, so it says the save is newer than it
 ///     instead.
+/// 24. Water (decision 105): the world can have `"terrain"`, which of its
+///     cells are water. A build that reads only an earlier version would
+///     drop it, and its city would spread onto the sea again, so it says the
+///     save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 23
+    public static let currentVersion = 24
 
     public let world: GameWorld
 
@@ -205,6 +209,8 @@ extension SavedGame: Codable {
         // as decision 85 keeps what was built before it.
         // Version 22 to 23: a world without `"zones"` has none, and grows
         // as it did.
+        // Version 23 to 24: a world without `"terrain"` has no water, and
+        // grows and builds as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
