@@ -11,7 +11,7 @@
 #                                    true if any can change the package's tests
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
-#   campaigns-1 .. campaigns-24   the long property, differential and mutation
+#   campaigns-1 .. campaigns-15   the long property, differential and mutation
 #                                campaigns, and the golden scenarios, named
 #                                below
 #   rest                         every test that no campaign shard names: the
@@ -122,36 +122,53 @@ set -euo pipefail
 # its 728 s of tests there (RealWorldDemoTests 85, ScheduledTrafficTests 71,
 # WorldStateMachineTests 55, the rest under 40 each). The golden scenarios run
 # alone in campaigns-24, which leaves rest about 444 s.
+# 2026-10-09: the account's runners were the bottleneck, not the shards'
+# length. Linux shards themselves waited up to 16 minutes for a runner (run
+# 37892260732), and every job also spends about 1.8 minutes starting its
+# container and building (44 of the run's 190 job-minutes), so 25 jobs a run
+# were 25 runners and 25 builds. The short shards were paired with others,
+# keeping every class (and so every test) and no shard above the slowest one,
+# old campaigns-7 (ServiceRepeatingPropertyTests, 792 s of tests, alone).
+# Seconds of tests, the slower of runs 37892260732 and 37883215492; the old
+# shard names on the left are the ones the notes above use:
+#   campaigns-1   old 7                                       792
+#   campaigns-2   old 6 (652) + old 22 (63)                   715
+#   campaigns-3   old 5 (579) + old 17 (100)                  679
+#   campaigns-4   old 10 (518) + old 11 (133)                 651
+#   campaigns-5   old 12 (501) + old 15 (164)                 665
+#   campaigns-6   old 21 (413) + old 1 (276)                  689
+#   campaigns-7   old 4 (405) + old 3 (240)                   645
+#   campaigns-8   old 19 (465) + old 16 (253)                 718
+#   campaigns-9   old 20 (330) + old 24 (321)                 651
+#   campaigns-10  old 18 (267) + old 23 (261)                 528
+#   campaigns-11  old 14                                      500
+#   campaigns-12  old 9                                       492
+#   campaigns-13  old 2                                       491
+#   campaigns-14  old 8                                       488
+#   campaigns-15  old 13                                      468
+#   rest          (unchanged)                                 488
+# 16 jobs instead of 25; the wall time is still the slowest shard's.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "EconomyPropertyTests" ;;
-    campaigns-2) echo "BoardingPropertyTests" ;;
-    campaigns-3) echo "SaveMutationTests" ;;
-    campaigns-4) echo "LinePatternPropertyTests" ;;
-    campaigns-5) echo "LineDispatchPropertyTests" ;;
-    campaigns-6) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests" ;;
-    campaigns-7) echo "ServiceRepeatingPropertyTests" ;;
-    campaigns-8) echo "ServiceLinePropertyTests" ;;
-    campaigns-9) echo "TrafficControlPropertyTests" ;;
-    campaigns-10) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests" ;;
-    campaigns-11) echo "DeadlockPropertyTests" ;;
-    campaigns-12) echo "ScheduledTrafficPropertyTests" ;;
-    campaigns-13) echo "TrafficFollowingPropertyTests" ;;
-    campaigns-14) echo "ScheduledTrafficSecondHalfPropertyTests" ;;
-    campaigns-15) echo "ScheduledOvertakeTrackPropertyTests" ;;
-    campaigns-16) echo "ScheduledOvertakeTrackMiddlePropertyTests" ;;
-    campaigns-17) echo "ScheduledOvertakeTrackLastPropertyTests" ;;
-    campaigns-18) echo "ScheduledOvertakeTrackFinalPropertyTests" ;;
-    campaigns-19) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests" ;;
-    campaigns-20) echo "EconomySecondHalfPropertyTests" ;;
-    campaigns-21) echo "SaveMutationSecondHalfTests" ;;
-    campaigns-22) echo "SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
-    campaigns-23) echo "PassengerPlanKeyTests" ;;
-    campaigns-24) echo "GoldenScenarioTests" ;;
+    campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
+    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
+    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests" ;;
+    campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
+    campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests" ;;
+    campaigns-6) echo "SaveMutationSecondHalfTests EconomyPropertyTests" ;;
+    campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
+    campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
+    campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
+    campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests" ;;
+    campaigns-13) echo "BoardingPropertyTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests" ;;
+    campaigns-15) echo "TrafficFollowingPropertyTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16 campaigns-17 campaigns-18 campaigns-19 campaigns-20 campaigns-21 campaigns-22 campaigns-23 campaigns-24)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""

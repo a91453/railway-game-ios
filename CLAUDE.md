@@ -113,10 +113,12 @@ needs OSM data reads the same extract.
 - `.github/workflows/` — `ci.yml` (the Swift package on Linux with Swift 6.4
   only: every test with the campaigns not reduced, split into parallel shards
   by `.github/scripts/swift-shards.sh`, which also proves each shard ran
-  exactly its tests; pull requests that change nothing the package builds or
-  tests skip the Swift jobs, and the `Swift CI (gate)` job always reports),
+  exactly its tests; pull requests and pushes to `main` that change nothing
+  the package builds or tests skip the Swift jobs, and the `Swift CI (gate)`
+  job always reports),
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
-  build, iPhone UI tests; not run for changes the app cannot see: docs, the
+  build, iPhone UI tests, the Traditional Chinese translation check; not run
+  for changes the app cannot see: docs, the
   package's tests and fixtures, `Web/`, `tools/`, the Linux checks' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's screens;
@@ -125,8 +127,9 @@ needs OSM data reads the same extract.
   their red result does not block a pull request; a newer push to `main`
   cancels the older one's run, so the newest `main` commit always has a
   complete one),
-  `release-archive.yml` (unsigned Release device archive; manual, and
-  on PRs that change project settings or app resources), `testflight.yml`
+  `release-archive.yml` (unsigned Release device archive; manual, nightly,
+  and on PRs that change project settings, the app's entry point or its
+  resources other than the string catalog), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no

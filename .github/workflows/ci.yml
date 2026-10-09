@@ -12,10 +12,13 @@ name: CI
 # from that script, so a shard defined there always has a job.
 #
 # The workflow always starts, so the "Swift CI (gate)" check always reports:
-# on a pull request that changes nothing the package builds or tests (only
-# docs, the app, the release workflows), the Swift jobs are skipped and the
-# gate passes. A required status check should name the gate, not the jobs
-# behind it. Pushes to main and manual runs always run everything.
+# on a pull request or a push to main that changes nothing the package builds
+# or tests (only docs, the app, the release workflows), the Swift jobs are
+# skipped and the gate passes. A push to main is compared with the commit main
+# was at before it: its package files are then the ones that commit ran. A
+# required status check should name the gate, not the jobs behind it. Manual
+# runs always run everything, and so does a push whose earlier commit cannot
+# be read.
 
 on:
   push:
@@ -55,12 +58,27 @@ jobs:
         id: detect
         env:
           EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
         run: |
           swift=true
+          base=""
           if [[ "$EVENT" == pull_request ]]; then
             # The first parent of the merge commit is the base, so this is
-            # what the pull request changes. If it cannot be read, test.
-            if files="$(git diff --name-only HEAD^1 HEAD)"; then
+            # what the pull request changes.
+            base=HEAD^1
+          elif [[ "$EVENT" == push && -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]]; then
+            # Where main was before this push: one merge, or several commits
+            # pushed at once, are all compared with it.
+            if git cat-file -e "$BEFORE^{commit}" 2>/dev/null ||
+              git fetch --no-tags --depth=1 origin "$BEFORE"; then
+              base="$BEFORE"
+            fi
+          fi
+          # If the changed files cannot be read, test.
+          if [[ -z "$base" && "$EVENT" != workflow_dispatch ]]; then
+            echo "::warning::No earlier commit to compare with; running the Swift jobs."
+          elif [[ -n "$base" ]]; then
+            if files="$(git diff --name-only "$base" HEAD)"; then
               echo "Changed files:"
               echo "$files"
               swift="$(.github/scripts/swift-shards.sh relevant <<<"$files")"

@@ -3,7 +3,10 @@ name: iOS App Build
 # Build and UI tests against the real Apple SDK, and a check that the
 # committed Xcode project still matches project.yml.
 # GameCore tests stay in ci.yml (Linux); the unsigned Release device archive
-# lives in release-archive.yml.
+# lives in release-archive.yml. The iPhone job also checks the Traditional
+# Chinese translations (an Xcode string export), which had a macOS job of its
+# own until 2026-10-09: that job ran about a minute and waited for a runner up
+# to 23 minutes.
 #
 # Two lanes, chosen by the event:
 #
@@ -46,10 +49,7 @@ on:
       - "tools/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/wasm-probe.yml"
-      - ".github/workflows/localization.yml"
       - ".github/scripts/swift-shards*.sh"
-      - ".github/scripts/check-localization*.py"
-      - ".github/scripts/localization-fixtures/**"
   push:
     branches: [main]
     paths-ignore:
@@ -63,10 +63,7 @@ on:
       - "tools/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/wasm-probe.yml"
-      - ".github/workflows/localization.yml"
       - ".github/scripts/swift-shards*.sh"
-      - ".github/scripts/check-localization*.py"
-      - ".github/scripts/localization-fixtures/**"
   # 18:17 UTC is 02:17 in Taipei. A scheduled run uses the default branch.
   schedule:
     - cron: "17 18 * * *"
@@ -140,10 +137,16 @@ jobs:
     runs-on: macos-26
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
-    # first boot's data migration (up to 14 minutes) and the warm-up launch.
-    timeout-minutes: 55
+    # first boot's data migration (up to 14 minutes), the warm-up launch and
+    # the translation check (about a minute).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+
+      # The translation check compares the export with the committed catalog,
+      # not with what an Xcode build or export may add to the working copy.
+      - name: Keep the committed string catalog
+        run: git show HEAD:RailwayGameApp/Resources/Localizable.xcstrings >"$RUNNER_TEMP/Localizable.xcstrings"
 
       - name: Toolchain versions
         run: |
@@ -209,6 +212,7 @@ jobs:
       # Package resolution is disabled as on Xcode Cloud, which only uses a
       # committed Package.resolved, so a missing one fails here first.
       - name: Build for iOS Simulator
+        id: app-build
         run: |
           xcodebuild build \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -283,7 +287,8 @@ jobs:
       # gesture, large-text and landscape tests, the slowest and the least
       # steady, to the full run, and the Traditional Chinese toolbar and
       # start/save flow and the Japanese fallback too: the English ones take
-      # the same paths, and localization.yml checks the translations.
+      # the same paths, and the translation check below checks the
+      # translations.
       # Each test may run 8 minutes at most (the slowest, the line route
       # test, took 188 s; a slow runner up to 1.8 times as long). A launch
       # that hangs then fails its one test instead of the whole step: on
@@ -340,6 +345,50 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # The Traditional Chinese translations, on every lane. It runs after the
+      # UI tests, and also when they failed, so each reports on its own. The
+      # export builds with SWIFT_EMIT_LOC_STRINGS into its own derived data,
+      # leaving the tested build alone.
+      - name: Test the localization checker
+        id: localization-selftest
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' }}
+        run: python3 .github/scripts/check-localization-selftest.py
+
+      - name: Export Swift strings with Xcode
+        id: localization-export
+        if: ${{ !cancelled() && steps.localization-selftest.outcome == 'success' }}
+        timeout-minutes: 15
+        run: |
+          xcodebuild -exportLocalizations \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -localizationPath "$RUNNER_TEMP/loc" \
+            -exportLanguage zh-Hant \
+            -destination "generic/platform=iOS Simulator" \
+            -disableAutomaticPackageResolution \
+            SWIFT_EMIT_LOC_STRINGS=YES \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Check zh-Hant targets and committed catalog keys
+        if: ${{ !cancelled() && steps.localization-export.outcome == 'success' }}
+        run: |
+          python3 .github/scripts/check-localization.py \
+            --export "$RUNNER_TEMP/loc" \
+            --catalog "$RUNNER_TEMP/Localizable.xcstrings"
+
+      - name: Upload localization export for diagnostics
+        if: ${{ !cancelled() && steps.localization-export.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          # A re-run of a failed job uploads the same names again.
+          overwrite: true
+          name: localization-export
+          path: |
+            ${{ runner.temp }}/loc
+            ${{ runner.temp }}/Localizable.xcstrings
+          if-no-files-found: ignore
+          retention-days: 7
+
       # Proof that the smoke test can fail: nightly and on request, not on
       # every pull request. Restore the source afterwards; this broken build
       # never replaces the normal test run. It reuses the iPhone
@@ -348,7 +397,8 @@ jobs:
         id: missing-button
         # It rebuilds the app without Select first: 2m03s to 4m11s measured.
         timeout-minutes: 10
-        if: github.event_name == 'schedule' || inputs.verify_missing_button
+        # After the translation check, but not held back by it.
+        if: ${{ !cancelled() && steps.ui-smoke.outcome == 'success' && (github.event_name == 'schedule' || inputs.verify_missing_button) }}
         run: |
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
           bash .github/scripts/ui-smoke-missing-button.sh
