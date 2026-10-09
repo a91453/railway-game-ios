@@ -107,9 +107,9 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.waitForExistence(timeout: 10))
         newGame.tap()
         // Decision 114: Build opens the tools, starting with the network.
-        let build = app.buttons["dock.build"]
-        XCTAssertTrue(build.waitForExistence(timeout: 10))
-        build.tap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        buildEntry.tap()
         let network = app.buttons["tool.network"]
         XCTAssertTrue(network.waitForExistence(timeout: 10))
         network.tap()
@@ -341,9 +341,9 @@ final class MapInteractionTests: XCTestCase {
         newGame.tap()
 
         // Decision 114: Build opens the tools, starting with the network.
-        let build = app.buttons["dock.build"]
-        XCTAssertTrue(build.waitForExistence(timeout: 10))
-        build.tap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        buildEntry.tap()
         let network = app.buttons["tool.network"]
         XCTAssertTrue(network.waitForExistence(timeout: 10))
         network.tap()
