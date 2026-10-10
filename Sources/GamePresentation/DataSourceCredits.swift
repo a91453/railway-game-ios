@@ -99,7 +99,7 @@ public enum DataSourceCredits {
                         title: language.text("Taiwan Railway open data", "臺鐵開放資料"),
                         detail: language.text(
                             "The timetable of the Pingxi Line's trains, which the real-world demo runs at their real times.",
-                            "平溪線各班列車的時刻表，實景示範地圖照真實時刻開車。"
+                            "平溪線各班列車的時刻表，實景示範照真實時刻開車。"
                         ),
                         notice: language.text(
                             "Used under the Open Government Data License, version 1.0.",

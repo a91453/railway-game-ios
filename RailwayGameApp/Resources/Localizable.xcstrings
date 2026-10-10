@@ -1013,6 +1013,16 @@
         }
       }
     },
+    "Simple Demo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "簡易示範"
+          }
+        }
+      }
+    },
     "Show Controls" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1608,7 +1618,17 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "實景示範地圖"
+            "value" : "實景示範"
+          }
+        }
+      }
+    },
+    "Railways already built and running: Taiwan’s real lines, or a simple one to try things on" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已經蓋好、正在營運的路網：台灣的真實路線，或拿來試功能的簡單地圖"
           }
         }
       }

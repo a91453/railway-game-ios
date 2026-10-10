@@ -127,7 +127,9 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         assertEmptyStart(in: app)
 
+        // Decision 135: the simple demo is in the Demo Map's sheet.
         requiredButton("start.demoMap", in: app).tap()
+        requiredButton("demo.simple", in: app).tap()
         assertGame(in: app)
 
         // Keep the live clock from rebuilding the native menu while XCTest
