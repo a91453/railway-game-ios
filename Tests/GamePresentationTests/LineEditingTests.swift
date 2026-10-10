@@ -52,6 +52,45 @@ final class LineEditingTests: XCTestCase {
         }
     }
 
+    /// A line with runs (decision 133) keeps its stops while one of its
+    /// trains is on a run. The line's train cannot stop its service
+    /// (`trainOnLine`), so the message does not tell the player to: it says
+    /// to wait for the run to end or take the train off the line.
+    func testNewStopsUnderARunSayWhatCanBeDone() async throws {
+        try await MainActor.run {
+            let track = TestLine(tiles: 7)
+            var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts))
+            try track.build(in: &world)
+            for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
+                _ = try track.buildStation(named: name, beside: x, at: 0, in: &world)
+            }
+            let main = try world.createLine(named: "Main", stops: [alpha, beta, gamma]).id
+            try world.setLineServiceWindow(main, to: .allDay)
+            let blue = try world.purchaseTrain(named: "Blue").id
+            try world.placeTrain(blue, at: track.at(1, facingEast: true))
+            try world.setTrainMovementRate(blue, to: 1_024)
+            try world.assignTrain(blue, to: main)
+            try world.setLineRuns(main, to: [LineRun(from: 0, to: 1, times: [
+                LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 900, departure: 960),
+            ])])
+            world.setSpeed(.normal)
+            try world.advance(ticks: 6)
+            XCTAssertNotNil(world.train(id: blue)?.execution, "on the run to Beta")
+
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let session = GameSession(world: world, language: language)
+                session.selectLine(main)
+                session.removeStopFromSelectedLine(at: 2)
+                XCTAssertEqual(session.selectedLine?.stops, [alpha, beta, gamma])
+                XCTAssertEqual(session.message?.kind, .failure)
+                XCTAssertEqual(session.message?.text, language.text(
+                    "Train #1 of Main is on one of its runs, which new stops end. Wait for it to finish, or take it off the line first.",
+                    "Main 的列車 #1 正在跑班次，改停靠會結束班次。請等它跑完，或先讓它離開路線。"
+                ))
+            }
+        }
+    }
+
     func testTheReferenceTooltipRangesOfTheStandardDay() {
         let day = ServiceDay.standard
         XCTAssertEqual(day.ranges(of: .peak), ["07:00–10:00", "16:00–20:00"])
