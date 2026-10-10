@@ -162,13 +162,30 @@ extension GameWorld {
     /// Match the whole currently running order before using a line's plan:
     /// editing its stops does not attach new legs to an old timetable.
     func routePreference(for train: Train, from: Int, to: Int) -> LineRoutePreference? {
+        // Decision 133: a run's calls are the line's stops one way, each
+        // once, so its legs are the line's.
+        if let id = assignedLine(of: train.id), let line = line(id: id), line.hasRuns {
+            guard let order = runOrder(of: train, on: line), order.indices.contains(from), order.indices.contains(to) else { return nil }
+            return line.routePreferences.first { $0.from == order[from] && $0.to == order[to] }
+        }
         guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty else { return nil }
         let order = line.routeOrder(service: stream.service, direction: stream.direction ?? .inner)
         guard order.map({ line.stops[$0] }) == train.timetable.map(\.station), order.indices.contains(from), order.indices.contains(to) else { return nil }
         return line.routes(ofService: stream.service).first { $0.from == order[from] && $0.to == order[to] }
     }
 
+    /// The indices, in `line`'s stops, of the calls of `train`'s timetable
+    /// on a line with runs (decision 133), or `nil` when one is not the
+    /// line's.
+    func runOrder(of train: Train, on line: ServiceLine) -> [Int]? {
+        let order = train.timetable.compactMap { stop in line.stops.firstIndex(of: stop.station) }
+        return order.count == train.timetable.count && !order.isEmpty ? order : nil
+    }
+
     func hasRoutePreferences(_ train: Train) -> Bool {
+        if let id = assignedLine(of: train.id), let line = line(id: id), line.hasRuns {
+            return !line.routePreferences.isEmpty && runOrder(of: train, on: line) != nil
+        }
         guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id),
               !line.routes(ofService: stream.service).isEmpty else { return false }
         return line.routeOrder(service: stream.service, direction: stream.direction ?? .inner).map { line.stops[$0] } == train.timetable.map(\.station)

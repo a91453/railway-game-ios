@@ -36,6 +36,7 @@ public struct DataSourceSection: Identifiable, Hashable, Sendable {
 
 public enum DataSourceCredits {
     static let tdxURL = "https://tdx.transportdata.tw"
+    static let traOpenDataURL = "https://ods.railway.gov.tw"
     static let openGovernmentLicenseURL = "https://data.gov.tw/license"
     static let openStreetMapCopyrightURL = "https://www.openstreetmap.org/copyright"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
@@ -87,6 +88,25 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),
+                            DataSourceCredit.Link(
+                                title: language.text("Open Government Data License", "政府資料開放授權條款"),
+                                url: openGovernmentLicenseURL
+                            ),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "traOpenData",
+                        title: language.text("Taiwan Railway open data", "臺鐵開放資料"),
+                        detail: language.text(
+                            "The timetable of the Pingxi Line's trains, which the real-world demo runs at their real times.",
+                            "平溪線各班列車的時刻表，實景示範地圖照真實時刻開車。"
+                        ),
+                        notice: language.text(
+                            "Used under the Open Government Data License, version 1.0.",
+                            "依「政府資料開放授權條款第 1 版」使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Taiwan Railway open data", "臺鐵開放資料"), url: traOpenDataURL),
                             DataSourceCredit.Link(
                                 title: language.text("Open Government Data License", "政府資料開放授權條款"),
                                 url: openGovernmentLicenseURL

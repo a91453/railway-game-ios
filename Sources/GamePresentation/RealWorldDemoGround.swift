@@ -75,6 +75,9 @@ extension RealWorldDemo {
     /// on the flat demo, so the two keep the game's 4 m apart on a curve,
     /// each fitted within a metre of its line.
     static let groundLoopOffset = 6.0 * metre
+    /// When the demo's lines run at a headway: TRA's day, 05:00 to
+    /// midnight. A line with runs keeps to its runs' times.
+    static let serviceHours = ServiceWindow.hours(open: 300, close: 1_440)
     /// How far above or below the ground a station may be laid.
     static let stationReach = 8.0 * metre
 
@@ -101,6 +104,9 @@ extension RealWorldDemo {
         let pingxiLoops: Set<String>
         /// Where on the main track the Western Trunk Line leaves it.
         let trunkJunction: Double
+        /// The Pingxi Line's real trains (decision 133), when the app has
+        /// them.
+        let pingxiRuns: RealLineRuns?
 
         init(railways: RealRailways) {
             let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
@@ -117,6 +123,7 @@ extension RealWorldDemo {
                 return Stop(station: station, point: WorldVector(frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)))
             }
             self.frame = frame
+            pingxiRuns = railways.pingxiRuns
             // The site's Western Trunk Line runs from Keelung through Badu
             // to Qidu and south, its Yilan Line from Su'ao to Badu, its
             // Pingxi Line from Sandiaoling and its Shenao Line from Ruifang.
@@ -202,6 +209,9 @@ extension RealWorldDemo {
             let stops: [String]
             let starts: [(piece: Int, zone: ClosedRange<Double>, forward: Bool)]
             var platforms: [String: Int] = [:]
+            /// The runs of a real timetable it sends its trains out on
+            /// (decision 133), or none for a headway.
+            var runs: [LineRun] = []
         }
 
         let pieces: [Piece]
@@ -234,6 +244,7 @@ extension RealWorldDemo {
             var pieces: [Piece] = []
             var platforms: [Platform] = []
             var loopStarts: [String: (piece: Int, zone: ClosedRange<Double>)] = [:]
+            var secondLoopStarts: [String: (piece: Int, zone: ClosedRange<Double>)] = [:]
             var starts: [String: [Int: ClosedRange<Double>]] = [:]
 
             /// Lays `path` with its stations `stops` and their loops
@@ -242,8 +253,9 @@ extension RealWorldDemo {
             /// other tracks leave it, and `spans` the stretches level at a
             /// station other than its platform's or its loop's.
             func lay(
-                _ path: WorldPath, stops: [Stop], loops: Set<String>, junctions: [Double] = [], from host: (host: Int, at: Double)? = nil,
-                looseUntil: Double = 0, close: [ClosedRange<Double>] = [], spans: [String: ClosedRange<Double>] = [:]
+                _ path: WorldPath, stops: [Stop], loops: Set<String>, secondLoops: Set<String> = [], junctions: [Double] = [],
+                from host: (host: Int, at: Double)? = nil, looseUntil: Double = 0, close: [ClosedRange<Double>] = [],
+                spans: [String: ClosedRange<Double>] = [:]
             ) -> Int {
                 let zones = stops.map { platformZone(on: path, at: $0.point) }
                 var forced = [0, path.length] + junctions
@@ -292,8 +304,11 @@ extension RealWorldDemo {
                 }
                 // Each loop leaves the track at one node and joins it again
                 // at the next, standing off it, level, in the middle.
-                for (stop, a, b) in loopEnds {
-                    let loop = path.offset(from: a, to: b, by: groundLoopOffset, ramp: loopRamp)
+                // A station in `secondLoops` has a loop on the other side too.
+                let sides = loopEnds.map { ($0.0, $0.1, $0.2, groundLoopOffset) }
+                    + loopEnds.filter { secondLoops.contains($0.0.station.name(in: .traditionalChinese)) }.map { ($0.0, $0.1, $0.2, -groundLoopOffset) }
+                for (stop, a, b, offset) in sides {
+                    let loop = path.offset(from: a, to: b, by: offset, ramp: loopRamp)
                     let loopRise = TrackRise(path: loop, ground: ground, water: water, levels: [TrackRise.Level(0...loop.length, at: Double(rise.node(at: a)))])
                     guard let start = plan.node(at: a), let end = plan.node(at: b) else { preconditionFailure("A loop's ends are not nodes") }
                     let zone = middlePlatform(of: loop)
@@ -305,7 +320,11 @@ extension RealWorldDemo {
                         start: (index, a), end: (index, b)
                     ))
                     platforms.append(Platform(stop: stop, piece: pieces.count - 1, zone: zone))
-                    loopStarts[stop.station.id] = (pieces.count - 1, zone)
+                    if offset > 0 {
+                        loopStarts[stop.station.id] = (pieces.count - 1, zone)
+                    } else {
+                        secondLoopStarts[stop.station.id] = (pieces.count - 1, zone)
+                    }
                 }
                 return index
             }
@@ -318,7 +337,11 @@ extension RealWorldDemo {
             // Badu is level from the trunk line's junction to the end of its
             // platforms, so the two lines run through it side by side.
             let mainIndex = lay(
-                main, stops: routes.mainStops, loops: routes.mainLoops, junctions: [routes.trunkJunction, sandiaoling, ruifang],
+                // Decision 133: with the real Pingxi trains, Ruifang has a
+                // second loop, where they wait between runs, so the main track
+                // and the first loop stay the Yilan Line's.
+                main, stops: routes.mainStops, loops: routes.mainLoops, secondLoops: routes.pingxiRuns == nil ? [] : ["瑞芳"],
+                junctions: [routes.trunkJunction, sandiaoling, ruifang],
                 close: [(ruifang - besideReach)...ruifang], spans: [badu.station.id: routes.trunkJunction...(mainZone.upperBound + platformMargin)]
             )
             let trunkZone = platformZone(on: routes.trunk, at: badu.point)
@@ -326,7 +349,7 @@ extension RealWorldDemo {
                 routes.trunk, stops: routes.trunkStops, loops: routes.trunkLoops, from: (mainIndex, routes.trunkJunction), looseUntil: 120 * metre,
                 spans: [badu.station.id: 0...(trunkZone.upperBound + platformMargin)]
             )
-            _ = lay(routes.pingxi, stops: routes.pingxiStops, loops: routes.pingxiLoops, from: (mainIndex, sandiaoling), looseUntil: 260 * metre)
+            let pingxi = lay(routes.pingxi, stops: routes.pingxiStops, loops: routes.pingxiLoops, from: (mainIndex, sandiaoling), looseUntil: 260 * metre)
             let shenao = lay(
                 routes.shenao, stops: routes.shenaoStops, loops: [], from: (mainIndex, ruifang), looseUntil: 300 * metre, close: [0...besideReach]
             )
@@ -343,16 +366,51 @@ extension RealWorldDemo {
             let (qidu, ruifangID, mudan) = (ids.main[0], ids.main[4], ids.main[7])
             var mudanLoop = loop(mudan)
             mudanLoop.forward = false
-            services = [
-                Service(
-                    names: ("Pingxi Line", "平溪線"), stops: Array(ids.main[4...6]) + routes.pingxiStops.map(\.station.id),
-                    starts: [on(mainIndex, ruifangID, forward: true), loop(ruifangID)]
-                ),
-                Service(names: ("Yilan Line", "宜蘭線"), stops: ids.main.reversed(), starts: [on(mainIndex, mudan, forward: false), mudanLoop]),
-                Service(
-                    names: ("Shenao Line", "深澳線"), stops: routes.shenaoStops.reversed().map(\.station.id) + [ruifangID],
-                    starts: [on(shenao, routes.shenaoStops[1].station.id, forward: false)]
-                ),
+            var lines: [Service]
+            // With the real Pingxi trains waiting at Ruifang, two Yilan Line
+            // trains meeting there leave them no track: one runs then.
+            let yilanStarts = routes.pingxiRuns == nil ? [on(mainIndex, mudan, forward: false), mudanLoop] : [on(mainIndex, mudan, forward: false)]
+            let yilan = Service(names: ("Yilan Line", "宜蘭線"), stops: ids.main.reversed(), starts: yilanStarts)
+            if let real = routes.pingxiRuns {
+                // Decision 133: TRA's own trains, Badouzi and Ruifang to
+                // Jingtong, one line through Ruifang, each trainset where
+                // it stands at midnight, on a passing loop where there is
+                // one so the main track stays free.
+                let everyStop = routes.mainStops + routes.pingxiStops + routes.shenaoStops
+                func id(_ name: String) -> String {
+                    guard let stop = everyStop.first(where: { $0.station.name(in: .traditionalChinese) == name }) else {
+                        preconditionFailure("The demo has no station \(name)")
+                    }
+                    return stop.station.id
+                }
+                let overnight = real.overnight.sorted { $0.key < $1.key }.flatMap { name, count in
+                    Array(repeating: (secondLoopStarts[id(name)] ?? loopStarts[id(name)]).map { (piece: $0.piece, zone: $0.zone, forward: true) }
+                        ?? on(starts[id(name)]?.keys.contains(pingxi) == true ? pingxi : shenao, id(name), forward: true), count: count)
+                }
+                let runs = real.runs.map { run in
+                    LineRun(
+                        from: real.stops.firstIndex(of: run.calls[0].station)!, to: real.stops.firstIndex(of: run.calls[run.calls.count - 1].station)!,
+                        times: run.calls.map { LineRunTime(arrival: $0.arrival, departure: $0.departure) },
+                        days: run.days.reduce(0) { $0 | 1 << $1 }
+                    )
+                }
+                var pingxiLine = Service(names: ("Pingxi Line", "平溪線"), stops: real.stops.map(id), starts: overnight, runs: runs)
+                if let second = secondLoopStarts[ruifangID] { pingxiLine.platforms = [ruifangID: second.piece] }
+                lines = [pingxiLine, yilan]
+            } else {
+                lines = [
+                    Service(
+                        names: ("Pingxi Line", "平溪線"), stops: Array(ids.main[4...6]) + routes.pingxiStops.map(\.station.id),
+                        starts: [on(mainIndex, ruifangID, forward: true), loop(ruifangID)]
+                    ),
+                    yilan,
+                    Service(
+                        names: ("Shenao Line", "深澳線"), stops: routes.shenaoStops.reversed().map(\.station.id) + [ruifangID],
+                        starts: [on(shenao, routes.shenaoStops[1].station.id, forward: false)]
+                    ),
+                ]
+            }
+            lines += [
                 // At Badu the trunk line's trains take their own track's
                 // platform, which goes on to Keelung.
                 Service(
@@ -360,6 +418,7 @@ extension RealWorldDemo {
                     platforms: [ids.trunk[0]: trunk]
                 ),
             ]
+            services = lines
             self.pieces = pieces
             self.platforms = platforms
         }
@@ -434,8 +493,10 @@ extension RealWorldDemo {
                     }
                 }
                 if !preferences.isEmpty { try world.setLineRoutePreferences(line, to: preferences) }
+                if !service.runs.isEmpty { try world.setLineRuns(line, to: service.runs) }
                 let count = service.starts.count
-                try world.setLineServiceWindow(line, to: .allDay)
+                // TRA's day, 05:00 to midnight: the trains rest at night.
+                try world.setLineServiceWindow(line, to: serviceHours)
                 try world.setLineTrainsInService(line, to: TrainsInService(peak: count, offPeak: count, low: count))
                 for (number, start) in service.starts.enumerated() {
                     let train = try world.purchaseTrain(named: trainName(line: name, number: number + 1, in: language)).id

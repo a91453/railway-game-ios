@@ -1312,3 +1312,19 @@ V 實際放行 → T、U（保證不互穿）
 比例：樣本每 8 m（`TrackRise.spacing`），地面平均前後 160 m；車站在地面 ±8 m 內（不夠時再放寬 4、8、12 m）；節點離地最多 60 m；邊的直線坡度和縱坡差 1 m 以內；待避線離主線 6 m，待避區間的擬合 1 m。世界單位 = 1/64 m。
 
 外部專案：沒有用到程式碼。坡度限制的投影（Lipschitz 限制下最接近目標的序列）是一般的做法，這裡自己寫。資料：Copernicus DEM GLO-30／GLO-90（高度檔，資料來源畫面已列）、OpenStreetMap（水域，ODbL）。
+
+## 路線照真實班次發車（決策 133）
+
+作者要實景示範套用真實班次。參考是 `a91453/railway-reference-private` `05d7000`，六個來源都看過，用得上的都在 `Railway/site_archive_clean/`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `data/tra_schedule_dense.json`（臺鐵開放資料 14 天的每一班車：車次、各站 `arrSec`／`depSec`、`dates`） | `tools/real-timetables/extract_pingxi_runs.py` → `RailwayGameApp/Resources/RealRailways/tra_pingxi_runs.json`；`RealLineRuns`；`LineRun.times`（秒） | direct（資料），擷取平溪線 38 班 |
+| `index.html` 的 `sched` 系統（列車在第一站的開車時刻出現、照時刻沿站移動） | `GameWorld.dispatchRuns(ofLine:)`、`readyRunTrain`、`RunTrip.timetable`：從停在起站的列車派出，跑完留在終點 | adapted（遊戲的列車是實體的，決策 14） |
+| `index.html` `inferMeetPassTimes`／`inferMeetRun`（單線交會，已在決策 59 移植成 `ScheduledTraffic`） | 照常用於班次的列車 | 已移植 |
+| `data/tra_overtake_tracks.json`（瑞芳有多股待避） | 示範的瑞芳第二條待避線（平溪線偏好停靠） | adapted |
+| （參考沒有） | 班次載客的方向、`runHeadway`、遲到 30 分鐘取消、回送（十分 04:15 → 瑞芳）、開局放車的位置、宜蘭線與縱貫線的營業時間 | gap → 原生 |
+
+比例：時刻是當天的秒數（遊戲時間的秒），星期幾照 `StationDemand.weekday(ofDay:)`（0 是星期日）。
+
+外部專案：沒有用到程式碼。資料：臺鐵開放資料（ods.railway.gov.tw），政府資料開放授權條款第 1 版，資料來源畫面已列。
