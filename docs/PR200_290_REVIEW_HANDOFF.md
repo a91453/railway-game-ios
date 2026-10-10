@@ -1,4 +1,4 @@
-# 交接：PR #200–#306 的審查與修正
+# 交接：PR #200–#318 的審查與修正
 
 Session：`claude/railway-game-ios-pr-review-hzdbwt`（2026-10-09～10）。分支從 `main` 6b43d31 開始，收工前合併了 `main` dedbb659（#291–#296）。存檔版本、ARCHITECTURE 決策編號、golden schema 都沒有用到；GoldenScenarios、ReplayFixtures、SaveFixtures 的期望值都沒有改。
 
@@ -184,3 +184,64 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 **驗證**：
 - **VERIFIED（本機 Linux）**：`swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告；`LineEditingTests`、`LineSessionTests`、`RingLineSessionTests`、`LineStaffingTests` 通過；`swift-shards.sh selftest` 通過；改到的 YAML 都能解析，`bash -n` 通過；按鈕消失檢查的正規表示式在目前的 `BuildToolRail.swift` 上剛好刪掉那一行。
 - **UNVERIFIED LOCALLY**：`StationPanel.swift` 的畫面行為、`ios-build.yml` 與 `release-archive.yml` 的實際觸發（要 macOS CI）。
+
+## 九、延長到 #307–#318（第五個 PR）
+
+**合併狀態**：#307–#318 都已合併，head 都在 `main` 上。
+- #310 是空的 PR（0 個檔案，內容已由 #309 合併），關閉沒合併，不用補。
+- #315 先合併進 #314 的分支，再隨 #314 進 `main`。
+
+**main 的 CI**：
+- Linux CI 在每次合併後都是綠的。
+- #313、#314 合併後，iOS App Build 紅在同一個 UI 測試：`LineRoutePreferenceUITests.testALineLegCanSelectAPhysicalPlatform`。
+  - 根因：狀態訊息 4 秒後自己消失，測試先找到「Dismiss message」按鈕，再讀它的位置；按鈕在兩步之間消失，讀位置就失敗。
+  - 另一個 session 已在 #318 改成對每個按鈕拍快照，並在 #319 的分支上用完整 UI 測試驗證過。
+- 之後 `main` 的 iOS run 都被新推送取消，要看最新一次完整的 run。
+- 我手動觸發的 ios-build（2b08a2e7，含按鈕消失檢查）全綠：#307 修的檢查在 macOS CI 上真的刪掉了「完成」鈕，UI 測試也照預期失敗。
+
+**修的 bug（GameCore 與 GamePresentation 都先寫測試，確認修之前會失敗）**：
+1. **月台位置的「外地連絡站」說明可能說錯**（#308，決策 137）：說明看的是點到的軌道，但月台會接到選單選的車站，或蓋在那一段的中點。現在看實際會接到的車站，或那一段的中點。測試：`StationSitingTests.testAStationByTheEdgeSaysItIsAnOutsideConnection`。
+2. **沒有改變世界的動作也會丟掉背景算的 tick**（#317，決策 143）：再點一次目前的速度、在一般地圖上選建地，都會把世界原樣寫回，6000× 時每點一下就少走一格遊戲時間。現在只有真的改變時才寫。測試：`GameLoopTests.testWhatChangesNothingDoesNotDropTheLoopTick`。
+3. **分區工具的城市需求在 −1 到 −9（千分之一）時顯示「0%」**（#312，決策 139）：需求是負的就不蓋，但畫面寫 0%，說明又說「需求不是負的時才會蓋」。現在百分比往遠離零的方向進位。測試：`ZoningSessionTests.testTheZoningToolShowsTheCitysDemand`。
+4. **全島地圖讀進新土地會被當成城市成長**（#312，決策 139）：需求比較的是土地現在的比例和當初記下的比例，所以之後讀進的每一塊都會讓需求亂跳。實測讀進一個辦公區，住宅需求就變 +100%、辦公 −100%。
+   - 現在 `expandLand` 把新土地依居民數併進記下的比例；`setLandOnDemand` 會清掉舊土地的比例。
+   - 沒有 golden、存檔或 replay 會按需讀土地。
+   - 測試：`CityDemandTests.testLandReadInIsNotTheCityGrowing`。
+5. **賣掉的建物，人搬到的格子會落在別的公司建物方塊裡**（#315，決策 142 與 130）：判斷時用的是那格現在的方塊（空格是 D1），但城市接著蓋的建物可能更密（D2）。現在用搬進去之後那棟建物的方塊來判斷。測試：`CityFootprintsTests.testASoldBuildingsPeopleDoNotMoveIntoAnotherBuildingsSquare`。
+6. **成長動畫把讀進的土地當成新蓋的建物**（#313、#314，決策 140）：
+   - 地圖只在土地或建物改變時才重做天際線，所以平靜的一晚之後，隔天早上讀進的土地（全島）或出售交還的格子，會被當成新建物升起。
+   - 現在天際線的鍵加上遊戲日。
+   - App 的 SwiftUI 檔：鍵單獨抽出來對 GameCore 型別檢查通過，畫面 UNVERIFIED LOCALLY。
+
+**審查過、沒有問題**：
+- #309（只改文件）。
+- #311（決策 138）的三個快取：每條路線服務有沒有開車、交通點、站間股道數。它們的依賴都只會被指令改變，快取只活在一次 `advance` 裡。
+- #316（跟車放行不再建集合）：子代理做了三種差分測試，新舊結果逐位元相同。
+- #318（建地自動對齊）。
+
+**沒修，需要作者決定**：
+- **地圖邊緣兩站的短程接駁會賺錢**（#308，決策 137）：兩端都是外地連絡站時完全不套距離比例，300 m 的兩站線每天各 3,120 人次、營業利益約 +$14,000。正好是決策 137 想擋的情況。
+  - 選項：
+    - (a) 只有一端是外地連絡站時才不套距離比例。
+    - (b) 兩端都是時，外地附加費只收一次或不收。
+    - (c) 維持現狀。
+  - 建議 (a)。會改到外地旅客的分布，要重量 `BalanceReportTests`。
+- **空白地圖挑戰的目標是決策 137 之前量的**：已由「挑戰模式依現況重調」的 session（決策 145）處理。
+- **教學的「最遠 2 公里」說明**在依距離算需求關閉的地圖（示範、舊存檔）上不成立，只是文字。
+- **城市需求幾乎沒有工作時，某些夜晚完全不成長**（#312，罕見）：權重以千分之一取整到 0。
+- **需求那一行在需求不起作用時也顯示**（實景示範、自由模式）。
+- **車站客源的背景計算不會取消**（#305，第八節已列）。
+
+**範圍外（#300 之前就有），待追查**：
+- `TrafficFollowingPropertyTests` 用額外種子時，GameCore 和參考模型不一致。CI 的 4 個種子沒事；#316 前後一樣，不是這次造成的。
+- 重現：`PROPERTY_STRESS=8 PROPERTY_REPLAY="traffic.following@9E03B1A53EA6991E@0" swift test --skip-build --filter TrafficFollowingPropertyTests`。
+  - 2 號車在 GameCore 還在第 1 站停站，參考模型已經開往第 2 站。
+  - case 1 是 3 號車的 `ServiceTimes.run` 不同。
+- 還沒判斷是哪一邊錯。
+
+**驗證**：
+- **VERIFIED（本機 Linux）**：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告。
+  - 通過的類別：`StationSitingTests`、`NetworkBuildingSessionTests`、`GameLoopTests`、`BuildingSessionTests`、`WholeTaiwanTests`、`UndoSessionTests`、`BuildPauseSessionTests`、`ZoningSessionTests`、`CityDemandTests`、`LandBlocksTests`、`CityFootprintsTests`、`BuildingSale*`、`PlacedBuilding*`、`NewGame*`、`SavedGameTests`、`GoldenScenarioTests`。
+  - #311 的交通 campaign 用 12 個額外種子加跑（跑滿兩小時上限被停掉）：`ScheduledOvertakeTrack` 的 Final、Last、Middle 三個類別跑完，只有種子數變多造成的次數斷言，沒有任何一個案例不一致；第四個類別跑到一半，也沒有不一致；`ScheduledTrafficPropertyTests` 與 `ScheduledTrafficSecondHalfPropertyTests` 沒有跑到（CI 的 4 個種子有跑）。
+- **UNVERIFIED LOCALLY**：`MapView.swift` 的畫面行為（要 macOS CI）。

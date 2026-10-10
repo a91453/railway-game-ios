@@ -106,6 +106,8 @@ extension GameWorld {
     /// ``setLand(_:)`` and ``foundTowns(seed:)`` make the land whole again.
     public mutating func setLandOnDemand() {
         replaceLand(with: Land())
+        // Decision 139: the mix of the land replaced goes with it.
+        settleCityMix(replacing: true)
         terrain = Terrain()
         landBlocks = []
         refreshLandDemand()
@@ -173,6 +175,8 @@ extension GameWorld {
             }
             fresh.append(cell)
         }
+        // Decision 139: what is read in is not growth.
+        keepCityMix(with: fresh, over: land.cells.reduce(0) { $0 + $1.residents })
         land.merge(fresh)
         terrain.add(wet.filter { land.cell(row: $0.row, column: $0.column) == nil })
         terrain.addSteep(slopes)

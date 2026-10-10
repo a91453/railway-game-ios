@@ -224,6 +224,36 @@ final class CityDemandTests: XCTestCase {
         XCTAssertEqual(world.cityDemand?.baseline, CityMix(shopJobs: 882_352, workJobs: 1_764_705))
     }
 
+    /// Land read in as it is needed (decision 88) is not the city growing:
+    /// a block read in counts in the mix kept, so the demand of the land
+    /// already read stays as it was. Land read afresh drops the mix kept,
+    /// which the first midnight with residents then settles again.
+    func testLandReadInIsNotTheCityGrowing() throws {
+        var world = GameWorld(bounds: try WorldBounds(width: 1 << 22, height: 1 << 22),
+                              economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .normal))
+        world.setEconomyMode(.management)
+        world.setLandDemand(true)
+        world.setLandOnDemand()
+        world.setCityDemand(true)
+        try world.expandLand([LandBlock(row: 0, column: 0)], cells: [
+            LandCell(row: 1, column: 1, use: .residential, residents: 1_000, jobs: 0),
+            LandCell(row: 1, column: 2, use: .commercial, residents: 0, jobs: 400),
+            LandCell(row: 1, column: 3, use: .office, residents: 0, jobs: 400),
+        ])
+        world.settleCityMix()
+        XCTAssertEqual(world.cityDemand?.baseline, CityMix(shopJobs: 400_000, workJobs: 400_000))
+
+        // An office district elsewhere: 10 living, 5,000 working.
+        try world.expandLand([LandBlock(row: 0, column: 1)], cells: [
+            LandCell(row: 1, column: 20, use: .office, residents: 10, jobs: 5_000),
+        ])
+        XCTAssertEqual(world.cityDemand?.baseline, CityMix(shopJobs: 396_039, workJobs: 5_346_534))
+        XCTAssertEqual(world.cityDemandLevels, CityDemand.Levels(homes: 0, shops: 0, work: 0))
+
+        world.setLandOnDemand()
+        XCTAssertEqual(world.cityDemand, CityDemand(baseline: nil))
+    }
+
     // MARK: - Saving
 
     func testTheMixSavesAndBadOnesAreRefused() throws {

@@ -1140,17 +1140,23 @@ private struct CityCellTooltip: View {
 /// buildings, the stations, town growth's measures and whether the land
 /// sets ridership; nothing while no city layer is shown.
 /// What the plain map's city is made from (decision 126): the land, its
-/// buildings and whether the map is a real place's.
+/// buildings and whether the map is a real place's; and the game day, so
+/// the skyline is made again each midnight even when nothing grew. Growth
+/// is played only between skylines of different days (decision 140), so
+/// land read in or handed over the morning after a quiet night is not
+/// played as growth against the day before's.
 private struct SkylineKey: Equatable {
     /// `nil` on a real-world map whose land does not grow, which draws
     /// none (decision 140: one whose land grows draws what grew).
     let land: Land?
     let buildings: CityBuildings?
+    let day: Int64?
 
     init(world: GameWorld) {
         let drawn = world.geoAnchor == nil || world.landDemand
         land = drawn ? world.land : nil
         buildings = drawn ? world.buildings : nil
+        day = drawn ? world.clock.now.seconds / GameTime.secondsPerDay : nil
     }
 }
 

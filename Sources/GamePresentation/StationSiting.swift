@@ -38,10 +38,20 @@ extension GameSession {
     /// What the map says of the platform site (``platformSitePlanPoint``):
     /// its catchment (``catchmentText(_:)``), and by the map's edge that a
     /// station there is an outside connection (decision 137): "Outside
-    /// connection: +$10 a trip".
+    /// connection: +$10 a trip". That is said of the station the platform
+    /// joins (``platformStationID``), or of a new one where
+    /// ``addNetworkPlatform()`` builds it, at the middle of the stretch.
     public func platformSiteCaption(_ totals: LandTotals, at site: PlanPoint) -> String {
         let catchment = catchmentText(totals)
-        guard world.isOutsideConnectionSite(site) else { return catchment }
+        let outside: Bool
+        if let id = platformStationID, world.station(id: id) != nil {
+            outside = world.isOutsideConnection(id)
+        } else if let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
+            outside = world.isOutsideConnectionSite(geometry.location(at: (stretch.start + stretch.end) / 2).position.plan)
+        } else {
+            outside = world.isOutsideConnectionSite(site)
+        }
+        guard outside else { return catchment }
         let fare = world.outsideFare.moneyText
         return catchment + "\n" + language.text("Outside connection: +\(fare) a trip", "外地連絡站：每趟多收 \(fare)")
     }
