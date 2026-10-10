@@ -92,6 +92,17 @@ public struct LineRun: Hashable, Sendable {
     func start(onDay day: Int64) -> Int64 {
         day * GameTime.secondsPerDay + times[0].departure
     }
+
+    /// Whether everything a train sent out on this run on game day `day`
+    /// is timed at fits in a clock: its last call, after the latest
+    /// dispatch and a terminal's dwell. Near the end of time a day does
+    /// not, and is passed over.
+    func fits(onDay day: Int64) -> Bool {
+        let (base, over) = day.multipliedReportingOverflow(by: GameTime.secondsPerDay)
+        guard !over, let last = times.map({ max($0.arrival, $0.departure) }).max() else { return false }
+        let margin = last + LineRun.latestDispatch + ServiceDwell.terminalMinimum + 1
+        return !base.addingReportingOverflow(margin).overflow
+    }
 }
 
 extension ServiceLine {
@@ -134,7 +145,7 @@ extension ServiceLine {
         let today = GameTime.floorDivide(now.seconds, GameTime.secondsPerDay)
         var due: [(run: Int, day: Int64, start: Int64)] = []
         for (index, run) in runs.enumerated() {
-            for day in (today - 2)...(today + 1) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day {
+            for day in (today - 2)...(today + 1) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day && run.fits(onDay: day) {
                 let start = run.start(onDay: day)
                 if start - LineRun.earliestDispatch <= now.seconds, now.seconds <= start + LineRun.latestDispatch {
                     due.append((index, day, start))
@@ -151,7 +162,7 @@ extension ServiceLine {
         let today = GameTime.floorDivide(now.seconds, GameTime.secondsPerDay)
         var soonest: Int64?
         for (index, run) in runs.enumerated() {
-            for day in (today - 2)...(today + 2) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day {
+            for day in (today - 2)...(today + 2) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day && run.fits(onDay: day) {
                 let start = run.start(onDay: day)
                 for edge in [start - LineRun.earliestDispatch, start + LineRun.latestDispatch + 1] where edge > now.seconds {
                     soonest = min(soonest ?? .max, edge)

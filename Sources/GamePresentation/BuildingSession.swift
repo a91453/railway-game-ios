@@ -185,8 +185,13 @@ extension GameSession {
     @discardableResult
     public func placeBuilding(at point: PlanPoint) -> Bool {
         let kind = buildingKind
-        let cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
+        let (population, places, water) = (population, places, water)
+        var cleared = 0
         let placed = perform { world throws(GameError) in
+            // The site's land, read when it was picked, may have gone with an
+            // undo since: read it again, as part of the edit (decision 95).
+            Self.readLand(within: Self.buildingLandReach, of: [point], in: &world, population: population, places: places, water: water)
+            cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
             let building = try world.placeBuilding(kind, at: point)
             let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
             let bought = cleared == 0 ? ("", "") : (

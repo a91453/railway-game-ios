@@ -1,4 +1,4 @@
-# 交接：PR #200–#296 的審查與修正
+# 交接：PR #200–#302 的審查與修正
 
 Session：`claude/railway-game-ios-pr-review-hzdbwt`（2026-10-09～10）。分支從 `main` 6b43d31 開始，收工前合併了 `main` dedbb659（#291–#296）。存檔版本、ARCHITECTURE 決策編號、golden schema 都沒有用到；GoldenScenarios、ReplayFixtures、SaveFixtures 的期望值都沒有改。
 
@@ -108,4 +108,53 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 **驗證**：
 - **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`BuildingSale*`、`CompanyBuildings*`、`SavedGameTests`、`TerrainPresentationTests`、`HeightGridTests`。
 - #297 那份修正的 golden（24 項）、`PassengerPropertyTests`、`BoardingPropertyTests` 都已在本機通過，結果貼在 #297 的留言。
+- 其餘交給 CI。
+
+## 七、延長到 #298–#302，並對 #200–#296 做第二輪（第三個 PR）
+
+**合併狀態**：#298、#300、#301、#302 都已合併，head 都在 `main` 上。#303 只改版本號（0.5.0）。
+
+**作者已決定的**：
+- 有列車的路線不能反轉（決策 134，#301）。
+- 所得稅不升存檔版本，沿用決策 67 的慣例（#301 的說明）。
+
+**main 的 CI**：
+- #298–#302 合併後，CI（Linux）與 Wasm Probe 都是綠的。
+- iOS run 都被下一次推送取消；#303 的完整 lane 在交接時還在跑。
+- #299 合併後的完整 lane 27 項全綠，也包括之前查不出根因的實景地圖「繼續」與示範按鈕兩項。
+
+**修的 bug（都先寫測試，確認修之前會失敗）**：
+1. **固定班次的列車跑到一半時，改站序或拆站讓乘客被丟下**（決策 133）：
+   - `setLineStops` 與 `removeStation` 會清掉班次。之後判斷列車方向時，退回「來回一趟」的規則：要去後半段的乘客被放棄，後半段也不再載客。
+   - `setLineRuns` 本來就會在列車行駛中拒絕；現在這兩條路徑也一樣拒絕。
+   - 測試：`LineRunsTests.testRunsAreNotEndedUnderATrainOnOne`。
+2. **時鐘接近時間盡頭時，固定班次會溢位當掉**：載入存檔與推進時間都會。
+   - 現在放不進時鐘的那一天直接跳過，載入時的檢查改用不會溢位的加法。
+   - 測試：`LineRunsTests.testRunsNearTheEndOfTimeDoNotOverflow`。
+3. **全島地圖按復原後，建物蓋在沒讀入的土地上**：
+   - 結果是沒有收購城市建物，地價也算成空地的價。
+   - 現在建造時，在同一個編輯裡重新讀入土地；復原後，也重讀選好位置的土地。
+   - 測試：`WholeTaiwanTests.testABuildingAfterAnUndoStillStandsOnItsLand`。
+4. **拖曳鋪軌被取消後，留下一段玩家沒選過的軌道**：
+   - 拖曳從別段軌道開始、換了起點，取消時卻把舊終點還原回來。
+   - 現在新起點保留，不留終點。
+   - 測試：`NetworkDragTests.testACancelledDragFromOtherTrackLeavesNoStretchUnpicked`。
+5. **選路線停靠站時，同一站點兩次沒有說明**：失敗訊息在同一次點擊裡就被清掉。測試加在 `LineDraftRouteTests`。
+6. **`expandLand` 接受超出世界邊界的格子**，結果存檔讀不回來。App 的匯入會裁切到邊界，所以只有直接呼叫才會遇到。測試加在 `LandBlocksTests`。
+
+**沒修、需要作者決定**：
+- **決策 134 可以從「移動站序」繞過**：
+  - 兩站的線把第 0 站往後移一格，就等於反轉；任何改到第一站的編輯也一樣（拆掉第一站、在第一站前插站）。
+  - 有列車時，這些編輯同樣會讓列車停在舊起站、不再發車。
+  - 選項：
+    - (a) 有列車時，不允許改動第一站，這是決策 134 的延伸。
+    - (b) 允許列車從任一端發車。
+- **自由模式免費蓋的建物，切到經營模式後出售會憑空賺錢**（以土地價出售），也會收租金。
+  - App 不允許從自由模式切回經營模式，所以玩家碰不到，只有 GameCore API 會遇到。
+  - 選項：沒有資產紀錄的建物以 0 元出售；或讓 GameCore 也禁止自由模式切回經營模式。
+- **負餘額的自由模式不能蓋、也不能拆免費的建物**：`spend(0)` 在餘額小於 0 時會拒絕。App 不允許負餘額切到自由模式，所以玩家碰不到。
+
+**驗證**：
+- **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`LineRunsTests`、`StationRemoval*`、`LineEditing*`、`RouteEditing*`、`RealWorldDemo*`、`WholeTaiwanTests`、`Building*`、`UndoSessionTests`、`NetworkDragTests`、`NetworkBuildingSessionTests`、`LineDraftRouteTests`、`LandBlocksTests`、`SparseCityLand*`。
+- golden、replay、存檔、`LineDispatchPropertyTests` 的結果寫在 PR 裡。
 - 其餘交給 CI。

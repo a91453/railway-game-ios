@@ -172,6 +172,51 @@ final class LineRunsTests: XCTestCase {
         XCTAssertThrowsError(try world.setLineRuns(main, to: [])) { XCTAssertEqual($0 as? GameError, .trainServiceActive(blue)) }
     }
 
+    /// New stops, or a station removed from the line, end its runs; not
+    /// while one of its trains is on a run, whose riders go the run's way to
+    /// its end (as ``setLineRuns(_:to:)`` refuses then too).
+    func testRunsAreNotEndedUnderATrainOnOne() throws {
+        let short = LineRun(from: 0, to: 1, times: Array(out.times.prefix(2)))
+        var world = try world(runs: [short])
+        try world.advance(ticks: 6)
+        XCTAssertEqual(world.train(id: blue)?.timetable.map(\.station), [alpha, beta], "on the run to Beta")
+        let before = world
+        XCTAssertThrowsError(try world.setLineStops(main, to: [alpha, beta])) { XCTAssertEqual($0 as? GameError, .trainServiceActive(blue)) }
+        XCTAssertThrowsError(try world.removeStation(gamma), "Gamma is not on the run but is the line's") {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(blue))
+        }
+        XCTAssertEqual(world, before)
+        // Once the run is done, the line's stops can change and its runs end.
+        try world.advance(ticks: 30)
+        XCTAssertNil(world.train(id: blue)?.execution)
+        try world.setLineStops(main, to: [alpha, beta])
+        XCTAssertEqual(world.line(id: main)?.runs, [])
+    }
+
+    /// `world` with its clock moved to `seconds`, through a save.
+    private func moving(_ world: GameWorld, to seconds: Int64) throws -> GameWorld {
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        var clock = try XCTUnwrap(json["clock"] as? [String: Any])
+        clock["now"] = seconds
+        json["clock"] = clock
+        return try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: json))
+    }
+
+    /// Near the end of time a run's day no longer fits in a clock: such
+    /// days are passed over, never a crash, loading or advancing.
+    func testRunsNearTheEndOfTimeDoNotOverflow() throws {
+        var sent = try world()
+        try sent.advance(ticks: 6)
+        XCTAssertEqual(sent.line(id: main)?.runDays.first, 0)
+        try sent.unassignTrain(blue)
+        let late = try moving(sent, to: Int64.max - 100)
+        XCTAssertEqual(late.line(id: main)?.runDays.first, 0, "a run of day 0 is from long ago")
+
+        var waiting = try moving(try world(), to: Int64.max - 3_000)
+        XCTAssertNoThrow(try waiting.advance(ticks: 1))
+        XCTAssertNil(waiting.train(id: blue)?.execution, "no run's day fits")
+    }
+
     /// Reversing the stops keeps each run at the same stations; new stops
     /// end the runs; a copy has them, none run yet.
     func testLineEditsKeepOrEndTheRuns() throws {
