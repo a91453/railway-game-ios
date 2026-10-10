@@ -1270,3 +1270,14 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `CitySkyline`、`MapArt.drawSkyline`、`Palette.cityRoof`／`cityWall`／`parkGround`／`farmGround`、`SkylineLayer` | gap → 原生 |
 
 外部只取想法：SimCity BuildIt（作者的截圖，商業遊戲）建物依密度長高、用途用顏色分。沒有程式碼或素材。
+
+## 站前長得快、九成滿就改建（決策 129）
+
+查 `a91453/railway-reference-private` `05d7000`：沒有城市成長或建物改建的規則與數字（`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9「Town growth / industry demand」只點名 OpenTTD 的 `src/town_cmd.cpp`，原始碼與數字不在參考包裡；`Ci/` 不做成長）。
+
+| 參考檔案／函式 | 目標 | 方式 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9 | `LandDemand.stationFrontRadius`、`stationFrontGrowth`、`upgradeFullness`，`GameWorld.stationFront(of:)`、`grow(around:residents:jobs:)` | 只有方向（成長讀交通的可及性），規則是 gap → 原生 |
+| （參考沒有） | `BalanceReportTests` 的「Fullest D3」欄 | gap → 原生 |
+
+外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發。沒有程式碼或數字。

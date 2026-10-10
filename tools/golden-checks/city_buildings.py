@@ -6,8 +6,10 @@ GoldenScenarios/city-buildings-growth.json.
 Written from the rules in the decision, not from the Swift code: the
 capacity table from its floor areas, the building each cell gets, the
 numbering, the first town of a seed (FNV-1a draws, with decision 91's
-farms, factories, schools, sights and parks) and the spread of a growing
-station. It prints what each fixture observes and the final
+farms, factories, schools, sights and parks) and the night of a growing
+station: the raises of buildings nine tenths full (decisions 75, 77 and
+129), the growth with its station front (decision 129) up to each building's
+capacity, and the spread. It prints what each fixture observes and the final
 building counts, and with --check compares them with the fixture files.
 
 Python 3 standard library only: python3 -I tools/golden-checks/city_buildings.py --check
@@ -152,10 +154,16 @@ def main():
     # city-buildings-growth.json: (0, 0) homes and (0, 1) offices in a world
     # of 2 x 2 cells, three stations sharing both by nearness (decision 73),
     # each growing at 12 thousandths (all its trips arrived, 2 stations
-    # reached), by ascending station: its share's growth shared over the
-    # cells by their counts, then the empty cell beside people nearest it
-    # (d^2, row, column), a home of 4 with a D1 building numbered next.
-    R2 = 51200 ** 2
+    # reached) and raising buildings (decision 75), by ascending station:
+    # first the first two buildings by row and column below D4 that were
+    # nine tenths full as the night began (their main count, decisions 77
+    # and 129) and that no station raised tonight, a density each; then its
+    # growth, (share + 2 x front) x 12 thousandths, the front being the cells
+    # within 256 m of it (decision 129), shared over the cells by their
+    # counts, the front's counted three times, each held at its building's
+    # capacity; then the empty cell beside people nearest it (d^2, row,
+    # column), a home of 4 with a D1 building numbered next.
+    R2, FRONT2 = 51200 ** 2, 16384 ** 2
     stations = [(1536, 512), (3584, 512), (5632, 512)]
     land = {(0, 0): ["residential", 240, 0], (0, 1): ["office", 0, 240]}
     grown = number({k: tuple(v) for k, v in land.items()})
@@ -184,15 +192,39 @@ def main():
             shares[i][0] += r
             shares[i][1] += j
     results["growth shares"] = shares
+
+    def capacity(pos):
+        """What a cell's building holds now: a city building its table's main
+        count and of the other the table's or the cell's, whichever is more."""
+        use, residents, jobs = land[pos]
+        _, kind, density = grown[pos][:3]
+        r, j = table(use, density)
+        if kind == "existingStock":
+            return max(r, residents), max(j, jobs)
+        return (r, max(j, jobs)) if use == "residential" else (max(r, residents), j)
+
+    full = set()
+    for pos, (use, residents, jobs) in land.items():
+        _, kind, density = grown[pos][:3]
+        main = 0 if use == "residential" else 1
+        if kind == "city" and density < 4 and (residents, jobs)[main] * 1000 >= table(use, density)[main] * 900:
+            full.add(pos)
+    results["growth full"] = sorted(full)
     rate = 10 + 2
-    spread = []
+    spread, raised = [], []
     for station, (share_r, share_j) in zip(stations, shares):
         grow = lambda amount: max(1, (amount * rate + 500) // 1000) if amount > 0 else 0
         cells = sorted(p for p in land if d2(p, station) < R2)
+        for pos in [p for p in cells if p in full and p not in raised][:2]:
+            number_, kind, density = grown[pos][:3]
+            grown[pos] = (number_, kind, density + 1) + grown[pos][3:]
+            raised.append(pos)
+        front = [p for p in cells if d2(p, station) < FRONT2]
         for index, key in [(1, 0), (2, 1)]:
-            added = largest_remainder(grow([share_r, share_j][key]), [land[p][index] for p in cells])
+            amount = [share_r, share_j][key] + 2 * sum(land[p][index] for p in front)
+            added = largest_remainder(grow(amount), [land[p][index] * (3 if p in front else 1) for p in cells])
             for p, a in zip(cells, added):
-                limit = 400 if index == 1 else 1200
+                limit = capacity(p)[key]
                 if land[p][index] < limit:
                     land[p][index] = min(limit, land[p][index] + a)
         best = None
@@ -207,6 +239,9 @@ def main():
             grown[best[1:]] = (len(grown) + 1,) + fit("residential", 4, 0)
         spread.append(best and best[1:])
     results["growth spread"] = spread
+    results["growth raised"] = raised
+    for pos in grown:
+        grown[pos] = grown[pos][:3] + capacity(pos)
     for pos in [(0, 0), (0, 1), (1, 0), (1, 1)]:
         results["growth land %s" % (pos,)] = land[pos]
         results["growth %s" % (pos,)] = observation(grown, *pos)

@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 44,
-  "description": "Water (ARCHITECTURE decision 105): zoning.json's world, land and railway (8192 x 8192 units, 2 x 2 cells of 64 m; homes at (0, 0) with 240 residents, offices at (0, 1) with 240 jobs; managed, land sets ridership, town growth and the city's buildings on; the line Main through Alpha, Beta and Gamma), with (1, 1) water. setWater replaces the world's water with its runs ({row, column, count}). Water goes on the ground before the land: setLand with a cell on (1, 1) is refused with invalidLand; setWater with (0, 0), where there is land, or with (1, 1) twice, is refused with invalidTerrain and changes nothing: (1, 1) is still water, (1, 0) is not. Zoning (1, 1) shops is refused with onWater naming (1, 1); zoning row 1, columns 0 to 1, shops zones only (1, 0), the dry cell, which is then zoned no development as in zoning.json, so (1, 1) has no zone. A house (16 m a side) centred on the middle of (1, 1), or at (4096, 6144) across the edge between (1, 0) and (1, 1), is refused with onWater naming (1, 1). Track and stations are as in zoning.json. The second midnight grows each station at 12 thousandths, 1 resident and 1 job: Alpha's go to (0, 0), 241, and (0, 1), 241. Then it builds its new cell: no empty cell of its catchment is zoned for a use; (1, 0) is zoned no development and (1, 1) is water, the town passes over both: nothing is built (in zoning.json (1, 1) became shops). Beta's resident and job go to (0, 0), 242, and (0, 1), 242, and Gamma's to 243 and 243; neither builds anything. The land ends with 2 cells, 243 residents and 243 jobs, and 2 buildings (D2 offices, D3 homes); zones counts 1 cell, noDevelopment; water counts 1 cell. The 486 people of the land are shared among the three stations, each 65 trips a day after the midnight (zoning.json's 66, 66 and 67 had (1, 1)'s 13 more). The land, buildings, zones and water are worked out by hand; the railway, passenger and account values are GameCore's, and match zoning.json but for the demand.",
+  "schemaVersion": 49,
+  "description": "Water (ARCHITECTURE decision 105): zoning.json's world, land and railway (8192 x 8192 units, 2 x 2 cells of 64 m; homes at (0, 0) with 240 residents, offices at (0, 1) with 240 jobs; managed, land sets ridership, town growth and the city's buildings on; the line Main through Alpha, Beta and Gamma), with (1, 1) water. setWater replaces the world's water with its runs ({row, column, count}). Water goes on the ground before the land: setLand with a cell on (1, 1) is refused with invalidLand; setWater with (0, 0), where there is land, or with (1, 1) twice, is refused with invalidTerrain and changes nothing: (1, 1) is still water, (1, 0) is not. Zoning (1, 1) shops is refused with onWater naming (1, 1); zoning row 1, columns 0 to 1, shops zones only (1, 0), the dry cell, which is then zoned no development as in zoning.json, so (1, 1) has no zone. A house (16 m a side) centred on the middle of (1, 1), or at (4096, 6144) across the edge between (1, 0) and (1, 1), is refused with onWater naming (1, 1). Track and stations are as in zoning.json. The second midnight grows each station at 12 thousandths with decision 129's station front (every cell here: the station grows (share + 2 x front) x 12 thousandths) and Alpha raises the offices, 240 of D2's 252 jobs (nine tenths or more is full), to D3 (72 / 756), as in zoning.json (schema 49): Alpha's 7 residents and 7 jobs ((80 + 2 x 240) x 12 = 6720) go to (0, 0), 247, and (0, 1), 247. Then it builds its new cell: no empty cell of its catchment is zoned for a use; (1, 0) is zoned no development and (1, 1) is water, the town passes over both: nothing is built (in zoning.json (1, 1) became shops). Beta's 7 and 7 ((80 + 2 x 247) x 12 = 6888) go to (0, 0), 254, and (0, 1), 254, and Gamma's ((80 + 2 x 254) x 12 = 7056) to 261 and 261; neither builds anything. The land ends with 2 cells, 261 residents and 261 jobs, and 2 buildings (D3 offices, D3 homes); zones counts 1 cell, noDevelopment; water counts 1 cell. The 522 people of the land are shared among the three stations, 174 each, 70 trips a day after the midnight (zoning.json's 71, 71 and 72 had (1, 1)'s 13 more). Before decision 129 (schema 44) each station grew 1 resident and 1 job: 243 and 243, D2 offices, 65 trips each. The land, buildings, zones and water are worked out by hand; the railway, passenger and account values are GameCore's, and match zoning.json but for the demand.",
   "initialState": {
     "worldWidth": 8192,
     "worldHeight": 8192,
@@ -818,7 +818,7 @@
           "row": 0,
           "column": 0,
           "use": "residential",
-          "residents": 243,
+          "residents": 261,
           "jobs": 0
         }
       }
@@ -836,7 +836,7 @@
           "column": 1,
           "use": "office",
           "residents": 0,
-          "jobs": 243
+          "jobs": 261
         }
       }
     },
@@ -1608,16 +1608,16 @@
     "cityBuildings": {
       "buildings": 2,
       "d1": 0,
-      "d2": 1,
-      "d3": 1,
+      "d2": 0,
+      "d3": 2,
       "d4": 0,
       "existingStock": 0
     },
     "gameMinutes": 2881,
     "land": {
       "cells": 2,
-      "jobs": 243,
-      "residents": 243
+      "jobs": 261,
+      "residents": 261
     },
     "landDemand": true,
     "lines": [
@@ -1829,7 +1829,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 65,
+          "dailyTrips": 70,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -1842,7 +1842,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 65,
+          "dailyTrips": 70,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -1855,7 +1855,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 65,
+          "dailyTrips": 70,
           "kind": "residential"
         },
         "overflowed": 0,

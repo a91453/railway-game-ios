@@ -235,7 +235,8 @@ final class LandImportTests: XCTestCase {
     }
 
     /// Phase 6c-2 (ARCHITECTURE decision 75): the station panel says what
-    /// town growth measured and whether full buildings rise. The version 14
+    /// town growth measured and whether buildings nine tenths full rise
+    /// (decision 129). The version 14
     /// save measured both stations at full service and one station reached;
     /// the version 13 save, a day earlier, had measured nothing yet.
     func testTheStationPanelSaysWhetherBuildingsRise() throws {
@@ -244,13 +245,13 @@ final class LandImportTests: XCTestCase {
             .appendingPathComponent("SaveFixtures")
         let measured = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v14-city-growth.json"))).world
         let station = StationID(rawValue: 1)
-        XCTAssertEqual(measured.cityGrowthText(of: station, in: .english), "Yesterday: 100% of trips served · 1 station reached · full buildings rise")
-        XCTAssertEqual(measured.cityGrowthText(of: station, in: .traditionalChinese), "昨日：旅次服務 100% · 可達 1 站 · 滿格的建物會升級")
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .english), "Yesterday: 100% of trips served · 1 station reached · buildings 90% full rise")
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .traditionalChinese), "昨日：旅次服務 100% · 可達 1 站 · 90%滿的建物會升級")
         let earlier = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v13-city-buildings.json"))).world
         XCTAssertEqual(earlier.cityGrowthText(of: station, in: .english),
-                       "Yesterday: 0% of trips served · 0 stations reached · full buildings rise at 80% served and 1 station reached")
+                       "Yesterday: 0% of trips served · 0 stations reached · buildings 90% full rise at 80% served and 1 station reached")
         XCTAssertEqual(earlier.cityGrowthText(of: station, in: .traditionalChinese),
-                       "昨日：旅次服務 0% · 可達 0 站 · 服務達 80% 且可達至少 1 站時，滿格的建物才會升級")
+                       "昨日：旅次服務 0% · 可達 0 站 · 服務達 80% 且可達至少 1 站時，90%滿的建物才會升級")
         XCTAssertNil(measured.cityGrowthText(of: StationID(rawValue: 99), in: .english))
         var off = measured
         off.setCityBuildings(false)
