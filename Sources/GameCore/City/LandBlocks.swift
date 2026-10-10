@@ -128,7 +128,8 @@ extension GameWorld {
     ///   (``landBlocks`` is `nil`), a block outside the world, listed twice
     ///   or already read, or a cell outside the blocks, listed twice, with a
     ///   negative count, more than ``Land/maximumPerCell`` residents or
-    ///   jobs, or no one living or working there; ``GameError/invalidTerrain``
+    ///   jobs, no one living or working there, or past the world's edge;
+    ///   ``GameError/invalidTerrain``
     ///   for water outside the blocks, listed twice, or under one of
     ///   `cells`, or a steep cell outside the blocks, listed twice, or on
     ///   water.
@@ -142,17 +143,21 @@ extension GameWorld {
               blocks.allSatisfy({ (0..<rows).contains($0.row) && (0..<columns).contains($0.column) }),
               !read.contains(where: new.contains)
         else { throw .invalidLand }
+        // The last blocks of a world whose side is not whole blocks reach
+        // past it: what they hold must still lie in the world.
+        let cellRows = Land.rows(in: bounds), cellColumns = Land.columns(in: bounds)
+        func inWorld(_ row: Int, _ column: Int) -> Bool { row < cellRows && column < cellColumns }
         let sorted = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
-        guard sorted.allSatisfy({ $0.isValid && new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
+        guard sorted.allSatisfy({ $0.isValid && inWorld($0.row, $0.column) && new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
               zip(sorted, sorted.dropFirst()).allSatisfy({ ($0.row, $0.column) < ($1.row, $1.column) })
         else { throw .invalidLand }
         let wet = water.sorted()
-        guard wet.allSatisfy({ new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
+        guard wet.allSatisfy({ inWorld($0.row, $0.column) && new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
               zip(wet, wet.dropFirst()).allSatisfy({ $0 < $1 }),
               !Self.intersect(sorted.map(\.position), wet)
         else { throw .invalidTerrain }
         let slopes = steep.sorted()
-        guard slopes.allSatisfy({ new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
+        guard slopes.allSatisfy({ inWorld($0.row, $0.column) && new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
               zip(slopes, slopes.dropFirst()).allSatisfy({ $0 < $1 }),
               !Self.intersect(slopes, wet)
         else { throw .invalidTerrain }

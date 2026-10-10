@@ -141,6 +141,37 @@ final class WholeTaiwanTests: XCTestCase {
         XCTAssertTrue(text.hasSuffix(session.catchmentText(reached) + ". Serve it well and the town round it grows."), text)
     }
 
+    /// A building's site reads its land in when picked (decision 95); an
+    /// Undo before it is built takes that land back, and the building is
+    /// still built over the land, buying out the city there, at its price.
+    func testABuildingAfterAnUndoStillStandsOnItsLand() throws {
+        func session() throws -> GameSession {
+            let session = GameSession(world: .newWholeTaiwanGame(), language: .english)
+            session.population = Self.population
+            session.places = Self.places
+            // An edit to undo, far from the site.
+            try session.performEdit { world throws(GameError) in _ = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024)) }
+            session.selectTool(.building)
+            return session
+        }
+        let taipei = point(25.0479308, 121.5170046)
+        let plain = try session()
+        plain.tapBuildingTool(at: taipei, reach: 0)
+        let price = try XCTUnwrap(plain.buildingPreview?.cost)
+        XCTAssertTrue(plain.confirmBuilding())
+        let expected = try XCTUnwrap(plain.world.placedBuildings.first)
+        XCTAssertEqual(expected.cost, price)
+
+        let undone = try session()
+        undone.tapBuildingTool(at: taipei, reach: 0)
+        undone.undo()
+        XCTAssertEqual(undone.buildingPreview?.cost, price, "the preview still counts the land there")
+        XCTAssertTrue(undone.confirmBuilding())
+        let built = try XCTUnwrap(undone.world.placedBuildings.first)
+        XCTAssertEqual(built.landCost, expected.landCost)
+        XCTAssertEqual([built.residents, built.jobs], [expected.residents, expected.jobs], "the city's people there moved in")
+    }
+
     /// Decision 105: the water of the blocks comes with their land, the
     /// land off it, and two harbours read in either order give the same
     /// water and land.

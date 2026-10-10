@@ -4175,9 +4175,19 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 3. **不動的**：兩張示範地圖本身（`DemoWorld`、`RealWorldDemo`）、它們的測試、平衡報告的數字、存檔與 golden 都不變。空白示範是很多測試用的小世界，也是環線、高架交會與一站多月台的示範，所以保留、不重建；要不要改外觀，等實機看過再說。
 4. **UI 測試**：打開示範的測試改成先按 `start.demoMap` 再按選單的一項（`XCUIApplication.openDemo(_:)`）。原本的 `start.realWorldDemo` 不存在了。
 
-### 136. 快轉的效能：結果逐位元相同的捷徑
+### 136. 車站客源在背景算；手機上畫軌道時細節卡收起
 
-2026-10-10，作者回報實景示範開 6000× 會卡住。號碼依工作登記 #231：決策 136；存檔版本、golden schema 都不動。
+2026-10-10，作者的實機截圖（橫拿的 iPhone，實景示範）回報兩件事：點車站再點「客源」，畫面停在一半（細節卡還在，車站面板停在畫面右緣外）；鋪軌時地圖能用的地方太小（左邊工具列、上面的施工資訊、右邊細節卡、下面的工具列夾住中間一小塊）。號碼依工作登記 #231：決策 136；存檔版本、golden schema 不動。GameCore 只多唯讀查詢，存檔、golden、replay 都不變。
+
+1. **原因（客源）**：車站面板每次重畫都算「每小時進出」（`stationFlow`）與「各站每日往返」（`stationDemandPairs`）。兩者都一對一對問 GameCore：每問一對（`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`），GameCore 就把出發站一整天的分配重算一次，全網路徑模式下那是對每一站的路徑搜尋。N 站時一次重畫是 4N 份分配、約 4N² 次路徑搜尋；遊戲在跑時每個 tick 都重畫，實景地圖上主執行緒被佔滿，細節卡讓位與面板滑入的動畫停在第一格。
+2. **一次算完**：GameCore 新增唯讀的 `dailyDemands(from:)`（出發站對每一站的每日旅次，一次算完，和逐對問的結果相同）與 `hourlyDemand(of:from:to:)`（已知每日旅次時分到 24 小時，和 `hourlyDemand(from:to:)` 相同）。GamePresentation 的 `stationRidership(of:)` 用它們一次算出每小時進出與各站往返：自己一份、其他每站各一份，共 N + 1 份分配。`stationFlow`、`stationDemandPairs` 改用它，結果逐值相同（`StationDemandSessionTests.testTheRidershipPassMatchesThePairs` 在示範地圖上對每一站、全網與直達兩種路徑模式比對舊的逐對算法）。地圖的旅次圖層（`travelDemandMap`）讀的 `stationFlow` 也因此從 2N 份分配降到 N + 1 份。
+3. **背景算、該變才重算**：車站面板在背景（`Task.detached`）算，算好之前那兩節顯示「正在計算客流…」；結果留到它依據的東西變了才重算（`RidershipKey`）：選的車站、遊戲的日子（每週需求、事件與城市給的客源以日為單位變）、車站、需求、路線（停靠、列車、班距、營運時間、服務模式、真實班次；不含每次派車都會變的 `lastDispatch`、`runDays`）、路徑模式與票價。全網路徑讀的服務等級一天之中會變，面板顯示當天第一次算的值，直到隔天或上述任何一項改變。
+4. **手機上畫軌道時細節卡收起**：手機（高度 compact）用路網工具鋪軌、已經選了起點（建好一段後它的終點就是下一段的起點）時，細節卡自己收起，地圖頂端的施工資訊（長度、高度、費用）與軌道旁的 ✕／✓（決策 107）就是卡片會說、會做的事，地圖拿回右邊約四成的寬度。工具列的細節鈕隨時能再打開（玩家的選擇保留到開始或結束畫軌道）；按 ✕ 清掉草稿（或選工具、換模式）卡片就回來。月台、拆除模式、iPad 與教學（卡片一直開著）都不變。只選了起點時地圖上還沒有 ✕，要清除就打開卡片按「清除」，或按「完成」。
+5. **UI 測試**：`MapInteractionTests` 的兩個測試（完整 UI 測試，不在 PR 閘門）跟著改：`testNavigationDoesNotChooseConstructionPoints` 在手機上以細節鈕變成「顯示」確認起點已選、用地圖的 ✓（`map.build.confirm`）建造，其他裝置仍用卡片的「清除」與「鋪設軌道」；`testConstructionHUDAppearsDuringTrackPreview` 改用地圖的 ✕（`map.build.cancel`，有預覽時哪種裝置都有）取消。
+
+### 138. 快轉的效能：結果逐位元相同的捷徑
+
+2026-10-10，作者回報實景示範開 6000× 會卡住。號碼依工作登記 #231：決策 138（136 是 #305，137 已由「需求隨距離」登記）；存檔版本、golden schema 都不動。
 
 **量測**（Linux 雲端容器、release 編譯，app 開啟的實景示範：高度、水域、人口、5 列車、3 條線，6000× 跑 3 個遊戲日，每 tick 呼叫一次 `advance(ticks: 1)`，和 app 有音效時一樣）：每個 tick 平均 794 ms、p95 2.0 s、最慢 3.7 s，app 每 0.1 秒就要一個 tick，而且 `GameSession` 在主執行緒上算，所以畫面停住。不是死結：遊戲時間照走，只是算不完。profiler（valgrind callgrind）找到的熱點與改法如下，**每一項都不改任何結果**：
 

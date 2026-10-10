@@ -844,9 +844,11 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainServiceActive(_:)`` naming the lowest numbered
     ///   train whose service calls at the station, needs one of its
     ///   platforms (see ``removeTrackPlatform(_:on:from:)``) or carries
-    ///   passengers from it, to it or changing there (stop the service
-    ///   first; for a line's train, take it off the line), so no one on
-    ///   board is left with nowhere to go; or, under traffic control (Stage
+    ///   passengers from it, to it or changing there, or runs a service of
+    ///   a line with runs that calls at it (decision 133: the line loses its
+    ///   runs) (stop the service first; for a line's train, take it off the
+    ///   line), so no one on board is left with nowhere to go; or, under
+    ///   traffic control (Stage
     ///   T), ``GameError/trackReserved(_:)`` while a train holds a span of a
     ///   platform's edge.
     public mutating func removeStation(_ id: StationID) throws(GameError) {
@@ -856,8 +858,12 @@ public struct GameWorld: Equatable, Sendable {
             group.origin == id || group.destination == id
                 || group.journey?.legs.contains { $0.from == id || $0.to == id } == true
         }
+        // Decision 133: a line that loses the station loses its runs, which
+        // a train on one still follows one way to its end.
+        let runLines = Set(lines.filter { $0.hasRuns && $0.stops.contains(id) }.map(\.id))
         if let train = trains.first(where: { train in
             (train.execution != nil && train.timetable.contains { $0.station == id })
+                || (train.execution != nil && assignedLine(of: train.id).map(runLines.contains) == true)
                 || platforms.contains { serviceNeeds(train, $0) }
                 || riders.contains { $0.train == train.id && $0.groups.contains(where: touches) }
         }) {
@@ -1452,8 +1458,11 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidLineStops`` (on a ring also fewer than three, or
     ///   the same station first and last, see ``setLineRing(_:to:)``),
     ///   ``GameError/unknownStation(_:)`` naming the first stop whose
-    ///   station does not exist, or ``GameError/invalidLinePattern`` if a
-    ///   pattern would call past the new last stop (remove it first).
+    ///   station does not exist, ``GameError/invalidLinePattern`` if a
+    ///   pattern would call past the new last stop (remove it first),
+    ///   ``GameError/invalidLineRoutePreference``, or, on a line with runs
+    ///   (decision 133), ``GameError/trainServiceActive(_:)`` while one of
+    ///   its trains runs a service.
     public mutating func setLineStops(_ id: LineID, to stops: [StationID]) throws(GameError) {
         let index = try lineIndex(of: id)
         try requireLineStops(stops, ring: lines[index].isRing)
@@ -1463,6 +1472,11 @@ public struct GameWorld: Equatable, Sendable {
         var changed = lines[index]
         changed.stops = stops
         guard changed.validRoutePreferences else { throw .invalidLineRoutePreference }
+        // Decision 133: new stops end the runs, which a train on one still
+        // follows one way to its end; not under it, as setLineRuns.
+        if lines[index].hasRuns, let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
+            throw .trainServiceActive(running)
+        }
         lines[index].stops = stops
         // Decision 133: runs name stops by index, so new stops end them.
         lines[index].runs = []
@@ -3858,8 +3872,9 @@ extension GameWorld: Codable {
             }
             // Decision 133: a run sends its train out at most
             // `LineRun.earliestDispatch` before its day's first departure.
+            let (ahead, past) = clock.now.seconds.addingReportingOverflow(LineRun.earliestDispatch)
             if let latest = line.runDays.compactMap({ $0 }).max(),
-               latest > GameTime.floorDivide(clock.now.seconds + LineRun.earliestDispatch, GameTime.secondsPerDay) {
+               latest > GameTime.floorDivide(past ? .max : ahead, GameTime.secondsPerDay) {
                 return "Line \(line.id.rawValue) ran a run on a day that has not come."
             }
         }

@@ -62,6 +62,7 @@ extension GameSession {
         if networkDragEndBefore == nil {
             networkDragEndBefore = .some(networkEnd)
             let onStart = networkStart.flatMap { planPoint(of: $0) }.map { Self.distance($0, start) <= Double(reach) } ?? false
+            networkDragMovedStart = !onStart
             if !onStart {
                 networkStart = networkAnchor(at: start, reach: reach)
             }
@@ -86,10 +87,11 @@ extension GameSession {
     }
 
     /// A second finger or the system took the drag: the end picked before
-    /// it comes back (the start it picked stays).
+    /// it comes back. A start the drag picked stays, as a tap there would,
+    /// with no end: the old end was picked for the old start.
     public func cancelNetworkDrag() {
         guard let before = networkDragEndBefore else { return }
-        networkEnd = before
+        networkEnd = networkDragMovedStart ? nil : before
         networkDragEndBefore = nil
     }
 

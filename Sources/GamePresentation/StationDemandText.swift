@@ -145,30 +145,60 @@ public struct LedgerCount: Hashable, Sendable {
     }
 }
 
+/// A station's trips by hour and by station (``GameWorld/stationFlow(of:)``
+/// and ``GameWorld/stationDemandPairs(of:)``), worked out together: both
+/// read the same pairs, and each pair reads its origin's whole day.
+public struct StationRidership: Hashable, Sendable {
+    public let flow: StationFlow?
+    public let pairs: [StationDemandPair]
+
+    public init(flow: StationFlow?, pairs: [StationDemandPair]) {
+        self.flow = flow
+        self.pairs = pairs
+    }
+}
+
 extension GameWorld {
-    /// The trips that start and end at station `id` in each hour (see
-    /// ``StationFlow``): the sums of ``hourlyDemand(from:to:)`` to and from
-    /// every other station. `nil` when it has no demand.
-    public func stationFlow(of id: StationID) -> StationFlow? {
-        guard let demand = stationDemand(of: id) else { return nil }
+    /// Station `id`'s ``stationFlow(of:)`` and ``stationDemandPairs(of:)``
+    /// in one pass: the station's own day once, and each other station's
+    /// once (``dailyDemands(from:)``), not once for every pair and again
+    /// for every hour. On a real-world map of hundreds of stations, with
+    /// network routing, asking pair by pair took seconds.
+    public func stationRidership(of id: StationID) -> StationRidership {
+        guard let demand = stationDemand(of: id) else { return StationRidership(flow: nil, pairs: []) }
+        let outbound = dailyDemands(from: id)
         var entries = Array(repeating: Int64(0), count: 24)
         var exits = entries
+        var pairs: [StationDemandPair] = []
         for other in stations where other.id != id && stationDemand(of: other.id) != nil {
-            let leaving = hourlyDemand(from: id, to: other.id)
-            let coming = hourlyDemand(from: other.id, to: id)
+            let there = outbound[other.id] ?? 0
+            let back = dailyDemands(from: other.id)[id] ?? 0
+            let leaving = hourlyDemand(of: there, from: id, to: other.id)
+            let coming = hourlyDemand(of: back, from: other.id, to: id)
             for hour in 0..<24 {
                 entries[hour] += leaving[hour]
                 exits[hour] += coming[hour]
             }
+            if there > 0 || back > 0 {
+                pairs.append(StationDemandPair(station: other.id, outbound: there, inbound: back))
+            }
         }
         guard entries.allSatisfy({ $0 == 0 }), exits.allSatisfy({ $0 == 0 }) else {
-            return StationFlow(entries: entries, exits: exits, isShape: false)
+            return StationRidership(flow: StationFlow(entries: entries, exits: exits, isShape: false), pairs: pairs)
         }
-        return StationFlow(
+        let shape = StationFlow(
             entries: Self.shared(demand.dailyTrips, by: demand.kind.departureShape),
             exits: Self.shared(demand.dailyTrips, by: demand.kind.arrivalShape),
             isShape: true
         )
+        return StationRidership(flow: shape, pairs: pairs)
+    }
+
+    /// The trips that start and end at station `id` in each hour (see
+    /// ``StationFlow``): the sums of ``hourlyDemand(from:to:)`` to and from
+    /// every other station. `nil` when it has no demand.
+    public func stationFlow(of id: StationID) -> StationFlow? {
+        stationRidership(of: id).flow
     }
 
     /// `trips` shared among the hours in proportion to
@@ -191,16 +221,7 @@ extension GameWorld {
     /// exchanges any with (``dailyDemand(from:to:)`` both ways), by
     /// ascending station ID.
     public func stationDemandPairs(of id: StationID) -> [StationDemandPair] {
-        guard stationDemand(of: id) != nil else { return [] }
-        return stations.compactMap { other in
-            guard other.id != id, stationDemand(of: other.id) != nil else { return nil }
-            let pair = StationDemandPair(
-                station: other.id,
-                outbound: dailyDemand(from: id, to: other.id),
-                inbound: dailyDemand(from: other.id, to: id)
-            )
-            return pair.outbound > 0 || pair.inbound > 0 ? pair : nil
-        }
+        stationRidership(of: id).pairs
     }
 
     /// One pair as the station panel lists it: "Beta · 6,000 there · 4,000

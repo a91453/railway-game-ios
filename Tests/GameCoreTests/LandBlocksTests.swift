@@ -151,6 +151,23 @@ final class LandBlocksTests: XCTestCase {
         XCTAssertThrowsGameError(try whole.expandLand([LandBlock(row: 0, column: 0)], cells: []), .invalidLand)
     }
 
+    /// The last blocks of a world whose side is not whole blocks reach past
+    /// it: their cells, water and slopes must still lie in the world, or
+    /// the save would not load.
+    func testCellsPastTheWorldsEdgeInTheLastBlockAreRefused() throws {
+        // 16 cells across and 20 down: block row 1 holds rows 16 to 31.
+        var world = GameWorld(bounds: try WorldBounds(width: 16 * Land.cellLength, height: 20 * Land.cellLength),
+                              economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+        world.setLandOnDemand()
+        let before = world
+        XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [cell(25, 0)]), .invalidLand)
+        XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [], water: [CellPosition(row: 25, column: 0)]), .invalidTerrain)
+        XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [], steep: [CellPosition(row: 25, column: 0)]), .invalidTerrain)
+        XCTAssertEqual(world, before)
+        try world.expandLand([LandBlock(row: 1, column: 0)], cells: [cell(19, 0)], water: [CellPosition(row: 18, column: 0)])
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     // MARK: - Saving
 
     func testTheBlocksSaveAsRunsAndBadOnesAreRefused() throws {

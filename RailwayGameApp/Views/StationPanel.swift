@@ -22,6 +22,11 @@ struct StationPanel: View {
     @State private var renaming: String?
     /// Whether the demolish confirmation is up.
     @State private var confirmingRemoval = false
+    /// The selected station's trips by hour and by station, worked out off
+    /// the main actor (``RidershipKey``): drawn from the world on every
+    /// tick, they held the main thread for seconds on a real-world map,
+    /// and the panel stopped halfway as it slid in.
+    @State private var ridership: (key: RidershipKey, value: StationRidership)?
 
     var body: some View {
         NavigationStack {
@@ -47,10 +52,7 @@ struct StationPanel: View {
                     landSection(station)
                     demandSection(station)
                     eventsSection(station)
-                    if let flow = session.world.stationFlow(of: station.id) {
-                        flowSection(flow)
-                    }
-                    pairsSection(station)
+                    ridershipSections(station)
                     passengersSection(station)
                     removalSection(station)
                 } else {
@@ -84,6 +86,22 @@ struct StationPanel: View {
                 StatusBanner(session: session)
             }
         }
+        .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {
+            await workOutRidership()
+        }
+    }
+
+    /// Works out the selected station's ridership for the world as it is,
+    /// off the main actor; kept until what it depends on changes.
+    private func workOutRidership() async {
+        let key = RidershipKey(world: session.world, station: session.selectedStationID)
+        guard let id = key.station else { return }
+        let world = session.world
+        let value = await Task.detached(priority: .userInitiated) {
+            world.stationRidership(of: id)
+        }.value
+        guard !Task.isCancelled else { return }
+        ridership = (key, value)
     }
 
     /// How the station is run (Phase 5F, the reference's `operationMode`):
@@ -507,9 +525,32 @@ struct StationPanel: View {
 
     // MARK: - Read-only
 
-    private func pairsSection(_ station: Station) -> some View {
-        let pairs = session.world.stationDemandPairs(of: station.id)
-        return Section {
+    /// The trips by hour and by station, once worked out for this station;
+    /// the last ones while they are worked out again.
+    @ViewBuilder
+    private func ridershipSections(_ station: Station) -> some View {
+        if let ridership, ridership.key.station == station.id {
+            if let flow = ridership.value.flow {
+                flowSection(flow)
+            }
+            pairsSection(ridership.value.pairs)
+        } else {
+            Section {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text(verbatim: session.language.text("Working out its trips…", "正在計算客流…"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+            } header: {
+                Text("Trips a day by station")
+            }
+        }
+    }
+
+    private func pairsSection(_ pairs: [StationDemandPair]) -> some View {
+        Section {
             if pairs.isEmpty {
                 Text("No trips to or from other stations yet.")
                     .font(.footnote)
@@ -542,6 +583,84 @@ struct StationPanel: View {
         } footer: {
             Text("Everyone released here is waiting, riding, arrived, left a full station or gave up. Left behind counts the times a full train left people waiting.")
         }
+    }
+}
+
+/// What a station's ridership (``GameWorld/stationRidership(of:)``) is
+/// worked out from, so the panel works it out again only when one of them
+/// changes, not on every tick: the station, the game day (weekly demand,
+/// events and the city's ridership change by the day), the stations, their
+/// demand and the lines, how passengers route, and the fares, which change
+/// demand. Network routing also reads the track the lines run over, their
+/// performance and routes, the trains' capacity and the transfer groups
+/// (``PassengerRouteGraph``). Within a day the service level that network routing reads can
+/// change; the panel shows the day's first reading until the next.
+private struct RidershipKey: Equatable {
+    /// What of a line passengers go by: not when it last sent a train
+    /// (``ServiceLine/lastDispatch``, ``ServiceLine/runDays``), which
+    /// changes every few minutes of the game.
+    struct LineKey: Equatable {
+        let id: LineID
+        let stops: [StationID]
+        let isRing: Bool
+        let trains: [TrainID]
+        let window: ServiceWindow
+        let trainsInService: TrainsInService
+        let targetHeadways: TargetHeadways
+        let patternCalls: [[Int]]
+        let patternTrains: [[TrainID]]
+        let runs: [LineRun]
+        let performance: TrainPerformance
+        let routePreferences: [[LineRoutePreference]]
+
+        init(_ line: ServiceLine) {
+            id = line.id
+            stops = line.stops
+            isRing = line.isRing
+            trains = line.trains
+            window = line.window
+            trainsInService = line.trainsInService
+            targetHeadways = line.targetHeadways
+            patternCalls = line.patterns.map(\.calls)
+            patternTrains = line.patterns.map(\.trains)
+            runs = line.runs
+            performance = line.performance
+            routePreferences = [line.routePreferences] + line.patterns.map(\.routePreferences)
+        }
+    }
+
+    let station: StationID?
+    let day: Int64
+    let stations: [Station]
+    let demandStations: [StationID]
+    let demands: [StationDemand]
+    let lines: [LineKey]
+    let network: RailwayNetwork
+    let trainCapacities: [Int64]
+    let transferGroups: [TransferGroup]
+    let routing: PassengerRoutingMode
+    let economy: EconomyMode
+    let fares: FareRules?
+    let fareBaseline: Money
+
+    init(world: GameWorld, station: StationID?) {
+        self.station = station
+        day = world.clock.now.seconds / GameTime.secondsPerDay
+        stations = world.stations
+        // Only the records with demand: the others come and go with who
+        // is waiting.
+        let withDemand = world.passengers.filter { $0.demand != nil }
+        demandStations = withDemand.map(\.station)
+        demands = withDemand.compactMap(\.demand)
+        lines = world.lines.map(LineKey.init)
+        // Unchanged storage compares at once, so this costs a tick little.
+        network = world.network
+        trainCapacities = world.trains.map(\.capacity)
+        transferGroups = world.transferGroups
+        routing = world.passengerRoutingMode
+        economy = world.accounts.mode
+        fares = world.accounts.fareRules
+        fareBaseline = world.accounts.fareBaseline
     }
 }
 
