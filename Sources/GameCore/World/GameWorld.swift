@@ -1477,12 +1477,19 @@ public struct GameWorld: Equatable, Sendable {
     /// stations stays theirs. A ring then goes round the other way, so its
     /// two dispatch times swap with its directions. Passengers waiting for a
     /// trip the line no longer takes leave, as after
-    /// ``setLineStops(_:to:)``; trains already sent out keep their
-    /// timetables.
+    /// ``setLineStops(_:to:)``.
     ///
-    /// - Throws: ``GameError/unknownLine(_:)``.
+    /// Only a line with no trains can be reversed (decision 134): a train
+    /// sent out would finish its trip at what is then the last stop, where
+    /// the line never sends a train out again, and every rider waiting for
+    /// the line would leave. Take its trains off first.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/trainOnLine(_:)`` naming the lowest numbered train
+    ///   assigned to the line or one of its patterns.
     public mutating func reverseLineStops(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
+        if let assigned = lines[index].assignedTrains.first { throw .trainOnLine(assigned) }
         var line = lines[index]
         let last = line.stops.count - 1
         func reversed(_ routes: [LineRoutePreference]) -> [LineRoutePreference] {

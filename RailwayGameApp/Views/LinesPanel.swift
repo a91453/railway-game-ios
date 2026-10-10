@@ -407,6 +407,8 @@ struct LinesPanel: View {
             } label: {
                 Label("Reverse Stop Order", systemImage: "arrow.left.arrow.right")
             }
+            // Decision 134: its trains would stop at the new last stop.
+            .disabled(!line.assignedTrains.isEmpty)
             .accessibilityIdentifier("line.reverse")
         } header: {
             Text("Stops")
@@ -415,6 +417,9 @@ struct LinesPanel: View {
                 Text("The last stop runs on to the first. Passengers waiting for a trip the line no longer takes leave.")
             } else {
                 Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
+            }
+            if !line.assignedTrains.isEmpty {
+                Text("Take the line's trains off it to reverse its stops.")
             }
         }
     }
