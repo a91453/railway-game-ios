@@ -109,9 +109,10 @@ extension GameWorld {
             if let preferred = preferredGoingOn(train), case .granted = reserving(preferred) { return preferred }
             return goingOn(train)
         case nil:
-            guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }),
-                  let stream = line.dispatchStream(of: train.id)
-            else { return nil }
+            guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }) else { return nil }
+            // Decision 133: a train a due run would send out.
+            if line.hasRuns { return dueRunDeparture(of: train, on: line) }
+            guard let stream = line.dispatchStream(of: train.id) else { return nil }
             var memo = DispatchMemo()
             guard isDispatchDue(line, stream, at: clock.now, memo: &memo),
                   let trip = readyTrip(of: train, on: line, stream.service, memo: &memo)

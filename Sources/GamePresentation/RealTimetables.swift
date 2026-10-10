@@ -312,3 +312,80 @@ public enum RealTimetables {
         return ((days % 7) + 7 + 4) % 7
     }
 }
+
+/// One line's real trains for the real-world demo (decision 133), as
+/// `tools/real-timetables/extract_pingxi_runs.py` writes them
+/// (`tra_pingxi_runs.json`, from TRA's open data): the line's stations in
+/// order, its trains each from one of them to another with every call's
+/// arrival and departure second of the day and the weekdays it runs (0
+/// Sunday), and where its trainsets stand at midnight.
+public struct RealLineRuns: Sendable, Equatable {
+    public struct Call: Sendable, Equatable {
+        public let station: String
+        public let arrival: Int64
+        public let departure: Int64
+    }
+
+    public struct Run: Sendable, Equatable {
+        /// The train number (`回送` for a positioning run).
+        public let train: String
+        public let calls: [Call]
+        public let days: [Int]
+        /// Whether it is not one of TRA's trains but added so the day ends
+        /// where it began.
+        public let positioning: Bool
+    }
+
+    /// The line's stations, by their Chinese names.
+    public let stops: [String]
+    public let runs: [Run]
+    /// The trainsets standing at each station at midnight.
+    public let overnight: [String: Int]
+
+    /// Reads the file. Throws for one out of shape: a call that is not
+    /// `[station, arrival, departure]`, or a run calling at a station that
+    /// is not one of the line's.
+    public init(data: Data) throws {
+        struct File: Decodable {
+            struct Run: Decodable {
+                let train: String
+                let calls: [[Call]]
+                let days: [Int]
+                let positioning: Bool?
+            }
+
+            enum Call: Decodable {
+                case name(String)
+                case second(Int64)
+
+                init(from decoder: any Decoder) throws {
+                    let container = try decoder.singleValueContainer()
+                    if let second = try? container.decode(Int64.self) {
+                        self = .second(second)
+                    } else {
+                        self = .name(try container.decode(String.self))
+                    }
+                }
+            }
+
+            let stops: [String]
+            let overnight: [String: Int]
+            let runs: [Run]
+        }
+        let file = try JSONDecoder().decode(File.self, from: data)
+        func corrupt(_ why: String) -> DecodingError {
+            DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: why))
+        }
+        stops = file.stops
+        overnight = file.overnight
+        runs = try file.runs.map { run in
+            let calls = try run.calls.map { call -> Call in
+                guard call.count == 3, case .name(let station) = call[0], case .second(let arrival) = call[1], case .second(let departure) = call[2],
+                      file.stops.contains(station)
+                else { throw corrupt("Train \(run.train)'s call is not [one of the line's stations, arrival, departure].") }
+                return Call(station: station, arrival: arrival, departure: departure)
+            }
+            return Run(train: run.train, calls: calls, days: run.days, positioning: run.positioning ?? false)
+        }
+    }
+}

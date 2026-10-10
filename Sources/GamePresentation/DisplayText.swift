@@ -274,6 +274,11 @@ extension GameError {
             language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
         case .invalidLineRoutePreference:
             language.text("Choose a physical path for a leg of this service.", "請為這個停站模式的路段選擇股道與月台。")
+        case .invalidLineRuns:
+            language.text(
+                "A timetable's trains each run between two of the line's stops at times that never go back. A ring, a line with patterns or one calling at a station twice has no timetable.",
+                "時刻表的每一班車都在路線的兩站之間行駛，時間不能倒退。環線、有停站模式或重複停靠同一站的路線不能有時刻表。"
+            )
         case .invalidLinePattern:
             language.text(
                 "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",

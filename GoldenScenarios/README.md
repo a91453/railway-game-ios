@@ -184,6 +184,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setGround`（schema 47） | `blocks`（`[{ "row", "column", "heights" }]`，1 km 區塊與它 17 × 17 個 64 m 角點的高度，公尺，逐列由北而南） | `setGround(_:)` |
 | `mapGround`（schema 48） | — | `mapGround()`：世界有地面，還沒讀任何區塊；已有地面或已有軌道是 `invalidGround` |
 | `sellPlacedBuilding`（schema 50） | `building`（建物的 ID） | `sellPlacedBuilding(_:)`：把公司的建物賣給城市（決策 130）；不存在是 `unknownPlacedBuilding` |
+| `setLineRuns`（schema 51） | `line`、`lineRuns`（`[{ "from", "to", "times": [[到, 開], …], "days" }]`：起訖兩站在路線停站中的位置、每站當天的秒數、星期幾開（位元 0 是星期日，省略是每天）） | `setLineRuns(_:to:)`：路線照真實班次發車（決策 133）；不合的班次是 `invalidLineRuns`，路線有列車在跑是 `trainServiceActive` |
 
 ### 結果（`expect.result`）
 
@@ -734,3 +735,16 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `sellPlacedBuilding`（`building`）、觀察 `buildingSale`，以及 `financeReport` 每一期選填的 `saleProceeds`、`saleBookValue`（是 0 時不寫）（ARCHITECTURE 決策 130，城市建造 P0-D）。結果沒有新的：不存在的建物照舊是 `unknownPlacedBuilding`。出售不寫帳本列（和買進一樣只記在資本日），所以 `accounts` 的形式不變。沒有出售的世界不會有這些欄位，schema 30 到 49 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過 `sellPlacedBuilding` 與 `buildingSale`。
 - `company-buildings-sale.json`：`company-buildings-clearing.json` 的世界（經營、$4,000,000、城市建物開啟、沒有車站）。辦公樓照舊收購 D4 住宅，帳上 331,264,000，入住 16 + 3 = 19／184；小住宅 2,304,000，空的。售價 = 目前土地使用權 × 95% ＋ 建物帳面價值（過半全額，以下 × 入住 × 2 ÷ 容量）：辦公樓那一格已收購，是空地的 1,000 美分／m²，1,024,000 × 95% = 972,800，建物 ⌊24,576,000 × 38 ÷ 184⌋ = 5,075,478，共 6,048,278；小住宅 243,200 ＋ 0。賣掉辦公樓後它的 16 位居民與 3 個就業變成 (5, 5) 的辦公格，城市蓋上 D1 辦公（3 號）；空的小住宅不留土地；再賣一次是 `unknownPlacedBuilding`。第 0 天的報表：出售收入 6,291,478、帳面價值 333,568,000。每個值都手算，寫在 description 裡；價格的入住比例、折舊與帳的其他情形由 `BuildingSaleTests` 手算驗證。
+
+## 決策 133：路線照班次發車（schema 51）
+
+- 新指令 `setLineRuns`（`line`、`lineRuns`）、結果 `invalidLineRuns`；最終狀態的路線有班次時另寫 `runs` 與 `runDays`（每班最後一次開出的遊戲日，沒開過是 `null`）（ARCHITECTURE 決策 133）。
+- 參考模型（`ReferenceWorld`）不跑班次，所以用到 `setLineRuns` 的 fixture 不在 `ReferenceWorldGoldenTests` 裡重播（同土地），由 `LineRunsTests` 驗證。
+- `line-runs.json`（新）：`line-dispatch.json` 的直線軌道，Alpha、Beta、Gamma 三站，路線 Main 停三站。班次：Alpha 00:10 開往 Gamma（Beta 00:15–00:16、Gamma 00:20）、Gamma 00:30 開回 Alpha（Beta 00:35–00:36、Alpha 00:40），以及只在週六、週日開的 Beta 00:50 → Alpha 00:55（`days` 65）。
+  - 拒絕：不存在的路線、起訖同站、時刻數不對、時間倒退、`days` 0。
+  - 班距：往 Alpha 的方向兩班較多，三班的第一個出發到最後一個出發 600 → 3000 秒，2400 ÷ (2 − 1) = 40 分鐘；列車數是指派的 1 列。
+  - 有班次的路線不能加停站模式（`invalidLinePattern`）、不能改成環線（`invalidLineRuns`）。
+  - 第 5 分鐘（出發前 5 分鐘）派出 Blue，時刻表照班次：Alpha 到 5、開 10，Beta 15／16，Gamma 20；列車在跑時改班次是 `trainServiceActive`。
+  - 第 24 分鐘停在 Gamma、沒有服務；第 25 分鐘回程派出，先折返（它面向 Gamma 進站）：Gamma 到 25、開 30，Beta 35／36，Alpha 40。週末的班次第 0 天（星期一）不開，`runDays` 是 `[0, 0, null]`。
+  - 最終狀態第 60 分鐘：餘額 1,000,000 − 6 段軌道 × 1,000 − 3 站 × 50,000 − 1 列 × 200,000 = 644,000；Blue 停在 Alpha（第 2 條邊反向的終點）。時刻與餘額手算；列車的位置取自 GameCore，和 `line-dispatch.json` 相同。
+

@@ -14,8 +14,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             let name = url.lastPathComponent
             // The reference model routes passengers directly only: network
             // routing, walks and station modes (Phase 5F) are GameCore's.
-            // Nor does it hold land (Phase 6a), which `LandTests` checks.
-            guard !scenario.usesPassengerNetwork, !scenario.usesLand else { continue }
+            // Nor does it hold land (Phase 6a), which `LandTests` checks, or
+            // run timetables (decision 133), which `LineRunsTests` checks.
+            guard !scenario.usesPassengerNetwork, !scenario.usesLand, !scenario.usesLineRuns else { continue }
             let initial = scenario.initialState
             var model = ReferenceWorld(
                 width: initial.worldWidth, height: initial.worldHeight, balance: initial.balance,
@@ -97,6 +98,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setLineStops(let id, let stops): error = model.setLineStops(id, stops)
         case .setLineRing(let id, let ring): error = model.setLineRing(id, ring)
         case .setLineRoutePreferences(let id, let routes, let pattern): error = model.setLineRoutes(id, routes, pattern: pattern)
+        case .setLineRuns: preconditionFailure("the reference model does not run timetables")
         case .setLinePerformance(let id, let performance): error = model.setLinePerformance(id, performance)
         case .setTrainPerformance(let id, let performance): error = model.setPerformance(id, performance)
         case .setLineServiceWindow(let id, let window): error = model.setLineWindow(id, window)

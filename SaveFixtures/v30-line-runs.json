@@ -1,0 +1,304 @@
+{
+  "saveVersion" : 30,
+  "world" : {
+    "bounds" : {
+      "height" : 4096,
+      "width" : 8192
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 991400,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "runDays" : [
+          0,
+          null
+        ],
+        "runs" : [
+          {
+            "from" : 0,
+            "times" : [
+              [
+                600,
+                600
+              ],
+              [
+                900,
+                960
+              ],
+              [
+                1200,
+                1200
+              ]
+            ],
+            "to" : 2
+          },
+          {
+            "from" : 2,
+            "times" : [
+              [
+                1800,
+                1800
+              ],
+              [
+                2100,
+                2160
+              ],
+              [
+                2400,
+                2400
+              ]
+            ],
+            "to" : 0
+          }
+        ],
+        "stops" : [
+          1,
+          2,
+          3
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        }
+      ],
+      "nextEdgeID" : 7,
+      "nextNodeID" : 8,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 4,
+    "nextTrainID" : 2,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Alpha",
+        "point" : {
+          "x" : 1536,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Beta",
+        "point" : {
+          "x" : 3584,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "Gamma",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "execution" : {
+          "phase" : "waiting",
+          "stop" : 0
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "rate" : 1024
+        },
+        "name" : "Blue",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 1024
+          }
+        },
+        "times" : {
+          "arrival" : 300,
+          "closing" : 591,
+          "exchangeEnd" : 308
+        },
+        "timetable" : [
+          {
+            "arrival" : 300,
+            "departure" : 600,
+            "station" : 1
+          },
+          {
+            "arrival" : 900,
+            "departure" : 960,
+            "station" : 2
+          },
+          {
+            "arrival" : 1200,
+            "departure" : 1200,
+            "station" : 3
+          }
+        ]
+      }
+    ]
+  }
+}
