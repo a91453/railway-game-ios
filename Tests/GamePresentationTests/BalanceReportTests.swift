@@ -67,8 +67,8 @@ final class BalanceReportTests: XCTestCase {
         var lines = [
             "### \(title): built for \(dollars(cost.amount)), \(stops.count) stations",
             "",
-            "| Day | Balance | Fares | Operating profit | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Land value avg / max | Service |",
-            "| --: | --: | --: | --: | --: | --: | --: | --- | --- | --- |",
+            "| Day | Balance | Fares | Operating profit | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
+            "| --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
         ]
         try world.advance(ticks: 1)
         for day in 1...days {
@@ -92,9 +92,19 @@ final class BalanceReportTests: XCTestCase {
         let people = catchment.reduce(Int64(0)) { $0 + $1.residents + $1.jobs }
         // Existing stock first, then D1 to D4.
         var heights = [0, 0, 0, 0, 0]
+        // How full the fullest D3 is, in per cent of its main count: the
+        // next D4 is raised from the D3s that are full.
+        var fullest = Int64(0)
         for cell in catchment {
             guard let building = world.buildings.building(row: cell.row, column: cell.column) else { continue }
             heights[building.kind == .existingStock ? 0 : building.density.rawValue] += 1
+            if building.kind == .city, building.density == .d3 {
+                let table = Building.tableCapacity(of: cell.use, .d3)
+                let main = cell.use == .residential ? (cell.residents, table.residents) : (cell.jobs, table.jobs)
+                if main.1 > 0 {
+                    fullest = max(fullest, main.0 * 100 / main.1)
+                }
+            }
         }
         let values = catchment.compactMap { world.landValue(row: $0.row, column: $0.column)?.value }
         let average = values.isEmpty ? 0 : values.reduce(0, +) / Int64(values.count)
@@ -102,7 +112,7 @@ final class BalanceReportTests: XCTestCase {
         let recovered = (world.economy.balance.amount - (GameWorld.startingBalance - cost).amount) * 100 / cost.amount
         return "| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars(report.fareRevenue.amount)) | "
             + "\(dollars(report.operatingProfit.amount)) | \(recovered)% | \(trips) | \(people) | "
-            + "\(heights[1]) / \(heights[2]) / \(heights[3]) / \(heights[4]) / \(heights[0]) | "
+            + "\(heights[1]) / \(heights[2]) / \(heights[3]) / \(heights[4]) / \(heights[0]) | \(fullest)% | "
             + "\(dollars(average)) / \(dollars(values.max() ?? 0)) | \(service / 10)% |"
     }
 

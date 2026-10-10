@@ -67,9 +67,10 @@ final class LandDemandTests: XCTestCase {
     }
 
     /// A day's growth of `cells` at `rates` (by ascending station), written
-    /// again: each growing station adds to its catchment's cells by their
-    /// residents (jobs), filling each to 400 (1,200), then builds the empty
-    /// cell beside people nearest it.
+    /// again: each growing station adds its share and twice its station
+    /// front to its catchment's cells by their residents (jobs), the
+    /// front's three times (decision 129), filling each to 400 (1,200), then
+    /// builds the empty cell beside people nearest it.
     private static func referenceGrowth(_ cells: [LandCell], _ stations: [Station], rates: [StationID: Int64], in bounds: WorldBounds) -> [LandCell] {
         let shares = referenceShares(cells, stations)
         var land: [Int: LandCell] = [:]
@@ -82,8 +83,15 @@ final class LandDemandTests: XCTestCase {
             let keys = land.keys.sorted().filter {
                 squaredDistance(row: $0 / columns, column: $0 % columns, station.location) < reach
             }
-            let addedResidents = largestRemainder(grown(share.residents), keys.map { land[$0]!.residents })
-            let addedJobs = largestRemainder(grown(share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs), keys.map { land[$0]!.jobs })
+            // Decision 129: the station front (the cells within 256 m as its
+            // turn comes) counts twice more in the growth and three times in
+            // its sharing.
+            let front = Set(keys.filter { squaredDistance(row: $0 / columns, column: $0 % columns, station.location) < 16_384 * 16_384 })
+            let frontResidents = front.reduce(Int64(0)) { $0 + land[$1]!.residents }, frontJobs = front.reduce(Int64(0)) { $0 + land[$1]!.jobs }
+            let jobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
+            let addedResidents = largestRemainder(
+                grown(share.residents + 2 * frontResidents), keys.map { land[$0]!.residents * (front.contains($0) ? 3 : 1) })
+            let addedJobs = largestRemainder(grown(jobs + 2 * frontJobs), keys.map { land[$0]!.jobs * (front.contains($0) ? 3 : 1) })
             for (offset, key) in keys.enumerated() {
                 let cell = land[key]!
                 let residents = cell.residents >= 400 ? cell.residents : min(400, cell.residents + addedResidents[offset])

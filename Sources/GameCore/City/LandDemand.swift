@@ -24,7 +24,11 @@
 //   of its town, nearest to it. Land never shrinks;
 // - with the city's buildings on (Phase 6c-2, decision 75), a cell grows to
 //   its building's capacity, and a station that served most of its trips
-//   raises up to two full buildings of its catchment a density each night.
+//   raises up to two full buildings of its catchment a density each night;
+// - since decision 129, the station front (the cells within 256 m) grows at
+//   three times the station's rate, and a building nine tenths full counts as
+//   full, so a first line's station sees new towers within the first hour
+//   of play instead of after some 60 days.
 //
 // Old saves and free play keep each station's own ridership: land drives it
 // only where ``GameWorld/landDemand`` is on (the app's new games) and the
@@ -54,6 +58,18 @@ public enum LandDemand {
     public static let upgradeService: Int64 = 800
     /// The stations its passengers must have reached the day before.
     public static let upgradeReached: Int64 = 1
+    /// How full a city building must be to be raised, in thousandths of its
+    /// table's main count: 900 since decision 129 (1,000 before).
+    public static let upgradeFullness: Int64 = 900
+
+    // The station front (ARCHITECTURE decision 129): this project's numbers
+    // (gap), chosen by `BalanceReportTests`.
+
+    /// The station front's radius: a cell whose middle lies within it of a
+    /// growing station is its front. 16,384 units, 256 m, four cells.
+    public static let stationFrontRadius: Int64 = 16_384
+    /// How many times its rate a growing station's front grows at.
+    public static let stationFrontGrowth: Int64 = 3
 
     /// What a station's share of the land holds.
     public struct Share: Hashable, Sendable {
@@ -260,14 +276,19 @@ extension GameWorld {
     ///   up to ``LandDemand/upgradesPerStation`` city buildings of its
     ///   catchment by one density, by row and column: those below D4 that
     ///   were full when the midnight began (their main count, residents of
-    ///   homes or jobs of shops and offices, at their table's; decision 77),
-    ///   each at most once a night (a cell a lower station raised is passed
-    ///   over);
-    /// - adds `(R × g + 500) / 1000` residents (at least 1) to its share's
-    ///   `R` residents and likewise jobs, shared among the cells of its
-    ///   catchment by their residents (jobs) by the largest remainder, each
-    ///   filled to at most its building's capacity with the city's buildings
-    ///   on (Phase 6c-2), else ``LandDemand/grownResidents``
+    ///   homes or jobs of shops and offices, at least
+    ///   ``LandDemand/upgradeFullness`` thousandths of their table's;
+    ///   decisions 77 and 129), each at most once a night (a cell a lower
+    ///   station raised is passed over);
+    /// - adds `((R + (k − 1) F) × g + 500) / 1000` residents (at least 1)
+    ///   to its share's `R` residents, `F` being those of the cells of its
+    ///   station front (``LandDemand/stationFrontRadius``) and `k`
+    ///   ``LandDemand/stationFrontGrowth`` (decision 129), and likewise
+    ///   jobs, shared among the cells of its catchment by their residents
+    ///   (jobs), those of the front counted `k` times, by the largest
+    ///   remainder (so the front grows about `k` times as fast as the rest),
+    ///   each filled to at most its building's capacity with the city's
+    ///   buildings on (Phase 6c-2), else ``LandDemand/grownResidents``
     ///   (``LandDemand/grownJobs``); a count already there keeps what it
     ///   has, and what does not fit is not added;
     /// - builds one new home of ``LandDemand/newCellResidents``: the empty
@@ -321,7 +342,12 @@ extension GameWorld {
                 }
                 let share = shares[station.id] ?? LandDemand.Share()
                 let jobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
-                grow(around: station, residents: Self.grown(share.residents, rate), jobs: Self.grown(jobs, rate))
+                // Decision 129: the front grows ``LandDemand/stationFrontGrowth``
+                // times as fast, so its people count that many times.
+                let front = stationFront(of: station), extra = LandDemand.stationFrontGrowth - 1
+                grow(
+                    around: station, residents: Self.grown(share.residents + front.residents * extra, rate),
+                    jobs: Self.grown(jobs + front.jobs * extra, rate))
                 spread(towards: station)
             }
         }
@@ -350,8 +376,9 @@ extension GameWorld {
     }
 
     /// The cells of the city buildings below D4 that are full: their main
-    /// count (residents of homes, jobs of shops and offices) at or above the
-    /// table's (decision 77).
+    /// count (residents of homes, jobs of shops and offices) at least
+    /// ``LandDemand/upgradeFullness`` thousandths of the table's (decisions
+    /// 77 and 129).
     private func fullBuildingCells() -> Set<CellPosition> {
         var full: Set<CellPosition> = []
         for cell in land.cells {
@@ -365,7 +392,7 @@ extension GameWorld {
             // every mixed cell of a real-world map full.
             let table = Building.tableCapacity(of: building.use, building.density)
             let main = Building.mainCount(of: building.use, residents: table.residents, jobs: table.jobs)
-            if main > 0, Building.mainCount(of: building.use, residents: cell.residents, jobs: cell.jobs) >= main {
+            if main > 0, Building.mainCount(of: building.use, residents: cell.residents, jobs: cell.jobs) * 1_000 >= main * LandDemand.upgradeFullness {
                 full.insert(cell.position)
             }
         }
@@ -392,17 +419,34 @@ extension GameWorld {
         }
     }
 
+    /// The residents and jobs of the cells of `station`'s front: those whose
+    /// middles lie within ``LandDemand/stationFrontRadius`` of it (decision
+    /// 129).
+    func stationFront(of station: Station) -> (residents: Int64, jobs: Int64) {
+        var residents: Int64 = 0, jobs: Int64 = 0
+        land.forEachCell(within: LandDemand.stationFrontRadius, of: station.location) { index, _ in
+            residents += land.cells[index].residents
+            jobs += land.cells[index].jobs
+        }
+        return (residents, jobs)
+    }
+
     /// Adds `residents` and `jobs` to the cells of `station`'s catchment,
-    /// shared by their residents (jobs) by the largest remainder, each cell
-    /// filled to at most its growth limit: its building's capacity with the
-    /// city's buildings on (Phase 6c-2), else the fixed limits.
+    /// shared by their residents (jobs), those of its front counted
+    /// ``LandDemand/stationFrontGrowth`` times (decision 129), by the
+    /// largest remainder, each cell filled to at most its growth limit: its
+    /// building's capacity with the city's buildings on (Phase 6c-2), else
+    /// the fixed limits.
     mutating func grow(around station: Station, residents: Int64, jobs: Int64) {
         var indices: [Int] = []
-        land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
+        var weights: [Int64] = []
+        let front = LandDemand.stationFrontRadius * LandDemand.stationFrontRadius
+        land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, squared in
             indices.append(index)
+            weights.append(squared < front ? LandDemand.stationFrontGrowth : 1)
         }
-        let addedResidents = Self.apportion(residents, by: indices.map { land.cells[$0].residents })
-        let addedJobs = Self.apportion(jobs, by: indices.map { land.cells[$0].jobs })
+        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        let addedJobs = Self.apportion(jobs, by: indices.indices.map { land.cells[indices[$0]].jobs * weights[$0] })
         for (offset, index) in indices.enumerated() {
             let cell = land.cells[index]
             // Decision 98: nothing grows on land zoned no development; its

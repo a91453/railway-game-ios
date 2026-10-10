@@ -71,20 +71,21 @@ extension GameWorld {
 
     /// What station `id`'s town growth measured at the last midnight and
     /// whether it raises the city's buildings (Phase 6c-2): "Yesterday:
-    /// 100% of trips served · 2 stations reached · full buildings rise", or
-    /// "... · full buildings rise at 80% served and 1 station reached";
+    /// 100% of trips served · 2 stations reached · buildings 90% full rise",
+    /// or "... · buildings 90% full rise at 80% served and 1 station
+    /// reached" (decision 129: nine tenths full is full);
     /// `nil` while the land does not grow there with the city's buildings.
     public func cityGrowthText(of id: StationID, in language: DisplayLanguage) -> String? {
         guard landDemand, cityBuildings, accounts.mode == .management, let place = townGrowth(of: id) else { return nil }
         let percent = "\(place.lastService / 10)%"
         let reached = place.lastReached
         let rises = place.lastService >= LandDemand.upgradeService && place.lastReached >= LandDemand.upgradeReached
-        let need = "\(LandDemand.upgradeService / 10)%"
+        let need = "\(LandDemand.upgradeService / 10)%", full = "\(LandDemand.upgradeFullness / 10)%"
         return language.text(
             "Yesterday: \(percent) of trips served · \(reached) \(reached == 1 ? "station" : "stations") reached · "
-                + (rises ? "full buildings rise" : "full buildings rise at \(need) served and \(LandDemand.upgradeReached) station reached"),
+                + (rises ? "buildings \(full) full rise" : "buildings \(full) full rise at \(need) served and \(LandDemand.upgradeReached) station reached"),
             "昨日：旅次服務 \(percent) · 可達 \(reached) 站 · "
-                + (rises ? "滿格的建物會升級" : "服務達 \(need) 且可達至少 \(LandDemand.upgradeReached) 站時，滿格的建物才會升級")
+                + (rises ? "\(full)滿的建物會升級" : "服務達 \(need) 且可達至少 \(LandDemand.upgradeReached) 站時，\(full)滿的建物才會升級")
         )
     }
 }

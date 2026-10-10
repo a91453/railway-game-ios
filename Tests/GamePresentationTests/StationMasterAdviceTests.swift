@@ -104,8 +104,8 @@ final class StationMasterAdviceTests: XCTestCase {
 
     func testWhatItSaysOfTheTownsGrowth() {
         let grew = StationMasterAdvice.townGrew(station: Self.alpha, name: "Alpha", tenths: 12)
-        XCTAssertEqual(grew.text(in: .english), "The town round Alpha grew 1.2% yesterday. Good service keeps it growing.")
-        XCTAssertEqual(grew.text(in: .traditionalChinese), "「Alpha」附近的城市昨天成長了 1.2%。服務好，城市就會繼續長大。")
+        XCTAssertEqual(grew.text(in: .english), "The town round Alpha grew 1.2% yesterday. Good service keeps it growing, fastest within 250 m of the station.")
+        XCTAssertEqual(grew.text(in: .traditionalChinese), "「Alpha」附近的城市昨天成長了 1.2%。服務好，城市就會繼續長大，車站 250 公尺內長得最快。")
         XCTAssertFalse(grew.isWorry)
         let short = StationMasterAdvice.underserved(station: Self.alpha, name: "Alpha", percent: 64)
         XCTAssertEqual(

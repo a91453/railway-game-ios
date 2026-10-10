@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 39,
-  "description": "Land value (Phase 6c-3, ARCHITECTURE decision 76), worked out when asked: value = clamp(floor(B x D / 1000) + 15 x S + 1000 x A, 500, 50000) cents a m2, B the use's base (1000 an empty cell, 2000 homes, 3000 shops, 3500 offices), D the building's density factor (1000, 1250, 1600, 2000 for D1 to D4, existing stock D4; 1000 without a building), S and A the best station's score floor(w x lastService / 1000) and lastReached, w = 1000 - floor(d2 x 1000 / 51200^2) for the stations whose catchment reaches the cell (d2 < 51200^2) and that measured some service, the highest score winning and a tie going to the lower station. A world 32768 x 8192 units (8 x 2 cells) on economy.json's line Main (Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00), managed, with demand from land, town growth and the city's buildings on. The land: row 0 column 0 homes of 100 (D2), 1 shops of 100 jobs (D2), 2 offices of 1600 jobs (D4), 3 homes of 2000 (existing stock), row 1 column 0 homes of 56 (D1). Before any service is measured each cell is worth its base: 2000 x 1250 / 1000 = 2500, 3000 x 1250 / 1000 = 3750, 3500 x 2000 / 1000 = 7000, 2000 x 2000 / 1000 = 4000, 2000, and an empty cell (row 1 column 7, row 0 column 7) 1000; cells outside the world (row 2, column 8, row -1) have none. After the first midnight (no measure yet) still 2500. The second midnight measures every station at lastService 1000 and lastReached 2 (GameCore's values from the railway, as the townGrowth observations show) and raises the full D1 homes at row 1 column 0 to D2 (decision 75). Then: row 0 column 0, middle (2048, 2048), is d2 = 512^2 + 1536^2 = 2621440 from Alpha and 1536^2 + 1536^2 = 4718592 from Beta, both w = 999 (1000 - 1, 1000 - 1): a tie, Alpha; S = 999, 2500 + 14985 + 2000 = 19485. Column 1 (6144, 2048) is nearest Gamma, d2 = 512^2 + 1536^2, w 999: 3750 + 14985 + 2000 = 20735. Column 2 (10240, 2048): Gamma, d2 = 4608^2 + 1536^2 = 23592960, floor 9, w 991: 7000 + 14865 + 2000 = 23865. Column 3: Gamma, w 971: 4000 + 14565 + 2000 = 20565. Row 1 column 0 (now D2): Alpha, d2 = 512^2 + 5632^2, floor 12, w 988: 2500 + 14820 + 2000 = 19320. The empty row 1 column 7 (30720, 6144): Gamma, d2 = 25088^2 + 5632^2, floor 252, w 748: 1000 + 11220 + 2000 = 14220; row 0 column 7: Gamma, w 759: 1000 + 11385 + 2000 = 14385. In free play the land does not set ridership and only the base counts: 2500 and 7000. Every landValue is worked out from the rule, the observed buildings and the observed measures by an independent Python implementation (tools/golden-checks/land_value.py); the railway, passenger, account and land values are GameCore's, as in economy.json.",
+  "schemaVersion": 49,
+  "description": "Land value (Phase 6c-3, ARCHITECTURE decision 76), worked out when asked: value = clamp(floor(B x D / 1000) + 15 x S + 1000 x A, 500, 50000) cents a m2, B the use's base (1000 an empty cell, 2000 homes, 3000 shops, 3500 offices), D the building's density factor (1000, 1250, 1600, 2000 for D1 to D4, existing stock D4; 1000 without a building), S and A the best station's score floor(w x lastService / 1000) and lastReached, w = 1000 - floor(d2 x 1000 / 51200^2) for the stations whose catchment reaches the cell (d2 < 51200^2) and that measured some service, the highest score winning and a tie going to the lower station. A world 32768 x 8192 units (8 x 2 cells) on economy.json's line Main (Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00), managed, with demand from land, town growth and the city's buildings on. The land: row 0 column 0 homes of 100 (D2), 1 shops of 100 jobs (D2), 2 offices of 1600 jobs (D4), 3 homes of 2000 (existing stock), row 1 column 0 homes of 56 (D1). Before any service is measured each cell is worth its base: 2000 x 1250 / 1000 = 2500, 3000 x 1250 / 1000 = 3750, 3500 x 2000 / 1000 = 7000, 2000 x 2000 / 1000 = 4000, 2000, and an empty cell (row 1 column 7, row 0 column 7) 1000; cells outside the world (row 2, column 8, row -1) have none. After the first midnight (no measure yet) still 2500. The second midnight measures every station at lastService 1000 and lastReached 2 (GameCore's values from the railway, as the townGrowth observations show) and raises the full D1 homes at row 1 column 0 to D2 (decision 75; no other building is nine tenths full, decision 129). Schema 49 (decision 129): the station front, the cells within 256 m of a growing station (columns 0 to 3 of each, and 4 of Beta's and Gamma's; 5 to 7 of none), grows three times as fast, so the land grows to 2182 residents and 1789 jobs (2170 and 1721 before) and the stations' trips from 508, 514 and 520 to 522, 529 and 537 (lastGrowth 27, 29 and 32 thousandths; 511, 519 and 526, 5, 9 and 11 before); the land and trips are checked by the same independent night as tools/golden-checks/city_growth.py's. Land value does not read the counts, so no value changes. Then: row 0 column 0, middle (2048, 2048), is d2 = 512^2 + 1536^2 = 2621440 from Alpha and 1536^2 + 1536^2 = 4718592 from Beta, both w = 999 (1000 - 1, 1000 - 1): a tie, Alpha; S = 999, 2500 + 14985 + 2000 = 19485. Column 1 (6144, 2048) is nearest Gamma, d2 = 512^2 + 1536^2, w 999: 3750 + 14985 + 2000 = 20735. Column 2 (10240, 2048): Gamma, d2 = 4608^2 + 1536^2 = 23592960, floor 9, w 991: 7000 + 14865 + 2000 = 23865. Column 3: Gamma, w 971: 4000 + 14565 + 2000 = 20565. Row 1 column 0 (now D2): Alpha, d2 = 512^2 + 5632^2, floor 12, w 988: 2500 + 14820 + 2000 = 19320. The empty row 1 column 7 (30720, 6144): Gamma, d2 = 25088^2 + 5632^2, floor 252, w 748: 1000 + 11220 + 2000 = 14220; row 0 column 7: Gamma, w 759: 1000 + 11385 + 2000 = 14385. In free play the land does not set ridership and only the base counts: 2500 and 7000. Every landValue is worked out from the rule, the observed buildings and the observed measures by an independent Python implementation (tools/golden-checks/land_value.py); the railway, passenger, account and land values are GameCore's, as in economy.json.",
   "initialState": {"worldWidth": 32768, "worldHeight": 8192, "balance": 1000000, "costs": {"track": 1000, "station": 50000, "train": 200000}, "gameMinutes": 1380, "speed": "normal"},
   "steps": [
     {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
@@ -51,9 +51,9 @@
     {"command": {"type": "advance", "ticks": 61}, "expect": {"result": "ok"}},
     {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 2500, "base": 2500, "servicePremium": 0, "accessPremium": 0, "station": null}}},
     {"command": {"type": "advance", "ticks": 1440}, "expect": {"result": "ok"}},
-    {"observe": {"type": "townGrowth", "station": 1}, "expect": {"found": true, "townGrowth": {"base": 508, "lastGrowth": 5, "lastService": 1000, "lastReached": 2}}},
-    {"observe": {"type": "townGrowth", "station": 2}, "expect": {"found": true, "townGrowth": {"base": 514, "lastGrowth": 9, "lastService": 1000, "lastReached": 2}}},
-    {"observe": {"type": "townGrowth", "station": 3}, "expect": {"found": true, "townGrowth": {"base": 520, "lastGrowth": 11, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "townGrowth", "station": 1}, "expect": {"found": true, "townGrowth": {"base": 508, "lastGrowth": 27, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "townGrowth", "station": 2}, "expect": {"found": true, "townGrowth": {"base": 514, "lastGrowth": 29, "lastService": 1000, "lastReached": 2}}},
+    {"observe": {"type": "townGrowth", "station": 3}, "expect": {"found": true, "townGrowth": {"base": 520, "lastGrowth": 32, "lastService": 1000, "lastReached": 2}}},
     {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 2, "residents": 168, "jobs": 36}}},
     {"observe": {"type": "landValue", "row": 0, "column": 0}, "expect": {"found": true, "landValue": {"value": 19485, "base": 2500, "servicePremium": 14985, "accessPremium": 2000, "station": 1}}},
     {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "commercial", "density": 2, "residents": 48, "jobs": 216}}},
@@ -403,7 +403,7 @@
         "abandoned": 0,
         "arrived": 508,
         "demand": {
-          "dailyTrips": 511,
+          "dailyTrips": 522,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -431,7 +431,7 @@
         "abandoned": 0,
         "arrived": 514,
         "demand": {
-          "dailyTrips": 519,
+          "dailyTrips": 529,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -452,7 +452,7 @@
         "abandoned": 0,
         "arrived": 520,
         "demand": {
-          "dailyTrips": 526,
+          "dailyTrips": 537,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -1213,8 +1213,8 @@
     },
     "land": {
       "cells": 8,
-      "jobs": 1721,
-      "residents": 2170
+      "jobs": 1789,
+      "residents": 2182
     },
     "landDemand": true,
     "cityBuildings": {
