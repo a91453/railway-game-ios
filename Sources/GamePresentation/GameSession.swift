@@ -216,6 +216,9 @@ public final class GameSession {
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
+    /// Whether the drag under way picked a new start (it began on other
+    /// track): cancelled, it keeps that start but not the old end.
+    @ObservationIgnored var networkDragMovedStart = false
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic
