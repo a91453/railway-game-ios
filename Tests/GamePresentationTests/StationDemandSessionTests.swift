@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Stage C2: the station demand screen (G1a's `setStationDemand`, after the
@@ -194,6 +194,26 @@ final class StationDemandSessionTests: XCTestCase {
         XCTAssertEqual(world.stationDemandPairs(of: alpha), [])
     }
 
+    /// The station panel's one pass (``GameWorld/stationRidership(of:)``)
+    /// gives what asking GameCore pair by pair gives, on the demo map's
+    /// lines and ring, with network routing and with direct trips.
+    func testTheRidershipPassMatchesThePairs() {
+        var world = DemoWorld.make(in: .english)
+        for mode in [PassengerRoutingMode.network, .direct] {
+            world.setPassengerRoutingMode(mode)
+            var linked = 0
+            for station in world.stations {
+                let ridership = world.stationRidership(of: station.id)
+                XCTAssertEqual(ridership.flow, world.pairByPairFlow(of: station.id), "\(mode) \(station.name)")
+                XCTAssertEqual(ridership.pairs, world.pairByPairPairs(of: station.id), "\(mode) \(station.name)")
+                XCTAssertEqual(ridership.flow, world.stationFlow(of: station.id))
+                XCTAssertEqual(ridership.pairs, world.stationDemandPairs(of: station.id))
+                if !ridership.pairs.isEmpty { linked += 1 }
+            }
+            XCTAssertGreaterThan(linked, 2, "the demo's stations exchange trips (\(mode))")
+        }
+    }
+
     func testTheLedgerRowsReadTheAudit() throws {
         var world = try makeStations()
         try world.createLine(named: "Main", stops: [alpha, beta])
@@ -234,4 +254,38 @@ private func makeStations() throws -> GameWorld {
         try world.buildStation(named: name, at: TestLine.centre(x, 0))
     }
     return world
+}
+
+private extension GameWorld {
+    /// ``stationFlow(of:)`` as it was worked out before the one pass: every
+    /// pair's hours asked of GameCore one by one.
+    func pairByPairFlow(of id: StationID) -> StationFlow? {
+        guard let demand = stationDemand(of: id) else { return nil }
+        var entries = Array(repeating: Int64(0), count: 24)
+        var exits = entries
+        for other in stations where other.id != id && stationDemand(of: other.id) != nil {
+            let leaving = hourlyDemand(from: id, to: other.id)
+            let coming = hourlyDemand(from: other.id, to: id)
+            for hour in 0..<24 {
+                entries[hour] += leaving[hour]
+                exits[hour] += coming[hour]
+            }
+        }
+        if entries.allSatisfy({ $0 == 0 }), exits.allSatisfy({ $0 == 0 }) {
+            return StationFlow(entries: GameWorld.shared(demand.dailyTrips, by: demand.kind.departureShape),
+                               exits: GameWorld.shared(demand.dailyTrips, by: demand.kind.arrivalShape), isShape: true)
+        }
+        return StationFlow(entries: entries, exits: exits, isShape: false)
+    }
+
+    /// ``stationDemandPairs(of:)`` as it was worked out before the one pass.
+    func pairByPairPairs(of id: StationID) -> [StationDemandPair] {
+        guard stationDemand(of: id) != nil else { return [] }
+        return stations.compactMap { other in
+            guard other.id != id, stationDemand(of: other.id) != nil else { return nil }
+            let pair = StationDemandPair(station: other.id, outbound: dailyDemand(from: id, to: other.id),
+                                         inbound: dailyDemand(from: other.id, to: id))
+            return pair.outbound > 0 || pair.inbound > 0 ? pair : nil
+        }
+    }
 }

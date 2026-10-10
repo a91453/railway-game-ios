@@ -31,6 +31,8 @@ struct ContentView: View {
     /// The player's choice for the details card: open or folded, `nil` to
     /// follow what there is to show (``ControlDetails``).
     @State private var detailsChoice: Bool?
+    /// Compact height: a phone, held on its side.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         gameLayout
@@ -171,7 +173,9 @@ struct ContentView: View {
             let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
             let sideWidth = min(Self.sidePanelWidth, (proxy.size.width * Self.sidePanelMaxShare).rounded())
             // The details card gives way to a panel beside the map.
-            let isOpen = sidePanel == nil && ControlDetails.isOpen(session, choice: detailsChoice)
+            let isOpen = sidePanel == nil && ControlDetails.isOpen(
+                session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
+            )
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
@@ -316,6 +320,9 @@ private struct MapTutorialTarget: View {
 /// what it would show changes; and always during the tutorial, which
 /// points at controls in it. A station selected while looking at the map
 /// shows its tag over it instead (decision 119), which opens the card.
+/// On a phone, track being drawn folds it (decision 136): the map's
+/// construction HUD and the ✕ and ✓ beside the track say and do what it
+/// would, and the map gets the room to draw in.
 private enum ControlDetails {
     /// What the details would be about; a change drops the player's choice.
     struct Subject: Equatable {
@@ -323,6 +330,8 @@ private enum ControlDetails {
         let station: StationID?
         let train: TrainID?
         let hasSelection: Bool
+        /// Starting to draw, and clearing what was drawn, drop it too.
+        let drawsTrack: Bool
 
         @MainActor
         init(_ session: GameSession) {
@@ -330,16 +339,26 @@ private enum ControlDetails {
             station = session.selectedStationID
             train = session.tappedTrainID
             hasSelection = session.selectionText() != nil
+            drawsTrack = ControlDetails.drawsTrack(session)
         }
     }
 
-    /// `choice` is the player's: open or folded, `nil` to follow what
-    /// there is to show.
+    /// Whether track is being drawn: the network tool building, from a
+    /// start already picked (and, once a stretch is built, its end, which
+    /// starts the next).
     @MainActor
-    static func isOpen(_ session: GameSession, choice: Bool?) -> Bool {
+    static func drawsTrack(_ session: GameSession) -> Bool {
+        session.tool == .network && session.networkMode == .build && session.networkStart != nil
+    }
+
+    /// `choice` is the player's: open or folded, `nil` to follow what
+    /// there is to show. `foldsWhileDrawing` on a phone, which has no room
+    /// beside the card to draw in (decision 136).
+    @MainActor
+    static func isOpen(_ session: GameSession, choice: Bool?, foldsWhileDrawing: Bool) -> Bool {
         if session.tutorial != nil { return true }
         if let choice { return choice }
-        if session.tool != .select { return true }
+        if session.tool != .select { return !(foldsWhileDrawing && drawsTrack(session)) }
         // Decision 119: a station's tag stands in for the card.
         return session.selectedStationID == nil && session.selectionText() != nil
     }

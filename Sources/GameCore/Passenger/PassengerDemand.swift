@@ -167,7 +167,26 @@ extension GameWorld {
     /// ``StationDemandKind/arrivalShape``, by largest remainder (ties to the
     /// earlier hour). All zero without trips.
     public func hourlyDemand(from origin: StationID, to destination: StationID) -> [Int64] {
-        let trips = dailyDemand(from: origin, to: destination)
+        hourlyDemand(of: dailyDemand(from: origin, to: destination), from: origin, to: destination)
+    }
+
+    /// The trips from `origin` to each station it reaches each day, as
+    /// ``dailyDemand(from:to:)`` gives them one by one, worked out once for
+    /// all of them: a station's ridership panel reads every pair, and asking
+    /// pair by pair works the origin's whole share out again each time.
+    /// Stations it sends no trips to are left out.
+    public func dailyDemands(from origin: StationID) -> [StationID: Int64] {
+        var trips: [StationID: Int64] = [:]
+        for entry in dailyDemand(from: origin) {
+            trips[entry.destination] = entry.trips
+        }
+        return trips
+    }
+
+    /// `trips` a day from `origin` to `destination` shared among the 24
+    /// hours as ``hourlyDemand(from:to:)`` shares that pair's: for daily
+    /// trips already read from ``dailyDemands(from:)``.
+    public func hourlyDemand(of trips: Int64, from origin: StationID, to destination: StationID) -> [Int64] {
         guard trips > 0, let from = stationDemand(of: origin), let to = stationDemand(of: destination) else {
             return Array(repeating: 0, count: 24)
         }
