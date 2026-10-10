@@ -177,6 +177,7 @@ final class LineRunsTests: XCTestCase {
     func testLineEditsKeepOrEndTheRuns() throws {
         var world = try world()
         try world.advance(ticks: 6)
+        try world.unassignTrain(blue)
         try world.reverseLineStops(main)
         let reversed = try XCTUnwrap(world.line(id: main))
         XCTAssertEqual(reversed.runs.map { [$0.from, $0.to] }, [[2, 0], [0, 2]])

@@ -43,7 +43,7 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 
 ## 四、沒修、需要作者決定的項目
 
-1. **反轉一條在營運中的路線會讓它停擺**（`GameWorld.reverseLineStops`，路線面板可以直接按）。
+1. **反轉一條在營運中的路線會讓它停擺**（`GameWorld.reverseLineStops`，路線面板可以直接按）。**已處理**：作者選 (a)，決策 134。
    - 列車跑完舊的一趟，會停在舊的起站，也就是現在的終點站。發車只接受停在第一站的列車，所以之後再也不發車。
    - 同時，等這條線的乘客會全部被放棄，這和文件寫的「停靠的站和以前一樣」矛盾。
    - 環狀線還有一個問題：已發出的列車，方向標籤會和實際行駛方向相反。
@@ -103,6 +103,7 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
   - 決策 67（貸款）當初也沒有升版，可以沿用這個慣例。
   - 只有在 #294 之後、#295 之前有發出過版本時才有影響。
   - 選項：升到 30（不需要 migration，只加一筆 fixture），或維持現狀。
+  - **已處理**：#300（決策 133）把存檔升到 30，不再另外升版；說明補在 `SavedGame` 的版本 30 與決策 131、134。
 
 **驗證**：
 - **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`BuildingSale*`、`CompanyBuildings*`、`SavedGameTests`、`TerrainPresentationTests`、`HeightGridTests`。

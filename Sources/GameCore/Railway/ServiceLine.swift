@@ -628,6 +628,12 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         service == 0 ? Array(stops.indices) : patterns[service - 1].calls
     }
 
+    /// Every train assigned to the line, to its own service or to a
+    /// pattern, in ascending ID order.
+    public var assignedTrains: [TrainID] {
+        (trains + patterns.flatMap(\.trains)).sorted()
+    }
+
     /// The trains assigned to service `service` (see ``serviceCount``).
     func trains(ofService service: Int) -> [TrainID] {
         service == 0 ? trains : patterns[service - 1].trains
