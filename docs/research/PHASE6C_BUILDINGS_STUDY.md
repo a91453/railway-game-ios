@@ -95,7 +95,7 @@ Kn 的 5 筆：大安 x[−212,−130)、z[280,1000)；中正 x[−700,−560)�
 | `proxy[]/solids[]` | proxy `{x,y?,z,w,d,h,roof,roofH?,mat,color?}`；solids `{x0,z0,x1,z1,y0?,y1}`。donqi proxy 主高 **18.2 m**；蜂達 **14.05 m**；鐵道部主館 **8.8+3.6 m 屋頂**、塔 **11.6+4.6 m**。 | 可以產生 iOS 低細節幾何；碰撞箱、室內與屋頂不能回寫土地容量。 |
 | `map/interior/atlas/cluster/hero/priority` | map `{icon,minimap}`、interior enum、atlas.slots；donqi `partial,slots:1,cluster:ximen,hero:true,priority:60`；鐵道部 `partial,cluster:beimen,hero:true,priority:85`。 | 只影響載入、快取、顯示與場景排序。 |
 
-現存 site 模組有 **3** 個，不能只說2個：`T/assets/site-donqi-ximen-BYSklXQx.js` **28,314 bytes**、`site-fongda-coffee-BLqPP37I.js` **32,315**、`site-railway-department-park-BykCBjAy.js` **25,070**。另外 `build-B3ahlmTh.js` **113,537**、`build-BQ6sPpWH.js` **109,307** 是場景幾何／atlas生成；後者有 atlas 預設 **2048**、固定 RNG seed **20,283,292**，不作本遊戲城市種子。
+現存 site 模組有 **3** 個，不能只說2個：`T/assets/site-donqi-ximen-C4Uhuz6T.js` **28,314 bytes**、`site-fongda-coffee-ncv_Ui7v.js` **32,315**、`site-railway-department-park-CeP4zM45.js` **25,070**。另外 `build-BU46ZK3j.js` **113,537**、`build-2kUI5-ha.js` **109,307** 是場景幾何／atlas生成；後者有 atlas 預設 **2048**、固定 RNG seed **20,283,292**，不作本遊戲城市種子。
 
 `world` 的 dynamic import 去重後 **46** 個 site 路徑，**43 個缺檔（gap）**。下列全部相對於 `T/assets/`；檢查每條實際檔案存在性，不把 metadata 已內嵌視為近景 module 已備妥：
 
@@ -145,7 +145,7 @@ site-xinfangchun-CDuNuXEA.js
 site-yansan-market-Uq9Y9hUs.js
 ```
 
-另外 gap：world import 的 `postfx-pHdVmtPd.js`；`T/assets/content-Bs2Ca5A2.js`（**1,850,065 bytes**）所指 `build-Bz4uAL4f.js`、`build-CN7_0enk.js`、`build-Cx8EeQJB.js`、`build-nn2qgmtJ.js`、`register-DEjbkm8D.js` 皆缺。查找用 `import(`、`site-`、`./defs/`、`lot`、`claims`、`placement`、`anchors`、`proxy`、`build-`、`postfx`。沒有下載缺檔，不能宣稱原網頁場景可完整跑起來。
+另外 gap：world import 的 `postfx-pHdVmtPd.js`；`T/assets/content-DcQ2Whr5.js`（**1,850,065 bytes**）所指 `build-Bz4uAL4f.js`、`build-CN7_0enk.js`、`build-Cx8EeQJB.js`、`build-nn2qgmtJ.js`、`register-DEjbkm8D.js` 皆缺。查找用 `import(`、`site-`、`./defs/`、`lot`、`claims`、`placement`、`anchors`、`proxy`、`build-`、`postfx`。沒有下載缺檔，不能宣稱原網頁場景可完整跑起來。
 
 ## 3. rail-3d 的 Blender／歷史建物資料與遠景網格
 
@@ -297,7 +297,7 @@ blender目錄現存共 **8,064,361 bytes**（far **7,756,272**）；historic共 
 
 **gap／搜尋**：`near.mesh.bin`、`near.glb`、`far.glb`、`.blend`、`hero.png`、`source-layouts`、`placements-source.json`；以catalog／lods／sourceSnapshot/referenceFile指向的實際路徑核對，沒有近景或重建來源。metadata的品質說明與sources保留；既有far可以做Phase8候選，不承諾能從near缺檔還原原始外觀。
 
-四處來源以完整詞搜尋地價／租金後，T另有外觀命中：`T/assets/content-Bs2Ca5A2.js` 的 `trade:"realestate"`、`category:"房屋仲介"`、names／menu（買屋、賣屋、租屋、捷運宅）、`weight:1/2`、`AL.realestate:"09:30-21:00"`，是店面樣式與營業時間；`T/assets/world-gYgJkZNf.js` 的 **"Tap to Rent"** 是借車畫面，shader的for-rent是出租鐵捲門外觀（關店用tile **24**，不顯示出租變體）。沒有租金、美分價格或房產交易。查找 `realestate`、完整詞 `rent`、`出租`、`trade`、`AL`、`bShopOpen`，不把招牌文案當經濟引擎。
+四處來源以完整詞搜尋地價／租金後，T另有外觀命中：`T/assets/content-DcQ2Whr5.js` 的 `trade:"realestate"`、`category:"房屋仲介"`、names／menu（買屋、賣屋、租屋、捷運宅）、`weight:1/2`、`AL.realestate:"09:30-21:00"`，是店面樣式與營業時間；`T/assets/world-DCb11kLR.js` 的 **"Tap to Rent"** 是借車畫面，shader的for-rent是出租鐵捲門外觀（關店用tile **24**，不顯示出租變體）。沒有租金、美分價格或房產交易。查找 `realestate`、完整詞 `rent`、`出租`、`trade`、`AL`、`bShopOpen`，不把招牌文案當經濟引擎。
 
 ## 4. Ci：建物圖層與地價／租金／開發搜尋
 
@@ -507,8 +507,8 @@ T的全樹 **102檔／20,962,045 bytes = 19.991 MiB**：35 JS **9,167,633**；8 
 | --- | --- | --- |
 | `T/avatars/manifest.json` 的maps | 英雄7張：body-color1024²、mask256²、normal512²；head-color2048×1024、mask256×128、normal512×256；hair-color1024²。群眾3張：atlas-color1536×512、mask192×64、normal384×128。color ETC1S（hair／atlas帶alpha），mask／normal UASTC。 | 不是獨立png；需從GLB bufferView取KTX2，維持baseColor sRGB、mask／normal線性與channel語意。 |
 | 同maps.bytes與KTX2 header | 8件嵌入貼圖合計 **2,721,205 bytes**；KTX2 vkFormat **0**、typeSize **1**、faceCount **1**；ETC1S supercompressionScheme **1**、UASTC **2**，已有 **8–12** mip levels。jie body-color **145,195**、head-color **286,122**、hair-color **158,101** bytes；完整jie textureBytes **892,164**。 | Basis Universal／UASTC不是GPU可直接吃的ASTC；要轉碼或離線解碼再轉ASTC／目標USD貼圖。輸出保留所有mips，透明髮片測試alpha。 |
-| `T/avatars/basis/basis_transcoder.js`／`.wasm` | **57,529／527,333 bytes**，WASM magic `\0asm` version1；JS是Emscripten loader。`T/assets/avatar-CUFURxPX.js` **112,468 bytes** 含GLTFLoader／KTX2Loader／meshopt decoder。 | JS＋WASM不是Swift framework可直接link的native轉碼器；建議離線處理。Metal自訂loader路線才考慮native Basis／meshoptimizer，不把WebWorkers與JS載入器搬進GameCore。 |
-| `T/assets/anim-CQkLTvTS.bin`；`clips-Cb5uFd0j.js` | bin **439,720**、JS **2,708**；AnimLibrary／Clip的格式如下。`animator-DGt1NqrS.js` **26,675**、`rig-BjRdQXtM.js` **614**、`avatar`的Rocketbox骨架adapter。 | 動畫獨立於GLB，必須還原／retarget後輸出skeletal animation；不能只用GLB轉USDZ就假稱動畫會出現。 |
+| `T/avatars/basis/basis_transcoder.js`／`.wasm` | **57,529／527,333 bytes**，WASM magic `\0asm` version1；JS是Emscripten loader。`T/assets/avatar-BUA-61rs.js` **112,468 bytes** 含GLTFLoader／KTX2Loader／meshopt decoder。 | JS＋WASM不是Swift framework可直接link的native轉碼器；建議離線處理。Metal自訂loader路線才考慮native Basis／meshoptimizer，不把WebWorkers與JS載入器搬進GameCore。 |
+| `T/assets/anim-CQkLTvTS.bin`；`clips-Cb5uFd0j.js` | bin **439,720**、JS **2,708**；AnimLibrary／Clip的格式如下。`animator-CHWSGVhN.js` **26,675**、`rig-BjRdQXtM.js` **614**、`avatar`的Rocketbox骨架adapter。 | 動畫獨立於GLB，必須還原／retarget後輸出skeletal animation；不能只用GLB轉USDZ就假稱動畫會出現。 |
 | `T/title/*.webp` | menu-2560 **325,032**（2560×1440）、menu-1600 **171,522**（1600×900）、menu-portrait **163,788**（960×1706）、menu-phone **168,866**（1600×738）、loader-1600 **181,686**（1600×900）、loader-portrait **177,946**（960×1706）。 | 只是標題／載入畫面，不是建物表面貼圖。原生asset流程先轉PNG／HEIF並核對色彩與尺寸，或使用明確WebP decoder；不假定所有SceneKit／RealityKit材質loader都讀WebP。 |
 | `T/splash/launch-*.png`、`icons/*.png`、`_favicon.png`、`icons/icon.svg` | 共45 PNG **6,132,453**；42張launch檔名即目標解析度，含1125×2436、2064×2752等；apple-touch-icon180² RGB、favicon32² RGBA；SVG **408 bytes**。 | PNG可用原生圖片loader；不用把42種Web/PWA啟動圖全部塞進iOS bundle。SVG要由asset工具轉成支援的向量／點陣輸出；它們不是3D貼圖。 |
 
@@ -551,7 +551,7 @@ manifest對8件現存角色的 `gpuBytes` 加總 **19,279,808 bytes**，fallback
 
 - **Microsoft Rocketbox**：`T/avatars/manifest.json.license`及8份GLB asset.copyright明記 **MIT License、Copyright (c) 2020 Microsoft**，含原avatar來源與頭部來源。manifest指 `CREDITS.md / LICENSE-ROCKETBOX.txt`，GLB指LICENSE-ROCKETBOX.txt，**本包兩檔均缺（gap）**。發佈素材前補入正確MIT全文與copyright，轉換不能刪掉來源標示；這不是要求重買模型。
 - **OSM建物輪廓**：兩組model.sources中有 **91個ODbL-1.0 source標示（49＋42）**；另89個source entry未寫license（25＋64），多為官方／觀光／外觀參考頁，不能把「沒寫license」全部叫成未授權模型。保留每件sources及placement/footprintReference的OSM標示；顯示 © OpenStreetMap contributors與ODbL連結，若發佈衍生輪廓資料庫，提供對應資料與同授權。材質網格是來源作者外觀建模，照片／商標flags為false，不把參考照片URL當可打包貼圖。
-- **Basis／meshopt／Three.js**：`T/avatars/basis/*`、`T/assets/avatar...`、`T/assets/three-DoD3b_mB.js`（**737,923 bytes**）的現存檔未找到完整license/copyright告示；只辨認到技術名稱，**不能以記憶替這個bundle宣告MIT或Apache版本（gap）**。若採native dependency，選定確切版本後附其實際LICENSE／NOTICE；若只離線轉出自己的資料，仍記錄工具與輸出來源，依所用工具真正條款處理。R/vendor/three.module.js的license不能替T所有bundle一概背書。
+- **Basis／meshopt／Three.js**：`T/avatars/basis/*`、`T/assets/avatar...`、`T/assets/three-CUv1qSsi.js`（**737,923 bytes**）的現存檔未找到完整license/copyright告示；只辨認到技術名稱，**不能以記憶替這個bundle宣告MIT或Apache版本（gap）**。若採native dependency，選定確切版本後附其實際LICENSE／NOTICE；若只離線轉出自己的資料，仍記錄工具與輸出來源，依所用工具真正條款處理。R/vendor/three.module.js的license不能替T所有bundle一概背書。
 - **site／標題／atlas／動畫**：本包沒有另外的逐素材license文件；來源作者授權可用的前提仍成立。維持site source、動畫clips.src等來源，對明示第三方項再補告示；沒有證據要求任意替換角色或場景。PNG／WebP與程序生成atlas不因可解碼就自動有新的授權。
 - **實景背景**：決策50的MapKit標誌／法律連結與資料限制照原決策；自有建物／OSM素材可畫在背景上，但不擷取Apple建物、地形或搜尋結果做可保存模型資料庫。OpenFreeMap樣式／圖磚契約與iOS自有模型來源分開記錄。
 
@@ -561,12 +561,12 @@ manifest對8件現存角色的 `gpuBytes` 加總 **19,279,808 bytes**，fallback
 
 | 參考檔案／函式／鍵 | 目標檔案／函式草案 | 定點比例與保留／改變 |
 | --- | --- | --- |
-| `T/assets/world-gYgJkZNf.js`：DO／lO／UD／WO、RD／zD／VD／HD | `tools/building-assets/import_taipei_scene.*` 產生佔格／保留格；`Sources/GameCore/City/Building.swift`：validateOccupiedCells／initializeCityBuildings（城市內部流程） | 米→64世界單位；cell4096；小距離量化見§2.1。來源旋轉矩形／3×3細查不進核心；格化差異需明示。 |
-| `T/assets/engine-DKps_Gq_.js`：hr.buildBlocks／districtAt／surfaceAt、V／Kn／K | 同匯入工具；`Sources/GamePresentation/BuildingStyle.swift`：style(for:)；`RailwayGameApp/Rendering/BuildingLayer.swift` | bounds偏移後×64；style機率若需要整數則×1000；9區外觀保持，容量為原生表。 |
-| `T/assets/world-gYgJkZNf.js`：Eg.pickType／floorsFor／layoutBlock、site lot／claims／placement／anchors | `GamePresentation/BuildingStyle`與工具；`City/BuildingTypes.swift`：capacity(for:) | 類型外觀可adapt；樓層2/6/18/40、面積1536、48/32㎡為gap新值，不能稱直接移植。任意輪廓只在畫面。 |
+| `T/assets/world-DCb11kLR.js`：DO／lO／UD／WO、RD／zD／VD／HD | `tools/building-assets/import_taipei_scene.*` 產生佔格／保留格；`Sources/GameCore/City/Building.swift`：validateOccupiedCells／initializeCityBuildings（城市內部流程） | 米→64世界單位；cell4096；小距離量化見§2.1。來源旋轉矩形／3×3細查不進核心；格化差異需明示。 |
+| `T/assets/engine-Dl04UrJP.js`：hr.buildBlocks／districtAt／surfaceAt、V／Kn／K | 同匯入工具；`Sources/GamePresentation/BuildingStyle.swift`：style(for:)；`RailwayGameApp/Rendering/BuildingLayer.swift` | bounds偏移後×64；style機率若需要整數則×1000；9區外觀保持，容量為原生表。 |
+| `T/assets/world-DCb11kLR.js`：Eg.pickType／floorsFor／layoutBlock、site lot／claims／placement／anchors | `GamePresentation/BuildingStyle`與工具；`City/BuildingTypes.swift`：capacity(for:) | 類型外觀可adapt；樓層2/6/18/40、面積1536、48/32㎡為gap新值，不能稱直接移植。任意輪廓只在畫面。 |
 | `R/blender-buildings.js`：buildingCatalog／buildBlenderBuilding／inspectBlenderBuilding | `Sources/GamePresentation/BuildingAssets.swift`：loadCatalog；`RailwayGameApp/Rendering/BuildingMeshLoader.swift`：loadMesh／inspectionMaterial；或離線USDZ | 24byte Float32 vertex格式只畫面；metres與axis一次轉換；opacity.24可保留。GameCore不importFoundation/SceneKit/RealityKit/Metal。 |
 | `R/assets/{blender-buildings-v1,historic-buildings-v2}/{catalog,placement}.json`、各model／far bin；`R/landmark-catalog.js` | `tools/building-assets/convert.*`、轉換manifest、App Resources/Buildings；GamePresentation landmark catalog | anchor地理投影在GameCore外；GeoAnchor仍1/10,000,000度；rotationDegrees只畫面；缺near明列，尺寸不推容量。 |
-| `T/avatars/*.glb`、manifest、basis/*；`T/assets/avatar-CUFURxPX.js` | `tools/building-assets/convert_avatars.*`、App Renderer character assets | meshopt／quantization／KTX2解碼後native輸出；GLB非GameCore資料；保留MIT告示。 |
+| `T/avatars/*.glb`、manifest、basis/*；`T/assets/avatar-BUA-61rs.js` | `tools/building-assets/convert_avatars.*`、App Renderer character assets | meshopt／quantization／KTX2解碼後native輸出；GLB非GameCore資料；保留MIT告示。 |
 | `T/assets/anim-CQkLTvTS.bin`、clips-Cb5uFd0j.js：AnimLibrary／Clip | 同工具decodeAnimPack／retarget；App character animation | Int16位置1e-4m、root1e-3m、yaw4π/32767僅畫面；輸出骨架動畫，世界位置讀GameCore。 |
 | `Ci/.../styles/liberty.json`、planet.json；app的mlLayerBeforeBuilding3d／setBuilding3dEnabled呼叫 | App實景建物extrusion／疊圖；已有背景保留 | render_height/min_height公尺；opacity.8；只有畫面，PMTiles／外部建物API缺檔。 |
 | 6a `Sources/GameCore/City/Land.swift`：cellLength／middle／totals；SeedDraw | `City/Building.swift`／BuildingCapacity；`City/LandValue.swift`：landValue(at:) | 4096單位格、51200半徑、rate/weights1/1000；FNV-1a原值不變。建物容量／地價全部原生gap。 |
