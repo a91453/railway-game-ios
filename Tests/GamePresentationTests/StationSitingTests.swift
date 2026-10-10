@@ -106,6 +106,28 @@ final class StationSitingTests: XCTestCase {
             XCTAssertTrue(text.hasSuffix(ending), text)
         }
 
+        // The caption speaks of the station the platform joins: an inland
+        // one chosen in the picker is no outside connection, whatever the
+        // track tapped.
+        var world = try makeWorld(width: 262_144, height: 262_144, balance: 10_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 131_072))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 31_744, y: 131_072))
+        try world.buildTrackEdge(from: west, to: east)
+        let inland = try world.buildStation(named: "Inland", at: PlanPoint(x: 131_072, y: 131_072)).id
+        try world.setFareBaseline(FareRules.standardFare)
+        world.setOutsideConnections(true)
+        let joining = GameSession(world: world, language: .english)
+        joining.selectTool(.network)
+        joining.setNetworkMode(.platform)
+        joining.tapNetwork(at: PlanPoint(x: 16_384, y: 131_072), reach: 512)
+        let edgeSite = try XCTUnwrap(joining.platformSitePlanPoint)
+        let none = LandTotals(residents: 0, jobs: 0)
+        XCTAssertTrue(joining.platformSiteCaption(none, at: edgeSite).contains("Outside connection"), "a new station by the edge")
+        joining.platformStationID = inland
+        XCTAssertFalse(joining.platformSiteCaption(none, at: edgeSite).contains("Outside connection"), "the platform joins Inland")
+        joining.addNetworkPlatform()
+        XCTAssertFalse(joining.world.isOutsideConnection(inland))
+
         // Without the outside connections the caption is the catchment alone.
         let session = try makeSession()
         session.selectTool(.network)
