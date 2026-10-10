@@ -207,7 +207,7 @@ extension GameWorld {
         var path: [TrackTraversal] = []
         var arrival = traversal
         for edge in train.movement.remainingEdges {
-            guard let entry = transitions(after: arrival).first(where: { $0.edge == edge }) else { break }
+            guard let entry = networkEntry(after: arrival, into: edge)?.traversal else { break }
             path.append(entry)
             arrival = entry
         }

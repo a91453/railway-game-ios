@@ -34,6 +34,16 @@ public enum TrackResource: Hashable, Comparable, Sendable {
             a < b
         }
     }
+
+    /// One word for a node and for a span alike (see
+    /// ``TrackSpan/hash(into:)``): sets of track are built at every step
+    /// of traffic control. Equal resources still hash equally.
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case .node(.node(let number)): hasher.combine(number)
+        case .span(let span): hasher.combine(span.hashWord)
+        }
+    }
 }
 
 extension TrackResource: Codable {
@@ -117,6 +127,23 @@ public struct TrackSpan: Hashable, Comparable, Sendable {
     /// By edge, then along it.
     public static func < (lhs: TrackSpan, rhs: TrackSpan) -> Bool {
         (lhs.edge, lhs.start, lhs.end) < (rhs.edge, rhs.start, rhs.end)
+    }
+
+    /// Its edge and ends mixed into one word, hashed once rather than
+    /// field by field: hashing was much of the time traffic control spent
+    /// on sets of track. Equal spans still hash equally.
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(hashWord)
+    }
+
+    /// See ``hash(into:)``.
+    /// 64 bits on every platform (`Int` is 32 on wasm32).
+    var hashWord: UInt64 {
+        switch edge {
+        case .edge(let number):
+            (UInt64(truncatingIfNeeded: number) &* 0x9E37_79B9_7F4A_7C15) ^ (UInt64(bitPattern: start) &* 0xC2B2_AE3D_27D4_EB4F)
+                ^ UInt64(bitPattern: end)
+        }
     }
 }
 
