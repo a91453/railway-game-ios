@@ -114,7 +114,7 @@ Linux 不能建置 App：Swift 檔只能 `swiftc -parse`（語法），`Contents
 
 ## 7. 素材與授權
 
-- **遊戲裡的圖不要和參考庫的一樣**（作者 2026-10-09）：CLAUDE.md 允許直接搬參考庫的素材，但圖片例外，參考庫（`a91453/railway-reference-private`）的圖只取用途與想法，一律重畫，不搬檔、不描圖。另外，`Ci/` 的小圖示有 icons8 的（要標示出處），`Railway/taipei_gta_reference/` 的標題圖與人物是寫實風、另一個品牌，畫風本來就不合。放進 App 之前，確認沒有一張和參考庫的檔案相同。
+- **遊戲裡的圖不要和參考庫的一樣**（作者 2026-10-09）：CLAUDE.md 允許直接搬參考庫的素材，但圖片例外，參考庫（`a91453/railway-reference-private`）的圖只取用途與想法，一律重畫，不搬檔、不描圖。另外，`Ci/` 的小圖示有 icons8 的（要標示出處），`Railway/city_world_reference/` 的標題圖與人物是寫實風、另一個品牌，畫風本來就不合。放進 App 之前，確認沒有一張和參考庫的檔案相同。
 - 商業遊戲（SimCity BuildIt、TheoTown 等）只看做法，不取素材。
 - 外部的畫圖 skill 也只取做法，用自己的話寫在上面，沒有複製它們的文字或腳本：
   - [`neonwatty/logo-designer-skill`](https://github.com/neonwatty/logo-designer-skill)（MIT）：幾種方案讓人挑、深淺色與小尺寸檢查；
