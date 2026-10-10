@@ -186,6 +186,8 @@ private struct BuildingControls: View {
                 Label("Tap one of your buildings to demolish it. A managed company pays a tenth of what it cost.", systemImage: "hand.tap")
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
+            case .sell:
+                sellOptions
             case .zone:
                 zoneOptions
             }
@@ -285,6 +287,46 @@ private struct BuildingControls: View {
 }
 
 extension BuildingControls {
+    /// Decision 130: what the building tapped would sell for, part by part,
+    /// and the gain or loss against its book value; the action button or
+    /// the map's pill sells it.
+    @ViewBuilder
+    private var sellOptions: some View {
+        if let sale = session.salePreview {
+            let lines = session.salePreviewLines
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                    let isLoss = index == lines.count - 1 && sale.quote.gain < .zero && session.world.accounts.mode == .management
+                    Text(verbatim: line)
+                        .font(index == 0 || index == lines.count - 1 ? .footnote.weight(.semibold) : .footnote)
+                        .foregroundStyle(isLoss ? Theme.error : Theme.textPrimary)
+                }
+            }
+            .monospacedDigit()
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("building.sale")
+            Label {
+                Text(verbatim: session.language.text(
+                    "The city takes it over: its people stay.", "賣掉的建物留給城市，居民與就業照舊。"
+                ))
+            } icon: {
+                Image(systemName: "building.2")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+        } else {
+            Label {
+                Text(verbatim: session.language.text(
+                    "Tap one of your buildings to see what it would sell for.", "點選自己的建物，先看售價與損益。"
+                ))
+            } icon: {
+                Image(systemName: "hand.tap")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.textSecondary)
+        }
+    }
+
     /// Decision 98: the zones, and clearing them, three a row; what the
     /// chosen one does, and how many cells are zoned.
     @ViewBuilder
@@ -380,7 +422,10 @@ private struct ActionButton: View {
     }
 
     private var isReady: Bool {
-        if session.tool == .building { return session.buildingPreview.map { $0.problem == nil } ?? false }
+        if session.tool == .building {
+            if session.buildingMode == .sell { return session.salePreview != nil }
+            return session.buildingPreview.map { $0.problem == nil } ?? false
+        }
         guard session.tool == .network else { return session.selectedPoint != nil }
         switch session.networkMode {
         case .build: return session.networkPreview != nil
@@ -390,7 +435,11 @@ private struct ActionButton: View {
 
     private func act() {
         if session.tool == .building {
-            session.confirmBuilding()
+            if session.buildingMode == .sell {
+                session.confirmSale()
+            } else {
+                session.confirmBuilding()
+            }
             return
         }
         guard session.tool == .network else {
@@ -408,7 +457,9 @@ private struct ActionButton: View {
         guard !isReady else { return "" }
         switch session.tool {
         case .network: return String(localized: "Tap the map first.")
-        case .building: return String(localized: "Tap the map where it goes first.")
+        case .building:
+            if session.buildingMode == .sell { return session.language.text("Tap one of your buildings first.", "請先點選自己的建物。") }
+            return String(localized: "Tap the map where it goes first.")
         case .select, .train: return String(localized: "Select a station on the map first.")
         }
     }
@@ -418,10 +469,18 @@ private struct ActionButton: View {
         case .select: return nil
         case .building:
             // Decision 95: a tap chooses the site, this builds there;
-            // demolishing acts on the tap itself.
-            guard session.buildingMode == .build else { return nil }
-            guard let cost = session.buildingPreview?.cost, cost > .zero else { return String(localized: "Build") }
-            return String(localized: "Build · \(cost.moneyText)")
+            // demolishing acts on the tap itself. Decision 130: a tap
+            // chooses the building to sell, this sells it.
+            switch session.buildingMode {
+            case .build:
+                guard let cost = session.buildingPreview?.cost, cost > .zero else { return String(localized: "Build") }
+                return String(localized: "Build · \(cost.moneyText)")
+            case .sell:
+                guard let price = session.salePreview?.quote.price, price > .zero else { return session.language.text("Sell", "出售") }
+                return session.language.text("Sell · \(price.moneyText)", "出售 · \(price.moneyText)")
+            case .demolish, .zone:
+                return nil
+            }
         case .network:
             switch session.networkMode {
             case .build:

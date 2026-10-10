@@ -95,7 +95,7 @@ final class BuildingSessionTests: XCTestCase {
 
     func testDemolishingInFreePlayIsFreeAndReadsInChinese() throws {
         let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
-        XCTAssertEqual(BuildingToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["建造", "拆除", "分區"])
+        XCTAssertEqual(BuildingToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["建造", "拆除", "出售", "分區"])
         XCTAssertNil(session.buildingQuoteText, "free play builds for nothing")
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
         XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好小住宅 #1。"))
