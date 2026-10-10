@@ -15,6 +15,12 @@ struct NetworkControls: View {
     /// Whether the track options are unfolded (decision 107): view state,
     /// folded again each time the tool is chosen.
     @State private var showsAdvanced = false
+    /// Whether the long section and the cost in parts are unfolded on a
+    /// phone (decision 124, H3): folded there, so the card's action button
+    /// stays in view without scrolling; an iPad has the room and shows them.
+    @State private var showsSection = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// The map's population and travel layer (``MapView``'s preference of
     /// the same key), which the platform mode can turn to population.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
@@ -109,12 +115,33 @@ struct NetworkControls: View {
                         .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                     // Decision 124, H3: the stretch over the ground, and
-                    // what it costs part by part.
-                    if let section = preview.longSection {
-                        LongSectionView(chart: LongSectionChart(section), length: section.length, language: session.language)
-                    }
-                    if let parts = preview.costParts {
-                        CostPartsView(parts: parts, language: session.language)
+                    // what it costs part by part. Only where the world has
+                    // ground: without it the ground is flat at 0 m and the
+                    // cost is the track's, which the line above says.
+                    if session.world.ground.isMapped, preview.longSection != nil || preview.costParts != nil {
+                        let roomy = horizontalSizeClass == .regular && verticalSizeClass == .regular
+                        if !roomy {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { showsSection.toggle() }
+                            } label: {
+                                Label {
+                                    Text(verbatim: session.language.text("Long section and costs", "縱斷面與費用"))
+                                } icon: {
+                                    Image(systemName: showsSection ? "chevron.down" : "chevron.right")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .font(.footnote)
+                            .accessibilityIdentifier("network.section")
+                        }
+                        if roomy || showsSection {
+                            if let section = preview.longSection {
+                                LongSectionView(chart: LongSectionChart(section), length: section.length, language: session.language)
+                            }
+                            if let parts = preview.costParts {
+                                CostPartsView(parts: parts, language: session.language)
+                            }
+                        }
                     }
                 }
                 .padding(.top, 2)
