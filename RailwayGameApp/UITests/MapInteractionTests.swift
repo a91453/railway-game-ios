@@ -49,9 +49,7 @@ final class MapInteractionTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let demoMap = app.buttons["start.demoMap"]
-        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
-        demoMap.tap()
+        app.openDemo("demo.simple")
         // A new game starts with no tool chosen: a tap selects (decision
         // 114: there is no Select button outside building).
         XCTAssertTrue(app.buttons["dock.build"].waitForExistence(timeout: 10))
@@ -69,9 +67,7 @@ final class MapInteractionTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let demoMap = app.buttons["start.demoMap"]
-        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
-        demoMap.tap()
+        app.openDemo("demo.simple")
         // A new game starts with no tool chosen: a tap selects (decision
         // 114: there is no Select button outside building).
         XCTAssertTrue(app.buttons["dock.build"].waitForExistence(timeout: 10))
@@ -238,9 +234,7 @@ final class MapInteractionTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let demoMap = app.buttons["start.demoMap"]
-        XCTAssertTrue(demoMap.waitForExistence(timeout: 10))
-        demoMap.tap()
+        app.openDemo("demo.simple")
 
         let pause = app.buttons["Pause"]
         XCTAssertTrue(pause.waitForExistence(timeout: 10))

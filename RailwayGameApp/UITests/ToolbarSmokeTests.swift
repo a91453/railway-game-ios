@@ -74,14 +74,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        let demo = app.buttons["start.realWorldDemo"]
-        XCTAssertTrue(demo.waitForExistence(timeout: 15))
-        app.bringStartButtonIntoView(demo)
-        // Disabled until the real-world data, read in the background at
-        // launch, is there.
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
-        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 15), .completed, "The real-world demo button never became enabled")
-        demo.tap()
+        app.openDemo("demo.realWorld")
         let pause = app.buttons["Pause"]
         XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
         let lines = app.buttons["Lines"]
@@ -238,5 +231,21 @@ extension XCUIApplication {
                 column.swipeUp(velocity: .slow)
             }
         }
+    }
+
+    /// Opens one of the start screen's demos (decision 135): the Demo Map
+    /// button, then `identifier`'s row in its sheet (`demo.realWorld` or
+    /// `demo.simple`) once it is enabled: the real-world demo waits for
+    /// the real-world data, read in the background at launch.
+    func openDemo(_ identifier: String, timeout: TimeInterval = 15) {
+        let button = buttons["start.demoMap"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing button: start.demoMap")
+        bringStartButtonIntoView(button)
+        button.tap()
+        let demo = buttons[identifier]
+        XCTAssertTrue(demo.waitForExistence(timeout: 10), "Missing demo: \(identifier)")
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
+        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed, "The demo never became enabled: \(identifier)")
+        demo.tap()
     }
 }

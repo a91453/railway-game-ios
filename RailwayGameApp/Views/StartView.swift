@@ -6,9 +6,9 @@ import UniformTypeIdentifiers
 /// The start screen (Stage C4), after the `Ci/` reference's home screen and
 /// its saved-game card (`screen-save-load-ui`: go on with the saved game,
 /// or start fresh): continue the autosave, start a new game on a blank or a
-/// real-world map (Stage E2), open the demo map, load one of the saves or
-/// import a save file, or open the real-world demo (Taiwan's real lines
-/// built and running).
+/// real-world map (Stage E2), open one of the demos (decision 135: the
+/// real-world demo of Taiwan's real lines, or the simple demo), load one of
+/// the saves or import a save file.
 ///
 /// Every action calls a ``GameLauncher`` method; the screen keeps nothing
 /// of the games but what it shows.
@@ -18,6 +18,7 @@ struct StartView: View {
     @State private var importsSave = false
     @State private var choosesPlace = false
     @State private var choosesChallenge = false
+    @State private var choosesDemo = false
     @State private var showsDataSources = false
     @State private var showsSettings = false
     @Environment(\.openURL) private var openURL
@@ -72,6 +73,9 @@ struct StartView: View {
         }
         .sheet(isPresented: $choosesChallenge) {
             ChallengePicker(launcher: launcher)
+        }
+        .sheet(isPresented: $choosesDemo) {
+            DemoPicker(launcher: launcher, loadingDetail: loadingDetail)
         }
         .sheet(isPresented: $choosesPlace) {
             RealWorldPicker(launcher: launcher)
@@ -143,13 +147,15 @@ struct StartView: View {
                 launcher.startTutorial()
             }
             .accessibilityIdentifier("start.tutorial")
+            // Decision 135: both demos behind one button, so the start
+            // screen keeps to the ways into a game of one's own.
             StartButton(
                 title: String(localized: "Demo Map"),
-                detail: String(localized: "Three lines already running, in a city that grows"),
+                detail: String(localized: "Railways already built and running: Taiwan’s real lines, or a simple one to try things on"),
                 systemImage: "tram.fill",
                 tone: .accent
             ) {
-                launcher.openDemo()
+                choosesDemo = true
             }
             .accessibilityIdentifier("start.demoMap")
             if !launcher.otherSaves.isEmpty {
@@ -171,22 +177,6 @@ struct StartView: View {
             ) {
                 importsSave = true
             }
-            // Last, so the buttons the UI tests reach stay where
-            // they were.
-            StartButton(
-                title: String(localized: "Real-World Demo"),
-                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Yilan, Western Trunk, Pingxi and Shenao Lines, built on their real track over the real ground and running"),
-                systemImage: "map.fill",
-                tone: .accent
-            ) {
-                if let railways = launcher.railways {
-                    launcher.openRealWorldDemo(railways: railways)
-                }
-            }
-            // Without the railways' files (listed on the data
-            // sources screen) there is no demo to open.
-            .disabled(launcher.railways == nil)
-            .accessibilityIdentifier("start.realWorldDemo")
             // Decision 86: a new game with goals. Last, after the
             // buttons the UI tests reach.
             StartButton(
@@ -302,6 +292,64 @@ struct StartView: View {
         let summary = entry.summary?.text(in: launcher.language) ?? ""
         guard let savedAt = entry.savedAt else { return summary }
         return "\(summary)\n\(String(localized: "Saved \(savedAt.formatted(date: .abbreviated, time: .shortened))"))"
+    }
+}
+
+/// The start screen's demos (decision 135), the real-world one first: the
+/// game as it looks on Taiwan's real lines, then the simple demo, a small
+/// network to try things on.
+private struct DemoPicker: View {
+    let launcher: GameLauncher
+    /// What the real-world demo says while the real-world data is read.
+    let loadingDetail: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    StartButton(
+                        title: String(localized: "Real-World Demo"),
+                        detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Yilan, Western Trunk, Pingxi and Shenao Lines, built on their real track over the real ground and running"),
+                        systemImage: "map.fill",
+                        tone: .accent
+                    ) {
+                        if let railways = launcher.railways {
+                            dismiss()
+                            launcher.openRealWorldDemo(railways: railways)
+                        }
+                    }
+                    // Without the railways' files (listed on the data
+                    // sources screen) there is no demo to open.
+                    .disabled(launcher.railways == nil)
+                    .accessibilityIdentifier("demo.realWorld")
+                    StartButton(
+                        title: String(localized: "Simple Demo"),
+                        detail: String(localized: "Three lines already running, in a city that grows"),
+                        systemImage: "tram.fill",
+                        tone: .accent
+                    ) {
+                        dismiss()
+                        launcher.openDemo()
+                    }
+                    .accessibilityIdentifier("demo.simple")
+                }
+                .frame(maxWidth: 420)
+                .padding()
+                .frame(maxWidth: .infinity)
+            }
+            .background(Theme.background)
+            .navigationTitle("Demo Map")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
