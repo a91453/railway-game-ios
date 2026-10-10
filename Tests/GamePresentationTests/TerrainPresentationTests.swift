@@ -188,6 +188,19 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(map.tiles(in: region, blockSize: 2).shaded.count, 8 * 8)
     }
 
+    /// A map wider than the layer's corners keeps every few: the last
+    /// cells, past the last whole step, are drawn too.
+    func testTheLastCellsOfALargeMapHaveTheirHeight() throws {
+        let grid = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0818, longitudeDegrees: 120.5385))
+        // 1,031 cells across: a step of 2 leaves one cell past the last.
+        let bounds = try WorldBounds(width: 1_031 * Land.cellLength, height: 2 * Land.cellLength)
+        let map = TerrainMap(world: GameWorld.newGame(anchor: anchor, bounds: bounds), heights: grid)
+        XCTAssertEqual(map.step, 2)
+        XCTAssertNotNil(map.height(atX: 1_030.5 * Double(Land.cellLength), y: Double(Land.cellLength) / 2), "the last cell")
+        XCTAssertNotNil(map.height(atX: Double(bounds.width - 1), y: Double(bounds.height - 1)), "the south-east corner")
+    }
+
     // MARK: - Slopes on the map
 
     /// The valley's embankment: two lengths, 2.5 m and 7.5 m high (160 and

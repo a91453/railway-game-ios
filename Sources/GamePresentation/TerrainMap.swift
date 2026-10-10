@@ -52,7 +52,9 @@ public struct TerrainMap: Sendable {
         let frame = RealWorldFrame(world: world)
         let step = max(1, (max(cellRows, cellColumns) + Self.maximumCorners - 2) / (Self.maximumCorners - 1))
         self.step = step
-        let rows = cellRows / step + 1, columns = cellColumns / step + 1
+        // A corner past the last cells when they are not a whole number of
+        // steps, so the map's east and south edges have heights too.
+        let rows = (cellRows + step - 1) / step + 1, columns = (cellColumns + step - 1) / step + 1
         self.rows = rows
         self.columns = columns
         let length = Double(Land.cellLength) * Double(step)
@@ -77,7 +79,11 @@ public struct TerrainMap: Sendable {
             let metre = Float(WorldCoordinate.unitsPerMetre)
             heights = (0..<rows).flatMap { row in
                 (0..<columns).map { column in
-                    let point = PlanPoint(x: Int64(column * step) * Land.cellLength, y: Int64(row * step) * Land.cellLength)
+                    // The corner past the edge reads the ground at the edge.
+                    let point = PlanPoint(
+                        x: min(Int64(column * step) * Land.cellLength, world.bounds.width - 1),
+                        y: min(Int64(row * step) * Land.cellLength, world.bounds.height - 1)
+                    )
                     return world.groundHeight(at: point).map { Float($0) / metre } ?? .nan
                 }
             }
