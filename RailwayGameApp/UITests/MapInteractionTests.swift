@@ -235,8 +235,32 @@ final class MapInteractionTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
         XCTAssertFalse(zoomIn.isEnabled, "Changing the layout must keep the camera's maximum zoom")
-        app.buttons["Zoom out"].tap()
-        XCTAssertTrue(zoomIn.isEnabled)
+        // Waiting for the app to idle does not wait for the turn: a tap
+        // found 0.5 s after it took the button's place in the turning
+        // window, landed on the map beside the overview, which moved the
+        // camera and left the zoom alone (the branch run of PR #326; the
+        // passing runs tapped a second after the turn). Tap once the
+        // button stays put.
+        let zoomOut = app.buttons["Zoom out"]
+        waitUntilSettled(zoomOut)
+        zoomOut.tap()
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: zoomIn)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Zoom out did not leave room to zoom in")
+    }
+
+    /// Waits until `element` is hittable and in the same place twice in a
+    /// row, a quarter of a second apart: a layout that is still turning
+    /// moves it between the reads.
+    private func waitUntilSettled(_ element: XCUIElement, timeout: TimeInterval = 5) {
+        XCTAssertTrue(element.waitForExistence(timeout: timeout))
+        var last = element.frame
+        for _ in 0..<Int(timeout * 4) {
+            _ = XCTWaiter.wait(for: [XCTestExpectation(description: "a quarter of a second")], timeout: 0.25)
+            let now = element.frame
+            if now == last, element.isHittable { return }
+            last = now
+        }
+        XCTFail("\(element) did not settle")
     }
 
     func testMapLayersSheetTogglesAndDismisses() {
