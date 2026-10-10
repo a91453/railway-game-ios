@@ -188,6 +188,19 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(map.tiles(in: region, blockSize: 2).shaded.count, 8 * 8)
     }
 
+    /// A map wider than the layer's corners keeps every few: the last
+    /// cells, past the last whole step, are drawn too.
+    func testTheLastCellsOfALargeMapHaveTheirHeight() throws {
+        let grid = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0818, longitudeDegrees: 120.5385))
+        // 1,031 cells across: a step of 2 leaves one cell past the last.
+        let bounds = try WorldBounds(width: 1_031 * Land.cellLength, height: 2 * Land.cellLength)
+        let map = TerrainMap(world: GameWorld.newGame(anchor: anchor, bounds: bounds), heights: grid)
+        XCTAssertEqual(map.step, 2)
+        XCTAssertNotNil(map.height(atX: 1_030.5 * Double(Land.cellLength), y: Double(Land.cellLength) / 2), "the last cell")
+        XCTAssertNotNil(map.height(atX: Double(bounds.width - 1), y: Double(bounds.height - 1)), "the south-east corner")
+    }
+
     // MARK: - Slopes on the map
 
     /// The valley's embankment: two lengths, 2.5 m and 7.5 m high (160 and
@@ -217,5 +230,23 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(cutting.kind, .cutting)
         let outer = try XCTUnwrap(cutting.bands[0].last)
         XCTAssertEqual(cutting.hachures[1].to.y, outer.y)
+    }
+    /// Each slope covers its own pricing length, the edge's last and
+    /// shorter one included: from where it starts, 16 m from the edge's
+    /// start at a time, not 8 m either side of its middle.
+    func testTheLastShortLengthsSlopeCoversOnlyThatLength() throws {
+        var world = try world(columns: [20, 20, 14, 14])
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: Self.row, z: 1_280))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 7_000, y: Self.row, z: 1_280))
+        let id = try world.buildTrackEdge(from: a, to: b, structure: .automatic)
+        let section = try XCTUnwrap(world.longSection(of: id))
+        XCTAssertEqual(section.samples.dropFirst().dropLast().last?.kind, .embankment, "the short last length is a bank")
+        let slopes = TrackSlope.slopes(of: section, geometry: try XCTUnwrap(world.trackGeometry(of: id)))
+        let last = try XCTUnwrap(slopes.last)
+        XCTAssertEqual(last.bands[0].first?.x, 1_024 + 5 * 1_024, "the last length starts 80 m along")
+        XCTAssertEqual(last.bands[0][1].x, 7_000)
+        for slope in slopes {
+            XCTAssertEqual((Int(slope.bands[0][0].x) - 1_024) % 1_024, 0, "\(slope.bands[0])")
+        }
     }
 }
