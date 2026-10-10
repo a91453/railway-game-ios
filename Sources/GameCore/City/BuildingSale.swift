@@ -194,8 +194,8 @@ extension GameWorld {
     /// `cell` with `building`'s people moved in: its use (a park's becomes
     /// the building's), each count stopping at ``Land/maximumPerCell``.
     private func handedOver(_ building: PlacedBuilding, onto cell: LandCell) -> LandCell {
-        LandCell(
-            row: cell.row, column: cell.column, use: cell.use == .park ? building.kind.use : cell.use,
+        cell.with(
+            use: cell.use == .park ? building.kind.use : cell.use,
             residents: min(Land.maximumPerCell, cell.residents + building.residents),
             jobs: min(Land.maximumPerCell, cell.jobs + building.jobs)
         )

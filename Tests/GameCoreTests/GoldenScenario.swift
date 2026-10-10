@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 55
+    static let schemaVersion = 56
 
     var description: String
     var initialState: InitialState
@@ -2444,13 +2444,16 @@ struct LandTotalsSummary: Codable, Equatable {
 }
 
 /// A cell of land (schema 36): `{"row", "column", "use", "residents",
-/// "jobs"}`, the use `"residential"`, `"commercial"` or `"office"`.
+/// "jobs"}`, the use `"residential"`, `"commercial"` or `"office"`; since
+/// schema 56 (decision 147) also `"coverage"`, its real coverage in whole
+/// percent, left out where it is not known.
 struct LandCellSummary: Codable, Equatable {
     var row: Int
     var column: Int
     var use: LandUse
     var residents: Int64
     var jobs: Int64
+    var coverage: Int64?
 
     init(_ cell: LandCell) {
         row = cell.row
@@ -2458,10 +2461,11 @@ struct LandCellSummary: Codable, Equatable {
         use = cell.use
         residents = cell.residents
         jobs = cell.jobs
+        coverage = cell.coverage
     }
 
     var cell: LandCell {
-        LandCell(row: row, column: column, use: use, residents: residents, jobs: jobs)
+        LandCell(row: row, column: column, use: use, residents: residents, jobs: jobs, coverage: coverage)
     }
 }
 

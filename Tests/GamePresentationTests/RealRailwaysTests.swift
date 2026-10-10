@@ -326,7 +326,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "appleMaps", "openFreeMap", "mapLibre", "copernicusDEM"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "openFreeMap", "mapLibre", "copernicusDEM"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -343,6 +343,13 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(worldPop.notice.contains("CC BY 4.0"))
             XCTAssertTrue(worldPop.notice.contains("10.5258/SOTON/WP00840"))
             XCTAssertTrue(worldPop.links.contains { $0.url == "https://creativecommons.org/licenses/by/4.0/" })
+            // Decision 147: Overture's theme (ODbL) and the footprints it
+            // takes in Taiwan, OpenStreetMap's and Shi et al.'s (CC BY 4.0).
+            let overture = try XCTUnwrap(credits.first { $0.id == "overtureBuildings" })
+            for part in ["Overture Maps Foundation", "ODbL", "© OpenStreetMap", "Qian Shi", "CC BY 4.0"] {
+                XCTAssertTrue(overture.notice.contains(part), part)
+            }
+            XCTAssertTrue(overture.links.contains { $0.url == "https://doi.org/10.5281/zenodo.8174931" })
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")

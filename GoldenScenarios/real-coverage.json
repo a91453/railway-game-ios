@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 56,
+  "description": "Real coverage (ARCHITECTURE decision 147) in a world 131072 x 98304 units (32 x 24 cells of 64 m, a cell 4,096 m2 and 16,777,216 square units), a managed company with $4,000,000 (400,000,000 cents), the city's buildings and footprints and buying out by area (decision 146) on, and no stations. Cells (5, 3), (5, 5) and (5, 6) hold homes of 48 residents and 8 jobs each: D1 (2 storeys), land worth 2,000 a m2. Cell (5, 5)'s real buildings cover none of it (0 %, a car park), cell (5, 6)'s half (50 %), and cell (5, 3)'s coverage is not known. A cell whose coverage is known stands on that much of its 4,096 m2, a storey of it each storey, and its land is that ground: cell (5, 5)'s buy-out is 0; cell (5, 6)'s is (2,048 m2 x 2 storeys = 4,096 m2 of floor at 4,000, 16,384,000, and 2,048 m2 of land at 2,000, 4,096,000) a fifth more: 24,576,000. An office block (32 m, 2,048 units) centred on the line between cells (5, 5) and (5, 6), (24576, 22528), covers an eighth of each: it pays 0 for cell (5, 5) and 24,576,000 / 8 = 3,072,000 for cell (5, 6), with 6,144 m2 of floor at 4,000, 24,576,000, and 1,024 m2 of land at the 2,000 of cell (5, 6), under its centre, 2,048,000: building 1, land cost 5,120,000. An eighth of each cell's people move in, 6 residents and 1 job from each, 12 and 2; each keeps 42 and 7 and its coverage. Cell (5, 3) has no coverage, so its buy-out is reckoned from its density as before (3,072 m2 of floor at 4,000 and its 20 m square's 400 m2 at 2,000, a fifth more: 15,705,600): a house (16 m) centred at (12800, 22528), a sixteenth of it, pays 981,600, with 512 m2 of floor at 4,000, 2,048,000, and 256 m2 of land at 2,000, 512,000: building 2, land cost 1,493,600. A sixteenth of 48 residents is 3 and of 8 jobs 0: the cell keeps 45 and 8. The balance: 400,000,000 - 29,696,000 - 3,541,600 = 366,762,400. Every value worked out by hand.",
+  "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 400000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"command": {"type": "setLand", "cells": [{"row": 5, "column": 3, "use": "residential", "residents": 48, "jobs": 8}, {"row": 5, "column": 5, "use": "residential", "residents": 48, "jobs": 8, "coverage": 0}, {"row": 5, "column": 6, "use": "residential", "residents": 48, "jobs": 8, "coverage": 50}]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityFootprints", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setAreaBuyOut", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 24576, "y": 22528}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "landCell", "row": 5, "column": 5}, "expect": {"found": true, "landCell": {"row": 5, "column": 5, "use": "residential", "residents": 42, "jobs": 7, "coverage": 0}}},
+    {"observe": {"type": "landCell", "row": 5, "column": 6}, "expect": {"found": true, "landCell": {"row": 5, "column": 6, "use": "residential", "residents": 42, "jobs": 7, "coverage": 50}}},
+    {"observe": {"type": "placedBuilding", "building": 1}, "expect": {"found": true, "placedBuilding": {"id": 1, "kind": "office", "x": 24576, "y": 22528, "residents": 12, "jobs": 2, "buildingCost": 24576000, "landCost": 5120000}}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 12800, "y": 22528}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "landCell", "row": 5, "column": 3}, "expect": {"found": true, "landCell": {"row": 5, "column": 3, "use": "residential", "residents": 45, "jobs": 8}}},
+    {"observe": {"type": "placedBuilding", "building": 2}, "expect": {"found": true, "placedBuilding": {"id": 2, "kind": "house", "x": 12800, "y": 22528, "residents": 3, "buildingCost": 2048000, "landCost": 1493600}}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 366762400,
+    "stations": [],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": {"nodes": [], "edges": [], "platforms": []},
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0},
+      "ledger": [],
+      "days": []
+    },
+    "land": {"cells": 3, "residents": 129, "jobs": 22},
+    "cityFootprints": true,
+    "areaBuyOut": true,
+    "cityBuildings": {"buildings": 3, "d1": 3, "d2": 0, "d3": 0, "d4": 0, "existingStock": 0},
+    "placedBuildings": [
+      {"id": 1, "kind": "office", "x": 24576, "y": 22528, "residents": 12, "jobs": 2, "buildingCost": 24576000, "landCost": 5120000},
+      {"id": 2, "kind": "house", "x": 12800, "y": 22528, "residents": 3, "buildingCost": 2048000, "landCost": 1493600}
+    ]
+  }
+}

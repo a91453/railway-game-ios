@@ -74,10 +74,15 @@ extension GameSession {
     /// `places` (``LandImport/cells(in:population:places:water:frame:bounds:)``)
     /// and, since decision 105, the blocks' `water`
     /// (``WaterGrid/cells(frame:bounds:in:)``) and, since decision 115,
-    /// their steep slopes; nothing for any other map, or without the
-    /// population.
-    static func readLand(roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil) {
-        readLand(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places, water: water)
+    /// their steep slopes, and since decision 147 the cells' `coverage`;
+    /// nothing for any other map, or without the population.
+    static func readLand(
+        roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil
+    ) {
+        readLand(
+            within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places, water: water,
+            coverage: coverage
+        )
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks
@@ -85,7 +90,8 @@ extension GameSession {
     /// does round stations: also under a building about to be placed
     /// (decision 95), so it buys out the city's buildings there.
     static func readLand(
-        within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil
+        within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil,
+        coverage: CoverageGrid? = nil
     ) {
         guard let read = world.landBlocks, !points.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
         let have = Set(read)
@@ -96,7 +102,11 @@ extension GameSession {
             }
         }
         guard !wanted.isEmpty else { return }
-        let cells = LandImport.cells(in: wanted, population: population, places: places, water: water, frame: frame, bounds: world.bounds)
+        var cells = LandImport.cells(in: wanted, population: population, places: places, water: water, frame: frame, bounds: world.bounds)
+        // Decision 147: each cell's real coverage, when the app has it.
+        if let coverage {
+            cells = coverage.covering(cells, frame: frame)
+        }
         let wet = water?.cells(frame: frame, bounds: world.bounds, in: wanted) ?? []
         // Decision 115: the steep slopes come from the same file.
         let steep = water?.steepCells(frame: frame, bounds: world.bounds, in: wanted) ?? []

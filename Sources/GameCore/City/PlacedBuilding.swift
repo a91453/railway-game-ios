@@ -228,8 +228,7 @@ extension GameWorld {
         if !movers.isEmpty {
             for (cell, residents, jobs) in movers {
                 guard let index = land.cells.firstIndex(where: { $0.position == cell.position }) else { continue }
-                land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use,
-                                             residents: cell.residents - residents, jobs: cell.jobs - jobs)
+                land.cells[index] = cell.with(residents: cell.residents - residents, jobs: cell.jobs - jobs)
             }
             refreshLandDemand()
         }
