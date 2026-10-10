@@ -84,7 +84,7 @@ Mini Metro 式的捷運建造遊戲，地圖 100%。活的遊戲開不起來（�
 - **點地圖就加一站**，新地圖延遲出現提示「點地圖加車站」。
 - 路線面板：7 欄的顏色格（`.Line-colors`）、站點列表的地上地下條、反轉、複製、刪除、轉乘步行時間。
 
-### 3.5 Taipei GTA（`Railway/taipei_gta_reference/source/`）
+### 3.5 City-world reference（`Railway/city_world_reference/source/`）
 
 開放世界遊戲，手機優先的 HUD。最好的通知寫法在 `notify(msg, ttl, kind)`：
 

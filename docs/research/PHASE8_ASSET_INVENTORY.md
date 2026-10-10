@@ -21,7 +21,7 @@
 | S | `Simulator/reference_snapshot/` |
 | R | `Railway/site_archive_clean/` |
 | R3 | `Railway/site_archive_clean/rail-3d/` |
-| T | `Railway/taipei_gta_reference/source/` |
+| T | `Railway/city_world_reference/source/` |
 | C | `Ci/reference_snapshot/` |
 | O | `Railway/railway_game_reference_clean/` |
 
@@ -55,10 +55,10 @@
 | `T/avatars/manifest.json` | 資料；JSON | 1 | 15,020 | 宣告 17 avatar；實有 8，另 9 avatar／LOD 與全部 17 fallback 缺 | D1 |
 | `T/assets/anim-CQkLTvTS.bin` | 動畫資料；ANM1 | 1 | 439,720 | 43 clips、30 fps、19 動畫關節；需要骨架對應，非 GLB 內建動畫 | A1 |
 | `T/assets/{avatar-CUFURxPX,clips-Cb5uFd0j,animator-DGt1NqrS,rig-BjRdQXtM}.js` | 參數／動畫 adapter；JS | 4 | 142,465 | rest pose、Rocketbox 骨架映射、root motion；逐件 bytes 見 §8.2 | P1／A1 |
-| `T/assets/engine-DKps_Gq_.js`、`world-gYgJkZNf.js` | 城市參數／資料／程序 mesh；JS | 2 | 1,495,038 | 9 區 style、街廓、地標 proxy、擺放；world 有 43 個 site 與 1 個 postfx 依賴缺檔 | P1／D1 |
-| `T/assets/site-donqi-ximen-BYSklXQx.js` | 城市程序 mesh；JS | 1 | 28,314 | 西門唐吉訶德外觀；沒有獨立建物 GLB | P1 |
-| `T/assets/site-fongda-coffee-BLqPP37I.js` | 城市程序 mesh；JS | 1 | 32,315 | 蜂大咖啡外觀 | P1 |
-| `T/assets/site-railway-department-park-BykCBjAy.js` | 城市程序 mesh；JS | 1 | 25,070 | 鐵道部園區外觀 | P1 |
+| `T/assets/engine-Dl04UrJP.js`、`world-DCb11kLR.js` | 城市參數／資料／程序 mesh；JS | 2 | 1,586,227 | 9 區 style、街廓、地標 proxy、擺放；world 仍有 43 個 site 依賴缺檔，postfx 已補齊 | P1／D1 |
+| `T/assets/site-donqi-ximen-C4Uhuz6T.js` | 城市程序 mesh；JS | 1 | 28,315 | 西門唐吉訶德外觀；沒有獨立建物 GLB | P1 |
+| `T/assets/site-fongda-coffee-ncv_Ui7v.js` | 城市程序 mesh；JS | 1 | 32,316 | 蜂大咖啡外觀 | P1 |
+| `T/assets/site-railway-department-park-CeP4zM45.js` | 城市程序 mesh；JS | 1 | 25,073 | 鐵道部園區外觀 | P1 |
 | `T/splash/launch-*.png`、`icons/*.png`、`_favicon.png` | 圖片／圖示；PNG | 45（launch 42） | 6,132,453 | launch 多種螢幕解析度；圖示 32²、180²；不是城市貼圖 | I1 |
 | `T/title/*.webp`、`icons/icon.svg` | 圖片／圖示；WebP／SVG | 7 | 1,189,248 | WebP 六張為 960×1706 到 2560×1440，SVG 408 bytes；見 §8.2 | I1 |
 | `C` 非 external 的圖示／圖片 | 圖片／圖示；PNG／JPEG／WebP／SVG | 31 | 1,868,612 | 16²～1920×1200；地球圖 1774×887，逐件見 §8.4 | I1 |
@@ -84,7 +84,7 @@
 | `R/memories/tainan-2026-09-12/vendor/three.module.js` | 函式庫資料／JS／1（重複版本） | 1,314,680 | L1 |
 | `R/vendor/maplibre-gl.js` | 函式庫資料／JS／1 | 955,078 | L1 |
 | `R3/vendor/pmtiles.js` | 函式庫資料／JS／1 | 20,229 | L1 |
-| `T/assets/three-DoD3b_mB.js` | 函式庫資料／JS／1 | 737,923 | L1 |
+| `T/assets/three-CUv1qSsi.js` | 函式庫資料／JS／1 | 737,923 | L1 |
 | §5 明列的 9 個台北 worker | 程序 mesh／貼圖生成器與內嵌函式庫／JS／9 | 2,372,853 | P1／L1 |
 | `T/avatars/basis/basis_transcoder.js` | 轉碼器／JS／1 | 57,529 | L1 |
 | `T/avatars/basis/basis_transcoder.wasm` | 轉碼器／WASM／1 | 527,333 | L1 |
@@ -218,7 +218,7 @@ S4 明定 GameCore 不存橋墩、隧道壁或 mesh。以上目標都是 App／G
 
 作者自己的 E201、列車／建物外觀、Simulator 程序造型、台北 site／動畫、圖示沒有另列限制時，依 `CLAUDE.md` 可用。來源 model 的 `sources`／攝影網址是外觀參考，**不是收錄照片貼圖**；47 建物的 `sourcePhotosIncluded`／`operatorLogoIncluded` 都為 false。保留來源 metadata，不從參考網址自行下載照片或把它當已有授權的 texture。
 
-個別仍需補的項目：`T/avatars/basis/*`、`T/assets/avatar-CUFURxPX.js` 的 meshopt／Basis 依賴、`T/assets/three-DoD3b_mB.js`、`R3/vendor/pmtiles.js` 沒有找到完整逐元件告示；Material Design Icons／element／iconfont 等字型沒有內嵌完整使用條款，Noto Sans PBF 也只有 family／range／glyph，需補對應字型版的條款。`C/icons8-*` 與其 hsr 子目錄明確有來源品牌檔名，`C/external/flaticon/512/2776/2776067.png` 也有第三方來源路徑，但快照未提供對應取得方案／逐圖示授權；採用時核對實際方案與署名，不把檔名當 licence，也不預設必須買新授權。這些具體項不影響未標第三方條款的作者素材。
+個別仍需補的項目：`T/avatars/basis/*`、`T/assets/avatar-BUA-61rs.js` 的 meshopt／Basis 依賴、`T/assets/three-CUv1qSsi.js`、`R3/vendor/pmtiles.js` 沒有找到完整逐元件告示；Material Design Icons／element／iconfont 等字型沒有內嵌完整使用條款，Noto Sans PBF 也只有 family／range／glyph，需補對應字型版的條款。`C/icons8-*` 與其 hsr 子目錄明確有來源品牌檔名，`C/external/flaticon/512/2776/2776067.png` 也有第三方來源路徑，但快照未提供對應取得方案／逐圖示授權；採用時核對實際方案與署名，不把檔名當 licence，也不預設必須買新授權。這些具體項不影響未標第三方條款的作者素材。
 
 `O/binary_reference/railway_core_15_3.wasm` 可辨認 OpenTTD，但快照未帶其完整授權與對應原始碼，不應把它誤列為作者自有 mesh；若日後真的散布這個編譯核心，另核對該版本上游條款及 source-offer 等義務。此次素材計畫完全不需要它。SwiftGodot／SwiftGodotKit 在 `Railway/SWIFT_GIS_GAME_REFERENCE_STUDY.md` 標 MIT；正式選用還要釘版本、Godot runtime 與傳遞第三方告示，這次沒有新增它們。
 
@@ -401,7 +401,7 @@ parts 全齊的 **23 個車型 ID**：`c321`、`c381`、`wenhu`、`airportlocal`
 | `student-m.glb` | 191,944 | 3,517 | 20 | 3 | 149,395 | Male_Adult_01／Business_Male_02 |
 | `wen.glb` | 1,010,100 | 8,612 | 81 | 7 | 899,856 | Female_Adult_04／Sports_Female_02 |
 
-動畫 adapter 四檔（P1／A1，JS）逐件大小：`T/assets/avatar-CUFURxPX.js` **112,468 bytes**；`T/assets/clips-Cb5uFd0j.js` **2,708 bytes**；`T/assets/animator-DGt1NqrS.js` **26,675 bytes**；`T/assets/rig-BjRdQXtM.js` **614 bytes**，合計 **142,465 bytes**。
+動畫 adapter 四檔（P1／A1，JS）逐件大小：`T/assets/avatar-BUA-61rs.js` **112,468 bytes**；`T/assets/clips-Cb5uFd0j.js` **2,708 bytes**；`T/assets/animator-CHWSGVhN.js` **26,675 bytes**；`T/assets/rig-BjRdQXtM.js` **614 bytes**，合計 **142,465 bytes**。
 
 六名群眾都各有 color／normal／mask 三張 KTX2；兩名英雄各七張，所以共 32 張。貼圖尺寸見 §2.1，沒有外部角色貼圖另外漏算。
 

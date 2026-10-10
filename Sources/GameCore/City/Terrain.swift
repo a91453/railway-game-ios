@@ -22,7 +22,7 @@
 // are kept as runs too, never on water.
 //
 // The owner's references keep water the same way, as a kind of ground
-// (`taipei_gta_reference`'s `surfaceAt` gives `'water'`, and its
+// (`city_world_reference`'s `surfaceAt` gives `'water'`, and its
 // placement samples a building's footprint against the ground it may
 // stand on); its rules and numbers here are this project's (gap).
 

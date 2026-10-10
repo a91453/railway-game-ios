@@ -47,7 +47,7 @@ mapping table in the PR (reference file/function → target file/function, with
 any fixed-point scale where relevant). Check all available implementation
 sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
 `Railway/railway_game_reference_clean/` (start with its
-`00_READ_ME_FIRST.md`), `Railway/taipei_gta_reference/` (start with its
+`00_READ_ME_FIRST.md`), `Railway/city_world_reference/` (start with its
 `00_READ_ME_FIRST.md` and `source/`), `Simulator/` (start with
 `REFERENCE_REFRESH_2026-10-07.md` and `SANITIZATION_REPORT.md`, then inspect
 `reference_snapshot/` for reusable simulator runtime/UI, track geometry,
