@@ -330,7 +330,7 @@ extension GameSession {
             overlay.site = PlanRect(minX: preview.centre.x - half, minY: preview.centre.y - half,
                                     maxX: preview.centre.x - half + preview.kind.side, maxY: preview.centre.y - half + preview.kind.side)
             overlay.siteIsBuildable = preview.problem == nil
-            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column) }
+            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column, in: world) }
         }
         // Decision 140: a real-world map has a city building on nearly every
         // cell, and their squares over the whole view hid its streets; there
@@ -401,12 +401,13 @@ public struct PlanRect: Hashable, Sendable {
     }
 
     /// The square the city's building on the cell at `row`, `column`
-    /// stands on (decision 95): ``PlacedBuildingRules/cityBuildingSide``
-    /// across, in the middle of the cell.
-    public static func cityBuilding(row: Int, column: Int) -> PlanRect {
-        let inset = (Land.cellLength - PlacedBuildingRules.cityBuildingSide) / 2
+    /// stands on in `world` (decision 95): ``GameWorld/cityBuildingSide(row:column:)``
+    /// across (decision 142), in the middle of the cell.
+    public static func cityBuilding(row: Int, column: Int, in world: GameWorld) -> PlanRect {
+        let side = world.cityBuildingSide(row: row, column: column)
+        let inset = (Land.cellLength - side) / 2
         let minX = Int64(column) * Land.cellLength + inset, minY = Int64(row) * Land.cellLength + inset
-        return PlanRect(minX: minX, minY: minY, maxX: minX + PlacedBuildingRules.cityBuildingSide, maxY: minY + PlacedBuildingRules.cityBuildingSide)
+        return PlanRect(minX: minX, minY: minY, maxX: minX + side, maxY: minY + side)
     }
 
     /// The square `building` stands on.

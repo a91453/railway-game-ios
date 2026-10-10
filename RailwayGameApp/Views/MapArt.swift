@@ -595,7 +595,7 @@ enum MapArt {
         guard !skyline.isEmpty, cellPoints >= skylineMinimumCellPoints else { return }
         let rises = cellPoints >= skylineRisingCellPoints
         let lots = skyline.lots(in: drawingRegion(projection), rowsBelow: rises ? CitySkyline.rowsRisenOver : 0)
-        let length = Double(Land.cellLength), side = Double(PlacedBuildingRules.cityBuildingSide)
+        let length = Double(Land.cellLength)
         let lineWidth = cellPoints < 14 ? 0.6 : 1
         var ground: [LandUse: Path] = [:], walls: [LandUse: Path] = [:], roofs: [LandUse: Path] = [:], outlines = Path()
         var lit: [(roof: CGRect, light: Double)] = []
@@ -632,7 +632,9 @@ enum MapArt {
                 continue
             }
             if let frame, !frame.isShown { continue }
-            let drawnSide = side * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
+            // Decision 142: each on its own square, its density's with the
+            // city's footprints.
+            let drawnSide = Double(lot.side) * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
             let foot = screenRect(
                 minX: minX + drawnInset, minY: minY + drawnInset,
                 maxX: minX + drawnInset + drawnSide, maxY: minY + drawnInset + drawnSide,
@@ -725,7 +727,7 @@ enum MapArt {
         var sites = Path()
         for row in firstRow...lastRow {
             for column in firstColumn...lastColumn where world.land.cell(row: row, column: column) != nil {
-                let square = PlanRect.cityBuilding(row: row, column: column)
+                let square = PlanRect.cityBuilding(row: row, column: column, in: world)
                 sites.addRect(screenRect(minX: Double(square.minX), minY: Double(square.minY), maxX: Double(square.maxX), maxY: Double(square.maxY), projection))
             }
         }

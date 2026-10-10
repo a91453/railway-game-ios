@@ -129,6 +129,25 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(overlay.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
     }
 
+    /// Decision 142: a new game's city buildings stand on squares of their
+    /// density's size, and the building tool marks the one it buys out at
+    /// that size.
+    func testANewGameMarksTheSquareOfTheDensityABuildingBuysOut() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        XCTAssertTrue(GameWorld.newGame().cityFootprints, "a new game has them")
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
+        // A D1's 20 m square: 20,480 + 1,408 to 20,480 + 2,688.
+        XCTAssertEqual(session.buildingOverlay?.boughtOut, [PlanRect(minX: 21_888, minY: 21_888, maxX: 23_168, maxY: 23_168)])
+        XCTAssertEqual(PlanRect.cityBuilding(row: 5, column: 5, in: session.world), PlanRect(minX: 21_888, minY: 21_888, maxX: 23_168, maxY: 23_168))
+    }
+
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])

@@ -426,9 +426,10 @@ extension GameWorld {
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
             let position = land.cells[index].position
             // Decision 98: nothing is raised on land zoned no development;
-            // decision 115: nor on a steep slope.
+            // decision 115: nor on a steep slope; decision 142: nor where
+            // its larger square would reach one of the company's buildings.
             if full.contains(position), !raised.contains(position), allowsGrowth(row: position.row, column: position.column),
-               !terrain.isSteep(row: position.row, column: position.column) {
+               !terrain.isSteep(row: position.row, column: position.column), !raiseIsBlocked(at: position) {
                 cells.append(position)
                 wanted.append(levels?.level(of: land.cells[index].use) ?? 0)
             }

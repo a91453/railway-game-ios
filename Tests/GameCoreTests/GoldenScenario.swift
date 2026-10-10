@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 53
+    static let schemaVersion = 54
 
     var description: String
     var initialState: InitialState
@@ -190,7 +190,7 @@ struct GoldenScenario: Decodable {
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
-                 .command(.setCityDemand, _), .observe(.cityDemand, _),
+                 .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -532,6 +532,8 @@ enum ScenarioCommand: Equatable {
     case setOutsideConnections(Bool)
     /// Schema 53 (decision 139): the city's demand.
     case setCityDemand(Bool)
+    /// Schema 54 (decision 142): the city's footprints.
+    case setCityFootprints(Bool)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -656,6 +658,8 @@ enum ScenarioCommand: Equatable {
                 world.setOutsideConnections(enabled)
             case .setCityDemand(let enabled):
                 world.setCityDemand(enabled)
+            case .setCityFootprints(let enabled):
+                world.setCityFootprints(enabled)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -719,6 +723,9 @@ extension ScenarioCommand: Decodable {
         // Schema 53: the city's demand (decision 139).
         case "setCityDemand":
             self = try .setCityDemand(container.decode(Bool.self, forKey: .enabled))
+        // Schema 54: the city's footprints (decision 142).
+        case "setCityFootprints":
+            self = try .setCityFootprints(container.decode(Bool.self, forKey: .enabled))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1975,6 +1982,9 @@ struct WorldSummary: Codable, Equatable {
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
     var cityDemand: CityDemand?
+    /// Whether a city building's square is its density's (schema 54,
+    /// decision 142); left out while it is off.
+    var cityFootprints: Bool?
     /// How many buildings of each density stand while the city's buildings
     /// are on (schema 37, Phase 6c-1); left out while they are off.
     var cityBuildings: CityBuildingsSummary?
@@ -2208,6 +2218,7 @@ struct WorldSummary: Codable, Equatable {
         distanceDemand = world.distanceDemand ? true : nil
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
+        cityFootprints = world.cityFootprints ? true : nil
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }

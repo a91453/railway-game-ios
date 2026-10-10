@@ -114,6 +114,20 @@ final class SkylineGrowthTests: XCTestCase {
         }
     }
 
+    /// Decision 142: a raised building's square grows with it, from its old
+    /// side to its new.
+    func testARaisedBuildingsSquareGrowsWithIt() throws {
+        let old = CitySkyline(lots: [CitySkyline.Lot(row: 0, column: 0, use: .residential, density: 1, side: 1_280)], time: .zero)
+        let lot = CitySkyline.Lot(row: 0, column: 0, use: .residential, density: 2, side: 1_792)
+        let growth = try XCTUnwrap(SkylineGrowth(from: old, to: CitySkyline(lots: [lot], time: night)))
+        let rise = try XCTUnwrap(growth.rise(row: 0, column: 0))
+        XCTAssertEqual(rise.fromSide, 1_280)
+        XCTAssertEqual(try XCTUnwrap(growth.frame(of: lot, elapsed: rise.delay)).sideShare, 1_280.0 / 1_792, accuracy: 1e-9)
+        let shares = stride(from: 0.05, through: SkylineGrowth.riseDuration, by: 0.05).map { growth.frame(of: lot, elapsed: rise.delay + $0)!.sideShare }
+        XCTAssertEqual(shares, shares.sorted())
+        XCTAssertEqual(try XCTUnwrap(growth.frame(of: lot, elapsed: SkylineGrowth.duration)).sideShare, 1)
+    }
+
     /// On a real-world map the buildings that grew stay whole while they
     /// rise and a moment after, then fade out.
     func testARealWorldMapsGrowthFadesOutAfterItHasRisen() {

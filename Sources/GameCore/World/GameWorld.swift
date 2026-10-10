@@ -102,6 +102,11 @@ public struct GameWorld: Equatable, Sendable {
     /// from before it; the app's new games turn it on. Set by
     /// ``setCityDemand(_:)``, the land's replacement and its growth only.
     public internal(set) var cityDemand: CityDemand?
+    /// Whether a city building's square is its density's, 20 to 40 m
+    /// across, rather than 40 m whatever its height (decision 142). Off in
+    /// a new world and in saves from before it; the app's new games turn it
+    /// on. Set by ``setCityFootprints(_:)`` only.
+    public internal(set) var cityFootprints: Bool = false
     /// Whether the city's buildings stand on the land (Phase 6c-1,
     /// ARCHITECTURE decision 74). Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
@@ -3523,7 +3528,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityFootprints, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground
     }
 
@@ -3615,6 +3620,7 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
+        cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
         cityBuildings = container.contains(.cityBuildings) ? try container.decode(Bool.self, forKey: .cityBuildings) : false
         buildings = container.contains(.buildings) ? try container.decode(CityBuildings.self, forKey: .buildings) : CityBuildings()
         transferGroups = container.contains(.transferGroups) ? try container.decode([TransferGroup].self, forKey: .transferGroups) : []
@@ -3727,6 +3733,9 @@ extension GameWorld: Codable {
         }
         if let cityDemand {
             try container.encode(cityDemand, forKey: .cityDemand)
+        }
+        if cityFootprints {
+            try container.encode(true, forKey: .cityFootprints)
         }
         if cityBuildings {
             try container.encode(true, forKey: .cityBuildings)

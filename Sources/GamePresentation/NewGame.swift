@@ -87,6 +87,9 @@ extension GameWorld {
             // Decision 139: the city keeps the mix of homes, shops and work
             // it starts with: what it is short of is in demand.
             world.setCityDemand(true)
+            // Decision 142: a low town's buildings leave room for the
+            // company's between them.
+            world.setCityFootprints(true)
             return world
         } catch {
             // An empty world has no trains to share track, and land and

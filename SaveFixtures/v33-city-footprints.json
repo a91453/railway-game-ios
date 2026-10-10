@@ -1,0 +1,120 @@
+{
+  "saveVersion" : 33,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 26624000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "building",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 26624000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "buildings" : [
+      {
+        "column" : 5,
+        "density" : [
+          1
+        ],
+        "id" : 1,
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "density" : [
+          4
+        ],
+        "id" : 2,
+        "row" : 5,
+        "use" : "residential"
+      }
+    ],
+    "cityBuildings" : true,
+    "cityFootprints" : true,
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 973376000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 5,
+        "residents" : [
+          4
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 9,
+        "jobs" : [
+          3
+        ],
+        "residents" : [
+          1000
+        ],
+        "row" : 5,
+        "use" : "residential"
+      }
+    ],
+    "nextPlacedBuildingID" : 2,
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "placedBuildings" : [
+      {
+        "buildingCost" : 24576000,
+        "centre" : {
+          "x" : 24320,
+          "y" : 22528
+        },
+        "id" : 1,
+        "kind" : "office",
+        "landCost" : 2048000
+      }
+    ],
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}
