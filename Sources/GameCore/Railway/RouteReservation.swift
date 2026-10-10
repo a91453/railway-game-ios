@@ -267,11 +267,139 @@ extension GameWorld {
         return blocked
     }
 
+    /// A train's reservation (see ``Train/reservation``), to ask whether it
+    /// holds a resource: by halving while it is in resource order, as the
+    /// game keeps it, else through a set of it. A set of a reservation some
+    /// hundreds long, built for every question, was much of the time
+    /// traffic control took.
+    struct ReservedTrack {
+        private let ordered: [TrackResource]
+        private let unordered: Set<TrackResource>?
+
+        init(_ reservation: [TrackResource]) {
+            ordered = reservation
+            unordered = zip(reservation, reservation.dropFirst()).allSatisfy { $0 < $1 } ? nil : Set(reservation)
+        }
+
+        func contains(_ resource: TrackResource) -> Bool {
+            if let unordered { return unordered.contains(resource) }
+            var (low, high) = (0, ordered.count)
+            while low < high {
+                let middle = (low + high) / 2
+                if ordered[middle] < resource {
+                    low = middle + 1
+                } else {
+                    high = middle
+                }
+            }
+            return low < ordered.count && ordered[low] == resource
+        }
+    }
+
+    /// The track a train holds (see ``held(_:)``), to ask a resource at a
+    /// time.
+    struct HeldTrack {
+        /// What it stands on and the junctions its body fouls.
+        let body: Set<TrackResource>
+        let reservation: [TrackResource]
+        let reserved: ReservedTrack
+
+        func contains(_ resource: TrackResource) -> Bool {
+            body.contains(resource) || reserved.contains(resource)
+        }
+
+        /// All of it, some perhaps twice.
+        var resources: [TrackResource] { Array(body) + reservation }
+    }
+
+    func heldTrack(_ train: Train) -> HeldTrack {
+        let body = bodyStretches(of: train)
+        var standing = Set(resources(covering: body))
+        standing.formUnion(foulingNodes(covering: body))
+        return HeldTrack(body: standing, reservation: train.reservation, reserved: ReservedTrack(train.reservation))
+    }
+
+    /// What every train holds (see ``held(_:)``) and, following another,
+    /// claims (see ``claim(of:)``), worked out once to ask
+    /// ``holder(of:except:holders:)`` and
+    /// ``blockedTrack(except:holders:)`` of many trains of one world.
+    struct TrackHolders {
+        let held: [TrainID: HeldTrack]
+        let claims: [TrainID: (route: Set<TrackResource>, waiting: Set<TrackResource>)]
+
+        /// Whether train `id` holds any of `claim`'s route, which keeps it
+        /// from waiting for that claim (see ``holder(of:except:)``).
+        func holdsAny(of claim: (route: Set<TrackResource>, waiting: Set<TrackResource>), _ id: TrainID) -> Bool {
+            guard let own = held[id] else { return false }
+            return claim.route.contains(where: own.contains)
+        }
+    }
+
+    func trackHolders() -> TrackHolders {
+        trackHolders(authorities: trains.map(authority))
+    }
+
+    /// ``trackHolders()`` knowing ``authority(of:)`` of every train, in
+    /// order.
+    func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?]) -> TrackHolders {
+        var held: [TrainID: HeldTrack] = [:]
+        for train in trains {
+            held[train.id] = heldTrack(train)
+        }
+        var claims: [TrainID: (route: Set<TrackResource>, waiting: Set<TrackResource>)] = [:]
+        for (train, authority) in zip(trains, authorities) {
+            // A following train's route envelope (see ``routeEnvelope(of:)``)
+            // is the base and every piece of its envelopes.
+            guard let envelopes = authority?.envelopes else { continue }
+            let route = routeResources(envelopes)
+            let others = trains.filter { $0.id != train.id && $0.position != nil }.map { held[$0.id]! }
+            claims[train.id] = (route, route.filter { resource in !others.contains { $0.contains(resource) } })
+        }
+        return TrackHolders(held: held, claims: claims)
+    }
+
+    /// ``holder(of:except:)`` from `holders`, the world's (see
+    /// ``trackHolders()``).
+    func holder(of resources: Set<TrackResource>, except id: TrainID, holders: TrackHolders) -> TrainID? {
+        trains.first { other in
+            guard other.id != id, other.position != nil else { return false }
+            if network.fouls(holders.held[other.id]!.resources, resources.contains) { return true }
+            guard let claim = holders.claims[other.id], !holders.holdsAny(of: claim, id) else { return false }
+            return network.fouls(claim.waiting, resources)
+        }?.id
+    }
+
+    /// ``blockedTrack(except:)``, to ask a resource at a time.
+    struct BlockedTrack {
+        let held: [HeldTrack]
+        let waiting: [Set<TrackResource>]
+
+        func contains(_ resource: TrackResource) -> Bool {
+            held.contains { $0.contains(resource) } || waiting.contains { $0.contains(resource) }
+        }
+    }
+
+    /// ``blockedTrack(except:)`` from `holders`, the world's (see
+    /// ``trackHolders()``).
+    func blockedTrack(except id: TrainID, holders: TrackHolders) -> BlockedTrack {
+        var held: [HeldTrack] = []
+        var waiting: [Set<TrackResource>] = []
+        for other in trains where other.id != id && other.position != nil {
+            held.append(holders.held[other.id]!)
+            if let claim = holders.claims[other.id], !holders.holdsAny(of: claim, id) {
+                waiting.append(claim.waiting)
+            }
+        }
+        return BlockedTrack(held: held, waiting: waiting)
+    }
+
     /// The track `train` holds: what it stands on, the junctions its body
     /// fouls, and its reservation.
     func held(_ train: Train) -> Set<TrackResource> {
-        var resources = Set(occupied(train))
-        resources.formUnion(foulingNodes(covering: bodyStretches(of: train)))
+        // What it stands on (see ``occupied(_:)``) is what its body covers.
+        let body = bodyStretches(of: train)
+        var resources = Set(self.resources(covering: body))
+        resources.formUnion(foulingNodes(covering: body))
         resources.formUnion(train.reservation)
         return resources
     }
@@ -288,7 +416,7 @@ extension GameWorld {
         guard train.position != nil else { return ([], false) }
         let body = bodyStretches(of: train)
         let route = routeStretches(of: train)
-        var resources = Set(occupied(train))
+        var resources = Set(self.resources(covering: body))
         resources.formUnion(self.resources(covering: route.stretches))
         resources.formUnion(foulingNodes(covering: body + route.stretches))
         return (resources, route.moves)
@@ -363,48 +491,121 @@ extension GameWorld {
         let stretches: [TrackStretch]
         /// How far from the head each stretch ends (saturating).
         let ends: [Int64]
-        /// For each stretch, everything before it: what the train stands
-        /// on, the junctions its body fouls, and the track of every earlier
-        /// stretch whole. One more than the stretches: the last is all of
-        /// it.
-        let before: [Set<TrackResource>]
+        /// What the train stands on and the junctions its body fouls (a
+        /// resource may be listed twice).
+        let base: [TrackResource]
+        /// For each stretch, its track whole: what it covers and the
+        /// junctions it fouls. The envelope to a distance is the base, the
+        /// pieces of the stretches before the one it ends in, and that one
+        /// as far as it goes.
+        let pieces: [[TrackResource]]
 
         /// The length of the route (see ``GameWorld/routeLength(of:)``).
         var length: Int64 { ends.last ?? 0 }
     }
 
     func authorityEnvelopes(of train: Train) -> AuthorityEnvelopes {
-        let stretches = routeStretches(of: train).stretches
-        var resources = Set(occupied(train))
-        resources.formUnion(foulingNodes(covering: bodyStretches(of: train)))
-        var before = [resources]
+        authorityEnvelopes(of: train, along: routeStretches(of: train).stretches)
+    }
+
+    /// ``authorityEnvelopes(of:)`` with `train`'s route stretches already
+    /// worked out.
+    private func authorityEnvelopes(of train: Train, along stretches: [TrackStretch]) -> AuthorityEnvelopes {
+        let body = bodyStretches(of: train)
+        let base = resources(covering: body) + foulingNodes(covering: body)
         var ends: [Int64] = []
+        var pieces: [[TrackResource]] = []
         var end: Int64 = 0
         for stretch in stretches {
             let (sum, overflow) = end.addingReportingOverflow(stretch.to - stretch.from)
             end = overflow ? .max : sum
             ends.append(end)
-            resources.formUnion(self.resources(covering: [stretch]))
-            resources.formUnion(foulingNodes(covering: [stretch]))
-            before.append(resources)
+            pieces.append(resources(covering: [stretch]) + foulingNodes(covering: [stretch]))
         }
-        return AuthorityEnvelopes(stretches: stretches, ends: ends, before: before)
+        return AuthorityEnvelopes(stretches: stretches, ends: ends, base: base, pieces: pieces)
+    }
+
+    /// The track of the whole route (see ``routeEnvelope(of:)``): the base
+    /// and every piece.
+    func routeResources(_ envelopes: AuthorityEnvelopes) -> Set<TrackResource> {
+        var resources = Set(envelopes.base)
+        for piece in envelopes.pieces {
+            resources.formUnion(piece)
+        }
+        return resources
+    }
+
+    /// The stretch the envelope to `distance` ends in (see
+    /// ``authorityEnvelope(_:to:)``), its index, and how far into it the
+    /// envelope goes: the first stretch always, even for no distance.
+    /// - Precondition: `envelopes` has a stretch.
+    private func authorityEnd(_ envelopes: AuthorityEnvelopes, to distance: Int64) -> (index: Int, part: TrackStretch) {
+        let index = envelopes.ends.firstIndex { distance <= $0 } ?? envelopes.stretches.count - 1
+        let stretch = envelopes.stretches[index]
+        let start = index == 0 ? 0 : envelopes.ends[index - 1]
+        let length = min(stretch.to - stretch.from, max(distance - start, 0))
+        return (index, TrackStretch(traversal: stretch.traversal, from: stretch.from, to: stretch.from + length))
     }
 
     /// ``authorityEnvelope(of:to:)`` from `envelopes`: the stretches before
     /// the one `distance` ends in whole, and that one as far as it goes
     /// (the first always, even for no distance).
     func authorityEnvelope(_ envelopes: AuthorityEnvelopes, to distance: Int64) -> Set<TrackResource> {
-        guard !envelopes.stretches.isEmpty else { return envelopes.before[0] }
-        let index = envelopes.ends.firstIndex { distance <= $0 } ?? envelopes.stretches.count - 1
-        let stretch = envelopes.stretches[index]
-        let start = index == 0 ? 0 : envelopes.ends[index - 1]
-        let length = min(stretch.to - stretch.from, max(distance - start, 0))
-        let part = [TrackStretch(traversal: stretch.traversal, from: stretch.from, to: stretch.from + length)]
-        var resources = envelopes.before[index]
-        resources.formUnion(self.resources(covering: part))
-        resources.formUnion(foulingNodes(covering: part))
+        var resources = Set(envelopes.base)
+        guard !envelopes.stretches.isEmpty else { return resources }
+        let end = authorityEnd(envelopes, to: distance)
+        for piece in envelopes.pieces[..<end.index] {
+            resources.formUnion(piece)
+        }
+        resources.formUnion(self.resources(covering: [end.part]))
+        resources.formUnion(foulingNodes(covering: [end.part]))
         return resources
+    }
+
+    /// Whether the envelope to `distance` (see ``authorityEnvelope(_:to:)``)
+    /// is `clear`, as ``longestAuthority(_:from:clear:)`` asks it.
+    func isAuthority(_ envelopes: AuthorityEnvelopes, to distance: Int64, clear: ([TrackResource]) -> Bool) -> Bool {
+        let clearBase = clear(envelopes.base)
+        guard clearBase, !envelopes.stretches.isEmpty else { return clearBase }
+        let end = authorityEnd(envelopes, to: distance)
+        return envelopes.pieces[..<end.index].allSatisfy(clear) && clear(resources(covering: [end.part]) + foulingNodes(covering: [end.part]))
+    }
+
+    /// ``isAuthority(_:to:clear:)``, knowing whether the base is clear and
+    /// how many of the first stretches are clear whole.
+    private func isAuthority(
+        _ envelopes: AuthorityEnvelopes, to distance: Int64, clear: ([TrackResource]) -> Bool, clearBase: Bool, leading: Int
+    ) -> Bool {
+        guard clearBase, !envelopes.stretches.isEmpty else { return clearBase }
+        let end = authorityEnd(envelopes, to: distance)
+        guard end.index <= leading else { return false }
+        return clear(resources(covering: [end.part]) + foulingNodes(covering: [end.part]))
+    }
+
+    /// The longest distance from `low` to the end of the route whose
+    /// envelope (see ``authorityEnvelope(_:to:)``) is `clear`, found by
+    /// halving: `low` when no longer one is. `clear` must hold of a set of
+    /// track exactly when it holds of each part of it (as "held by the
+    /// reservation" and "fouling nothing blocked" do), so each envelope is
+    /// tried a part at a time (the base, the whole stretches before its
+    /// end, and the part of the last), and never gathered.
+    func longestAuthority(_ envelopes: AuthorityEnvelopes, from low: Int64, clear: ([TrackResource]) -> Bool) -> Int64 {
+        let clearBase = clear(envelopes.base)
+        // The stretches from the first that are clear whole.
+        var leading = 0
+        while clearBase, leading < envelopes.pieces.count, clear(envelopes.pieces[leading]) {
+            leading += 1
+        }
+        var (low, high) = (low, envelopes.length)
+        while low < high {
+            let middle = low + (high - low + 1) / 2
+            if isAuthority(envelopes, to: middle, clear: clear, clearBase: clearBase, leading: leading) {
+                low = middle
+            } else {
+                high = middle - 1
+            }
+        }
+        return low
     }
 
     /// How far along its route `train` has world units of its route
@@ -426,28 +627,30 @@ extension GameWorld {
     /// its reservation holds it to (see ``authorityEnvelope(of:to:)``).
     /// Derived from the reservation, never saved.
     func authorityLeft(of train: Train) -> Int64? {
+        authority(of: train)?.left
+    }
+
+    /// ``authorityLeft(of:)`` of a train that follows another, with the
+    /// envelopes it was found from (see ``authorityEnvelopes(of:)``); `nil`
+    /// for any other train.
+    func authority(of train: Train) -> (left: Int64, envelopes: AuthorityEnvelopes)? {
         guard isTrafficControlEnabled, !train.reservation.isEmpty else { return nil }
-        let reservation = Set(train.reservation)
+        let reservation = ReservedTrack(train.reservation)
         let route = routeStretches(of: train)
         // A reservation that holds where the route ends holds all of it: a
         // following train's ends at least ``followingGap`` short of that.
         guard let last = route.stretches.last,
-              !resources(covering: [TrackStretch(traversal: last.traversal, from: last.to, to: last.to)]).allSatisfy(reservation.contains)
+              !resources(covering: [TrackStretch(traversal: last.traversal, from: last.to, to: last.to)]).allSatisfy(reservation.contains),
+              route.moves
         else { return nil }
-        let envelope = routeEnvelope(of: train)
-        guard envelope.moves, !envelope.resources.isSubset(of: reservation) else { return nil }
+        // Its route envelope (see ``routeEnvelope(of:)``) is the base and
+        // every piece together: a reservation holding all of them holds
+        // the whole route.
+        let envelopes = authorityEnvelopes(of: train, along: route.stretches)
+        let holds = { (piece: [TrackResource]) in piece.allSatisfy(reservation.contains) }
+        guard !holds(envelopes.base) || !envelopes.pieces.allSatisfy(holds) else { return nil }
         // The longest distance whose track the reservation holds.
-        let envelopes = authorityEnvelopes(of: train)
-        var (low, high) = (Int64(0), envelopes.length)
-        while low < high {
-            let middle = low + (high - low + 1) / 2
-            if authorityEnvelope(envelopes, to: middle).isSubset(of: reservation) {
-                low = middle
-            } else {
-                high = middle - 1
-            }
-        }
-        return low
+        return (longestAuthority(envelopes, from: 0, clear: holds), envelopes)
     }
 
     /// Whether `train` follows another (Stage U2): under traffic control
@@ -497,16 +700,8 @@ extension GameWorld {
         // The longest distance whose track no other train holds.
         let blocked = blockedTrack(except: candidate.id)
         let envelopes = authorityEnvelopes(of: candidate)
-        var (low, high) = (Int64(0), envelopes.length)
-        while low < high {
-            let middle = low + (high - low + 1) / 2
-            if !network.fouls(authorityEnvelope(envelopes, to: middle), blocked) {
-                low = middle
-            } else {
-                high = middle - 1
-            }
-        }
-        let authority = low - Self.followingGap
+        let free = longestAuthority(envelopes, from: 0) { !network.fouls($0, blocked.contains) }
+        let authority = free - Self.followingGap
         guard authority >= 1 else { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()

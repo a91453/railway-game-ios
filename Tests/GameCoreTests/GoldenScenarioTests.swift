@@ -488,6 +488,12 @@ final class GoldenScenarioTests: XCTestCase {
             return [.zone(nil), .zone(zone == .residential ? .reserved : .residential)]
         case .water(let water):
             return [.water(!water)]
+        case .cityDemand(let demand):
+            var homes = demand, shops = demand, work = demand
+            homes.homes += 1
+            shops.shops += 1
+            work.work += 1
+            return [.cityDemand(homes), .cityDemand(shops), .cityDemand(work)]
         case .steep(let steep):
             return [.steep(!steep)]
         case .groundHeight(nil):

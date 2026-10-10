@@ -65,7 +65,7 @@ extension GameSession {
             // Not an edit: as for a game's stations, reading land in is not
             // something to undo.
             readLand(within: Self.buildingLandReach, of: point)
-            buildingSite = point
+            buildingSite = snappedBuildingSite(point)
             message = nil
             if buildingBuildsOnTap {
                 return confirmBuilding()
@@ -135,8 +135,54 @@ extension GameSession {
         dragBuildingSite(from: start, to: end)
         if let site = buildingSite {
             readLand(within: Self.buildingLandReach, of: site)
+            buildingSite = snappedBuildingSite(site)
         }
         buildingDragSiteBefore = nil
+    }
+
+    /// How far a site is moved to stand clear of the city's buildings
+    /// (decision 144): 12 m, less than half a D1's square and the gap
+    /// beside it, so a building put on top of a city building stays there
+    /// and buys it out, and one put at its edge moves into the gap.
+    public static let buildingSnapReach: Int64 = 768
+    /// The points within ``buildingSnapReach`` of a site, half a metre
+    /// apart, nearest first (then by row and column).
+    private static let buildingSnapOffsets: [(x: Int64, y: Int64)] = {
+        let step = 32, reach = buildingSnapReach
+        var offsets: [(x: Int64, y: Int64)] = []
+        for y in stride(from: -reach, through: reach, by: step) {
+            for x in stride(from: -reach, through: reach, by: step) where x * x + y * y <= reach * reach && (x, y) != (0, 0) {
+                offsets.append((x, y))
+            }
+        }
+        return offsets.sorted { ($0.x * $0.x + $0.y * $0.y, $0.y, $0.x) < ($1.x * $1.x + $1.y * $1.y, $1.y, $1.x) }
+    }()
+
+    /// `point`, or when ``buildingKind`` there would buy out some of the
+    /// city's buildings, the nearest point within ``buildingSnapReach``
+    /// where it buys out none and GameCore would put it up (decision 144):
+    /// the player taps near a gap between the city's buildings and the
+    /// building lands in it. With none, `point`, whose preview shows what
+    /// buying out costs.
+    func snappedBuildingSite(_ point: PlanPoint) -> PlanPoint {
+        let kind = buildingKind
+        func clears(_ centre: PlanPoint) -> Bool {
+            world.cityCells(claimedBy: PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: kind, centre: centre)).isEmpty
+        }
+        guard world.bounds.contains(point), !clears(point) else { return point }
+        // GameCore has the last word on each candidate (water, track, the
+        // company's other buildings); a few tries are enough, as the
+        // nearest clear points lie side by side.
+        var tries = 0
+        for offset in Self.buildingSnapOffsets {
+            let candidate = PlanPoint(x: point.x + offset.x, y: point.y + offset.y)
+            guard world.bounds.contains(candidate), clears(candidate) else { continue }
+            var draft = world
+            if (try? draft.placeBuilding(kind, at: candidate)) != nil { return candidate }
+            tries += 1
+            if tries == 8 { break }
+        }
+        return point
     }
 
     /// The drag was cancelled: the building goes back where it was.
@@ -330,10 +376,26 @@ extension GameSession {
             overlay.site = PlanRect(minX: preview.centre.x - half, minY: preview.centre.y - half,
                                     maxX: preview.centre.x - half + preview.kind.side, maxY: preview.centre.y - half + preview.kind.side)
             overlay.siteIsBuildable = preview.problem == nil
-            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column) }
+            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column, in: world) }
+        }
+        // Decision 140: a real-world map has a city building on nearly every
+        // cell, and their squares over the whole view hid its streets; there
+        // only those round the chosen site are drawn, enough to see where a
+        // building fits between them, and none before a site is chosen.
+        if world.geoAnchor != nil, overlay.showsCityBuildingSites {
+            if let site = overlay.site {
+                let reach = Self.citySitesReach
+                overlay.citySitesArea = PlanRect(minX: site.minX - reach, minY: site.minY - reach, maxX: site.maxX + reach, maxY: site.maxY + reach)
+            } else {
+                overlay.showsCityBuildingSites = false
+            }
         }
         return overlay
     }
+
+    /// How far round a real-world map's chosen site its city buildings are
+    /// drawn (decision 140): two cells.
+    public static let citySitesReach = 2 * Land.cellLength
 
     /// What ``buildingKind`` costs a managed company: its building, and the
     /// land under it at that land's value; `nil` in free play, where it is
@@ -385,12 +447,13 @@ public struct PlanRect: Hashable, Sendable {
     }
 
     /// The square the city's building on the cell at `row`, `column`
-    /// stands on (decision 95): ``PlacedBuildingRules/cityBuildingSide``
-    /// across, in the middle of the cell.
-    public static func cityBuilding(row: Int, column: Int) -> PlanRect {
-        let inset = (Land.cellLength - PlacedBuildingRules.cityBuildingSide) / 2
+    /// stands on in `world` (decision 95): ``GameWorld/cityBuildingSide(row:column:)``
+    /// across (decision 142), in the middle of the cell.
+    public static func cityBuilding(row: Int, column: Int, in world: GameWorld) -> PlanRect {
+        let side = world.cityBuildingSide(row: row, column: column)
+        let inset = (Land.cellLength - side) / 2
         let minX = Int64(column) * Land.cellLength + inset, minY = Int64(row) * Land.cellLength + inset
-        return PlanRect(minX: minX, minY: minY, maxX: minX + PlacedBuildingRules.cityBuildingSide, maxY: minY + PlacedBuildingRules.cityBuildingSide)
+        return PlanRect(minX: minX, minY: minY, maxX: minX + side, maxY: minY + side)
     }
 
     /// The square `building` stands on.
@@ -402,8 +465,11 @@ public struct PlanRect: Hashable, Sendable {
 /// What the map draws for the building tool (decision 95).
 public struct BuildingOverlay: Hashable, Sendable {
     /// Whether to draw where the city's buildings stand, so the player sees
-    /// where a building would buy one out.
+    /// where a building would buy one out, and where: everywhere in view
+    /// when `citySitesArea` is `nil`, otherwise only those it reaches (a
+    /// real-world map's, round the chosen site, decision 140).
     public var showsCityBuildingSites = false
+    public var citySitesArea: PlanRect?
     /// The building on the site, and whether GameCore would build it.
     public var site: PlanRect?
     public var siteIsBuildable = false

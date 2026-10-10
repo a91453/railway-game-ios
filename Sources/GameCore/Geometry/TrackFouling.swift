@@ -107,6 +107,17 @@ extension RailwayNetwork {
         }
         return false
     }
+
+    /// ``fouls(_:_:)`` with the track of `a` listed rather than gathered
+    /// (it may list a resource twice), and `b` asked a resource at a time.
+    func fouls(_ a: [TrackResource], _ b: (TrackResource) -> Bool) -> Bool {
+        for resource in a {
+            if b(resource) { return true }
+            guard case .span(let x) = resource, let partners = foulingSpans[x] else { continue }
+            if partners.contains(where: { b(.span($0)) }) { return true }
+        }
+        return false
+    }
 }
 
 extension TrackSpacing {

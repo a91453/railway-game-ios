@@ -370,6 +370,13 @@ extension BuildingControls {
             .font(.footnote.weight(.semibold))
             .monospacedDigit()
             .accessibilityIdentifier("building.zoneCount")
+        // Decision 139: what the city is short of.
+        if let demand = session.cityDemandText {
+            Text(verbatim: demand)
+                .font(.footnote.weight(.semibold))
+                .monospacedDigit()
+                .accessibilityIdentifier("building.cityDemand")
+        }
     }
 }
 

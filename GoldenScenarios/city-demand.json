@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 53,
+  "description": "Decision 139: the city's demand for homes, shops and work, in a world 32 x 24 cells of 64 m, managed, with the city's buildings. The land is homes of 1000 residents at row 5, column 5, shops of 400 jobs at column 6 and offices of 600 jobs at column 7. Off, the city has no demand. On, it keeps the mix it has: 400,000 shop jobs and 600,000 jobs in work for every million residents, so nothing is in demand. An office block placed on the shops' cell (26624, 22528) buys them out: the city has 1000 residents, no shop jobs and 600 jobs in work. Shops: 10 x 1000 x (400,000 - 0) / 400,000, past full, 1000; homes: jobs a resident 600,000 against 1,000,000, 10 x 1000 x (-400,000) / 1,000,000, past full, -1000; work: as kept, 0. Turned off and on again the city keeps the mix it has then (no shop jobs, 600,000 in work), and nothing is in demand.",
+  "initialState": {
+    "worldWidth": 131072,
+    "worldHeight": 98304,
+    "balance": 1000000000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "setEconomyMode",
+        "mode": "management"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLand",
+        "cells": [
+          {
+            "row": 5,
+            "column": 5,
+            "use": "residential",
+            "residents": 1000,
+            "jobs": 0
+          },
+          {
+            "row": 5,
+            "column": 6,
+            "use": "commercial",
+            "residents": 0,
+            "jobs": 400
+          },
+          {
+            "row": 5,
+            "column": 7,
+            "use": "office",
+            "residents": 0,
+            "jobs": 600
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setCityBuildings",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "cityDemand"
+      },
+      "expect": {
+        "cityDemand": {
+          "homes": 0,
+          "shops": 0,
+          "work": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "setCityDemand",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "cityDemand"
+      },
+      "expect": {
+        "cityDemand": {
+          "homes": 0,
+          "shops": 0,
+          "work": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "placeBuilding",
+        "kind": "office",
+        "point": {
+          "x": 26624,
+          "y": 22528
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "cityDemand"
+      },
+      "expect": {
+        "cityDemand": {
+          "homes": -1000,
+          "shops": 1000,
+          "work": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "setCityDemand",
+        "enabled": false
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "cityDemand"
+      },
+      "expect": {
+        "cityDemand": {
+          "homes": 0,
+          "shops": 0,
+          "work": 0
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "setCityDemand",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "cityDemand"
+      },
+      "expect": {
+        "cityDemand": {
+          "homes": 0,
+          "shops": 0,
+          "work": 0
+        }
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 828582400,
+    "stations": [],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "management",
+      "openedAt": 0,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "land": {
+      "cells": 2,
+      "jobs": 600,
+      "residents": 1000
+    },
+    "cityBuildings": {
+      "buildings": 2,
+      "d1": 0,
+      "d2": 0,
+      "d3": 1,
+      "d4": 1,
+      "existingStock": 0
+    },
+    "placedBuildings": [
+      {
+        "buildingCost": 24576000,
+        "id": 1,
+        "jobs": 168,
+        "kind": "office",
+        "landCost": 146841600,
+        "x": 26624,
+        "y": 22528
+      }
+    ],
+    "cityDemand": {
+      "baseline": {
+        "shopJobs": 0,
+        "workJobs": 600000
+      }
+    }
+  }
+}

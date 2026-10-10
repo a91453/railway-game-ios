@@ -108,10 +108,15 @@ final class LineRoutePreferenceUITests: XCTestCase {
     /// itself 4 s after it appears (#182), so it is waited out rather than
     /// tapped: on a slow runner the banner went between finding the button
     /// and tapping it, and the tap failed on an element that no longer
-    /// existed. Only a message still there after that wait is tapped.
+    /// existed. Only a message still there after that wait is tapped. Each
+    /// button's place is read from a snapshot, which a button that has gone
+    /// meanwhile simply lacks: reading `frame` from one failed the test
+    /// (main f833a6e, d46734a: the message cleared between the query and
+    /// the read).
     private func dismissMessage(in app: XCUIApplication) {
         let buttons = app.buttons.matching(NSPredicate(format: "label == %@", "Dismiss message")).allElementsBoundByIndex
-        guard let lowest = buttons.filter({ $0.exists }).max(by: { $0.frame.minY < $1.frame.minY }) else { return }
+        let placed = buttons.compactMap { button in (try? button.snapshot()).map { (button: button, top: $0.frame.minY) } }
+        guard let lowest = placed.max(by: { $0.top < $1.top })?.button else { return }
         if lowest.waitForNonExistence(timeout: 8) { return }
         lowest.tap()
         XCTAssertTrue(lowest.waitForNonExistence(timeout: 5), "The status message stayed over the list")

@@ -21,8 +21,10 @@ import Observation
 /// whole ticks with a ``TickAccumulator`` and calls `GameWorld.advance(ticks:)`.
 /// Wall-clock time never reaches GameCore.
 ///
-/// Main-actor isolated because both SwiftUI and the game loop run on the main
-/// actor, so no locks or `@unchecked Sendable` are needed.
+/// Main-actor isolated because SwiftUI and the game loop run on the main
+/// actor, so no locks or `@unchecked Sendable` are needed. Only working out
+/// a tick runs elsewhere, on a copy of the world, which the session takes as
+/// its world only if no command changed it meanwhile (decision 143).
 @MainActor
 @Observable
 public final class GameSession {
@@ -659,68 +661,147 @@ public final class GameSession {
     }
 
     /// Turns `elapsed` real time into whole ticks and advances the world by
-    /// them. While paused, elapsed time is discarded rather than saved up.
-    /// If GameCore refuses to advance (game time is at its limit), the world
-    /// is unchanged and the refusal is shown as the status message.
+    /// them, at once, on the main actor. While paused, elapsed time is
+    /// discarded rather than saved up. If GameCore refuses to advance (game
+    /// time is at its limit), the world is unchanged and the refusal is
+    /// shown as the status message. The game loop does the same a tick at a
+    /// time, worked out off the main actor (``startGameLoop()``).
     public func advance(realElapsed elapsed: Duration) {
+        let ticks = dueTicks(realElapsed: elapsed)
+        guard ticks > 0 else { return }
+        let listening = playSound != nil
+        finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
+    }
+
+    /// The whole ticks `elapsed` real time makes due; none while paused,
+    /// when the time is discarded rather than saved up.
+    private func dueTicks(realElapsed elapsed: Duration) -> Int {
         guard !world.clock.isPaused else {
             tickAccumulator.reset()
+            return 0
+        }
+        return tickAccumulator.ticks(for: elapsed)
+    }
+
+    /// What a step of ticks made of a world: the world after it, and the
+    /// trains that arrived at a call within it, in train order.
+    struct TickStep: Sendable {
+        var world: GameWorld
+        var arrived: [TrainID]
+    }
+
+    /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
+    /// are played) advances a tick at a time, comparing only the arrival
+    /// times (holding the whole world would copy what the ticks change): a
+    /// step of several ticks can hold a train sent out, arriving and
+    /// completing its service, and a completed service keeps no times to
+    /// compare. Reads nothing but its arguments, so it can run off the main
+    /// actor.
+    nonisolated static func advanced(_ world: GameWorld, by ticks: Int, listening: Bool) throws(GameError) -> TickStep {
+        var world = world
+        guard listening else {
+            try world.advance(ticks: ticks)
+            return TickStep(world: world, arrived: [])
+        }
+        var arrived: [TrainID] = []
+        for _ in 0..<ticks {
+            let arrivals = SoundCue.arrivals(in: world)
+            try world.advance(ticks: 1)
+            arrived += SoundCue.trainsArrived(since: arrivals, in: world)
+        }
+        return TickStep(world: world, arrived: arrived)
+    }
+
+    /// Makes `outcome`, a step worked out from ``world`` as it is now, the
+    /// world, with what follows a step: no edit before it can be undone,
+    /// the arrival sound, the income (decision 117), the year's close and
+    /// the scenario's end. A refused step changes nothing and shows the
+    /// refusal.
+    private func finish(_ outcome: Result<TickStep, GameError>) {
+        let step: TickStep
+        switch outcome {
+        case .success(let advanced):
+            step = advanced
+        case .failure(let error):
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return
         }
-        let ticks = tickAccumulator.ticks(for: elapsed)
-        if ticks > 0 {
-            let closedBefore = world.accounts.years.last?.year
-            let endedBefore = world.scenario?.outcome != nil
-            let lastEntry = world.accounts.entries.last
-            defer {
-                // Decision 117: fares and rent settled within the step.
-                noteIncome(since: lastEntry)
-                if let closed = world.accounts.years.last?.year, closed != closedBefore {
-                    yearEndYear = closed
-                }
-                if !endedBefore, world.scenario?.outcome != nil {
-                    scenarioJustEnded = true
-                }
-            }
-            do throws(GameError) {
-                if let playSound {
-                    // A tick at a time, comparing only the arrival times
-                    // (holding the whole world would copy what the ticks
-                    // change): a step of several ticks can hold a train
-                    // sent out, arriving and completing its service, and a
-                    // completed service keeps no times to compare. The
-                    // clock alone refuses a step, so trying it on a copy
-                    // first keeps the step all or nothing.
-                    var clock = world.clock
-                    try clock.advance(ticks: ticks)
-                    var arrived: [TrainID] = []
-                    for _ in 0..<ticks {
-                        let arrivals = SoundCue.arrivals(in: world)
-                        try world.advance(ticks: 1)
-                        arrived += SoundCue.trainsArrived(since: arrivals, in: world)
-                    }
-                    // Game time moved on: no edit before it can be undone.
-                    undoHistory.removeAll()
-                    editGestureHasSnapshot = false
-                    endFollowIfGone()
-                    if !arrived.isEmpty {
-                        let watched = watchedTrainIDs
-                        playSound(.arrival(watched: arrived.contains { watched.contains($0) }))
-                    }
-                } else {
-                    try world.advance(ticks: ticks)
-                    undoHistory.removeAll()
-                    editGestureHasSnapshot = false
-                    endFollowIfGone()
-                }
-            } catch {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
-            }
+        let closedBefore = world.accounts.years.last?.year
+        let endedBefore = world.scenario?.outcome != nil
+        let lastEntry = world.accounts.entries.last
+        world = step.world
+        // Game time moved on: no edit before it can be undone.
+        undoHistory.removeAll()
+        editGestureHasSnapshot = false
+        endFollowIfGone()
+        if let playSound, !step.arrived.isEmpty {
+            let watched = watchedTrainIDs
+            playSound(.arrival(watched: step.arrived.contains { watched.contains($0) }))
         }
+        // Decision 117: fares and rent settled within the step.
+        noteIncome(since: lastEntry)
+        if let closed = world.accounts.years.last?.year, closed != closedBefore {
+            yearEndYear = closed
+        }
+        if !endedBefore, world.scenario?.outcome != nil {
+            scenarioJustEnded = true
+        }
+    }
+
+    /// A tick of the game loop being worked out off the main actor
+    /// (decision 143), from the world as it was when it began.
+    struct LoopTick: Sendable {
+        /// The world the tick advances.
+        let world: GameWorld
+        /// ``worldRevision`` when the tick began: a command since then
+        /// changed the world the tick was worked out from.
+        let revision: Int
+        /// Whether sounds are played (see ``advanced(_:by:listening:)``).
+        let listening: Bool
+
+        /// Advances ``world`` by one tick off the main actor. The world
+        /// is a copy: the session's stays as it is, and commands still
+        /// apply to it, while this runs.
+        func work() async -> Result<TickStep, GameError> {
+            let world = world
+            let listening = listening
+            return await Task.detached(priority: .userInitiated) {
+                Result { () throws(GameError) in try GameSession.advanced(world, by: 1, listening: listening) }
+            }.value
+        }
+    }
+
+    /// A tick of the game loop beginning from the world as it is now, or
+    /// `nil` while paused.
+    func beginLoopTick() -> LoopTick? {
+        guard !world.clock.isPaused else { return nil }
+        return LoopTick(world: world, revision: worldRevision, listening: playSound != nil)
+    }
+
+    /// Ends `tick` with what ``LoopTick/work()`` made of it: the world
+    /// after it, as ``advance(realElapsed:)`` would make it. A command
+    /// since the tick began (an edit, an undo, a pause, a speed) changed
+    /// the world it was worked out from, so the tick is dropped and the
+    /// game falls behind by it, the command standing as the player made
+    /// it on the world they saw. Returns whether the tick was taken.
+    @discardableResult
+    func finish(_ tick: LoopTick, with outcome: Result<TickStep, GameError>) -> Bool {
+        guard tick.revision == worldRevision else { return false }
+        finish(outcome)
+        return true
     }
 
     /// Starts advancing the world in real time. Calling it while the loop is
     /// already running does nothing, so the world is never ticked twice.
+    ///
+    /// Each tick is worked out off the main actor (decision 143), so a slow
+    /// tick never stops the screen: the map, gestures and commands go on,
+    /// on the world as it was before the tick, until the tick is done. One
+    /// tick is worked out at a time and shown as soon as it is done. A step
+    /// still turns at most ``maximumStepDuration`` into ticks, and the time
+    /// spent working them out counts as elapsed, so when ticks take longer
+    /// than ``tickInterval`` the game runs slower than its speed instead of
+    /// piling up ticks to catch up.
     public func startGameLoop() {
         guard gameLoop == nil else { return }
         tickAccumulator.reset()
@@ -738,8 +819,16 @@ public final class GameSession {
                 // not let one more step through.
                 guard !Task.isCancelled, let self else { return }
                 let now = clock.now
-                self.advance(realElapsed: now - last)
+                let ticks = self.dueTicks(realElapsed: now - last)
                 last = now
+                for _ in 0..<ticks {
+                    guard let tick = self.beginLoopTick() else { break }
+                    let outcome = await tick.work()
+                    // Nor may a stop while the tick was worked out.
+                    guard !Task.isCancelled else { return }
+                    self.finish(tick, with: outcome)
+                    if case .failure = outcome { break }
+                }
             }
         }
     }

@@ -25,12 +25,17 @@ public struct CitySkyline: Sendable {
         /// Other land whose building was bought out (decision 95) has no
         /// lot.
         public let density: Int
+        /// The side of the square its building stands on, in world units
+        /// (``GameWorld/cityBuildingSide(row:column:)``: its density's with
+        /// the city's footprints, decision 142).
+        public let side: Int64
 
-        public init(row: Int, column: Int, use: LandUse, density: Int) {
+        public init(row: Int, column: Int, use: LandUse, density: Int, side: Int64 = PlacedBuildingRules.cityBuildingSide) {
             self.row = row
             self.column = column
             self.use = use
             self.density = density
+            self.side = side
         }
 
         /// Whether it is open ground rather than a building.
@@ -42,6 +47,9 @@ public struct CitySkyline: Sendable {
     /// Every lot, by row and then column: north to south, so a building
     /// drawn later stands in front of the ones behind it.
     public let lots: [Lot]
+    /// The world's time when it was made, so the next one can tell a night's
+    /// growth (``SkylineGrowth``, decision 140) from a loaded game.
+    public let time: GameTime
 
     public init(world: GameWorld) {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
@@ -56,10 +64,18 @@ public struct CitySkyline: Sendable {
                 lots.append(Lot(row: cell.row, column: cell.column, use: use, density: 0))
             } else if let building {
                 let density = building.kind == .existingStock ? BuildingDensity.d4.rawValue : building.density.rawValue
-                lots.append(Lot(row: cell.row, column: cell.column, use: use, density: density))
+                lots.append(Lot(row: cell.row, column: cell.column, use: use, density: density,
+                                side: world.cityBuildingSide(row: cell.row, column: cell.column)))
             }
         }
         self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+        time = world.clock.now
+    }
+
+    /// A skyline of the given lots, put in drawing order.
+    public init(lots: [Lot], time: GameTime) {
+        self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+        self.time = time
     }
 
     /// The uses drawn as open ground rather than buildings.

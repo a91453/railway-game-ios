@@ -97,6 +97,16 @@ public struct GameWorld: Equatable, Sendable {
     /// app's new games but those of the whole of Taiwan turn them on. Set by
     /// ``setOutsideConnections(_:)`` only.
     public internal(set) var outsideConnections: Bool = false
+    /// The city's demand for homes, shops and work (decision 139), or `nil`
+    /// for a city that grows as before. Off in a new world and in saves
+    /// from before it; the app's new games turn it on. Set by
+    /// ``setCityDemand(_:)``, the land's replacement and its growth only.
+    public internal(set) var cityDemand: CityDemand?
+    /// Whether a city building's square is its density's, 20 to 40 m
+    /// across, rather than 40 m whatever its height (decision 142). Off in
+    /// a new world and in saves from before it; the app's new games turn it
+    /// on. Set by ``setCityFootprints(_:)`` only.
+    public internal(set) var cityFootprints: Bool = false
     /// Whether the city's buildings stand on the land (Phase 6c-1,
     /// ARCHITECTURE decision 74). Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
@@ -2165,9 +2175,11 @@ public struct GameWorld: Equatable, Sendable {
             // Stage U: or to the second at which trains moving on have
             // released enough track behind them for a departure that waits
             // for its route, which then tries again, or (Stage U2) for a
-            // train following them to take more of its route.
+            // train following them to take more of its route. `moves` keeps
+            // the trains as each span tried leaves them, for the move below.
+            var moves: [Int64: (trains: [Train], moved: Bool)] = [:]
             if span > 1, !held.isEmpty || trains.contains(where: isFollowing),
-               let freed = secondsUntilARouteFrees(held, from: start, within: span, memo: &memo) {
+               let freed = secondsUntilARouteFrees(held, from: start, within: span, moves: &moves, memo: &memo) {
                 span = freed
             }
             if !traffic.waits.isEmpty {
@@ -2191,7 +2203,13 @@ public struct GameWorld: Equatable, Sendable {
                 memo.directions.stepTraffic = traffic
             }
             let beforeTraffic = traffic.waits.isEmpty ? nil : trains
-            if moveTrains(from: start, for: span) {
+            // Nothing has changed a train since the spans were tried.
+            if let move = moves[span] {
+                trains = move.trains
+                if move.moved {
+                    changed = true
+                }
+            } else if moveTrains(from: start, for: span) {
                 changed = true
             }
             if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span)) {
@@ -3290,29 +3308,26 @@ public struct GameWorld: Equatable, Sendable {
     /// whether any reservation changed.
     mutating func extendAuthorities() -> Bool {
         var extended = false
+        // Worked out again once a reservation changes.
+        var holders: TrackHolders?
         for index in trains.indices {
-            guard let held = authorityLeft(of: trains[index]) else { continue }
-            let envelope = routeEnvelope(of: trains[index])
-            if holder(of: envelope.resources, except: trains[index].id) == nil {
-                trains[index].reservation = envelope.resources.sorted()
+            guard let (held, envelopes) = authority(of: trains[index]) else { continue }
+            // Its route envelope (see ``routeEnvelope(of:)``).
+            let route = routeResources(envelopes)
+            if holders == nil { holders = trackHolders() }
+            if holder(of: route, except: trains[index].id, holders: holders!) == nil {
+                trains[index].reservation = route.sorted()
                 extended = true
+                holders = nil
                 continue
             }
-            let blocked = blockedTrack(except: trains[index].id)
-            let envelopes = authorityEnvelopes(of: trains[index])
-            var (low, high) = (held, envelopes.length)
-            while low < high {
-                let middle = low + (high - low + 1) / 2
-                if !network.fouls(authorityEnvelope(envelopes, to: middle), blocked) {
-                    low = middle
-                } else {
-                    high = middle - 1
-                }
-            }
-            let authority = low - Self.followingGap
+            let blocked = blockedTrack(except: trains[index].id, holders: holders!)
+            let free = longestAuthority(envelopes, from: held) { !network.fouls($0, blocked.contains) }
+            let authority = free - Self.followingGap
             guard authority > held else { continue }
             trains[index].reservation = Set(trains[index].reservation).union(authorityEnvelope(envelopes, to: authority)).sorted()
             extended = true
+            holders = nil
         }
         return extended
     }
@@ -3323,10 +3338,14 @@ public struct GameWorld: Equatable, Sendable {
     /// only ever leaves the others less, so the first that could is the
     /// first that does.
     private func canExtendAnyAuthority() -> Bool {
-        trains.contains { train in
-            guard let held = authorityLeft(of: train) else { return false }
+        let authorities = trains.map(authority)
+        guard authorities.contains(where: { $0 != nil }) else { return false }
+        let holders = trackHolders(authorities: authorities)
+        return zip(trains, authorities).contains { train, authority in
+            guard let (held, envelopes) = authority else { return false }
             let (reach, overflow) = held.addingReportingOverflow(Self.followingGap + 1)
-            return !network.fouls(authorityEnvelope(of: train, to: overflow ? .max : reach), blockedTrack(except: train.id))
+            let blocked = blockedTrack(except: train.id, holders: holders)
+            return isAuthority(envelopes, to: overflow ? .max : reach) { !network.fouls($0, blocked.contains) }
         }
     }
 
@@ -3346,11 +3365,18 @@ public struct GameWorld: Equatable, Sendable {
     /// train only moves on in the step, and what it holds only shrinks as it
     /// does, so once free the track stays free.
     ///
+    /// `moves` gets the trains as each span tried leaves them (see
+    /// ``moveTrains(from:for:)``), and whether any moved.
+    ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
-    private func secondsUntilARouteFrees(_ held: [HeldRoute], from start: GameTime, within span: Int64, memo: inout DispatchMemo) -> Int64? {
+    private func secondsUntilARouteFrees(
+        _ held: [HeldRoute], from start: GameTime, within span: Int64, moves: inout [Int64: (trains: [Train], moved: Bool)],
+        memo: inout DispatchMemo
+    ) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
-            _ = moved.moveTrains(from: start, for: seconds)
+            let any = moved.moveTrains(from: start, for: seconds)
+            moves[seconds] = (moved.trains, any)
             // The cheaper question first: either answer frees.
             if moved.canExtendAnyAuthority() {
                 return true
@@ -3518,7 +3544,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityFootprints, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground
     }
 
@@ -3609,6 +3635,8 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
+        cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
+        cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
         cityBuildings = container.contains(.cityBuildings) ? try container.decode(Bool.self, forKey: .cityBuildings) : false
         buildings = container.contains(.buildings) ? try container.decode(CityBuildings.self, forKey: .buildings) : CityBuildings()
         transferGroups = container.contains(.transferGroups) ? try container.decode([TransferGroup].self, forKey: .transferGroups) : []
@@ -3718,6 +3746,12 @@ extension GameWorld: Codable {
         }
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
+        }
+        if let cityDemand {
+            try container.encode(cityDemand, forKey: .cityDemand)
+        }
+        if cityFootprints {
+            try container.encode(true, forKey: .cityFootprints)
         }
         if cityBuildings {
             try container.encode(true, forKey: .cityBuildings)

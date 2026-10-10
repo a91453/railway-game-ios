@@ -21,6 +21,15 @@ final class BalanceReportTests: XCTestCase {
         try play(&world, days: days, title: "A first line")
     }
 
+    /// Decision 137's first line that pays: the first town to the second
+    /// (seed 1, 5.4 km), one train of four cars.
+    func testALineBetweenTwoTowns() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try play(&world, days: days, title: "A line between two towns")
+    }
+
     /// The first line with the company's buildings (decision 130): once the
     /// line has paid for itself, on day 30, two office blocks by its middle
     /// station: A beside it, buying out the city's D4 buildings in its
@@ -175,13 +184,18 @@ final class BalanceReportTests: XCTestCase {
     /// the end of each: everything the network's stations reach is its
     /// catchment, every station of the world is the network's.
     private func play(_ world: inout GameWorld, days: Int, title: String) throws {
+        // Decision 139: `BALANCE_NO_CITY_DEMAND=1` measures the city without
+        // its valves, as before it.
+        if ProcessInfo.processInfo.environment["BALANCE_NO_CITY_DEMAND"] != nil {
+            world.setCityDemand(false)
+        }
         let stops = world.stations.map(\.id)
         let cost = GameWorld.startingBalance - world.economy.balance
         var lines = [
             "### \(title): built for \(dollars(cost.amount)), \(stops.count) stations",
             "",
-            "| Day | Balance | Fares | Operating profit | Tax | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
-            "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
+            "| Day | Balance | Fares | Operating profit | Tax | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service | Homes / shops / work demand | City residents / shop jobs / work jobs |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- | --- | --- |",
         ]
         try world.advance(ticks: 1)
         for day in 1...days {
@@ -226,7 +240,23 @@ final class BalanceReportTests: XCTestCase {
         return "| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars(report.fareRevenue.amount)) | "
             + "\(dollars(report.operatingProfit.amount)) | \(dollars(report.taxCost.amount)) | \(recovered)% | \(trips) | \(people) | "
             + "\(heights[1]) / \(heights[2]) / \(heights[3]) / \(heights[4]) / \(heights[0]) | \(fullest)% | "
-            + "\(dollars(average)) / \(dollars(values.max() ?? 0)) | \(service / 10)% |"
+            + "\(dollars(average)) / \(dollars(values.max() ?? 0)) | \(service / 10)% | "
+            + "\(world.cityDemandLevels.homes / 10)% / \(world.cityDemandLevels.shops / 10)% / \(world.cityDemandLevels.work / 10)% | "
+            + cityTotals(world) + " |"
+    }
+
+    /// The city's residents, shop jobs and jobs in work (decision 139).
+    private func cityTotals(_ world: GameWorld) -> String {
+        var residents: Int64 = 0, shops: Int64 = 0, work: Int64 = 0
+        for cell in world.land.cells {
+            residents += cell.residents
+            switch cell.use {
+            case .residential, .commercial, .park: shops += cell.jobs
+            case .office, .industrial, .agricultural: work += cell.jobs
+            case .civic, .leisure: break
+            }
+        }
+        return "\(residents) / \(shops) / \(work)"
     }
 
     /// Whole dollars of `cents`.
