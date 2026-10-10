@@ -112,6 +112,36 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertTrue(all[firstLabel...].allSatisfy { $0["type"] as? String == "symbol" })
     }
 
+    /// Taiwan's hills are shaded from the game's own heights, as the
+    /// `Railway/` reference's `landscape-hillshade`: a Terrarium source of
+    /// 512-pixel tiles, lit from the north-west, over the woods and parks
+    /// and under the water and roads. Without the terrain, or out of
+    /// Taiwan, there is no shading.
+    func testTaiwansHillsAreShadedFromTheGamesHeights() throws {
+        let style = BaseMapStyle.style(
+            tiles: .bundled(pmtiles: "file:///app/BaseMap/taiwan.pmtiles"), dark: false, glyphs: Self.glyphs,
+            terrain: "file:///app/BaseMap/taiwan_terrain.pmtiles"
+        )
+        let sources = try XCTUnwrap(style["sources"] as? [String: [String: Any]])
+        let terrain = try XCTUnwrap(sources["terrain"])
+        XCTAssertEqual(terrain["type"] as? String, "raster-dem")
+        XCTAssertEqual(terrain["url"] as? String, "pmtiles://file:///app/BaseMap/taiwan_terrain.pmtiles")
+        XCTAssertEqual(terrain["encoding"] as? String, "terrarium")
+        XCTAssertEqual(terrain["tileSize"] as? Int, 512)
+        let layers = try XCTUnwrap(style["layers"] as? [[String: Any]])
+        let ids = layers.compactMap { $0["id"] as? String }
+        let shade = try XCTUnwrap(ids.firstIndex(of: "hillshade"))
+        XCTAssertEqual(ids[shade - 1], "park")
+        XCTAssertEqual(ids[shade + 1], "water")
+        let paint = try XCTUnwrap(layers[shade]["paint"] as? [String: Any])
+        XCTAssertEqual(paint["hillshade-exaggeration"] as? Double, 0.42)
+        XCTAssertEqual(paint["hillshade-illumination-direction"] as? Int, 315)
+        XCTAssertEqual(layers[shade]["source"] as? String, "terrain")
+
+        XCTAssertFalse(try Self.layers(.bundled(pmtiles: "file:///app/BaseMap/taiwan.pmtiles")).contains { $0["id"] as? String == "hillshade" })
+        XCTAssertNil((BaseMapStyle.style(tiles: .openFreeMap, dark: true, glyphs: Self.glyphs)["sources"] as? [String: Any])?["terrain"])
+    }
+
     /// `Ci/`'s `osmSensitiveFacilityLabelFilter`, on road names.
     func testRoadNamesHideSensitiveSites() throws {
         let filter = BaseMapStyle.sensitiveFacilityLabelFilter()
@@ -177,6 +207,21 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertGreaterThan(east, 122.1, "the east coast")
         XCTAssertLessThan(south, 21.8, "Orchid Island")
         XCTAssertGreaterThan(north, 26.4, "Matsu")
+    }
+
+    /// The terrain the app bundles: a PMTiles v3 archive of PNG tiles
+    /// (Terrarium heights), zooms 0–10, over the heights' grid.
+    func testTheBundledTerrainIsTheGamesHeights() throws {
+        let file = Self.resources.appendingPathComponent("BaseMap/taiwan_terrain.pmtiles")
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        let bytes = [UInt8](try XCTUnwrap(try handle.read(upToCount: 127)))
+        XCTAssertEqual(String(decoding: bytes.prefix(7), as: UTF8.self), "PMTiles")
+        XCTAssertEqual(bytes[7], 3, "version")
+        XCTAssertEqual(bytes[98], 1, "uncompressed tiles")
+        XCTAssertEqual(bytes[99], 2, "PNG tiles")
+        XCTAssertEqual(bytes[100], 0, "first zoom")
+        XCTAssertEqual(bytes[101], 10, "last zoom")
     }
 
     /// Every font the style asks for has the ranges of Latin and of

@@ -449,7 +449,7 @@ final class FollowingMapLibreView: MLNMapView {
 }
 
 /// The files of the game's base map style (decision 151): the bundled
-/// tiles and glyphs (`Resources/BaseMap/`, a folder in the app), and the
+/// tiles, terrain and glyphs (`Resources/BaseMap/`, a folder in the app), and the
 /// style JSON written for MapLibre to load, once a launch for each look.
 @MainActor
 enum BaseMapFiles {
@@ -457,8 +457,15 @@ enum BaseMapFiles {
     static let folder = Bundle.main.url(forResource: "BaseMap", withExtension: nil)
 
     /// Taiwan's tiles, `nil` if the app has none.
-    static let tiles: URL? = folder.map { $0.appendingPathComponent("taiwan.pmtiles") }
-        .flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+    static let tiles = file("taiwan.pmtiles")
+
+    /// Taiwan's ground heights for the hill shading, `nil` if the app has
+    /// none.
+    static let terrain = file("taiwan_terrain.pmtiles")
+
+    private static func file(_ name: String) -> URL? {
+        folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+    }
 
     /// The glyphs' address, MapLibre's `{fontstack}` and `{range}` in it:
     /// the bundled ones, else OpenFreeMap's (the same files).
@@ -482,7 +489,7 @@ enum BaseMapFiles {
         if let address = written[name] { return address }
         let source: BaseMapStyle.Tiles = if taiwan, let tiles { .bundled(pmtiles: tiles.absoluteString) } else { .openFreeMap }
         guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
-              let data = try? BaseMapStyle.json(tiles: source, dark: dark, glyphs: glyphs)
+              let data = try? BaseMapStyle.json(tiles: source, dark: dark, glyphs: glyphs, terrain: taiwan ? terrain?.absoluteString : nil)
         else { return nil }
         let file = caches.appendingPathComponent(name)
         guard (try? data.write(to: file, options: .atomic)) != nil else { return nil }

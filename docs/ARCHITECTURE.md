@@ -4500,6 +4500,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
 6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
 7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
+8. **山的陰影**（同日，作者問「沒有衛星好嗎」，同意不做衛星底圖、用地形陰影補上立體感；同一個 PR，不另取號）：衛星照片照舊是 Apple 地圖的「衛星」「混合」，給規劃時對照；遊戲的底圖不放衛星照片（照片裡真實的房子、道路、鐵道會和玩家的軌道、遊戲的城市疊在一起，也和遊戲的資料對不齊；授權與容量也不划算）。台灣的底圖改用遊戲自己的地面高度（`taiwan_heights.dat`，決策 124）畫山的陰影：`tools/basemap/build_terrain.py` 把它寫成 Terrarium 編碼的 512 像素 PNG（`raster-dem`），zoom 0–10（台灣約 70 m 一個像素，和高度的 1.875″ 一格相當；zoom 11 是 29 MB，只多了內插），只寫有陸地的圖磚：115 塊、10.0 MB，約 1 分鐘。樣式照 `Railway/` 網站的 `landscape-hillshade`（`rail-3d/integration/map3d.js`：陰影強度 0.42、光從 315°），顏色換成遊戲的（`docs/UI_THEME.md`），畫在森林、公園之上、水與道路之下；只有台灣的樣式有，台灣以外沒有地形資料。陰影和遊戲判斷路堤、路塹、隧道的高度是同一份資料。檢查：圖磚的高度和 `HeightGrid` 的同一點差 4–5 m 以內（像素中心與點的差），阿里山車站 2,207 m、玉山 3,881 m。
 
 **外部專案**：geojson-vt（https://github.com/mapbox/geojson-vt ，ISC）的 `clip.js`、`simplify.js` 移植成 Python，著作權聲明在工具的說明裡；PMTiles v3 規格（https://github.com/protomaps/PMTiles ）與 MVT 2.1 規格照文件自己寫編碼；評估過 Planetiler（Apache-2.0，OpenMapTiles 的 profile，要 Java 21，另外下載 Natural Earth 與 OSM 的海洋多邊形，是新的依賴）與 tippecanoe（BSD 2-Clause，要另外編譯 C++），都沒用：pyosmium 已經同意，切法本身不大。MapLibre Native 6.31.0 的原始碼確認了 `pmtiles://file://`（6.10.0 起，`pmtiles_file_source.cpp`）、本機檔的路徑解碼（`local_file_source.cpp`）、glyph 讀不到的行為與本機畫的字的範圍。
 
@@ -4507,10 +4508,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **限制**：
 - MapLibre Native 在 iOS 上畫打包的圖磚、讀本機 glyph 沒有在這個環境驗證（只有 CI 的 Xcode 建置）；要在實機上看。
-- App 多約 48 MB（圖磚 47.4 MB、字型 1.2 MB）。
+- App 多約 58 MB（圖磚 47.4 MB、地形 10.0 MB、字型 1.2 MB）。
 - 整包檔只有台灣：金門、馬祖對岸的陸地畫成海（和水域格網一致）。
 - 底圖的 OSM 是 2026-10-08 的，水域、分區、地點是 2026-10-06 的檔（那份已經下載不到），兩天的差別。
-- 沒有山的陰影、3D 建物與地形，沒有興趣點；台灣以外仍要網路。
+- 還沒有 3D 建物與 3D 地形（地形圖磚之後可以直接給 MapLibre 的 `terrain` 用），沒有興趣點；台灣以外仍要網路，也沒有山的陰影。
 
 ## 目前規則摘要
 

@@ -871,7 +871,11 @@ def directory(entries):
     return gzip.compress(out, 9, mtime=0)
 
 
-def write_pmtiles(path, tiles, metadata, bounds, center):
+def write_pmtiles(path, tiles, metadata, bounds, center, tile_type=1, tile_compression=2, zooms=(0, MAX_ZOOM)):
+    """Write `tiles` [(tile id, bytes), …] as a PMTiles v3 archive: its tiles
+    `tile_type` (1 vector, 2 PNG) compressed as `tile_compression` (1 none,
+    2 gzip), of zooms `zooms` (first, last); `bounds` (west, south, east,
+    north) and `center` (lon, lat, zoom) in degrees."""
     tiles.sort(key=lambda t: t[0])
     data, offsets, entries = bytearray(), {}, []
     for tid, blob in tiles:
@@ -900,12 +904,11 @@ def write_pmtiles(path, tiles, metadata, bounds, center):
     meta_offset = root_offset + len(root)
     leaf_offset = meta_offset + len(meta)
     data_offset = leaf_offset + len(leaves)
-    zooms = [z for z in range(MAX_ZOOM + 1)]
     header = b'PMTiles' + struct.pack(
         '<BQQQQQQQQQQQBBBBBBiiiiBii', 3,
         root_offset, len(root), meta_offset, len(meta), leaf_offset, len(leaves), data_offset, len(data),
         len(tiles), len(entries), len(offsets),
-        1, 2, 2, 1, zooms[0], zooms[-1],
+        1, 2, tile_compression, tile_type, zooms[0], zooms[-1],
         round(bounds[0] * 1e7), round(bounds[1] * 1e7), round(bounds[2] * 1e7), round(bounds[3] * 1e7),
         center[2], round(center[0] * 1e7), round(center[1] * 1e7))
     assert len(header) == 127

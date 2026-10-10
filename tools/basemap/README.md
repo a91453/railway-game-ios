@@ -25,6 +25,10 @@
 
 `fetch_glyphs.py` 下載 OpenFreeMap 的字型 glyph（OpenMapTiles 版的 Noto Sans，SIL Open Font License 1.1，授權條款在 `Resources/Licenses/NotoSans-OFL.txt`；參考庫 `Ci/reference_snapshot/external/openfreemap-tiles/fonts/` 的三個檔逐位元相同）。MapLibre Native 用裝置的字型畫中文、假名與諺文，不會要那些範圍；其他範圍裡，地名用到的拉丁字母、標點與符號是真的 glyph，其餘是空的檔：MapLibre 等不到某個範圍時，整塊圖磚的文字都不排，所以意料外的文字也要有檔可讀（空的檔只少那幾個字）。`build_basemap.py` 最後會列出地名用到哪些範圍。
 
+## 山的陰影
+
+`build_terrain.py` 把遊戲的地面高度（`Resources/RealWorld/taiwan_heights.dat`，決策 124）寫成 `Resources/BaseMap/taiwan_terrain.pmtiles`：Terrarium 編碼（高度 = 紅 × 256 + 綠 + 藍 ÷ 256 − 32768 公尺）的 512 像素 PNG，zoom 0–10，只寫有陸地的圖磚。照 `Railway/` 網站的 `rail-3d/integration/map3d.js`（`raster-dem` 加 `hillshade`）。陰影和遊戲判斷路堤、隧道的高度是同一份資料。需要 numpy，約 1 分鐘；2026-10-10：115 塊、10.0 MB。
+
 ## 重新產生
 
 ```sh
@@ -32,6 +36,7 @@ pip install osmium
 curl -LO https://osmtoday.com/asia/taiwan.pbf
 python3 tools/basemap/build_basemap.py taiwan.pbf RailwayGameApp/Resources/BaseMap/taiwan.pmtiles
 python3 tools/basemap/fetch_glyphs.py RailwayGameApp/Resources/BaseMap/fonts
+python3 tools/basemap/build_terrain.py RailwayGameApp/Resources/RealWorld/taiwan_heights.dat RailwayGameApp/Resources/BaseMap/taiwan_terrain.pmtiles
 ```
 
 `build_basemap.py` 需要 `tools/real-world-population/build_water_grid.py`（海岸線接成環的方法）。換了圖層、`class` 或欄位時，同時改 `BaseMapStyle` 與 `BaseMapStyleTests`。

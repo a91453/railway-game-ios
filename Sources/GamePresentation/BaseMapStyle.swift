@@ -16,7 +16,10 @@ import GameCore
 // (`osmSensitiveFacilityLabelFilter`). Its glyphs come with the app
 // (`Resources/BaseMap/fonts/`, Noto Sans), so the bundled map needs no
 // network at all; MapLibre draws Chinese and Japanese with the device's
-// own font.
+// own font. In Taiwan the hills are shaded from the game's own ground
+// heights (`Resources/BaseMap/taiwan_terrain.pmtiles`, decision 124's
+// heights by `tools/basemap/build_terrain.py`), as the `Railway/`
+// reference's `landscape-hillshade` shades its terrain.
 
 /// The style MapLibre draws the OpenStreetMap base map in, as a style JSON
 /// object.
@@ -37,6 +40,8 @@ public enum BaseMapStyle {
     public static let sourceLayers: Set<String> = [
         "water", "waterway", "landcover", "park", "boundary", "transportation", "transportation_name", "place",
     ]
+    /// The terrain source the hill shading draws from.
+    static let terrainSource = "terrain"
     /// The fonts the style asks for, each bundled in every glyph range.
     public static let fonts = ["Noto Sans Regular", "Noto Sans Bold"]
 
@@ -65,6 +70,10 @@ public enum BaseMapStyle {
         let casing: String
         let motorwayCasing: String
         let boundary: String
+        /// The hill shading's shadow, light and valley colours.
+        let shadow: String
+        let highlight: String
+        let accent: String
         let text: String
         let textMinor: String
         let halo: String
@@ -74,37 +83,67 @@ public enum BaseMapStyle {
             wood: "#D9E7D3", grass: "#E2EDDB", park: "#D2E8C4", sand: "#F1EBD8", wetland: "#D6E0EA",
             road: "#FFFFFF", roadMajor: "#FFFFFF", motorway: "#FFE4B0",
             casing: "#CDD1E4", motorwayCasing: "#E2B866",
-            boundary: "#262C57", text: "#262C57", textMinor: "#5B6189", halo: "#ECEEF6"
+            boundary: "#262C57", shadow: "#4A5482", highlight: "#FFFFFF", accent: "#8D95BA",
+            text: "#262C57", textMinor: "#5B6189", halo: "#ECEEF6"
         )
         static let dark = Colors(
             land: "#262C57", water: "#1A1F45", waterLabel: "#93A7DB",
             wood: "#2B4458", grass: "#2D3F60", park: "#2F4D52", sand: "#3A3B5C", wetland: "#293360",
             road: "#363D72", roadMajor: "#424A84", motorway: "#6E6475",
             casing: "#1E2348", motorwayCasing: "#1E2348",
-            boundary: "#ECEEF6", text: "#ECEEF6", textMinor: "#B4B9D9", halo: "#262C57"
+            boundary: "#ECEEF6", shadow: "#0D1029", highlight: "#5A63A3", accent: "#171B3D",
+            text: "#ECEEF6", textMinor: "#B4B9D9", halo: "#262C57"
         )
     }
 
     /// The style JSON object for `tiles`, light or dark, its glyphs at
-    /// `glyphs` (a MapLibre glyph address with `{fontstack}` and `{range}`).
-    public static func style(tiles: Tiles, dark: Bool, glyphs: String) -> [String: Any] {
+    /// `glyphs` (a MapLibre glyph address with `{fontstack}` and `{range}`),
+    /// the hills shaded from the Terrarium PMTiles file at `terrain`, if any.
+    public static func style(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil) -> [String: Any] {
         let colors = dark ? Colors.dark : Colors.light
         var vector: [String: Any] = ["type": "vector", "url": address(of: tiles)]
         if tiles == .openFreeMap {
             vector["attribution"] = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
         }
+        var sources: [String: Any] = [source: vector]
+        var drawn = layers(colors)
+        if let terrain {
+            sources[terrainSource] = [
+                "type": "raster-dem", "url": "pmtiles://\(terrain)", "encoding": "terrarium", "tileSize": 512,
+            ] as [String: Any]
+            // Over the woods and parks, under the water and roads.
+            let water = drawn.firstIndex { $0["id"] as? String == "water" } ?? drawn.count
+            drawn.insert(hillshade(colors), at: water)
+        }
         return [
             "version": 8,
             "name": dark ? "Railway game (dark)" : "Railway game",
             "glyphs": glyphs,
-            "sources": [source: vector],
-            "layers": layers(colors),
+            "sources": sources,
+            "layers": drawn,
+        ]
+    }
+
+    /// The hills, lit from the north-west: the `Railway/` reference's
+    /// `landscape-hillshade` (exaggeration 0.42, light from 315°), in the
+    /// game's colours.
+    static func hillshade(_ c: Colors) -> [String: Any] {
+        [
+            "id": "hillshade", "type": "hillshade", "source": terrainSource,
+            "paint": [
+                "hillshade-exaggeration": 0.42,
+                "hillshade-illumination-direction": 315,
+                "hillshade-illumination-anchor": "map",
+                "hillshade-shadow-color": c.shadow,
+                "hillshade-highlight-color": c.highlight,
+                "hillshade-accent-color": c.accent,
+            ] as [String: Any],
         ]
     }
 
     /// The style as JSON, for a file MapLibre loads.
-    public static func json(tiles: Tiles, dark: Bool, glyphs: String) throws -> Data {
-        try JSONSerialization.data(withJSONObject: style(tiles: tiles, dark: dark, glyphs: glyphs), options: [.sortedKeys])
+    public static func json(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil) throws -> Data {
+        try JSONSerialization.data(withJSONObject: style(tiles: tiles, dark: dark, glyphs: glyphs, terrain: terrain), options: [.sortedKeys])
     }
 
     // MARK: - Layers

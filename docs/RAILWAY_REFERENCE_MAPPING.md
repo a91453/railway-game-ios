@@ -1341,6 +1341,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同上／`osmStyleKey` 的 `positron`、`dark` | `BaseMapStyle.Colors.light`、`.dark` | adapted：一樣分淺色、深色，顏色換成 App 圖示的色票 |
 | `Railway/site_archive_clean/data/offline_land_style.json`（沒網路時墊底的陸地填色） | 打包的圖磚（台灣的陸地與海都在本機） | 只取想法：離線也有陸地；這裡整份底圖都在本機 |
 | `Railway/site_archive_clean/rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles） | MapLibre Native 6.31.0 內建的 `pmtiles://file://`（`BaseMapFiles`） | 不用：App 不跑 JS，MapLibre Native 自己讀 PMTiles |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js` 的 `terrain` 來源（`raster-dem`、Terrarium、512 像素）與 `landscape-hillshade`（`hillshade-exaggeration` 0.42、`hillshade-illumination-direction` 315） | `tools/basemap/build_terrain.py`、`BaseMapStyle.hillshade(_:)` | adapted：同樣的來源與圖層設定，顏色換成遊戲的；DEM 圖磚（`island-dem://`，Mapterhorn、內政部 20 m）不在快照裡，改用遊戲自己的 `taiwan_heights.dat` 產生 |
 | `Ci/…/virtual_island_city__q_21ffa7f6ae58fc9e.js` 的 `city.pmtiles` | — | gap：本體不在快照裡 |
 | （參考沒有）產生向量圖磚的工具 | `tools/basemap/build_basemap.py` | gap → 原生（切法照 geojson-vt，見下） |
 
