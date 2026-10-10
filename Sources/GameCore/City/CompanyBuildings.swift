@@ -42,6 +42,17 @@ extension PlacedBuildingRules {
     /// its cell (decision 95): 40 m, 1,600 m², about a storey's
     /// ``Building/floorArea`` (1,536 m²).
     public static let cityBuildingSide: Int64 = 2_560
+    /// With the city's footprints (decision 142), the side of the square a
+    /// city building of `density` stands on: 20, 28, 34 and 40 m, so a low
+    /// town leaves room between its buildings and a dense centre does not.
+    public static func cityBuildingSide(of density: BuildingDensity) -> Int64 {
+        switch density {
+        case .d1: 1_280
+        case .d2: 1_792
+        case .d3: 2_176
+        case .d4: cityBuildingSide
+        }
+    }
     /// What buying out a city building costs, in hundredths of its value:
     /// its floor at ``floorCost`` and the land of its square at the cell's
     /// land value, and a fifth more (the A-Train's buy-out costs more than
@@ -96,8 +107,8 @@ extension GameWorld {
 
     /// The cells of land whose city building `building` claims (decision
     /// 95), by row and then column: those whose square, a
-    /// ``PlacedBuildingRules/cityBuildingSide`` square in the middle of the
-    /// cell, shares ground with `building`'s square grown by the clearance
+    /// ``cityBuildingSide(row:column:)`` square in the middle of the cell,
+    /// shares ground with `building`'s square grown by the clearance
     /// (touching does not). A cell of land with no city building on it
     /// (the city's buildings off) counts as if it had one.
     public func cityCells(claimedBy building: PlacedBuilding) -> [LandCell] {
@@ -106,8 +117,9 @@ extension GameWorld {
         let firstColumn = Land.cellIndex(building.minX - c), lastColumn = Land.cellIndex(building.maxX + c)
         var cells: [LandCell] = []
         for row in firstRow...lastRow {
-            for column in firstColumn...lastColumn where Self.claims(building, row: row, column: column) {
-                if let cell = land.cell(row: row, column: column) {
+            for column in firstColumn...lastColumn {
+                if let cell = land.cell(row: row, column: column),
+                   Self.claims(building, row: row, column: column, side: cityBuildingSide(row: row, column: column)) {
                     cells.append(cell)
                 }
             }
@@ -115,20 +127,70 @@ extension GameWorld {
         return cells
     }
 
+    /// The side of the square the city's building on the cell at `row`,
+    /// `column` stands on, in the middle of the cell (decision 95):
+    /// ``PlacedBuildingRules/cityBuildingSide``, or with the city's
+    /// footprints (decision 142) its density's: the building's on it, else
+    /// the one the city would put up on its land, else a D1's for a cell
+    /// with no land yet, as the city's growth puts up there.
+    public func cityBuildingSide(row: Int, column: Int) -> Int64 {
+        guard cityFootprints else { return PlacedBuildingRules.cityBuildingSide }
+        if let building = buildings.building(row: row, column: column) {
+            return PlacedBuildingRules.cityBuildingSide(of: building.density)
+        }
+        if let cell = land.cell(row: row, column: column) {
+            return cityBuildingSide(for: cell)
+        }
+        return PlacedBuildingRules.cityBuildingSide(of: .d1)
+    }
+
+    /// The side of the square of the building the city would put up on
+    /// `cell` (see ``cityBuildingSide(row:column:)``), for land not yet in
+    /// place.
+    func cityBuildingSide(for cell: LandCell) -> Int64 {
+        guard cityFootprints else { return PlacedBuildingRules.cityBuildingSide }
+        return PlacedBuildingRules.cityBuildingSide(of: Building.fitting(cell, id: BuildingID(rawValue: 1)).density)
+    }
+
     /// Whether `building` claims the city building of the cell at `row`,
-    /// `column` (see ``cityCells(claimedBy:)``).
-    static func claims(_ building: PlacedBuilding, row: Int, column: Int) -> Bool {
+    /// `column` whose square is `side` across (see
+    /// ``cityCells(claimedBy:)``).
+    static func claims(_ building: PlacedBuilding, row: Int, column: Int, side: Int64) -> Bool {
         let c = PlacedBuildingRules.clearance
-        let inset = (Land.cellLength - PlacedBuildingRules.cityBuildingSide) / 2
+        let inset = (Land.cellLength - side) / 2
         let minX = Int64(column) * Land.cellLength + inset, minY = Int64(row) * Land.cellLength + inset
-        let maxX = minX + PlacedBuildingRules.cityBuildingSide, maxY = minY + PlacedBuildingRules.cityBuildingSide
+        let maxX = minX + side, maxY = minY + side
         return building.minX - c < maxX && minX < building.maxX + c && building.minY - c < maxY && minY < building.maxY + c
     }
 
     /// Whether one of the company's buildings claims the cell at `row`,
-    /// `column`: the city puts up nothing there (decision 95).
-    func isClaimedByPlacedBuilding(row: Int, column: Int) -> Bool {
-        placedBuildings.contains { Self.claims($0, row: row, column: column) }
+    /// `column`: the city puts up nothing there (decision 95). Its square
+    /// is `side` across, or ``cityBuildingSide(row:column:)``.
+    func isClaimedByPlacedBuilding(row: Int, column: Int, side: Int64? = nil) -> Bool {
+        guard !placedBuildings.isEmpty else { return false }
+        let side = side ?? cityBuildingSide(row: row, column: column)
+        return placedBuildings.contains { Self.claims($0, row: row, column: column, side: side) }
+    }
+
+    /// Whether the city building on `position` cannot be raised because
+    /// its square, grown to the next density's with the city's footprints
+    /// (decision 142), would reach one of the company's buildings.
+    func raiseIsBlocked(at position: CellPosition) -> Bool {
+        guard cityFootprints, !placedBuildings.isEmpty,
+              let building = buildings.building(row: position.row, column: position.column),
+              let next = BuildingDensity(rawValue: building.density.rawValue + 1)
+        else { return false }
+        return isClaimedByPlacedBuilding(row: position.row, column: position.column, side: PlacedBuildingRules.cityBuildingSide(of: next))
+    }
+
+    // MARK: - Commands
+
+    /// Turns the city's footprints on or off (decision 142): on, a city
+    /// building's square is its density's (20 to 40 m) rather than 40 m
+    /// whatever its height. Free; nothing on the map changes but what a
+    /// building claims and buys out from now on.
+    public mutating func setCityFootprints(_ enabled: Bool) {
+        cityFootprints = enabled
     }
 
     /// What buying out the city building on `cell` costs a managed company
@@ -142,7 +204,7 @@ extension GameWorld {
         let density = buildings.building(row: cell.row, column: cell.column)?.density
             ?? Building.fitting(cell, id: BuildingID(rawValue: 1)).density
         let floor = cell.use == .park ? 0 : Building.floorArea * density.floors
-        let side = PlacedBuildingRules.cityBuildingSide / WorldCoordinate.unitsPerMetre
+        let side = cityBuildingSide(row: cell.row, column: cell.column) / WorldCoordinate.unitsPerMetre
         let value = landValue(row: cell.row, column: cell.column)?.value ?? 0
         return Money((floor * PlacedBuildingRules.floorCost.amount + side * side * value) * PlacedBuildingRules.buyOutPercent / 100)
     }

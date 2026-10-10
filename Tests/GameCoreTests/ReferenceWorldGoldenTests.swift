@@ -127,7 +127,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setFareRules(let rules): error = model.setFareRules(rules)
         case .setPassengerRoutingMode, .setStationOperationMode:
             preconditionFailure("the reference model does not run network routing")
-        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok

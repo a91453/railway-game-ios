@@ -26,6 +26,9 @@ public struct SkylineGrowth: Sendable {
     public struct Rise: Hashable, Sendable {
         /// The density it rises from: 0 for a new building.
         public let fromDensity: Int
+        /// The side of the square it stood on, which grows with its density
+        /// (decision 142); the new side for a new building.
+        public let fromSide: Int64
         /// Whether the building is new on its cell (on open ground, a new
         /// cell or a cell whose use changed) rather than raised.
         public let isNew: Bool
@@ -113,11 +116,11 @@ public struct SkylineGrowth: Sendable {
             let cell = Cell(row: lot.row, column: lot.column)
             let delay = Self.delay(row: lot.row, column: lot.column)
             guard let earlier = before[cell], !earlier.isOpenGround, earlier.use == lot.use else {
-                rises[cell] = Rise(fromDensity: 0, isNew: true, delay: delay)
+                rises[cell] = Rise(fromDensity: 0, fromSide: lot.side, isNew: true, delay: delay)
                 continue
             }
             if lot.density > earlier.density {
-                rises[cell] = Rise(fromDensity: earlier.density, isNew: false, delay: delay)
+                rises[cell] = Rise(fromDensity: earlier.density, fromSide: earlier.side, isNew: false, delay: delay)
             }
         }
         guard !rises.isEmpty else { return nil }
@@ -134,11 +137,13 @@ public struct SkylineGrowth: Sendable {
     public func frame(of lot: CitySkyline.Lot, elapsed: Double) -> Frame? {
         guard let rise = rise(row: lot.row, column: lot.column) else { return nil }
         let target = CitySkyline.heightShare(density: lot.density)
+        // A raised building's square grows from its old side (decision 142).
+        let startSide = lot.side > 0 ? Double(rise.fromSide) / Double(lot.side) : 1
         let local = elapsed - rise.delay
         guard local > 0 else {
             return rise.isNew
                 ? Frame(heightShare: 0, sideShare: 0, light: 0)
-                : Frame(heightShare: CitySkyline.heightShare(density: rise.fromDensity), sideShare: 1, light: 0)
+                : Frame(heightShare: CitySkyline.heightShare(density: rise.fromDensity), sideShare: startSide, light: 0)
         }
         let progress = min(1, local / Self.riseDuration)
         // Fast at first, settling into place.
@@ -146,7 +151,7 @@ public struct SkylineGrowth: Sendable {
         let start = CitySkyline.heightShare(density: rise.fromDensity)
         return Frame(
             heightShare: start + (target - start) * eased,
-            sideShare: rise.isNew ? 0.4 + 0.6 * eased : 1,
+            sideShare: rise.isNew ? 0.4 + 0.6 * eased : startSide + (1 - startSide) * eased,
             light: 1 - progress
         )
     }
