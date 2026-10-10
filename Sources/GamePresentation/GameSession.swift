@@ -546,6 +546,11 @@ public final class GameSession {
     /// Changes the game speed through the world's clock, the only record of it.
     public func setSpeed(_ speed: GameSpeed) {
         isPausedForBuilding = false
+        // Decision 143: any write drops the tick being worked out, so the
+        // speed the game already runs at is not written again.
+        var clock = world.clock
+        clock.setSpeed(speed)
+        guard clock != world.clock else { return }
         world.setSpeed(speed)
     }
 
@@ -1574,14 +1579,26 @@ public final class GameSession {
     /// Undo takes both back; a game that starts does it for the stations
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
-        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water)
+        var read = world
+        Self.readLand(roundStationsOf: &read, population: population, places: places, water: water)
+        keepLand(of: read)
     }
 
     /// Reads in the land within `reach` of `point` (decision 95: under a
     /// building's site), as ``readLandRoundStations()`` does round
     /// stations. Not an edit.
     func readLand(within reach: Int64, of point: PlanPoint) {
-        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places, water: water)
+        var read = world
+        Self.readLand(within: reach, of: [point], in: &read, population: population, places: places, water: water)
+        keepLand(of: read)
+    }
+
+    /// Takes `read`, the world with land read in, only if land was: any
+    /// write drops the tick being worked out (decision 143), and on a map
+    /// whose land is all there, or already read here, nothing is.
+    private func keepLand(of read: GameWorld) {
+        guard read.landBlocks != world.landBlocks else { return }
+        world = read
     }
 
     @discardableResult

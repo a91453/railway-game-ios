@@ -205,6 +205,28 @@ final class GameLoopTests: XCTestCase {
         XCTAssertNil(session.beginLoopTick(), "no tick begins while paused")
     }
 
+    /// Only a change drops the tick worked out meanwhile: tapping the speed
+    /// the game already runs at, or picking a building site on a map whose
+    /// land is all there (no land is read in), changes nothing, and the
+    /// tick is taken.
+    @MainActor
+    func testWhatChangesNothingDoesNotDropTheLoopTick() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+        session.selectTool(.building)
+        session.setSpeed(.normal)
+        var expected = session.world
+        try expected.advance(ticks: 1)
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        async let outcome = tick.work()
+        session.setSpeed(.normal)
+        _ = session.tapBuildingTool(at: PlanPoint(x: 4_096, y: 3_072), reach: 512)
+        let taken = session.finish(tick, with: await outcome)
+
+        XCTAssertTrue(taken)
+        XCTAssertEqual(session.world, expected)
+    }
+
     @MainActor
     func testALoopTickThatCannotAdvanceChangesNothingAndIsReported() async throws {
         let world = try GameWorld(
