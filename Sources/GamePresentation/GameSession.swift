@@ -1590,6 +1590,11 @@ public final class GameSession {
         if world.clock.isPaused { restored.pause() }
         world = restored
         dropSelectionOfMissing()
+        // The building shown keeps its land read in, which the undo may
+        // have taken back, so its preview counts what stands there.
+        if let site = buildingSite {
+            readLand(within: Self.buildingLandReach, of: site)
+        }
         message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
     }
 
