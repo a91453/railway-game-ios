@@ -276,6 +276,12 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
    - 現在只有會收起卡片的手機才把「正在畫軌道」算進主題。
    - App 的 SwiftUI 檔，UNVERIFIED LOCALLY。
 
+4. **兩個 UI 測試在動畫還沒停時點擊**（這個 PR 的 CI 抓到，App 沒有錯）：
+   - `MapInteractionTests.testRotationKeepsTheCameraZoom`（只在完整 lane）：轉向後 0.5 秒就點「縮小」。等 App 閒置不會等轉向動畫，按鈕位置是轉到一半時讀的。失敗的錄影顯示點擊落在小地圖旁的地圖上，相機移走、縮放不變。`main` 通過的幾次都是轉向後約 1 秒才點。
+   - `MapInteractionTests.testSwitchingFollowTargetWhilePausedCentersTheCamera`（PR 閘門）：按「建造」後工具從旁邊滑入，「列車」的位置是滑到一半時讀的。點擊落在 x 70.6，按鈕停住後在 76–140，所以點到地圖。路網工具下點地圖會選鋪軌起點，卡片收起（決策 136），車隊總覽就沒出現。
+   - 修法：新增共用的 `XCUIElement.waitUntilSettled()`，等元素可點、而且相隔 0.25 秒讀兩次位置都一樣才點。用在上面兩處，以及 `StartSaveFlowSmokeTests` 按「建造」後點工具的每一處（同樣的寫法）。
+   - 沒有略過或停用任何測試。
+
 **審查過、沒有問題**：
 - #319（UI 測試改讀快照）、#320、#321、#323（只有文件與工具）。
 - #324 的建蔽率資料：解碼器與產生工具一致，9,296 列每列 8,064 格，值在 −1…100；每個讀土地的入口都帶上建蔽率。
@@ -295,4 +301,5 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 - **VERIFIED（本機 Linux，Swift 6.4）**：
   - `swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告。
   - 通過：`LineRunsTests`、`AreaBuyOutTests`、`CityFootprintsTests`、`CityDemandTests`、`RealCoverageTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`、`ReferenceWorldGoldenTests`、`LineDispatchPropertyTests`（campaigns-3 的大項），以及 GamePresentation 的 `RealWorldDemo*`、`RealWorldMapTests`、`RealRailwayGameplayTests`、`BuildingSessionTests`、`LineEditingTests`、`StationMasterAdviceTests`。
-- **UNVERIFIED LOCALLY**：`ContentView.swift` 的畫面行為（要 macOS CI）。
+- **VERIFIED（GitHub Actions，head 2593c71）**：CI（Linux 全部分片）、PR 的 iOS 閘門、Wasm Probe；手動觸發的 `ios-build.yml`（run 38075245693：完整 UI 測試與 iPad 教學測試）全綠。
+- **UNVERIFIED LOCALLY**：`ContentView.swift` 與 UI 測試只能在 macOS CI 上跑，本機只做了語法檢查。
