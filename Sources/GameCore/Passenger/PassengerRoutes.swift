@@ -203,6 +203,31 @@ struct PassengerRouteGraph: Equatable {
                                                headway: headway, isRing: true, dailyCapacity: capacity)
                         Self.add(path, to: &included, calls: &calls)
                     }
+                } else if line.hasRuns {
+                    // Decision 149: a line with runs (its own service only,
+                    // calling at every stop) rides only the stretches its
+                    // runs go, each way.
+                    let count = line.stops.count
+                    let out = Array(journey.legs.prefix(count - 1).map(\.seconds))
+                    let back = Array(journey.legs.suffix(count - 1).map(\.seconds))
+                    // A leg between each pair of stops each way.
+                    guard out.count == count - 1, back.count == count - 1 else { continue }
+                    for stretch in line.runStretches(outbound: true) {
+                        Self.add(ServicePath(line: line.id, pattern: nil, direction: .outbound,
+                                             stations: stretch.map { line.stops[$0] },
+                                             runSeconds: Array(out[stretch.lowerBound..<stretch.upperBound]),
+                                             headway: headway, isRing: false, dailyCapacity: capacity),
+                                 to: &included, calls: &calls)
+                    }
+                    for stretch in line.runStretches(outbound: false) {
+                        // Back from the stretch's last stop to its first:
+                        // the legs back are in the reversed order.
+                        Self.add(ServicePath(line: line.id, pattern: nil, direction: .inbound,
+                                             stations: stretch.reversed().map { line.stops[$0] },
+                                             runSeconds: Array(back[(count - 1 - stretch.upperBound)..<(count - 1 - stretch.lowerBound)]),
+                                             headway: headway, isRing: false, dailyCapacity: capacity),
+                                 to: &included, calls: &calls)
+                    }
                 } else {
                     let callIndices = line.calls(ofService: service)
                     let half = callIndices.count - 1

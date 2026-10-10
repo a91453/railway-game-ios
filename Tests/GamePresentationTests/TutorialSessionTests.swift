@@ -358,6 +358,29 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
+    /// The second-station step says short trips walk, up to 2 km, only
+    /// where they do: a world with demand by distance (decision 137). A
+    /// demo or a save from before it has none, and the step leaves it out.
+    func testTheStepsSayShortTripsWalkOnlyWhereTheyDo() async throws {
+        await MainActor.run {
+            @MainActor func secondStation(_ session: GameSession) -> String {
+                session.startTutorial()
+                return session.tutorial?.steps.first { $0.id == "build.secondStation" }?.body(in: .english) ?? ""
+            }
+            let distanced = GameSession(world: .newGame(), language: .english)
+            XCTAssertTrue(distanced.world.distanceDemand)
+            XCTAssertTrue(secondStation(distanced).contains("up to 2 km"))
+            XCTAssertEqual(distanced.tutorial?.steps, Tutorial.standardSteps)
+
+            var world = GameWorld.newGame()
+            world.setDistanceDemand(false)
+            let plain = GameSession(world: world, language: .english)
+            let body = secondStation(plain)
+            XCTAssertFalse(body.contains("2 km"), body)
+            XCTAssertTrue(body.hasSuffix("add a platform there too."), body)
+        }
+    }
+
     /// The speed step reads the clock as it is now: it is done while the
     /// speed differs from the one it was shown at, and resuming counts.
     func testTheSpeedStepIsDoneWhileTheSpeedDiffers() async throws {

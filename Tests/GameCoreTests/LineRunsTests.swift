@@ -150,6 +150,31 @@ final class LineRunsTests: XCTestCase {
         XCTAssertFalse(two.line(id: main)?.hasRuns ?? true)
     }
 
+    /// A line with runs serves only the way and the stretch some run goes
+    /// (decision 149): with the run out alone, Gamma's trips to Alpha
+    /// have no train to take and are not set out; with a run from Alpha to
+    /// Beta alone, nor are Alpha's to Gamma. Direct and network routing
+    /// alike.
+    func testOnlyTheWaysAndStretchesTheRunsGoAreServed() throws {
+        for mode in [PassengerRoutingMode.direct, .network] {
+            var world = try world(runs: [out])
+            world.setPassengerRoutingMode(mode)
+            for station in [alpha, beta, gamma] {
+                try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 1_000))
+            }
+            XCTAssertGreaterThan(world.dailyDemand(from: alpha, to: gamma), 0, "\(mode)")
+            XCTAssertGreaterThan(world.dailyDemand(from: beta, to: gamma), 0, "\(mode)")
+            XCTAssertEqual(world.dailyDemand(from: gamma, to: alpha), 0, "\(mode): no run back")
+            XCTAssertEqual(world.dailyDemand(from: beta, to: alpha), 0, "\(mode): no run back")
+
+            let short = LineRun(from: 0, to: 1, times: Array(out.times.prefix(2)))
+            try world.setLineRuns(main, to: [short])
+            XCTAssertGreaterThan(world.dailyDemand(from: alpha, to: beta), 0, "\(mode)")
+            XCTAssertEqual(world.dailyDemand(from: alpha, to: gamma), 0, "\(mode): no run reaches Gamma")
+            XCTAssertEqual(world.dailyDemand(from: beta, to: gamma), 0, "\(mode): no run reaches Gamma")
+        }
+    }
+
     // MARK: - Commands
 
     func testSettingRunsChecksThem() throws {

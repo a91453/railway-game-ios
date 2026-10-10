@@ -244,6 +244,36 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.buildingPreviewText?.contains("city building"), false)
     }
 
+    /// Buying out by area, a share of each covered cell's people move into
+    /// the building, in free play as when managed: the preview says how
+    /// many, and so does the message once it stands.
+    func testBuyingOutByAreaSaysWhoMovesIn() throws {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.1316, longitudeDegrees: 121.7397))
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 48, jobs: 8)])
+        world.setCityBuildings(true)
+        world.setCityFootprints(true)
+        world.setAreaBuyOut(true)
+        world.setGeoAnchor(anchor)
+        XCTAssertEqual(world.accounts.mode, .free)
+        // 1,580 × 2,048 units of cell (5, 5): 9 of its 48 residents and 1
+        // of its 8 jobs, rounded down.
+        let covered: Int64 = (24_576 - (24_020 - 1_024)) * 2_048
+        let residents = 48 * covered / Land.cellArea, jobs = 8 * covered / Land.cellArea
+        XCTAssertEqual([residents, jobs], [9, 1])
+        for mode in [EconomyMode.free, .management] {
+            var copy = world
+            copy.setEconomyMode(mode)
+            let session = GameSession(world: copy, language: .english)
+            session.selectTool(.building)
+            session.buildingKind = .office
+            session.tapBuildingTool(at: PlanPoint(x: 24_020, y: 22_528), reach: 0)
+            XCTAssertEqual(session.buildingPreviewText?.contains("9 residents and 1 job move in"), true, "\(mode): \(session.buildingPreviewText ?? "nil")")
+            XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 24_020, y: 22_528)))
+            XCTAssertEqual(session.message?.text.contains("9 residents and 1 job moving in"), true, "\(mode): \(session.message?.text ?? "nil")")
+        }
+    }
+
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])

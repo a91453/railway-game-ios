@@ -16,8 +16,10 @@
 //   ``DistanceDemand/outsideTrips`` a day are shared among the open
 //   outside connections and added to their ridership from the land, so
 //   visitors set out from them and the other stations' trips are drawn to
-//   them; their trips go beyond the map, so they keep all of them whatever
-//   the distance on it, and pay the fare and
+//   them; a trip between one and a station that is not one goes beyond
+//   the map, so it keeps all its trips whatever the distance on it (two
+//   outside connections keep the share of their distance, decision 148),
+//   and every trip to or from one pays the fare and
 //   ``DistanceDemand/outsideFareMultiple`` times the city's fare baseline
 //   for the way beyond (the long-distance fare).
 //
@@ -118,10 +120,13 @@ extension GameWorld {
 
     /// `trips` from `origin` to `destination` as their distance keeps them
     /// (see ``DistanceDemand/share(squaredDistance:)``), rounded half up,
-    /// while demand by distance is on; all of them to or from an outside
-    /// connection, and unchanged with it off.
+    /// while demand by distance is on; all of them between an outside
+    /// connection and a station that is not one (the trip goes beyond the
+    /// map), and unchanged with it off. A pair of outside connections keeps
+    /// the share of its distance like any other (decision 148): two of them
+    /// side by side are a short trip along the edge, not a trip beyond it.
     func distancedTrips(_ trips: Int64, from origin: StationID, to destination: StationID) -> Int64 {
-        guard distanceDemand, trips > 0, !isOutsideConnection(origin), !isOutsideConnection(destination),
+        guard distanceDemand, trips > 0, isOutsideConnection(origin) == isOutsideConnection(destination),
               let squared = squaredDistance(from: origin, to: destination)
         else { return trips }
         return (trips * DistanceDemand.share(squaredDistance: squared) + 500) / 1_000
