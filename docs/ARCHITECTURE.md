@@ -3879,7 +3879,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
    - 實景地圖讀 App 的高度檔（`HeightGrid`），在 64 m 格的角點取樣一次（在背景執行緒）；地圖超過 1,025 個角點寬時（全島）隔幾格取一個。沒有高度檔時讀世界已讀入的地面；沒有地面的世界（空白地圖）是平地，不畫，圖例寫「這張地圖是平地」。
    - 每格（拉遠時併成 2、4、8… 格的區塊，和城市圖層相同）依中點高度著色（本專案的配色：0 m 淡綠到 3,500 m 淡灰，每 25 m 一階），再依跨過區塊的坡度以西北方的光加陰影或亮面（強度分八階，畫面上只有幾百種顏色）；水不畫。陡坡（決策 115）的格畫斜線。點一格顯示「海拔 N 公尺」與是不是陡坡。
 5. **字串**：圖層選單的三句加進 `Localizable.xcstrings`（繁中已翻）；其他新文字用 `Text(verbatim:)` 與 `DisplayLanguage.text`。
-6. **卡片的高度**（2026-10-10，PR #292）：H3 合併後，`main` 的 `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 在 iPhone 橫向失敗（`Build Track` 不能點）。詳細卡片超過最大高度就捲動，動作按鈕排在最後，縱斷面與分項把它推出畫面，玩家也要先捲動才按得到。改成：沒有地面的世界（空白地圖、教學）不畫縱斷面與分項（地面是 0 m 的平地，費用就是軌道的，上一行已寫）；手機上兩者預設收起，按「縱斷面與費用」（`network.section`）才展開，iPad（兩個方向都是 regular）照舊直接顯示。只改 `NetworkControls`；GamePresentation 的 `NetworkPreview` 照舊算出兩者。
+6. **卡片的高度**（2026-10-10，PR #293）：H3 合併後，`main` 的 `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` 在 iPhone 橫向失敗（`Build Track` 不能點）。詳細卡片超過最大高度就捲動，動作按鈕排在最後，縱斷面與分項把它推出畫面，玩家也要先捲動才按得到。改成：沒有地面的世界（空白地圖、教學）不畫縱斷面與分項（地面是 0 m 的平地，費用就是軌道的，上一行已寫）；手機上兩者預設收起，按「縱斷面與費用」（`network.section`）才展開，iPad（兩個方向都是 regular）照舊直接顯示。只改 `NetworkControls`；GamePresentation 的 `NetworkPreview` 照舊算出兩者。
 
 **沒有驗證的**：Linux 不能建置 App：`NetworkControls`、`MapArt`、`MapView`、`PopulationLegendView`、`MapLayerSheet`、`Palette` 的改動要看 CI 的 Xcode 建置；縱斷面、邊坡、圖層的顏色與在全島地圖上拉近拉遠的速度要實機看。設計說明第 7 節的「節點顯示地面高度」已在 H1 的路網卡片；側邊工具列的「橋／隧道」「上／下」與參考 `Simulator` 的「覆土不足」提示（`shallowBores`）沒有做，留給之後。
 
