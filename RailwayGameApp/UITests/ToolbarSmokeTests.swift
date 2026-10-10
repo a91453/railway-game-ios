@@ -173,6 +173,26 @@ final class LineRoutePreferenceUITests: XCTestCase {
 }
 
 @MainActor
+extension XCUIElement {
+    /// Waits until the element is hittable and in the same place twice in
+    /// a row, a quarter of a second apart. Waiting for the app to idle does
+    /// not wait for a turning layout or tools sliding in, and a tap found
+    /// while they move lands where the element was (PR #326's runs: on the
+    /// map beside the overview, and 5 pt left of the train tool).
+    func waitUntilSettled(timeout: TimeInterval = 5) {
+        XCTAssertTrue(waitForExistence(timeout: timeout), "Missing \(self)")
+        var last = frame
+        for _ in 0..<Int(timeout * 4) {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = frame
+            if now == last, isHittable { return }
+            last = now
+        }
+        XCTFail("\(self) did not settle")
+    }
+}
+
+@MainActor
 extension XCUIApplication {
     /// Drags a list until `element` lies wholly on screen; whether it does
     /// within 16 drags. A sheet's list (`list` `nil`): clear of the

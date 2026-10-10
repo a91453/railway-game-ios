@@ -465,9 +465,8 @@ extension GameWorld {
     /// Adds `residents` and `jobs` to the cells of `station`'s catchment,
     /// shared by their residents (jobs), those of its front counted
     /// ``LandDemand/stationFrontGrowth`` times (decision 129), by the
-    /// largest remainder, each cell filled to at most its growth limit: its
-    /// building's capacity with the city's buildings on (Phase 6c-2), else
-    /// the fixed limits.
+    /// largest remainder, each cell filled to at most its growth limit
+    /// (``growthLimits(of:)``).
     mutating func grow(around station: Station, residents: Int64, jobs: Int64) {
         var indices: [Int] = []
         var weights: [Int64] = []
@@ -483,11 +482,11 @@ extension GameWorld {
             // Decision 98: nothing grows on land zoned no development; its
             // share is not added.
             guard allowsGrowth(row: cell.row, column: cell.column) else { continue }
-            let capacity = cityBuildings ? buildings.building(row: cell.row, column: cell.column)?.capacity(on: cell) : nil
-            let residentLimit = capacity?.residents ?? LandDemand.grownResidents
-            let jobLimit = capacity?.jobs ?? LandDemand.grownJobs
-            let newResidents = cell.residents >= residentLimit ? cell.residents : min(residentLimit, cell.residents + addedResidents[offset])
-            let newJobs = cell.jobs >= jobLimit ? cell.jobs : min(jobLimit, cell.jobs + addedJobs[offset])
+            // Buying out by area (decision 146), less what the company's
+            // buildings cover, as the steered growth.
+            let limits = growthLimits(of: cell)
+            let newResidents = cell.residents >= limits.residents ? cell.residents : min(limits.residents, cell.residents + addedResidents[offset])
+            let newJobs = cell.jobs >= limits.jobs ? cell.jobs : min(limits.jobs, cell.jobs + addedJobs[offset])
             land.cells[index] = cell.with(residents: newResidents, jobs: newJobs)
         }
     }

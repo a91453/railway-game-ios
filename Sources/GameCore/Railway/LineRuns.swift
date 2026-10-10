@@ -156,13 +156,16 @@ extension ServiceLine {
     }
 
     /// The first second after `now` at which a run starts or stops being
-    /// due (see ``dueRuns(at:)``), within the next two days, or `nil`.
+    /// due (see ``dueRuns(at:)``), or `nil` if none ever does. The days
+    /// looked at run a week past tomorrow, so a run on any weekday is
+    /// seen: an idle step skips to this second, and a run days away must
+    /// still wake it (decision 133).
     func nextRunChange(after now: GameTime) -> GameTime? {
         guard hasRuns else { return nil }
         let today = GameTime.floorDivide(now.seconds, GameTime.secondsPerDay)
         var soonest: Int64?
         for (index, run) in runs.enumerated() {
-            for day in (today - 2)...(today + 2) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day && run.fits(onDay: day) {
+            for day in (today - 2)...(today + 8) where day >= 0 && run.runs(onDay: day) && (runDays[index] ?? -1) < day && run.fits(onDay: day) {
                 let start = run.start(onDay: day)
                 for edge in [start - LineRun.earliestDispatch, start + LineRun.latestDispatch + 1] where edge > now.seconds {
                     soonest = min(soonest ?? .max, edge)

@@ -19,7 +19,13 @@ final class MapInteractionTests: XCTestCase {
             // Decision 114: the tools show once Build is pressed; Select
             // (Done) below closes them again.
             app.buttons["dock.build"].tap()
-            app.buttons["tool.train"].tap()
+            // The tools slide in from the side: a tap found while they
+            // moved landed 5 pt left of Train on the map, which, with the
+            // network tool chosen, picked a track start and folded the
+            // card (PR #326's run on 6d23fab).
+            let trainTool = app.buttons["tool.train"]
+            trainTool.waitUntilSettled()
+            trainTool.tap()
             let fleet = app.buttons["train.fleetOverview"]
             if !fleet.isHittable { app.swipeUp() }
             XCTAssertTrue(fleet.waitForExistence(timeout: 5))
@@ -235,8 +241,17 @@ final class MapInteractionTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeRight
         XCTAssertGreaterThan(app.frame.width, app.frame.height)
         XCTAssertFalse(zoomIn.isEnabled, "Changing the layout must keep the camera's maximum zoom")
-        app.buttons["Zoom out"].tap()
-        XCTAssertTrue(zoomIn.isEnabled)
+        // Waiting for the app to idle does not wait for the turn: a tap
+        // found 0.5 s after it took the button's place in the turning
+        // window, landed on the map beside the overview, which moved the
+        // camera and left the zoom alone (the branch run of PR #326; the
+        // passing runs tapped a second after the turn). Tap once the
+        // button stays put.
+        let zoomOut = app.buttons["Zoom out"]
+        zoomOut.waitUntilSettled()
+        zoomOut.tap()
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: zoomIn)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Zoom out did not leave room to zoom in")
     }
 
     func testMapLayersSheetTogglesAndDismisses() {

@@ -257,6 +257,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
                 }
             }
         }
+        // The tools slide in once Build is pressed: tap one once it stays put.
+        if identifier.hasPrefix("tool.") { button.waitUntilSettled() }
         return requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
     }
 

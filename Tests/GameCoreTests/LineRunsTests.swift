@@ -116,6 +116,21 @@ final class LineRunsTests: XCTestCase {
         XCTAssertEqual(once.line(id: main)?.runDays, [2, 2])
     }
 
+    /// A run days away, beyond the days a step looks at for the next
+    /// minute a run starts or stops being due, still wakes one long step:
+    /// a Saturday run (day 5) from a Monday, in one call as in a day at a
+    /// time.
+    func testALongAdvanceDoesNotSkipARunDaysAway() throws {
+        let saturday = LineRun(from: 0, to: 2, times: out.times, days: 1 << 6)
+        var once = try world(runs: [saturday])
+        var daily = once
+        try once.advance(ticks: 6 * 1_440)
+        for _ in 0..<6 { try daily.advance(ticks: 1_440) }
+        XCTAssertEqual(daily.line(id: main)?.runDays, [5])
+        XCTAssertEqual(once.line(id: main)?.runDays, [5])
+        XCTAssertTrue(once == daily, "one long step and a day at a time differ")
+    }
+
     // MARK: - Riders and the line's queries
 
     /// A run's riders go its way to its end, and the line's headway is the
