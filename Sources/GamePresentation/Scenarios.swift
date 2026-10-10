@@ -61,13 +61,19 @@ public struct Challenge: Hashable, Sendable, Identifiable {
 }
 
 extension Challenge {
-    /// The challenges on a blank map, easiest first. Their targets are a
-    /// first measure (decision 86) to be tuned by playing: one fixed first
-    /// line through the middle town, never extended, carries 35,000 riders
-    /// a day at first, 68,000 by day 60, 111,000 by 120 and some 180,000
-    /// by 180; the map's 91,000 people grow to 141,000, 240,000 and
-    /// 342,000, its 38 high-rises to 56, 279 and 325, and the company's
-    /// equity from $3.1M to $14M, $37M and $75M.
+    /// The challenges on a blank map, easiest first. Decision 86 set their
+    /// targets on a fixed first line that decision 137 left losing money;
+    /// decision 145 measured them again with `ChallengeReportTests` and set
+    /// them so that the least each asks, played and waited out, earns
+    /// bronze, one more thing silver, and gold asks for more than the
+    /// report's plays. On seeds 1–3 the three towns linked by two lines from
+    /// the first, a train of four cars each, first carry 350,000 riders a
+    /// day on day 284–306; trains of eight cars, on day 193–229: until about
+    /// day 120 the riders are the demand's, after it the trains' room. More
+    /// lines and stations between the towns do not bring it forward. The
+    /// same two lines reach 600,000 people on day 475–494 and equity of
+    /// $800 million on day 1,028–1,031; with eight cars, on day 426–451 and
+    /// 847–868.
     public static let sandbox: [Challenge] = [threeTowns, cityBuilder, tycoon]
 
     /// The challenge with `id`, as a save names its scenario: one of
@@ -89,8 +95,8 @@ extension Challenge {
         rules: { seed, bounds in
             Scenario(
                 id: "sandbox.threeTowns",
-                goals: [.connect(points: Land.townCentres(seed: seed, in: bounds), radius: Land.catchmentRadius), .dailyRiders(100_000)],
-                goldDays: 60, silverDays: 120, deadlineDays: year, insolvencyDays: 60
+                goals: [.connect(points: Land.townCentres(seed: seed, in: bounds), radius: Land.catchmentRadius), .dailyRiders(350_000)],
+                goldDays: 180, silverDays: 270, deadlineDays: year, insolvencyDays: 60
             )
         }
     )
@@ -100,14 +106,16 @@ extension Challenge {
         id: "sandbox.cityBuilder",
         titles: ("Railway Town", "鐵道造鎮"),
         stories: (
-            "A railway brings people, and people bring buildings. Grow the towns along your lines into a city of a million.",
-            "鐵路帶來人潮，人潮帶來高樓。讓沿線的小鎮長成百萬人口、高樓林立的城市。"
+            "A railway brings people, and people bring buildings. Grow the towns along your lines into a city of 600,000.",
+            "鐵路帶來人潮，人潮帶來高樓。讓沿線的小鎮長成六十萬人口、高樓林立的城市。"
         ),
         rules: { _, _ in
             Scenario(
                 id: "sandbox.cityBuilder",
-                goals: [.population(1_000_000), .tallBuildings(500), .dailyRiders(500_000)],
-                goldDays: year, silverDays: 3 * year / 2, deadlineDays: 2 * year, insolvencyDays: 60
+                // Decision 145: silver between the day trains of eight
+                // cars bring 600,000 people (426–451) and four cars (475–494).
+                goals: [.population(600_000), .tallBuildings(500), .dailyRiders(350_000)],
+                goldDays: year, silverDays: 465, deadlineDays: 2 * year, insolvencyDays: 60
             )
         }
     )
@@ -117,14 +125,14 @@ extension Challenge {
         id: "sandbox.tycoon",
         titles: ("Railway Tycoon", "鐵道大亨"),
         stories: (
-            "Turn a small railway into a great company: $300 million of profit in a year, and a company worth a billion.",
-            "把一間小小的鐵路公司經營成大企業：一年賺進 3 億，讓公司身價突破 10 億。"
+            "Turn a small railway into a great company: $300 million of profit in a year, and a company worth $800 million.",
+            "把一間小小的鐵路公司經營成大企業：一年賺進 3 億，讓公司身價突破 8 億。"
         ),
         rules: { _, _ in
             Scenario(
                 id: "sandbox.tycoon",
-                goals: [.annualNetProfit(Money(30_000_000_000)), .equity(Money(100_000_000_000))],
-                goldDays: 3 * year / 2, silverDays: 2 * year, deadlineDays: 3 * year, insolvencyDays: 60
+                goals: [.annualNetProfit(Money(30_000_000_000)), .equity(Money(80_000_000_000))],
+                goldDays: 2 * year, silverDays: 5 * year / 2, deadlineDays: 3 * year, insolvencyDays: 60
             )
         }
     )

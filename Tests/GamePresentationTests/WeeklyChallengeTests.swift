@@ -33,12 +33,35 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertNotEqual(week.seed, WeeklyChallenge(week: week.week + 1).seed)
 
         XCTAssertEqual(first.scenario?.scenario.id, "weekly.\(week.week)")
-        XCTAssertEqual(first.scenarioTitle(in: .traditionalChinese), "每週挑戰 · 10/5–10/11")
+        XCTAssertEqual(first.scenarioTitle(in: .traditionalChinese), "每週挑戰 · 三鎮連線 · 10/5–10/11")
         XCTAssertEqual(Challenge.named("weekly.\(week.week)")?.id, week.scenarioID)
         XCTAssertNil(Challenge.named("weekly.x"))
         // The week's goals are the three towns' on its own map.
         guard case .connect(let points, _)? = first.scenario?.scenario.goals.first else { return XCTFail("links the towns") }
         XCTAssertEqual(points, Land.townCentres(seed: week.seed, in: first.bounds))
+    }
+
+    /// Decision 145: from the week of 12 October 2026 the weeks take the
+    /// sandbox challenges in turn; every week before it was Three Towns.
+    func testTheWeeksTakeTheSandboxChallengesInTurn() throws {
+        let rotating = WeeklyChallenge(containing: monday.addingTimeInterval(7 * 86_400))
+        XCTAssertEqual(rotating.week, WeeklyChallenge.firstRotatingWeek)
+        XCTAssertEqual(WeeklyChallenge(containing: monday).base, Challenge.threeTowns)
+        XCTAssertEqual(WeeklyChallenge(week: rotating.week - 5).base, Challenge.threeTowns)
+        let turns = (0..<6).map { WeeklyChallenge(week: rotating.week + $0).base.id }
+        XCTAssertEqual(turns, (Challenge.sandbox + Challenge.sandbox).map(\.id))
+
+        // The week plays its challenge's goals and days on its own map,
+        // under its own ID, and says which challenge it is.
+        let week = WeeklyChallenge(week: rotating.week + 2)
+        let world = GameWorld.newGame(weekly: week)
+        let rules = try XCTUnwrap(world.scenario?.scenario)
+        let tycoon = Challenge.tycoon.scenario(seed: week.seed, in: world.bounds)
+        XCTAssertEqual(rules.id, "weekly.\(week.week)")
+        XCTAssertEqual(rules.goals, tycoon.goals)
+        XCTAssertEqual([rules.goldDays, rules.silverDays, rules.deadlineDays], [tycoon.goldDays, tycoon.silverDays, tycoon.deadlineDays])
+        XCTAssertEqual(world.scenarioTitle(in: .traditionalChinese), "每週挑戰 · 鐵道大亨 · 10/26–11/1")
+        XCTAssertTrue(week.challenge.story(in: .traditionalChinese).contains(Challenge.tycoon.story(in: .traditionalChinese)))
     }
 
     func testOnlyABetterResultIsKept() throws {

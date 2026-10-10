@@ -57,15 +57,32 @@ public struct WeeklyChallenge: Hashable, Sendable {
         "weekly.\(week)"
     }
 
-    /// The week's challenge: link the three towns of its map and carry their
-    /// people, rated by the days it took.
+    /// The first week whose challenge rotates (decision 145): the one that
+    /// begins on Monday 12 October 2026. Every week before it was Three
+    /// Towns, and a save of one is still named so.
+    static let firstRotatingWeek: Int64 = 2_962
+
+    /// The sandbox challenge the week plays: Three Towns before
+    /// ``firstRotatingWeek``, then Three Towns, Railway Town and Railway
+    /// Tycoon in turn (decision 145), so the weeks do not all ask the same.
+    public var base: Challenge {
+        guard week >= Self.firstRotatingWeek else { return Challenge.threeTowns }
+        let sandbox = Challenge.sandbox
+        return sandbox[Int((week - Self.firstRotatingWeek) % Int64(sandbox.count))]
+    }
+
+    /// The week's challenge: its sandbox challenge (``base``) on the week's
+    /// map, rated by the days it took.
     public var challenge: Challenge {
-        let base = Challenge.threeTowns
+        let base = base
         let id = scenarioID
         let range = rangeText
         return Challenge(
             id: id,
-            titles: ("Weekly Challenge · \(range)", "每週挑戰 · \(range)"),
+            titles: (
+                "Weekly Challenge · \(base.title(in: .english)) · \(range)",
+                "每週挑戰 · \(base.title(in: .traditionalChinese)) · \(range)"
+            ),
             stories: (
                 "Everyone gets this map this week. \(base.story(in: .english)) The fewer days it takes, the better.",
                 "這週所有人玩同一張地圖。\(base.story(in: .traditionalChinese))完成的天數越少越好。"
@@ -155,8 +172,9 @@ public struct ChallengeRecord: Hashable, Codable, Sendable {
 /// counts as no results; one that cannot be written loses only the newest.
 public struct ChallengeRecords: Sendable {
     /// The challenges' rules now: a new version when their targets change,
-    /// so older results are set aside.
-    public static let rulesVersion = "2026-10-goals-v1"
+    /// so older results are set aside (v2: decision 145's targets and
+    /// weekly turns).
+    public static let rulesVersion = "2026-10-goals-v2"
 
     public let file: URL
     /// The best results under the current rules, by scenario ID.
