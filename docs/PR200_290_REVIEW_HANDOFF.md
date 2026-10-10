@@ -245,3 +245,54 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
   - 通過的類別：`StationSitingTests`、`NetworkBuildingSessionTests`、`GameLoopTests`、`BuildingSessionTests`、`WholeTaiwanTests`、`UndoSessionTests`、`BuildPauseSessionTests`、`ZoningSessionTests`、`CityDemandTests`、`LandBlocksTests`、`CityFootprintsTests`、`BuildingSale*`、`PlacedBuilding*`、`NewGame*`、`SavedGameTests`、`GoldenScenarioTests`。
   - #311 的交通 campaign 用 12 個額外種子加跑（跑滿兩小時上限被停掉）：`ScheduledOvertakeTrack` 的 Final、Last、Middle 三個類別跑完，只有種子數變多造成的次數斷言，沒有任何一個案例不一致；第四個類別跑到一半，也沒有不一致；`ScheduledTrafficPropertyTests` 與 `ScheduledTrafficSecondHalfPropertyTests` 沒有跑到（CI 的 4 個種子有跑）。
 - **UNVERIFIED LOCALLY**：`MapView.swift` 的畫面行為（要 macOS CI）。
+
+## 十、延長到 #319–#325，並對 #300–#318 再看一輪（第六個 PR）
+
+**合併狀態**：#300–#325 每個 PR 的 head 都已在 `main` 上（`git merge-base --is-ancestor`）。#310 關閉沒合併，它的 head 就是 #309 的合併 commit（b8512d5），內容已在 `main`，不用補。
+
+**main 的 CI**：
+- CI（Linux）與 Wasm Probe 在範圍內每次合併後都是綠的，包括 #324、#325。
+- iOS App Build 只紅過 #313、#314 兩次，都是 `LineRoutePreferenceUITests.testALineLegCanSelectAPhysicalPlatform`（第九節）。
+  - log 佐證：#314 那次，查詢在 t=154.53 s 找到 2 個「Dismiss message」按鈕，0.13 s 後讀第 0 個的 `frame` 時已經不在。從點選路徑（t=148.56 s）算起，已過了約 6 s，訊息 4 s 自己消失。
+  - #312 那次通過：查詢在點選後 6.95 s，訊息早已消失，查到 0 個，直接跳過。
+  - 所以是測試先查再讀的時間差，不是 App 的錯。#319 改從 `snapshot()` 讀位置，之後 #319、#322 的 iOS run 都綠。
+- 其餘 iOS run 被下一次推送取消（`main` 的新推送取消舊的）。
+
+**修的 bug（GameCore 的兩項都先寫測試，確認修之前會失敗）**：
+1. **一次推進好幾天時，固定班次會漏發兩天以後的班**（#300，決策 133）：
+   - 閒置快轉跳到下一次「有班次開始或結束可以發車」的時刻，`nextRunChange(after:)` 只往後看兩天。
+   - 兩天內沒有班次（只在週六開的班從週一看；平日班跨過週末）就回傳 `nil`，整段直接跳到底，那班永遠不發。逐日推進卻會發。
+   - 現在往後看到明天再加一週，每個星期幾都看得到。原本找得到的情況答案不變。
+   - 測試：`LineRunsTests.testALongAdvanceDoesNotSkipARunDaysAway`（修之前一次推進 `runDays` 是 `[nil]`，逐日是 `[5]`）。
+   - 實景示範的平溪線每天都有班，又有每週需求每晚叫醒，碰不到；GameCore API 與沒有每週需求的世界會碰到。
+2. **依面積收購後，一般成長會把公司蓋掉的那份長回來**（#322，決策 146）：
+   - 只有依城市需求的成長用 `growthLimits(of:)` 扣掉公司蓋到的面積；一般成長（城市需求關閉，或還沒有比例時）自己算上限，沒有扣。
+   - 結果是搬進公司建物的那份人在格子裡又長回來，算了兩次。
+   - 現在兩條路都用 `growthLimits(of:)`；沒開依面積收購時上限和以前一樣，golden、存檔、replay 都不變。
+   - 測試：`AreaBuyOutTests.testPlainGrowthLeavesOutWhatTheCompanyCovers`（修之前格子長回 56 人，上限是 49）。
+3. **iPad 上收起的細節卡，開始畫軌道或清除時又自己打開**（#305，決策 136）：
+   - 決策 136 把「正在畫軌道」放進細節卡的主題，主題一變就丟掉玩家的選擇。
+   - 手機上這是要的（畫軌道時收起）；iPad 不收，卻也丟掉選擇，每次開始或清除一段，收起的卡片又蓋回地圖上。決策 136 寫明 iPad 不變。
+   - 現在只有會收起卡片的手機才把「正在畫軌道」算進主題。
+   - App 的 SwiftUI 檔，UNVERIFIED LOCALLY。
+
+**審查過、沒有問題**：
+- #319（UI 測試改讀快照）、#320、#321、#323（只有文件與工具）。
+- #324 的建蔽率資料：解碼器與產生工具一致，9,296 列每列 8,064 格，值在 −1…100；每個讀土地的入口都帶上建蔽率。
+- #325 的六項修正。
+- 遊戲迴圈（決策 143）：每個改世界的路徑都會加 `worldRevision`，背景算的 tick 不會蓋過指令，也不會套用兩次。
+- 固定班次的存檔驗證、失敗原子性、乘客方向；需求依距離的計畫快取鍵。
+
+**沒修，需要作者決定或只回報**：
+- **自由模式依面積收購時，建造預覽不說會搬進多少人**（#322）：經營模式寫收購費，自由模式不收錢，預覽什麼都不寫；放好後的訊息也不提。要不要加一行是文字設計。
+- **建地對齊後換建物種類不會重新對齊**（決策 144 只在點選與放開拖曳時對齊，照設計）。
+- **成長動畫在很窄的時間內仍可能把讀進的土地當成長**：天際線在背景算到一半被下一個鍵取消時，下一次比較的是更舊的天際線。只發生在 23:5x 讀進土地、背景計算跨過午夜時，只影響動畫。
+- **城市建物關閉、只開依密度的建地時，出售建物的人可能搬進另一棟建物的方塊**（#325 的修正沒有涵蓋城市建物關閉的情況）：App 的新遊戲兩者都開，只有 GameCore API 會碰到。
+- **固定班次只服務部分方向或區段時，其他方向的乘客會一直等**（GameCore API 或示範資料才會設定班次；平溪線兩個方向都有）。
+- 第九節的待決項目（地圖邊緣短程接駁會賺錢等）仍待作者決定。
+
+**驗證**：
+- **VERIFIED（本機 Linux，Swift 6.4）**：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告。
+  - 通過：`LineRunsTests`、`AreaBuyOutTests`、`CityFootprintsTests`、`CityDemandTests`、`RealCoverageTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`、`ReferenceWorldGoldenTests`、`LineDispatchPropertyTests`（campaigns-3 的大項），以及 GamePresentation 的 `RealWorldDemo*`、`RealWorldMapTests`、`RealRailwayGameplayTests`、`BuildingSessionTests`、`LineEditingTests`、`StationMasterAdviceTests`。
+- **UNVERIFIED LOCALLY**：`ContentView.swift` 的畫面行為（要 macOS CI）。
