@@ -154,29 +154,36 @@ def density(levels):
     return next(name for limit, name in CLASSES if levels <= limit)
 
 
-def main(population_path, extract, out):
-    population = json.load(open(population_path))
+def survey(population, step, cells, bounds=None):
+    """The survey of `cells` (each [footprint, footprint × lat, footprint ×
+    lon, footprint with storeys, that × storeys, buildings] by (row, column)
+    on the grid of `step` degrees): totals, people by the footprint a resident
+    and the SPOTS. With `bounds` (west, south, east, north), only the people
+    of the population cells whose middle lies inside count."""
     size = population['cellDegrees']
     north, west = population['north'], population['west']
-    step = size / CUTS
-    handler = Buildings(north, west, step)
-    handler.apply_file(extract, locations=True)
-    cells = handler.cells
     footprint = sum(cell[0] for cell in cells.values())
 
-    # The people of each population cell, and the footprint OSM has there.
+    # The people of each population cell, and the footprint there.
     people = {}
     for run in population['runs']:
         for offset, count in enumerate(run['p']):
-            people[(run['r'], run['c'] + offset)] = count
+            row, column = run['r'], run['c'] + offset
+            if bounds:
+                lat = north - (row + 0.5) * size
+                lon = west + (column + 0.5) * size
+                if not (bounds[0] <= lon <= bounds[2] and bounds[1] <= lat <= bounds[3]):
+                    continue
+            people[(row, column)] = count
+    cuts = round(size / step)
     built = {}
     for (row, column), cell in cells.items():
-        key = (row // CUTS, column // CUTS)
+        key = (row // cuts, column // cuts)
         built[key] = built.get(key, 0.0) + cell[0]
     total_people = sum(people.values())
     # m² of footprint a resident in each 1 km cell; Taiwan builds some 10 to
     # 20 m² of footprint a resident (50 m² of floor on 3 to 5 storeys), so
-    # under 2 m² is a town OSM has hardly mapped.
+    # under 2 m² is a town hardly mapped.
     bands = [(0, 'no building'), (2, 'under 2 m2 a resident'), (5, '2 to 5'), (10, '5 to 10'), (math.inf, '10 and more')]
     by_band = {name: 0 for _, name in bands}
     for key, count in people.items():
@@ -192,35 +199,30 @@ def main(population_path, extract, out):
     spots = []
     for name, lat, lon in SPOTS:
         width, height = cell_size(lat, step)
-        rows = math.ceil(SPOT_HALF / height)
-        columns = math.ceil(SPOT_HALF / width)
-        middle_row = math.floor((north - lat) / step)
-        middle_column = math.floor((lon - west) / step)
         area = width * height
         looked = with_building = 0
         coverages = []
         known = tagged_area = 0.0
         classes = {name: 0 for _, name in CLASSES}
         offsets = []
-        for row in range(middle_row - rows, middle_row + rows):
-            for column in range(middle_column - columns, middle_column + columns):
-                looked += 1
-                cell = cells.get((row, column))
-                if not cell:
-                    coverages.append(0.0)
-                    continue
-                with_building += 1
-                coverages.append(cell[0] / area)
-                tagged_area += cell[0]
-                known += cell[3]
-                if cell[3] > 0:
-                    classes[density(cell[4] / cell[3])] += 1
-                # The built area's centroid from the cell's middle, in metres.
-                middle_lat = north - (row + 0.5) * step
-                middle_lon = west + (column + 0.5) * step
-                dy = (cell[1] / cell[0] - middle_lat) / step * height
-                dx = (cell[2] / cell[0] - middle_lon) / step * width
-                offsets.append(math.hypot(dx, dy))
+        for row, column in spot_cells(lat, lon, north, west, step):
+            looked += 1
+            cell = cells.get((row, column))
+            if not cell:
+                coverages.append(0.0)
+                continue
+            with_building += 1
+            coverages.append(cell[0] / area)
+            tagged_area += cell[0]
+            known += cell[3]
+            if cell[3] > 0:
+                classes[density(cell[4] / cell[3])] += 1
+            # The built area's centroid from the cell's middle, in metres.
+            middle_lat = north - (row + 0.5) * step
+            middle_lon = west + (column + 0.5) * step
+            dy = (cell[1] / cell[0] - middle_lat) / step * height
+            dx = (cell[2] / cell[0] - middle_lon) / step * width
+            offsets.append(math.hypot(dx, dy))
         coverages.sort()
         offsets.sort()
         spots.append({
@@ -234,16 +236,36 @@ def main(population_path, extract, out):
             'centroidOffsetMedianMetres': round(offsets[len(offsets) // 2], 1) if offsets else None,
         })
 
-    report = {
-        'source': 'OpenStreetMap (ODbL 1.0), osmtoday.com asia/taiwan.pbf',
+    return {
         'gridCellDegrees': step,
-        'buildings': handler.count,
-        'buildingsWithStoreys': handler.tagged,
+        'buildings': sum(cell[5] for cell in cells.values()),
         'footprintKm2': round(footprint / 1e6, 1),
         'cellsWithBuildings': len(cells),
         'peopleByFootprintPerResident': {name: round(count / total_people, 3) for name, count in by_band.items()},
         'spots': spots,
     }
+
+
+def spot_cells(lat, lon, north, west, step):
+    """The (row, column) of the cells of the square round a spot."""
+    width, height = cell_size(lat, step)
+    rows = math.ceil(SPOT_HALF / height)
+    columns = math.ceil(SPOT_HALF / width)
+    middle_row = math.floor((north - lat) / step)
+    middle_column = math.floor((lon - west) / step)
+    for row in range(middle_row - rows, middle_row + rows):
+        for column in range(middle_column - columns, middle_column + columns):
+            yield row, column
+
+
+def main(population_path, extract, out):
+    population = json.load(open(population_path))
+    step = population['cellDegrees'] / CUTS
+    handler = Buildings(population['north'], population['west'], step)
+    handler.apply_file(extract, locations=True)
+    report = {'source': 'OpenStreetMap (ODbL 1.0), osmtoday.com asia/taiwan.pbf'}
+    report.update(survey(population, step, handler.cells))
+    report['buildingsWithStoreys'] = handler.tagged
     with open(out, 'w') as file:
         json.dump(report, file, ensure_ascii=False, indent=1)
     print(json.dumps(report, ensure_ascii=False, indent=1))
