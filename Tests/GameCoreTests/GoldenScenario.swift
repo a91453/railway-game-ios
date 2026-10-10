@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 52
+    static let schemaVersion = 53
 
     var description: String
     var initialState: InitialState
@@ -190,6 +190,7 @@ struct GoldenScenario: Decodable {
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
+                 .command(.setCityDemand, _), .observe(.cityDemand, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -260,7 +261,7 @@ extension GoldenScenario.Step: Decodable {
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
-        case buildingSale
+        case buildingSale, cityDemand
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -304,6 +305,9 @@ extension GoldenScenario.Step: Decodable {
             case .water:
                 try requireOnly([.water], answering: "water")
                 self = try .observe(observation, expect: .water(expect.decode(Bool.self, forKey: .water)))
+            case .cityDemand:
+                try requireOnly([.cityDemand], answering: "cityDemand")
+                self = try .observe(observation, expect: .cityDemand(expect.decode(CityDemandSummary.self, forKey: .cityDemand)))
             case .steep:
                 try requireOnly([.steep], answering: "steep")
                 self = try .observe(observation, expect: .steep(expect.decode(Bool.self, forKey: .steep)))
@@ -526,6 +530,8 @@ enum ScenarioCommand: Equatable {
     /// connections.
     case setDistanceDemand(Bool)
     case setOutsideConnections(Bool)
+    /// Schema 53 (decision 139): the city's demand.
+    case setCityDemand(Bool)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -648,6 +654,8 @@ enum ScenarioCommand: Equatable {
                 world.setDistanceDemand(enabled)
             case .setOutsideConnections(let enabled):
                 world.setOutsideConnections(enabled)
+            case .setCityDemand(let enabled):
+                world.setCityDemand(enabled)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -708,6 +716,9 @@ extension ScenarioCommand: Decodable {
             self = try .setDistanceDemand(container.decode(Bool.self, forKey: .enabled))
         case "setOutsideConnections":
             self = try .setOutsideConnections(container.decode(Bool.self, forKey: .enabled))
+        // Schema 53: the city's demand (decision 139).
+        case "setCityDemand":
+            self = try .setCityDemand(container.decode(Bool.self, forKey: .enabled))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1373,6 +1384,9 @@ enum ScenarioObservation: Equatable {
     case zone(row: Int, column: Int)
     /// Schema 44 (decision 105): whether a cell is water.
     case water(row: Int, column: Int)
+    /// Schema 53 (decision 139): the city's demand for homes, shops and
+    /// work.
+    case cityDemand
     /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
     /// Schema 47 (decision 124): the ground's height at a point, in world
@@ -1397,6 +1411,8 @@ enum ScenarioObservation: Equatable {
             .zone(world.zones.zone(row: row, column: column))
         case .water(let row, let column):
             .water(world.isWater(row: row, column: column))
+        case .cityDemand:
+            .cityDemand(CityDemandSummary(world.cityDemandLevels))
         case .steep(let row, let column):
             .steep(world.isSteep(row: row, column: column))
         case .groundHeight(let point):
@@ -1535,6 +1551,9 @@ extension ScenarioObservation: Decodable {
         // Schema 44: water (decision 105).
         case "water":
             self = try .water(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
+        // Schema 53: the city's demand (decision 139).
+        case "cityDemand":
+            self = .cityDemand
         // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
@@ -1719,6 +1738,21 @@ enum ObservationAnswer: Equatable {
     case water(Bool)
     case steep(Bool)
     case groundHeight(Int64?)
+    case cityDemand(CityDemandSummary)
+}
+
+/// Schema 53 (decision 139): the city's demand, in thousandths from −1000
+/// to 1000: `{"homes", "shops", "work"}`.
+struct CityDemandSummary: Codable, Equatable {
+    var homes: Int64
+    var shops: Int64
+    var work: Int64
+
+    init(_ levels: CityDemand.Levels) {
+        homes = levels.homes
+        shops = levels.shops
+        work = levels.work
+    }
 }
 
 extension ObservationAnswer: Encodable {
@@ -1730,7 +1764,7 @@ extension ObservationAnswer: Encodable {
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
-        case buildingSale
+        case buildingSale, cityDemand
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1844,6 +1878,8 @@ extension ObservationAnswer: Encodable {
             try container.encode(zone, forKey: .zone)
         case .water(let water):
             try container.encode(water, forKey: .water)
+        case .cityDemand(let demand):
+            try container.encode(demand, forKey: .cityDemand)
         case .steep(let steep):
             try container.encode(steep, forKey: .steep)
         case .groundHeight(let height?):
@@ -1935,6 +1971,10 @@ struct WorldSummary: Codable, Equatable {
     /// left out otherwise.
     var distanceDemand: Bool?
     var outsideConnections: Bool?
+    /// The mix the city keeps while its demand is on (schema 53, decision
+    /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
+    /// "workJobs"}}` after; left out while it is off.
+    var cityDemand: CityDemand?
     /// How many buildings of each density stand while the city's buildings
     /// are on (schema 37, Phase 6c-1); left out while they are off.
     var cityBuildings: CityBuildingsSummary?
@@ -2167,6 +2207,7 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
         outsideConnections = world.outsideConnections ? true : nil
+        cityDemand = world.cityDemand
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }

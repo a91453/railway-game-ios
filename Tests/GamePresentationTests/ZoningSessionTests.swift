@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -125,5 +126,45 @@ final class ZoningSessionTests: XCTestCase {
         let info = try XCTUnwrap(world.cityCellInfo(atX: 100, y: 100))
         XCTAssertEqual(info.zone, .office)
         XCTAssertTrue(info.lines(in: .english).contains("Zoned: Offices"))
+    }
+
+    /// Decision 139: the zoning tool shows the city's demand, and says the
+    /// valves hold homes, shops and work back; without them it shows
+    /// neither.
+    func testTheZoningToolShowsTheCitysDemand() throws {
+        let land = [
+            LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0),
+            LandCell(row: 5, column: 6, use: .commercial, residents: 0, jobs: 400),
+            LandCell(row: 5, column: 7, use: .office, residents: 0, jobs: 600),
+        ]
+        var world = try makeWorld(width: 131_072, height: 98_304)
+        try world.setLand(land)
+        let off = GameSession(world: world, language: .english)
+        off.selectTool(.building)
+        off.buildingMode = .zone
+        XCTAssertNil(off.cityDemandText)
+        XCTAssertFalse(off.zoningHelpText.contains("wants"))
+
+        // The mix kept: 500 shop jobs and 500 in work for each thousand
+        // residents. Now 400 and 600: shops 10 × 100 / 500 = +200%, past
+        // full; work −10 × 100 / 600 = −166.7%, past full the other way;
+        // jobs a resident the same, so homes 0.
+        world.setCityDemand(true)
+        let json = String(decoding: try JSONEncoder().encode(world), as: UTF8.self)
+            .replacingOccurrences(of: #""baseline":{"shopJobs":400000,"workJobs":600000}"#, with: #""baseline":{"shopJobs":500000,"workJobs":500000}"#)
+        XCTAssertTrue(json.contains(#""shopJobs":500000"#), json)
+        let steered = try JSONDecoder().decode(GameWorld.self, from: Data(json.utf8))
+        for (language, text, help) in [
+            (DisplayLanguage.english, "City demand: homes 0% · shops +100% · work −100%", " They are built only while the city wants that use."),
+            (.traditionalChinese, "城市需求：住宅 0% · 商業 +100% · 辦公與工業 −100%", "只有城市需要這種用途（需求不是負的）時才會蓋。"),
+        ] {
+            let session = GameSession(world: steered, language: language)
+            session.selectTool(.building)
+            session.buildingMode = .zone
+            XCTAssertEqual(session.cityDemandText, text)
+            XCTAssertTrue(session.zoningHelpText.hasSuffix(help), session.zoningHelpText)
+            session.zoningZone = .civic
+            XCTAssertFalse(session.zoningHelpText.hasSuffix(help), "schools are not held back")
+        }
     }
 }

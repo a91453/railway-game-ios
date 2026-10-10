@@ -314,6 +314,10 @@ extension GameWorld {
     /// trips changed, in thousandths.
     mutating func growLand(reached: [StationID: Int]) {
         guard var growth = townGrowth, drawsDemandFromLand else { return }
+        // Decision 139: the city's demand as the midnight begins, once it
+        // has a mix.
+        settleCityMix()
+        let levels = cityDemand.map { $0.levels(now: CityMix(of: land)) }
         var places: [TownGrowth.Place] = []
         var growing: [(station: Station, rate: Int64, raises: Bool)] = []
         var before: [StationID: Int64] = [:]
@@ -345,17 +349,21 @@ extension GameWorld {
             var raised: Set<CellPosition> = []
             for (station, rate, raises) in growing {
                 if raises, !full.isEmpty {
-                    raiseBuildings(around: station, full: full, raised: &raised)
+                    raiseBuildings(around: station, full: full, raised: &raised, levels: levels)
                 }
                 let share = shares[station.id] ?? LandDemand.Share()
-                let jobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
-                // Decision 129: the front grows ``LandDemand/stationFrontGrowth``
-                // times as fast, so its people count that many times.
-                let front = stationFront(of: station), extra = LandDemand.stationFrontGrowth - 1
-                grow(
-                    around: station, residents: Self.grown(share.residents + front.residents * extra, rate),
-                    jobs: Self.grown(jobs + front.jobs * extra, rate))
-                spread(towards: station)
+                if let levels, let mix = cityDemand?.baseline {
+                    growSteered(around: station, share: share, rate: rate, levels: levels, mix: mix)
+                } else {
+                    let jobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
+                    // Decision 129: the front grows ``LandDemand/stationFrontGrowth``
+                    // times as fast, so its people count that many times.
+                    let front = stationFront(of: station), extra = LandDemand.stationFrontGrowth - 1
+                    grow(
+                        around: station, residents: Self.grown(share.residents + front.residents * extra, rate),
+                        jobs: Self.grown(jobs + front.jobs * extra, rate))
+                }
+                spread(towards: station, levels: levels)
             }
         }
         refreshLandDemand()
@@ -408,11 +416,16 @@ extension GameWorld {
 
     /// Raises up to ``LandDemand/upgradesPerStation`` of the `full`
     /// buildings of `station`'s catchment that no station has `raised`
-    /// tonight by one density, by row and then column.
-    mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>) {
+    /// tonight by one density, by row and then column; with the city's
+    /// demand `levels` (decision 139), only those whose use is not in
+    /// negative demand.
+    mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>,
+                                 levels: CityDemand.Levels? = nil) {
         var cells: [CellPosition] = []
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
             let position = land.cells[index].position
+            // Decision 139: a use the city has too much of is not raised.
+            if let level = levels?.level(of: land.cells[index].use), level < 0 { return }
             // Decision 98: nothing is raised on land zoned no development;
             // decision 115: nor on a steep slope.
             if full.contains(position), !raised.contains(position), allowsGrowth(row: position.row, column: position.column),
@@ -483,7 +496,13 @@ extension GameWorld {
     ///   development or reserved is passed over.
     ///
     /// A world without zones builds as before decision 98.
-    mutating func spread(towards station: Station) {
+    ///
+    /// With the city's demand `levels` (decision 139), a zoned cell whose
+    /// use is in negative demand is passed over, and the unzoned new cell
+    /// is the use most in demand, when that is above 0: homes, shops
+    /// (``Zone/commercial``'s new cell) or work (``Zone/office``'s), the
+    /// first of them on a tie.
+    mutating func spread(towards station: Station, levels: CityDemand.Levels? = nil) {
         let radius = Land.catchmentRadius, length = Land.cellLength
         let point = station.location
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
@@ -505,7 +524,7 @@ extension GameWorld {
                       !terrain.isSteep(row: row, column: column)
                 else { continue }
                 if zoned, let zone = zones.zone(row: row, column: column) {
-                    if let use = zone.use {
+                    if let use = zone.use, (levels?.level(of: use) ?? 0) >= 0 {
                         candidates.append((squared, CellPosition(row: row, column: column), use, zone))
                     }
                     continue
@@ -531,6 +550,84 @@ extension GameWorld {
             return
         }
         guard let best else { return }
-        addLand(LandCell(row: best.row, column: best.column, use: .residential, residents: LandDemand.newCellResidents, jobs: 0))
+        var zone = Zone.residential
+        if let levels {
+            // Homes unless shops or work is wanted more, and at all.
+            var most = max(0, levels.homes)
+            for (kind, level) in [(Zone.commercial, levels.shops), (.office, levels.work)] where level > most {
+                (zone, most) = (kind, level)
+            }
+        }
+        let counts = zone.newCell
+        addLand(LandCell(row: best.row, column: best.column, use: zone.use!, residents: counts.residents, jobs: counts.jobs))
+    }
+
+    /// Decision 139: a growing `station`'s day of growth at `rate`, steered
+    /// by the city's demand `levels` with the mix it keeps, `mix`. It grows
+    /// as many people as ``grow(around:residents:jobs:)`` would (its share's
+    /// and front's residents and jobs, the front counted
+    /// ``LandDemand/stationFrontGrowth`` times, at `rate`); the jobs of
+    /// schools, public offices and sights grow as they would, and the rest
+    /// is shared among residents, shop jobs and jobs in work in proportion to
+    /// the mix (a thousand residents to its shop jobs and its jobs in work
+    /// per thousand residents, rounded down, at most a million), each times
+    /// `1000 + ` its demand, by the largest remainder. Each kind
+    /// is then shared among the cells that hold it (residents among all;
+    /// shop jobs among homes, shops and parks; work among offices,
+    /// factories and farms) by what they hold, those of the front `k`
+    /// times, each filled to at most its limit.
+    mutating func growSteered(around station: Station, share: LandDemand.Share, rate: Int64, levels: CityDemand.Levels, mix: CityMix) {
+        let front = LandDemand.stationFrontRadius * LandDemand.stationFrontRadius
+        let extra = LandDemand.stationFrontGrowth - 1
+        var indices: [Int] = []
+        var weights: [Int64] = []
+        var frontResidents: Int64 = 0
+        var frontJobs: Int64 = 0
+        var frontOther: Int64 = 0
+        land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, squared in
+            indices.append(index)
+            let inFront = squared < front
+            weights.append(inFront ? LandDemand.stationFrontGrowth : 1)
+            if inFront {
+                let cell = land.cells[index]
+                frontResidents += cell.residents
+                frontJobs += cell.jobs
+                if CityDemand.Kind(of: cell.use) == nil { frontOther += cell.jobs }
+            }
+        }
+        let shareJobs = share.officeJobs + share.shopJobs + share.civicJobs + share.leisureJobs
+        let total = Self.grown(share.residents + frontResidents * extra, rate) + Self.grown(shareJobs + frontJobs * extra, rate)
+        let other = min(total, Self.grown(share.civicJobs + share.leisureJobs + frontOther * extra, rate))
+        // Per thousand residents, at most a thousand jobs a resident, so the
+        // weights stay below 2^31 and their products with the people inside
+        // an `Int64`.
+        func perThousand(_ jobs: Int64) -> Int64 { min(1_000_000, jobs / 1_000) }
+        let kinds = Self.apportion(total - other, by: [
+            1_000 * (1_000 + levels.homes),
+            perThousand(mix.shopJobs) * (1_000 + levels.shops),
+            perThousand(mix.workJobs) * (1_000 + levels.work),
+        ])
+        let residents = kinds[0]
+        let jobs: [CityDemand.Kind?: Int64] = [.shops: kinds[1], .work: kinds[2], nil: other]
+        let addedResidents = Self.apportion(residents, by: indices.indices.map { land.cells[indices[$0]].residents * weights[$0] })
+        var addedJobs = [Int64](repeating: 0, count: indices.count)
+        for kind in [CityDemand.Kind.shops, .work, nil] {
+            let members = indices.indices.filter { CityDemand.Kind(of: land.cells[indices[$0]].use) == kind }
+            let shares = Self.apportion(jobs[kind] ?? 0, by: members.map { land.cells[indices[$0]].jobs * weights[$0] })
+            for (member, added) in zip(members, shares) {
+                addedJobs[member] = added
+            }
+        }
+        for (offset, index) in indices.enumerated() {
+            let cell = land.cells[index]
+            // Decision 98: nothing grows on land zoned no development.
+            guard allowsGrowth(row: cell.row, column: cell.column) else { continue }
+            let capacity = cityBuildings ? buildings.building(row: cell.row, column: cell.column)?.capacity(on: cell) : nil
+            let residentLimit = capacity?.residents ?? LandDemand.grownResidents
+            let jobLimit = capacity?.jobs ?? LandDemand.grownJobs
+            let newResidents = cell.residents >= residentLimit ? cell.residents : min(residentLimit, cell.residents + addedResidents[offset])
+            let newJobs = cell.jobs >= jobLimit ? cell.jobs : min(jobLimit, cell.jobs + addedJobs[offset])
+            land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use, residents: newResidents, jobs: newJobs)
+        }
     }
 }

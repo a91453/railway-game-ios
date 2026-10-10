@@ -127,7 +127,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setFareRules(let rules): error = model.setFareRules(rules)
         case .setPassengerRoutingMode, .setStationOperationMode:
             preconditionFailure("the reference model does not run network routing")
-        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok
@@ -135,7 +135,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
 
     private static func answer(_ observation: ScenarioObservation, in model: ReferenceWorld) -> ObservationAnswer {
         switch observation {
-        case .landCatchment, .landCell, .building, .townGrowth, .landValue, .placedBuilding, .buildingSale, .zone, .water, .steep, .groundHeight:
+        case .landCatchment, .landCell, .building, .townGrowth, .landValue, .placedBuilding, .buildingSale, .zone, .water, .steep, .groundHeight, .cityDemand:
             preconditionFailure("the reference model does not hold land")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))

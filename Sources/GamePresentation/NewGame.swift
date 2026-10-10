@@ -84,6 +84,9 @@ extension GameWorld {
             // Phase 6c-1: the city's buildings stand on its land, each
             // holding so many residents and jobs.
             world.setCityBuildings(true)
+            // Decision 139: the city keeps the mix of homes, shops and work
+            // it starts with: what it is short of is in demand.
+            world.setCityDemand(true)
             return world
         } catch {
             // An empty world has no trains to share track, and land and
