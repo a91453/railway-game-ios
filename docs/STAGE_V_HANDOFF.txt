@@ -145,7 +145,7 @@ Railway/site_archive_clean/rail-3d/physical/turnbacks.js：AFR_TURNBACKS、isSch
 同目錄timing.js turnbackProgress：w=min(.15,20/max(1,next.arrSec-st.depSec))；departure w*(2u²-u³)、arrival1-w+w*(u+u²-u³)。源註明不虛構未公開dwell，既有window內減速；不可杜撰反轉20秒。
 Railway/railway_game_reference_clean/00_READ_ME_FIRST.md、migration§7及symbols：有 rail_depot_reverse_penalty 名稱，無數值／可讀planner；reverse priority明列adapted/gap，不稱忠實常數。
 Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js：查turnback/reverse，沒有可讀反向側線planner；1.5min headway不等於反轉dwell。
-Railway/city_world_reference/READ_ME與source actors-Cx0CrTrM.js：MRT兩軌端點layover timer14，無同玩家單線deadlock反向側線；不套用14秒。
+Railway/city_world_reference/READ_ME與source actors-DPDGaah7.js：MRT兩軌端點layover timer14，無同玩家單線deadlock反向側線；不套用14秒。
 正式PR需四源→目標→classification→gap table；固定點m×64、sec×1；沿用既有加減速與dwell，原子預約。
 
 遠端保存操作注意
