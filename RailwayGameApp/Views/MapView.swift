@@ -85,6 +85,10 @@ struct MapView: View {
     /// Decision 140: the night's growth the map is playing, and when it
     /// began; `nil` once it is done.
     @State private var skylineGrowth: SkylineLayer.Growth?
+    /// The last skyline built, kept even when the task that built it was
+    /// cancelled, for decision 140's comparison (not observed: it draws
+    /// nothing).
+    @State private var skylineMemory = SkylineMemory()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
@@ -588,6 +592,7 @@ struct MapView: View {
             // decision 140 only what grew of it, where the land grows.
             guard session.world.geoAnchor == nil || session.world.landDemand, !session.world.land.isEmpty else {
                 skyline = nil
+                skylineMemory.latest = nil
                 skylineGrowth = nil
                 skylineVersion &+= 1
                 return
@@ -595,12 +600,18 @@ struct MapView: View {
             // Decision 140: what grew since the last one, played over the
             // next second and a half (and faded out on a real-world map);
             // not with Reduce Motion.
-            let world = session.world, previous = reduceMotion ? nil : skyline
+            let world = session.world
             let playing = world.geoAnchor == nil ? SkylineGrowth.duration : SkylineGrowth.fadedDuration
-            let (built, growth) = await Task.detached(priority: .utility) {
-                let built = CitySkyline(world: world)
-                return (built, previous.flatMap { SkylineGrowth(from: $0, to: built) })
-            }.value
+            let built = await Task.detached(priority: .utility) { CitySkyline(world: world) }.value
+            // Compared with the last skyline built, kept even when its task
+            // was cancelled: land read in at 23:59 whose skyline was still
+            // being built when midnight changed the key would otherwise be
+            // missing from the one compared with, and rise as the night's
+            // growth.
+            let previous = reduceMotion ? nil : skylineMemory.latest
+            skylineMemory.latest = built
+            guard !Task.isCancelled else { return }
+            let growth = await Task.detached(priority: .utility) { previous.flatMap { SkylineGrowth(from: $0, to: built) } }.value
             guard !Task.isCancelled else { return }
             skyline = built
             skylineGrowth = growth.map { SkylineLayer.Growth(growth: $0, start: .now) }
@@ -1134,6 +1145,13 @@ private struct CityCellTooltip: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("map.cityTooltip")
     }
+}
+
+/// The last skyline the map built (decision 140), kept across the skyline
+/// task's cancellations and never observed.
+@MainActor
+final class SkylineMemory {
+    var latest: CitySkyline?
 }
 
 /// What the city layers are worked out from (Phase 6d): the land, its

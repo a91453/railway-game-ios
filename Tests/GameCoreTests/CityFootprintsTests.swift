@@ -143,6 +143,27 @@ final class CityFootprintsTests: XCTestCase {
         XCTAssertNotNil(world.placedBuildings.first { $0.id == house.id })
     }
 
+    /// With the city's buildings off no city building stands on the cell
+    /// to stay, so a sold building's people are judged by the square the
+    /// city would put up for them once they have moved in, not by the
+    /// cell's now: here 20 jobs are a D1 square the house beside it clears,
+    /// and 150 a D2 square it does not.
+    func testASoldBuildingsPeopleKeepClearWithTheCitysBuildingsOff() throws {
+        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        try world.setLand([LandCell(row: 5, column: 5, use: .office, residents: 0, jobs: 20)])
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        XCTAssertFalse(world.cityBuildings)
+        let house = try world.placeBuilding(.house, at: PlanPoint(x: 23_812, y: 22_528))
+        XCTAssertFalse(world.isClaimedByPlacedBuilding(row: 5, column: 5))
+        XCTAssertTrue(CityBuildingsClaim.claims(house, side: PlacedBuildingRules.cityBuildingSide(of: .d2)))
+        // An office being sold whose centre lies in the cell: its 130 jobs
+        // make the cell's 150.
+        var office = PlacedBuilding(id: PlacedBuildingID(rawValue: 99), kind: .office, centre: PlanPoint(x: 21_580, y: 22_528))
+        office.jobs = 130
+        XCTAssertNotEqual(world.handOverCell(of: office), CellPosition(row: 5, column: 5))
+    }
+
     func testTheFootprintsAreSavedOnlyWhenOn() throws {
         let off = try world(footprints: false)
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(off), as: UTF8.self).contains("cityFootprints"))

@@ -120,6 +120,29 @@ extension ServiceLine {
         return !isRing && patterns.isEmpty && Set(stops).count == stops.count && runs.allSatisfy { $0.isValid(stopCount: stops.count) }
     }
 
+    /// Whether riders can go from stop `from` to stop `to` (indices into
+    /// the line's stops) on one train (decision 149): on a line with runs,
+    /// some run goes that way and calls at both; on any other line, yes.
+    /// A way or a stretch no run goes has no train, so no one sets out on
+    /// it and no route plans it.
+    func runsServe(from: Int, to: Int) -> Bool {
+        guard hasRuns else { return true }
+        return runs.contains { run in
+            run.isOutbound == (from < to) && min(run.from, run.to) <= min(from, to) && max(from, to) <= max(run.from, run.to)
+        }
+    }
+
+    /// The stretches of the line its runs go `outbound` or back (decision
+    /// 149), as ranges of stop indices in the line's order: each run's,
+    /// leaving out those inside another's, by their first stop. A ride
+    /// within one of them is served (``runsServe(from:to:)``).
+    func runStretches(outbound: Bool) -> [ClosedRange<Int>] {
+        let spans = Set(runs.filter { $0.isOutbound == outbound }.map { min($0.from, $0.to)...max($0.from, $0.to) })
+        return spans
+            .filter { span in !spans.contains { $0 != span && $0.lowerBound <= span.lowerBound && span.upperBound <= $0.upperBound } }
+            .sorted { ($0.lowerBound, $0.upperBound) < ($1.lowerBound, $1.upperBound) }
+    }
+
     /// The minutes between the line's runs each way, as the route planners
     /// and the line's queries see them (decision 133): the day its runs
     /// span, from the first departure to the last, shared between the runs

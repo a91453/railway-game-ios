@@ -142,7 +142,12 @@ extension GameWorld {
             let side: Int64
             if let cell = land.cell(row: row, column: column) {
                 let merged = handedOver(building, onto: cell)
-                side = cityBuildingStays(on: merged) ? cityBuildingSide(row: row, column: column) : cityBuildingSide(for: merged)
+                // The square of the city building standing there, if one
+                // does and stays; else of the one the city puts up for the
+                // merged cell (with the city's buildings off, or none there
+                // yet, nothing stands to keep its square).
+                let stands = cityBuildings && buildings.building(row: row, column: column) != nil
+                side = stands && cityBuildingStays(on: merged) ? cityBuildingSide(row: row, column: column) : cityBuildingSide(for: merged)
             } else {
                 side = cityBuildingSide(for: handedOver(building, onto: position))
             }
