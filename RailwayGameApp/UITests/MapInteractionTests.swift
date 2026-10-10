@@ -19,7 +19,13 @@ final class MapInteractionTests: XCTestCase {
             // Decision 114: the tools show once Build is pressed; Select
             // (Done) below closes them again.
             app.buttons["dock.build"].tap()
-            app.buttons["tool.train"].tap()
+            // The tools slide in from the side: a tap found while they
+            // moved landed 5 pt left of Train on the map, which, with the
+            // network tool chosen, picked a track start and folded the
+            // card (PR #326's run on 6d23fab).
+            let trainTool = app.buttons["tool.train"]
+            trainTool.waitUntilSettled()
+            trainTool.tap()
             let fleet = app.buttons["train.fleetOverview"]
             if !fleet.isHittable { app.swipeUp() }
             XCTAssertTrue(fleet.waitForExistence(timeout: 5))
@@ -242,25 +248,10 @@ final class MapInteractionTests: XCTestCase {
         // passing runs tapped a second after the turn). Tap once the
         // button stays put.
         let zoomOut = app.buttons["Zoom out"]
-        waitUntilSettled(zoomOut)
+        zoomOut.waitUntilSettled()
         zoomOut.tap()
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: zoomIn)
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Zoom out did not leave room to zoom in")
-    }
-
-    /// Waits until `element` is hittable and in the same place twice in a
-    /// row, a quarter of a second apart: a layout that is still turning
-    /// moves it between the reads.
-    private func waitUntilSettled(_ element: XCUIElement, timeout: TimeInterval = 5) {
-        XCTAssertTrue(element.waitForExistence(timeout: timeout))
-        var last = element.frame
-        for _ in 0..<Int(timeout * 4) {
-            _ = XCTWaiter.wait(for: [XCTestExpectation(description: "a quarter of a second")], timeout: 0.25)
-            let now = element.frame
-            if now == last, element.isHittable { return }
-            last = now
-        }
-        XCTFail("\(element) did not settle")
     }
 
     func testMapLayersSheetTogglesAndDismisses() {
