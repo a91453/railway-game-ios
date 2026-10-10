@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 final class GameLoopTests: XCTestCase {
@@ -150,6 +150,75 @@ final class GameLoopTests: XCTestCase {
 
         // Only time since the restart counts, and only one loop is ticking.
         XCTAssertLessThanOrEqual(total - firstRun, wholeTicks(in: sinceRestart))
+    }
+
+    // MARK: - Decision 143: the loop's ticks off the main actor
+
+    @MainActor
+    func testALoopTickMovesTheWorldOnAsATickOnTheMainActorDoes() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+        try session.performEdit { world throws(GameError) in try world.buildStation(named: "Hill", at: PlanPoint(x: 1_024, y: 1_024)) }
+        XCTAssertEqual(session.undoCount, 1)
+        var expected = session.world
+        try expected.advance(ticks: 1)
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        let taken = session.finish(tick, with: await tick.work())
+
+        XCTAssertTrue(taken)
+        XCTAssertEqual(session.world, expected)
+        XCTAssertEqual(session.undoCount, 0, "game time moved on")
+    }
+
+    @MainActor
+    func testAnEditWhileALoopTickIsWorkedOutStandsAndDropsTheTick() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+        let before = session.world
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        async let outcome = tick.work()
+        // The world the player sees takes the edit at once.
+        try session.performEdit { world throws(GameError) in try world.buildStation(named: "Hill", at: PlanPoint(x: 1_024, y: 1_024)) }
+        let edited = session.world
+        let taken = session.finish(tick, with: await outcome)
+
+        XCTAssertFalse(taken)
+        XCTAssertEqual(session.world, edited, "the edit stands, and the tick worked out before it is dropped")
+        XCTAssertEqual(session.world.clock.now, .zero)
+        XCTAssertEqual(session.world.stations.count, 1)
+        session.undo()
+        XCTAssertEqual(session.world, before, "the edit can still be undone")
+    }
+
+    @MainActor
+    func testPausingWhileALoopTickIsWorkedOutStopsTimeAtOnce() async throws {
+        let session = GameSession(world: try makeWorld(speed: .normal))
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        async let outcome = tick.work()
+        session.setSpeed(.paused)
+        let taken = session.finish(tick, with: await outcome)
+
+        XCTAssertFalse(taken)
+        XCTAssertEqual(session.world.clock.now, .zero)
+        XCTAssertTrue(session.world.clock.isPaused)
+        XCTAssertNil(session.beginLoopTick(), "no tick begins while paused")
+    }
+
+    @MainActor
+    func testALoopTickThatCannotAdvanceChangesNothingAndIsReported() async throws {
+        let world = try GameWorld(
+            bounds: WorldBounds(width: 8_192, height: 6_144),
+            economy: GameEconomy(balance: 10_000, costs: testCosts),
+            clock: GameClock(now: GameTime(seconds: .max - 30), speed: .normal)
+        )
+        let session = GameSession(world: world)
+
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        session.finish(tick, with: await tick.work())
+
+        XCTAssertEqual(session.world, world)
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.clockOverflow.playerMessage(in: .english)))
     }
 
     /// Polls until the world reaches `minutes`, failing after ten seconds.
