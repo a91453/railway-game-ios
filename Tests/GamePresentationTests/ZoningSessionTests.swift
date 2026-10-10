@@ -145,11 +145,23 @@ final class ZoningSessionTests: XCTestCase {
         XCTAssertNil(off.cityDemandText)
         XCTAssertFalse(off.zoningHelpText.contains("wants"))
 
+        // The valves on but no growth (free play, no town growth): the
+        // demand steers nothing, and neither line shows.
+        world.setCityDemand(true)
+        let idle = GameSession(world: world, language: .english)
+        idle.selectTool(.building)
+        idle.buildingMode = .zone
+        XCTAssertNil(idle.cityDemandText)
+        XCTAssertFalse(idle.zoningHelpText.contains("wants"))
+
         // The mix kept: 500 shop jobs and 500 in work for each thousand
         // residents. Now 400 and 600: shops 10 × 100 / 500 = +200%, past
         // full; work −10 × 100 / 600 = −166.7%, past full the other way;
-        // jobs a resident the same, so homes 0.
-        world.setCityDemand(true)
+        // jobs a resident the same, so homes 0. A managed city that grows
+        // from its land.
+        world.setEconomyMode(.management)
+        world.setLandDemand(true)
+        world.setTownGrowth(true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
         let json = String(decoding: try encoder.encode(world), as: UTF8.self)

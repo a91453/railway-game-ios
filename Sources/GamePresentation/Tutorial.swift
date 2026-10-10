@@ -114,15 +114,19 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     public let goal: TutorialGoal
     private let englishTitle: String
     private let chineseTitle: String
-    private let englishBody: String
-    private let chineseBody: String
+    private var englishBody: String
+    private var chineseBody: String
+    /// What the body says of demand by distance (decision 137), left out
+    /// over a world without it (``Tutorial/steps(over:)``).
+    private var distanceNote: (english: String, chinese: String)?
 
     init(
         id: String,
         targets: [TutorialTarget],
         goal: TutorialGoal,
         title: (english: String, chinese: String),
-        body: (english: String, chinese: String)
+        body: (english: String, chinese: String),
+        distanceNote: (english: String, chinese: String)? = nil
     ) {
         self.id = id
         self.targets = targets
@@ -131,6 +135,27 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
         chineseTitle = title.chinese
         englishBody = body.english
         chineseBody = body.chinese
+        self.distanceNote = distanceNote
+    }
+
+    public static func == (lhs: TutorialStep, rhs: TutorialStep) -> Bool {
+        lhs.id == rhs.id && lhs.targets == rhs.targets && lhs.goal == rhs.goal
+            && lhs.englishTitle == rhs.englishTitle && lhs.chineseTitle == rhs.chineseTitle
+            && lhs.englishBody == rhs.englishBody && lhs.chineseBody == rhs.chineseBody
+            && lhs.distanceNote?.english == rhs.distanceNote?.english && lhs.distanceNote?.chinese == rhs.distanceNote?.chinese
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(englishBody)
+        hasher.combine(distanceNote?.english)
+    }
+
+    /// The step without what it says of demand by distance.
+    func withoutDistanceNote() -> TutorialStep {
+        var step = self
+        step.distanceNote = nil
+        return step
     }
 
     public func title(in language: DisplayLanguage) -> String {
@@ -138,7 +163,8 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     }
 
     public func body(in language: DisplayLanguage) -> String {
-        language.text(englishBody, chineseBody)
+        guard let note = distanceNote else { return language.text(englishBody, chineseBody) }
+        return language.text(englishBody + " " + note.english, chineseBody + note.chinese)
     }
 }
 
@@ -263,6 +289,13 @@ public struct Tutorial: Hashable, Sendable {
 }
 
 extension Tutorial {
+    /// ``standardSteps`` for a tutorial over `world`: without what they say
+    /// of demand by distance where it is off (a demo, a save from before
+    /// decision 137), where short trips do not walk.
+    static func steps(over world: GameWorld) -> [TutorialStep] {
+        world.distanceDemand ? standardSteps : standardSteps.map { $0.withoutDistanceNote() }
+    }
+
     /// The tutorial's steps: the reference's content steps (`Ci/`
     /// `TUTORIAL_STEPS` 0–1, 4, 7, 10 and 11) rewritten for touch and this
     /// app's tools, in the order a first line is built and run, until its
@@ -332,9 +365,12 @@ extension Tutorial {
             goal: .buildStation,
             title: ("A line needs two stations", "路線至少要兩座車站"),
             body: (
-                "Switch back to Build, extend the track at least 32 m past the first station, then add a platform there too. "
-                    + "Passengers walk short trips: the farther apart the stations, up to 2 km, the more of them ride.",
-                "切回「鋪設」模式，把軌道延伸到離第一座車站至少 32 公尺以外，再設置一座月台。距離近的人會用走的：兩站離得越遠（到 2 公里為止），搭車的人越多。"
+                "Switch back to Build, extend the track at least 32 m past the first station, then add a platform there too.",
+                "切回「鋪設」模式，把軌道延伸到離第一座車站至少 32 公尺以外，再設置一座月台。"
+            ),
+            distanceNote: (
+                "Passengers walk short trips: the farther apart the stations, up to 2 km, the more of them ride.",
+                "距離近的人會用走的：兩站離得越遠（到 2 公里為止），搭車的人越多。"
             )
         ),
         // Reference step 4, ending the line's construction.
