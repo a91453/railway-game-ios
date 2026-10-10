@@ -175,6 +175,22 @@ final class BuildingSaleTests: XCTestCase {
         XCTAssertNil(world.buildingProblem())
     }
 
+    /// Decision 95: the city puts up nothing on a cell one of the company's
+    /// buildings still claims. A house beside the one sold, in the same
+    /// cell, keeps it; with no other cell under the one sold, its people
+    /// leave, as growth's do.
+    func testPeopleDoNotMoveOntoACellAnotherOfTheCompanysBuildingsClaims() throws {
+        var world = try world(cityBuildings: true)
+        let sold = try world.placeBuilding(.house, at: Self.housePoint).id
+        try world.placeBuilding(.house, at: PlanPoint(x: 21_900, y: 30_000))
+        occupy(&world, sold, residents: 6, jobs: 2)
+        try world.sellPlacedBuilding(sold)
+        XCTAssertTrue(world.isClaimedByPlacedBuilding(row: 7, column: 5), "the other house still claims the cell")
+        XCTAssertNil(world.land.cell(row: 7, column: 5))
+        XCTAssertNil(world.buildings.building(row: 7, column: 5))
+        XCTAssertNil(world.buildingProblem())
+    }
+
     func testAnEmptyBuildingLeavesNoLand() throws {
         var world = try world(cityBuildings: true)
         let id = try world.placeBuilding(.house, at: Self.housePoint).id
