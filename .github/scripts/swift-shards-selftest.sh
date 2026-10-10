@@ -130,7 +130,8 @@ fi
 relevant() { printf '%s\n' "$@" | "$script" relevant; }
 for path in Package.swift Sources/GameCore/World/GameWorld.swift Tests/GameCoreTests/X.swift \
   GoldenScenarios/line-dispatch.json SaveFixtures/v1-demo-90-minutes.json ReplayFixtures/kernel.json .github/workflows/ci.yml .github/scripts/swift-shards.sh \
-  .github/scripts/swift-shards-selftest.sh; do
+  .github/scripts/swift-shards-selftest.sh RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  RailwayGameApp/Resources/RealRailways/tra_pingxi_runs.json; do
   if [[ "$(relevant docs/ROADMAP.md "$path")" == true ]]; then
     echo "ok   pass  $path is relevant"
   else
