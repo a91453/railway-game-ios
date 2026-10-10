@@ -80,7 +80,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .onChange(of: ControlDetails.Subject(session)) { _, _ in
+            .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) { _, _ in
                 detailsChoice = nil
             }
             .onChange(of: screen.detailsRequests) { _, _ in
@@ -330,16 +330,18 @@ private enum ControlDetails {
         let station: StationID?
         let train: TrainID?
         let hasSelection: Bool
-        /// Starting to draw, and clearing what was drawn, drop it too.
+        /// Starting to draw, and clearing what was drawn, drop it too,
+        /// where drawing folds the card: on an iPad, which does not fold
+        /// it, a card the player folded stays folded (decision 136).
         let drawsTrack: Bool
 
         @MainActor
-        init(_ session: GameSession) {
+        init(_ session: GameSession, foldsWhileDrawing: Bool) {
             tool = session.tool
             station = session.selectedStationID
             train = session.tappedTrainID
             hasSelection = session.selectionText() != nil
-            drawsTrack = ControlDetails.drawsTrack(session)
+            drawsTrack = foldsWhileDrawing && ControlDetails.drawsTrack(session)
         }
     }
 
