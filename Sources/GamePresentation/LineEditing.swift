@@ -279,11 +279,27 @@ extension GameSession {
         }
     }
 
+    /// On a line with runs, refused while one of its trains is on a run
+    /// (decision 133); a line's train cannot stop its service, so the
+    /// message says to wait for the run or take the train off the line.
     private func setStops(of line: ServiceLine, to stops: [StationID]) {
-        perform { world throws(GameError) in
-            try world.setLineStops(line.id, to: stops)
-            let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
-            return language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
+        do throws(GameError) {
+            let text = try performEdit { world throws(GameError) in
+                try world.setLineStops(line.id, to: stops)
+                let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
+                return language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
+            }
+            message = StatusMessage(kind: .success, text: text)
+            endFollowIfGone()
+        } catch {
+            if case .trainServiceActive(let train) = error, line.trains.contains(train) {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "Train #\(train.rawValue) of \(line.name) is on one of its runs, which new stops end. Wait for it to finish, or take it off the line first.",
+                    "\(line.name) 的列車 #\(train.rawValue) 正在跑班次，改停靠會結束班次。請等它跑完，或先讓它離開路線。"
+                ))
+            } else {
+                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            }
         }
     }
 

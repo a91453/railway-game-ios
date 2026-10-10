@@ -120,7 +120,7 @@ jobs:
             if files="$(git diff --name-only HEAD^1 HEAD)"; then
               echo "Changed files:"
               echo "$files"
-              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView|MapView|NetworkControls)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml)' <<<"$files"; then
+              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView|MapView|NetworkControls|BuildToolRail|LinesPanel|TrainControls|StartView)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml)' <<<"$files"; then
                 ipad=true
               else
                 ipad=false
