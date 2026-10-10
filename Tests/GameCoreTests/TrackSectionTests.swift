@@ -271,6 +271,8 @@ final class TrackSectionTests: XCTestCase {
             [("surface", 3), ("surface", 2), ("viaduct", 11)],
             [("surface", 16)],
             [("tunnel", 16)],
+            // Lengths whose sum overflows are refused, not a crash.
+            [("surface", Int.max), ("viaduct", Int.max)],
         ] {
             let sections = bad.map { ["kind": $0.0, "lengths": $0.1] as [String: Any] }
             XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: edited { $0["sections"] = sections }), "\(bad)")

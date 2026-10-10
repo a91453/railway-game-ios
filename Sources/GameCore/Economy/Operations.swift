@@ -15,7 +15,9 @@
 // - each day's end writes energy `round(220·route-km + 360·trains)` and
 //   staff `round(620·stations + 480·trains)`
 //   (`metroEconomySettleDailyForEndedDay`), with the balance allowed to go
-//   below zero.
+//   below zero;
+// - since decision 131 (native: the reference has no tax), each day's end
+//   also pays half of what the day made before tax beyond $100,000.
 //
 // Nothing happens in the free economy mode, the default.
 
@@ -291,9 +293,17 @@ extension GameWorld {
         }
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
-        // Phase 7a: the assets are written down for the day, then a year's
-        // last day closes the year.
+        // Phase 7a: the assets are written down for the day, then the day's
+        // profit is taxed (decision 131), then a year's last day closes the
+        // year.
         depreciateAssets(day: day)
+        let tax = Self.dailyTax(on: accounts.report(.day, day: day).current.profitBeforeTax)
+        if tax > .zero {
+            write(LedgerEntry(
+                kind: .dailyTax, time: time, amount: .zero - tax,
+                breakdown: [LedgerLine(item: .incomeTax, amount: .zero - tax)]
+            ), day: day)
+        }
         closeYear(endingWith: day)
         // Decision 86: the goals are judged once the day is settled.
         judgeScenario(endingWith: day)
@@ -303,6 +313,14 @@ extension GameWorld {
     /// whole dollars (decision 67).
     public static func dailyLoanInterest(on loan: Money) -> Money {
         roundedDollars(loan.amount * CompanyAccounts.interestBasisPoints, over: 100 * 10_000 * FinancePeriod.year.days)
+    }
+
+    /// The tax on a day's profit before tax (decision 131): ``CompanyAccounts/taxPercent``
+    /// of what is beyond ``CompanyAccounts/taxFreeProfit``, rounded half up
+    /// to whole dollars; nothing on a loss or less.
+    public static func dailyTax(on profit: Money) -> Money {
+        guard profit > CompanyAccounts.taxFreeProfit else { return .zero }
+        return roundedDollars((profit - CompanyAccounts.taxFreeProfit).amount * CompanyAccounts.taxPercent, over: 100 * 100)
     }
 
     /// Writes `entry` and moves the balance by its amount, which may take
@@ -369,11 +387,11 @@ extension GameWorld {
             return "Day accounts cannot be for a day after today."
         }
         let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
-            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost] }
+            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.taxCost] }
         guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
         guard accounts.days.allSatisfy({ (0...Self.maximumAccrued).contains($0.fareTrips) }) else { return "A day's trips are out of range." }
         guard accounts.days.allSatisfy({
-            [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.propertyRevenue, $0.propertyCost]
+            [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.propertyRevenue, $0.propertyCost, $0.taxCost]
                 .allSatisfy { $0 >= .zero }
         }) else {
             return "Day accounts cannot be negative."
@@ -395,6 +413,7 @@ extension GameWorld {
         case .dailyInterest: [.loanInterest]
         case .dailyProperty: [.propertyRent, .propertyUpkeep, .propertyTax]
         case .buildingDemolition: [.propertyDemolition]
+        case .dailyTax: [.incomeTax]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent ? $0.amount >= .zero : $0.amount <= .zero }),

@@ -696,6 +696,12 @@ extension GameWorld {
     mutating func abandonUnservedPassengers() {
         passengerPlan = PassengerPlanCache()
         abandonStrandedRiders()
+        // A pair's balanced routes must still be ridable one after another,
+        // as the save checks; the next release plans the pair anew.
+        let walkable = self
+        passengerRouteBalances.removeAll { balance in
+            !balance.journeys.allSatisfy { zip($0.legs, $0.legs.dropFirst()).allSatisfy(walkable.connects) }
+        }
         let world = self
         let valid = servedWaitingLegs()
         var abandoned: [StationID: Int64] = [:]

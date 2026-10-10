@@ -193,6 +193,13 @@ final class PlacedBuildingTests: XCTestCase {
         XCTAssertFalse(decodes { $0["placedBuildings"] = [building(2, "house", 1_000, 1_000), building(1, "house", 5_000, 5_000)] }, "out of order")
         XCTAssertFalse(decodes { $0["nextPlacedBuildingID"] = 2 }, "an ID not below the next")
         XCTAssertFalse(decodes { $0["placedBuildings"] = [building(1, "castle", 1_000, 1_000)] }, "an unknown kind")
+        XCTAssertFalse(decodes {
+            // Costs whose sum overflows are refused, not a crash.
+            var buildings = $0["placedBuildings"] as! [[String: Any]]
+            buildings[0]["buildingCost"] = Int64.max
+            buildings[0]["landCost"] = Int64.max
+            $0["placedBuildings"] = buildings
+        }, "costs out of range")
         XCTAssertFalse(decodes { $0["placedBuildings"] = NSNull() })
         XCTAssertFalse(decodes { $0["nextPlacedBuildingID"] = NSNull() })
     }

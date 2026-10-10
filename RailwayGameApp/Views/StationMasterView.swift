@@ -87,7 +87,7 @@ struct StationMasterCorner: View {
             .accessibilityLabel(Text(verbatim: session.language.text("Station master", "站長")))
             .accessibilityValue(Text(verbatim: said(advice)))
             .accessibilityIdentifier("stationMaster")
-            if isTalking, maxBubbleWidth >= 140 {
+            if isTalking, hasRoom {
                 let width = min(maxBubbleWidth, 320)
                 let worry = advice?.isWorry ?? false
                 // One line when it fits, else wrapped at the width it has.
@@ -105,20 +105,29 @@ struct StationMasterCorner: View {
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
         .onChange(of: advice, initial: true) { _, advice in
-            // New advice is said once by itself; the same again is not.
-            guard let advice, advice != lastSpoken else {
-                if advice == nil { isTalking = false }
-                return
-            }
-            lastSpoken = advice
-            isTalking = true
-            talk &+= 1
+            if advice == nil { isTalking = false }
+            sayIfNew(advice)
         }
+        // Advice that came while a side panel left no room for the bubble
+        // is said once the room is back.
+        .onChange(of: hasRoom) { _, _ in sayIfNew(advice) }
         .task(id: talk) {
             try? await Task.sleep(for: Self.speakingTime)
             guard !Task.isCancelled else { return }
             isTalking = false
         }
+    }
+
+    /// Whether the bubble has the width it needs to show.
+    private var hasRoom: Bool { maxBubbleWidth >= 140 }
+
+    /// New advice is said once by itself; the same again is not. Without
+    /// room for the bubble it is kept, with its dot, until there is.
+    private func sayIfNew(_ advice: StationMasterAdvice?) {
+        guard let advice, advice != lastSpoken, hasRoom else { return }
+        lastSpoken = advice
+        isTalking = true
+        talk &+= 1
     }
 
     private func mood(_ advice: StationMasterAdvice?) -> StationMasterMood {

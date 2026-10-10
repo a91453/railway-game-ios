@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 @testable import GamePresentation
 import XCTest
 
@@ -73,6 +73,33 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertFalse(records.record(fast, at: monday), "not better than itself")
         XCTAssertEqual(ChallengeRecords(file: file).best, records.best, "kept in the file")
         XCTAssertEqual(records.best["weekly.1"]?.text(in: .traditionalChinese), "最佳紀錄：1 天，金牌")
+    }
+
+    /// A result is the day it was completed on: later days, with more
+    /// riders, while the game plays on, do not make it a new best again.
+    func testAResultKeepsTheRidersOfItsDay() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("records-\(UUID().uuidString).data")
+        defer { try? FileManager.default.removeItem(at: file) }
+        var records = ChallengeRecords(file: file)
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000), clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        try world.startScenario(Scenario(id: "weekly.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
+        try world.advance(ticks: 1_441)
+        guard case .completed(let day, _)? = world.scenario?.outcome else { return XCTFail("completed at the first midnight") }
+        var completion = DayAccount(day: day)
+        completion.fareTrips = 3
+        world.accounts.days = [completion]
+        XCTAssertTrue(records.record(world, at: monday))
+        XCTAssertEqual(records.best["weekly.1"]?.riders, 3)
+        // Played on: the next day carries more riders.
+        try world.advance(ticks: 1_440)
+        var later = DayAccount(day: day + 1)
+        later.fareTrips = 50
+        world.accounts.days = [completion, later]
+        XCTAssertFalse(records.record(world, at: monday), "the same result, not a new best")
+        XCTAssertEqual(records.best["weekly.1"]?.riders, 3)
     }
 
     /// The launcher starts the week's map, and keeps a best result the

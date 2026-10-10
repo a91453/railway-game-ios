@@ -112,6 +112,35 @@ final class WholeTaiwanTests: XCTestCase {
         )
     }
 
+    /// A station far from the others says who it reaches from the land read
+    /// in with it, not that no one lives there (decision 128).
+    func testAFarStationSaysWhoItReachesFromItsOwnLand() throws {
+        let session = GameSession(world: .newWholeTaiwanGame(), language: .english)
+        session.population = Self.population
+        session.places = Self.places
+        try session.performEdit { world throws(GameError) in _ = try world.buildStation(named: "Taipei", at: point(25.0479308, 121.5170046)) }
+        XCTAssertFalse(session.world.land.isEmpty)
+        // Track through Taichung, 130 km away: no land read there yet.
+        let taichung = point(24.1369, 120.6850)
+        try session.performEdit { world throws(GameError) in
+            let west = try world.buildTrackNode(at: WorldCoordinate(x: taichung.x - 15_360, y: taichung.y))
+            let east = try world.buildTrackNode(at: WorldCoordinate(x: taichung.x + 15_360, y: taichung.y))
+            try world.buildTrackEdge(from: west, to: east)
+        }
+        XCTAssertEqual(session.world.land.totals(within: Land.catchmentRadius, of: taichung).residents, 0)
+        session.selectTool(.network)
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: taichung, reach: 512)
+        XCTAssertGreaterThan(try XCTUnwrap(session.platformSiteCatchment).residents, 0, "the site's count has the land there")
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.world.stations.count, 2)
+        let text = try XCTUnwrap(session.message?.text)
+        XCTAssertFalse(text.contains("No one lives"), text)
+        let reached = session.world.land.totals(within: Land.catchmentRadius, of: try XCTUnwrap(session.world.stations.last).location)
+        XCTAssertGreaterThan(reached.residents, 0, "Taichung's land came with the station")
+        XCTAssertTrue(text.hasSuffix(session.catchmentText(reached) + ". Serve it well and the town round it grows."), text)
+    }
+
     /// Decision 105: the water of the blocks comes with their land, the
     /// land off it, and two harbours read in either order give the same
     /// water and land.

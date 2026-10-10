@@ -14,10 +14,74 @@ import XCTest
 /// `BALANCE_REPORT` is the days to play. A release build plays the first
 /// line's 60 days in seconds and the demo map's in some four minutes.
 final class BalanceReportTests: XCTestCase {
-    /// `NewGameBalanceTests`' first line: three stations through the first
-    /// town on 448 m of track and one train of four cars, $914,800.
+    /// The first line (``firstLine()``).
     func testAFirstLine() throws {
         let days = try requestedDays()
+        var world = try firstLine()
+        try play(&world, days: days, title: "A first line")
+    }
+
+    /// The first line with the company's buildings (decision 130): once the
+    /// line has paid for itself, on day 30, two office blocks by its middle
+    /// station: A beside it, buying out the city's D4 buildings in its
+    /// way, and B on the empty land at the town's edge 768 m north, inside
+    /// the station's 800 m. Then the day's balance, what they earn, how full
+    /// they are and what selling each would bring, and at the end both are
+    /// sold. Measures what a sale does to the cash against keeping them.
+    func testAFirstLineWithBuildingsToSell() throws {
+        let days = try requestedDays()
+        var world = try firstLine()
+        let tile = Int64(1_024)
+        let middle = world.stations[1].location
+        let sites = [PlanPoint(x: middle.x, y: middle.y + 3 * tile), PlanPoint(x: middle.x, y: middle.y - 48 * tile)]
+        var bought: [PlacedBuildingID] = []
+        var lines = [
+            "### A first line with two office blocks bought on day 30: A buying out, B on empty land",
+            "",
+            "| Day | Balance | Property a day | A full | A price | A book | B full | B price | B book | Balance if sold |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        try world.advance(ticks: 1)
+        for day in 1...days {
+            try world.advance(ticks: 1_440)
+            if day == 30 {
+                for site in sites {
+                    let quote = try XCTUnwrap(world.placedBuildingQuote(.office, at: site))
+                    bought.append(try world.placeBuilding(.office, at: site).id)
+                    lines.append(
+                        "| \(day) | bought for \(dollars(quote.total.amount)): building \(dollars(quote.building.amount)), "
+                            + "land \(dollars(quote.land.amount)), buy-out \(dollars(quote.buyOut.amount)) | | | | | | | | |"
+                    )
+                }
+            }
+            guard !bought.isEmpty else { continue }
+            let report = world.financeReport(.day).previous
+            let quotes = bought.compactMap { world.saleQuote(of: $0) }
+            let columns = quotes.map { quote in
+                "\(quote.occupants * 100 / max(1, quote.capacity))% | \(dollars(quote.price.amount)) | \(dollars(quote.bookValue.amount))"
+            }
+            let price = quotes.reduce(Money.zero) { $0 + $1.price }
+            lines.append(
+                "| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars((report.propertyRevenue - report.propertyCost).amount)) | "
+                    + columns.joined(separator: " | ") + " | \(dollars((world.economy.balance + price).amount)) |"
+            )
+        }
+        let before = world.economy.balance
+        for id in bought {
+            try world.sellPlacedBuilding(id)
+        }
+        let sold = world.financeReport(.day).current
+        lines.append("")
+        lines.append(
+            "Sold on day \(days): \(dollars((world.economy.balance - before).amount)) in, "
+                + "realized \(dollars(sold.realizedGain.amount)), the balance \(dollars(world.economy.balance.amount))."
+        )
+        print(lines.joined(separator: "\n"))
+    }
+
+    /// `NewGameBalanceTests`' first line: three stations through the first
+    /// town on 448 m of track and one train of four cars, $914,800.
+    private func firstLine() throws -> GameWorld {
         var world = GameWorld.newGame()
         let tile = Int64(1_024)
         let cars = 4
@@ -41,7 +105,7 @@ final class BalanceReportTests: XCTestCase {
         try world.setTrainContinuation(train, along: [], stoppingAt: tile + platform)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
-        try play(&world, days: days, title: "A first line")
+        return world
     }
 
     /// The demo map (decision 78): three lines and four trains, $2,291,200.
@@ -67,8 +131,8 @@ final class BalanceReportTests: XCTestCase {
         var lines = [
             "### \(title): built for \(dollars(cost.amount)), \(stops.count) stations",
             "",
-            "| Day | Balance | Fares | Operating profit | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
-            "| --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
+            "| Day | Balance | Fares | Operating profit | Tax | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
         ]
         try world.advance(ticks: 1)
         for day in 1...days {
@@ -111,7 +175,7 @@ final class BalanceReportTests: XCTestCase {
         let service = stops.compactMap { world.townGrowth(of: $0)?.lastService }.min() ?? 0
         let recovered = (world.economy.balance.amount - (GameWorld.startingBalance - cost).amount) * 100 / cost.amount
         return "| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars(report.fareRevenue.amount)) | "
-            + "\(dollars(report.operatingProfit.amount)) | \(recovered)% | \(trips) | \(people) | "
+            + "\(dollars(report.operatingProfit.amount)) | \(dollars(report.taxCost.amount)) | \(recovered)% | \(trips) | \(people) | "
             + "\(heights[1]) / \(heights[2]) / \(heights[3]) / \(heights[4]) / \(heights[0]) | \(fullest)% | "
             + "\(dollars(average)) / \(dollars(values.max() ?? 0)) | \(service / 10)% |"
     }

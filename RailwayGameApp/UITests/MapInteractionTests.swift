@@ -127,8 +127,32 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
         map.pinch(withScale: 3, velocity: 1)
         XCTAssertFalse(clear.isEnabled, "Pinching must not pick a track anchor")
-        XCTAssertFalse(app.buttons["Zoom in"].isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
+        // Decision 123: on a phone the zoom buttons give way beside the
+        // details card, which a chosen tool keeps open. Fold the card to
+        // read them, then open it again for the tool's buttons. Each tap is
+        // tried twice, like the anchor's below: a touch can be lost after
+        // the pinch to the closest zoom.
+        let zoomIn = app.buttons["Zoom in"]
+        let cardFolds = !zoomIn.exists
+        let controls = app.buttons["controls.toggle"]
+        func toggleControls(to label: String) {
+            func labelled() -> Bool {
+                XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: controls)],
+                                 timeout: 10) == .completed
+            }
+            controls.tap()
+            if !labelled() { controls.tap() }
+            XCTAssertTrue(labelled(), "The details card did not change to \(label)")
+        }
+        if cardFolds { toggleControls(to: "Show Controls") }
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
+        if cardFolds {
+            toggleControls(to: "Hide Controls")
+            XCTAssertTrue(clear.waitForExistence(timeout: 10))
+            XCTAssertFalse(clear.isEnabled)
+        }
 
         // After a pinch to the closest zoom an accessibility query can hold
         // the app's main thread for seconds (run 37161734560's recording),

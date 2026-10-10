@@ -59,6 +59,11 @@ extension GameSession {
             }
         case .platform:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
+            // The land a station there would reach, so the site's count
+            // (decision 108) has it; not an edit, as for the building tool.
+            if let site = networkEdgePoint.flatMap({ planPoint(of: .track($0)) }) {
+                readLand(within: WholeTaiwan.landReach, of: site)
+            }
             platformStationID = networkEdgePoint.flatMap { nearestStation(to: $0) }
             if platformStationID == nil, let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) {
                 let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -360,6 +365,9 @@ extension GameSession {
                 }
             }
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
+            // Decision 88: the land round a new station is read in after the
+            // edit; read it now, so the opening message counts who it reaches.
+            Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water)
             world = draft
             built = chosen == nil ? station.id : nil
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
@@ -546,11 +554,27 @@ struct EdgePlan {
     /// Builds it in `world`: a node for each new end, then the edge, with
     /// the ground under its way read in first from `heights` (decision 124).
     func build(in world: inout GameWorld, structure: TrackStructure, heights: HeightGrid?) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
-        try world.readGround(under: [from.plan, to.plan] + (geometry?.points.map(\.plan) ?? []), from: heights)
+        try world.readGround(under: [from.plan, to.plan] + surveyedPoints, from: heights)
         let first = try node(for: start, at: from, in: &world)
         let last = try node(for: end, at: to, in: &world)
         let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
         return (edge, last)
+    }
+
+    /// Where GameCore surveys the ground under the edge: the middle of each
+    /// pricing length (16 m). A straight edge's points are only its ends,
+    /// so a block it crosses between them would otherwise stay unread.
+    private var surveyedPoints: [PlanPoint] {
+        guard let geometry else { return [] }
+        let priced = ConstructionCosts.trackPricingLength
+        var points: [PlanPoint] = []
+        var start: Int64 = 0
+        while start < geometry.length {
+            let end = min(geometry.length, start + priced)
+            points.append(geometry.location(at: (start + end) / 2).position.plan)
+            start = end
+        }
+        return points
     }
 
     private func node(for anchor: NetworkAnchor, at position: WorldCoordinate, in world: inout GameWorld) throws(GameError) -> TrackNodeID {

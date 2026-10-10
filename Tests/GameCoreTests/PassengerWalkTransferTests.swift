@@ -305,4 +305,24 @@ final class PassengerWalkTransferTests: XCTestCase {
         XCTAssertEqual(left.passengerLedger(of: a).abandoned, 5, "the walk is gone")
         try assertConservedAndSaveable(left)
     }
+    /// Leaving the group while the passengers ride the first train, before
+    /// the walk: they leave the train's riders too, so the save loads.
+    func testRidersWhoseWalkGoesLeaveWhenTheGroupGoes() throws {
+        var world = try world(apart: 600)
+        try world.linkTransfer(b, nearB)
+        let journey = try XCTUnwrap(PassengerJourney(origin: a, route: XCTUnwrap(world.passengerRoutes(from: a, to: c).first)))
+        world.passengers[0].release(5, along: journey, at: world.clock.now)
+        for _ in 0..<15 where world.riders.isEmpty {
+            try world.advance(ticks: 1)
+        }
+        XCTAssertEqual(world.passengerLedger(of: a).riding, 5, "aboard the first train, the walk ahead")
+        // A pair's balance over the same way goes with the walk.
+        world.passengerRouteBalances = [PassengerRouteBalance(origin: a, destination: c, journeys: [journey], weights: [1], balances: [0])]
+        try assertConservedAndSaveable(world)
+        try world.unlinkTransfer(b)
+        XCTAssertEqual(world.passengerLedger(of: a).abandoned, 5, "the walk is gone")
+        XCTAssertTrue(world.riders.isEmpty)
+        XCTAssertTrue(world.passengerRouteBalances.isEmpty)
+        try assertConservedAndSaveable(world)
+    }
 }

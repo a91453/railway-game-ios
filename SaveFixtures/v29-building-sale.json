@@ -1,0 +1,195 @@
+{
+  "saveVersion" : 29,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 1,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 27905000,
+          "day" : 0,
+          "depreciation" : 2583
+        },
+        {
+          "day" : 1,
+          "saleBookValue" : 27901417,
+          "saleProceeds" : 9407242
+        }
+      ],
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "propertyCost" : 5454,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : -5454,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "propertyRent"
+            },
+            {
+              "amount" : -5326,
+              "item" : "propertyUpkeep"
+            },
+            {
+              "amount" : -128,
+              "item" : "propertyTax"
+            }
+          ],
+          "kind" : "dailyProperty",
+          "time" : 86340
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 86400,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "buildings" : [
+      {
+        "column" : 5,
+        "density" : [
+          4
+        ],
+        "id" : 1,
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "density" : [
+          1
+        ],
+        "id" : 2,
+        "row" : 7,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "density" : [
+          1
+        ],
+        "id" : 3,
+        "row" : 7,
+        "use" : "office"
+      }
+    ],
+    "cityBuildings" : true,
+    "clock" : {
+      "now" : 87600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 981496788,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 5,
+        "residents" : [
+          1000
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 5,
+        "jobs" : [
+          2
+        ],
+        "residents" : [
+          4
+        ],
+        "row" : 7,
+        "use" : "residential"
+      },
+      {
+        "column" : 7,
+        "jobs" : [
+          20
+        ],
+        "residents" : [
+          3
+        ],
+        "row" : 7,
+        "use" : "office"
+      }
+    ],
+    "landDemand" : true,
+    "nextPlacedBuildingID" : 3,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 412,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S0",
+        "point" : {
+          "x" : 22528,
+          "y" : 22528
+        }
+      }
+    ],
+    "townGrowth" : {
+      "places" : [
+        {
+          "base" : 400,
+          "counted" : 0,
+          "lastGrowth" : 0,
+          "station" : 1
+        }
+      ]
+    },
+    "trains" : [
+
+    ]
+  }
+}
