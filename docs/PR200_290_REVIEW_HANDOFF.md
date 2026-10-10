@@ -1,4 +1,4 @@
-# 交接：PR #200–#290 的審查與修正
+# 交接：PR #200–#296 的審查與修正
 
 Session：`claude/railway-game-ios-pr-review-hzdbwt`（2026-10-09～10）。分支從 `main` 6b43d31 開始，收工前合併了 `main` dedbb659（#291–#296）。存檔版本、ARCHITECTURE 決策編號、golden schema 都沒有用到；GoldenScenarios、ReplayFixtures、SaveFixtures 的期望值都沒有改。
 
@@ -75,3 +75,36 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 - **campaign shard**：第一次跑到一半時容器重啟，中斷了。收工時另外單獨跑了 `GoldenScenarioTests`、`PassengerPropertyTests`、`BoardingPropertyTests`，結果寫在 PR 裡。其餘交給 CI。
 - **UNVERIFIED LOCALLY — requires macOS/Xcode CI**：`StationMasterView` 的修正，要看分支上 `ios-build.yml` 的 workflow_dispatch run。
 - 本機用過的工具：審查用的五個只讀 agent；`gh api` 讀 CI log 與 artifact；xcresult 用 sqlite 加 zstd 解開來讀 UI 層級，用 ffmpeg 擷取錄影畫面。
+
+## 六、延長到 #291–#296（第二個 PR，在 #297 合併之後）
+
+**合併狀態**：#291–#296 都已合併，head commit 都在 `main` 上。
+
+**main 的 CI**：
+- #291 合併後的完整 lane 有兩項紅燈：
+  - 縮放測試（#296 已修）。
+  - `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds`：H3 的縱斷面卡片在手機上太高，#293 改成收起後已修。
+- #293 合併後只剩縮放測試紅燈。
+- #292、#294、#295 的 iOS run 被下一次推送取消，CI（Linux）與 Wasm Probe 都是綠的。
+- #290 時兩個沒查到根因的紅燈（實景地圖「繼續」、示範按鈕 15 秒），在 #291、#293 的完整 lane 都沒有再出現。
+  - 量測：示範按鈕在通過的 run 裡，啟動後 20–27 秒才變成可按；失敗那次超過 38 秒。
+  - 同一份資料，Linux Debug 只要 1.1 秒就讀完（各檔：population 0.05 s、places 0.51 s、water 0.38 s、heights 0.03 s、railways 0.14 s）。
+  - 所以慢的不是解碼本身，可能是模擬器上的 I/O 或主執行緒排程。
+  - 要查到底，得在 App 裡記錄讀取各段的時間，從 xcresult 的 App stdout 讀出來。
+
+**修的 bug（各附重現測試，確認修之前會失敗）**：
+1. **出售建物時，居民被搬到另一棟公司建物仍佔用的格子**（`BuildingSale.handOverCell`）：違反決策 95（城市不在被公司建物佔用的格子上建）。現在改找建物底下其他未被佔用的陸地格；都沒有時，居民離開，和城市成長時的做法一樣。測試：`BuildingSaleTests.testPeopleDoNotMoveOntoACellAnotherOfTheCompanysBuildingsClaims`。
+2. **邊坡與縱斷面的水域畫錯位置**：最後一段較短的 16 m 被畫成「中點前後各 8 m」，蓋到前一段。現在照 GameCore 的切法，每段從起點起算，16 m 一段。測試：`TerrainPresentationTests.testTheLastShortLengthsSlopeCoversOnlyThatLength`。
+3. **大地圖的高度圖層，東、南邊留下一條空白**：格數不是 step 的倍數時，最後幾格沒有角點。測試：`TerrainPresentationTests.testTheLastCellsOfALargeMapHaveTheirHeight`。
+4. （SwiftUI）**自由模式的經營報表也寫著所得稅的規則**，但自由模式不會課稅。現在只在經營模式顯示。**UNVERIFIED LOCALLY**。
+
+**需要作者決定**：
+- 所得稅（決策 131）讓存檔多了 `dailyTax`、`incomeTax`、`taxCost`，版本卻仍是 29。#294 到 #295 之間的版本讀到這種存檔時，可能報出一般的「資料損壞」錯誤，而不是「存檔較新」，也可能悄悄丟掉稅額。
+  - 決策 67（貸款）當初也沒有升版，可以沿用這個慣例。
+  - 只有在 #294 之後、#295 之前有發出過版本時才有影響。
+  - 選項：升到 30（不需要 migration，只加一筆 fixture），或維持現狀。
+
+**驗證**：
+- **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`BuildingSale*`、`CompanyBuildings*`、`SavedGameTests`、`TerrainPresentationTests`、`HeightGridTests`。
+- #297 那份修正的 golden（24 項）、`PassengerPropertyTests`、`BoardingPropertyTests` 都已在本機通過，結果貼在 #297 的留言。
+- 其餘交給 CI。

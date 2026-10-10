@@ -129,14 +129,20 @@ extension GameWorld {
     /// The cell of land a sold building's people move to: the cell under
     /// its centre, or for a building on the shore whose centre is over the
     /// water, the first cell under it on land, by row and then column;
-    /// `nil` when every cell under it is water.
+    /// `nil` when every cell under it is water. A cell another of the
+    /// company's buildings still claims is passed over, as the city puts up
+    /// nothing there (decision 95); with no other, the people leave, as
+    /// growth's do. The sold building is off the list by then.
     func handOverCell(of building: PlacedBuilding) -> CellPosition? {
+        func takes(_ row: Int, _ column: Int) -> Bool {
+            !terrain.isWater(row: row, column: column) && !isClaimedByPlacedBuilding(row: row, column: column)
+        }
         let centre = CellPosition(row: Land.cellIndex(building.centre.y), column: Land.cellIndex(building.centre.x))
-        guard terrain.isWater(row: centre.row, column: centre.column) else { return centre }
+        if takes(centre.row, centre.column) { return centre }
         let firstRow = Land.cellIndex(building.minY), lastRow = Land.cellIndex(building.maxY - 1)
         let firstColumn = Land.cellIndex(building.minX), lastColumn = Land.cellIndex(building.maxX - 1)
         for row in firstRow...lastRow {
-            for column in firstColumn...lastColumn where !terrain.isWater(row: row, column: column) {
+            for column in firstColumn...lastColumn where takes(row, column) {
                 return CellPosition(row: row, column: column)
             }
         }
