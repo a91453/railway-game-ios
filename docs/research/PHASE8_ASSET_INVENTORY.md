@@ -55,10 +55,10 @@
 | `T/avatars/manifest.json` | 資料；JSON | 1 | 15,020 | 宣告 17 avatar；實有 8，另 9 avatar／LOD 與全部 17 fallback 缺 | D1 |
 | `T/assets/anim-CQkLTvTS.bin` | 動畫資料；ANM1 | 1 | 439,720 | 43 clips、30 fps、19 動畫關節；需要骨架對應，非 GLB 內建動畫 | A1 |
 | `T/assets/{avatar-CUFURxPX,clips-Cb5uFd0j,animator-DGt1NqrS,rig-BjRdQXtM}.js` | 參數／動畫 adapter；JS | 4 | 142,465 | rest pose、Rocketbox 骨架映射、root motion；逐件 bytes 見 §8.2 | P1／A1 |
-| `T/assets/engine-Dl04UrJP.js`、`world-DCb11kLR.js` | 城市參數／資料／程序 mesh；JS | 2 | 1,495,038 | 9 區 style、街廓、地標 proxy、擺放；world 有 43 個 site 與 1 個 postfx 依賴缺檔 | P1／D1 |
-| `T/assets/site-donqi-ximen-C4Uhuz6T.js` | 城市程序 mesh；JS | 1 | 28,314 | 西門唐吉訶德外觀；沒有獨立建物 GLB | P1 |
-| `T/assets/site-fongda-coffee-ncv_Ui7v.js` | 城市程序 mesh；JS | 1 | 32,315 | 蜂大咖啡外觀 | P1 |
-| `T/assets/site-railway-department-park-CeP4zM45.js` | 城市程序 mesh；JS | 1 | 25,070 | 鐵道部園區外觀 | P1 |
+| `T/assets/engine-Dl04UrJP.js`、`world-DCb11kLR.js` | 城市參數／資料／程序 mesh；JS | 2 | 1,586,227 | 9 區 style、街廓、地標 proxy、擺放；world 仍有 43 個 site 依賴缺檔，postfx 已補齊 | P1／D1 |
+| `T/assets/site-donqi-ximen-C4Uhuz6T.js` | 城市程序 mesh；JS | 1 | 28,315 | 西門唐吉訶德外觀；沒有獨立建物 GLB | P1 |
+| `T/assets/site-fongda-coffee-ncv_Ui7v.js` | 城市程序 mesh；JS | 1 | 32,316 | 蜂大咖啡外觀 | P1 |
+| `T/assets/site-railway-department-park-CeP4zM45.js` | 城市程序 mesh；JS | 1 | 25,073 | 鐵道部園區外觀 | P1 |
 | `T/splash/launch-*.png`、`icons/*.png`、`_favicon.png` | 圖片／圖示；PNG | 45（launch 42） | 6,132,453 | launch 多種螢幕解析度；圖示 32²、180²；不是城市貼圖 | I1 |
 | `T/title/*.webp`、`icons/icon.svg` | 圖片／圖示；WebP／SVG | 7 | 1,189,248 | WebP 六張為 960×1706 到 2560×1440，SVG 408 bytes；見 §8.2 | I1 |
 | `C` 非 external 的圖示／圖片 | 圖片／圖示；PNG／JPEG／WebP／SVG | 31 | 1,868,612 | 16²～1920×1200；地球圖 1774×887，逐件見 §8.4 | I1 |
