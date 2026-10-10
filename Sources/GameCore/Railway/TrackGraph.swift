@@ -56,6 +56,13 @@ public enum TrackEdgeDirection: String, Hashable, Codable, Sendable {
     public var reversed: TrackEdgeDirection {
         self == .forward ? .backward : .forward
     }
+
+    /// By case, not by raw value: hashing the raw value's string was a
+    /// large part of every set of traversals and spans (equal values still
+    /// hash equally).
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self == .forward)
+    }
 }
 
 /// An edge travelled one way: what a train is on, and what a route is made

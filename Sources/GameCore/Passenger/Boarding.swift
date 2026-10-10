@@ -136,7 +136,7 @@ extension GameWorld {
     /// is never anyone). Then, unless it is the last stop, the train takes
     /// on passengers (see ``boardPassengers(_:at:)``). Returns the larger of
     /// the two numbers, which sets how long the exchange takes.
-    mutating func exchangePassengers(_ index: Int, at stop: Int) -> Int64 {
+    mutating func exchangePassengers(_ index: Int, at stop: Int, memo: inout DispatchMemo) -> Int64 {
         guard !passengers.isEmpty || !riders.isEmpty else { return 0 }
         let train = trains[index]
         let entry = train.timetable[stop]
@@ -153,7 +153,7 @@ extension GameWorld {
                 if group.destination == entry.station && isOpen {
                     if let next = group.journey?.next {
                         enqueueTransfer(group.count, along: next, at: entry.station,
-                                        after: group.journey!.leg.line)
+                                        after: group.journey!.leg.line, memo: &memo)
                     } else {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                     }
@@ -280,7 +280,7 @@ extension GameWorld {
     /// same station needs no time. Those whose next leg is gone or out of
     /// reach, or who find no room to wait, leave.
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                          at alighting: StationID, after line: LineID) {
+                                          at alighting: StationID, after line: LineID, memo: inout DispatchMemo) {
         let origin = journey.origin
         let station = journey.leg.from
         let seconds: Int64
@@ -294,7 +294,11 @@ extension GameWorld {
         }
         let planned = WaitingGroup(line: journey.leg.line, direction: journey.leg.direction,
             destination: journey.leg.to, since: clock.now, count: count, journey: journey)
-        guard isServed(planned, at: station) else {
+        var served: [PassengerJourneyLeg: Bool] = [:]
+        for leg in journey.legs.dropFirst(journey.current) {
+            served[leg] = isServed(leg, memo: &memo)
+        }
+        guard isServed(planned, at: station, checkingLeg: { served[$0]! }) else {
             passengers[passengerIndex(of: origin)].abandoned += count
             return
         }
