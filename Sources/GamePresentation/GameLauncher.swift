@@ -172,13 +172,14 @@ public final class GameLauncher {
         begin(DemoWorld.make(in: language), keepingAutosave: true)
     }
 
-    /// Opens ``RealWorldDemo``: Taiwan's Pingxi, Yilan and Shenao Lines
-    /// built on `railways` and running over Apple's map.
+    /// Opens ``RealWorldDemo``: Taiwan's Yilan, Western Trunk, Pingxi and
+    /// Shenao Lines built on `railways` over the ground of the app's
+    /// heights (decision 132) and running over Apple's map.
     public func openRealWorldDemo(railways: RealRailways) {
         begin(
             RealWorldDemo.make(
                 in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
-                steep: steep(at: RealWorldDemo.anchor)
+                steep: steep(at: RealWorldDemo.anchor), heights: heights
             ),
             keepingAutosave: true
         )

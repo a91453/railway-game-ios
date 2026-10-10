@@ -4,7 +4,9 @@ import GameCore
 // Taiwan's ground height on a real-world map (ARCHITECTURE decision 124):
 // the Copernicus DEM (GLO-30; GLO-90 where only that is released) on the
 // water file's grid (1.875″, some 58 × 53 m), the 3 × 3 median heights the
-// steep slopes are found from, in whole metres, water at 0. Bundled as
+// steep slopes are found from, in whole metres; rivers and lakes at their
+// surface and the open sea at 0 (decision 132; before it all water was 0,
+// a pit in every mountain river). Bundled as
 // `Resources/RealWorld/taiwan_heights.dat` by
 // `tools/real-world-population/build_slope_grid.py`, whose docstring gives
 // the format: each row on its own, as varint differences with runs of

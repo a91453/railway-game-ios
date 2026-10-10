@@ -175,7 +175,7 @@ struct StartView: View {
             // they were.
             StartButton(
                 title: String(localized: "Real-World Demo"),
-                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running"),
+                detail: launcher.isLoadingRealWorldData ? loadingDetail : String(localized: "Taiwan’s Yilan, Western Trunk, Pingxi and Shenao Lines, built on their real track over the real ground and running"),
                 systemImage: "map.fill",
                 tone: .accent
             ) {

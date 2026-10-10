@@ -35,8 +35,11 @@ The file gains `"steep": [[row, column, count, gap, count, …], …]`, as
 imagecodecs (`pip install tifffile imagecodecs numpy`), as the population
 grid's script; about a minute.
 
-The heights are the same median heights, rounded to whole metres; water,
-and anywhere no tile reaches, is 0 (the sea). The file is little-endian:
+The heights are the same median heights, rounded to whole metres, but
+taken with the water in (ARCHITECTURE decision 132): water within SHORE
+cells of dry land (rivers, lakes, the shore) is at its surface, no lower
+than 0; the open sea, the mainland across it (water in the OpenStreetMap
+extract of Taiwan) and anywhere no tile reaches are 0 (the sea). The file is little-endian:
 the magic `TWHG`, version 1 (u16) and 0 (u16); the grid's north, west and
 cell size in degrees (f64 each) and its rows and columns (u32 each); then
 rows + 1 offsets (u32) from the start of the rows' bytes, row by row, the
@@ -57,6 +60,9 @@ import sys
 import numpy as np
 
 SLOPE = 0.30
+# How far from dry land water keeps the DEM's height in the heights file,
+# in cells (some 450 m): rivers and lakes, not the open sea.
+SHORE = 8
 METRES_PER_DEGREE_LATITUDE = 110_574.0
 METRES_PER_DEGREE_LONGITUDE = 111_320.0
 
@@ -133,6 +139,24 @@ def median3(grid):
     return out
 
 
+def near(mask, cells):
+    """Where `mask` is, or is within `cells` cells of it (a square round
+    each), a cell at a time."""
+    out = mask.copy()
+    for _ in range(cells):
+        grown = out.copy()
+        grown[1:, :] |= out[:-1, :]
+        grown[:-1, :] |= out[1:, :]
+        grown[:, 1:] |= out[:, :-1]
+        grown[:, :-1] |= out[:, 1:]
+        grown[1:, 1:] |= out[:-1, :-1]
+        grown[1:, :-1] |= out[:-1, 1:]
+        grown[:-1, 1:] |= out[1:, :-1]
+        grown[:-1, :-1] |= out[1:, 1:]
+        out = grown
+    return out
+
+
 def encode(mask):
     encoded = []
     for row in range(mask.shape[0]):
@@ -183,6 +207,10 @@ def main(water_path, folder, out, heights_out=None):
     rows, step = data['rows'], data['cellDegrees']
     water = water_mask(data)
     grid, count = heights_on_grid(data, folder)
+    # The heights file keeps the DEM's own heights over water (the water's
+    # surface, ARCHITECTURE decision 132); the steep slopes are found with
+    # water at 0, as they always have been.
+    surface = grid.copy()
     grid[water] = 0
     smooth = median3(np.nan_to_num(grid, nan=0.0))
     latitudes = data['north'] - (np.arange(rows) + 0.5) * step
@@ -212,10 +240,18 @@ def main(water_path, folder, out, heights_out=None):
     print(f'{out}: {count} tiles; land {km2(~water)} km², steep {km2(steep)} km² ({runs} runs); {len(text)} bytes')
     if heights_out:
         dry = ~water & ~np.isnan(grid)
-        heights = np.where(dry, np.clip(np.rint(smooth), -32768, 32767), 0).astype(np.int16)
+        level = np.clip(np.rint(median3(np.nan_to_num(surface, nan=0.0))), -32768, 32767)
+        # Water near land (rivers, lakes, the shore) is at its surface, no
+        # lower than the sea; the open sea, the mainland across it (which
+        # the OpenStreetMap extract of Taiwan leaves as water) and anywhere
+        # no tile reaches are the sea, 0.
+        inland = water & near(dry, SHORE)
+        heights = np.where(dry, level, np.where(inland & ~np.isnan(surface), np.maximum(level, 0), 0)).astype(np.int16)
         encoded = encode_heights(heights, data)
         open(heights_out, 'wb').write(encoded)
-        print(f'{heights_out}: {int(dry.sum())} dry cells, {int(heights.min())} to {int(heights.max())} m; {len(encoded)} bytes')
+        above = int((inland & (heights > 0)).sum())
+        print(f'{heights_out}: {int(dry.sum())} dry cells, {above} water cells above the sea, {int(heights.min())} to {int(heights.max())} m; '
+              f'{len(encoded)} bytes')
     return data, steep, grid
 
 

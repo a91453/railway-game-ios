@@ -19,7 +19,7 @@ final class RealWorldDemoTests: XCTestCase {
     /// build.
     private static let built: Result<(RealRailways, GameWorld), Error> = Result {
         let railways = try bundledRailways()
-        return (railways, RealWorldDemo.make(in: .traditionalChinese, railways: railways))
+        return (railways, RealWorldDemo.makeFlat(in: .traditionalChinese, railways: railways))
     }
 
     func testExpressPatternsCanRouteBetweenEveryPairOfRealDemoStops() throws {

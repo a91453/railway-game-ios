@@ -2,8 +2,10 @@ import GameCore
 
 // The first Taiwan railway history challenge (decision 90): take over the
 // Pingxi Line, built for coal and kept for its sights, and fill it with
-// visitors. It is played on the real-world demo's map (``RealWorldDemo``):
-// the Pingxi, Yilan and Shenao Lines on their real alignments, running.
+// visitors. It is played on the real-world demo's map as it was before
+// decision 132 (``RealWorldDemo/makeFlat(in:railways:land:water:steep:)``):
+// the Pingxi, Yilan and Shenao Lines on their real alignments, flat,
+// running.
 //
 // The history in its story is from public sources (the English
 // Wikipedia's "Pingxi line"; CommonWealth's Smile Taiwan, "回憶平溪支線的黑金
@@ -69,7 +71,7 @@ public enum PingxiChallenge {
     public static func make(
         in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
     ) -> GameWorld {
-        var world = RealWorldDemo.make(in: language, railways: railways, land: land, water: water, steep: steep)
+        var world = RealWorldDemo.makeFlat(in: language, railways: railways, land: land, water: water, steep: steep)
         let events = festivalStations.compactMap { name -> ScenarioEvent? in
             guard let real = railways.stations.first(where: { $0.id == "tra_sched|\(name)" }),
                   let station = world.stations.first(where: { $0.name == real.name(in: language) }) else { return nil }

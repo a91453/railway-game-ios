@@ -74,6 +74,28 @@ final class TrackLongSectionTests: XCTestCase {
         XCTAssertEqual(section.cost.total, cost)
     }
 
+    /// Decision 132: the price quoted for an edge not yet built is what
+    /// building it charges, over the valley, without ground, and for a
+    /// steep or bad edge none.
+    func testAQuoteIsWhatBuildingCharges() throws {
+        var valley = try world(columns: [20, 20, 0, 0, 20])
+        let from = WorldCoordinate(x: 1_024, y: Self.row, z: 1_280), to = WorldCoordinate(x: 17_408, y: Self.row, z: 1_280)
+        let quote = try valley.trackEdgePrice(from: from, to: to, structure: .automatic)
+        XCTAssertEqual(quote, Money(4_235))
+        XCTAssertEqual(try build(&valley, from: 1_024, to: 17_408, z: 1_280, structure: .automatic).cost, quote)
+
+        var flat = world()
+        let viaduct = try flat.trackEdgePrice(
+            from: WorldCoordinate(x: 1_024, y: Self.row, z: 2_048), to: WorldCoordinate(x: 5_120, y: Self.row, z: 2_048), structure: .elevated
+        )
+        XCTAssertEqual(viaduct, try build(&flat, from: 1_024, to: 5_120, z: 2_048, structure: .elevated).cost)
+
+        XCTAssertThrowsError(try flat.trackEdgePrice(from: from, to: from)) { XCTAssertEqual($0 as? GameError, .invalidTrackGeometry) }
+        XCTAssertThrowsError(try flat.trackEdgePrice(from: WorldCoordinate(x: 1_024, y: Self.row), to: WorldCoordinate(x: 2_048, y: Self.row, z: 64))) {
+            XCTAssertEqual($0 as? GameError, .trackTooSteep)
+        }
+    }
+
     /// The hill: a tunnel's four prices more for its 16 lengths; the parts
     /// and pulling down the house over the open track add up to the cost.
     func testATunnelsPartsAndTheDemolitionAddUpToTheCost() throws {

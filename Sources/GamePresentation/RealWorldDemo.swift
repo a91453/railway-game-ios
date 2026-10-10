@@ -72,11 +72,14 @@ public enum RealWorldDemo {
         return anchor
     }()
 
-    /// The demo's game, built on `railways`, with `land` the map's people
+    /// The demo as it was before decision 132, flat at 0 m and with the
+    /// lines above, built on `railways`, with `land` the map's people
     /// (``LandImport``; without it, the towns of a new game) and `water`
     /// its water (``WaterGrid``, decision 105) and steep slopes (decision
-    /// 115).
-    public static func make(
+    /// 115). The Pingxi challenge (decision 90) is played on it: its
+    /// targets were measured there. The demo itself is
+    /// ``make(in:railways:land:water:steep:heights:)``.
+    public static func makeFlat(
         in language: DisplayLanguage, railways: RealRailways, land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
     ) -> GameWorld {
         let layout = Layout(railways: railways)
@@ -172,7 +175,7 @@ public enum RealWorldDemo {
             let junction = loopEnds[0].0
             let main = TrackPlan(
                 mainPath, forced: [0, mainPath.length] + loopEnds.flatMap { [$0.0, $0.1] }, avoiding: mainPlatforms,
-                close: (junction - besideReach)...junction
+                close: [(junction - besideReach)...junction]
             )
 
             // Each loop leaves the main track at one node and joins it again
@@ -193,7 +196,7 @@ public enum RealWorldDemo {
             let branchPlatforms = branchStops.map { platformZone(on: branchPath, at: $0.point) }
             guard let start = main.node(at: junction) else { preconditionFailure("The junction is not a node") }
             branch = TrackPlan(
-                branchPath, forced: [0, branchPath.length], avoiding: branchPlatforms, looseUntil: 300 * metre, close: 0...besideReach,
+                branchPath, forced: [0, branchPath.length], avoiding: branchPlatforms, looseUntil: 300 * metre, close: [0...besideReach],
                 start: (start.point, start.direction.reversed)
             )
             self.main = main
@@ -318,6 +321,9 @@ public enum RealWorldDemo {
         "四腳亭": (.residential, 8_000), "瑞芳": (.office, 20_000), "猴硐": (.scenic, 6_000), "三貂嶺": (.scenic, 2_000),
         "大華": (.scenic, 1_000), "十分": (.scenic, 10_000), "望古": (.scenic, 1_000), "嶺腳": (.residential, 2_000),
         "平溪": (.scenic, 6_000), "菁桐": (.scenic, 6_000), "海科館": (.scenic, 5_000), "八斗子": (.residential, 4_000),
+        // Decision 132's longer demo.
+        "七堵": (.residential, 12_000), "八堵": (.residential, 6_000), "暖暖": (.residential, 5_000), "牡丹": (.residential, 1_000),
+        "三坑": (.residential, 4_000), "基隆": (.office, 24_000),
     ]
 
     static func ridership(_ stops: [Stop]) -> [(Stop, StationDemandKind, Int64)] {
@@ -346,7 +352,8 @@ public enum RealWorldDemo {
 
     /// The tolerances of the fit: how far an edge may stray from the
     /// smoothed centre line (closely where the Shenao Line runs beside the
-    /// Yilan Line, 6 to 12 m off it, so the two keep 4 m apart), how long
+    /// Yilan Line, 6 to 12 m off it, so the two keep 4 m apart, and on the
+    /// ground demo through the passing loops), how long
     /// and how short it may be, and how far its direction may turn.
     static let tolerance = 3.0 * metre
     static let closeTolerance = 1.0 * metre
@@ -374,11 +381,21 @@ public enum RealWorldDemo {
         let nodes: [(point: PlanPoint, direction: WorldVector)]
         let curves: [TrackCurve]
 
+        /// The height of each node, in world units: 0 on flat ground.
+        let heights: [Int64]
+        /// What carries each edge.
+        let structure: TrackStructure
+
+        /// With `rise` (decision 132) the track has the heights it gives,
+        /// edges are cut until their straight grade keeps close to it, and
+        /// never where a node would stand too far above or below the ground.
         init(
-            _ path: WorldPath, forced: [Double], avoiding: [ClosedRange<Double>], looseUntil: Double = 0, close: ClosedRange<Double>? = nil,
-            start: (point: PlanPoint, direction: WorldVector)? = nil, end: (point: PlanPoint, direction: WorldVector)? = nil
+            _ path: WorldPath, forced: [Double], avoiding: [ClosedRange<Double>], looseUntil: Double = 0, close: [ClosedRange<Double>] = [],
+            start: (point: PlanPoint, direction: WorldVector)? = nil, end: (point: PlanPoint, direction: WorldVector)? = nil,
+            rise: TrackRise? = nil, structure: TrackStructure = .surface
         ) {
             self.path = path
+            self.structure = structure
             let keepOut = avoiding.map { ($0.lowerBound - platformMargin)...($0.upperBound + platformMargin) }
             func tangent(at distance: Double) -> WorldVector {
                 if distance == 0, let start { return start.direction }
@@ -395,9 +412,10 @@ public enum RealWorldDemo {
             func split(_ a: Double, _ b: Double) {
                 let length = b - a
                 let turn = tangent(at: a).angle(to: tangent(at: b))
-                let limit = close.map { $0.overlaps(a...b) } == true ? closeTolerance : tolerance
+                let limit = close.contains { $0.overlaps(a...b) } ? closeTolerance : tolerance
                 let near = b <= looseUntil || deviation(of: cubic(a, b), from: path, between: a, and: b) <= limit
-                if length <= longestEdge, turn <= sharpestTurn, near { return }
+                let level = rise?.fits(from: a, to: b) ?? true
+                if length <= longestEdge, turn <= sharpestTurn, near, level { return }
                 guard length > 2 * shortestEdge else { return }
                 var cut = (a + b) / 2
                 if let zone = keepOut.first(where: { $0.contains(cut) }) {
@@ -408,6 +426,17 @@ public enum RealWorldDemo {
                     } else {
                         return
                     }
+                }
+                if let rise, !rise.allowsNode(at: cut) {
+                    // The nearest place a node may stand, every 16 m either
+                    // way; none in a deep tunnel, which stays one edge.
+                    let step = 16 * metre
+                    let places = (1...Int(length / step)).flatMap { [cut - Double($0) * step, cut + Double($0) * step] }
+                    guard let place = places.first(where: { place in
+                        place > a + shortestEdge && place < b - shortestEdge && rise.allowsNode(at: place)
+                            && !keepOut.contains { $0.contains(place) }
+                    }) else { return }
+                    cut = place
                 }
                 split(a, cut)
                 cuts.append(cut)
@@ -426,6 +455,7 @@ public enum RealWorldDemo {
             if let start { nodes[0] = start }
             if let end { nodes[nodes.count - 1] = end }
             self.nodes = nodes
+            heights = distances.map { rise?.node(at: $0) ?? 0 }
             curves = distances.indices.dropLast().map { index in
                 let handle = (distances[index + 1] - distances[index]) / 3
                 let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle
@@ -450,8 +480,13 @@ public enum RealWorldDemo {
             }
         }
 
-        /// Builds the track, from `start` and to `end` if they are built.
-        func build(in world: inout GameWorld, start: TrackNodeID? = nil, end: TrackNodeID? = nil) throws(GameError) -> Track {
+        /// Builds the track, from `start` and to `end` if they are built;
+        /// `together`, its edges as one command
+        /// (``GameWorld/buildTrackEdges(_:)``), the spacing checked once all
+        /// are built: a passing loop, which runs within 4 m of the main
+        /// track near each end, joins it at its far end only with its last
+        /// edge.
+        func build(in world: inout GameWorld, start: TrackNodeID? = nil, end: TrackNodeID? = nil, together: Bool = false) throws(GameError) -> Track {
             var ids: [TrackNodeID] = []
             for (index, node) in nodes.enumerated() {
                 if index == 0, let start {
@@ -459,12 +494,18 @@ public enum RealWorldDemo {
                 } else if index == nodes.count - 1, let end {
                     ids.append(end)
                 } else {
-                    ids.append(try world.buildTrackNode(at: WorldCoordinate(x: node.point.x, y: node.point.y)))
+                    ids.append(try world.buildTrackNode(at: WorldCoordinate(x: node.point.x, y: node.point.y, z: heights[index])))
                 }
             }
             var edges: [TrackEdgeID] = []
-            for (index, curve) in curves.enumerated() {
-                edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve))
+            if together {
+                edges = try world.buildTrackEdges(curves.enumerated().map { index, curve in
+                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: structure)
+                })
+            } else {
+                for (index, curve) in curves.enumerated() {
+                    edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: structure))
+                }
             }
             return Track(plan: self, nodes: ids, edges: edges)
         }

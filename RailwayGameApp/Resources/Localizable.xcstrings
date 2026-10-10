@@ -2203,12 +2203,12 @@
         }
       }
     },
-    "Taiwan’s Pingxi, Yilan and Shenao Lines, built on their real track and running" : {
+    "Taiwan’s Yilan, Western Trunk, Pingxi and Shenao Lines, built on their real track over the real ground and running" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "台灣的平溪線、宜蘭線與深澳線，照真實路線蓋好、已經在跑"
+            "value" : "台灣的宜蘭線、縱貫線、平溪線與深澳線，照真實路線與地形蓋好、已經在跑"
           }
         }
       }
