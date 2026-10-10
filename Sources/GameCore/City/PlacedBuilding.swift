@@ -159,7 +159,11 @@ extension GameWorld {
     /// nothing. Since decision 95 it buys out the city's buildings it
     /// claims (``cityCells(claimedBy:)``), which are pulled down with their
     /// cells of land: their residents and jobs move in, up to what it
-    /// holds, and the rest leave. Track in a tunnel is not in its way.
+    /// holds, and the rest leave. Buying out by area (decision 146), it
+    /// pulls nothing down: from each cell it covers part of
+    /// (``cityShares(coveredBy:)``), that share of the residents and of the
+    /// jobs, each rounded down, move in as before, and the cell keeps the
+    /// rest. Track in a tunnel is not in its way.
     ///
     /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
@@ -203,14 +207,30 @@ extension GameWorld {
         var building = PlacedBuilding(id: PlacedBuildingID(rawValue: id), kind: kind, centre: centre)
         building.buildingCost = quote.building
         building.landCost = quote.land + quote.buyOut
-        let cleared = cityCells(claimedBy: candidate)
-        building.residents = min(kind.capacity.residents, cleared.reduce(0) { $0 + $1.residents })
-        building.jobs = min(kind.capacity.jobs, cleared.reduce(0) { $0 + $1.jobs })
+        let cleared = areaBuyOut ? [] : cityCells(claimedBy: candidate)
+        // Decision 146: the share of each covered cell's people, which
+        // leaves the cell someone, as the share is less than the whole.
+        let moved = areaBuyOut ? cityShares(coveredBy: candidate).map { share in
+            (cell: share.cell,
+             residents: share.cell.residents * share.area / Land.cellArea,
+             jobs: share.cell.jobs * share.area / Land.cellArea)
+        } : []
+        building.residents = min(kind.capacity.residents, cleared.reduce(0) { $0 + $1.residents } + moved.reduce(0) { $0 + $1.residents })
+        building.jobs = min(kind.capacity.jobs, cleared.reduce(0) { $0 + $1.jobs } + moved.reduce(0) { $0 + $1.jobs })
         nextPlacedBuildingID = next
         placedBuildings.append(building)
         acquireAsset(.building, owner: id, cost: quote.total)
         if !cleared.isEmpty {
             removeLand(at: Set(cleared.map(\.position)))
+            refreshLandDemand()
+        }
+        let movers = moved.filter { $0.residents + $0.jobs > 0 }
+        if !movers.isEmpty {
+            for (cell, residents, jobs) in movers {
+                guard let index = land.cells.firstIndex(where: { $0.position == cell.position }) else { continue }
+                land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use,
+                                             residents: cell.residents - residents, jobs: cell.jobs - jobs)
+            }
             refreshLandDemand()
         }
         return building

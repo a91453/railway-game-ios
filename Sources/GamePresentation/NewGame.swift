@@ -90,6 +90,9 @@ extension GameWorld {
             // Decision 142: a low town's buildings leave room for the
             // company's between them.
             world.setCityFootprints(true)
+            // Decision 146: a real-world map's buildings are the base map's,
+            // so the company's buy out the city's by the ground they cover.
+            world.setAreaBuyOut(anchor != nil)
             return world
         } catch {
             // An empty world has no trains to share track, and land and

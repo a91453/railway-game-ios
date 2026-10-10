@@ -163,8 +163,10 @@ extension GameSession {
     /// where it buys out none and GameCore would put it up (decision 144):
     /// the player taps near a gap between the city's buildings and the
     /// building lands in it. With none, `point`, whose preview shows what
-    /// buying out costs.
+    /// buying out costs. Buying out by area (decision 146), always `point`:
+    /// there are no squares to fit between.
     func snappedBuildingSite(_ point: PlanPoint) -> PlanPoint {
+        guard !world.areaBuyOut else { return point }
         let kind = buildingKind
         func clears(_ centre: PlanPoint) -> Bool {
             world.cityCells(claimedBy: PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: kind, centre: centre)).isEmpty
@@ -347,6 +349,10 @@ extension GameSession {
             if count > 0 {
                 english.append("buying out \(count == 1 ? "1 city building" : "\(count) city buildings") \(quote.buyOut.moneyText)")
                 chinese.append("收購城市建物 \(count) 棟 \(quote.buyOut.moneyText)")
+            } else if quote.buyOut > .zero {
+                // Decision 146: the share of the city's floor under it.
+                english.append("buying out the city's floor under it \(quote.buyOut.moneyText)")
+                chinese.append("收購用地上的城市建物 \(quote.buyOut.moneyText)")
             }
         } else if count > 0 {
             english.append(count == 1 ? "Pulls down 1 city building" : "Pulls down \(count) city buildings")
@@ -361,7 +367,9 @@ extension GameSession {
     public var buildingOverlay: BuildingOverlay? {
         guard tool == .building else { return nil }
         var overlay = BuildingOverlay()
-        overlay.showsCityBuildingSites = buildingMode == .build
+        // Decision 146: buying out by area, the city's squares stand in no
+        // one's way, so they are not drawn.
+        overlay.showsCityBuildingSites = buildingMode == .build && !world.areaBuyOut
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)

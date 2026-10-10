@@ -105,6 +105,8 @@ public struct LandTotals: Hashable, Sendable {
 public struct Land: Hashable, Sendable {
     /// A cell's side: 64 m.
     public static let cellLength: Int64 = 4_096
+    /// A cell's ground, in square world units: 4,096 m² (2^24).
+    public static let cellArea: Int64 = cellLength * cellLength
     /// The most residents, and the most jobs, a cell holds: some 24 million
     /// a km², far above any real city, so only a damaged save meets it.
     public static let maximumPerCell: Int64 = 100_000

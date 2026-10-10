@@ -16,6 +16,14 @@
 // but the building on it has a place, so a small building can stand at the
 // edge of a cell and leave the city's alone.
 //
+// Buying out by area (decision 146): on a real-world map the city's
+// buildings are the base map's, and the game's squares in the middle of
+// each cell match none of them, so they stand in no one's way there. A
+// company building buys out the share of each cell of land it covers,
+// that share of the cell's city building's price, and that share of the
+// cell's people move in; the cell stays, and grows to its limits less the
+// share the company covers.
+//
 // The reference has no property (docs/research/CITY_BUILDING_STUDY.md §2):
 // the rules and every number are native, the formulas the Phase 7 study's
 // (docs/research/PHASE7_COMPANY_STUDY.md §3.3) with a building's own
@@ -67,10 +75,12 @@ public struct PlacedBuildingQuote: Hashable, Sendable {
     /// The right to use the land: the land value of the cell under its
     /// centre (cents a m²) by its footprint.
     public let land: Money
-    /// Buying out the city's buildings it claims (decision 95), together.
+    /// Buying out the city's buildings it claims (decision 95), together;
+    /// buying out by area (decision 146), the shares of the cells it covers.
     public let buyOut: Money
     /// The cells of land whose city buildings it buys out and pulls down,
-    /// by row and then column; free play pulls them down too.
+    /// by row and then column; free play pulls them down too. None when
+    /// buying out by area, which pulls nothing down.
     public let cleared: [CellPosition]
 
     public init(building: Money, land: Money, buyOut: Money = .zero, cleared: [CellPosition] = []) {
@@ -92,17 +102,71 @@ extension GameWorld {
     /// `nil` outside the world. Free play pays nothing.
     public func placedBuildingQuote(_ kind: PlacedBuildingKind, at centre: PlanPoint) -> PlacedBuildingQuote? {
         guard bounds.contains(centre) else { return nil }
-        let cleared = cityCells(claimedBy: PlacedBuilding(id: PlacedBuildingID(rawValue: 0), kind: kind, centre: centre))
+        let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: 0), kind: kind, centre: centre)
+        let cleared = areaBuyOut ? [] : cityCells(claimedBy: candidate)
         guard accounts.mode == .management else {
             return PlacedBuildingQuote(building: .zero, land: .zero, cleared: cleared.map(\.position))
         }
         let value = landValue(row: Land.cellIndex(centre.y), column: Land.cellIndex(centre.x))?.value ?? 0
+        let buyOut = areaBuyOut
+            ? cityShares(coveredBy: candidate).reduce(.zero) { $0 + buyOutPrice(of: $1.cell, covered: $1.area) }
+            : cleared.reduce(.zero) { $0 + buyOutPrice(of: $1) }
         return PlacedBuildingQuote(
             building: Money(kind.floorArea * PlacedBuildingRules.floorCost.amount),
             land: Money(kind.footprintArea * value),
-            buyOut: cleared.reduce(.zero) { $0 + buyOutPrice(of: $1) },
+            buyOut: buyOut,
             cleared: cleared.map(\.position)
         )
+    }
+
+    /// The cells of land `building`'s square covers part of, by row and
+    /// then column, each with the area it covers in square world units
+    /// (decision 146): more than 0 and, as no building is a cell across,
+    /// less than ``Land/cellArea``.
+    public func cityShares(coveredBy building: PlacedBuilding) -> [(cell: LandCell, area: Int64)] {
+        let firstRow = Land.cellIndex(building.minY), lastRow = Land.cellIndex(building.maxY - 1)
+        let firstColumn = Land.cellIndex(building.minX), lastColumn = Land.cellIndex(building.maxX - 1)
+        var shares: [(cell: LandCell, area: Int64)] = []
+        for row in firstRow...lastRow {
+            for column in firstColumn...lastColumn {
+                let area = Self.area(of: building, onRow: row, column: column)
+                if area > 0, let cell = land.cell(row: row, column: column) {
+                    shares.append((cell, area))
+                }
+            }
+        }
+        return shares
+    }
+
+    /// The ground `building`'s square shares with the cell at `row`,
+    /// `column`, in square world units.
+    static func area(of building: PlacedBuilding, onRow row: Int, column: Int) -> Int64 {
+        let minX = Int64(column) * Land.cellLength, minY = Int64(row) * Land.cellLength
+        let width = min(building.maxX, minX + Land.cellLength) - max(building.minX, minX)
+        let height = min(building.maxY, minY + Land.cellLength) - max(building.minY, minY)
+        return width > 0 && height > 0 ? width * height : 0
+    }
+
+    /// The ground of the cell at `row`, `column` the company's buildings
+    /// cover, in square world units (decision 146): at most
+    /// ``Land/cellArea``, as they share no ground.
+    func coveredArea(row: Int, column: Int) -> Int64 {
+        guard !placedBuildings.isEmpty else { return 0 }
+        return min(Land.cellArea, placedBuildings.reduce(0) { $0 + Self.area(of: $1, onRow: row, column: column) })
+    }
+
+    /// ``coveredArea(row:column:)`` of every cell the company's buildings
+    /// cover part of.
+    func coveredAreas() -> [CellPosition: Int64] {
+        var covered: [CellPosition: Int64] = [:]
+        for building in placedBuildings {
+            for row in Land.cellIndex(building.minY)...Land.cellIndex(building.maxY - 1) {
+                for column in Land.cellIndex(building.minX)...Land.cellIndex(building.maxX - 1) {
+                    covered[CellPosition(row: row, column: column), default: 0] += Self.area(of: building, onRow: row, column: column)
+                }
+            }
+        }
+        return covered
     }
 
     /// The cells of land whose city building `building` claims (decision
@@ -166,17 +230,22 @@ extension GameWorld {
     /// Whether one of the company's buildings claims the cell at `row`,
     /// `column`: the city puts up nothing there (decision 95). Its square
     /// is `side` across, or ``cityBuildingSide(row:column:)``.
+    /// Buying out by area (decision 146), only a cell they cover whole is
+    /// theirs.
     func isClaimedByPlacedBuilding(row: Int, column: Int, side: Int64? = nil) -> Bool {
         guard !placedBuildings.isEmpty else { return false }
+        if areaBuyOut { return coveredArea(row: row, column: column) == Land.cellArea }
         let side = side ?? cityBuildingSide(row: row, column: column)
         return placedBuildings.contains { Self.claims($0, row: row, column: column, side: side) }
     }
 
     /// Whether the city building on `position` cannot be raised because
     /// its square, grown to the next density's with the city's footprints
-    /// (decision 142), would reach one of the company's buildings.
+    /// (decision 142), would reach one of the company's buildings. Never
+    /// when buying out by area (decision 146): the cell's limits leave out
+    /// what they cover instead.
     func raiseIsBlocked(at position: CellPosition) -> Bool {
-        guard cityFootprints, !placedBuildings.isEmpty,
+        guard cityFootprints, !areaBuyOut, !placedBuildings.isEmpty,
               let building = buildings.building(row: position.row, column: position.column),
               let next = BuildingDensity(rawValue: building.density.rawValue + 1)
         else { return false }
@@ -193,6 +262,15 @@ extension GameWorld {
         cityFootprints = enabled
     }
 
+    /// Turns buying out by area on or off (decision 146): on, a company
+    /// building buys out the share of each cell it covers, rather than the
+    /// city buildings whose squares it reaches. Free; nothing on the map
+    /// changes but what is bought out from now on and what the cells under
+    /// the company's buildings grow to.
+    public mutating func setAreaBuyOut(_ enabled: Bool) {
+        areaBuyOut = enabled
+    }
+
     /// What buying out the city building on `cell` costs a managed company
     /// (decision 95): ``PlacedBuildingRules/buyOutPercent`` of its floor at
     /// ``PlacedBuildingRules/floorCost`` (a park has none) and its square's
@@ -207,6 +285,17 @@ extension GameWorld {
         let side = cityBuildingSide(row: cell.row, column: cell.column) / WorldCoordinate.unitsPerMetre
         let value = landValue(row: cell.row, column: cell.column)?.value ?? 0
         return Money((floor * PlacedBuildingRules.floorCost.amount + side * side * value) * PlacedBuildingRules.buyOutPercent / 100)
+    }
+
+    /// What buying out `covered` square world units of `cell` costs a
+    /// managed company (decision 146): that share of ``buyOutPrice(of:)``,
+    /// rounded down, as if the city building stood spread over its cell.
+    public func buyOutPrice(of cell: LandCell, covered: Int64) -> Money {
+        let whole = buyOutPrice(of: cell).amount
+        // The cell's area is 2^24: split the price so its product stays
+        // far inside 64 bits whatever the land is worth.
+        let high = whole / Land.cellArea, low = whole % Land.cellArea
+        return Money(high * covered + low * covered / Land.cellArea)
     }
 
     /// The company's buildings, by ID, that track along `points` would

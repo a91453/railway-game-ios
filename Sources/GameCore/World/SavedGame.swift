@@ -169,9 +169,14 @@
 ///     build that reads only an earlier version would drop it, and the
 ///     company's buildings would buy out 40 m squares again, so it says the
 ///     save is newer than it instead.
+/// 34. Buying out by area (decision 146): a world can have
+///     `"areaBuyOut": true`, the company's buildings buying out the city's
+///     by the ground they cover. A build that reads only an earlier version
+///     would drop it, and a real-world map's buildings would buy out the
+///     game's squares again, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 33
+    public static let currentVersion = 34
 
     public let world: GameWorld
 
@@ -276,6 +281,8 @@ extension SavedGame: Codable {
         // Version 31 to 32: a world without `"cityDemand"` grows as it did.
         // Version 32 to 33: a world without `"cityFootprints"` keeps its
         // city buildings' 40 m squares.
+        // Version 33 to 34: a world without `"areaBuyOut"` buys out by
+        // squares, as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

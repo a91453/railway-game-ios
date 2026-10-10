@@ -393,9 +393,11 @@ extension GameWorld {
     /// The cells of the city buildings below D4 that are full: their main
     /// count (residents of homes, jobs of shops and offices) at least
     /// ``LandDemand/upgradeFullness`` thousandths of the table's (decisions
-    /// 77 and 129).
+    /// 77 and 129); buying out by area (decision 146), of the table's less
+    /// the share of the cell the company's buildings cover, as its limits.
     private func fullBuildingCells() -> Set<CellPosition> {
         var full: Set<CellPosition> = []
+        let covered = areaBuyOut ? coveredAreas() : [:]
         for cell in land.cells {
             guard let building = buildings.building(row: cell.row, column: cell.column),
                   building.kind == .city, building.density < .d4
@@ -406,7 +408,10 @@ extension GameWorld {
             // whenever that is above the table's, so it would make nearly
             // every mixed cell of a real-world map full.
             let table = Building.tableCapacity(of: building.use, building.density)
-            let main = Building.mainCount(of: building.use, residents: table.residents, jobs: table.jobs)
+            var main = Building.mainCount(of: building.use, residents: table.residents, jobs: table.jobs)
+            if let covered = covered[cell.position] {
+                main = main * (Land.cellArea - covered) / Land.cellArea
+            }
             if main > 0, Building.mainCount(of: building.use, residents: cell.residents, jobs: cell.jobs) * 1_000 >= main * LandDemand.upgradeFullness {
                 full.insert(cell.position)
             }
@@ -663,9 +668,15 @@ extension GameWorld {
     }
 
     /// What `cell` grows to at most: its building's capacity with the city's
-    /// buildings on (Phase 6c-2), else the fixed limits.
+    /// buildings on (Phase 6c-2), else the fixed limits; buying out by area
+    /// (decision 146), less the share of the cell the company's buildings
+    /// cover, rounded down.
     func growthLimits(of cell: LandCell) -> (residents: Int64, jobs: Int64) {
         let capacity = cityBuildings ? buildings.building(row: cell.row, column: cell.column)?.capacity(on: cell) : nil
-        return (capacity?.residents ?? LandDemand.grownResidents, capacity?.jobs ?? LandDemand.grownJobs)
+        let limits = (residents: capacity?.residents ?? LandDemand.grownResidents, jobs: capacity?.jobs ?? LandDemand.grownJobs)
+        guard areaBuyOut else { return limits }
+        let open = Land.cellArea - coveredArea(row: cell.row, column: cell.column)
+        guard open < Land.cellArea else { return limits }
+        return (limits.residents * open / Land.cellArea, limits.jobs * open / Land.cellArea)
     }
 }

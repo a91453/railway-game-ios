@@ -90,12 +90,15 @@ final class RealWorldMapTests: XCTestCase {
     // MARK: - New games
 
     /// A real-world new game is a new game on a map laid over the Earth:
-    /// the same money, prices, city and empty map.
+    /// the same money, prices, city and empty map, but that the company's
+    /// buildings buy out the city's by area (decision 146).
     func testARealWorldNewGameIsANewGameOverTheEarth() {
         let real = GameWorld.newGame(anchor: taipei)
         XCTAssertEqual(real.geoAnchor, taipei)
+        XCTAssertTrue(real.areaBuyOut)
         var blank = real
         blank.setGeoAnchor(nil)
+        blank.setAreaBuyOut(false)
         XCTAssertEqual(blank, .newGame())
         XCTAssertNil(GameWorld.newGame().geoAnchor)
     }

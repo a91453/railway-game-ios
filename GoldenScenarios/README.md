@@ -28,6 +28,17 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 新增 `single-track-scheduled-meet.json` 與 `scheduled-overtake.json`（schema 31，決策 59）：計畫、實際誤點、待避月台／通過正線與精確解除秒；值先由 GameCore 取得，再由 ReferenceWorldGoldenTests 的獨立模型確認。31 新增 `{"observe":{"type":"scheduledWaits"},"expect":{"scheduledWaits":[...]}}`；每一列寫 train、station、stop、cycle、other、otherStop、otherCycle、kind、departureSeconds、clearanceSeconds。讀取端仍接受 schema 30，所有既有 JSON 原字節保留。
 
+## 依面積收購（`area-buyout.json`）
+
+12 步、不推進時間的情境（schema 55，決策 146）。32 × 24 格、經營模式、城市建物與依密度的方塊開啟；第 5 列第 5、6 行都是 48 位居民、8 個就業的住宅（D1，地價每 m² 2,000），整格收購價 (12,288,000 + 400 × 2,000) × 120% = 15,705,600。`setAreaBuyOut` 開啟後：
+
+- 辦公樓（32 m，2,048 單位）中心在兩格的交界 (24576, 22528)，兩格各蓋到 1,024 × 2,048 = 2,097,152 平方單位，一格的八分之一。不拆任何一格，付每格收購價的八分之一 1,963,200，兩格 3,926,400，加上中心那一格的土地 1,024 m² × 2,000 = 2,048,000：土地費 5,974,400，建物 24,576,000。兩格各有八分之一的人搬進來（無條件捨去）：各 6 位居民、1 個就業，辦公樓 12 與 2，兩格各剩 42 與 7。
+- 住宅（16 m）中心在 (20992, 22528)，整棟在 (5, 5) 裡，是那格的十六分之一：收購 15,705,600 / 16 = 981,600，土地 256 m² × 2,000 = 512,000，建物 2,048,000；42 的十六分之一是 2、7 的是 0，那格剩 40 與 7。
+
+兩格與它們的 D1 建物都還在，餘額 400,000,000 − 30,550,400 − 3,541,600 = 365,908,000。
+
+每個值都是手算的。schema 55 新增指令 `{"type": "setAreaBuyOut", "enabled": true}`，最終狀態可以有 `"areaBuyOut": true`（關著時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 城市建物依密度的建地（`city-footprints.json`）
 
 15 步、不推進時間的情境（schema 54，決策 142）。32 × 24 格、經營模式、城市建物開啟；第 5 列第 5、13 行是 4 位居民的住宅（D1），第 9 行是 1000 位居民、3 個就業的住宅（D4）。`setCityFootprints` 開啟後城市建物的方塊依密度：D1 20 m（1,280 單位）、D4 40 m。辦公樓（32 m）中心在 (24320, 22528)，離 (5, 5) 的 D1 方塊剛好 2 m 間距，不收購，住宅留下；中心在 (5, 13) 的辦公樓收購 D1 住宅，收購價只算 20 × 20 m 的土地：(12,288,000 + 400 × 2,000) × 120% = 15,705,600。關掉之後方塊照舊 40 m，(20992, 22528) 的商店（24 m）碰到 (5, 5) 的 40 m 方塊而收購它：(12,288,000 + 1,600 × 2,000) × 120% = 18,585,600。最後再打開，最終狀態有 `"cityFootprints": true`。
@@ -197,6 +208,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setOutsideConnections`（schema 52） | `enabled`（布林值） | `setOutsideConnections(_:)`：地圖邊緣 1 km 內的車站是外地連絡站（決策 137） |
 | `setCityDemand`（schema 53） | `enabled`（布林值） | `setCityDemand(_:)`：城市的住商工需求（決策 139） |
 | `setCityFootprints`（schema 54） | `enabled`（布林值） | `setCityFootprints(_:)`：城市建物的方塊依密度大小（決策 142） |
+| `setAreaBuyOut`（schema 55） | `enabled`（布林值） | `setAreaBuyOut(_:)`：公司的建物依蓋到的面積收購城市建物（決策 146） |
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"`，schema 40（決策 91）起也可以是 `"industrial"`、`"civic"`、`"leisure"`、`"agricultural"`、`"park"`（`landCell` 與 `building` 觀察的 `use` 也一樣） | `setLand(_:)` |
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |
