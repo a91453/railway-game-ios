@@ -2233,6 +2233,16 @@
         }
       }
     },
+    "Take the line's trains off it to reverse its stops." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這條路線有列車時不能反轉站序，請先把列車從路線移除。"
+          }
+        }
+      }
+    },
     "Take Off" : {
       "localizations" : {
         "zh-Hant" : {

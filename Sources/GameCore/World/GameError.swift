@@ -80,8 +80,8 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidHeadway
     /// The train is assigned to a line, which runs its timetable and
     /// service: it cannot be given another timetable, have a service
-    /// started or stopped, or be assigned again. Take it off the line
-    /// first.
+    /// started or stopped, or be assigned again, and its line's stops
+    /// cannot be reversed. Take it off the line first.
     case trainOnLine(TrainID)
     /// The train is not assigned to a line, so there is none to take it
     /// off.

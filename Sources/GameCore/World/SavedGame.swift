@@ -151,7 +151,10 @@
 ///     a real timetable it sends out at their times, and `"runDays"`, the
 ///     day each last ran. A build that reads only an earlier version would
 ///     drop them and run the line at a headway, so it says the save is
-///     newer than it instead.
+///     newer than it instead. The income tax (decision 131) added
+///     `"dailyTax"`, `"incomeTax"` and `"taxCost"` without raising the
+///     version; from this version on, a build that reads only an earlier
+///     one says a save with them is newer too (decision 134).
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 30
