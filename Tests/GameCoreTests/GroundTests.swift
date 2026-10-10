@@ -108,6 +108,16 @@ final class GroundTests: XCTestCase {
             XCTAssertThrowsError(try world.setGround(bad)) { XCTAssertEqual($0 as? GameError, .invalidGround) }
             XCTAssertEqual(world, before, "a refused command changes nothing")
         }
+        // A flat world with track is not given ground afterwards, as
+        // mapGround() refuses: its track would no longer load.
+        var flat = self.world()
+        let a = try flat.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
+        let b = try flat.buildTrackNode(at: WorldCoordinate(x: 70_656, y: 1_024))
+        try flat.buildTrackEdge(from: a, to: b)
+        let track = flat
+        XCTAssertThrowsError(try flat.setGround([block(0, 0) { _, _ in 1 }])) { XCTAssertEqual($0 as? GameError, .invalidGround) }
+        XCTAssertEqual(flat, track)
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: flat))).world, flat)
         XCTAssertNil(GroundBlock(block: LandBlock(row: 0, column: 0), heights: Array(repeating: 0, count: 256)), "16 × 16 is a block's cells, not its corners")
         XCTAssertNil(GroundBlock(block: LandBlock(row: 0, column: 0), heights: Array(repeating: 0, count: 290)))
     }

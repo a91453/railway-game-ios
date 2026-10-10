@@ -233,5 +233,9 @@ final class AssetAccountsTests: XCTestCase {
         let cars = #""cars":2,"cost":72000"#
         XCTAssertTrue(text.contains(cars))
         XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(text.replacingOccurrences(of: cars, with: #""cars":3,"cost":72000"#).utf8)))
+        // Two records of cars whose sum overflows are refused, not a crash.
+        let record = try XCTUnwrap(text.range(of: #"\{[^{}]*"cars":2,"cost":72000[^{}]*\}"#, options: .regularExpression).map { String(text[$0]) })
+        let huge = record.replacingOccurrences(of: #""cars":2"#, with: #""cars":\#(Int.max)"#)
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(text.replacingOccurrences(of: record, with: huge + "," + huge).utf8)))
     }
 }

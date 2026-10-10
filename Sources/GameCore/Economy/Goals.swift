@@ -282,8 +282,10 @@ extension GameWorld {
     /// too many midnights in the red lose it. Once it has ended nothing
     /// changes.
     mutating func judgeScenario(endingWith day: Int64) {
-        guard var state = scenario, state.outcome == nil else { return }
-        for index in state.achieved.indices where state.achieved[index] == nil && isMet(state.scenario.goals[index]) {
+        // A scenario started on the stroke of a midnight not yet settled
+        // begins with the next day; the day before is not its own.
+        guard var state = scenario, state.outcome == nil, day >= state.startDay else { return }
+        for index in state.achieved.indices where state.achieved[index] == nil && isMet(state.scenario.goals[index], endingWith: day) {
             state.achieved[index] = day
         }
         let elapsed = state.elapsedDays(through: day)
@@ -296,6 +298,17 @@ extension GameWorld {
             state.outcome = .failed(day: day, reason: .deadline)
         }
         scenario = state
+    }
+
+    /// Whether `goal` is met at the midnight that ended `day`. Riders are
+    /// read from that day itself: when one advance skips idle minutes past
+    /// midnight the clock has not moved on yet (``lastDayTrips()`` would
+    /// read the day before).
+    private func isMet(_ goal: Goal, endingWith day: Int64) -> Bool {
+        if case .dailyRiders(let count) = goal {
+            return (accounts.days.first { $0.day == day }?.fareTrips ?? 0) >= count
+        }
+        return isMet(goal)
     }
 
     // MARK: - Validation

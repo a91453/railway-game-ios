@@ -159,4 +159,45 @@ final class HeightGridTests: XCTestCase {
         blank.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
         XCTAssertEqual(blank.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
     }
+    /// A straight stretch is only its two ends, but the ground is surveyed
+    /// every 16 m along it: a block between its ends must be read too, or
+    /// the track can neither be previewed nor built.
+    func testAStraightTrackReadsTheGroundOfTheBlocksItCrosses() throws {
+        // The Changhua plain, flat enough for track on the ground.
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0818, longitudeDegrees: 120.5385))
+        var world = GameWorld.newGame(anchor: anchor)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.heights = Self.grid
+        session.selectTool(.network)
+        let block = Land.blockLength
+        let y = 5 * block + block / 2
+        // From block (5, 4) to block (5, 6), across block (5, 5).
+        session.tapNetwork(at: PlanPoint(x: 4 * block + block / 2, y: y), reach: 512)
+        session.tapNetwork(at: PlanPoint(x: 6 * block + block / 2, y: y), reach: 512)
+        XCTAssertEqual(session.world.missingGroundBlocks(under: [PlanPoint(x: 5 * block, y: y)]), [LandBlock(row: 5, column: 5)],
+                       "the middle block is not read before the track")
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(preview.problem, "the preview surveys the whole way")
+        XCTAssertNotNil(preview.cost)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.edges.count, 1)
+    }
+    /// The heights file can arrive after a saved game with ground opened:
+    /// the preview worked out without it is not kept once it is there.
+    func testThePreviewIsWorkedOutAgainWhenTheHeightsArrive() throws {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0818, longitudeDegrees: 120.5385))
+        var world = GameWorld.newGame(anchor: anchor)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.network)
+        let block = Land.blockLength
+        session.tapNetwork(at: PlanPoint(x: 5 * block + 4_096, y: 5 * block + 4_096), reach: 512)
+        session.tapNetwork(at: PlanPoint(x: 5 * block + 32_768, y: 5 * block + 4_096), reach: 512)
+        XCTAssertNotNil(session.networkPreview?.problem, "no ground to read yet")
+        session.heights = Self.grid
+        XCTAssertNil(session.networkPreview?.problem)
+        XCTAssertNotNil(session.networkPreview?.cost)
+    }
 }

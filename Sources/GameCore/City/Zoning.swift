@@ -136,7 +136,13 @@ public struct Zoning: Hashable, Sendable {
                 kept.append(cell)
                 continue
             }
-            if cell.zone == zone { unchanged += 1 } else if zone == nil { changed += 1 }
+            // A cell skipped now (zoned before its water was read) loses
+            // its zone, whatever it was: a change.
+            if zone == nil || skipping(cell.row, cell.column) {
+                changed += 1
+            } else if cell.zone == zone {
+                unchanged += 1
+            }
         }
         guard let zone else {
             cells = kept
@@ -163,7 +169,7 @@ public struct Zoning: Hashable, Sendable {
             }
         }
         cells = merged
-        return added.count - unchanged
+        return added.count - unchanged + changed
     }
 
     /// The index of the first cell at or after `row`, `column`.

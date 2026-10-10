@@ -174,7 +174,10 @@ public struct ChallengeRecords: Sendable {
     @discardableResult
     public mutating func record(_ world: GameWorld, at date: Date = Date()) -> Bool {
         guard let state = world.scenario, case .completed(let day, let rating)? = state.outcome else { return false }
-        let result = ChallengeRecord(days: state.elapsedDays(through: day), rating: rating, riders: world.lastDayTrips(), date: date)
+        // The riders of the day it was completed, not of the day before
+        // this autosave: the game plays on after the scenario ends.
+        let riders = world.accounts.days.first { $0.day == day }?.fareTrips ?? 0
+        let result = ChallengeRecord(days: state.elapsedDays(through: day), rating: rating, riders: riders, date: date)
         if let known = best[state.scenario.id], !result.isBetter(than: known) { return false }
         best[state.scenario.id] = result
         let encoder = JSONEncoder()

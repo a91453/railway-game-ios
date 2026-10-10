@@ -293,6 +293,9 @@ extension GameWorld {
             let capacity = building.kind.capacity
             guard (0...capacity.residents).contains(building.residents), (0...capacity.jobs).contains(building.jobs),
                   building.buildingCost >= .zero, building.landCost >= .zero,
+                  // Each part within range first, so their sum cannot overflow.
+                  building.buildingCost.amount <= CompanyAccounts.maximumAssetCost,
+                  building.landCost.amount <= CompanyAccounts.maximumAssetCost,
                   building.cost.amount <= CompanyAccounts.maximumAssetCost
             else {
                 return "Placed building \(building.id.rawValue) holds more than it may or cost out of range."

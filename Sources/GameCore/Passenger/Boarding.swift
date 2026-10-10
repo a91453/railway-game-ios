@@ -364,7 +364,11 @@ extension GameWorld {
             guard let train = train(id: riders[slot].train), let ahead = riderReach(of: train) else { continue }
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
-                if ahead.contains(where: { train.timetable[$0].station == group.destination }) {
+                // A walk on the journey's way may have gone too (a transfer
+                // group left, decision 81): the save would refuse it.
+                let pending = group.journey.map { $0.legs.dropFirst($0.current) } ?? []
+                if ahead.contains(where: { train.timetable[$0].station == group.destination }),
+                   zip(pending, pending.dropFirst()).allSatisfy(connects) {
                     kept.append(group)
                 } else {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
