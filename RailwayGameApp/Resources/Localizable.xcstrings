@@ -2653,6 +2653,36 @@
         }
       }
     },
+    "Height and Steep Slopes" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高度與陡坡"
+          }
+        }
+      }
+    },
+    "Terrain" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地形"
+          }
+        }
+      }
+    },
+    "The ground's height on real-world maps, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; tap a cell for its height. Blank maps are flat." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "實景地圖的地面海拔，以西北方的光照出起伏；斜線是超過 30% 的陡坡，城市不能開發。點一格看海拔。空白地圖是平地。"
+          }
+        }
+      }
+    },
     "Catchment Coverage" : {
       "localizations" : {
         "zh-Hant" : {

@@ -127,23 +127,31 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
         map.pinch(withScale: 3, velocity: 1)
         XCTAssertFalse(clear.isEnabled, "Pinching must not pick a track anchor")
-        // Decision 123: beside a phone's details card the zoom buttons give
-        // way. Fold the card to read them, then open it again for Clear and
-        // Build Track; folding it must not pick an anchor either.
+        // Decision 123: on a phone the zoom buttons give way beside the
+        // details card, which a chosen tool keeps open. Fold the card to
+        // read them, then open it again for the tool's buttons. Each tap is
+        // tried twice, like the anchor's below: a touch can be lost after
+        // the pinch to the closest zoom.
         let zoomIn = app.buttons["Zoom in"]
-        let detailsToggle = app.buttons["controls.toggle"]
-        let folded = !zoomIn.exists
-        if folded {
-            XCTAssertTrue(detailsToggle.waitForExistence(timeout: 5))
-            detailsToggle.tap()
-            XCTAssertTrue(zoomIn.waitForExistence(timeout: 10), "Folding the details card must bring the zoom buttons back")
+        let cardFolds = !zoomIn.exists
+        let controls = app.buttons["controls.toggle"]
+        func toggleControls(to label: String) {
+            func labelled() -> Bool {
+                XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: controls)],
+                                 timeout: 10) == .completed
+            }
+            controls.tap()
+            if !labelled() { controls.tap() }
+            XCTAssertTrue(labelled(), "The details card did not change to \(label)")
         }
+        if cardFolds { toggleControls(to: "Show Controls") }
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
         XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
-        if folded {
-            detailsToggle.tap()
-            XCTAssertTrue(clear.waitForExistence(timeout: 10), "Opening the details card again must show Clear")
-            XCTAssertFalse(clear.isEnabled, "Folding the details card must not pick a track anchor")
+        if cardFolds {
+            toggleControls(to: "Hide Controls")
+            XCTAssertTrue(clear.waitForExistence(timeout: 10))
+            XCTAssertFalse(clear.isEnabled)
         }
 
         // After a pinch to the closest zoom an accessibility query can hold

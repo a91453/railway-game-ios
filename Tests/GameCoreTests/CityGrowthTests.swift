@@ -63,9 +63,11 @@ final class CityGrowthTests: XCTestCase {
     /// whether it raises buildings), written again cell by cell: the shares
     /// of the land as it was, the buildings full as the night began; then
     /// each growing station raises up to two of those in its catchment by
-    /// row and column that no station raised tonight, grows its share into
-    /// the cells of its catchment by their counts up to their capacity, and
-    /// builds the empty cell beside people nearest it with D1 homes.
+    /// row and column that no station raised tonight, grows its share and
+    /// twice its station front (the cells within 256 m as its turn comes,
+    /// decision 129) into the cells of its catchment by their counts, the
+    /// front's three times, up to their capacity, and builds the empty cell
+    /// beside people nearest it with D1 homes.
     private static func referenceNight(
         _ plots: [CellPosition: Plot], _ stations: [Station], rates: [StationID: Int64], raises: Set<StationID>, in bounds: WorldBounds
     ) -> [CellPosition: Plot] {
@@ -91,10 +93,11 @@ final class CityGrowthTests: XCTestCase {
             let plot = land[key]!
             // A park holds no one, so is never full (decision 91).
             guard plot.kind == .city, plot.density < 4, plot.use != .park else { return false }
-            // Full by the main count only (decision 77): the table's
-            // residents of homes, jobs of shops and offices.
+            // Full by the main count only (decision 77), nine tenths of the
+            // table's or more (decision 129): residents of homes, jobs of
+            // shops and offices.
             let table = capacity(plot.use, plot.kind, plot.density, residents: 0, jobs: 0)
-            return plot.use == .residential ? plot.residents >= table.residents : plot.jobs >= table.jobs
+            return plot.use == .residential ? plot.residents * 10 >= table.residents * 9 : plot.jobs * 10 >= table.jobs * 9
         })
         var raised: Set<CellPosition> = []
         for station in stations.sorted(by: { $0.id < $1.id }) {
@@ -108,8 +111,12 @@ final class CityGrowthTests: XCTestCase {
             }
             func grown(_ amount: Int64) -> Int64 { amount > 0 ? max(1, (amount * rate + 500) / 1_000) : 0 }
             let share = shares[station.id] ?? (0, 0)
-            let addedResidents = largestRemainder(grown(share.residents), inReach.map { land[$0]!.residents })
-            let addedJobs = largestRemainder(grown(share.jobs), inReach.map { land[$0]!.jobs })
+            // Decision 129: the station front, 256 m (16,384 units).
+            let front = Set(inReach.filter { squaredDistance(row: $0.row, column: $0.column, station.location) < 16_384 * 16_384 })
+            let frontResidents = front.reduce(Int64(0)) { $0 + land[$1]!.residents }, frontJobs = front.reduce(Int64(0)) { $0 + land[$1]!.jobs }
+            let addedResidents = largestRemainder(
+                grown(share.residents + 2 * frontResidents), inReach.map { land[$0]!.residents * (front.contains($0) ? 3 : 1) })
+            let addedJobs = largestRemainder(grown(share.jobs + 2 * frontJobs), inReach.map { land[$0]!.jobs * (front.contains($0) ? 3 : 1) })
             for (offset, key) in inReach.enumerated() {
                 let plot = land[key]!
                 let cap = capacity(plot.use, plot.kind, plot.density, residents: plot.residents, jobs: plot.jobs)
@@ -253,39 +260,42 @@ final class CityGrowthTests: XCTestCase {
     }
 
     func testHomesStopAtTheirBuildingsCapacity() throws {
-        // D2 homes of 167 at 10 thousandths: (167 × 10 + 500) / 1000 = 2,
-        // 169, held at 168.
+        // D2 homes of 167 at 10 thousandths, the station's front (decision
+        // 129: its share and twice the front): (501 × 10 + 500) / 1000 = 5,
+        // 172, held at 168.
         var world = try night([LandCell(row: 5, column: 5, use: .residential, residents: 167, jobs: 0)])
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 168)
-        // D3 homes of 500: 5 more, 505, held at 504.
+        // D3 homes of 500: 15 more, 515, held at 504.
         world = try night([LandCell(row: 5, column: 5, use: .residential, residents: 500, jobs: 0)])
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 504)
-        // Without the city's buildings, 400 still: 169 and 505 (above 400
+        // Without the city's buildings, 400 still: 172 and 515 (above 400
         // already: kept, not grown).
         world = try night([LandCell(row: 5, column: 5, use: .residential, residents: 167, jobs: 0)], buildings: false)
-        XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 169)
+        XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 172)
         world = try night([LandCell(row: 5, column: 5, use: .residential, residents: 500, jobs: 0)], buildings: false)
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 500)
-        // Offices' jobs: D2's 252 hold 250 + 3 at 252; their residents are
+        // Offices' jobs: D2's 252 hold 250 + 8 at 252; their residents are
         // held at the table's 24 or what is there.
         world = try night([LandCell(row: 5, column: 5, use: .office, residents: 30, jobs: 250)])
         XCTAssertEqual(world.land.cell(row: 5, column: 5), LandCell(row: 5, column: 5, use: .office, residents: 30, jobs: 252))
     }
 
     func testWhatDoesNotFitIsDroppedNotGivenToAnotherCell() throws {
-        // 167 + 300 residents grow by (467 × 10 + 500) / 1000 = 5, by the
-        // largest remainder 2 and 3: the D2 homes have room for 1 and keep
-        // 168; the other 1 is not added to the D3 homes beside them (303).
+        // 167 + 300 residents, all in the station's front (decision 129),
+        // grow by ((467 + 2 × 467) × 10 + 500) / 1000 = 14, shared 3 × 167
+        // to 3 × 300 by the largest remainder, 5 and 9: the D2 homes have
+        // room for 1 and keep 168; the other 4 are not added to the D3
+        // homes beside them (309).
         let world = try night([
             LandCell(row: 5, column: 5, use: .residential, residents: 167, jobs: 0),
             LandCell(row: 5, column: 6, use: .residential, residents: 300, jobs: 0),
         ])
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 168)
-        XCTAssertEqual(world.land.cell(row: 5, column: 6)?.residents, 303)
+        XCTAssertEqual(world.land.cell(row: 5, column: 6)?.residents, 309)
         // The station's new cell: (4, 5), with its D1 homes.
         XCTAssertEqual(world.land.cell(row: 4, column: 5)?.residents, 4)
         XCTAssertEqual(world.buildings.building(row: 4, column: 5)?.density, .d1)
-        XCTAssertEqual(world.land.totals.residents, 168 + 303 + 4)
+        XCTAssertEqual(world.land.totals.residents, 168 + 309 + 4)
     }
 
     func testCellsAboveTheirCapacityKeepWhatTheyHave() throws {
@@ -368,7 +378,8 @@ final class CityGrowthTests: XCTestCase {
     /// - column 4: D4 homes of 1,120, full (no higher density);
     /// - column 5: existing stock of 2,000 residents (never raised);
     /// - column 6: D1 offices of 84 jobs, full;
-    /// - column 7: D3 homes of 503, one short;
+    /// - column 7: D3 homes of 453, just under nine tenths of 504 (decision
+    ///   129: 453 × 10 < 504 × 9, 454 would be full);
     /// - column 8: D2 homes of 168, full;
     /// - column 10: D1 homes of 56, full.
     private static let rowFive = [
@@ -377,7 +388,7 @@ final class CityGrowthTests: XCTestCase {
         LandCell(row: 5, column: 4, use: .residential, residents: 1_120, jobs: 0),
         LandCell(row: 5, column: 5, use: .residential, residents: 2_000, jobs: 0),
         LandCell(row: 5, column: 6, use: .office, residents: 0, jobs: 84),
-        LandCell(row: 5, column: 7, use: .residential, residents: 503, jobs: 0),
+        LandCell(row: 5, column: 7, use: .residential, residents: 453, jobs: 0),
         LandCell(row: 5, column: 8, use: .residential, residents: 168, jobs: 0),
         LandCell(row: 5, column: 10, use: .residential, residents: 56, jobs: 0),
     ]
@@ -401,8 +412,8 @@ final class CityGrowthTests: XCTestCase {
         world.growLand(reached: [ids[0]: 1, ids[1]: 1])
         // A raises columns 2 and 3 (its first two full ones), not its third
         // (6); B passes over 2 and 3, which A raised tonight, and raises 6
-        // and 8, not 10. D4 (4), existing stock (5) and the homes one short
-        // as the night began (7) are not raised.
+        // and 8, not 10. D4 (4), existing stock (5) and the homes just under
+        // nine tenths full as the night began (7) are not raised.
         XCTAssertEqual(density(world, 2), .d2, "raised once, not again by B")
         XCTAssertEqual(density(world, 3), .d2)
         XCTAssertEqual(density(world, 4), .d4)
@@ -411,7 +422,7 @@ final class CityGrowthTests: XCTestCase {
         XCTAssertEqual(density(world, 7), .d3)
         XCTAssertEqual(density(world, 8), .d3)
         XCTAssertEqual(density(world, 10), .d1, "B's third")
-        XCTAssertEqual(world.land.cell(row: 5, column: 7)?.residents, 504, "full tonight, raised no sooner than tomorrow")
+        XCTAssertGreaterThanOrEqual(world.land.cell(row: 5, column: 7)!.residents, 454, "nine tenths full tonight, raised no sooner than tomorrow")
         // Raising changes the density only: the same building, use and
         // people (the cells raised then grow into their new room).
         for column in [2, 3, 6, 8] {

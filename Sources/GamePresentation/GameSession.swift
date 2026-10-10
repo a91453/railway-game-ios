@@ -59,12 +59,13 @@ public final class GameSession {
 
     /// What the building tool places where the player taps (decision 92).
     public var buildingKind: PlacedBuildingKind = .house
-    /// Whether a tap with the building tool builds or demolishes (decision
-    /// 94).
+    /// Whether a tap with the building tool builds, demolishes (decision
+    /// 94), sells (decision 130) or zones (decision 98).
     public var buildingMode: BuildingToolMode = .build {
         didSet {
             buildingSite = nil
             zoneDrag = nil
+            saleCandidate = nil
         }
     }
     /// What the zoning mode zones cells for (decision 98), or `nil` to
@@ -77,6 +78,10 @@ public final class GameSession {
     /// (decision 95): the map shows the building there and what it would
     /// cost and pull down, and the action button builds it.
     public internal(set) var buildingSite: PlanPoint?
+    /// The company's building the sell mode would sell, once the player
+    /// tapped it (decision 130): the map marks it, the card shows what it
+    /// would bring in and the gain or loss, and the action button sells it.
+    public internal(set) var saleCandidate: PlacedBuildingID?
     /// Whether a tap with the building tool builds there at once rather
     /// than showing the building first (decision 103): for putting up one
     /// building after another. Undo takes each back.
@@ -501,6 +506,7 @@ public final class GameSession {
         guard newTool != tool else { return }
         tool = newTool
         buildingSite = nil
+        saleCandidate = nil
         zoneDrag = nil
         message = nil
         if newTool.pausesGame {

@@ -1212,6 +1212,25 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼）：OpenTTD（GPL-2.0）「過水要用橋」；Simutrans（Artistic 1.0）「高架不能在水上」；GraphHopper（Apache-2.0）`EdgeElevationInterpolator`：橋與隧道內部不跟 DEM 起伏，和這裡「邊的高度由兩端與縱斷面決定，只拿來和地面比」一致。
 
+## 畫面（決策 124 的 H3）
+
+第三步（H3）：縱斷面、費用分項、邊坡與高度圖層。參考 `05d7000`，六個來源都重查了這四樣。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js:399–402`（`raster-dem`、terrarium）與 `landscape-hillshade` 圖層（`hillshade-illumination-direction` 315、`hillshade-exaggeration` 0.42、shadow `#5c785f`、highlight `#fff4d6`、accent `#90a580`） | `TerrainMap.shade(_:eastward:southward:)`、`TerrainMap.shadow`／`highlight` | adapted：同樣的光向、強度與兩種顏色，算在 64 m 格的區塊上（App 不用 MapLibre 的 DEM 圖層）；accent 沒有用（陡坡另畫斜線） |
+| `rail-3d/environment/sun.mjs:205–211`（暈渲隨日照變化） | — | 不用：圖層不跟著時間變 |
+| `MapBuilder/reference_snapshot/_next/static/chunks/352-cc4c9866d08d4d04.js`（`topographic`：Mapbox `contour` 等高線，計曲線金色、其他綠色） | — | 只取想法：等高線要 Mapbox 的向量圖磚，不用；改成依高度著色 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js:18`（`FILL_SLOPE`、`BED_TOP_W`、`BED_BOTTOM_MAX`）、`:35` 路基色 `#c6c0b1` | `TrackSlope`（邊坡寬 = 高差 × 1.5，路基寬 10 m，和 H2 的土方斷面相同）、`Palette.embankment` | adapted：參考只有 3D 的填方，斷面用 H2 的；路基色取來當路堤的顏色 |
+| `Simulator/reference_snapshot/_next/static/chunks/5758-131911c5f04a436f.js` 模組 41611（`shallowBores`：隧道上方的地面低於軌面加隧道高 45 mm 就提示「覆土不足」） | — | 留給之後（設計說明第 10 節）：遊戲的自動隧道都在地面下 11 m 以上，只有強制的隧道會淺 |
+| `rail-3d/physical/level-profiles.json`（真實路線的 `offsetM`、`coverM`） | — | 資料，不是圖；留給全島步驟 C |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js:129` `showMetroCostPreview(amount, label)`（`#metro-cost-preview-pill`：一個總額，沒有人呼叫） | `CostPartsView`、`NetworkCostParts.lines(in:)` | 只取「預覽旁顯示費用」，分項是原生 |
+| （參考沒有） | `GameWorld.longSection(of:)`、`TrackLongSection`、`TrackGroundSample`、`TrackCostParts`、`LongSectionChart`／`LongSectionView`、路堤與路塹的平面畫法、`TerrainMap` 依高度的配色、`PopTravelMode.terrain` | gap → 原生 |
+
+比例：1 世界單位 = 1/64 m；縱斷面的點在兩端與每 1,024 單位（16 m）的中點；圖表上下各留一成，至少 1,024 單位（16 m）。邊坡寬 = |Δ| × 1.5，路基半寬 320 單位（5 m），每 256 單位（4 m）一條短線。圖層的角點每 4,096 單位（64 m），最多 1,025 個寬。
+
+外部專案（只取想法，沒有程式碼）：GDAL `gdaldem hillshade`（MIT）的暈渲公式（法向量與光向的內積）；地形圖以短線（hachure）表示路堤與路塹的慣例。
+
 ## 地圖圖示（決策 121）
 
 查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。
@@ -1251,3 +1270,27 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `CitySkyline`、`MapArt.drawSkyline`、`Palette.cityRoof`／`cityWall`／`parkGround`／`farmGround`、`SkylineLayer` | gap → 原生 |
 
 外部只取想法：SimCity BuildIt（作者的截圖，商業遊戲）建物依密度長高、用途用顏色分。沒有程式碼或素材。
+
+## 站前長得快、九成滿就改建（決策 129）
+
+查 `a91453/railway-reference-private` `05d7000`：沒有城市成長或建物改建的規則與數字（`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9「Town growth / industry demand」只點名 OpenTTD 的 `src/town_cmd.cpp`，原始碼與數字不在參考包裡；`Ci/` 不做成長）。
+
+| 參考檔案／函式 | 目標 | 方式 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9 | `LandDemand.stationFrontRadius`、`stationFrontGrowth`、`upgradeFullness`，`GameWorld.stationFront(of:)`、`grow(around:residents:jobs:)` | 只有方向（成長讀交通的可及性），規則是 gap → 原生 |
+| （參考沒有） | `BalanceReportTests` 的「Fullest D3」欄 | gap → 原生 |
+
+外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發。沒有程式碼或數字。
+
+## 出售公司的建物（決策 130）
+
+查 `a91453/railway-reference-private` `05d7000`（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`）：沒有不動產、出售、帳面價值或已實現損益（`sale`／`sell`／`出售` 的命中都是招牌字樣、攤販對話或 OSM 標籤）。能沿用的只有 `Ci/` 現金流量表的形狀：投資活動是流入減流出。
+
+| 參考檔案／函式 | 目標 | 方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`summarizeFinanceForTransport` 的 `investingCashFlow = quotaReturnCashInflow − Math.abs(quotaPurchaseCashOutflow)` | `FinanceSummary.investingCashFlow = saleProceeds − capitalSpending`；現金流量表「出售建物收入」一列 | 移植形狀：參考退回配額是投資流入，這裡是賣掉建物的收入；美分，不換算 |
+| 同檔 `flowDashboardBuildModeIncomeStatement` 的段落與小計 | `FinanceSummary.incomeStatementRows` 的「出售建物損益（已實現）」一列 | 沿用版面；列是原生的 |
+| （參考沒有） | `GameWorld.sellPlacedBuilding(_:)`、`saleQuote(of:)`、`PlacedBuildingSaleQuote`、`PlacedBuildingRules.saleLandPercent`（95%）、`handOverToCity(_:)`、`CapitalDay.saleProceeds`／`saleBookValue`、`FinanceSummary.realizedGain`、存檔 29、golden schema 50 | gap → 原生（`docs/research/CITY_BUILDING_STUDY.md` §4.3 的公式） |
+| （參考沒有） | `GameSession.saleCandidate`、`salePreview`、`salePreviewLines`、`confirmSale()`、建築工具的「出售」模式 | gap → 原生 |
+
+外部只取想法，沒有程式碼或數字：A 列車（Artdink，商業遊戲，[官方說明書](https://www.artdink.co.jp/manual/aexp/const02/const02.html)）的子公司發展後出售、賣掉的建物由城市接手；OpenTTD（GPL-2.0）賣車時拿回的是折舊後的現值；會計上處分固定資產的損益是收入減帳面價值（IAS 16 的處分損益）。

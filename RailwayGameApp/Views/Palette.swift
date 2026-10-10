@@ -90,6 +90,29 @@ enum Palette {
     static let parkGround = hex(light: 0xCDE8B5, dark: 0x3E6B3A)
     static let farmGround = hex(light: 0xF1E6C8, dark: 0x5A5236)
 
+    /// Decision 124, H3: what carries a stretch of track, on the build
+    /// card's long section. The track's teal on the surface; the
+    /// `Railway/` site's bank (`rail-structures.js` `#c6c0b1`) deepened
+    /// for an embankment and a deeper earth for a cutting; the casing's
+    /// navy for a viaduct, a river blue for a bridge, grey underground.
+    static func section(_ kind: TrackSectionKind) -> Color {
+        switch kind {
+        case .surface: track
+        case .embankment: embankment
+        case .cutting: cutting
+        case .viaduct: hex(light: 0x5A6390, dark: 0x9AA3D0)
+        case .bridge: hex(light: 0x3E7CB1, dark: 0x7AB0DE)
+        case .tunnel: hex(light: 0x8A8A8A, dark: 0x9C9C9C)
+        }
+    }
+    /// The slopes of an embankment and a cutting, on the long section and
+    /// beside the track on the map.
+    static let embankment = hex(light: 0xB3A88E, dark: 0xC6C0B1)
+    static let cutting = hex(light: 0x8C6A4A, dark: 0xB08D6A)
+    /// The long section's ground and water.
+    static let groundLine = hex(light: 0x6B4F2E, dark: 0xD7B884)
+    static let water = hex(light: 0x7FB8E0, dark: 0x3E6E99)
+
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))
     static let metroGreen = dynamic(light: (0.13, 0.62, 0.36), dark: (0.22, 0.78, 0.48))

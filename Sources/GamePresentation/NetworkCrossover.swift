@@ -139,8 +139,16 @@ extension GameSession {
             let first = geometries.count == 4 ? geometries[0].points + geometries[1].points.reversed().dropFirst() : [plan.places[0].position, plan.middle, plan.places[1].position]
             let second = geometries.count == 4 ? geometries[2].points + geometries[3].points.reversed().dropFirst() : [plan.places[3].position, plan.middle, plan.places[2].position]
             let length = geometries.reduce(0) { $0 + $1.length }
+            // Decision 124, H3: its four halves' parts, and what pulling
+            // down the buildings in their way costs.
+            let sections = edges.compactMap { draft.longSection(of: $0) }
+            let cleared = cost == nil ? [] : world.placedBuildings(clearedIn: draft)
+            let parts = cost == nil || sections.count != edges.count ? nil : NetworkCostParts(
+                track: sections.reduce(.zero) { $0 + $1.cost }, demolition: world.clearingCost(of: cleared)
+            )
             return (NetworkPreview(curve: .straight, profile: .uniform, points: first, length: length, startHeight: plan.middle.z,
-                                   endHeight: plan.middle.z, joinsStart: true, joinsEnd: true, cost: cost, problem: problem), second)
+                                   endHeight: plan.middle.z, joinsStart: true, joinsEnd: true, cost: cost, problem: problem,
+                                   costParts: parts), second)
         }
     }
 

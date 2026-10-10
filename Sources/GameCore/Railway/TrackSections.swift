@@ -336,13 +336,9 @@ extension GameWorld {
             }
         }
         func share(_ numerator: Int64, _ divisor: Int64) -> Int64 {
-            // track × numerator / divisor, rounded half up, without
-            // multiplying the whole numerator.
-            let (whole, rest) = numerator.quotientAndRemainder(dividingBy: divisor)
-            let (a, overflowA) = track.multipliedReportingOverflow(by: whole)
-            let (b, overflowB) = track.multipliedReportingOverflow(by: rest)
-            overflow = overflow || overflowA || overflowB
-            return a &+ (b + divisor / 2) / divisor
+            let (value, carry) = Self.share(of: track, numerator, divisor)
+            overflow = overflow || carry
+            return value
         }
         var total: Int64 = 0
         let (main, overflowMain) = track.multipliedReportingOverflow(by: base)
@@ -351,6 +347,15 @@ extension GameWorld {
         add(share(earth, TrackSectionRules.earthworkDivisor), to: &total)
         add(share(piers, TrackSectionRules.pierStep), to: &total)
         return (total, overflow)
+    }
+
+    /// `track` × `numerator` / `divisor`, rounded half up, without
+    /// multiplying the whole numerator; and whether it overflowed.
+    static func share(of track: Int64, _ numerator: Int64, _ divisor: Int64) -> (value: Int64, overflow: Bool) {
+        let (whole, rest) = numerator.quotientAndRemainder(dividingBy: divisor)
+        let (a, overflowA) = track.multipliedReportingOverflow(by: whole)
+        let (b, overflowB) = track.multipliedReportingOverflow(by: rest)
+        return (a &+ (b + divisor / 2) / divisor, overflowA || overflowB)
     }
 
     /// What an edge of `geometry` carried by `structure` with `sections`
@@ -363,16 +368,24 @@ extension GameWorld {
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
     ///   the price does not fit in a ``Money``.
     func edgeCost(of geometry: TrackGeometry, structure: TrackStructure, sections: [TrackSection]) throws(GameError) -> Money {
-        let survey = try survey(geometry)
-        let edge = TrackEdge(id: .edge(0), from: .node(0), to: .node(0), curve: .straight, length: geometry.length, structure: structure, sections: sections)
-        let spans = edge.sectionSpans
-        let pieces = survey.lengths.map { length in
-            (length, spans.first { $0.start <= length.start && length.start < $0.end }?.kind ?? TrackSectionKind(structure))
-        }
+        let pieces = try pricedPieces(of: geometry, structure: structure, sections: sections)
         let extras = structure == .automatic || ground.isMapped
         let (price, overflow) = Self.price(of: pieces, track: economy.costs.track.amount, extras: extras)
         guard !overflow, price >= 0 else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
         return Money(price)
+    }
+
+    /// Each pricing length of an edge of `geometry` carried by `structure`
+    /// with `sections`, and the kind that carries it.
+    func pricedPieces(
+        of geometry: TrackGeometry, structure: TrackStructure, sections: [TrackSection]
+    ) throws(GameError) -> [(TrackPricedLength, TrackSectionKind)] {
+        let survey = try survey(geometry)
+        let edge = TrackEdge(id: .edge(0), from: .node(0), to: .node(0), curve: .straight, length: geometry.length, structure: structure, sections: sections)
+        let spans = edge.sectionSpans
+        return survey.lengths.map { length in
+            (length, spans.first { $0.start <= length.start && length.start < $0.end }?.kind ?? TrackSectionKind(structure))
+        }
     }
 }
 
@@ -430,5 +443,158 @@ extension GameWorld {
             return "Track edge \(edge.id)'s structure cannot carry it at its heights above the ground."
         }
         return nil
+    }
+}
+
+// MARK: - What the build card shows (decision 124, H3)
+
+/// What an edge's price is made of (decision 124, the design's third
+/// step): the four parts add up to what ``GameWorld`` charges for it,
+/// rounded as it is. Read only; it charges nothing.
+public struct TrackCostParts: Hashable, Sendable {
+    /// The track price for every pricing length, as on the ground.
+    public let track: Money
+    /// Earthwork past ``TrackSectionRules/level`` on the ground.
+    public let earthwork: Money
+    /// What viaducts and bridges cost past the track price: their
+    /// structures and tall piers.
+    public let viaductsAndBridges: Money
+    /// What tunnels cost past the track price.
+    public let tunnels: Money
+
+    public init(track: Money, earthwork: Money, viaductsAndBridges: Money, tunnels: Money) {
+        self.track = track
+        self.earthwork = earthwork
+        self.viaductsAndBridges = viaductsAndBridges
+        self.tunnels = tunnels
+    }
+
+    public static let zero = TrackCostParts(track: .zero, earthwork: .zero, viaductsAndBridges: .zero, tunnels: .zero)
+
+    /// What the edge costs.
+    public var total: Money {
+        track + earthwork + viaductsAndBridges + tunnels
+    }
+
+    public static func + (lhs: TrackCostParts, rhs: TrackCostParts) -> TrackCostParts {
+        TrackCostParts(
+            track: lhs.track + rhs.track, earthwork: lhs.earthwork + rhs.earthwork,
+            viaductsAndBridges: lhs.viaductsAndBridges + rhs.viaductsAndBridges, tunnels: lhs.tunnels + rhs.tunnels
+        )
+    }
+}
+
+/// A point of an edge's long section (decision 124, H3): how high the rail
+/// and the ground under it are, in world units above the sea, at `distance`
+/// from its `from` node, and what carries the track there.
+public struct TrackGroundSample: Hashable, Sendable {
+    public let distance: Int64
+    public let rail: Int64
+    public let ground: Int64
+    public let kind: TrackSectionKind
+    /// Whether the 64 m cell there is water (only in a world with ground).
+    public let isWater: Bool
+
+    public init(distance: Int64, rail: Int64, ground: Int64, kind: TrackSectionKind, isWater: Bool) {
+        self.distance = distance
+        self.rail = rail
+        self.ground = ground
+        self.kind = kind
+        self.isWater = isWater
+    }
+
+    /// The rail's height above the ground (Δ), negative below it.
+    public var height: Int64 {
+        rail - ground
+    }
+}
+
+/// An edge over the ground (decision 124, H3), as the build card draws it:
+/// the rail and the ground at the `from` node, at the middle of every
+/// pricing length (where the rules measure them) and at the `to` node; the
+/// stretches carried alike; and what it costs, part by part.
+public struct TrackLongSection: Hashable, Sendable {
+    public let length: Int64
+    public let samples: [TrackGroundSample]
+    public let spans: [TrackSectionSpan]
+    public let cost: TrackCostParts
+}
+
+extension GameWorld {
+    /// Edge `id`'s long section and its price in parts (decision 124, H3),
+    /// measured as ``buildTrackEdge(from:to:curve:profile:structure:)``
+    /// measured and charged it; `nil` for an edge the network does not
+    /// have, or one over ground the world has not read. Read only.
+    public func longSection(of id: TrackEdgeID) -> TrackLongSection? {
+        guard let edge = network.edge(id), let geometry = trackGeometry(of: id),
+              let pieces = try? pricedPieces(of: geometry, structure: edge.structure, sections: edge.sections),
+              let cost = costParts(of: pieces, extras: edge.structure == .automatic || ground.isMapped)
+        else { return nil }
+        let spans = edge.sectionSpans
+        func sample(at distance: Int64, kind: TrackSectionKind) -> TrackGroundSample? {
+            let point = geometry.location(at: distance).position
+            guard let ground = groundHeight(at: point.plan) else { return nil }
+            let isWater = self.ground.isMapped && terrain.isWater(row: Land.cellIndex(point.y), column: Land.cellIndex(point.x))
+            return TrackGroundSample(distance: distance, rail: point.z, ground: ground, kind: kind, isWater: isWater)
+        }
+        var samples: [TrackGroundSample] = []
+        guard let first = sample(at: 0, kind: spans[0].kind) else { return nil }
+        samples.append(first)
+        for (length, kind) in pieces {
+            let middle = (length.start + length.end) / 2
+            samples.append(TrackGroundSample(
+                distance: middle, rail: geometry.height(at: middle), ground: geometry.height(at: middle) - length.delta, kind: kind, isWater: length.isWater
+            ))
+        }
+        guard let last = sample(at: geometry.length, kind: spans[spans.count - 1].kind) else { return nil }
+        samples.append(last)
+        return TrackLongSection(length: geometry.length, samples: samples, spans: spans, cost: cost)
+    }
+
+    /// What `pieces` cost in parts at this world's track price, as
+    /// ``price(of:track:extras:)`` adds them up (``edgeCost(of:structure:sections:)``
+    /// says when it takes the `extras`); `nil` when they do not fit in a
+    /// whole number.
+    func costParts(of pieces: [(TrackPricedLength, TrackSectionKind)], extras: Bool) -> TrackCostParts? {
+        let track = economy.costs.track.amount
+        var lengths: Int64 = 0, structures: Int64 = 0, tunnels: Int64 = 0, earth: Int64 = 0, piers: Int64 = 0
+        var overflow = false
+        func add(_ value: Int64, to total: inout Int64) {
+            let (sum, carry) = total.addingReportingOverflow(value)
+            overflow = overflow || carry
+            total = sum
+        }
+        for (length, kind) in pieces {
+            add(1, to: &lengths)
+            let past = kind.structure.costFactor - 1
+            if kind == .tunnel { add(past, to: &tunnels) } else { add(past, to: &structures) }
+            guard extras else { continue }
+            if kind.isOnGround {
+                add(TrackSectionRules.earthwork(length.delta), to: &earth)
+            } else if kind == .viaduct || kind == .bridge, length.delta > TrackSectionRules.tallPier {
+                add(length.delta - TrackSectionRules.tallPier, to: &piers)
+            }
+        }
+        func times(_ count: Int64) -> Int64 {
+            let (value, carry) = track.multipliedReportingOverflow(by: count)
+            overflow = overflow || carry
+            return value
+        }
+        func share(_ numerator: Int64, _ divisor: Int64) -> Int64 {
+            let (value, carry) = Self.share(of: track, numerator, divisor)
+            overflow = overflow || carry
+            return value
+        }
+        var bridges = times(structures)
+        add(share(piers, TrackSectionRules.pierStep), to: &bridges)
+        let parts = TrackCostParts(
+            track: Money(times(lengths)), earthwork: Money(share(earth, TrackSectionRules.earthworkDivisor)),
+            viaductsAndBridges: Money(bridges), tunnels: Money(times(tunnels))
+        )
+        var total: Int64 = 0
+        for part in [parts.track, parts.earthwork, parts.viaductsAndBridges, parts.tunnels] {
+            add(part.amount, to: &total)
+        }
+        return overflow ? nil : parts
     }
 }

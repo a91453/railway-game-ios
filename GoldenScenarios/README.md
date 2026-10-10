@@ -125,7 +125,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
   - 經營模式：`"free"` 或 `"management"`。
   - 票價規則（`rules`）：`{ "mode": "flat", "fare" }` 或 `{ "mode": "distance", "bands": [{ "fromMeters", "toMeters", "fare" }, ...] }`；`toMeters` 必填，沒有終點時是 `null`。指令裡照原樣讀取，是否合法由 GameCore 判定。
   - 帳（`accounts`）：`{ "mode", "fareRules", "openedAt", "pending", "ledger", "days" }`，六個欄位都必填；`fareRules`（沒有設定過是 `null`）、`openedAt`（遊戲分鐘，從未經營是 `null`）；`pending` 是這一小時的 `{ "fareRevenue", "fareTrips", "departures", "trainDistance", "passengers", "seats" }`；`ledger` 是帳本列 `{ "kind", "time", "amount", "breakdown": [{ "item", "amount" }, ...], "crowding" }`（`kind` 是 `"hourlyNet"`、`"dailyEnergy"` 或 `"dailyStaff"`，`crowding` 必填：小時列是 `{ "crowdedStations", "fullTrains", "maxWaiting", "maxLoad" }`，其他是 `null`），依寫入的順序；`days` 是 `{ "day", "fareRevenue", "operatingCost", "maintenanceCost", "energyCost", "staffCost" }`（成本是正數），依日期遞增。
-  - 報表（`report`）：`{ "current": 一期, "previous": 一期 }`，一期是 `{ "index", "fareRevenue", "operatingCost", "maintenanceCost", "energyCost", "staffCost" }`。
+  - 報表（`report`）：`{ "current": 一期, "previous": 一期 }`，一期是 `{ "index", "fareRevenue", "operatingCost", "maintenanceCost", "energyCost", "staffCost" }`；schema 50（決策 130）起有出售建物時另有 `saleProceeds`、`saleBookValue`（出售收入與賣掉的建物的帳面價值，是 0 時不寫）。
 
 ### 指令（`command.type`）
 
@@ -183,6 +183,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setWater`（schema 44） | `runs`（`[{ "row", "column", "count" }]`，水域的格，同一列連續的一段；每段 1 到 65,536 格） | `setWater(_:)`（每段展開成格） |
 | `setGround`（schema 47） | `blocks`（`[{ "row", "column", "heights" }]`，1 km 區塊與它 17 × 17 個 64 m 角點的高度，公尺，逐列由北而南） | `setGround(_:)` |
 | `mapGround`（schema 48） | — | `mapGround()`：世界有地面，還沒讀任何區塊；已有地面或已有軌道是 `invalidGround` |
+| `sellPlacedBuilding`（schema 50） | `building`（建物的 ID） | `sellPlacedBuilding(_:)`：把公司的建物賣給城市（決策 130）；不存在是 `unknownPlacedBuilding` |
 
 ### 結果（`expect.result`）
 
@@ -299,6 +300,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `landValue`（schema 39） | `row`、`column` | `{ "found": true, "landValue": { "value", "base", "servicePremium", "accessPremium", "station" } }`：那一格的地價（美分／m²）、三個分項與決定價格的車站（沒有時 `null`）；世界外的格 `{ "found": false }` | `landValue(row:column:)` |
 | `townGrowth`（schema 38） | `station` | `{ "found": true, "townGrowth": { "base", "lastGrowth", "lastService", "lastReached" } }`：城鎮成長的起點、上次成長（千分比）、上一天的服務比例（千分比）與可達車站數；成長沒看過這一站時 `{ "found": false }` | `townGrowth(of:)` |
 | `placedBuilding`（schema 41） | `building` | `{ "found": true, "placedBuilding": { "id", "kind", "x", "y" } }`：玩家建物的種類與中心；沒有這棟時 `{ "found": false }` | `placedBuilding(id:)` |
+| `buildingSale`（schema 50） | `building` | `{ "found": true, "buildingSale": { "landRight", "land", "buildingBookValue", "occupants", "capacity", "building", "price", "bookValue" } }`：現在出售這棟的售價與它的每一步（決策 130），美分；沒有這棟時 `{ "found": false }` | `saleQuote(of:)` |
 | `zone`（schema 43） | `row`、`column` | `{ "found": true, "zone": "commercial" }`：那一格的分區；沒有分區時 `{ "found": false }` | `zones.zone(row:column:)` |
 | `water`（schema 44） | `row`、`column` | `{ "water": true }`：那一格是不是水 | `isWater(row:column:)` |
 | `groundHeight`（schema 47） | `point`（`{ "x", "y" }`） | `{ "found": true, "groundHeight": n }`：那一點的地面高度（世界單位）；沒有讀過任何地面的世界處處是 0；世界外或沒有讀過的區塊 `{ "found": false }` | `groundHeight(at:)` |
@@ -717,3 +719,18 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 
 - 新指令 `mapGround`（世界有地面，還沒讀任何區塊），`buildTrackEdge` 的 `structure` 多了 `"automatic"`，新結果 `groundNotLoaded`、`trackOverWater`、`structureTooHigh`，最終狀態的邊多了選填的 `sections`（`[{ "kind", "lengths" }]`，`kind` 是 `surface`、`embankment`、`cutting`、`viaduct`、`bridge`、`tunnel`；只有自動的邊有）。沒有地面的世界照 Stage S4 的規則與價格，舊的 fixture 不必改，schema 30 到 47 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有土地，`ReferenceWorldGoldenTests` 跳過用到地面或自動結構物的 fixture；`TrackSectionTests` 另外手算驗證每個分界、併段、切邊、拆遷與存檔。
 - `terrain-track.json`：自由模式、2 × 1 個區塊、軌道每 16 m 100。`mapGround` 後 (2048, 1024) 找不到地面、蓋節點是 `groundNotLoaded`。區塊 (0, 0) 是 20 m 深的谷（角點欄 20、20、0、0、20 m）：20 m 高的自動邊 16 段，中點離地 0、0、0、160、480、800、1120、1280 × 4、1120、800、480、160、0，分成地面 3、路堤 2、高架 8，最後 3 段地面太短併入高架：地面 3、路堤 2、高架 11，費用 3800 + 土方 185 + 墩高 250 = 4235。區塊 (0, 1) 平地、(0, 18) 是湖：8 m 高的強制高架過湖是 `trackOverWater`；自動是路堤 7、橋 4、路堤 5，費用 2800 + 土方 2394 = 5194。湖上的車站是 `onWater`。每個值都手算，寫在 description 裡。
+
+## 決策 129：站前長得快、九成滿就改建（schema 49）
+
+- 沒有新的指令、觀察、結果或欄位。schema 49 表示這一版的城市成長規則（ARCHITECTURE 決策 129）：建物的主要人數到表上的九成以上就算滿（原本要到表上的數），成長中車站 256 m（16,384 單位）內的站前以三倍的成長率長：一晚加 `((R + 2F) × g + 500) / 1000`（`F` 是輪到這站時站前各格的人數），依各格人數、站前的格算三倍，以最大餘數分配。schema 30 到 48 照樣讀取。依舊規則寫成的讀取端算不出下面五份的值，所以這五份改成 schema 49，description 寫了新舊值；其他 fixture 沒有成長中的土地，預期值都沒有改變。
+- **改變的既有預期值**（新值都先由 GameCore 取得，再由照決策 129 改寫的 `python3 -I tools/golden-checks/city_growth.py`、`python3 -I tools/golden-checks/city_buildings.py --check` 與另一份手寫的 Python 腹地與需求計算核對；`CityGrowthTests`、`LandDemandTests` 的逐格參考實作也照新規則改寫）：
+  - `city-buildings-growth.json`（schema 37 → 49）：2 × 2 格的世界每一格都在三站的站前。午夜開始時辦公 (0, 1) 有 D2 252 個就業中的 240 個（952‰），滿了，Alpha 把它升成 D3（第 47 步：D2 24／252 → D3 72／756）。每站一晚加 7 位居民、7 個就業，不再是 1 和 1：Alpha (80 + 2 × 240) × 12 = 6720 → 7；Beta (80 + 2 × 251) × 12 = 6984 → 7；Gamma (80 + 2 × 262) × 12 = 7248 → 7。第 42 步 (0, 0) 的居民 243 → 261，第 43 步 (0, 1) 的就業 243 → 261。最終狀態：土地 251／243 → 269／261，建物 D2 1、D3 1 → D2 0、D3 2，三站的需求 66、66、66 → 71、70、71（依近遠分配的 177、176、177 人）。
+  - `zoning.json`（schema 43 → 49）：同一個世界，辦公同樣由 Alpha 升成 D3；每站一晚 7 和 7（Beta 的站前 248 位居民、259 個就業，Gamma 255、266）。第 51 步 (0, 0) 243 → 261、第 52 步 (0, 1) 243 → 261。最終狀態：土地 244／255 → 262／273，建物 D2 1、D3 1 → D2 0、D3 2，需求 66、66、67 → 71、71、72。
+  - `water-terrain.json`（schema 44 → 49）：同上，沒有 (1, 1)。第 61 步 243 → 261、第 62 步 243 → 261。最終狀態：土地 243／243 → 261／261，建物 D2 1、D3 1 → D2 0、D3 2，需求 65、65、65 → 70、70、70。
+  - `city-buildings-raise.json`（schema 38 → 49）：8 × 2 格，第 0–3 欄是三站的站前，第 4 欄是 Beta 與 Gamma 的，第 5–7 欄都不是。503 位居民的 D3 住宅（6 號）有 998‰，現在是滿的，所以 Beta 升 5、6 號，Gamma 升 7、8 號，9 號留在 D1（第 64 步：D3 → D4 1120／240；第 70 步：9 號 D2 168／36 → D1 56／12）。成長：Alpha (1148 + 2 × 2788) × 12 = 80688 → 81 位居民、(51 + 2 × 72) × 12 → 2 個就業；Beta 81 與 4；Gamma 82 與 5。第 53 步 (0, 0) 56 → 62，第 55 步 (0, 1) 72 → 77，第 61 步 (0, 4) 86 → 89，第 63 步 (0, 5) 504 → 513。第 50–52 步的 `lastGrowth` 4、4、6 → 8、12、12。最終狀態：土地 3530／158 → 3545／166，建物 D1 4、D2 5、D3 2、D4 1 → D1 5、D2 4、D3 1、D4 2，需求 482、492、501 → 484、496、504。
+  - `land-value.json`（schema 39 → 49）：沒有別的建物到九成，升級不變，地價也不變（地價不讀人數）。土地長得比較多：最終狀態 2170／1721 → 2182／1789，需求 511、519、526 → 522、529、537；第 48–50 步的 `lastGrowth` 5、9、11 → 27、29、32（從 508、514、520 算起）。
+
+## 決策 130：出售公司的建物（schema 50）
+
+- 新指令 `sellPlacedBuilding`（`building`）、觀察 `buildingSale`，以及 `financeReport` 每一期選填的 `saleProceeds`、`saleBookValue`（是 0 時不寫）（ARCHITECTURE 決策 130，城市建造 P0-D）。結果沒有新的：不存在的建物照舊是 `unknownPlacedBuilding`。出售不寫帳本列（和買進一樣只記在資本日），所以 `accounts` 的形式不變。沒有出售的世界不會有這些欄位，schema 30 到 49 照樣讀取：**沒有任何既有 fixture 的預期值改變**。`ReferenceWorld` 沒有建物，`ReferenceWorldGoldenTests` 跳過 `sellPlacedBuilding` 與 `buildingSale`。
+- `company-buildings-sale.json`：`company-buildings-clearing.json` 的世界（經營、$4,000,000、城市建物開啟、沒有車站）。辦公樓照舊收購 D4 住宅，帳上 331,264,000，入住 16 + 3 = 19／184；小住宅 2,304,000，空的。售價 = 目前土地使用權 × 95% ＋ 建物帳面價值（過半全額，以下 × 入住 × 2 ÷ 容量）：辦公樓那一格已收購，是空地的 1,000 美分／m²，1,024,000 × 95% = 972,800，建物 ⌊24,576,000 × 38 ÷ 184⌋ = 5,075,478，共 6,048,278；小住宅 243,200 ＋ 0。賣掉辦公樓後它的 16 位居民與 3 個就業變成 (5, 5) 的辦公格，城市蓋上 D1 辦公（3 號）；空的小住宅不留土地；再賣一次是 `unknownPlacedBuilding`。第 0 天的報表：出售收入 6,291,478、帳面價值 333,568,000。每個值都手算，寫在 description 裡；價格的入住比例、折舊與帳的其他情形由 `BuildingSaleTests` 手算驗證。

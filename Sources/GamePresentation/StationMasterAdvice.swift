@@ -150,8 +150,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .townGrew(_, let name, let tenths):
             language.text(
-                "The town round \(name) grew \(tenths / 10).\(tenths % 10)% yesterday. Good service keeps it growing.",
-                "「\(name)」附近的城市昨天成長了 \(tenths / 10).\(tenths % 10)%。服務好，城市就會繼續長大。"
+                "The town round \(name) grew \(tenths / 10).\(tenths % 10)% yesterday. Good service keeps it growing, fastest within 250 m of the station.",
+                "「\(name)」附近的城市昨天成長了 \(tenths / 10).\(tenths % 10)%。服務好，城市就會繼續長大，車站 250 公尺內長得最快。"
             )
         }
     }

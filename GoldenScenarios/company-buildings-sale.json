@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 50,
+  "description": "Selling the company's buildings (city building P0-D, ARCHITECTURE decision 130) in the world of company-buildings-clearing.json: 131072 x 98304 units (32 x 24 cells of 64 m), a managed company with $4,000,000 (400,000,000 cents), the city's buildings on, no stations. Cell (5, 5) holds 1,000 residents and 3 jobs (homes, D4, building 1); cell (5, 6) shops with 20 jobs (D1, building 2). The office block at (22528, 22528) buys out the D4 home as there: 24,576,000 for the building, 4,096,000 + 302,592,000 for its land, 331,264,000 on the books; 16 residents and 3 jobs move in, 19 of the 16 + 168 = 184 it holds: the balance 68,736,000. The house at (10000, 10000) costs 2,048,000 + 256,000 = 2,304,000, empty: the balance 66,432,000. A sale pays 95% of the right to use the land at its value now and the building's book value, in full from half full, below that x occupants x 2 / capacity. The home's cell is gone, so the office's land is empty land at the base of 1,000 a m2: 1,024 m2 x 1,000 = 1,024,000, 95% 972,800. Nothing is written down yet: the building's book value is 24,576,000, and 19 is below half of 184: floor(24,576,000 x 38 / 184) = 5,075,478. The price 6,048,278 against a book value of 331,264,000, a loss of 325,215,722 (the buy-out is in the land and is not paid back). The house: 256 m2 x 1,000 = 256,000, 95% 243,200, no one in it, so nothing for the building: 243,200 against 2,304,000. Selling the office pays 6,048,278: the balance 72,480,278. The city takes it over: its 16 residents and 3 jobs become cell (5, 5), an office cell, and a D1 office, building 3 (after building 2), holds them (its table 8 residents and 84 jobs; 16 residents, the more). Selling the empty house pays 243,200: the balance 72,723,478; it leaves no land at cell (2, 2). Selling it again is unknownPlacedBuilding. Day 0's report: sales 6,291,478 against a book value of 333,568,000; no ledger row, as buying wrote none. Every value worked out by hand.",
+  "initialState": {"worldWidth": 131072, "worldHeight": 98304, "balance": 400000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "paused"},
+  "steps": [
+    {"command": {"type": "setLand", "cells": [{"row": 5, "column": 5, "use": "residential", "residents": 1000, "jobs": 3}, {"row": 5, "column": 6, "use": "commercial", "residents": 0, "jobs": 20}]}, "expect": {"result": "ok"}},
+    {"command": {"type": "setCityBuildings", "enabled": true}, "expect": {"result": "ok"}},
+    {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "office", "point": {"x": 22528, "y": 22528}}, "expect": {"result": "ok"}},
+    {"command": {"type": "placeBuilding", "kind": "house", "point": {"x": 10000, "y": 10000}}, "expect": {"result": "ok"}},
+    {"observe": {"type": "buildingSale", "building": 1}, "expect": {"found": true, "buildingSale": {"landRight": 1024000, "land": 972800, "buildingBookValue": 24576000, "occupants": 19, "capacity": 184, "building": 5075478, "price": 6048278, "bookValue": 331264000}}},
+    {"observe": {"type": "buildingSale", "building": 2}, "expect": {"found": true, "buildingSale": {"landRight": 256000, "land": 243200, "buildingBookValue": 2048000, "occupants": 0, "capacity": 11, "building": 0, "price": 243200, "bookValue": 2304000}}},
+    {"observe": {"type": "buildingSale", "building": 3}, "expect": {"found": false}},
+    {"command": {"type": "sellPlacedBuilding", "building": 1}, "expect": {"result": "ok"}},
+    {"observe": {"type": "placedBuilding", "building": 1}, "expect": {"found": false}},
+    {"observe": {"type": "landCell", "row": 5, "column": 5}, "expect": {"found": true, "landCell": {"row": 5, "column": 5, "use": "office", "residents": 16, "jobs": 3}}},
+    {"observe": {"type": "building", "row": 5, "column": 5}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "office", "density": 1, "residents": 16, "jobs": 84}}},
+    {"command": {"type": "sellPlacedBuilding", "building": 2}, "expect": {"result": "ok"}},
+    {"observe": {"type": "landCell", "row": 2, "column": 2}, "expect": {"found": false}},
+    {"command": {"type": "sellPlacedBuilding", "building": 2}, "expect": {"result": "unknownPlacedBuilding", "building": 2}},
+    {"observe": {"type": "financeReport", "period": "day"}, "expect": {"report": {"current": {"index": 0, "fareRevenue": 0, "operatingCost": 0, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0, "saleProceeds": 6291478, "saleBookValue": 333568000}, "previous": {"index": -1, "fareRevenue": 0, "operatingCost": 0, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0}}}}
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 72723478,
+    "stations": [],
+    "trains": [],
+    "lines": [],
+    "serviceDay": [
+      { "start": 0, "level": "low" },
+      { "start": 420, "level": "peak" },
+      { "start": 600, "level": "offPeak" },
+      { "start": 960, "level": "peak" },
+      { "start": 1200, "level": "offPeak" },
+      { "start": 1260, "level": "low" }
+    ],
+    "network": {"nodes": [], "edges": [], "platforms": []},
+    "trafficControl": false,
+    "passengers": [],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": {"fareRevenue": 0, "fareTrips": 0, "departures": 0, "trainDistance": 0, "passengers": 0, "seats": 0},
+      "ledger": [],
+      "days": []
+    },
+    "land": {"cells": 2, "residents": 16, "jobs": 23},
+    "cityBuildings": {"buildings": 2, "d1": 2, "d2": 0, "d3": 0, "d4": 0, "existingStock": 0}
+  }
+}

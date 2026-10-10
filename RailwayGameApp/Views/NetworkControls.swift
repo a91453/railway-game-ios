@@ -15,6 +15,12 @@ struct NetworkControls: View {
     /// Whether the track options are unfolded (decision 107): view state,
     /// folded again each time the tool is chosen.
     @State private var showsAdvanced = false
+    /// Whether the long section and the cost in parts are unfolded on a
+    /// phone (decision 124, H3): folded there, so the card's action button
+    /// stays in view without scrolling; an iPad has the room and shows them.
+    @State private var showsSection = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// The map's population and travel layer (``MapView``'s preference of
     /// the same key), which the platform mode can turn to population.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
@@ -107,6 +113,35 @@ struct NetworkControls: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    // Decision 124, H3: the stretch over the ground, and
+                    // what it costs part by part. Only where the world has
+                    // ground: without it the ground is flat at 0 m and the
+                    // cost is the track's, which the line above says.
+                    if session.world.ground.isMapped, preview.longSection != nil || preview.costParts != nil {
+                        let roomy = horizontalSizeClass == .regular && verticalSizeClass == .regular
+                        if !roomy {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) { showsSection.toggle() }
+                            } label: {
+                                Label {
+                                    Text(verbatim: session.language.text("Long section and costs", "縱斷面與費用"))
+                                } icon: {
+                                    Image(systemName: showsSection ? "chevron.down" : "chevron.right")
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .font(.footnote)
+                            .accessibilityIdentifier("network.section")
+                        }
+                        if roomy || showsSection {
+                            if let section = preview.longSection {
+                                LongSectionView(chart: LongSectionChart(section), length: section.length, language: session.language)
+                            }
+                            if let parts = preview.costParts {
+                                CostPartsView(parts: parts, language: session.language)
+                            }
+                        }
                     }
                 }
                 .padding(.top, 2)
@@ -218,5 +253,110 @@ struct NetworkControls: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - The stretch over the ground (decision 124, H3)
+
+/// The build card's long section of the stretch the network tool would
+/// build (``LongSectionChart``): chainage across, height up; water shaded,
+/// each stretch between the rail and the ground in the colour of what
+/// carries it, the ground's line and the rail's over them; the heights at
+/// the top and bottom, the length, and a key of the kinds it shows.
+private struct LongSectionView: View {
+    let chart: LongSectionChart
+    let length: Int64
+    let language: DisplayLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Canvas { context, size in
+                func point(_ p: LongSectionChart.Point) -> CGPoint {
+                    CGPoint(x: p.x * size.width, y: (1 - p.y) * size.height)
+                }
+                func line(_ points: [LongSectionChart.Point]) -> Path {
+                    var path = Path()
+                    path.addLines(points.map(point))
+                    return path
+                }
+                for range in chart.water {
+                    let rect = CGRect(x: range.lowerBound * size.width, y: 0, width: (range.upperBound - range.lowerBound) * size.width, height: size.height)
+                    context.fill(Path(rect), with: .color(Palette.water.opacity(0.35)))
+                }
+                for band in chart.bands {
+                    var outline = line(band.outline)
+                    outline.closeSubpath()
+                    context.fill(outline, with: .color(Palette.section(band.kind).opacity(band.kind == .surface ? 0.35 : 0.6)))
+                }
+                context.stroke(line(chart.ground), with: .color(Palette.groundLine), style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                // A tunnel's rail dashed, as on the map: drawn band by band.
+                for band in chart.bands {
+                    let rail = Array(band.outline.prefix(band.outline.count / 2))
+                    let dash: [CGFloat] = band.kind == .tunnel ? [4, 3] : []
+                    context.stroke(line(rail), with: .color(Palette.ink), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: dash))
+                }
+            }
+            .frame(height: 72)
+            .background(Theme.panel.opacity(0.5), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(alignment: .topLeading) { axisLabel(chart.top) }
+            .overlay(alignment: .bottomLeading) { axisLabel(chart.bottom) }
+            .overlay(alignment: .bottomTrailing) {
+                Text(verbatim: NetworkBuilding.lengthText(length, in: language))
+                    .font(.system(size: 9).monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(2)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: language.text("Long section", "縱斷面")))
+            .accessibilityValue(Text(verbatim: chart.kinds.map { $0.name(in: language) }.joined(separator: ", ")))
+            .accessibilityIdentifier("network.longSection")
+            HStack(spacing: 8) {
+                ForEach(chart.kinds, id: \.self) { kind in
+                    HStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 2).fill(Palette.section(kind)).frame(width: 10, height: 8)
+                        Text(verbatim: kind.name(in: language))
+                    }
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+    }
+
+    /// A height on the chart's edge, to the metre.
+    private func axisLabel(_ height: Int64) -> some View {
+        Text(verbatim: NetworkBuilding.lengthText(height, in: language))
+            .font(.system(size: 9).monospacedDigit())
+            .foregroundStyle(Theme.textSecondary)
+            .padding(2)
+    }
+}
+
+/// What the stretch costs, part by part (``NetworkCostParts``): the
+/// track, earthwork, viaducts and bridges, tunnels and demolition where
+/// they cost anything, and the total GameCore charged on the preview's
+/// copy of the world.
+private struct CostPartsView: View {
+    let parts: NetworkCostParts
+    let language: DisplayLanguage
+
+    var body: some View {
+        let lines = parts.lines(in: language)
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                HStack {
+                    Text(verbatim: line.name)
+                    Spacer(minLength: 8)
+                    Text(verbatim: line.cost.moneyText)
+                        .monospacedDigit()
+                }
+                .font(index == lines.count - 1 ? .caption.weight(.semibold) : .caption)
+                .foregroundStyle(index == lines.count - 1 ? Theme.textPrimary : Theme.textSecondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("network.costParts")
     }
 }

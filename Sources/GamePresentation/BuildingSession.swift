@@ -6,12 +6,17 @@ import GameCore
 // company's buildings too. Since P0-C2 (decision 95) a tap only chooses the
 // site: the map shows the building there, what it costs and the city's
 // buildings it would buy out, and the action button builds it. Since P0-B
-// (decision 98) its third mode zones cells (ZoningSession.swift).
+// (decision 98) a mode zones cells (ZoningSession.swift), and since P0-D
+// (decision 130) one sells the company's buildings to the city: a tap
+// chooses the building, the card shows what it would bring in and the gain
+// or loss, and the action button sells it.
 
 /// What a tap with the building tool does (decision 94).
 public enum BuildingToolMode: CaseIterable, Hashable, Sendable {
     case build
     case demolish
+    /// Chooses the company's building to sell to the city (decision 130).
+    case sell
     /// Zones the cell tapped, or the rectangle dragged (decision 98).
     case zone
 
@@ -19,6 +24,7 @@ public enum BuildingToolMode: CaseIterable, Hashable, Sendable {
         switch self {
         case .build: language.text("Put up", "建造")
         case .demolish: language.text("Demolish", "拆除")
+        case .sell: language.text("Sell", "出售")
         case .zone: language.text("Zone", "分區")
         }
     }
@@ -44,7 +50,9 @@ extension GameSession {
     /// preview counts the city's buildings in the way; in
     /// ``BuildingToolMode/demolish`` it demolishes the company's building
     /// there or within `reach` of it, the one whose centre is nearest; in
-    /// ``BuildingToolMode/zone`` it zones the cell tapped (decision 98).
+    /// ``BuildingToolMode/sell`` it makes that building the
+    /// ``saleCandidate`` (decision 130); in ``BuildingToolMode/zone`` it
+    /// zones the cell tapped (decision 98).
     @discardableResult
     public func tapBuildingTool(at point: PlanPoint, reach: Int64) -> Bool {
         switch buildingMode {
@@ -64,19 +72,33 @@ extension GameSession {
             }
             return true
         case .demolish:
-            let near = world.placedBuildings.filter { building in
-                point.x >= building.minX - reach && point.x < building.maxX + reach
-                    && point.y >= building.minY - reach && point.y < building.maxY + reach
-            }
-            guard let building = near.min(by: { distance($0, point) < distance($1, point) }) else {
+            guard let building = placedBuilding(near: point, reach: reach) else {
                 message = StatusMessage(kind: .failure, text: language.text("Tap one of your buildings to demolish it.", "請點選要拆除的建物。"))
                 return false
             }
             return demolishBuilding(building.id)
+        case .sell:
+            guard let building = placedBuilding(near: point, reach: reach) else {
+                saleCandidate = nil
+                message = StatusMessage(kind: .failure, text: language.text("Tap one of your buildings to sell it.", "請點選要出售的建物。"))
+                return false
+            }
+            saleCandidate = building.id
+            message = nil
+            return true
         case .zone:
             guard let cell = zoneRectangle(from: point, to: point) else { return false }
             return zone(cell)
         }
+    }
+
+    /// The company's building at `point` or within `reach` of it, the one
+    /// whose centre is nearest, or `nil`.
+    private func placedBuilding(near point: PlanPoint, reach: Int64) -> PlacedBuilding? {
+        world.placedBuildings.filter { building in
+            point.x >= building.minX - reach && point.x < building.maxX + reach
+                && point.y >= building.minY - reach && point.y < building.maxY + reach
+        }.min { distance($0, point) < distance($1, point) }
     }
 
     /// Whether `point` lies on the building shown at ``buildingSite``.
@@ -292,6 +314,11 @@ extension GameSession {
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
+        }
+        if buildingMode == .sell, let sale = salePreview {
+            // Decision 130: the building to sell, marked as the one chosen.
+            overlay.site = PlanRect(sale.building)
+            overlay.siteIsBuildable = true
         }
         if let preview = buildingPreview {
             let half = preview.kind.side / 2

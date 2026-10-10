@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 37,
-  "description": "City buildings grow with the land (Phase 6c-1, ARCHITECTURE decision 74) in a world 8192 x 8192 units, 2 x 2 cells of 64 m. The land is homes at row 0, column 0 with 240 residents and offices at row 0, column 1 with 240 jobs; the company is managed, the land sets the stations' ridership (decision 73), town growth is on, and the city's buildings: the homes get building 1, D3 (240 > 168, D2's residents; D3 holds 504 residents and 108 jobs), the offices building 2, D2 (240 > 84, D2 holds 252 jobs; its residents' capacity is the table's 24), and the empty cells none. The railway is economy.json's line Main, Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00. Every station reaches both cells (all well within 800 m), so each takes about a third of each by nearness (largest remainder): 80 residents and 80 jobs, (160 x 40 + 50) / 100 = 64 trips a day. The first midnight (the tick after 1440, as advancing always crosses it) growth sees the stations; the second (after 2880) each has had all of its 64 trips arrive and reached 2 stations, so it grows at 10 + 2 = 12 thousandths: (80 x 12 + 500) / 1000 = 1 resident and 1 job each, by ascending station. Alpha's resident goes to the only cell with residents, (0, 0), 241, its job to the only cell with jobs, (0, 1), 241; it then builds the empty cell beside people nearest it: (1, 0), middle (2048, 6144), d^2 = 512^2 + 5632^2 = 31981568, against (1, 1) at 4608^2 + 5632^2 = 52953088, a home of 4 residents, and with it building 3, D1 homes (56 / 12): numbered after the others, as a growing station's new cell always gets the next number. Beta's resident is shared by residents 241 and 4: (0, 0), 242; its job (0, 1), 242; the only empty cell left, (1, 1), is beside (0, 1) and (1, 0): home and building 4, D1. Gamma's resident and job make 243 and 243; no empty cell is left, so it builds nothing. Growth does not raise a building in 6c-1 (6c-2 does), and land still grows to 400 residents and 1,200 jobs a cell: (0, 0) stays D3 and (0, 1) D2. The land and buildings are worked out by hand and checked with an independent Python implementation (tools/golden-checks/city_buildings.py); the railway, passenger and account values are GameCore's, as in economy.json, and the growth rate follows from the arrivals they show.",
+  "schemaVersion": 49,
+  "description": "City buildings grow with the land (Phase 6c-1, ARCHITECTURE decision 74) in a world 8192 x 8192 units, 2 x 2 cells of 64 m. The land is homes at row 0, column 0 with 240 residents and offices at row 0, column 1 with 240 jobs; the company is managed, the land sets the stations' ridership (decision 73), town growth is on, and the city's buildings: the homes get building 1, D3 (240 > 168, D2's residents; D3 holds 504 residents and 108 jobs), the offices building 2, D2 (240 > 84, D2 holds 252 jobs; its residents' capacity is the table's 24), and the empty cells none. The railway is economy.json's line Main, Alpha (1536, 512), Beta (3584, 512), Gamma (5632, 512), one train all day from 23:00. Every station reaches both cells (all well within 800 m), so each takes about a third of each by nearness (largest remainder): 80 residents and 80 jobs, (160 x 40 + 50) / 100 = 64 trips a day. The first midnight (the tick after 1440, as advancing always crosses it) growth sees the stations; the second (after 2880) each has had all of its 64 trips arrive and reached 2 stations, so it grows at 10 + 2 = 12 thousandths and raises buildings (decision 75). Schema 49 (ARCHITECTURE decision 129): a building whose main count is at least nine tenths of its table's is full, and the station front, the cells whose middles lie within 256 m (16384 units) of a growing station, grows three times as fast: the station grows (share + 2 x front) x 12 thousandths, shared by residents (jobs) with the front's counted three times. Here every cell is in every station's front. As the midnight began the offices (0, 1) held 240 of D2's 252 jobs, 952 thousandths, full; the homes 240 of D3's 504, not. By ascending station: Alpha raises the offices to D3 (72 / 756), then grows (80 + 2 x 240) x 12 = 6720, (6720 + 500) / 1000 = 7 residents and likewise 7 jobs, to the only cell with residents, (0, 0), 247, and the only cell with jobs, (0, 1), 247; it then builds the empty cell beside people nearest it: (1, 0), middle (2048, 6144), d^2 = 512^2 + 5632^2 = 31981568, against (1, 1) at 4608^2 + 5632^2 = 52953088, a home of 4 residents, and with it building 3, D1 homes (56 / 12): numbered after the others, as a growing station's new cell always gets the next number. Beta has nothing left to raise; its front holds 247 + 4 = 251 residents and 247 jobs: (80 + 502) x 12 = 6984 and (80 + 494) x 12 = 6888, 7 each; the residents shared 3 x 247 to 3 x 4 (6.89 and 0.11, the largest remainder to the first): (0, 0), 254; the jobs (0, 1), 254; the only empty cell left, (1, 1), is beside (0, 1) and (1, 0): home and building 4, D1. Gamma's front holds 262 residents and 254 jobs: (80 + 524) x 12 = 7248 and (80 + 508) x 12 = 7056, 7 each: (0, 0) 261 (6.79, 0.11 and 0.11), (0, 1) 261; no empty cell is left, so it builds nothing. Every cell stays within its building: (0, 0) D3 homes (504), (0, 1) D3 offices (756). The land ends with 4 cells, 269 residents and 261 jobs; after the midnight the stations' shares by nearness are 177, 176 and 177 people, 71, 70 and 71 trips a day. Before decision 129 (schema 37) the offices were not full (only a count at the table's was) and each station grew 1 resident and 1 job: (0, 0) 243, (0, 1) 243 and D2, 251 residents and 243 jobs, 66 trips a day each. The land and buildings are worked out by hand and checked with an independent Python implementation (tools/golden-checks/city_buildings.py); the railway, passenger and account values are GameCore's, as in economy.json, and the growth rate follows from the arrivals they show.",
   "initialState": {"worldWidth": 8192, "worldHeight": 8192, "balance": 1000000, "costs": {"track": 1000, "station": 50000, "train": 200000}, "gameMinutes": 1380, "speed": "normal"},
   "steps": [
     {"command": {"type": "setEconomyMode", "mode": "management"}, "expect": {"result": "ok"}},
@@ -45,12 +45,12 @@
     {"observe": {"type": "landCell", "row": 1, "column": 0}, "expect": {"found": false}},
     {"observe": {"type": "building", "row": 1, "column": 0}, "expect": {"found": false}},
     {"command": {"type": "advance", "ticks": 1440}, "expect": {"result": "ok"}},
-    {"observe": {"type": "landCell", "row": 0, "column": 0}, "expect": {"found": true, "landCell": {"row": 0, "column": 0, "use": "residential", "residents": 243, "jobs": 0}}},
-    {"observe": {"type": "landCell", "row": 0, "column": 1}, "expect": {"found": true, "landCell": {"row": 0, "column": 1, "use": "office", "residents": 0, "jobs": 243}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 0}, "expect": {"found": true, "landCell": {"row": 0, "column": 0, "use": "residential", "residents": 261, "jobs": 0}}},
+    {"observe": {"type": "landCell", "row": 0, "column": 1}, "expect": {"found": true, "landCell": {"row": 0, "column": 1, "use": "office", "residents": 0, "jobs": 261}}},
     {"observe": {"type": "landCell", "row": 1, "column": 0}, "expect": {"found": true, "landCell": {"row": 1, "column": 0, "use": "residential", "residents": 4, "jobs": 0}}},
     {"observe": {"type": "landCell", "row": 1, "column": 1}, "expect": {"found": true, "landCell": {"row": 1, "column": 1, "use": "residential", "residents": 4, "jobs": 0}}},
     {"observe": {"type": "building", "row": 0, "column": 0}, "expect": {"found": true, "building": {"id": 1, "kind": "city", "use": "residential", "density": 3, "residents": 504, "jobs": 108}}},
-    {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "office", "density": 2, "residents": 24, "jobs": 252}}},
+    {"observe": {"type": "building", "row": 0, "column": 1}, "expect": {"found": true, "building": {"id": 2, "kind": "city", "use": "office", "density": 3, "residents": 72, "jobs": 756}}},
     {"observe": {"type": "building", "row": 1, "column": 0}, "expect": {"found": true, "building": {"id": 3, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}},
     {"observe": {"type": "building", "row": 1, "column": 1}, "expect": {"found": true, "building": {"id": 4, "kind": "city", "use": "residential", "density": 1, "residents": 56, "jobs": 12}}}
   ],
@@ -385,7 +385,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 66,
+          "dailyTrips": 71,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -398,7 +398,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 66,
+          "dailyTrips": 70,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -411,7 +411,7 @@
         "abandoned": 0,
         "arrived": 64,
         "demand": {
-          "dailyTrips": 66,
+          "dailyTrips": 71,
           "kind": "residential"
         },
         "overflowed": 0,
@@ -1146,15 +1146,15 @@
     },
     "land": {
       "cells": 4,
-      "jobs": 243,
-      "residents": 251
+      "jobs": 261,
+      "residents": 269
     },
     "landDemand": true,
     "cityBuildings": {
       "buildings": 4,
       "d1": 2,
-      "d2": 1,
-      "d3": 1,
+      "d2": 0,
+      "d3": 2,
       "d4": 0,
       "existingStock": 0
     }

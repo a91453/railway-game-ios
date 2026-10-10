@@ -8,6 +8,8 @@ struct MapEdgeDrawing: Equatable, Sendable {
     let edge: TrackEdge
     let geometry: TrackGeometry
     let bounds: WorldRegion
+    /// Decision 124, H3: the side slopes of its embankments and cuttings.
+    let slopes: [TrackSlope]
 
     init?(edge: TrackEdge, world: GameWorld) {
         guard let geometry = world.trackGeometry(of: edge.id),
@@ -15,6 +17,10 @@ struct MapEdgeDrawing: Equatable, Sendable {
         self.edge = edge
         self.geometry = geometry
         self.bounds = bounds
+        // Only an automatic edge has embankments and cuttings.
+        slopes = edge.structure == .automatic
+            ? world.longSection(of: edge.id).map { TrackSlope.slopes(of: $0, geometry: geometry) } ?? []
+            : []
     }
 }
 
@@ -206,6 +212,9 @@ enum MapArt {
                 context.stroke(polyline(points, projection: projection), with: .color(Palette.station.opacity(0.85)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.75), lineCap: .butt, lineJoin: .round))
             }
         }
+        if detail == .full {
+            drawSlopes(edges.flatMap(\.slopes), projection: projection, in: context)
+        }
         for drawing in edges {
             // Decision 124: an automatic edge stretch by stretch, as the
             // ground carries it; an explicit one whole.
@@ -227,6 +236,30 @@ enum MapArt {
             if world.isTunnelPortal(node.id) {
                 context.stroke(disc(at: projection.screenPoint(of: node.position), radius: radius * 2.5), with: .color(Palette.ink), lineWidth: max(1, radius * 0.6))
             }
+        }
+    }
+
+    /// Decision 124, H3 (``TrackSlope``): beside an embankment or a
+    /// cutting, a band as wide as its slopes run, and hachures across it,
+    /// under the track; the bank's colour for a fill, a deeper earth for a
+    /// cut. One fill and one stroke a kind.
+    private static func drawSlopes(_ slopes: [TrackSlope], projection: some MapProjection, in context: GraphicsContext) {
+        guard !slopes.isEmpty else { return }
+        var bands: [TrackSectionKind: Path] = [:], hachures: [TrackSectionKind: Path] = [:]
+        for slope in slopes {
+            for band in slope.bands {
+                bands[slope.kind, default: Path()].addPath(polygon(band.map { screenPoint($0.x, $0.y, projection) }))
+            }
+            for hachure in slope.hachures {
+                hachures[slope.kind, default: Path()].move(to: screenPoint(hachure.from.x, hachure.from.y, projection))
+                hachures[slope.kind, default: Path()].addLine(to: screenPoint(hachure.to.x, hachure.to.y, projection))
+            }
+        }
+        let width = max(0.5, projection.referenceSize * 0.03)
+        for kind in [TrackSectionKind.embankment, .cutting] {
+            let color = kind == .embankment ? Palette.embankment : Palette.cutting
+            if let band = bands[kind] { context.fill(band, with: .color(color.opacity(0.4))) }
+            if let lines = hachures[kind] { context.stroke(lines, with: .color(color), lineWidth: width) }
         }
     }
 
@@ -483,7 +516,37 @@ enum MapArt {
             drawTravel(tiles, opacity: layer.opacity, projection: projection, in: context)
         case .city(let map, let mode):
             drawCity(map, mode: mode, opacity: layer.opacity, projection: projection, in: context)
+        case .terrain(let map):
+            drawTerrain(map, opacity: layer.opacity, projection: projection, in: context)
         }
+    }
+
+    /// The height and steep slope layer (decision 124, H3, ``TerrainMap``):
+    /// the blocks in view, tinted and shaded, merged when zoomed out as the
+    /// city's are; then the steep ones hatched, lines falling to the right
+    /// about 6 points apart, so the hatching runs on across blocks.
+    private static func drawTerrain(_ map: TerrainMap, opacity: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let blockSize = CityMap.blockSize(pointsPerUnit: projection.pointsPerUnit)
+        let tiles = map.tiles(in: drawingRegion(projection), blockSize: blockSize)
+        drawTravel(tiles.shaded, opacity: opacity, projection: projection, in: context)
+        guard !tiles.steep.isEmpty else { return }
+        let spacing = 6.0
+        var hatching = Path()
+        for tile in tiles.steep {
+            let rect = screenRect(minX: tile.minX, minY: tile.minY, maxX: tile.maxX, maxY: tile.maxY, projection)
+            // The lines x + y = c, at every multiple of the spacing across
+            // the block, cut to it.
+            let low = ((rect.minX + rect.minY) / spacing).rounded(.up), high = ((rect.maxX + rect.maxY) / spacing).rounded(.down)
+            guard low <= high else { continue }
+            for k in Int(low)...Int(high) {
+                let c = Double(k) * spacing
+                let start = CGPoint(x: max(rect.minX, c - rect.maxY), y: min(rect.maxY, c - rect.minX))
+                let end = CGPoint(x: min(rect.maxX, c - rect.minY), y: max(rect.minY, c - rect.maxX))
+                hatching.move(to: start)
+                hatching.addLine(to: end)
+            }
+        }
+        context.stroke(hatching, with: .color(Color(TerrainMap.steepColor).opacity(min(1, opacity))), lineWidth: 0.75)
     }
 
     /// A city layer (Phase 6d, ``CityMap``): only the cells in view, merged

@@ -199,8 +199,9 @@ public struct AnnualStatement: Hashable, Codable, Sendable {
 }
 
 /// One day's movements that are not the running ledger's (Phase 7a): the
-/// assets written down and off, what was spent on new ones, and what was
-/// borrowed and repaid. All non-negative.
+/// assets written down and off, what was spent on new ones, what was
+/// borrowed and repaid, and since decision 130 what the company's buildings
+/// sold for and what they were on the books at. All non-negative.
 public struct CapitalDay: Hashable, Sendable {
     /// The day's index, as ``DayAccount/day``.
     public let day: Int64
@@ -213,13 +214,18 @@ public struct CapitalDay: Hashable, Sendable {
     public internal(set) var capitalSpending: Money = .zero
     public internal(set) var borrowed: Money = .zero
     public internal(set) var repaid: Money = .zero
+    /// Cash received for the company's buildings sold (decision 130), and
+    /// the book value they were taken off the books at: the gain realized
+    /// is the one less the other.
+    public internal(set) var saleProceeds: Money = .zero
+    public internal(set) var saleBookValue: Money = .zero
 
     public init(day: Int64) {
         self.day = day
     }
 
     var amounts: [Money] {
-        [depreciation, writeOff, capitalSpending, borrowed, repaid]
+        [depreciation, writeOff, capitalSpending, borrowed, repaid, saleProceeds, saleBookValue]
     }
 }
 
@@ -250,6 +256,8 @@ extension CompanyAccounts {
         capitalDays[index].capitalSpending = min(capitalDays[index].capitalSpending, limit)
         capitalDays[index].borrowed = min(capitalDays[index].borrowed, limit)
         capitalDays[index].repaid = min(capitalDays[index].repaid, limit)
+        capitalDays[index].saleProceeds = min(capitalDays[index].saleProceeds, limit)
+        capitalDays[index].saleBookValue = min(capitalDays[index].saleBookValue, limit)
         capitalDays.removeAll { $0.day <= day - Int64(Self.keptCapitalDays) }
     }
 
@@ -322,6 +330,25 @@ extension GameWorld {
             return true
         }
         writeOff(lost)
+    }
+
+    /// Removes the record of the company's building sold (decision 130)
+    /// and receives `price` for it: a managed company books the cash and
+    /// the book value the record leaves at, so the gain or loss is
+    /// realized; free play keeps no accounts and is paid nothing.
+    mutating func sellAsset(_ kind: AssetRecord.Kind, owner: Int, for price: Money) {
+        var sold = Money.zero
+        accounts.assets.removeAll { record in
+            guard record.kind == kind, record.owner == owner else { return false }
+            sold = sold + record.bookValue
+            return true
+        }
+        guard accounts.mode == .management else { return }
+        economy.earn(price)
+        accounts.bookCapital(day: dayIndex(of: clock.now)) {
+            $0.saleProceeds = $0.saleProceeds + price
+            $0.saleBookValue = $0.saleBookValue + sold
+        }
     }
 
     /// Splits the record of edge `edge` between its parts `first` and
@@ -468,7 +495,7 @@ extension GameWorld {
         let flows = [
             income.fareRevenue, income.operatingCost, income.maintenanceCost, income.energyCost, income.staffCost, income.interestCost,
             income.depreciationCost, income.writeOffCost, income.capitalSpending, income.loanBorrowed, income.loanRepaid,
-            income.propertyRevenue, income.propertyCost,
+            income.propertyRevenue, income.propertyCost, income.saleProceeds, income.saleBookValue, income.taxCost,
         ]
         let classes = [closing.track, closing.stations, closing.rollingStock, closing.buildings]
         return income.index == statement.year
@@ -546,7 +573,7 @@ extension AssetRecord: Codable {
 
 extension CapitalDay: Codable {
     private enum CodingKeys: String, CodingKey {
-        case day, depreciation, writeOff, capitalSpending, borrowed, repaid
+        case day, depreciation, writeOff, capitalSpending, borrowed, repaid, saleProceeds, saleBookValue
     }
 
     /// Decodes a day; an amount of 0 is not written.
@@ -561,13 +588,17 @@ extension CapitalDay: Codable {
         capitalSpending = try amount(.capitalSpending)
         borrowed = try amount(.borrowed)
         repaid = try amount(.repaid)
+        // Decision 130: a day before save version 29 sold nothing.
+        saleProceeds = try amount(.saleProceeds)
+        saleBookValue = try amount(.saleBookValue)
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(day, forKey: .day)
         for (key, value) in [(CodingKeys.depreciation, depreciation), (.writeOff, writeOff), (.capitalSpending, capitalSpending),
-                             (.borrowed, borrowed), (.repaid, repaid)] where value != .zero {
+                             (.borrowed, borrowed), (.repaid, repaid), (.saleProceeds, saleProceeds),
+                             (.saleBookValue, saleBookValue)] where value != .zero {
             try container.encode(value, forKey: key)
         }
     }

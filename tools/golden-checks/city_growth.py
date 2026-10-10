@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Independent check of the Phase 6c-2 fixture (ARCHITECTURE decision 75):
-GoldenScenarios/city-buildings-raise.json.
+GoldenScenarios/city-buildings-raise.json, under decision 129's station front
+and nine-tenths fullness.
 
 Written from the rules in the decision, not from the Swift code. The
 fixture's land is set by hand; three stations share it. Its second midnight
@@ -8,9 +9,12 @@ grows the land: each station's service share and stations reached that
 night are what the fixture observes (`townGrowth`, the GameCore values the
 railway and passengers give), and everything after them is worked out here:
 the rates, the shares of the land by nearness, the buildings full as the
-night began, the raises (two a station, by row and column, a cell once a
-night), growth up to each building's capacity, and the new cells with D1
-homes. It compares every land and building observation after that night.
+night began (their main count at least nine tenths of their table's,
+decisions 77 and 129), the raises (two a station, by row and column, a cell
+once a night), growth up to each building's capacity (the station front,
+the cells within 256 m, growing three times as fast: its people counted
+three times in the share of the growth and twice more in the growth itself,
+decision 129), and the new cells with D1 homes. It compares every land and building observation after that night.
 
 Python 3 standard library only: python3 -I tools/golden-checks/city_growth.py
 """
@@ -19,6 +23,7 @@ import pathlib
 import sys
 
 CELL, R2 = 4096, 51200 ** 2
+FRONT2, FRONT_GROWTH, FULLNESS = 16384 ** 2, 3, 900  # decision 129
 TABLE = {
     "residential": [(56, 12), (168, 36), (504, 108), (1120, 240)],
     "commercial": [(16, 72), (48, 216), (144, 648), (320, 1440)],
@@ -98,8 +103,11 @@ def night(fixture):
     full = set()
     for pos, plot in land.items():
         if plot["kind"] == "city" and plot["density"] < 4:
-            cr, cj = capacity(plot)
-            if plot["residents"] >= cr or plot["jobs"] >= cj:
+            # The main count (residents of homes, jobs of the rest) against
+            # the table's, nine tenths or more.
+            main = 0 if plot["use"] == "residential" else 1
+            table = TABLE[plot["use"]][plot["density"] - 1][main]
+            if (plot["residents"], plot["jobs"])[main] * 1000 >= table * FULLNESS:
                 full.add(pos)
     print("full", sorted(full))
     raised = []
@@ -113,8 +121,13 @@ def night(fixture):
                 land[pos]["density"] += 1
                 raised.append(pos)
         grow = lambda amount: max(1, (amount * rate + 500) // 1000) if amount > 0 else 0
+        # The station front as this station's turn comes (after the lower
+        # stations grew and spread).
+        front = [p for p in reach if d2(p, STATIONS[station - 1]) < FRONT2]
         for key, index in (("residents", 0), ("jobs", 1)):
-            added = largest_remainder(grow(shares[station][index]), [land[p][key] for p in reach])
+            amount = shares[station][index] + (FRONT_GROWTH - 1) * sum(land[p][key] for p in front)
+            weights = [land[p][key] * (FRONT_GROWTH if p in front else 1) for p in reach]
+            added = largest_remainder(grow(amount), weights)
             for p, a in zip(reach, added):
                 limit = capacity(land[p])[index]
                 if land[p][key] < limit:
