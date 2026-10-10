@@ -4485,6 +4485,33 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑 App；實機上的價格與 App 讀檔的時間要在 TestFlight 上看。
 
+### 151. 自製的 OSM 底圖：遊戲自己的樣式與台灣的離線圖磚（E3 第二步）
+
+2026-10-10，作者問「需要自製的 osm 嗎」，接著要求一個 PR 做兩步：(1) 遊戲自己的底圖樣式；(2) 台灣的圖磚由同一份整包檔產生、隨 App 打包。號碼依工作登記 #231：決策 151（148–150 由 #300–#326 審查的 session 保留）；存檔版本、golden schema 不動。
+
+**為什麼**：實景地圖的水域、分區、地點都來自 osmtoday 的台灣整包檔（決策 93、96、105），OSM 底圖（決策 97）卻是 OpenFreeMap 另一份一直在更新的 OSM，海岸、河面和遊戲的水域遮罩對不齊，底圖自己的建物也疊在遊戲的城市建物（決策 126）下面；沒有網路或 OpenFreeMap 停止服務時底圖是空白；Positron 不是遊戲的畫風；決策 97 留下的軍事設施標示也要自己控制圖層才拿得掉。
+
+參考檢查（`a91453/railway-reference-private` `581db83`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「自製的 OSM 底圖（決策 151）」）：`Ci/` 的 `osmSensitiveFacilityLabelFilter`／`applyOsmSensitiveFacilityLabelFilter`（直接移植）、`external/openfreemap-tiles/fonts/`（三個 glyph 範圍，和 OpenFreeMap 伺服器的檔逐位元相同）、`styles/liberty.json` 與 `planet.json`（OpenMapTiles schema 的圖層與欄位）；`Railway/site_archive_clean/data/offline_land_style.json`（沒網路時墊底的陸地，只取想法：底圖離線也要有陸地）與 `rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles；App 用 MapLibre Native 內建的 `pmtiles://`）。參考庫沒有產生圖磚的工具，`Ci/` 的虛擬島 `city.pmtiles` 本體也不在快照裡（gap → 原生）。新的 `OpenWorld/` 快照的地圖是 OSM 的點陣圖磚，沒有可用的。
+
+1. **圖磚**（`tools/basemap/build_basemap.py`，pyosmium，決策 93 同意的依賴）：讀實景資料同一份整包檔，切成 zoom 0–14 的 Mapbox Vector Tiles（4096 單位、64 的邊），寫成 PMTiles v3（gzip）。圖層照 OpenMapTiles schema 的一部分：`water`（海是台灣陸地外 2° 的框、海岸線的 704 個環是洞；湖、水庫、河面；魚塭不是水，決策 96）、`waterway`（河、運河、溪流）、`landcover`（森林、草地、濕地、沙灘；沒有農地）、`park`、`boundary`（縣市、鄉鎮市區）、`transportation`（國道到服務道路，匝道、橋、隧道；沒有鐵道、步道、停車場）、`transportation_name`、`place`。每一層從哪個 zoom 起、依面積的門檻在工具的常數與 README。切法照 geojson-vt（ISC）：點先排一次簡化順序，再由上一層切成四塊；整塊是海的圖磚往下全部同一份內容。2026-10-10 下載的檔（OSM 資料到 2026-10-08）：353,695 塊、12,340 種內容、47.4 MB，四核心約 3.5 分鐘。
+2. **樣式**（`BaseMapStyle`，GamePresentation，有測試）：遊戲自己寫的樣式 JSON，淺色、深色（顏色在 `docs/UI_THEME.md`）：地面是 `Palette.land`、字是 `ink`、淡藍的水、淡綠的森林與公園、白色道路（國道與快速道路暖黃）、虛線的縣市界；地名從直轄市到聚落分層，重要的放上層（MapLibre 先排上層）；巷弄的路名 15.5 級起才出現。沒有建物、土地使用、興趣點、鐵道；路名套 `Ci/` 的 `osmSensitiveFacilityLabelFilter`（`sensitiveFacilityLabelFilter()`）。同一份樣式也畫 OpenFreeMap 的圖磚（同一個 schema）：圖層名、`class` 都是 OpenMapTiles 的。
+3. **哪裡用哪份圖磚**（`BaseMapStyle.drawsTaiwan`）：地圖中心 2 km 內有台灣的陸地（水域格網 `WaterGrid.hasLand`，它把廈門等非台灣的陸地當海）就用打包的圖磚，否則（廈門、外國、沒有水域格網）用 OpenFreeMap 的。
+4. **字型**（`tools/basemap/fetch_glyphs.py`）：OpenFreeMap 的 Noto Sans glyph（OFL 1.1，`Resources/Licenses/NotoSans-OFL.txt`）。MapLibre Native 用裝置的字型畫中文、假名與諺文（`allowsFixedWidthGlyphGeneration`），整段都是這些字的範圍不放；地名用到的拉丁字母、標點與符號放真的 glyph（15 個範圍），其餘 179 個範圍是空的檔：MapLibre 某個範圍讀不到時（`GlyphManager::processResponse` 遇到錯誤就不再通知），整塊圖磚的文字都不排，所以要每個可能要的範圍都有檔。共 1.19 MB。打包的字型台灣以外也用。
+5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
+6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
+7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
+
+**外部專案**：geojson-vt（https://github.com/mapbox/geojson-vt ，ISC）的 `clip.js`、`simplify.js` 移植成 Python，著作權聲明在工具的說明裡；PMTiles v3 規格（https://github.com/protomaps/PMTiles ）與 MVT 2.1 規格照文件自己寫編碼；評估過 Planetiler（Apache-2.0，OpenMapTiles 的 profile，要 Java 21，另外下載 Natural Earth 與 OSM 的海洋多邊形，是新的依賴）與 tippecanoe（BSD 2-Clause，要另外編譯 C++），都沒用：pyosmium 已經同意，切法本身不大。MapLibre Native 6.31.0 的原始碼確認了 `pmtiles://file://`（6.10.0 起，`pmtiles_file_source.cpp`）、本機檔的路徑解碼（`local_file_source.cpp`）、glyph 讀不到的行為與本機畫的字的範圍。
+
+**驗證**：Linux 上用 MapLibre GL JS 4.7.1 在 Chromium 畫打包的圖磚與樣式（台北、平溪、金門、全島，淺色與深色；巴黎用 OpenFreeMap 的圖磚）；`pmtiles`、`mapbox-vector-tile` 兩個 Python 套件讀得出每一層（只在 scratchpad 驗證用，不是依賴）。
+
+**限制**：
+- MapLibre Native 在 iOS 上畫打包的圖磚、讀本機 glyph 沒有在這個環境驗證（只有 CI 的 Xcode 建置）；要在實機上看。
+- App 多約 48 MB（圖磚 47.4 MB、字型 1.2 MB）。
+- 整包檔只有台灣：金門、馬祖對岸的陸地畫成海（和水域格網一致）。
+- 底圖的 OSM 是 2026-10-08 的，水域、分區、地點是 2026-10-06 的檔（那份已經下載不到），兩天的差別。
+- 沒有山的陰影、3D 建物與地形，沒有興趣點；台灣以外仍要網路。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

@@ -4,10 +4,13 @@ import MapLibre
 import SwiftUI
 
 /// OpenStreetMap's map under a real-world game's railway (ARCHITECTURE
-/// decision 97, ROADMAP E3): OpenFreeMap's vector tiles drawn by MapLibre
-/// Native, the map engine of the `Ci/` reference, in its Positron style (Dark
-/// in the dark appearance). The map style menu's OpenStreetMap; Apple's map
-/// (``AppleMapBackground``) stays the default.
+/// decisions 97 and 151, ROADMAP E3): vector tiles drawn by MapLibre Native,
+/// the map engine of the `Ci/` reference, in the game's own style
+/// (``BaseMapStyle``, light or dark). In Taiwan the tiles are the ones the
+/// app bundles (`Resources/BaseMap/`, from the same OpenStreetMap as the
+/// game's water and zones; no network needed), elsewhere OpenFreeMap's. The
+/// map style menu's OpenStreetMap; Apple's map (``AppleMapBackground``) stays
+/// the default.
 ///
 /// Like Apple's map it follows the game's camera, top-down and north up
 /// (``OpenStreetMapBase/camera(of:in:width:height:)``), takes no gestures of
@@ -23,6 +26,9 @@ struct OSMMapBackground: UIViewRepresentable {
     let camera: PlanCamera
     /// Taiwan's railways, `nil` if the app's copy cannot be read.
     let railways: RealRailways?
+    /// Taiwan's water (``WaterGrid``), which says whether the map is in
+    /// Taiwan and draws the bundled tiles (decision 151).
+    let water: WaterGrid?
     let trackStyle: RealRailways.TrackStyle
     let language: DisplayLanguage
     /// The game's stations (decision 123), so the map's place names make
@@ -47,12 +53,16 @@ struct OSMMapBackground: UIViewRepresentable {
             style: trackStyle,
             theme: dark ? .dark : .light
         )
+        let taiwan = BaseMapStyle.drawsTaiwan(anchor: realWorld.anchor, water: water) && BaseMapFiles.tiles != nil
         map.show(
-            style: OpenStreetMapBase.styleURL(dark: dark),
+            style: BaseMapFiles.styleAddress(taiwan: taiwan, dark: dark) ?? OpenStreetMapBase.styleURL(dark: dark),
             language: language,
             railways: railways,
             look: look,
-            credits: (DataSourceCredits.openStreetMapBaseMap(in: language), DataSourceCredits.railwaysOnMap(in: language))
+            credits: (
+                taiwan ? DataSourceCredits.bundledBaseMap(in: language) : DataSourceCredits.openStreetMapBaseMap(in: language),
+                DataSourceCredits.railwaysOnMap(in: language)
+            )
         )
         map.stations = stations
         map.screenSafeArea = safeArea
@@ -435,6 +445,49 @@ final class FollowingMapLibreView: MLNMapView {
             x: 10 + safe.leading, y: bounds.height - 6 - safe.bottom - height, width: max(0, width), height: height
         )
         bringSubviewToFront(credit)
+    }
+}
+
+/// The files of the game's base map style (decision 151): the bundled
+/// tiles and glyphs (`Resources/BaseMap/`, a folder in the app), and the
+/// style JSON written for MapLibre to load, once a launch for each look.
+@MainActor
+enum BaseMapFiles {
+    /// The app's base map folder, `nil` if it has none.
+    static let folder = Bundle.main.url(forResource: "BaseMap", withExtension: nil)
+
+    /// Taiwan's tiles, `nil` if the app has none.
+    static let tiles: URL? = folder.map { $0.appendingPathComponent("taiwan.pmtiles") }
+        .flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+
+    /// The glyphs' address, MapLibre's `{fontstack}` and `{range}` in it:
+    /// the bundled ones, else OpenFreeMap's (the same files).
+    static let glyphs: String = {
+        if let fonts = folder?.appendingPathComponent("fonts", isDirectory: true),
+           FileManager.default.fileExists(atPath: fonts.path) {
+            var address = fonts.absoluteString
+            while address.hasSuffix("/") { address.removeLast() }
+            return address + "/{fontstack}/{range}.pbf"
+        }
+        return "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
+    }()
+
+    private static var written: [String: String] = [:]
+
+    /// The address of the style file for Taiwan's tiles or OpenFreeMap's,
+    /// light or dark, writing it the first time; `nil` if it cannot be
+    /// written.
+    static func styleAddress(taiwan: Bool, dark: Bool) -> String? {
+        let name = "BaseMapStyle-\(taiwan ? "taiwan" : "world")-\(dark ? "dark" : "light").json"
+        if let address = written[name] { return address }
+        let source: BaseMapStyle.Tiles = if taiwan, let tiles { .bundled(pmtiles: tiles.absoluteString) } else { .openFreeMap }
+        guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
+              let data = try? BaseMapStyle.json(tiles: source, dark: dark, glyphs: glyphs)
+        else { return nil }
+        let file = caches.appendingPathComponent(name)
+        guard (try? data.write(to: file, options: .atomic)) != nil else { return nil }
+        written[name] = file.absoluteString
+        return file.absoluteString
     }
 }
 

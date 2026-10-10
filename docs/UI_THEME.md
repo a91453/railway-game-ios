@@ -102,6 +102,24 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 圖示的淺色軌道 `#12A08F` 對地面只有 2.81:1，不到圖形的 3:1，所以淺色模式壓暗到 `#10917F`。路線用 `Palette.lineColor`（路線面板的顏色）。
 
+## OSM 底圖（決策 151）
+
+實景地圖的 OpenStreetMap 底圖用遊戲自己的樣式（`Sources/GamePresentation/BaseMapStyle.swift` 的 `Colors`）：地面和一般地圖相同，其他是同一個色相、很淡的色塊，讓軌道、車站與城市浮在上面（和 Positron 一樣，底圖的道路、水不要求 3:1，它們是背景）。文字照 4.5:1。
+
+| 名稱 | Light | Dark | 用途 | 對比 Light／Dark |
+| --- | --- | --- | --- | --- |
+| `land` | `#ECEEF6` | `#262C57` | 地面（= `Palette.land`） | — |
+| `water` | `#C3CEEA` | `#1A1F45` | 海、湖、河 | 對地面 1.36／1.19 |
+| `wood`／`grass`／`park` | `#D9E7D3`／`#E2EDDB`／`#D2E8C4` | `#2B4458`／`#2D3F60`／`#2F4D52` | 森林、草地、公園 | — |
+| `sand`／`wetland` | `#F1EBD8`／`#D6E0EA` | `#3A3B5C`／`#293360` | 沙灘、濕地 | — |
+| `road`／`roadMajor`、`casing` | `#FFFFFF`、`#CDD1E4` | `#363D72`／`#424A84`，`#1E2348` | 道路與外框 | — |
+| `motorway`、`motorwayCasing` | `#FFE4B0`、`#E2B866` | `#6E6475`、`#1E2348` | 國道與快速道路 | — |
+| `boundary` | `#262C57` 35%／18% | `#ECEEF6` 35%／18% | 縣市界、鄉鎮市區界（虛線） | — |
+| `text` | `#262C57` | `#ECEEF6` | 城市、鄉鎮、區名 | 11.47／11.47 |
+| `textMinor` | `#5B6189` | `#B4B9D9` | 村里、聚落、路名 | 5.16／6.89（對地面） |
+| `waterLabel` | `#344C8A` | `#93A7DB` | 河名、島名 | 5.24／6.63（對水） |
+| `halo` | `#ECEEF6` | `#262C57` | 文字的外框（= 地面） | — |
+
 ## 地圖圖示（決策 121）
 
 2026-10-09 作者決定：地圖上的東西改用自己畫、和 App 圖示同一個畫風的圖示（`Assets.xcassets` 的 `MapGlyph*`，程式用 `MapGlyph`），取代 SF Symbols。介面的按鈕照舊用 SF Symbols。

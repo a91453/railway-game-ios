@@ -51,6 +51,11 @@ public enum DataSourceCredits {
     static let openFreeMapURL = "https://openfreemap.org"
     static let openMapTilesURL = "https://openmaptiles.org"
     static let mapLibreURL = "https://github.com/maplibre/maplibre-native"
+    static let openMapTilesSchemaURL = "https://openmaptiles.org/schema/"
+    static let notoSansURL = "https://notofonts.github.io"
+    /// Noto Sans's licence, as the app bundles it (`Resources/Licenses/`).
+    static let notoSansLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/NotoSans-OFL.txt"
+    static let baseMapToolURL = "https://github.com/a91453/railway-game-ios/tree/main/tools/basemap"
     /// MapLibre Native's licence and its third-party notices, as the app
     /// bundles them (`Resources/Licenses/`).
     static let mapLibreLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"
@@ -65,6 +70,13 @@ public enum DataSourceCredits {
     /// OpenStreetMap's (decision 97): the wording OpenFreeMap asks for.
     public static func openStreetMapBaseMap(in language: DisplayLanguage) -> String {
         language.text("OpenFreeMap © OpenMapTiles Data from OpenStreetMap", "OpenFreeMap © OpenMapTiles，資料來自 OpenStreetMap")
+    }
+
+    /// The short credit on a real-world map in Taiwan, whose base map is
+    /// the one the app bundles (decision 151): OpenStreetMap's data, in
+    /// tiles after the OpenMapTiles schema.
+    public static func bundledBaseMap(in language: DisplayLanguage) -> String {
+        language.text("© OpenMapTiles © OpenStreetMap contributors", "© OpenMapTiles © OpenStreetMap 貢獻者")
     }
 
     /// Every source, by the part of the game that uses it. The same wording
@@ -216,6 +228,27 @@ public enum DataSourceCredits {
                         ),
                         links: []
                     ),
+                    // Decision 151: Taiwan's base map, the app's own tiles
+                    // of OpenStreetMap and their glyphs.
+                    DataSourceCredit(
+                        id: "taiwanBaseMap",
+                        title: language.text("Taiwan’s OpenStreetMap base map", "台灣的 OpenStreetMap 底圖"),
+                        detail: language.text(
+                            "The OpenStreetMap base map of real-world maps in Taiwan (the map style menu’s OSM), which needs no network: the game’s own vector tiles of OpenStreetMap’s sea, rivers, woods, parks, roads, boundaries and place names, made from the same extract (osmtoday.com) as the real-world maps’ water, zones and places, in tiles after the OpenMapTiles schema; its labels in Noto Sans.",
+                            "台灣的實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路：遊戲自己的向量圖磚，畫 OpenStreetMap 的海、河川、森林、公園、道路、行政界與地名，和實景地圖的水域、分區、地點來自同一份整包檔（osmtoday.com），圖層照 OpenMapTiles 的格式；文字用 Noto Sans。"
+                        ),
+                        notice: language.text(
+                            "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Noto Sans is © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權在遊戲的公開 repo 提供。圖層照 OpenMapTiles 的格式（CC BY 4.0）。Noto Sans © The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
+                            DataSourceCredit.Link(title: language.text("OpenMapTiles schema", "OpenMapTiles 格式"), url: openMapTilesSchemaURL),
+                            DataSourceCredit.Link(title: language.text("The tiles and their tool", "圖磚與工具"), url: baseMapToolURL),
+                            DataSourceCredit.Link(title: "Noto Sans", url: notoSansURL),
+                            DataSourceCredit.Link(title: language.text("Noto Sans licence", "Noto Sans 授權條款"), url: notoSansLicenseURL),
+                        ]
+                    ),
                     // Decision 97: the OpenStreetMap base map, after `Ci/`'s
                     // credit for it ("OpenFreeMap © OpenMapTiles Data from
                     // OpenStreetMap").
@@ -223,8 +256,8 @@ public enum DataSourceCredits {
                         id: "openFreeMap",
                         title: "OpenFreeMap",
                         detail: language.text(
-                            "The OpenStreetMap base map of real-world maps (the map style menu’s OSM): OpenFreeMap’s vector tiles in its Positron and Dark styles.",
-                            "實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」）：OpenFreeMap 的向量圖磚與它的 Positron、Dark 樣式。"
+                            "The OpenStreetMap base map of real-world maps outside Taiwan (the map style menu’s OSM): OpenFreeMap’s vector tiles, in the game’s own style.",
+                            "台灣以外的實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」）：OpenFreeMap 的向量圖磚，用遊戲自己的樣式。"
                         ),
                         notice: language.text(
                             "OpenFreeMap © OpenMapTiles Data from OpenStreetMap. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0.",

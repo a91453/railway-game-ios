@@ -326,7 +326,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "openFreeMap", "mapLibre", "copernicusDEM"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -350,12 +350,22 @@ final class RealRailwaysTests: XCTestCase {
                 XCTAssertTrue(overture.notice.contains(part), part)
             }
             XCTAssertTrue(overture.links.contains { $0.url == "https://doi.org/10.5281/zenodo.8174931" })
+            // Decision 151: Taiwan's own tiles, the OpenMapTiles schema they
+            // follow, and Noto Sans's licence.
+            let baseMap = try XCTUnwrap(credits.first { $0.id == "taiwanBaseMap" })
+            for part in ["© OpenMapTiles", "© OpenStreetMap", "ODbL", "CC BY 4.0", "SIL Open Font License 1.1"] {
+                XCTAssertTrue(baseMap.notice.contains(part), part)
+            }
+            XCTAssertTrue(baseMap.links.contains { $0.url.hasSuffix("Resources/Licenses/NotoSans-OFL.txt") })
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
         // Decision 97: the OpenStreetMap base map's credit, in OpenFreeMap's
         // words.
         XCTAssertEqual(DataSourceCredits.openStreetMapBaseMap(in: .english), "OpenFreeMap © OpenMapTiles Data from OpenStreetMap")
+        // Decision 151: the bundled tiles' credit.
+        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .english), "© OpenMapTiles © OpenStreetMap contributors")
+        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .traditionalChinese), "© OpenMapTiles © OpenStreetMap 貢獻者")
         // MapLibre Native's licence and third-party notices come with the
         // app, as its BSD 2-Clause licence asks of a binary.
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

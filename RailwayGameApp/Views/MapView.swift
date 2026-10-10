@@ -445,6 +445,7 @@ struct MapView: View {
                                 realWorld: realWorld,
                                 camera: projection,
                                 railways: session.railways,
+                                water: session.water,
                                 trackStyle: trackStyle,
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
