@@ -4240,6 +4240,23 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**：私有參考 repo 的 `Railway/site_archive_clean/index.html` 是即時資料的顯示，`catchup` 只是列車畫面追上官方位置的速度上限，沒有可以移植的快轉；OpenTTD、Simutrans 的快轉是把固定 tick 跑得更快，沒有事件跳躍。這些捷徑是本專案自己的。
 
+**補充：整點前後跟車的慢 tick**（2026-10-10，號碼依工作登記 #231：沿用決策 138，不另取號；存檔版本、golden schema 都不動）。上面「效果」留下的下一步。用 callgrind 量 release 建置的第 96 個 tick 之後那一個（.fast 下第 0 天 16:00 起的 10 分鐘；從 16:00 的存檔讀入後量，所以另含一次約 10 億指令的乘客計畫重建）：改前 83 億指令，48% 花在 `Set` 的插入與雜湊，熱點是 `authorityLeft`（含子呼叫 25%）、`routeEnvelope`（21%）、`authorityEnvelopes`（16%）、`blockedTrack`（14%）。跟車的列車每一步只走一秒，每一步這些都重算好幾次；保留（`Train.reservation`）長達數百個資源，每次問都整個建成集合。改法如下，**每一項都不改任何結果**：
+
+1. **放行範圍逐段問**：`AuthorityEnvelopes` 原本為每一段存「在它之前的全部軌道」的集合（段數平方次的複製），二分搜尋的每一次試探又合出整個範圍的集合。現在只存底（列車站著的軌道與車身碰到的道岔）與每段整段的軌道（`pieces`，陣列）。二分搜尋改由 `longestAuthority(_:from:clear:)` 做：「保留握有」與「不碰到被擋的軌道」對聯集都是逐部分成立（`fouls` 是「有一個資源相同或相犯」），所以先算出開頭連續幾段整段成立，每次試探只再檢查終點那一段的一部分。上下界與步驟和原本的迴圈相同，答案相同。上面第 6 點撤回的作法是查詢時把各段合成集合；這裡從不合成。
+2. **保留的查詢**：遊戲一直依資源順序存保留，`ReservedTrack` 以二分搜尋問「有沒有保留這個資源」；順序不對（手寫的存檔）才建集合，答案相同。
+3. **被擋的軌道逐個資源問**：`canExtendAnyAuthority` 與 `extendAuthorities` 先把每列車持有的（`HeldTrack`）與跟車列車還在等的軌道（claim）各算一次（`TrackHolders`），問一個資源是否被擋時逐列車問（`BlockedTrack`），不把別的列車的保留合成一個集合。`extendAuthorities` 有列車的保留改變後就重算。跟車列車的整條路線範圍由它的 `pieces` 合出（`routeResources`），和 `routeEnvelope(of:)` 是同一個集合。
+4. **試探的移動沿用**：`secondsUntilARouteFrees` 試一個步長時複製世界把列車移過去；這一步的步長若正是試過的（幾乎都是 `frees(after: 1)` 的一秒），直接用試探移好的列車（`moves`），不再移一次。試探之後到移動之前沒有東西改列車。
+5. **雜湊**：`TrackSpan`、`TrackResource` 把欄位混成一個整數只雜湊一次（原本 case、邊、起點、終點各一次）。相等不變，理由同第 3 點。
+6. **小處**：`held`、`routeEnvelope` 直接讀車身各段的資源（不經 `occupied` 的集合加排序，集合相同）；`pathAhead` 用 `networkEntry(after:into:)` 找下一段，不為每個節點建出所有出口的陣列（同一條邊、同一個節點，結果相同）。
+
+試過沒有效果而撤回：`resources(covering:)` 以二分搜尋找邊上的 span（每條邊的 span 不多）。
+
+**效果**（同一台 Linux 雲端容器、release，實景示範每 tick `advance(ticks: 1)`，改前改後依序跑、不同時跑）：第 96 個 tick 之後那一個 83 → 39 億指令（其中約 10 億是讀檔後的乘客計畫）。6000× 2 天：平均 156 → 121 ms、p95 592 → 333 ms、最慢 1.39 → 0.67 s（16:00 那個 tick 1.09 → 0.53 s）；600× 1 天：平均 35 → 31 ms、p95 85 → 72 ms、最慢 353 → 180 ms。中位數幾乎不變（113 → 110 ms）：一般的 tick 花在排定交會計畫與乘客上，不在跟車。最慢的 tick 仍在整點前後，剩下的是每一步的試探移動與 `releasePassedTrack` 對整條路線範圍建集合。
+
+**驗證**：同上：改前（`main` 5110684）改後各跑 6000× 2 天與 600× 1 天，每 1/8 段把 `SavedGame` 的 JSON（排序鍵）做 SHA-256，16 個檢查點全部逐位元相同（改前跑兩次也相同）；golden、SaveFixtures、ReplayFixtures 一個都不改。
+
+**參考**：私有參考 repo 的 `Railway/site_archive_clean/index.html` 的跟車是同一條線上一維的間距（`BLOCK_GAP_KM`，已是 `followingGap`），沒有以資源集合表示的保留可以移植；`Simulator/reference_snapshot` 的模擬器沒有閉塞邏輯。OpenTTD 的路徑保留（PBS）把保留記在地圖格上（GPL-2.0，只看想法、沒有複製）；本專案的保留是列車上依序存放的資源列表，二分搜尋與逐段檢查是本專案自己的。
+
 ### 139. 城市的住商工需求（RCI）
 
 2026-10-10，作者排的第 3 項（城市項目：成長動畫、住商工的需求閥）的需求閥。號碼依工作登記 #231：存檔版本 32、決策 139、golden schema 53（138 是實景示範 6000× 的 session）。成長動畫是畫面的事，另開 PR。
