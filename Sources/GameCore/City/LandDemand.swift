@@ -488,7 +488,7 @@ extension GameWorld {
             let jobLimit = capacity?.jobs ?? LandDemand.grownJobs
             let newResidents = cell.residents >= residentLimit ? cell.residents : min(residentLimit, cell.residents + addedResidents[offset])
             let newJobs = cell.jobs >= jobLimit ? cell.jobs : min(jobLimit, cell.jobs + addedJobs[offset])
-            land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use, residents: newResidents, jobs: newJobs)
+            land.cells[index] = cell.with(residents: newResidents, jobs: newJobs)
         }
     }
 
@@ -663,7 +663,7 @@ extension GameWorld {
             let limits = growthLimits(of: cell)
             let newResidents = cell.residents >= limits.residents ? cell.residents : min(limits.residents, cell.residents + addedResidents[offset])
             let newJobs = cell.jobs >= limits.jobs ? cell.jobs : min(limits.jobs, cell.jobs + addedJobs[offset])
-            land.cells[index] = LandCell(row: cell.row, column: cell.column, use: cell.use, residents: newResidents, jobs: newJobs)
+            land.cells[index] = cell.with(residents: newResidents, jobs: newJobs)
         }
     }
 

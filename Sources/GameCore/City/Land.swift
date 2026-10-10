@@ -65,13 +65,24 @@ public struct LandCell: Hashable, Sendable {
     /// ``Land/maximumPerCell`` each, not both 0; both 0 in a park.
     public let residents: Int64
     public let jobs: Int64
+    /// How much of the cell real buildings cover, in whole percent, 0 to
+    /// 100 (decision 147): a real-world map's, from Overture Maps'
+    /// footprints; `nil` where it is not known (a blank map, a cell the
+    /// city grew, a save from before it).
+    public let coverage: Int64?
 
-    public init(row: Int, column: Int, use: LandUse, residents: Int64, jobs: Int64) {
+    public init(row: Int, column: Int, use: LandUse, residents: Int64, jobs: Int64, coverage: Int64? = nil) {
         self.row = row
         self.column = column
         self.use = use
         self.residents = residents
         self.jobs = jobs
+        self.coverage = coverage
+    }
+
+    /// This cell with `residents` and `jobs`, and `use`, its coverage kept.
+    func with(use: LandUse? = nil, residents: Int64, jobs: Int64) -> LandCell {
+        LandCell(row: row, column: column, use: use ?? self.use, residents: residents, jobs: jobs, coverage: coverage)
     }
 
     /// The world point at its middle.
@@ -86,6 +97,7 @@ public struct LandCell: Hashable, Sendable {
         row >= 0 && column >= 0
             && (0...Land.maximumPerCell).contains(residents) && (0...Land.maximumPerCell).contains(jobs)
             && (use == .park ? residents + jobs == 0 : residents + jobs > 0)
+            && (coverage.map { (0...100).contains($0) } ?? true)
     }
 }
 
@@ -428,13 +440,16 @@ extension Land: Codable {
     /// "column", "use", "residents": [n, …], "jobs": [n, …]}`, the first
     /// cell's column, one count a cell, `"jobs"` left out when they are all
     /// 0. A real-world map lists tens of thousands of cells, and a run
-    /// writes each as one or two numbers.
+    /// writes each as one or two numbers. Since save version 35 (decision
+    /// 147) a run of cells whose coverage is known has `"coverage": [n,
+    /// …]`, one a cell; a run's cells all have it or none does.
     private struct Run: Codable {
         var row: Int
         var column: Int
         var use: LandUse
         var residents: [Int64]
         var jobs: [Int64]?
+        var coverage: [Int64]?
     }
 
     /// Decodes a list of runs. The cells must be in order, each once and in
@@ -444,12 +459,14 @@ extension Land: Codable {
         var cells: [LandCell] = []
         for run in try container.decode([Run].self) {
             guard !run.residents.isEmpty, run.jobs.map({ $0.count == run.residents.count }) ?? true,
+                  run.coverage.map({ $0.count == run.residents.count }) ?? true,
                   run.column >= 0, run.residents.count <= Int.max - run.column
             else {
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "A run of land has no cells, or its counts do not match.")
             }
             for (offset, residents) in run.residents.enumerated() {
-                cells.append(LandCell(row: run.row, column: run.column + offset, use: run.use, residents: residents, jobs: run.jobs?[offset] ?? 0))
+                cells.append(LandCell(row: run.row, column: run.column + offset, use: run.use, residents: residents, jobs: run.jobs?[offset] ?? 0,
+                                      coverage: run.coverage?[offset]))
             }
         }
         self.cells = cells
@@ -463,15 +480,20 @@ extension Land: Codable {
     public func encode(to encoder: any Encoder) throws {
         var runs: [Run] = []
         for cell in cells {
-            if var last = runs.last, last.row == cell.row, last.use == cell.use, last.column + last.residents.count == cell.column {
+            if var last = runs.last, last.row == cell.row, last.use == cell.use, last.column + last.residents.count == cell.column,
+               (last.coverage == nil) == (cell.coverage == nil) {
                 last.residents.append(cell.residents)
+                if let coverage = cell.coverage {
+                    last.coverage?.append(coverage)
+                }
                 last.jobs?.append(cell.jobs)
                 if last.jobs == nil, cell.jobs != 0 {
                     last.jobs = Array(repeating: 0, count: last.residents.count - 1) + [cell.jobs]
                 }
                 runs[runs.count - 1] = last
             } else {
-                runs.append(Run(row: cell.row, column: cell.column, use: cell.use, residents: [cell.residents], jobs: cell.jobs == 0 ? nil : [cell.jobs]))
+                runs.append(Run(row: cell.row, column: cell.column, use: cell.use, residents: [cell.residents], jobs: cell.jobs == 0 ? nil : [cell.jobs],
+                                coverage: cell.coverage.map { [$0] }))
             }
         }
         var container = encoder.singleValueContainer()

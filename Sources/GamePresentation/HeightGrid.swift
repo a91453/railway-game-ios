@@ -35,6 +35,12 @@ public struct HeightGrid: Sendable {
     /// wrong magic or version, a grid of no cells, or offsets out of order
     /// or past its end. A row is checked as it is read.
     public init(data: Data) throws {
+        try self.init(data: data, magic: "TWHG")
+    }
+
+    /// Reads a grid of whole numbers in the heights file's form under
+    /// `magic` (decision 147: ``CoverageGrid``'s `TWCV`).
+    init(data: Data, magic: String) throws {
         func corrupt(_ why: String) -> DecodingError {
             DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: why))
         }
@@ -43,8 +49,8 @@ public struct HeightGrid: Sendable {
             (0..<size).reduce(UInt64(0)) { $0 | UInt64(bytes[offset + $1]) << (8 * $1) }
         }
         let header = 4 + 2 + 2 + 8 * 3 + 4 * 2
-        guard bytes.count >= header, bytes.prefix(4).elementsEqual("TWHG".utf8), integer(at: 4, size: 2) == 1 else {
-            throw corrupt("The heights file starts with TWHG and version 1.")
+        guard bytes.count >= header, bytes.prefix(4).elementsEqual(magic.utf8), integer(at: 4, size: 2) == 1 else {
+            throw corrupt("The file starts with \(magic) and version 1.")
         }
         north = Double(bitPattern: integer(at: 8, size: 8))
         west = Double(bitPattern: integer(at: 16, size: 8))

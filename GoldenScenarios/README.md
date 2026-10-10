@@ -28,6 +28,18 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 新增 `single-track-scheduled-meet.json` 與 `scheduled-overtake.json`（schema 31，決策 59）：計畫、實際誤點、待避月台／通過正線與精確解除秒；值先由 GameCore 取得，再由 ReferenceWorldGoldenTests 的獨立模型確認。31 新增 `{"observe":{"type":"scheduledWaits"},"expect":{"scheduledWaits":[...]}}`；每一列寫 train、station、stop、cycle、other、otherStop、otherCycle、kind、departureSeconds、clearanceSeconds。讀取端仍接受 schema 30，所有既有 JSON 原字節保留。
 
+## 真實建蔽率（`real-coverage.json`）
+
+12 步、不推進時間的情境（schema 56，決策 147）。32 × 24 格、經營模式、城市建物、依密度的方塊與依面積收購開啟。第 5 列第 3、5、6 行都是 48 位居民、8 個就業的 D1 住宅，地價每 m² 2,000。
+
+- (5, 5) 的建蔽率是 0（停車場），收購價 0。
+- (5, 6) 是 50%：城市建物站在 2,048 m² 上，(2,048 × 2 層 × 4,000 + 2,048 × 2,000) × 120% = 24,576,000。
+- (5, 3) 不知道，照舊是 15,705,600。
+
+辦公樓蓋在 (5, 5)、(5, 6) 的交界，各八分之一：付 0 與 3,072,000，土地 2,048,000，土地費 5,120,000；各搬走 6 位居民、1 個就業，兩格都保留建蔽率。住宅整棟在 (5, 3) 裡，付 15,705,600 / 16 = 981,600。餘額 366,762,400。
+
+每個值都是手算的。schema 56 起，`setLand` 的格與 `landCell` 觀察可以有 `"coverage"`（整數百分比，0 到 100，不知道時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 依面積收購（`area-buyout.json`）
 
 12 步、不推進時間的情境（schema 55，決策 146）。32 × 24 格、經營模式、城市建物與依密度的方塊開啟；第 5 列第 5、6 行都是 48 位居民、8 個就業的住宅（D1，地價每 m² 2,000），整格收購價 (12,288,000 + 400 × 2,000) × 120% = 15,705,600。`setAreaBuyOut` 開啟後：

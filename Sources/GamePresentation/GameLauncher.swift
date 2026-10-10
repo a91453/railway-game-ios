@@ -49,6 +49,9 @@ public final class GameLauncher {
     /// Taiwan's ground height (decision 124), from the app's heights file;
     /// `nil` until it is read, or without it.
     public var heights: HeightGrid?
+    /// How much of the ground real buildings cover (decision 147), from
+    /// the app's coverage file; `nil` until it is read, or without it.
+    public var coverage: CoverageGrid?
 
     /// Taiwan's real railways (stations and lines) for real-world maps, handed
     /// to every game it starts (``GameSession/railways``).
@@ -189,13 +192,15 @@ public final class GameLauncher {
     /// (Phase 6a–6b, ``LandImport``), off its water (decision 105), or
     /// `nil` without the app's population or where no one in it lives or
     /// works.
+    /// Since decision 147 each cell has the coverage of the app's
+    /// coverage file, when it has been read.
     func land(at anchor: GeoAnchor) -> [LandCell]? {
-        population.flatMap {
-            LandImport.cells(
-                population: $0, places: places, water: water,
-                frame: RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds), bounds: GameWorld.newGameBounds
-            )
+        let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
+        let cells = population.flatMap {
+            LandImport.cells(population: $0, places: places, water: water, frame: frame, bounds: GameWorld.newGameBounds)
         }
+        guard let cells, let coverage else { return cells }
+        return coverage.covering(cells, frame: frame)
     }
 
     /// The water of a new game's map with its middle at `anchor` (decision
@@ -276,6 +281,7 @@ public final class GameLauncher {
         started.places = places
         started.water = water
         started.heights = heights
+        started.coverage = coverage
         started.railways = railways
         // Decision 88: land not read round a station built while the app
         // had no population.
@@ -316,6 +322,7 @@ public final class GameLauncher {
         places = data.places
         water = data.water
         heights = data.heights
+        coverage = data.coverage
         railways = data.railways
         realWorldIssues = data.issues
         if let session {
@@ -323,6 +330,7 @@ public final class GameLauncher {
             session.places = places
             session.water = water
             session.heights = heights
+            session.coverage = coverage
             session.railways = railways
         }
         isLoadingRealWorldData = false
@@ -424,25 +432,29 @@ public struct RealWorldData: Sendable {
     public let water: WaterGrid?
     /// Taiwan's ground height (decision 124).
     public let heights: HeightGrid?
+    /// How much of the ground real buildings cover (decision 147).
+    public let coverage: CoverageGrid?
     public let railways: RealRailways?
     /// The files that could not be read, and why: the grids' and the
     /// railways' (``RealRailways/Loaded/issues``).
     public let issues: [RealDataLoadIssue]
 
     public init(
-        population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, heights: HeightGrid? = nil, railways: RealRailways?,
-        issues: [RealDataLoadIssue]
+        population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, heights: HeightGrid? = nil, coverage: CoverageGrid? = nil,
+        railways: RealRailways?, issues: [RealDataLoadIssue]
     ) {
         self.population = population
         self.places = places
         self.water = water
         self.heights = heights
+        self.coverage = coverage
         self.railways = railways
         self.issues = issues
     }
 
     /// Reads `taiwan_population.json`, `taiwan_places.json`,
-    /// `taiwan_water.json`, `taiwan_heights.dat` and the railways' files
+    /// `taiwan_water.json`, `taiwan_heights.dat`, `taiwan_coverage.dat`
+    /// (decision 147) and the railways' files
     /// (``RealRailways/load(file:)``) through `file` (a name and extension
     /// to its contents). About 5.3 MB of JSON is decoded, and 12 MB of heights
     /// read (their rows decoded only when asked): call it off the
@@ -461,9 +473,11 @@ public struct RealWorldData: Sendable {
         let places = grid("taiwan_places", PlaceGrid.init(data:))
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
+        let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))
         let railways = RealRailways.load(file: file)
         return RealWorldData(
-            population: population, places: places, water: water, heights: heights, railways: railways.railways, issues: issues + railways.issues
+            population: population, places: places, water: water, heights: heights, coverage: coverage, railways: railways.railways,
+            issues: issues + railways.issues
         )
     }
 }

@@ -275,6 +275,11 @@ public final class GameSession {
         didSet { networkPreviewMemo = nil }
     }
 
+    /// How much of the ground real buildings cover (decision 147), read in
+    /// with the land of a map whose land is read as it is needed; `nil`
+    /// without the app's file.
+    @ObservationIgnored public var coverage: CoverageGrid?
+
     /// Taiwan's real railways (stations and lines) for real-world maps.
     /// Handed to each session by the launcher; never saved. Once they are
     /// there, a station name still as first suggested is suggested again
@@ -1574,14 +1579,14 @@ public final class GameSession {
     /// Undo takes both back; a game that starts does it for the stations
     /// built while the app had no population. Not an edit: nothing to undo.
     public func readLandRoundStations() {
-        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water)
+        Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
     }
 
     /// Reads in the land within `reach` of `point` (decision 95: under a
     /// building's site), as ``readLandRoundStations()`` does round
     /// stations. Not an edit.
     func readLand(within reach: Int64, of point: PlanPoint) {
-        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places, water: water)
+        Self.readLand(within: reach, of: [point], in: &world, population: population, places: places, water: water, coverage: coverage)
     }
 
     @discardableResult
@@ -1591,7 +1596,7 @@ public final class GameSession {
         var edited = world
         let result = try command(&edited)
         // Decision 88: a new station's land comes with it.
-        Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water)
+        Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water, coverage: coverage)
         guard edited != world else { return result }
         // Decision 100: the new line's route follows the track.
         let trackChanged = lineDraft.count >= 2 && edited.network != world.network

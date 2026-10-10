@@ -372,7 +372,7 @@ extension GameSession {
             try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
             // Decision 88: the land round a new station is read in after the
             // edit; read it now, so the opening message counts who it reaches.
-            Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water)
+            Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water, coverage: coverage)
             world = draft
             built = chosen == nil ? station.id : nil
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)

@@ -276,15 +276,28 @@ extension GameWorld {
     /// ``PlacedBuildingRules/floorCost`` (a park has none) and its square's
     /// land at the cell's land value. Its floor is its density's storeys of
     /// ``Building/floorArea``: the density of the building on it, or with
-    /// the city's buildings off, the one the city would put up.
+    /// the city's buildings off, the one the city would put up. Decision
+    /// 147: a cell whose real ``LandCell/coverage`` is known stands on that
+    /// much of its 4,096 m² instead, a storey of it each of its density's
+    /// storeys, and its land is that ground: a cell real buildings leave
+    /// empty (a car park, a field) costs nothing to buy out.
     public func buyOutPrice(of cell: LandCell) -> Money {
         guard accounts.mode == .management else { return .zero }
         let density = buildings.building(row: cell.row, column: cell.column)?.density
             ?? Building.fitting(cell, id: BuildingID(rawValue: 1)).density
-        let floor = cell.use == .park ? 0 : Building.floorArea * density.floors
-        let side = cityBuildingSide(row: cell.row, column: cell.column) / WorldCoordinate.unitsPerMetre
+        let ground: Int64
+        let storey: Int64
+        if let coverage = cell.coverage {
+            ground = Land.cellArea / (WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre) * coverage / 100
+            storey = ground
+        } else {
+            let side = cityBuildingSide(row: cell.row, column: cell.column) / WorldCoordinate.unitsPerMetre
+            ground = side * side
+            storey = Building.floorArea
+        }
+        let floor = cell.use == .park ? 0 : storey * density.floors
         let value = landValue(row: cell.row, column: cell.column)?.value ?? 0
-        return Money((floor * PlacedBuildingRules.floorCost.amount + side * side * value) * PlacedBuildingRules.buyOutPercent / 100)
+        return Money((floor * PlacedBuildingRules.floorCost.amount + ground * value) * PlacedBuildingRules.buyOutPercent / 100)
     }
 
     /// What buying out `covered` square world units of `cell` costs a

@@ -179,8 +179,9 @@ def varint(value, out):
     out.append(value)
 
 
-def encode_heights(heights, data):
-    """The heights file's bytes (see the module's docstring)."""
+def encode_heights(heights, data, magic=b'TWHG'):
+    """The heights file's bytes (see the module's docstring); another grid
+    of whole numbers in the same form under another `magic`."""
     rows, columns = heights.shape
     body = bytearray()
     offsets = [0]
@@ -198,7 +199,7 @@ def encode_heights(heights, data):
                 for d in differences[start:end].tolist():
                     varint((d << 1) ^ (d >> 31), body)
         offsets.append(len(body))
-    header = b'TWHG' + struct.pack('<HHdddII', 1, 0, data['north'], data['west'], data['cellDegrees'], rows, columns)
+    header = magic + struct.pack('<HHdddII', 1, 0, data['north'], data['west'], data['cellDegrees'], rows, columns)
     return header + struct.pack(f'<{len(offsets)}I', *offsets) + bytes(body)
 
 
