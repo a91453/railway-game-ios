@@ -3,7 +3,7 @@
 > **文件狀態**：完整規格與移植計畫書（唯讀研究，無任何程式碼修改）  
 > **基準版本**：
 > - `railway-game-ios` `main` 分支（Commit: [`3fd1e9d`](https://github.com/a91453/railway-game-ios/commit/3fd1e9d25c855948d663a5e2bcfa294617b33e13)）
-> - 私有參考資料夾：`railway-reference-private/`（`Railway/site_archive_clean`、`Railway/taipei_gta_reference`、`Railway/railway_game_reference_clean`、`Ci/reference_snapshot`）  
+> - 私有參考資料夾：`railway-reference-private/`（`Railway/site_archive_clean`、`Railway/city_world_reference`、`Railway/railway_game_reference_clean`、`Ci/reference_snapshot`）  
 > **排除邊界**：全面排除 V 系列（V1–V4e 及後續 Dispatcher / 待避 / 死結 / 授權標示），標記為 `DEFER_TO_V`、`DEFER_DATA_MODEL`、`DEFER_DATA_PIPELINE`。  
 > **PR #131 / V4d 協作邊界**：PR #131 正在修改 V4d 的 GameCore、測試、golden 與 V 文件；本計畫不修改其 changed-file set，不重定義 V4d 行為。V4d 相關 UI 維持獨立後續工作。
 
