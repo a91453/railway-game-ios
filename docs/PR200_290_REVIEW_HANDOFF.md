@@ -243,5 +243,5 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 - **VERIFIED（本機 Linux）**：
   - `swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告。
   - 通過的類別：`StationSitingTests`、`NetworkBuildingSessionTests`、`GameLoopTests`、`BuildingSessionTests`、`WholeTaiwanTests`、`UndoSessionTests`、`BuildPauseSessionTests`、`ZoningSessionTests`、`CityDemandTests`、`LandBlocksTests`、`CityFootprintsTests`、`BuildingSale*`、`PlacedBuilding*`、`NewGame*`、`SavedGameTests`、`GoldenScenarioTests`。
-  - #311 的交通 campaign 用 12 個額外種子加跑：只有種子數變多造成的次數斷言，沒有任何一個案例不一致。
+  - #311 的交通 campaign 用 12 個額外種子加跑（跑滿兩小時上限被停掉）：`ScheduledOvertakeTrack` 的 Final、Last、Middle 三個類別跑完，只有種子數變多造成的次數斷言，沒有任何一個案例不一致；第四個類別跑到一半，也沒有不一致；`ScheduledTrafficPropertyTests` 與 `ScheduledTrafficSecondHalfPropertyTests` 沒有跑到（CI 的 4 個種子有跑）。
 - **UNVERIFIED LOCALLY**：`MapView.swift` 的畫面行為（要 macOS CI）。
