@@ -130,7 +130,7 @@ GameCore 裡的經營層（Passenger、City、Economy）不得依賴鐵路的物
 - SwiftUI 需要一個可觀察的 reference 擁有者；把這個責任放在 Presentation 層，GameCore 就能維持 value type、`Sendable`、不 import Observation。
 - 每個玩家動作都是 session 方法 → 對應的 `GameWorld` 指令。session 不預先檢查遊戲規則（空格、資金、名稱），由 GameCore 決定並丟出 `GameError`；session 只把結果轉成畫面訊息（`GameError.playerMessage(in:)`，定義在 GamePresentation）。失敗時世界保持不變（GameCore 的原子性保證）。
 - session 另外只保存 UI 暫時狀態：選取的格子、目前工具、下一段鐵軌的方向、車站名稱草稿、選取的列車 ID、放置列車時的朝向、最後一則訊息。現金、時間、速度、地圖、車站、列車的位置與移動都直接從 `world` 讀取，不另存副本（列車見決策 17）。
-- 全部在 main actor 上執行，不需要鎖或 `@unchecked Sendable`。
+- 全部在 main actor 上執行，不需要鎖或 `@unchecked Sendable`。決策 143 起只有 game loop 的 tick 在背景算，算的是世界的副本，算完回到 main actor 才換上（見決策 143）。
 - 放在獨立的 SwiftPM target 而不是 App target，是為了讓 session 與其規則在 Linux 上以 `swift test` 驗證（App target 只能在 macOS CI 編譯）。
 
 ### 12. 宿主 game loop：真實時間 → 整數 tick
@@ -140,7 +140,7 @@ wall clock 只存在於 Presentation 層；GameCore 只收到 `advance(ticks:)`�
 - `GameSession` 的 loop 以 `ContinuousClock` 量測經過時間，交給 `TickAccumulator` 換算成固定間隔（100 ms）的整數 tick，不足一個 tick 的餘數留到下一次，因此 tick 頻率不會隨畫面節奏漂移。`Task.sleep` 只負責節奏，不影響正確性。
 - 速度不改變 tick 頻率：1× 與 2× 都是每 100 ms 一個 tick，由 GameCore 決定每個 tick 執行幾個基本步長（決策 3）。Stage W2a 起速度的名稱就是 100 ms 一個 tick 下真實時間的倍數（`x1` 是真實時間），tick 頻率仍然不變（決策 37）。暫停時丟棄經過的時間，不累積。
 - `advance(ticks:)` 被拒絕（`clockOverflow`，遊戲時間已到上限）時，session 不改變世界，只把錯誤顯示為狀態訊息。
-- 單次最多換算 500 ms（5 個 tick）：主執行緒卡頓或除錯暫停不會變成一次大量補跑。
+- 單次最多換算 500 ms（5 個 tick）：主執行緒卡頓或除錯暫停不會變成一次大量補跑。決策 143 起 loop 的 tick 在主執行緒外一個一個算，算 tick 花的時間也算經過的時間，所以 tick 算得比 100 ms 慢時，遊戲跑得比速度慢，不會越補越多。
 - App 以所有 scene 合併的 `scenePhase` 啟停 loop：只有 `.active` 時執行；離開前景即停止並丟棄殘餘，回到前景不補跑背景時間（prototype 不做離線進度）。loop 由 session 持有且只會有一個，iPad 多視窗也不會重複推進。
 
 ### 13. 可移植邊界與 golden scenarios
@@ -4332,6 +4332,30 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **golden**：新的 `city-footprints.json`（schema 54）：開著時辦公樓擺在 D1 住宅旁邊不收購、收購 D1 只付 20 m 方塊的土地；關掉後同樣的位置碰到 40 m 方塊而收購。既有 fixture 的預期值都沒有改變。存檔 `SaveFixtures/v33-city-footprints.json`。
 
 **限制與之後**：方塊仍在格子正中央，不是真實建物的位置與形狀；格子邊上的街道空隙沒有和實景地圖的真實街道對齊；公園與農地也有方塊（它們的城市建物紀錄是 D1），之後可以讓空地完全不擋。
+
+### 143. 遊戲迴圈在主執行緒外算 tick
+
+2026-10-10，接著決策 138：實景示範開 6000× 時，一個 tick 平均仍要 144 ms、p95 0.55 s、最慢 1.17 s（#311 的量測），`GameSession` 卻在主執行緒上同步算；落後時下一步一次補 5 個 tick（`maximumStepDuration` 500 ms），主執行緒連續被佔住半秒以上，畫面、手勢都停住。號碼依工作登記 #231：決策 143（141 由跟車放行的 session 條件性登記，142 是 #315）；存檔版本、golden schema 都不動。GameCore 不動，golden、存檔、replay 都不變。
+
+作者給的兩個方向是「在主執行緒外算再發布」與「落後時少補幾個 tick、當成遊戲變慢」。只做後者不夠：一個 tick 本身就可能超過一秒，在主執行緒上算就是卡一秒。所以兩個一起做：
+
+1. **在主執行緒外算**（`GameSession.LoopTick`）：loop 的每個 tick 開始時，在 main actor 上記下當下的世界（`GameWorld` 是 `Sendable` 的值型別，記下的是副本，不必複製整份資料）與 `worldRevision`；用 `Task.detached` 在背景算一個 tick（`GameSession.advanced(_:by:listening:)`，和同步的 `advance(realElapsed:)` 用同一個函式）；算完回到 main actor（`finish(_:with:)`）。算的期間 session 的 `world` 照舊是 tick 之前的世界，畫面照讀、指令照樣作用在它上面。
+2. **期間有指令就丟掉這個 tick**：`world` 每次改變 `worldRevision` 就加一（原本就有，給軌道預覽 `networkPreview` 的快取用）。回到 main actor 時 revision 沒變，才把算好的世界換上；變了（建造、復原、改速度、暫停、任何指令），表示這個 tick 是從玩家已經改掉的世界算的，整個丟掉，世界保持指令後的樣子，下一個 tick 從它算。所以：
+   - **只有一份權威的世界**：背景的是計算用的副本，從不被畫面讀，只有在等於「目前的世界往前一個 tick」時才成為 `world`。
+   - **決定性**：換上的世界一定等於「目前的世界」`advance(ticks: 1)` 的結果，和在主執行緒上算完全相同；指令永遠作用在 tick 之間、玩家看到的那一份世界上，和以前一樣。被丟掉的 tick 只是沒有發生（遊戲時間少走一個 tick），不會一半套用。
+   - **復原**：指令照舊把快照放進 `undoHistory`；被丟掉的 tick 沒有讓遊戲時間前進，所以不清空它（決策 82：只有時間前進才清空）。
+   - **暫停**立刻生效：暫停本身是指令，進行中的 tick 被丟掉；暫停時不開始新的 tick。
+   - **停止 loop**（離開前景、換遊戲）：背景的計算無法中途停下，算完時 loop 的 task 已取消，結果不套用。
+3. **一次一個 tick，算完就發布**：loop 每 100 ms 照舊用 `TickAccumulator` 把經過時間換成整數 tick（單步最多 500 ms，5 個），但一個一個算、每個算完就換上，畫面每個 tick 都更新，指令最多等一個 tick 就生效（不是 5 個）。算 tick 的時間也算在經過的時間裡，5 個的上限照舊：tick 算得比 100 ms 慢時，遊戲跑得比速度慢（實際速度就是背景算得多快），不會越積越多，也不會一次補很多。
+4. **音效**：到站的比較（`SoundCue.arrivals`、`trainsArrived`）和 tick 一起在背景算，結果（到站的列車）帶回 main actor，換上世界後才播（`watchedTrainIDs` 讀的是當下的選取）。和以前一樣，換上的那一步有到站就響一次；以前一步最多 5 個 tick，現在一步是一個 tick。
+5. **其他跟著 tick 的事**（`finish`）照舊在 main actor 上、換上世界之後做：清空復原、停止跟隨不在了的列車、收入的提示（決策 117）、年度結算、劇本結束。教學只從世界讀步驟有沒有完成，不受影響。
+6. **同步的 `advance(realElapsed:)` 保留**：它在 main actor 上一次算完（測試用、行為照舊）。它和 loop 用同一個計算與同一個收尾。
+
+**代價**：背景計算期間 session 也握著同一份世界，tick 改到的陣列會各複製一次（copy-on-write）；量測見 PR。玩家連續拖曳滑桿（每一下都是指令）時，6000× 的慢 tick 會一直被丟掉，拖曳期間遊戲時間幾乎不走；放開就恢復。600× 的 tick 平均 31 ms，影響很小。
+
+**參考**：參考庫（`a91453/railway-reference-private` `581db83`）的模擬器（`Simulator/reference_snapshot/` 的 `page-*.js`）以 `requestAnimationFrame` 推進，每格把經過時間限制在 40 ms（和本專案的 500 ms 上限同一個想法：慢就變慢，不補跑）；`Railway/city_world_reference/` 把建物與人物的產生交給 Web Worker，以請求編號對回結果。兩者都是 JavaScript 的畫面或資產，沒有可以移植的模擬迴圈；這裡用的是 Swift 的 `Sendable` 值型別與 task。外部專案：OpenTTD（GPL-2.0，只看做法、沒有複製程式碼）的 video driver 把遊戲迴圈放在另一個執行緒，每個 tick 用 `game_state_mutex` 鎖住遊戲狀態，畫面要讀或改狀態時先拿鎖。本專案不用鎖：背景算的是副本，換上前比對 revision。
+
+**沒有驗證的**：Linux 不能建置 App；實機 iPhone 上的順暢度與 6000× 的實際速度要在 TestFlight 上看。
 
 ## 目前規則摘要
 

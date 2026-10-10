@@ -1,6 +1,6 @@
 import Foundation
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// The sounds the session asks the app to play (``SoundCue``): the station
@@ -178,6 +178,29 @@ final class SoundCueTests: XCTestCase {
             // One sound a step, however many arrivals it holds.
             XCTAssertEqual(heard, stepsWithArrivals)
         }
+    }
+
+    /// Decision 143: the game loop's ticks, worked out off the main actor,
+    /// ring as ticks on the main actor do.
+    @MainActor
+    func testTheLoopsTicksRingAsTicksOnTheMainActorDo() async throws {
+        let world = try makeServiceWorld()
+        let stepped = GameSession(world: world)
+        var heardStepped: [SoundCue] = []
+        stepped.playSound = { heardStepped.append($0) }
+        let looped = GameSession(world: world)
+        var heardLooped: [SoundCue] = []
+        looped.playSound = { heardLooped.append($0) }
+
+        for _ in 0..<10 {
+            stepped.advance(realElapsed: GameSession.tickInterval)
+            let tick = try XCTUnwrap(looped.beginLoopTick())
+            looped.finish(tick, with: await tick.work())
+        }
+
+        XCTAssertEqual(looped.world, stepped.world)
+        XCTAssertEqual(heardStepped, [.arrival(watched: false)])
+        XCTAssertEqual(heardLooped, heardStepped)
     }
 
     func testTheTrainThePlayerIsLookingAtChimesAsWatched() async throws {
