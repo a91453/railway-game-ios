@@ -231,8 +231,10 @@ struct EconomyPanel: View {
         } header: {
             Text("Report")
         } footer: {
-            // Decision 131.
-            Text(verbatim: CompanyAccounts.taxTermsText(in: session.language))
+            // Decision 131: only a managed company's midnights charge the tax.
+            if session.world.accounts.mode == .management {
+                Text(verbatim: CompanyAccounts.taxTermsText(in: session.language))
+            }
         }
     }
 

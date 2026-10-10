@@ -90,11 +90,11 @@ public struct LongSectionChart: Hashable, Sendable {
             return Band(kind: span.kind, outline: rails + grounds.reversed())
         }
         // Water by the pricing lengths it is measured at: each wet middle
-        // stands for its length, half a length either side.
+        // stands for its length, the last one shorter.
         var water: [ClosedRange<Double>] = []
-        let half = ConstructionCosts.trackPricingLength / 2
-        for sample in samples.dropFirst().dropLast() where sample.isWater {
-            let from = Double(max(0, sample.distance - half)) / length, to = Double(min(section.length, sample.distance + half)) / length
+        for (index, sample) in samples.dropFirst().dropLast().enumerated() where sample.isWater {
+            let (start, end) = section.pricingLength(index)
+            let from = Double(start) / length, to = Double(end) / length
             if let last = water.last, last.upperBound >= from {
                 water[water.count - 1] = last.lowerBound...to
             } else {
@@ -122,5 +122,16 @@ extension NetworkCostParts {
         lines += parts.filter { $0.1 != .zero }
         lines.append((language.text("Total", "合計"), total))
         return lines.map { (name: $0.0, cost: $0.1) }
+    }
+}
+
+extension TrackLongSection {
+    /// Where pricing length `index` runs, as GameCore surveys it: 16 m at a
+    /// time from the edge's start, the last one shorter. Its sample is the
+    /// one after the start's.
+    func pricingLength(_ index: Int) -> (start: Int64, end: Int64) {
+        let priced = ConstructionCosts.trackPricingLength
+        let start = Int64(index) * priced
+        return (start, min(length, start + priced))
     }
 }
