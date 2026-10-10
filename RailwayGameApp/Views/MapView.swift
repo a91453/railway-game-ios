@@ -1054,7 +1054,7 @@ private struct MapBaseCanvas: View, Equatable {
     }
 
     var body: some View {
-        let bounds = bounds, drawsLand = drawsLand, skyline = skyline?.skyline, growth = skyline?.growth, layer = layer, camera = camera
+        let bounds = bounds, drawsLand = drawsLand, growth = skyline?.growth, skyline = skyline?.skyline, layer = layer, camera = camera
         // Decision 140: redrawn every frame only while a night's growth
         // plays; otherwise the timeline is paused and the canvas is drawn
         // as before.

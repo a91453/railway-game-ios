@@ -645,7 +645,7 @@ enum MapArt {
                 }
             }
             roofs[lot.use, default: Path()].addPath(top)
-            if let frame, frame.light > 0 { lit.append((roof, frame.light)) }
+            if let frame, frame.light > 0 { lit.append((roof: roof, light: frame.light)) }
             outlines.addRect(whole)
             if rise > 0 {
                 outlines.move(to: CGPoint(x: roof.minX, y: roof.maxY))
