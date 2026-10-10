@@ -79,8 +79,11 @@ final class LineDraftRouteTests: XCTestCase {
         session.tapMap(at: TestLine.centre(1, 0), reach: 512)
         XCTAssertEqual(session.lineDraft, [Self.alpha])
         XCTAssertNil(session.lineDraftRoute)
-        session.tapMap(at: TestLine.centre(1, 0), reach: 512)
+        // A little off the first tap, as a finger lands.
+        let first = TestLine.centre(1, 0)
+        session.tapMap(at: PlanPoint(x: first.x + 40, y: first.y), reach: 512)
         XCTAssertEqual(session.lineDraft, [Self.alpha], "the same station twice in a row is not added")
+        XCTAssertEqual(session.message?.kind, .failure, "and the player is told why")
         session.tapMap(at: TestLine.centre(7, 0), reach: 512)
         XCTAssertEqual(session.lineDraft, [Self.alpha, Self.delta])
         XCTAssertEqual(session.lineDraftRoute, [Self.alpha, Self.beta, Self.gamma, Self.delta])

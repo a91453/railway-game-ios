@@ -13,10 +13,13 @@ from pathlib import Path
 import sys
 source = Path(sys.argv[1])
 text = source.read_text()
-original = "                doneButton\n"
-if text.count(original) != 1:
+# The rail's Done button, called with whatever arguments it takes (#281
+# added the compact layout's).
+import re
+pattern = re.compile(r"^[ \t]*doneButton(\([^)\n]*\))?[ \t]*\n", re.MULTILINE)
+if len(pattern.findall(text)) != 1:
     raise SystemExit("Could not remove exactly one Select (Done) toolbar button")
-source.write_text(text.replace(original, ""))
+source.write_text(pattern.sub("", text, count=1))
 PY
 
 set +e

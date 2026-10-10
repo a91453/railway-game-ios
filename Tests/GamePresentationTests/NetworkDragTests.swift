@@ -92,6 +92,26 @@ final class NetworkDragTests: XCTestCase {
         XCTAssertEqual(session.networkStart, .point(Self.a))
     }
 
+    /// A drag that began on other track picked a new start; cancelled, it
+    /// keeps that start, as a tap there would, but not the end picked for
+    /// the old one: the player never chose that stretch.
+    func testACancelledDragFromOtherTrackLeavesNoStretchUnpicked() throws {
+        let session = try makeSession()
+        session.tapNetwork(at: Self.a, reach: Self.reach)
+        session.tapNetwork(at: Self.b, reach: Self.reach)
+        session.buildNetworkTrack()
+        session.clearNetworkDraft()
+        let d = PlanPoint(x: 2_048, y: 6_144), e = PlanPoint(x: 12_288, y: 6_144)
+        session.tapNetwork(at: d, reach: Self.reach)
+        session.tapNetwork(at: e, reach: Self.reach)
+        let middle = PlanPoint(x: 4_096, y: 2_048)
+        session.dragNetwork(from: middle, to: Self.c, reach: Self.reach)
+        session.cancelNetworkDrag()
+        guard case .track? = session.networkStart else { return XCTFail("the start the drag picked stays") }
+        XCTAssertNil(session.networkEnd, "not D's end E from the track")
+        XCTAssertNil(session.networkPreview)
+    }
+
     func testDraggingBackOntoTheStartLeavesNoEnd() throws {
         let session = try makeSession()
         session.tapNetwork(at: Self.a, reach: Self.reach)

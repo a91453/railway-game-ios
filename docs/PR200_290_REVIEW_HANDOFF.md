@@ -1,4 +1,4 @@
-# 交接：PR #200–#296 的審查與修正
+# 交接：PR #200–#306 的審查與修正
 
 Session：`claude/railway-game-ios-pr-review-hzdbwt`（2026-10-09～10）。分支從 `main` 6b43d31 開始，收工前合併了 `main` dedbb659（#291–#296）。存檔版本、ARCHITECTURE 決策編號、golden schema 都沒有用到；GoldenScenarios、ReplayFixtures、SaveFixtures 的期望值都沒有改。
 
@@ -109,3 +109,78 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
 - **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`BuildingSale*`、`CompanyBuildings*`、`SavedGameTests`、`TerrainPresentationTests`、`HeightGridTests`。
 - #297 那份修正的 golden（24 項）、`PassengerPropertyTests`、`BoardingPropertyTests` 都已在本機通過，結果貼在 #297 的留言。
 - 其餘交給 CI。
+
+## 七、延長到 #298–#302，並對 #200–#296 做第二輪（第三個 PR）
+
+**合併狀態**：#298、#300、#301、#302 都已合併，head 都在 `main` 上。#303 只改版本號（0.5.0）。
+
+**作者已決定的**：
+- 有列車的路線不能反轉（決策 134，#301）。
+- 所得稅不升存檔版本，沿用決策 67 的慣例（#301 的說明）。
+
+**main 的 CI**：
+- #298–#302 合併後，CI（Linux）與 Wasm Probe 都是綠的。
+- iOS run 都被下一次推送取消；#303 的完整 lane 在交接時還在跑。
+- #299 合併後的完整 lane 27 項全綠，也包括之前查不出根因的實景地圖「繼續」與示範按鈕兩項。
+
+**修的 bug（都先寫測試，確認修之前會失敗）**：
+1. **固定班次的列車跑到一半時，改站序或拆站讓乘客被丟下**（決策 133）：
+   - `setLineStops` 與 `removeStation` 會清掉班次。之後判斷列車方向時，退回「來回一趟」的規則：要去後半段的乘客被放棄，後半段也不再載客。
+   - `setLineRuns` 本來就會在列車行駛中拒絕；現在這兩條路徑也一樣拒絕。
+   - 測試：`LineRunsTests.testRunsAreNotEndedUnderATrainOnOne`。
+2. **時鐘接近時間盡頭時，固定班次會溢位當掉**：載入存檔與推進時間都會。
+   - 現在放不進時鐘的那一天直接跳過，載入時的檢查改用不會溢位的加法。
+   - 測試：`LineRunsTests.testRunsNearTheEndOfTimeDoNotOverflow`。
+3. **全島地圖按復原後，建物蓋在沒讀入的土地上**：
+   - 結果是沒有收購城市建物，地價也算成空地的價。
+   - 現在建造時，在同一個編輯裡重新讀入土地；復原後，也重讀選好位置的土地。
+   - 測試：`WholeTaiwanTests.testABuildingAfterAnUndoStillStandsOnItsLand`。
+4. **拖曳鋪軌被取消後，留下一段玩家沒選過的軌道**：
+   - 拖曳從別段軌道開始、換了起點，取消時卻把舊終點還原回來。
+   - 現在新起點保留，不留終點。
+   - 測試：`NetworkDragTests.testACancelledDragFromOtherTrackLeavesNoStretchUnpicked`。
+5. **選路線停靠站時，同一站點兩次沒有說明**：失敗訊息在同一次點擊裡就被清掉。測試加在 `LineDraftRouteTests`。
+6. **`expandLand` 接受超出世界邊界的格子**，結果存檔讀不回來。App 的匯入會裁切到邊界，所以只有直接呼叫才會遇到。測試加在 `LandBlocksTests`。
+
+**沒修、需要作者決定**：
+- **決策 134 可以從「移動站序」繞過**（2026-10-10 作者決定：排進路線圖當正式功能，不當 bug 修，見 `docs/ROADMAP.md` 的 Q4）：
+  - 兩站的線把第 0 站往後移一格，就等於反轉；任何改到第一站的編輯也一樣（拆掉第一站、在第一站前插站）。
+  - 有列車時，這些編輯同樣會讓列車停在舊起站、不再發車。
+  - 選項：
+    - (a) 有列車時，不允許改動第一站，這是決策 134 的延伸。
+    - (b) 允許列車從任一端發車。
+- **自由模式免費蓋的建物，切到經營模式後出售會憑空賺錢**（以土地價出售），也會收租金。
+  - App 不允許從自由模式切回經營模式，所以玩家碰不到，只有 GameCore API 會遇到。
+  - 選項：沒有資產紀錄的建物以 0 元出售；或讓 GameCore 也禁止自由模式切回經營模式。
+- **負餘額的自由模式不能蓋、也不能拆免費的建物**：`spend(0)` 在餘額小於 0 時會拒絕。App 不允許負餘額切到自由模式，所以玩家碰不到。
+
+**驗證**：
+- **VERIFIED（本機 Linux）**：建置沒有警告。改到的類別都通過：`LineRunsTests`、`StationRemoval*`、`LineEditing*`、`RouteEditing*`、`RealWorldDemo*`、`WholeTaiwanTests`、`Building*`、`UndoSessionTests`、`NetworkDragTests`、`NetworkBuildingSessionTests`、`LineDraftRouteTests`、`LandBlocksTests`、`SparseCityLand*`。
+- golden、replay、存檔、`LineDispatchPropertyTests` 的結果寫在 PR 裡。
+- 其餘交給 CI。
+
+## 八、延長到 #303–#306，並對 #200–#302 做第三輪（第四個 PR）
+
+**合併狀態**：#303（版本號 0.5.0）、#304（第三個 PR）、#305（決策 136：車站客源在背景算、手機畫軌道時細節卡收起）、#306（路線圖 Q4）都已合併，head 都在 `main` 上。
+
+**main 的 CI**：#304 與 #305 合併後 CI（Linux）是綠的。#304 的 PR 上 campaigns-6 有一次是 SwiftPM 在跑任何測試之前 segfault，重跑一次就過（已在 PR 留言）。
+
+**修的 CI 問題（工作流程與腳本）**：
+1. **只改 App 內附資料時，Swift 測試不會跑**：套件的測試會讀 `RailwayGameApp/Resources/`（實景網格、鐵路與時刻表、授權檔），但 `swift-shards.sh` 的 `relevant_paths` 不算它，閘門直接放行。現在算進去，selftest 也加了兩個例子。
+2. **按鈕消失檢查找不到鐵軌工具的「完成」鈕**：`ui-smoke-missing-button.sh` 要找的那行已經改成 `doneButton(compact: compact)`，舊的字串比對永遠找不到，檢查等於失效。現在用正規表示式只認一行，找到的不是剛好一行就停止。
+3. **iPad 教學測試漏掉幾個教學會指到的畫面**：`ios-build.yml` 偵測教學畫面的清單補上 `BuildToolRail`、`LinesPanel`、`TrainControls`、`StartView`。
+4. **手動與夜間的 release archive 會互相取消**：兩者同一個 concurrency group。現在只有 PR 依分支分組並取消舊的，其他每次 run 自己一組。
+- 同一批也把誤提交的 `tools/real-world-population/__pycache__/*.pyc` 從版本控制移除（已在 `.gitignore`）。
+
+**修的 bug**：
+1. **有班次的路線在列車跑班次時改停靠，訊息叫玩家「先停止服務」**，但路線的列車不能停止服務（`trainOnLine`）。這是 #304 新加的拒絕帶出的錯誤訊息。現在說「等它跑完，或先讓它離開路線」，和拆站時的訊息一致。先寫的測試：`LineEditingTests.testNewStopsUnderARunSayWhatCanBeDone`（修之前失敗）。
+2. **車站面板的客源在改軌道後不會更新**（#305 的快取）：全網路徑模式下，結果還依路網、路線性能與路徑偏好、列車容量、轉乘群組決定，但快取的鍵沒有這些。拆掉路線走的軌道或改路線速度後，旅次與每小時圖要到隔天才更新，暫停時就一直不更新。現在鍵包含它們。App 的 SwiftUI 檔，Linux 上不能建置：把鍵單獨抽出來對 GameCore 型別檢查通過，畫面行為 UNVERIFIED LOCALLY。
+
+**沒修，只回報**：
+- **手機上只選了起點時，地圖上沒有 ✕**：決策 136 第 4 點已寫明是設計（打開卡片按「清除」或按「完成」）。如果想要地圖上也能取消，可以在只有起點時顯示只有 ✕ 的小膠囊；這是設計選擇，留給作者。
+- **車站客源的背景計算不會被取消**：換車站或關面板時，舊的計算會跑完才丟掉結果。實景地圖、全網路徑、快速播放下，如果一次計算超過一個遊戲日（約 14 秒），面板可能一直停在「正在計算客流…」。沒有量到實際時間，先不改。
+- **`ios-build.yml` 的 `paths-ignore: "**/*.md"` 也會忽略 App 內附的 `RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md`**：只改這個檔不會跑 iOS 建置。影響很小（授權檔很少改），先不改。
+
+**驗證**：
+- **VERIFIED（本機 Linux）**：`swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告；`LineEditingTests`、`LineSessionTests`、`RingLineSessionTests`、`LineStaffingTests` 通過；`swift-shards.sh selftest` 通過；改到的 YAML 都能解析，`bash -n` 通過；按鈕消失檢查的正規表示式在目前的 `BuildToolRail.swift` 上剛好刪掉那一行。
+- **UNVERIFIED LOCALLY**：`StationPanel.swift` 的畫面行為、`ios-build.yml` 與 `release-archive.yml` 的實際觸發（要 macOS CI）。

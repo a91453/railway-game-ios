@@ -329,6 +329,9 @@ relevant_paths() {
   while IFS= read -r path; do
     case "$path" in
       Package.swift | Package.resolved | Sources/* | Tests/* | GoldenScenarios/* | SaveFixtures/* | ReplayFixtures/*) echo true; return ;;
+      # The package's tests read the app's bundled data (the real-world
+      # grids, the railways and their timetables, the licences).
+      RailwayGameApp/Resources/*) echo true; return ;;
       .github/workflows/ci.yml | .github/scripts/swift-shards.sh | .github/scripts/swift-shards-selftest.sh) echo true; return ;;
     esac
   done

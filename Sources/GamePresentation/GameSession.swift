@@ -216,6 +216,9 @@ public final class GameSession {
     /// While a finger draws track (decision 102): the end picked before the
     /// drag began, which a cancelled drag puts back.
     @ObservationIgnored var networkDragEndBefore: NetworkAnchor??
+    /// Whether the drag under way picked a new start (it began on other
+    /// track): cancelled, it keeps that start but not the old end.
+    @ObservationIgnored var networkDragMovedStart = false
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic
@@ -373,14 +376,16 @@ public final class GameSession {
             return
         }
         station = station ?? world.station(near: point, within: reach)?.id
+        // A stop the draft refused keeps the message saying why.
+        var refused = false
         if isPickingLineStops, let station {
-            appendToLineDraft(station)
+            refused = !appendToLineDraft(station)
         }
         guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil else { return }
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
-        message = nil
+        if !refused { message = nil }
     }
 
     /// A tap that picked train `id`: it becomes the train the train tool
@@ -1018,8 +1023,10 @@ public final class GameSession {
 
     /// Adds station `id` to the end of the new line's stops, unless it is
     /// already the last.
-    private func appendToLineDraft(_ id: StationID) {
-        guard let station = world.station(id: id) else { return }
+    /// Adds station `id` to the new line's stops; returns whether it did.
+    @discardableResult
+    private func appendToLineDraft(_ id: StationID) -> Bool {
+        guard let station = world.station(id: id) else { return false }
         guard lineDraft.last != station.id else {
             message = StatusMessage(
                 kind: .failure,
@@ -1028,11 +1035,12 @@ public final class GameSession {
                     "\(station.name) 已經是最後一站。路線不能連續兩次停靠同一站。"
                 )
             )
-            return
+            return false
         }
         lineDraft.append(station.id)
         refreshLineDraftRoute()
         message = nil
+        return true
     }
 
     /// Drops the last stop picked for the new line.
@@ -1590,6 +1598,11 @@ public final class GameSession {
         if world.clock.isPaused { restored.pause() }
         world = restored
         dropSelectionOfMissing()
+        // The building shown keeps its land read in, which the undo may
+        // have taken back, so its preview counts what stands there.
+        if let site = buildingSite {
+            readLand(within: Self.buildingLandReach, of: site)
+        }
         message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
     }
 
