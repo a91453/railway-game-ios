@@ -39,13 +39,13 @@ final class ChallengeTests: XCTestCase {
 
     func testTheGoalsPanelSaysWhereTheScenarioStands() throws {
         let world = GameWorld.newGame(challenge: Challenge.sandbox[0], eventSeed: 7)
-        XCTAssertEqual(world.scenarioStatusText(in: .traditionalChinese), "第 1 天，共 360 天 · 第 60 天前完成可得金牌")
-        XCTAssertEqual(world.scenarioStatusText(in: .english), "Day 1 of 360 · gold by day 60")
-        XCTAssertEqual(world.scenarioRatingsText(in: .traditionalChinese), "金牌 60 天內 · 銀牌 120 天 · 銅牌 360 天")
+        XCTAssertEqual(world.scenarioStatusText(in: .traditionalChinese), "第 1 天，共 360 天 · 第 180 天前完成可得金牌")
+        XCTAssertEqual(world.scenarioStatusText(in: .english), "Day 1 of 360 · gold by day 180")
+        XCTAssertEqual(world.scenarioRatingsText(in: .traditionalChinese), "金牌 180 天內 · 銀牌 270 天 · 銅牌 360 天")
         let goals = world.goalProgress(in: .traditionalChinese)
         XCTAssertEqual(goals.map(\.title), ["用鐵路連通全部 3 座城鎮", "每日運量（人次）"])
         XCTAssertEqual(goals[0].detail, "0 / 3 座有路線停靠的車站")
-        XCTAssertEqual(goals[1].detail, "0 / 100,000")
+        XCTAssertEqual(goals[1].detail, "0 / 350,000")
         XCTAssertEqual(goals.map(\.metOnDay), [nil, nil])
         XCTAssertEqual(ScenarioRating.gold.displayName(in: .traditionalChinese), "金牌")
         XCTAssertNil(GameWorld.newGame().scenarioStatusText(in: .english))
