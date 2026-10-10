@@ -2148,7 +2148,16 @@ public struct GameWorld: Equatable, Sendable {
                 span = freed
             }
             if !traffic.waits.isEmpty {
-                span = 1
+                // Decision 59: a plan that schedules a wait is worked out
+                // again at the next second when this step changed what it
+                // is derived from, and otherwise holds until a wait may let
+                // its train go or a visit it needs is made (see
+                // ``secondsUntilTrafficChanges(_:from:within:)``).
+                if trafficPlanKey() != trafficKey {
+                    span = 1
+                } else if span > 1, let changes = secondsUntilTrafficChanges(traffic, from: start, within: span) {
+                    span = changes
+                }
             } else if span > 1, trafficPlanKey() != trafficKey {
                 // A departure or a visit in this step changed what the plan
                 // is derived from: when the plan it gives schedules a wait,
@@ -2256,6 +2265,15 @@ public struct GameWorld: Equatable, Sendable {
         /// and body) when it was looked up, or
         /// `nil` if it had none.
         var trips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
+        /// Whether each line's service, by line and pattern, has a journey
+        /// and runs trains at some level of its window (see
+        /// ``GameWorld/isServed(_:memo:)``), once worked out.
+        var scheduledServices: [ScheduledService: Bool] = [:]
+    }
+
+    struct ScheduledService: Hashable {
+        var line: LineID
+        var pattern: Int?
     }
 
     /// Phase 0 of a basic step: each line, in ascending ID order, and on it
@@ -2530,14 +2548,14 @@ public struct GameWorld: Equatable, Sendable {
 
     /// The services' phase of a basic step (Stage W2b): every train whose
     /// service waits at a stop, in ascending ID order, moves its dwell on
-    /// (see ``stepDwell(_:at:)``) and then leaves if its departure is due
+    /// (see ``stepDwell(_:at:memo:)``) and then leaves if its departure is due
     /// (see ``departService(_:at:unroutable:held:)``); every train whose service
     /// travels and was held up on its run sets off again if it can (Stage
     /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
     private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
         var changed = false
         for index in trains.indices where trains[index].execution != nil {
-            if stepDwell(index, at: now) {
+            if stepDwell(index, at: now, memo: &memo) {
                 changed = true
             }
             if departService(index, at: now, unroutable: &unroutable, held: &held, memo: &memo) {
@@ -2661,7 +2679,7 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - once its doors have opened, the passengers for that stop get off
     ///   and those waiting for the train get on (see
-    ///   ``exchangePassengers(_:at:)``), taking as long as the larger
+    ///   ``exchangePassengers(_:at:memo:)``), taking as long as the larger
     ///   number does (see ``Train/exchangeSeconds(_:)``);
     /// - while its doors stay open, at each whole minute, when new
     ///   passengers have come, they get on too, after those still getting
@@ -2670,7 +2688,7 @@ public struct GameWorld: Equatable, Sendable {
     ///   will be over when they have closed, and (when it is early) they
     ///   close for its scheduled departure: at the latest of
     ///   ``closingStart(of:stop:cycle:)``.
-    private mutating func stepDwell(_ index: Int, at now: GameTime) -> Bool {
+    private mutating func stepDwell(_ index: Int, at now: GameTime, memo: inout DispatchMemo) -> Bool {
         guard case .waitingAtStop(let stop, let cycle)? = trains[index].execution, var times = trains[index].times else { return false }
         var changed = false
         if let end = times.exchangeEnd {
@@ -2683,7 +2701,7 @@ public struct GameWorld: Equatable, Sendable {
             }
         } else {
             guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
-            let busy = exchangePassengers(index, at: stop)
+            let busy = exchangePassengers(index, at: stop, memo: &memo)
             times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy))
             changed = true
         }
@@ -3310,10 +3328,11 @@ public struct GameWorld: Equatable, Sendable {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
             _ = moved.moveTrains(from: start, for: seconds)
-            if held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions) { true } else { false } }) {
+            // The cheaper question first: either answer frees.
+            if moved.canExtendAnyAuthority() {
                 return true
             }
-            return moved.canExtendAnyAuthority()
+            return held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions) { true } else { false } })
         }
         // The least `k` after which one is free. A train following another
         // moving on takes more of its route almost every second, so then
@@ -3330,6 +3349,68 @@ public struct GameWorld: Equatable, Sendable {
             }
         }
         return low
+    }
+
+    /// The seconds, from `start` and at most `span`, after which a step
+    /// under `plan`, a traffic plan with waits (decision 59), must end so
+    /// that it does what a step every second would, or `nil` if it need
+    /// not end before `span`: the second a wait's train may leave (the
+    /// wait's departure, or its release, see ``trafficReleased(_:)``), or
+    /// the second a train's head reaches the berth of a point a wait needs,
+    /// where ``recordTrafficVisits(_:before:)`` records the visit at that
+    /// second. A train only goes on along its route in a step, and the plan
+    /// and every train's service stay as they are until a step ends (a
+    /// changed plan, an arrival and a departure each end one), so nothing
+    /// else a wait reads changes within it.
+    ///
+    /// - Precondition: `start.secondOfMinute + span <= 60`.
+    private func secondsUntilTrafficChanges(_ plan: TrafficPlan, from start: GameTime, within span: Int64) -> Int64? {
+        var soonest: Int64?
+        func note(_ seconds: Int64) {
+            if seconds >= 1, seconds < (soonest ?? span) { soonest = seconds }
+        }
+        for wait in plan.waits {
+            for time in [wait.departure, trafficReleased(wait)].compactMap({ $0 }) where time > start {
+                let (gap, overflow) = time.seconds.subtractingReportingOverflow(start.seconds)
+                if !overflow { note(gap) }
+            }
+        }
+        for train in trains where train.movement.rate > 0 && train.position != nil {
+            guard let execution = train.execution, let service = plan.services.first(where: { $0.train.id == train.id }) else { continue }
+            let needed = service.points.filter { p in
+                execution.cycle == p.cycle && (execution.stop == p.stop || (p.calls && execution.stop + 1 == p.stop))
+                    && plan.waits.contains { w in
+                        w.station == p.station && ((w.train == train.id && w.stop == p.stop && w.cycle == p.cycle)
+                                                  || (w.other == train.id && w.otherStop == p.stop && w.otherCycle == p.cycle))
+                    }
+            }
+            guard !needed.isEmpty else { continue }
+            let share = travelShare(of: train, from: start)
+            var distance: Int64 = 0
+            for stretch in routeStretches(of: train).stretches {
+                for point in needed {
+                    for berth in berths(of: point.station, length: train.length) where berth.traversal == stretch.traversal {
+                        let reach = distance + berth.offset - stretch.from
+                        guard berth.offset >= stretch.from, berth.offset <= stretch.to, reach > 0 else { continue }
+                        let limit = soonest.map { $0 - 1 } ?? span
+                        guard limit >= 1, share(limit) >= reach else { continue }
+                        // The least `k` whose distance reaches the berth.
+                        var (low, high) = (Int64(1), limit)
+                        while low < high {
+                            let middle = (low + high) / 2
+                            if share(middle) >= reach {
+                                high = middle
+                            } else {
+                                low = middle + 1
+                            }
+                        }
+                        note(low)
+                    }
+                }
+                distance += stretch.to - stretch.from
+            }
+        }
+        return soonest
     }
 
     // MARK: - Validation

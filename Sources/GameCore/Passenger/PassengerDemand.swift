@@ -239,13 +239,40 @@ extension GameWorld {
         passengers.removeAll { $0.isEmpty }
     }
 
+    /// Whether `leg` is served (see ``isServed(_:)``), with whether its
+    /// line's service runs from `memo` once worked out there: the journeys
+    /// and headways it reads change only by a command, never within an
+    /// advance.
+    func isServed(_ leg: PassengerJourneyLeg, memo: inout DispatchMemo) -> Bool {
+        let key = ScheduledService(line: leg.line, pattern: leg.pattern)
+        let runs: Bool
+        if let known = memo.scheduledServices[key] {
+            runs = known
+        } else {
+            runs = isScheduled(leg.line, pattern: leg.pattern)
+            memo.scheduledServices[key] = runs
+        }
+        return isServed(leg, scheduled: runs)
+    }
+
     /// A planned ride can wait across the nightly closure, but must still
     /// have a physical journey and a service planned at some level.
     private func isServed(_ leg: PassengerJourneyLeg) -> Bool {
+        isServed(leg, scheduled: isScheduled(leg.line, pattern: leg.pattern))
+    }
+
+    /// Whether line `id`'s service `pattern` has a journey and runs trains
+    /// at some level of its window.
+    private func isScheduled(_ id: LineID, pattern: Int?) -> Bool {
+        guard let line = line(id: id), lineJourney(id, pattern: pattern) != nil else { return false }
+        return scheduledLevels(of: line).contains { lineHeadway(id, at: $0, pattern: pattern) != nil }
+    }
+
+    /// ``isServed(_:)`` with `scheduled` whether the leg's service runs
+    /// (see ``isScheduled(_:pattern:)``).
+    private func isServed(_ leg: PassengerJourneyLeg, scheduled: Bool) -> Bool {
         guard allowsService(at: leg.from), allowsService(at: leg.to),
-              let line = line(id: leg.line),
-              lineJourney(leg.line, pattern: leg.pattern) != nil,
-              scheduledLevels(of: line).contains(where: { lineHeadway(leg.line, at: $0, pattern: leg.pattern) != nil })
+              let line = line(id: leg.line), scheduled
         else { return false }
         if line.isRing {
             let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
