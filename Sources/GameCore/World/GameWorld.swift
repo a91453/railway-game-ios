@@ -3791,8 +3791,9 @@ extension GameWorld: Codable {
             }
             // Decision 133: a run sends its train out at most
             // `LineRun.earliestDispatch` before its day's first departure.
+            let (ahead, past) = clock.now.seconds.addingReportingOverflow(LineRun.earliestDispatch)
             if let latest = line.runDays.compactMap({ $0 }).max(),
-               latest > GameTime.floorDivide(clock.now.seconds + LineRun.earliestDispatch, GameTime.secondsPerDay) {
+               latest > GameTime.floorDivide(past ? .max : ahead, GameTime.secondsPerDay) {
                 return "Line \(line.id.rawValue) ran a run on a day that has not come."
             }
         }
