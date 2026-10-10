@@ -376,14 +376,16 @@ public final class GameSession {
             return
         }
         station = station ?? world.station(near: point, within: reach)?.id
+        // A stop the draft refused keeps the message saying why.
+        var refused = false
         if isPickingLineStops, let station {
-            appendToLineDraft(station)
+            refused = !appendToLineDraft(station)
         }
         guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil else { return }
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
-        message = nil
+        if !refused { message = nil }
     }
 
     /// A tap that picked train `id`: it becomes the train the train tool
@@ -1021,8 +1023,10 @@ public final class GameSession {
 
     /// Adds station `id` to the end of the new line's stops, unless it is
     /// already the last.
-    private func appendToLineDraft(_ id: StationID) {
-        guard let station = world.station(id: id) else { return }
+    /// Adds station `id` to the new line's stops; returns whether it did.
+    @discardableResult
+    private func appendToLineDraft(_ id: StationID) -> Bool {
+        guard let station = world.station(id: id) else { return false }
         guard lineDraft.last != station.id else {
             message = StatusMessage(
                 kind: .failure,
@@ -1031,11 +1035,12 @@ public final class GameSession {
                     "\(station.name) 已經是最後一站。路線不能連續兩次停靠同一站。"
                 )
             )
-            return
+            return false
         }
         lineDraft.append(station.id)
         refreshLineDraftRoute()
         message = nil
+        return true
     }
 
     /// Drops the last stop picked for the new line.
