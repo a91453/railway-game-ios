@@ -45,6 +45,9 @@ public enum DataSourceCredits {
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let ccByURL = "https://creativecommons.org/licenses/by/4.0/"
+    static let overtureURL = "https://overturemaps.org"
+    static let overtureAttributionURL = "https://docs.overturemaps.org/attribution/"
+    static let eastAsianBuildingsURL = "https://doi.org/10.5281/zenodo.8174931"
     static let openFreeMapURL = "https://openfreemap.org"
     static let openMapTilesURL = "https://openmaptiles.org"
     static let mapLibreURL = "https://github.com/maplibre/maplibre-native"
@@ -167,6 +170,31 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
                             DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 147: how much of the ground real buildings
+                    // cover, which sets what buying out a city building
+                    // costs. Overture's buildings theme is ODbL 1.0; in
+                    // Taiwan its footprints are OpenStreetMap's and Shi et
+                    // al.'s (CC BY 4.0), each credited as it asks.
+                    DataSourceCredit(
+                        id: "overtureBuildings",
+                        title: language.text("Overture Maps buildings", "Overture Maps 建物"),
+                        detail: language.text(
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot.",
+                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。"
+                        ),
+                        notice: language.text(
+                            "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file the game derives from them is available under the same licence from the source repository.",
+                            "Overture Maps Foundation（overturemaps.org），依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔以相同授權提供，可從原始碼儲存庫取得。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
+                            DataSourceCredit.Link(title: language.text("Attribution", "出處"), url: overtureAttributionURL),
+                            DataSourceCredit.Link(title: language.text("East Asian buildings", "東亞建物資料"), url: eastAsianBuildingsURL),
+                            DataSourceCredit.Link(title: "ODbL 1.0", url: odblURL),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(title: language.text("Source repository", "原始碼儲存庫"), url: repositoryURL),
                         ]
                     ),
                 ]

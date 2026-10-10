@@ -76,6 +76,12 @@
 
 `build_overture_building_grid.py` 用 DuckDB 從 Overture Maps 的公開 bucket 只讀台灣範圍的 buildings（約 35 秒，190 MB），再用同一個格網與同一份彙整（`build_building_grid.py` 的 `survey()`）量一次。結果在同一份報告的「Overture Maps」：Overture 的足跡（OSM 加上 Shi 等人以影像擷取的 East Asian buildings，CC BY 4.0）在全台大致完整，但樓層全是 OSM 的，只有約 4% 的建物有。
 
+## 真實建蔽率（決策 147）
+
+`build_coverage_grid.py` 讀上面 `extract` 的 Overture 檔，把每棟建物的面切到水域格網的每一格上，寫出 App 的 `Resources/RealWorld/taiwan_coverage.dat`：每格的建蔽率（整數百分比，格式同高度檔，magic `TWCV`）。金門、馬祖記成 −1（不知道），因為 Overture 在那裡缺了大部分的市鎮。遊戲用它算收購城市建物的價格。指令寫在工具的說明裡，約 20 秒；需要 DuckDB 與 numpy（`build_building_grid.py` 也要 import，所以還要 pyosmium）。
+
+- 2026-10-10 的資料（Overture `2026-09-23.1`）：1,118,307 格有建物，平均 18.7%，85,482 格在一半以上；2.1 MB。
+
 ## 重新產生
 
 ```sh

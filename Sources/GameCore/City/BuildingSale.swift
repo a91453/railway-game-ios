@@ -165,8 +165,8 @@ extension GameWorld {
             addLand(LandCell(row: position.row, column: position.column, use: building.kind.use, residents: building.residents, jobs: building.jobs))
             return
         }
-        let merged = LandCell(
-            row: cell.row, column: cell.column, use: cell.use == .park ? building.kind.use : cell.use,
+        let merged = cell.with(
+            use: cell.use == .park ? building.kind.use : cell.use,
             residents: min(Land.maximumPerCell, cell.residents + building.residents),
             jobs: min(Land.maximumPerCell, cell.jobs + building.jobs)
         )

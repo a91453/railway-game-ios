@@ -39,6 +39,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(data.places)
         XCTAssertNotNil(data.water)
         XCTAssertNotNil(data.heights)
+        XCTAssertNotNil(data.coverage)
         XCTAssertNotNil(data.railways?.stationData?.overtakeTracks)
     }
 
@@ -97,7 +98,8 @@ final class RealWorldDataLoadTests: XCTestCase {
     }
 
     /// Once the data is there, a real-world game gets its people, off its
-    /// water (decision 105), and the real-world demo can open.
+    /// water (decision 105), with their real coverage (decision 147), and
+    /// the real-world demo can open.
     func testARealWorldGameAfterTheLoadHasItsPeople() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         await launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }.value
@@ -106,8 +108,8 @@ final class RealWorldDataLoadTests: XCTestCase {
         let population = try XCTUnwrap(launcher.population)
         let water = try XCTUnwrap(launcher.water)
         let frame = RealWorldFrame(anchor: anchor, bounds: GameWorld.newGameBounds)
-        let expected = LandImport.cells(population: population, places: launcher.places, water: water, frame: frame, bounds: GameWorld.newGameBounds)
-        XCTAssertNotNil(expected)
+        let imported = LandImport.cells(population: population, places: launcher.places, water: water, frame: frame, bounds: GameWorld.newGameBounds)
+        let expected = try XCTUnwrap(launcher.coverage).covering(try XCTUnwrap(imported), frame: frame)
         XCTAssertEqual(launcher.session?.world.land.cells, expected)
         XCTAssertEqual(launcher.session?.world.terrain, Terrain(
             water: water.cells(frame: frame, bounds: GameWorld.newGameBounds), steep: water.steepCells(frame: frame, bounds: GameWorld.newGameBounds)
