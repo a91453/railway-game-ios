@@ -95,7 +95,7 @@ Kn 的 5 筆：大安 x[−212,−130)、z[280,1000)；中正 x[−700,−560)�
 | `proxy[]/solids[]` | proxy `{x,y?,z,w,d,h,roof,roofH?,mat,color?}`；solids `{x0,z0,x1,z1,y0?,y1}`。donqi proxy 主高 **18.2 m**；蜂達 **14.05 m**；鐵道部主館 **8.8+3.6 m 屋頂**、塔 **11.6+4.6 m**。 | 可以產生 iOS 低細節幾何；碰撞箱、室內與屋頂不能回寫土地容量。 |
 | `map/interior/atlas/cluster/hero/priority` | map `{icon,minimap}`、interior enum、atlas.slots；donqi `partial,slots:1,cluster:ximen,hero:true,priority:60`；鐵道部 `partial,cluster:beimen,hero:true,priority:85`。 | 只影響載入、快取、顯示與場景排序。 |
 
-現存 site 模組有 **3** 個，不能只說2個：`T/assets/site-donqi-ximen-C4Uhuz6T.js` **28,314 bytes**、`site-fongda-coffee-ncv_Ui7v.js` **32,315**、`site-railway-department-park-CeP4zM45.js` **25,070**。另外 `build-BU46ZK3j.js` **113,537**、`build-2kUI5-ha.js` **109,307** 是場景幾何／atlas生成；後者有 atlas 預設 **2048**、固定 RNG seed **20,283,292**，不作本遊戲城市種子。
+現存 site 模組有 **3** 個，不能只說2個：`T/assets/site-donqi-ximen-C4Uhuz6T.js` **28,315 bytes**、`site-fongda-coffee-ncv_Ui7v.js` **32,316**、`site-railway-department-park-CeP4zM45.js` **25,073**。另外 `build-BU46ZK3j.js` **118,851**、`build-2kUI5-ha.js` **109,698** 是場景幾何／atlas生成；後者有 atlas 預設 **2048**、固定 RNG seed **20,283,292**，不作本遊戲城市種子。
 
 `world` 的 dynamic import 去重後 **46** 個 site 路徑，**43 個缺檔（gap）**。下列全部相對於 `T/assets/`；檢查每條實際檔案存在性，不把 metadata 已內嵌視為近景 module 已備妥：
 
@@ -145,7 +145,7 @@ site-xinfangchun-CDuNuXEA.js
 site-yansan-market-Uq9Y9hUs.js
 ```
 
-另外 gap：world import 的 `postfx-pHdVmtPd.js`；`T/assets/content-DcQ2Whr5.js`（**1,850,065 bytes**）所指 `build-Bz4uAL4f.js`、`build-CN7_0enk.js`、`build-Cx8EeQJB.js`、`build-nn2qgmtJ.js`、`register-DEjbkm8D.js` 皆缺。查找用 `import(`、`site-`、`./defs/`、`lot`、`claims`、`placement`、`anchors`、`proxy`、`build-`、`postfx`。沒有下載缺檔，不能宣稱原網頁場景可完整跑起來。
+另外 gap：world 仍缺 43 個 `site-*.js`；`postfx-D80OZstt.js` 已在 2026-10-10 refresh 補齊。`T/assets/content-DcQ2Whr5.js`（**1,855,122 bytes**）所指 `build-Bz4uAL4f.js`、`build-CN7_0enk.js`、`build-Cx8EeQJB.js`、`build-nn2qgmtJ.js`、`register-DEjbkm8D.js` 皆缺。查找用 `import(`、`site-`、`./defs/`、`lot`、`claims`、`placement`、`anchors`、`proxy`、`build-`、`postfx`。沒有下載缺檔，不能宣稱原網頁場景可完整跑起來。
 
 ## 3. rail-3d 的 Blender／歷史建物資料與遠景網格
 
