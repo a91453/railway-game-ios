@@ -92,6 +92,12 @@ public enum RealWorldDemo {
         // the land does not hold, and without the app's people its stations
         // would have none.
         world.setLandDemand(false)
+        // Decision 137: its ridership is the real stations', measured
+        // between them as they stand, so its pairs keep all their trips;
+        // and its lines run off the map without the outside's fares, which
+        // its challenge's targets were not measured with.
+        world.setDistanceDemand(false)
+        world.setOutsideConnections(false)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
         } catch {

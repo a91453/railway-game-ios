@@ -44,6 +44,10 @@ extension RealWorldDemo {
             // Its stations keep the ridership it gives them, as the flat
             // demo's (Phase 6b): most of its riders come for the sights.
             world.setLandDemand(false)
+            // Its demand is as it was measured, as the flat demo's
+            // (decision 137).
+            world.setDistanceDemand(false)
+            world.setOutsideConnections(false)
             try world.mapGround()
             if !ground.isEmpty { try world.setGround(ground) }
             return world

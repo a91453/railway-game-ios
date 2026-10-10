@@ -155,9 +155,14 @@
 ///     `"dailyTax"`, `"incomeTax"` and `"taxCost"` without raising the
 ///     version; from this version on, a build that reads only an earlier
 ///     one says a save with them is newer too (decision 134).
+/// 31. Demand by distance and the outside connections (decision 137): a
+///     world can have `"distanceDemand"` and `"outsideConnections"`. A build
+///     that reads only an earlier version would drop them, and the game's
+///     short trips would ride and its edge stations bring no one again, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 30
+    public static let currentVersion = 31
 
     public let world: GameWorld
 
@@ -257,6 +262,8 @@ extension SavedGame: Codable {
         // net profit and investing cash flow read as before.
         // Version 29 to 30: a line without `"runs"` runs at a headway, as
         // every line did.
+        // Version 30 to 31: a world without `"distanceDemand"` or
+        // `"outsideConnections"` has them off, and its demand is as it was.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

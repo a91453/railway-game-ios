@@ -34,4 +34,26 @@ extension GameSession {
             "800 公尺內：居民 \(residents) · 工作 \(jobs)"
         )
     }
+
+    /// What the map says of the platform site (``platformSitePlanPoint``):
+    /// its catchment (``catchmentText(_:)``), and by the map's edge that a
+    /// station there is an outside connection (decision 137): "Outside
+    /// connection: +$10 a trip".
+    public func platformSiteCaption(_ totals: LandTotals, at site: PlanPoint) -> String {
+        let catchment = catchmentText(totals)
+        guard world.isOutsideConnectionSite(site) else { return catchment }
+        let fare = world.outsideFare.moneyText
+        return catchment + "\n" + language.text("Outside connection: +\(fare) a trip", "外地連絡站：每趟多收 \(fare)")
+    }
+
+    /// An outside connection as its opening says it (decision 137):
+    /// "Outside connection: travellers from beyond the map's edge ride from
+    /// here, paying $10 more a trip."
+    var outsideConnectionText: String {
+        let fare = world.outsideFare.moneyText
+        return language.text(
+            "Outside connection: travellers from beyond the map's edge ride from here, paying \(fare) more a trip.",
+            "外地連絡站：地圖外的旅客由這裡進出，每趟多付 \(fare)。"
+        )
+    }
 }
