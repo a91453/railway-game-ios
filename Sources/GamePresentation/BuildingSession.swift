@@ -65,7 +65,7 @@ extension GameSession {
             // Not an edit: as for a game's stations, reading land in is not
             // something to undo.
             readLand(within: Self.buildingLandReach, of: point)
-            buildingSite = point
+            buildingSite = snappedBuildingSite(point)
             message = nil
             if buildingBuildsOnTap {
                 return confirmBuilding()
@@ -135,8 +135,54 @@ extension GameSession {
         dragBuildingSite(from: start, to: end)
         if let site = buildingSite {
             readLand(within: Self.buildingLandReach, of: site)
+            buildingSite = snappedBuildingSite(site)
         }
         buildingDragSiteBefore = nil
+    }
+
+    /// How far a site is moved to stand clear of the city's buildings
+    /// (decision 144): 12 m, less than half a D1's square and the gap
+    /// beside it, so a building put on top of a city building stays there
+    /// and buys it out, and one put at its edge moves into the gap.
+    public static let buildingSnapReach: Int64 = 768
+    /// The points within ``buildingSnapReach`` of a site, half a metre
+    /// apart, nearest first (then by row and column).
+    private static let buildingSnapOffsets: [(x: Int64, y: Int64)] = {
+        let step = 32, reach = buildingSnapReach
+        var offsets: [(x: Int64, y: Int64)] = []
+        for y in stride(from: -reach, through: reach, by: step) {
+            for x in stride(from: -reach, through: reach, by: step) where x * x + y * y <= reach * reach && (x, y) != (0, 0) {
+                offsets.append((x, y))
+            }
+        }
+        return offsets.sorted { ($0.x * $0.x + $0.y * $0.y, $0.y, $0.x) < ($1.x * $1.x + $1.y * $1.y, $1.y, $1.x) }
+    }()
+
+    /// `point`, or when ``buildingKind`` there would buy out some of the
+    /// city's buildings, the nearest point within ``buildingSnapReach``
+    /// where it buys out none and GameCore would put it up (decision 144):
+    /// the player taps near a gap between the city's buildings and the
+    /// building lands in it. With none, `point`, whose preview shows what
+    /// buying out costs.
+    func snappedBuildingSite(_ point: PlanPoint) -> PlanPoint {
+        let kind = buildingKind
+        func clears(_ centre: PlanPoint) -> Bool {
+            world.cityCells(claimedBy: PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: kind, centre: centre)).isEmpty
+        }
+        guard world.bounds.contains(point), !clears(point) else { return point }
+        // GameCore has the last word on each candidate (water, track, the
+        // company's other buildings); a few tries are enough, as the
+        // nearest clear points lie side by side.
+        var tries = 0
+        for offset in Self.buildingSnapOffsets {
+            let candidate = PlanPoint(x: point.x + offset.x, y: point.y + offset.y)
+            guard world.bounds.contains(candidate), clears(candidate) else { continue }
+            var draft = world
+            if (try? draft.placeBuilding(kind, at: candidate)) != nil { return candidate }
+            tries += 1
+            if tries == 8 { break }
+        }
+        return point
     }
 
     /// The drag was cancelled: the building goes back where it was.
