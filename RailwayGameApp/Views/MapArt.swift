@@ -491,6 +491,7 @@ enum MapArt {
         bounds worldBounds: WorldBounds,
         drawsLand: Bool,
         skyline: CitySkyline?,
+        growth: (SkylineGrowth, elapsed: Double)?,
         layer: PopTravelLayer?,
         projection: some MapProjection,
         in context: GraphicsContext
@@ -506,7 +507,7 @@ enum MapArt {
             context.fill(land, with: .color(Palette.land))
         }
         if let skyline {
-            drawSkyline(skyline, projection: projection, in: context)
+            drawSkyline(skyline, growth: growth, projection: projection, in: context)
         }
         guard let layer else { return }
         switch layer.content {
@@ -572,15 +573,23 @@ enum MapArt {
     /// ground. Drawn row by row from the north, so a building in front
     /// covers the foot of the ones behind; each row's shapes are filled a
     /// colour at a time. Flat when zoomed out, nothing when a cell is a few
-    /// points.
-    private static func drawSkyline(_ skyline: CitySkyline, projection: some MapProjection, in context: GraphicsContext) {
+    /// points. While a night's `growth` plays (decision 140), the lots that
+    /// grew are drawn as it says at `elapsed`: rising, a new one swelling
+    /// to its size, its roof lit in the station's yellow.
+    private static func drawSkyline(
+        _ skyline: CitySkyline,
+        growth: (SkylineGrowth, elapsed: Double)?,
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
         let cellPoints = Double(Land.cellLength) * projection.pointsPerUnit
         guard !skyline.isEmpty, cellPoints >= skylineMinimumCellPoints else { return }
         let rises = cellPoints >= skylineRisingCellPoints
         let lots = skyline.lots(in: drawingRegion(projection), rowsBelow: rises ? CitySkyline.rowsRisenOver : 0)
-        let length = Double(Land.cellLength), side = Double(PlacedBuildingRules.cityBuildingSide), inset = (length - side) / 2
+        let length = Double(Land.cellLength), side = Double(PlacedBuildingRules.cityBuildingSide)
         let lineWidth = cellPoints < 14 ? 0.6 : 1
         var ground: [LandUse: Path] = [:], walls: [LandUse: Path] = [:], roofs: [LandUse: Path] = [:], outlines = Path()
+        var lit: [(roof: CGRect, light: Double)] = []
         func drawRow() {
             for use in LandUse.allCases {
                 if let path = ground[use] { context.fill(path, with: .color(Palette.cityRoof(use))) }
@@ -589,11 +598,15 @@ enum MapArt {
                 if let path = walls[use] { context.fill(path, with: .color(Palette.cityWall(use))) }
                 if let path = roofs[use] { context.fill(path, with: .color(Palette.cityRoof(use))) }
             }
+            for (roof, light) in lit {
+                context.fill(Path(roof), with: .color(Palette.station.opacity(0.85 * light)))
+            }
             context.stroke(outlines, with: .color(Palette.cityOutline), lineWidth: lineWidth)
             ground = [:]
             walls = [:]
             roofs = [:]
             outlines = Path()
+            lit = []
         }
         var row = lots.first?.row
         for lot in lots {
@@ -607,8 +620,17 @@ enum MapArt {
                 ground[lot.use, default: Path()].addRect(rect)
                 continue
             }
-            let foot = screenRect(minX: minX + inset, minY: minY + inset, maxX: minX + inset + side, maxY: minY + inset + side, projection)
-            let rise = rises ? foot.height * CitySkyline.heightShare(density: lot.density) : 0
+            let frame = growth.flatMap { $0.0.frame(of: lot, elapsed: $0.elapsed) }
+            if let frame, !frame.isShown { continue }
+            let drawnSide = side * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
+            let foot = screenRect(
+                minX: minX + drawnInset, minY: minY + drawnInset,
+                maxX: minX + drawnInset + drawnSide, maxY: minY + drawnInset + drawnSide,
+                projection
+            )
+            // Scaled with the footprint as drawn, so a new building swelling
+            // to its size keeps its proportions.
+            let rise = rises ? foot.height * (frame?.heightShare ?? CitySkyline.heightShare(density: lot.density)) : 0
             let roof = foot.offsetBy(dx: 0, dy: -rise)
             let whole = CGRect(x: foot.minX, y: roof.minY, width: foot.width, height: foot.maxY - roof.minY)
             walls[lot.use, default: Path()].addRect(whole)
@@ -623,6 +645,7 @@ enum MapArt {
                 }
             }
             roofs[lot.use, default: Path()].addPath(top)
+            if let frame, frame.light > 0 { lit.append((roof: roof, light: frame.light)) }
             outlines.addRect(whole)
             if rise > 0 {
                 outlines.move(to: CGPoint(x: roof.minX, y: roof.maxY))

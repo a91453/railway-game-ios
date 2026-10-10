@@ -82,6 +82,10 @@ struct MapView: View {
     /// that changes when they are replaced.
     @State private var skyline: CitySkyline?
     @State private var skylineVersion = 0
+    /// Decision 140: the night's growth the map is playing, and when it
+    /// began; `nil` once it is done.
+    @State private var skylineGrowth: SkylineLayer.Growth?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The city tooltip of the last tapped cell, and where it was tapped.
     @State private var cityTooltip: (info: CityCellInfo, at: ScreenPoint)?
     /// Decision 124, H3: the height and steep slope layer's map
@@ -175,7 +179,7 @@ struct MapView: View {
                         drawsLand: realWorld == nil,
                         // Decision 126: a city layer colours the cells instead.
                         skyline: realWorld == nil && mapLayers.popTravelMode?.isCityLayer != true
-                            ? skyline.map { SkylineLayer(skyline: $0, version: skylineVersion) } : nil,
+                            ? skyline.map { SkylineLayer(skyline: $0, growth: skylineGrowth, version: skylineVersion) } : nil,
                         layer: popTravelLayer(realWorld: realWorld),
                         camera: projection
                     )
@@ -579,15 +583,26 @@ struct MapView: View {
             // (each night at most). A real-world map shows its own town.
             guard session.world.geoAnchor == nil, !session.world.land.isEmpty else {
                 skyline = nil
+                skylineGrowth = nil
                 skylineVersion &+= 1
                 return
             }
-            let world = session.world
-            let built = await Task.detached(priority: .utility) { CitySkyline(world: world) }.value
-            if !Task.isCancelled {
-                skyline = built
-                skylineVersion &+= 1
-            }
+            // Decision 140: what grew since the last one, played over the
+            // next second and a half; not with Reduce Motion.
+            let world = session.world, previous = reduceMotion ? nil : skyline
+            let (built, growth) = await Task.detached(priority: .utility) {
+                let built = CitySkyline(world: world)
+                return (built, previous.flatMap { SkylineGrowth(from: $0, to: built) })
+            }.value
+            guard !Task.isCancelled else { return }
+            skyline = built
+            skylineGrowth = growth.map { SkylineLayer.Growth(growth: $0, start: .now) }
+            skylineVersion &+= 1
+            guard growth != nil else { return }
+            try? await Task.sleep(for: .seconds(SkylineGrowth.duration))
+            guard !Task.isCancelled else { return }
+            skylineGrowth = nil
+            skylineVersion &+= 1
         }
         .onChange(of: mapLayers.popTravelMode) { _, mode in
             cellTooltip = nil
@@ -1006,9 +1021,16 @@ struct PopTravelLayer: Equatable {
 }
 
 /// The city's buildings the base canvas draws (decision 126), compared by
-/// a version rather than lot by lot.
+/// a version rather than lot by lot, and the night's growth playing on
+/// them (decision 140).
 struct SkylineLayer: Equatable {
+    struct Growth {
+        let growth: SkylineGrowth
+        let start: Date
+    }
+
     let skyline: CitySkyline
+    let growth: Growth?
     let version: Int
 
     static func == (lhs: SkylineLayer, rhs: SkylineLayer) -> Bool {
@@ -1032,10 +1054,23 @@ private struct MapBaseCanvas: View, Equatable {
     }
 
     var body: some View {
-        let bounds = bounds, drawsLand = drawsLand, skyline = skyline?.skyline, layer = layer, camera = camera
-        return Canvas { context, size in
-            context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            MapArt.drawBase(bounds: bounds, drawsLand: drawsLand, skyline: skyline, layer: layer, projection: camera, in: context)
+        let bounds = bounds, drawsLand = drawsLand, growth = skyline?.growth, skyline = skyline?.skyline, layer = layer, camera = camera
+        // Decision 140: redrawn every frame only while a night's growth
+        // plays; otherwise the timeline is paused and the canvas is drawn
+        // as before.
+        return TimelineView(.animation(paused: growth == nil)) { timeline in
+            Canvas { context, size in
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                MapArt.drawBase(
+                    bounds: bounds,
+                    drawsLand: drawsLand,
+                    skyline: skyline,
+                    growth: growth.map { ($0.growth, elapsed: timeline.date.timeIntervalSince($0.start)) },
+                    layer: layer,
+                    projection: camera,
+                    in: context
+                )
+            }
         }
         .allowsHitTesting(false)
     }
