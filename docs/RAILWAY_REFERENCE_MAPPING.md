@@ -177,7 +177,7 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 | 同網站 / `planSameDirectionOvertakes`、`overtakeRunBuildable`、`resolveTraTraffic` | `ScheduledTraffic.swift` / `planTrafficOvertakes`、`trafficStopBuildable`、`trafficPlan`；`GameWorld.swift` / `recordTrafficVisits`、`departService`、`goOn` | km ×64000；25 km＝1,600,000 單位，30／600 秒；先後對調、backward scan、tooClose、rebuilt/reliedOn、最多八輪及每次重算交會直接移植。允許既有停靠延長；實際事件解除與 fixed-point 曲線為必要調整 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7；`binary_reference/relevant_symbols_and_settings.txt`／`railway_core_15_3.wasm` | `ScheduledTraffic.swift` / `scheduledPath`、`trafficStationPenalty`、`trafficMismatchPenalty`；`ServicePath.swift` / `trafficPath`／`networkPath` | 立即可移植的 station／PBS／停站、通過與月台不合成本。**gap：無可讀預設值**；自訂 400／800 m＝25,600／51,200，理由見決策 59，非參考值；不逆向 wasm。成本和物理距離分離；無計畫仍 V1 |
 | `Ci/PROJECT_ABSORPTION_GUIDE.md` Stage U；`Ci/reference_snapshot/` 更新記錄 | 無可翻譯實作；概念對應上述計畫與月台選路 | 優先順序、在哪裡等、快車超越、單線交會、月台分配清單；snapshot 只有快慢車與哪些車站需要超越的文字，列為概念，沒有數值倍率 |
-| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-*.js` 的 MRT | **無**（V3） | 雙線往返、終點 14 秒折返、同線跟車距離／煞車限速；確認沒有單線交會或同向待避。未移植／未冒充 V3 來源 |
+| `Railway/city_world_reference/00_READ_ME_FIRST.md`、`source/assets/actors-*.js` 的 MRT | **無**（V3） | 雙線往返、終點 14 秒折返、同線跟車距離／煞車限速；確認沒有單線交會或同向待避。未移植／未冒充 V3 來源 |
 
 GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.swift`／`ReferenceTrafficCurve.swift` 不呼叫 production 規劃／曲線。派車與保存語義、正線的名義最短走廊推導、實際 witness 的版本 9 與所有調整，均列決策 59。兩份新 schema 31 golden 先取得 GameCore 值再由獨立模型確認；`traffic.scheduledMeets` 在 `campaigns-12`（每個 seed 的第 9–17 個 case 在 `campaigns-14`），既有 campaign 不縮小。
 
@@ -196,7 +196,7 @@ GameCore 是純 Swift／整數／ID 平手；獨立 `ReferenceScheduledTraffic.s
 | （獨立交叉驗證） | `ReferenceOvertakeTracks.swift`／`stationMove`、`stationMovements`、`overtakePlaces`、`freeOvertakeTrack`、`scheduledBerthRoute`；`ReferenceNetworkService`／指定 berth 的鬆弛搜尋 | **gap**：本專案獨立 oracle，絕對距離時窗／候選索引集合組合，無 production planner 或 GameWorld 呼叫；同倍率 |
 | `Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html`／快慢車與超越說明；`lib/app__q_c234188b7c397f91.js`／`MIN_TRAIN_GAP` | 無可翻譯的 V4a 實作 | **gap**：只有文字與一次常數定義，未找到股道時窗／派車路線表演算法，不冒稱來源 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7／path cost、platformMismatchCost；`binary_reference/relevant_symbols_and_settings.txt` | V3 既有成本沿用；V4a 無新增成本常數 | **gap**：只有結構與編譯符號，沒有 overtakeTrackFree 實作；V3 自訂 400／800 m 成本不稱為參考預設值 |
-| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT | 無（V4a） | **gap**：雙線往返、停留、同線車距與煞車限制，未找到單線待避／股道時窗 |
+| `Railway/city_world_reference/00_READ_ME_FIRST.md`、`source/assets/actors-DPDGaah7.js`／MRT | 無（V4a） | **gap**：雙線往返、停留、同線車距與煞車限制，未找到單線待避／股道時窗 |
 
 V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 GoldenScenarios、SaveFixtures、ReplayFixtures 不改；原 `traffic.scheduledMeets` case 0–17 保留，新增三車 case 18–23 在 campaigns-15–18，每步全狀態／批次＝逐秒／存讀／關閉交通控制驗證。實景示範用猴硐既有雙股驗證實際全列停到快車名義走廊以外的另一股（正線／待避股推導的限制見決策 60），驗證狀態見 PR。
 
@@ -216,7 +216,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `dispatch.json`／`handoffs`、`groups` | 既有同列車往返／折返／下一趟派車 | **adapted**：班次接續不用現實日期／source group；新中途換向／倒進側線為 V4d，groups 歷史資料分組列 **gap**；秒×1 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7／`rail_shorter_platform_penalty`、`rail_longer_platform_penalty`、platformMismatchCost；binary symbols | `ServicePath` eligible berth、`ScheduledTraffic` 既有廣義成本；`preferredPath` 全列 fit | **adapted**：保留距離＋選路成本的概念；clean pack 沒有可讀預設值或實作，新增短／長月台成本常數列 **gap**；既有 400／800 m 為本專案決策 59，m×64 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`routeLegs`、`consolidateRingRouteLegs` | 既有 ServiceLine／LinePattern 語義沿用 | **gap**（V4b）：routeLegs 是班型／班距段，未找到 physical pathIds 或 platformMismatchCost；不將班距設定誤稱實體股道綁定 |
-| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT、platform spots | 無可翻譯的 V4b 派車實作 | **gap**：雙線捷運場景／步行碰撞與搭車 spots，沒有逐段 path binding／玩家股道指定 |
+| `Railway/city_world_reference/00_READ_ME_FIRST.md`、`source/assets/actors-DPDGaah7.js`／MRT、platform spots | 無可翻譯的 V4b 派車實作 | **gap**：雙線捷運場景／步行碰撞與搭車 spots，沒有逐段 path binding／玩家股道指定 |
 | （玩家操作／獨立驗證） | `GameWorld.lineRouteChoices`、`GameSession.setSelectedLineRoute`、`LinesPanel.routeMenus`；`ReferenceLineRoutes`、`ReferenceNetworkService`／名義與實際路徑、`ReferenceTrafficControl`／方向保護 | **gap**：本專案補足選路 UI、validated Codable、獨立 signed-run／絕對距離 oracle；UI point×1、m×64／秒×1；無 production planner／GameWorld 呼叫 |
 | （V4a 合併後追蹤） | `scheduledBerthPath` 單次 eligible 搜尋、`ScheduledOvertakeTrackTests` 第七項手算 | **gap**：恢復跨安全 berth 的 V3 成本／平手；觸控已獨立由作者合併 #119，不在 V4b diff；m×64 |
 
@@ -233,7 +233,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`MIN_HEADWAY_MINUTES=1.5`、`enforceMinHeadway` | `ServiceLine.minimumHeadwayMinutes`／capacity maximum、實際 dispatcher | **adapted**：既有 ceil(90/60)=2min 與整數分鐘 dispatcher 保留；單線 G 取整至分鐘，N 受 G 與原 requested／target 限制；本線→區間車索引優先不變 |
 | （四源沒有可讀單線最大公式） | `ServiceCapacityProfile`、`ServiceLine.services`；`ReferenceLineCapacity`／`ReferenceLines` | **gap**：本專案推導 G=max(2,ceil(max B/60))、N=floor(R/G)、每天 ceil(B×1440/H)≤86400 的保守資源式；獨立 DFS／餘數算術／倒數 allocation，不呼叫 production planner；無新 saved 欄位 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` §7、binary symbols | 無新增可直譯容量函式 | **gap**：成本／reverse／platform 設定不是單線 headway 公式，未找到可讀的單線 capacity／meeting implementation；不猜常數 |
-| `Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/assets/actors-Cx0CrTrM.js`／MRT | 無新增可直譯容量函式 | **gap**：既有雙線捷運來回／月台 spots 與車距，沒有玩家單線拓撲、交會 block 或最大 roster 公式 |
+| `Railway/city_world_reference/00_READ_ME_FIRST.md`、`source/assets/actors-DPDGaah7.js`／MRT | 無新增可直譯容量函式 | **gap**：既有雙線捷運來回／月台 spots 與車距，沒有玩家單線拓撲、交會 block 或最大 roster 公式 |
 
 無 direct reuse 或 faithful 全公式宣稱。必要整數化、環線兩向、部分區間車共用、不過午夜重算、未知外向零 paired 容量與名義上界限制見決策 62。SavedGame 10 不變（derived，無格式變更），schema 33 新增短 golden；既有三種 fixtures 全不改。新 576 步 campaign 在 campaigns-22，原 SaveMutation 14 項不縮減而分 campaigns-3／21。平溪 demo 由本身路網推導；各 check 狀態見 PR／handoff。
 
@@ -725,7 +725,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同目錄 timing.js `turnbackProgress` | 既有 RunningCurve／ServiceDwell；TurnbackTests 手算 | adapted／gap | 原始碼明說未公布停留，不虛構。保留現有加減速與dwell，不把20秒ease參數加成反轉停留；沒有移植畫面ease到權威移動。 |
 | Railway/railway_game_reference_clean/01_MIGRATION_MAP.md §7／binary_reference/relevant_symbols_and_settings.txt `rail_depot_reverse_penalty` | Deadlock.passingPlace／passingContinuation、GameWorld.resolveDeadlock／ServiceDirections；ReferenceDeadlock／ReferenceTrafficControl | adapted／gap | 只有符號與成本構想、無可讀planner或數值。正向優先，再反向所有可容全車berths；沿用400m detour與完整預約，不捏造新penalty。 |
 | Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js，turnback/reverse／headway查核 | 無直接反向側線實作可移植；新增玩家規則與獨立oracle | gap | 1.5min為班距，不是反轉dwell；未發現可讀的單線反向側線planner。 |
-| Railway/taipei_gta_reference/source/assets/actors-Cx0CrTrM.js，MRT雙軌端點layover | 非直接移植；延續GameCore head/tail反轉與既有停留 | gap | 來源是兩軌捷運端點timer14，沒有玩家单線死結倒側線模型；不套14秒。 |
+| Railway/city_world_reference/source/assets/actors-DPDGaah7.js，MRT雙軌端點layover | 非直接移植；延續GameCore head/tail反轉與既有停留 | gap | 來源是兩軌捷運端點timer14，沒有玩家单線死結倒側線模型；不套14秒。 |
 
 新增 golden schema34：可省略的中途反轉出發leg indices；舊30–33繼續讀。save10不變，既有fixtures（含README）不改。新campaign 768步的每步獨立模型、batch=second、存讀；實景驗收用既有平溪幾何建玩家折返服務。多次調車、無平台倒車、全域最優解仍是gap，本階段只做一次反向待避與安全續行。驗證以PR128實際head/run為準。
 
@@ -740,7 +740,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔 `blockHoldSec`／`updateBlockHolds`（8885–9125 行：`trainPos` 減 hold 秒數、`BLOCK_GAP_KM` 0.4、`BLOCK_CAP_SEC` 120、`_blockGap.lead`、`_blockCapped`） | 無直接移植；等候對象由 `trainHoldingRoute`／`routeWaits` | gap | 來源 block hold 是畫面時間延遲避免重疊，不是預約或授權；GameCore 早已用原子預約保證不互穿。`_blockGap.lead` 的「等誰」語義對應 holder；`_blockCapped` 永不清除，不仿。 |
 | 同檔 `blockSideShift`（10827 行，同組列車標籤側移 2 px／15 px、緩動 0.18） | 無 | gap | 遊戲地圖沒有列車標籤，不移植；列為之後畫面工作。 |
 | Railway/railway_game_reference_clean 01_MIGRATION_MAP §7、binary_reference `pf.reserve_paths`、`gui.show_track_reservation`、PBS 符號 | `contestedResources`／`routeWaits` 的概念依據 | gap | 只有設定與符號名稱，沒有可讀實作或顏色；不杜撰。 |
-| Railway/taipei_gta_reference/source/assets/actors-Cx0CrTrM.js（MRT 前車間距 −35 m、道路 `cons(e, why)` 的 `e.lead`、stuck/idle 計時） | 無直接移植 | gap | 雙軌捷運與道路車流的跟車限制，沒有地圖預約或死結標示；`e.lead` 同為「等誰」語義，無繪法。 |
+| Railway/city_world_reference/source/assets/actors-DPDGaah7.js（MRT 前車間距 −35 m、道路 `cons(e, why)` 的 `e.lead`、stuck/idle 計時） | 無直接移植 | gap | 雙軌捷運與道路車流的跟車限制，沒有地圖預約或死結標示；`e.lead` 同為「等誰」語義，無繪法。 |
 | Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js 共用軌道 headway ledger（`MIN_HEADWAY_MINUTES` 1.5、`_sharedTrackHeadwayWaiting`、`_blockedByFrontTrain`） | 無直接移植 | gap | 旗標只餵環境音效，不畫在地圖；沒有 deadlock 字樣。 |
 
 量綱：遊戲座標 m×64，只用世界座標折線，不引入新常數。新增查詢不保存，save10、golden 34 不變。
@@ -763,7 +763,7 @@ V 實際放行 → T、U（保證不互穿）
 | （無來源公式）`Ci/`／`choiceProb`（快照外 flow service）、`metroEconomyCollectCrowdingMetrics`（只報負載）；`Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §6（offeredCapacity／usedCapacity／travelTime 欄位） | `PassengerCrowding`、`PassengerRouteGraph.ServicePath.dailyCapacity`、`makeNetworkPassengerPlan` | **native**（R2）：BPR 0.15×(used/offered)^4，比例上限 2；供給 = 開放分鐘 ÷ 班距 × `Train.capacity`（無車 6×352）；需求超過 30 廣義分鐘按 30/分鐘遞減。只在 `.network`；千分比整數。 |
 | 同檔／`transferStations[].members`、`pairs` | 未匯入 | gap：同名正規化、system-scoped ID 與距離嚴格小於 450 m；563 站、58 組、63 matched pairs。群組可由多個 pair 連通，不能把全 members 當成每對都可直接步行。原生需來源 ID → StationID 轉換、明確步行 leg／時間與存檔；資料本身沒有同月台／通道成本數值。 |
 | `Railway/site_archive_clean/index.html`／`transferStationName`、`transferAnchorForStop`、`transferAnchorNear` | 跨站比對的待接位置 | gap：NFKC、臺→台、移除前綴／後綴，搭配實際距離。正規化與地理資料轉換應在 GameCore 外完成；不可只用近距離或站名自動把所有站接起來。 |
-| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/taipei_gta_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
+| `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`；`Railway/city_world_reference/00_READ_ME_FIRST.md`、`source/` | 本次來源檢查 | 未找到可直接代替原生 OD 轉乘佇列、持久化 route credit 或同月台／通道分級成本的可讀實作；不捏造來源數值。 |
 
 服務異動處理：候車群組檢查尚未完成的每段服務、物理路徑與每天能實際出現的服務 level；夜間暫停可等待再開班，永久失效則離站。刪除 pattern 會移轉後續索引；已在被移除服務上的乘客可按舊時刻表完成目前這段，移除未來 pattern 則結束其旅程並記回原起站。批量推進在 window／level 邊界保存 OD 餘數、重建需求，idle shortcut 亦會在該邊界醒來。
 
@@ -839,7 +839,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/.../aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a over `seed|key`） | `SeedDraw.hash`、`roll`（`DemandEvents.swift`，需求事件與 `Land.towns(seed:in:)` 共用） | direct：雜湊照搬（決策 69 已移植），這次只從 `DemandEventSchedule` 抽出共用，值不變 |
 | `Ci/.../app__q_c234188b7c397f91.js`／人口格（`loadPopulationHexLayer`）與新站運量 | GamePresentation 的 `LandImport.cells(population:frame:bounds:)` | adapted：WorldPop 30″ 格（本 repo 的 `taiwan_population.json`）重新分配到 64 m 格，最大餘數法；Ci 的 LandScan 圖磚不在參考庫 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`src/town_cmd.cpp`，只有路徑） | `Land.towns(seed:in:)`、`GameWorld.foundTowns(seed:)` | gap → 原生：三座城鎮的位置、半徑與密度是本專案的規則；照它的要求不控制列車 |
-| `Railway/taipei_gta_reference/source/assets/engine-DKps_Gq_.js`／`V` 的 9 區 `floors`、`districtAt` | — | 只是畫面（建物外觀的分布，沒有居民或就業），6c 的建物再評估 |
+| `Railway/city_world_reference/source/assets/engine-Dl04UrJP.js`／`V` 的 9 區 `floors`、`districtAt` | — | 只是畫面（建物外觀的分布，沒有居民或就業），6c 的建物再評估 |
 | `Railway/site_archive_clean/rail-3d/blender-buildings.js`、`data/taiwan_land.json` | — | 只是畫面／海岸遮罩；6a 不用（實景地圖沒有人的格本來就是空的） |
 | 本 repo `StationDemand.catchmentRadius`（800 m，`PopulationGrid.swift`） | `Land.catchmentRadius` = 51,200 單位、`GameWorld.landCatchment(of:)` | 同一個半徑的整數版本（64 單位／公尺） |
 
@@ -860,11 +860,11 @@ V 實際放行 → T、U（保證不互穿）
 
 ## Phase 6c-1：城市建物（決策 74）
 
-同一個參考庫版本（`2db0c5a`），四處來源都查過（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`）。建物在來源裡只有外觀（高度、樓層範圍、輪廓、模型），沒有居民或就業容量、升級或地價規則，所以容量表與選級是原生的（gap）。研究文件 PR #174 §2–§4、§9、§11 有逐檔盤點。
+同一個參考庫版本（`2db0c5a`），四處來源都查過（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`）。建物在來源裡只有外觀（高度、樓層範圍、輪廓、模型），沒有居民或就業容量、升級或地價規則，所以容量表與選級是原生的（gap）。研究文件 PR #174 §2–§4、§9、§11 有逐檔盤點。
 
 | 來源／函式 | 目標 | 狀態／差異 |
 | --- | --- | --- |
-| `Railway/taipei_gta_reference/source/assets/world-*.js`：`floorsFor`、`pickType`；`engine-*.js` 的區域 `style.floors`（例如 `[2,6]`、`[4,12]`、`[10,40]`） | `BuildingDensity.floors`（2／6／18／40） | gap → 原生：四個代表樓層參考來源的外觀跨度（店屋、公寓、大樓、信義上端），但選這四個值與容量換算是本專案的；來源的樓層只決定外觀 |
+| `Railway/city_world_reference/source/assets/world-*.js`：`floorsFor`、`pickType`；`engine-*.js` 的區域 `style.floors`（例如 `[2,6]`、`[4,12]`、`[10,40]`） | `BuildingDensity.floors`（2／6／18／40） | gap → 原生：四個代表樓層參考來源的外觀跨度（店屋、公寓、大樓、信義上端），但選這四個值與容量換算是本專案的；來源的樓層只決定外觀 |
 | 同上（旋轉矩形、lot、site 佔地） | `Building.cells`（佔用的 64 m 格） | 改變：GameCore 只存佔格，輪廓與旋轉留給畫面（Phase 8） |
 | `Railway/site_archive_clean/rail-3d/blender-buildings.js`：`buildingCatalog`；`blender-buildings-v1`／`historic-buildings-v2` 的 catalog／placement | 沒有（Phase 8 素材） | 只有模型、尺寸與地理錨點，不推容量 |
 | `Ci/reference_snapshot/external/openfreemap-tiles/styles/liberty.json`：`building`、`building-3d`（`render_height`、`render_min_height`） | 沒有（畫面層） | 圖磚高度只給 extrusion，不是容量 |
@@ -876,13 +876,13 @@ V 實際放行 → T、U（保證不互穿）
 
 ## Phase 6c-2：容量接上成長與自動升級（決策 75）
 
-同一個參考庫版本（`2db0c5a`），再查 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`binary_reference/relevant_source_paths.txt`）與 `Railway/taipei_gta_reference/`。來源沒有建物升級、容量限制成長或服務門檻，所以門檻與配額是原生的（gap）。
+同一個參考庫版本（`2db0c5a`），再查 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`binary_reference/relevant_source_paths.txt`）與 `Railway/city_world_reference/`。來源沒有建物升級、容量限制成長或服務門檻，所以門檻與配額是原生的（gap）。
 
 | 來源／函式 | 目標 | 狀態／差異 |
 | --- | --- | --- |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9（`town_cmd.cpp`、`industry_cmd.cpp`，只有路徑；「consume transport accessibility metrics」） | `GameWorld.growLand(reached:)` 的升級與容量 | gap → 原生：沿用決策 70 的服務比例與可達車站當作升級條件（800‰、1 站、每站 2 格） |
 | 同檔固定 tick 順序（`EconomySystem.tick()` → `TownSystem.tick()`） | 午夜：結算後才成長；每站「升級 → 成長 → 擴張」 | 沿用「城鎮在經濟之後」的順序；站內順序是原生的 |
-| `Railway/taipei_gta_reference/source/assets/world-*.js`：`floorsFor`、區域 `style.floors` | `BuildingDensity` D1 → D4 一次一級 | 只有外觀樓層，沒有升級規則（gap） |
+| `Railway/city_world_reference/source/assets/world-*.js`：`floorsFor`、區域 `style.floors` | `BuildingDensity` D1 → D4 一次一級 | 只有外觀樓層，沒有升級規則（gap） |
 | 本 repo 決策 70 `TownGrowth.growth(served:trips:reached:)` | `TownGrowth.serviceShare(served:trips:)`、`reachedCount(_:)`、`Place.lastService`、`Place.lastReached` | 抽出同一個比例保存，值不變 |
 | 本 repo 決策 73／74 `LandDemand.grow`、`Building.capacity(on:)` | `grow` 改用建物容量 | 取代 400／1200；放不下的捨棄 |
 
@@ -890,7 +890,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## Phase 6c-3／6d：地價與城市圖層（決策 76）
 
-同一個參考庫版本（`2db0c5a`）。研究文件 PR #174 §4 已在 `Ci/reference_snapshot/` 的 js／json／html 搜尋 `landValue`、`land_value`、`landPrice`、`propertyValue`、`realEstate`、`rent`、`地價`、`租金`、`房地產`、`開發`，並查 `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`，都沒有地價、租金或開發規則；本次再查 `Railway/site_archive_clean/`、`Railway/taipei_gta_reference/source/` 與新加入的 `Simulator/`（`3a19671`，先讀 `REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`，再搜 `reference_snapshot/`：模型火車佈景模擬器，`office` 只是 KATO 佈景建物的軌道件與 3D 外觀，沒有 `landValue`、`zoning`、`residential`、`population` 或 `catchment`）也沒有。所以地價與圖層是原生的（gap → 原生）。
+同一個參考庫版本（`2db0c5a`）。研究文件 PR #174 §4 已在 `Ci/reference_snapshot/` 的 js／json／html 搜尋 `landValue`、`land_value`、`landPrice`、`propertyValue`、`realEstate`、`rent`、`地價`、`租金`、`房地產`、`開發`，並查 `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`，都沒有地價、租金或開發規則；本次再查 `Railway/site_archive_clean/`、`Railway/city_world_reference/source/` 與新加入的 `Simulator/`（`3a19671`，先讀 `REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`，再搜 `reference_snapshot/`：模型火車佈景模擬器，`office` 只是 KATO 佈景建物的軌道件與 3D 外觀，沒有 `landValue`、`zoning`、`residential`、`population` 或 `catchment`）也沒有。所以地價與圖層是原生的（gap → 原生）。
 
 | 來源／函式 | 目標 | 狀態／差異 |
 | --- | --- | --- |
@@ -904,7 +904,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 拆除車站（決策 83）
 
-2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源。`MapBuilder/` 與 `Ci/` 有刪站；`Railway/railway_game_reference_clean/` 只在 `binary_reference/relevant_symbols_and_settings.txt` 有 `CmdRemoveFromRailStation` 的符號名、`relevant_source_paths.txt` 有 `src/station_cmd.cpp` 的路徑，沒有原始碼；`Railway/site_archive_clean/`、`Railway/taipei_gta_reference/source/` 沒有刪站；`Simulator/` 是模型軌道，沒有車站物件。
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源。`MapBuilder/` 與 `Ci/` 有刪站；`Railway/railway_game_reference_clean/` 只在 `binary_reference/relevant_symbols_and_settings.txt` 有 `CmdRemoveFromRailStation` 的符號名、`relevant_source_paths.txt` 有 `src/station_cmd.cpp` 的路徑，沒有原始碼；`Railway/site_archive_clean/`、`Railway/city_world_reference/source/` 沒有刪站；`Simulator/` 是模型軌道，沒有車站物件。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -920,7 +920,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 地圖畫出路線、共線區段與轉乘群組（決策 84）
 
-2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`。`MapBuilder/` 有完整的畫法（共線偏移與轉乘站連線）；`Ci/` 有共線錯開（`metroBranchSharedTrackLaneLayout`）與轉乘走廊（`_buildTransferCorridorLineFeaturesGcj`）；`Simulator/`、`Railway/site_archive_clean/`、`Railway/taipei_gta_reference/` 與 `Railway/railway_game_reference_clean/` 沒有路線在地圖上並排的畫法。只改畫面，沒有比例換算（偏移以線寬為單位，線寬依縮放）。
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`。`MapBuilder/` 有完整的畫法（共線偏移與轉乘站連線）；`Ci/` 有共線錯開（`metroBranchSharedTrackLaneLayout`）與轉乘走廊（`_buildTransferCorridorLineFeaturesGcj`）；`Simulator/`、`Railway/site_archive_clean/`、`Railway/city_world_reference/` 與 `Railway/railway_game_reference_clean/` 沒有路線在地圖上並排的畫法。只改畫面，沒有比例換算（偏移以線寬為單位，線寬依縮放）。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -936,7 +936,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 資產、折舊、資產負債表與年度決算（決策 85）
 
-2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`），搜尋 `depreciation`、`balanceSheet`、`fixedAssets`、`annualReport`、`fiscal`、`yearEnd`、`netWorth`、`equity`。只有 `Ci/` 的財務儀表板有報表結構；其他來源沒有成本、折舊或年度結算（`PHASE7_COMPANY_STUDY.md` §2 的盤點仍然成立）。金額一律是美分（`Money`），一年是 360 天。
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec` 的全部來源（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Simulator/`、`MapBuilder/`），搜尋 `depreciation`、`balanceSheet`、`fixedAssets`、`annualReport`、`fiscal`、`yearEnd`、`netWorth`、`equity`。只有 `Ci/` 的財務儀表板有報表結構；其他來源沒有成本、折舊或年度結算（`PHASE7_COMPANY_STUDY.md` §2 的盤點仍然成立）。金額一律是美分（`Money`），一年是 360 天。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -957,7 +957,7 @@ V 實際放行 → T、U（保證不互穿）
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
-| `Railway/taipei_gta_reference/source/assets/` 的 missions（動作遊戲的小任務） | — | 不採用：不同玩法 |
+| `Railway/city_world_reference/source/assets/` 的 missions（動作遊戲的小任務） | — | 不採用：不同玩法 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`openMetroChallengeStartModal`、`startMetroChallengeFromModal`、`metroChallengeCurrentPassengerScore`（已停用的單日挑戰：跑 1 個模擬日，以載客數計分；`mission` 只出現在 `flow-admission` 等字串） | — | 不採用為目標：單日計分賽、已停用、計分引擎不在快照；成績與排行榜部分見決策 87 |
 | （參考沒有快轉） | `GameSpeed.fast`（6000×） | gap → 原生：以年為單位的目標需要更快的速度 |
 | （參考沒有） | `Goal`、`Scenario`、`ScenarioState`、`judgeScenario(endingWith:)`、`startScenario(_:)`、`Challenge`、`GoalsPanel`、存檔版本 17 | gap → 原生 |
@@ -976,7 +976,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 全島地圖：上限、全台灣與土地按需展開（決策 88）
 
-2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`（研究用的是 `5f6ac80`，見 `docs/research/WHOLE_TAIWAN_MAP.md` §6），搜尋 `lazyLoad`、`visibleRoutes`、`chunk`、`tileSize`、`sector`。參考沒有按需展開的土地：`Railway/taipei_gta_reference/` 的 `lazyLoads`／`worldLazyMB` 是音訊緩衝區的延遲載入，不是土地；`Ci/` 與 `Railway/` 網站一次讀入整個城市的人口格。
+2026-10-08 檢查參考庫 `a7e377b683604b226949ec1dbd24ec9f32ca0245`（研究用的是 `5f6ac80`，見 `docs/research/WHOLE_TAIWAN_MAP.md` §6），搜尋 `lazyLoad`、`visibleRoutes`、`chunk`、`tileSize`、`sector`。參考沒有按需展開的土地：`Railway/city_world_reference/` 的 `lazyLoads`／`worldLazyMB` 是音訊緩衝區的延遲載入，不是土地；`Ci/` 與 `Railway/` 網站一次讀入整個城市的人口格。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -1031,7 +1031,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 城市建造 P0-A：玩家放置建物（決策 92）
 
-2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `placeBuilding`、`buildingPlacement`、`addBuilding`、`buildingTool`、`buildMode`、`placeMode`、`addStructure`、`放置建築`、`建造建築`。命中的只有 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_buildModeLinePostWorkTimers`（蓋地鐵路線的模式）與 `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `buildMode`（場景載入的程度），都不是放置建物。
+2026-10-08 檢查參考庫 `5f6ac80c233063c09c4c61571f629881af0b19ec`：搜尋 `placeBuilding`、`buildingPlacement`、`addBuilding`、`buildingTool`、`buildMode`、`placeMode`、`addStructure`、`放置建築`、`建造建築`。命中的只有 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `_buildModeLinePostWorkTimers`（蓋地鐵路線的模式）與 `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的 `buildMode`（場景載入的程度），都不是放置建物。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -1086,11 +1086,11 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 城市建造 P0-C2：收購、拆遷與預覽（決策 95）
 
-2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）重新看了可以用的部分：`Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)`（足跡在間距內碰到軌道就擋下）P0-A 已經用同一個想法；`Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的「認領」（大型地點認領矩形、移除那裡的程序化建物）就是收購的形式；`Simulator/` 的 `onDropStructure` 與 `Ci/` 的 `metroCanPlaceWithinQuota` 是「放置前預覽費用、確認才扣款」。參考庫沒有收購價、拆遷費或軌道穿過建物的規則，這些是原生。
+2026-10-08 依研究文件 `docs/research/CITY_BUILDING_STUDY.md` §2 的盤點（同一個參考庫 commit）重新看了可以用的部分：`Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)`（足跡在間距內碰到軌道就擋下）P0-A 已經用同一個想法；`Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的「認領」（大型地點認領矩形、移除那裡的程序化建物）就是收購的形式；`Simulator/` 的 `onDropStructure` 與 `Ci/` 的 `metroCanPlaceWithinQuota` 是「放置前預覽費用、確認才扣款」。參考庫沒有收購價、拆遷費或軌道穿過建物的規則，這些是原生。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的認領矩形（`reservedRects`） | `GameWorld.cityCells(claimedBy:)`、`claims(_:row:column:)`、`removeLand(at:)`、`isClaimedByPlacedBuilding` | 改寫：認領的是城市建物的格子中央 40 m 見方，認領後移除那一格，城市不再長回來 |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的認領矩形（`reservedRects`） | `GameWorld.cityCells(claimedBy:)`、`claims(_:row:column:)`、`removeLand(at:)`、`isClaimedByPlacedBuilding` | 改寫：認領的是城市建物的格子中央 40 m 見方，認領後移除那一格，城市不再長回來 |
 | `Railway/site_archive_clean/rail-3d/integration/rail-clearance.js` 的 `blocked(rings, padding)` | `GameWorld.line(_:comesNear:)`、`placedBuildings(inTheWayOf:)` | 改寫（P0-A 的間距檢查反過來用：新軌道對既有建物） |
 | `Simulator/reference_snapshot/…/page-38607521e5e99afd.js` 的 `onDropStructure`（先放、再確認）；`Ci/` 的 `metroCanPlaceWithinQuota` | `GameSession.buildingSite`、`buildingPreview`、`confirmBuilding()`、`BuildingOverlay`、App 的動作按鈕「建造 · $X」 | 改寫：點地圖選建地、預覽費用與原因、按鈕確認 |
 | （參考沒有） | `PlacedBuildingRules.cityBuildingSide`、`buyOutPercent`、`buyOutPrice(of:)`、`buildTrackEdge`／`buildStation` 的拆遷費、`clear(_:)` | gap → 原生 |
@@ -1117,14 +1117,14 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 城市建造 P0-B：土地分區（決策 98）
 
-2026-10-08 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`）、`Railway/taipei_gta_reference/`（`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找分區、保護區、筆刷或框選、地價加成與依分區成長。**參考庫沒有玩家劃分區、保護區規則、計算的地價或隨時間的成長**（「zone」的命中多半是音樂、速限、時區）；可以用的是筆刷的操作與土地用途的顏色。
+2026-10-08 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`）、`Railway/city_world_reference/`（`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找分區、保護區、筆刷或框選、地價加成與依分區成長。**參考庫沒有玩家劃分區、保護區規則、計算的地價或隨時間的成長**（「zone」的命中多半是音樂、速限、時區）；可以用的是筆刷的操作與土地用途的顏色。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `onTerrainStroke`（一筆只存一次復原快照、格子稀疏存成 `col,row` 的表、依列行排序）；`chunks/5758-131911c5f04a436f.js` 的指標處理（畫面座標 → `floor(x / cellMm)` 的格、`select` 模式點一格） | `GameSession.dragZone(from:to:)`、`endZoneDrag(from:to:)`（放開才是一個編輯）、`zoneRectangle(from:to:)`、`tapBuildingTool` 的 `.zone`；`Zoning`（依列、行排序的稀疏格）；App `MapGestures` 的單指繪製 | 改寫：圓形筆刷改成矩形（作者要「單點或拖曳」），座標 → 64 m 格是 `Land.cellIndex` |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `landuseColorByClass`／`landuseLabelByClass`、`renderBuildingLegend` | `CityMap.zoneColors`（住宅 `#FFB74D`、商業 `#FF7043`、辦公 `#EF5350`、工業 `#AB47BC`、公共設施 `#42A5F5`、觀光借教育的 `#26C6DA`）、`PopulationLegendView` 的分區圖例 | 直接沿用顏色；`Ci/` 沒有觀光類別 |
 | `Ci/reference_snapshot/lib/game-dom__q_f4c03f23b8518a04.html` 的 `map.legend.reserveExtent`（`#1B5E20`）、`map.legend.airportExtent`（`#78909C`） | `CityMap.zoneColors` 的不開發、保留地 | 直接沿用顏色（只有圖例、沒有規則） |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `reservedRects`／`overlapsReserved`（保留的矩形不長程序化建物） | `Zone.reserved`、`spread(towards:)` 跳過劃了分區的格 | 只取想法：參考是一次性的種子生成，這裡是每晚的成長 |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的 `reservedRects`／`overlapsReserved`（保留的矩形不長程序化建物） | `Zone.reserved`、`spread(towards:)` 跳過劃了分區的格 | 只取想法：參考是一次性的種子生成，這裡是每晚的成長 |
 | （參考沒有） | `Zone`、`GameWorld.setZone(_:rows:columns:)`、`invalidZoneArea`、`spread(towards:)` 的分區優先、`grow`／`raiseBuildings` 的不開發、`LandValueRules.companyPremium`、存檔版本 23、golden schema 43 | gap → 原生 |
 
 固定小數：格是 4,096 單位（64 m）；一次最多 128 格一邊；地價加成 600 美分／m²、距離 25,600 單位（400 m），比較的是平方（整數）；新格的人數以 `LandDemand.newCellResidents`（4）為底。
@@ -1133,15 +1133,15 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 地形：水域（決策 105）
 
-2026-10-09 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`relevant_source_paths.txt`）、`Railway/taipei_gta_reference/`（`00_READ_ME_FIRST.md`、`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找海岸線、河湖、海陸遮罩、水上的建造限制與橋。參考庫有一份海岸線資料與幾個可以照著做的規則；**沒有河湖的資料，也沒有「城鎮不往水上長」的規則**。`Simulator/` 只有地形筆刷與高度場、沒有水；`MapBuilder/` 的 Overpass 查詢只有建物、公園、行政區與路名，沒有水。
+2026-10-09 重新 clone `a91453/railway-reference-private`（`a7e377b`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`（`00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`、`relevant_source_paths.txt`）、`Railway/city_world_reference/`（`00_READ_ME_FIRST.md`、`source/`）、`Simulator/`（`REFERENCE_REFRESH_2026-10-07.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`）與 `MapBuilder/`（`REFERENCE_REFRESH_2026-10-08.md`、`SANITIZATION_REPORT.md`、`reference_snapshot/`），找海岸線、河湖、海陸遮罩、水上的建造限制與橋。參考庫有一份海岸線資料與幾個可以照著做的規則；**沒有河湖的資料，也沒有「城鎮不往水上長」的規則**。`Simulator/` 只有地形筆刷與高度場、沒有水；`MapBuilder/` 的 Overpass 查詢只有建物、公園、行政區與路名，沒有水。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | `Railway/site_archive_clean/data/taiwan_land.json`（內政部直轄市、縣市界線 1140318 合併的海岸線，GeoJSON MultiPolygon，39 塊，RDP 約 150 m；政府資料開放授權條款第 1 版，`index.html` 標示「臺灣輪廓：內政部」） | `tools/real-world-population/build_water_grid.py` 的第四個參數：和 OSM 的海岸線逐格比較（99.79% 一致） | 只用來核對，不打包：它畫到低潮線（潮間帶算陸地）、比 64 m 格粗；遮罩用 OSM（決策 105 第 2 點） |
 | `Railway/site_archive_clean/index.html` 的 `glLandLoad()`／`glLandInstall()`（陸地是底圖下的填色，海是背景色，`GL_SEA`） | 不畫水域圖層：Apple 地圖與 OSM 底圖（決策 97）本來就畫了水 | 只取想法：參考也不另外畫水，只畫陸地 |
 | `Railway/site_archive_clean/rail-3d/geo.js` 的 `inRing`／`inPolygon`（射線法、外環減內環） | `build_water_grid.py` 的 `fill`（每列的交點排序、成對填滿，奇偶規則） | 改寫：逐點判斷改成逐列掃描（9,296 × 8,064 格），同一個奇偶規則 |
-| `Railway/taipei_gta_reference/source/assets/engine-DKps_Gq_.js` 的 `surfaceAt(x, z)`（每個位置一種地面，`'water'` 是其中之一） | `Terrain`、`GameWorld.isWater(row:column:)`：和土地用途分開的一層 | 只取想法：參考是解析的曲線，這裡是存檔的格 |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `UD()`（建物的 9 個取樣點都要落在允許的地面 `PD`，否則不放） | `placeBuilding` 的 `waterUnder(_:)`：正方形碰到的每一格都不能是水，拒絕時指名第一格（`onWater`） | 改寫：取樣點改成正方形碰到的整格，整數比較 |
+| `Railway/city_world_reference/source/assets/engine-Dl04UrJP.js` 的 `surfaceAt(x, z)`（每個位置一種地面，`'water'` 是其中之一） | `Terrain`、`GameWorld.isWater(row:column:)`：和土地用途分開的一層 | 只取想法：參考是解析的曲線，這裡是存檔的格 |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的 `UD()`（建物的 9 個取樣點都要落在允許的地面 `PD`，否則不放） | `placeBuilding` 的 `waterUnder(_:)`：正方形碰到的每一格都不能是水，拒絕時指名第一格（`onWater`） | 改寫：取樣點改成正方形碰到的整格，整數比較 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md`（建造是否合法放在指令裡，不放在 renderer）；`relevant_source_paths.txt` 列的 OpenTTD `tunnelbridge_cmd.cpp`、`terraform_cmd.cpp`（只有路徑） | `placeBuilding`、`setZone`、`spread(towards:)` 在 GameCore 裡檢查水；橋與整地留給之後 | 照做（規則在 GameCore）；OpenTTD 的檔案沒有收錄 |
 | `MapBuilder/reference_snapshot/_next/static/chunks/371-b21952458407b892.js`（打包的 osmtogeojson：multipolygon 的外環與內環、`waterway` 白名單 riverbank、dock） | `build_water_grid.py` 的 `WATER_TAGS`（`natural=water`、`waterway=riverbank`、`dock`、`landuse=reservoir`）；面由 pyosmium 組 | 照它的標籤清單；組多邊形用 pyosmium（決策 93） |
 | （參考沒有） | 河湖的資料、魚塭除外的規則、`Terrain` 的段與按塊讀入、`setWater`、`expandLand(_:cells:water:)`、`invalidTerrain`、`onWater`、`LandImport` 只分給乾格、`WaterGrid`、存檔版本 24、golden schema 44 | gap → 原生 |
@@ -1156,7 +1156,7 @@ V 實際放行 → T、U（保證不互穿）
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js` 的 `UD()`（建物的取樣點都要落在允許的地面） | `GameWorld.straddlesShore(_:)`：岸邊的建物正方形下面要同時有水和陸地 | 改寫：允許的地面從「一種」變成「兩種都要有」 |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js` 的 `UD()`（建物的取樣點都要落在允許的地面） | `GameWorld.straddlesShore(_:)`：岸邊的建物正方形下面要同時有水和陸地 | 改寫：允許的地面從「一種」變成「兩種都要有」 |
 | 作者提供的 SimCity BuildIt 截圖（海岸的碼頭、遊艇港、海上建物；景觀的池塘與湖泊；跨河的橋） | `PlacedBuildingKind.wharf`、`.marina`、`standsOnShore`、`needsShore`；`LandValueRules.waterPremium` | 只參考玩法（商業遊戲，不取數值與素材）；挖湖、填海、橋列為之後 |
 | （參考沒有） | 岸邊建物的規則、`waterPremium`／`waterReach`、`Terrain.isNearWater`、存檔版本 25、golden schema 45 | gap → 原生 |
 
@@ -1233,7 +1233,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 地圖圖示（決策 121）
 
-查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/taipei_gta_reference/` 的標題圖是寫實夜景、另一個品牌，不用。
+查 `a91453/railway-reference-private` `435350d` 裡所有的圖片（約 250 張）：遊戲用得上的只有 `Ci/` 的車站與路線小圖示和 `MapBuilder/` 的地圖標記，都是黑白細線，和 App 圖示的畫風不同；`Website/site/assets/` 的 App 圖示與宣傳圖已經是這個畫風（取色見上面的決策 84）；`Railway/city_world_reference/` 的標題圖是寫實夜景、另一個品牌，不用。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
@@ -1247,11 +1247,11 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 站長的角色（決策 122）
 
-查 `a91453/railway-reference-private` `435350d` 裡的人物與角色：只有 `Railway/taipei_gta_reference/source/avatars/` 的八個 3D 人物（`casual-*`、`elder-*`、`student-*`、`jie`、`wen`，`.glb`，KTX2 貼圖，寫實），畫風與 App 圖示不合；其餘的來源沒有角色或吉祥物。
+查 `a91453/railway-reference-private` `435350d` 裡的人物與角色：只有 `Railway/city_world_reference/source/avatars/` 的八個 3D 人物（`casual-*`、`elder-*`、`student-*`、`jie`、`wen`，`.glb`，KTX2 貼圖，寫實），畫風與 App 圖示不合；其餘的來源沒有角色或吉祥物。
 
 | 參考檔案 | 目標 | 方式 |
 | --- | --- | --- |
-| `Railway/taipei_gta_reference/source/avatars/*.glb` | — | 不用（寫實的 3D，和扁平的 2D 不合） |
+| `Railway/city_world_reference/source/avatars/*.glb` | — | 不用（寫實的 3D，和扁平的 2D 不合） |
 | `Website/site/assets/app-icon-light.png`（黃點 `#FFC86B`） | 黃山雀的身體與燈的顏色 | 取顏色 |
 | （參考沒有） | `StationMasterTaiwan*`、`StationMasterLantern`、`StationMasterMood`、`RegionStyle.stationMasterArt` | gap → 原生 |
 
@@ -1266,7 +1266,7 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標 | 方式 |
 | --- | --- | --- |
 | `Ci/reference_snapshot/`（土地來自沒有附上的向量圖磚） | — | 沒有可移植的 |
-| `Railway/taipei_gta_reference/source/assets/buildWorker-*.js`（three.js 的 3D 台北，`extrudeXY` 擠出建物） | — | 不用：真實的 3D 幾何，留給 Phase 8 |
+| `Railway/city_world_reference/source/assets/buildWorker-*.js`（three.js 的 3D 台北，`extrudeXY` 擠出建物） | — | 不用：真實的 3D 幾何，留給 Phase 8 |
 | （參考沒有） | `CitySkyline`、`MapArt.drawSkyline`、`Palette.cityRoof`／`cityWall`／`parkGround`／`farmGround`、`SkylineLayer` | gap → 原生 |
 
 外部只取想法：SimCity BuildIt（作者的截圖，商業遊戲）建物依密度長高、用途用顏色分。沒有程式碼或素材。
@@ -1284,7 +1284,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 出售公司的建物（決策 130）
 
-查 `a91453/railway-reference-private` `05d7000`（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`）：沒有不動產、出售、帳面價值或已實現損益（`sale`／`sell`／`出售` 的命中都是招牌字樣、攤販對話或 OSM 標籤）。能沿用的只有 `Ci/` 現金流量表的形狀：投資活動是流入減流出。
+查 `a91453/railway-reference-private` `05d7000`（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Simulator/`、`MapBuilder/`）：沒有不動產、出售、帳面價值或已實現損益（`sale`／`sell`／`出售` 的命中都是招牌字樣、攤販對話或 OSM 標籤）。能沿用的只有 `Ci/` 現金流量表的形狀：投資活動是流入減流出。
 
 | 參考檔案／函式 | 目標 | 方式 |
 | --- | --- | --- |
@@ -1297,7 +1297,7 @@ V 實際放行 → T、U（保證不互穿）
 
 ## 實景示範用地面重建（決策 132）
 
-作者要求把實景示範用新的地形模組重蓋，並且加長。參考是 `a91453/railway-reference-private` `05d7000`，六個來源都看過（`Ci/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`）。只有 `Railway/site_archive_clean/` 有用得上的。
+作者要求把實景示範用新的地形模組重蓋，並且加長。參考是 `a91453/railway-reference-private` `05d7000`，六個來源都看過（`Ci/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Simulator/`、`MapBuilder/`）。只有 `Railway/site_archive_clean/` 有用得上的。
 
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |

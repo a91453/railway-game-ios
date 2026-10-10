@@ -30,6 +30,9 @@ extension GameWorld {
         /// keeps for all its decisions.
         var traffic: (key: TrafficPlanKey, plan: TrafficPlan)?
         var stepTraffic: TrafficPlan?
+        /// What working out a traffic plan reads that changes only by a
+        /// command, kept from one plan to the next.
+        var trafficParts = TrafficParts()
     }
 
     private struct DirectionState: Hashable {

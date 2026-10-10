@@ -60,6 +60,21 @@ extension GameWorld {
         var from: StationID
         var to: StationID
     }
+    /// What ``trafficPlan(parts:)`` works out from the network and a
+    /// train's timetable alone: the same for every plan until a command
+    /// changes the world.
+    struct TrafficParts {
+        struct Run: Hashable {
+            var train: TrainID
+            var cycle: Int64
+            var timetable: [ScheduledStop]
+            var period: Int64?
+            var length: Int64
+            var performance: TrainPerformance
+        }
+        var points: [Run: [TrafficPoint]?] = [:]
+        var tracks: [TrafficSection: Int] = [:]
+    }
 
     /// Scheduled meets and overtakes, including future visits, in train,
     /// cycle and station order. Without traffic control there is no plan.
@@ -100,12 +115,19 @@ extension GameWorld {
         if let step = memo.stepTraffic { return step }
         let key = trafficPlanKey()
         if let kept = memo.traffic, kept.key == key { return kept.plan }
-        let plan = trafficPlan()
+        let plan = trafficPlan(parts: &memo.trafficParts)
         memo.traffic = (key, plan)
         return plan
     }
 
     func trafficPlan() -> TrafficPlan {
+        var parts = TrafficParts()
+        return trafficPlan(parts: &parts)
+    }
+
+    /// The plan, with what it reads that only a command changes from
+    /// `parts`, and kept there.
+    func trafficPlan(parts: inout TrafficParts) -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
         // Running services, and finished ones whose visits a waiting train
@@ -114,11 +136,22 @@ extension GameWorld {
         for source in trains where source.position != nil && (source.execution != nil || !source.trafficVisits.isEmpty) {
             guard source.timetable.count >= 2 else { continue }
             let cycle = source.execution?.cycle ?? source.trafficVisits.last?.cycle ?? 0
-            if let points = trafficPoints(of: source, cycle: cycle), points.count >= 2 {
+            let run = TrafficParts.Run(train: source.id, cycle: cycle, timetable: source.timetable, period: source.timetablePeriod,
+                                       length: source.length, performance: source.performance)
+            let points: [TrafficPoint]?
+            if let kept = parts.points[run] {
+                points = kept
+            } else {
+                points = trafficPoints(of: source, cycle: cycle)
+                parts.points[run] = .some(points)
+            }
+            if let points, points.count >= 2 {
                 plan.services.append(TrafficService(train: source, points: points))
             }
         }
         guard plan.services.count >= 2 else { return plan }
+        plan.tracks = parts.tracks
+        defer { parts.tracks = plan.tracks }
         inferTrafficMeets(&plan)
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
