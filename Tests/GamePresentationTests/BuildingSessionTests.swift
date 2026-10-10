@@ -108,10 +108,10 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.world.economy.balance, 10_000, "free")
     }
 
-    /// Decision 140: a real-world map shows its own houses, so the
-    /// building tool marks only the city buildings a site would buy out,
-    /// not every one in view.
-    func testARealWorldMapMarksOnlyTheCityBuildingsASiteBuysOut() throws {
+    /// Decision 140: a real-world map has a city building on nearly every
+    /// cell, so the building tool draws only those round the chosen site,
+    /// not every one in view, and still marks those it would buy out.
+    func testARealWorldMapDrawsOnlyTheCityBuildingsRoundTheSite() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
         world.setCityBuildings(true)
@@ -120,9 +120,13 @@ final class BuildingSessionTests: XCTestCase {
         let session = GameSession(world: world, language: .english)
         session.selectTool(.building)
         session.buildingKind = .office
-        XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, false)
+        XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, false, "none before a site is chosen")
         session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
-        XCTAssertEqual(session.buildingOverlay?.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
+        let overlay = try XCTUnwrap(session.buildingOverlay)
+        XCTAssertTrue(overlay.showsCityBuildingSites)
+        let reach = GameSession.citySitesReach
+        XCTAssertEqual(overlay.citySitesArea, PlanRect(minX: 21_504 - reach, minY: 21_504 - reach, maxX: 23_552 + reach, maxY: 23_552 + reach))
+        XCTAssertEqual(overlay.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
     }
 
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
@@ -135,6 +139,7 @@ final class BuildingSessionTests: XCTestCase {
         session.buildingKind = .office
         XCTAssertNil(session.buildingOverlay?.site)
         XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, true)
+        XCTAssertNil(session.buildingOverlay?.citySitesArea, "a blank map draws every one in view")
 
         // An office on the middle of the D4 home's cell buys it out (the
         // numbers of CompanyBuildingsClearingTests).

@@ -706,11 +706,18 @@ enum MapArt {
 
     /// Where the city's buildings stand (decision 95), while the building
     /// tool chooses a site: the middle square of each cell of land in view,
-    /// faintly, once a cell is 8 points or more across.
+    /// or on a real-world map round the site (decision 140), faintly, once
+    /// a cell is 8 points or more across.
     private static func drawCityBuildingSites(_ world: GameWorld, overlay: BuildingOverlay, projection: some MapProjection, in context: GraphicsContext) {
         guard overlay.showsCityBuildingSites, !world.land.isEmpty,
               Double(Land.cellLength) * projection.pointsPerUnit >= 8 else { return }
-        let region = drawingRegion(projection)
+        var region = drawingRegion(projection)
+        if let area = overlay.citySitesArea {
+            region = WorldRegion(
+                minX: max(region.minX, Double(area.minX)), minY: max(region.minY, Double(area.minY)),
+                maxX: min(region.maxX, Double(area.maxX)), maxY: min(region.maxY, Double(area.maxY))
+            )
+        }
         let length = Double(Land.cellLength)
         let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(Land.rows(in: world.bounds) - 1, Int((region.maxY / length).rounded(.down)))
         let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(Land.columns(in: world.bounds) - 1, Int((region.maxX / length).rounded(.down)))

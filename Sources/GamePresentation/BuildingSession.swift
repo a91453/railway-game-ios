@@ -315,10 +315,7 @@ extension GameSession {
     public var buildingOverlay: BuildingOverlay? {
         guard tool == .building else { return nil }
         var overlay = BuildingOverlay()
-        // Decision 140: a real-world map shows its own houses; the grid of
-        // the city's squares over it hid the streets, so only the ones a
-        // site would buy out are marked.
-        overlay.showsCityBuildingSites = buildingMode == .build && world.geoAnchor == nil
+        overlay.showsCityBuildingSites = buildingMode == .build
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
@@ -335,8 +332,24 @@ extension GameSession {
             overlay.siteIsBuildable = preview.problem == nil
             overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column) }
         }
+        // Decision 140: a real-world map has a city building on nearly every
+        // cell, and their squares over the whole view hid its streets; there
+        // only those round the chosen site are drawn, enough to see where a
+        // building fits between them, and none before a site is chosen.
+        if world.geoAnchor != nil, overlay.showsCityBuildingSites {
+            if let site = overlay.site {
+                let reach = Self.citySitesReach
+                overlay.citySitesArea = PlanRect(minX: site.minX - reach, minY: site.minY - reach, maxX: site.maxX + reach, maxY: site.maxY + reach)
+            } else {
+                overlay.showsCityBuildingSites = false
+            }
+        }
         return overlay
     }
+
+    /// How far round a real-world map's chosen site its city buildings are
+    /// drawn (decision 140): two cells.
+    public static let citySitesReach = 2 * Land.cellLength
 
     /// What ``buildingKind`` costs a managed company: its building, and the
     /// land under it at that land's value; `nil` in free play, where it is
@@ -405,9 +418,11 @@ public struct PlanRect: Hashable, Sendable {
 /// What the map draws for the building tool (decision 95).
 public struct BuildingOverlay: Hashable, Sendable {
     /// Whether to draw where the city's buildings stand, so the player sees
-    /// where a building would buy one out: on a blank map only (decision
-    /// 140).
+    /// where a building would buy one out, and where: everywhere in view
+    /// when `citySitesArea` is `nil`, otherwise only those it reaches (a
+    /// real-world map's, round the chosen site, decision 140).
     public var showsCityBuildingSites = false
+    public var citySitesArea: PlanRect?
     /// The building on the site, and whether GameCore would build it.
     public var site: PlanRect?
     public var siteIsBuildable = false
