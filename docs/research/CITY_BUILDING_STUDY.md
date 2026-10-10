@@ -23,7 +23,7 @@
 | 同目錄 `landscape-trees.js` | 樹離軌道 12 m、離步道 3 m，另有占用格（0.001°） | 想法：不同物件不同間距 |
 | `Railway/site_archive_clean/rail-3d/blender-buildings.js`／`buildingCatalog()`、`inspectBlenderBuilding()`；`assets/*/catalog.json`、`placement.json` | 建物目錄：`anchor`、`rotationDeg`、`footprintExtentM`、GeoJSON 足跡；碰到軌道的部分以 0.24 不透明度畫出 | 可改寫：目錄格式（錨點、旋轉、足跡）給 Phase 8 的外觀；半透明畫出「這裡不能蓋」 |
 | `Railway/site_archive_clean/memories/tainan-2026-09-12/surroundings/model.json`／`heightRule` | 高度 = 3.6 + (樓層 − 1) × 3.2 m，上限 200 m；各類預設樓層（住宅 4、商業 3、辦公 6、學校 4…） | 可直接移植：玩家建物的樓層與畫面高度 |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js`／`floorsFor`、`widthFor`、`makeLot`、`lO(env, rect)`、`qO`、`reservedRects` | 程序化街廓：各類建物的樓層與寬度範圍；**放置檢查 `lO` 依序回傳第一個失敗原因**（`bounds`、`road`、`sidewalk`、`block`、`landmark:id`、`transit`、`mrt:id`、`site:id`…）；`qO` 沿街面每 2 m 滑動找最好的位置；大型地點「認領」矩形，移除那裡的程序化建物 | **可改寫**：拒絕理由的固定順序（P0-A 已照這個形式）；「認領」就是玩家建物蓋在城市建物上時要做的事 |
+| `Railway/city_world_reference/source/assets/world-gYgJkZNf.js`／`floorsFor`、`widthFor`、`makeLot`、`lO(env, rect)`、`qO`、`reservedRects` | 程序化街廓：各類建物的樓層與寬度範圍；**放置檢查 `lO` 依序回傳第一個失敗原因**（`bounds`、`road`、`sidewalk`、`block`、`landmark:id`、`transit`、`mrt:id`、`site:id`…）；`qO` 沿街面每 2 m 滑動找最好的位置；大型地點「認領」矩形，移除那裡的程序化建物 | **可改寫**：拒絕理由的固定順序（P0-A 已照這個形式）；「認領」就是玩家建物蓋在城市建物上時要做的事 |
 | `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js`／`onDropStructure`、`sZ()`、`t3`、`s8(±1)`、`onRotatePointerDown` | 模型鐵道的建物（`footprint{width,depth}`、`spansTrack`）：拖放、先存復原快照、選取框的拖曳區與旋轉把手、繞中心旋轉；接點吸附 24 單位、角度 20°；缺件估價 `priceNTD × missing` | 可改寫：拖放後確認、旋轉把手、放置前的費用預覽 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`metroCanPlaceWithinQuota`、`metroEconomyCommitQuotaRefund`、`summarizeFinanceForTransport` | 放置前預覽額度、不足就擋；刪除退回額度；帳分營業與投資現金流（`quota_purchase`／`quota_return`） | 可改寫：預覽 → 確認 → 一筆投資現金流；退回的形式。正式價格引擎 `window.MetroEconomy` 不在快照 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §3、§8–10；`binary_reference/railway_core_15_3.wasm` | OpenTTD 的命令名（`CmdBuildObject`、`CmdClearArea`、`CmdDoTownAction` 的 `TOWN_ACTION_FUND_BUILDINGS`）、每個變更都是有 `validate()`、`estimateCost()`、`execute()` 的命令 | 想法：命令先估價再執行（本專案已是 GameCore 指令 + Session 預覽） |
@@ -55,7 +55,7 @@ shallow clone 到 scratchpad 閱讀，沒有任何程式碼進入本 repository�
 - **城市建物（決策 74）**：照舊一格一棟，在車站附近由城市自己長出與升級。這是模擬城市的「自動長出的建物」。
 - 64 m 的土地格只做統計與規劃，不限制玩家建物的位置（作者 P0 的要求）。
 - **統計的接法**（建議）：玩家建物的居民與就業存在建物上（入住數），不寫進 `LandCell`。車站分配腹地時，`LandDemand.shares` 把每棟玩家建物當成一個人口點，依中心點與車站的距離分配。權重和格一樣：`1000 − d²×1000/R²`，最大餘數法。這樣玩家建物和城市的格一起進運量，而且只有一份權威資料（不會一份在建物、一份在格）。
-- **玩家建物蓋在城市建物上**：參考 `taipei_gta_reference` 的「認領」、A 列車的「買收撤去」與 OpenTTD 的拆除費。足跡碰到的城市建物所在格（格的中點在足跡加間距內），要以**收購價**買下並拆除。那些格的居民與就業移到玩家建物上，上限是玩家建物的容量，放不下的就消失。費用顯示在預覽，不足就整個拒絕。之後城市不會在玩家建物佔的格再長出建物。
+- **玩家建物蓋在城市建物上**：參考 `city_world_reference` 的「認領」、A 列車的「買收撤去」與 OpenTTD 的拆除費。足跡碰到的城市建物所在格（格的中點在足跡加間距內），要以**收購價**買下並拆除。那些格的居民與就業移到玩家建物上，上限是玩家建物的容量，放不下的就消失。費用顯示在預覽，不足就整個拒絕。之後城市不會在玩家建物佔的格再長出建物。
 
 ### 4.2 碰撞與軌道衝突
 
@@ -141,7 +141,7 @@ shallow clone 到 scratchpad 閱讀，沒有任何程式碼進入本 repository�
 | 參考檔案／函式 | 目標檔案／函式 | 比例／狀態 |
 | --- | --- | --- |
 | `Railway/site_archive_clean/rail-3d/integration/rail-clearance.js`／`blocked(rings, padding)` | `GameWorld.placeBuilding` 的軌道檢查（P0-A 已用同一個想法）；P0-C 旋轉後的多邊形版本 | 公尺 → 世界單位 ×64；間距 18 m → 2 m（2D 遊戲） |
-| `Railway/taipei_gta_reference/.../world-gYgJkZNf.js`／`lO`、`reservedRects`、地點認領 | 放置檢查的順序與理由；收購城市建物 | 2 m 間距 → 128 單位 |
+| `Railway/city_world_reference/.../world-gYgJkZNf.js`／`lO`、`reservedRects`、地點認領 | 放置檢查的順序與理由；收購城市建物 | 2 m 間距 → 128 單位 |
 | `Railway/site_archive_clean/memories/tainan-2026-09-12/surroundings/model.json`／`heightRule` | 玩家建物的樓層、Phase 8 的高度 | 3.6 + (n − 1) × 3.2 m |
 | `Simulator/.../page-38607521e5e99afd.js`／`onDropStructure`、`t3`、`s8(±1)` | App 的虛影、拖曳、旋轉 | 只是操作 |
 | `Ci/.../app__q_c234188b7c397f91.js`／`metroCanPlaceWithinQuota`、`summarizeFinanceForTransport` 的投資現金流 | 費用預覽；決策 85 的投資現金流分項 | 美元 → 美分 ×100 |
