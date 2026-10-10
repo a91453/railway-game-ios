@@ -387,6 +387,8 @@ extension GameWorld {
         else { throw .invalidLand }
         replaceLand(with: land)
         landBlocks = nil
+        // Decision 139: a new city keeps its own mix.
+        settleCityMix(replacing: true)
         refreshLandDemand()
     }
 
@@ -402,6 +404,7 @@ extension GameWorld {
         }
         replaceLand(with: towns)
         landBlocks = nil
+        settleCityMix(replacing: true)
         refreshLandDemand()
     }
 

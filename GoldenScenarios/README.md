@@ -28,6 +28,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 新增 `single-track-scheduled-meet.json` 與 `scheduled-overtake.json`（schema 31，決策 59）：計畫、實際誤點、待避月台／通過正線與精確解除秒；值先由 GameCore 取得，再由 ReferenceWorldGoldenTests 的獨立模型確認。31 新增 `{"observe":{"type":"scheduledWaits"},"expect":{"scheduledWaits":[...]}}`；每一列寫 train、station、stop、cycle、other、otherStop、otherCycle、kind、departureSeconds、clearanceSeconds。讀取端仍接受 schema 30，所有既有 JSON 原字節保留。
 
+## 城市的住商工需求（`city-demand.json`）
+
+12 步、不推進時間的情境（schema 53，決策 139）。32 × 24 格、經營模式、城市建物開啟；土地是第 5 列第 5 行 1000 位居民的住宅、第 6 行 400 個就業的商店、第 7 行 600 個就業的辦公。關著時沒有需求；`setCityDemand` 開啟後城市記下它現在的比例（每百萬居民 400,000 個商店就業、600,000 個辦公與工業就業），三種需求都是 0。在商店那一格（26624, 22528）蓋辦公樓收購了商店：城市剩 1000 位居民、0 個商店就業、600 個辦公就業。商店 10 × 1000 × 400,000 / 400,000，超過上限，1000；住宅：每位居民的就業 600,000 比 1,000,000，10 × 1000 × (−400,000) / 1,000,000，超過上限，−1000；辦公照舊，0。關掉再開，城市記下那時的比例（0、600,000），需求又都是 0。
+
+需求的值是手算的；最終狀態的建物、地價與收購費是既有的規則，由 GameCore 取得。schema 53 新增指令 `{"type": "setCityDemand", "enabled": true}`、觀察 `{"observe": {"type": "cityDemand"}, "expect": {"cityDemand": {"homes", "shops", "work"}}}`（千分之一，−1000 到 1000），最終狀態可以有 `"cityDemand"`（`{}` 或 `{"baseline": {"shopJobs", "workJobs"}}`，關著時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 需求隨距離與外地連絡（`distance-demand.json`）
 
 32 步、不推進時間的情境（schema 52，決策 137）。A 在 (100352, 100352)，B 在東邊 400 m、D 1.75 km、C 3 km，路線 A–B–D–C；A 每天 1000 旅次，B、C、D 各 1000。關著時 A 的 1000 平分給三站：334、333、333。`setDistanceDemand` 開啟後每一對依直線距離保留：500 m 以內一成、2 km 以上全部、中間直線內插，334 × 100‰ = 33、333 × 1000‰ = 333、333 × 850‰ = 283。之後公司改成經營模式，A 那一格 1000 位居民的土地決定運量：A、B 依距離分（1000 : 750），571 與 429 人，228 與 172 旅次；C、D 沒有土地。E 在東邊邊緣內 20000 單位，路線 Out 從 A 到 E。沒有外地連絡時 E 沒有運量，A 的 228 都往 B，400 m 留 23；`setOutsideConnections` 開啟後 E 是外地連絡站，地圖外的 6000 旅次都是它的，A 的 228 分 6 給 B（留 1）、222 給 E（不打折），E 的 6000 都往 A；往來 E 的票價是標準的 500 加城市基準 75：575。
@@ -183,6 +189,7 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setLandDemand`（schema 36） | `enabled`（布林值） | `setLandDemand(_:)` |
 | `setDistanceDemand`（schema 52） | `enabled`（布林值） | `setDistanceDemand(_:)`：每一對的旅次依直線距離保留（決策 137） |
 | `setOutsideConnections`（schema 52） | `enabled`（布林值） | `setOutsideConnections(_:)`：地圖邊緣 1 km 內的車站是外地連絡站（決策 137） |
+| `setCityDemand`（schema 53） | `enabled`（布林值） | `setCityDemand(_:)`：城市的住商工需求（決策 139） |
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"`，schema 40（決策 91）起也可以是 `"industrial"`、`"civic"`、`"leisure"`、`"agricultural"`、`"park"`（`landCell` 與 `building` 觀察的 `use` 也一樣） | `setLand(_:)` |
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |

@@ -115,6 +115,21 @@ extension GameSession {
         return language.text(count == 1 ? "1 cell zoned" : "\(count) cells zoned", "已劃分區 \(count) 格")
     }
 
+    /// The city's demand (decision 139), for the zoning tool: "City demand:
+    /// homes +12% · shops −8% · work +3%"; `nil` with the valves off.
+    public var cityDemandText: String? {
+        guard world.cityDemand != nil else { return nil }
+        let levels = world.cityDemandLevels
+        func percent(_ level: Int64) -> String {
+            let value = level / 10
+            return value > 0 ? "+\(value)%" : value < 0 ? "−\(-value)%" : "0%"
+        }
+        return language.text(
+            "City demand: homes \(percent(levels.homes)) · shops \(percent(levels.shops)) · work \(percent(levels.work))",
+            "城市需求：住宅 \(percent(levels.homes)) · 商業 \(percent(levels.shops)) · 辦公與工業 \(percent(levels.work))"
+        )
+    }
+
     /// What the chosen zone does, for the zoning tool.
     public var zoningHelpText: String {
         guard let zone = zoningZone else {
@@ -129,9 +144,16 @@ extension GameSession {
         case .reserved:
             return language.text("Kept for your track and buildings: the city builds nothing new here.", "保留給軌道或公司建物：城市不在這裡蓋新建物。")
         default:
-            return language.text(
+            let help = language.text(
                 "Tap or drag: growing stations build \(zone.title(in: .english).lowercased()) on empty zoned cells first, those worth most first. Zoned cells near your buildings are worth more.",
                 "點一格或拖曳一塊範圍：成長中的車站先在空的分區格蓋\(zone.title(in: .traditionalChinese))，地價高的先蓋；公司建物附近的分區格地價較高。"
+            )
+            // Decision 139: homes, shops, offices and factories wait for
+            // their demand.
+            guard world.cityDemand != nil, zone.use.flatMap(world.cityDemandLevels.level(of:)) != nil else { return help }
+            return help + language.text(
+                " They are built only while the city wants that use.",
+                "只有城市需要這種用途（需求不是負的）時才會蓋。"
             )
         }
     }

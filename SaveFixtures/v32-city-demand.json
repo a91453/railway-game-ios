@@ -1,0 +1,146 @@
+{
+  "saveVersion" : 32,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 1,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 1000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 86400,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "cityDemand" : {
+      "baseline" : {
+        "shopJobs" : 882352,
+        "workJobs" : 1764705
+      }
+    },
+    "clock" : {
+      "now" : 86460,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 999999000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 5,
+        "residents" : [
+          300
+        ],
+        "row" : 5,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "jobs" : [
+          300
+        ],
+        "residents" : [
+          40
+        ],
+        "row" : 5,
+        "use" : "commercial"
+      },
+      {
+        "column" : 7,
+        "jobs" : [
+          600
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 5,
+        "use" : "office"
+      }
+    ],
+    "landDemand" : true,
+    "nextStationID" : 2,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 496,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S0",
+        "point" : {
+          "x" : 22528,
+          "y" : 22528
+        }
+      }
+    ],
+    "townGrowth" : {
+      "places" : [
+        {
+          "base" : 496,
+          "counted" : 0,
+          "lastGrowth" : 0,
+          "station" : 1
+        }
+      ]
+    },
+    "trains" : [
+
+    ],
+    "zones" : [
+      {
+        "column" : 5,
+        "count" : 3,
+        "row" : 8,
+        "zone" : "office"
+      }
+    ]
+  }
+}
