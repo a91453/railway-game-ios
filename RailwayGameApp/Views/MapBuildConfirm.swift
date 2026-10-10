@@ -162,7 +162,7 @@ private struct BuildConfirmation {
     let confirm: @MainActor () -> Void
 
     enum Kind {
-        case track, platform, building
+        case track, platform, building, sale
     }
 
     init?(_ session: GameSession) {
@@ -196,6 +196,20 @@ private struct BuildConfirmation {
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
+        case .building where session.buildingMode == .sell:
+            // Decision 130: the building chosen to sell, and what it brings.
+            guard let sale = session.salePreview else { return nil }
+            start = nil
+            flaggedEnd = nil
+            anchor = sale.building.centre
+            clearance = 44
+            cost = sale.quote.price > .zero ? sale.quote.price : nil
+            canConfirm = true
+            kind = .sale
+            caption = session.saleGainText
+            showsCatchment = false
+            cancel = { session.clearSaleCandidate() }
+            confirm = { _ = session.confirmSale() }
         case .building:
             guard let preview = session.buildingPreview else { return nil }
             start = nil
@@ -221,6 +235,7 @@ private struct BuildConfirmation {
         case .track: language.text("Build this stretch", "建造這一段")
         case .platform: language.text("Put a platform here", "在這裡加月台")
         case .building: language.text("Build here", "蓋在這裡")
+        case .sale: language.text("Sell to the city", "賣給城市")
         }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"

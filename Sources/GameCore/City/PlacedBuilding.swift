@@ -7,7 +7,9 @@
 // company pays for it and keeps it on its books, it fills with residents and
 // jobs who ride from the stations near it, and it earns rent (see
 // CompanyBuildings.swift). Since P0-C2 (decision 95) it buys out the city's
-// buildings in its way, and track and stations built later clear it.
+// buildings in its way, and track and stations built later clear it. Since
+// P0-D (decision 130) it can be sold to the city, which takes it over
+// (BuildingSale.swift).
 
 /// Identifies a building the player placed. IDs are allocated by
 /// ``GameWorld`` from 1 and never handed out again.

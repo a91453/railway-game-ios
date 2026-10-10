@@ -141,9 +141,15 @@
 ///     world can have `"ground"` with no block read yet. A build that reads
 ///     only an earlier version would call such an edge damaged and such a
 ///     world flat, so it says the save is newer than it instead.
+/// 29. Selling the company's buildings (decision 130): the accounts' capital
+///     days and closed years can have `"saleProceeds"` and
+///     `"saleBookValue"`. A build that reads only an earlier version would
+///     drop them, and its statements would lose the cash a sale brought in
+///     and the gain or loss it realized, so it says the save is newer than
+///     it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 28
+    public static let currentVersion = 29
 
     public let world: GameWorld
 
@@ -238,6 +244,9 @@ extension SavedGame: Codable {
         // Version 27 to 28: a world with `"ground"` has ground, and its
         // track is measured from it; no build before 28 wrote ground with
         // track (the app read none), and no edge was automatic.
+        // Version 28 to 29: capital days and closed years without
+        // `"saleProceeds"` or `"saleBookValue"` sold no building, and their
+        // net profit and investing cash flow read as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

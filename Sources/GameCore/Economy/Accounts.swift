@@ -227,6 +227,10 @@ public struct FinanceSummary: Hashable, Sendable {
     /// 94), paid in cash.
     public var propertyRevenue: Money = .zero
     public var propertyCost: Money = .zero
+    /// What the company's buildings sold for, and the book value they left
+    /// the books at (decision 130).
+    public var saleProceeds: Money = .zero
+    public var saleBookValue: Money = .zero
     /// The tax on each day's profit (decision 131), paid in cash.
     public var taxCost: Money = .zero
 
@@ -241,11 +245,18 @@ public struct FinanceSummary: Hashable, Sendable {
         fareRevenue - totalCost + propertyRevenue - propertyCost
     }
 
+    /// The gain realized on the company's buildings sold, or the loss when
+    /// negative (decision 130): what they sold for less their book value.
+    public var realizedGain: Money {
+        saleProceeds - saleBookValue
+    }
+
     /// The operating profit less the loan's interest (decision 67) and the
-    /// assets written down and off (Phase 7a): what each day's tax is on
+    /// assets written down and off (Phase 7a), with the gain or loss
+    /// realized on buildings sold (decision 130): what each day's tax is on
     /// (decision 131).
     public var profitBeforeTax: Money {
-        operatingProfit - interestCost - depreciationCost - writeOffCost
+        operatingProfit - interestCost - depreciationCost - writeOffCost + realizedGain
     }
 
     /// The profit before tax less the tax (decision 131).
@@ -260,10 +271,11 @@ public struct FinanceSummary: Hashable, Sendable {
         operatingProfit - interestCost - taxCost
     }
 
-    /// The cash spent on new assets, as negative (the reference's
-    /// `investingCashFlow`, there quota purchases).
+    /// The cash spent on new assets, as negative, and since decision 130
+    /// received for buildings sold (the reference's `investingCashFlow`,
+    /// there quota purchases).
     public var investingCashFlow: Money {
-        .zero - capitalSpending
+        saleProceeds - capitalSpending
     }
 
     /// The cash borrowed less repaid (native: the reference has no loan).
@@ -400,6 +412,8 @@ public struct CompanyAccounts: Hashable, Sendable {
             summary.loanRepaid = capitalTotal(\.repaid)
             summary.propertyRevenue = total(\.propertyRevenue)
             summary.propertyCost = total(\.propertyCost)
+            summary.saleProceeds = capitalTotal(\.saleProceeds)
+            summary.saleBookValue = capitalTotal(\.saleBookValue)
             summary.taxCost = total(\.taxCost)
             return summary
         }
@@ -420,13 +434,16 @@ extension CrowdingMetrics: Codable {}
 extension FinanceSummary: Codable {
     private enum CodingKeys: String, CodingKey {
         case index, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
-        case depreciationCost, writeOffCost, capitalSpending, loanBorrowed, loanRepaid, propertyRevenue, propertyCost, taxCost
+        case depreciationCost, writeOffCost, capitalSpending, loanBorrowed, loanRepaid, propertyRevenue, propertyCost
+        case saleProceeds, saleBookValue, taxCost
     }
 
     /// Decodes a closed year's statement; one without the company's
     /// buildings (every year before save version 22) has no
-    /// `"propertyRevenue"` or `"propertyCost"`, and one without tax (every
-    /// year before decision 131) no `"taxCost"`.
+    /// `"propertyRevenue"` or `"propertyCost"`, one that sold none
+    /// (every year before save version 29) no `"saleProceeds"` or
+    /// `"saleBookValue"`, and one without tax (every year before decision
+    /// 131) no `"taxCost"`.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         index = try container.decode(Int64.self, forKey: .index)
@@ -443,6 +460,8 @@ extension FinanceSummary: Codable {
         loanRepaid = try container.decode(Money.self, forKey: .loanRepaid)
         propertyRevenue = try container.decodeIfPresent(Money.self, forKey: .propertyRevenue) ?? .zero
         propertyCost = try container.decodeIfPresent(Money.self, forKey: .propertyCost) ?? .zero
+        saleProceeds = try container.decodeIfPresent(Money.self, forKey: .saleProceeds) ?? .zero
+        saleBookValue = try container.decodeIfPresent(Money.self, forKey: .saleBookValue) ?? .zero
         taxCost = try container.decodeIfPresent(Money.self, forKey: .taxCost) ?? .zero
     }
 
@@ -462,6 +481,8 @@ extension FinanceSummary: Codable {
         try container.encode(loanRepaid, forKey: .loanRepaid)
         if propertyRevenue != .zero { try container.encode(propertyRevenue, forKey: .propertyRevenue) }
         if propertyCost != .zero { try container.encode(propertyCost, forKey: .propertyCost) }
+        if saleProceeds != .zero { try container.encode(saleProceeds, forKey: .saleProceeds) }
+        if saleBookValue != .zero { try container.encode(saleBookValue, forKey: .saleBookValue) }
         if taxCost != .zero { try container.encode(taxCost, forKey: .taxCost) }
     }
 }
