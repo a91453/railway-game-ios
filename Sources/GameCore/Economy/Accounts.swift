@@ -54,6 +54,10 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     case propertyUpkeep
     case propertyTax
     case propertyDemolition
+    /// The tax on the day's profit, out (decision 131; native, the
+    /// reference has no tax): half of what the day made before tax beyond
+    /// ``CompanyAccounts/taxFreeProfit``.
+    case incomeTax
 }
 
 /// One line of a ledger row's breakdown.
@@ -110,6 +114,8 @@ public struct LedgerEntry: Hashable, Sendable {
         /// What demolishing one of the company's buildings cost (decision
         /// 94), written when it was demolished.
         case buildingDemolition
+        /// A day's tax on its profit (decision 131).
+        case dailyTax
     }
 
     public let kind: Kind
@@ -151,6 +157,9 @@ public struct DayAccount: Hashable, Sendable {
     /// 94): not the railway's, so not in ``totalCost``.
     public internal(set) var propertyRevenue: Money = .zero
     public internal(set) var propertyCost: Money = .zero
+    /// The tax on the day's profit (decision 131): not a running cost, so
+    /// not in ``totalCost``.
+    public internal(set) var taxCost: Money = .zero
 
     public init(day: Int64) {
         self.day = day
@@ -173,6 +182,7 @@ public struct DayAccount: Hashable, Sendable {
             case .loanInterest: interestCost = interestCost + cost
             case .propertyRent: propertyRevenue = propertyRevenue + line.amount
             case .propertyUpkeep, .propertyTax, .propertyDemolition: propertyCost = propertyCost + cost
+            case .incomeTax: taxCost = taxCost + cost
             }
         }
     }
@@ -217,6 +227,8 @@ public struct FinanceSummary: Hashable, Sendable {
     /// 94), paid in cash.
     public var propertyRevenue: Money = .zero
     public var propertyCost: Money = .zero
+    /// The tax on each day's profit (decision 131), paid in cash.
+    public var taxCost: Money = .zero
 
     /// The railway's running costs.
     public var totalCost: Money {
@@ -230,16 +242,22 @@ public struct FinanceSummary: Hashable, Sendable {
     }
 
     /// The operating profit less the loan's interest (decision 67) and the
-    /// assets written down and off (Phase 7a).
-    public var netProfit: Money {
+    /// assets written down and off (Phase 7a): what each day's tax is on
+    /// (decision 131).
+    public var profitBeforeTax: Money {
         operatingProfit - interestCost - depreciationCost - writeOffCost
     }
 
+    /// The profit before tax less the tax (decision 131).
+    public var netProfit: Money {
+        profitBeforeTax - taxCost
+    }
+
     /// The cash the running of the network brought in: fares less the
-    /// running costs and interest, all paid in cash (the reference's
-    /// `operatingCashFlow`, with the interest it has no loan for).
+    /// running costs, interest and tax, all paid in cash (the reference's
+    /// `operatingCashFlow`, with the interest and tax it has not).
     public var operatingCashFlow: Money {
-        operatingProfit - interestCost
+        operatingProfit - interestCost - taxCost
     }
 
     /// The cash spent on new assets, as negative (the reference's
@@ -306,6 +324,10 @@ public struct CompanyAccounts: Hashable, Sendable {
     /// The yearly interest, in hundredths of a percent: 5 %, over the
     /// finance report's 360-day year, charged daily.
     public static let interestBasisPoints: Int64 = 500
+    /// Decision 131: the profit a day makes before tax that is not taxed,
+    /// $100,000, and the share of the rest paid as tax, in per cent: half.
+    public static let taxFreeProfit: Money = 10_000_000
+    public static let taxPercent: Int64 = 50
 
     /// The economy panel shows the last 12 rows and the last hour's totals;
     /// two days of rows cover both.
@@ -378,6 +400,7 @@ public struct CompanyAccounts: Hashable, Sendable {
             summary.loanRepaid = capitalTotal(\.repaid)
             summary.propertyRevenue = total(\.propertyRevenue)
             summary.propertyCost = total(\.propertyCost)
+            summary.taxCost = total(\.taxCost)
             return summary
         }
         return (summary(current), summary(current - 1))
@@ -397,12 +420,13 @@ extension CrowdingMetrics: Codable {}
 extension FinanceSummary: Codable {
     private enum CodingKeys: String, CodingKey {
         case index, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
-        case depreciationCost, writeOffCost, capitalSpending, loanBorrowed, loanRepaid, propertyRevenue, propertyCost
+        case depreciationCost, writeOffCost, capitalSpending, loanBorrowed, loanRepaid, propertyRevenue, propertyCost, taxCost
     }
 
     /// Decodes a closed year's statement; one without the company's
     /// buildings (every year before save version 22) has no
-    /// `"propertyRevenue"` or `"propertyCost"`.
+    /// `"propertyRevenue"` or `"propertyCost"`, and one without tax (every
+    /// year before decision 131) no `"taxCost"`.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         index = try container.decode(Int64.self, forKey: .index)
@@ -419,6 +443,7 @@ extension FinanceSummary: Codable {
         loanRepaid = try container.decode(Money.self, forKey: .loanRepaid)
         propertyRevenue = try container.decodeIfPresent(Money.self, forKey: .propertyRevenue) ?? .zero
         propertyCost = try container.decodeIfPresent(Money.self, forKey: .propertyCost) ?? .zero
+        taxCost = try container.decodeIfPresent(Money.self, forKey: .taxCost) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -437,13 +462,14 @@ extension FinanceSummary: Codable {
         try container.encode(loanRepaid, forKey: .loanRepaid)
         if propertyRevenue != .zero { try container.encode(propertyRevenue, forKey: .propertyRevenue) }
         if propertyCost != .zero { try container.encode(propertyCost, forKey: .propertyCost) }
+        if taxCost != .zero { try container.encode(taxCost, forKey: .taxCost) }
     }
 }
 
 extension DayAccount: Codable {
     private enum CodingKeys: String, CodingKey {
         case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost, fareTrips
-        case propertyRevenue, propertyCost
+        case propertyRevenue, propertyCost, taxCost
     }
 
     /// Decodes a day; a day without interest, as every day before loans,
@@ -461,6 +487,8 @@ extension DayAccount: Codable {
         // Decision 94: a day without the company's buildings has neither.
         propertyRevenue = try container.decodeIfPresent(Money.self, forKey: .propertyRevenue) ?? .zero
         propertyCost = try container.decodeIfPresent(Money.self, forKey: .propertyCost) ?? .zero
+        // Decision 131: a day without tax has none.
+        taxCost = try container.decodeIfPresent(Money.self, forKey: .taxCost) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -482,6 +510,9 @@ extension DayAccount: Codable {
         }
         if propertyCost != .zero {
             try container.encode(propertyCost, forKey: .propertyCost)
+        }
+        if taxCost != .zero {
+            try container.encode(taxCost, forKey: .taxCost)
         }
     }
 }

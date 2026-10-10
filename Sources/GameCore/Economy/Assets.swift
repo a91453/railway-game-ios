@@ -467,7 +467,7 @@ extension GameWorld {
         let flows = [
             income.fareRevenue, income.operatingCost, income.maintenanceCost, income.energyCost, income.staffCost, income.interestCost,
             income.depreciationCost, income.writeOffCost, income.capitalSpending, income.loanBorrowed, income.loanRepaid,
-            income.propertyRevenue, income.propertyCost,
+            income.propertyRevenue, income.propertyCost, income.taxCost,
         ]
         let classes = [closing.track, closing.stations, closing.rollingStock, closing.buildings]
         return income.index == statement.year

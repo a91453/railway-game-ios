@@ -56,7 +56,8 @@ extension FinanceSummary {
     /// The income statement (the reference's `incomeStatement`), with
     /// `previous` beside it if given: fares, the running costs, the
     /// operating profit, then interest, depreciation and assets written off
-    /// down to the net profit.
+    /// down to the net profit, through the profit before tax and the tax
+    /// where there was tax (decision 131).
     public func incomeStatementRows(previous: FinanceSummary?, in language: DisplayLanguage) -> [StatementRow] {
         func row(_ title: String, _ value: (FinanceSummary) -> Money, _ style: StatementRow.Style = .item) -> StatementRow {
             StatementRow(title: title, current: value(self), previous: previous.map(value), style: style)
@@ -66,6 +67,11 @@ extension FinanceSummary {
         let property = hasProperty(previous: previous) ? [
             row(LedgerItem.propertyRent.displayName(in: language), \.propertyRevenue),
             row(language.text("Building upkeep, land tax and demolition", "建物維護、土地資產稅與拆除")) { out($0.propertyCost) },
+        ] : []
+        // Decision 131: the tax, only where there was some.
+        let tax = hasTax(previous: previous) ? [
+            row(language.text("Profit before tax", "稅前淨利"), \.profitBeforeTax, .subtotal),
+            row(LedgerItem.incomeTax.displayName(in: language)) { out($0.taxCost) },
         ] : []
         return [
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
@@ -78,6 +84,7 @@ extension FinanceSummary {
             row(LedgerItem.loanInterest.displayName(in: language)) { out($0.interestCost) },
             row(language.text("Depreciation", "折舊費用")) { out($0.depreciationCost) },
             row(language.text("Assets written off", "資產報廢損失")) { out($0.writeOffCost) },
+        ] + tax + [
             row(language.text("Net profit", "本期淨利"), \.netProfit, .total),
         ]
     }
@@ -111,6 +118,7 @@ extension FinanceSummary {
             row(language.text("Running costs paid", "營運支出")) { out($0.totalCost) },
         ] + property + [
             row(language.text("Interest paid", "利息支出")) { out($0.interestCost) },
+        ] + (hasTax(previous: previous) ? [row(language.text("Income tax paid", "所得稅支出")) { out($0.taxCost) }] : []) + [
             row(language.text("Net from operating", "營業活動淨額"), \.operatingCashFlow, .subtotal),
             .section(language.text("Investing activities", "投資活動之現金流量")),
             row(language.text("Track, stations, trains and buildings bought", "購置軌道、車站、車輛與建物")) { out($0.capitalSpending) },
@@ -152,6 +160,11 @@ extension FinanceSummary {
     /// or costs (decision 94).
     private func hasProperty(previous: FinanceSummary?) -> Bool {
         [self, previous].contains { $0.map { $0.propertyRevenue != .zero || $0.propertyCost != .zero } ?? false }
+    }
+
+    /// Whether this period or `previous` paid tax (decision 131).
+    private func hasTax(previous: FinanceSummary?) -> Bool {
+        [self, previous].contains { $0.map { $0.taxCost != .zero } ?? false }
     }
 }
 

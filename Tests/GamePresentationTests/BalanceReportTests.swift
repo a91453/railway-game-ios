@@ -67,8 +67,8 @@ final class BalanceReportTests: XCTestCase {
         var lines = [
             "### \(title): built for \(dollars(cost.amount)), \(stops.count) stations",
             "",
-            "| Day | Balance | Fares | Operating profit | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
-            "| --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
+            "| Day | Balance | Fares | Operating profit | Tax | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- |",
         ]
         try world.advance(ticks: 1)
         for day in 1...days {
@@ -111,7 +111,7 @@ final class BalanceReportTests: XCTestCase {
         let service = stops.compactMap { world.townGrowth(of: $0)?.lastService }.min() ?? 0
         let recovered = (world.economy.balance.amount - (GameWorld.startingBalance - cost).amount) * 100 / cost.amount
         return "| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars(report.fareRevenue.amount)) | "
-            + "\(dollars(report.operatingProfit.amount)) | \(recovered)% | \(trips) | \(people) | "
+            + "\(dollars(report.operatingProfit.amount)) | \(dollars(report.taxCost.amount)) | \(recovered)% | \(trips) | \(people) | "
             + "\(heights[1]) / \(heights[2]) / \(heights[3]) / \(heights[4]) / \(heights[0]) | \(fullest)% | "
             + "\(dollars(average)) / \(dollars(values.max() ?? 0)) | \(service / 10)% |"
     }

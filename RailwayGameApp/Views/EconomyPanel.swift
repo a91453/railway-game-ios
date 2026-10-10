@@ -199,7 +199,7 @@ struct EconomyPanel: View {
     }
 
     private var reportSection: some View {
-        Section("Report") {
+        Section {
             Picker("Period", selection: $period) {
                 ForEach(FinancePeriod.allCases, id: \.self) { period in
                     Text(period.displayName(in: session.language)).tag(period)
@@ -228,6 +228,11 @@ struct EconomyPanel: View {
                     ),
                 currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
             )
+        } header: {
+            Text("Report")
+        } footer: {
+            // Decision 131.
+            Text(verbatim: CompanyAccounts.taxTermsText(in: session.language))
         }
     }
 

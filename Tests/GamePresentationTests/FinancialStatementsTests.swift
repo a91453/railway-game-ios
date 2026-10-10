@@ -1,4 +1,4 @@
-import GameCore
+@testable import GameCore
 import GamePresentation
 import XCTest
 
@@ -74,6 +74,49 @@ final class FinancialStatementsTests: XCTestCase {
         XCTAssertEqual(sheet.depreciationText(of: .rollingStock, in: .english), "Trains and cars: cost $ 4,320, written down $ 1")
         XCTAssertEqual(sheet.depreciationText(of: .stations, in: .traditionalChinese), "車站：成本 $ 7,200，累計折舊 $ 1")
         XCTAssertNil(world.unrecordedAssetsText(in: .english))
+    }
+
+    func testTaxShowsWhereThereWasSome() throws {
+        // Decision 131: $250,000 of fares on a day with $14 of interest and
+        // $2.30 of depreciation: $249,983.70 before tax, $74,992 of tax.
+        var world = try world()
+        try world.advance(ticks: 1)
+        let fares = Money(25_000_000)
+        world.write(LedgerEntry(
+            kind: .hourlyNet, time: world.clock.now, amount: fares,
+            breakdown: [
+                LedgerLine(item: .fareRevenue, amount: fares), LedgerLine(item: .operatingCost, amount: .zero),
+                LedgerLine(item: .maintenanceCost, amount: .zero),
+            ],
+            crowding: CrowdingMetrics(crowdedStations: 0, fullTrains: 0, maxWaiting: 0, maxLoad: 0)
+        ), day: 0)
+        try world.advance(ticks: 1_440)
+        let report = world.financeReport(.day)
+        let income = report.previous.incomeStatementRows(previous: report.current, in: .english)
+        XCTAssertEqual(income.map(\.title), [
+            "Fares", "Operating", "Maintenance", "Energy", "Staff", "Operating profit", "Loan interest", "Depreciation",
+            "Assets written off", "Profit before tax", "Income tax", "Net profit",
+        ])
+        XCTAssertEqual(income[9], StatementRow(title: "Profit before tax", current: Money(24_998_370), previous: .zero, style: .subtotal))
+        XCTAssertEqual(income[10].current, Money(-7_499_200))
+        XCTAssertEqual(income.last?.current, Money(24_998_370 - 7_499_200))
+        let items = income.filter { $0.style == .item }.compactMap(\.current)
+        XCTAssertEqual(items.reduce(Money.zero, +), income.last?.current)
+        XCTAssertEqual(
+            report.previous.incomeStatementRows(previous: nil, in: .traditionalChinese).suffix(3).map(\.title), ["稅前淨利", "營利事業所得稅", "本期淨利"]
+        )
+
+        let cash = report.previous.cashFlowRows(previous: report.current, in: .traditionalChinese)
+        XCTAssertEqual(cash.map(\.title).prefix(6), ["營業活動之現金流量", "票價收入", "營運支出", "利息支出", "所得稅支出", "營業活動淨額"])
+        XCTAssertEqual(cash[4].current, Money(-7_499_200))
+        let flows = cash.filter { $0.style == .item }.compactMap(\.current)
+        XCTAssertEqual(flows.reduce(Money.zero, +), cash.last?.current)
+        XCTAssertEqual(LedgerEntry.Kind.dailyTax.displayName(in: .traditionalChinese), "營利事業所得稅（日結）")
+        XCTAssertEqual(LedgerItem.incomeTax.displayName(in: .english), "Income tax")
+        XCTAssertEqual(
+            CompanyAccounts.taxTermsText(in: .english), "Income tax: 50% of each day's profit before tax beyond $ 100,000, paid at midnight"
+        )
+        XCTAssertEqual(CompanyAccounts.taxTermsText(in: .traditionalChinese), "營利事業所得稅：每天的稅前淨利超過 $ 100,000 的部分課 50%，午夜支付")
     }
 
     func testAClosedYearHasItsTitleAndHeadline() throws {
