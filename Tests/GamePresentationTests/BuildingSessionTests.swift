@@ -210,6 +210,40 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertNil(session.buildingPreview?.problem)
     }
 
+    /// Decision 146: a real-world new game buys out by area; a blank one by
+    /// squares. Buying out by area, the site does not snap, no square is
+    /// marked or drawn, and the preview names the share it buys out.
+    func testBuyingOutByAreaNeitherSnapsNorMarksSquares() throws {
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.1316, longitudeDegrees: 121.7397))
+        XCTAssertTrue(GameWorld.newGame(anchor: anchor).areaBuyOut, "a real-world new game buys out by area")
+        XCTAssertFalse(GameWorld.newGame().areaBuyOut, "a blank one by squares")
+
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 48, jobs: 8)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        world.setAreaBuyOut(true)
+        world.setGeoAnchor(anchor)
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        // By squares this site would move 320 east into the gap (decision
+        // 144); by area it stays.
+        session.tapBuildingTool(at: PlanPoint(x: 24_020, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 24_020, y: 22_528))
+        let quote = try XCTUnwrap(session.buildingPreview?.quote)
+        XCTAssertEqual(quote.cleared, [])
+        // The office runs from 22,996 to 25,044 across and 21,504 to 23,552
+        // down: 1,580 × 2,048 units of cell (5, 5), which ends at 24,576.
+        let covered: Int64 = (24_576 - (24_020 - 1_024)) * 2_048
+        XCTAssertEqual(quote.buyOut, Money(15_705_600 * covered / Land.cellArea))
+        XCTAssertEqual(session.buildingOverlay?.boughtOut, [])
+        XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, false)
+        XCTAssertEqual(session.buildingPreviewText?.contains("buying out the city's floor under it \(quote.buyOut.moneyText)"), true)
+        XCTAssertEqual(session.buildingPreviewText?.contains("city building"), false)
+    }
+
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
