@@ -117,6 +117,32 @@ final class CityFootprintsTests: XCTestCase {
         XCTAssertTrue(world.isClaimedByPlacedBuilding(row: 5, column: 6))
     }
 
+    /// A sold building's people move to a cell the city may build on: one
+    /// no other company building claims by the square of the building the
+    /// city then puts up there, which may be denser than the cell's now
+    /// (decision 130 with decision 142).
+    func testASoldBuildingsPeopleDoNotMoveIntoAnotherBuildingsSquare() throws {
+        var world = GameWorld(bounds: Self.small, economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .paused))
+        try world.setLand([LandCell(row: 5, column: 5, use: .office, residents: 0, jobs: 150)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        XCTAssertEqual(world.buildings.building(row: 5, column: 5)?.density, .d2)
+        let office = try world.placeBuilding(.office, at: PlanPoint(x: 21_580, y: 22_528))
+        XCTAssertNil(world.land.cell(row: 5, column: 5), "the office took the cell's jobs in")
+        // Beside the cell: clear of a D1's square there, not of a D2's.
+        let house = try world.placeBuilding(.house, at: PlanPoint(x: 23_812, y: 22_528))
+        XCTAssertFalse(CityBuildingsClaim.claims(house, side: PlacedBuildingRules.cityBuildingSide(of: .d1)))
+        XCTAssertTrue(CityBuildingsClaim.claims(house, side: PlacedBuildingRules.cityBuildingSide(of: .d2)))
+
+        _ = try world.sellPlacedBuilding(office.id)
+        for cell in world.land.cells {
+            XCTAssertFalse(world.isClaimedByPlacedBuilding(row: cell.row, column: cell.column),
+                           "the house claims the city's building on (\(cell.row), \(cell.column))")
+        }
+        XCTAssertNotNil(world.placedBuildings.first { $0.id == house.id })
+    }
+
     func testTheFootprintsAreSavedOnlyWhenOn() throws {
         let off = try world(footprints: false)
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(off), as: UTF8.self).contains("cityFootprints"))
@@ -151,5 +177,13 @@ final class CityFootprintsTests: XCTestCase {
         XCTAssertNotNil(world.land.cell(row: 5, column: 5))
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 33,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
+}
+
+/// Whether a company building claims cell (5, 5)'s city building of a
+/// square `side` across.
+private enum CityBuildingsClaim {
+    static func claims(_ building: PlacedBuilding, side: Int64) -> Bool {
+        GameWorld.claims(building, row: 5, column: 5, side: side)
     }
 }

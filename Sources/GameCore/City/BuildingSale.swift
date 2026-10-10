@@ -131,11 +131,22 @@ extension GameWorld {
     /// water, the first cell under it on land, by row and then column;
     /// `nil` when every cell under it is water. A cell another of the
     /// company's buildings still claims is passed over, as the city puts up
-    /// nothing there (decision 95); with no other, the people leave, as
-    /// growth's do. The sold building is off the list by then.
+    /// nothing there (decision 95), by the square of the city building
+    /// that stands there once the people have moved in (decision 142: it
+    /// may be denser than the cell's now); with no other, the people leave,
+    /// as growth's do. The sold building is off the list by then.
     func handOverCell(of building: PlacedBuilding) -> CellPosition? {
         func takes(_ row: Int, _ column: Int) -> Bool {
-            !terrain.isWater(row: row, column: column) && !isClaimedByPlacedBuilding(row: row, column: column)
+            guard !terrain.isWater(row: row, column: column) else { return false }
+            let position = CellPosition(row: row, column: column)
+            let side: Int64
+            if let cell = land.cell(row: row, column: column) {
+                let merged = handedOver(building, onto: cell)
+                side = cityBuildingStays(on: merged) ? cityBuildingSide(row: row, column: column) : cityBuildingSide(for: merged)
+            } else {
+                side = cityBuildingSide(for: handedOver(building, onto: position))
+            }
+            return !isClaimedByPlacedBuilding(row: row, column: column, side: side)
         }
         let centre = CellPosition(row: Land.cellIndex(building.centre.y), column: Land.cellIndex(building.centre.x))
         if takes(centre.row, centre.column) { return centre }
@@ -162,26 +173,43 @@ extension GameWorld {
     mutating func handOverToCity(_ building: PlacedBuilding) {
         guard building.residents + building.jobs > 0, let position = handOverCell(of: building) else { return }
         guard let cell = land.cell(row: position.row, column: position.column) else {
-            addLand(LandCell(row: position.row, column: position.column, use: building.kind.use, residents: building.residents, jobs: building.jobs))
+            addLand(handedOver(building, onto: position))
             return
         }
-        let merged = LandCell(
+        let merged = handedOver(building, onto: cell)
+        if !cityBuildingStays(on: merged) {
+            guard let id = buildings.nextID else { return }
+            buildings.remove(on: [position])
+            buildings.append(Building.fitting(merged, id: id))
+        }
+        guard let index = land.cells.firstIndex(where: { $0.position == position }) else { return }
+        land.cells[index] = merged
+    }
+
+    /// The cell `building`'s people make of an empty one at `position`.
+    private func handedOver(_ building: PlacedBuilding, onto position: CellPosition) -> LandCell {
+        LandCell(row: position.row, column: position.column, use: building.kind.use, residents: building.residents, jobs: building.jobs)
+    }
+
+    /// `cell` with `building`'s people moved in: its use (a park's becomes
+    /// the building's), each count stopping at ``Land/maximumPerCell``.
+    private func handedOver(_ building: PlacedBuilding, onto cell: LandCell) -> LandCell {
+        LandCell(
             row: cell.row, column: cell.column, use: cell.use == .park ? building.kind.use : cell.use,
             residents: min(Land.maximumPerCell, cell.residents + building.residents),
             jobs: min(Land.maximumPerCell, cell.jobs + building.jobs)
         )
-        if cityBuildings, let standing = buildings.building(row: cell.row, column: cell.column) {
-            let holds = standing.capacity(on: merged)
-            let fits = standing.use == merged.use
-                && Building.mainCount(of: merged.use, residents: holds.residents, jobs: holds.jobs)
-                    >= Building.mainCount(of: merged.use, residents: merged.residents, jobs: merged.jobs)
-            if !fits {
-                guard let id = buildings.nextID else { return }
-                buildings.remove(on: [position])
-                buildings.append(Building.fitting(merged, id: id))
-            }
-        }
-        guard let index = land.cells.firstIndex(where: { $0.position == position }) else { return }
-        land.cells[index] = merged
+    }
+
+    /// Whether the city building on `merged`'s cell, if any, stays once
+    /// the people have moved in: with the city's buildings off or none
+    /// there, nothing is pulled down; otherwise one of the merged use that
+    /// still holds its main count stays.
+    private func cityBuildingStays(on merged: LandCell) -> Bool {
+        guard cityBuildings, let standing = buildings.building(row: merged.row, column: merged.column) else { return true }
+        let holds = standing.capacity(on: merged)
+        return standing.use == merged.use
+            && Building.mainCount(of: merged.use, residents: holds.residents, jobs: holds.jobs)
+                >= Building.mainCount(of: merged.use, residents: merged.residents, jobs: merged.jobs)
     }
 }
