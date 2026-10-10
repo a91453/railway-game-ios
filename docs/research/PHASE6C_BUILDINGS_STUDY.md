@@ -28,7 +28,7 @@
 
 ## 2. 台北場景：擺放、區域風格與 site
 
-路徑前綴 **T = `Railway/taipei_gta_reference/source/`**；表內 `T/assets/...` 均指這個完整前綴。先讀該包 `00_READ_ME_FIRST.md`，再展開 minified JS 到工作區的 scratch 閱讀，未改參考原檔。`T/assets/engine-DKps_Gq_.js` **137,915 bytes**；`T/assets/world-gYgJkZNf.js` **1,357,123 bytes**。函式短名是 bundle 裡的實際名字，不推測不存在的 TypeScript 原始碼。
+路徑前綴 **T = `Railway/city_world_reference/source/`**；表內 `T/assets/...` 均指這個完整前綴。先讀該包 `00_READ_ME_FIRST.md`，再展開 minified JS 到工作區的 scratch 閱讀，未改參考原檔。`T/assets/engine-DKps_Gq_.js` **137,915 bytes**；`T/assets/world-gYgJkZNf.js` **1,357,123 bytes**。函式短名是 bundle 裡的實際名字，不推測不存在的 TypeScript 原始碼。
 
 ### 2.1 逐條合法性規則與格佔用改寫
 
