@@ -42,6 +42,9 @@ public struct CitySkyline: Sendable {
     /// Every lot, by row and then column: north to south, so a building
     /// drawn later stands in front of the ones behind it.
     public let lots: [Lot]
+    /// The world's time when it was made, so the next one can tell a night's
+    /// growth (``SkylineGrowth``, decision 140) from a loaded game.
+    public let time: GameTime
 
     public init(world: GameWorld) {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
@@ -60,6 +63,13 @@ public struct CitySkyline: Sendable {
             }
         }
         self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+        time = world.clock.now
+    }
+
+    /// A skyline of the given lots, put in drawing order.
+    public init(lots: [Lot], time: GameTime) {
+        self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+        self.time = time
     }
 
     /// The uses drawn as open ground rather than buildings.
