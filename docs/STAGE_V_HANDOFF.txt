@@ -145,7 +145,7 @@ Railway/site_archive_clean/rail-3d/physical/turnbacks.js：AFR_TURNBACKS、isSch
 同目錄timing.js turnbackProgress：w=min(.15,20/max(1,next.arrSec-st.depSec))；departure w*(2u²-u³)、arrival1-w+w*(u+u²-u³)。源註明不虛構未公開dwell，既有window內減速；不可杜撰反轉20秒。
 Railway/railway_game_reference_clean/00_READ_ME_FIRST.md、migration§7及symbols：有 rail_depot_reverse_penalty 名稱，無數值／可讀planner；reverse priority明列adapted/gap，不稱忠實常數。
 Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js：查turnback/reverse，沒有可讀反向側線planner；1.5min headway不等於反轉dwell。
-Railway/taipei_gta_reference/READ_ME與source actors-Cx0CrTrM.js：MRT兩軌端點layover timer14，無同玩家單線deadlock反向側線；不套用14秒。
+Railway/city_world_reference/READ_ME與source actors-Cx0CrTrM.js：MRT兩軌端點layover timer14，無同玩家單線deadlock反向側線；不套用14秒。
 正式PR需四源→目標→classification→gap table；固定點m×64、sec×1；沿用既有加減速與dwell，原子預約。
 
 遠端保存操作注意
@@ -260,7 +260,7 @@ gh 的 GH_TOKEN 已過期，git public fetch 正常、push 401；不要印 token
 
 繼續 Stage V 的 prompt（作者可直接貼給下一位）
 請先完整讀 repo 的 docs/STAGE_V_HANDOFF.txt（同 /workspace/stage-v-handoff.txt）、CLAUDE.md 和 AGENTS.md，保留工作樹，再從最新 origin/main 檢查作者已合併哪些 PR。延續原 2026-10-05 Stage V 授權：可改 GameCore、獨立 ReferenceWorld、golden schema、存檔版本與新增 fixtures、ARCHITECTURE 決策 60 起、ROADMAP、RAILWAY_REFERENCE_MAPPING；這取代 AGENTS Division of work，其餘照舊。先跟進 #119 的 macOS CI；只有作者合併，agent 不合併、不開 auto-merge。
-私有 repo /workspace/railway-reference-private 固定 main25229af，不能用 ddff2be。每階段查四源 Ci/reference_snapshot、Railway/site_archive_clean、Railway/railway_game_reference_clean（先 READ_ME、migration §7）、Railway/taipei_gta_reference（先 READ_ME、source）。來源行為、常數、平手直接移植；Swift deterministic／整數定點／無 Foundation／value semantics／Sendable／validated Codable／failure atomicity。玩家路網從 RailwayNetwork/TrackPlatform/berths 推導，不用真實台鐵站名或 OSM id 作規則。
+私有 repo /workspace/railway-reference-private 固定 main25229af，不能用 ddff2be。每階段查四源 Ci/reference_snapshot、Railway/site_archive_clean、Railway/railway_game_reference_clean（先 READ_ME、migration §7）、Railway/city_world_reference（先 READ_ME、source）。來源行為、常數、平手直接移植；Swift deterministic／整數定點／無 Foundation／value semantics／Sendable／validated Codable／failure atomicity。玩家路網從 RailwayNetwork/TrackPlatform/berths 推導，不用真實台鐵站名或 OSM id 作規則。
 先完成並修好保留的 V4b，尤其已知 fastPassed failure，不要重新從零寫，不要宣稱目前 WIP 已完成。新的 main 先讀 #117 inventory，將接手的安全 berth 全域成本修正保留、觸控 #119 去重。V4b 仍一分支、一 draft PR，附四源→目標／倍率／direct reuse|faithful|adapted|gap 表、必要調整、決策61、各 check VERIFIED/UNVERIFIED。PR 開好且 CI 紅燈修好再推；下一階段僅在作者合併前階段後從新 main 開 branch。
 V4c：從 parallelTracks／交會站推導單線最大列車數與班距，來源 tra_track_sections.json、traSectionKey/inferMeetPassTimes/inferMeetRun、參考最短班距1.5min；新增公式決策、獨立模型、golden 值變動逐值解釋、平溪 demo 單線容量驗收。
 V4d：中途站換向、V2 倒入側線讓路；來源 turnbacks.js 的同來源節點同股反向與林鐵 zigzag、timing.turnbackProgress、RailwayCore reverse penalty；明確停留及預約語義。
