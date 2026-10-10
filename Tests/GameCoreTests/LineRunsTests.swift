@@ -172,6 +172,27 @@ final class LineRunsTests: XCTestCase {
         XCTAssertThrowsError(try world.setLineRuns(main, to: [])) { XCTAssertEqual($0 as? GameError, .trainServiceActive(blue)) }
     }
 
+    /// New stops, or a station removed from the line, end its runs; not
+    /// while one of its trains is on a run, whose riders go the run's way to
+    /// its end (as ``setLineRuns(_:to:)`` refuses then too).
+    func testRunsAreNotEndedUnderATrainOnOne() throws {
+        let short = LineRun(from: 0, to: 1, times: Array(out.times.prefix(2)))
+        var world = try world(runs: [short])
+        try world.advance(ticks: 6)
+        XCTAssertEqual(world.train(id: blue)?.timetable.map(\.station), [alpha, beta], "on the run to Beta")
+        let before = world
+        XCTAssertThrowsError(try world.setLineStops(main, to: [alpha, beta])) { XCTAssertEqual($0 as? GameError, .trainServiceActive(blue)) }
+        XCTAssertThrowsError(try world.removeStation(gamma), "Gamma is not on the run but is the line's") {
+            XCTAssertEqual($0 as? GameError, .trainServiceActive(blue))
+        }
+        XCTAssertEqual(world, before)
+        // Once the run is done, the line's stops can change and its runs end.
+        try world.advance(ticks: 30)
+        XCTAssertNil(world.train(id: blue)?.execution)
+        try world.setLineStops(main, to: [alpha, beta])
+        XCTAssertEqual(world.line(id: main)?.runs, [])
+    }
+
     /// Reversing the stops keeps each run at the same stations; new stops
     /// end the runs; a copy has them, none run yet.
     func testLineEditsKeepOrEndTheRuns() throws {
