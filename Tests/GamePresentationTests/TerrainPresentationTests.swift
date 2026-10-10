@@ -218,4 +218,22 @@ final class TerrainPresentationTests: XCTestCase {
         let outer = try XCTUnwrap(cutting.bands[0].last)
         XCTAssertEqual(cutting.hachures[1].to.y, outer.y)
     }
+    /// Each slope covers its own pricing length, the edge's last and
+    /// shorter one included: from where it starts, 16 m from the edge's
+    /// start at a time, not 8 m either side of its middle.
+    func testTheLastShortLengthsSlopeCoversOnlyThatLength() throws {
+        var world = try world(columns: [20, 20, 14, 14])
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: Self.row, z: 1_280))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 7_000, y: Self.row, z: 1_280))
+        let id = try world.buildTrackEdge(from: a, to: b, structure: .automatic)
+        let section = try XCTUnwrap(world.longSection(of: id))
+        XCTAssertEqual(section.samples.dropFirst().dropLast().last?.kind, .embankment, "the short last length is a bank")
+        let slopes = TrackSlope.slopes(of: section, geometry: try XCTUnwrap(world.trackGeometry(of: id)))
+        let last = try XCTUnwrap(slopes.last)
+        XCTAssertEqual(last.bands[0].first?.x, 1_024 + 5 * 1_024, "the last length starts 80 m along")
+        XCTAssertEqual(last.bands[0][1].x, 7_000)
+        for slope in slopes {
+            XCTAssertEqual((Int(slope.bands[0][0].x) - 1_024) % 1_024, 0, "\(slope.bands[0])")
+        }
+    }
 }

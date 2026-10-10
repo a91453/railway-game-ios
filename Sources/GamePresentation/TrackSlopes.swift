@@ -56,10 +56,9 @@ public struct TrackSlope: Hashable, Sendable {
     /// each pricing length on an embankment or in a cutting, from its
     /// middle's height (``GameCore/TrackGroundSample/height``).
     public static func slopes(of section: TrackLongSection, geometry: TrackGeometry) -> [TrackSlope] {
-        let half = ConstructionCosts.trackPricingLength / 2
-        return section.samples.dropFirst().dropLast().compactMap { sample in
+        section.samples.dropFirst().dropLast().enumerated().compactMap { index, sample in
             guard sample.kind == .embankment || sample.kind == .cutting else { return nil }
-            let start = max(0, sample.distance - half), end = min(geometry.length, sample.distance + half)
+            let (start, end) = section.pricingLength(index)
             guard start < end else { return nil }
             return TrackSlope(kind: sample.kind, height: Double(abs(sample.height)), from: geometry.location(at: start), to: geometry.location(at: end))
         }
