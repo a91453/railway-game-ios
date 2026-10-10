@@ -108,6 +108,23 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.world.economy.balance, 10_000, "free")
     }
 
+    /// Decision 140: a real-world map shows its own houses, so the
+    /// building tool marks only the city buildings a site would buy out,
+    /// not every one in view.
+    func testARealWorldMapMarksOnlyTheCityBuildingsASiteBuysOut() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setGeoAnchor(try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.1316, longitudeDegrees: 121.7397)))
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        XCTAssertEqual(session.buildingOverlay?.showsCityBuildingSites, false)
+        session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingOverlay?.boughtOut, [PlanRect(minX: 21_248, minY: 21_248, maxX: 23_808, maxY: 23_808)])
+    }
+
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])

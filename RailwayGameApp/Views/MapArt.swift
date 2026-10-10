@@ -492,6 +492,7 @@ enum MapArt {
         drawsLand: Bool,
         skyline: CitySkyline?,
         growth: (SkylineGrowth, elapsed: Double)?,
+        growthOnly: Bool,
         layer: PopTravelLayer?,
         projection: some MapProjection,
         in context: GraphicsContext
@@ -506,8 +507,14 @@ enum MapArt {
             ])
             context.fill(land, with: .color(Palette.land))
         }
-        if let skyline {
-            drawSkyline(skyline, growth: growth, projection: projection, in: context)
+        if let skyline, !growthOnly {
+            drawSkyline(skyline, growth: growth, growthOnly: false, projection: projection, in: context)
+        } else if let skyline, let growth {
+            // Decision 140: a real-world map's own houses stand under it;
+            // only what grew is drawn, fading out once it has risen.
+            var faded = context
+            faded.opacity = SkylineGrowth.shown(elapsed: growth.elapsed)
+            drawSkyline(skyline, growth: growth, growthOnly: true, projection: projection, in: faded)
         }
         guard let layer else { return }
         switch layer.content {
@@ -575,10 +582,12 @@ enum MapArt {
     /// colour at a time. Flat when zoomed out, nothing when a cell is a few
     /// points. While a night's `growth` plays (decision 140), the lots that
     /// grew are drawn as it says at `elapsed`: rising, a new one swelling
-    /// to its size, its roof lit in the station's yellow.
+    /// to its size, its roof lit in the station's yellow; with `growthOnly`
+    /// (a real-world map), only they are.
     private static func drawSkyline(
         _ skyline: CitySkyline,
         growth: (SkylineGrowth, elapsed: Double)?,
+        growthOnly: Bool,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -614,13 +623,14 @@ enum MapArt {
                 drawRow()
                 row = lot.row
             }
+            let frame = growth.flatMap { $0.0.frame(of: lot, elapsed: $0.elapsed) }
+            if growthOnly, frame == nil { continue }
             let minX = Double(lot.column) * length, minY = Double(lot.row) * length
             if lot.isOpenGround {
                 let rect = screenRect(minX: minX, minY: minY, maxX: minX + length, maxY: minY + length, projection)
                 ground[lot.use, default: Path()].addRect(rect)
                 continue
             }
-            let frame = growth.flatMap { $0.0.frame(of: lot, elapsed: $0.elapsed) }
             if let frame, !frame.isShown { continue }
             let drawnSide = side * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
             let foot = screenRect(

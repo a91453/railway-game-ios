@@ -315,7 +315,10 @@ extension GameSession {
     public var buildingOverlay: BuildingOverlay? {
         guard tool == .building else { return nil }
         var overlay = BuildingOverlay()
-        overlay.showsCityBuildingSites = buildingMode == .build
+        // Decision 140: a real-world map shows its own houses; the grid of
+        // the city's squares over it hid the streets, so only the ones a
+        // site would buy out are marked.
+        overlay.showsCityBuildingSites = buildingMode == .build && world.geoAnchor == nil
         if buildingMode == .zone, let drag = zoneDrag {
             overlay.zoneDrag = drag.planRect
             overlay.zoneDragColor = zoningZone.map(CityMap.zoneColor)
@@ -402,7 +405,8 @@ public struct PlanRect: Hashable, Sendable {
 /// What the map draws for the building tool (decision 95).
 public struct BuildingOverlay: Hashable, Sendable {
     /// Whether to draw where the city's buildings stand, so the player sees
-    /// where a building would buy one out.
+    /// where a building would buy one out: on a blank map only (decision
+    /// 140).
     public var showsCityBuildingSites = false
     /// The building on the site, and whether GameCore would build it.
     public var site: PlanRect?
