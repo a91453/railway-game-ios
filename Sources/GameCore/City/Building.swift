@@ -5,7 +5,7 @@
 // The owner's references have no capacity to port (the study,
 // `docs/research/PHASE6C_BUILDINGS_STUDY.md` in PR #174, §4 and §11): `Ci/`
 // draws buildings from vector tiles it does not ship and extrudes them by
-// height alone; `Railway/` and `taipei_gta_reference` give buildings
+// height alone; `Railway/` and `city_world_reference` give buildings
 // floors, footprints and models but no residents or jobs. So the table and
 // the rules are this project's (gap), as the study's §5 proposes and the
 // author settled:
