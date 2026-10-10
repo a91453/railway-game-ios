@@ -342,7 +342,7 @@ extension GameWorld {
     mutating func replaceLand(with land: Land) {
         var land = land
         if !placedBuildings.isEmpty {
-            land.cells.removeAll { isClaimedByPlacedBuilding(row: $0.row, column: $0.column) }
+            land.cells.removeAll { isClaimedByPlacedBuilding(row: $0.row, column: $0.column, side: cityBuildingSide(for: $0)) }
         }
         if cityBuildings {
             buildings = CityBuildings.fitting(land)

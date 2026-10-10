@@ -492,6 +492,7 @@ enum MapArt {
         drawsLand: Bool,
         skyline: CitySkyline?,
         growth: (SkylineGrowth, elapsed: Double)?,
+        growthOnly: Bool,
         layer: PopTravelLayer?,
         projection: some MapProjection,
         in context: GraphicsContext
@@ -506,8 +507,14 @@ enum MapArt {
             ])
             context.fill(land, with: .color(Palette.land))
         }
-        if let skyline {
-            drawSkyline(skyline, growth: growth, projection: projection, in: context)
+        if let skyline, !growthOnly {
+            drawSkyline(skyline, growth: growth, growthOnly: false, projection: projection, in: context)
+        } else if let skyline, let growth {
+            // Decision 140: a real-world map's own houses stand under it;
+            // only what grew is drawn, fading out once it has risen.
+            var faded = context
+            faded.opacity = SkylineGrowth.shown(elapsed: growth.elapsed)
+            drawSkyline(skyline, growth: growth, growthOnly: true, projection: projection, in: faded)
         }
         guard let layer else { return }
         switch layer.content {
@@ -575,10 +582,12 @@ enum MapArt {
     /// colour at a time. Flat when zoomed out, nothing when a cell is a few
     /// points. While a night's `growth` plays (decision 140), the lots that
     /// grew are drawn as it says at `elapsed`: rising, a new one swelling
-    /// to its size, its roof lit in the station's yellow.
+    /// to its size, its roof lit in the station's yellow; with `growthOnly`
+    /// (a real-world map), only they are.
     private static func drawSkyline(
         _ skyline: CitySkyline,
         growth: (SkylineGrowth, elapsed: Double)?,
+        growthOnly: Bool,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -586,7 +595,7 @@ enum MapArt {
         guard !skyline.isEmpty, cellPoints >= skylineMinimumCellPoints else { return }
         let rises = cellPoints >= skylineRisingCellPoints
         let lots = skyline.lots(in: drawingRegion(projection), rowsBelow: rises ? CitySkyline.rowsRisenOver : 0)
-        let length = Double(Land.cellLength), side = Double(PlacedBuildingRules.cityBuildingSide)
+        let length = Double(Land.cellLength)
         let lineWidth = cellPoints < 14 ? 0.6 : 1
         var ground: [LandUse: Path] = [:], walls: [LandUse: Path] = [:], roofs: [LandUse: Path] = [:], outlines = Path()
         var lit: [(roof: CGRect, light: Double)] = []
@@ -614,15 +623,18 @@ enum MapArt {
                 drawRow()
                 row = lot.row
             }
+            let frame = growth.flatMap { $0.0.frame(of: lot, elapsed: $0.elapsed) }
+            if growthOnly, frame == nil { continue }
             let minX = Double(lot.column) * length, minY = Double(lot.row) * length
             if lot.isOpenGround {
                 let rect = screenRect(minX: minX, minY: minY, maxX: minX + length, maxY: minY + length, projection)
                 ground[lot.use, default: Path()].addRect(rect)
                 continue
             }
-            let frame = growth.flatMap { $0.0.frame(of: lot, elapsed: $0.elapsed) }
             if let frame, !frame.isShown { continue }
-            let drawnSide = side * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
+            // Decision 142: each on its own square, its density's with the
+            // city's footprints.
+            let drawnSide = Double(lot.side) * (frame?.sideShare ?? 1), drawnInset = (length - drawnSide) / 2
             let foot = screenRect(
                 minX: minX + drawnInset, minY: minY + drawnInset,
                 maxX: minX + drawnInset + drawnSide, maxY: minY + drawnInset + drawnSide,
@@ -696,11 +708,18 @@ enum MapArt {
 
     /// Where the city's buildings stand (decision 95), while the building
     /// tool chooses a site: the middle square of each cell of land in view,
-    /// faintly, once a cell is 8 points or more across.
+    /// or on a real-world map round the site (decision 140), faintly, once
+    /// a cell is 8 points or more across.
     private static func drawCityBuildingSites(_ world: GameWorld, overlay: BuildingOverlay, projection: some MapProjection, in context: GraphicsContext) {
         guard overlay.showsCityBuildingSites, !world.land.isEmpty,
               Double(Land.cellLength) * projection.pointsPerUnit >= 8 else { return }
-        let region = drawingRegion(projection)
+        var region = drawingRegion(projection)
+        if let area = overlay.citySitesArea {
+            region = WorldRegion(
+                minX: max(region.minX, Double(area.minX)), minY: max(region.minY, Double(area.minY)),
+                maxX: min(region.maxX, Double(area.maxX)), maxY: min(region.maxY, Double(area.maxY))
+            )
+        }
         let length = Double(Land.cellLength)
         let firstRow = max(0, Int((region.minY / length).rounded(.down))), lastRow = min(Land.rows(in: world.bounds) - 1, Int((region.maxY / length).rounded(.down)))
         let firstColumn = max(0, Int((region.minX / length).rounded(.down))), lastColumn = min(Land.columns(in: world.bounds) - 1, Int((region.maxX / length).rounded(.down)))
@@ -708,7 +727,7 @@ enum MapArt {
         var sites = Path()
         for row in firstRow...lastRow {
             for column in firstColumn...lastColumn where world.land.cell(row: row, column: column) != nil {
-                let square = PlanRect.cityBuilding(row: row, column: column)
+                let square = PlanRect.cityBuilding(row: row, column: column, in: world)
                 sites.addRect(screenRect(minX: Double(square.minX), minY: Double(square.minY), maxX: Double(square.maxX), maxY: Double(square.maxY), projection))
             }
         }

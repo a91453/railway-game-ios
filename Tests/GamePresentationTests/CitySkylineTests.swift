@@ -23,6 +23,8 @@ final class CitySkylineTests: XCTestCase {
                 buildings += 1
                 XCTAssertEqual(lot?.use, building.use)
                 XCTAssertEqual(lot?.density, building.kind == .existingStock ? 4 : building.density.rawValue)
+                // Decision 142: a new game's squares are their density's.
+                XCTAssertEqual(lot?.side, PlacedBuildingRules.cityBuildingSide(of: building.density))
                 XCTAssertEqual(lot?.isOpenGround, false)
             } else {
                 XCTAssertNil(lot, "land without its building draws nothing")

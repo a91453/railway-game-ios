@@ -164,7 +164,7 @@ extension GameWorld {
         var fresh: [LandCell] = []
         // Decision 95: nor on a cell one of the company's buildings claims.
         for cell in sorted where land.cell(row: cell.row, column: cell.column) == nil
-            && !isClaimedByPlacedBuilding(row: cell.row, column: cell.column) {
+            && !isClaimedByPlacedBuilding(row: cell.row, column: cell.column, side: cityBuildingSide(for: cell)) {
             if cityBuildings {
                 // No number left for its building: neither, as the land's
                 // growth does.

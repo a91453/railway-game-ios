@@ -8,10 +8,16 @@ import GameCore
 /// station's yellow that fades as it rises; they start one after another,
 /// a little apart, and all are done in ``duration`` seconds.
 ///
+/// A real-world map draws no city of its own (its base map shows the real
+/// one, decision 126), so there only the buildings that grew are drawn,
+/// over the real map: they rise the same way, stay a moment and fade out by
+/// ``fadedDuration``.
+///
 /// Derived from two skylines and never saved: GameCore's growth is the
 /// same with or without it. The map plays it only for growth the clock
-/// moved forward to, a few days at most, so loading a save, undoing or
-/// buying out a lot changes the map at once.
+/// moved forward to over a midnight, when the city grows, a few days at
+/// most, so loading a save, undoing, buying out a lot or the whole of
+/// Taiwan reading in land as the map moves changes the map at once.
 ///
 /// The references animate no city growth to port (gap): the timing and the
 /// look are this project's.
@@ -20,6 +26,9 @@ public struct SkylineGrowth: Sendable {
     public struct Rise: Hashable, Sendable {
         /// The density it rises from: 0 for a new building.
         public let fromDensity: Int
+        /// The side of the square it stood on, which grows with its density
+        /// (decision 142); the new side for a new building.
+        public let fromSide: Int64
         /// Whether the building is new on its cell (on open ground, a new
         /// cell or a cell whose use changed) rather than raised.
         public let isNew: Bool
@@ -68,16 +77,35 @@ public struct SkylineGrowth: Sendable {
     public static let longestDelay = 0.7
     /// How long the whole growth takes, in seconds.
     public static let duration = longestDelay + riseDuration
+    /// On a real-world map, how long the buildings stay once all have
+    /// risen, and how long they then take to fade out, in seconds.
+    public static let lingerDuration = 1.2
+    public static let fadeDuration = 0.8
+    /// How long a real-world map's growth takes, faded out, in seconds.
+    public static let fadedDuration = duration + lingerDuration + fadeDuration
+
+    /// How much of a real-world map's growth is still shown `elapsed`
+    /// seconds after it began: whole until it has risen and stayed, then
+    /// fading to nothing at ``fadedDuration``.
+    public static func shown(elapsed: Double) -> Double {
+        guard elapsed < fadedDuration else { return 0 }
+        let fading = elapsed - duration - lingerDuration
+        return max(0, min(1, 1 - fading / fadeDuration))
+    }
+
     /// The most game days between two skylines whose difference is played:
     /// further apart, the map was loaded or jumped, not grown.
     public static let longestGapDays: Int64 = 3
 
     /// The growth from `old` to `new`, or `nil` when there is none to play:
-    /// nothing grew, the clock went back or did not move, or more than
-    /// ``longestGapDays`` passed between them.
+    /// nothing grew, no midnight passed between them (the clock went back,
+    /// did not move or moved within a day), or more than
+    /// ``longestGapDays`` did.
     public init?(from old: CitySkyline, to new: CitySkyline) {
-        let gap = new.time.seconds - old.time.seconds
-        guard gap > 0, gap <= Self.longestGapDays * GameTime.secondsPerDay else { return nil }
+        let day = GameTime.secondsPerDay
+        guard Self.day(of: old.time) < Self.day(of: new.time),
+              new.time.seconds - old.time.seconds <= Self.longestGapDays * day
+        else { return nil }
         var before: [Cell: CitySkyline.Lot] = [:]
         before.reserveCapacity(old.lots.count)
         for lot in old.lots {
@@ -88,11 +116,11 @@ public struct SkylineGrowth: Sendable {
             let cell = Cell(row: lot.row, column: lot.column)
             let delay = Self.delay(row: lot.row, column: lot.column)
             guard let earlier = before[cell], !earlier.isOpenGround, earlier.use == lot.use else {
-                rises[cell] = Rise(fromDensity: 0, isNew: true, delay: delay)
+                rises[cell] = Rise(fromDensity: 0, fromSide: lot.side, isNew: true, delay: delay)
                 continue
             }
             if lot.density > earlier.density {
-                rises[cell] = Rise(fromDensity: earlier.density, isNew: false, delay: delay)
+                rises[cell] = Rise(fromDensity: earlier.density, fromSide: earlier.side, isNew: false, delay: delay)
             }
         }
         guard !rises.isEmpty else { return nil }
@@ -109,11 +137,13 @@ public struct SkylineGrowth: Sendable {
     public func frame(of lot: CitySkyline.Lot, elapsed: Double) -> Frame? {
         guard let rise = rise(row: lot.row, column: lot.column) else { return nil }
         let target = CitySkyline.heightShare(density: lot.density)
+        // A raised building's square grows from its old side (decision 142).
+        let startSide = lot.side > 0 ? Double(rise.fromSide) / Double(lot.side) : 1
         let local = elapsed - rise.delay
         guard local > 0 else {
             return rise.isNew
                 ? Frame(heightShare: 0, sideShare: 0, light: 0)
-                : Frame(heightShare: CitySkyline.heightShare(density: rise.fromDensity), sideShare: 1, light: 0)
+                : Frame(heightShare: CitySkyline.heightShare(density: rise.fromDensity), sideShare: startSide, light: 0)
         }
         let progress = min(1, local / Self.riseDuration)
         // Fast at first, settling into place.
@@ -121,9 +151,14 @@ public struct SkylineGrowth: Sendable {
         let start = CitySkyline.heightShare(density: rise.fromDensity)
         return Frame(
             heightShare: start + (target - start) * eased,
-            sideShare: rise.isNew ? 0.4 + 0.6 * eased : 1,
+            sideShare: rise.isNew ? 0.4 + 0.6 * eased : startSide + (1 - startSide) * eased,
             light: 1 - progress
         )
+    }
+
+    /// The day `time` falls on, counted from 0.
+    private static func day(of time: GameTime) -> Int64 {
+        time.seconds / GameTime.secondsPerDay
     }
 
     /// When the lot on a cell starts: spread from 0 to ``longestDelay`` by

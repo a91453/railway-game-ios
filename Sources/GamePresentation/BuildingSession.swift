@@ -330,10 +330,26 @@ extension GameSession {
             overlay.site = PlanRect(minX: preview.centre.x - half, minY: preview.centre.y - half,
                                     maxX: preview.centre.x - half + preview.kind.side, maxY: preview.centre.y - half + preview.kind.side)
             overlay.siteIsBuildable = preview.problem == nil
-            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column) }
+            overlay.boughtOut = preview.quote.cleared.map { PlanRect.cityBuilding(row: $0.row, column: $0.column, in: world) }
+        }
+        // Decision 140: a real-world map has a city building on nearly every
+        // cell, and their squares over the whole view hid its streets; there
+        // only those round the chosen site are drawn, enough to see where a
+        // building fits between them, and none before a site is chosen.
+        if world.geoAnchor != nil, overlay.showsCityBuildingSites {
+            if let site = overlay.site {
+                let reach = Self.citySitesReach
+                overlay.citySitesArea = PlanRect(minX: site.minX - reach, minY: site.minY - reach, maxX: site.maxX + reach, maxY: site.maxY + reach)
+            } else {
+                overlay.showsCityBuildingSites = false
+            }
         }
         return overlay
     }
+
+    /// How far round a real-world map's chosen site its city buildings are
+    /// drawn (decision 140): two cells.
+    public static let citySitesReach = 2 * Land.cellLength
 
     /// What ``buildingKind`` costs a managed company: its building, and the
     /// land under it at that land's value; `nil` in free play, where it is
@@ -385,12 +401,13 @@ public struct PlanRect: Hashable, Sendable {
     }
 
     /// The square the city's building on the cell at `row`, `column`
-    /// stands on (decision 95): ``PlacedBuildingRules/cityBuildingSide``
-    /// across, in the middle of the cell.
-    public static func cityBuilding(row: Int, column: Int) -> PlanRect {
-        let inset = (Land.cellLength - PlacedBuildingRules.cityBuildingSide) / 2
+    /// stands on in `world` (decision 95): ``GameWorld/cityBuildingSide(row:column:)``
+    /// across (decision 142), in the middle of the cell.
+    public static func cityBuilding(row: Int, column: Int, in world: GameWorld) -> PlanRect {
+        let side = world.cityBuildingSide(row: row, column: column)
+        let inset = (Land.cellLength - side) / 2
         let minX = Int64(column) * Land.cellLength + inset, minY = Int64(row) * Land.cellLength + inset
-        return PlanRect(minX: minX, minY: minY, maxX: minX + PlacedBuildingRules.cityBuildingSide, maxY: minY + PlacedBuildingRules.cityBuildingSide)
+        return PlanRect(minX: minX, minY: minY, maxX: minX + side, maxY: minY + side)
     }
 
     /// The square `building` stands on.
@@ -402,8 +419,11 @@ public struct PlanRect: Hashable, Sendable {
 /// What the map draws for the building tool (decision 95).
 public struct BuildingOverlay: Hashable, Sendable {
     /// Whether to draw where the city's buildings stand, so the player sees
-    /// where a building would buy one out.
+    /// where a building would buy one out, and where: everywhere in view
+    /// when `citySitesArea` is `nil`, otherwise only those it reaches (a
+    /// real-world map's, round the chosen site, decision 140).
     public var showsCityBuildingSites = false
+    public var citySitesArea: PlanRect?
     /// The building on the site, and whether GameCore would build it.
     public var site: PlanRect?
     public var siteIsBuildable = false

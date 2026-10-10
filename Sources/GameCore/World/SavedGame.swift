@@ -164,9 +164,14 @@
 ///     with the mix its city keeps (`"baseline"`). A build that reads only
 ///     an earlier version would drop it, and the city would grow without
 ///     its valves again, so it says the save is newer than it instead.
+/// 33. The city's footprints (decision 142): a world can have
+///     `"cityFootprints": true`, a city building's square its density's. A
+///     build that reads only an earlier version would drop it, and the
+///     company's buildings would buy out 40 m squares again, so it says the
+///     save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 32
+    public static let currentVersion = 33
 
     public let world: GameWorld
 
@@ -269,6 +274,8 @@ extension SavedGame: Codable {
         // Version 30 to 31: a world without `"distanceDemand"` or
         // `"outsideConnections"` has them off, and its demand is as it was.
         // Version 31 to 32: a world without `"cityDemand"` grows as it did.
+        // Version 32 to 33: a world without `"cityFootprints"` keeps its
+        // city buildings' 40 m squares.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

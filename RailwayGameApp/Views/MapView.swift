@@ -178,8 +178,12 @@ struct MapView: View {
                         bounds: bounds,
                         drawsLand: realWorld == nil,
                         // Decision 126: a city layer colours the cells instead.
-                        skyline: realWorld == nil && mapLayers.popTravelMode?.isCityLayer != true
-                            ? skyline.map { SkylineLayer(skyline: $0, growth: skylineGrowth, version: skylineVersion) } : nil,
+                        // Decision 140: a real-world map draws only the
+                        // night's growth.
+                        skyline: mapLayers.popTravelMode?.isCityLayer != true
+                            ? skyline.map {
+                                SkylineLayer(skyline: $0, growth: skylineGrowth, growthOnly: realWorld != nil, version: skylineVersion)
+                            } : nil,
                         layer: popTravelLayer(realWorld: realWorld),
                         camera: projection
                     )
@@ -580,16 +584,19 @@ struct MapView: View {
         .task(id: SkylineKey(world: session.world)) {
             // Decision 126: what the plain map shows of the city, worked out
             // off the main thread when the land or its buildings change
-            // (each night at most). A real-world map shows its own town.
-            guard session.world.geoAnchor == nil, !session.world.land.isEmpty else {
+            // (each night at most). A real-world map shows its own town, and
+            // decision 140 only what grew of it, where the land grows.
+            guard session.world.geoAnchor == nil || session.world.landDemand, !session.world.land.isEmpty else {
                 skyline = nil
                 skylineGrowth = nil
                 skylineVersion &+= 1
                 return
             }
             // Decision 140: what grew since the last one, played over the
-            // next second and a half; not with Reduce Motion.
+            // next second and a half (and faded out on a real-world map);
+            // not with Reduce Motion.
             let world = session.world, previous = reduceMotion ? nil : skyline
+            let playing = world.geoAnchor == nil ? SkylineGrowth.duration : SkylineGrowth.fadedDuration
             let (built, growth) = await Task.detached(priority: .utility) {
                 let built = CitySkyline(world: world)
                 return (built, previous.flatMap { SkylineGrowth(from: $0, to: built) })
@@ -599,7 +606,7 @@ struct MapView: View {
             skylineGrowth = growth.map { SkylineLayer.Growth(growth: $0, start: .now) }
             skylineVersion &+= 1
             guard growth != nil else { return }
-            try? await Task.sleep(for: .seconds(SkylineGrowth.duration))
+            try? await Task.sleep(for: .seconds(playing))
             guard !Task.isCancelled else { return }
             skylineGrowth = nil
             skylineVersion &+= 1
@@ -1031,10 +1038,12 @@ struct SkylineLayer: Equatable {
 
     let skyline: CitySkyline
     let growth: Growth?
+    /// A real-world map's: only the growth is drawn (decision 140).
+    let growthOnly: Bool
     let version: Int
 
     static func == (lhs: SkylineLayer, rhs: SkylineLayer) -> Bool {
-        lhs.version == rhs.version
+        lhs.version == rhs.version && lhs.growthOnly == rhs.growthOnly
     }
 }
 
@@ -1054,7 +1063,9 @@ private struct MapBaseCanvas: View, Equatable {
     }
 
     var body: some View {
-        let bounds = bounds, drawsLand = drawsLand, growth = skyline?.growth, skyline = skyline?.skyline, layer = layer, camera = camera
+        let shown = self.skyline
+        let bounds = bounds, drawsLand = drawsLand, growth = shown?.growth, growthOnly = shown?.growthOnly ?? false
+        let skyline = shown?.skyline, layer = layer, camera = camera
         // Decision 140: redrawn every frame only while a night's growth
         // plays; otherwise the timeline is paused and the canvas is drawn
         // as before.
@@ -1066,6 +1077,7 @@ private struct MapBaseCanvas: View, Equatable {
                     drawsLand: drawsLand,
                     skyline: skyline,
                     growth: growth.map { ($0.growth, elapsed: timeline.date.timeIntervalSince($0.start)) },
+                    growthOnly: growthOnly,
                     layer: layer,
                     projection: camera,
                     in: context
@@ -1130,12 +1142,13 @@ private struct CityCellTooltip: View {
 /// What the plain map's city is made from (decision 126): the land, its
 /// buildings and whether the map is a real place's.
 private struct SkylineKey: Equatable {
-    /// `nil` on a real-world map, which draws none.
+    /// `nil` on a real-world map whose land does not grow, which draws
+    /// none (decision 140: one whose land grows draws what grew).
     let land: Land?
     let buildings: CityBuildings?
 
     init(world: GameWorld) {
-        let drawn = world.geoAnchor == nil
+        let drawn = world.geoAnchor == nil || world.landDemand
         land = drawn ? world.land : nil
         buildings = drawn ? world.buildings : nil
     }

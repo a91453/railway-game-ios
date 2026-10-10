@@ -47,8 +47,9 @@ final class SkylineGrowthTests: XCTestCase {
         XCTAssertNil(growth.frame(of: new.lots[1], elapsed: 0.5), "a lot that did not grow is drawn as it is")
     }
 
-    /// A save loaded, an undo or the same moment changes the map at once.
-    func testOnlyGrowthTheClockMovedForwardToAFewDaysAtMostIsPlayed() {
+    /// A save loaded, an undo, the same moment or land read in during the
+    /// day changes the map at once: the city grows at midnight.
+    func testOnlyGrowthTheClockMovedForwardToOverAMidnightAFewDaysAtMostIsPlayed() {
         let old = CitySkyline(lots: [lot(0, 0, .residential, 1)], time: night)
         let grown = [lot(0, 0, .residential, 3)]
         XCTAssertNotNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: GameTime(seconds: 2 * GameTime.secondsPerDay))))
@@ -56,6 +57,12 @@ final class SkylineGrowthTests: XCTestCase {
         XCTAssertNotNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: longest)))
         XCTAssertNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: GameTime(seconds: longest.seconds + 1))))
         XCTAssertNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: night)), "the clock did not move")
+        let evening = GameTime(seconds: 2 * GameTime.secondsPerDay - 1)
+        XCTAssertNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: evening)), "no midnight passed")
+        XCTAssertNotNil(SkylineGrowth(
+            from: CitySkyline(lots: old.lots, time: evening),
+            to: CitySkyline(lots: grown, time: GameTime(seconds: 2 * GameTime.secondsPerDay))
+        ), "a second before midnight to midnight")
         XCTAssertNil(SkylineGrowth(from: old, to: CitySkyline(lots: grown, time: .zero)), "the clock went back")
         XCTAssertNil(SkylineGrowth(from: old, to: CitySkyline(lots: old.lots, time: GameTime(seconds: 2 * GameTime.secondsPerDay))), "nothing grew")
     }
@@ -105,6 +112,34 @@ final class SkylineGrowthTests: XCTestCase {
         for lot in lots {
             XCTAssertEqual(growth.frame(of: lot, elapsed: SkylineGrowth.duration)?.light, 0)
         }
+    }
+
+    /// Decision 142: a raised building's square grows with it, from its old
+    /// side to its new.
+    func testARaisedBuildingsSquareGrowsWithIt() throws {
+        let old = CitySkyline(lots: [CitySkyline.Lot(row: 0, column: 0, use: .residential, density: 1, side: 1_280)], time: .zero)
+        let lot = CitySkyline.Lot(row: 0, column: 0, use: .residential, density: 2, side: 1_792)
+        let growth = try XCTUnwrap(SkylineGrowth(from: old, to: CitySkyline(lots: [lot], time: night)))
+        let rise = try XCTUnwrap(growth.rise(row: 0, column: 0))
+        XCTAssertEqual(rise.fromSide, 1_280)
+        XCTAssertEqual(try XCTUnwrap(growth.frame(of: lot, elapsed: rise.delay)).sideShare, 1_280.0 / 1_792, accuracy: 1e-9)
+        let shares = stride(from: 0.05, through: SkylineGrowth.riseDuration, by: 0.05).map { growth.frame(of: lot, elapsed: rise.delay + $0)!.sideShare }
+        XCTAssertEqual(shares, shares.sorted())
+        XCTAssertEqual(try XCTUnwrap(growth.frame(of: lot, elapsed: SkylineGrowth.duration)).sideShare, 1)
+    }
+
+    /// On a real-world map the buildings that grew stay whole while they
+    /// rise and a moment after, then fade out.
+    func testARealWorldMapsGrowthFadesOutAfterItHasRisen() {
+        let risen = SkylineGrowth.duration + SkylineGrowth.lingerDuration
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: 0), 1)
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: SkylineGrowth.duration), 1, "whole while rising")
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: risen), 1)
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: risen + SkylineGrowth.fadeDuration / 2), 0.5, accuracy: 1e-9)
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: SkylineGrowth.fadedDuration), 0)
+        XCTAssertEqual(SkylineGrowth.shown(elapsed: SkylineGrowth.fadedDuration + 5), 0)
+        let samples = stride(from: 0.0, through: SkylineGrowth.fadedDuration, by: 0.1).map(SkylineGrowth.shown(elapsed:))
+        XCTAssertEqual(samples, samples.sorted(by: >))
     }
 
     /// The skyline the map makes from a world keeps the world's time.
