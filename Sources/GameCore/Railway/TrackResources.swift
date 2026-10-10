@@ -137,10 +137,12 @@ public struct TrackSpan: Hashable, Comparable, Sendable {
     }
 
     /// See ``hash(into:)``.
-    var hashWord: Int {
+    /// 64 bits on every platform (`Int` is 32 on wasm32).
+    var hashWord: UInt64 {
         switch edge {
         case .edge(let number):
-            (number &* -7_046_029_254_386_353_131) ^ (Int(truncatingIfNeeded: start) &* -4_658_895_280_553_007_687) ^ Int(truncatingIfNeeded: end)
+            (UInt64(truncatingIfNeeded: number) &* 0x9E37_79B9_7F4A_7C15) ^ (UInt64(bitPattern: start) &* 0xC2B2_AE3D_27D4_EB4F)
+                ^ UInt64(bitPattern: end)
         }
     }
 }
