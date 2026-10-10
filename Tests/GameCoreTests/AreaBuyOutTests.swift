@@ -126,6 +126,22 @@ final class AreaBuyOutTests: XCTestCase {
         XCTAssertEqual(off.growthLimits(of: try XCTUnwrap(off.land.cell(row: 5, column: 5))).residents, 56)
     }
 
+    /// The plain growth, the city's demand off (decision 139), grows a cell
+    /// under a company building to its limits less what the building
+    /// covers, as the steered growth does: the covered share's people are
+    /// in the building and do not grow back in the cell.
+    func testPlainGrowthLeavesOutWhatTheCompanyCovers() throws {
+        var world = try world(area: true)
+        _ = try world.placeBuilding(.office, at: Self.betweenTheHomes)
+        let station = try world.buildStation(named: "S", at: PlanPoint(x: 22_528, y: 26_000))
+        XCTAssertNil(world.cityDemand)
+        world.grow(around: station, residents: 1_000, jobs: 1_000)
+        let cell = try XCTUnwrap(world.land.cell(row: 5, column: 5))
+        XCTAssertEqual(world.growthLimits(of: cell).residents, 56 * 7 / 8)
+        XCTAssertEqual(cell.residents, 56 * 7 / 8)
+        XCTAssertEqual(cell.jobs, 12 * 7 / 8)
+    }
+
     /// A building's squares do not hold the city back: no raise is blocked,
     /// and only a cell the company covers whole keeps new land off.
     func testNoRaiseIsBlockedAndOnlyAWholeCellIsClaimed() throws {
