@@ -941,6 +941,8 @@ G1 先做了 5A、5B、5D、5E、5G 的最小版；這個 Phase 在它上面深�
 
 E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立體的背景；遊戲本身的 3D（軌道、結構物、列車）仍在這個 Phase。
 
+城市建物的程序外觀（P8-2）、圖塊串流與 LOD（P8-11）的研究：[PROCEDURAL_CITY_STUDY.md](research/PROCEDURAL_CITY_STUDY.md)（2026-10-10）。內容包括開源專案 jeantimex/tokyo（MIT）的建物生成、256 m 圖塊串流與設施 pool，私有參考庫的台灣地塊生成器，以及高雄、台北 1 km² 的 Overture 足跡量測。下一步是高雄車站 1 km² 的 iOS 試片，引擎由作者決定。
+
 ## 跨階段議題
 
 - 在地化（**L1 ✅**，ARCHITECTURE 決策 38）：繁體中文（台灣用語）與英文，跟著系統語言切換；用語以參考 `Ci/` 的簡體中文介面為來源。之後新增的畫面文字要同時寫兩種語言：GamePresentation 的文字函式接收語言，App 的字面字串要加進 `Localizable.xcstrings`。
