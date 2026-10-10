@@ -148,6 +148,68 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(PlanRect.cityBuilding(row: 5, column: 5, in: session.world), PlanRect(minX: 21_888, minY: 21_888, maxX: 23_168, maxY: 23_168))
     }
 
+    /// Decision 144: a site that would buy out a city building moves to the
+    /// nearest point within 12 m where it buys out none, on a tap and when
+    /// a drag lets go; one on top of a city building stays and buys it out.
+    func testASiteAtACityBuildingsEdgeMovesIntoTheGapBesideIt() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        // The D1 home's 20 m square ends at 23,168; an office clears it
+        // from a centre of 23,168 + 128 + 1,024 = 24,320. Tapped 300 short,
+        // it moves 320 east, the nearest half metre that clears it.
+        session.tapBuildingTool(at: PlanPoint(x: 24_020, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 24_340, y: 22_528))
+        XCTAssertEqual(session.buildingPreview?.quote.cleared, [])
+        XCTAssertNil(session.buildingPreview?.problem)
+
+        // On top of the home it is more than 12 m from any gap: it stays,
+        // and buys the home out.
+        session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 22_528, y: 22_528))
+        XCTAssertEqual(session.buildingPreview?.quote.cleared, [CellPosition(row: 5, column: 5)])
+
+        // Dragged to the home's west edge and let go: it moves into the gap.
+        session.dragBuildingSite(from: PlanPoint(x: 22_528, y: 22_528), to: PlanPoint(x: 21_000, y: 22_528))
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 21_000, y: 22_528), "it follows the finger")
+        session.endBuildingDrag(from: PlanPoint(x: 22_528, y: 22_528), to: PlanPoint(x: 21_000, y: 22_528))
+        // The office clears the square west of 21,888 − 128 − 1,024 = 20,736.
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 20_712, y: 22_528))
+        XCTAssertEqual(session.buildingPreview?.quote.cleared, [])
+
+        // A site that buys out nothing does not move.
+        session.tapBuildingTool(at: PlanPoint(x: 60_000, y: 60_000), reach: 0)
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 60_000, y: 60_000))
+    }
+
+    /// Decision 144: a point GameCore refuses, where another of the
+    /// company's buildings stands, is passed over; with no other within
+    /// reach the site stays where it was put and buys the home out.
+    func testASiteDoesNotMoveOntoAnotherOfTheCompanysBuildings() throws {
+        var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
+        try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 4, jobs: 0)])
+        world.setCityBuildings(true)
+        world.setEconomyMode(.management)
+        world.setCityFootprints(true)
+        // A house in the gap east of the home, 25,200 to 26,224: clear of an
+        // office at 24,020 (to 25,044), in the way of one at 24,320 or east.
+        _ = try world.placeBuilding(.house, at: PlanPoint(x: 25_712, y: 22_528))
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.building)
+        session.buildingKind = .office
+        session.tapBuildingTool(at: PlanPoint(x: 24_020, y: 22_528), reach: 0)
+        // East of 24,320 the office would stand on the house; north or
+        // south it would have to move 28 m to clear the home.
+        XCTAssertEqual(session.buildingSite, PlanPoint(x: 24_020, y: 22_528))
+        XCTAssertEqual(session.buildingPreview?.quote.cleared, [CellPosition(row: 5, column: 5)])
+        XCTAssertNil(session.buildingPreview?.problem)
+    }
+
     func testThePreviewShowsTheCityBuildingsABuildingBuysOut() throws {
         var world = try makeWorld(width: 131_072, height: 98_304, balance: 1_000_000_000)
         try world.setLand([LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 3)])
