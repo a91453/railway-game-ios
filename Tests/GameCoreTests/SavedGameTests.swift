@@ -41,7 +41,7 @@ final class SavedGameTests: XCTestCase {
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["saveVersion", "world"])
         XCTAssertEqual(object["saveVersion"] as? Int, SavedGame.currentVersion)
-        XCTAssertEqual(SavedGame.currentVersion, 30)
+        XCTAssertEqual(SavedGame.currentVersion, 31)
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         // The world inside is exactly the world's own form.
         let world2 = try JSONSerialization.data(withJSONObject: object["world"] as Any)
@@ -61,7 +61,7 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 6, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 31, "world": \#(world)}"#), "a later version is not guessed at")
+        XCTAssertThrowsError(try decode(#"{"saveVersion": 32, "world": \#(world)}"#), "a later version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))

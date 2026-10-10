@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 51
+    static let schemaVersion = 52
 
     var description: String
     var initialState: InitialState
@@ -189,6 +189,7 @@ struct GoldenScenario: Decodable {
         steps.contains { step in
             switch step {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
+                 .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -521,6 +522,10 @@ enum ScenarioCommand: Equatable {
     case foundTowns(UInt32)
     case setLand([LandCell])
     case setLandDemand(Bool)
+    /// Schema 52 (decision 137): demand by distance and the outside
+    /// connections.
+    case setDistanceDemand(Bool)
+    case setOutsideConnections(Bool)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -639,6 +644,10 @@ enum ScenarioCommand: Equatable {
                 try world.setLand(cells)
             case .setLandDemand(let enabled):
                 world.setLandDemand(enabled)
+            case .setDistanceDemand(let enabled):
+                world.setDistanceDemand(enabled)
+            case .setOutsideConnections(let enabled):
+                world.setOutsideConnections(enabled)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -693,6 +702,12 @@ extension ScenarioCommand: Decodable {
             self = try .setLand(container.decode([LandCellSummary].self, forKey: .cells).map(\.cell))
         case "setLandDemand":
             self = try .setLandDemand(container.decode(Bool.self, forKey: .enabled))
+        // Schema 52: demand by distance and the outside connections
+        // (decision 137).
+        case "setDistanceDemand":
+            self = try .setDistanceDemand(container.decode(Bool.self, forKey: .enabled))
+        case "setOutsideConnections":
+            self = try .setOutsideConnections(container.decode(Bool.self, forKey: .enabled))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1915,6 +1930,11 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a managed company's ridership comes from the land
     /// (schema 36, Phase 6b); left out otherwise.
     var landDemand: Bool?
+    /// `true` while demand is by distance, and while the stations by the
+    /// map's edge are outside connections (schema 52, decision 137); each
+    /// left out otherwise.
+    var distanceDemand: Bool?
+    var outsideConnections: Bool?
     /// How many buildings of each density stand while the city's buildings
     /// are on (schema 37, Phase 6c-1); left out while they are off.
     var cityBuildings: CityBuildingsSummary?
@@ -2145,6 +2165,8 @@ struct WorldSummary: Codable, Equatable {
         passengerRoutingMode = world.passengerRoutingMode == .direct ? nil : world.passengerRoutingMode.rawValue
         land = world.land.isEmpty ? nil : LandSummary(world.land)
         landDemand = world.landDemand ? true : nil
+        distanceDemand = world.distanceDemand ? true : nil
+        outsideConnections = world.outsideConnections ? true : nil
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }

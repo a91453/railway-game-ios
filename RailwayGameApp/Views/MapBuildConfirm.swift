@@ -178,7 +178,7 @@ private struct BuildConfirmation {
             cost = nil
             canConfirm = true
             kind = .platform
-            caption = session.catchmentText(catchment)
+            caption = session.platformSiteCaption(catchment, at: site)
             showsCatchment = true
             cancel = { session.clearNetworkDraft() }
             confirm = { session.addNetworkPlatform() }

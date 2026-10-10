@@ -4,19 +4,69 @@ import XCTest
 
 /// ARCHITECTURE decision 46: a new game's prices and starting money. A
 /// first line pays for itself in about ten days of its fares less its
-/// running costs, and the starting money builds it with some to spare.
+/// running costs, and the starting money builds it with some to spare;
+/// since decision 137 a first line that pays links two towns, or a town
+/// and the map's edge.
 final class NewGameBalanceTests: XCTestCase {
-    /// Three stations of the city's ridership on 28 tiles of surface track
-    /// across a new game's map, and a train of four cars running all day:
-    /// $44,800 of track, $600,000 of stations and $270,000 for the train.
-    func testAFirstLinePaysForItselfInAboutTenDays() throws {
+    /// Decision 137: a first line from the first town to the second (seed
+    /// 1, 5.4 km), a station at each town's middle and a train of four cars
+    /// running all day, pays for itself in about five days, and the starting
+    /// money builds it with more than half to spare. Before decision 137 a
+    /// 448 m line through the first town did (decision 73); now its pairs
+    /// walk (``testAShortLineThroughOneTownDoesNotPay()``).
+    func testALineBetweenTwoTownsPaysForItselfInAboutFiveDays() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        XCTAssertTrue(world.stations.allSatisfy { (world.stationDemand(of: $0.id)?.dailyTrips ?? 0) > 0 }, "both towns give their station ridership")
+
+        let cost = GameWorld.startingBalance - world.economy.balance
+        XCTAssertEqual(cost, Money(122_840_000), "$1,228,400")
+        XCTAssertLessThan(cost.amount * 2, GameWorld.startingBalance.amount, "with more than half the money to spare")
+
+        // The second whole day, its hours and its day settled.
+        try world.advance(ticks: 1 + 2 * 1_440)
+        let day = world.financeReport(.day).previous
+        XCTAssertGreaterThan(day.operatingProfit, .zero)
+        let payback = Double(cost.amount) / Double(day.operatingProfit.amount)
+        XCTAssertTrue((4...10).contains(payback), "pays for itself in \(payback) days")
+    }
+
+    /// Decision 137: a first line from the first town to the map's edge, on
+    /// from the second town through the first (some 10 km), pays for itself
+    /// in about as long: its far station is an outside connection, which
+    /// brings the outside's trips and charges the long-distance fare.
+    func testALineToTheEdgePaysForItselfInAboutFiveDaysToo() throws {
+        let bounds = GameWorld.newGameBounds
+        let towns = Land.townCentres(seed: 1, in: bounds)
+        let first = towns[0], second = towns[1]
+        let edgeX = second.x > first.x ? 40_000 : bounds.width - 40_000
+        let edge = PlanPoint(x: edgeX, y: first.y + (first.y - second.y) * (edgeX - first.x) / (first.x - second.x))
+        var world = try newGameLine(through: [first, edge])
+        let far = world.stations[1].id
+        XCTAssertTrue(world.isOutsideConnection(far))
+        XCTAssertEqual(world.stationDemand(of: far), StationDemand(kind: .residential, dailyTrips: DistanceDemand.outsideTrips))
+        XCTAssertEqual(world.tripFare(from: world.stations[0].id, to: far), FareRules.standardFare + FareRules.standardFare)
+
+        // Some 10 km of track: $1,695,600, more than half the starting money.
+        let cost = GameWorld.startingBalance - world.economy.balance
+        XCTAssertEqual(cost, Money(169_560_000), "$1,695,600")
+        try world.advance(ticks: 1 + 2 * 1_440)
+        let day = world.financeReport(.day).previous
+        XCTAssertGreaterThan(day.operatingProfit, .zero)
+        let payback = Double(cost.amount) / Double(day.operatingProfit.amount)
+        XCTAssertTrue((4...10).contains(payback), "pays for itself in \(payback) days")
+    }
+
+    /// Decision 137: the first line decision 73 measured, three stations
+    /// through the middle of the first town on 448 m of track, no longer
+    /// pays: its stations are 224 m apart, so its pairs keep a tenth of
+    /// their trips and the rest walk (the balance report's item 3).
+    func testAShortLineThroughOneTownDoesNotPay() throws {
         var world = GameWorld.newGame()
         // The test layout's spacing: 1024 units, 16 m (the world has no cells).
         let tile = Int64(1_024)
         let cars = 4
         let platform = Int64(cars) * Train.carLength
-        // Phase 6b: a first line through the first town, the middle of the
-        // map, whose land gives its stations their ridership.
         let x = GameWorld.newGameBounds.width / 2 - 16 * tile, y = GameWorld.newGameBounds.height / 2
         let west = try world.buildTrackNode(at: WorldCoordinate(x: x + 2 * tile, y: y))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: x + 30 * tile, y: y))
@@ -37,17 +87,18 @@ final class NewGameBalanceTests: XCTestCase {
         try world.setTrainContinuation(train, along: [], stoppingAt: tile + platform)
         try world.setTrainMovementRate(train, to: 512)
         try world.assignTrain(train, to: line)
+        XCTAssertEqual(GameWorld.startingBalance - world.economy.balance, Money(91_480_000), "$914,800")
+        // Each pair keeps a tenth of what it had before decision 137.
+        var walking = world
+        walking.setDistanceDemand(false)
+        for (from, to) in [(0, 1), (0, 2), (1, 2)] {
+            let before = walking.dailyDemand(from: stops[from], to: stops[to])
+            XCTAssertGreaterThan(before, 0)
+            XCTAssertEqual(world.dailyDemand(from: stops[from], to: stops[to]), (before * DistanceDemand.nearShare + 500) / 1_000)
+        }
 
-        let cost = GameWorld.startingBalance - world.economy.balance
-        XCTAssertEqual(cost, Money(91_480_000), "$914,800")
-        XCTAssertLessThan(cost.amount * 2, GameWorld.startingBalance.amount, "with more than half the money to spare")
-
-        // The second whole day, its hours and its day settled.
         try world.advance(ticks: 1 + 2 * 1_440)
-        let day = world.financeReport(.day).previous
-        XCTAssertGreaterThan(day.operatingProfit, .zero)
-        let payback = Double(cost.amount) / Double(day.operatingProfit.amount)
-        XCTAssertTrue((7...14).contains(payback), "pays for itself in \(payback) days")
+        XCTAssertLessThan(world.financeReport(.day).previous.operatingProfit, .zero)
     }
 
     /// ARCHITECTURE decision 78: the demo map's stations draw their

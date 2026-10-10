@@ -53,9 +53,9 @@
 
 先讀 `00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md`。後者 §8–§9 **只列** `src/economy.cpp`、`src/company_cmd.cpp`、`src/vehicle_cmd.cpp`、`src/town_cmd.cpp`、`src/industry_cmd.cpp`、`src/subsidy.cpp`，主張經濟、公司、城鎮分層；固定 tick 範例列 `EconomySystem.tick()` 再 `TownSystem.tick()`。`binary_reference/relevant_source_paths.txt` 也列前述路徑；實際 `src/*.cpp` 未收錄，只有 `binary_reference/railway_core_15_3.wasm` 與符號／路徑清單，沒有可核對的貸款、補貼、折舊、房租數值或 Swift 可直接呼叫的經營函式。分類：**需轉譯成 Swift的架構提示**；數值和演算法為 **gap**。搜尋 `economy,company,subsidy,loan,depreciation,EXPENSES_,max_loan` 及上述路徑；不得把檔名當成已讀到原始碼。
 
-### Railway/taipei_gta_reference
+### Railway/city_world_reference
 
-先讀 `00_READ_ME_FIRST.md`，再查 `source/assets/`。`world-gYgJkZNf.js` 的 `pickType`／`floorsFor` 用區域 style、機率與樓層範圍決定建物**外觀**；site metadata 的 `lot`、`claims`、`placement`、`proxy` 是尺寸、保留範圍與渲染資料。例如 `site-donqi-ximen-BYSklXQx.js` 內的商品看板有 `{text:"泡麵",price:29}`、`{text:"面膜",price:99,unit:"/10入"}`，`world-gYgJkZNf.js` 的 site 選項會讀 `option.price` 並以 `state.addMoney(-price,"site")` 扣互動費。這是**場景商品／互動價格**，不是地標的營業額、房租或收購價，分類為**只是畫面／不同玩法**。site `lot` 如 donqi 24×22 m、`proxy` 高度 18.2 m 可用於 Phase 8 外觀，不能轉成一格容量或價值。搜尋 `price,rent,revenue,income,cost,lot,claims,site,landmark,floorsFor,pickType`；未見每格資產或每日房產收益，為 **gap**。
+先讀 `00_READ_ME_FIRST.md`，再查 `source/assets/`。`world-DCb11kLR.js` 的 `pickType`／`floorsFor` 用區域 style、機率與樓層範圍決定建物**外觀**；site metadata 的 `lot`、`claims`、`placement`、`proxy` 是尺寸、保留範圍與渲染資料。例如 `site-donqi-ximen-C4Uhuz6T.js` 內的商品看板有 `{text:"泡麵",price:29}`、`{text:"面膜",price:99,unit:"/10入"}`，`world-DCb11kLR.js` 的 site 選項會讀 `option.price` 並以 `state.addMoney(-price,"site")` 扣互動費。這是**場景商品／互動價格**，不是地標的營業額、房租或收購價，分類為**只是畫面／不同玩法**。site `lot` 如 donqi 24×22 m、`proxy` 高度 18.2 m 可用於 Phase 8 外觀，不能轉成一格容量或價值。搜尋 `price,rent,revenue,income,cost,lot,claims,site,landmark,floorsFor,pickType`；未見每格資產或每日房產收益，為 **gap**。
 
 ### Simulator
 
@@ -136,7 +136,7 @@ netCashCents = grossCents − maintenanceCents − propertyTaxCents
 | 同檔／`metroQuotaPurchaseCatalogItems`、`metroQuotaRingItems` | 暫不加入 `ConstructionCosts` 或配額狀態 | 10 km／5 站／6 節的備用價目非現有美分價；不採用配額是待決建議。 |
 | `Ci/.../aviation_economy_completed__q_7b75c8d57f0ba33b.js`／`allocate` | 可參考 `CompanyAccounts.record` 的整數餘數分配 | 航空曲線浮點、不能直入 GameCore；房產若不拆分不需此函式。 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §8–§9 | `GameWorld` 的經濟／城市分層、`Sources/GameCore/City/LandDemand.swift` | 只有路徑與架構；所有交易數值 gap。 |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js`／`floorsFor`、site `lot`／`proxy`，`Railway/site_archive_clean/rail-3d/blender-buildings.js`／`buildingCatalog` | Phase 8 的公司建物外觀資產；核心仍用 `Building.cells` | 公尺→世界單位 ×64；外觀資訊不能當價值／容量。 |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js`／`floorsFor`、site `lot`／`proxy`，`Railway/site_archive_clean/rail-3d/blender-buildings.js`／`buildingCatalog` | Phase 8 的公司建物外觀資產；核心仍用 `Building.cells` | 公尺→世界單位 ×64；外觀資訊不能當價值／容量。 |
 | `Simulator/reference_snapshot/_next/static/chunks/4193-d08071182eb33d9c.js`／`priceNTD` | 不接 `ConstructionCosts` | 新台幣模型零件，不換成遊戲美元／真實鐵路價格。 |
 | 本 repo `Sources/GameCore/City/LandValue.swift`／`landValue`、`LandValueRules` | 建議 `Sources/GameCore/Economy/Property.swift` 的 `quotePurchase`／`quoteSale` | 美分／m² × 整數 m²→美分；地價原生既有規則，買賣折讓與建物價仍為 gap。 |
 | 本 repo `Sources/GameCore/City/Building.swift`／`capacity(on:)`、`Sources/GameCore/City/LandDemand.swift`／`growLand` | 建議 `Sources/GameCore/City/CompanyBuilding.swift` 與原有 `buildingCapacity`／`spread` | 一格 4096 單位、容量整數人；所有權、日租、稅與折舊原生。 |

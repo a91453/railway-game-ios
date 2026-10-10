@@ -329,6 +329,11 @@ extension GameSession {
     func openingReach(of station: Station, in world: GameWorld) -> String {
         guard !world.land.isEmpty else { return "" }
         let totals = world.land.totals(within: Land.catchmentRadius, of: station.location)
+        // Decision 137: by the map's edge the outside rides from it whoever
+        // lives round it.
+        if world.isOutsideConnection(station.id) {
+            return language.text(" ", "") + outsideConnectionText
+        }
         guard totals.residents + totals.jobs > 0 else {
             return language.text(
                 " No one lives or works within 800 m yet: it will see few passengers.",

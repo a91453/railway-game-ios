@@ -226,7 +226,7 @@
 | `Simulator` 坡道工具（`page-*.js` `im`：「設為平面」「設為高架」，依長度線性分配高度） | 一串軌道的高度與平均坡度 | adapted：H3 的「上／下」與緩和坡度 |
 | `Simulator` `shallowBores`（覆土不足的警告） | 隧道太淺的提示 | idea：H3 在縱斷面上標示淺的隧道段 |
 | `MapBuilder/reference_snapshot` 車站的 `grade`（above／at／below）與各運具的 `defaultGrade`（捷運預設地下） | 依運具的預設層位 | idea：之後可依車種預設強制結構物；造價在伺服器上算，不在快照（gap） |
-| `Railway/taipei_gta_reference` `actors-*.js`（高架 10–11 m、70 m 內從 3 m 降到 −6 m 的隧道口、墩距 ≤ 30 m） | 捷運的高架與隧道口畫法 | idea：Phase 8 |
+| `Railway/city_world_reference` `actors-*.js`（高架 10–11 m、70 m 內從 3 m 降到 −6 m 的隧道口、墩距 ≤ 30 m） | 捷運的高架與隧道口畫法 | idea：Phase 8 |
 | `Ci/reference_snapshot` `metroEstimateLineConstructionCost` | 回傳 0 的空函式 | gap：參考裡沒有任何土方、隧道、橋的造價 |
 | `Railway/railway_game_reference_clean/binary_reference`（OpenTTD 15.3 的 wasm） | 指令與錯誤名稱 | GPL，只看想法 |
 

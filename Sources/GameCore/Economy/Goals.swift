@@ -1,7 +1,7 @@
 // Goals and scenarios (decision 86): what a game asks the player to reach,
 // by when, and how well they did. None of the owner's references has a
 // railway goal to port: the `Ci/` game has no objectives, and the Taipei
-// pack's missions (`Railway/taipei_gta_reference/`) are an action game's
+// pack's missions (`Railway/city_world_reference/`) are an action game's
 // errands. So the goals are native, and read only what the game already
 // keeps: the network's lines and stations, the day accounts, the city's land
 // and buildings, the closed years and the balance sheet (decision 85). They

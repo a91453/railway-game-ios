@@ -348,7 +348,7 @@ extension GameWorld {
         }
         let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
         return zip(reached, shares).compactMap { reached, trips in
-            var trips = faredTrips(trips, from: origin, to: reached.destination)
+            var trips = keptTrips(trips, from: origin, to: reached.destination)
             if let minutes = fastest[reached.destination] {
                 trips = PassengerCrowding.decayed(trips, minutes: minutes)
             }
@@ -453,8 +453,9 @@ extension GameWorld {
     /// ``PassengerRouteGraph/init(world:)`` reads (the lines, stations with
     /// their operation modes, track network, traffic control, train lengths
     /// and each line's service level at the current minute), the stations'
-    /// records and demands, the fare rules that scale demand, and the
-    /// demand day, weekly demand and demand events. A plan
+    /// records and demands, the fare rules that scale demand, the demand
+    /// day, weekly demand and demand events, and demand by distance and the
+    /// outside connections (decision 137). A plan
     /// kept while its key is unchanged is exactly the plan worked out
     /// afresh (`PassengerPlanKeyTests`).
     struct PassengerPlanKey: Equatable, Sendable {
@@ -479,6 +480,11 @@ extension GameWorld {
         let day: Int64?
         let weeklyDemand: Bool
         let demandEvents: DemandEventSchedule?
+        /// Decision 137: each pair's share by its distance, and which
+        /// stations are outside connections (their points are in
+        /// ``stations``).
+        let distanceDemand: Bool
+        let outsideConnections: Bool
     }
 
     /// The key of the network plan ``makePassengerPlan()`` works out now.
@@ -490,7 +496,8 @@ extension GameWorld {
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
-            day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents
+            day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents,
+            distanceDemand: distanceDemand, outsideConnections: outsideConnections
         )
     }
 
@@ -531,7 +538,7 @@ extension GameWorld {
             let shares = Self.apportion(trips(of: origin, at: record.station),
                                         by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
             for ((destination, trip), shared) in zip(reached, shares) {
-                let trips = faredTrips(shared, from: record.station, to: destination.station)
+                let trips = keptTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
@@ -578,7 +585,7 @@ extension GameWorld {
             let shares = Self.apportion(trips(of: origin, at: record.station),
                                         by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
-                let fared = faredTrips(shared, from: record.station, to: destination.station)
+                let fared = keptTrips(shared, from: record.station, to: destination.station)
                 let trips = PassengerCrowding.decayed(fared, minutes: options.map(\.route.totalMinutes).min()!)
                 guard trips > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,

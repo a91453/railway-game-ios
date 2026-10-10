@@ -6,7 +6,7 @@
 // map from vector tiles it does not ship (`virtual_island_city`'s
 // `city.pmtiles`) and a population grid it uses for a station's first
 // ridership; the reference pack names OpenTTD's towns (`town_cmd.cpp`) only
-// by path; `Railway/` and `taipei_gta_reference` draw buildings and districts
+// by path; `Railway/` and `city_world_reference` draw buildings and districts
 // without residents or jobs (the study, `docs/research/PHASE6_LAND_USE_STUDY.md`
 // in PR #172). So the cells, the towns a blank map starts with and their
 // numbers are this project's (gap):

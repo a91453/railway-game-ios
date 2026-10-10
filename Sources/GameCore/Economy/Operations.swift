@@ -102,10 +102,14 @@ extension GameWorld {
 
     /// The fare a passenger from `origin` to `destination` pays: the rule's
     /// fare for the straight-line distance between the stations' points, or
-    /// 5 if that is 0 or less. `nil` for the same station or an unknown one.
+    /// 5 if that is 0 or less, and ``outsideFare`` more to or from an outside
+    /// connection (decision 137). `nil` for the same station or an unknown
+    /// one.
     public func tripFare(from origin: StationID, to destination: StationID) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
-        return FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
+        let fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
+        guard isOutsideConnection(origin) || isOutsideConnection(destination) else { return fare }
+        return fare + outsideFare
     }
 
     /// The finance report's statements for `period`: the one containing

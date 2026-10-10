@@ -122,4 +122,4 @@ Linux（雲端容器）、Swift 6.4、`swift test -c release`，暫時的量測�
 | `MapBuilder/.../pages/_app-*.js` 的路線尺度（`LOCAL`、`REGIONAL`、`LONG`，`zoomThreshold` 9.5／7／3.5） | 縮小時依路線尺度決定要不要畫 | adapted（步驟 B） |
 | （參考沒有） | TWD97 TM2 投影、土地按需展開、稀疏地價／城市圖層、沿線段走格子的間距檢查 | gap → 原生 |
 
-`Railway/taipei_gta_reference/` 是區域尺度的 3D 世界（繪製距離最多 1300 m），`Simulator/` 是模型鐵道的毫米座標，兩者都沒有全島尺度可用的東西。
+`Railway/city_world_reference/` 是區域尺度的 3D 世界（繪製距離最多 1300 m），`Simulator/` 是模型鐵道的毫米座標，兩者都沒有全島尺度可用的東西。

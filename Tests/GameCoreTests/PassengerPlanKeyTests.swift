@@ -148,6 +148,14 @@ final class PassengerPlanKeyTests: XCTestCase {
         try world.advance(ticks: 1)
         expectCurrent(world, "operation mode")
 
+        // Decision 137: demand by distance and the outside connections.
+        world.setDistanceDemand(true)
+        try world.advance(ticks: 1)
+        expectCurrent(world, "distance demand")
+        world.setOutsideConnections(true)
+        try world.advance(ticks: 1)
+        expectCurrent(world, "outside connections")
+
         // A day of service levels, one call a minute: each call's kept plan
         // is the current level's.
         for minute in 0..<(24 * 60) {
