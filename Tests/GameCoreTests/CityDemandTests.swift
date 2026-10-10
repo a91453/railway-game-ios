@@ -137,20 +137,51 @@ final class CityDemandTests: XCTestCase {
         XCTAssertEqual(steered.land.cell(row: 5, column: 7)?.jobs, 624)
     }
 
-    func testAUseInNegativeDemandIsNotRaised() throws {
+    /// Three full D1 buildings, two raised a night: by row and column
+    /// without the valves, the most wanted use first with them.
+    func testTheMostWantedUseIsRaisedFirst() throws {
         var world = try world(land: [
             LandCell(row: 5, column: 5, use: .residential, residents: 100, jobs: 0),
             LandCell(row: 5, column: 8, use: .commercial, residents: 10, jobs: 100),
+            LandCell(row: 5, column: 9, use: .office, residents: 10, jobs: 100),
         ])
         world.setCityBuildings(true)
-        let full: Set<CellPosition> = [CellPosition(row: 5, column: 5), CellPosition(row: 5, column: 8)]
+        let full: Set<CellPosition> = [CellPosition(row: 5, column: 5), CellPosition(row: 5, column: 8), CellPosition(row: 5, column: 9)]
         var raised: Set<CellPosition> = []
-        var check = world
-        check.raiseBuildings(around: check.stations[0], full: full, raised: &raised, levels: CityDemand.Levels(homes: -1, shops: 0, work: 0))
-        XCTAssertEqual(raised, [CellPosition(row: 5, column: 8)], "homes are not wanted; shops at 0 still are")
+        var steered = world
+        steered.raiseBuildings(around: steered.stations[0], full: full, raised: &raised, levels: CityDemand.Levels(homes: -1, shops: 0, work: 5))
+        XCTAssertEqual(raised, [CellPosition(row: 5, column: 9), CellPosition(row: 5, column: 8)], "work, then shops; homes wait")
+        raised = []
+        steered = world
+        steered.raiseBuildings(around: steered.stations[0], full: full, raised: &raised, levels: CityDemand.Levels.none)
+        XCTAssertEqual(raised, [CellPosition(row: 5, column: 5), CellPosition(row: 5, column: 8)], "all equal: by row and column")
         raised = []
         world.raiseBuildings(around: world.stations[0], full: full, raised: &raised, levels: nil)
-        XCTAssertEqual(raised, full, "without the valves both are")
+        XCTAssertEqual(raised, [CellPosition(row: 5, column: 5), CellPosition(row: 5, column: 8)], "without the valves, as before")
+    }
+
+    /// The offices are full (1,200 jobs, the limit without the city's
+    /// buildings): work has no room. Jobs 1,500 in all give 45 grown, 55
+    /// with the residents' 10; the mix's weights 1,000,000, 882 × 1000 and
+    /// 3,529 × 1000 give 10, 9 and 36. The 36 of work go to residents and
+    /// shops by the plain mix, 1000 : 882: 19.13 and 16.87, 19 and 17. So
+    /// 29 residents (26 and 3) and 26 shop jobs.
+    func testWhatAKindHasNoRoomForGoesToTheOthers() throws {
+        var world = try world(land: [
+            LandCell(row: 5, column: 5, use: .residential, residents: 300, jobs: 0),
+            LandCell(row: 5, column: 6, use: .commercial, residents: 40, jobs: 300),
+            LandCell(row: 5, column: 7, use: .office, residents: 0, jobs: 1_200),
+        ])
+        world.setCityDemand(true)
+        let mix = try XCTUnwrap(world.cityDemand?.baseline)
+        XCTAssertEqual(mix, CityMix(shopJobs: 882_352, workJobs: 3_529_411))
+        let share = try XCTUnwrap(LandDemand.shares(of: world.land, among: world.stations)[world.stations[0].id])
+        world.growSteered(around: world.stations[0], share: share, rate: 10, levels: .none, mix: mix)
+        XCTAssertEqual(world.land.cells, [
+            LandCell(row: 5, column: 5, use: .residential, residents: 326, jobs: 0),
+            LandCell(row: 5, column: 6, use: .commercial, residents: 43, jobs: 326),
+            LandCell(row: 5, column: 7, use: .office, residents: 0, jobs: 1_200),
+        ])
     }
 
     func testTheNewCellIsTheUseMostInDemand() throws {

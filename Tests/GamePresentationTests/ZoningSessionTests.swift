@@ -150,9 +150,11 @@ final class ZoningSessionTests: XCTestCase {
         // full; work −10 × 100 / 600 = −166.7%, past full the other way;
         // jobs a resident the same, so homes 0.
         world.setCityDemand(true)
-        let json = String(decoding: try JSONEncoder().encode(world), as: UTF8.self)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let json = String(decoding: try encoder.encode(world), as: UTF8.self)
             .replacingOccurrences(of: #""baseline":{"shopJobs":400000,"workJobs":600000}"#, with: #""baseline":{"shopJobs":500000,"workJobs":500000}"#)
-        XCTAssertTrue(json.contains(#""shopJobs":500000"#), json)
+        XCTAssertTrue(json.contains(#""shopJobs":500000"#), "the mix kept is replaced")
         let steered = try JSONDecoder().decode(GameWorld.self, from: Data(json.utf8))
         for (language, text, help) in [
             (DisplayLanguage.english, "City demand: homes 0% · shops +100% · work −100%", " They are built only while the city wants that use."),

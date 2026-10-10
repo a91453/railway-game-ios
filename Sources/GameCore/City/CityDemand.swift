@@ -18,11 +18,14 @@
 // Schools, public offices and sights, and parks, are no part of it: their
 // people grow and are raised as before.
 //
-// What demand does (in ``GameWorld/growLand(reached:)``):
+// What demand does (in ``GameWorld/growLand(reached:)``), steering the
+// city's growth without stopping it:
 //
-// - a growing station's residents grow by `1 + R`, its catchment's shop
-//   jobs by `1 + C` and its jobs in work by `1 + W` (0 to twice);
-// - a full building is raised only if its use is not in negative demand;
+// - a growing station grows as many people as before, shared among
+//   residents, shop jobs and work by the mix kept, each weighted by
+//   `1 + ` its demand; what a kind has no room for goes to the others, so
+//   a city whose offices cannot grow keeps growing homes;
+// - its full buildings are raised the most wanted use first;
 // - its new cell is the use most in demand (homes, shops or offices) when
 //   that is above 0, and a home otherwise; a zoned cell is built on only if
 //   its zone's use is not in negative demand.
