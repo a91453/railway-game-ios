@@ -115,7 +115,7 @@
 
 **gap 的搜尋**：`town`、`growth`、`industry`、`subsidy`、`house`、`building`、`population`、`land`、`map`、`heightmap`、`terraform`、`land value`、`employment`。查閱 migration map、source-path／symbol 清單與 savegame 格式文件後，能確認依賴方向，不能確認成長／產銷／地價演算法。符合決策 70 已記錄的 gap。
 
-### 2.4 `Railway/taipei_gta_reference/` 與 `source/`
+### 2.4 `Railway/city_world_reference/` 與 `source/`
 
 先讀 `00_READ_ME_FIRST.md` 並列出 `source/`；實際 **102 檔、20,962,045 bytes**。以下函式名保留 bundle 內真實的短名，括號才是用途說明，不假稱未收錄的 TypeScript 原始函式名。
 
@@ -265,8 +265,8 @@ GameWorld 仍是唯一權威；新型別需保持值語意、`Codable` 解碼驗
 | `Railway/.../landmark-catalog.js`／`landmarkCatalog`；`landscape-trees.js`／`inside/noise` | GamePresentation 地標清單／renderer `BuildingSnapshot` 與環境植被 | 只畫面；700/1400 cap、26 m 樹間距不進入人口／就業；GameCore 若用隨機必須儲存種子。 |
 | `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` §9／§10 | `City/CityGrowth.swift`／`GameWorld.updateCityDay`；世界建物／分區命令 | 接穩定車站／服務／旅客量測；**gap→原生**，成長率暫不聲稱來源值；整數千分比。 |
 | 同包／`docs/savegame_format.md` | `World/SavedGame.swift`、`GameWorld` Codable，新增土地版 fixture | 參考稀疏／自描述思路，不複製 binary chunk 或來源版本 295。現行 v11 與候選新版本由作者協調。 |
-| `Railway/taipei_gta_reference/source/assets/engine-DKps_Gq_.js`／`hr.buildBlocks/districtAt/surfaceAt`、`V/Kn/K` | `tools/land-use/import_taipei_scene.*`；`City/BuildingPlacement.swift` | 米尺度場景需明確原點平移、z→y 南向核對、定點 64/m；樣式 floors 是呈現，不能當入住人數。 |
-| `Railway/taipei_gta_reference/source/assets/world-gYgJkZNf.js`／`DO/lO/UD/WO`、`dk/Ik` | `City/BuildingPlacement.swift`／`validatePlacement`、`GameWorld.placeBuilding`；地標場景轉換 | 0.5 m=32 單位、0.3 m 候選量化 19 單位、1 m=64、2 m=128、3 m=192、4 m=256；−0.05 m 須明訂負向捨入，不能悄悄近似。來源 3×3 檢查需另決定精確交疊契約；依 site 錨點依賴固定排序。 |
+| `Railway/city_world_reference/source/assets/engine-DKps_Gq_.js`／`hr.buildBlocks/districtAt/surfaceAt`、`V/Kn/K` | `tools/land-use/import_taipei_scene.*`；`City/BuildingPlacement.swift` | 米尺度場景需明確原點平移、z→y 南向核對、定點 64/m；樣式 floors 是呈現，不能當入住人數。 |
+| `Railway/city_world_reference/source/assets/world-gYgJkZNf.js`／`DO/lO/UD/WO`、`dk/Ik` | `City/BuildingPlacement.swift`／`validatePlacement`、`GameWorld.placeBuilding`；地標場景轉換 | 0.5 m=32 單位、0.3 m 候選量化 19 單位、1 m=64、2 m=128、3 m=192、4 m=256；−0.05 m 須明訂負向捨入，不能悄悄近似。來源 3×3 檢查需另決定精確交疊契約；依 site 錨點依賴固定排序。 |
 | 同 world／`On.kind` 與現存 site/build 模組 | 匯入工具的初始地形／renderer 場景 | sin/exp、材質與 atlas 不進入 GameCore；缺動態模組需取得或明訂後備。 |
 
 ## 6. 查閱方法與尚未檢查到的部分
