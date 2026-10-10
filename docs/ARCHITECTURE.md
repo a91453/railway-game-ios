@@ -4221,7 +4221,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 2026-10-10，作者排的第 3 項（城市項目：成長動畫、住商工的需求閥）的需求閥。號碼依工作登記 #231：存檔版本 32、決策 139、golden schema 53（138 是實景示範 6000× 的 session）。成長動畫是畫面的事，另開 PR。
 
-參考檢查：參考庫沒有城市需求（決策 98 已查；這次為決策 137 clone 的 `a91453/railway-reference-private` 再搜尋 RCI、需求閥、zone demand，沒有）。外部專案：Micropolis（開源的 SimCity，GPL-3.0）有由人口普查算出的 RCI 需求閥，只取這個想法，沒有讀也沒有複製它的程式碼或數字。規則與數字是這個專案的（gap），用 `BalanceReportTests` 量出來。
+參考檢查：參考庫沒有城市需求（決策 98 已查；這次在為決策 137 clone 的 `a91453/railway-reference-private` 全部的 JS、JSON、MD、HTML 再搜尋 RCI、demand valve、zoneDemand、residential／commercial／industrialDemand、需求閥、住商工，只有無關的 `Ci/reference_snapshot/external/scidb/` 雜訊）。外部專案：Micropolis（開源的 SimCity，GPL-3.0）有由人口普查算出的 RCI 需求閥，只取這個想法，沒有讀也沒有複製它的程式碼或數字。規則與數字是這個專案的（gap），用 `BalanceReportTests` 量出來。
 
 1. **城市保持它開始時的比例**（`CityMix`）：每百萬居民有多少商店就業（住宅、商店、公園的就業）與多少辦公與工業就業（辦公、工業、農業）。學校、公部門與景點不算。開關打開時取當時的土地；土地被整個換掉（`setLand`、`foundTowns`）時重新取；開的時候還沒有人住（全台灣的地圖開局沒有土地）就等第一個有居民的午夜再取。所以空白地圖與實景地圖都從 0 開始，各自保持自己的比例，不用一組固定的目標（空白地圖約 0.41 與 0.59，實景地圖差很多）。
 2. **需求**（`cityDemandLevels`，千分之一，−1000 到 1000）：商店與辦公是「應有的比例 − 現在的比例」除以兩者中較大的，住宅是「現在每位居民的就業 − 開始時的」除以較大的；都乘 10（`CityDemand.gain`），所以差一成就是滿格。
