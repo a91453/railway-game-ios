@@ -61,6 +61,7 @@ extension LedgerEntry.Kind {
         case .dailyInterest: language.text("Loan interest (daily)", "貸款利息（日結）")
         case .dailyProperty: language.text("Buildings (daily)", "建物收支（日結）")
         case .buildingDemolition: language.text("Building demolished", "拆除建物")
+        case .dailyTax: language.text("Income tax (daily)", "營利事業所得稅（日結）")
         }
     }
 }
@@ -82,6 +83,7 @@ extension LedgerItem {
         case .propertyUpkeep: language.text("Building upkeep", "建物維護")
         case .propertyTax: language.text("Land tax", "土地資產稅")
         case .propertyDemolition: language.text("Demolition", "拆除費")
+        case .incomeTax: language.text("Income tax", "營利事業所得稅")
         }
     }
 }
@@ -284,6 +286,15 @@ extension CompanyAccounts {
         return language.text(
             "\(loanStep.moneyText) at a time, up to \(maximumLoan.moneyText), at \(rate) a year, paid daily",
             "每次 \(loanStep.moneyText)，最多 \(maximumLoan.moneyText)，年利率 \(rate)，每日支付"
+        )
+    }
+
+    /// The tax (decision 131): "Income tax: 50% of each day's profit
+    /// before tax beyond $ 100,000, paid at midnight".
+    public static func taxTermsText(in language: DisplayLanguage) -> String {
+        language.text(
+            "Income tax: \(taxPercent)% of each day's profit before tax beyond \(taxFreeProfit.moneyText), paid at midnight",
+            "營利事業所得稅：每天的稅前淨利超過 \(taxFreeProfit.moneyText) 的部分課 \(taxPercent)%，午夜支付"
         )
     }
 }
