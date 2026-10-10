@@ -168,5 +168,16 @@ final class ZoningSessionTests: XCTestCase {
             session.zoningZone = .civic
             XCTAssertFalse(session.zoningHelpText.hasSuffix(help), "schools are not held back")
         }
+
+        // A demand under one per cent still says which way it goes: shops a
+        // thousandth below the mix kept (−5) are held back, so they do not
+        // read "0%"; homes +2 are wanted.
+        let near = try JSONDecoder().decode(GameWorld.self, from: Data(json.replacingOccurrences(
+            of: #""baseline":{"shopJobs":500000,"workJobs":500000}"#, with: #""baseline":{"shopJobs":399800,"workJobs":600000}"#
+        ).utf8))
+        XCTAssertEqual(near.cityDemandLevels.shops, -5)
+        XCTAssertEqual(near.cityDemandLevels.homes, 2)
+        let session = GameSession(world: near, language: .english)
+        XCTAssertEqual(session.cityDemandText, "City demand: homes +1% · shops −1% · work 0%")
     }
 }

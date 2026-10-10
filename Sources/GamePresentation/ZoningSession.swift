@@ -120,9 +120,12 @@ extension GameSession {
     public var cityDemandText: String? {
         guard world.cityDemand != nil else { return nil }
         let levels = world.cityDemandLevels
+        // Whole per cents away from zero: a demand below one per cent
+        // still holds a use back or lets it build (``spread`` builds only
+        // what is not negative), so it never reads "0%".
         func percent(_ level: Int64) -> String {
-            let value = level / 10
-            return value > 0 ? "+\(value)%" : value < 0 ? "−\(-value)%" : "0%"
+            let value = (abs(level) + 9) / 10
+            return level > 0 ? "+\(value)%" : level < 0 ? "−\(value)%" : "0%"
         }
         return language.text(
             "City demand: homes \(percent(levels.homes)) · shops \(percent(levels.shops)) · work \(percent(levels.work))",
