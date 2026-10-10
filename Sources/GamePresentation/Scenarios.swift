@@ -11,8 +11,9 @@ import GameCore
 public enum ChallengeMap: Hashable, Sendable {
     /// A new game's blank map, its towns drawn from a seed.
     case blank
-    /// The real-world demo's map, its Pingxi, Yilan and Shenao Lines built
-    /// (decision 90): it needs the app's real railways.
+    /// The real-world demo's map as it was before decision 132, its
+    /// Pingxi, Yilan and Shenao Lines built flat (decision 90): it needs
+    /// the app's real railways.
     case pingxi
 }
 

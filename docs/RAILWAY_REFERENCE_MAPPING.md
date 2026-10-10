@@ -1186,7 +1186,7 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | `Railway/site_archive_clean/rail-3d/terrain-source.js`、`terrain/manifest.json`（Mapterhorn 的 terrarium DEM 圖磚，PMTiles 切成 14 塊；圖磚本身沒有提交） | `taiwan_heights.dat`（`build_slope_grid.py`） | 只取想法；圖磚不在參考裡，改用決策 115 已在用的 Copernicus GLO-30 |
-| `Railway/site_archive_clean/rail-3d/integration/terrain-elevation.js`（海邊 0 m 是有效值，不把沒有資料當成海） | 高度檔：水與沒有圖磚的地方是 0（海面）；GameCore：沒讀過的區塊是 `nil`，不當成 0 | adapted |
+| `Railway/site_archive_clean/rail-3d/integration/terrain-elevation.js`（海邊 0 m 是有效值，不把沒有資料當成海） | 高度檔：外海與沒有圖磚的地方是 0（海面），河與湖是水面高度（決策 132 起；之前所有的水都是 0）；GameCore：沒讀過的區塊是 `nil`，不當成 0 | adapted |
 | `Railway/site_archive_clean/rail-3d/physical/level-profiles.json`（6,283 條 OSM 鐵路的縱斷面、`terrainValues`） | — | 留給 H2／全島步驟 C（預鋪真實路線） |
 | `Simulator/reference_snapshot/_next/static/chunks/5758-131911c5f04a436f.js`（模組 85873：整數格 × 整數層的稀疏地形、B-spline 取樣、筆刷） | `GroundBlock`：整數公尺的角點、整數雙線性內插 | 只取「整數格存高度」的想法；B-spline 是浮點數，不用；筆刷留給之後的挖湖與填海 |
 | `Railway/railway_game_reference_clean/binary_reference`（OpenTTD 15.3 的 wasm：`map_height_limit`、`heightmap_height`） | 角點存高度 | GPL，只取想法 |
@@ -1281,3 +1281,21 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `BalanceReportTests` 的「Fullest D3」欄 | gap → 原生 |
 
 外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發。沒有程式碼或數字。
+
+## 實景示範用地面重建（決策 132）
+
+作者要求把實景示範用新的地形模組重蓋，並且加長。參考是 `a91453/railway-reference-private` `05d7000`，六個來源都看過（`Ci/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`）。只有 `Railway/site_archive_clean/` 有用得上的。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的 `basis`（台鐵、高鐵坡度上限 2.5%；高架至少離地 6 m；地面段不低於地表） | `RealWorldDemo.rulingGrade` = 0.025；`TrackRise`（過水至少 5 m，離地最多 56 m） | adapted（取數字） |
+| `level-profiles.json` 的 `terrainValues` + `offsets`（6,283 條 OSM 鐵路擬合好的縱斷面） | — | 不採用：地面是 Mapterhorn DEM，和遊戲量的 Copernicus 地面不同；只拿它估的站高對照（瑞芳 55、三貂嶺 113、十分 176、菁桐 234 m；這裡 59、133、181、249 m） |
+| `rail-3d/physical/network.json`（三貂嶺隧道約 2.09 km、平溪線 5 座隧道與 9 座橋、深澳線一號隧道） | — | 對照：示範的隧道與橋由地面與縱坡決定，三貂嶺–牡丹之間同樣是長隧道 |
+| `data/tra_track_sections.json`（三貂嶺–大華、十分–大華、平溪–菁桐單線；八堵–暖暖、三貂嶺–牡丹雙線） | — | 示範照舊全部單線加待避線（雙線是之後的事，ROADMAP 的「示範地圖的雙線」） |
+| `data/tra_overtake_tracks.json`（七堵、四腳亭、瑞芳、猴硐有待避的股道） | 待避線在七堵、四腳亭、瑞芳、猴硐、三貂嶺、牡丹、三坑、十分 | adapted（三貂嶺、牡丹、三坑、十分是遊戲為了交會加的） |
+| `Railway/` 網站的 `track_lines.geojson`（縱貫線北段、宜蘭線、平溪線、深澳線） | `RealWorldDemo.GroundRoutes`：七堵–八堵–牡丹、八堵–基隆、三貂嶺–菁桐、瑞芳–八斗子 | direct（和平地示範同一份資料） |
+| （參考沒有） | `TrackRise`（坡度限制下最接近地面的縱坡，正反兩趟求可達範圍）、`GameWorld.trackEdgePrice(...)`、待避線一次蓋完、縱貫線在八堵的月台偏好、高度檔的水面高度 | gap → 原生 |
+
+比例：樣本每 8 m（`TrackRise.spacing`），地面平均前後 160 m；車站在地面 ±8 m 內（不夠時再放寬 4、8、12 m）；節點離地最多 60 m；邊的直線坡度和縱坡差 1 m 以內；待避線離主線 6 m，待避區間的擬合 1 m。世界單位 = 1/64 m。
+
+外部專案：沒有用到程式碼。坡度限制的投影（Lipschitz 限制下最接近目標的序列）是一般的做法，這裡自己寫。資料：Copernicus DEM GLO-30／GLO-90（高度檔，資料來源畫面已列）、OpenStreetMap（水域，ODbL）。
