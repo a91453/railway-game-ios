@@ -74,6 +74,8 @@
 
 `build_building_grid.py` 從同一份 OSM 整包檔，在水域的格網上（約 58 × 53 m）算每格的建物足跡、樓層與建地重心，再比對人口格網與十幾個地方，寫成一份量測 JSON（不提交）。結果與結論在 `docs/research/OSM_BUILDING_SURVEY.md`：OSM 的建物只在台北、台南、花蓮的市區比較完整，大約一半的人住在建物明顯不完整的地方，所以還不能直接拿來決定實景地圖的城市建物。指令寫在那份報告的最後。
 
+`build_overture_building_grid.py` 用 DuckDB 從 Overture Maps 的公開 bucket 只讀台灣範圍的 buildings（約 35 秒，190 MB），再用同一個格網與同一份彙整（`build_building_grid.py` 的 `survey()`）量一次。結果在同一份報告的「Overture Maps」：Overture 的足跡（OSM 加上 Shi 等人以影像擷取的 East Asian buildings，CC BY 4.0）在全台大致完整，但樓層全是 OSM 的，只有約 4% 的建物有。
+
 ## 重新產生
 
 ```sh
