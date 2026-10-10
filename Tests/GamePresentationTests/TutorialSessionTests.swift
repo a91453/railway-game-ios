@@ -363,7 +363,7 @@ final class TutorialSessionTests: XCTestCase {
     /// demo or a save from before it has none, and the step leaves it out.
     func testTheStepsSayShortTripsWalkOnlyWhereTheyDo() async throws {
         await MainActor.run {
-            func secondStation(_ session: GameSession) -> String {
+            @MainActor func secondStation(_ session: GameSession) -> String {
                 session.startTutorial()
                 return session.tutorial?.steps.first { $0.id == "build.secondStation" }?.body(in: .english) ?? ""
             }
