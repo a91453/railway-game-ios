@@ -125,7 +125,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 
 - **規則**：`<BUILD_NUMBER_OFFSET + run number>.<run attempt>`。
   - 例如第 7 次執行是 `7.1`，重跑同一次是 `7.2`，下一次執行是 `8.1`。
-  - 版本號（目前 0.4.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
+  - 版本號（目前 0.5.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
   - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
 - **Apple**：
