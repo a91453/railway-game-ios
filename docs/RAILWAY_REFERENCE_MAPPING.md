@@ -1281,3 +1281,16 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有） | `BalanceReportTests` 的「Fullest D3」欄 | gap → 原生 |
 
 外部只取想法：OpenTTD（GPL-2.0，[wiki](https://wiki.openttd.org/en/Manual/Towns)）的城鎮在受服務的車站越多時長得越快，並以較大的建物取代舊的；A 列車的站前開發。沒有程式碼或數字。
+
+## 出售公司的建物（決策 130）
+
+查 `a91453/railway-reference-private` `05d7000`（`Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/taipei_gta_reference/`、`Simulator/`、`MapBuilder/`）：沒有不動產、出售、帳面價值或已實現損益（`sale`／`sell`／`出售` 的命中都是招牌字樣、攤販對話或 OSM 標籤）。能沿用的只有 `Ci/` 現金流量表的形狀：投資活動是流入減流出。
+
+| 參考檔案／函式 | 目標 | 方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`summarizeFinanceForTransport` 的 `investingCashFlow = quotaReturnCashInflow − Math.abs(quotaPurchaseCashOutflow)` | `FinanceSummary.investingCashFlow = saleProceeds − capitalSpending`；現金流量表「出售建物收入」一列 | 移植形狀：參考退回配額是投資流入，這裡是賣掉建物的收入；美分，不換算 |
+| 同檔 `flowDashboardBuildModeIncomeStatement` 的段落與小計 | `FinanceSummary.incomeStatementRows` 的「出售建物損益（已實現）」一列 | 沿用版面；列是原生的 |
+| （參考沒有） | `GameWorld.sellPlacedBuilding(_:)`、`saleQuote(of:)`、`PlacedBuildingSaleQuote`、`PlacedBuildingRules.saleLandPercent`（95%）、`handOverToCity(_:)`、`CapitalDay.saleProceeds`／`saleBookValue`、`FinanceSummary.realizedGain`、存檔 29、golden schema 50 | gap → 原生（`docs/research/CITY_BUILDING_STUDY.md` §4.3 的公式） |
+| （參考沒有） | `GameSession.saleCandidate`、`salePreview`、`salePreviewLines`、`confirmSale()`、建築工具的「出售」模式 | gap → 原生 |
+
+外部只取想法，沒有程式碼或數字：A 列車（Artdink，商業遊戲，[官方說明書](https://www.artdink.co.jp/manual/aexp/const02/const02.html)）的子公司發展後出售、賣掉的建物由城市接手；OpenTTD（GPL-2.0）賣車時拿回的是折舊後的現值；會計上處分固定資產的損益是收入減帳面價值（IAS 16 的處分損益）。

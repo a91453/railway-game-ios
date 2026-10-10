@@ -472,6 +472,16 @@ final class GoldenScenarioTests: XCTestCase {
                 .landValue(nil), .landValue(total), .landValue(base), .landValue(service), .landValue(access), .landValue(station), .landValue(company),
                 .landValue(water),
             ]
+        case .buildingSale(nil):
+            return []
+        case .buildingSale(let sale?):
+            var land = sale, building = sale, price = sale, book = sale, occupants = sale
+            land.land += 1
+            building.building += 1
+            price.price += 1
+            book.bookValue += 1
+            occupants.occupants += 1
+            return [.buildingSale(nil), .buildingSale(land), .buildingSale(building), .buildingSale(price), .buildingSale(book), .buildingSale(occupants)]
         case .zone(nil):
             return [.zone(.residential)]
         case .zone(let zone?):

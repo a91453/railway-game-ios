@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 49
+    static let schemaVersion = 50
 
     var description: String
     var initialState: InitialState
@@ -182,6 +182,7 @@ struct GoldenScenario: Decodable {
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
+                 .command(.sellPlacedBuilding, _), .observe(.buildingSale, _),
                  .command(.setZone, _), .observe(.zone, _), .command(.setWater, _), .observe(.water, _), .command(.setSteep, _), .observe(.steep, _),
                  .command(.setGround, _), .observe(.groundHeight, _), .command(.mapGround, _),
                  .command(.buildTrackEdge(_, _, _, _, .automatic), _): true
@@ -248,6 +249,7 @@ extension GoldenScenario.Step: Decodable {
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
+        case buildingSale
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -282,6 +284,9 @@ extension GoldenScenario.Step: Decodable {
             case .placedBuilding:
                 try requireOnly([.found, .placedBuilding], answering: "placedBuilding")
                 self = try .observe(observation, expect: .placedBuilding(Self.found(expect, .placedBuilding, PlacedBuildingSummary.self)))
+            case .buildingSale:
+                try requireOnly([.found, .buildingSale], answering: "buildingSale")
+                self = try .observe(observation, expect: .buildingSale(Self.found(expect, .buildingSale, BuildingSaleSummary.self)))
             case .zone:
                 try requireOnly([.found, .zone], answering: "zone")
                 self = try .observe(observation, expect: .zone(Self.found(expect, .zone, Zone.self)))
@@ -512,6 +517,8 @@ enum ScenarioCommand: Equatable {
     case placeBuilding(PlacedBuildingKind, PlanPoint)
     /// Schema 42 (decision 94): demolishing one.
     case removePlacedBuilding(PlacedBuildingID)
+    /// Schema 50 (decision 130): selling one to the city.
+    case sellPlacedBuilding(PlacedBuildingID)
     /// Schema 43 (decision 98): zoning a rectangle of cells, or clearing it.
     case setZone(Zone?, rows: ClosedRange<Int>, columns: ClosedRange<Int>)
     /// Schema 44 (decision 105): a real-world map's water, as runs along
@@ -626,6 +633,8 @@ enum ScenarioCommand: Equatable {
                 try world.placeBuilding(kind, at: point)
             case .removePlacedBuilding(let id):
                 try world.removePlacedBuilding(id)
+            case .sellPlacedBuilding(let id):
+                try world.sellPlacedBuilding(id)
             case .setZone(let zone, let rows, let columns):
                 try world.setZone(zone, rows: rows, columns: columns)
             case .setWater(let runs):
@@ -680,6 +689,9 @@ extension ScenarioCommand: Decodable {
         // Schema 42: demolishing the company's buildings (decision 94).
         case "removePlacedBuilding":
             self = .removePlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
+        // Schema 50: selling the company's buildings (decision 130).
+        case "sellPlacedBuilding":
+            self = .sellPlacedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
         // Schema 43: zoning (decision 98). `"zone"` is required, `null` to
         // clear; `"rows"` and `"columns"` are `[first, last]`.
         case "setZone":
@@ -1319,6 +1331,8 @@ enum ScenarioObservation: Equatable {
     case landValue(row: Int, column: Int)
     /// Schema 41 (decision 92): a building the player placed.
     case placedBuilding(PlacedBuildingID)
+    /// Schema 50 (decision 130): what selling it would bring in.
+    case buildingSale(PlacedBuildingID)
     /// Schema 43 (decision 98): a cell's zone.
     case zone(row: Int, column: Int)
     /// Schema 44 (decision 105): whether a cell is water.
@@ -1341,6 +1355,8 @@ enum ScenarioObservation: Equatable {
             .landValue(world.landValue(row: row, column: column).map(LandValueSummary.init))
         case .placedBuilding(let id):
             .placedBuilding(world.placedBuilding(id: id).map(PlacedBuildingSummary.init))
+        case .buildingSale(let id):
+            .buildingSale(world.saleQuote(of: id).map(BuildingSaleSummary.init))
         case .zone(let row, let column):
             .zone(world.zones.zone(row: row, column: column))
         case .water(let row, let column):
@@ -1474,6 +1490,9 @@ extension ScenarioObservation: Decodable {
         // Schema 41: buildings the player places (decision 92).
         case "placedBuilding":
             self = .placedBuilding(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
+        // Schema 50: what selling one brings in (decision 130).
+        case "buildingSale":
+            self = .buildingSale(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building)))
         // Schema 43: zoning (decision 98).
         case "zone":
             self = try .zone(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
@@ -1659,6 +1678,7 @@ enum ObservationAnswer: Equatable {
     case townGrowth(TownGrowthSummary?)
     case landValue(LandValueSummary?)
     case placedBuilding(PlacedBuildingSummary?)
+    case buildingSale(BuildingSaleSummary?)
     case zone(Zone?)
     case water(Bool)
     case steep(Bool)
@@ -1674,6 +1694,7 @@ extension ObservationAnswer: Encodable {
         case trip, daily, hourly, groups, ledger, riders, fare, accounts, report
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
+        case buildingSale
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1759,7 +1780,7 @@ extension ObservationAnswer: Encodable {
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
         case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil),
-             .groundHeight(nil):
+             .groundHeight(nil), .buildingSale(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1779,6 +1800,9 @@ extension ObservationAnswer: Encodable {
         case .placedBuilding(let building?):
             try container.encode(true, forKey: .found)
             try container.encode(building, forKey: .placedBuilding)
+        case .buildingSale(let sale?):
+            try container.encode(true, forKey: .found)
+            try container.encode(sale, forKey: .buildingSale)
         case .zone(let zone?):
             try container.encode(true, forKey: .found)
             try container.encode(zone, forKey: .zone)
@@ -2237,6 +2261,32 @@ struct PlacedBuildingSummary: Codable, Equatable {
         jobs = building.jobs == 0 ? nil : building.jobs
         buildingCost = building.buildingCost == .zero ? nil : building.buildingCost.amount
         landCost = building.landCost == .zero ? nil : building.landCost.amount
+    }
+}
+
+/// What selling one of the company's buildings brings in (schema 50,
+/// decision 130): `{"landRight", "land", "buildingBookValue", "occupants",
+/// "capacity", "building", "price", "bookValue"}`, the inputs and each step
+/// of the price, in cents.
+struct BuildingSaleSummary: Codable, Equatable {
+    var landRight: Int64
+    var land: Int64
+    var buildingBookValue: Int64
+    var occupants: Int64
+    var capacity: Int64
+    var building: Int64
+    var price: Int64
+    var bookValue: Int64
+
+    init(_ quote: PlacedBuildingSaleQuote) {
+        landRight = quote.landRight.amount
+        land = quote.land.amount
+        buildingBookValue = quote.buildingBookValue.amount
+        occupants = quote.occupants
+        capacity = quote.capacity
+        building = quote.building.amount
+        price = quote.price.amount
+        bookValue = quote.bookValue.amount
     }
 }
 
@@ -4059,6 +4109,10 @@ struct PeriodSummary: Codable, Equatable {
     var maintenanceCost: Int64
     var energyCost: Int64
     var staffCost: Int64
+    /// What the company's buildings sold for and the book value they left
+    /// at (schema 50, decision 130); absent when 0.
+    var saleProceeds: Int64?
+    var saleBookValue: Int64?
 
     init(index: Int64, fareRevenue: Int64, operatingCost: Int64, maintenanceCost: Int64, energyCost: Int64, staffCost: Int64) {
         self.index = index
@@ -4074,6 +4128,8 @@ struct PeriodSummary: Codable, Equatable {
             index: summary.index, fareRevenue: summary.fareRevenue.amount, operatingCost: summary.operatingCost.amount,
             maintenanceCost: summary.maintenanceCost.amount, energyCost: summary.energyCost.amount, staffCost: summary.staffCost.amount
         )
+        saleProceeds = summary.saleProceeds == .zero ? nil : summary.saleProceeds.amount
+        saleBookValue = summary.saleBookValue == .zero ? nil : summary.saleBookValue.amount
     }
 }
 

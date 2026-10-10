@@ -118,4 +118,36 @@ final class FinancialStatementsTests: XCTestCase {
         // A loaded game whose year closed before shows nothing.
         XCTAssertNil(GameSession(world: session.world).yearEndYear)
     }
+
+    /// Decision 130: a period that sold a building shows what it brought in,
+    /// its book value and the gain or loss in the income statement, and the
+    /// cash in the investing activities; one that sold none shows neither.
+    func testABuildingSoldShowsInBothStatements() throws {
+        // A house on empty land, 2,048,000 + 256,000, sold at once for 95%
+        // of its land, 243,200.
+        var world = try makeWorld(width: 20_480, height: 20_480, balance: 100_000_000)
+        world.setEconomyMode(.management)
+        let id = try world.placeBuilding(.house, at: PlanPoint(x: 5_000, y: 5_000)).id
+        let bought = world.financeReport(.day).current
+        XCTAssertFalse(bought.incomeStatementRows(previous: nil, in: .english).map(\.title).contains("Buildings sold"))
+        XCTAssertFalse(bought.cashFlowRows(previous: nil, in: .english).map(\.title).contains("Buildings sold"))
+        try world.sellPlacedBuilding(id)
+        let summary = world.financeReport(.day).current
+        let income = summary.incomeStatementRows(previous: nil, in: .english)
+        let rows = Dictionary(uniqueKeysWithValues: income.map { ($0.title, $0.current) })
+        XCTAssertEqual(rows["Buildings sold"], 243_200)
+        XCTAssertEqual(rows["Their book value"], -2_304_000)
+        XCTAssertEqual(rows["Gain or loss on sale (realized)"], -2_060_800)
+        XCTAssertEqual(rows["Net profit"], -2_060_800)
+        XCTAssertEqual(income.last?.title, "Net profit")
+        let cash = summary.cashFlowRows(previous: nil, in: .traditionalChinese)
+        let investing = Dictionary(uniqueKeysWithValues: cash.map { ($0.title, $0.current) })
+        XCTAssertEqual(investing["出售建物收入"], 243_200)
+        XCTAssertEqual(investing["投資活動淨額"], 243_200 - 2_304_000)
+        XCTAssertEqual(investing["本期現金淨增減"], world.economy.balance - 100_000_000)
+        // A later period beside it shows the rows too, at 0.
+        let next = world.accounts.report(.day, day: 1)
+        XCTAssertEqual(next.current.incomeStatementRows(previous: next.previous, in: .traditionalChinese)
+            .first { $0.title == "出售建物損益（已實現）" }?.previous, -2_060_800)
+    }
 }
