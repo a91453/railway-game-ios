@@ -93,6 +93,11 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidLinePattern
     /// A physical preference must name a directed leg of its service.
     case invalidLineRoutePreference
+    /// A line's runs (decision 133) each go from one of its stops to
+    /// another with a time for every call, times that never go back, on
+    /// some day of the week; and only a line that is not a ring, has no
+    /// patterns and calls at no station twice has runs.
+    case invalidLineRuns
     /// The line has no pattern at this index.
     case unknownLinePattern(Int)
     /// A train has ``Train/minimumCars`` to ``Train/maximumCars`` cars.

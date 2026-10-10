@@ -147,9 +147,14 @@
 ///     drop them, and its statements would lose the cash a sale brought in
 ///     and the gain or loss it realized, so it says the save is newer than
 ///     it instead.
+/// 30. A line's runs (decision 133): a line can have `"runs"`, the trains of
+///     a real timetable it sends out at their times, and `"runDays"`, the
+///     day each last ran. A build that reads only an earlier version would
+///     drop them and run the line at a headway, so it says the save is
+///     newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 29
+    public static let currentVersion = 30
 
     public let world: GameWorld
 
@@ -247,6 +252,8 @@ extension SavedGame: Codable {
         // Version 28 to 29: capital days and closed years without
         // `"saleProceeds"` or `"saleBookValue"` sold no building, and their
         // net profit and investing cash flow read as before.
+        // Version 29 to 30: a line without `"runs"` runs at a headway, as
+        // every line did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

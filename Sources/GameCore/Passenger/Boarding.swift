@@ -190,7 +190,14 @@ extension GameWorld {
               let record = passengers.firstIndex(where: { $0.station == train.timetable[stop].station })
         else { return nil }
         let onRing = self.line(id: line)?.isRing ?? false
-        let direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
+        var direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
+        // Decision 133: a run goes one way, the way its stops go along the
+        // line's.
+        if let served = self.line(id: line), served.hasRuns,
+           let here = served.stops.firstIndex(of: train.timetable[stop].station),
+           let next = served.stops.firstIndex(of: train.timetable[stop + 1].station) {
+            direction = here < next ? .outbound : .inbound
+        }
         let ringDirection: LineDirection = self.line(id: line)?.ringDirection(of: train.id) == .outer ? .inbound : .outbound
         let pattern = assignedPattern(of: train.id)
         // How far along each destination is: the first call at it.
@@ -337,6 +344,10 @@ extension GameWorld {
     /// the first entry where it turns round, or its last entry.
     func directionEnd(of train: Train, from stop: Int) -> Int {
         let last = train.timetable.count - 1
+        if let line = assignedLine(of: train.id), self.line(id: line)?.hasRuns == true {
+            // Decision 133: a run goes one way to its end.
+            return last
+        }
         if let line = assignedLine(of: train.id), self.line(id: line)?.isRing == false {
             let farEnd = last / 2
             return stop <= farEnd ? farEnd : last

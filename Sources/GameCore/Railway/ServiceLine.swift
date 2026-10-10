@@ -326,6 +326,12 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// The colour the player chose for the line, or `nil` for the app's
     /// own pick (see ``LineColor``).
     public internal(set) var color: LineColor?
+    /// The runs of a real timetable the line sends its trains out on
+    /// (decision 133), or none for a line that runs at a headway.
+    public internal(set) var runs: [LineRun]
+    /// For each run, the last game day it sent a train out, or `nil` if it
+    /// never has.
+    public internal(set) var runDays: [Int64?]
 
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1
@@ -352,6 +358,8 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         self.isRing = false
         self.outerLastDispatch = nil
         self.color = nil
+        self.runs = []
+        self.runDays = []
     }
 
     /// Whether `stops` can be a line's stops, judged without a world: at
@@ -434,6 +442,10 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
                 line.patterns[service - 1].routePreferences = routes
             }
         }
+        // Decision 133: runs name stops by index; a line that loses one
+        // loses its runs.
+        line.runs = []
+        line.runDays = []
         return (line, dropped)
     }
 
@@ -657,6 +669,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// load is on every segment, the last one from its last stop back to
     /// the first included, each way at its headway.
     func services(at level: ServiceLevel, roundTrips: [Int64?], capacities: [ServiceCapacityProfile?]? = nil) -> (plans: [(trains: Int, headway: Int64)?], loads: [Int]) {
+        // Decision 133: a line with runs runs its trains at the runs'
+        // times, every level alike: as many as are assigned to it, at the
+        // runs' headway.
+        if hasRuns {
+            guard roundTrips.first ?? nil != nil, !trains.isEmpty else { return ([nil], Array(repeating: 0, count: stops.count - 1)) }
+            return ([(trains.count, runHeadway)], Array(repeating: Self.load(ofHeadway: runHeadway), count: stops.count - 1))
+        }
         if isRing {
             guard let lap = roundTrips.first ?? nil, let plan = Self.ringService(trainsInService, targetHeadways, at: level, lap: lap, capacity: capacities?.first ?? nil) else {
                 return ([nil], Array(repeating: 0, count: stops.count))
@@ -859,6 +878,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
+        case runs, runDays
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -897,6 +917,8 @@ extension ServiceLine: Codable {
         isRing = container.contains(.ring) ? try container.decode(Bool.self, forKey: .ring) : false
         outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
         color = container.contains(.color) ? try container.decode(LineColor.self, forKey: .color) : nil
+        runs = container.contains(.runs) ? try container.decode([LineRun].self, forKey: .runs) : []
+        runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -939,6 +961,16 @@ extension ServiceLine: Codable {
                 debugDescription: "Line \(id.rawValue): only a ring sends trains out the outer way, never before second 0."
             )
         }
+        // Decision 133 (save version 30): runs the line can have, each with
+        // the last day it sent a train out, never before day 0.
+        guard container.contains(.runs) ? !runs.isEmpty : !container.contains(.runDays), canHave(runs),
+              runDays.count == runs.count, runDays.allSatisfy({ ($0 ?? 0) >= 0 })
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .runs, in: container,
+                debugDescription: "Line \(id.rawValue)'s runs must be its own, on a line that is not a ring, has no patterns and calls at no station twice, each with the day it last ran."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -967,6 +999,12 @@ extension ServiceLine: Codable {
         }
         try container.encodeIfPresent(outerLastDispatch, forKey: .outerLastDispatch)
         try container.encodeIfPresent(color, forKey: .color)
+        if hasRuns {
+            try container.encode(runs, forKey: .runs)
+            if runDays.contains(where: { $0 != nil }) {
+                try container.encode(runDays, forKey: .runDays)
+            }
+        }
     }
 }
 
