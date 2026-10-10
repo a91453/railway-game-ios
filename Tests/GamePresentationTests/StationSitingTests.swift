@@ -15,7 +15,8 @@ final class StationSitingTests: XCTestCase {
             LandCell(row: 2, column: 4, use: .residential, residents: 1_200, jobs: 300),
             LandCell(row: 2, column: 60, use: .residential, residents: 9_000, jobs: 0),
         ],
-        language: DisplayLanguage = .english
+        language: DisplayLanguage = .english,
+        outsideConnections: Bool = false
     ) throws -> GameSession {
         var world = try makeWorld(width: 262_144, height: 16_384, balance: 10_000_000, speed: .paused)
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
@@ -23,6 +24,10 @@ final class StationSitingTests: XCTestCase {
         try world.buildTrackEdge(from: west, to: east)
         if !land.isEmpty {
             try world.setLand(land)
+        }
+        if outsideConnections {
+            try world.setFareBaseline(FareRules.standardFare)
+            world.setOutsideConnections(true)
         }
         return GameSession(world: world, language: language)
     }
@@ -79,5 +84,34 @@ final class StationSitingTests: XCTestCase {
                 XCTAssertFalse(text.contains("800 m"), text)
             }
         }
+    }
+
+    /// Decision 137: by the map's edge (the whole of this 256 m high world
+    /// is within 1 km of it) the site says a station there is an outside
+    /// connection, and the station says so as it opens.
+    func testAStationByTheEdgeSaysItIsAnOutsideConnection() throws {
+        for (language, caption, ending) in [
+            (DisplayLanguage.english, "Within 800 m: 1,200 residents · 300 jobs\nOutside connection: +$ 5 a trip",
+             " Outside connection: travellers from beyond the map's edge ride from here, paying $ 5 more a trip."),
+            (.traditionalChinese, "800 公尺內：居民 1,200 · 工作 300\n外地連絡站：每趟多收 $ 5", "外地連絡站：地圖外的旅客由這裡進出，每趟多付 $ 5。"),
+        ] {
+            let session = try makeSession(language: language, outsideConnections: true)
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: 512)
+            let site = try XCTUnwrap(session.platformSitePlanPoint)
+            XCTAssertEqual(session.platformSiteCaption(try XCTUnwrap(session.platformSiteCatchment), at: site), caption)
+            session.addNetworkPlatform()
+            let text = try XCTUnwrap(session.message?.text)
+            XCTAssertTrue(text.hasSuffix(ending), text)
+        }
+
+        // Without the outside connections the caption is the catchment alone.
+        let session = try makeSession()
+        session.selectTool(.network)
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: 512)
+        let site = try XCTUnwrap(session.platformSitePlanPoint)
+        XCTAssertEqual(session.platformSiteCaption(try XCTUnwrap(session.platformSiteCatchment), at: site), "Within 800 m: 1,200 residents · 300 jobs")
     }
 }

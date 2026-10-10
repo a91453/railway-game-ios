@@ -24,6 +24,10 @@ extension GameWorld {
     /// real-world one where the app has no people. Its city's buildings
     /// (Phase 6c-1, ARCHITECTURE decision 74) stand on that land.
     ///
+    /// Its pairs' trips keep a share by their distance, and the stations by
+    /// its edge are outside connections (decision 137), but for the whole
+    /// of Taiwan.
+    ///
     /// Its `water` (decision 105) is a real-world map's sea, rivers and
     /// lakes (``WaterGrid``), under which there is no land, and its `steep`
     /// slopes (decision 115), where nothing new is built; a blank map has
@@ -69,6 +73,11 @@ extension GameWorld {
             } else {
                 world.foundTowns(seed: eventSeed)
             }
+            // Decision 137: short trips walk, and the stations by the map's
+            // edge bring the towns beyond it, but for the whole of Taiwan,
+            // whose edge is the sea.
+            world.setDistanceDemand(true)
+            world.setOutsideConnections(bounds != WholeTaiwan.bounds)
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
@@ -137,11 +146,18 @@ extension ConstructionCosts {
 ///   share, so the network pays for itself in about eight days; the new
 ///   game's two outer towns are there to build to. The city grows round
 ///   the stations, and its buildings go up a density as they fill.
+/// - Its pairs keep all their trips however near (decision 137): its
+///   stations are a few hundred metres apart.
 /// - Central is the middle of the map (Stage E1) and of what the demo
 ///   builds, so the map opens on it, with room to build on every side.
 public enum DemoWorld {
     public static func make(in language: DisplayLanguage) -> GameWorld {
         var world = GameWorld.newGame()
+        // Decision 137: the demo's stations stand a few hundred metres
+        // apart to show the tools on one screen, so its pairs keep all their
+        // trips, as before; nothing of it is by the map's edge.
+        world.setDistanceDemand(false)
+        world.setOutsideConnections(false)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

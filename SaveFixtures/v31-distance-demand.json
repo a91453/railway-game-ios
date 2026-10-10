@@ -1,0 +1,220 @@
+{
+  "saveVersion" : 31,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 3
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 3000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 1048576,
+      "width" : 1048576
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "distanceDemand" : true,
+    "economy" : {
+      "balance" : 999997000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 128,
+        "residents" : [
+          1000
+        ],
+        "row" : 128,
+        "use" : "residential"
+      }
+    ],
+    "landDemand" : true,
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Across",
+        "stops" : [
+          2,
+          1,
+          3
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "nextLineID" : 2,
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "outsideConnections" : true,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 400,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 600
+          },
+          {
+            "destination" : 3,
+            "value" : 600
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 3000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 1,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 600
+          },
+          {
+            "destination" : 3,
+            "value" : 2400
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 300
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 3000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 1,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 600
+          },
+          {
+            "destination" : 2,
+            "value" : 2400
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 300
+          }
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Town",
+        "point" : {
+          "x" : 526336,
+          "y" : 526336
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "West",
+        "point" : {
+          "x" : 30000,
+          "y" : 524288
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "East",
+        "point" : {
+          "x" : 988576,
+          "y" : 524288
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

@@ -333,8 +333,8 @@ extension Tutorial {
             title: ("A line needs two stations", "路線至少要兩座車站"),
             body: (
                 "Switch back to Build, extend the track at least 32 m past the first station, then add a platform there too. "
-                    + "Passengers travel between stations, so keep them well apart.",
-                "切回「鋪設」模式，把軌道延伸到離第一座車站至少 32 公尺以外，再設置一座月台。乘客在車站之間往來，所以兩站要離遠一點。"
+                    + "Passengers walk short trips: the farther apart the stations, up to 2 km, the more of them ride.",
+                "切回「鋪設」模式，把軌道延伸到離第一座車站至少 32 公尺以外，再設置一座月台。距離近的人會用走的：兩站離得越遠（到 2 公里為止），搭車的人越多。"
             )
         ),
         // Reference step 4, ending the line's construction.

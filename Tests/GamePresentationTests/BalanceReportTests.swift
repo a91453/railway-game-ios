@@ -108,6 +108,55 @@ final class BalanceReportTests: XCTestCase {
         return world
     }
 
+    /// Decision 137: lines of different lengths on a new game's map of seed
+    /// 1, each with one train of four cars, played `BALANCE_REPORT` days:
+    /// the first line, a line across the first town, one from it to the
+    /// second town, one from it to the map's edge away from the second town
+    /// (an outside connection) and one from the second town through the
+    /// first to that edge.
+    func testLinesByDistance() throws {
+        let days = try requestedDays()
+        let bounds = GameWorld.newGameBounds
+        let towns = Land.townCentres(seed: 1, in: bounds)
+        let first = towns[0], second = towns[1]
+        let metre = WorldCoordinate.unitsPerMetre
+        // On from the second town through the first to 40,000 units inside
+        // the map's east or west edge, in a straight line, so a line from
+        // the second town through the first runs on without turning.
+        let edgeX = second.x > first.x ? 40_000 : bounds.width - 40_000
+        let edge = PlanPoint(x: edgeX, y: first.y + (first.y - second.y) * (edgeX - first.x) / (first.x - second.x))
+        let layouts: [(String, [PlanPoint])] = [
+            ("Across the first town, 1.5 km", [PlanPoint(x: first.x - 750 * metre, y: first.y), first, PlanPoint(x: first.x + 750 * metre, y: first.y)]),
+            ("First town to second", [first, second]),
+            ("First town to the edge (outside connection)", [first, edge]),
+            ("Second town, first town, edge", [second, first, edge]),
+        ]
+        var lines = [
+            "### Lines by distance (seed 1; second town at \((second.x - first.x) / metre) m, \((second.y - first.y) / metre) m)",
+            "",
+            "| Line | Built for | Trips a day (day 2) | Fares (day 2) | Operating profit (day 2) | Payback | Balance day \(days) |",
+            "| --- | --: | --: | --: | --: | --: | --: |",
+        ]
+        var worlds: [(String, GameWorld)] = [("The first line, 448 m", try firstLine())]
+        for (name, points) in layouts {
+            worlds.append((name, try newGameLine(through: points)))
+        }
+        for (name, start) in worlds {
+            var world = start
+            let cost = GameWorld.startingBalance - world.economy.balance
+            try world.advance(ticks: 1 + 2 * 1_440)
+            let report = world.financeReport(.day).previous
+            let trips = world.stations.reduce(Int64(0)) { $0 + (world.stationDemand(of: $1.id)?.dailyTrips ?? 0) }
+            let payback = report.operatingProfit.amount > 0 ? "\(cost.amount / report.operatingProfit.amount) days" : "never"
+            try world.advance(ticks: (days - 2) * 1_440)
+            lines.append(
+                "| \(name) | \(dollars(cost.amount)) | \(trips) | \(dollars(report.fareRevenue.amount)) | "
+                    + "\(dollars(report.operatingProfit.amount)) | \(payback) | \(dollars(world.economy.balance.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// The demo map (decision 78): three lines and four trains, $2,291,200.
     func testTheDemoMap() throws {
         let days = try requestedDays()

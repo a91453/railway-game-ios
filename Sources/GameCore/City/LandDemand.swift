@@ -233,14 +233,21 @@ extension GameWorld {
 
     /// Gives every station the ridership of its share of the land (see
     /// ``LandDemand/shares(of:among:)``), when the land sets it; a closed
-    /// station has none (decision 77). Passengers already waiting stay.
+    /// station has none (decision 77). Decision 137: an outside connection
+    /// adds its share of the outside's trips, of its land's kind or homes
+    /// (``outsideTrips(among:)``). Passengers already waiting stay.
     mutating func refreshLandDemand() {
         guard drawsDemandFromLand else { return }
         // Decision 94: the people in the player's buildings ride too.
         let shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
+        let outside = outsideTrips(among: landStations)
         var changed = false
         for station in stations {
-            let demand = shares[station.id]?.demand
+            var demand = shares[station.id]?.demand
+            if let trips = outside[station.id], trips > 0 {
+                demand = StationDemand(kind: demand?.kind ?? .residential,
+                                       dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
+            }
             if let index = passengers.firstIndex(where: { $0.station == station.id }) {
                 guard passengers[index].demand != demand else { continue }
                 passengers[index].demand = demand

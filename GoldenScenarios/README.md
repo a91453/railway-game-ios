@@ -28,6 +28,12 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 新增 `single-track-scheduled-meet.json` 與 `scheduled-overtake.json`（schema 31，決策 59）：計畫、實際誤點、待避月台／通過正線與精確解除秒；值先由 GameCore 取得，再由 ReferenceWorldGoldenTests 的獨立模型確認。31 新增 `{"observe":{"type":"scheduledWaits"},"expect":{"scheduledWaits":[...]}}`；每一列寫 train、station、stop、cycle、other、otherStop、otherCycle、kind、departureSeconds、clearanceSeconds。讀取端仍接受 schema 30，所有既有 JSON 原字節保留。
 
+## 需求隨距離與外地連絡（`distance-demand.json`）
+
+32 步、不推進時間的情境（schema 52，決策 137）。A 在 (100352, 100352)，B 在東邊 400 m、D 1.75 km、C 3 km，路線 A–B–D–C；A 每天 1000 旅次，B、C、D 各 1000。關著時 A 的 1000 平分給三站：334、333、333。`setDistanceDemand` 開啟後每一對依直線距離保留：500 m 以內一成、2 km 以上全部、中間直線內插，334 × 100‰ = 33、333 × 1000‰ = 333、333 × 850‰ = 283。之後公司改成經營模式，A 那一格 1000 位居民的土地決定運量：A、B 依距離分（1000 : 750），571 與 429 人，228 與 172 旅次；C、D 沒有土地。E 在東邊邊緣內 20000 單位，路線 Out 從 A 到 E。沒有外地連絡時 E 沒有運量，A 的 228 都往 B，400 m 留 23；`setOutsideConnections` 開啟後 E 是外地連絡站，地圖外的 6000 旅次都是它的，A 的 228 分 6 給 B（留 1）、222 給 E（不打折），E 的 6000 都往 A；往來 E 的票價是標準的 500 加城市基準 75：575。
+
+每日旅次是手算的；每小時的分配（既有的形狀與曲線，沒有改變）由 GameCore 取得。schema 52 新增指令 `{"type": "setDistanceDemand", "enabled": true}`、`{"type": "setOutsideConnections", "enabled": true}`，最終狀態可以有 `"distanceDemand": true`、`"outsideConnections": true`（關著時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## Schema（`schemaVersion: 30`／`31`）
 
 除了每個步驟在 `command` 與 `observe` 之間擇一，路線指令與觀察可以省略的 `pattern`（見下面「服務模式」），`buildTrackEdge` 可以省略的 `profile` 與 `structure`（見下面「立體鐵路」），`setTrainPath`、列車移動與路徑可以省略的 `end`、`pathToStation` 可以省略的 `cars`（見下面「路網上的營運」），時鐘的 `gameMinutes` 與 `gameSeconds` 二擇一、最終狀態可以省略的 `pendingTenths`、時刻表停靠的 `arrival` 與 `arrivalSeconds`、`departure` 與 `departureSeconds` 各二擇一（見下面「時間」），列車沒有服務時省略的 `times`（見下面「服務時刻」），以及標準性能時省略的列車與路線的 `performance`、沒有行駛曲線時省略的服務時刻 `run`（見下面「行駛曲線」），不是環線時省略的路線 `ring`、`outerLastDispatch` 與行程的 `ring`（見下面「環線」），所有欄位都必填。讀取端遇到不認得的 `schemaVersion`、指令、觀察、結果或名稱必須報錯，不可猜測。不要加入 schema 沒有定義的欄位，同一個物件裡也不要重複 key：目前的 Swift 讀取端會忽略多出的欄位、各語言對重複 key 保留的值也不同，兩者都還沒有自動檢查。
@@ -175,6 +181,8 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 | `setStationOperationMode`（schema 35） | `station`、`mode`（`"normalFlow"`、`"flowControl"` 或 `"closed"`） | `setStationOperationMode(_:to:)` |
 | `foundTowns`（schema 36） | `seed`（0…4294967295） | `foundTowns(seed:)` |
 | `setLandDemand`（schema 36） | `enabled`（布林值） | `setLandDemand(_:)` |
+| `setDistanceDemand`（schema 52） | `enabled`（布林值） | `setDistanceDemand(_:)`：每一對的旅次依直線距離保留（決策 137） |
+| `setOutsideConnections`（schema 52） | `enabled`（布林值） | `setOutsideConnections(_:)`：地圖邊緣 1 km 內的車站是外地連絡站（決策 137） |
 | `setLand`（schema 36） | `cells`：`[{ "row", "column", "use", "residents", "jobs" }, ...]`，順序不拘；`use` 是 `"residential"`、`"commercial"` 或 `"office"`，schema 40（決策 91）起也可以是 `"industrial"`、`"civic"`、`"leisure"`、`"agricultural"`、`"park"`（`landCell` 與 `building` 觀察的 `use` 也一樣） | `setLand(_:)` |
 | `setCityBuildings`（schema 37） | `enabled`（布林值） | `setCityBuildings(_:)` |
 | `setTownGrowth`（schema 37） | `enabled`（布林值） | `setTownGrowth(_:)` |

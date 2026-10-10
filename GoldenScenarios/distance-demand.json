@@ -1,0 +1,893 @@
+{
+  "schemaVersion": 52,
+  "description": "Decision 137: demand by distance and the outside connections, in a world 524288 x 196608 units (8.2 x 3.1 km). A stands at (100352, 100352), B 400 m east of it, D 1.75 km and C 3 km, on the line A-B-D-C; A starts 1000 trips a day and B, C and D draw 1000 each. Off, A's 1000 are shared equally by B, C and D: 334, 333, 333. With demand by distance each pair keeps a share of its trips by its straight-line distance, a tenth up to 500 m, all from 2 km and in a straight line between: 334 x 100 = 33, 333 x 1000 = 333, 333 x 850 = 283 (thousandths, rounded half up). Then the company is managed and the land, homes of 1000 residents on A's cell (row 24, column 24), sets the ridership: A and B share the cell by nearness (1000 : 750), 571 and 429 residents, 228 and 172 trips; C and D reach no land and have none. E stands 20000 units (312 m) inside the east edge, on the line Out from A. Without the outside connections it has no ridership and A sends B its 228, of which 400 m keep 23. With them E is an outside connection: the outside's 6000 trips a day are all its, A's 228 go 6 to B (kept 1) and 222 to E, all kept, and E's 6000 all go to A, the one station it reaches with ridership. A trip to or from E pays the standard 500 and the city's baseline of 75 more: 575.",
+  "initialState": {
+    "worldWidth": 524288,
+    "worldHeight": 196608,
+    "balance": 100000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "A",
+        "point": {
+          "x": 100352,
+          "y": 100352
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "B",
+        "point": {
+          "x": 125952,
+          "y": 100352
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "C",
+        "point": {
+          "x": 292352,
+          "y": 100352
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "D",
+        "point": {
+          "x": 212352,
+          "y": 100352
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Line",
+        "stops": [
+          1,
+          2,
+          4,
+          3
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 2,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 3,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 4,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 334,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          11,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 333,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          10,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 4
+      },
+      "expect": {
+        "daily": 333,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          10,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDistanceDemand",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 33,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          4,
+          6,
+          4,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 333,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          10,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 4
+      },
+      "expect": {
+        "daily": 283,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          10,
+          31,
+          48,
+          31,
+          11,
+          9,
+          9,
+          9,
+          9,
+          9,
+          16,
+          16,
+          19,
+          16,
+          11,
+          11,
+          11,
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setEconomyMode",
+        "mode": "management"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLand",
+        "cells": [
+          {
+            "row": 24,
+            "column": 24,
+            "use": "residential",
+            "residents": 1000,
+            "jobs": 0
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLandDemand",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "E",
+        "point": {
+          "x": 504288,
+          "y": 100352
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Out",
+        "stops": [
+          1,
+          5
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "tripFare",
+        "from": 1,
+        "to": 5
+      },
+      "expect": {
+        "found": true,
+        "fare": 500
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 23,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 5
+      },
+      "expect": {
+        "daily": 0,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 5,
+        "to": 1
+      },
+      "expect": {
+        "daily": 0,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setOutsideConnections",
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "tripFare",
+        "from": 1,
+        "to": 5
+      },
+      "expect": {
+        "found": true,
+        "fare": 575
+      }
+    },
+    {
+      "observe": {
+        "type": "tripFare",
+        "from": 5,
+        "to": 1
+      },
+      "expect": {
+        "found": true,
+        "fare": 575
+      }
+    },
+    {
+      "observe": {
+        "type": "tripFare",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "found": true,
+        "fare": 500
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 1,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 5
+      },
+      "expect": {
+        "daily": 222,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          7,
+          18,
+          25,
+          18,
+          8,
+          7,
+          7,
+          7,
+          7,
+          8,
+          14,
+          18,
+          25,
+          18,
+          10,
+          9,
+          9,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 5,
+        "to": 1
+      },
+      "expect": {
+        "daily": 6000,
+        "hourly": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          24,
+          189,
+          491,
+          667,
+          491,
+          210,
+          194,
+          195,
+          199,
+          204,
+          213,
+          394,
+          490,
+          667,
+          490,
+          262,
+          241,
+          241,
+          23
+        ]
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "paused",
+    "balance": 95000,
+    "stations": [
+      {
+        "id": 1,
+        "name": "A",
+        "point": {
+          "x": 100352,
+          "y": 100352
+        }
+      },
+      {
+        "id": 2,
+        "name": "B",
+        "point": {
+          "x": 125952,
+          "y": 100352
+        }
+      },
+      {
+        "id": 3,
+        "name": "C",
+        "point": {
+          "x": 292352,
+          "y": 100352
+        }
+      },
+      {
+        "id": 4,
+        "name": "D",
+        "point": {
+          "x": 212352,
+          "y": 100352
+        }
+      },
+      {
+        "id": 5,
+        "name": "E",
+        "point": {
+          "x": 504288,
+          "y": 100352
+        }
+      }
+    ],
+    "trains": [],
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Line",
+        "patterns": [],
+        "stops": [
+          1,
+          2,
+          4,
+          3
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      },
+      {
+        "id": 2,
+        "lastDispatch": null,
+        "name": "Out",
+        "patterns": [],
+        "stops": [
+          1,
+          5
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "serviceDay": [
+      {
+        "start": 0,
+        "level": "low"
+      },
+      {
+        "start": 420,
+        "level": "peak"
+      },
+      {
+        "start": 600,
+        "level": "offPeak"
+      },
+      {
+        "start": 960,
+        "level": "peak"
+      },
+      {
+        "start": 1200,
+        "level": "offPeak"
+      },
+      {
+        "start": 1260,
+        "level": "low"
+      }
+    ],
+    "network": {
+      "nodes": [],
+      "edges": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [
+      {
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 228
+        },
+        "waiting": [],
+        "released": 0,
+        "arrived": 0,
+        "overflowed": 0,
+        "abandoned": 0,
+        "refused": 0
+      },
+      {
+        "station": 2,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 172
+        },
+        "waiting": [],
+        "released": 0,
+        "arrived": 0,
+        "overflowed": 0,
+        "abandoned": 0,
+        "refused": 0
+      },
+      {
+        "station": 5,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 6000
+        },
+        "waiting": [],
+        "released": 0,
+        "arrived": 0,
+        "overflowed": 0,
+        "abandoned": 0,
+        "refused": 0
+      }
+    ],
+    "riders": [],
+    "accounts": {
+      "mode": "management",
+      "fareRules": null,
+      "openedAt": 0,
+      "pending": {
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "departures": 0,
+        "trainDistance": 0,
+        "passengers": 0,
+        "seats": 0
+      },
+      "ledger": [],
+      "days": []
+    },
+    "land": {
+      "cells": 1,
+      "residents": 1000,
+      "jobs": 0
+    },
+    "landDemand": true,
+    "distanceDemand": true,
+    "outsideConnections": true
+  }
+}
