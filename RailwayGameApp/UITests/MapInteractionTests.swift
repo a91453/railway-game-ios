@@ -154,17 +154,25 @@ final class MapInteractionTests: XCTestCase {
         // the app's main thread for seconds (run 37161734560's recording),
         // and a touch held across that is failed by the tap recognizer: wait
         // for the anchor, and tap once more if the first touch was lost.
+        // Decision 136: on a phone (where the card folded above) the
+        // start folds the card, so the map's track gives the room to draw
+        // in, and the map's ✓ builds; elsewhere the card's Clear and Build
+        // Track stay.
         let anchor = map.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.35))
         func anchored() -> Bool {
-            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: clear)],
-                             timeout: 10) == .completed
+            let signal = cardFolds
+                ? XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Show Controls"), object: controls)
+                : XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: clear)
+            return XCTWaiter().wait(for: [signal], timeout: 10) == .completed
         }
         anchor.tap()
         if !anchored() { anchor.tap() }
         XCTAssertTrue(anchored(), "Taps after navigating must still reach the network tool")
         // The far end, tried twice like the anchor: the same lost touch.
         let far = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
-        let build = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
+        let build = cardFolds
+            ? app.buttons["map.build.confirm"]
+            : app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         func previewed() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: build)],
                              timeout: 10) == .completed
@@ -173,10 +181,13 @@ final class MapInteractionTests: XCTestCase {
         if !previewed() { far.tap() }
         XCTAssertTrue(previewed(), "Two taps after a pinch must make a buildable preview")
         build.tap()
-        // Built track disables the button for good (its end starts the
-        // next stretch); the "Built …" banner clears itself after 4 s
-        // (#182), within one slow accessibility query.
-        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: build)
+        // Built track disables the card's button for good (its end starts
+        // the next stretch), and takes the map's ✓ away with the preview;
+        // the "Built …" banner clears itself after 4 s (#182), within one
+        // slow accessibility query.
+        let built = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: cardFolds ? "exists == false" : "isEnabled == false"), object: build
+        )
         XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "Build Track did not build")
     }
 
@@ -380,10 +391,12 @@ final class MapInteractionTests: XCTestCase {
 
         XCTAssertTrue(hud.waitForExistence(timeout: 5), "MapConstructionHUD must appear when preview is active")
 
-        // Clearing construction removes preview and HUD
-        let clear = app.buttons["Clear"]
-        XCTAssertTrue(clear.waitForExistence(timeout: 5))
-        clear.tap()
+        // Cancelling construction removes preview and HUD: the map's ✕
+        // beside the track, which a phone shows with the details card
+        // folded (decision 136), as the card's Clear does.
+        let cancel = app.buttons["map.build.cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.tap()
 
         // It leaves with a transition (move and fade, 0.2 s), which the
         // idle wait does not always cover, as the legend's (#198).
