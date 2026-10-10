@@ -39,9 +39,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request cancels its older run; a manual run and
+# the nightly one on main each finish.
 concurrency:
-  group: release-archive-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-archive-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
