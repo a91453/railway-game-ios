@@ -207,4 +207,34 @@ extension GameWorld {
         demand.baseline = CityMix(of: land)
         cityDemand = demand
     }
+
+    /// Counts `fresh`, land read in as it is needed (decision 88), in the
+    /// mix kept: reading land in is not the city growing, so the land
+    /// already read, where `residents` live, keeps the demand it had. Each
+    /// kind's jobs kept for those residents and the fresh land's jobs, for
+    /// a million of everyone, at most ``CityDemand/maximumMix``.
+    mutating func keepCityMix(with fresh: [LandCell], over residents: Int64) {
+        guard var demand = cityDemand, let baseline = demand.baseline else { return }
+        var people: Int64 = residents, shops: Int64 = 0, work: Int64 = 0
+        for cell in fresh {
+            people += cell.residents
+            switch CityDemand.Kind(of: cell.use) {
+            case .shops?: shops += cell.jobs
+            case .work?: work += cell.jobs
+            case .homes?, nil: break
+            }
+        }
+        guard people > residents || shops > 0 || work > 0, people > 0 else { return }
+        let per = CityDemand.perResidents
+        // Jobs and mixes stay far inside Int64 (decision 139: at most a
+        // million jobs a resident), but their products need the full width.
+        func mix(keeping kept: Int64, adding jobs: Int64) -> Int64 {
+            let total = per.dividingFullWidth(kept.multipliedFullWidth(by: residents)).quotient + jobs
+            guard total / people < CityDemand.maximumMix / per else { return CityDemand.maximumMix }
+            return people.dividingFullWidth(total.multipliedFullWidth(by: per)).quotient
+        }
+        demand.baseline = CityMix(shopJobs: mix(keeping: baseline.shopJobs, adding: shops),
+                                  workJobs: mix(keeping: baseline.workJobs, adding: work))
+        cityDemand = demand
+    }
 }
