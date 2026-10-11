@@ -7,8 +7,9 @@
 3. 匯出 IPA
 4. 檢查 IPA
 5. 上傳 App Store Connect
+6. 在 Linux 上等 App Store Connect 處理完，把結果寫在執行頁面，並把上次成功發佈以來合併的 PR 標題填進 TestFlight 的 What to Test
 
-整個流程不需要自己的 Mac。Xcode Cloud 暫緩，[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md) 保留供日後使用。
+匯出與上傳失敗時會自動再試（最多 3 次），不必重做 Archive。整個流程不需要自己的 Mac。Xcode Cloud 暫緩，[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md) 保留供日後使用。
 
 官方文件查閱日期：**2026-09-28**（來源列在文末）。
 
@@ -21,7 +22,9 @@
 | Apple Developer Program、Team API key、GitHub environment、真實 Apple 驗證 | **VERIFIED**（見〈真實執行紀錄〉） |
 | 真實 Release Archive（`adhoc`）、App Store 發佈簽章匯出、IPA 檢查、上傳到 App Store Connect、清理 | **VERIFIED**：第 2 次執行全部成功 |
 | `automatic` Archive | 在沒有已註冊裝置的新團隊**失敗**（已觀察）；仍保留為選項 |
-| App Store Connect processing、TestFlight 安裝到裝置 | **UNVERIFIED**：repository 與 workflow log 裡沒有證據 |
+| 匯出與上傳失敗時自動再試 | 以假指令 **VERIFIED**（Linux 與 macOS 的 bash）；真的遇到 Apple 斷線時 **UNVERIFIED** |
+| 等 App Store Connect processing、回報結果、填 What to Test | 以假的 App Store Connect 與 GitHub **VERIFIED**；對真實 App Store Connect **UNVERIFIED**：合併後第一次真實發佈的 processing job 才能證明 |
+| App Store Connect processing、TestFlight 安裝到裝置 | **UNVERIFIED**：repository 與 workflow log 裡沒有證據；processing 的結果之後由 processing job 寫在每次執行的頁面 |
 
 `release-archive.yml` 的未簽章 Archive，以及 `testflight-checks.yml` 的 dry run 與合成 IPA 測試，仍然**不能**證明真實簽章；真實簽章與上傳的證據只來自〈真實執行紀錄〉的兩次執行。
 
@@ -32,21 +35,27 @@ Actions → TestFlight → Run workflow（只允許 main）
   ├─ preflight（Linux，數秒）
   │    分支與觸發方式、每個必要設定是否存在且格式正確；
   │    缺少就一次列出全部並停止，不啟動 macOS runner
-  └─ release（macos-26）
-       再檢查一次設定，並依這次執行的 attempt 決定 build number
-       → 暫存 keychain + API key 檔（權限 600）
-       → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
-         真實 Team；預設 `adhoc` 簽章（`automatic` 為選項，見下）
-       → 匯出 IPA：xcodebuild -exportArchive，App Store Connect 發佈，
-         `internal` 時加入 `testFlightInternalTestingOnly=true`；`external` 時省略此鍵，
-         自動簽章 + API key
-         （本機沒有發佈憑證時使用 Apple 雲端管理的發佈憑證）
-       → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
-         發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
-       → 上傳：同一份 archive、相同設定再以 xcodebuild -exportArchive
-         （destination=upload，API key）送到 App Store Connect；
-         只在 IPA 檢查通過後執行
-       → 清理（成功、失敗、取消都執行）
+  ├─ release（macos-26）
+  │    再檢查一次設定，並依這次執行的 attempt 決定 build number
+  │    → 暫存 keychain + API key 檔（權限 600）
+  │    → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
+  │      真實 Team；預設 `adhoc` 簽章（`automatic` 為選項，見下）
+  │    → 匯出 IPA：xcodebuild -exportArchive，App Store Connect 發佈，
+  │      `internal` 時加入 `testFlightInternalTestingOnly=true`；`external` 時省略此鍵，
+  │      自動簽章 + API key
+  │      （本機沒有發佈憑證時使用 Apple 雲端管理的發佈憑證）；
+  │      失敗時再試，最多 3 次
+  │    → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
+  │      發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
+  │    → 上傳：同一份 archive、相同設定再以 xcodebuild -exportArchive
+  │      （destination=upload，API key）送到 App Store Connect；
+  │      只在 IPA 檢查通過後執行；失敗時再試，最多 3 次
+  │    → 清理（成功、失敗、取消都執行）
+  └─ processing（Linux；上傳開始之後才執行，上傳步驟失敗也執行）
+       → 列出上次成功的 TestFlight 執行以來合併進 main 的 PR（What to Test 的內容）
+       → 以 App Store Connect API 每 30 秒查一次這個 build 的處理狀態，最多等 60 分鐘
+       → VALID：寫出 TestFlight 內部與外部測試的狀態，填 What to Test
+       → INVALID 或 FAILED：失敗（紅色）；60 分鐘還沒處理完：警告，不算失敗
 ```
 
 | 檔案 | 用途 |
@@ -56,10 +65,13 @@ Actions → TestFlight → Run workflow（只允許 main）
 | `.github/scripts/testflight-signing.sh` | 暫存 keychain、API key 檔的建立與清理 |
 | `.github/scripts/testflight-archive.sh` | Archive，以及匯出（export）與上傳（upload）兩份 ExportOptions |
 | `.github/scripts/testflight-verify-ipa.sh` | 上傳前的 IPA 檢查 |
-| `.github/workflows/testflight-checks.yml` | PR 檢查：lint、腳本測試、macOS dry run、合成 IPA 測試；不需帳號、不用 secrets |
-| `.github/scripts/testflight-selftest*.sh` | 上述檢查用的測試（只用假值） |
+| `.github/scripts/testflight-retry.sh` | 匯出與上傳失敗時再試 |
+| `.github/scripts/testflight-changes.py` | 列出上次成功發佈以來合併的 PR（What to Test 的文字） |
+| `.github/scripts/testflight-processing.py` | 等 App Store Connect 處理完、回報結果、填 What to Test |
+| `.github/workflows/testflight-checks.yml` | PR 檢查：lint、腳本測試、macOS dry run、合成 IPA 測試、假的 App Store Connect；不需帳號、不用 secrets |
+| `.github/scripts/testflight-selftest*.sh`、`testflight-selftest-processing.py` | 上述檢查用的測試（只用假值） |
 
-- **只允許一個發佈同時進行**：`concurrency: testflight-release`，而且不取消進行中的上傳。執行中再按一次會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。
+- **只允許一個發佈同時進行**：release job 使用 `concurrency: testflight-release`，而且不取消進行中的上傳。執行中再按一次，新的 release job 會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。等 processing 的 job 不在這個群組裡，不會擋住下一次發佈。
 - **TestFlight 範圍**（Run workflow 的 `testing_scope` 選項）：`internal` 為預設，保留原本僅內部測試行為；`external` 會上傳可供 External Testing 使用的新 build。外部測試仍需在 App Store Connect 將該 build 加入外部群組並通過 Beta App Review。
 - **Archive 簽章方式**（Run workflow 的 `archive_signing` 選項）：
   - `adhoc`（預設，第一個選項）：以 ad hoc（`-`）簽章封存，不需要開發憑證或開發描述檔。適合 CI 與沒有已註冊開發裝置的新團隊。
@@ -108,14 +120,14 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
      - 不要貼給任何人（包括 Claude），也不要放進 repository、issue、PR 或聊天。
 6. **建立 GitHub environment**：在 github.com 用 Safari 開 repository → Settings → Environments → New environment，名稱 `testflight`。
    - **Deployment branches and tags**：選 **Selected branches and tags**，只加入 `main`。
-   - **Required reviewers**（選用）：加上自己，每次發佈前多一次確認。不要勾「Prevent self-review」，否則你無法核准自己的發佈。preflight 與 release 兩個 job 都使用這個 environment，所以每次發佈會要求核准兩次。
+   - **Required reviewers**（選用）：加上自己，每次發佈前多一次確認。不要勾「Prevent self-review」，否則你無法核准自己的發佈。preflight、release、processing 三個 job 都使用這個 environment，所以每次發佈會要求核准三次。
    - **Environment secrets**：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY`（貼上 `.p8` 全文，換行保持原樣即可）。
    - **Environment variables**：`APPLE_TEAM_ID`、`ASC_APP_ID`；`BUILD_NUMBER_OFFSET` 選填。
 7. **內部測試群組**：App Store Connect → 你的 App → TestFlight → Internal Testing「+」→ 群組 `Internal`，加入自己，勾「Enable automatic distribution」。Apple 說明中必須手動加入群組的是 Xcode Cloud 的 build；若新 build 沒有自動出現，在群組頁按 Add Builds 手動加入。
 8. **發佈**：GitHub → Actions → **TestFlight** → Run workflow → Branch 選 `main`，`archive_signing` 維持預設的 `adhoc`；自己測試選 `testing_scope: internal`，要給朋友外部測試則選 `testing_scope: external` → Run workflow。
 9. **上傳之後**：
-   - App Store Connect 會先處理（processing），通常數分鐘到數十分鐘。
-   - TestFlight 若顯示 **Missing Compliance**，依實際情況回答出口合規問題（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉；本專案不替你預設答案）。
+   - App Store Connect 會先處理（processing），通常數分鐘到數十分鐘。workflow 的 processing job 會等它處理完，在執行頁面（Summary）寫出結果與 TestFlight 的狀態，並填好 What to Test（見〈重試、處理檢查與 What to Test〉）。
+   - TestFlight 若顯示 **Missing Compliance**，依實際情況回答出口合規問題（見 XCODE_CLOUD_ONBOARDING.md〈出口合規〉；本專案不替你預設答案）。processing job 看到這個狀態時會在執行頁面提醒。
    - `internal`：照原本方式在內部群組安裝。
    - `external`：在 App Store Connect → TestFlight → External Testing 將新 build 加到外部群組（例如 `Friends Beta`），填測試資訊並送 Beta App Review；核准後再以 Email 或 Public Link 邀請朋友。
 
@@ -133,6 +145,43 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - App Store Connect 要求版本號與 build number 的組合不重複。
   - Apple 舊技術文件（TN2420）另寫明：同一版本內 build number 要遞增。所以同一版本已上傳較新的 build 之後，**不要重跑更舊的執行**，改按一次新的 Run workflow。
 - **需要跳號時**設定 `BUILD_NUMBER_OFFSET`，例如 workflow 改名讓 run number 從 1 重新起算，或曾用其他方式上傳過較大的 build。Offset 與 run number 相加後必須 ≤ 9999；若此 workflow 真正累積到 10,000 次手動發佈，需要先改 build-number 編碼方案。
+
+## 重試、處理檢查與 What to Test
+
+2026-10-11 加入。起因是第 48 次執行：Archive 已經做完，匯出時 Apple 回 `The network connection was lost.`（exit 70），整次只能重跑；另外，原本流程只到「上傳成功」，Apple 處理得如何要看信或 App Store Connect。
+
+**重試**（`testflight-retry.sh`）
+
+- 用在匯出與上傳兩步，也就是 Archive 之後還要連 Apple 的兩步。Archive 不重試。
+- 任何失敗都再試，最多 3 次，第二次前等 30 秒、第三次前等 60 秒。Apple 斷線時的訊息不固定，所以不挑錯誤訊息；不是斷線的錯誤（權限、簽章）只是多花兩次的時間，最後一樣失敗。
+- 每次嘗試前刪掉上一次留下的匯出資料夾。
+- 上傳的第一次其實已經送到 Apple、只是連線斷在回應之前時，之後的嘗試會被 Apple 以 build number 重複拒絕，上傳步驟顯示失敗。processing job 仍然會找這個 build 並回報，所以看 processing job 的結果就知道 build 有沒有到。
+
+**處理檢查**（`testflight-processing.py`，processing job，Linux）
+
+- release job 開始上傳之後才執行；上傳步驟失敗也執行（理由見上一點），取消時不執行。
+- 用同一把 Team API key 簽 ES256 的 JWT（每次最多 15 分鐘），以 App Store Connect API 的 List Builds（`filter[app]`、`filter[version]`＝build number、`filter[preReleaseVersion.version]`＝版本號）每 30 秒查一次 `processingState`，最多等 60 分鐘。
+- `VALID`：讀出 TestFlight 的內部、外部測試狀態（`internalBuildState`、`externalBuildState`，例如 `MISSING_EXPORT_COMPLIANCE`、`READY_FOR_BETA_TESTING`），寫在執行頁面，接著填 What to Test。
+- `INVALID` 或 `FAILED`：job 失敗。原因在 Apple 寄給 Account Holder 的信裡；API 不提供。
+- 60 分鐘內沒處理完：只發警告，job 不算失敗（Apple 有時就是慢）。之後可以只重跑這個 job（Re-run failed jobs 或單獨重跑），它會再查同一個 build。
+- 伺服器錯誤、429、斷線會再問；HTTP 401、403 這類拒絕立刻停止並說明。
+- 等待在 Linux 上，不佔 macOS runner；也不在 `testflight-release` 群組裡，不會擋住下一次發佈。
+
+**What to Test**（`testflight-changes.py` 列出內容，`testflight-processing.py` 寫入）
+
+- 「上次發佈」是這個 workflow 在 `main` 上最近一次**成功**的執行（GitHub API，`actions: read`）。從它的 commit 到這次的 commit，列出 `main` 自己的 commit（`git log --first-parent`），每個合併的 PR 一行，最新的在前；標題用 GitHub 上 PR 現在的標題（`pull-requests: read`），拿不到時用合併 commit 的內容或分支名稱。
+- 例如：
+
+  ```text
+  Changes since build 51.1:
+  - Lay level track on flat ground, and say why a platform cannot go on a grade (#375)
+  - Show what a freight train carries (#374)
+  ```
+
+- 同一個 commit 再發佈一次時寫「No changes since build …: the same commit.」；找不到上次發佈（第一次、GitHub 沒回應、那個 commit 不在歷史裡）時列出最近 20 個 commit，標題改成「Recent changes:」。
+- 寫入這個 build 已有的每一個語系；一個都沒有時，用 App 的主要語言新增一個。
+- 文字限制在 4,000 字以內，放不下的寫成「…and N more」。API 文件沒有寫 What to Test 的上限，4,000 是保守的值。
+- 寫入失敗只發警告；可以在 App Store Connect 的 TestFlight → 該 build → Test Details 手動填寫。
 
 ## 真實執行紀錄
 
@@ -156,6 +205,8 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - 上傳：xcodebuild 回報 `Upload succeeded`、`Uploaded package is processing`。
 - 清理：暫存 keychain 已刪除、這次新增的 1 份描述檔已移除、key 檔／archive／IPA 已移除。
 
+**#48 `adhoc`（2026-10-11，build `48.1`，`external`）**：Archive 成功（約 5 分鐘）後，Sign and export the IPA 失敗：`error: exportArchive The network connection was lost.`、`** EXPORT FAILED **`（exit 70）。IPA 檢查與上傳略過，清理成功。https://github.com/a91453/railway-game-ios/actions/runs/38136163921 。這次之後，匯出與上傳改為失敗時再試（見〈重試、處理檢查與 What to Test〉）。
+
 ## 安全設計
 
 - **Secrets 的範圍**：secrets 只在 environment `testflight`，只有從 `main` 手動觸發的發佈 job 拿得到。一般 PR、fork 的 PR、`testflight-checks.yml` 都拿不到，也不會發佈。preflight 另外會擋下非 `main` 或非手動的觸發。
@@ -172,6 +223,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - GitHub 會自動遮蔽 secrets，但官方說明遮蔽不保證完整，所以腳本本身就不輸出它們。
   - 簽章 Archive、IPA export 與 upload 都以 `xcodebuild -quiet` 執行，降低公開 log 出現 signing identity 的機會；Apple 工具的錯誤訊息仍可能提到憑證名稱。
 - **公開 log 裡看得到的識別碼**（真實執行 #1、#2 的 log 實際檢查）：`ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_PRIVATE_KEY` 與 key 檔名都被遮蔽為 `***`，`.p8` 內容、憑證與簽章者姓名都沒有出現。`APPLE_TEAM_ID` 與 `ASC_APP_ID` 是 **variables**，GitHub 不遮蔽 variables，所以它們會出現在每個步驟的 `env:` 區塊。這兩個是公開識別碼（Team ID 本來就在每個簽章的 App 與描述檔裡，App 的 Apple ID 在 App Store 網址裡），不能用來驗證或簽章；本 repository 仍不把它們的值寫進檔案。若想讓它們也不出現在 log，可以改放 environment secrets（要同步改 workflow 的 `vars.` 為 `secrets.`，這是另一個小改動）。
+- **processing job**：同樣只在 environment `testflight` 拿得到 key。key 寫進一個只有自己能讀（600）的暫存資料夾，job 結束就刪除；JWT 不印出。GitHub token 只有 `contents`、`actions`、`pull-requests` 的讀取權限，用來找上次成功的執行與 PR 標題。
 - **寫入權限**：有 repository 寫入權限的人都能讀取 secrets，不要把寫入權限給不信任的人。
 
 ## 驗證狀態
@@ -190,7 +242,12 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | App Store distribution 簽章與描述檔的匯出（API key，雲端管理的發佈憑證）；IPA 檢查（distribution 憑證、App Store 描述檔、bundle ID、版本、build number、結構） | VERIFIED | 真實執行 #2 |
 | 上傳到 App Store Connect（`Upload succeeded`） | VERIFIED（App Store Connect upload） | 真實執行 #2 |
 | 清理（成功後與失敗後）；log 沒有 key、Key ID、Issuer ID、簽章者姓名 | VERIFIED | 真實執行 #1、#2 |
-| App Store Connect processing 完成、Missing Compliance、TestFlight 安裝到裝置 | **UNVERIFIED** | repository 沒有證據；由你在 App Store Connect 與 TestFlight App 確認 |
+| 重試：成功、失敗後再試、3 次都失敗時的 exit status、30／60 秒的等待、每次前刪掉匯出資料夾、拒絕錯誤的設定 | VERIFIED | `testflight-checks.yml`（Linux 與 macOS 的 bash）＋ 本機 Linux |
+| 處理檢查：JWT（ES256、key ID、issuer、audience、期限）每個請求都驗過簽章；查詢條件；等到 VALID；INVALID／FAILED 失敗；逾時只警告；401 立刻停止；503／429 再問；What to Test 寫入每個語系或新增主要語系、超過 4,000 字截斷、被拒只警告；不輸出 key、key ID、issuer、token | VERIFIED（假的 App Store Connect） | `testflight-checks.yml`（Linux）＋ 本機 Linux |
+| What to Test 的內容：上次成功執行以來 `main` 的合併、最新在前、PR 標題、重複執行同一 commit、找不到上次發佈、GitHub 沒回應、4,000 字上限 | VERIFIED（假的 GitHub、拋棄式 git 歷史） | 同上 |
+| 處理檢查與 What to Test 對真實 App Store Connect 與 GitHub | **UNVERIFIED** | 合併後第一次真實發佈的 processing job 才能證明 |
+| 真的遇到 Apple 斷線時重試成功 | **UNVERIFIED** | 要等下一次斷線 |
+| App Store Connect processing 完成、Missing Compliance、TestFlight 安裝到裝置 | **UNVERIFIED** | repository 沒有證據；由你在 App Store Connect 與 TestFlight App 確認。processing 的結果之後由 processing job 寫在執行頁面 |
 | 取消時的清理（`if: always()`） | 由 macOS dry run 的失敗步驟驗證；**尚未**在真實執行中取消過 | — |
 | `automatic` archive 在已註冊裝置的團隊上能否成功 | **UNVERIFIED** | 尚未有裝置可試 |
 
@@ -204,9 +261,15 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | 匯出時出現 `…_Managed is unknown` 或權限錯誤 | 確認 key 是 **Team** key、角色是 **Admin**；見下方〈備案〉 |
 | 找不到 App 或 Bundle ID | 先完成步驟 2、3；Bundle ID 必須與 `project.yml` 相同 |
 | IPA 檢查失敗 | 看錯誤列出的項目；IPA 不會被上傳 |
+| 匯出或上傳 3 次都失敗 | 看最後一次的錯誤。不是斷線的錯誤依本表其他列處理；斷線就按 Re-run failed jobs（會拿到新的 build number） |
+| 上傳再試之後被拒：build number 重複 | 第一次上傳其實已經送到 Apple；看 processing job 的結果，不必重跑 |
 | 上傳被拒：build number 重複或較小 | 不要重跑舊的執行；按新的 Run workflow，必要時設定 `BUILD_NUMBER_OFFSET` |
 | 上傳被拒：SDK / Xcode 太舊 | 需要 Xcode 26 以上；workflow 一開始就會檢查 |
 | TestFlight 顯示 Missing Compliance | 在 App Store Connect 回答出口合規問題 |
+| processing：`INVALID` 或 `FAILED` | Apple 寄給 Account Holder 的信會說明原因；修好後按新的 Run workflow |
+| processing：60 分鐘還沒處理完（警告） | 到 App Store Connect 看；稍後可以只重跑 processing job |
+| processing：HTTP 401 或 403 | key 被撤銷、不是 Team key 或權限不足，見〈需要的設定〉 |
+| What to Test 沒有填上（警告） | 在 App Store Connect 的 TestFlight → 該 build → Test Details 手動填寫 |
 | 測試者看不到 build | 確認群組有你、已接受邀請；沒開自動發佈時，手動把 build 加入群組 |
 | API 存取申請尚未核准 | 等 Apple 核准；在那之前無法產生 Team key |
 
@@ -249,8 +312,19 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 - CSR 建立：https://developer.apple.com/help/account/certificates/create-a-certificate-signing-request/
 - TN3161：https://developer.apple.com/documentation/technotes/tn3161-inside-code-signing-certificates
 
+- App Store Connect API（查閱日期 2026-10-11）：
+  - List Builds（`filter[app]`、`filter[version]`、`filter[preReleaseVersion.version]`；`processingState` 為 `PROCESSING`、`FAILED`、`INVALID`、`VALID`）：https://developer.apple.com/documentation/appstoreconnectapi/get-v1-builds
+  - Build 的 TestFlight 狀態（`InternalBetaState`、`ExternalBetaState`）：https://developer.apple.com/documentation/appstoreconnectapi/get-v1-builds-_id_-buildbetadetail
+  - What to Test（`betaBuildLocalizations` 的 `whatsNew`）：
+    - https://developer.apple.com/documentation/appstoreconnectapi/get-v1-builds-_id_-betabuildlocalizations
+    - https://developer.apple.com/documentation/appstoreconnectapi/post-v1-betabuildlocalizations
+    - https://developer.apple.com/documentation/appstoreconnectapi/patch-v1-betabuildlocalizations-_id_
+  - App 的主要語言（`primaryLocale`）：https://developer.apple.com/documentation/appstoreconnectapi/get-v1-apps-_id_
+
 **GitHub**
 
+- 列出 workflow 的執行（`branch`、`status=success`）：https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow
+- 讀取 PR（標題）：https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
 - Environments、部署分支（依 `GITHUB_REF` 比對）、required reviewers：https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments
 - `workflow_dispatch` 需在預設分支：https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch
 - `run_number` / `run_attempt`：https://docs.github.com/en/actions/reference/workflows-and-actions/contexts

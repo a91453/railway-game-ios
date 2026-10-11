@@ -60,7 +60,7 @@ on:
       - ".github/workflows/testflight*.yml"
       - ".github/workflows/website-screenshots.yml"
       - ".github/scripts/swift-shards*.sh"
-      - ".github/scripts/testflight-*.sh"
+      - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
   # Pushes to main no longer run it (until 2026-10-11 each did): merges come
   # in bursts and a newer one cancelled the run in progress, so from

@@ -48,7 +48,7 @@ on:
       - ".github/workflows/release-archive.yml"
       - ".github/workflows/testflight*.yml"
       - ".github/scripts/swift-shards*.sh"
-      - ".github/scripts/testflight-*.sh"
+      - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
   schedule:
     # 17 minutes past every third hour (UTC), except 18:17, when ios-build.yml's
