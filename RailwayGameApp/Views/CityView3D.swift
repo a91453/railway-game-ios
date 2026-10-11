@@ -1,5 +1,6 @@
 import GamePresentation
 import Observation
+import SafariServices
 import SwiftUI
 import UIKit
 import WebKit
@@ -15,13 +16,21 @@ struct CityView3D: View {
     let area: CityViewArea
     @Environment(\.dismiss) private var dismiss
     @State private var host = CityViewHost()
+    /// A page the city view's page links to (the website's home page),
+    /// shown in the app in Safari's view rather than in Safari.
+    @State private var linkedPage: LinkedPage?
 
     var body: some View {
         let language = DisplayLanguage.app
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             if let url = URL(string: area.pageAddress) {
-                CityWebView(url: url, onLoaded: { host.pageLoaded() }, onFailure: { error in host.loadFailed(error) })
+                CityWebView(
+                    url: url,
+                    onLoaded: { host.pageLoaded() },
+                    onFailure: { error in host.loadFailed(error) },
+                    onLink: { linked in linkedPage = LinkedPage(url: linked) }
+                )
                     .id(host.attempt)
                     .ignoresSafeArea()
                     .accessibilityIdentifier("cityView.web")
@@ -68,7 +77,29 @@ struct CityView3D: View {
             .accessibilityIdentifier("cityView.close")
         }
         .statusBarHidden()
+        .sheet(item: $linkedPage) { page in
+            SafariView(url: page.url)
+                .ignoresSafeArea()
+        }
     }
+}
+
+/// A page the city view's page links to.
+struct LinkedPage: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
+/// Safari's view in the app (`SFSafariViewController`): the linked page
+/// over the city view, closed with Done, without leaving the game.
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 }
 
 /// Whether the web view has the page, and why not when it could not load
@@ -121,18 +152,21 @@ final class CityViewHost {
 }
 
 /// The web view of the page. It stays on the city view's own pages
-/// (``CityViewPage/opensInView(_:)``): any other link (the website's home
-/// page) opens in the browser instead, and a page whose process the
-/// system ended (memory) is loaded again.
+/// (``CityViewPage/opensInView(_:)``): any other https link (the website's
+/// home page) goes to `onLink`, which shows it in Safari's view in the
+/// app, and a page whose process the system ended (memory) is loaded
+/// again.
 struct CityWebView: UIViewRepresentable {
     let url: URL
     /// Told when the page has loaded.
     let onLoaded: @MainActor () -> Void
     /// Told why, when the page cannot be loaded.
     let onFailure: @MainActor (any Error) -> Void
+    /// Told of an https link out of the city view's pages.
+    let onLink: @MainActor (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onLoaded: onLoaded, onFailure: onFailure)
+        Coordinator(onLoaded: onLoaded, onFailure: onFailure, onLink: onLink)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -156,10 +190,16 @@ struct CityWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate {
         let onLoaded: @MainActor () -> Void
         let onFailure: @MainActor (any Error) -> Void
+        let onLink: @MainActor (URL) -> Void
 
-        init(onLoaded: @escaping @MainActor () -> Void, onFailure: @escaping @MainActor (any Error) -> Void) {
+        init(
+            onLoaded: @escaping @MainActor () -> Void,
+            onFailure: @escaping @MainActor (any Error) -> Void,
+            onLink: @escaping @MainActor (URL) -> Void
+        ) {
             self.onLoaded = onLoaded
             self.onFailure = onFailure
+            self.onLink = onLink
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -188,7 +228,7 @@ struct CityWebView: UIViewRepresentable {
                 return .allow
             }
             if url.scheme == "https" {
-                _ = await UIApplication.shared.open(url)
+                onLink(url)
             }
             return .cancel
         }
