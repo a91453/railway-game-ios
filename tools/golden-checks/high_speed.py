@@ -5,8 +5,9 @@ trips between two high-speed stations.
 
 Written from the rules in the decision, not from the Swift code:
 
-- the fare is `max(20, round(km * .45))` dollars (`Math.round` takes .5 up),
-  the straight-line distance between the stations' points, in cents;
+- the fare is `round(km * .45)` dollars (`Math.round` takes .5 up) for the
+  straight-line distance between the stations' points, in cents, or the
+  network's flat $5 if that is more;
 - two stations with `a` and `b` people in their hinterlands have, one way,
   `K * a * b` trips a day (K = 2,400 for a million and a million), the
   products in millions and rounded down a step at a time, kept by a share of
@@ -69,7 +70,7 @@ def distance_units(a, b):
 def fare_cents(units):
     # km * 45 / 100 dollars, units / 64,000 km, rounded half up.
     dollars = (units * 45 + 3_200_000) // 6_400_000
-    return max(20, dollars) * 100
+    return dollars * 100
 
 
 def share(units):
@@ -112,7 +113,7 @@ def observed():
         answers[("demand", origin, destination)] = {"daily": trips, "hourly": hourly(trips, origin, destination)}
     for origin, destination, high_speed in [(1, 2, False), (1, 2, True), (1, 3, True), (3, 2, True)]:
         units = distance_units(origin, destination)
-        answers[("tripFare", origin, destination, high_speed)] = {"found": True, "fare": fare_cents(units) if high_speed else 500}
+        answers[("tripFare", origin, destination, high_speed)] = {"found": True, "fare": max(500, fare_cents(units)) if high_speed else 500}
     return answers
 
 

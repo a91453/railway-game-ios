@@ -7,7 +7,14 @@
 //
 // - the fare, `hsrFarePassengerPrice`'s legacy branch (no per-type rate, the
 //   absent v3 rules not active): `Math.max(20, Math.round(Math.max(1, km) ×
-//   .45))`, in the reference's dollars, where the metro's flat fare is 5;
+//   .45))`, in the reference's dollars, where the metro's flat fare is 5.
+//   Deliberately without the reference's floor of 20: a line is high-speed by
+//   a switch here, not by being built of high-speed stations, and a floor
+//   would let any metro line be switched to charge 4 times its fare on every
+//   short ride (the fare does not change demand). The fare is the network's
+//   or the kilometres', whichever is more, which is also nearer the real
+//   Taiwan High Speed Rail's shortest fare against its longest (NT$40 for
+//   NT$1,490, 3 %, against 13 %);
 // - a high-speed train never overloads (`TrainType.highSpeed`, in
 //   `TrainType.swift`).
 //
@@ -48,21 +55,20 @@
 public enum HighSpeed {
     // MARK: Fare
 
-    /// The least fare (`Math.max(20, …)`), in whole dollars.
-    public static let minimumFareDollars: Int64 = 20
     /// The fare of a kilometre, in cents (`.45`).
     public static let centsPerKilometre: Int64 = 45
 
     /// The fare of a trip whose straight-line distance is
-    /// `√squaredDistance` world units (1/64 m): `max(20, round(km × 0.45))`
-    /// dollars, rounded half up as `Math.round` does; 153 for the 340.04 km
-    /// from Taipei to Zuoying along the track, as the reference's formula
-    /// gives.
+    /// `√squaredDistance` world units (1/64 m): `round(km × 0.45)` dollars,
+    /// rounded half up as `Math.round` does, in whole dollars; 153 for the
+    /// 340.04 km from Taipei to Zuoying along the track, as the reference's
+    /// formula gives. A trip pays this or the network's fare, whichever is
+    /// more (``GameWorld/tripFare(from:to:highSpeed:)``).
     public static func fare(squaredDistance: Int64) -> Money {
         let units = FixedPoint.squareRoot(max(0, squaredDistance))
         // units / 64,000 kilometres × 45 / 100 dollars.
         let dollars = (units * centsPerKilometre + 3_200_000) / 6_400_000
-        return Money(max(minimumFareDollars, dollars) * 100)
+        return Money(dollars * 100)
     }
 
     // MARK: Intercity trips

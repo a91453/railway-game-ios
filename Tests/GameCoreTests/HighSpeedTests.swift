@@ -8,12 +8,14 @@ import XCTest
 final class HighSpeedTests: XCTestCase {
     // MARK: - The fare
 
-    /// `Math.max(20, Math.round(km × .45))` dollars, the reference's legacy
-    /// fare, for the straight-line distance in units of 1/64 m.
-    func testTheFareIsTwentyDollarsOrFortyFiveCentsAKilometre() {
+    /// `Math.round(km × .45)` dollars, the reference's legacy fare without
+    /// its floor of 20, for the straight-line distance in units of 1/64 m.
+    func testTheFareIsFortyFiveCentsAKilometre() {
         func fare(_ units: Int64) -> Int64 { HighSpeed.fare(squaredDistance: units * units).amount }
-        XCTAssertEqual(fare(0), 2_000, "the least")
-        XCTAssertEqual(fare(640_000), 2_000, "10 km is $4.50")
+        XCTAssertEqual(fare(0), 0)
+        XCTAssertEqual(fare(64_000), 0, "1 km is $0.45")
+        XCTAssertEqual(fare(128_000), 100, "2 km is $0.90")
+        XCTAssertEqual(fare(640_000), 500, "10 km is $4.50, which Math.round takes up")
         XCTAssertEqual(fare(2_842_000), 2_000, "44.4 km is $19.98")
         XCTAssertEqual(fare(2_880_000), 2_000, "45 km is $20.25")
         XCTAssertEqual(fare(3_200_000), 2_300, "50 km is $22.50, which Math.round takes up")
@@ -282,7 +284,7 @@ final class HighSpeedTests: XCTestCase {
     /// planned at `PERF_HSR` with a train of eight high-speed cars, in
     /// network routing. The hinterlands are 2,000,000, 500,000 and
     /// 1,000,000 people, none with trips of its own.
-    private func corridor(hinterlands: [Int64] = [2_000_000, 500_000, 1_000_000]) throws -> GameWorld {
+    private func corridor(hinterlands: [Int64] = [2_000_000, 500_000, 1_000_000], placesTrain: Bool = false) throws -> GameWorld {
         var world = try GameWorld(
             bounds: WorldBounds(width: 5_000_000, height: 200_000), economy: GameEconomy(balance: 1_000_000_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -319,6 +321,12 @@ final class HighSpeedTests: XCTestCase {
         try world.setTrainType(train, to: .highSpeed)
         try world.setTrainCars(train, to: 8)
         try world.setTrainPerformance(train, to: .highSpeed)
+        if placesTrain {
+            // Its head at the end of A's platform, its body along the track behind.
+            try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edges[0], direction: .forward), offset: 8_192))
+            try world.setTrainContinuation(train, along: [], stoppingAt: 8_192)
+            try world.setTrainMovementRate(train, to: 1024)
+        }
         try world.assignTrain(train, to: line)
         try world.setLineHighSpeed(line, to: true)
         world.setPassengerRoutingMode(.network)
@@ -407,56 +415,49 @@ final class HighSpeedTests: XCTestCase {
 
     // MARK: - Fares at boarding
 
-    // Alpha(1,0) Beta(3,0) Gamma(5,0) on a(0,1)–g(6,1), one line, one train of
-    // one car (see `EconomyAccountsTests`): three passengers waiting at Alpha
-    // for Beta board at the first departure and pay as they board.
-    private let tiles = TestLine(tiles: 7)
-    private let main = LineID(rawValue: 1)
-
-    private func boardingWorld() throws -> GameWorld {
-        var world = try GameWorld(
-            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
-            clock: GameClock(speed: .normal)
-        )
-        try tiles.build(in: &world)
-        try tiles.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
-        try tiles.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
-        try tiles.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
-        try world.createLine(named: "Main", stops: [a, b, StationID(rawValue: 3)])
-        try world.setLineServiceWindow(main, to: .allDay)
-        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
-        let train = try world.purchaseTrain(named: "T1")
-        try world.placeTrain(train.id, at: tiles.at(1, facingEast: true))
-        try world.setTrainMovementRate(train.id, to: 1024)
-        try world.assignTrain(train.id, to: main)
+    /// Three passengers waiting at A for B, 61 km along the track, and the
+    /// first train standing at A: they pay as they board, at the first
+    /// departure.
+    private func boardingWorld(highSpeed: Bool) throws -> GameWorld {
+        var world = try corridor(hinterlands: [0, 0, 0], placesTrain: true)
+        if !highSpeed {
+            try world.setLineHighSpeed(LineID(rawValue: 1), to: false)
+        }
         world.setEconomyMode(.management)
-        try world.setStationDemand(a, to: StationDemand(kind: .office, dailyTrips: 0))
-        world.passengers[world.passengers.firstIndex { $0.station == a }!].release(3, to: b, along: PassengerTrip(line: main, direction: .outbound), at: .zero)
+        world.setSpeed(.normal)
+        world.passengers[world.passengers.firstIndex { $0.station == a }!].release(
+            3, to: b, along: PassengerTrip(line: LineID(rawValue: 1), direction: .outbound), at: .zero
+        )
         return world
     }
 
     func testAHighSpeedTripPaysTheHighSpeedFare() throws {
-        var ordinary = try boardingWorld()
-        try ordinary.advance(ticks: 60)
+        var ordinary = try boardingWorld(highSpeed: false)
+        try ordinary.advance(ticks: 5)
+        XCTAssertEqual(ordinary.accounts.pending.fareTrips, 3)
         XCTAssertEqual(ordinary.accounts.pending.fareRevenue, 1_500, "three trips at the metro's $5")
 
-        var fast = try boardingWorld()
-        try fast.setLineHighSpeed(main, to: true)
-        try fast.advance(ticks: 60)
-        // 64 m apart is under any distance's worth: the least, $20 each.
-        XCTAssertEqual(fast.accounts.pending.fareRevenue, 6_000)
+        var fast = try boardingWorld(highSpeed: true)
+        try fast.advance(ticks: 5)
+        // 61 km is 27.45: $27 each.
         XCTAssertEqual(fast.accounts.pending.fareTrips, 3)
+        XCTAssertEqual(fast.accounts.pending.fareRevenue, 8_100)
     }
 
     func testAHighSpeedFareIsNeverLessThanTheNetworks() throws {
-        var world = try boardingWorld()
-        let c = StationID(rawValue: 3)
-        XCTAssertEqual(world.tripFare(from: a, to: c), 500)
-        XCTAssertEqual(world.tripFare(from: a, to: c, highSpeed: true), 2_000)
-        // A fare the company set above the high-speed one is the one asked.
+        var world = try corridor()
+        // A and N are 5 km apart ($2.25 by the kilometres), A and B 61 km.
+        XCTAssertEqual(world.tripFare(from: a, to: n), 500)
+        XCTAssertEqual(world.tripFare(from: a, to: n, highSpeed: true), 500, "the network's $5 is more")
+        XCTAssertEqual(world.tripFare(from: a, to: b), 500)
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 2_700)
+        XCTAssertEqual(world.tripFare(from: n, to: b, highSpeed: true), 2_500, "56 km is $25.20")
+        // A fare the company set above the kilometres' is the one asked.
         try world.setFareRules(.flat(3_000))
-        XCTAssertEqual(world.tripFare(from: a, to: c), 3_000)
-        XCTAssertEqual(world.tripFare(from: a, to: c, highSpeed: true), 3_000)
+        XCTAssertEqual(world.tripFare(from: a, to: n, highSpeed: true), 3_000)
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 3_000)
+        try world.setFareRules(.flat(2_000))
+        XCTAssertEqual(world.tripFare(from: a, to: b, highSpeed: true), 2_700)
         XCTAssertNil(world.tripFare(from: a, to: a, highSpeed: true))
     }
 }

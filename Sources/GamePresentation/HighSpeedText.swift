@@ -8,15 +8,14 @@ extension GameWorld {
     /// What the switch of a high-speed line says it does, before and after
     /// it is on: the fare, where the trips come from and where they go.
     public func highSpeedLineHelp(in language: DisplayLanguage) -> String {
-        let fare = Money(HighSpeed.minimumFareDollars * 100).moneyText
         let perKilometre = Money(HighSpeed.centsPerKilometre).centsText
         let radius = HighSpeed.hinterlandRadius / WorldCoordinate.unitsPerMetre / 1_000
         let near = HighSpeed.nearDistance / WorldCoordinate.unitsPerMetre / 1_000
         let full = HighSpeed.fullDistance / WorldCoordinate.unitsPerMetre / 1_000
         return language.text(
-            "Riders pay \(fare) or \(perKilometre) a kilometre, whichever is more. Its stations draw intercity trips from the people within \(radius) km of them, "
+            "Riders pay \(perKilometre) a kilometre, or the network's fare if that is more. Its stations draw intercity trips from the people within \(radius) km of them, "
                 + "to the other high-speed stations: none under \(near) km, all from \(full) km. Give its trains the high-speed type.",
-            "乘客付 \(fare) 或每公里 \(perKilometre)，取較高的。它的車站從 \(radius) 公里內的居民與就業取得城際旅次，"
+            "乘客付每公里 \(perKilometre)，路網的票價比較高就付路網的。它的車站從 \(radius) 公里內的居民與就業取得城際旅次，"
                 + "去其他高鐵站：\(near) 公里內沒有，\(full) 公里起全部。列車請選高鐵車種。"
         )
     }

@@ -104,8 +104,9 @@ extension GameWorld {
     /// fare for the straight-line distance between the stations' points, or
     /// 5 if that is 0 or less, and ``outsideFare`` more to or from an outside
     /// connection (decision 137). With `highSpeed`, a trip that rides a
-    /// high-speed line (decision 168), the high-speed fare for that distance
-    /// if it is more. `nil` for the same station or an unknown one.
+    /// high-speed line (decision 168), the kilometres' fare
+    /// (``HighSpeed/fare(squaredDistance:)``) if it is more. `nil` for the
+    /// same station or an unknown one.
     public func tripFare(from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
         var fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
