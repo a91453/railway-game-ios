@@ -890,7 +890,9 @@ struct MapView: View {
 /// What the lines' map (``LineMap``, decision 84) is worked out from: the
 /// track and its platforms, the lines' stops, ways and colours, the
 /// stations and the transfer groups; not the trains or the clock, so it is
-/// worked out again only after an edit.
+/// worked out again only after an edit. The small map drawn with it also
+/// shows only the tiles owned (decision 160), so buying one, or undoing
+/// the purchase, draws it again.
 private struct LineMapKey: Equatable {
     struct Line: Equatable {
         let id: LineID
@@ -904,12 +906,14 @@ private struct LineMapKey: Equatable {
     let lines: [Line]
     let stations: [PlanPoint]
     let groups: [TransferGroup]
+    let ownedTiles: [MapTile]?
 
     init(world: GameWorld) {
         network = world.network
         lines = world.lines.map { Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color) }
         stations = world.stations.map(\.location)
         groups = world.transferGroups
+        ownedTiles = world.mapExpansion?.owned
     }
 }
 
