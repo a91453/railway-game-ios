@@ -454,8 +454,9 @@ final class NetworkBuildingSessionTests: XCTestCase {
     }
 
     /// Easing the grade puts a vertical curve a quarter of the length long
-    /// at each end; the middle is steeper (4/3 of 512 over 16,384: 42‰),
-    /// so it needs a longer stretch.
+    /// at each end; the middle is steeper (4/3 of 512 over 16,384: 42‰).
+    /// Where that is too steep the stretch keeps a steady grade (31‰,
+    /// decision 164); a longer one eases.
     func testEasingTheGradeAddsVerticalCurvesAtBothEnds() async throws {
         var world = try makeWorld(width: 24_576, height: 8_192, balance: 10_000_000)
         let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
@@ -468,8 +469,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: PlanPoint(x: 1_024, y: 4_096), reach: Self.reach)
             XCTAssertEqual(session.networkStart, .node(n1))
             session.tapNetwork(at: PlanPoint(x: 17_408, y: 4_096), reach: Self.reach)
-            XCTAssertEqual(session.networkPreview?.profile, TrackProfile(startTransition: 4_096, endTransition: 4_096))
-            XCTAssertEqual(session.networkPreview?.problem, GameError.trackTooSteep.playerMessage(in: .english))
+            XCTAssertEqual(session.networkPreview?.profile, .uniform)
+            XCTAssertNil(session.networkPreview?.problem)
             session.tapNetwork(at: PlanPoint(x: 19_456, y: 4_096), reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.profile, TrackProfile(startTransition: 4_608, endTransition: 4_608))
             XCTAssertNil(session.networkPreview?.problem)

@@ -271,6 +271,13 @@ extension GameWorld {
 }
 
 extension NetworkBuilding {
+    /// `point` at `other`'s height if it is within
+    /// ``TrackSectionRules/level`` of it, else as it is (decision 164).
+    static func levelled(_ point: WorldCoordinate, with other: WorldCoordinate) -> WorldCoordinate {
+        guard point.z != other.z, abs(point.z - other.z) <= TrackSectionRules.level else { return point }
+        return WorldCoordinate(x: point.x, y: point.y, z: other.z)
+    }
+
     /// Where GameCore surveys the ground under an edge of `geometry`: the
     /// middle of each pricing length (16 m). A straight edge's points are
     /// only its ends, so a block it crosses between them would otherwise
