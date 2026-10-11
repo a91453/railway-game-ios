@@ -40,6 +40,29 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 每個值都是手算的。schema 56 起，`setLand` 的格與 `landCell` 觀察可以有 `"coverage"`（整數百分比，0 到 100，不知道時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
+## 國定假日（`holidays.json`）
+
+schema 57（決策 154）：
+
+- 新指令 `setDisruptions`（`level`：`"light"`、`"standard"`，或 `null` 表示關閉；有 level 時 `country` 是 `HolidayCalendar` 有的 ISO 代碼）。
+- 新觀察 `holiday`（`day`）：那一天放的假日，`{"found": true, "holiday": {"kind", "start", "end", "boost"}}`（`end` 是最後一天的隔天，`boost` 千分比），沒有是 `{"found": false}`。
+- 最終狀態在開啟時多一個 `disruptions`：`{"country", "level"}`。
+- 參考模型不放假，所以用到它們的 fixture 不在 `ReferenceWorldGoldenTests` 裡重播，由 `HolidayTests` 驗證。
+
+情境：Home（住宅 1000 人次）與 Office（辦公）在路線 Main 上，時鐘在第 0 天，不推進時間。
+
+- 關閉時沒有假日。Home 往 Office 的 1000 人次照 `dayShape` × 早上尖峰 × 早上尖峰的權重，以最大餘數法分到各小時。
+- 台灣、標準：
+  - 第 0 天是元旦（1 月 1 日，1 天，+50‰）。
+  - 春節從第 43 天（2 月 14 日）起 9 天，+200‰。
+  - 國慶日是第 279 天（10 月 10 日），+100‰。
+  - 每年同一天：第 407 天在隔年的春節（403 到 412），第 −81 天是前一年的國慶日。
+  - 今天的需求乘上今天假日的倍數：1000 × 1.050 = 1050，照同樣的權重分到各小時。
+- 中國：元旦 3 天；國慶從第 270 天起 7 天；第 279 天不是假日。
+- 關閉後又沒有假日，需求回到 1000。
+- 「輕」：加成是一半、無條件捨去，春節 +100、元旦 +25，今天的需求 1025。
+- 各小時的人次另以獨立的 Python 照規則重算，與 GameCore 一致；最終狀態取自 GameCore（只有兩站、一條線與 `disruptions`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 依面積收購（`area-buyout.json`）
 
 12 步、不推進時間的情境（schema 55，決策 146）。32 × 24 格、經營模式、城市建物與依密度的方塊開啟；第 5 列第 5、6 行都是 48 位居民、8 個就業的住宅（D1，地價每 m² 2,000），整格收購價 (12,288,000 + 400 × 2,000) × 120% = 15,705,600。`setAreaBuyOut` 開啟後：
@@ -794,3 +817,13 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 第 24 分鐘停在 Gamma、沒有服務；第 25 分鐘回程派出，先折返（它面向 Gamma 進站）：Gamma 到 25、開 30，Beta 35／36，Alpha 40。週末的班次第 0 天（星期一）不開，`runDays` 是 `[0, 0, null]`。
   - 最終狀態第 60 分鐘：餘額 1,000,000 − 6 段軌道 × 1,000 − 3 站 × 50,000 − 1 列 × 200,000 = 644,000；Blue 停在 Alpha（第 2 條邊反向的終點）。時刻與餘額手算；列車的位置取自 GameCore，和 `line-dispatch.json` 相同。
 
+
+## 決策 155：貨運（schema 58）
+
+- 新指令 `enableFreight`、`buildFreightFacility`（`station`）、`setLineFreight`（`line`、`enabled`）；新結果 `freightNotEnabled`、`freightFacilityExists`（`station`）、`noFreightFacility`（`station`）。最終狀態有貨運時另寫 `freight`（`facilities`、`loads`、`pendingRevenue`、`produced`、`delivered`、`spilled`、`lost`），貨運路線另寫 `"freight": true`；沒有貨運時都省略。
+- 參考模型（`ReferenceWorld`）沒有土地與貨運，所以用到貨運指令的 fixture 不在 `ReferenceWorldGoldenTests` 裡重播（同土地），由 `FreightTests` 驗證。
+- `freight.json`（新）：8,192 × 4,096 單位，Alpha (1536, 512) 與 Gamma (5632, 512)，經營模式；第 0 列第 0 行 100 個就業的工業格（中點 (2048, 2048) 離 Alpha 近），路線 Goods 連兩站。
+  - 沒打開貨運前建貨運場、把路線改貨運路線都被拒（`freightNotEnabled`）；打開後不存在的車站 9 被拒（`unknownStation`），Alpha 第二座被拒（`freightFacilityExists`）。
+  - 兩座貨運場各 5,000,000，路線改貨運路線；開到第 3 小時（180 分鐘）：100 個就業 × 500 = 50,000 千分之一噸一天，每個整點（第 0、1、2 小時）做 50,000 千分之一噸，各得 2 噸，共 6 噸，全在 Alpha，Gamma 沒有。
+  - 餘額 100,000,000 − 2 × 1,000（車站）− 2 × 5,000,000（貨運場）− 2 × 3,600（兩個結算過的小時，每站 18 元的營運成本）= 89,990,800。
+- 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

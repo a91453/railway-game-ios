@@ -155,6 +155,8 @@ public enum LiuMingchuanChallenge {
         var world = GameWorld.newGame(anchor: anchor, bounds: bounds, balance: startingBalance, eventSeed: eventSeed, land: [])
         world.setLandOnDemand()
         world.setOutsideConnections(false)
+        // Decision 154: its targets were measured without holidays.
+        world.setDisruptions(nil)
         do {
             try world.startScenario(scenario)
         } catch {

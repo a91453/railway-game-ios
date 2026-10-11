@@ -1,0 +1,593 @@
+{
+  "schemaVersion": 57,
+  "description": "Public holidays (decision 154, schema 57). Home (1, residential, 1000 trips a day) and Office (2, office) on line Main; the clock is at day 0. Without disruptions no day is a holiday and Home's 1000 trips to Office are shared over the hours in proportion to dayShape x the morning peak x the morning peak, by largest remainder. With Taiwan's holidays at the standard level, day 0 is New Year's Day (1 January, one day, +50 per mille), the Spring Festival runs from day 43 (14 February) for nine days at +200, National Day is day 279 (10 October) at +100, and every year again: day 407 is in the next year's Spring Festival (403 to 412), day -81 the previous year's National Day. Today's demand is raised by today's holiday: 1000 x 1.050 = 1050, shared over the same hours. China's New Year runs three days and its National Day seven from day 270, and day 279 is no holiday there. Off, there is none again and the demand is 1000. At the light level a holiday adds half its boost, rounded down: +100 for the Spring Festival, +25 on New Year's Day, so today's demand is 1025.",
+  "initialState": {
+    "worldWidth": 12288,
+    "worldHeight": 3072,
+    "balance": 3000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Main",
+        "stops": [
+          1,
+          2
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 2,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 0
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 1000,
+        "hourly": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          34,
+          111,
+          171,
+          111,
+          38,
+          31,
+          31,
+          32,
+          32,
+          33,
+          56,
+          56,
+          67,
+          56,
+          37,
+          38,
+          38,
+          4
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "TW",
+        "level": "standard"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 0
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "newYear",
+          "start": 0,
+          "end": 1,
+          "boost": 50
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 1
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 43
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "springFestival",
+          "start": 43,
+          "end": 52,
+          "boost": 200
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 51
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "springFestival",
+          "start": 43,
+          "end": 52,
+          "boost": 200
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 52
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 279
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "nationalDay",
+          "start": 279,
+          "end": 280,
+          "boost": 100
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 407
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "springFestival",
+          "start": 403,
+          "end": 412,
+          "boost": 200
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": -81
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "nationalDay",
+          "start": -81,
+          "end": -80,
+          "boost": 100
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 1050,
+        "hourly": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          36,
+          116,
+          180,
+          116,
+          40,
+          33,
+          33,
+          34,
+          34,
+          35,
+          59,
+          58,
+          70,
+          58,
+          39,
+          40,
+          41,
+          4
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "CN",
+        "level": "standard"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 0
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "newYear",
+          "start": 0,
+          "end": 3,
+          "boost": 50
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 270
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "nationalDay",
+          "start": 270,
+          "end": 277,
+          "boost": 100
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 279
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "level": null
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 0
+      },
+      "expect": {
+        "found": false
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 1000,
+        "hourly": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          34,
+          111,
+          171,
+          111,
+          38,
+          31,
+          31,
+          32,
+          32,
+          33,
+          56,
+          56,
+          67,
+          56,
+          37,
+          38,
+          38,
+          4
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "TW",
+        "level": "light"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 43
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "springFestival",
+          "start": 43,
+          "end": 52,
+          "boost": 100
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 0
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "newYear",
+          "start": 0,
+          "end": 1,
+          "boost": 25
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 1025,
+        "hourly": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          35,
+          114,
+          175,
+          114,
+          39,
+          32,
+          32,
+          33,
+          33,
+          34,
+          57,
+          57,
+          68,
+          57,
+          38,
+          39,
+          40,
+          4
+        ]
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 0,
+    "speed": "normal",
+    "balance": 1000,
+    "stations": [
+      {
+        "id": 1,
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      {
+        "id": 2,
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      }
+    ],
+    "trains": [],
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Main",
+        "patterns": [],
+        "stops": [
+          1,
+          2
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 1,
+        "waiting": []
+      },
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "office"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 2,
+        "waiting": []
+      }
+    ],
+    "riders": [],
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "disruptions": {
+      "country": "TW",
+      "level": "light"
+    }
+  }
+}

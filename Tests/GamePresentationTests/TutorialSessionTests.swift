@@ -303,7 +303,8 @@ final class TutorialSessionTests: XCTestCase {
     }
 
     /// The start screen's tutorial entry starts a new game on the first
-    /// step, keeping the autosave as starting a new game does.
+    /// step, keeping the autosave as starting a new game does; the
+    /// tutorial's game keeps no holidays (decision 154).
     func testTheStartScreenStartsANewGameWithTheTutorial() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -311,7 +312,10 @@ final class TutorialSessionTests: XCTestCase {
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startTutorial()
             let session = try XCTUnwrap(launcher.session)
-            XCTAssertEqual(session.world, .newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed)))
+            // A new game, without its holidays (decision 154).
+            var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
+            expected.setDisruptions(nil)
+            XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.tutorial?.index, 0)
             XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)
         }
@@ -355,6 +359,29 @@ final class TutorialSessionTests: XCTestCase {
             }
             XCTAssertNotEqual(step.body(in: .traditionalChinese), step.body(in: .english), step.id)
             XCTAssertEqual(Set(step.targets).count, step.targets.count, step.id)
+        }
+    }
+
+    /// The second-station step says short trips walk, up to 2 km, only
+    /// where they do: a world with demand by distance (decision 137). A
+    /// demo or a save from before it has none, and the step leaves it out.
+    func testTheStepsSayShortTripsWalkOnlyWhereTheyDo() async throws {
+        await MainActor.run {
+            @MainActor func secondStation(_ session: GameSession) -> String {
+                session.startTutorial()
+                return session.tutorial?.steps.first { $0.id == "build.secondStation" }?.body(in: .english) ?? ""
+            }
+            let distanced = GameSession(world: .newGame(), language: .english)
+            XCTAssertTrue(distanced.world.distanceDemand)
+            XCTAssertTrue(secondStation(distanced).contains("up to 2 km"))
+            XCTAssertEqual(distanced.tutorial?.steps, Tutorial.standardSteps)
+
+            var world = GameWorld.newGame()
+            world.setDistanceDemand(false)
+            let plain = GameSession(world: world, language: .english)
+            let body = secondStation(plain)
+            XCTAssertFalse(body.contains("2 km"), body)
+            XCTAssertTrue(body.hasSuffix("add a platform there too."), body)
         }
     }
 

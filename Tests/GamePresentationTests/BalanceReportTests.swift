@@ -166,6 +166,64 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Freight (decision 155): the line of ``testALineBetweenTwoTowns`` (the
+    /// first town to the second, 5.4 km, one train of four cars) as a
+    /// freight line between two freight yards, with industry round the
+    /// first yard of 10, 60 and 150 cells of 29 jobs (the real-world map's
+    /// factory cell), next to the passenger line itself. Shows what the
+    /// ton-kilometre fare must be for freight to pay about as a passenger
+    /// line does, and whether the yard fills or the train does.
+    func testAFreightLine() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var lines = [
+            "### A freight line between two towns (seed 1, 5.4 km, one train of four cars), \(days) days",
+            "",
+            "| Line | Built for | Made a day | Carried a day | Yard 1 / spilled | Freight a day (day 3) | Operating profit (day 3) | Payback | Balance |",
+            "| --- | --: | --: | --: | --- | --: | --: | --: | --: |",
+        ]
+        var worlds: [(String, GameWorld)] = [("Passengers", try newGameLine(through: [towns[0], towns[1]]))]
+        for cells in [10, 60, 150] {
+            var world = try newGameLine(through: [towns[0], towns[1]])
+            let line = try XCTUnwrap(world.lines.first)
+            let train = try XCTUnwrap(line.assignedTrains.first)
+            try world.unassignTrain(train)
+            try world.setLineFreight(line.id, to: true)
+            try world.assignTrain(train, to: line.id)
+            for station in world.stations.map(\.id) { try world.buildFreightFacility(at: station) }
+            // Industry in a block of cells beside the first town's centre,
+            // on cells with nobody on them.
+            var land = world.land.cells
+            let first = try XCTUnwrap(world.stations.first).point
+            let row = Int(first.y / Land.cellLength) - 8, column = Int(first.x / Land.cellLength) - 8
+            var added = 0, step = 0
+            while added < cells {
+                let cell = LandCell(row: row + step / 12, column: column + step % 12, use: .industrial, residents: 0, jobs: 29)
+                step += 1
+                guard !land.contains(where: { $0.row == cell.row && $0.column == cell.column }) else { continue }
+                land.append(cell)
+                added += 1
+            }
+            try world.setLand(land)
+            worlds.append(("Freight, \(cells) cells of industry", world))
+        }
+        for (name, start) in worlds {
+            var world = start
+            let cost = GameWorld.startingBalance - world.economy.balance
+            try world.advance(ticks: 1 + 3 * 1_440)
+            let report = world.financeReport(.day).previous
+            try world.advance(ticks: (days - 3) * 1_440)
+            let state = world.freight ?? FreightState()
+            let made = state.produced / Int64(days), carried = state.delivered / Int64(days)
+            let payback = report.operatingProfit.amount > 0 ? "\(cost.amount / report.operatingProfit.amount) days" : "never"
+            lines.append(
+                "| \(name) | \(dollars(cost.amount)) | \(made) t | \(carried) t | \(state.facilities.first?.stock ?? 0) t / \(state.spilled) t | "
+                    + "\(dollars(report.freightRevenue.amount)) | \(dollars(report.operatingProfit.amount)) | \(payback) | \(dollars(world.economy.balance.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// The demo map (decision 78): three lines and four trains, $2,291,200.
     func testTheDemoMap() throws {
         let days = try requestedDays()

@@ -78,6 +78,8 @@ public enum PingxiChallenge {
             return ScenarioEvent(station: station.id, dayOfYear: festivalDay, days: festivalDays, boost: festivalBoost, notice: festivalNotice)
         }
         let rules = Challenge.pingxi.scenario(seed: 0, in: world.bounds)
+        // Decision 154: its targets were measured without holidays.
+        world.setDisruptions(nil)
         do {
             try world.startScenario(Scenario(
                 id: rules.id, goals: rules.goals, goldDays: rules.goldDays, silverDays: rules.silverDays, deadlineDays: rules.deadlineDays,

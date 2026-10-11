@@ -22,6 +22,7 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         // one from beyond the map.
         XCTAssertEqual(world.landBlocks, [])
         XCTAssertFalse(world.outsideConnections)
+        XCTAssertNil(world.disruptions)
     }
 
     func testItsGoalsAreTheMilestonesAndTheRiders() throws {

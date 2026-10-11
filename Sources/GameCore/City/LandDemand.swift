@@ -612,8 +612,10 @@ extension GameWorld {
         let other = min(total, Self.grown(share.civicJobs + share.leisureJobs + frontOther * extra, rate))
         // Per thousand residents, at most a thousand jobs a resident, so the
         // weights stay below 2^31 and their products with the people inside
-        // an `Int64`.
-        func perThousand(_ jobs: Int64) -> Int64 { min(1_000_000, jobs / 1_000) }
+        // an `Int64`; a kind the city has any of weighs at least 1, so
+        // under a job a thousand residents does not round to none (with
+        // no demand for homes, every weight was 0 and nothing grew).
+        func perThousand(_ jobs: Int64) -> Int64 { jobs > 0 ? max(1, min(1_000_000, jobs / 1_000)) : 0 }
         let plain = [1_000, perThousand(mix.shopJobs), perThousand(mix.workJobs)]
         let steered = zip(plain, [levels.homes, levels.shops, levels.work]).map { $0 * (1_000 + $1) }
         // What each kind has room for: the cells that would take a share of

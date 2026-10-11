@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 56
+    static let schemaVersion = 58
 
     var description: String
     var initialState: InitialState
@@ -171,6 +171,18 @@ struct GoldenScenario: Decodable {
         }
     }
 
+    /// Whether a step sets or observes public holidays (schema 57,
+    /// decision 154), which the reference model does not keep:
+    /// ``HolidayTests`` checks them.
+    var usesHolidays: Bool {
+        steps.contains { step in
+            switch step {
+            case .command(.setDisruptions, _), .observe(.holiday, _): true
+            default: false
+            }
+        }
+    }
+
     var usesPassengerNetwork: Bool {
         steps.contains { step in
             switch step {
@@ -191,6 +203,7 @@ struct GoldenScenario: Decodable {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
+                 .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -262,6 +275,7 @@ extension GoldenScenario.Step: Decodable {
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
+        case holiday
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -305,6 +319,9 @@ extension GoldenScenario.Step: Decodable {
             case .water:
                 try requireOnly([.water], answering: "water")
                 self = try .observe(observation, expect: .water(expect.decode(Bool.self, forKey: .water)))
+            case .holiday:
+                try requireOnly([.found, .holiday], answering: "holiday")
+                self = try .observe(observation, expect: .holiday(Self.found(expect, .holiday, HolidaySummary.self)))
             case .cityDemand:
                 try requireOnly([.cityDemand], answering: "cityDemand")
                 self = try .observe(observation, expect: .cityDemand(expect.decode(CityDemandSummary.self, forKey: .cityDemand)))
@@ -536,6 +553,13 @@ enum ScenarioCommand: Equatable {
     case setCityFootprints(Bool)
     /// Schema 55 (decision 146): buying out by area.
     case setAreaBuyOut(Bool)
+    /// Schema 57 (decision 154): the country whose holidays the world
+    /// keeps and the level, or off.
+    case setDisruptions(Disruptions?)
+    /// Schema 58 (decision 155): freight.
+    case enableFreight
+    case buildFreightFacility(StationID)
+    case setLineFreight(LineID, Bool)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -664,6 +688,14 @@ enum ScenarioCommand: Equatable {
                 world.setCityFootprints(enabled)
             case .setAreaBuyOut(let enabled):
                 world.setAreaBuyOut(enabled)
+            case .setDisruptions(let disruptions):
+                world.setDisruptions(disruptions)
+            case .enableFreight:
+                world.enableFreight()
+            case .buildFreightFacility(let id):
+                try world.buildFreightFacility(at: id)
+            case .setLineFreight(let line, let freight):
+                try world.setLineFreight(line, to: freight)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -698,6 +730,7 @@ extension ScenarioCommand: Decodable {
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, station, cars, ring
         case z, from, to, curve, edge, node, path
         case profile, structure, start, end, enabled, demand, mode, rules
+        case country, level
         case performance, point, routePreferences
         case lineRuns
         case seed, cells
@@ -733,6 +766,28 @@ extension ScenarioCommand: Decodable {
         // Schema 55: buying out by area (decision 146).
         case "setAreaBuyOut":
             self = try .setAreaBuyOut(container.decode(Bool.self, forKey: .enabled))
+        // Schema 57: public holidays (decision 154). `"level"` is required,
+        // `null` for off; `"country"` with a level, a code the calendar has.
+        case "setDisruptions":
+            guard container.contains(.level) else {
+                throw DecodingError.keyNotFound(CodingKeys.level, DecodingError.Context(codingPath: container.codingPath, debugDescription: "setDisruptions needs \"level\"."))
+            }
+            guard let level = try container.decodeIfPresent(String.self, forKey: .level) else {
+                self = .setDisruptions(nil)
+                return
+            }
+            let country = try container.decode(String.self, forKey: .country)
+            guard let parsed = DisruptionLevel(rawValue: level), let disruptions = Disruptions(level: parsed, country: country) else {
+                throw DecodingError.dataCorruptedError(forKey: .country, in: container, debugDescription: "No disruptions at \(level) for \(country).")
+            }
+            self = .setDisruptions(disruptions)
+        // Schema 58: freight (decision 155).
+        case "enableFreight":
+            self = .enableFreight
+        case "buildFreightFacility":
+            self = try .buildFreightFacility(container.decodeStation(forKey: .station))
+        case "setLineFreight":
+            self = try .setLineFreight(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1129,6 +1184,13 @@ extension StepOutcome: Codable {
             self = .rejected(.needsShore)
         case "onWater":
             self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
+        // Schema 58 (decision 155).
+        case "freightNotEnabled":
+            self = .rejected(.freightNotEnabled)
+        case "freightFacilityExists":
+            self = try .rejected(.freightFacilityExists(container.decodeStation(forKey: .station)))
+        case "noFreightFacility":
+            self = try .rejected(.noFreightFacility(container.decodeStation(forKey: .station)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1313,6 +1375,14 @@ extension StepOutcome: Codable {
             try container.encode("onSteepSlope", forKey: .result)
             try container.encode(row, forKey: .row)
             try container.encode(column, forKey: .column)
+        case .rejected(.freightNotEnabled):
+            try container.encode("freightNotEnabled", forKey: .result)
+        case .rejected(.freightFacilityExists(let id)):
+            try container.encode("freightFacilityExists", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.noFreightFacility(let id)):
+            try container.encode("noFreightFacility", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
         case .rejected(.onWater(let row, let column)):
             try container.encode("onWater", forKey: .result)
             try container.encode(row, forKey: .row)
@@ -1401,6 +1471,8 @@ enum ScenarioObservation: Equatable {
     /// Schema 53 (decision 139): the city's demand for homes, shops and
     /// work.
     case cityDemand
+    /// Schema 57 (decision 154): the holiday running on a game day.
+    case holiday(day: Int64)
     /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
     /// Schema 47 (decision 124): the ground's height at a point, in world
@@ -1427,6 +1499,8 @@ enum ScenarioObservation: Equatable {
             .water(world.isWater(row: row, column: column))
         case .cityDemand:
             .cityDemand(CityDemandSummary(world.cityDemandLevels))
+        case .holiday(let day):
+            .holiday(world.holiday(onDay: day).map(HolidaySummary.init))
         case .steep(let row, let column):
             .steep(world.isSteep(row: row, column: column))
         case .groundHeight(let point):
@@ -1527,6 +1601,7 @@ extension ScenarioObservation: Decodable {
         case edge, direction, distance, node, period
         case row, column
         case point
+        case day
     }
 
     init(from decoder: any Decoder) throws {
@@ -1568,6 +1643,9 @@ extension ScenarioObservation: Decodable {
         // Schema 53: the city's demand (decision 139).
         case "cityDemand":
             self = .cityDemand
+        // Schema 57: public holidays (decision 154).
+        case "holiday":
+            self = try .holiday(day: container.decode(Int64.self, forKey: .day))
         // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
@@ -1753,6 +1831,24 @@ enum ObservationAnswer: Equatable {
     case steep(Bool)
     case groundHeight(Int64?)
     case cityDemand(CityDemandSummary)
+    case holiday(HolidaySummary?)
+}
+
+/// Schema 57 (decision 154): a holiday's run, `{"kind", "start", "end",
+/// "boost"}`: its kind, its first game day, the day after its last, and
+/// what it adds to demand in thousandths.
+struct HolidaySummary: Codable, Equatable {
+    var kind: String
+    var start: Int64
+    var end: Int64
+    var boost: Int64
+
+    init(_ run: HolidayRun) {
+        kind = run.holiday.kind.rawValue
+        start = run.start
+        end = run.end
+        boost = run.boost
+    }
 }
 
 /// Schema 53 (decision 139): the city's demand, in thousandths from −1000
@@ -1779,6 +1875,7 @@ extension ObservationAnswer: Encodable {
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
+        case holiday
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1864,7 +1961,7 @@ extension ObservationAnswer: Encodable {
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
         case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil),
-             .groundHeight(nil), .buildingSale(nil):
+             .groundHeight(nil), .buildingSale(nil), .holiday(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -1899,6 +1996,9 @@ extension ObservationAnswer: Encodable {
         case .groundHeight(let height?):
             try container.encode(true, forKey: .found)
             try container.encode(height, forKey: .groundHeight)
+        case .holiday(let run?):
+            try container.encode(true, forKey: .found)
+            try container.encode(run, forKey: .holiday)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -1995,6 +2095,9 @@ struct WorldSummary: Codable, Equatable {
     /// Whether the company's buildings buy out by area (schema 55,
     /// decision 146); left out while it is off.
     var areaBuyOut: Bool?
+    /// The world's freight (schema 58, decision 155): its facilities, the
+    /// cargo on its trains and the totals; left out while freight is off.
+    var freight: FreightSummary?
     /// How many buildings of each density stand while the city's buildings
     /// are on (schema 37, Phase 6c-1); left out while they are off.
     var cityBuildings: CityBuildingsSummary?
@@ -2013,6 +2116,14 @@ struct WorldSummary: Codable, Equatable {
     /// How many blocks of the ground's height are read (schema 47, decision
     /// 124); left out when none is.
     var groundBlocks: Int?
+    /// The country whose holidays the world keeps and the level (schema
+    /// 57, decision 154), `{"country", "level"}`; left out while off.
+    var disruptions: DisruptionsSummary?
+
+    struct DisruptionsSummary: Codable, Equatable {
+        var country: String
+        var level: String
+    }
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
     /// { "x", "y" } }`. A station on tiles (`"x"`, `"y"` and `"annexes"`)
@@ -2230,12 +2341,14 @@ struct WorldSummary: Codable, Equatable {
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil
         areaBuyOut = world.areaBuyOut ? true : nil
+        freight = world.freight.map(FreightSummary.init)
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }
         water = world.terrain.water.isEmpty ? nil : world.terrain.waterCellCount
         steep = world.terrain.steep.isEmpty ? nil : world.terrain.steepCellCount
         groundBlocks = world.ground.isEmpty ? nil : world.ground.blocks.count
+        disruptions = world.disruptions.map { DisruptionsSummary(country: $0.country, level: $0.level.rawValue) }
     }
 }
 
@@ -2709,6 +2822,8 @@ struct LineSummary: Codable, Equatable {
     /// written only for a line with runs.
     var runs: [LineRun] = []
     var runDays: [Int64?] = []
+    /// Schema 58 (decision 155): written as `true` for a freight line only.
+    var isFreight = false
 
     init(
         id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
@@ -2743,12 +2858,14 @@ struct LineSummary: Codable, Equatable {
         routePreferences = line.routePreferences
         runs = line.runs
         runDays = line.runDays
+        isFreight = line.isFreight
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, routePreferences
         case isRing = "ring", outerLastDispatch
         case runs, runDays
+        case isFreight = "freight"
     }
 
     init(from decoder: any Decoder) throws {
@@ -2772,6 +2889,13 @@ struct LineSummary: Codable, Equatable {
         if container.contains(.runs) {
             runs = try container.decode([LineRun].self, forKey: .runs)
             runDays = try container.decode([Int64?].self, forKey: .runDays)
+        }
+        // Schema 58: a freight line says so, with `true`.
+        if container.contains(.isFreight) {
+            guard try container.decode(Bool.self, forKey: .isFreight) else {
+                throw DecodingError.dataCorruptedError(forKey: .isFreight, in: container, debugDescription: "\"freight\" is written only as true.")
+            }
+            isFreight = true
         }
         // Schema 27: a ring says so, and its outer dispatch is then
         // required; a line that is not a ring writes neither.
@@ -2812,6 +2936,7 @@ struct LineSummary: Codable, Equatable {
             try container.encode(runs, forKey: .runs)
             try container.encode(runDays, forKey: .runDays)
         }
+        if isFreight { try container.encode(true, forKey: .isFreight) }
         if isRing {
             try container.encode(true, forKey: .isRing)
             if let outerLastDispatch {
@@ -4157,6 +4282,46 @@ struct DaySummary: Codable, Equatable {
 /// kept here in seconds (Stage W2a), since a company opened between two
 /// minutes has no whole minute to write; such a time is printed in
 /// diagnostics as `"openedAtSeconds"`.
+/// Schema 58 (decision 155): `{"facilities": [{"station", "stock"}], "loads":
+/// [{"train", "groups": [{"origin", "tons"}]}], "pendingRevenue", "produced",
+/// "delivered", "spilled", "lost"}`.
+struct FreightSummary: Codable, Equatable {
+    struct Facility: Codable, Equatable {
+        var station: Int
+        var stock: Int64
+    }
+
+    struct Group: Codable, Equatable {
+        var origin: Int
+        var tons: Int64
+    }
+
+    struct Load: Codable, Equatable {
+        var train: Int
+        var groups: [Group]
+    }
+
+    var facilities: [Facility]
+    var loads: [Load]
+    var pendingRevenue: Int64
+    var produced: Int64
+    var delivered: Int64
+    var spilled: Int64
+    var lost: Int64
+
+    init(_ state: FreightState) {
+        facilities = state.facilities.map { Facility(station: $0.station.rawValue, stock: $0.stock) }
+        loads = state.loads.map { load in
+            Load(train: load.train.rawValue, groups: load.groups.map { Group(origin: $0.origin.rawValue, tons: $0.tons) })
+        }
+        pendingRevenue = state.pendingRevenue.amount
+        produced = state.produced
+        delivered = state.delivered
+        spilled = state.spilled
+        lost = state.lost
+    }
+}
+
 struct AccountsSummary: Codable, Equatable {
     var mode: String
     var fareRules: FareRulesSummary?

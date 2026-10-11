@@ -158,6 +158,31 @@ final class DistanceDemandTests: XCTestCase {
         XCTAssertEqual(world.dailyDemand(from: west, to: east), 2_647)
     }
 
+    /// Two outside connections side by side are not a long-distance trip:
+    /// only a pair with one end outside goes beyond the map, so a pair with
+    /// both keeps the share of its distance (decision 148). A shuttle 300 m
+    /// along the edge no longer carries all of both connections' visitors.
+    func testTwoOutsideConnectionsSideBySideKeepTheShareOfTheirDistance() throws {
+        var world = try edgeWorld()
+        let town = a, west = b
+        // 300 m north of West, by the same edge.
+        let north = try world.buildStation(named: "North", at: PlanPoint(x: 30_000, y: Self.middle + 19_200)).id
+        try world.createLine(named: "Shuttle", stops: [west, north])
+        try world.createLine(named: "Town", stops: [town, west])
+        world.setDistanceDemand(true)
+        world.setOutsideConnections(true)
+        XCTAssertTrue(world.isOutsideConnection(west))
+        XCTAssertTrue(world.isOutsideConnection(north))
+        // The outside's 6,000 shared by three connections, 2,000 each.
+        // West's, shared by what it reaches, Town's 400 and North's 2,000:
+        // 333.3 and 1,666.7, rounded to 333 and 1,667; North's keeps a
+        // tenth (300 m), 166.7 rounded half up. North reaches only West:
+        // its 2,000 keep 200. Town's pair keeps all, one end outside.
+        XCTAssertEqual(world.dailyDemand(from: west, to: north), 167)
+        XCTAssertEqual(world.dailyDemand(from: north, to: west), 200)
+        XCTAssertEqual(world.dailyDemand(from: west, to: town), 333)
+    }
+
     func testBoardingAtAnOutsideConnectionChargesTheLongDistanceFare() throws {
         var world = try edgeWorld()
         world.setOutsideConnections(true)

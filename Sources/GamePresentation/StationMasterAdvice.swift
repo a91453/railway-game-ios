@@ -33,13 +33,20 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 128: the town round a station grew yesterday, by `tenths`
     /// of a percent: the most of any.
     case townGrew(station: StationID, name: String, tenths: Int64)
+    /// Decision 154: a public holiday starts in `days` days (1 to 3),
+    /// raising demand on every line by `percent`.
+    case holidayComing(kind: HolidayKind, days: Int64, percent: Int64)
+    /// Decision 154: the holiday that ended yesterday carried `riders` a
+    /// day, `percent` more than the days before it.
+    case holidayOver(kind: HolidayKind, riders: Int64, percent: Int64)
 
     /// The advice for `world`, or `nil` when all runs well. The worries
     /// first (debt, a full station, a line no one rides, a crowded
     /// station; the lowest ID of each), then the next step of building a
-    /// first line, then how the towns grow (decision 128): a station that
-    /// served too few to grow taller (the lowest ID), else the town that
-    /// grew most.
+    /// first line, then a public holiday about to start or just over
+    /// (decision 154), then how the towns grow (decision 128): a station
+    /// that served too few to grow taller (the lowest ID), else the town
+    /// that grew most.
     public init?(world: GameWorld) {
         if world.accounts.mode == .management, world.economy.balance < .zero {
             self = .inDebt
@@ -69,11 +76,26 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .buildSecondStation
         } else if world.lines.isEmpty {
             self = .createLine
+        } else if let holiday = Self.holiday(in: world) {
+            self = holiday
         } else if let growth = Self.growth(in: world) {
             self = growth
         } else {
             return nil
         }
+    }
+
+    /// Decision 154: a holiday starting in one to three days, else the
+    /// review of one that ended yesterday.
+    private static func holiday(in world: GameWorld) -> StationMasterAdvice? {
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        if let coming = world.holidays(from: today + 1, through: today + 3).first(where: { $0.start > today }) {
+            return .holidayComing(kind: coming.holiday.kind, days: coming.start - today, percent: (coming.boost + 5) / 10)
+        }
+        if let review = world.holidayReview() {
+            return .holidayOver(kind: review.kind, riders: review.riders, percent: review.percent)
+        }
+        return nil
     }
 
     /// Decision 128: what the last midnight's growth says, where the land
@@ -153,6 +175,21 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "The town round \(name) grew \(tenths / 10).\(tenths % 10)% yesterday. Good service keeps it growing, fastest within 250 m of the station.",
                 "「\(name)」附近的城市昨天成長了 \(tenths / 10).\(tenths % 10)%。服務好，城市就會繼續長大，車站 250 公尺內長得最快。"
             )
+        case .holidayComing(let kind, let days, let percent):
+            language.text(
+                "\(kind.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): about \(percent)% more passengers on every line. Add trains or cars before it.",
+                "\(days) 天後是\(kind.title(in: language))，各線旅客約多 \(percent)%。先加開列車或加掛車廂吧。"
+            )
+        case .holidayOver(let kind, let riders, let percent):
+            percent >= 0
+                ? language.text(
+                    "\(kind.title(in: language)) is over: \(Money(riders).displayText) riders a day, \(percent)% more than before it.",
+                    "\(kind.title(in: language))結束了：每天 \(Money(riders).displayText) 人次，比連假前多 \(percent)%。"
+                )
+                : language.text(
+                    "\(kind.title(in: language)) is over: \(Money(riders).displayText) riders a day, \(-percent)% fewer than before it. Were the trains full?",
+                    "\(kind.title(in: language))結束了：每天 \(Money(riders).displayText) 人次，比連假前少 \(-percent)%。是不是車太擠了？"
+                )
         }
     }
 
@@ -161,7 +198,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     public var isWorry: Bool {
         switch self {
         case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved: true
-        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew: false
+        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver: false
         }
     }
 }

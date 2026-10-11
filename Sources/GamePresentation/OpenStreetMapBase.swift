@@ -12,7 +12,9 @@ import GameCore
 /// which style to load and how to label it.
 public enum OpenStreetMapBase {
     /// OpenFreeMap's Positron, light and muted so the railway stands out
-    /// (`Ci/`'s default `positron`), or its Dark for the dark appearance.
+    /// (`Ci/`'s default `positron`), or its Dark for the dark appearance:
+    /// since decision 151 only when the game's own style (``BaseMapStyle``)
+    /// cannot be written for MapLibre to load.
     public static func styleURL(dark: Bool) -> String {
         dark ? "https://tiles.openfreemap.org/styles/dark" : "https://tiles.openfreemap.org/styles/positron"
     }

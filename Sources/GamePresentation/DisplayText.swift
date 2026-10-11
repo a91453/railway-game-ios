@@ -428,6 +428,12 @@ extension GameError {
             )
         case .structureTooHigh:
             language.text("A viaduct or bridge stands at most 64 m above the ground.", "高架或橋離地面最多 64 公尺。")
+        case .freightNotEnabled:
+            language.text("This game has no freight.", "這局遊戲沒有貨運。")
+        case .freightFacilityExists(let id):
+            language.text("Station #\(id.rawValue) already has a freight yard.", "車站 #\(id.rawValue) 已經有貨運場。")
+        case .noFreightFacility(let id):
+            language.text("Station #\(id.rawValue) has no freight yard.", "車站 #\(id.rawValue) 沒有貨運場。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",

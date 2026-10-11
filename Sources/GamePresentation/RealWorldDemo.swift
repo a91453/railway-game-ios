@@ -179,9 +179,14 @@ public enum RealWorldDemo {
                 return (at - loopReach, at + loopReach)
             }
             let junction = loopEnds[0].0
+            // Through the passing loops both tracks keep within
+            // closeTolerance of their paths, as the ground demo's do: 5 m
+            // apart, they must keep RailwayNetwork.trackSpacing (4 m) clear
+            // of each other whatever the curve (decision 151 found a fit
+            // 1 m off at Houtong once the line followed OSM).
             let main = TrackPlan(
                 mainPath, forced: [0, mainPath.length] + loopEnds.flatMap { [$0.0, $0.1] }, avoiding: mainPlatforms,
-                close: [(junction - besideReach)...junction]
+                close: [(junction - besideReach)...junction] + loopEnds.map { $0.0...$0.1 }
             )
 
             // Each loop leaves the main track at one node and joins it again
@@ -189,7 +194,7 @@ public enum RealWorldDemo {
             let loops = loopEnds.map { ends in
                 let path = mainPath.offset(from: ends.0, to: ends.1, by: loopOffset, ramp: loopRamp)
                 return TrackPlan(
-                    path, forced: [0, path.length], avoiding: [middlePlatform(of: path)],
+                    path, forced: [0, path.length], avoiding: [middlePlatform(of: path)], close: [0...path.length],
                     start: main.node(at: ends.0), end: main.node(at: ends.1)
                 )
             }
@@ -236,7 +241,9 @@ public enum RealWorldDemo {
             var loopTracks: [Track] = []
             for (plan, ends) in zip(loops, loopEnds) {
                 guard let start = mainTrack.node(at: ends.0), let end = mainTrack.node(at: ends.1) else { preconditionFailure("A loop's ends are not nodes") }
-                loopTracks.append(try plan.build(in: &world, start: start, end: end))
+                // Together: a ramp's first piece runs within 4 m of the main
+                // and parts from it only by way of the next.
+                loopTracks.append(try plan.build(in: &world, start: start, end: end, together: true))
             }
             guard let junctionNode = mainTrack.node(at: junction) else { preconditionFailure("The junction is not a node") }
             let branchTrack = try branch.build(in: &world, start: junctionNode)

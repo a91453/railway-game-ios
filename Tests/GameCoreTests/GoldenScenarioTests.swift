@@ -496,6 +496,15 @@ final class GoldenScenarioTests: XCTestCase {
             return [.cityDemand(homes), .cityDemand(shops), .cityDemand(work)]
         case .steep(let steep):
             return [.steep(!steep)]
+        case .holiday(nil):
+            return []
+        case .holiday(let run?):
+            var kind = run, start = run, end = run, boost = run
+            kind.kind = run.kind == "newYear" ? "nationalDay" : "newYear"
+            start.start += 1
+            end.end += 1
+            boost.boost += 1
+            return [.holiday(nil), .holiday(kind), .holiday(start), .holiday(end), .holiday(boost)]
         case .groundHeight(nil):
             return [.groundHeight(0)]
         case .groundHeight(let height?):

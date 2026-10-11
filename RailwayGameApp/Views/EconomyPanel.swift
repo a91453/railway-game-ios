@@ -188,6 +188,12 @@ struct EconomyPanel: View {
                 LabeledContent(total.item.displayName(in: session.language), value: total.amountText)
                     .monospacedDigit()
             }
+            // Decision 155: the tons made and carried, once there is any.
+            if let freight = session.world.freightTotalsText(in: session.language) {
+                Text(verbatim: freight)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 

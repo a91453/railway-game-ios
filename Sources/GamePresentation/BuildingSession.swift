@@ -242,10 +242,14 @@ extension GameSession {
             cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
             let building = try world.placeBuilding(kind, at: point)
             let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
-            let bought = cleared == 0 ? ("", "") : (
+            var bought = cleared == 0 ? ("", "") : (
                 cleared == 1 ? ", pulling down 1 city building" : ", pulling down \(cleared) city buildings",
                 "，拆除城市建物 \(cleared) 棟"
             )
+            // Decision 146: buying out by area, who moved in.
+            if world.areaBuyOut, let movingIn = Self.movingInText(residents: building.residents, jobs: building.jobs, moving: true) {
+                bought = (bought.0 + ", " + movingIn.english, bought.1 + "，" + movingIn.chinese)
+            }
             guard building.cost > .zero else {
                 return language.text("Built \(english) #\(id)\(bought.0).", "蓋好\(chinese) #\(id)\(bought.1)。")
             }
@@ -321,8 +325,11 @@ extension GameSession {
         let kind = buildingKind
         var draft = world
         let cost: Money?, problem: String?
+        var movingIn: (residents: Int64, jobs: Int64) = (0, 0)
         do throws(GameError) {
-            cost = try draft.placeBuilding(kind, at: site).cost
+            let placed = try draft.placeBuilding(kind, at: site)
+            cost = placed.cost
+            movingIn = (placed.residents, placed.jobs)
             problem = nil
         } catch {
             cost = nil
@@ -330,19 +337,24 @@ extension GameSession {
         }
         return BuildingPreview(
             kind: kind, centre: site, cost: cost, problem: problem,
-            quote: world.placedBuildingQuote(kind, at: site) ?? PlacedBuildingQuote(building: .zero, land: .zero)
+            quote: world.placedBuildingQuote(kind, at: site) ?? PlacedBuildingQuote(building: .zero, land: .zero),
+            residentsMovingIn: movingIn.residents, jobsMovingIn: movingIn.jobs
         )
     }
 
     /// What the preview says under the building tool: why it cannot be
     /// built, or what a managed company pays for what, and the city's
-    /// buildings it pulls down.
+    /// buildings it pulls down; buying out by area (decision 146), in
+    /// free play too, who moves in.
     public var buildingPreviewText: String? {
         guard let preview = buildingPreview else { return nil }
         if let problem = preview.problem { return problem }
         let quote = preview.quote
         let count = quote.cleared.count
         var english: [String] = [], chinese: [String] = []
+        let movingIn = world.areaBuyOut
+            ? Self.movingInText(residents: preview.residentsMovingIn, jobs: preview.jobsMovingIn, moving: false)
+            : nil
         if world.accounts.mode == .management {
             english.append("Building \(quote.building.moneyText) + land \(quote.land.moneyText)")
             chinese.append("建物 \(quote.building.moneyText) + 土地 \(quote.land.moneyText)")
@@ -357,10 +369,32 @@ extension GameSession {
         } else if count > 0 {
             english.append(count == 1 ? "Pulls down 1 city building" : "Pulls down \(count) city buildings")
             chinese.append("拆除城市建物 \(count) 棟")
-        } else {
+        } else if movingIn == nil {
             return nil
         }
+        if let movingIn {
+            english.append(movingIn.english)
+            chinese.append(movingIn.chinese)
+        }
         return language.text(english.joined(separator: ", "), chinese.joined(separator: "，"))
+    }
+
+    /// Who moves into a building buying out by area (decision 146): the
+    /// share of each covered cell's residents and jobs, as the preview
+    /// (`moving` false: "move in") or the message once it stands (`moving`
+    /// true: "moving in") says it; `nil` when no one does.
+    static func movingInText(residents: Int64, jobs: Int64, moving: Bool) -> (english: String, chinese: String)? {
+        guard residents > 0 || jobs > 0 else { return nil }
+        var english: [String] = [], chinese: [String] = []
+        if residents > 0 {
+            english.append(residents == 1 ? "1 resident" : "\(residents) residents")
+            chinese.append("居民 \(residents) 人")
+        }
+        if jobs > 0 {
+            english.append(jobs == 1 ? "1 job" : "\(jobs) jobs")
+            chinese.append("工作 \(jobs) 個")
+        }
+        return (english.joined(separator: " and ") + (moving ? " moving in" : " move in"), "搬進" + chinese.joined(separator: "、"))
     }
 
     /// What the map draws for the building tool; `nil` with another tool.
@@ -438,6 +472,10 @@ public struct BuildingPreview: Hashable, Sendable {
     /// The parts of what it costs, and the cells whose city buildings it
     /// would buy out.
     public let quote: PlacedBuildingQuote
+    /// The residents and jobs that would move in from the cells it buys
+    /// out (decision 146: a share of each, by area); 0 when it is refused.
+    public var residentsMovingIn: Int64 = 0
+    public var jobsMovingIn: Int64 = 0
 }
 
 /// A rectangle of the plan, in world units: `minX ..< maxX` by `minY ..< maxY`.

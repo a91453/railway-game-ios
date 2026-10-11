@@ -146,6 +146,9 @@ extension GameWorld {
     /// drawn from `seed`, the goals judged from its first midnight.
     public static func newGame(challenge: Challenge, eventSeed: UInt32) -> GameWorld {
         var world = newGame(eventSeed: eventSeed)
+        // Decision 154: the challenges' targets were measured without
+        // holidays (decision 145), so they keep none.
+        world.setDisruptions(nil)
         do {
             try world.startScenario(challenge.scenario(seed: eventSeed, in: world.bounds))
         } catch {
