@@ -55,6 +55,7 @@ struct HUDView: View {
     private var gameMenu: some View {
         Menu {
             Button {
+                UITestTrace.action("menu.saveGame")
                 launcher.saveCurrentGame()
             } label: {
                 Label("Save Game", systemImage: "square.and.arrow.down")

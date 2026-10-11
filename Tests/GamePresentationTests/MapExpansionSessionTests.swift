@@ -60,13 +60,59 @@ final class MapExpansionSessionTests: XCTestCase {
         let cells = free.world.land.cells.count
         XCTAssertTrue(free.buyChosenMapTile())
         XCTAssertEqual(free.message?.text, "Bought the tile for $ 5,000,000. Its towns wait for your railway.")
-        XCTAssertFalse(free.isChoosingMapTile)
+        // Still choosing, the tile let go of (decision 160, later).
+        XCTAssertTrue(free.isChoosingMapTile)
+        XCTAssertNil(free.chosenMapTile)
         XCTAssertEqual(free.world.economy.balance, balance - 500_000_000)
         XCTAssertGreaterThan(free.world.land.cells.count, cells)
         XCTAssertEqual(free.world.mapExpansion?.owned, [MapTile(row: 2, column: 2), MapTile(row: 2, column: 3)])
         free.undo()
         XCTAssertEqual(free.world.mapExpansion?.owned, [MapTile(row: 2, column: 2)])
         XCTAssertEqual(free.world.economy.balance, balance)
+    }
+
+    /// Decision 160, later: choosing a tile pauses a running game as the
+    /// building tools do, so a tile bought can be undone after the next
+    /// tick; stopping resumes it. A building tool chosen meanwhile keeps
+    /// the pause, and leaving it resumes the game.
+    func testChoosingATilePausesTheGameSoABuyCanBeUndone() throws {
+        var world = GameWorld.newGame(balance: 1_000_000_000, eventSeed: 9, buysMap: true)
+        world.setEconomyMode(.free)
+        let session = GameSession(world: world, language: .english)
+        session.setSpeed(.normal)
+        XCTAssertFalse(session.world.clock.isPaused)
+        session.startChoosingMapTile()
+        XCTAssertTrue(session.world.clock.isPaused)
+        XCTAssertTrue(session.isPausedForBuilding)
+        XCTAssertEqual(session.message?.text, "Tap a tile next to your land to see its price. Paused meanwhile, so a tile bought can be undone.")
+        XCTAssertTrue(session.tapMapExpansion(at: PlanPoint(x: 3 * length + 10, y: 2 * length + 10)))
+        XCTAssertTrue(session.buyChosenMapTile())
+        let now = session.world.clock.now
+        session.advance(realElapsed: .seconds(2))
+        XCTAssertEqual(session.world.clock.now, now, "no time runs")
+        XCTAssertTrue(session.canUndo)
+        session.undo()
+        XCTAssertEqual(session.world.mapExpansion?.owned, [MapTile(row: 2, column: 2)])
+        session.stopChoosingMapTile()
+        XCTAssertFalse(session.isChoosingMapTile)
+        XCTAssertFalse(session.world.clock.isPaused)
+        XCTAssertEqual(session.world.clock.speed, .normal)
+
+        // A building tool chosen while choosing keeps the pause; leaving it
+        // resumes the game.
+        session.startChoosingMapTile()
+        session.selectTool(.network)
+        XCTAssertFalse(session.isChoosingMapTile)
+        XCTAssertTrue(session.world.clock.isPaused)
+        session.selectTool(.select)
+        XCTAssertFalse(session.world.clock.isPaused)
+
+        // A game the player paused stays paused when they stop choosing.
+        session.togglePause()
+        session.startChoosingMapTile()
+        XCTAssertEqual(session.message?.text, "Tap a tile next to your land to see its price.")
+        session.stopChoosingMapTile()
+        XCTAssertTrue(session.world.clock.isPaused)
     }
 
     /// The small map shows the tiles owned.

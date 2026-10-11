@@ -344,7 +344,10 @@ final class LineRoutePreferencePropertyTests: XCTestCase {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
             digest.add(String(decoding: try encoder.encode(world), as: UTF8.self))
         }
-        XCTAssertEqual(tally, 680)
+        // Every step of every case: 20 in each of the first four, 45 in
+        // the last two, for each seed (680 with CI's four); not counted
+        // when PROPERTY_REPLAY runs one case.
+        assertVolume(tally == (4 * 20 + 2 * 45) * PropertySeeds.active.count, "every step ran: \(tally)")
         print("[digest] traffic.lineRoutes \(digest.hex) (steps \(tally))")
     }
 }

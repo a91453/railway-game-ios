@@ -110,6 +110,7 @@ struct StartView: View {
                     isPrimary: true,
                     tone: .primary
                 ) {
+                    UITestTrace.action("start.continue")
                     launcher.continueGame()
                 }
                 .accessibilityIdentifier("start.continue")

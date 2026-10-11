@@ -1,0 +1,1365 @@
+{
+  "saveVersion" : 41,
+  "world" : {
+    "bounds" : {
+      "height" : 4096,
+      "width" : 16384
+    },
+    "clock" : {
+      "now" : 28800,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 99996200,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "L",
+        "stops" : [
+          1,
+          2,
+          3,
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 8,
+          "to" : 9
+        }
+      ],
+      "nextEdgeID" : 9,
+      "nextNodeID" : 10,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 7680,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 8704,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "passengerRouteBalances" : [
+      {
+        "balances" : [
+          -1944,
+          1667,
+          277
+        ],
+        "destination" : 2,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 1
+          },
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 1
+          },
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 1
+          }
+        ],
+        "origin" : 1,
+        "weights" : [
+          1250,
+          1250,
+          1111
+        ]
+      },
+      {
+        "balances" : [
+          556,
+          -556
+        ],
+        "destination" : 3,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 3,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 3
+              }
+            ],
+            "origin" : 1
+          },
+          {
+            "current" : 0,
+            "destination" : 3,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 1,
+                "line" : 1,
+                "to" : 3
+              }
+            ],
+            "origin" : 1
+          }
+        ],
+        "origin" : 1,
+        "weights" : [
+          1250,
+          1111
+        ]
+      },
+      {
+        "balances" : [
+          0
+        ],
+        "destination" : 1,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 1,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 2,
+                "line" : 1,
+                "to" : 1
+              }
+            ],
+            "origin" : 2
+          }
+        ],
+        "origin" : 2,
+        "weights" : [
+          1250
+        ]
+      },
+      {
+        "balances" : [
+          -833,
+          833
+        ],
+        "destination" : 3,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 3,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 2,
+                "line" : 1,
+                "to" : 3
+              }
+            ],
+            "origin" : 2
+          },
+          {
+            "current" : 0,
+            "destination" : 3,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 2,
+                "line" : 1,
+                "to" : 3
+              }
+            ],
+            "origin" : 2
+          }
+        ],
+        "origin" : 2,
+        "weights" : [
+          1250,
+          1111
+        ]
+      },
+      {
+        "balances" : [
+          -833,
+          833
+        ],
+        "destination" : 1,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 1,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 3,
+                "line" : 1,
+                "to" : 1
+              }
+            ],
+            "origin" : 3
+          },
+          {
+            "current" : 0,
+            "destination" : 1,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 3,
+                "line" : 1,
+                "to" : 1
+              }
+            ],
+            "origin" : 3
+          }
+        ],
+        "origin" : 3,
+        "weights" : [
+          1250,
+          1111
+        ]
+      },
+      {
+        "balances" : [
+          -694,
+          694
+        ],
+        "destination" : 2,
+        "journeys" : [
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "inbound",
+                "from" : 3,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 3
+          },
+          {
+            "current" : 0,
+            "destination" : 2,
+            "legs" : [
+              {
+                "direction" : "outbound",
+                "from" : 3,
+                "line" : 1,
+                "to" : 2
+              }
+            ],
+            "origin" : 3
+          }
+        ],
+        "origin" : 3,
+        "weights" : [
+          1250,
+          1111
+        ]
+      }
+    ],
+    "passengerRoutingMode" : "network",
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 100,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 18,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 3360
+          },
+          {
+            "destination" : 3,
+            "value" : 1650
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 21600
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 21600
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 22980
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 23100
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 24000
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 24240
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 24840
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 25200
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 25560
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 26100
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 26220
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 26760
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 26880
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 27360
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 27660
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 27840
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 28320
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 1,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 1
+            },
+            "line" : 1,
+            "since" : 28440
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 100,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 10,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1710
+          },
+          {
+            "destination" : 3,
+            "value" : 1710
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 22920
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 22920
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 24540
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 24540
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 25800
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 25800
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 27000
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 27000
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 28200
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 3,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 2,
+                  "line" : 1,
+                  "to" : 3
+                }
+              ],
+              "origin" : 2
+            },
+            "line" : 1,
+            "since" : 28200
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 100,
+          "kind" : "shopping"
+        },
+        "overflowed" : 0,
+        "released" : 12,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1710
+          },
+          {
+            "destination" : 2,
+            "value" : 1650
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 22800
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 22920
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 24180
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 24540
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 25200
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 25800
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 26100
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 26880
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 27000
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 27660
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "outbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 1,
+              "legs" : [
+                {
+                  "direction" : "outbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 1
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 28200
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "journey" : {
+              "current" : 0,
+              "destination" : 2,
+              "legs" : [
+                {
+                  "direction" : "inbound",
+                  "from" : 3,
+                  "line" : 1,
+                  "to" : 2
+                }
+              ],
+              "origin" : 3
+            },
+            "line" : 1,
+            "since" : 28440
+          }
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 1536,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 3584,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "C",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      }
+    ],
+    "trafficControl" : true,
+    "trains" : [
+
+    ]
+  }
+}

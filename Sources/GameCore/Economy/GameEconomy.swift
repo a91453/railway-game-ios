@@ -76,14 +76,17 @@ public struct GameEconomy: Hashable, Codable, Sendable {
         self.costs = costs
     }
 
+    /// Whether the balance covers `amount`. Nothing always can be paid,
+    /// in the red too, so a free command is never refused for want of
+    /// money.
     public func canAfford(_ amount: Money) -> Bool {
-        amount <= balance
+        amount <= .zero || amount <= balance
     }
 
     /// Deducts `amount`, leaving the balance untouched on failure.
     ///
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` if the
-    ///   balance is lower than `amount`.
+    ///   balance is lower than `amount`, unless that is nothing.
     public mutating func spend(_ amount: Money) throws(GameError) {
         precondition(amount >= .zero, "spend(_:) requires a non-negative amount")
         guard canAfford(amount) else {

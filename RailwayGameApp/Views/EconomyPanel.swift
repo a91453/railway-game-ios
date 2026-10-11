@@ -100,17 +100,24 @@ struct EconomyPanel: View {
                     .accessibilityIdentifier("economy.fuel")
             }
             // Free play cannot become managed again (decision 46), so the
-            // switch goes one way, after a confirmation.
+            // switch goes one way, after a confirmation. Decision 86,
+            // later: not while a challenge is being played.
             if accounts.mode == .management {
                 Button("Switch to Free Play", role: .destructive) {
                     confirmsFreePlay = true
                 }
+                .disabled(session.isFreePlayLocked)
                 .confirmationDialog("Switch to Free Play", isPresented: $confirmsFreePlay, titleVisibility: .visible) {
                     Button("Switch to Free Play", role: .destructive) {
                         session.setEconomyMode(.free)
                     }
                 } message: {
                     Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
+                }
+                if session.isFreePlayLocked {
+                    Text(verbatim: GameSession.freePlayLockedText(in: session.language))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
         } footer: {

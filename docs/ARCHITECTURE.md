@@ -1923,6 +1923,11 @@ G1 的最後一步：乘客上車時付票價，路線的列車每次離站記�
 - 參考以地圖的經緯度量距離；這裡是格子的直線距離。
 - 開局資金、配額建設與平衡留給之後（需要決定）。
 
+**之後的決定**（#366 留下的項目，2026-10-11，作者交給 session 決定）：
+- 每天的費用仍照「設定的」列車數算，不改成只算實際派上線的。設定的列車數就是公司對這條線的承諾（車輛、人員、維修都要準備），付錢的是承諾，不是今天跑了幾趟。改成照實際派出的算，沒車可派、或排不進時刻表的列車就變成免費的保險，玩家也比較難從經營面板看出一條線的成本。#366 第 12 項已把上限定在 1,000 列，溢位的路已經堵住。
+- `GameEconomy.canAfford(_:)` 對 0 一律為真，`spend(.zero)` 在餘額為負時不再拒絕：免費的指令（自由模式的建物與拆除、沒有價格的車廂）不會因為沒錢被擋。之前只有 `setTrainCars` 自己繞過；有價格的仍照舊拒絕。測試：`EconomyTests.testNothingCanBePaidInTheRed`，修正前失敗。
+- 自由模式免費放置的建物，切到經營模式後能照地價賣出：維持。App 不能從自由模式切回經營模式，只有 GameCore 的 API 碰得到；GameCore 的切換是開新局（`NewGame`）與 golden 設定經營模式要用的。
+
 ### 37. 遊戲時間改以秒計（Phase 4.7 Stage W2a）
 
 W2 要接上真實車速與以秒計的停站（ROADMAP 的 Stage W；[對照文件](RAILWAY_REFERENCE_MAPPING.md#gap-分析)的 gap 2、9，作者 2026-10-01 的決定）。地圖是真實比例（一格 16 公尺，手機預設每公尺 2 pt），真實車速的列車只有在接近真實時間的速度下才看得清楚；在那種速度下，一分鐘的基本步長會讓移動每 6 到 60 真實秒才前進一次，玩家的指令最多晚一分鐘才生效。所以基本步長改成一秒。這一步只換時間的單位與速度檔位，不加新玩法。
@@ -3146,6 +3151,12 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：台灣鐵道史的劇本（平溪線觀光、劉銘傳鐵路、木柵線）是下一步，會用這裡的年代車種限制與實景地圖；平溪線的運煤史實版等貨運（O10）。目標數值只用無頭模擬量過一條固定的第一條線，沒有玩家擴張；挑戰的劇情文字是原創的，不是史實。
 
+**之後的修正**（#366 留下的項目，2026-10-11，作者交給 session 決定）：
+- **挑戰進行中不能切到自由模式**：挑戰只在經營模式的午夜判定，切過去之後目標、期限與破產都不再判定，挑戰永遠不會結束。`GameSession.isFreePlayLocked`（有劇本、還沒有結果）時 `setEconomyMode(.free)` 拒絕並說明，經營面板的「切換到自由模式」停用，下面寫原因。挑戰結束（完成或失敗）之後可以切。和決策 154 鎖住挑戰的事件同一個道理：挑戰的規則固定。GameCore 不改：切換仍是開新局與 golden 用的指令。
+- **之前已經切過去的存檔**：目標面板的狀態寫「已改為自由模式，挑戰中止」，不再寫「第 4xx 天，共 360 天」。
+- **`annualNetProfit` 只算挑戰期間結算的年度**（`goalYears()`）：在挑戰的某一天午夜結算的年度才算，開始前就結算的不算。內建挑戰都從第 0 天開始，所以行為不變。選「在挑戰期間結算」而不是「整年都在挑戰期間」：後者讓年中開始的挑戰要等將近兩年，360 天期限的目標就達不到了。目標面板的「年度淨利」進度用同一份年度。
+- 測試：`ChallengeTests.testAChallengeBeingPlayedCannotBecomeFreePlay`、`testAChallengeSwitchedToFreePlayBeforeTheLockSaysItStopped`、`GoalsTests.testAProfitGoalReadsOnlyTheYearsClosedSinceTheScenarioBegan`（修正前失敗）。
+
 ### 87. 每週挑戰與個人最佳紀錄
 
 2026-10-08，作者同意的順序：先做能公平比較的每週挑戰，TestFlight 回饋之後再接 Game Center 的排行榜與成就，官網排行榜最後（要帳號、後端與隱私權政策的修改；屆時可以用 GameCore 的確定性重播在伺服器上驗證成績）。每週的地圖是原生（gap）；成績的欄位照 `Ci/` 已停用的挑戰模式（`metroChallengeLeaderboardPayload` 的 `eventId`、`rulesVersion`、`scorePassengers`，上傳到 `/api/challenge-scores`，伺服器回傳前 20 名與名次或百分位），之後的排行榜可以直接用。
@@ -3716,6 +3727,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **沒有做的**：事件的即時報告（年度結算、達成目標、第一班車到站）；多位顧問（SimCity BuildIt 每類一位）；美術素材。
 
 **參考**：參考庫 `Railway/taipei_gta_reference/` 有一行持續顯示的目標句（`.hud-obj`）與只在需要時出現的提示（`.hud-prompts`，研究紀錄 3.5 節）；這裡照它一次只說一件事、有需要才說。外部遊戲只看做法：SimCity BuildIt 用顧問的頭像加一句話通知，TheoTown 的教學是一個小人加對話泡泡、不蓋地圖（研究紀錄 4.1、4.2 節）。程式是本專案自己寫的，臉是本專案畫的。
+
+**之後的修正**（#366 留下的項目，2026-10-11）：泡泡的寬度原本只扣掉 dock 和卡片，沒扣地圖右下角那一欄（小地圖、縮放鈕、圖例）。幾何推算 iPhone 17 Pro 橫向時泡泡蓋住「縮小」，iPhone SE 橫向時兩個縮放鈕都被蓋住約 7 秒，點下去只會關掉泡泡。現在地圖量那一欄在螢幕上的位置（`GameScreenState.mapCornerFrame`），泡泡停在它前面。不等實機確認就改：多扣一欄最壞只是泡泡窄一點、多換一行；窄到放不下（`StationMasterCorner` 的 140 點）時照舊只亮點，等有空間再說。**UNVERIFIED**：只能在 macOS 與實機上看。
 
 
 ### 119. 點一下看、長按改
@@ -4442,6 +4455,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑 App；實景地圖上蓋建物的手感與價格要在 TestFlight 上看。
 
+**之後的修正**（#366 留下的項目，2026-10-11，作者交給 session 決定）：同一格有好幾棟公司建物時，每棟原本帶走「格子裡剩下的人」的比例，不是「剩下的地」的比例：四棟各蓋四分之一，整格蓋滿、也付了整格的價錢，格子裡仍留 16 位居民、3 個工作。價錢是照地算的，人也應該照地算。
+- 現在每棟帶走的是它蓋到的地占「公司建物還沒蓋到的地」的比例（各自無條件捨去）。四棟各四分之一的辦公樓，各帶走 12 位居民、2 個工作，格子剩 36、24、12、0。
+- 蓋滿最後一塊地的那一棟帶走其餘的人，**那格的土地與城市建物一起移除**，不留一人：整格都是公司的地了，和 `isClaimedByPlacedBuilding`（整格蓋滿才算公司的）、`replaceLand` 不在這種格子放土地一致。賣掉其中一棟時，人照決策 130 搬回中心那一格。
+- golden `area-buyout.json` 改三個值（schema 不變）：住宅的居民 2 → 3（剩下八分之七的地裡它蓋十六分之一，是十四分之一，42 ÷ 14 = 3）、(5, 5) 的居民 40 → 39、土地居民合計 82 → 81。價錢、辦公樓、(5, 6)、餘額都不變。README 有說明。
+- 測試：`AreaBuyOutTests.testFourQuartersOfACellTakeItsPeopleByTheGroundLeft`（修正前剩 36、27、21、16，格子留著）、`testPlacingMovesTheSharesPeopleInAndKeepsTheCells` 的住宅改成 3 人。
+
 ### 147. 實景地圖的真實建蔽率
 
 2026-10-10，接決策 146 的「之後」。作者同意把 Overture 的建物資料搬進來，只搬每格的建蔽率，不搬房子的形狀。號碼依工作登記 #231：存檔版本 35、決策 147（145 由挑戰模式重調登記）、golden schema 56。
@@ -4646,6 +4665,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 量測沒有讀地面，App 裡的建造費會比表上高；也只量了一條固定路線、每條線一列車。
 - 延伸到新竹在經濟上是負擔：之後若調整成本或票價的平衡，要重跑 `LIU_REPORT`。
 - 劇情與目標面板的里程碑沒有特別的動畫或通知，達成時照目標的一般顯示。
+
+**之後的修正**（#366 留下的項目，2026-10-11）：「蒸汽列車太短」的「昨天虧錢」原本只比票價收入和鐵路的營運成本，貨運收入夠付費用的公司仍被說成在虧錢。現在看當天的營業利益，和財務報表一樣（`StationMasterAdvice.lostMoney(on:)`）：票價、貨運（決策 155）、物業租金（決策 94）對鐵路的營運成本加物業的維護與稅。利息與所得稅不算，它們不是營運。測試：`LiuMingchuanChallengeTests.testADayLosesMoneyByItsOperatingProfit`。
 
 ### 154. 國定假日與干擾事件的骨架
 
@@ -4882,6 +4903,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 新的 golden 結果名稱 `mapExpansionEnabled`（golden schema 63），新 fixture `map-expansion-once.json`。
 - 既有 golden、存檔與 replay 都不變（`map-expansion.json` 第一次打開本來就被拒）。
 - 測試：`MapExpansionTests.testItIsTurnedOnOnce`，修正前失敗。
+
+**之後的修正**（#366 留下的項目，2026-10-11，作者交給 session 決定）：打開「擴建」會切回選取工具，結束為建造而暫停的狀態，買下區塊後下一個 tick 就清掉復原紀錄，「一次可以復原的編輯」實際上只有玩家自己暫停時做得到。花錢最多的一步反而最難復原。
+- 選區塊時和建造工具一樣暫停（決策 99 的 `isPausedForBuilding`），狀態列說明「擴建時遊戲暫停，買下的地也能復原」。
+- 買下之後**留在擴建模式**（選的區塊放開，可以再選），遊戲仍暫停，可以復原；按 ✕ 結束擴建才恢復。玩家在這期間自己按了播放或改了速度，就照玩家的。
+- 從擴建切到建造工具，暫停保留，離開工具才恢復；玩家原本就暫停的，結束擴建後仍暫停。
+- 測試：`MapExpansionSessionTests.testChoosingATilePausesTheGameSoABuyCanBeUndone`；`testChoosingAndBuyingATile` 改成買下後仍在擴建模式。
 
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 

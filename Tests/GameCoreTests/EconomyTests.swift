@@ -20,6 +20,18 @@ final class EconomyTests: XCTestCase {
         XCTAssertFalse(economy.canAfford(101))
         XCTAssertTrue(economy.canAfford(100))
     }
+
+    /// Nothing can always be paid, in the red too: a free command (a free
+    /// play building, a car with no price) is never refused for want of
+    /// money, while anything with a price still is.
+    func testNothingCanBePaidInTheRed() throws {
+        var economy = GameEconomy(balance: -100)
+        XCTAssertTrue(economy.canAfford(.zero))
+        try economy.spend(.zero)
+        XCTAssertEqual(economy.balance, -100)
+        XCTAssertFalse(economy.canAfford(1))
+        XCTAssertThrowsGameError(try economy.spend(1), .insufficientFunds(required: 1, available: -100))
+    }
 }
 
 /// Decision 46: each car added to a train costs ``ConstructionCosts/car``,

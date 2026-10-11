@@ -65,6 +65,7 @@ struct BuildToolRail: View {
         return Button {
             // A tool chosen again stays chosen: Done, or Build in the dock,
             // goes back to looking at the map.
+            UITestTrace.action("tool.\(tool)")
             session.selectTool(tool)
         } label: {
             label(tool.systemImage, tool.title(in: session.language), isActive: isActive, compact: compact)
@@ -82,6 +83,7 @@ struct BuildToolRail: View {
     private func doneButton(compact: Bool) -> some View {
         let isActive = session.tool == .select
         return Button {
+            UITestTrace.action("tool.select")
             session.selectTool(.select)
         } label: {
             label("xmark", session.language.text("Done", "完成"), isActive: isActive, compact: compact)

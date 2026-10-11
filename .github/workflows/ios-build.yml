@@ -381,6 +381,30 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      # K4 (#366): a tap the test saw pressed whose action never ran. The
+      # app writes each touch it got (where, on which view of which window)
+      # and the named buttons' actions to the unified log under -ui-testing
+      # (`UITestTrace` in RailwayGameApp.swift); kept beside the result
+      # bundle, so the next such failure says whether the touch arrived and
+      # whether the action ran.
+      - name: Save the app's UI test trace
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        continue-on-error: true
+        run: |
+          xcrun simctl spawn "$SIMULATOR_UDID" log show --last 3h --style compact \
+            --predicate 'subsystem == "io.github.a91453.RailwayGame" AND category == "ui-test"' \
+            > "$RUNNER_TEMP/ui-smoke-trace.log" || echo "::warning::Could not read the app's UI test trace"
+
+      - name: Upload the app's UI test trace
+        if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ui-smoke-trace
+          path: ${{ runner.temp }}/ui-smoke-trace.log
+          if-no-files-found: warn
+          retention-days: 7
+
       # The Traditional Chinese translations, on every lane. It runs after the
       # UI tests, and also when they failed, so each reports on its own. The
       # export builds with SWIFT_EMIT_LOC_STRINGS into its own derived data,
@@ -531,4 +555,23 @@ jobs:
           name: ipad-tutorial-xcresult
           path: ${{ runner.temp }}/ipad-tutorial.xcresult
           if-no-files-found: error
+          retention-days: 7
+
+      # The app's touches and actions, as for the iPhone's UI tests (K4).
+      - name: Save the app's iPad UI test trace
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        continue-on-error: true
+        run: |
+          xcrun simctl spawn "$IPAD_SIMULATOR_UDID" log show --last 3h --style compact \
+            --predicate 'subsystem == "io.github.a91453.RailwayGame" AND category == "ui-test"' \
+            > "$RUNNER_TEMP/ipad-tutorial-trace.log" || echo "::warning::Could not read the app's UI test trace"
+
+      - name: Upload the app's iPad UI test trace
+        if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: ipad-tutorial-trace
+          path: ${{ runner.temp }}/ipad-tutorial-trace.log
+          if-no-files-found: warn
           retention-days: 7

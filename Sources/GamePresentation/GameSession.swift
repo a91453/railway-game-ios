@@ -530,19 +530,19 @@ public final class GameSession {
     /// choosing a tool that builds (``ConstructionTool/pausesGame``) pauses
     /// a running game, and leaving those tools resumes it if the session
     /// paused it and the player has not touched the speed since
-    /// (ARCHITECTURE decision 99).
+    /// (ARCHITECTURE decision 99). Choosing a tile of the map to buy pauses
+    /// it the same way (decision 160, later), and a tool that builds keeps
+    /// that pause.
     public func selectTool(_ newTool: ConstructionTool) {
         guard newTool != tool else { return }
         tool = newTool
         buildingSite = nil
         saleCandidate = nil
-        stopChoosingMapTile()
+        endChoosingMapTile()
         zoneDrag = nil
         message = nil
         if newTool.pausesGame {
-            if !world.clock.isPaused {
-                world.pause()
-                isPausedForBuilding = true
+            if pauseForBuilding() {
                 message = StatusMessage(
                     kind: .success,
                     text: language.text(
@@ -551,15 +551,32 @@ public final class GameSession {
                     )
                 )
             }
-        } else if isPausedForBuilding {
-            isPausedForBuilding = false
-            if world.clock.isPaused { world.resume() }
+        } else {
+            endPauseForBuilding()
         }
         playSound?(.transition)
     }
 
+    /// Pauses a running game for building (decision 99), so each edit can
+    /// be undone until time moves on: `true` when it paused it now.
+    func pauseForBuilding() -> Bool {
+        guard !world.clock.isPaused else { return false }
+        world.pause()
+        isPausedForBuilding = true
+        return true
+    }
+
+    /// Resumes the game ``pauseForBuilding()`` paused, unless the player
+    /// has touched the speed since.
+    func endPauseForBuilding() {
+        guard isPausedForBuilding else { return }
+        isPausedForBuilding = false
+        if world.clock.isPaused { world.resume() }
+    }
+
     /// Whether the session paused the game itself when a building tool was
-    /// chosen (decision 99), so leaving the building tools resumes it.
+    /// chosen (decision 99), or a tile of the map to buy (decision 160,
+    /// later), so leaving the building tools, or the tiles, resumes it.
     /// Any speed change by the player, pausing and resuming included,
     /// lets go of it: the speed is then the player's.
     public private(set) var isPausedForBuilding = false
@@ -678,7 +695,8 @@ public final class GameSession {
     /// free play, which has no income, so a negative balance could never be
     /// built out of and the switch cannot be undone. Nor can a company with
     /// a loan: interest is paid only by a managed company (decision 67), so
-    /// the loan would become money it never pays for.
+    /// the loan would become money it never pays for. Nor can a challenge
+    /// being played (``isFreePlayLocked``).
     public func setEconomyMode(_ mode: EconomyMode) {
         guard mode != world.accounts.mode else { return }
         guard mode == .free else {
@@ -686,6 +704,10 @@ public final class GameSession {
                 "Free play cannot become a managed company again. Start a new game to manage one.",
                 "自由模式無法再改回經營模式。要經營公司，請開新遊戲。"
             ))
+            return
+        }
+        guard !isFreePlayLocked else {
+            message = StatusMessage(kind: .failure, text: Self.freePlayLockedText(in: language))
             return
         }
         guard world.economy.balance >= .zero else {
@@ -707,6 +729,22 @@ public final class GameSession {
             "Free play: no fares or running costs, and you set each station's ridership.",
             "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
         ))
+    }
+
+    /// Whether this game cannot become free play because a challenge is
+    /// being played (decision 86, later): its goals, deadline and
+    /// bankruptcy are judged only at a managed company's midnights, so in
+    /// free play it would never end. Once it has ended, the game may.
+    public var isFreePlayLocked: Bool {
+        world.scenario.map { $0.outcome == nil } ?? false
+    }
+
+    /// Why ``isFreePlayLocked`` keeps the game managed.
+    public static func freePlayLockedText(in language: DisplayLanguage) -> String {
+        language.text(
+            "A challenge is being played: its goals are judged only for a managed company. Finish it, or start a new game for free play.",
+            "挑戰進行中：目標只在經營模式下判定。完成挑戰，或開新遊戲玩自由模式。"
+        )
     }
 
     /// Sets the network's fare rules through `GameWorld.setFareRules(_:)`.

@@ -238,7 +238,11 @@ struct ContentView: View {
                 // button and then slide across the dock to its place.
                 .overlay(alignment: .bottomLeading) {
                     if session.tutorial == nil, dockSize != .zero {
-                        let trailing = sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0
+                        // Short of the map's bottom-trailing column too
+                        // (#366): beside a phone's dock the bubble reached
+                        // the zoom buttons, and a tap there only closed it.
+                        let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
+                        let trailing = max(sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0, corner)
                         StationMasterCorner(
                             session: session,
                             maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52
@@ -506,6 +510,10 @@ final class GameScreenState {
     /// `G.popTravelHour` and `G.popTravelPlaying`).
     var popTravelHour = PopTravel.defaultHour
     private(set) var isPlayingPopTravel = false
+    /// Where the map's bottom-trailing column (the small map, the zoom
+    /// buttons, a layer's key) stands on the screen, as the map measured
+    /// it: the station master's bubble stops short of it.
+    var mapCornerFrame: CGRect = .zero
     @ObservationIgnored private var popTravelPlay: Task<Void, Never>?
 
     /// Play: the next hour every 1.2 s, back to 0 after 23

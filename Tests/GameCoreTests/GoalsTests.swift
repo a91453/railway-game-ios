@@ -154,6 +154,29 @@ final class GoalsTests: XCTestCase {
         XCTAssertTrue(world.isMet(.equity(Money(1))))
     }
 
+    /// Decision 86, later: a profit goal reads the years closed while the
+    /// scenario is played, not one closed before it began.
+    func testAProfitGoalReadsOnlyTheYearsClosedSinceTheScenarioBegan() throws {
+        var (world, _) = try makeStations()
+        let sheet = BalanceSheet(cash: 5, track: .zero, stations: .zero, rollingStock: .zero, loan: .zero)
+        func year(_ index: Int64) -> AnnualStatement {
+            let income = FinanceSummary(index: index, fareRevenue: 1_000, operatingCost: 0, maintenanceCost: 0, energyCost: 0, staffCost: 0, interestCost: 0)
+            return AnnualStatement(year: index, income: income, closing: sheet)
+        }
+        world.accounts.years = [year(0)]
+        XCTAssertTrue(world.isMet(.annualNetProfit(Money(1_000))), "with no scenario, every closed year")
+        // Begun on day 360, the first of year 1: year 0 closed the night before.
+        world.scenario = ScenarioState(scenario: scenario([.annualNetProfit(Money(1_000))]), startDay: 360)
+        XCTAssertFalse(world.isMet(.annualNetProfit(Money(1_000))))
+        // Year 1 closes while it is played, whatever day it began on.
+        world.accounts.years = [year(0), year(1)]
+        XCTAssertTrue(world.isMet(.annualNetProfit(Money(1_000))))
+        world.scenario = ScenarioState(scenario: scenario([.annualNetProfit(Money(1_000))]), startDay: 719)
+        XCTAssertTrue(world.isMet(.annualNetProfit(Money(1_000))))
+        world.scenario = ScenarioState(scenario: scenario([.annualNetProfit(Money(1_000))]), startDay: 720)
+        XCTAssertFalse(world.isMet(.annualNetProfit(Money(1_000))))
+    }
+
     /// Riders are judged on the day that ended, however the time came: one
     /// advance skipping idle minutes past midnight, or a minute at a time.
     func testDailyRidersAreJudgedOnTheDayThatEndedHoweverTimeIsAdvanced() throws {

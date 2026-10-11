@@ -22,7 +22,8 @@ public enum Goal: Hashable, Sendable {
     /// At least this many of the city's buildings are of the tallest
     /// density, D4 (Phase 6c).
     case tallBuildings(Int)
-    /// A closed year made at least this net profit (decision 85).
+    /// A closed year made at least this net profit (decision 85); in a
+    /// scenario, a year closed since it began.
     case annualNetProfit(Money)
     /// The company is worth at least this much (decision 85).
     case equity(Money)
@@ -210,10 +211,18 @@ extension GameWorld {
         case .tallBuildings(let count):
             tallBuildingCount() >= count
         case .annualNetProfit(let amount):
-            accounts.years.contains { $0.income.netProfit >= amount }
+            goalYears().contains { $0.income.netProfit >= amount }
         case .equity(let amount):
             balanceSheet().equity >= amount
         }
+    }
+
+    /// The closed years a profit goal reads (decision 86, later): those
+    /// closed since the scenario began, at the midnight that ended a day of
+    /// it; all of them without one.
+    public func goalYears() -> [AnnualStatement] {
+        let start = scenario?.startDay ?? 0
+        return accounts.years.filter { ($0.year + 1) * FinancePeriod.year.days > start }
     }
 
     /// The scenario's day now, 1 on the day it started, or `nil` without one.

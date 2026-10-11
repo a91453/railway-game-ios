@@ -52,6 +52,42 @@ final class ChallengeTests: XCTestCase {
         XCTAssertEqual(GameSpeed.fast.label(in: .english), "6000×")
     }
 
+    /// Decision 86, later: a challenge being played stays a managed
+    /// company, as only a managed company's midnights judge it; once it
+    /// has ended, the game may become free play.
+    @MainActor
+    func testAChallengeBeingPlayedCannotBecomeFreePlay() throws {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000), clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        try world.startScenario(Scenario(id: "test", goals: [.equity(Money(1))], goldDays: 1, silverDays: 1, deadlineDays: 1))
+        let session = GameSession(world: world, language: .traditionalChinese)
+        XCTAssertTrue(session.isFreePlayLocked)
+        let before = session.world
+        session.setEconomyMode(.free)
+        XCTAssertEqual(session.world, before, "refused")
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.message?.text, "挑戰進行中：目標只在經營模式下判定。完成挑戰，或開新遊戲玩自由模式。")
+        for _ in 0..<289 {
+            session.advance(realElapsed: GameSession.maximumStepDuration)
+        }
+        XCTAssertEqual(session.world.scenario?.outcome, .completed(day: 0, rating: .gold))
+        XCTAssertFalse(session.isFreePlayLocked)
+        session.setEconomyMode(.free)
+        XCTAssertEqual(session.world.accounts.mode, .free)
+        XCTAssertFalse(GameSession(world: GameWorld.newGame()).isFreePlayLocked, "no challenge")
+    }
+
+    /// A save from before the lock whose challenge was switched to free
+    /// play says the challenge stopped, not a day past its deadline.
+    func testAChallengeSwitchedToFreePlayBeforeTheLockSaysItStopped() {
+        var world = GameWorld.newGame(challenge: Challenge.sandbox[0], eventSeed: 7)
+        world.setEconomyMode(.free)
+        XCTAssertEqual(world.scenarioStatusText(in: .traditionalChinese), "已改為自由模式，挑戰中止")
+        XCTAssertEqual(world.scenarioStatusText(in: .english), "Stopped: the game was switched to free play")
+    }
+
     @MainActor
     func testTheSessionNoticesAScenarioThatEndsWhileItRuns() throws {
         var world = try GameWorld(

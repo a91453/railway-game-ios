@@ -170,6 +170,20 @@ final class ScenarioStationMasterTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice(world: world), .shortSteamTrains(line: line, name: "基隆線"))
     }
 
+    /// A day loses money when its operating profit is below zero: freight
+    /// and the buildings' rent count with the fares, the buildings' upkeep
+    /// and tax with the running costs.
+    func testADayLosesMoneyByItsOperatingProfit() throws {
+        func day(_ fields: String) throws -> DayAccount {
+            try JSONDecoder().decode(DayAccount.self, from: Data(#"{"day": 0, "fareRevenue": 100, "operatingCost": 500, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0\#(fields)}"#.utf8))
+        }
+        XCTAssertTrue(StationMasterAdvice.lostMoney(on: try day("")))
+        XCTAssertFalse(StationMasterAdvice.lostMoney(on: try day(#", "freightRevenue": 400"#)), "freight pays the rest")
+        XCTAssertTrue(StationMasterAdvice.lostMoney(on: try day(#", "freightRevenue": 399"#)))
+        XCTAssertFalse(StationMasterAdvice.lostMoney(on: try day(#", "propertyRevenue": 400"#)), "so does rent")
+        XCTAssertTrue(StationMasterAdvice.lostMoney(on: try day(#", "propertyRevenue": 400, "propertyCost": 1"#)))
+    }
+
     func testAGoalOfAnyChallengeAndTheEnd() {
         XCTAssertEqual(
             StationMasterAdvice.goalMet(scenario: "sandbox.threeTowns", goal: 1, titles: ["Riders a day", "每日運量（人次）"]).text(in: .traditionalChinese),

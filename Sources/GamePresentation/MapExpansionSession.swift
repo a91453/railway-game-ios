@@ -85,18 +85,27 @@ extension GameSession {
         return MapExpansionOverlay(owned: expansion.owned.map(rect), forSale: forSale, chosen: chosenMapTile.map(rect))
     }
 
-    /// Starts choosing a tile to buy: the select tool, nothing selected.
+    /// Starts choosing a tile to buy: the select tool, nothing selected,
+    /// and a running game paused as the building tools pause it (decision
+    /// 99), so a tile bought can be undone until the player stops choosing
+    /// (decision 160, later). From a building tool that paused it, the
+    /// game is resumed and paused again in this one call, so no time runs
+    /// between.
     public func startChoosingMapTile() {
         guard buysMap else { return }
         selectTool(.select)
         clearSelection()
         isChoosingMapTile = true
         chosenMapTile = nil
+        let paused = pauseForBuilding()
+        let tap = world.mapTilesForSale().isEmpty
+            ? language.text("You own the whole map.", "整張地圖都是你的了。")
+            : language.text("Tap a tile next to your land to see its price.", "點選和你的土地相鄰的一塊，看看價格。")
         message = StatusMessage(
             kind: .success,
-            text: world.mapTilesForSale().isEmpty
-                ? language.text("You own the whole map.", "整張地圖都是你的了。")
-                : language.text("Tap a tile next to your land to see its price.", "點選和你的土地相鄰的一塊，看看價格。")
+            text: paused
+                ? tap + language.text(" Paused meanwhile, so a tile bought can be undone.", "擴建時遊戲暫停，買下的地也能復原。")
+                : tap
         )
     }
 
@@ -105,8 +114,17 @@ extension GameSession {
         chosenMapTile = nil
     }
 
-    /// Stops choosing a tile to buy, and lets go of the one chosen.
+    /// Stops choosing a tile to buy, lets go of the one chosen, and resumes
+    /// the game ``startChoosingMapTile()`` paused.
     public func stopChoosingMapTile() {
+        guard isChoosingMapTile else { return }
+        endChoosingMapTile()
+        endPauseForBuilding()
+    }
+
+    /// Stops choosing a tile to buy, and lets go of the one chosen; the
+    /// pause is the next tool's to keep or end (``selectTool(_:)``).
+    func endChoosingMapTile() {
         isChoosingMapTile = false
         chosenMapTile = nil
     }
@@ -178,8 +196,10 @@ extension GameSession {
     }
 
     /// Buys the ``chosenMapTile`` with ``GameWorld/buyMapTile(_:)``, as one
-    /// edit that undo takes back, says so in ``message``, and stops
-    /// choosing once bought.
+    /// edit that undo takes back, says so in ``message``, and lets go of
+    /// it once bought, still choosing: the game stays paused, so the buy
+    /// can be undone, until the player stops choosing (decision 160,
+    /// later).
     @discardableResult
     public func buyChosenMapTile() -> Bool {
         guard let tile = chosenMapTile else {
@@ -195,7 +215,7 @@ extension GameSession {
                 : language.text("Bought the tile for \(price.moneyText).", "以 \(price.moneyText) 買下這一塊。")
         }
         if bought {
-            stopChoosingMapTile()
+            chosenMapTile = nil
         }
         return bought
     }

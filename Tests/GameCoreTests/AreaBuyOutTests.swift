@@ -96,12 +96,38 @@ final class AreaBuyOutTests: XCTestCase {
             XCTAssertEqual(world.land.cell(row: 5, column: column), LandCell(row: 5, column: column, use: .residential, residents: 42, jobs: 7))
             XCTAssertEqual(world.buildings.building(row: 5, column: column)?.density, .d1)
         }
-        // A share's people are rounded down: a sixteenth of 42 and 7.
+        // The house covers a sixteenth of the cell, a fourteenth of the
+        // ground the office left: a fourteenth of its 42 residents and 7
+        // jobs, rounded down.
         let house = try world.placeBuilding(.house, at: Self.inTheWestHome)
-        XCTAssertEqual(house.residents, 2)
+        XCTAssertEqual(house.residents, 3)
         XCTAssertEqual(house.jobs, 0)
-        XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 40)
+        XCTAssertEqual(world.land.cell(row: 5, column: 5)?.residents, 39)
         XCTAssertEqual(world.land.cell(row: 5, column: 5)?.jobs, 7)
+    }
+
+    /// The people go by the ground left, not by the people left: four
+    /// offices, a quarter of cell (5, 5) each, take 12 residents and 2 jobs
+    /// each, and the fourth, which covers what remains, takes the rest and
+    /// the cell and its building with them, as a cell the company covers
+    /// whole is its own (``GameWorld/isClaimedByPlacedBuilding(row:column:side:)``).
+    func testFourQuartersOfACellTakeItsPeopleByTheGroundLeft() throws {
+        var world = try world(area: true)
+        let quarters = [(21_504, 21_504), (23_552, 21_504), (21_504, 23_552), (23_552, 23_552)]
+        var left: [Int64] = []
+        for (x, y) in quarters {
+            let office = try world.placeBuilding(.office, at: PlanPoint(x: Int64(x), y: Int64(y)))
+            XCTAssertEqual(office.residents, 12)
+            XCTAssertEqual(office.jobs, 2)
+            left.append(world.land.cell(row: 5, column: 5)?.residents ?? 0)
+        }
+        XCTAssertEqual(left, [36, 24, 12, 0])
+        XCTAssertNil(world.land.cell(row: 5, column: 5))
+        XCTAssertNil(world.buildings.building(row: 5, column: 5))
+        XCTAssertTrue(world.isClaimedByPlacedBuilding(row: 5, column: 5))
+        XCTAssertEqual(world.land.cell(row: 5, column: 6), LandCell(row: 5, column: 6, use: .residential, residents: 48, jobs: 8))
+        // And the world saves and loads as it is.
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
     }
 
     /// The cells under the company's buildings grow to their limits less
