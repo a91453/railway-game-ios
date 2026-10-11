@@ -41,10 +41,11 @@
       "id": "n700st-cab",
       "use": "THSR N700ST high-speed train (台灣高鐵), the two end cars",
       "prompt": "One single high-speed train car, the leading driving car of a Taiwan High Speed Rail N700ST bullet train, based on the Japanese N700S Shinkansen. Smooth car about 27 m long, 3.4 m wide and 3.6 m tall, on two bogies hidden by side skirts. One end is a very long, low, flat duck-bill nose with sharp edges on both sides (dual supreme wing shape), a small cockpit windshield on top and slim headlights; the other end is flat with a gangway. One door near the rear end and a long row of small windows on each side. Low poly game asset, no rails, no platform, no base.",
-      "texture_prompt": "Glossy bright white body. An orange stripe with a black stripe just below it runs along the whole side under the windows and sweeps forward as curved lines meeting on the nose. Black cockpit windshield, dark tinted small side windows, white door, light grey roof, white side skirts and dark grey bogies.",
+      "texture_prompt": "Glossy pure white body and nose. An orange band runs along the lower side below the small windows and sweeps diagonally down toward the front, ending behind the nose; a thin dark grey line runs above it. Light grey band along the bottom skirt. Black tinted cockpit canopy, dark tinted side windows, white door, white roof.",
       "target_polycount": 7000,
       "front": null,
-      "out": "Web/CityView/public/models/trains/n700st-cab.glb"
+      "out": "Web/CityView/public/models/trains/n700st-cab.glb",
+      "source_image": "the owner's own photo of set TS01 at its unveiling (not committed); image-to-3d, smart topology"
     }
   ]
 }
