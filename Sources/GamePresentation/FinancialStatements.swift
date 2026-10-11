@@ -48,6 +48,7 @@ extension AssetClass {
         case .stations: language.text("Stations", "車站")
         case .rollingStock: language.text("Trains and cars", "車輛")
         case .buildings: language.text("Buildings", "建物")
+        case .land: language.text("Land", "土地")
         }
     }
 }
@@ -204,8 +205,9 @@ extension BalanceSheet {
             .section(language.text("Assets", "資產")),
             row(language.text("Cash", "現金"), \.cash),
         ] + AssetClass.allCases.filter { assetClass in
-            // Decision 94: buildings only once the company has had some.
-            assetClass != .buildings || self[.buildings] != .zero || previous.map { $0[.buildings] != .zero } ?? false
+            // Decision 94: buildings only once the company has had some;
+            // decision 160: land alike.
+            ![.buildings, .land].contains(assetClass) || self[assetClass] != .zero || previous.map { $0[assetClass] != .zero } ?? false
         }.map { assetClass in
             row(assetClass.displayName(in: language)) { $0[assetClass].bookValue }
         } + [

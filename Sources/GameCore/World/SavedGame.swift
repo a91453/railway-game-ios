@@ -199,9 +199,15 @@
 ///     `"lastShort"` (decision 158). A build that reads only an earlier version would drop
 ///     them, and send the materials as goods, so it says the save is newer
 ///     than it instead.
+/// 40. Buying the map (decision 160): a world can have `"mapExpansion"`,
+///     the tiles of the map the company owns, its best day and the seed of
+///     a bought tile's towns, and the accounts can record a `"mapTile"` and
+///     close a year with `"land"`. A build that reads only an earlier
+///     version would drop them, and the company could build anywhere, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 39
+    public static let currentVersion = 40
 
     public let world: GameWorld
 
@@ -318,6 +324,8 @@ extension SavedGame: Codable {
         // line without `"freight"` carries passengers, as every line did.
         // Version 38 to 39: freight without `"buildingMaterials"` has none,
         // and its yards send goods, as every yard did.
+        // Version 39 to 40: a world without `"mapExpansion"` owns the
+        // whole of its map, and builds anywhere in it as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -24,15 +24,19 @@ public enum AssetClass: String, CaseIterable, Codable, Sendable {
     /// The company's buildings, with the right to use the land under them
     /// (decision 94).
     case buildings
+    /// The tiles of the map bought (decision 160).
+    case land
 
     /// The days an asset of the class is written down over, to nothing:
     /// track and stations 20 of the finance report's 360-day years, trains
-    /// and cars 10 (native, Phase 7a), buildings 30 (decision 94).
+    /// and cars 10 (native, Phase 7a), buildings 30 (decision 94). Land is
+    /// not written down at all: 0 (decision 160).
     public var lifeDays: Int64 {
         switch self {
         case .track, .stations: 20 * FinancePeriod.year.days
         case .rollingStock: 10 * FinancePeriod.year.days
         case .buildings: 30 * FinancePeriod.year.days
+        case .land: 0
         }
     }
 }
@@ -50,6 +54,9 @@ public struct AssetRecord: Hashable, Sendable {
         case cars
         /// A building the player placed, ``owner`` its ID (decision 94).
         case building
+        /// A tile of the map bought, ``owner`` its number, row by row from
+        /// the north west (decision 160).
+        case mapTile
 
         public var assetClass: AssetClass {
             switch self {
@@ -57,6 +64,7 @@ public struct AssetRecord: Hashable, Sendable {
             case .station: .stations
             case .train, .cars: .rollingStock
             case .building: .buildings
+            case .mapTile: .land
             }
         }
     }
@@ -144,17 +152,20 @@ public struct BalanceSheet: Hashable, Sendable {
     public let rollingStock: AssetClassBalance
     /// The company's buildings (decision 94).
     public let buildings: AssetClassBalance
+    /// The tiles of the map bought (decision 160).
+    public let land: AssetClassBalance
     public let loan: Money
 
     public init(
         cash: Money, track: AssetClassBalance, stations: AssetClassBalance, rollingStock: AssetClassBalance,
-        buildings: AssetClassBalance = .zero, loan: Money
+        buildings: AssetClassBalance = .zero, land: AssetClassBalance = .zero, loan: Money
     ) {
         self.cash = cash
         self.track = track
         self.stations = stations
         self.rollingStock = rollingStock
         self.buildings = buildings
+        self.land = land
         self.loan = loan
     }
 
@@ -164,12 +175,13 @@ public struct BalanceSheet: Hashable, Sendable {
         case .stations: stations
         case .rollingStock: rollingStock
         case .buildings: buildings
+        case .land: land
         }
     }
 
     /// The fixed assets at book value.
     public var fixedAssets: Money {
-        track.bookValue + stations.bookValue + rollingStock.bookValue + buildings.bookValue
+        track.bookValue + stations.bookValue + rollingStock.bookValue + buildings.bookValue + land.bookValue
     }
 
     public var totalAssets: Money {
@@ -285,7 +297,8 @@ extension GameWorld {
     public func balanceSheet() -> BalanceSheet {
         BalanceSheet(
             cash: economy.balance, track: accounts.assetBalance(.track), stations: accounts.assetBalance(.stations),
-            rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), loan: accounts.loan
+            rollingStock: accounts.assetBalance(.rollingStock), buildings: accounts.assetBalance(.buildings), land: accounts.assetBalance(.land),
+            loan: accounts.loan
         )
     }
 
@@ -449,6 +462,7 @@ extension GameWorld {
             case .station: station(id: StationID(rawValue: record.owner)) != nil
             case .train, .cars: train(id: TrainID(rawValue: record.owner)) != nil
             case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
+            case .mapTile: mapExpansion.map { record.owner >= 0 && $0.owns(MapTile(row: record.owner / mapTileColumns, column: record.owner % mapTileColumns)) } ?? false
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }
             if record.kind == .cars {
@@ -497,7 +511,7 @@ extension GameWorld {
             income.depreciationCost, income.writeOffCost, income.capitalSpending, income.loanBorrowed, income.loanRepaid,
             income.propertyRevenue, income.propertyCost, income.saleProceeds, income.saleBookValue, income.taxCost, income.freightRevenue,
         ]
-        let classes = [closing.track, closing.stations, closing.rollingStock, closing.buildings]
+        let classes = [closing.track, closing.stations, closing.rollingStock, closing.buildings, closing.land]
         return income.index == statement.year
             && flows.allSatisfy { (0...maximumAccrued).contains($0.amount) }
             && classes.allSatisfy { (0...CompanyAccounts.maximumAssetCost).contains($0.cost.amount) && (.zero...$0.cost).contains($0.depreciation) }
@@ -510,11 +524,12 @@ extension GameWorld {
 
 extension BalanceSheet: Codable {
     private enum CodingKeys: String, CodingKey {
-        case cash, track, stations, rollingStock, buildings, loan
+        case cash, track, stations, rollingStock, buildings, land, loan
     }
 
     /// Decodes a closing balance sheet; one without the company's
-    /// buildings (every year before save version 22) has no `"buildings"`.
+    /// buildings (every year before save version 22) has no `"buildings"`,
+    /// and one without land (decision 160) no `"land"`.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         cash = try container.decode(Money.self, forKey: .cash)
@@ -522,6 +537,7 @@ extension BalanceSheet: Codable {
         stations = try container.decode(AssetClassBalance.self, forKey: .stations)
         rollingStock = try container.decode(AssetClassBalance.self, forKey: .rollingStock)
         buildings = try container.decodeIfPresent(AssetClassBalance.self, forKey: .buildings) ?? .zero
+        land = try container.decodeIfPresent(AssetClassBalance.self, forKey: .land) ?? .zero
         loan = try container.decode(Money.self, forKey: .loan)
     }
 
@@ -533,6 +549,9 @@ extension BalanceSheet: Codable {
         try container.encode(rollingStock, forKey: .rollingStock)
         if buildings != .zero {
             try container.encode(buildings, forKey: .buildings)
+        }
+        if land != .zero {
+            try container.encode(land, forKey: .land)
         }
         try container.encode(loan, forKey: .loan)
     }

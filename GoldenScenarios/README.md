@@ -846,3 +846,14 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 三站都缺料，成長率都變成四分之一（12 → 3 千分比），各蓋一格新的（剩 13 噸）。之後那個午夜各再得 60 噸：73 噸，共用掉 141 噸、供應 360 噸。
 - 最終狀態的 `freight` 另有 `lastShort`（決策 158：當晚缺料的車站，沒有時省略）：`[1, 2, 3]`。
 - `tools/golden-checks/city_growth.py` 獨立算出每一個值（同一支程式也照舊驗 `city-buildings-raise.json`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 160：購買擴建地圖（schema 61）
+
+- 新指令 `enableMapExpansion`（`row`、`column`：擁有的那一塊；`seed`：買下的一塊長城鎮用的種子，省略就不長）、`buyMapTile`（`row`、`column`）；新結果 `mapExpansionNotEnabled`、`invalidMapTile`、`mapTileOwned`、`mapTileNotAdjacent`、`mapExpansionLocked`（`riders`：需要的每日運量）、`mapTileNotOwned`（`row`、`column`）。最終狀態有擴建地圖時另寫 `mapExpansion`（`owned`：`[[row, column], …]`，`bestDayRiders` 與 `townSeed` 不是 0、有值時才寫）；沒有時省略，所以既有 fixture 照舊。
+- 參考模型（`ReferenceWorld`）沒有地圖區塊，所以用到這兩個指令的 fixture 不在 `ReferenceWorldGoldenTests` 裡重播（同土地），由 `MapExpansionTests` 驗證。
+- `map-expansion.json`（新）：5 × 5 塊、每塊 1,048,576 單位（5,242,880 見方）的世界，自由模式，起始 2,000,000,000。
+  - 還沒打開前買地被拒（`mapExpansionNotEnabled`）；第 5 列不在世界裡（`invalidMapTile`）；打開後只擁有中央 (2, 2)：x、y 2,097,152 到 3,145,727。
+  - x = 2,000,000 在 (2, 1)，那裡的車站被拒（`mapTileNotOwned` 2, 1）；中央 (2,621,440) 的車站蓋好。(0, 0) 不相鄰、(2, 2) 已擁有、(2, 5) 在世界外。
+  - 自由模式不看運量：(2, 1) 花 1 塊 × 500,000,000 = 500,000,000，之後 x = 2,000,000 的車站蓋好。改成經營模式後第 3 塊要最佳一天 2 × 100,000 = 200,000 人次，最佳是 0（`mapExpansionLocked` 200,000）。
+  - 餘額 2,000,000,000 − 2 × 1,000（車站）− 500,000,000 = 1,499,998,000；自由模式不記資產。
+- 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

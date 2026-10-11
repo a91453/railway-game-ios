@@ -162,10 +162,27 @@ private struct BuildConfirmation {
     let confirm: @MainActor () -> Void
 
     enum Kind {
-        case track, platform, building, sale
+        case track, platform, building, sale, mapTile
     }
 
     init?(_ session: GameSession) {
+        // Decision 160: the tile of the map chosen to buy, at its middle.
+        if session.isChoosingMapTile {
+            guard let quote = session.chosenMapTileQuote else { return nil }
+            let area = session.world.mapArea(of: quote.tile)
+            start = nil
+            flaggedEnd = nil
+            anchor = PlanPoint(x: (area.minX + area.maxX) / 2, y: (area.minY + area.maxY) / 2)
+            clearance = 18
+            cost = quote.price
+            canConfirm = quote.isUnlocked && session.world.economy.canAfford(quote.price)
+            kind = .mapTile
+            caption = session.chosenMapTileCaption
+            showsCatchment = false
+            cancel = { session.clearChosenMapTile() }
+            confirm = { _ = session.buyChosenMapTile() }
+            return
+        }
         switch session.tool {
         case .network where session.networkMode == .platform:
             // Decision 108: the place picked for a platform, and who lives
@@ -236,6 +253,7 @@ private struct BuildConfirmation {
         case .platform: language.text("Put a platform here", "在這裡加月台")
         case .building: language.text("Build here", "蓋在這裡")
         case .sale: language.text("Sell to the city", "賣給城市")
+        case .mapTile: language.text("Buy this tile", "買下這一塊")
         }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"
