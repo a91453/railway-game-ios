@@ -483,4 +483,24 @@ final class EconomyAccountsTests: XCTestCase {
             XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: data), name)
         }
     }
+
+    /// A day's property rent and costs are held to the same bound as its
+    /// other amounts: past it, the day's profit (fares + rent − costs), the
+    /// finance report and the next midnight's tax would overflow and stop
+    /// the game, so a save carrying one is refused instead.
+    func testADaysPropertyAmountsBeyondTheBoundAreRefused() throws {
+        var world = try makeWorld()
+        try wait(&world, 3, at: alpha, for: beta)
+        try world.advance(ticks: 1_500)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        for key in ["propertyRevenue", "propertyCost"] {
+            var copy = json
+            var accounts = try XCTUnwrap(copy["accounts"] as? [String: Any])
+            var days = try XCTUnwrap(accounts["days"] as? [[String: Any]])
+            days[days.count - 1][key] = Int64.max - 10
+            accounts["days"] = days
+            copy["accounts"] = accounts
+            XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: copy)), key)
+        }
+    }
 }
