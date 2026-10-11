@@ -279,6 +279,8 @@
 
 ## 9. 下一步：iOS 試片
 
+> 2026-10-11 更新：作者在 iPhone 17 Pro 試過 Tokyo 的輕量版可行，選了「直接照搬」而不是下面的 Swift 移植：Tokyo 的網頁原樣放進 App 的 WKWebView，地點改成高雄車站（ARCHITECTURE 決策 152）。下面的 Swift 路線保留作為之後的選項。
+
 建議下一個 PR 做報告的第二步：高雄車站 1 km² 的試片。範圍：
 
 1. **打包資料**：`extract_patch.py` 的高雄部分轉成圖塊檔，約 26 KiB gzip，放進 `RealWorld/`。`DataSourceCredits` 加上 Overture（ODbL）與 Shi 等人（CC BY 4.0）；決策 147 若先合併，就沿用它加的那兩條。

@@ -44,6 +44,33 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10))
     }
 
+    /// Decision 152: the settings' 3D city preview opens full screen, its
+    /// page comes from the app's loopback server (the credit line is
+    /// written by the page's script from the area's manifest, so it shows
+    /// the server, the page's modules and its fetch all worked), and the
+    /// close button goes back to the settings.
+    func testTheCityPreviewLoadsItsPageAndCloses() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tap(app.buttons["start.settings"], name: "start.settings")
+        let preview = app.buttons["settings.cityView"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
+        for _ in 0..<3 where !preview.isHittable {
+            app.swipeUp()
+        }
+        preview.tap()
+        XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
+        let credit = app.webViews.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Overture Maps Foundation")).firstMatch
+        XCTAssertTrue(credit.waitForExistence(timeout: 120), "The 3D city page did not load from the loopback server")
+        tap(app.buttons["cityView.close"], name: "cityView.close")
+        XCTAssertTrue(app.buttons["cityView.close"].waitForNonExistence(timeout: 10), "Close did not close the 3D city preview")
+        XCTAssertTrue(app.buttons["settings.done"].waitForExistence(timeout: 10))
+    }
+
     /// With the Lines panel open (a half-height sheet that leaves the HUD
     /// usable) the game menu's Settings still opens, in the panel's place.
     /// It pins the behaviour only: with Settings back as a sheet of the
