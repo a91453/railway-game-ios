@@ -55,18 +55,20 @@ const HSR_STOCK = {
 // are the material names in his EMU3000 model. The nose is the one thing no reference carries — all
 // three of his are map-scale and narrow for barely 2 m — so 4 m here is a judgement, not a measurement.
 const EMU3000_STOCK = {
-  stripe: '#9c385c', body: '#f6f3ee', cars: 12, length: 20.5, nose: 4, highSpeed: true,
-  shell: { halfW: 1.455, floor: 0.53, roof: 3.49, drop: 0.95, lift: 0.22, tuck: 0.26, cap: 0.5, wing: 0.03, shoulder: 0.7 },
+  stripe: '#9c385c', body: '#f6f3ee', cars: 12, length: 20.5, nose: 5.4, highSpeed: true,
+  shell: { halfW: 1.455, floor: 0.53, roof: 3.49, drop: 1.15, lift: 0.18, tuck: 0.3, cap: 0.46, wing: 0.03, shoulder: 0.72 },
   livery: {
-    body: '#f6f3ee', skirt: '#8a8f93', skirtTop: 0.16,
-    // Signature_Red sits low on the side: 0.79–1.33 m above the rail in his model, which on a body
-    // from 0.53 to 3.49 is these two rows. It runs level, not diving: it is level the whole set long.
-    bands: [{ from: 0.088, to: 0.270, colour: '#9c385c' }],
-    window: { from: 0.430, to: 0.700, pitch: 1.6, width: 1.05, round: 0.12, tint: '#293e4c' },
-    door: { width: 1.0, frame: '#b9bdbe', leaf: '#dcdcd7' },
-    cab: { crease: 0, glass: '#293e4c', canopyStops: 0.66,
-           canopy: [{ at: 0.6, length: 2.6, to: 0.70 }],
-           lamp: { at: 2.6, f: 0.42, width: 1.4, tall: 0.05, lens: 0.5, gap: 0.34, housing: '#3a4046' } },
+    body: '#f6f3ee', skirt: '#9aa0a4', skirtTop: 0.12,
+    // The owner's photographs overrule his own model here. It paints a wide crimson waist band; the
+    // real train has none. Its side is plain white with a thin dark line under the windows, and the
+    // colour that names the set is only a short accent high up by each car's end.
+    bands: [{ from: 0.700, to: 0.726, colour: '#2a3340' }],
+    window: { from: 0.470, to: 0.700, pitch: 1.35, width: 0.70, round: 0.18, tint: '#1b2634', frame: '#b7bbbd', lit: '#c8bb94' },
+    door: { width: 1.0, frame: '#aeb3b6', leaf: '#f2f1ec' },
+    cab: { crease: 0, glass: '#222a38', canopyStops: 0.80,
+           mask: { from: 0.86, dive: 0.62 },
+           canopy: [{ at: 1.1, length: 3.0, to: 0.80 }],
+           lamp: { at: 3.9, f: 0.60, width: 1.5, tall: 0.045, lens: 0.52, gap: 0.36, housing: '#1b2330' } },
   },
 };
 const TRA_STOCK = [EMU900_STOCK, EMU3000_STOCK];
@@ -274,16 +276,20 @@ function highSpeedTextures(stock) {
   const noseX = (0.004 + ((L - stock.nose) / L) * 0.492) * TEX_W;   // where the cab car's nose begins, in the shell's own u
   // A band from x0 to x1 between heights f0 and f1, falling by `dive` on the way. The N700ST's cab car
   // dives its bands towards the nose; EMU3000's run level.
+  // `dive` is how far the band falls on the way: one number moves both edges together, a pair moves
+  // the lower and the upper edge by different amounts, which is how the EMU3000's nose mask keeps its
+  // top at the roof while its lower edge sweeps down to the coupler.
   const band = (x0, x1, f0, f1, dive, colour) => {
+    const [d0, d1] = Array.isArray(dive) ? dive : [dive, dive];
     g.fillStyle = colour;
     g.beginPath();
-    const edge = (f, back) => {
+    const edge = (f, d, back) => {
       for (let i = 0; i <= 24; i++) {
         const x = x0 + ((x1 - x0) * (back ? 24 - i : i)) / 24;
-        g.lineTo(x, row(f - dive * ease((x - x0) / (x1 - x0))));
+        g.lineTo(x, row(f - d * ease((x - x0) / (x1 - x0))));
       }
     };
-    edge(f1, false); edge(f0, true);
+    edge(f1, d1, false); edge(f0, d0, true);
     g.closePath(); g.fill();
   };
   // One pane of saloon glass: an upright window with rounded ends, in the stock's own tint.
@@ -291,10 +297,13 @@ function highSpeedTextures(stock) {
     // A capsule on the N700ST, a rounded rectangle on the EMU3000: `round` is the corner radius as a
     // fraction of the pane's width, and 0.5 is as round as a pane can be.
     const r = w * (lv.window.round ?? 0.5);
-    g.fillStyle = '#d8d9d6'; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, r + 2); g.fill();
+    g.fillStyle = lv.window.frame ?? '#d8d9d6'; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, r + 2); g.fill();
     g.fillStyle = lv.window.tint; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
     g.fillStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.roundRect(x, y, w, h * 0.42, [r, r, 0, 0]); g.fill();
-    e.fillStyle = '#fff0d0'; e.beginPath(); e.roundRect(x, y, w, h, r); e.fill();
+    // The glow picture is what the saloon lights shine out of at night. A pane painted solid there
+    // also lifts the glass by day (the material keeps a little emissive on), which on a train whose
+    // windows read dark in daylight is wrong, so each stock says how brightly its glass is lit.
+    e.fillStyle = lv.window.lit ?? '#fff0d0'; e.beginPath(); e.roundRect(x, y, w, h, r); e.fill();
   };
   // The side of one car: a door at each end in its frame, a row of windows between them. The doors go
   // on before the bands, because the livery runs straight across them, and the windows after.
@@ -323,6 +332,9 @@ function highSpeedTextures(stock) {
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
   const cab = lv.cab;
   if (cab.crease) { g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(noseX, row(cab.crease), HALF - noseX, 3); }
+  // The EMU3000 wears its whole nose as one dark mask, windscreen and all, white only along the
+  // lower flanks; the N700ST has no mask, just a canopy, so this is absent there.
+  if (cab.mask) band(noseX, HALF, cab.mask.from, 1, [cab.mask.dive, 0], cab.glass);
   for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
   g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
   const lp = cab.lamp;

@@ -101,6 +101,12 @@ await trains.ready;            // the Meshy models, when an area has them, arriv
 trains.update(20.0, 0);
 // car 0's nose sits at x = -400 + SPEED * 20 = -100; the cars run back from there
 const set = trains.sets[${SET}] ?? trains.sets[0];
+// Reaching the second stock of a rotation means laying a second line, and the first line's train
+// would otherwise stand in the background of every shot. Only the stock being looked at is shown.
+for (const other of trains.sets) {
+  if (other === set) continue;
+  for (const m of [other.mesh, other.model?.cabs, other.model?.cars]) if (m) m.visible = false;
+}
 const LEN = set.stock.length, CARS = set.stock.cars;
 const noseX = -100, trackZ = ${SET} * 60, cabCentre = noseX - LEN * 0.5, midCentre = noseX - LEN * 4.5;
 
