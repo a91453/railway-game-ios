@@ -4409,6 +4409,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：三鎮連線量了 3 個種子，鐵道造鎮、鐵道大亨各 2 個；鐵道大亨擴張的達成日、鐵道造鎮銀牌改成 465 天之後的評等是由量到的曲線推的，沒有再重跑；劇本是固定的三種玩法，真實玩家會調票價、選站位、加車，結果會不同；實機上 6000× 玩一年的手感要看 TestFlight。
 
+**之後的修正**（審查 #325–#350）：`ChallengeRecords.record` 原本不看存檔裡劇本的目標，第 8 項照舊規則玩完的存檔會被記成 `v2` 的最佳紀錄。現在挑戰的目標與天數（`connect` 的地點除外，它由種子決定）和這個挑戰現在的規則不同時不記錄（`hasTheSameTargets`）。測試：`WeeklyChallengeTests.testAResultUnderOtherTargetsIsNotKept`。
+
 ### 146. 實景地圖依面積收購城市建物
 
 2026-10-10，接 #320、#321 的建物量測。作者問「你是遊戲開發者的話怎麼處理」，同意的方向：實景地圖上城市建物不再擋玩家的建物，改用錢表達收購；空白地圖保留決策 95、142 的方塊。理由：
@@ -4514,6 +4516,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 參考檢查：參考庫的 TRA 時刻表（`Railway/site_archive_clean/index.html` 的 `sched`）是每班列車自己的停靠站，沒有乘客規劃，沒有可以搬的規則；外部專案沒有找。是本專案的規則。
 
 **golden、存檔、replay**：`line-runs.json` 的班次兩個方向都開全線，預期值都不變。測試：`LineRunsTests.testOnlyTheWaysAndStretchesTheRunsGoAreServed`（直接路徑與全網路徑各一次；修之前沒有回程班時，回程方向每天仍有 500／21 人次）。
+
+**之後的修正**（審查 #325–#350）：直接路徑的放行計畫（`makePassengerPlan` 自己的 `trip`）漏了第 1 項的檢查，仍然放出班次沒開的方向與區段的乘客。這些乘客永遠等不到車，存檔也讀不回來（`passengerProblem` 拒絕）。現在和 `trip(on:from:to:)` 一樣檢查 `runsServe`。golden、存檔、replay 的預期值都不變。測試：`LineRunsTests.testOnlyTheWaysTheRunsGoAreSetOut`。
 
 ### 151. 自製的 OSM 底圖：遊戲自己的樣式與台灣的離線圖磚（E3 第二步）
 
@@ -4716,6 +4720,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 工業格只有就業，沒有產能；空白地圖的工業只來自城鎮與玩家劃的工業區；
 - 還沒有資材與城市成長的連結（方案 A 的第二步）、地圖上的貨運圖層。
 
+**之後的修正**（審查 #325–#350）：
+- 路線改成貨運路線時，`isServed` 不看 `isFreight`，在等這條線的乘客不會被放棄，從此永遠在等；全網路徑也會把轉乘排到這條線上。現在兩個 `isServed` 都把貨運路線當成沒有服務，`setLineFreight` 會把他們算成放棄；`boardingPlan` 也不讓任何人上貨運列車。修正前存下、還有人在等貨運路線的存檔照樣讀得回來（`passengerProblem` 暫時接受），下一個重新檢查的指令把他們算成放棄。測試：`FreightTests.testPassengersWaitingForALineThatTurnsFreightAreAbandoned`、`testASaveWithPassengersWaitingForAFreightLineLoads`。
+- 存檔裡一列車的貨原本可到 2^40 噸，卸貨時運費的乘積會溢位當掉。現在一列車最多是最長列車（`Train.maximumCars` 節）的噸數，遊戲裡到得了的狀態都在這之內。測試：`FreightTests.testASaveWithMoreOnBoardThanATrainHoldsIsRefused`。
+
 ### 156. 建材：貨運場出建材、車站的建材置場、在地供應與進口
 
 2026-10-11，作者要求做研究文件方案 A（貨運第二步）的第一個 PR，設計交給 Claude Code。號碼依工作登記 #231：決策 156、存檔版本 39、golden schema 59。這一步只讓建材存在，不改城市成長（閘門是決策 157）。
@@ -4785,6 +4793,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **golden、存檔、replay**：`materials-growth.json`（schema 60，決策 157 新加的、還沒合併）最終狀態多了 `"lastShort": [1, 2, 3]`，`city_growth.py` 一起驗；其他既有 fixture 都沒有改。測試：`FreightSessionTests.testAStationShortOfMaterialsShowsOnTheMap`。
 
+**之後的修正**（審查 #325–#350）：`lastShort` 只在城市成長的那一晚重算，關掉城鎮成長或改成自由模式後，「缺建材」會一直顯示。現在沒有成長的午夜（`growLand` 不跑、或沒有土地需求）與關掉城鎮成長時都清空。測試：`BuildingMaterialsTests.testANightWithoutGrowthIsShortOfNothing`。
+
 ### 159. 新車站依所在的地名命名
 
 2026-10-11，作者說之前講好要改車站的自動命名、後來忘了，並把做法交給 Claude Code 決定。參考移植盤點的 M2（MapBuilder 的自動命名）一直沒有移植。之前：實景地圖上新車站取 5 公里內最近、還沒用過的真實車站名，沒有就叫「車站 N」；所以離台北車站 4 公里的地方也叫「臺北」，山裡、田中央的車站都是「車站 3」「車站 4」。號碼依工作登記 #231：決策 159；存檔、golden schema 不動。
@@ -4850,6 +4860,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **golden、存檔、replay**：新的 `map-expansion.json`（schema 61）；存檔版本 40（`v40-map-expansion.json`），版本 39 以前的存檔讀成整張地圖都擁有。既有 golden、存檔與 replay 都沒有改。測試：`MapExpansionTests`、`MapExpansionSessionTests`。
 
 **限制**：實景地圖與全台灣的擴建是第 2 步（實景開局的世界改成全台灣大小、買下時讀入那一塊的土地）；區塊只能整塊買，不能賣回；沒擁有的區塊裡城市照樣會長；買地不影響挑戰（挑戰的地圖不能擴建）。
+
+**之後的修正**（審查 #325–#350）：蓋軌道時檢查的是曲線的中心線，存檔檢查的卻是曲線的控制點；貝茲曲線只走到控制點的四分之三，所以貼著區塊邊緣的彎道蓋得出來，存檔卻讀不回來。現在存檔也檢查中心線（`firstTileNotOwned(along:in:)`），已經存下的這種存檔也讀得回來。測試：`MapExpansionTests.testACurveWhoseControlPointsLieBeyondTheTileOwnedLoads`。App：選地塊時開著路線面板，點地圖改回選路線的車站（`MapView`）。
 
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 
