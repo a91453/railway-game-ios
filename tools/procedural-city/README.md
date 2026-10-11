@@ -15,13 +15,15 @@ Poly Haven, npm). From the repository root:
 curl -LO https://osmtoday.com/asia/taiwan.pbf                          # some 350 MB
 python3 tools/procedural-city/taiwan_area.py buildings 2026-09-23.1 kaohsiung Web/CityView/data/raw/kaohsiung
 python3 tools/procedural-city/taiwan_area.py osm taiwan.pbf kaohsiung Web/CityView/data/raw/kaohsiung
+python3 tools/procedural-city/taiwan_area.py buildings 2026-09-23.1 taichung Web/CityView/data/raw/taichung
+python3 tools/procedural-city/taiwan_area.py osm taiwan.pbf taichung Web/CityView/data/raw/taichung
 tools/procedural-city/build_city_view.sh
 ```
 
 - `taiwan_area.py buildings`: Overture's buildings round the area (about 30 s).
 - `taiwan_area.py osm`: the area's roads, railways, green space, crossings, signals, shops and street furniture
   out of the Taiwan extract, in the shape of the Overpass answers Tokyo's `fetch.mjs` asks for (about 2½ min).
-- `build_city_view.sh`: compiles the tiles (`Web/CityView/tools/pipeline/compile.mjs --area=kaohsiung --no-ads`,
+- `build_city_view.sh`: compiles the tiles of both areas (`Web/CityView/tools/pipeline/compile.mjs --area=kaohsiung --no-ads`,
   a few seconds), shrinks the textures to 512 px (`shrink_textures.mjs`), builds the page with Vite into
   `RailwayGameApp/Resources/CityView/`, and writes the notices of the bundled libraries
   (`notices.mjs` → `RailwayGameApp/Resources/Licenses/CityView-NOTICES.md`).
@@ -29,6 +31,12 @@ tools/procedural-city/build_city_view.sh
 2026-10-11 (Overture `2026-09-23.1`, osmtoday's Taiwan extract downloaded on 2026-10-10): 1,212 buildings in the area (1,179 of
 them without storeys in Overture, so estimated), 70.2 km of road, 147 shop signs, 54 tiles of 256 m (2.0 MB);
 the whole page 12 MB.
+
+Taichung Station (decision 161; Overture `2026-09-23.1`, osmtoday's extract of 2026-10-11): 1,404 buildings in the
+area (1,229 estimated), 14 elevated railway lines (the TRA viaduct), 508 shop signs, 41 tiles (2.1 MB); Kaohsiung's
+tiles came out byte for byte the same from the newer extract. The whole page 14 MB.
+
+The trains' Meshy models (`Web/CityView/public/models/trains/`) are made with `tools/meshy/` (its README).
 
 ## Trying it in a browser
 

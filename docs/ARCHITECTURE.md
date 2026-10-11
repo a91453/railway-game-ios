@@ -4802,6 +4802,39 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **相容**：GameCore、存檔、golden、replay 都不變（站名只是建議，由 `buildStation(named:)` 照舊寫進世界）。測試：`PlaceNamingTests`；`NearestStationNamingTests` 的「地圖中央第一次建議」改成照 800 m（以前的 5 km 會把離四腳亭 800 m 以外的中央叫做四腳亭）。
 
+### 161. Meshy 的列車模型與 3D 城市的臺中車站
+
+2026-10-11，作者：「我有買 Meshy，你能接它的 API 做點東西嗎」，選了「3D 城市的列車模型」。高雄車站一帶的臺鐵與捷運都在地下（決策 152 的限制），畫面裡沒有列車，作者再選「加一個臺中車站區域」：臺鐵在臺中是高架。號碼依工作登記 #231：決策 161（160 由購買擴建地圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**參考**（私有參考 `581db83`）：
+
+| 參考 | 這裡 |
+| --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/formations.js` 的 `FORMATIONS.emu3000`（12 節：頭尾 21.35 m、中間 20.3 m，寬 2.91 m） | `trains.js` 的 `TRA_STOCK` 自強號：12 節、每節 20.5 m（總長 246 m，參考 246.3 m）；模型縮放寬 2.9 m |
+| 同上 `FORMATIONS.commuter`（EMU700／800 推估 8 × 20 m，寬 2.9 m） | 區間車：EMU900 的 10 節 × 20 m（EMU900 是 10 輛一組，參考沒有這一型） |
+| `Simulator/reference_snapshot/models/tra-e201/tra-e201.glb`（臺鐵 E200 型電力機車，Blender 輸出、無貼圖） | 只拿來在本機測 `pack` 與載入，不提交；自強號與區間車都不是機車牽引 |
+| `Railway/city_world_reference/`、`Ci/`、`MapBuilder/` | 沒有列車的 3D 模型或 Meshy 的流程 |
+
+外部專案：Meshy 的 Text to 3D API（https://docs.meshy.ai/en/api/text-to-3d）。程式是本專案自己寫的（`tools/meshy/meshy.mjs`，Node 22 內建 fetch、`Web/CityView` 既有的 sharp），沒有新的套件。
+
+1. **`tools/meshy/`**：`models.json` 寫四個模型的 prompt（EMU900、EMU3000 各一個頭車與中間車）。`generate` 做 preview（Meshy 7.1、重新拓樸到 5,000–6,000 個三角形）再 refine（2K 貼圖、不要 PBR），GLB 與縮圖下載到 `Web/CityView/data/raw/meshy/`（不提交），prompt、任務編號與點數記在 `generated.json`；`pack` 把貼圖縮到 1024 px、不透明的轉 JPEG，寫到 `Web/CityView/public/models/trains/` 與它的 `index.json`（檔名與駕駛室朝哪個軸）。每個模型 30 點，四個 120 點。
+   - 金鑰只讀環境變數 `MESHY_API_KEY`，不寫進任何檔案；這個 repo 是公開的。
+   - Meshy 條款：付費方案的使用者擁有輸出（§3.2），輸出裡的 AI 識別資訊不能移除（§2.4），所以 `pack` 原樣保留 GLB 的 `asset` 與 `extras`。
+2. **3D 城市的臺中車站**：`taiwan_area.py` 與 `config.mjs` 多一個地點 `taichung`（臺鐵臺中站 24.1371°N、120.6869°E，1.5 × 1.5 km），資料照決策 152 的流程（Overture `2026-09-23.1`、osmtoday 2026-10-11 的整包檔）：Overture 框內 2,136 棟、區內留下 1,404 棟（1,229 棟依足跡估樓層），14 段高架鐵路（`臺中線`、`臺中線 (山線)` 與沒有名字的站內線），508 塊店招，41 個圖塊 2.1 MB。開場的視角從西邊沿著高架看進車站。`build_city_view.sh` 編譯兩個地點；高雄的圖塊重新編譯後逐位元組相同（只有 manifest 的編譯時間不同，保留原檔）。打包的頁面從 12 MB 變 14 MB。
+3. **列車**（`Web/CityView/src/world/trains.js`，標 Along the Line）：
+   - 台灣的地點（manifest 的 `zone`）裡，`railway=rail` 都是臺鐵，各條路徑輪流是區間車（銀色車身、黃色帶）與自強號（白色車身、橘色帶）。Tokyo 的路線表照舊。
+   - 有 Meshy 模型時（`models/trains/index.json`），列車改畫模型：頭尾用頭車模型（尾車轉 180°），中間用中間車；只有一個時每節都用它。模型轉成駕駛室朝前、縮放成車長 × 2.9 m × 3.9 m，放在軌面上。
+   - 沒有模型時（目前 `index.json` 是 `{}`）照舊畫方塊，塗裝是臺鐵的顏色。
+4. **App**：設定頁的「試作」多一項「3D 城市：臺中車站」。GamePresentation 新的 `CityViewArea`（高雄、臺中）給每個地點的開啟網址，取代 `CityViewServing.startPath`。資料來源畫面的 Overture 與 3D 城市說明加上臺中。
+
+**驗證**：在 headless Chromium（SwiftShader）開建置好的頁面：臺中的高架上有方塊列車；把參考的 E201 GLB 與一個 2048 px 貼圖的測試模型 `pack` 之後，列車換成模型、沿著高架走（測試檔不提交）。iPhone 上的幀時間與記憶體沒有量（UNVERIFIED）。
+
+**限制與之後**：
+- 這個 session 的環境沒有 Meshy 金鑰，四個模型還沒生成（`index.json` 是空的）。作者在環境設定加上 `MESHY_API_KEY` 之後，新的 session 照 `tools/meshy/README.md` 生成、看縮圖填 `front`、`pack`、重新建置；那時在資料來源畫面註明由 Meshy 生成。
+- 模型的夜間沒有窗光（方塊的窗光是畫上去的發光貼圖）。
+- 列車照舊是頁面自己的：每條路徑一列、等速 15 m/s，不停站、不讀 GameCore 的時刻表。
+- 臺中站的站房（Overture 的大型建物）蓋在高架上，車站裡的列車會被擋住。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

@@ -50,8 +50,11 @@ final class CityViewServingTests: XCTestCase {
         XCTAssertTrue(missing.hasPrefix("HTTP/1.1 404 Not Found\r\n"))
     }
 
-    func testTheStartPageIsTheLightKaohsiungView() {
-        XCTAssertEqual(CityViewServing.file(requestHead: "GET \(CityViewServing.startPath) HTTP/1.1\r\n\r\n"), "index.html")
-        XCTAssertTrue(CityViewServing.startPath.contains("area=kaohsiung"))
+    func testEachAreaStartsOnTheLightView() {
+        XCTAssertEqual(CityViewArea.allCases, [.kaohsiung, .taichung])
+        for area in CityViewArea.allCases {
+            XCTAssertEqual(CityViewServing.file(requestHead: "GET \(area.startPath) HTTP/1.1\r\n\r\n"), "index.html")
+            XCTAssertEqual(area.startPath, "/index.html?area=\(area.rawValue)&radius=400&clouds=0&birds=0&traffic=0")
+        }
     }
 }
