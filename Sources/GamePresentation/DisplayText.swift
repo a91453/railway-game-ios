@@ -584,14 +584,25 @@ extension GameSession {
 }
 
 extension TrainType {
-    /// The type's name, as the reference labels it (`TRAIN_TYPES[type].label`,
-    /// `metroTrainTypeLabel`): "Type B" / "B型", "Maglev" / "磁浮".
+    /// The type's name (decision 171). The reference labels its types
+    /// `TRAIN_TYPES[type].label` ("A型" to "D型", "APM", "磁浮", "云轨",
+    /// "单轨"). The names a player in Taiwan knows keep them: "APM",
+    /// "Maglev" / "磁浮", "Monorail" / "單軌". The letters and the sky rail,
+    /// which nobody there would recognize, are named for what they are: the
+    /// large (A) and medium (B) metro, the light rail (C), the linear-motor
+    /// metro (L), the suburban express (D) and the light monorail (BYD's
+    /// SkyRail, a medium-capacity monorail, rated here below the monorail).
+    /// Only this text changes: a type is saved and replayed by its raw value.
     public func title(in language: DisplayLanguage) -> String {
         switch self {
-        case .a, .b, .c, .l, .d: language.text("Type \(rawValue)", "\(rawValue)型")
+        case .a: language.text("Large metro", "大型捷運")
+        case .b: language.text("Medium metro", "中型捷運")
+        case .c: language.text("Light rail", "輕軌")
+        case .l: language.text("Linear-motor metro", "線性馬達捷運")
+        case .d: language.text("Suburban express", "市郊快線")
         case .apm: "APM"
         case .maglev: language.text("Maglev", "磁浮")
-        case .skyRail: language.text("Sky rail", "雲軌")
+        case .skyRail: language.text("Light monorail", "輕型單軌")
         case .monorail: language.text("Monorail", "單軌")
         case .steam: language.text("Steam train", "蒸汽列車")
         case .highSpeed: language.text("High-speed set", "高鐵列車")
@@ -602,7 +613,8 @@ extension TrainType {
 
 extension Train {
     /// The type of its cars, what each carries and its doors:
-    /// "Type B · 260 a car · 4 doors", or "Standard car · 320 a car · 4 doors".
+    /// "Medium metro · 260 a car · 4 doors", or "Standard car · 320 a car · 4
+    /// doors".
     public func typeText(in language: DisplayLanguage) -> String {
         Self.typeText(type, in: language)
     }
