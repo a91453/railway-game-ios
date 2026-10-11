@@ -225,7 +225,7 @@ extension GameWorld {
             case .tallBuildings(let target):
                 return counted(Int64(tallBuildingCount()), Int64(target), language.text("High-rises (D4)", "高樓（D4）"))
             case .annualNetProfit(let target):
-                let best = accounts.years.map(\.income.netProfit).max() ?? .zero
+                let best = goalYears().map(\.income.netProfit).max() ?? .zero
                 return money(best, target, language.text("Net profit in a year", "年度淨利"))
             case .equity(let target):
                 return money(balanceSheet().equity, target, language.text("Company worth (equity)", "公司權益"))
@@ -262,7 +262,7 @@ extension GameWorld {
     }
 
     /// Where the scenario stands: "Day 12 of 360 · gold by day 60", or how
-    /// it ended.
+    /// it ended, or that free play stopped it.
     public func scenarioStatusText(in language: DisplayLanguage) -> String? {
         guard let state = scenario else { return nil }
         let rules = state.scenario
@@ -279,6 +279,10 @@ extension GameWorld {
             case .deadline: language.text("Time ran out after \(days) days", "\(days) 天期限已到，挑戰失敗")
             case .insolvency: language.text("Bankrupt on day \(days): too long in the red", "第 \(days) 天破產：現金赤字太久")
             }
+        case nil where accounts.mode == .free:
+            // Decision 86, later: a save from before a challenge being
+            // played was kept managed; free play never judges it.
+            return language.text("Stopped: the game was switched to free play", "已改為自由模式，挑戰中止")
         case nil:
             let today = scenarioDay() ?? 1
             let next: String
