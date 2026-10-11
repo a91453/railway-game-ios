@@ -22,8 +22,6 @@ if len(pattern.findall(text)) != 1:
 source.write_text(pattern.sub("", text, count=1))
 PY
 
-# The same settings as ios-build.yml's builds (SWIFT_EMIT_LOC_STRINGS too), so
-# only the changed file is compiled again.
 set +e
 xcodebuild test \
   -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -35,7 +33,6 @@ xcodebuild test \
   -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar \
   -parallel-testing-enabled NO \
   -disableAutomaticPackageResolution \
-  SWIFT_EMIT_LOC_STRINGS=YES \
   CODE_SIGN_IDENTITY=- 2>&1 | tee "$RUNNER_TEMP/ui-smoke-missing-button.log"
 test_status=${PIPESTATUS[0]}
 set -e
