@@ -2712,6 +2712,9 @@ public struct GameWorld: Equatable, Sendable {
         let plan = trafficPlan(memo: &memo.directions)
         guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil,
               let going = goingOn(trains[index]) else { return false }
+        // The whole routes tried before the default one and held: a step
+        // ends when one frees, as for the default one (decision 55).
+        var whole: [Train] = []
         if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan) {
             var scheduled = going
             follow(chosen.path, &scheduled)
@@ -2721,10 +2724,14 @@ public struct GameWorld: Equatable, Sendable {
                 setOff(index, as: granted)
                 return true
             }
+            whole.append(scheduled)
         }
-        if let preferred = preferredGoingOn(trains[index]), case .granted(let granted) = reserving(preferred) {
-            setOff(index, as: granted)
-            return true
+        if let preferred = preferredGoingOn(trains[index]) {
+            if case .granted(let granted) = reserving(preferred) {
+                setOff(index, as: granted)
+                return true
+            }
+            whole.append(preferred)
         }
         switch reservingDeparture(going, memo: &memo.directions) {
         case .granted(var granted):
@@ -2733,7 +2740,7 @@ public struct GameWorld: Equatable, Sendable {
             setOff(index, as: granted)
             return true
         case .held:
-            held.append(HeldRoute(candidate: going))
+            held.append(HeldRoute(candidate: going, whole: whole))
             return false
         }
     }
@@ -2942,22 +2949,29 @@ public struct GameWorld: Equatable, Sendable {
             unroutable.insert(trains[index].id)
             return false
         }
-        let train: Train
         // Stage V3: the scheduled path, on the scheduled run, when the train
-        // can take it whole now; otherwise the departure as without a plan.
+        // can take it whole now; then the line's preferred path (decision
+        // 61); otherwise the departure as without a plan. The whole routes
+        // tried first and held end a step when one frees, as the default
+        // one does (decision 55).
+        var granted: Train?
+        var whole: [Train] = []
         if case .setsOff = departure,
-           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan),
-           case .granted(let granted) = reserving(scheduled) {
-            train = granted
-        } else if case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle),
-                  case .granted(let granted) = reserving(preferred) {
+           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan) {
+            if case .granted(let train) = reserving(scheduled) { granted = train } else { whole.append(scheduled) }
+        }
+        if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle) {
+            if case .granted(let train) = reserving(preferred) { granted = train } else { whole.append(preferred) }
+        }
+        let train: Train
+        if let granted {
             train = granted
         } else {
             switch reservingDeparture(moved, memo: &memo.directions) {
             case .granted(let granted):
                 train = granted
             case .held:
-                held.append(HeldRoute(candidate: moved))
+                held.append(HeldRoute(candidate: moved, whole: whole))
                 return false
             }
         }
@@ -3433,9 +3447,12 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// A departure due at the start of a step whose route another train
-    /// holds (Stage T): the train as it would set off.
+    /// holds (Stage T): the train as it would set off, and as it would set
+    /// off on the whole routes it tries first (its scheduled path, decision
+    /// 59, and its line's preferred one, decision 61).
     struct HeldRoute {
         let candidate: Train
+        var whole: [Train] = []
     }
 
     /// The seconds, from `start` and at most `span`, after which one of
@@ -3468,7 +3485,11 @@ public struct GameWorld: Equatable, Sendable {
             if moved.canExtendAnyAuthority() {
                 return true
             }
-            return held.contains(where: { if case .granted = moved.reservingDeparture($0.candidate, memo: &memo.directions) { true } else { false } })
+            return held.contains { route in
+                if route.whole.contains(where: { if case .granted = moved.reserving($0) { true } else { false } }) { return true }
+                if case .granted = moved.reservingDeparture(route.candidate, memo: &memo.directions) { return true }
+                return false
+            }
         }
         // The least `k` after which one is free. A train following another
         // moving on takes more of its route almost every second, so then

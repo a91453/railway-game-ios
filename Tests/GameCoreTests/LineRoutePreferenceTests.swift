@@ -189,6 +189,39 @@ final class LineRoutePreferenceTests: XCTestCase {
         XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
     }
 
+    /// A departure held under traffic control takes its preferred route the
+    /// second that route frees (decision 61), in one long advance as one
+    /// second at a time (decision 55): the step ends there, as it does for
+    /// the default route. The loop is far longer than the main track, so
+    /// V1 never offers it, and the train ahead moving off it frees it at
+    /// 0:51 while a standing train keeps the default way held.
+    func testAPreferredRouteFreedMidStepIsTakenAsSecondBySecond() throws {
+        var world = try SingleTrackMeet.world(loop: 32_768)
+        let line = try world.createLine(named: "Loop", stops: [SingleTrackMeet.west, SingleTrackMeet.middle]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        try world.assignTrain(train, to: line)
+        let platform = try XCTUnwrap(world.trackPlatforms(of: SingleTrackMeet.middle).first { $0.edge == .edge(5) })
+        try world.setLineRoutePreferences(line, to: [
+            LineRoutePreference(from: 0, to: 1, tracks: [1, 4, 5].map(SingleTrackMeet.forward), platform: platform),
+        ])
+        try world.setTrafficControl(true)
+        world.setSpeed(.x1)
+        // Sent out at 0:00, due to leave W at 0:42.
+        for _ in 0..<40 { try world.advance(ticks: 10) }
+        _ = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(2), offset: 9_216)
+        let ahead = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(5), offset: 6_144)
+        try world.setTrainContinuation(ahead, along: [6, 3].map(SingleTrackMeet.forward), stoppingAt: 4_096)
+        try world.setTrainMovementRate(ahead, to: 6_144)
+        var batch = world, seconds = world
+        try batch.advance(ticks: 180)
+        for _ in 0..<18 { try seconds.advance(ticks: 10) }
+        XCTAssertEqual(seconds.train(id: train)?.times?.departure, GameTime(seconds: 51))
+        XCTAssertEqual(batch.train(id: train)?.times?.departure, GameTime(seconds: 51))
+        XCTAssertEqual(batch, seconds)
+    }
+
     func testMissingPlatformAndBrokenWalkFallBackWithoutLosingThePlan() throws {
         var (world, model, line, _) = try Self.setup()
         let preference = Self.loop(world)
