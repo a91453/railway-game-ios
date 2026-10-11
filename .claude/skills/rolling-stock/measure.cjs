@@ -144,14 +144,18 @@ for (const [i, node] of (isWenhu ? [] : gltf.nodes ?? []).entries()) {
     if (!byMaterial.has(name)) byMaterial.set(name, { material: prim.material, triangles: 0, points: [] });
     const rec = byMaterial.get(name);
     rec.triangles += n;
-    rec.points.push(...pos);
-    vertices.push(...pos);
+    for (const q of pos) { rec.points.push(q); vertices.push(q); }
   }
 }
 if (!vertices.length) { console.error('the model has no geometry'); process.exit(2); }
 
 // ---- Put it in the city view's frame: +Z along the car, +Y up, y = 0 at the rail.
-const span = [0, 1, 2].map((a) => Math.max(...vertices.map((p) => p[a])) - Math.min(...vertices.map((p) => p[a])));
+// Math.max(...a) passes every element as an argument, which overflows the stack on a dense model —
+// the first reference with a few hundred thousand vertices crashed the whole tool.
+const least = (ps, f) => { let v = Infinity; for (const p of ps) { const x = f(p); if (x < v) v = x; } return v; };
+const most = (ps, f) => { let v = -Infinity; for (const p of ps) { const x = f(p); if (x > v) v = x; } return v; };
+
+const span = [0, 1, 2].map((a) => most(vertices, (p) => p[a]) - least(vertices, (p) => p[a]));
 const along = Number(flag('axis', String(span.indexOf(Math.max(...span)))));   // the car runs along its longest axis
 const rest = [0, 1, 2].filter((a) => a !== along);
 // Of the two remaining axes, up is the one the model is taller in: a car is taller than it is wide.
@@ -159,15 +163,15 @@ const up = span[rest[0]] >= span[rest[1]] ? rest[0] : rest[1];
 const side = rest.find((a) => a !== up);
 const put = (p) => [p[side], p[up], p[along]];
 const all = vertices.map(put);
-const floorY = Math.min(...all.map((p) => p[1]));
-const midZ = (Math.max(...all.map((p) => p[2])) + Math.min(...all.map((p) => p[2]))) / 2;
+const floorY = least(all, (p) => p[1]);
+const midZ = (most(all, (p) => p[2]) + least(all, (p) => p[2])) / 2;
 const frame = (p) => { const q = put(p); return [q[0], q[1] - floorY, q[2] - midZ]; };
 
 const pts = vertices.map(frame);
 const bound = (ps) => ({
-  x: [Math.min(...ps.map((p) => p[0])), Math.max(...ps.map((p) => p[0]))],
-  y: [Math.min(...ps.map((p) => p[1])), Math.max(...ps.map((p) => p[1]))],
-  z: [Math.min(...ps.map((p) => p[2])), Math.max(...ps.map((p) => p[2]))],
+  x: [least(ps, (p) => p[0]), most(ps, (p) => p[0])],
+  y: [least(ps, (p) => p[1]), most(ps, (p) => p[1])],
+  z: [least(ps, (p) => p[2]), most(ps, (p) => p[2])],
 });
 const whole = bound(pts);
 const LEN = whole.z[1] - whole.z[0], WIDE = whole.x[1] - whole.x[0], TALL = whole.y[1] - whole.y[0];
@@ -233,7 +237,7 @@ for (let s = 0; s < SLICES; s++) {
   // slice would read the pantograph as the roof and the bogie as the floor. Width comes from the
   // body's flank alone, and top and bottom from percentiles, which ignore sparse outliers.
   const flank = slab.filter((p) => p[1] >= whole.y[0] + TALL * 0.3 && p[1] <= whole.y[0] + TALL * 0.8);
-  const halfWidth = Math.max(...(flank.length ? flank : slab).map((p) => Math.abs(p[0])));
+  const halfWidth = most(flank.length ? flank : slab, (p) => Math.abs(p[0]));
   const pick = (ps, q) => { const v = ps.map((p) => p[1]).sort((a, b) => a - b); return v[Math.min(v.length - 1, Math.max(0, Math.round(q * (v.length - 1))))]; };
   const sides = slab.filter((p) => Math.abs(p[0]) >= halfWidth * 0.6);
   stations.push({
