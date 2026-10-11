@@ -17,8 +17,6 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(map.waitForExistence(timeout: 120), "The scene opens")
         let alerts = app.buttons.matching(identifier: "map.alert")
         XCTAssertTrue(alerts.firstMatch.waitForExistence(timeout: 30), "The stations short of materials show")
-        // Out a step, to show the whole network round Central.
-        app.buttons["縮小"].tap()
         settle()
         keep("freight-materials", app)
 
@@ -26,6 +24,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
+        XCTAssertTrue(app.buttons["map.stationTag"].waitForExistence(timeout: 5), "A tap on a bubble picks its station")
         settle()
         keep("freight-station", app)
 
