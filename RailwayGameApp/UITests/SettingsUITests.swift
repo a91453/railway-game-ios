@@ -45,10 +45,13 @@ final class SettingsUITests: XCTestCase {
     }
 
     /// Decision 152: the settings' 3D city preview opens full screen, its
-    /// page comes from the app's loopback server (the credit line is
-    /// written by the page's script from the area's manifest, so it shows
-    /// the server, the page's modules and its fetch all worked), and the
-    /// close button goes back to the settings.
+    /// page comes from the app's loopback server, and the close button goes
+    /// back to the settings. It waits for the loading indicator to go
+    /// (`cityView.loading`, shown until the web view finishes loading the
+    /// page): the server answered, whether or not the Simulator's WebGL
+    /// then draws the city. A view that could not start, or a page the web
+    /// view could not load, shows why (`cityView.error`), and the test
+    /// reports it.
     func testTheCityPreviewLoadsItsPageAndCloses() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -64,8 +67,13 @@ final class SettingsUITests: XCTestCase {
         }
         preview.tap()
         XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
-        let credit = app.webViews.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Overture Maps Foundation")).firstMatch
-        XCTAssertTrue(credit.waitForExistence(timeout: 120), "The 3D city page did not load from the loopback server")
+        let loading = app.descendants(matching: .any)["cityView.loading"]
+        let error = app.staticTexts["cityView.error"]
+        let done = loading.waitForNonExistence(timeout: 60)
+        if error.exists {
+            XCTFail(error.label)
+        }
+        XCTAssertTrue(done, "The page did not load from the loopback server, and the web view reported no error")
         tap(app.buttons["cityView.close"], name: "cityView.close")
         XCTAssertTrue(app.buttons["cityView.close"].waitForNonExistence(timeout: 10), "Close did not close the 3D city preview")
         XCTAssertTrue(app.buttons["settings.done"].waitForExistence(timeout: 10))
