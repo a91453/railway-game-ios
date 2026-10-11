@@ -29,6 +29,23 @@ extension GameWorld {
         return waiting + "\n" + makes
     }
 
+    /// What station `station` holds of building materials and gets a day
+    /// without a train (decision 156), for the station panel; `nil` while
+    /// building materials are off.
+    public func materialsText(at station: StationID, in language: DisplayLanguage) -> String? {
+        guard freight?.buildingMaterials == true else { return nil }
+        let stock = materialsStock(at: station), daily = materialsSuppliedPerDay(at: station)
+        return language.text(
+            "Building materials: \(stock) t (up to \(Freight.materialsLimit) t); \(daily) t a day arrive by road.",
+            "建材置場：\(stock) 噸（最多 \(Freight.materialsLimit) 噸）；每天由公路運來 \(daily) 噸。"
+        )
+    }
+
+    /// Whether this game has building materials, so a yard can send them.
+    public var hasBuildingMaterials: Bool {
+        freight?.buildingMaterials == true
+    }
+
     /// What building a yard costs and does, for the button's footer.
     public func freightYardHelp(in language: DisplayLanguage) -> String {
         language.text(
@@ -98,6 +115,18 @@ extension GameSession {
         }
     }
 
+    /// Sets what the selected station's freight yard sends (decision 156).
+    public func setFreightProductAtSelectedStation(_ kind: CargoKind) {
+        guard let station = selectedStation, world.freightFacility(at: station.id)?.product != kind else { return }
+        perform { world throws(GameError) in
+            try world.setFreightProduct(at: station.id, to: kind)
+            return language.text(
+                "\(station.name)'s yard sends \(kind.title(in: .english).lowercased()).",
+                "\(station.name) 的貨運場改出\(kind.title(in: .traditionalChinese))。"
+            )
+        }
+    }
+
     /// Makes the selected line a freight line, or a passenger line again
     /// (decision 155).
     public func setSelectedLineFreight(_ isFreight: Bool) {
@@ -107,6 +136,16 @@ extension GameSession {
             return isFreight
                 ? language.text("\(line.name) now carries freight.", "\(line.name) 改為貨運路線。")
                 : language.text("\(line.name) carries passengers again.", "\(line.name) 改回客運路線。")
+        }
+    }
+}
+
+extension CargoKind {
+    /// Goods or building materials.
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .goods: language.text("Goods", "一般貨物")
+        case .materials: language.text("Building materials", "建材")
         }
     }
 }

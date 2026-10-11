@@ -190,9 +190,15 @@
 ///     the `hourlyFreight` rows and `"freightRevenue"` totals. A build that
 ///     reads only an earlier version would drop them and the cargo would
 ///     vanish, so it says the save is newer than it instead.
+/// 39. Building materials (decision 156): a world's `"freight"` can have
+///     `"buildingMaterials": true`, the stations' `"materials"` and their
+///     totals, a yard `"product": "materials"`, and cargo `"kind":
+///     "materials"`. A build that reads only an earlier version would drop
+///     them, and send the materials as goods, so it says the save is newer
+///     than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 38
+    public static let currentVersion = 39
 
     public let world: GameWorld
 
@@ -307,6 +313,8 @@ extension SavedGame: Codable {
         // holidays, and its demand is as it was.
         // Version 37 to 38: a world without `"freight"` has no freight, and a
         // line without `"freight"` carries passengers, as every line did.
+        // Version 38 to 39: freight without `"buildingMaterials"` has none,
+        // and its yards send goods, as every yard did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

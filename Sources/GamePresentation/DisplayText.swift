@@ -432,6 +432,8 @@ extension GameError {
             language.text("Station #\(id.rawValue) already has a freight yard.", "車站 #\(id.rawValue) 已經有貨運場。")
         case .noFreightFacility(let id):
             language.text("Station #\(id.rawValue) has no freight yard.", "車站 #\(id.rawValue) 沒有貨運場。")
+        case .buildingMaterialsNotEnabled:
+            language.text("This game has no building materials.", "這局遊戲沒有建材。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",

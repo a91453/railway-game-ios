@@ -827,3 +827,12 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 兩座貨運場各 5,000,000，路線改貨運路線；開到第 3 小時（180 分鐘）：100 個就業 × 500 = 50,000 千分之一噸一天，每個整點（第 0、1、2 小時）做 50,000 千分之一噸，各得 2 噸，共 6 噸，全在 Alpha，Gamma 沒有。
   - 餘額 100,000,000 − 2 × 1,000（車站）− 2 × 5,000,000（貨運場）− 2 × 3,600（兩個結算過的小時，每站 18 元的營運成本）= 89,990,800。
 - 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 156：建材（schema 59）
+
+- 新指令 `enableBuildingMaterials`、`setFreightProduct`（`station`、`kind`：`goods` 或 `materials`）；新結果 `buildingMaterialsNotEnabled`。最終狀態的 `freight` 另有 `buildingMaterials`、`materials`（`[{"station", "tons"}]`）、`materialsReceived`、`materialsSupplied`、`materialsUsed`、`materialsLost`，貨運場的 `product`、車上貨物的 `kind`；關閉、空的、0 或一般貨物時都省略，所以 `freight.json`（schema 58）照舊。
+- `materials.json`（新）：`freight.json` 的兩站與工業格，沒有路線。貨運場在 Alpha。建材沒打開前不能改出建材（`buildingMaterialsNotEnabled`）；沒有貨運場的 Gamma 不能改（`noFreightFacility`）。打開後 Alpha 出建材，開一天又一分鐘：
+  - 午夜（第 0、1440 分鐘）每站各得 60 噸在地供應，各 120 噸，共供應 240 噸；
+  - 貨運場在第 0 到第 24 個整點各做 50,000 千分之一噸，共 1,250,000：52 噸，餘 2,000；
+  - 沒有路線，沒有營運成本：餘額 100,000,000 − 2 × 1,000 − 5,000,000 = 94,998,000。
+- 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

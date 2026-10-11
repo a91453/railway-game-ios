@@ -56,6 +56,17 @@ public enum Freight {
     /// pays $1,430 a trip at the standard $5 fare, a freight car one way only,
     /// 40 t: over 5.4 km that is $1,080 (`BalanceReportTests.testAFreightLine`).
     public static let centsPerTonKilometre: Int64 = 500
+    // Building materials (decision 156): this project's numbers (gap),
+    // the study's §6.2, to be measured with decision 157's growth.
+
+    /// The most tons of building materials a station holds.
+    public static let materialsLimit: Int64 = 5_000
+    /// The tons of building materials every station gets a day by road,
+    /// from the city's own builders' merchants.
+    public static let localMaterialsPerDay: Int64 = 60
+    /// The tons a station that is an outside connection (decision 137)
+    /// imports a day besides.
+    public static let importedMaterialsPerDay: Int64 = 600
     /// The most tons any total, or train's load, may hold in a save: far
     /// beyond any game.
     static let maximumTons: Int64 = 1 << 40
@@ -72,16 +83,36 @@ public enum Freight {
     }
 }
 
-/// Cargo of one origin on a train.
+/// What a freight yard sends (decision 156): goods, paid for where they
+/// are let off, or building materials, paid for and kept at the station
+/// they are let off at for the city round it to build with.
+public enum CargoKind: String, CaseIterable, Codable, Comparable, Sendable {
+    case goods
+    case materials
+
+    public static func < (lhs: CargoKind, rhs: CargoKind) -> Bool {
+        allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
+    }
+}
+
+/// Cargo of one origin and kind on a train.
 public struct CargoGroup: Hashable, Sendable {
     /// The station it was loaded at.
     public let origin: StationID
+    /// What it is (decision 156); goods for cargo loaded before then.
+    public let kind: CargoKind
     /// How many tons, at least 1.
     public internal(set) var tons: Int64
 
-    public init(origin: StationID, tons: Int64) {
+    public init(origin: StationID, kind: CargoKind = .goods, tons: Int64) {
         self.origin = origin
+        self.kind = kind
         self.tons = tons
+    }
+
+    /// Groups are kept by origin, then kind.
+    var key: (Int, CargoKind) {
+        (origin.rawValue, kind)
     }
 }
 
@@ -93,6 +124,9 @@ public struct StationFreight: Hashable, Sendable {
     /// Thousandths of a ton made but not yet a whole ton, counted over
     /// 24 hours: 0 up to (not including) 24,000.
     var accrual: Int64 = 0
+    /// What it sends (decision 156): goods unless set to building
+    /// materials.
+    public internal(set) var product: CargoKind = .goods
 
     public init(station: StationID) {
         self.station = station
@@ -102,11 +136,22 @@ public struct StationFreight: Hashable, Sendable {
 /// The cargo on one train.
 public struct TrainCargo: Hashable, Sendable {
     public let train: TrainID
-    /// By ascending origin, each once.
+    /// By ascending origin, then kind, each once.
     public internal(set) var groups: [CargoGroup]
 
     public var tons: Int64 {
         groups.reduce(0) { $0 + $1.tons }
+    }
+}
+
+/// The building materials a station holds (decision 156).
+public struct StationMaterials: Hashable, Sendable {
+    public let station: StationID
+    /// 1 to ``Freight/materialsLimit`` tons.
+    public internal(set) var tons: Int64 = 0
+
+    public init(station: StationID) {
+        self.station = station
     }
 }
 
@@ -125,6 +170,17 @@ public struct FreightState: Hashable, Sendable {
     public internal(set) var delivered: Int64 = 0
     public internal(set) var spilled: Int64 = 0
     public internal(set) var lost: Int64 = 0
+    /// Building materials (decision 156): whether stations get them, how
+    /// many tons each holds, and the tons received by train, supplied
+    /// locally or imported, used by the city (decision 157) and lost (over a
+    /// station's limit, or with the station), in all.
+    public internal(set) var buildingMaterials = false
+    /// By ascending station; only stations holding some.
+    public internal(set) var materials: [StationMaterials] = []
+    public internal(set) var materialsReceived: Int64 = 0
+    public internal(set) var materialsSupplied: Int64 = 0
+    public internal(set) var materialsUsed: Int64 = 0
+    public internal(set) var materialsLost: Int64 = 0
 
     public init() {}
 
@@ -149,6 +205,40 @@ public struct FreightState: Hashable, Sendable {
     /// spilled or lost.
     var isConserved: Bool {
         produced == waiting + onBoard + delivered + spilled + lost
+            && materialsReceived + materialsSupplied == materials.reduce(0) { $0 + $1.tons } + materialsUsed + materialsLost
+    }
+
+    /// The tons of building materials at `station`.
+    func materialsTons(at station: StationID) -> Int64 {
+        materials.first { $0.station == station }?.tons ?? 0
+    }
+
+    /// Adds `tons` of building materials to `station`'s stock, up to
+    /// ``Freight/materialsLimit``; the rest is lost. Returns what it kept.
+    @discardableResult
+    mutating func storeMaterials(_ tons: Int64, at station: StationID) -> Int64 {
+        guard tons > 0 else { return 0 }
+        let index: Int
+        if let known = materials.firstIndex(where: { $0.station == station }) {
+            index = known
+        } else {
+            index = materials.firstIndex { $0.station > station } ?? materials.count
+            materials.insert(StationMaterials(station: station), at: index)
+        }
+        let kept = min(tons, Freight.materialsLimit - materials[index].tons)
+        materials[index].tons += kept
+        count(tons - kept, in: \.materialsLost)
+        if materials[index].tons == 0 { materials.remove(at: index) }
+        return kept
+    }
+
+    /// Takes `tons` of building materials from `station`'s stock, which
+    /// holds at least that many, as used by the city (decision 157).
+    mutating func useMaterials(_ tons: Int64, at station: StationID) {
+        guard tons > 0, let index = materials.firstIndex(where: { $0.station == station }) else { return }
+        materials[index].tons -= tons
+        count(tons, in: \.materialsUsed)
+        if materials[index].tons == 0 { materials.remove(at: index) }
     }
 
     /// Adds `tons` to the total `keyPath` names, stopping at the most a save
@@ -160,10 +250,31 @@ public struct FreightState: Hashable, Sendable {
 
 // MARK: - Codable
 
-extension CargoGroup: Codable {}
+extension CargoGroup: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case origin, kind, tons
+    }
+
+    /// Goods have no `"kind"`, as cargo saved before decision 156 reads.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        origin = try container.decode(StationID.self, forKey: .origin)
+        kind = try container.decodeIfPresent(CargoKind.self, forKey: .kind) ?? .goods
+        tons = try container.decode(Int64.self, forKey: .tons)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(origin, forKey: .origin)
+        if kind != .goods { try container.encode(kind, forKey: .kind) }
+        try container.encode(tons, forKey: .tons)
+    }
+}
+
+extension StationMaterials: Codable {}
 extension StationFreight: Codable {
     private enum CodingKeys: String, CodingKey {
-        case station, stock, accrual
+        case station, stock, accrual, product
     }
 
     public init(from decoder: any Decoder) throws {
@@ -171,6 +282,7 @@ extension StationFreight: Codable {
         station = try container.decode(StationID.self, forKey: .station)
         stock = try container.decodeIfPresent(Int64.self, forKey: .stock) ?? 0
         accrual = try container.decodeIfPresent(Int64.self, forKey: .accrual) ?? 0
+        product = try container.decodeIfPresent(CargoKind.self, forKey: .product) ?? .goods
         guard (0...Freight.stockLimit).contains(stock), (0..<Freight.accrualUnit).contains(accrual) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stock, in: container, debugDescription: "A freight facility holds 0 to \(Freight.stockLimit) tons."
@@ -183,6 +295,7 @@ extension StationFreight: Codable {
         try container.encode(station, forKey: .station)
         if stock != 0 { try container.encode(stock, forKey: .stock) }
         if accrual != 0 { try container.encode(accrual, forKey: .accrual) }
+        if product != .goods { try container.encode(product, forKey: .product) }
     }
 }
 
@@ -191,6 +304,7 @@ extension TrainCargo: Codable {}
 extension FreightState: Codable {
     private enum CodingKeys: String, CodingKey {
         case facilities, loads, pendingRevenue, produced, delivered, spilled, lost
+        case buildingMaterials, materials, materialsReceived, materialsSupplied, materialsUsed, materialsLost
     }
 
     /// Decodes the freight of a world that has it. A facility list or load
@@ -208,6 +322,13 @@ extension FreightState: Codable {
         delivered = try container.decodeIfPresent(Int64.self, forKey: .delivered) ?? 0
         spilled = try container.decodeIfPresent(Int64.self, forKey: .spilled) ?? 0
         lost = try container.decodeIfPresent(Int64.self, forKey: .lost) ?? 0
+        // Decision 156 (save version 39): building materials.
+        buildingMaterials = try container.decodeIfPresent(Bool.self, forKey: .buildingMaterials) ?? false
+        materials = try container.decodeIfPresent([StationMaterials].self, forKey: .materials) ?? []
+        materialsReceived = try container.decodeIfPresent(Int64.self, forKey: .materialsReceived) ?? 0
+        materialsSupplied = try container.decodeIfPresent(Int64.self, forKey: .materialsSupplied) ?? 0
+        materialsUsed = try container.decodeIfPresent(Int64.self, forKey: .materialsUsed) ?? 0
+        materialsLost = try container.decodeIfPresent(Int64.self, forKey: .materialsLost) ?? 0
         func corrupt(_ why: String) -> DecodingError {
             DecodingError.dataCorrupted(DecodingError.Context(codingPath: container.codingPath, debugDescription: why))
         }
@@ -217,19 +338,27 @@ extension FreightState: Codable {
         guard zip(loads, loads.dropFirst()).allSatisfy({ $0.train < $1.train }),
               loads.allSatisfy({ load in
                   !load.groups.isEmpty && load.groups.allSatisfy { (1...Freight.maximumTons).contains($0.tons) }
-                      && zip(load.groups, load.groups.dropFirst()).allSatisfy { $0.origin < $1.origin }
+                      && zip(load.groups, load.groups.dropFirst()).allSatisfy { $0.key < $1.key }
               })
         else {
             throw corrupt("Freight loads must be listed once each, by ascending train, with groups of tons by ascending origin.")
         }
-        guard [produced, delivered, spilled, lost].allSatisfy({ (0...Freight.maximumTons).contains($0) }),
+        guard buildingMaterials || (materials.isEmpty && facilities.allSatisfy { $0.product == .goods }
+                  && loads.allSatisfy { $0.groups.allSatisfy { $0.kind == .goods } }),
+              zip(materials, materials.dropFirst()).allSatisfy({ $0.station < $1.station }),
+              materials.allSatisfy({ (1...Freight.materialsLimit).contains($0.tons) })
+        else {
+            throw corrupt("Building materials must be on to be held or sent, and each station's are 1 to \(Freight.materialsLimit) tons, by ascending station.")
+        }
+        let totals = [produced, delivered, spilled, lost, materialsReceived, materialsSupplied, materialsUsed, materialsLost]
+        guard totals.allSatisfy({ (0...Freight.maximumTons).contains($0) }),
               (.zero...Money(GameWorld.maximumHourly)).contains(pendingRevenue), pendingRevenue.amount % 100 == 0
         else {
             throw corrupt("Freight totals must be 0 or more and within bounds, and fares whole dollars.")
         }
         // The totals stop at ``Freight/maximumTons``; a save that reached it
         // counts no further, so only a total below it must add up exactly.
-        guard isConserved || [produced, delivered, spilled, lost].contains(Freight.maximumTons) else {
+        guard isConserved || totals.contains(Freight.maximumTons) else {
             throw corrupt("Every ton made must be waiting, on board, delivered, spilled or lost.")
         }
     }
@@ -243,6 +372,12 @@ extension FreightState: Codable {
         if delivered != 0 { try container.encode(delivered, forKey: .delivered) }
         if spilled != 0 { try container.encode(spilled, forKey: .spilled) }
         if lost != 0 { try container.encode(lost, forKey: .lost) }
+        if buildingMaterials { try container.encode(true, forKey: .buildingMaterials) }
+        if !materials.isEmpty { try container.encode(materials, forKey: .materials) }
+        if materialsReceived != 0 { try container.encode(materialsReceived, forKey: .materialsReceived) }
+        if materialsSupplied != 0 { try container.encode(materialsSupplied, forKey: .materialsSupplied) }
+        if materialsUsed != 0 { try container.encode(materialsUsed, forKey: .materialsUsed) }
+        if materialsLost != 0 { try container.encode(materialsLost, forKey: .materialsLost) }
     }
 }
 
@@ -253,6 +388,41 @@ extension GameWorld {
     /// it on.
     public mutating func enableFreight() {
         if freight == nil { freight = FreightState() }
+    }
+
+    /// Turns building materials on (decision 156), and freight with them.
+    /// Free; a world with them on keeps them on.
+    public mutating func enableBuildingMaterials() {
+        enableFreight()
+        freight?.buildingMaterials = true
+    }
+
+    /// The tons of building materials station `id` holds (decision 156).
+    public func materialsStock(at id: StationID) -> Int64 {
+        freight?.materialsTons(at: id) ?? 0
+    }
+
+    /// The tons of building materials station `id` gets a day without a
+    /// train (decision 156): ``Freight/localMaterialsPerDay``, and
+    /// ``Freight/importedMaterialsPerDay`` more at an outside connection; 0
+    /// while building materials are off.
+    public func materialsSuppliedPerDay(at id: StationID) -> Int64 {
+        guard freight?.buildingMaterials == true, station(id: id) != nil else { return 0 }
+        return Freight.localMaterialsPerDay + (isOutsideConnection(id) ? Freight.importedMaterialsPerDay : 0)
+    }
+
+    /// Sets what station `id`'s freight yard sends (decision 156). What
+    /// waits there is sent as the new kind. Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/freightNotEnabled``,
+    ///   ``GameError/noFreightFacility(_:)`` or, for building materials,
+    ///   ``GameError/buildingMaterialsNotEnabled``.
+    public mutating func setFreightProduct(at id: StationID, to kind: CargoKind) throws(GameError) {
+        guard var state = freight else { throw .freightNotEnabled }
+        guard let index = state.facilityIndex(of: id) else { throw .noFreightFacility(id) }
+        if kind == .materials, !state.buildingMaterials { throw .buildingMaterialsNotEnabled }
+        state.facilities[index].product = kind
+        freight = state
     }
 
     /// Station `id`'s freight facility, or `nil` while it has none or freight
@@ -368,6 +538,15 @@ extension GameWorld {
             state.count(state.loads[index].tons, in: \.lost)
             state.loads.remove(at: index)
         }
+        // Decision 156: each midnight every station gets the day's building
+        // materials by road, and an outside connection its imports.
+        if state.buildingMaterials, now.seconds % GameTime.secondsPerDay == 0 {
+            for station in stations {
+                let tons = Freight.localMaterialsPerDay + (isOutsideConnection(station.id) ? Freight.importedMaterialsPerDay : 0)
+                state.count(tons, in: \.materialsSupplied)
+                state.storeMaterials(tons, at: station.id)
+            }
+        }
         // An hour of cargo for each facility.
         if !state.facilities.isEmpty {
             let made = state.facilities.compactMap { station(id: $0.station) }
@@ -409,6 +588,11 @@ extension GameWorld {
                     kept.append(group)
                 } else {
                     letOff += group.tons
+                    // Decision 156: building materials stay at the station.
+                    if group.kind == .materials {
+                        state.count(group.tons, in: \.materialsReceived)
+                        state.storeMaterials(group.tons, at: here)
+                    }
                     if accounts.mode == .management, let squared = squaredDistance(from: group.origin, to: here) {
                         let fare = Freight.fare(tons: group.tons, distance: FixedPoint.squareRoot(squared))
                         state.pendingRevenue = Money(min(state.pendingRevenue.amount + fare.amount, Self.maximumHourly / 100 * 100))
@@ -428,16 +612,17 @@ extension GameWorld {
             taken = min(state.facilities[facility].stock, max(0, Self.freightCapacity(cars: train.cars) - aboard))
             if taken > 0 {
                 state.facilities[facility].stock -= taken
+                let kind = state.facilities[facility].product
                 if let slot = state.loadIndex(of: train.id) {
-                    if let group = state.loads[slot].groups.firstIndex(where: { $0.origin == here }) {
+                    if let group = state.loads[slot].groups.firstIndex(where: { $0.origin == here && $0.kind == kind }) {
                         state.loads[slot].groups[group].tons += taken
                     } else {
-                        state.loads[slot].groups.append(CargoGroup(origin: here, tons: taken))
-                        state.loads[slot].groups.sort { $0.origin < $1.origin }
+                        state.loads[slot].groups.append(CargoGroup(origin: here, kind: kind, tons: taken))
+                        state.loads[slot].groups.sort { $0.key < $1.key }
                     }
                 } else {
                     let at = state.loads.firstIndex { $0.train > train.id } ?? state.loads.count
-                    state.loads.insert(TrainCargo(train: train.id, groups: [CargoGroup(origin: here, tons: taken)]), at: at)
+                    state.loads.insert(TrainCargo(train: train.id, groups: [CargoGroup(origin: here, kind: kind, tons: taken)]), at: at)
                 }
             }
         }
@@ -452,6 +637,11 @@ extension GameWorld {
         if let index = state.facilityIndex(of: id) {
             state.count(state.facilities[index].stock, in: \.lost)
             state.facilities.remove(at: index)
+        }
+        // Decision 156: and the building materials it held.
+        if let index = state.materials.firstIndex(where: { $0.station == id }) {
+            state.count(state.materials[index].tons, in: \.materialsLost)
+            state.materials.remove(at: index)
         }
         for slot in state.loads.indices.reversed() {
             let gone = state.loads[slot].groups.filter { $0.origin == id }.reduce(0) { $0 + $1.tons }
@@ -473,6 +663,9 @@ extension GameWorld {
         guard state.facilities.allSatisfy({ station(id: $0.station) != nil }) else { return "A freight facility names a station that does not exist." }
         guard state.loads.allSatisfy({ load in train(id: load.train) != nil && load.groups.allSatisfy { station(id: $0.origin) != nil } }) else {
             return "Cargo is on a train, or from a station, that does not exist."
+        }
+        guard state.materials.allSatisfy({ station(id: $0.station) != nil }) else {
+            return "Building materials are held at a station that does not exist."
         }
         return nil
     }
