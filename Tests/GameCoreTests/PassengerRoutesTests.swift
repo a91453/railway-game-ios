@@ -312,4 +312,21 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertTrue(world.passengerRouteBalances.allSatisfy { Set($0.journeys).count == $0.journeys.count })
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
     }
+
+    /// The same world saved by the build before the fix
+    /// (`SaveFixtures/v41-duplicate-route-journeys.json`), which listed
+    /// the A→B ride twice and could not be read back, loads: that balance
+    /// is dropped, the others kept, and the next releases go on.
+    func testASaveThatListedAJourneyTwiceLoadsWithoutThatBalance() throws {
+        let data = try Data(contentsOf: SavedGameTests.fixtures.appendingPathComponent("v41-duplicate-route-journeys.json"))
+        let raw = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let balances = try XCTUnwrap((raw["world"] as? [String: Any])?["passengerRouteBalances"] as? [[String: Any]])
+        XCTAssertEqual(balances.count, 6)
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world.passengerRouteBalances.map { [$0.origin.rawValue, $0.destination.rawValue] }, [[1, 3], [2, 1], [2, 3], [3, 1], [3, 2]])
+        XCTAssertTrue(world.passengerRouteBalances.allSatisfy { Set($0.journeys).count == $0.journeys.count })
+        try world.advance(ticks: 600)
+        XCTAssertTrue(world.passengerRouteBalances.allSatisfy { Set($0.journeys).count == $0.journeys.count })
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+    }
 }

@@ -3745,6 +3745,14 @@ extension GameWorld: Codable {
         townGrowth = container.contains(.townGrowth) ? try container.decode(TownGrowth.self, forKey: .townGrowth) : nil
         passengerRouteBalances = container.contains(.passengerRouteBalances)
             ? try container.decode([PassengerRouteBalance].self, forKey: .passengerRouteBalances) : []
+        // A balance listing a journey twice, which builds before #366 (its
+        // item 10) saved for a line calling twice at the same two stations,
+        // is dropped rather than refused, so those saves load again. It is
+        // only the rounding carried from one release to the next, and the
+        // next release starts a new one from the plan, which lists each
+        // journey once: merging the twins would give weights the plan never
+        // has, and be dropped there all the same.
+        passengerRouteBalances.removeAll { Set($0.journeys).count != $0.journeys.count }
         accounts = container.contains(.accounts) ? try container.decode(CompanyAccounts.self, forKey: .accounts) : CompanyAccounts()
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
