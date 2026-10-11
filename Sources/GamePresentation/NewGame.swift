@@ -36,10 +36,18 @@ extension GameWorld {
     /// lakes (``WaterGrid``), under which there is no land, and its `steep`
     /// slopes (decision 115), where nothing new is built; a blank map has
     /// neither.
+    ///
+    /// A blank map that `buysMap` (decision 160) is ``buyingMapTiles``
+    /// tiles a side of the usual map's size, of which the company owns the
+    /// middle one, the usual map with the same towns, and buys the others
+    /// as its railway grows, each growing towns of its own from
+    /// `eventSeed`.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
-        land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = []
+        land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = [], buysMap: Bool = false
     ) -> GameWorld {
+        precondition(!buysMap || (anchor == nil && bounds == newGameBounds), "Only a blank map of the usual size buys its map (decision 160).")
+        let bounds = buysMap ? buyingMapBounds : bounds
         do {
             var world = GameWorld(
                 bounds: bounds,
@@ -82,6 +90,11 @@ extension GameWorld {
             } else {
                 world.foundTowns(seed: eventSeed)
             }
+            // Decision 160: the middle tile, its towns the usual map's.
+            if buysMap {
+                let middle = buyingMapTiles / 2
+                try world.enableMapExpansion(owning: MapTile(row: middle, column: middle), townSeed: eventSeed)
+            }
             // Decision 137: short trips walk, and the stations by the map's
             // edge bring the towns beyond it, but for the whole of Taiwan,
             // whose edge is the sea.
@@ -121,6 +134,22 @@ extension GameWorld {
     /// before E1 keep their 512 × 384 m. Only the whole of Taiwan is larger
     /// (``WholeTaiwan/bounds``).
     public static let newGameBounds = WorldBounds.standard
+
+    /// How many tiles a side a blank map that buys its map has (decision
+    /// 160): 5, 81.92 km, room for an intercity line.
+    public static let buyingMapTiles = 5
+
+    /// The world of a blank map that buys its map: ``buyingMapTiles`` tiles
+    /// of ``newGameBounds`` a side. Its middle is the middle tile's, so
+    /// ``Land/towns(seed:in:)`` lays the usual map's towns there.
+    public static let buyingMapBounds: WorldBounds = {
+        let side = Int64(buyingMapTiles) * MapExpansion.tileLength
+        do {
+            return try WorldBounds(width: side, height: side)
+        } catch {
+            preconditionFailure("\(side) units fits a world.")
+        }
+    }()
 
     /// What a new game starts with: $3,000,000, a first line and some to
     /// spare (ARCHITECTURE decision 46; the reference's starting cash is in

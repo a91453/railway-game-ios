@@ -151,6 +151,12 @@ public struct GameWorld: Equatable, Sendable {
     /// The scenario being played, its goals and how far they are met
     /// (decision 86), or `nil`: a game without goals.
     public internal(set) var scenario: ScenarioState?
+    /// The tiles of the map the company owns, when it buys its map as it
+    /// grows (decision 160), or `nil`: it may build anywhere in the world.
+    /// Off in a new world and in saves from before it; the app's new blank
+    /// games turn it on. Set by ``enableMapExpansion(owning:townSeed:)``,
+    /// ``buyMapTile(_:)`` and every midnight only.
+    public internal(set) var mapExpansion: MapExpansion?
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -233,13 +239,17 @@ public struct GameWorld: Equatable, Sendable {
     /// where no node stands yet.
     ///
     /// - Throws, checked in this order: ``GameError/invalidTrackGeometry``
-    ///   outside the bounds; ``GameError/groundNotLoaded`` where the world
+    ///   outside the bounds; ``GameError/mapTileNotOwned(_:)`` on a tile of
+    ///   the map the company does not own (decision 160);
+    ///   ``GameError/groundNotLoaded`` where the world
     ///   has ground but has not read it there; ``GameError/invalidTrackGeometry``
     ///   too far above or below it, or where a node stands; or
     ///   ``GameError/idsExhausted``.
     @discardableResult
     public mutating func buildTrackNode(at position: WorldCoordinate) throws(GameError) -> TrackNodeID {
         guard bounds.contains(position.plan) else { throw .invalidTrackGeometry }
+        // Decision 160: on the company's own ground.
+        guard ownsGround(at: position.plan) else { throw .mapTileNotOwned(MapExpansion.tile(at: position.plan)) }
         guard groundHeight(at: position.plan) != nil else { throw .groundNotLoaded }
         guard isInWorld(position), !network.hasNode(at: position) else { throw .invalidTrackGeometry }
         let (_, next) = try Self.allocateID(from: network.nextNodeNumber)
@@ -271,7 +281,9 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownTrackNode(_:)``
     ///   for `from`, then for `to`; ``GameError/invalidTrackGeometry`` (the
     ///   same node twice, a control point outside the bounds, or a curve or profile
-    ///   that does not make an edge); ``GameError/trackTooSteep``;
+    ///   that does not make an edge); ``GameError/mapTileNotOwned(_:)``
+    ///   for the first tile of the map it passes over that the company does
+    ///   not own (decision 160); ``GameError/trackTooSteep``;
     ///   ``GameError/invalidTrackStructure``;
     ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
     ///   would meet without clearance; ``GameError/trackTooClose(_:)`` for
@@ -332,6 +344,8 @@ public struct GameWorld: Equatable, Sendable {
         guard from != to, curve.controlPoints.allSatisfy(bounds.contains),
               let geometry = TrackGeometry(from: start.position, to: end.position, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
+        // Decision 160: the whole of it on the company's own ground.
+        if let tile = firstTileNotOwned(along: geometry.points.map(\.plan)) { throw .mapTileNotOwned(tile) }
         guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) else { throw .trackTooSteep }
         // Decision 124: what carries it, measured from the ground.
         let sections = try sections(of: geometry, structure: structure)
@@ -791,7 +805,9 @@ public struct GameWorld: Equatable, Sendable {
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
     ///   ``GameError/outOfBounds(_:)`` naming `point` when it lies outside
-    ///   the world's ``bounds``, ``GameError/onWater(row:column:)`` in a
+    ///   the world's ``bounds``, ``GameError/mapTileNotOwned(_:)`` on a
+    ///   tile of the map the company does not own (decision 160),
+    ///   ``GameError/onWater(row:column:)`` in a
     ///   world with ground when `point` lies over water (decision 124),
     ///   ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)`` for the
@@ -800,6 +816,8 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func buildStation(named name: String, at point: PlanPoint) throws(GameError) -> Station {
         guard Self.isValidName(name) else { throw .invalidName }
         guard bounds.contains(point) else { throw .outOfBounds(point) }
+        // Decision 160: on the company's own ground.
+        guard ownsGround(at: point) else { throw .mapTileNotOwned(MapExpansion.tile(at: point)) }
         // Decision 124: in a world with ground, not on water (a platform
         // may still lie on a bridge).
         let row = Land.cellIndex(point.y), column = Land.cellIndex(point.x)
@@ -3612,7 +3630,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3717,6 +3735,7 @@ extension GameWorld: Codable {
         terrain = container.contains(.terrain) ? try container.decode(Terrain.self, forKey: .terrain) : Terrain()
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
         freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
+        mapExpansion = try container.decodeIfPresent(MapExpansion.self, forKey: .mapExpansion)
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3824,6 +3843,7 @@ extension GameWorld: Codable {
         if let freight {
             try container.encode(freight, forKey: .freight)
         }
+        try container.encodeIfPresent(mapExpansion, forKey: .mapExpansion)
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
         }
@@ -4068,7 +4088,7 @@ extension GameWorld: Codable {
             return problem
         }
         return land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
-            ?? ground.problem(in: bounds)
+            ?? ground.problem(in: bounds) ?? mapExpansionProblem()
     }
 
     /// Why the trains' reservations break a Stage T rule (ARCHITECTURE

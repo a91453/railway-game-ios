@@ -436,6 +436,21 @@ extension GameError {
             language.text("Station #\(id.rawValue) has no freight yard.", "車站 #\(id.rawValue) 沒有貨運場。")
         case .buildingMaterialsNotEnabled:
             language.text("This game has no building materials.", "這局遊戲沒有建材。")
+        case .mapExpansionNotEnabled:
+            language.text("This map is not bought tile by tile.", "這張地圖沒有分區塊購買。")
+        case .invalidMapTile:
+            language.text("That tile is not on the map.", "那一塊不在地圖上。")
+        case .mapTileOwned:
+            language.text("You own that tile already.", "這一塊已經是你的了。")
+        case .mapTileNotAdjacent:
+            language.text("Buy a tile next to one you own.", "只能買和已擁有區塊相鄰的一塊。")
+        case .mapExpansionLocked(let riders):
+            language.text(
+                "Carry \(Money(riders).displayText) riders in a day to buy one more tile.",
+                "要有一天的運量達到 \(Money(riders).displayText) 人次，才能再買一塊。"
+            )
+        case .mapTileNotOwned:
+            language.text("You don't own this land yet: buy the tile with Expand the Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",

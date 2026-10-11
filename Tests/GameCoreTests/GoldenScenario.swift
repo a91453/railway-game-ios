@@ -205,6 +205,7 @@ struct GoldenScenario: Decodable {
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
                  .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _),
+                 .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -574,6 +575,9 @@ enum ScenarioCommand: Equatable {
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
+    /// Schema 61 (decision 160): buying the map.
+    case enableMapExpansion(MapTile, UInt32?)
+    case buyMapTile(MapTile)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -714,6 +718,10 @@ enum ScenarioCommand: Equatable {
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
                 try world.setFreightProduct(at: id, to: kind)
+            case .enableMapExpansion(let tile, let seed):
+                try world.enableMapExpansion(owning: tile, townSeed: seed)
+            case .buyMapTile(let tile):
+                try world.buyMapTile(tile)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -756,6 +764,7 @@ extension ScenarioCommand: Decodable {
         case zone, rows, columns
         case runs
         case blocks
+        case row, column
     }
 
     init(from decoder: any Decoder) throws {
@@ -813,6 +822,15 @@ extension ScenarioCommand: Decodable {
             self = .enableBuildingMaterials
         case "setFreightProduct":
             self = try .setFreightProduct(container.decodeStation(forKey: .station), container.decode(CargoKind.self, forKey: .kind))
+        // Schema 61: buying the map (decision 160). `"seed"` is left out
+        // for a tile bought with no towns.
+        case "enableMapExpansion":
+            self = try .enableMapExpansion(
+                MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)),
+                container.decodeIfPresent(UInt32.self, forKey: .seed)
+            )
+        case "buyMapTile":
+            self = try .buyMapTile(MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1042,7 +1060,7 @@ enum StepOutcome: Equatable {
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
         case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains, trainType, building
-        case row, column
+        case row, column, riders
     }
 
     init(from decoder: any Decoder) throws {
@@ -1219,6 +1237,19 @@ extension StepOutcome: Codable {
         // Schema 59 (decision 156).
         case "buildingMaterialsNotEnabled":
             self = .rejected(.buildingMaterialsNotEnabled)
+        // Schema 61 (decision 160).
+        case "mapExpansionNotEnabled":
+            self = .rejected(.mapExpansionNotEnabled)
+        case "invalidMapTile":
+            self = .rejected(.invalidMapTile)
+        case "mapTileOwned":
+            self = .rejected(.mapTileOwned)
+        case "mapTileNotAdjacent":
+            self = .rejected(.mapTileNotAdjacent)
+        case "mapExpansionLocked":
+            self = try .rejected(.mapExpansionLocked(ridersNeeded: container.decode(Int64.self, forKey: .riders)))
+        case "mapTileNotOwned":
+            self = try .rejected(.mapTileNotOwned(MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1413,6 +1444,21 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .station)
         case .rejected(.buildingMaterialsNotEnabled):
             try container.encode("buildingMaterialsNotEnabled", forKey: .result)
+        case .rejected(.mapExpansionNotEnabled):
+            try container.encode("mapExpansionNotEnabled", forKey: .result)
+        case .rejected(.invalidMapTile):
+            try container.encode("invalidMapTile", forKey: .result)
+        case .rejected(.mapTileOwned):
+            try container.encode("mapTileOwned", forKey: .result)
+        case .rejected(.mapTileNotAdjacent):
+            try container.encode("mapTileNotAdjacent", forKey: .result)
+        case .rejected(.mapExpansionLocked(let riders)):
+            try container.encode("mapExpansionLocked", forKey: .result)
+            try container.encode(riders, forKey: .riders)
+        case .rejected(.mapTileNotOwned(let tile)):
+            try container.encode("mapTileNotOwned", forKey: .result)
+            try container.encode(tile.row, forKey: .row)
+            try container.encode(tile.column, forKey: .column)
         case .rejected(.onWater(let row, let column)):
             try container.encode("onWater", forKey: .result)
             try container.encode(row, forKey: .row)
@@ -2217,6 +2263,11 @@ struct WorldSummary: Codable, Equatable {
     /// 57, decision 154), `{"country", "level"}`, and (schema 62, decision
     /// 162) its `"seed"` when it has one; left out while off.
     var disruptions: DisruptionsSummary?
+    /// The tiles of the map owned, the best day and the towns' seed
+    /// (schema 61, decision 160), `{"owned": [[row, column], …],
+    /// "bestDayRiders", "townSeed"}`; left out while the map is not
+    /// bought.
+    var mapExpansion: MapExpansion?
 
     struct DisruptionsSummary: Codable, Equatable {
         var country: String
@@ -2448,6 +2499,7 @@ struct WorldSummary: Codable, Equatable {
         steep = world.terrain.steep.isEmpty ? nil : world.terrain.steepCellCount
         groundBlocks = world.ground.isEmpty ? nil : world.ground.blocks.count
         disruptions = world.disruptions.map { DisruptionsSummary(country: $0.country, level: $0.level.rawValue, seed: $0.seed) }
+        mapExpansion = world.mapExpansion
     }
 }
 

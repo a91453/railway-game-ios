@@ -35,6 +35,7 @@ enum MapArt {
         selectedStationID: StationID? = nil,
         network overlay: NetworkOverlay? = nil,
         building: BuildingOverlay? = nil,
+        expansion: MapExpansionOverlay? = nil,
         traffic: TrafficOverlay = TrafficOverlay(),
         projection: some MapProjection,
         edges: [TrackEdgeID: MapEdgeDrawing],
@@ -65,6 +66,11 @@ enum MapArt {
         beyond.addPath(land)
         context.fill(beyond, with: .color(Palette.mapEdge.opacity(0.12)), style: FillStyle(eoFill: true))
         context.stroke(land, with: .color(Palette.mapEdge), lineWidth: 1)
+        // Decision 160: the land not owned yet is shaded too, and the
+        // tiles for sale marked while the player chooses one.
+        if let expansion {
+            drawMapExpansion(expansion, land: land, projection: projection, in: context)
+        }
 
         if layers.showsCatchmentRings {
             drawCatchmentRings(world, projection: projection, in: context)
@@ -762,6 +768,39 @@ enum MapArt {
         let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
         context.fill(shape, with: .color(colour.opacity(0.45)))
         context.stroke(shape, with: .color(colour), style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+    }
+
+    /// The tiles of a map bought tile by tile (decision 160): the world
+    /// outside the tiles owned shaded as past the map's edge, each tile for
+    /// sale edged with its price (a lock when the best day has not unlocked
+    /// it), and the tile chosen filled.
+    private static func drawMapExpansion(_ expansion: MapExpansionOverlay, land: Path, projection: some MapProjection, in context: GraphicsContext) {
+        func shape(_ rect: PlanRect) -> Path {
+            polygon([
+                screenPoint(Double(rect.minX), Double(rect.minY), projection), screenPoint(Double(rect.maxX), Double(rect.minY), projection),
+                screenPoint(Double(rect.maxX), Double(rect.maxY), projection), screenPoint(Double(rect.minX), Double(rect.maxY), projection),
+            ])
+        }
+        var unowned = land
+        for rect in expansion.owned {
+            unowned.addPath(shape(rect))
+        }
+        context.fill(unowned, with: .color(Palette.mapEdge.opacity(0.18)), style: FillStyle(eoFill: true))
+        for tile in expansion.forSale {
+            let outline = shape(tile.area)
+            let isChosen = expansion.chosen == tile.area
+            if isChosen {
+                context.fill(outline, with: .color(Palette.metroGreen.opacity(0.18)))
+            }
+            context.stroke(
+                outline, with: .color(tile.isUnlocked ? Palette.metroGreen : Palette.mapEdge),
+                style: StrokeStyle(lineWidth: isChosen ? 3 : 1.5, dash: [8, 5])
+            )
+            let middle = screenPoint(Double(tile.area.minX + tile.area.maxX) / 2, Double(tile.area.minY + tile.area.maxY) / 2, projection)
+            let price = Text(verbatim: tile.price.moneyText).font(.caption.weight(.bold)).monospacedDigit()
+            let label = tile.isUnlocked ? price : Text(Image(systemName: "lock.fill")).font(.caption) + Text(verbatim: " ") + price
+            context.draw(label.foregroundStyle(Palette.ink), at: middle)
+        }
     }
 
     /// `rect` filled and edged in `colour`: something that would come down.

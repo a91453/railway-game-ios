@@ -62,9 +62,6 @@ final class SavedGameTests: XCTestCase {
         XCTAssertNoThrow(try decode(#"{"saveVersion": 7, "world": \#(world)}"#))
         XCTAssertNoThrow(try decode(#"{"saveVersion": 8, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": \#(SavedGame.currentVersion + 1), "world": \#(world)}"#), "a later version is not guessed at")
-        // Version 40 is reserved for another change (decision 160) that
-        // this build does not have.
-        XCTAssertThrowsError(try decode(#"{"saveVersion": 40, "world": \#(world)}"#), "a reserved version is not guessed at")
         XCTAssertThrowsError(try decode(#"{"saveVersion": 0, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": -1, "world": \#(world)}"#))
         XCTAssertThrowsError(try decode(#"{"saveVersion": "1", "world": \#(world)}"#))

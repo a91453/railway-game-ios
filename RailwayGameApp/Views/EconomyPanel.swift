@@ -81,6 +81,15 @@ struct EconomyPanel: View {
             .padding(.vertical, 4)
 
             LabeledContent("Mode", value: accounts.mode.displayName(in: session.language))
+            // Decision 160: the tiles of the map owned, and what the next
+            // costs and needs.
+            if let map = session.mapExpansionText {
+                Text(verbatim: map)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.mapExpansion")
+            }
             // Free play cannot become managed again (decision 46), so the
             // switch goes one way, after a confirmation.
             if accounts.mode == .management {

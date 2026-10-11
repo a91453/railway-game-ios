@@ -2,6 +2,8 @@
 // running direction); one train per path loops through the area, leaving at one edge and re-entering
 // at the other.
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { beamTexture } from './traffic.js';
 import { LAMP_LAYER, lampMaterial, lampScene } from './lamplight.js';
 
@@ -15,6 +17,15 @@ const STOCK = [
   { match: '銀座', stripe: '#8a4a1c', body: '#f2b62a', cars: 6, length: 16 },
 ];
 const DEFAULT_STOCK = { stripe: '#7b8794', body: '#c9ccce', cars: 8, length: 20 };
+// Along the Line (ARCHITECTURE decision 161): in a Taiwanese area every heavy-rail line is the TRA's, and its paths
+// take turns between a commuter train and an express. Formations as the reference's rail-3d formations.js
+// (`commuter` 8 x 20 m as EMU700/800, EMU900 sets are 10; `emu3000` 12 cars of 20.3 m with 21.35 m ends).
+// `models` names the Meshy models (tools/meshy) listed in models/trains/index.json; without them the cars
+// stay boxes in the stock's livery.
+const TRA_STOCK = [
+  { stripe: '#f2b400', body: '#c9ccce', cars: 10, length: 20, models: { cab: 'emu900-cab', car: 'emu900-car' } },     // EMU900 區間車
+  { stripe: '#e8641c', body: '#eceeee', cars: 12, length: 20.5, models: { cab: 'emu3000-cab', car: 'emu3000-car' } }, // EMU3000 自強號
+];
 const SPEED = 15;        // m/s
 const GAP = 350;         // metres of pause before a train re-enters
 const MIN_PATH = 260;
@@ -111,7 +122,7 @@ function chain(lines) {
   const items = lines.map((l) => {
     const pts = [];
     for (let i = 0; i < l.pts.length; i += 3) pts.push([l.pts[i], l.pts[i + 1], l.pts[i + 2]]);
-    return { name: l.name ?? '', pts, start: key(pts[0][0], pts[0][2]), end: key(pts.at(-1)[0], pts.at(-1)[2]), used: false };
+    return { name: l.name ?? '', railway: l.railway, pts, start: key(pts[0][0], pts[0][2]), end: key(pts.at(-1)[0], pts.at(-1)[2]), used: false };
   });
   const byStart = new Map();
   for (const it of items) { const k = it.name + '|' + it.start; if (!byStart.has(k)) byStart.set(k, []); byStart.get(k).push(it); }
@@ -127,7 +138,7 @@ function chain(lines) {
     }
     const cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][2] - pts[i - 1][2]));
-    if (cum.at(-1) >= MIN_PATH) paths.push({ name: it.name, pts, cum, length: cum.at(-1) });
+    if (cum.at(-1) >= MIN_PATH) paths.push({ name: it.name, railway: it.railway, pts, cum, length: cum.at(-1) });
   }
   return paths;
 }
@@ -140,8 +151,39 @@ function pointAt(path, s, out) {
   return out.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
 }
 
+// Along the Line (decision 161): a Meshy car (tools/meshy) as one geometry and material for an InstancedMesh, in the frame of carGeometry: the
+// cab (`front`, the axis it faces in the model) towards +z, the rail top at y = 0, the body fitted to the stock's
+// car length, 2.9 m wide and 3.9 m tall. Null when the model is not there: the cars stay boxes.
+const loader = new GLTFLoader();
+async function carModel(url, front, length) {
+  let gltf;
+  try { gltf = await loader.loadAsync(url); } catch { return null; }
+  gltf.scene.updateMatrixWorld(true);
+  const parts = [];
+  let material;
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+    parts.push(g.index ? g : g.toNonIndexed());
+    material ??= Array.isArray(o.material) ? o.material[0] : o.material;
+  });
+  if (!parts.length) return null;
+  const geometry = parts.length === 1 ? parts[0] : mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)));
+  if (!geometry) return null;
+  const turn = { '+z': 0, '-z': Math.PI, '+x': -Math.PI / 2, '-x': Math.PI / 2 }[front] ?? -Math.PI / 2;
+  geometry.rotateY(turn);
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+  geometry.translate(-centre.x, -box.min.y, -centre.z);
+  geometry.scale(2.9 / size.x, 3.9 / size.y, (length - 0.6) / size.z);
+  if (!geometry.attributes.normal) geometry.computeVertexNormals();
+  material.side = THREE.FrontSide;
+  return { geometry, material };
+}
+
 export class Trains {
-  constructor(lines) {
+  constructor(lines, { taiwan = false } = {}) {
     this.group = new THREE.Group();
     this.group.name = 'trains';
     this.lamps = new THREE.Group(); // the headlamps' light on the track: in the lamp light's scene (lamplight.js)
@@ -150,8 +192,10 @@ export class Trains {
     const paths = chain(lines);
     this.beam = lampMaterial(beamTexture());
     const stocks = new Map(); // stock -> paths
+    let tra = 0;
     for (const p of paths) {
-      const stock = STOCK.find((s) => p.name.includes(s.match)) ?? DEFAULT_STOCK;
+      const stock = taiwan && p.railway === 'rail' ? TRA_STOCK[tra++ % TRA_STOCK.length]
+        : STOCK.find((s) => p.name.includes(s.match)) ?? DEFAULT_STOCK;
       if (!stocks.has(stock)) stocks.set(stock, []);
       stocks.get(stock).push(p);
     }
@@ -173,32 +217,64 @@ export class Trains {
     }
     this.dummy = new THREE.Object3D();
     this.a = new THREE.Vector3(); this.b = new THREE.Vector3();
+    this.ready = this.loadModels(); // (the boxes run until the models arrive)
+  }
+
+  // Along the Line (decision 161): swaps a stock's boxes for its Meshy models: the cab model at both ends (the rear one turned round), the middle
+  // model between them. A stock with only one of the two uses it for every car.
+  async loadModels() {
+    const wanted = this.sets.filter((set) => set.stock.models);
+    if (!wanted.length) return;
+    let index;
+    try { index = await (await fetch('models/trains/index.json')).json(); } catch { return; }
+    await Promise.all(wanted.map(async (set) => {
+      const { stock, trains } = set, load = (id) => (index[id] ? carModel(`models/trains/${index[id].file}`, index[id].front, stock.length) : null);
+      const [cab, car] = await Promise.all([load(stock.models.cab), load(stock.models.car)]);
+      if (!cab && !car) return;
+      const mesh = (m, count) => {
+        const im = new THREE.InstancedMesh(m.geometry, m.material, Math.max(1, count));
+        im.castShadow = im.receiveShadow = true;
+        im.frustumCulled = false;
+        this.group.add(im);
+        return im;
+      };
+      set.model = { cabs: mesh(cab ?? car, trains.length * 2), cars: mesh(car ?? cab, trains.length * Math.max(0, stock.cars - 2)) };
+      this.group.remove(set.mesh);
+      set.mesh.geometry.dispose();
+    }));
   }
 
   update(dt, night) {
     const { dummy, a, b } = this;
     this.beam.color.setRGB(2.2 * night, 2.1 * night, 1.8 * night);
     this.beam.visible = night > 0.02;
-    for (const { stock, mesh, beams, material, trains } of this.sets) {
+    for (const { stock, mesh, beams, material, trains, model } of this.sets) {
       material.emissiveIntensity = 0.2 + night * 2.2; // the saloon lights and the lamps are always on
-      let n = 0;
+      let n = 0, ends = 0, middles = 0;
+      const put = (c, matrix) => {
+        if (!model) mesh.setMatrixAt(n, matrix);
+        else if (c === 0 || c === stock.cars - 1) model.cabs.setMatrixAt(ends++, matrix);
+        else model.cars.setMatrixAt(middles++, matrix);
+      };
       trains.forEach((t, ti) => {
         const span = t.path.length + stock.cars * stock.length + GAP;
         t.s = (t.s + SPEED * dt) % span; // distance of the train's nose from the start of the path
         for (let c = 0; c < stock.cars; c++, n++) {
           const centre = t.s - (c + 0.5) * stock.length, half = stock.length * 0.36;
-          if (centre - half < 0 || centre + half > t.path.length) { dummy.scale.setScalar(0); dummy.updateMatrix(); mesh.setMatrixAt(n, dummy.matrix); if (c === 0) beams.setMatrixAt(ti, dummy.matrix); continue; }
+          if (centre - half < 0 || centre + half > t.path.length) { dummy.scale.setScalar(0); dummy.updateMatrix(); put(c, dummy.matrix); if (c === 0) beams.setMatrixAt(ti, dummy.matrix); continue; }
           pointAt(t.path, centre + half, a); pointAt(t.path, centre - half, b); // the two bogies
           dummy.position.copy(a).add(b).multiplyScalar(0.5);
           dummy.position.y += 0.16; // on top of the rails
           dummy.scale.setScalar(1);
           dummy.lookAt(a.x, a.y + 0.16, a.z);
           dummy.updateMatrix();
-          mesh.setMatrixAt(n, dummy.matrix);
           if (c === 0) beams.setMatrixAt(ti, dummy.matrix);
+          if (model && c > 0 && c === stock.cars - 1) { dummy.rotateY(Math.PI); dummy.updateMatrix(); } // the rear cab faces back
+          put(c, dummy.matrix);
         }
       });
       mesh.instanceMatrix.needsUpdate = true;
+      if (model) model.cabs.instanceMatrix.needsUpdate = model.cars.instanceMatrix.needsUpdate = true;
       beams.instanceMatrix.needsUpdate = true;
     }
   }

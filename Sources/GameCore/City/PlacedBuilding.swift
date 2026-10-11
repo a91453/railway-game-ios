@@ -167,6 +167,8 @@ extension GameWorld {
     ///
     /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
+    ///   ``GameError/mapTileNotOwned(_:)`` naming the first tile of the map
+    ///   it covers part of that the company does not own (decision 160);
     ///   ``GameError/buildingOverlaps(_:)`` naming the lowest numbered
     ///   building it would share ground with;
     ///   ``GameError/buildingOnTrack(_:)`` naming the lowest numbered edge
@@ -184,6 +186,10 @@ extension GameWorld {
     public mutating func placeBuilding(_ kind: PlacedBuildingKind, at centre: PlanPoint) throws(GameError) -> PlacedBuilding {
         let candidate = PlacedBuilding(id: PlacedBuildingID(rawValue: nextPlacedBuildingID), kind: kind, centre: centre)
         guard Self.lies(candidate, in: bounds) else { throw .outOfBounds(centre) }
+        // Decision 160: the whole square on the company's own ground.
+        if let tile = firstTileNotOwned(minX: candidate.minX, minY: candidate.minY, maxX: candidate.maxX, maxY: candidate.maxY) {
+            throw .mapTileNotOwned(tile)
+        }
         if let other = placedBuildings.first(where: { $0.overlaps(candidate) }) {
             throw .buildingOverlaps(other.id)
         }

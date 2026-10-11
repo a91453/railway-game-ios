@@ -31,7 +31,7 @@ final class GameLauncherTests: XCTestCase {
             let session = try XCTUnwrap(launcher.session)
             // Item 4: each new game draws its events from a seed of its own.
             let seed = try XCTUnwrap(session.world.demandEvents?.seed)
-            XCTAssertEqual(session.world, .newGame(eventSeed: seed))
+            XCTAssertEqual(session.world, .newGame(eventSeed: seed, buysMap: true))
             XCTAssertNil(launcher.message)
             session.setSpeed(.double)
             launcher.returnToStart()
@@ -58,11 +58,11 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(launcher.session?.world, DemoWorld.make(in: .english))
             XCTAssertNil(launcher.autosave, "moved aside")
             XCTAssertEqual(launcher.otherSaves.count, 1)
-            XCTAssertEqual(try library.load(launcher.otherSaves[0]), .newGame(eventSeed: seed))
+            XCTAssertEqual(try library.load(launcher.otherSaves[0]), .newGame(eventSeed: seed, buysMap: true))
 
             launcher.returnToStart()
             launcher.load(launcher.otherSaves[0])
-            XCTAssertEqual(launcher.session?.world, .newGame(eventSeed: seed))
+            XCTAssertEqual(launcher.session?.world, .newGame(eventSeed: seed, buysMap: true))
             XCTAssertEqual(launcher.otherSaves.count, 2, "the demo's autosave kept too")
         }
     }
