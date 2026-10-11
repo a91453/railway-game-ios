@@ -547,10 +547,23 @@ async function carModel(url, { front, fit = true }, length) {
 // into the paint, where it would also darken the train in direct sun. Each model carries its own bake,
 // which is why this clones: one material cannot hold two.
 const textures = new THREE.TextureLoader();
-async function occluded(material, url) {
+
+// A model baked down from a dense one (tools/trains/bake_model.py) brings its own colour: the dense
+// model's paint, in the coordinates the light one was unwrapped into. Nothing this file paints is
+// used for it — which is the point, because what was wanted was that model's look.
+async function baked(spec) {
+  let map;
+  try { map = await textures.loadAsync(`models/trains/${spec.colour}`); } catch { return null; }
+  map.flipY = false;                     // the UVs came from a glTF, which measures v from the top
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.34, metalness: 0.04 });
+}
+
+async function occluded(material, url, channel) {
   let map;
   try { map = await textures.loadAsync(url); } catch { return material; }
-  map.channel = 1;
+  map.channel = channel;
   map.colorSpace = THREE.NoColorSpace;   // a shadow term, not a colour
   map.flipY = false;                     // the UVs came from a glTF, which measures v from the top
   map.anisotropy = 8;
@@ -624,11 +637,12 @@ export class Trains {
         if (!spec) return null;
         const model = await carModel(`models/trains/${spec.file}`, spec, stock.length);
         if (!model) return null;
-        // A stock that paints its own livery keeps it: the model carries the shape, this file's canvas
-        // the paint. Only a model with no livery of its own (a Meshy one) uses the material it came with.
-        let material = stock.livery ? set.material : model.material;
+        // Three kinds of model, and the index entry says which: one baked from a dense model brings
+        // its own colour; one built to this file's atlas (build_train.py) wears the stock's painted
+        // canvas; anything else keeps the material it came with.
+        let material = spec.colour ? await baked(spec) : stock.livery ? set.material : model.material;
         if (!material) return null;
-        if (spec.ao) material = await occluded(material, `models/trains/${spec.ao}`);
+        if (spec.ao) material = await occluded(material, `models/trains/${spec.ao}`, spec.aoChannel ?? 1);
         if (material !== set.material) set.materials.push(material);
         return { geometry: model.geometry, material };
       };

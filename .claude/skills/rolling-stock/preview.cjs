@@ -261,9 +261,10 @@ window.ready = true;
 function budgetFor(cars) {
   // Measured against the owner's own practice rather than guessed: his near-LOD car shed meshes are
   // about 7,200 triangles a car and his EMU3000 GLB about 16,000, for a map view on the same phones.
-  // 3,500 leaves room for the kit that makes a train read as one — roof units, bogies with wheels,
-  // door recesses — while staying half his lightest and well under what a city block costs.
-  return cars * 3500;
+  // 8,000 is his lightest, which is what a car derived from a dense model costs once it still holds
+  // its windows and its nose; a car drawn in code comes in at a third of it. A whole set is two
+  // draw calls either way, so the count is what matters and not the number of cars.
+  return cars * 8000;
 }
 
 (async () => {
