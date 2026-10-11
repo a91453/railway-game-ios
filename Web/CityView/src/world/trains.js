@@ -83,7 +83,9 @@ const EMU3000_STOCK = {
            lamp: { at: 3.9, f: 0.60, width: 1.5, tall: 0.045, lens: 0.52, gap: 0.36, housing: '#1b2330' } },
   },
 };
-const TRA_STOCK = [EMU900_STOCK, EMU3000_STOCK];
+// The EMU900 does not run (the owner's call, 2026-10-11): with no model it is the original's box, the Yamanote
+// Line's in all but a shade of green. Its stock stays for when it is drawn as itself.
+const TRA_STOCK = [EMU3000_STOCK];
 const HSR_NAME = /高鐵|高速鐵/;
 const SPEED = 15;        // m/s
 const GAP = 350;         // metres of pause before a train re-enters

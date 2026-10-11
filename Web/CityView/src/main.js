@@ -27,11 +27,37 @@ installLampLight(); // (before any material is compiled)
 installSkyLight();
 
 const params = new URLSearchParams(location.search);
-const AREA = params.get('area') || 'tokyo'; // (the first of the city switch)
+// Along the Line: the website has Kaohsiung and Taichung only (tiles/areas.json); with no area, or another, the page
+// opens Kaohsiung, not Tokyo (decision 163)
+const AREAS = ['kaohsiung', 'taichung'];
+const AREA = AREAS.includes(params.get('area')) ? params.get('area') : AREAS[0];
 
 // Along the Line: the page speaks the app's language (the web view's is the app's) on its loading screen and credits.
 const ZH = /^zh/i.test(navigator.language);
 const STEPS_ZH = { textures: '材質', terrain: '地形', 'railways and roads': '鐵道與道路', 'leaving for the next city': '前往下一個城市', 'city tiles': '城市街區' };
+// Along the Line: the settings panel's words in Chinese ('folder/name' where a name means two things)
+const GUI_ZH = {
+  city: '城市', Time: '時間', 'live clock': '現在時間', 'auto play': '自動播放', 'speed (min / s)': '速度（分鐘／秒）', time: '時刻',
+  'back to the defaults': '恢復預設',
+  Light: '光線', sun: '陽光', 'sky (blue fill)': '天光（藍色補光）', 'sunlight sent on by the city': '城市反射的陽光', moonlight: '月光',
+  'glow of the city by night': '夜間城市光暈', 'night exposure': '夜間曝光',
+  Picture: '畫面', 'tone curve': '色調曲線', exposure: '曝光', contrast: '對比', highlights: '亮部', 'Picture/shadows': '暗部',
+  saturation: '飽和度', vibrance: '自然飽和度', temperature: '色溫', tint: '色調', vignette: '暗角', bloom: '光暈',
+  Shadows: '陰影', 'Shadows/shadows': '投影', softness: '柔和度', 'contact shadows': '接觸陰影', 'contact shadow blur (m)': '接觸陰影模糊（公尺）',
+  'ambient occlusion': '環境光遮蔽',
+  Sky: '天空', clouds: '雲', 'cloud cover': '雲量', 'cloud shadow on the city': '雲在城市上的影子', 'cloud base (m)': '雲底高度（公尺）',
+  'clouds over the city only': '只在城市上方有雲', 'cloud quality': '雲的畫質', wind: '風', fog: '霧',
+  City: '城市', windows: '窗戶', 'recessed windows': '內凹的窗戶', 'window glass': '窗戶玻璃', 'sun in the windows': '窗上的陽光反射',
+  'wall photos': '牆面照片', 'wall photos from (m)': '牆面照片起始距離（公尺）', 'wall photos full at (m)': '牆面照片完整距離（公尺）',
+  'aerial photo on the ground': '地面空照圖', season: '季節',
+  'Abstract model': '抽象模型', 'abstract model': '抽象模型', 'landmarks in detail': '地標細節', 'live preview on the switch': '切換鈕即時預覽',
+  Traffic: '交通', cars: '汽車', 'how many cars': '汽車數量', 'highway traffic': '高架道路車流', trains: '列車', birds: '鳥',
+  'Night lights': '夜間燈光', 'street lights': '路燈', 'park lights': '公園燈', 'car headlights': '車頭燈', 'window light': '窗戶燈光',
+  'window light softness': '窗戶燈光柔和度', 'rooms that change': '會換燈的房間', 'pace of the change': '換燈的速度',
+  'drawn city lights in tower glass': '大樓玻璃上的城市燈光', 'blue lights': '藍色燈光',
+  Rendering: '繪製', 'whole city': '整座城市', 'view radius (m), if not': '視野半徑（公尺，非整座城市時）', 'smooth edges': '邊緣平滑',
+  'window and water reflections': '窗戶與水面反射', 'info panel': '資訊面板',
+};
 const say = (step) => (ZH && step ? step.replace(/^[a-z ]+[a-z]/, (words) => STEPS_ZH[words] ?? words) : step);
 
 // The loading screen (index.html): the city's name, a bar and what is being done.
@@ -227,12 +253,14 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   gui.close(); // (out of the way until it is asked for)
   gui.add(state, 'city', Object.fromEntries(areas.map((a) => [a.name, a.id]))).onChange((id) => {
     const url = new URL(location.href);
-    url.search = '';
+    // Along the Line: keep the page's other parameters (the app's lighter settings, app=1) and drop only the camera,
+    // which is the previous city's (the original cleared them all)
+    url.searchParams.delete('cam');
     url.searchParams.set('area', id);
     loader.show(areas.find((a) => a.id === id)?.name ?? id, 'leaving for the next city');
     setTimeout(() => { location.href = url.href; }, 60); // (let the screen appear first)
   });
-  const time = gui.addFolder('Time (Tokyo)');
+  const time = gui.addFolder('Time'); // Along the Line: the area's own time (the original's was Tokyo's)
   time.add(clockTime, 'live').name('live clock').listen().onChange((v) => { if (v) clockTime.play = false; });
   time.add(clockTime, 'play').name('auto play').listen();
   time.add(clockTime, 'speed', 1, 100, 1).name('speed (min / s)');
@@ -286,7 +314,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   sky.add(state, 'cloudShadow', 0, 0.85, 0.01).name('cloud shadow on the city');
   sky.add(atmosphere, 'base', 200, 2000, 50).name('cloud base (m)');
   sky.add(atmosphere, 'overCity').name('clouds over the city only');
-  sky.add(atmosphere, 'quality', ['low', 'medium', 'high', 'ultra']).name('cloud quality');
+  sky.add(atmosphere, 'quality', ZH ? { 低: 'low', 中: 'medium', 高: 'high', 極高: 'ultra' } : ['low', 'medium', 'high', 'ultra']).name('cloud quality');
   sky.add(atmosphere.clouds.localWeatherVelocity, 'x', 0, 0.02, 0.0005).name('wind');
   sky.add(atmosphere, 'fog', 0, 1, 0.01);
   withReset(sky);
@@ -300,7 +328,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   city.add(shared.uPhotoRange.value, 'x', 0, 1000, 10).name('wall photos from (m)');
   city.add(shared.uPhotoRange.value, 'y', 10, 2000, 10).name('wall photos full at (m)');
   city.add(state, 'photo').name('aerial photo on the ground').listen();
-  city.add(state, 'season', ['summer', 'autumn', 'spring']);
+  city.add(state, 'season', ZH ? { 夏天: 'summer', 秋天: 'autumn', 春天: 'spring' } : ['summer', 'autumn', 'spring']); // Along the Line: in Chinese
   withReset(city);
 
   // the abstract model, and the switch in the corner that shows the city it changes to
@@ -342,11 +370,18 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   const quality = gui.addFolder('Rendering');
   quality.add(state, 'whole').name('whole city');
   quality.add(state, 'radius', 300, 3000, 50).name('view radius (m), if not');
-  quality.add(atmosphere, 'antialias', ['off', 'smaa', 'msaa', 'both']).name('smooth edges');
+  quality.add(atmosphere, 'antialias', ZH ? { 關: 'off', SMAA: 'smaa', MSAA: 'msaa', 兩者: 'both' } : ['off', 'smaa', 'msaa', 'both']).name('smooth edges');
   quality.add(atmosphere, 'reflect').name('window and water reflections');
   quality.add(state, 'info').name('info panel');
   withReset(quality);
   for (const folder of gui.folders) if (folder !== time) folder.close(); // (the list of folders is the panel: one is opened at a time)
+  // Along the Line: the panel in Chinese when the page is (its look is in index.html)
+  if (ZH) {
+    // (the controls first: a name that means two things is looked up under its folder's English title)
+    for (const c of gui.controllersRecursive()) c.name(GUI_ZH[`${c.parent._title}/${c._name}`] ?? GUI_ZH[c._name] ?? c._name);
+    for (const folder of gui.foldersRecursive()) folder.title(GUI_ZH[folder._title] ?? folder._title);
+    gui.title('設定');
+  }
 
   // The panel's settings are kept (in this browser) and are the same for every city: what is switched off in
   // one is off in the next. A URL that sets something itself (?time=, ?cars=, ...) is taken as it stands.

@@ -2,15 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Procedural Tokyo</title>
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1220; }
       canvas { display: block; }
       #hud {
         position: fixed; top: 12px; left: 12px; padding: 10px 12px; max-width: 340px;
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #e8ecf2;
-        background: rgba(10, 14, 22, 0.66); border-radius: 6px; pointer-events: none; white-space: pre;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #262c57; /* Along the Line: the game's look */
+        background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(38, 44, 87, 0.14); border-radius: 12px; pointer-events: none; white-space: pre;
       }
       /* Along the Line: one credit line at the bottom, in the middle, as on the game's real-world maps */
       #credits {
@@ -38,6 +38,30 @@
       #mode.live { background: none !important; }
       #mode:hover { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 3px 12px rgba(0, 0, 0, 0.6); }
       #mode:active { border-color: #d6e4ff; }
+      /* Along the Line: the settings panel (lil-gui) and the info panel in the game's look (docs/UI_THEME.md): a white
+         panel, navy text, teal controls, round corners; clear of the notch (viewport-fit=cover) */
+      :root .lil-gui {
+        --background-color: rgba(255, 255, 255, 0.96); --text-color: #262c57;
+        --title-background-color: #ffffff; --title-text-color: #262c57;
+        --widget-color: rgba(38, 44, 87, 0.07); --hover-color: rgba(38, 44, 87, 0.13); --focus-color: rgba(13, 118, 106, 0.25);
+        --number-color: #0d766a; --string-color: #0d766a;
+        --font-family: -apple-system, "PingFang TC", "Noto Sans TC", system-ui, sans-serif; --font-size: 13px; --input-font-size: 13px;
+        --widget-height: 28px; --padding: 10px; --spacing: 6px; --widget-border-radius: 8px; --slider-knob-width: 3px;
+        --folder-indent: 8px; --scrollbar-width: 5px;
+      }
+      :root .lil-gui.lil-root {
+        top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right));
+        max-height: calc(100% - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); width: 280px;
+        border: 1px solid rgba(38, 44, 87, 0.14); border-radius: 18px; overflow: hidden; box-shadow: 0 6px 24px rgba(38, 44, 87, 0.22);
+      }
+      :root .lil-gui.lil-root > .lil-title { height: 40px; font-size: 15px; font-weight: 700; padding: 0 14px; }
+      :root .lil-gui .lil-gui > .lil-title { font-weight: 700; }
+      :root .lil-gui .lil-gui > .lil-title, :root .lil-gui .lil-title:before { color: #262c57; }
+      :root .lil-controller.lil-number .lil-fill { background: rgba(13, 118, 106, 0.2); }
+      :root .lil-gui input[type=checkbox] { background: rgba(38, 44, 87, 0.1); }
+      :root .lil-gui input[type=checkbox]:checked { background: #0d766a; color: #ffffff; }
+      :root .lil-gui .lil-controller button { background: rgba(13, 118, 106, 0.12); color: #0d766a; font-weight: 600; }
+      #mode { left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); }
       /* shown while a city loads: at start-up and when another city is chosen */
       #loader {
         position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;

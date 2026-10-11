@@ -200,14 +200,21 @@ extension XCUIApplication {
     /// banner at the bottom, dragged down the middle of the screen; a sheet
     /// at its middle height grows first, as a swipe would grow it. A panel
     /// beside the map (decision 106): within `list`, dragged down its
-    /// middle, so the drag starts on the list and not on the map or the
-    /// dock beside it. How far a `swipeUp()` flings a list depends on the
-    /// synthesized event's timing; each drag here holds before lifting, so
-    /// the list moves by the drag's length and does not fling.
+    /// leading margin beside the rows, so the drag starts on the list and
+    /// not on the map or the dock beside it, nor on a row that is a
+    /// control. A full-width Menu row (Add Stop Where It Fits) took the
+    /// press of every drag begun on it and the list did not move: a branch
+    /// run (38130205989) lost two drags to the app's stalls, so its fixed
+    /// starting point fell on that row and the last 22 drags moved nothing.
+    /// How far a `swipeUp()` flings a list depends on the synthesized
+    /// event's timing; each drag here holds before lifting, so the list
+    /// moves by the drag's length and does not fling.
     func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil) -> Bool {
         let area = list.map(\.frame) ?? frame
         let top = list == nil ? frame.minY + 140 : area.minY + 8
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
+        // A form's rows are inset 16 pt from the list's sides.
+        let x = list == nil ? area.midX : area.minX + 8
         // A panel beside the map on a phone on its side is short, and a
         // line's list there runs to some 23 screens (main's e48285f): long
         // drags until the row exists, then short ones that cannot carry it
@@ -219,23 +226,22 @@ extension XCUIApplication {
                 // Above the band: move the list down. Each drag is shorter
                 // than the band less a row, so a row cannot jump over it.
                 if place.minY < top {
-                    drag(in: area, from: 0.45, to: 0.65)
+                    drag(in: area, at: x, from: 0.45, to: 0.65)
                     continue
                 }
-                drag(in: area, from: 0.75, to: 0.5)
+                drag(in: area, at: x, from: 0.75, to: 0.5)
             } else {
-                drag(in: area, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
+                drag(in: area, at: x, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
             }
         }
         return false
     }
 
-    /// Drags vertically down the middle of `area` between two heights
-    /// given as fractions of it, and holds before lifting, so a list does
-    /// not fling.
-    private func drag(in area: CGRect, from: CGFloat, to: CGFloat) {
+    /// Drags vertically down `area` at `x` between two heights given as
+    /// fractions of it, and holds before lifting, so a list does not fling.
+    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat) {
         let origin = coordinate(withNormalizedOffset: .zero)
-        let x = area.midX - frame.minX
+        let x = x - frame.minX
         let start = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * from))
         let end = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * to))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
