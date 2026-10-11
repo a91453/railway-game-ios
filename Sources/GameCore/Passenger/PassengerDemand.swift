@@ -57,13 +57,23 @@ extension GameWorld {
         return (trips * local * network + 500_000) / 1_000_000
     }
 
+    /// Each of `drawing`'s stations' ``attraction(of:at:)``, worked out
+    /// once for a plan rather than once for each origin (a typhoon's is a
+    /// search of the year's typhoons).
+    func pulls(of drawing: [StationPassengers]) -> [StationID: Int64] {
+        Dictionary(uniqueKeysWithValues: drawing.map { ($0.station, attraction(of: $0.demand!, at: $0.station)) })
+    }
+
     /// How strongly station `station`, with `demand`, draws travellers
     /// today: its daily trips, raised by any event there, and (decision
-    /// 162) lowered by a typhoon there.
+    /// 162) lowered by a typhoon there. Only the ratios between stations
+    /// count (see ``apportion(_:by:)``).
     func attraction(of demand: StationDemand, at station: StationID) -> Int64 {
         let attraction = demandEvents != nil ? demand.dailyTrips * demandMultiplier(at: station) : demand.dailyTrips
         guard disruptions?.seed != nil else { return attraction }
-        return attraction * typhoonMultiplier(at: station) / 1_000
+        // Without events the pull is whole trips: kept in thousandths, so a
+        // small station's typhoon fifth is not rounded to nothing.
+        return demandEvents != nil ? attraction * typhoonMultiplier(at: station) / 1_000 : attraction * typhoonMultiplier(at: station)
     }
 
     // MARK: - Commands
@@ -560,13 +570,13 @@ extension GameWorld {
             return nil
         }
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
+        let pull = pulls(of: drawing)
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
         for record in passengers {
             guard let origin = record.demand, origin.dailyTrips > 0, allowsEntry(at: record.station) else { continue }
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
-            let shares = Self.apportion(trips(of: origin, at: record.station),
-                                        by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = keptTrips(shared, from: record.station, to: destination.station)
                 guard trips > 0 else { continue }
@@ -585,6 +595,7 @@ extension GameWorld {
     /// ``PassengerCrowding``).
     private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
+        let pull = pulls(of: drawing)
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
         struct Draft {
@@ -612,8 +623,7 @@ extension GameWorld {
                 }
                 return options.isEmpty ? nil : (other, options, journeys)
             }
-            let shares = Self.apportion(trips(of: origin, at: record.station),
-                                        by: reached.map { attraction(of: $0.0.demand!, at: $0.0.station) })
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
                 let fared = keptTrips(shared, from: record.station, to: destination.station)
                 let trips = PassengerCrowding.decayed(fared, minutes: options.map(\.route.totalMinutes).min()!)

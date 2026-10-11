@@ -160,9 +160,13 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// some line calls at.
     private static func typhoon(in world: GameWorld) -> StationMasterAdvice? {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
-        let served = Set(world.lines.flatMap(\.stops))
+        // Stations passengers use: a passenger line's (not a freight
+        // line's, decision 155) and not closed, as the advice asks.
+        let served = Set(world.lines.filter { !$0.isFreight }.flatMap(\.stops))
         for typhoon in world.typhoons(onDay: today) {
-            let hit = world.stations.filter { served.contains($0.id) && typhoon.covers($0.point) }.count
+            let hit = world.stations.filter {
+                served.contains($0.id) && $0.operationMode != .closed && typhoon.covers($0.point)
+            }.count
             if hit > 0 {
                 return .typhoonComing(days: max(0, typhoon.start - today), stations: hit, percent: typhoon.drop / 10)
             }
@@ -345,11 +349,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .typhoonComing(let days, let stations, let percent):
             days > 0
                 ? language.text(
-                    "A typhoon comes in \(days) day\(days == 1 ? "" : "s"), over \(stations) of our station\(stations == 1 ? "" : "s"): about \(percent)% fewer passengers there. Run fewer trains, or close those stations for it.",
+                    "A typhoon comes in \(days) day\(days == 1 ? "" : "s"), over \(stations == 1 ? "one" : "\(stations)") of our stations: about \(percent)% fewer passengers there. Run fewer trains, or close those stations for it.",
                     "颱風 \(days) 天後來襲，影響 \(stations) 個車站，那裡的旅客會少約 \(percent)%。可以減少班次，或先把車站封站。"
                 )
                 : language.text(
-                    "A typhoon is blowing over \(stations) of our station\(stations == 1 ? "" : "s"): about \(percent)% fewer passengers there today.",
+                    "A typhoon is blowing over \(stations == 1 ? "one" : "\(stations)") of our stations: about \(percent)% fewer passengers there today.",
                     "颱風正在影響 \(stations) 個車站，今天那裡的旅客少約 \(percent)%。"
                 )
         case .fuelSpell(let percent, let days):

@@ -91,8 +91,29 @@ final class WeatherTextTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice(world: try world(seed: seed, day: typhoon.start)), .typhoonComing(days: 0, stations: stations, percent: 80))
         XCTAssertEqual(
             StationMasterAdvice.typhoonComing(days: 0, stations: 1, percent: 40).text(in: .english),
-            "A typhoon is blowing over 1 of our station: about 40% fewer passengers there today."
+            "A typhoon is blowing over one of our stations: about 40% fewer passengers there today."
         )
+        XCTAssertEqual(
+            StationMasterAdvice.typhoonComing(days: 1, stations: 2, percent: 80).text(in: .english),
+            "A typhoon comes in 1 day, over 2 of our stations: about 80% fewer passengers there. Run fewer trains, or close those stations for it."
+        )
+    }
+
+    /// Stations closed for the typhoon, as the station master asks, are no
+    /// longer counted, and with every covered one closed the warning is
+    /// over; nor does a station only a freight line calls at count.
+    func testTheTyphoonWarningLeavesOutClosedStations() throws {
+        let (seed, typhoon) = try typhoonOverAlpha()
+        var world = try world(seed: seed, day: typhoon.announced)
+        XCTAssertNotNil(StationMasterAdvice(world: world).flatMap { advice in
+            if case .typhoonComing = advice { return advice } else { return nil }
+        })
+        for station in world.stations where typhoon.covers(station.point) {
+            try world.setStationOperationMode(station.id, to: .closed)
+        }
+        if case .typhoonComing? = StationMasterAdvice(world: world) {
+            XCTFail("every station the typhoon covers is closed")
+        }
     }
 
     func testTheStationMasterTellsOfAFuelSpellOnItsFirstDay() throws {

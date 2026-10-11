@@ -158,6 +158,22 @@ final class WeatherTests: XCTestCase {
         XCTAssertEqual(try world(seed: seed, day: typhoon.end).typhoonMultiplier(at: ids[1]), 1_000)
     }
 
+    /// A small station under a typhoon still draws its fifth: its pull is
+    /// not rounded to nothing before it is weighed against the others
+    /// (4 trips a day at −80% is 0.8, not 0).
+    func testASmallStationUnderATyphoonStillDrawsTravellers() throws {
+        let (seed, typhoon) = try typhoonOverS1()
+        var world = try world(seed: seed, day: typhoon.start)
+        XCTAssertNil(world.demandEvents)
+        try world.setStationDemand(ids[1], to: StationDemand(kind: .office, dailyTrips: 4))
+        for id in ids[2...] {
+            try world.setStationDemand(id, to: StationDemand(kind: .office, dailyTrips: 40))
+        }
+        XCTAssertEqual(world.typhoonMultiplier(at: ids[1]), 200)
+        let toS1 = world.dailyDemand(from: ids[0]).first { $0.destination == ids[1] }?.trips ?? 0
+        XCTAssertGreaterThan(toS1, 0)
+    }
+
     func testFuelSpellsComeAfterSixWeeksAndChangeTheDaysEnergy() throws {
         let standard = Disruptions(level: .standard, country: "TW", seed: 7)!, light = Disruptions(level: .light, country: "TW", seed: 7)!
         XCTAssertTrue((0..<42).allSatisfy { standard.fuelSpell(onDay: $0) == nil })

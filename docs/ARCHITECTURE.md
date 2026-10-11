@@ -4929,7 +4929,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 車站面板「活動」區：今天下雨或雷雨、這站的颱風（幾天後來襲或還有幾天）。
    - 設定頁的說明寫進天氣、颱風與油電價格。
 9. **設定**：改難度時保留種子；原本關閉或決策 154 沒有種子的存檔，開啟時用需求事件的種子（沒有就是 1）。
-10. **存檔 41**：`"disruptions"` 多了 `"seed"`，只在有時寫；讀檔拒絕不是 `UInt32` 的種子。只讀到 39 的 build 會丟掉它、天天晴天，所以升版。新的 `SaveFixtures/v41-weather.json`。
+10. **存檔 41**：`"disruptions"` 多了 `"seed"`，只在有時寫；讀檔拒絕不是 `UInt32` 的種子。只讀到 40 的 build 會丟掉它、天天晴天，所以升版。新的 `SaveFixtures/v41-weather.json`。
 11. **golden schema 62**：`setDisruptions` 可以有 `"seed"`；新觀察 `weather`、`typhoons`、`fuel`；最終狀態的 `disruptions` 有種子時寫 `"seed"`。新的 `weather.json`，每個值另以獨立的 Python 重寫 FNV-1a 與抽籤算出。既有 golden、存檔與 replay 都不變。
 
 **限制**：

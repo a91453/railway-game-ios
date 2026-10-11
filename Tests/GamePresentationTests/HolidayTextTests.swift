@@ -93,7 +93,7 @@ final class HolidayTextTests: XCTestCase {
         XCTAssertEqual(session.world.disruptions, Disruptions(level: .standard, country: "JP", seed: 1))
         session.setDisruptionLevel(nil)
         XCTAssertNil(session.world.disruptions)
-        XCTAssertEqual(session.message?.text, "Holidays and other events off: demand is the same every day of the week.")
+        XCTAssertEqual(session.message?.text, "Holidays and other events off: every week's demand is the same.")
         // On again, the map's country; and the change undoes.
         session.setDisruptionLevel(.light)
         XCTAssertEqual(session.world.disruptions, Disruptions(level: .light, country: "JP", seed: 1))

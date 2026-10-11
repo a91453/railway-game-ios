@@ -473,7 +473,8 @@ struct StationPanel: View {
             + session.world.demandEventTexts(at: station.id, in: session.language)
         if !lines.isEmpty {
             Section {
-                ForEach(lines, id: \.self) { line in
+                // By position: two typhoons alike can read the same.
+                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                     Label {
                         Text(verbatim: line)
                     } icon: {

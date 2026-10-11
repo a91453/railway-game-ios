@@ -621,7 +621,7 @@ public final class GameSession {
         perform { world throws(GameError) in
             world.setDisruptions(level.flatMap { Disruptions(level: $0, country: country, seed: seed) })
             return level == nil
-                ? language.text("Holidays and other events off: demand is the same every day of the week.", "連假等事件已關閉：每週的需求都一樣。")
+                ? language.text("Holidays and other events off: every week's demand is the same.", "連假等事件已關閉：每週的需求都一樣。")
                 : language.text("Holidays and other events on: \(level!.title(in: language)).", "連假等事件已開啟：\(level!.title(in: language))。")
         }
     }
