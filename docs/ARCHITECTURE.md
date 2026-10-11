@@ -4723,6 +4723,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **之後的修正**（審查 #325–#350）：
 - 路線改成貨運路線時，`isServed` 不看 `isFreight`，在等這條線的乘客不會被放棄，從此永遠在等；全網路徑也會把轉乘排到這條線上。現在兩個 `isServed` 都把貨運路線當成沒有服務，`setLineFreight` 會把他們算成放棄；`boardingPlan` 也不讓任何人上貨運列車。修正前存下、還有人在等貨運路線的存檔照樣讀得回來（`passengerProblem` 暫時接受），下一個重新檢查的指令把他們算成放棄。測試：`FreightTests.testPassengersWaitingForALineThatTurnsFreightAreAbandoned`、`testASaveWithPassengersWaitingForAFreightLineLoads`。
 - 存檔裡一列車的貨原本可到 2^40 噸，卸貨時運費的乘積會溢位當掉。現在一列車最多是最長列車（`Train.maximumCars` 節）的噸數，遊戲裡到得了的狀態都在這之內。測試：`FreightTests.testASaveWithMoreOnBoardThanATrainHoldsIsRefused`。
+- （審查 #340–#357）上面那個修正之前，這種乘客會在停站時上車，之後就永遠下不了車。修正前存下的這種存檔照樣讀得回來，貨運列車下一次停站開門時，把車上的人算成放棄（`exchangePassengers`）。測試：`FreightTests.testRidersLeftOnAFreightTrainGetOffAbandoned`。
 
 ### 156. 建材：貨運場出建材、車站的建材置場、在地供應與進口
 
@@ -4863,6 +4864,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（審查 #325–#350）：蓋軌道時檢查的是曲線的中心線，存檔檢查的卻是曲線的控制點；貝茲曲線只走到控制點的四分之三，所以貼著區塊邊緣的彎道蓋得出來，存檔卻讀不回來。現在存檔也檢查中心線（`firstTileNotOwned(along:in:)`），已經存下的這種存檔也讀得回來。測試：`MapExpansionTests.testACurveWhoseControlPointsLieBeyondTheTileOwnedLoads`。App：選地塊時開著路線面板，點地圖改回選路線的車站（`MapView`）。
 
+**之後的修正**（審查 #340–#357）：分割軌道（`splitTrackEdge`，分岔、月台岔線與渡線都會用到）會把兩段重新取樣，取樣點可能比原來的軌道多出去一個單位，跨進沒擁有的區塊；原本分割時不檢查，這樣的存檔讀不回來。現在兩段都照蓋軌道的規則檢查，跨出去就拒絕（`mapTileNotOwned`）。測試：`MapExpansionTests.testASplitStaysOnTheTilesOwned`。
+
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 
 2026-10-11，作者：「我有買 Meshy，你能接它的 API 做點東西嗎」，選了「3D 城市的列車模型」。高雄車站一帶的臺鐵與捷運都在地下（決策 152 的限制），畫面裡沒有列車，作者再選「加一個臺中車站區域」：臺鐵在臺中是高架。號碼依工作登記 #231：決策 161（160 由購買擴建地圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -4929,7 +4932,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 車站面板「活動」區：今天下雨或雷雨、這站的颱風（幾天後來襲或還有幾天）。
    - 設定頁的說明寫進天氣、颱風與油電價格。
 9. **設定**：改難度時保留種子；原本關閉或決策 154 沒有種子的存檔，開啟時用需求事件的種子（沒有就是 1）。
-10. **存檔 41**：`"disruptions"` 多了 `"seed"`，只在有時寫；讀檔拒絕不是 `UInt32` 的種子。只讀到 39 的 build 會丟掉它、天天晴天，所以升版。新的 `SaveFixtures/v41-weather.json`。
+10. **存檔 41**：`"disruptions"` 多了 `"seed"`，只在有時寫；讀檔拒絕不是 `UInt32` 的種子。只讀到 40 的 build 會丟掉它、天天晴天，所以升版。新的 `SaveFixtures/v41-weather.json`。
 11. **golden schema 62**：`setDisruptions` 可以有 `"seed"`；新觀察 `weather`、`typhoons`、`fuel`；最終狀態的 `disruptions` 有種子時寫 `"seed"`。新的 `weather.json`，每個值另以獨立的 Python 重寫 FNV-1a 與抽籤算出。既有 golden、存檔與 replay 都不變。
 
 **限制**：
@@ -4939,6 +4942,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 數值（機率、降幅）都是本專案的，要在實機上調。
 
 **沒有驗證的**：Linux 不能跑 App；車站面板與設定頁的文字要在 macOS CI 與 TestFlight 上看。
+
+**之後的修正**（審查 #340–#357）：
+- 第 5 項的颱風在沒有需求事件時，吸引力先乘颱風再除以 1000，每天 4 人次以下的車站會被捨入成 0，一個旅次都分不到。現在沒有事件時吸引力保留千分之一的單位，只比較車站之間的比例，所以 golden、存檔、replay 都不變。測試：`WeatherTests.testASmallStationUnderATyphoonStillDrawsTravellers`。
+- 每個目的地的吸引力原本每個出發站都重算一次，颱風的倍數每次都要把整年的颱風算一遍，有颱風的國家排計畫約慢 2.4 倍。現在一個計畫只算一次（`pulls(of:)`），結果相同。
+- 站長的颱風預警原本連封站的車站、只有貨運路線停靠的車站都算進去；照建議封站之後預警也不會消失，還會連著幾天蓋住其他提醒。現在只算有開的客運車站。英文的「1 of our station」改成「one of our stations」。
 
 ## 目前規則摘要
 

@@ -475,7 +475,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trackTooClose(_:)`` when a part would meet other track;
     ///   or ``GameError/idsExhausted``. Since decision 124, before the trains,
     ///   what ``buildTrackEdge(from:to:curve:profile:structure:)`` throws when
-    ///   a part's structure does not suit the ground under it.
+    ///   a part's structure does not suit the ground under it; since decision
+    ///   160, after the parts' geometry, ``GameError/mapTileNotOwned(_:)``
+    ///   when a part's centre line passes over a tile the company does not
+    ///   own.
     @discardableResult
     public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
         guard let edge = network.edge(id), let geometry = network.geometry(of: id),
@@ -510,6 +513,12 @@ public struct GameWorld: Equatable, Sendable {
               let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first),
               let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second)
         else { throw .invalidTrackGeometry }
+        // Decision 160: each part is sampled afresh, so it is checked on the
+        // company's own ground as an edge built is.
+        if let tile = firstTileNotOwned(along: firstGeometry.points.map(\.plan))
+            ?? firstTileNotOwned(along: secondGeometry.points.map(\.plan)) {
+            throw .mapTileNotOwned(tile)
+        }
         // Decision 124: each part is carried as the ground under it asks,
         // an automatic edge's sections worked out again for each.
         let firstSections = try sections(of: firstGeometry, structure: edge.structure)

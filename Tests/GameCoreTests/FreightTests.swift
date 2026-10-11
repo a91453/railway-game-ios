@@ -230,6 +230,31 @@ final class FreightTests: XCTestCase {
         XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: loaded))))
     }
 
+    /// Riders a save from before that fix left on a train of a line made a
+    /// freight line leave it at its next stop, abandoned, rather than ride
+    /// it for ever.
+    func testRidersLeftOnAFreightTrainGetOffAbandoned() throws {
+        var world = try world(freightLine: false)
+        for station in [alpha, gamma] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 2_000))
+        }
+        while world.riders.allSatisfy({ $0.groups.isEmpty }) { try world.advance(ticks: 1) }
+        let riding = world.riders.flatMap(\.groups).reduce(Int64(0)) { $0 + $1.count }
+        var save = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: world))) as? [String: Any])
+        var saved = try XCTUnwrap(save["world"] as? [String: Any])
+        var lines = try XCTUnwrap(saved["lines"] as? [[String: Any]])
+        lines[0]["freight"] = true
+        saved["lines"] = lines
+        save["world"] = saved
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: save)).world
+        XCTAssertEqual(loaded.riders.flatMap(\.groups).reduce(Int64(0)) { $0 + $1.count }, riding)
+        let abandoned = loaded.passengers.reduce(Int64(0)) { $0 + $1.abandoned }
+        try hours(2, &loaded)
+        XCTAssertTrue(loaded.riders.allSatisfy { $0.groups.isEmpty }, "nobody rides a freight train")
+        XCTAssertEqual(loaded.passengers.reduce(Int64(0)) { $0 + $1.abandoned }, abandoned + riding)
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: loaded))))
+    }
+
     /// Without a yard a freight line's train goes through and carries
     /// nothing.
     func testNoYardNoCargo() throws {
