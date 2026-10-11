@@ -99,18 +99,24 @@ jobs:
           out="$RUNNER_TEMP/attachments"
           mkdir -p "$out" "$RUNNER_TEMP/website-screenshots"
           xcrun xcresulttool export attachments --path "$RUNNER_TEMP/screenshots.xcresult" --output-path "$out"
-          python3 - <<'PY' || echo "::warning::Could not name the screenshots; the artifact has the raw export"
-          import json, os, shutil
+          python3 - <<'PY' || echo "::warning::Could not name the screenshots; the result bundle has them"
+          import json, os, re, shutil
           from pathlib import Path
           out = Path(os.environ["RUNNER_TEMP"], "attachments")
           dest = Path(os.environ["RUNNER_TEMP"], "website-screenshots")
           manifest = json.loads((out / "manifest.json").read_text())
+          # Only the tests' own screenshots, named in lower case with
+          # hyphens: XCTest's own attachments (failure screenshots, debug
+          # descriptions with quotes in their names) stay in the result bundle.
+          pattern = re.compile(r"^([a-z0-9-]+)_\d+_")
           for test in manifest:
               for attachment in test.get("attachments", []):
-                  name = attachment.get("suggestedHumanReadableName", "")
-                  stem = name.split("_")[0] if name else Path(attachment["exportedFileName"]).stem
-                  target = dest / f"{stem}{Path(attachment['exportedFileName']).suffix}"
-                  shutil.copy(out / attachment["exportedFileName"], target)
+                  exported = attachment["exportedFileName"]
+                  match = pattern.match(attachment.get("suggestedHumanReadableName", ""))
+                  if not match or not exported.endswith(".png"):
+                      continue
+                  target = dest / f"{match.group(1)}.png"
+                  shutil.copy(out / exported, target)
                   print(f"{test.get('testIdentifier', '?')}: {target.name}")
           PY
           ls -l "$RUNNER_TEMP/website-screenshots"
@@ -121,11 +127,7 @@ jobs:
         with:
           overwrite: true
           name: website-screenshots
-          # The named PNGs, and the export as xcresulttool wrote it in case
-          # its manifest changes.
-          path: |
-            ${{ runner.temp }}/website-screenshots
-            ${{ runner.temp }}/attachments
+          path: ${{ runner.temp }}/website-screenshots
           if-no-files-found: warn
           retention-days: 14
 
