@@ -915,3 +915,16 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 買下 (0, 1) 花 1 塊 × 500,000,000。之後用第一塊再打開仍被拒；世界外的第 5 列也一樣被拒，表示這個檢查排在最前面。
   - 公司保有兩塊；餘額 1,000,000,000 − 500,000,000 = 500,000,000。
 - 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 167：實景地圖的擴建（schema 64）
+
+- `enableMapExpansion` 多一個可省略的 `ridersStep`（每塊要的每日運量，省略是 100,000）；新結果 `invalidRidersStep`：步長小於 1 或大於 2^32（4,294,967,296）。檢查順序是 `mapExpansionEnabled`、`invalidRidersStep`、`invalidMapTile`。最終狀態的 `mapExpansion` 在步長不是 100,000 時另寫 `ridersStep`。
+- 下一塊的價格改成「每塊已擁有的 × 步長 × 每人次 $50（5,000 美分）」：標準步長就是 5,000,000 美元（決策 160 的 500,000,000 美分，所有既有 golden 不變）；步長 25,000 是 125,000,000 美分。
+- 參考模型（`ReferenceWorld`）沒有地圖區塊，所以這份不在 `ReferenceWorldGoldenTests` 裡重播（同決策 160），由 `MapExpansionTests` 驗證。
+- `map-expansion-step.json`（新）：3 × 1 塊、每塊 1,048,576 單位的世界，自由模式，起始 3,000,000,000。
+  - 步長 0 被拒（`invalidRidersStep`）；步長 0 配世界外的第 5 列也被拒在步長，表示步長先檢查；步長 4,294,967,297（2^32 + 1）被拒。
+  - 步長 25,000、擁有 (0, 0) 打開。打開後再打開（步長 0）被拒在 `mapExpansionEnabled`，表示「已打開」排在步長之前。
+  - 自由模式不看運量：買 (0, 1) 花 1 塊 × 25,000 × 5,000 = 125,000,000（標準步長要 500,000,000）。
+  - 改成經營模式，買 (0, 2)：第三塊要 2 × 25,000 = 50,000 人次，最佳一天是 0，被拒（`mapExpansionLocked`，`riders` 50,000）；標準步長會要 200,000。
+  - 餘額 3,000,000,000 − 125,000,000 = 2,875,000,000；最終狀態的 `mapExpansion` 擁有 (0, 0) 與 (0, 1)、`ridersStep` 25,000。
+- 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

@@ -188,7 +188,7 @@ extension GameSession {
         guard world.accounts.mode == .management else {
             return language.text("\(owned) · the next \(price)", "\(owned) · 下一塊 \(price)")
         }
-        let needed = Money(MapExpansion.ridersNeeded(toOwn: expansion.owned.count + 1)).displayText
+        let needed = Money(expansion.ridersNeeded(toOwn: expansion.owned.count + 1)).displayText
         return language.text(
             "\(owned) · the next \(price), from \(needed) riders a day (best \(Money(expansion.bestDayRiders).displayText))",
             "\(owned) · 下一塊 \(price)，每日運量 \(needed) 人次解鎖（目前最佳 \(Money(expansion.bestDayRiders).displayText)）"

@@ -210,9 +210,15 @@
 ///     A build that reads only an earlier version would drop it, and its
 ///     days would all be clear, so it says the save is newer than it
 ///     instead.
+/// 42. A real place's map bought tile by tile (decision 167): a world's
+///     `"mapExpansion"` can have a `"ridersStep"`, the riders in a day each
+///     tile beyond the first needs, and the price of the tiles follows it.
+///     A build that reads only an earlier version would drop it and ask for
+///     100,000 riders and $5 million, which a tile of a country town could
+///     never carry or pay, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 41
+    public static let currentVersion = 42
 
     public let world: GameWorld
 
@@ -333,6 +339,8 @@ extension SavedGame: Codable {
         // whole of its map, and builds anywhere in it as it did.
         // Version 40 to 41: disruptions without `"seed"` have holidays
         // alone, as before.
+        // Version 41 to 42: a map bought without `"ridersStep"` asks
+        // 100,000 riders and $5 million a tile, as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

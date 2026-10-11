@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 63
+    static let schemaVersion = 64
 
     var description: String
     var initialState: InitialState
@@ -575,8 +575,9 @@ enum ScenarioCommand: Equatable {
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
-    /// Schema 61 (decision 160): buying the map.
-    case enableMapExpansion(MapTile, UInt32?)
+    /// Schema 61 (decision 160): buying the map. Schema 64 (decision 167):
+    /// the riders each tile needs, or `nil` for 100,000.
+    case enableMapExpansion(MapTile, UInt32?, Int64?)
     case buyMapTile(MapTile)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
@@ -718,8 +719,8 @@ enum ScenarioCommand: Equatable {
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
                 try world.setFreightProduct(at: id, to: kind)
-            case .enableMapExpansion(let tile, let seed):
-                try world.enableMapExpansion(owning: tile, townSeed: seed)
+            case .enableMapExpansion(let tile, let seed, let step):
+                try world.enableMapExpansion(owning: tile, townSeed: seed, ridersStep: step ?? MapExpansion.standardRidersStep)
             case .buyMapTile(let tile):
                 try world.buyMapTile(tile)
             case .setCityBuildings(let enabled):
@@ -760,6 +761,7 @@ extension ScenarioCommand: Decodable {
         case performance, point, routePreferences
         case lineRuns
         case seed, cells
+        case ridersStep
         case kind, building
         case zone, rows, columns
         case runs
@@ -823,11 +825,13 @@ extension ScenarioCommand: Decodable {
         case "setFreightProduct":
             self = try .setFreightProduct(container.decodeStation(forKey: .station), container.decode(CargoKind.self, forKey: .kind))
         // Schema 61: buying the map (decision 160). `"seed"` is left out
-        // for a tile bought with no towns.
+        // for a tile bought with no towns. Schema 64 (decision 167):
+        // `"ridersStep"` is left out for 100,000.
         case "enableMapExpansion":
             self = try .enableMapExpansion(
                 MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)),
-                container.decodeIfPresent(UInt32.self, forKey: .seed)
+                container.decodeIfPresent(UInt32.self, forKey: .seed),
+                container.decodeIfPresent(Int64.self, forKey: .ridersStep)
             )
         case "buyMapTile":
             self = try .buyMapTile(MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
@@ -1253,6 +1257,9 @@ extension StepOutcome: Codable {
         // Schema 63 (decision 160, turned on once).
         case "mapExpansionEnabled":
             self = .rejected(.mapExpansionEnabled)
+        // Schema 64 (decision 167).
+        case "invalidRidersStep":
+            self = .rejected(.invalidRidersStep)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1451,6 +1458,8 @@ extension StepOutcome: Codable {
             try container.encode("mapExpansionNotEnabled", forKey: .result)
         case .rejected(.mapExpansionEnabled):
             try container.encode("mapExpansionEnabled", forKey: .result)
+        case .rejected(.invalidRidersStep):
+            try container.encode("invalidRidersStep", forKey: .result)
         case .rejected(.invalidMapTile):
             try container.encode("invalidMapTile", forKey: .result)
         case .rejected(.mapTileOwned):

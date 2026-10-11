@@ -76,13 +76,21 @@ extension GameSession {
     /// (``WaterGrid/cells(frame:bounds:in:)``) and, since decision 115,
     /// their steep slopes, and since decision 147 the cells' `coverage`;
     /// nothing for any other map, or without the population.
+    ///
+    /// Since decision 167 also the whole of every tile the company owns of a
+    /// map it buys tile by tile (``GameWorld/mapExpansion``): the first as
+    /// the game begins, each next as it is bought (the same edit, so Undo
+    /// takes both back).
     static func readLand(
         roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil
     ) {
-        readLand(
-            within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: &world, population: population, places: places, water: water,
-            coverage: coverage
-        )
+        var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
+        if let expansion = world.mapExpansion {
+            for tile in expansion.owned {
+                wanted.formUnion(tile.landBlocks(in: world.bounds))
+            }
+        }
+        readLand(blocks: wanted, in: &world, population: population, places: places, water: water, coverage: coverage)
     }
 
     /// Reads in the land within `reach` of each of `points` whose blocks
@@ -93,14 +101,29 @@ extension GameSession {
         within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil,
         coverage: CoverageGrid? = nil
     ) {
-        guard let read = world.landBlocks, !points.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
-        let have = Set(read)
-        var wanted = Set<LandBlock>()
+        readLand(
+            blocks: blocks(within: reach, of: points, in: world.bounds), in: &world, population: population, places: places, water: water,
+            coverage: coverage
+        )
+    }
+
+    /// The blocks of a world of `bounds` some part of which lies within
+    /// `reach` of one of `points`.
+    private static func blocks(within reach: Int64, of points: [PlanPoint], in bounds: WorldBounds) -> Set<LandBlock> {
+        var found = Set<LandBlock>()
         for point in points {
-            for block in Land.blocks(within: reach, of: point, in: world.bounds) where !have.contains(block) {
-                wanted.insert(block)
-            }
+            found.formUnion(Land.blocks(within: reach, of: point, in: bounds))
         }
+        return found
+    }
+
+    /// Reads in whichever of `blocks` the map has not read yet.
+    private static func readLand(
+        blocks candidates: Set<LandBlock>, in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid?,
+        coverage: CoverageGrid?
+    ) {
+        guard let read = world.landBlocks, !candidates.isEmpty, let population, let frame = RealWorldFrame(world: world) else { return }
+        let wanted = candidates.subtracting(read)
         guard !wanted.isEmpty else { return }
         var cells = LandImport.cells(in: wanted, population: population, places: places, water: water, frame: frame, bounds: world.bounds)
         // Decision 147: each cell's real coverage, when the app has it.

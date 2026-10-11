@@ -1,0 +1,173 @@
+{
+ "schemaVersion": 64,
+ "description": "Buying the map with its own step (schema 64, decision 167), 9 steps. A world of 3 x 1 tiles of 1,048,576 units, free play, 3,000,000,000 at the start. The riders each tile beyond the first needs are the map's own: ridersStep, 100,000 when left out, and the land costs $50 (5,000 cents) for each rider of it for each tile owned, 500,000,000 for the second tile at the standard step. enableMapExpansion refuses a step below 1 or above 2^32 = 4,294,967,296 (invalidRidersStep), checked after 'turned on already' and before the tile: a step of 0 with a tile outside the world (row 5) is refused for the step. With a step of 25,000 and tile (0, 0) it is turned on; turned on again it is refused (mapExpansionEnabled). Free play needs no riders: tile (0, 1) costs 1 x 25,000 x 5,000 = 125,000,000, where the standard step would have cost 500,000,000. Managed, tile (0, 2) is the third tile: it needs 2 x 25,000 = 50,000 riders in the best day, and the best day is 0 (mapExpansionLocked, riders 50,000), where the standard step would have asked 200,000. The final state keeps ridersStep 25,000; balance 3,000,000,000 - 125,000,000 = 2,875,000,000.",
+ "initialState": {
+  "worldWidth": 3145728,
+  "worldHeight": 1048576,
+  "balance": 3000000000,
+  "costs": {
+   "track": 100,
+   "station": 1000,
+   "train": 5000
+  },
+  "gameMinutes": 0,
+  "speed": "paused"
+ },
+ "steps": [
+  {
+   "command": {
+    "type": "enableMapExpansion",
+    "row": 0,
+    "column": 0,
+    "ridersStep": 0
+   },
+   "expect": {
+    "result": "invalidRidersStep"
+   }
+  },
+  {
+   "command": {
+    "type": "enableMapExpansion",
+    "row": 5,
+    "column": 0,
+    "ridersStep": 0
+   },
+   "expect": {
+    "result": "invalidRidersStep"
+   }
+  },
+  {
+   "command": {
+    "type": "enableMapExpansion",
+    "row": 0,
+    "column": 0,
+    "ridersStep": 4294967297
+   },
+   "expect": {
+    "result": "invalidRidersStep"
+   }
+  },
+  {
+   "command": {
+    "type": "enableMapExpansion",
+    "row": 0,
+    "column": 0,
+    "ridersStep": 25000
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "enableMapExpansion",
+    "row": 0,
+    "column": 1,
+    "ridersStep": 0
+   },
+   "expect": {
+    "result": "mapExpansionEnabled"
+   }
+  },
+  {
+   "command": {
+    "type": "buyMapTile",
+    "row": 0,
+    "column": 1
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setEconomyMode",
+    "mode": "management"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buyMapTile",
+    "row": 0,
+    "column": 2
+   },
+   "expect": {
+    "result": "mapExpansionLocked",
+    "riders": 50000
+   }
+  }
+ ],
+ "expectedFinalState": {
+  "accounts": {
+   "days": [],
+   "fareRules": null,
+   "ledger": [],
+   "mode": "management",
+   "openedAt": 0,
+   "pending": {
+    "departures": 0,
+    "fareRevenue": 0,
+    "fareTrips": 0,
+    "passengers": 0,
+    "seats": 0,
+    "trainDistance": 0
+   }
+  },
+  "balance": 2875000000,
+  "gameMinutes": 0,
+  "lines": [],
+  "mapExpansion": {
+   "owned": [
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "ridersStep": 25000
+  },
+  "network": {
+   "edges": [],
+   "nodes": [],
+   "platforms": []
+  },
+  "passengers": [],
+  "riders": [],
+  "serviceDay": [
+   {
+    "level": "low",
+    "start": 0
+   },
+   {
+    "level": "peak",
+    "start": 420
+   },
+   {
+    "level": "offPeak",
+    "start": 600
+   },
+   {
+    "level": "peak",
+    "start": 960
+   },
+   {
+    "level": "offPeak",
+    "start": 1200
+   },
+   {
+    "level": "low",
+    "start": 1260
+   }
+  ],
+  "speed": "paused",
+  "stations": [],
+  "trafficControl": false,
+  "trains": []
+ }
+}

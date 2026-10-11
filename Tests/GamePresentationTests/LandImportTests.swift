@@ -179,9 +179,22 @@ final class LandImportTests: XCTestCase {
             XCTAssertEqual(launcher.session?.world.land, Land.towns(seed: seed, in: .standard), "without the app's people, towns")
             launcher.returnToStart()
             launcher.population = grid
-            launcher.startNewGame(at: anchor)
-            let expected = LandImport.cells(population: grid, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds)
+            // Kinmen lies off the box of Taiwan that a real map is bought
+            // tile by tile in (decision 167), and the people of the grid are
+            // there: a 16 km square, with its people.
+            let kinmen = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.4321, longitudeDegrees: 118.3171))
+            launcher.startNewGame(at: kinmen)
+            let expected = LandImport.cells(population: grid, frame: Self.frame(kinmen), bounds: GameWorld.newGameBounds)
+            XCTAssertNotNil(expected)
             XCTAssertEqual(launcher.session?.world.land.cells, expected)
+            XCTAssertNil(launcher.session?.world.mapExpansion)
+            // A place of Taiwan is bought tile by tile, from the 16 km round it.
+            launcher.returnToStart()
+            launcher.startNewGame(at: anchor)
+            let island = try XCTUnwrap(launcher.session?.world)
+            XCTAssertEqual(island.mapExpansion?.owned.count, 1)
+            XCTAssertGreaterThan(island.bounds.width, GameWorld.newGameBounds.width)
+            XCTAssertGreaterThan(island.land.totals.residents, 4_000_000, "Taipei's people, the tile round the pick")
             launcher.returnToStart()
             launcher.startNewGame()
             let blank = try XCTUnwrap(launcher.session?.world)

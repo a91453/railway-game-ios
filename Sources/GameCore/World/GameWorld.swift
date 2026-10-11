@@ -154,7 +154,7 @@ public struct GameWorld: Equatable, Sendable {
     /// The tiles of the map the company owns, when it buys its map as it
     /// grows (decision 160), or `nil`: it may build anywhere in the world.
     /// Off in a new world and in saves from before it; the app's new blank
-    /// games turn it on. Set by ``enableMapExpansion(owning:townSeed:)``,
+    /// games turn it on. Set by ``enableMapExpansion(owning:townSeed:ridersStep:)``,
     /// ``buyMapTile(_:)`` and every midnight only.
     public internal(set) var mapExpansion: MapExpansion?
     /// The trips that release passengers, derived from the demands and the

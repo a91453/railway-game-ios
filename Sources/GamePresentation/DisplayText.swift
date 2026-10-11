@@ -442,6 +442,8 @@ extension GameError {
             language.text("This map is bought tile by tile already.", "這張地圖已經是分區塊購買。")
         case .invalidMapTile:
             language.text("That tile is not on the map.", "那一塊不在地圖上。")
+        case .invalidRidersStep:
+            language.text("The riders each tile needs must be at least 1.", "每塊要的每日運量至少是 1 人次。")
         case .mapTileOwned:
             language.text("You own that tile already.", "這一塊已經是你的了。")
         case .mapTileNotAdjacent:

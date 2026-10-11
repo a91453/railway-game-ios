@@ -110,9 +110,12 @@ public struct WorldRegion: Hashable, Sendable {
     /// or, on a map whose land is read in as it is needed with nothing
     /// built yet (decision 89: the whole of Taiwan), the whole map, so the
     /// player starts seeing the island rather than a few hundred metres of
-    /// it; `nil`, the camera's own opening, otherwise.
+    /// it, or, if it is bought tile by tile (decision 167), the land owned;
+    /// `nil`, the camera's own opening, otherwise.
     public static func opening(in world: GameWorld) -> WorldRegion? {
-        built(in: world) ?? (world.landBlocks != nil ? WorldRegion(bounds: world.bounds) : nil)
+        if let built = built(in: world) { return built }
+        guard world.landBlocks != nil else { return nil }
+        return owned(in: world) ?? WorldRegion(bounds: world.bounds)
     }
 }
 

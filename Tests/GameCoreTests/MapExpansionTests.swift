@@ -15,14 +15,17 @@ final class MapExpansionTests: XCTestCase {
     private let middle = MapTile(row: 2, column: 2)
 
     /// A blank world of 5 × 5 tiles (81.92 km a side) owning the middle
-    /// tile, with `balance` in cents, managed unless `free`.
-    private func world(balance: Money = 10_000_000_000, free: Bool = false, seed: UInt32? = 7) throws -> GameWorld {
+    /// tile, with `balance` in cents, managed unless `free`, each tile
+    /// beyond the first needing `step` riders of the best day.
+    private func world(
+        balance: Money = 10_000_000_000, free: Bool = false, seed: UInt32? = 7, step: Int64 = MapExpansion.standardRidersStep
+    ) throws -> GameWorld {
         var world = try GameWorld(
             bounds: WorldBounds(width: 5 * length, height: 5 * length), economy: GameEconomy(balance: balance, costs: testCosts),
             clock: GameClock(speed: .paused)
         )
         if !free { world.setEconomyMode(.management) }
-        try world.enableMapExpansion(owning: middle, townSeed: seed)
+        try world.enableMapExpansion(owning: middle, townSeed: seed, ridersStep: step)
         return world
     }
 
@@ -272,6 +275,90 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(five, one.map { LandCell(row: $0.row + 512, column: $0.column + 512, use: $0.use, residents: $0.residents, jobs: $0.jobs) })
     }
 
+    // MARK: - The riders each tile needs (decision 167)
+
+    /// A real place's first tile may hold too few people to carry 100,000
+    /// riders a day, so a map has its own step: the allowance, the riders
+    /// each tile needs, the refusal and the quote all follow it.
+    func testAMapsOwnStepSetsTheMilestones() throws {
+        var world = try world(seed: nil, step: 25_000)
+        XCTAssertEqual(world.mapExpansion?.ridersStep, 25_000)
+        XCTAssertEqual(world.mapExpansion?.allowance, 1)
+        XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 2, column: 1)), .mapExpansionLocked(ridersNeeded: 25_000))
+        // 74,999 riders: one tile and two more.
+        world.mapExpansion?.bestDayRiders = 74_999
+        XCTAssertEqual(world.mapExpansion?.allowance, 3)
+        try world.buyMapTile(MapTile(row: 2, column: 1))
+        try world.buyMapTile(MapTile(row: 2, column: 0))
+        // $50 a rider of the step for each tile owned: $1.25 million, then $2.5 million.
+        XCTAssertEqual(world.economy.balance, 10_000_000_000 - 125_000_000 - 250_000_000)
+        XCTAssertEqual(world.mapExpansion?.nextPrice, 375_000_000)
+        XCTAssertThrowsGameError(try world.buyMapTile(MapTile(row: 1, column: 2)), .mapExpansionLocked(ridersNeeded: 75_000))
+        let quote = try XCTUnwrap(world.mapTileQuote(MapTile(row: 1, column: 2)))
+        XCTAssertEqual(quote.ridersNeeded, 75_000)
+        XCTAssertFalse(quote.isUnlocked)
+        world.mapExpansion?.bestDayRiders = 75_000
+        XCTAssertTrue(try XCTUnwrap(world.mapTileQuote(MapTile(row: 1, column: 2))).isUnlocked)
+        XCTAssertEqual(world.mapExpansion?.ridersNeeded(toOwn: 4), 75_000)
+        XCTAssertEqual(world.mapExpansion?.ridersNeeded(toOwn: 1), 0)
+        XCTAssertEqual(MapExpansion.ridersNeeded(toOwn: 4, step: 25_000), 75_000)
+        XCTAssertEqual(MapExpansion.ridersNeeded(toOwn: 4), 300_000, "a map that says nothing asks the standard 100,000 a tile")
+    }
+
+    /// The price of a tile is $50 for each rider of the step, for each tile
+    /// owned: the standard step's $5 million, a country town's less, and no
+    /// overflow at the most.
+    func testThePriceFollowsTheStep() throws {
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil).nextPrice, 500_000_000)
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 21_000).nextPrice, 105_000_000, "$1.05 million")
+        let two = [middle, MapTile(row: 2, column: 3)]
+        XCTAssertEqual(MapExpansion(owned: two, townSeed: nil, ridersStep: 21_000).nextPrice, 210_000_000)
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 1).nextPrice, 5_000, "$50")
+        // A world of the most tiles, all owned but one, at the most.
+        let all = (0..<1_023).map { MapTile(row: $0 / 32, column: $0 % 32) }
+        let dearest = MapExpansion(owned: all, townSeed: nil, ridersStep: MapExpansion.maximumRidersStep).nextPrice
+        XCTAssertEqual(dearest.amount, 1_023 * 4_294_967_296 * 5_000)
+        XCTAssertGreaterThan(dearest.amount, 0)
+    }
+
+    /// The step is the map's, from 1 to 2^32; the refusal comes after
+    /// "turned on already" and before the tile, and changes nothing.
+    func testAStepOutOfRangeIsRefused() throws {
+        var world = GameWorld(bounds: try WorldBounds(width: 5 * length, height: 5 * length), economy: GameEconomy(balance: 100_000, costs: testCosts))
+        let before = world
+        for step: Int64 in [0, -1, MapExpansion.maximumRidersStep + 1, .min, .max] {
+            XCTAssertThrowsGameError(try world.enableMapExpansion(owning: middle, townSeed: nil, ridersStep: step), .invalidRidersStep)
+        }
+        XCTAssertEqual(world, before)
+        XCTAssertThrowsGameError(
+            try world.enableMapExpansion(owning: MapTile(row: 9, column: 9), townSeed: nil, ridersStep: 0), .invalidRidersStep
+        )
+        try world.enableMapExpansion(owning: middle, townSeed: nil, ridersStep: MapExpansion.maximumRidersStep)
+        XCTAssertEqual(world.mapExpansion?.ridersStep, 4_294_967_296)
+        XCTAssertEqual(world.mapExpansion?.ridersNeeded(toOwn: 25), 24 * 4_294_967_296)
+        XCTAssertThrowsGameError(try world.enableMapExpansion(owning: middle, townSeed: nil, ridersStep: 0), .mapExpansionEnabled)
+        // A map made directly keeps to the range too.
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: 0).ridersStep, 1)
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil, ridersStep: .max).ridersStep, MapExpansion.maximumRidersStep)
+        XCTAssertEqual(MapExpansion(owned: [middle], townSeed: nil).ridersStep, 100_000)
+    }
+
+    /// A step other than the standard is saved, and a bad one is refused.
+    func testTheStepIsSavedOnlyWhenItIsNotTheStandard() throws {
+        let standard = String(decoding: try JSONEncoder().encode(try world()), as: UTF8.self)
+        XCTAssertFalse(standard.contains("ridersStep"), "as before decision 167")
+        let own = try world(step: 12_500)
+        let data = try JSONEncoder().encode(own)
+        let text = String(decoding: data, as: UTF8.self)
+        XCTAssertTrue(text.contains(#""ridersStep":12500"#))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), own)
+        for bad in ["0", "-3", "4294967297", #""many""#, "1.5"] {
+            let broken = text.replacingOccurrences(of: #""ridersStep":12500"#, with: #""ridersStep":\#(bad)"#)
+            XCTAssertNotEqual(broken, text)
+            XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(broken.utf8)), bad)
+        }
+    }
+
     // MARK: - The best day
 
     func testTheBestDayIsKeptAtMidnight() throws {
@@ -340,6 +427,36 @@ final class MapExpansionTests: XCTestCase {
         refused(#""owned":[[2,2]]"#)
         refused(#""owned":[]"#)
         refused(#""owned":[[2,2],[9,2]]"#)
+    }
+
+    /// Version 42 (decision 167): a map that asks 25,000 riders a tile, its
+    /// second tile bought. It saves byte for byte and is the world this
+    /// build makes.
+    func testVersionFortyTwoKeepsItsStep() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v42-map-expansion-step.json")
+        var made = try world(balance: 2_000_000_000, seed: nil, step: 25_000)
+        try made.buildStation(named: "Middle", at: at(2.5, 2.5))
+        made.mapExpansion?.bestDayRiders = 26_000
+        try made.buyMapTile(MapTile(row: 2, column: 3))
+        try made.buildStation(named: "East", at: at(3.5, 2.5))
+        made.setSpeed(.normal)
+        try made.advance(ticks: 10)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["MAP_EXPANSION_STEP_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: made)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 42)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, made)
+        XCTAssertEqual(world.mapExpansion?.ridersStep, 25_000)
+        XCTAssertEqual(world.mapExpansion?.owned, [middle, MapTile(row: 2, column: 3)])
+        XCTAssertEqual(world.mapExpansion?.allowance, 2)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 42,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 
     func testVersionFortyKeepsItsMap() throws {

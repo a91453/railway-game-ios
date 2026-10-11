@@ -98,13 +98,17 @@ final class RealWorldDataLoadTests: XCTestCase {
         XCTAssertNotNil(session.railways)
     }
 
+    /// Kinmen, off the box of Taiwan that a real map is bought tile by tile
+    /// in (decision 167): a 16 km square.
+    private static let kinmen = GeoAnchor(latitudeDegrees: 24.4321, longitudeDegrees: 118.3171)
+
     /// Once the data is there, a real-world game gets its people, off its
     /// water (decision 105), with their real coverage (decision 147), and
     /// the real-world demo can open.
     func testARealWorldGameAfterTheLoadHasItsPeople() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         await launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }.value
-        let anchor = try XCTUnwrap(Self.taipei)
+        let anchor = try XCTUnwrap(Self.kinmen)
         launcher.startNewGame(at: anchor)
         let population = try XCTUnwrap(launcher.population)
         let water = try XCTUnwrap(launcher.water)
@@ -121,6 +125,32 @@ final class RealWorldDataLoadTests: XCTestCase {
         launcher.returnToStart()
         launcher.openRealWorldDemo(railways: try XCTUnwrap(launcher.railways))
         XCTAssertEqual(launcher.session?.world.geoAnchor, RealWorldDemo.anchor)
+    }
+
+    /// A place of Taiwan after the load (decision 167) is the island bought
+    /// tile by tile: the first tile's people, off its water (decision 105),
+    /// with their real coverage (decision 147), as the 16 km square's are,
+    /// and the milestone for the next tile follows the people.
+    func testAPlaceOfTaiwanAfterTheLoadIsBoughtTileByTile() async throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        await launcher.loadRealWorldData { RealWorldData.load(file: Self.file) }.value
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 23.9926399, longitudeDegrees: 121.6009524), "Hualien")
+        launcher.startNewGame(at: anchor)
+        let layout = try XCTUnwrap(RealWorldExpansion(around: anchor))
+        let world = try XCTUnwrap(launcher.session?.world)
+        let population = try XCTUnwrap(launcher.population)
+        let water = try XCTUnwrap(launcher.water)
+        let blocks = Set(layout.start.landBlocks(in: layout.bounds))
+        let imported = LandImport.cells(in: blocks, population: population, places: launcher.places, water: water, frame: layout.frame, bounds: layout.bounds)
+        let expected = try XCTUnwrap(launcher.coverage).covering(imported, frame: layout.frame)
+        XCTAssertFalse(expected.isEmpty)
+        XCTAssertEqual(world.land.cells, expected)
+        XCTAssertEqual(world.terrain, Terrain(
+            water: water.cells(frame: layout.frame, bounds: layout.bounds, in: blocks), steep: water.steepCells(frame: layout.frame, bounds: layout.bounds, in: blocks)
+        ))
+        XCTAssertEqual(world.landBlocks, blocks.sorted())
+        XCTAssertEqual(world.mapExpansion?.ridersStep, RealWorldExpansion.ridersStep(forResidents: imported.reduce(0) { $0 + $1.residents }))
+        XCTAssertEqual(world.mapExpansion?.ridersStep, layout.ridersStep(population: population, places: launcher.places, water: water))
     }
 
     /// The data is read once: a second call (another window) waits for
