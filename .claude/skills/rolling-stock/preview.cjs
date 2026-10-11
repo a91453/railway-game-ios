@@ -248,9 +248,11 @@ window.ready = true;
 </script></body></html>`;
 
 function budgetFor(cars) {
-  // A city view draws several trains at once on a phone. 400 triangles a car is roomy for a shape
-  // this simple, and well under what the surrounding buildings cost.
-  return cars * 400;
+  // Measured against the owner's own practice rather than guessed: his near-LOD car shed meshes are
+  // about 7,200 triangles a car and his EMU3000 GLB about 16,000, for a map view on the same phones.
+  // 3,500 leaves room for the kit that makes a train read as one — roof units, bogies with wheels,
+  // door recesses — while staying half his lightest and well under what a city block costs.
+  return cars * 3500;
 }
 
 (async () => {

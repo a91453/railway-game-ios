@@ -181,7 +181,7 @@ function carGeometry(length) {
 // is the livery's v, so a band painted straight across the picture follows the nose down and forward the way the
 // paint does on the real train. (Meshy's generated meshes were tried first and dropped: blobby at 391k triangles,
 // and diffusion texturing cannot put a stripe at a given height.)
-const RING = 24, NOSE_RINGS = 18;
+const RING = 28, NOSE_RINGS = 22;
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
 // One ring of a lofted shell at `z`, `t` along the nose (0 at the body, 1 at the tip). `shell` is the
@@ -248,10 +248,26 @@ function shellGeometry(stock, cab) {
   shell.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   shell.setIndex(index);
   shell.computeVertexNormals();
-  // the underframe and bogies live under the body only: the nose has nothing beneath it
+  // The underframe and bogies live under the body only: the nose has nothing beneath it. What makes
+  // a train read as a train at this distance is not a smoother tube but the kit on it — the boxes
+  // along the roof, the wheels under the skirt — so that is where the triangles go.
   const back = -half + 1.2, forward = nose ? half - nose + 1.4 : half - 1.2;
   const parts = [shell, plainUv(new THREE.BoxGeometry(2.2, 0.45, forward - back).translate(0, 0.42, (back + forward) / 2), 0.75)];
-  for (const z of [back + 2.6, forward - 2.6]) parts.push(plainUv(new THREE.BoxGeometry(2.3, 0.5, 3.2).translate(0, 0.25, z), 0.75));
+  for (const k of [-0.22, 0.22]) parts.push(plainUv(new THREE.BoxGeometry(1.5, 0.5, 2.4).translate(0, 0.62, (back + forward) / 2 + k * (forward - back)), 0.75)); // underfloor equipment
+  for (const z of [back + 2.6, forward - 2.6]) {
+    parts.push(plainUv(new THREE.BoxGeometry(2.1, 0.42, 2.9).translate(0, 0.62, z), 0.75));       // bogie frame
+    for (const wz of [z - 1.15, z + 1.15]) for (const wx of [-1.06, 1.06]) {
+      const wheel = new THREE.CylinderGeometry(0.43, 0.43, 0.14, 12).rotateZ(Math.PI / 2).translate(wx, 0.43, wz);
+      parts.push(plainUv(wheel, 0.75));
+    }
+  }
+  // Roof: the air-conditioning run and the cable ducts beside it, over the body only.
+  const roof = sh.roof, runFrom = back + 0.6, runTo = forward - 0.6, units = Math.max(2, Math.round((runTo - runFrom) / 3.2));
+  for (let i = 0; i < units; i++) {
+    const z = runFrom + ((runTo - runFrom) * (i + 0.5)) / units;
+    parts.push(plainUv(new THREE.BoxGeometry(1.9, 0.26, 2.1).translate(0, roof + 0.08, z), 0.25));
+  }
+  for (const x of [-0.95, 0.95]) parts.push(plainUv(new THREE.BoxGeometry(0.26, 0.14, runTo - runFrom).translate(x, roof + 0.04, (runFrom + runTo) / 2), 0.75));
   return mergeGeometries(parts);
 }
 
