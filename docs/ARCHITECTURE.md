@@ -4485,6 +4485,64 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑 App；實機上的價格與 App 讀檔的時間要在 TestFlight 上看。
 
+### 148. 兩座外地連絡站之間的旅次也依距離打折
+
+2026-10-11，作者交代「以遊戲開發者的角度一次全部修復」審查交接文件（`docs/PR200_290_REVIEW_HANDOFF.md`）第九節的待決項目，這一項選了建議的 (a)。號碼依工作登記 #231：決策 148；存檔版本、golden schema 不動。
+
+問題（#308，決策 137）：往來外地連絡站的旅次不打折，因為那一趟走出了地圖。但兩端都是外地連絡站時也不打折，地圖邊緣相距 300 m 的兩站短程接駁，兩站各自分到的外地旅客幾乎全部互送，每天各 3,120 人次、營業利益約 +$14,000，正是決策 137 想擋的「短線載走所有人」。
+
+規則：只有**一端**是外地連絡站的一對才不依距離打折。兩端都是外地連絡站的一對，和其他車站之間一樣依直線距離保留 10%（500 m 以內）到全部（2 km 以上）。外地附加費照舊：往來外地連絡站的旅次（一端或兩端）都多付一次。相距很遠的兩座外地連絡站（例如地圖兩側）在 2 km 以上，照舊全部保留。
+
+參考檢查：參考庫與外部專案沒有這條規則（決策 137 已查），是本專案的規則。
+
+**golden、存檔、replay**：`distance-demand.json` 只有一座外地連絡站，預期值都不變；沒有 fixture 有兩座外地連絡站的一對。測試：`DistanceDemandTests.testTwoOutsideConnectionsSideBySideKeepTheShareOfTheirDistance`（修之前兩站互送 1,667 與 2,000 人次，修之後 167 與 200）。
+
+### 149. 固定班次的路線只服務班次有開的方向與區段
+
+2026-10-11，同一份交代，審查交接文件第十節的待決項目。號碼依工作登記 #231：決策 149；存檔版本、golden schema 不動。
+
+問題（#300，決策 133）：有固定班次的路線，乘客照舊依路線的所有停靠站兩個方向產生與規劃。班次只開部分方向或區段時（只有往一個方向的班、只開到中途站的區間車），其他方向、區段的乘客沒有車可搭，會一直在月台上等。
+
+規則：
+1. 有固定班次的路線，一對停靠站只在**有一班往那個方向、而且兩站都停**時才算服務（`ServiceLine.runsServe(from:to:)`）。沒有班次的路線不受影響。
+2. 直接路徑（`PassengerTrip`）：沒有服務的一對不在那條路線上產生旅次，改找下一條停靠兩站的路線，都沒有就沒有旅次。
+3. 全網路徑：路線的路徑改成每個方向一條「班次涵蓋的區段」（各班的區段，去掉被另一班完全涵蓋的），每段只有那幾站與那幾段的行駛秒數；班距照舊是決策 133 的班次班距。驗證一段路程時（`isServed`）也要求有一班涵蓋起訖兩站。
+4. 改班次（`setLineRuns`）照舊會放棄不再有服務的乘客（`abandonUnservedPassengers`）。
+
+平溪線的實景班次兩個方向都有開到全線，聯集涵蓋所有停靠站，結果不變。
+
+參考檢查：參考庫的 TRA 時刻表（`Railway/site_archive_clean/index.html` 的 `sched`）是每班列車自己的停靠站，沒有乘客規劃，沒有可以搬的規則；外部專案沒有找。是本專案的規則。
+
+**golden、存檔、replay**：`line-runs.json` 的班次兩個方向都開全線，預期值都不變。測試：`LineRunsTests.testOnlyTheWaysAndStretchesTheRunsGoAreServed`（直接路徑與全網路徑各一次；修之前沒有回程班時，回程方向每天仍有 500／21 人次）。
+
+### 151. 自製的 OSM 底圖：遊戲自己的樣式與台灣的離線圖磚（E3 第二步）
+
+2026-10-10，作者問「需要自製的 osm 嗎」，接著要求一個 PR 做兩步：(1) 遊戲自己的底圖樣式；(2) 台灣的圖磚由同一份整包檔產生、隨 App 打包。號碼依工作登記 #231：決策 151（148–150 由 #300–#326 審查的 session 保留）；存檔版本、golden schema 不動。
+
+**為什麼**：實景地圖的水域、分區、地點都來自 osmtoday 的台灣整包檔（決策 93、96、105），OSM 底圖（決策 97）卻是 OpenFreeMap 另一份一直在更新的 OSM，海岸、河面和遊戲的水域遮罩對不齊，底圖自己的建物也疊在遊戲的城市建物（決策 126）下面；沒有網路或 OpenFreeMap 停止服務時底圖是空白；Positron 不是遊戲的畫風；決策 97 留下的軍事設施標示也要自己控制圖層才拿得掉。
+
+參考檢查（`a91453/railway-reference-private` `581db83`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「自製的 OSM 底圖（決策 151）」）：`Ci/` 的 `osmSensitiveFacilityLabelFilter`／`applyOsmSensitiveFacilityLabelFilter`（直接移植）、`external/openfreemap-tiles/fonts/`（三個 glyph 範圍，和 OpenFreeMap 伺服器的檔逐位元相同）、`styles/liberty.json` 與 `planet.json`（OpenMapTiles schema 的圖層與欄位）；`Railway/site_archive_clean/data/offline_land_style.json`（沒網路時墊底的陸地，只取想法：底圖離線也要有陸地）與 `rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles；App 用 MapLibre Native 內建的 `pmtiles://`）。參考庫沒有產生圖磚的工具，`Ci/` 的虛擬島 `city.pmtiles` 本體也不在快照裡（gap → 原生）。新的 `OpenWorld/` 快照的地圖是 OSM 的點陣圖磚，沒有可用的。
+
+1. **圖磚**（`tools/basemap/build_basemap.py`，pyosmium，決策 93 同意的依賴）：讀實景資料同一份整包檔，切成 zoom 0–14 的 Mapbox Vector Tiles（4096 單位、64 的邊），寫成 PMTiles v3（gzip）。圖層照 OpenMapTiles schema 的一部分：`water`（海是台灣陸地外 2° 的框、海岸線的 704 個環是洞；湖、水庫、河面；魚塭不是水，決策 96）、`waterway`（河、運河、溪流）、`landcover`（森林、草地、濕地、沙灘；沒有農地）、`park`、`boundary`（縣市、鄉鎮市區）、`transportation`（國道到服務道路，匝道、橋、隧道；沒有鐵道、步道、停車場）、`transportation_name`、`place`。每一層從哪個 zoom 起、依面積的門檻在工具的常數與 README。切法照 geojson-vt（ISC）：點先排一次簡化順序，再由上一層切成四塊；整塊是海的圖磚往下全部同一份內容。2026-10-10 下載的檔（OSM 資料到 2026-10-08）：353,695 塊、12,340 種內容、47.4 MB，四核心約 3.5 分鐘。
+2. **樣式**（`BaseMapStyle`，GamePresentation，有測試）：遊戲自己寫的樣式 JSON，淺色、深色（顏色在 `docs/UI_THEME.md`）：地面是 `Palette.land`、字是 `ink`、淡藍的水、淡綠的森林與公園、白色道路（國道與快速道路暖黃）、虛線的縣市界；地名從直轄市到聚落分層，重要的放上層（MapLibre 先排上層）；巷弄的路名 15.5 級起才出現。沒有建物、土地使用、興趣點、鐵道；路名套 `Ci/` 的 `osmSensitiveFacilityLabelFilter`（`sensitiveFacilityLabelFilter()`）。同一份樣式也畫 OpenFreeMap 的圖磚（同一個 schema）：圖層名、`class` 都是 OpenMapTiles 的。
+3. **哪裡用哪份圖磚**（`BaseMapStyle.drawsTaiwan`）：地圖中心 2 km 內有台灣的陸地（水域格網 `WaterGrid.hasLand`，它把廈門等非台灣的陸地當海）就用打包的圖磚，否則（廈門、外國、沒有水域格網）用 OpenFreeMap 的。
+4. **字型**（`tools/basemap/fetch_glyphs.py`）：OpenFreeMap 的 Noto Sans glyph（OFL 1.1，`Resources/Licenses/NotoSans-OFL.txt`）。MapLibre Native 用裝置的字型畫中文、假名與諺文（`allowsFixedWidthGlyphGeneration`），整段都是這些字的範圍不放；地名用到的拉丁字母、標點與符號放真的 glyph（15 個範圍），其餘 179 個範圍是空的檔：MapLibre 某個範圍讀不到時（`GlyphManager::processResponse` 遇到錯誤就不再通知），整塊圖磚的文字都不排，所以要每個可能要的範圍都有檔。共 1.19 MB。打包的字型台灣以外也用。
+5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
+6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
+7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
+8. **山的陰影**（同日，作者問「沒有衛星好嗎」，同意不做衛星底圖、用地形陰影補上立體感；同一個 PR，不另取號）：衛星照片照舊是 Apple 地圖的「衛星」「混合」，給規劃時對照；遊戲的底圖不放衛星照片（照片裡真實的房子、道路、鐵道會和玩家的軌道、遊戲的城市疊在一起，也和遊戲的資料對不齊；授權與容量也不划算）。台灣的底圖改用遊戲自己的地面高度（`taiwan_heights.dat`，決策 124）畫山的陰影：`tools/basemap/build_terrain.py` 把它寫成 Terrarium 編碼的 512 像素 PNG（`raster-dem`），zoom 0–10（台灣約 70 m 一個像素，和高度的 1.875″ 一格相當；zoom 11 是 29 MB，只多了內插），只寫有陸地的圖磚：115 塊、10.0 MB，約 1 分鐘。樣式照 `Railway/` 網站的 `landscape-hillshade`（`rail-3d/integration/map3d.js`：陰影強度 0.42、光從 315°），顏色換成遊戲的（`docs/UI_THEME.md`），畫在森林、公園之上、水與道路之下；只有台灣的樣式有，台灣以外沒有地形資料。陰影和遊戲判斷路堤、路塹、隧道的高度是同一份資料。檢查：圖磚的高度和 `HeightGrid` 的同一點差 4–5 m 以內（像素中心與點的差），阿里山車站 2,207 m、玉山 3,881 m。
+
+**外部專案**：geojson-vt（https://github.com/mapbox/geojson-vt ，ISC）的 `clip.js`、`simplify.js` 移植成 Python，著作權聲明在工具的說明裡；PMTiles v3 規格（https://github.com/protomaps/PMTiles ）與 MVT 2.1 規格照文件自己寫編碼；評估過 Planetiler（Apache-2.0，OpenMapTiles 的 profile，要 Java 21，另外下載 Natural Earth 與 OSM 的海洋多邊形，是新的依賴）與 tippecanoe（BSD 2-Clause，要另外編譯 C++），都沒用：pyosmium 已經同意，切法本身不大。MapLibre Native 6.31.0 的原始碼確認了 `pmtiles://file://`（6.10.0 起，`pmtiles_file_source.cpp`）、本機檔的路徑解碼（`local_file_source.cpp`）、glyph 讀不到的行為與本機畫的字的範圍。
+
+**驗證**：Linux 上用 MapLibre GL JS 4.7.1 在 Chromium 畫打包的圖磚與樣式（台北、平溪、金門、全島，淺色與深色；巴黎用 OpenFreeMap 的圖磚）；`pmtiles`、`mapbox-vector-tile` 兩個 Python 套件讀得出每一層（只在 scratchpad 驗證用，不是依賴）。
+
+**限制**：
+- MapLibre Native 在 iOS 上畫打包的圖磚、讀本機 glyph 沒有在這個環境驗證（只有 CI 的 Xcode 建置）；要在實機上看。
+- App 多約 58 MB（圖磚 47.4 MB、地形 10.0 MB、字型 1.2 MB）。
+- 整包檔只有台灣：金門、馬祖對岸的陸地畫成海（和水域格網一致）。
+- 底圖的 OSM 是 2026-10-08 的，水域、分區、地點是 2026-10-06 的檔（那份已經下載不到），兩天的差別。
+- 還沒有 3D 建物與 3D 地形（地形圖磚之後可以直接給 MapLibre 的 `terrain` 用），沒有興趣點；台灣以外仍要網路，也沒有山的陰影。
+
 ### 154. 國定假日與干擾事件的骨架
 
 2026-10-11，`docs/research/DISRUPTION_STUDY.md` 方案 B 的第一步。作者選了 B → Q4 → A，並決定國定假日用遊戲固定曆法、但實景地圖依所在國家放各自的假日；預設難度與挑戰交給 Claude Code 決定（輕；挑戰先關）。號碼依工作登記 #231：存檔版本 37（36 是劉銘傳劇本的，決策 153）、決策 154（148–152 由其他 session 登記或使用）、golden schema 57。
@@ -4569,7 +4627,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 城鎮成長（決策 70）：經營模式下，App 的新遊戲每個午夜依昨天的服務比例與可達車站數讓每站的每日旅次成長（最多每天 1.5%、起點的 4 倍），沒有服務時每天 −0.2%，不低於起點。
 - 土地（決策 72、90）：世界可以有 64 m 格的土地，每格一種用途（住宅、商業、辦公、工業物流、學校與公共設施、觀光休閒、農業、公園；公園沒有人，其他至少一人）與居民、就業；App 的空白新遊戲有種子產生的三座城鎮，實景新遊戲有 WorldPop 的人口與 OSM 地點換算的就業，以及 OSM 的工業區、公園與農地（決策 93）。車站的腹地是 800 m 內的格。
 - 運量由土地推導（決策 73）：App 的新遊戲（經營模式）每站的運量是它分到的腹地（重疊時依距離分）每 100 位居民與就業每天 40 旅次，類型是佔最多的；每個午夜服務好的車站讓腹地的人口成長並往車站蓋新的住宅格，土地不衰退。 關閉的車站不分土地（決策 77）。空白示範地圖也由土地決定運量（自己的城市取代第一座城鎮），實景示範保留固定運量（決策 78）。
-- 需求隨距離與外地連絡（決策 137）：App 的新遊戲每一對的旅次依兩站的直線距離保留 10%（500 m 以內）到全部（2 km 以上）；離地圖邊緣 1 km 內的車站是外地連絡站，平分地圖外每天 6,000 旅次，往來它的旅次不打折、多付一倍的城市基準票價。全台灣只開距離，兩張示範地圖都不開；`GameWorld` 的新世界與舊存檔都不開。存檔版本 31。
+- 需求隨距離與外地連絡（決策 137）：App 的新遊戲每一對的旅次依兩站的直線距離保留 10%（500 m 以內）到全部（2 km 以上）；離地圖邊緣 1 km 內的車站是外地連絡站，平分地圖外每天 6,000 旅次，往來它的旅次不打折（兩端都是外地連絡站時照常依距離打折，決策 148）、多付一倍的城市基準票價。全台灣只開距離，兩張示範地圖都不開；`GameWorld` 的新世界與舊存檔都不開。存檔版本 31。
 - 城市的住商工需求（決策 139）：App 的新遊戲記下城市開始時每位居民的商店就業與辦公、工業就業；偏離的十倍是三種需求（−100% 到 +100%）。每晚的成長依那個比例乘 `1 + 需求` 分給居民、商店與辦公，長不下的分給別類；滿的建物需求高的先升級；新格蓋需求最高的用途；分區格在需求不是負的時才蓋。存檔版本 32。
 - 城市建物的建地（決策 142）：App 的新遊戲城市建物站在格子中央、依密度大小的方塊上（D1 20 m、D2 28 m、D3 34 m、D4 與既有存量 40 m），收購、收購價的土地、城市不蓋的地方都照這個方塊；方塊升級後會碰到玩家建物的，不升級。關著（舊存檔）照舊一律 40 m。存檔版本 33。
 - 依面積收購（決策 146）：App 的實景新遊戲裡，玩家建物不被城市建物的方塊擋住。它付蓋到的每一格收購價的那一份（面積比例），那一份的人搬進來；格子與城市建物留下，成長上限扣掉被蓋到的比例，不擋升級。選建地時不畫方塊、不自動對齊。空白地圖與舊存檔照舊用方塊。存檔版本 34。

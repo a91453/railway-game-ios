@@ -116,9 +116,11 @@ extension GameSession {
     }
 
     /// The city's demand (decision 139), for the zoning tool: "City demand:
-    /// homes +12% · shops −8% · work +3%"; `nil` with the valves off.
+    /// homes +12% · shops −8% · work +3%"; `nil` with the valves off, or
+    /// where the city does not grow and the demand steers nothing (see
+    /// ``cityDemandSteersGrowth``).
     public var cityDemandText: String? {
-        guard world.cityDemand != nil else { return nil }
+        guard cityDemandSteersGrowth else { return nil }
         let levels = world.cityDemandLevels
         // Whole per cents away from zero: a demand below one per cent
         // still holds a use back or lets it build (``spread`` builds only
@@ -131,6 +133,15 @@ extension GameSession {
             "City demand: homes \(percent(levels.homes)) · shops \(percent(levels.shops)) · work \(percent(levels.work))",
             "城市需求：住宅 \(percent(levels.homes)) · 商業 \(percent(levels.shops)) · 辦公與工業 \(percent(levels.work))"
         )
+    }
+
+    /// Whether the city's demand steers anything: the valves are on and
+    /// the city grows, which it does only with town growth on and its land
+    /// setting the stations' ridership, a managed company's (as
+    /// `GameWorld.growLand` does). A real-world demo or free play has the
+    /// valves but no growth, and the demand line would only mislead.
+    var cityDemandSteersGrowth: Bool {
+        world.cityDemand != nil && world.townGrowth != nil && world.landDemand && world.accounts.mode == .management
     }
 
     /// What the chosen zone does, for the zoning tool.
@@ -153,7 +164,7 @@ extension GameSession {
             )
             // Decision 139: homes, shops, offices and factories wait for
             // their demand.
-            guard world.cityDemand != nil, zone.use.flatMap(world.cityDemandLevels.level(of:)) != nil else { return help }
+            guard cityDemandSteersGrowth, zone.use.flatMap(world.cityDemandLevels.level(of:)) != nil else { return help }
             return help + language.text(
                 " They are built only while the city wants that use.",
                 "只有城市需要這種用途（需求不是負的）時才會蓋。"

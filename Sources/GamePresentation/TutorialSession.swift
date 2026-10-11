@@ -9,7 +9,7 @@ extension GameSession {
     /// Shows the tutorial from its first step: the reference's
     /// `startTutorial`, and starting it again from the game menu.
     public func startTutorial() {
-        tutorial = Tutorial(steps: Tutorial.standardSteps, over: world)
+        tutorial = Tutorial(steps: Tutorial.steps(over: world), over: world)
     }
 
     /// Whether the player has done what the step on screen asks (the

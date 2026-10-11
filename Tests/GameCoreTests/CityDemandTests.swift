@@ -137,6 +137,19 @@ final class CityDemandTests: XCTestCase {
         XCTAssertEqual(steered.land.cell(row: 5, column: 7)?.jobs, 624)
     }
 
+    /// A city with under one job a thousand residents and no demand for
+    /// homes still grows: its kinds of job weigh at least 1 rather than
+    /// rounding to 0, and what they have no room for goes to the homes by
+    /// the plain mix. Before, all three weights were 0 and nothing grew
+    /// that night.
+    func testACityWithAlmostNoJobsStillGrows() throws {
+        var world = try world(land: [LandCell(row: 5, column: 5, use: .residential, residents: 300, jobs: 0)])
+        let share = try XCTUnwrap(LandDemand.shares(of: world.land, among: world.stations)[world.stations[0].id])
+        let mix = CityMix(shopJobs: 500, workJobs: 500)
+        world.growSteered(around: world.stations[0], share: share, rate: 10, levels: CityDemand.Levels(homes: -1_000, shops: 0, work: 0), mix: mix)
+        XCTAssertGreaterThan(try XCTUnwrap(world.land.cell(row: 5, column: 5)).residents, 300)
+    }
+
     /// Three full D1 buildings, two raised a night: by row and column
     /// without the valves, the most wanted use first with them.
     func testTheMostWantedUseIsRaisedFirst() throws {
@@ -193,7 +206,7 @@ final class CityDemandTests: XCTestCase {
             (CityDemand.Levels(homes: 30, shops: 20, work: 30), LandCell(row: 4, column: 5, use: .residential, residents: 4, jobs: 0)),
         ]
         for (levels, cell) in cases {
-            var world = try world(land: [LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
+            var world = try world(land: [LandCell(row: 5, column: 5, use: .residential, residents: 300, jobs: 0)])
             world.spread(towards: world.stations[0], levels: levels)
             // The four cells beside (5, 5) are equally near: by row, (4, 5).
             XCTAssertEqual(world.land.cell(row: 4, column: 5), cell, "\(levels)")
@@ -201,7 +214,7 @@ final class CityDemandTests: XCTestCase {
     }
 
     func testAZonedCellIsBuiltOnlyWhileItsUseIsWanted() throws {
-        var world = try world(land: [LandCell(row: 5, column: 5, use: .residential, residents: 1_000, jobs: 0)])
+        var world = try world(land: [LandCell(row: 5, column: 5, use: .residential, residents: 300, jobs: 0)])
         try world.setZone(.commercial, rows: 10...10, columns: 5...5)
         try world.setZone(.civic, rows: 12...12, columns: 5...5)
         var unwanted = world

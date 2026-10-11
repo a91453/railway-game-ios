@@ -210,7 +210,10 @@ extension GameWorld {
     static func trip(on line: ServiceLine, from origin: StationID, to destination: StationID) -> PassengerTrip? {
         guard origin != destination,
               let from = line.stops.firstIndex(of: origin),
-              let to = line.stops.firstIndex(of: destination)
+              let to = line.stops.firstIndex(of: destination),
+              // Decision 149: on a line with runs, only a way and stretch
+              // some run goes.
+              line.runsServe(from: from, to: to)
         else { return nil }
         return PassengerTrip(line: line.id, direction: to > from ? .outbound : .inbound)
     }
@@ -306,6 +309,14 @@ extension GameWorld {
             return calls.indices.contains { index in
                 calls[index] == leg.from && calls.dropFirst(index + 1).contains(leg.to)
             }
+        }
+        // Decision 149: on a line with runs (no patterns, no station
+        // twice), only a way and stretch some run goes.
+        if line.hasRuns {
+            guard leg.pattern == nil, let from = line.stops.firstIndex(of: leg.from), let to = line.stops.firstIndex(of: leg.to),
+                  (from < to) == (leg.direction == .outbound)
+            else { return false }
+            return line.runsServe(from: from, to: to)
         }
         let service = (leg.pattern ?? -1) + 1
         guard (0..<line.serviceCount).contains(service) else { return false }
