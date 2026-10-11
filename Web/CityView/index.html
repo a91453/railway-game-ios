@@ -15,12 +15,20 @@
       /* Along the Line: one credit line at the bottom, in the middle, as on the game's real-world maps */
       #credits {
         position: fixed; left: 50%; bottom: max(6px, env(safe-area-inset-bottom)); transform: translateX(-50%);
-        max-width: calc(100% - 184px); width: max-content; box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
+        max-width: calc(100% - 220px); /* (clear of the switch on the left and the website on the right) */ width: max-content; box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
         font: 11px/1.4 -apple-system, system-ui, "PingFang TC", sans-serif; text-align: center; color: rgba(60, 60, 67, 0.75);
         background: rgba(255, 255, 255, 0.7); pointer-events: none;
       }
       #credits:empty { display: none; }
       #credits span { white-space: nowrap; } /* (a long line breaks between the sources, not inside one) */
+      /* Along the Line: the game's website, where jeantimex's GitHub link was (the app opens it in Safari) */
+      #website {
+        position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+        display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 16px;
+        font: 600 12px -apple-system, system-ui, "PingFang TC", sans-serif; color: #262c57; text-decoration: none;
+        background: rgba(255, 255, 255, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      }
+      #website img { width: 22px; height: 22px; border-radius: 6px; }
       /* the switch between the city as it is and its abstract model: a picture of the one it changes to */
       #mode {
         position: fixed; left: 12px; bottom: 12px; width: 68px; height: 68px; padding: 0; border: 2px solid #fff; border-radius: 12px; cursor: pointer;
@@ -68,7 +76,14 @@
     <!-- the info panel: hidden until asked for (control panel: info panel) -->
     <div id="hud" style="display: none">loading…</div>
     <button id="mode" type="button" aria-label="Switch between the photorealistic city and the abstract model"></button>
+    <a id="website" href="https://www.alongthelinegame.com">
+      <img src="/assets/ui/brand-mark.png" alt="" /><span>Website</span>
+    </a>
     <div id="credits"></div>
+    <script>
+      // Along the Line: the website link in the app's language (the web view's is the app's)
+      if (/^zh/i.test(navigator.language)) document.querySelector('#website span').textContent = '官網';
+    </script>
     <script>
       // The atmosphere works out its tables (the sky's colours, the light on the clouds) in the browser's idle
       // time, of which a busy page — the whole city loaded, clouds on — has none: the sky would stay dull and the
