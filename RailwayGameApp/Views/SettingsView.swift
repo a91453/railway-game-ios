@@ -4,8 +4,8 @@ import UIKit
 
 /// The app's settings: the music and the sound effects on or off
 /// (``GameAudio``), from the start screen and the game menu. Kept on the
-/// device, never in a save. Under them, the app's version and a way to
-/// report a problem (decision 127).
+/// device, never in a save. Under them, the 3D city preview (decision 152),
+/// the app's version and a way to report a problem (decision 127).
 struct SettingsView: View {
     let audio: GameAudio
     /// What is in the game the settings were opened from
@@ -13,6 +13,7 @@ struct SettingsView: View {
     /// from the start screen.
     var game: String? = nil
     @Environment(\.dismiss) private var dismiss
+    @State private var showsCityView = false
 
     var body: some View {
         NavigationStack {
@@ -31,9 +32,13 @@ struct SettingsView: View {
                 } footer: {
                     Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
                 }
+                previewSection
                 aboutSection
             }
             .listStyle(.insetGrouped)
+            .fullScreenCover(isPresented: $showsCityView) {
+                CityView3D()
+            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -44,6 +49,31 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// Decision 152: the 3D city view, a preview of what the game's 3D may
+    /// look like (``CityView3D``).
+    private var previewSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Button {
+                showsCityView = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("3D City: Kaohsiung Station", "3D 城市：高雄車站"))
+                } icon: {
+                    Image(systemName: "building.2")
+                }
+            }
+            .accessibilityIdentifier("settings.cityView")
+        } header: {
+            Text(verbatim: language.text("Preview", "試作"))
+        } footer: {
+            Text(verbatim: language.text(
+                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung Station, drawn by the Procedural Tokyo renderer. It is not part of your game yet: the cars and the light are its own. Drag to move, pinch to zoom, two fingers to turn.",
+                "3D 城市的試作：高雄車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。還沒有接上你的遊戲：車流與光線都是它自己的。拖曳移動、兩指縮放、兩指旋轉。"
+            ))
         }
     }
 

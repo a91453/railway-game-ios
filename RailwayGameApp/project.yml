@@ -42,6 +42,14 @@ targets:
       - path: App
       - path: Views
       - path: Resources
+        excludes:
+          - "CityView/**"
+      # Decision 152: the 3D city view's web page (built from Web/CityView by
+      # tools/procedural-city/build_city_view.sh), copied as one folder so its
+      # relative paths (assets/, textures/, tiles/) stay as they are.
+      - path: Resources/CityView
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: RailwayGame
         product: GameCore
