@@ -253,10 +253,6 @@ jobs:
       # builds need no certificate or Apple Developer account. Package
       # resolution is disabled as on Xcode Cloud, which only uses a committed
       # Package.resolved, so a missing one fails here first.
-      # SWIFT_EMIT_LOC_STRINGS=YES has the compiler write out the localizable
-      # strings as it compiles (it changes no code), as the string export
-      # below needs: every build of this job sets it, so the export finds the
-      # files compiled and does not compile them all again.
       - name: Build for iOS Simulator
         id: app-build
         run: |
@@ -267,7 +263,6 @@ jobs:
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
-            SWIFT_EMIT_LOC_STRINGS=YES \
             CODE_SIGNING_ALLOWED=NO
 
       # release-archive.yml proves no Debug-only launch argument code is in
@@ -361,7 +356,6 @@ jobs:
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
             -disableAutomaticPackageResolution \
-            SWIFT_EMIT_LOC_STRINGS=YES \
             CODE_SIGN_IDENTITY=-
 
       - name: Upload failed UI test results
@@ -377,12 +371,12 @@ jobs:
 
       # The Traditional Chinese translations, on every lane. It runs after the
       # UI tests, and also when they failed, so each reports on its own. The
-      # export builds the app for the same Simulator into the same derived
-      # data, with the same settings, so it reuses what the build and the UI
-      # tests compiled; the tests have already run, so nothing it writes
-      # there changes them. Until 2026-10-11 it built into derived data of
-      # its own and compiled the whole app and package again (97 s, the
-      # median of the pull request runs from 2026-10-09 to 2026-10-11).
+      # export builds with SWIFT_EMIT_LOC_STRINGS into its own derived data,
+      # leaving the tested build alone. It cannot reuse the tested build:
+      # -exportLocalizations builds for the iOS device SDK (Debug-iphoneos)
+      # whatever -destination says, so #356, which gave it this job's
+      # Simulator, derived data and settings, still compiled all 226 files
+      # (run 38111831569, 86 s against 97 s before).
       - name: Test the localization checker
         id: localization-selftest
         if: ${{ !cancelled() && steps.app-build.outcome == 'success' }}
@@ -398,11 +392,10 @@ jobs:
             -scheme RailwayGame \
             -localizationPath "$RUNNER_TEMP/loc" \
             -exportLanguage zh-Hant \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -destination "generic/platform=iOS Simulator" \
             -disableAutomaticPackageResolution \
             SWIFT_EMIT_LOC_STRINGS=YES \
-            CODE_SIGN_IDENTITY=-
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Check zh-Hant targets and committed catalog keys
         if: ${{ !cancelled() && steps.localization-export.outcome == 'success' }}
