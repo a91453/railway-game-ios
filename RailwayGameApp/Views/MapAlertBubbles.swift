@@ -21,10 +21,15 @@ struct MapAlertBubbles: View {
         ZStack(alignment: .topLeading) {
             if session.tool == .select {
                 ForEach(placed) { item in
+                    // Its bottom middle at the point: the bubble stands on a
+                    // frame of no size, placed there. Alignment guides
+                    // placed the bubbles only against each other, and the
+                    // stack, as large as the bubbles, sat in the map's top
+                    // left corner with all of them in it.
                     bubble(item.alert)
                         .fixedSize()
-                        .alignmentGuide(HorizontalAlignment.leading) { $0[HorizontalAlignment.center] - item.point.x }
-                        .alignmentGuide(VerticalAlignment.top) { $0[VerticalAlignment.bottom] - item.point.y }
+                        .frame(width: 0, height: 0, alignment: .bottom)
+                        .position(item.point)
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
             }

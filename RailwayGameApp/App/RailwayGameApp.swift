@@ -77,6 +77,11 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing-paused") {
             launcher.session?.setSpeed(.paused)
         }
+        // Decision 165: the website screenshot test opens a scene set up
+        // for it, paused at the moment it shows.
+        if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
+            launcher.openScreenshotScene(scene)
+        }
         #endif
         return launcher
     }
@@ -142,6 +147,14 @@ private enum DebugLaunch {
         guard ProcessInfo.processInfo.arguments.contains(argument) else { return false }
         print("\(marker): \(argument)")
         return true
+    }
+
+    /// The argument after `argument`, or `nil` without both.
+    static func value(of argument: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: argument), arguments.indices.contains(index + 1) else { return nil }
+        print("\(marker): \(argument) \(arguments[index + 1])")
+        return arguments[index + 1]
     }
 }
 #endif

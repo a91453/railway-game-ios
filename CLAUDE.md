@@ -135,7 +135,9 @@ needs OSM data reads the same extract.
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no
-  secrets).
+  secrets), `website-screenshots.yml` (the website's screenshots from the
+  Debug app on an iPhone Simulator, `WebsiteScreenshotTests`; by hand, or on
+  a pull request that changes them; decision 165).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
@@ -228,7 +230,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   `classes_of` in that script when the shard timings drift apart.
 - Real-device visual checks are manual (internal TestFlight). CI's UI tests
   (`RailwayGameApp/UITests/`, `ios-build.yml`) assert on the Simulator and
-  take no screenshots (the owner checks the screens on devices); a failed
+  take no screenshots (the owner checks the screens on devices; only the
+  website's screenshots are taken, by `website-screenshots.yml`); a failed
   run's uploaded result bundle holds XCTest's own failure screenshots, and
   nothing compares images. A new UI test joins the gate list in
   `ios-build.yml` only if it is steady and only a Simulator can answer it;

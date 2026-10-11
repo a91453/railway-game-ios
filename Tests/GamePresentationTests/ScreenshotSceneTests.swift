@@ -1,0 +1,36 @@
+import Foundation
+import GameCore
+import GamePresentation
+import XCTest
+
+/// The website's screenshot scenes (decision 165) are worlds the game's own
+/// commands build; each must still build, and show what its screenshots
+/// are taken for, or the screenshot run would photograph something else.
+@MainActor
+final class ScreenshotSceneTests: XCTestCase {
+    /// The freight scene, on the second morning: both yards hold goods,
+    /// the freight train is full, the city's stations are drawn from
+    /// as before, and the first midnight left stations short of building
+    /// materials, so the map shows its bubble.
+    func testTheFreightSceneShowsFreightAndMaterials() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.openScreenshotScene(.freight).value
+        let world = try XCTUnwrap(launcher.session?.world, "the launcher plays the scene")
+        XCTAssertEqual(world.clock.speed, .paused)
+        XCTAssertEqual(world.clock.now, GameTime(seconds: 32 * 3_600 + 30))
+        let freight = try XCTUnwrap(world.freight)
+        XCTAssertEqual(freight.facilities.count, 2)
+        let line = try XCTUnwrap(world.lines.first(where: \.isFreight))
+        XCTAssertEqual(line.name, "貨運線")
+        let train = try XCTUnwrap(line.assignedTrains.first)
+        let load = try XCTUnwrap(world.trainLoadInfo(of: train))
+        XCTAssertTrue(load.isFreight)
+        XCTAssertEqual(load.percentage, 100, "the freight train leaves full: \(load)")
+        XCTAssertTrue(world.stations.allSatisfy { world.freightFacility(at: $0.id).map { $0.stock > 0 } ?? true }, "both yards hold goods")
+        XCTAssertGreaterThan(freight.delivered, 0, "goods have been delivered")
+        XCTAssertTrue(world.stations.contains { world.isShortOfMaterials($0.id) }, "a station is short of building materials")
+        XCTAssertTrue(world.lines.filter { !$0.isFreight }.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
+    }
+}
