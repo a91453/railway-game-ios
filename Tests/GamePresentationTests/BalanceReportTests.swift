@@ -259,6 +259,63 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Buying the map (decision 160): ``testALineBetweenTwoTowns`` on a
+    /// blank map of 5 × 5 tiles that owns the middle one, the same towns.
+    /// A player who buys the cheapest tile beside the line's towns as soon
+    /// as the best day allows it and the cash covers it with $1,000,000 to
+    /// spare, and builds nothing more. Prints the day the milestones and
+    /// prices are met, the outside connections lost, and how long a day
+    /// takes to play on the larger map against the usual one.
+    func testBuyingTheMap() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.buyingMapBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]], in: .newGame(buysMap: true))
+        let usualTowns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var usual = try newGameLine(through: [usualTowns[0], usualTowns[1]])
+        var lines = [
+            "### Buying the map: a line between two towns (seed 1, 5.4 km), one train of four cars, \(days) days",
+            "",
+            "| Day | Balance | Riders yesterday | Best day | Tiles owned / allowed | Next price | Outside connections | Bought | ms a day (5 × 5 / 1 × 1) |",
+            "| --: | --: | --: | --: | --- | --: | --: | --- | --- |",
+        ]
+        try world.advance(ticks: 1)
+        try usual.advance(ticks: 1)
+        for day in 1...days {
+            let start = Date()
+            try world.advance(ticks: 1_440)
+            let large = Date().timeIntervalSince(start)
+            let usualStart = Date()
+            try usual.advance(ticks: 1_440)
+            let small = Date().timeIntervalSince(usualStart)
+            var bought = ""
+            let expansion = try XCTUnwrap(world.mapExpansion)
+            if expansion.owned.count < expansion.allowance, world.economy.balance >= expansion.nextPrice + 100_000_000 {
+                // The tile beside the line nearest the first town.
+                let first = world.stations[0].point
+                let tile = world.mapTilesForSale().min { a, b in
+                    func distance(_ tile: MapTile) -> Int64 {
+                        let area = world.mapArea(of: tile)
+                        let dx = (area.minX + area.maxX) / 2 - first.x, dy = (area.minY + area.maxY) / 2 - first.y
+                        return dx * dx + dy * dy
+                    }
+                    return distance(a) < distance(b)
+                }
+                if let tile {
+                    let lost = world.mapTileQuote(tile)?.outsideConnectionsLost.count ?? 0
+                    try world.buyMapTile(tile)
+                    bought = "(\(tile.row), \(tile.column)), \(lost) outside connections lost"
+                }
+            }
+            let after = try XCTUnwrap(world.mapExpansion)
+            lines.append(
+                "| \(day) | \(dollars(world.economy.balance.amount)) | \(world.lastDayTrips()) | \(after.bestDayRiders) | "
+                    + "\(after.owned.count) / \(after.allowance) | \(dollars(after.nextPrice.amount)) | "
+                    + "\(world.stations.count { world.isOutsideConnection($0.id) }) | \(bought) | \(Int(large * 1_000)) / \(Int(small * 1_000)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// The demo map (decision 78): three lines and four trains, $2,291,200.
     func testTheDemoMap() throws {
         let days = try requestedDays()

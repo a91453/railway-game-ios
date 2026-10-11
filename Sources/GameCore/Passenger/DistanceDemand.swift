@@ -12,7 +12,9 @@
 //   reaches only its neighbours.
 // - The map is not the whole world. A station within
 //   ``DistanceDemand/outsideMargin`` of the map's edge is an outside
-//   connection: it stands for the towns beyond the edge. The outside's
+//   connection: it stands for the towns beyond the edge. Since decision
+//   160 the edge is that of the tiles the company owns, where it buys its
+//   map: a tile bought beyond makes the station an ordinary one. The outside's
 //   ``DistanceDemand/outsideTrips`` a day are shared among the open
 //   outside connections and added to their ridership from the land, so
 //   visitors set out from them and the other stations' trips are drawn to
@@ -90,8 +92,9 @@ extension GameWorld {
 
     /// Whether station `id` is an outside connection: the outside
     /// connections are on and its point lies within
-    /// ``DistanceDemand/outsideMargin`` of the map's edge. `false` for an
-    /// unknown station.
+    /// ``DistanceDemand/outsideMargin`` of the map's edge (since decision
+    /// 160 the edge of the tiles the company owns). `false` for an unknown
+    /// station.
     public func isOutsideConnection(_ id: StationID) -> Bool {
         guard outsideConnections, let station = station(id: id) else { return false }
         return isOutsideConnectionSite(station.point)
@@ -101,7 +104,7 @@ extension GameWorld {
     /// outside connections are on and `point` lies within
     /// ``DistanceDemand/outsideMargin`` of the map's edge.
     public func isOutsideConnectionSite(_ point: PlanPoint) -> Bool {
-        outsideConnections && Self.liesByTheEdge(point, of: bounds)
+        outsideConnections && liesByTheEdge(point)
     }
 
     /// What a trip to or from an outside connection pays on top of its fare:
@@ -111,9 +114,22 @@ extension GameWorld {
         Money(DistanceDemand.outsideFareMultiple * accounts.fareBaseline.amount)
     }
 
-    static func liesByTheEdge(_ point: PlanPoint, of bounds: WorldBounds) -> Bool {
+    /// Whether `point` lies within ``DistanceDemand/outsideMargin`` of the
+    /// edge of the map: the world's, or since decision 160 that of the
+    /// tiles the company owns, a side of its tile with no tile owned
+    /// beyond. On one tile of a new game's size alone that is the world's
+    /// edge before, moved to the tile.
+    func liesByTheEdge(_ point: PlanPoint) -> Bool {
         let margin = DistanceDemand.outsideMargin
-        return point.x < margin || point.y < margin || bounds.width - point.x <= margin || bounds.height - point.y <= margin
+        guard let mapExpansion else {
+            return point.x < margin || point.y < margin || bounds.width - point.x <= margin || bounds.height - point.y <= margin
+        }
+        let tile = MapExpansion.tile(at: point), area = mapArea(of: tile)
+        func open(_ row: Int, _ column: Int) -> Bool { !mapExpansion.owns(MapTile(row: row, column: column)) }
+        return (point.x - area.minX < margin && open(tile.row, tile.column - 1))
+            || (point.y - area.minY < margin && open(tile.row - 1, tile.column))
+            || (area.maxX - point.x <= margin && open(tile.row, tile.column + 1))
+            || (area.maxY - point.y <= margin && open(tile.row + 1, tile.column))
     }
 
     // MARK: - Deriving
@@ -144,7 +160,7 @@ extension GameWorld {
     /// with the outside connections off.
     func outsideTrips(among stations: [Station]) -> [StationID: Int64] {
         guard outsideConnections else { return [:] }
-        let connections = stations.filter { Self.liesByTheEdge($0.point, of: bounds) }.map(\.id).sorted()
+        let connections = stations.filter { liesByTheEdge($0.point) }.map(\.id).sorted()
         guard !connections.isEmpty else { return [:] }
         let shares = Self.apportion(DistanceDemand.outsideTrips, by: connections.map { _ in 1 })
         return Dictionary(uniqueKeysWithValues: zip(connections, shares))

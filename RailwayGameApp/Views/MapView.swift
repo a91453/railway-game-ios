@@ -200,6 +200,7 @@ struct MapView: View {
                         selectedStationID: session.selectedStation?.id,
                         network: session.networkOverlay,
                         building: session.buildingOverlay,
+                        expansion: session.mapExpansionOverlay,
                         traffic: traffic,
                         camera: projection,
                         edges: edges,
@@ -282,7 +283,10 @@ struct MapView: View {
                         // With the lines panel open the map is where the
                         // player picks stations for a line (the tutorial's
                         // line step), whichever tool is chosen.
-                        if session.tool == .network, screen.panel != .lines {
+                        if session.isChoosingMapTile {
+                            // Decision 160: a tap chooses the tile to buy.
+                            session.tapMapExpansion(at: point)
+                        } else if session.tool == .network, screen.panel != .lines {
                             session.tapNetwork(at: point, reach: reach)
                         } else if session.tool == .building, screen.panel != .lines {
                             // Decisions 92 and 94: the building tool builds
@@ -379,6 +383,9 @@ struct MapView: View {
                         mapLayersButton
                         if let realWorld {
                             mapStyleMenu(realWorld)
+                        }
+                        if session.buysMap {
+                            mapExpansionButton(viewport: viewport)
                         }
                     }
                     .padding(12)
@@ -791,6 +798,32 @@ struct MapView: View {
         .accessibilityIdentifier("map.style")
     }
 
+    /// Decision 160: starts choosing a tile of the map to buy, and shows
+    /// the land owned and the tiles for sale; again, stops.
+    private func mapExpansionButton(viewport: ScreenSize) -> some View {
+        Button {
+            if session.isChoosingMapTile {
+                session.stopChoosingMapTile()
+                return
+            }
+            session.startChoosingMapTile()
+            if let region = session.mapExpansionOverlay?.region {
+                if session.followedTrain != nil { session.stopFollowingTrain() }
+                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
+                session.mapDidMove()
+            }
+        } label: {
+            Image(systemName: session.isChoosingMapTile ? "xmark" : "plus.square.dashed")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .glassBackground(in: Circle(), interactive: true)
+        }
+        .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
+            ? session.language.text("Stop expanding the map", "結束擴建地圖")
+            : session.language.text("Expand the map", "擴建地圖")))
+        .accessibilityIdentifier("map.expansion")
+    }
+
     private var mapLayersButton: some View {
         Button {
             screen.panel = .mapLayers
@@ -952,6 +985,8 @@ private struct MapCanvas: View, Equatable {
     let network: NetworkOverlay?
     /// The building tool's site and the city's buildings (decision 95).
     let building: BuildingOverlay?
+    /// The tiles of the map owned and for sale (decision 160).
+    let expansion: MapExpansionOverlay?
     let traffic: TrafficOverlay
     let camera: PlanCamera
     let edges: [TrackEdgeID: MapEdgeDrawing]
@@ -971,6 +1006,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.selectedStationID == rhs.selectedStationID
             && lhs.network == rhs.network
             && lhs.building == rhs.building
+            && lhs.expansion == rhs.expansion
             && (lhs.building == nil || lhs.world.land == rhs.world.land)
             && lhs.traffic == rhs.traffic
             && lhs.camera == rhs.camera
@@ -983,7 +1019,7 @@ private struct MapCanvas: View, Equatable {
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
-        let selectedStationID = selectedStationID, network = network, building = building, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
+        let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -994,6 +1030,7 @@ private struct MapCanvas: View, Equatable {
                 selectedStationID: network == nil ? selectedStationID : nil,
                 network: network,
                 building: building,
+                expansion: expansion,
                 traffic: traffic,
                 projection: camera,
                 edges: edges,

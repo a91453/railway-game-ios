@@ -185,7 +185,8 @@ final class LandImportTests: XCTestCase {
             launcher.returnToStart()
             launcher.startNewGame()
             let blank = try XCTUnwrap(launcher.session?.world)
-            XCTAssertEqual(blank.land, Land.towns(seed: try XCTUnwrap(blank.demandEvents?.seed), in: .standard), "a blank map has towns")
+            // Decision 160: on the middle of a map bought tile by tile.
+            XCTAssertEqual(blank.land, Land.towns(seed: try XCTUnwrap(blank.demandEvents?.seed), in: GameWorld.buyingMapBounds), "a blank map has towns")
         }
     }
 

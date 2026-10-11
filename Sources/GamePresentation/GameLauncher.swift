@@ -110,12 +110,13 @@ public final class GameLauncher {
 
     // MARK: - Starting a game
 
-    /// Starts a new game: on a blank map, or with `anchor` on a real-world
-    /// map with its middle there (Stage E2).
+    /// Starts a new game: on a blank map, bought tile by tile as the
+    /// railway grows (decision 160), or with `anchor` on a real-world map
+    /// with its middle there (Stage E2).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
         let world = GameWorld.newGame(
             anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
-            steep: anchor.map(steep(at:)) ?? []
+            steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil
         )
         begin(anchor == nil ? world : grounded(world), keepingAutosave: true)
     }

@@ -233,4 +233,20 @@ public enum GameError: Error, Hashable, Sendable {
     case noFreightFacility(StationID)
     /// Building materials in a world without them (decision 156).
     case buildingMaterialsNotEnabled
+    /// A command about buying the map in a world whose map is not bought
+    /// (decision 160).
+    case mapExpansionNotEnabled
+    /// The tile lies outside the world, or what the company built lies
+    /// outside the tile it would own (decision 160).
+    case invalidMapTile
+    /// The company owns the tile already (decision 160).
+    case mapTileOwned
+    /// The tile is not beside one the company owns (decision 160).
+    case mapTileNotAdjacent
+    /// The company's best day has not carried the riders it needs for one
+    /// more tile (decision 160).
+    case mapExpansionLocked(ridersNeeded: Int64)
+    /// The ground lies in a tile of the map the company does not own
+    /// (decision 160): it buys the tile first.
+    case mapTileNotOwned(MapTile)
 }

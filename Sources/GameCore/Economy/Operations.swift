@@ -311,6 +311,8 @@ extension GameWorld {
         closeYear(endingWith: day)
         // Decision 86: the goals are judged once the day is settled.
         judgeScenario(endingWith: day)
+        // Decision 160: the best day, for the tiles of the map it opens.
+        recordBestDay(endingWith: day)
     }
 
     /// A day's interest on `loan`: `loan × 5 % ÷ 360`, rounded half up to

@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 61,
+  "description": "Buying the map (schema 61, decision 160), 12 steps. A world of 5 x 5 tiles of 1,048,576 units (5,242,880 a side), free play. Buying is refused before enableMapExpansion; a tile outside the world (row 5) is refused; the company then owns only the middle tile (2, 2): x and y 2,097,152 to 3,145,727. A station at x 2,000,000 lies in tile (2, 1) and is refused there; one at the middle (2,621,440) is built. Tile (0, 0) is not beside one owned, (2, 2) is owned, (2, 5) is outside. In free play no milestone is needed: tile (2, 1) costs 500,000,000 (5,000,000 dollars for the one tile owned), and the station at x 2,000,000 is built there. Managed, the third tile needs a best day of 2 x 100,000 = 200,000 riders, and the best day is 0. Balance 2,000,000,000 - 2 x 1,000 (stations) - 500,000,000 = 1,499,998,000; free play kept no asset records.",
+  "initialState": {
+    "worldWidth": 5242880,
+    "worldHeight": 5242880,
+    "balance": 2000000000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 2,
+        "column": 1
+      },
+      "expect": {
+        "result": "mapExpansionNotEnabled"
+      }
+    },
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 5,
+        "column": 2
+      },
+      "expect": {
+        "result": "invalidMapTile"
+      }
+    },
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 2,
+        "column": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "West",
+        "point": {
+          "x": 2000000,
+          "y": 2621440
+        }
+      },
+      "expect": {
+        "result": "mapTileNotOwned",
+        "row": 2,
+        "column": 1
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Middle",
+        "point": {
+          "x": 2621440,
+          "y": 2621440
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 0,
+        "column": 0
+      },
+      "expect": {
+        "result": "mapTileNotAdjacent"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 2,
+        "column": 2
+      },
+      "expect": {
+        "result": "mapTileOwned"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 2,
+        "column": 5
+      },
+      "expect": {
+        "result": "invalidMapTile"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 2,
+        "column": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "West",
+        "point": {
+          "x": 2000000,
+          "y": 2621440
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setEconomyMode",
+        "mode": "management"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 2,
+        "column": 0
+      },
+      "expect": {
+        "result": "mapExpansionLocked",
+        "riders": 200000
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "management",
+      "openedAt": 0,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 1499998000,
+    "gameMinutes": 0,
+    "lines": [],
+    "mapExpansion": {
+      "owned": [
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          2
+        ]
+      ]
+    },
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [
+      {
+        "id": 1,
+        "name": "Middle",
+        "point": {
+          "x": 2621440,
+          "y": 2621440
+        }
+      },
+      {
+        "id": 2,
+        "name": "West",
+        "point": {
+          "x": 2000000,
+          "y": 2621440
+        }
+      }
+    ],
+    "trafficControl": false,
+    "trains": []
+  }
+}
