@@ -15,8 +15,11 @@ name: iOS Full Lane (every 3 hours)
 # full run, which a run by hand on an earlier commit can narrow down.
 #
 # ios-build.yml's own nightly run (with the missing-button proof) runs
-# whatever this one did. A run of a commit's full lane that was cancelled
-# does not count, so the next start runs it again.
+# whatever this one did. A full run that was cancelled still counts: GitHub
+# reports a job that reached its time limit as cancelled, and nothing else
+# cancels a full run (each has its own concurrency group), so not counting it
+# would start the same commit's full lane again every three hours. One
+# cancelled by hand is run again by hand.
 
 on:
   schedule:
@@ -57,12 +60,13 @@ jobs:
           echo "main is at $sha."
           # Every run of ios-build.yml that is not a pull request's is the
           # full lane (manual, nightly, started here, or a push before
-          # 2026-10-11). One that is queued or running, or finished green or
-          # red, counts; a cancelled one does not.
+          # 2026-10-11). Each counts, queued, running or finished however
+          # (a timed-out one reads cancelled), except one that never
+          # started (startup_failure).
           runs="$(gh api "repos/$REPO/actions/workflows/ios-build.yml/runs?head_sha=$sha&per_page=100" \
             --jq '.workflow_runs[]
               | select(.event != "pull_request")
-              | select(.status != "completed" or .conclusion == "success" or .conclusion == "failure")
+              | select(.conclusion != "startup_failure")
               | "\(.html_url) (\(.event), \(.conclusion // .status))"')"
           if [[ -n "$runs" ]]; then
             echo "Already has a full run, so none is started:"
