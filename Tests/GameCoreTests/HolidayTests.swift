@@ -175,7 +175,10 @@ final class HolidayTests: XCTestCase {
         let off = try world(nil)
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(off), as: UTF8.self).contains("disruptions"))
         let on = try world(Disruptions(level: .light, country: "JP"))
-        let data = try JSONEncoder().encode(on)
+        // Sorted keys, so the text to look for has one order.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let data = try encoder.encode(on)
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains(#""disruptions":{"country":"JP","level":"light"}"#))
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), on)
         for bad in [#""disruptions":{"country":"XX","level":"light"}"#, #""disruptions":{"country":"JP","level":"severe"}"#] {
