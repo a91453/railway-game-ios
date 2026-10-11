@@ -43,9 +43,11 @@ final class RealRailwaysTests: XCTestCase {
             "ntdlrt": 14, "ntalrt": 9, "sanying": 12, "krtc": 75, "tmrt": 18,
         ])
 
-        // Pingzhen, on the trunk line since the 2026-10-05 snapshot.
+        // Pingzhen, on the trunk line since the 2026-10-05 snapshot; since
+        // decision 151 on the line as OSM has it, some 4 m from the site's
+        // point (24.944038, 121.215443).
         let pingzhen = try XCTUnwrap(railways.stations.first { $0.id == "tra_sched|平鎮" })
-        XCTAssertEqual(pingzhen.coordinate, RealRailways.Coordinate(latitude: 24.944038, longitude: 121.215443))
+        XCTAssertEqual(pingzhen.coordinate, RealRailways.Coordinate(latitude: 24.944015, longitude: 121.215479))
 
         // All of it in Taiwan.
         let points = railways.lines.flatMap(\.points) + railways.stationMarks.map(\.coordinate)
@@ -56,40 +58,64 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertTrue(railways.lines.allSatisfy { $0.points.count >= 2 && $0.sortKey >= 0 })
     }
 
-    /// Where the site's shapes are off the real track, the game redraws them
-    /// from OpenStreetMap (`tools/real-railways/osm_patches.json`): the
-    /// bundled lines carry every stretch the patches list, so copying the
-    /// site's original file over them again cannot quietly undo them.
-    func testTheStretchesRedrawnFromOpenStreetMapAreBundled() throws {
-        struct Patches: Decodable {
-            struct Patch: Decodable {
+    /// The lines follow OpenStreetMap's tracks (decision 151,
+    /// `tools/real-railways/match_osm.py`): where the site's TDX shapes were
+    /// off the track (the three stretches the game first redrew by hand,
+    /// up to 78 m), the bundled lines now run within 3 m of OSM's; the
+    /// one stretch kept as TDX draws it on purpose (`osm_exceptions.json`:
+    /// the Alishan line at Duolin, where OSM has only the collapsed old
+    /// line) is the site's own, end to end.
+    func testTheLinesFollowOpenStreetMap() throws {
+        let railways = try Self.bundled()
+        /// How far `point` is from the nearest of a system's lines.
+        func distance(_ point: RealRailways.Coordinate, toLinesOf system: String) -> Double {
+            var best = Double.infinity
+            for line in railways.lines where line.system.id == system {
+                for (a, b) in zip(line.points, line.points.dropFirst()) {
+                    let ax = 0.0, ay = 0.0
+                    let bx = (b.longitude - a.longitude) * 111_320 * cos(a.latitude * .pi / 180), by = (b.latitude - a.latitude) * 110_574
+                    let px = (point.longitude - a.longitude) * 111_320 * cos(a.latitude * .pi / 180), py = (point.latitude - a.latitude) * 110_574
+                    let length2 = bx * bx + by * by
+                    let t = length2 == 0 ? 0 : max(0, min(1, (px * bx + py * by) / length2))
+                    let dx = px - (ax + t * bx), dy = py - (ay + t * by)
+                    best = min(best, (dx * dx + dy * dy).squareRoot())
+                }
+            }
+            return best
+        }
+        // Points of OSM's tracks (ways 462002035, 113715493, 229516472).
+        let osm: [(String, RealRailways.Coordinate)] = [
+            ("krtc", RealRailways.Coordinate(latitude: 22.570516, longitude: 120.338492)),
+            ("krtc", RealRailways.Coordinate(latitude: 22.627032, longitude: 120.287872)),
+            ("afr_sched", RealRailways.Coordinate(latitude: 23.513688, longitude: 120.821398)),
+        ]
+        for (system, point) in osm {
+            XCTAssertLessThan(distance(point, toLinesOf: system), 3, "\(system) \(point)")
+        }
+
+        struct Exceptions: Decodable {
+            struct Keep: Decodable {
                 let id: String
                 let lineKey: String
-                let points: [[Double]]
+                let middle: [Double]
             }
 
-            let patches: [Patch]
+            let keep: [Keep]
         }
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-        let patches = try JSONDecoder().decode(
-            Patches.self,
-            from: Data(contentsOf: root.appendingPathComponent("tools/real-railways/osm_patches.json"))
-        ).patches
-        XCTAssertEqual(patches.map(\.id), ["krtc-red-airport", "krtc-orange-yanchengpu", "afr-zhushan"])
-
-        let railways = try Self.bundled()
-        for patch in patches {
-            let system = String(patch.lineKey.prefix { $0 != "|" })
-            let stretch = patch.points.map { RealRailways.Coordinate(latitude: $0[1], longitude: $0[0]) }
-            let carried = railways.lines.contains { line in
-                line.system.id == system && line.points.count >= stretch.count
-                    && (0 ... line.points.count - stretch.count).contains { Array(line.points[$0 ..< $0 + stretch.count]) == stretch }
-            }
-            XCTAssertTrue(carried, patch.id)
-        }
+        let exceptions = try JSONDecoder().decode(
+            Exceptions.self,
+            from: Data(contentsOf: root.appendingPathComponent("tools/real-railways/osm_exceptions.json"))
+        ).keep
+        XCTAssertEqual(exceptions.map(\.id), ["afr-main-duolin"])
+        XCTAssertEqual(exceptions[0].lineKey, "afr_sched|AFR_MAIN")
+        // A vertex of TDX's shape inside the stretch, some 90 m from OSM's
+        // collapsed old line: on the bundled line.
+        let kept = RealRailways.Coordinate(latitude: exceptions[0].middle[1], longitude: exceptions[0].middle[0])
+        XCTAssertLessThan(distance(kept, toLinesOf: "afr_sched"), 1)
     }
 
     func testTheFirstLineAsTheSiteHasIt() throws {
@@ -97,8 +123,11 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(line.system.id, "tra_sched")
         XCTAssertEqual(line.name, "縱貫線北段（基隆–竹南）")
         XCTAssertEqual(line.sortKey, 0)
-        XCTAssertEqual(line.points.first, RealRailways.Coordinate(latitude: 25.13369, longitude: 121.739691))
-        XCTAssertEqual(line.points.count, 485)
+        // Since decision 151 its shape is OSM's tracks, simplified to 1 m:
+        // it starts some 5 m from the site's first point (25.13369,
+        // 121.739691), in 245 points where the site had 485.
+        XCTAssertEqual(line.points.first, RealRailways.Coordinate(latitude: 25.133717, longitude: 121.739645))
+        XCTAssertEqual(line.points.count, 245)
     }
 
     /// The site's `railMix`, ported: mixing each line's own colour as the
@@ -246,15 +275,16 @@ final class RealRailwaysTests: XCTestCase {
         XCTAssertEqual(railways.stations.filter { $0.name(in: .english) == $0.name(in: .traditionalChinese) }.count, 5)
     }
 
-    /// The TRA's Taipei is the same point as the place the picker had
-    /// before (both OpenStreetMap's, six decimals here and seven there).
+    /// The TRA's Taipei, an anchor at its point: since decision 151 on the
+    /// line under the station as OSM has it, some 12 m north of the place
+    /// the picker has (OSM's station node, which the site's point was).
     func testAStationsAnchorIsWhereItIs() throws {
         let station = try XCTUnwrap(Self.bundled().stations.first { $0.id == "tra_sched|臺北" })
-        XCTAssertEqual(station.coordinate, RealRailways.Coordinate(latitude: 25.047931, longitude: 121.517005))
-        XCTAssertEqual(station.anchor, GeoAnchor(latitude: 250_479_310, longitude: 1_215_170_050))
+        XCTAssertEqual(station.coordinate, RealRailways.Coordinate(latitude: 25.048042, longitude: 121.517027))
+        XCTAssertEqual(station.anchor, GeoAnchor(latitude: 250_480_420, longitude: 1_215_170_270))
         let anchor = try XCTUnwrap(station.anchor)
-        XCTAssertEqual(abs(anchor.latitude - taipei.latitude), 2)
-        XCTAssertEqual(abs(anchor.longitude - taipei.longitude), 4)
+        XCTAssertEqual(abs(anchor.latitude - taipei.latitude), 1_112)
+        XCTAssertEqual(abs(anchor.longitude - taipei.longitude), 224)
     }
 
     /// As the site matches names: 臺 and 台 alike, spaces and case ignored,
@@ -326,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "openFreeMap", "mapLibre", "copernicusDEM"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -350,12 +380,22 @@ final class RealRailwaysTests: XCTestCase {
                 XCTAssertTrue(overture.notice.contains(part), part)
             }
             XCTAssertTrue(overture.links.contains { $0.url == "https://doi.org/10.5281/zenodo.8174931" })
+            // Decision 151: Taiwan's own tiles, the OpenMapTiles schema they
+            // follow, and Noto Sans's licence.
+            let baseMap = try XCTUnwrap(credits.first { $0.id == "taiwanBaseMap" })
+            for part in ["© OpenMapTiles", "© OpenStreetMap", "ODbL", "CC BY 4.0", "SIL Open Font License 1.1"] {
+                XCTAssertTrue(baseMap.notice.contains(part), part)
+            }
+            XCTAssertTrue(baseMap.links.contains { $0.url.hasSuffix("Resources/Licenses/NotoSans-OFL.txt") })
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
         // Decision 97: the OpenStreetMap base map's credit, in OpenFreeMap's
         // words.
         XCTAssertEqual(DataSourceCredits.openStreetMapBaseMap(in: .english), "OpenFreeMap © OpenMapTiles Data from OpenStreetMap")
+        // Decision 151: the bundled tiles' credit.
+        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .english), "© OpenMapTiles © OpenStreetMap contributors")
+        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .traditionalChinese), "© OpenMapTiles © OpenStreetMap 貢獻者")
         // MapLibre Native's licence and third-party notices come with the
         // app, as its BSD 2-Clause licence asks of a binary.
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

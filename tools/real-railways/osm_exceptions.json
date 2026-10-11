@@ -1,0 +1,39 @@
+{
+  "about": "Stretches of the app's real railways kept as the owner's Railway/ site (TDX) draws them when match_osm.py redraws every other line on OpenStreetMap's tracks (ARCHITECTURE decision 151). Each is from one point to another on the line, both on its old shape. The inputs are the site's original files, checked by sha256.",
+  "base": {
+    "reference": "a91453/railway-reference-private 581db83 (the files unchanged since 2db0c5a)",
+    "lines": {
+      "path": "Railway/site_archive_clean/data/track_lines.geojson",
+      "sha256": "3d872a5aec269ae5405c6dc18baaff071fed6ebefce21ba7926b9a40695d7a40"
+    },
+    "stations": {
+      "path": "Railway/site_archive_clean/data/track_stations.geojson",
+      "sha256": "fe6225573d473f500f690f51df09103fbfc1ce102b10a55fbb39160f977d614f"
+    }
+  },
+  "osm": {
+    "credit": "© OpenStreetMap contributors",
+    "license": "ODbL-1.0",
+    "url": "https://www.openstreetmap.org/copyright"
+  },
+  "keep": [
+    {
+      "id": "afr-main-duolin",
+      "lineKey": "afr_sched|AFR_MAIN",
+      "from": [
+        120.720436,
+        23.50372
+      ],
+      "to": [
+        120.727078,
+        23.497661
+      ],
+      "reason": "Alishan Forest Railway main line at Duolin (about 49.5-50.5 km from Chiayi): the extract (OSM data to 2026-10-08) has only the collapsed old line through the Duolin tunnel (way 340255673, '阿里山森林鐵路登山本線 (已崩塌舊線)'), up to 90 m off; TDX's shape is the line in use. The owner chose to keep it (2026-10-11).",
+      "middle": [
+        120.723177,
+        23.500215
+      ],
+      "about_middle": "A vertex of TDX's shape inside the stretch (50.0 km), which the bundled line keeps; RealRailwaysTests checks it."
+    }
+  ]
+}

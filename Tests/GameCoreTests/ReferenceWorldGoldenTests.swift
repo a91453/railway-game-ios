@@ -15,8 +15,9 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             // The reference model routes passengers directly only: network
             // routing, walks and station modes (Phase 5F) are GameCore's.
             // Nor does it hold land (Phase 6a), which `LandTests` checks, or
-            // run timetables (decision 133), which `LineRunsTests` checks.
-            guard !scenario.usesPassengerNetwork, !scenario.usesLand, !scenario.usesLineRuns else { continue }
+            // run timetables (decision 133), which `LineRunsTests` checks, or
+            // keep holidays (decision 154), which `HolidayTests` checks.
+            guard !scenario.usesPassengerNetwork, !scenario.usesLand, !scenario.usesLineRuns, !scenario.usesHolidays else { continue }
             let initial = scenario.initialState
             var model = ReferenceWorld(
                 width: initial.worldWidth, height: initial.worldHeight, balance: initial.balance,
@@ -127,6 +128,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         case .setFareRules(let rules): error = model.setFareRules(rules)
         case .setPassengerRoutingMode, .setStationOperationMode:
             preconditionFailure("the reference model does not run network routing")
+        case .setDisruptions:
+            preconditionFailure("the reference model does not keep holidays")
         case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
@@ -137,6 +140,8 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         switch observation {
         case .landCatchment, .landCell, .building, .townGrowth, .landValue, .placedBuilding, .buildingSale, .zone, .water, .steep, .groundHeight, .cityDemand:
             preconditionFailure("the reference model does not hold land")
+        case .holiday:
+            preconditionFailure("the reference model does not keep holidays")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))
         case .train(let id):

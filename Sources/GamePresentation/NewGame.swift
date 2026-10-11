@@ -28,6 +28,10 @@ extension GameWorld {
     /// its edge are outside connections (decision 137), but for the whole
     /// of Taiwan.
     ///
+    /// It keeps the public holidays (decision 154) of the country `anchor`
+    /// lies in (``CountryLookup``), or Taiwan's on a blank map, at the
+    /// light level. The tutorial and the challenges turn them off.
+    ///
     /// Its `water` (decision 105) is a real-world map's sea, rivers and
     /// lakes (``WaterGrid``), under which there is no land, and its `steep`
     /// slopes (decision 115), where nothing new is built; a blank map has
@@ -61,6 +65,9 @@ extension GameWorld {
             // Item 4: exhibitions and crowd surges raise a station's demand
             // for some days, announced days ahead.
             world.setDemandEvents(seed: eventSeed)
+            // Decision 154: the country's public holidays raise the whole
+            // network's demand, gently.
+            world.setDisruptions(Disruptions(level: .light, country: anchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home))
             // Item 5: the towns round well-served stations grow.
             world.setTownGrowth(true)
             world.setGeoAnchor(anchor)

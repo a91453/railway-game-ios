@@ -37,9 +37,10 @@ struct MapView: View {
     /// The parent keeps this view state across portrait/landscape layouts.
     @Binding var camera: PlanCamera?
     @State private var edges: [TrackEdgeID: MapEdgeDrawing] = [:]
-    /// How Apple's map under a real-world game looks (Stage E2): a view
-    /// preference, the same for every game.
-    @AppStorage("realWorldMapStyle") private var mapStyle: AppleMapStyle = .standard
+    /// The map under a real-world game (Stage E2): a view preference, the
+    /// same for every game. The game's own OpenStreetMap base map unless
+    /// the player picked another (decision 151); a choice once made stays.
+    @AppStorage("realWorldMapStyle") private var mapStyle: AppleMapStyle = .openStreetMap
     /// How strongly Taiwan's real railways show on it (the `Railway/` site's
     /// track display). Faint by default, not the site's own colours: here
     /// the player's railway is drawn over them.
@@ -449,6 +450,7 @@ struct MapView: View {
                                 realWorld: realWorld,
                                 camera: projection,
                                 railways: session.railways,
+                                water: session.water,
                                 trackStyle: trackStyle,
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),

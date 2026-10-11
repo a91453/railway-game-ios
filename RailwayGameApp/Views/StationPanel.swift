@@ -445,10 +445,11 @@ struct StationPanel: View {
         }
     }
 
-    /// Item 4: the demand events announced or running at the station.
+    /// Item 4: the demand events announced or running at the station, and
+    /// (decision 154) the public holidays announced or running everywhere.
     @ViewBuilder
     private func eventsSection(_ station: Station) -> some View {
-        let lines = session.world.demandEventTexts(at: station.id, in: session.language)
+        let lines = session.world.holidayTexts(in: session.language) + session.world.demandEventTexts(at: station.id, in: session.language)
         if !lines.isEmpty {
             Section {
                 ForEach(lines, id: \.self) { line in

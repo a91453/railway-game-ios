@@ -12,6 +12,10 @@ struct SettingsView: View {
     /// (``GameSession/problemReportGame``), for a problem report; `nil`
     /// from the start screen.
     var game: String? = nil
+    /// The game the settings were opened from, for its own settings
+    /// (decision 154: holidays and other events); `nil` from the start
+    /// screen.
+    var session: GameSession? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -31,6 +35,9 @@ struct SettingsView: View {
                 } footer: {
                     Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
                 }
+                if let session {
+                    eventsSection(session)
+                }
                 aboutSection
             }
             .listStyle(.insetGrouped)
@@ -44,6 +51,41 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// Decision 154: how strongly the game's holidays (and later its other
+    /// events) bite, kept in the game's save, and whose holidays they are.
+    private func eventsSection(_ session: GameSession) -> some View {
+        let language = session.language
+        let levels: [DisruptionLevel?] = [nil, .light, .standard]
+        return Section {
+            Picker(selection: Binding(get: { session.world.disruptions?.level }, set: { session.setDisruptionLevel($0) })) {
+                ForEach(levels, id: \.self) { level in
+                    Text(verbatim: level?.title(in: language) ?? language.text("Off", "關")).tag(level)
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Holidays and events", "連假與事件"))
+                } icon: {
+                    Image(systemName: "calendar")
+                }
+            }
+            .accessibilityIdentifier("settings.disruptions")
+            if let country = session.world.disruptions?.country {
+                LabeledContent {
+                    Text(verbatim: holidayCountryName(country, in: language))
+                } label: {
+                    Text(verbatim: language.text("Public holidays of", "國定假日"))
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("This game", "這一局"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Public holidays raise demand on every line, announced a week ahead. Light adds half as much as Standard. Kept in this game's save.",
+                "國定假日時各線需求增加，一週前公布。「輕」的增加是「標準」的一半。設定存在這一局的存檔裡。"
+            ))
         }
     }
 

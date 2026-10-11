@@ -150,7 +150,7 @@ struct ContentView: View {
             DataSourcesView(launcher: launcher)
         case .settings:
             // Decision 127: a problem report from a game says what is in it.
-            SettingsView(audio: audio, game: session.problemReportGame)
+            SettingsView(audio: audio, game: session.problemReportGame, session: session)
         case .yearEnd:
             YearEndSheet(session: session)
                 .presentationDetents([.medium, .large])

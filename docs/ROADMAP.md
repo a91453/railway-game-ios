@@ -704,6 +704,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 還沒有：真實鐵道只在台灣；玩家自己沿真實路線自動建造（實景示範地圖的擬合可以重用）；示範地圖的雙線。
 - **E3 — MapLibre**（視需要，不佔固定的位置）：E2 實測之後，MapKit 不夠用時（例如每座城市都要 3D 建築、自訂樣式、離線圖磚）才加入。
   - **第一步 ✅**（決策 97，2026-10-08 作者：底圖先換 OSM）：地圖樣式選單多一個「OpenStreetMap」，MapLibre Native 6.31.0 畫 OpenFreeMap 的 Positron／Dark，標籤用玩家的語言，真實鐵道照舊畫在上面；預設仍是 Apple 地圖，實機確認後再決定。之後：傾斜與 3D 建築、地形、隱藏軍事設施的標示、選點畫面也換成 OSM。
+  - **第二步 ✅**（決策 151，2026-10-10 作者：「自製的 OSM」，一個 PR 做樣式與圖磚）：遊戲自己的底圖樣式（App 圖示的畫風，淺色、深色；沒有建物、興趣點、土地使用與鐵道，路名照 `Ci/` 濾掉軍事等設施）；台灣的向量圖磚由水域、分區同一份 osmtoday 整包檔產生（`tools/basemap/`，PMTiles，47 MB），隨 App 打包、不用網路；台灣以外照舊是 OpenFreeMap 的圖磚、套同一份樣式；台灣的山用遊戲自己的地面高度畫陰影（10 MB，衛星照片照舊在 Apple 地圖）；真實鐵道的線形改以 OSM 為準（`tools/real-railways/match_osm.py`，只保留林鐵多林一帶的 TDX 線形）；實景地圖的預設底圖改成 OSM（Apple 地圖、衛星、混合仍在選單）。之後：傾斜與 3D 建築、3D 地形、選點畫面也換成 OSM。
   - `Ci/` 用的就是 MapLibre 加 OpenFreeMap 的圖磚（中國用高德），3D 建築用 fill-extrusion。
   - MapLibre Native 是 BSD 2-Clause 授權，免費，要在 App 裡附上授權聲明；iOS 有 SwiftUI 的包裝。
   - OpenFreeMap 的公開服務免費、不用註冊或金鑰、不限次數、可以商用，要標示「© OpenMapTiles Data from OpenStreetMap」；沒有服務保證。
@@ -823,6 +824,8 @@ G1 先做了 5A、5B、5D、5E、5G 的最小版；這個 Phase 在它上面深�
 **2026-10-06 每週需求與事件（決策 68、69）**：新遊戲每天的旅次依來源的星期係數變化，週末依週末時段；展覽與大量人潮事件由存檔種子抽出、提前公布、提高車站需求。中斷（停駛、封站）與國定假日仍是 gap。
 
 故障、停駛、天災與國定假日的研究與玩法方案（2026-10-10，給作者選）：[DISRUPTION_STUDY.md](research/DISRUPTION_STUDY.md)。
+
+**2026-10-11 國定假日（決策 154）** ✅：作者選了研究的 B → Q4 → A。第一步：干擾事件的骨架（關／輕／標準，新遊戲預設輕，教學與挑戰關閉）與國定假日：遊戲固定曆法，實景地圖依 Natural Earth 國界判定國家、放那一國的假日（`Ci/` 的 24 國假日表，台灣照 `TW_DAYTYPE`），假日全網需求增加、照週末時段；站長在假日前提醒、結束後回顧。存檔版本 37。下一步是 B2（天候與颱風預警），之後 Q4、方案 A。
 
 ## Phase 6 — City simulation
 
