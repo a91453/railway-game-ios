@@ -28,7 +28,7 @@ const TRA_STOCK = [
 ];
 // 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Its cab cars have a nose, so they are lofted
 // (shellGeometry) rather than boxes. A line is the high speed railway by name, the way the Tokyo stock matches.
-const HSR_STOCK = { stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 10.5, highSpeed: true };
+const HSR_STOCK = { stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 9, highSpeed: true };
 const HSR_NAME = /高鐵|高速鐵/;
 const SPEED = 15;        // m/s
 const GAP = 350;         // metres of pause before a train re-enters
@@ -143,8 +143,8 @@ const HS_HALF_W = 1.45, HS_FLOOR = 0.62, HS_ROOF = 3.75;       // the body down 
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
 function shellRing(z, t) {
-  const halfW = HS_HALF_W * (1 - 0.5 * ease((t - 0.35) / 0.65));
-  const top = HS_ROOF - 1.92 * ease(t), bottom = HS_FLOOR + 0.35 * ease((t - 0.5) / 0.5);  // the tip is a wide, low bill, not a point
+  const halfW = HS_HALF_W * (1 - 0.34 * ease((t - 0.45) / 0.55));
+  const top = HS_ROOF - 1.78 * ease(t), bottom = HS_FLOOR + 0.1 * ease((t - 0.6) / 0.4);  // a broad blunt bill: 1.9 m across and 1.25 m deep at the tip
   const cy = (top + bottom) / 2, hy = (top - bottom) / 2, p = 2 / (7 - 4.6 * ease(t)); // a near-rectangle rounding into an oval
   const pts = [];
   for (let k = 0; k < RING; k++) {
@@ -166,8 +166,10 @@ function shellGeometry(stock, cab) {
   } else rings.push(shellRing(half, 0));
   const u0 = cab ? 0 : 0.5, v0 = 1 - SIDE_Y1 / TEX_H, v1 = 1 - SIDE_Y0 / TEX_H;
   const pos = [], uv = [], index = [];
+  // u is kept just inside this car's half of the picture, so the tip does not sample the other car's
+  const uAt = (z) => u0 + 0.004 + ((z + half) / L) * 0.492;
   for (const r of rings) {
-    const u = u0 + ((r.z + half) / L) * 0.5;
+    const u = uAt(r.z);
     for (const [x, y, f] of r.pts) { pos.push(x, y, r.z); uv.push(u, v0 + f * (v1 - v0)); }
   }
   for (let i = 0; i + 1 < rings.length; i++) {
@@ -180,7 +182,7 @@ function shellGeometry(stock, cab) {
     const r = rings[i], centre = pos.length / 3;
     let x = 0, y = 0;
     for (const p of r.pts) { x += p[0] / RING; y += p[1] / RING; }
-    pos.push(x, y, r.z); uv.push(0.25, SWATCH_V);
+    pos.push(x, y, r.z); uv.push(uAt(r.z), v0 + 0.5 * (v1 - v0));  // the cap takes its own ring's paint, not a swatch from elsewhere
     for (let k = 0; k < RING; k++) {
       const a = i * RING + k, b = i * RING + ((k + 1) % RING);
       if (front) index.push(centre, a, b); else index.push(centre, b, a);
@@ -234,13 +236,14 @@ function highSpeedTextures(stock) {
   carSide(0, bodyW); carSide(HALF, HALF);
   // the cab: the canopy wrapping the top of the nose where it starts to fall, the lamps on its shoulders
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
-  oval(g, bodyW + 1.5 * perM, row(1), 3.6 * perM, (row(0.84) - row(1)) * 2, '#191d22');
-  oval(g, bodyW + 3.0 * perM, row(1), 2.2 * perM, (row(0.90) - row(1)) * 2, '#191d22');   // and on down the front
-  g.fillStyle = stock.body; g.fillRect(0, row(1), bodyW, row(0.74) - row(1));  // the canopy stops where the body does
-  for (const dx of [7.6, 8.5]) {                                               // the lamps, in one dark housing each
-    oval(g, bodyW + dx * perM, row(0.50), 1.0 * perM, row(0.465) - row(0.535), '#2a2e34');
-    oval(g, bodyW + dx * perM, row(0.50), 0.72 * perM, row(0.475) - row(0.525), '#fbf7ea');
-    oval(e, bodyW + dx * perM, row(0.50), 0.72 * perM, row(0.475) - row(0.525), '#fff4de');
+  g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(bodyW, row(0.645), HALF - bodyW, 3);         // the crease along its shoulder
+  oval(g, bodyW + 1.0 * perM, row(1), 4.2 * perM, (row(0.70) - row(1)) * 2, '#191d22');
+  oval(g, bodyW + 2.7 * perM, row(1), 2.6 * perM, (row(0.82) - row(1)) * 2, '#191d22');     // and on down the front
+  g.fillStyle = stock.body; g.fillRect(0, row(1), bodyW, row(0.68) - row(1));  // the canopy stops where the body does
+  oval(g, bodyW + 5.6 * perM, row(0.52), 1.6 * perM, row(0.45) - row(0.59), '#23272c');  // one housing of two lamps on each shoulder
+  for (const k of [-0.35, 0.35]) {
+    oval(g, bodyW + (5.6 + k) * perM, row(0.52), 0.56 * perM, row(0.482) - row(0.558), '#fbf7ea');
+    oval(e, bodyW + (5.6 + k) * perM, row(0.52), 0.56 * perM, row(0.482) - row(0.558), '#fff4de');
   }
   const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   return { map: tex(side), emissiveMap: tex(glow) };
