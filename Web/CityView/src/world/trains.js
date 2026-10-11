@@ -138,19 +138,25 @@ function carGeometry(length) {
 // is the livery's v, so a band painted straight across the picture follows the nose down and forward the way the
 // paint does on the real train. (Meshy's generated meshes were tried first and dropped: blobby at 391k triangles,
 // and diffusion texturing cannot put a stripe at a given height.)
-const RING = 16, NOSE_RINGS = 12;
+const RING = 24, NOSE_RINGS = 18;
 const HS_HALF_W = 1.45, HS_FLOOR = 0.62, HS_ROOF = 3.75;       // the body down to the hem of its skirt, in metres above the rail
+const SHOULDER = 0.66;                                          // where the crease runs, as a height within the section
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
 function shellRing(z, t) {
   const halfW = HS_HALF_W * (1 - 0.34 * ease((t - 0.45) / 0.55));
   const top = HS_ROOF - 1.78 * ease(t), bottom = HS_FLOOR + 0.1 * ease((t - 0.6) / 0.4);  // a broad blunt bill: 1.9 m across and 1.25 m deep at the tip
-  const cy = (top + bottom) / 2, hy = (top - bottom) / 2, p = 2 / (7 - 4.6 * ease(t)); // a near-rectangle rounding into an oval
+  const cy = (top + bottom) / 2, hy = (top - bottom) / 2;
+  // The section is fuller below the crease than above it, the way the body tucks in towards the roof, and it
+  // widens by a little at the crease itself: that is the wing line running the length of the nose.
+  const low = 2 / (8.5 - 5.6 * ease(t)), up = 2 / (4.6 - 2.3 * ease(t));
   const pts = [];
   for (let k = 0; k < RING; k++) {
     const a = -Math.PI / 2 + (2 * Math.PI * k) / RING, c = Math.cos(a), s = Math.sin(a);
-    const y = cy + Math.sign(s) * Math.abs(s) ** p * hy;
-    pts.push([Math.sign(c) * Math.abs(c) ** p * halfW, y, (y - bottom) / (top - bottom)]);
+    const y = cy + Math.sign(s) * Math.abs(s) ** (s < 0 ? low : up) * hy;
+    const f = (y - bottom) / (top - bottom);
+    const wing = 1 + 0.05 * Math.exp(-(((f - SHOULDER) / 0.1) ** 2));
+    pts.push([Math.sign(c) * Math.abs(c) ** low * halfW * wing, y, f]);
   }
   return { z, pts };
 }
