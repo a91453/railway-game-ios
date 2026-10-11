@@ -286,4 +286,30 @@ final class PassengerRoutesTests: XCTestCase {
         XCTAssertEqual(changed.map(\.count).reduce(0, +), 101)
         XCTAssertEqual(changed.first?.route.legs.map(\.line), [slow])
     }
+
+    /// A line that calls at the same two stations twice (A–B–C–A–B, which
+    /// turnbacks make drivable under traffic control) offers two rides from
+    /// A to B that differ only in their seconds. They are one journey: the
+    /// plan keeps it once, so the route balances it writes still load.
+    func testALineCallingTwiceAtTwoStationsOffersTheJourneyOnceAndStillSaves() throws {
+        let track = TestLine(tiles: 9)
+        var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts))
+        try track.build(in: &world)
+        let a = try track.buildStation(named: "A", beside: 1, at: 0, in: &world)
+        let b = try track.buildStation(named: "B", beside: 3, at: 0, in: &world)
+        let c = try track.buildStation(named: "C", beside: 5, at: 0, in: &world)
+        for (station, kind) in [(a, StationDemandKind.residential), (b, .office), (c, .shopping)] {
+            try world.setStationDemand(station, to: StationDemand(kind: kind, dailyTrips: 2_000))
+        }
+        let line = try world.createLine(named: "L", stops: [a, b, c, a, b]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.setTrafficControl(true)
+        world.setPassengerRoutingMode(.network)
+        world.setSpeed(.normal)
+        try world.advance(ticks: 480)
+        XCTAssertFalse(world.passengerRouteBalances.isEmpty)
+        XCTAssertTrue(world.passengerRouteBalances.allSatisfy { Set($0.journeys).count == $0.journeys.count })
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world, world)
+    }
 }

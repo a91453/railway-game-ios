@@ -617,7 +617,11 @@ extension GameWorld {
                 var options: [PassengerRouteChoice] = []
                 var journeys: [PassengerJourney] = []
                 for choice in found {
-                    guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { continue }
+                    // A line calling twice at the same stations rides between
+                    // them twice, the rides differing only in their seconds:
+                    // one journey, kept once, as the first (better) choice.
+                    guard let journey = PassengerJourney(origin: record.station, route: choice.route),
+                          !journeys.contains(journey) else { continue }
                     options.append(choice)
                     journeys.append(journey)
                 }
