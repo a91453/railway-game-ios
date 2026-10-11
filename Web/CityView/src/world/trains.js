@@ -52,9 +52,13 @@ const HSR_STOCK = {
     // saloon lights washed this train's dark green glass out to pale grey in full sun.
     window: { from: 0.555, to: 0.780, pitch: 1.0, width: 0.50, tint: '#1d4a44', lit: '#8a7f63' },
     door: { width: 0.85, frame: '#22262b', leaf: '#f6f6f4' },
+    // `screen` is the windscreen in the nose's own chart (NOSE): `from`/`to` along the nose, `wide`
+    // and `narrow` how far it reaches across at each end. The canopy drawn at a height — what this
+    // replaces — came out as a black visor right round the front.
     cab: { crease: 0.645, glass: '#161a20', canopyStops: 0.70,
+           screen: { from: 0.10, to: 0.34, wide: 0.52, narrow: 0.30, surround: '#eceded' },
            canopy: [{ at: 0.9, length: 3.4, to: 0.73 }, { at: 2.2, length: 2.0, to: 0.84 }],
-           lamp: { at: 5.3, f: 0.52, width: 2.1, tall: 0.048, lens: 0.6, gap: 0.42, housing: '#2b3036' } },
+           lamp: { at: 5.0, f: 0.50, width: 1.0, tall: 0.024, lens: 0.26, gap: 0.22, housing: '#49505a' } },
   },
 };
 // 臺鐵 EMU3000 新自強號: 12 cars, cabs at both ends (the owner: 車頭 = 車尾). The dimensions are the
@@ -98,6 +102,26 @@ const SWATCH_V = 1 - SIDE_Y0 / 2 / TEX_H;
 // window glass sitting beside the window.
 const U0 = 0.004, USPAN = 0.492;
 const uOf = (m, L, u0) => u0 + U0 + (m / L) * USPAN;   // m: metres from the car's rear end
+// The top of the nose, as its own little picture, in the lower half no other stock uses.
+//
+// Everything else on a car is painted in (along, how high up the section): one coordinate says where
+// you are along the car and the other how high you sit in its own ring. That is what makes a band
+// painted straight across follow the nose down for free — and it is also why anything painted at a
+// height goes right around the ring. A windscreen cannot be painted that way: it comes out as a
+// visor across the whole front, which is exactly how the first N700ST looked head-on. So the top of
+// the nose gets a second chart, laid out along the nose and across it, and the glass is drawn in it
+// as the shape it is. Only a stock whose cab has a `screen` uses it; the EMU3000 wears its whole
+// nose as one dark mask, which the height mapping does perfectly well.
+// `across` is the point's own lateral position, not its place in the ring: the section is a
+// superellipse, which keeps the top nearly flat, so three of the six rings either side of the
+// centre line sit in the outer fifth of the width. Measuring across in metres makes the chart a
+// view from above, which is what a windscreen can be drawn in.
+const NOSE = { x0: 16, x1: 1456, y0: 264, y1: 504, rings: 3 };
+const noseUv = (along, across) => [(NOSE.x0 + along * (NOSE.x1 - NOSE.x0)) / TEX_W,
+                                   1 - (NOSE.y0 + across * (NOSE.y1 - NOSE.y0)) / TEX_H];
+const noseAcross = (y, edge) => 0.5 - (0.5 * y) / edge;
+const noseChart = (stock, cab) => (cab && stock.nose && stock.livery?.cab?.screen
+  ? { k0: RING / 2 - NOSE.rings, k1: RING / 2 + NOSE.rings } : null);
 
 // One pane of glass: dark with a frame on the side picture, lit on the glow picture.
 function glass(g, e, x, y, w, h, lit = true) {
@@ -242,10 +266,33 @@ function shellGeometry(stock, cab) {
     const u = uAt(r.z);
     for (const [x, y, f] of r.pts) { pos.push(x, y, r.z); uv.push(u, v0 + f * (v1 - v0)); }
   }
+  // The nose's top, when this stock has a windscreen, is left out of the sweep and laid again below
+  // with the chart's coordinates: a vertex can carry only one pair, so the band is its own surface.
+  const chart = noseChart(stock, cab), noseFrom = 1;
+  const inChart = (i, k) => chart && i >= noseFrom && i < noseFrom + NOSE_RINGS && k >= chart.k0 && k < chart.k1;
   for (let i = 0; i + 1 < rings.length; i++) {
     for (let k = 0; k < RING; k++) {
+      if (inChart(i, k)) continue;
       const a = i * RING + k, b = i * RING + ((k + 1) % RING);
       index.push(a, b, a + RING, b, b + RING, a + RING);
+    }
+  }
+  if (chart) {
+    const base = pos.length / 3, across = chart.k1 - chart.k0;
+    for (let i = noseFrom; i <= noseFrom + NOSE_RINGS; i++) {
+      const edge = rings[i].pts[chart.k0][0];
+      for (let k = chart.k0; k <= chart.k1; k++) {
+        const [x, y] = rings[i].pts[k];
+        pos.push(x, y, rings[i].z);
+        uv.push(...noseUv((i - noseFrom) / NOSE_RINGS, noseAcross(x, edge)));
+      }
+    }
+    const w = across + 1;
+    for (let i = 0; i < NOSE_RINGS; i++) {
+      for (let k = 0; k < across; k++) {
+        const a = base + i * w + k, b = a + 1;
+        index.push(a, b, a + w, b, b + w, a + w);
+      }
     }
   }
   const cap = (i, front) => {                                   // the flat rear end and the small face at the tip
@@ -287,6 +334,40 @@ function shellGeometry(stock, cab) {
   return mergeGeometries(parts);
 }
 
+// The windscreen, painted into the nose's own chart (NOSE). `along` runs from the cab roof (0) to
+// the tip (1) and `across` from one side of the chart's band to the other, so the glass can be the
+// shape it really is: wide where it meets the roof, narrowing forward, with its corners rounded.
+function windscreen(g, lv, ws, glass) {
+  const W = NOSE.x1 - NOSE.x0, H = NOSE.y1 - NOSE.y0, mid = NOSE.y0 + H / 2;
+  g.fillStyle = lv.body; g.fillRect(NOSE.x0 - 12, NOSE.y0 - 12, W + 24, H + 24);
+  const at = (a) => NOSE.x0 + a * W, side = (s) => mid + (s * H) / 2;
+  // Stroking the path with a round join and then filling is what rounds the corners of a trapezoid;
+  // roundRect only does rectangles.
+  const panel = (fill, ga, gs, r) => {
+    g.fillStyle = fill; g.strokeStyle = typeof fill === 'string' ? fill : '#000';
+    g.lineJoin = 'round'; g.lineWidth = r;
+    g.beginPath();
+    g.moveTo(at(ws.from - ga), side(-ws.wide - gs));
+    g.lineTo(at(ws.to + ga), side(-ws.narrow - gs));
+    g.lineTo(at(ws.to + ga), side(ws.narrow + gs));
+    g.lineTo(at(ws.from - ga), side(ws.wide + gs));
+    g.closePath();
+    if (typeof fill === 'string') g.stroke();
+    g.fill();
+  };
+  panel(ws.surround, 0.018, 0.20, 34);          // the body the glass is set into
+  // The glass takes the sky at the back and darkens where it turns down towards the tip. Painted
+  // near-black instead it reads as a hole cut in the nose, not as glass.
+  const sky = g.createLinearGradient(at(ws.from), 0, at(ws.to), 0);
+  sky.addColorStop(0, '#7f90a8'); sky.addColorStop(0.4, '#44516a'); sky.addColorStop(1, '#232a36');
+  g.strokeStyle = '#44516a'; g.lineJoin = 'round'; g.lineWidth = 14;
+  g.beginPath();
+  g.moveTo(at(ws.from), side(-ws.wide)); g.lineTo(at(ws.to), side(-ws.narrow));
+  g.lineTo(at(ws.to), side(ws.narrow)); g.lineTo(at(ws.from), side(ws.wide));
+  g.closePath(); g.stroke();
+  g.fillStyle = sky; g.fill();
+}
+
 // The livery of a lofted car, in the same picture as the other stock: the plain swatches in the top
 // 16 px, then the side — its left half a cab car (whose front is the nose), its right half an
 // intermediate car. Everything that differs between trains is in the stock's `livery` record.
@@ -303,7 +384,6 @@ function highSpeedTextures(stock) {
   const shade = g.createLinearGradient(0, Y, 0, Y + H);         // a gloss: lighter over the shoulder, darker by the skirt
   shade.addColorStop(0, 'rgba(255,255,255,0.12)'); shade.addColorStop(0.5, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.16)');
   g.fillStyle = shade; g.fillRect(0, Y, TEX_W, H);
-  g.fillStyle = lv.skirt; g.fillRect(0, row(lv.skirtTop), TEX_W, row(0) - row(lv.skirtTop));
   // The picture's scale is the geometry's own (uOf): `perM` pixels to the metre, and a car's rear end
   // at `rearOf(u0)`. A cab car's painted side runs from there to where the nose begins.
   const L = stock.length - 0.6, perM = (USPAN * TEX_W) / L;
@@ -359,6 +439,10 @@ function highSpeedTextures(stock) {
     for (const dx of doors) pane(dx + DOOR * 0.26, top, DOOR * 0.48, h * 0.78);
   };
   carDoors(CAB, L - stock.nose); carDoors(MID, L);
+  // The skirt goes on after the doors and before the bands: a door runs down into it on the real
+  // train, but it does not take the body's colour down there, and painting it first left a white
+  // notch in the grey at every door.
+  g.fillStyle = lv.skirt; g.fillRect(0, row(lv.skirtTop), TEX_W, row(0) - row(lv.skirtTop));
   for (const b of lv.bands) {
     band(HALF, TEX_W, b.from, b.to, 0, b.colour);                 // an intermediate car: level
     band(0, HALF, b.from, b.to, b.dive ?? 0, b.colour);           // a cab car: it may dive to the nose
@@ -371,8 +455,11 @@ function highSpeedTextures(stock) {
   // The EMU3000 wears its whole nose as one dark mask, windscreen and all, white only along the
   // lower flanks; the N700ST has no mask, just a canopy, so this is absent there.
   if (cab.mask) band(noseX, HALF, cab.mask.from, 1, [cab.mask.dive, 0], cab.glass);
-  for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
-  g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
+  if (cab.screen) windscreen(g, lv, cab.screen, cab.glass);
+  else {
+    for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
+    g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
+  }
   const lp = cab.lamp;
   oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
   for (const k of [-lp.gap, lp.gap]) {
