@@ -1343,6 +1343,9 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/site_archive_clean/rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles） | MapLibre Native 6.31.0 內建的 `pmtiles://file://`（`BaseMapFiles`） | 不用：App 不跑 JS，MapLibre Native 自己讀 PMTiles |
 | `Railway/site_archive_clean/rail-3d/integration/map3d.js` 的 `terrain` 來源（`raster-dem`、Terrarium、512 像素）與 `landscape-hillshade`（`hillshade-exaggeration` 0.42、`hillshade-illumination-direction` 315） | `tools/basemap/build_terrain.py`、`BaseMapStyle.hillshade(_:)` | adapted：同樣的來源與圖層設定，顏色換成遊戲的；DEM 圖磚（`island-dem://`，Mapterhorn、內政部 20 m）不在快照裡，改用遊戲自己的 `taiwan_heights.dat` 產生 |
 | `Ci/…/virtual_island_city__q_21ffa7f6ae58fc9e.js` 的 `city.pmtiles` | — | gap：本體不在快照裡 |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js`／`railwaySystem(tags)`（依營運者、路網、名稱、軌距判斷系統）與 `makeTopology`（軌道靠共用節點相接、不以座標接近合併；月台線常沒有營運者與軌距） | `tools/real-railways/match_osm.py` 的 `railway_system`、`fits`、軌道圖 | direct：`railwaySystem` 逐條照搬；相接的原則照用；沒有系統的月台線改成「同種類的系統都能用」，靠偏離成本留在原線 |
+| `Railway/site_archive_clean/rail-3d/physical/network.json`（OSM 2026-09-07 的台鐵股道與路徑） | — | 不用：只有到 2026-09 的台鐵，這次要所有系統、和底圖同一份整包檔 |
+| `Railway/site_archive_clean/data/track_lines.geojson`、`track_stations.geojson`（TDX） | `match_osm.py` 的輸入，sha256 記在 `osm_exceptions.json` | direct：路線、站名、顏色、`sortKey` 照舊，只換線形與站點 |
 | （參考沒有）產生向量圖磚的工具 | `tools/basemap/build_basemap.py` | gap → 原生（切法照 geojson-vt，見下） |
 
 固定小數：圖磚 4096 單位、邊 64 單位；PMTiles 的範圍是千萬分之一度（和 `GeoAnchor` 相同）。
