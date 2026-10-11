@@ -329,11 +329,13 @@ jobs:
       # until the step's limit, and no result bundle was left to read.
       - name: UI smoke tests (English and Traditional Chinese)
         id: ui-smoke
-        # The full list took 12m29s with the map interaction tests (7m42s
-        # before the start/save and map tests were added), counting cold
-        # XCTest startup and Xcode writing the result bundle; a slower runner
-        # can take 1.8 times as long. The gate list is shorter than that.
-        timeout-minutes: 25
+        # The full list took 16m39s to 24m49s (median 20m11s) over the 21
+        # full runs on main from 2026-10-09 to 10-11 (28 tests by then),
+        # counting cold XCTest startup and Xcode writing the result bundle;
+        # the 25 minutes set when it took 12m29s left the slowest 11 s. A
+        # slower runner can take 1.8 times as long: 36 minutes. The gate list
+        # is shorter than that.
+        timeout-minutes: 40
         run: |
           only=()
           if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
