@@ -391,11 +391,11 @@ extension GameWorld {
             return "Day accounts cannot be for a day after today."
         }
         let amounts = accounts.entries.flatMap { [$0.amount] + $0.breakdown.map(\.amount) }
-            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.taxCost] }
+            + accounts.days.flatMap { [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.taxCost, $0.freightRevenue] }
         guard amounts.allSatisfy({ (-Self.maximumAccrued...Self.maximumAccrued).contains($0.amount) }) else { return "Ledger amounts are out of range." }
         guard accounts.days.allSatisfy({ (0...Self.maximumAccrued).contains($0.fareTrips) }) else { return "A day's trips are out of range." }
         guard accounts.days.allSatisfy({
-            [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.propertyRevenue, $0.propertyCost, $0.taxCost]
+            [$0.fareRevenue, $0.operatingCost, $0.maintenanceCost, $0.energyCost, $0.staffCost, $0.interestCost, $0.propertyRevenue, $0.propertyCost, $0.taxCost, $0.freightRevenue]
                 .allSatisfy { $0 >= .zero }
         }) else {
             return "Day accounts cannot be negative."
@@ -418,9 +418,10 @@ extension GameWorld {
         case .dailyProperty: [.propertyRent, .propertyUpkeep, .propertyTax]
         case .buildingDemolition: [.propertyDemolition]
         case .dailyTax: [.incomeTax]
+        case .hourlyFreight: [.freightRevenue]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

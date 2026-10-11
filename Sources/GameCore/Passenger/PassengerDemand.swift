@@ -142,7 +142,7 @@ extension GameWorld {
     /// trips exist in G1: no transfers.
     public func passengerTrip(from origin: StationID, to destination: StationID) -> PassengerTrip? {
         guard origin != destination else { return nil }
-        for line in lines {
+        for line in lines where !line.isFreight {
             if let trip = Self.trip(on: line, from: origin, to: destination) { return trip }
         }
         return nil
@@ -526,7 +526,8 @@ extension GameWorld {
         if passengerRoutingMode == .network { return makeNetworkPassengerPlan(memo: &memo) }
         let firstCalls = lines.map { line in
             var calls: [StationID: Int] = [:]
-            for (index, stop) in line.stops.enumerated() where calls[stop] == nil {
+            // Decision 155: nobody rides a freight line.
+            for (index, stop) in line.stops.enumerated() where calls[stop] == nil && !line.isFreight {
                 calls[stop] = index
             }
             return calls

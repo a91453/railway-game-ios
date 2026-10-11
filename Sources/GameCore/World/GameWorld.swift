@@ -102,6 +102,10 @@ public struct GameWorld: Equatable, Sendable {
     /// from before it; the app's new games turn it on. Set by
     /// ``setCityDemand(_:)``, the land's replacement and its growth only.
     public internal(set) var cityDemand: CityDemand?
+    /// The world's freight (decision 155), or `nil` for a world without it.
+    /// Off in a new world and in saves from before it. Set by
+    /// ``enableFreight()`` and the freight commands only.
+    public internal(set) var freight: FreightState?
     /// Whether a city building's square is its density's, 20 to 40 m
     /// across, rather than 40 m whatever its height (decision 142). Off in
     /// a new world and in saves from before it; the app's new games turn it
@@ -906,6 +910,7 @@ public struct GameWorld: Equatable, Sendable {
             passengers[index].remainders.removeAll { $0.destination == id }
         }
         passengers.removeAll { $0.station == id }
+        forgetFreight(of: id)
         passengerRouteBalances.removeAll { balance in
             balance.origin == id || balance.destination == id
                 || balance.journeys.contains { $0.legs.contains { $0.from == id || $0.to == id } }
@@ -1838,6 +1843,21 @@ public struct GameWorld: Equatable, Sendable {
         abandonUnservedPassengers()
     }
 
+    /// Makes line `id` a freight line, or a passenger line again. Free.
+    ///
+    /// - Throws, checked in this order: ``GameError/freightNotEnabled`` (to
+    ///   make one), ``GameError/unknownLine(_:)`` or ``GameError/trainOnLine(_:)``
+    ///   naming a train assigned to it (take them off first).
+    public mutating func setLineFreight(_ id: LineID, to isFreight: Bool) throws(GameError) {
+        if isFreight, freight == nil { throw .freightNotEnabled }
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        guard lines[index].isFreight != isFreight else { return }
+        if let train = lines[index].assignedTrains.first { throw .trainOnLine(train) }
+        lines[index].isFreight = isFreight
+        passengerPlan = PassengerPlanCache()
+        abandonUnservedPassengers()
+    }
+
     // MARK: - Time
 
     public mutating func pause() {
@@ -2138,6 +2158,7 @@ public struct GameWorld: Equatable, Sendable {
                     release = passengerRelease()
                     releasedFrom = start
                 }
+                tickFreight(at: start)
                 settleAccounts(at: start, memo: &memo)
                 if release != nil {
                     releasePassengers(at: start, &release!)
@@ -2256,12 +2277,13 @@ public struct GameWorld: Equatable, Sendable {
                     minutesUntilLineWaitsChange(memo: &memo), passengerWake, dayWake,
                 ].compactMap { $0 }.min()
                 let idle = min(remaining / minute, wake ?? remaining / minute)
-                if release != nil || accounts.mode == .management {
+                if release != nil || accounts.mode == .management || freight != nil {
                     // Releasing passengers (G1a) and settling the accounts
                     // (G1c) change no train, so the minutes skipped still do
                     // theirs, minute by minute.
                     for step in 0..<idle {
                         let time = GameTime(seconds: clock.now.seconds + step * minute)
+                        tickFreight(at: time)
                         settleAccounts(at: time, memo: &memo)
                         if release != nil {
                             releasePassengers(at: time, &release!)
@@ -3551,7 +3573,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, townGrowth, accounts, geoAnchor
         case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight
     }
 
     /// Decodes a world, rejecting data that breaks cross-object invariants
@@ -3654,6 +3676,7 @@ extension GameWorld: Codable {
         zones = container.contains(.zones) ? try container.decode(Zoning.self, forKey: .zones) : Zoning()
         terrain = container.contains(.terrain) ? try container.decode(Terrain.self, forKey: .terrain) : Terrain()
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
+        freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
         if madeBeforeSpacing {
             guard network.spacingExemptions.isEmpty else {
                 throw DecodingError.dataCorrupted(DecodingError.Context(
@@ -3756,6 +3779,9 @@ extension GameWorld: Codable {
         }
         if let cityDemand {
             try container.encode(cityDemand, forKey: .cityDemand)
+        }
+        if let freight {
+            try container.encode(freight, forKey: .freight)
         }
         if cityFootprints {
             try container.encode(true, forKey: .cityFootprints)
@@ -3908,6 +3934,7 @@ extension GameWorld: Codable {
         }
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }
+        if let problem = freightProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }

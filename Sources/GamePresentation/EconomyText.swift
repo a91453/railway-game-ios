@@ -62,6 +62,7 @@ extension LedgerEntry.Kind {
         case .dailyProperty: language.text("Buildings (daily)", "建物收支（日結）")
         case .buildingDemolition: language.text("Building demolished", "拆除建物")
         case .dailyTax: language.text("Income tax (daily)", "營利事業所得稅（日結）")
+        case .hourlyFreight: language.text("Freight (hourly)", "貨運收入（小時）")
         }
     }
 }
@@ -84,6 +85,7 @@ extension LedgerItem {
         case .propertyTax: language.text("Land tax", "土地資產稅")
         case .propertyDemolition: language.text("Demolition", "拆除費")
         case .incomeTax: language.text("Income tax", "營利事業所得稅")
+        case .freightRevenue: language.text("Freight", "貨運收入")
         }
     }
 }
