@@ -116,15 +116,17 @@ public enum LiuMingchuanChallenge {
     ]
 
     /// The targets were measured (decision 153, `LiuMingchuanReportTests`,
-    /// release build): the line to Twatutia and its station costs some
-    /// $5.7–5.9 million, the line on to Hsinchu $12.5–13.0 million with
+    /// release build): the line to Twatutia and its stations cost some
+    /// $5.4–5.7 million, the line on to Hsinchu $12.4–12.8 million with
     /// its train. A steam train of four cars loses $30,000 a day on the
-    /// line to Twatutia and never pays for the rest; one of eight cars
-    /// earns $10,000 a day and reaches Hsinchu around day 1,300 (bronze);
-    /// one of sixteen earns $108,000 and reaches it on day 109 (silver);
-    /// sixteen cars with the company's $5 million loan from the first day,
-    /// on day 57 (gold). The line on to Hsinchu loses money, as Liu's did:
-    /// with sixteen cars the two lines together about break even.
+    /// line to Twatutia, never pays for the rest and goes bankrupt on day
+    /// 150; one of eight cars earns $10,000 a day and reaches Hsinchu on
+    /// day 1,323 (bronze); one of sixteen earns $108,000 and reaches it on
+    /// day 106 (silver); sixteen cars with the company's $5 million loan
+    /// from the first day and fares by distance, on day 54 (gold). The
+    /// deadline is the six years from 1887 to 1893. The line on to Hsinchu
+    /// loses money, as Liu's did: with sixteen cars the two lines together
+    /// about break even.
     /// Riders a day to reach.
     static let ridersTarget: Int64 = 15_000
     /// What the governor's treasury starts the railway with: $8 million,
@@ -137,7 +139,7 @@ public enum LiuMingchuanChallenge {
     static let scenario = Scenario(
         id: "history.liuMingchuan",
         goals: milestones.map { .connect(points: $0.places.map(\.point), radius: Land.catchmentRadius) } + [.dailyRiders(ridersTarget)],
-        goldDays: 75, silverDays: year, deadlineDays: 4 * year, insolvencyDays: 60, trainTypes: [.steam]
+        goldDays: 75, silverDays: year, deadlineDays: 6 * year, insolvencyDays: 60, trainTypes: [.steam]
     )
 
     /// The milestone goal `index` of the scenario names, if it is one.
