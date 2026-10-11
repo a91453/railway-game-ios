@@ -354,9 +354,9 @@ final class RealRailwaysTests: XCTestCase {
     func testEverySourceIsCredited() throws {
         for language in DisplayLanguage.allCases {
             let sections = DataSourceCredits.sections(in: language)
-            XCTAssertEqual(sections.map(\.id), ["railways", "population", "map"])
+            XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
