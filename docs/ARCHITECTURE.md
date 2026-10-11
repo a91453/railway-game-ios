@@ -4875,10 +4875,15 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **驗證**：在 headless Chromium（SwiftShader）開建置好的頁面：臺中的高架上有方塊列車；把參考的 E201 GLB 與一個 2048 px 貼圖的測試模型 `pack` 之後，列車換成模型、沿著高架走（測試檔不提交）。iPhone 上的幀時間與記憶體沒有量（UNVERIFIED）。
 
 **限制與之後**：
-- 這個 session 的環境沒有 Meshy 金鑰，四個模型還沒生成（`index.json` 是空的）。作者在環境設定加上 `MESHY_API_KEY` 之後，新的 session 照 `tools/meshy/README.md` 生成、看縮圖填 `front`、`pack`、重新建置；那時在資料來源畫面註明由 Meshy 生成。
+- 四個模型還沒生成（`index.json` 是空的）。生成之後看縮圖填 `front`、`pack`、重新建置；那時在資料來源畫面註明由 Meshy 生成。
 - 模型的夜間沒有窗光（方塊的窗光是畫上去的發光貼圖）。
 - 列車照舊是頁面自己的：每條路徑一列、等速 15 m/s，不停站、不讀 GameCore 的時刻表。
 - 臺中站的站房（Overture 的大型建物）蓋在高架上，車站裡的列車會被擋住。
+
+**改用 Meshy 官方的 skill 與 CLI**（2026-10-11，#347 合併之後，作者同意新增這個依賴）：作者問有沒有參考 Meshy 官方的 [meshy-dev/meshy-3d-agent](https://github.com/meshy-dev/meshy-3d-agent)（MIT）。第一個 PR 沒有參考，是照 API 文件自己寫的。改成：
+- `.claude/skills/meshy-3d-generation/` 是它的 `skills/meshy-3d-generation`（`644fd70`），原樣，保留 `LICENSE`；`SKILL.md` 最後加一節本專案的路徑與規矩（標明不是 Meshy 的）。
+- 生成用官方的 `meshy-cli` 0.4.0（MIT，`npm exec` 暫時執行，不裝進專案、不進 App）。它支援瀏覽器登入（device flow），不需要 `MESHY_API_KEY`；憑證留在容器，不進 repo。它也有照片轉 3D、遊戲用的低面數（smart topology）、重新上色與 LOD，花點數前先報價。
+- `tools/meshy/meshy.mjs` 拿掉自己寫的 `balance`、`generate`，只留 `pack`；`pack` 從 CLI 的任務紀錄（workspace 裡的 `task_<id>.json`）把任務編號、prompt、模型與點數記進 `generated.json`。
 
 ### 162. 天氣、颱風與油電價格
 
