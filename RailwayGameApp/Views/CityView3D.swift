@@ -120,8 +120,9 @@ final class CityViewHost {
 /// A small HTTP server for one folder, listening on the loopback interface
 /// only (nothing on the network can reach it), on a port the system picks:
 /// both its addresses, as `localhost` may be IPv6's `::1` or IPv4's
-/// `127.0.0.1`.
-/// It answers each request with the file and closes the connection
+/// `127.0.0.1`; a connection from anywhere else is refused.
+/// It answers each request with the file, ends its side of the connection
+/// and lets it go once the web view has closed the other
 /// (``CityViewServing`` decides which file and writes the head). Its
 /// listener and connections all run on `queue`.
 final class CityViewServer: @unchecked Sendable {
@@ -132,7 +133,6 @@ final class CityViewServer: @unchecked Sendable {
     init(root: URL) throws {
         let parameters = NWParameters.tcp
         parameters.requiredInterfaceType = .loopback
-        parameters.acceptLocalOnly = true
         listener = try NWListener(using: parameters)
         self.root = root.standardizedFileURL
     }
@@ -152,13 +152,32 @@ final class CityViewServer: @unchecked Sendable {
             }
         }
         listener.newConnectionHandler = { [weak self] connection in
-            self?.serve(connection)
+            guard let self, Self.isLoopback(connection.endpoint) else {
+                connection.cancel()
+                return
+            }
+            serve(connection)
         }
         listener.start(queue: queue)
     }
 
     func stop() {
         listener.cancel()
+    }
+
+    /// Whether a connection comes from this device's loopback address.
+    private static func isLoopback(_ endpoint: NWEndpoint) -> Bool {
+        guard case .hostPort(let host, _) = endpoint else { return false }
+        if case .ipv4(let address) = host {
+            return address.isLoopback
+        }
+        if case .ipv6(let address) = host {
+            return address.isLoopback || address.asIPv4?.isLoopback == true
+        }
+        if case .name(let name, _) = host {
+            return name == "localhost"
+        }
+        return false
     }
 
     private func serve(_ connection: NWConnection) {
@@ -201,7 +220,31 @@ final class CityViewServer: @unchecked Sendable {
         if !CityViewServing.isHead(head) {
             reply.append(body)
         }
-        connection.send(content: reply, completion: .contentProcessed { _ in connection.cancel() })
+        // The answer is the connection's last data (FIN after it), and ours
+        // is let go only once the web view has closed its side: cancelling
+        // it right after the send can reset it before the answer arrives
+        // (the Simulator's NSURLErrorDomain -1005, "connection lost").
+        connection.send(
+            content: reply, contentContext: .finalMessage, isComplete: true,
+            completion: .contentProcessed { [weak self] error in
+                guard let self, error == nil else {
+                    connection.cancel()
+                    return
+                }
+                awaitClose(of: connection)
+            })
+    }
+
+    /// Reads (and drops) until the web view closes its side, then lets the
+    /// connection go.
+    private func awaitClose(of connection: NWConnection) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] _, _, isComplete, error in
+            guard let self, !isComplete, error == nil else {
+                connection.cancel()
+                return
+            }
+            awaitClose(of: connection)
+        }
     }
 }
 
