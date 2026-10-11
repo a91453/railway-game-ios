@@ -198,6 +198,26 @@ final class BuildingMaterialsTests: XCTestCase {
 
     /// Turning building materials off loses what the stations hold and what
     /// trains carry of them, and every yard sends goods again.
+    /// A station is short of materials the night its town grows without
+    /// them (decision 158). A night the towns do not grow (in free play),
+    /// or once town growth is off, nobody is short, and the map stops
+    /// saying so.
+    func testANightWithoutGrowthIsShortOfNothing() throws {
+        var world = try world()
+        world.setTownGrowth(true)
+        // As a managed game left the night its towns last grew.
+        world.freight?.lastShort = [alpha]
+        XCTAssertTrue(world.isShortOfMaterials(alpha))
+        world.setEconomyMode(.free)
+        try world.advance(ticks: 1_440)
+        XCTAssertFalse(world.isShortOfMaterials(alpha))
+        XCTAssertEqual(world.freight?.lastShort, [])
+
+        world.freight?.lastShort = [alpha]
+        world.setTownGrowth(false)
+        XCTAssertFalse(world.isShortOfMaterials(alpha))
+    }
+
     func testTurningMaterialsOffLosesThem() throws {
         var world = try world()
         while world.freight?.loads.isEmpty ?? true { try world.advance(ticks: 1) }

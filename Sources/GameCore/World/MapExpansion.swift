@@ -278,10 +278,10 @@ extension GameWorld {
 
     /// The first tile the company does not own that `points`, a line from
     /// each to the next, pass over; `nil` when they keep to its tiles (or
-    /// the map is not bought). A line that only grazes a tile's last unit
-    /// counts.
-    func firstTileNotOwned(along points: [PlanPoint]) -> MapTile? {
-        guard let mapExpansion else { return nil }
+    /// the map is not bought), by `expansion`'s tiles when given. A line
+    /// that only grazes a tile's last unit counts.
+    func firstTileNotOwned(along points: [PlanPoint], in expansion: MapExpansion? = nil) -> MapTile? {
+        guard let mapExpansion = expansion ?? mapExpansion else { return nil }
         if let point = points.first(where: { !mapExpansion.owns(MapExpansion.tile(at: $0)) }) {
             return MapExpansion.tile(at: point)
         }
@@ -389,8 +389,8 @@ extension GameWorld {
     /// Why `expansion` does not fit the world, or `nil`: its tiles in the
     /// world, listed once each in order, joined to each other; everything
     /// the company built on them (its stations, track nodes and the
-    /// control points of its curves, its buildings and zones); its best day
-    /// not below zero.
+    /// centre line of its track, checked as it is built, its buildings and
+    /// zones); its best day not below zero.
     func mapExpansionProblem(_ expansion: MapExpansion? = nil) -> String? {
         guard let expansion = expansion ?? mapExpansion else { return nil }
         let owned = expansion.owned
@@ -406,8 +406,12 @@ extension GameWorld {
         guard reached.count == owned.count else { return "The tiles of the map owned must each be beside another." }
         guard expansion.bestDayRiders >= 0 else { return "The best day's riders must not be below zero." }
         func owns(_ point: PlanPoint) -> Bool { expansion.owns(MapExpansion.tile(at: point)) }
+        // A curve's control points may lie beyond the tiles its centre
+        // line keeps to (a Bézier curve goes only part of the way to them).
         guard stations.allSatisfy({ owns($0.point) }), network.nodes.allSatisfy({ owns($0.position.plan) }),
-              network.edges.allSatisfy({ $0.curve.controlPoints.allSatisfy(owns) })
+              network.edges.allSatisfy({ edge in
+                  network.geometry(of: edge.id).map { firstTileNotOwned(along: $0.points.map(\.plan), in: expansion) == nil } ?? false
+              })
         else { return "The company's railway stands on a tile of the map it does not own." }
         let corners = placedBuildings.flatMap { building in
             [PlanPoint(x: building.minX, y: building.minY), PlanPoint(x: building.maxX - 1, y: building.maxY - 1),

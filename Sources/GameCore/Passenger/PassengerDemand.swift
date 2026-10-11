@@ -224,17 +224,19 @@ extension GameWorld {
     }
 
     /// Whether `group`, waiting at `station`, still has its trip: its line
-    /// exists and still takes it that way.
+    /// exists, carries passengers (decision 155) unless `onFreightLines`,
+    /// and still takes it that way.
     func isServed(_ group: WaitingGroup, at station: StationID,
-                  checkingLeg check: ((PassengerJourneyLeg) -> Bool)? = nil) -> Bool {
-        guard let line = line(id: group.line) else { return false }
+                  checkingLeg check: ((PassengerJourneyLeg) -> Bool)? = nil, onFreightLines: Bool = false) -> Bool {
+        guard let line = line(id: group.line), onFreightLines || !line.isFreight else { return false }
         if let journey = group.journey {
             guard journey.leg.from == station,
                   journey.leg.line == group.line,
                   journey.leg.direction == group.direction,
                   journey.leg.to == group.destination else { return false }
             let pending = journey.legs.dropFirst(journey.current)
-            return pending.allSatisfy(check ?? isServed) && zip(pending, pending.dropFirst()).allSatisfy(connects)
+            return pending.allSatisfy(check ?? { isServed($0, onFreightLines: onFreightLines) })
+                && zip(pending, pending.dropFirst()).allSatisfy(connects)
         }
         // A closed station neither sends nor receives passengers.
         guard allowsService(at: station), allowsService(at: group.destination) else { return false }
@@ -290,8 +292,8 @@ extension GameWorld {
 
     /// A planned ride can wait across the nightly closure, but must still
     /// have a physical journey and a service planned at some level.
-    private func isServed(_ leg: PassengerJourneyLeg) -> Bool {
-        isServed(leg, scheduled: isScheduled(leg.line, pattern: leg.pattern))
+    private func isServed(_ leg: PassengerJourneyLeg, onFreightLines: Bool = false) -> Bool {
+        isServed(leg, scheduled: isScheduled(leg.line, pattern: leg.pattern), onFreightLines: onFreightLines)
     }
 
     /// Whether line `id`'s service `pattern` has a journey and runs trains
@@ -302,10 +304,11 @@ extension GameWorld {
     }
 
     /// ``isServed(_:)`` with `scheduled` whether the leg's service runs
-    /// (see ``isScheduled(_:pattern:)``).
-    private func isServed(_ leg: PassengerJourneyLeg, scheduled: Bool) -> Bool {
+    /// (see ``isScheduled(_:pattern:)``); nobody rides a freight line
+    /// (decision 155) unless `onFreightLines`.
+    private func isServed(_ leg: PassengerJourneyLeg, scheduled: Bool, onFreightLines: Bool = false) -> Bool {
         guard allowsService(at: leg.from), allowsService(at: leg.to),
-              let line = line(id: leg.line), scheduled
+              let line = line(id: leg.line), onFreightLines || !line.isFreight, scheduled
         else { return false }
         if line.isRing {
             let direction: RingDirection = leg.direction == .outbound ? .inner : .outer
@@ -548,7 +551,9 @@ extension GameWorld {
         func trip(from origin: StationID, to destination: StationID) -> PassengerTrip? {
             guard origin != destination else { return nil }
             for (index, calls) in firstCalls.enumerated() {
-                if let from = calls[origin], let to = calls[destination] {
+                // Decision 149, as `Self.trip(on:from:to:)` does: on a line
+                // with runs, only a way and stretch some run goes.
+                if let from = calls[origin], let to = calls[destination], lines[index].runsServe(from: from, to: to) {
                     return PassengerTrip(line: lines[index].id, direction: to > from ? .outbound : .inbound)
                 }
             }
@@ -799,11 +804,11 @@ extension GameWorld {
 
     /// Validate each distinct planned leg once, even with a full station's
     /// thousands of minute groups. Legacy direct queues need no graph work.
-    private func servedWaitingLegs() -> Set<PassengerJourneyLeg> {
+    private func servedWaitingLegs(onFreightLines: Bool = false) -> Set<PassengerJourneyLeg> {
         let pending = Set(passengers.flatMap(\.waiting).flatMap { group in
             group.journey.map { Array($0.legs.dropFirst($0.current)) } ?? []
         })
-        return Set(pending.filter(isServed))
+        return Set(pending.filter { isServed($0, onFreightLines: onFreightLines) })
     }
 
     mutating func reindexPassengerJourneys(on line: LineID, removing pattern: Int) {
@@ -849,12 +854,16 @@ extension GameWorld {
         guard zip(passengers, passengers.dropFirst()).allSatisfy({ $0.station < $1.station }) else {
             return "Passenger records must be listed once each, by ascending station."
         }
-        let valid = servedWaitingLegs()
+        // A save from before passengers waiting for a line were sent away
+        // when it became a freight line may still hold them: it loads, no
+        // freight train takes them on, and the next command that checks the
+        // waiting (`abandonUnservedPassengers`) sends them away.
+        let valid = servedWaitingLegs(onFreightLines: true)
         for record in passengers {
             let id = record.station.rawValue
             guard station(id: record.station) != nil else { return "Passengers wait at station \(id), which does not exist." }
             for group in record.waiting {
-                guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }) else {
+                guard isServed(group, at: record.station, checkingLeg: { valid.contains($0) }, onFreightLines: true) else {
                     return "Passengers at station \(id) wait for a trip no line takes that way."
                 }
                 if let journey = group.journey,

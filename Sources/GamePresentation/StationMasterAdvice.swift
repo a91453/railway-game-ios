@@ -148,7 +148,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         let losing = world.economy.balance < .zero || day.map { $0.fareRevenue < $0.totalCost } ?? false
         guard losing else { return nil }
         for line in world.lines {
-            let short = line.trains.contains { id in
+            let short = line.assignedTrains.contains { id in
                 world.train(id: id).map { $0.type == .steam && $0.cars < shortSteamCars } ?? false
             }
             if short { return .shortSteamTrains(line: line.id, name: line.name) }

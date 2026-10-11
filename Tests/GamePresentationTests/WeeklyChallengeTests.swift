@@ -75,7 +75,7 @@ final class WeeklyChallengeTests: XCTestCase {
                 bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000), clock: GameClock(speed: .normal)
             )
             world.setEconomyMode(.management)
-            try world.startScenario(Scenario(id: "weekly.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
+            try world.startScenario(Scenario(id: "custom.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
             try world.advance(ticks: Int(day) * 1_440 + 1)
             return world
         }
@@ -83,11 +83,11 @@ final class WeeklyChallengeTests: XCTestCase {
         let fast = try completed(onDay: 1)
         XCTAssertFalse(records.record(try GameWorld(bounds: WorldBounds(width: 1_024, height: 1_024), economy: GameEconomy(balance: 0))))
         XCTAssertTrue(records.record(fast, at: monday))
-        XCTAssertEqual(records.best["weekly.1"], ChallengeRecord(days: 1, rating: .gold, riders: 0, date: monday))
+        XCTAssertEqual(records.best["custom.1"], ChallengeRecord(days: 1, rating: .gold, riders: 0, date: monday))
         // As few days with more riders beats it; a result under other rules
         // is set aside when read.
-        XCTAssertTrue(ChallengeRecord(days: 1, rating: .gold, riders: 5, date: monday).isBetter(than: records.best["weekly.1"]!))
-        XCTAssertFalse(ChallengeRecord(days: 2, rating: .gold, riders: 9, date: monday).isBetter(than: records.best["weekly.1"]!))
+        XCTAssertTrue(ChallengeRecord(days: 1, rating: .gold, riders: 5, date: monday).isBetter(than: records.best["custom.1"]!))
+        XCTAssertFalse(ChallengeRecord(days: 2, rating: .gold, riders: 9, date: monday).isBetter(than: records.best["custom.1"]!))
         let old = try JSONEncoder().encode(["weekly.9": ChallengeRecord(days: 3, rating: .gold, riders: 0, rulesVersion: "old", date: monday)])
         let oldFile = file.appendingPathExtension("old")
         defer { try? FileManager.default.removeItem(at: oldFile) }
@@ -95,7 +95,34 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertTrue(ChallengeRecords(file: oldFile).best.isEmpty)
         XCTAssertFalse(records.record(fast, at: monday), "not better than itself")
         XCTAssertEqual(ChallengeRecords(file: file).best, records.best, "kept in the file")
-        XCTAssertEqual(records.best["weekly.1"]?.text(in: .traditionalChinese), "最佳紀錄：1 天，金牌")
+        XCTAssertEqual(records.best["custom.1"]?.text(in: .traditionalChinese), "最佳紀錄：1 天，金牌")
+    }
+
+    /// A challenge's save keeps the targets it was started under (decision
+    /// 145): a week before the rotation played Three Towns' old targets,
+    /// and its result is not one under today's rules. Played under today's
+    /// targets, it is kept.
+    func testAResultUnderOtherTargetsIsNotKept() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("records-\(UUID().uuidString).data")
+        defer { try? FileManager.default.removeItem(at: file) }
+        var records = ChallengeRecords(file: file)
+        let week = WeeklyChallenge(week: WeeklyChallenge.firstRotatingWeek - 1)
+        func completed(_ scenario: Scenario) throws -> GameWorld {
+            var world = GameWorld.newGame(weekly: week)
+            world.setEconomyMode(.management)
+            try world.startScenario(scenario)
+            world.scenario?.outcome = .completed(day: 1, rating: .gold)
+            return world
+        }
+        let today = week.challenge.scenario(seed: week.seed, in: GameWorld.newGame(weekly: week).bounds)
+        let connect = try XCTUnwrap(today.goals.first)
+        // Decision 86's targets: 100,000 riders, gold in 60 days.
+        let old = Scenario(id: today.id, goals: [connect, .dailyRiders(100_000)], goldDays: 60, silverDays: 120, deadlineDays: 360)
+        XCTAssertNotEqual(old.goals, today.goals)
+        XCTAssertFalse(records.record(try completed(old), at: monday))
+        XCTAssertTrue(records.best.isEmpty)
+        XCTAssertTrue(records.record(try completed(today), at: monday))
+        XCTAssertNotNil(records.best[today.id])
     }
 
     /// A result is the day it was completed on: later days, with more
@@ -108,21 +135,21 @@ final class WeeklyChallengeTests: XCTestCase {
             bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000), clock: GameClock(speed: .normal)
         )
         world.setEconomyMode(.management)
-        try world.startScenario(Scenario(id: "weekly.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
+        try world.startScenario(Scenario(id: "custom.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
         try world.advance(ticks: 1_441)
         guard case .completed(let day, _)? = world.scenario?.outcome else { return XCTFail("completed at the first midnight") }
         var completion = DayAccount(day: day)
         completion.fareTrips = 3
         world.accounts.days = [completion]
         XCTAssertTrue(records.record(world, at: monday))
-        XCTAssertEqual(records.best["weekly.1"]?.riders, 3)
+        XCTAssertEqual(records.best["custom.1"]?.riders, 3)
         // Played on: the next day carries more riders.
         try world.advance(ticks: 1_440)
         var later = DayAccount(day: day + 1)
         later.fareTrips = 50
         world.accounts.days = [completion, later]
         XCTAssertFalse(records.record(world, at: monday), "the same result, not a new best")
-        XCTAssertEqual(records.best["weekly.1"]?.riders, 3)
+        XCTAssertEqual(records.best["custom.1"]?.riders, 3)
     }
 
     /// The launcher starts the week's map, and keeps a best result the

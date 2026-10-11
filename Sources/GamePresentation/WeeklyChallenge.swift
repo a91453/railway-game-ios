@@ -188,10 +188,16 @@ public struct ChallengeRecords: Sendable {
 
     /// Keeps `world`'s scenario's result if it was completed in fewer days
     /// than the best so far, and writes the file. Returns whether it is a
-    /// new best.
+    /// new best. A challenge played under other targets than its current
+    /// ones (a save started before decision 145, which keeps its rules) is
+    /// not a result under ``rulesVersion`` and is not kept.
     @discardableResult
     public mutating func record(_ world: GameWorld, at date: Date = Date()) -> Bool {
         guard let state = world.scenario, case .completed(let day, let rating)? = state.outcome else { return false }
+        if let current = Challenge.named(state.scenario.id)?.scenario(seed: 0, in: world.bounds),
+           !Self.hasTheSameTargets(state.scenario, current) {
+            return false
+        }
         // The riders of the day it was completed, not of the day before
         // this autosave: the game plays on after the scenario ends.
         let riders = world.accounts.days.first { $0.day == day }?.fareTrips ?? 0
@@ -203,5 +209,19 @@ public struct ChallengeRecords: Sendable {
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? encoder.encode(best).write(to: file, options: .atomic)
         return true
+    }
+
+    /// Whether two of a challenge's scenarios ask the same: the same goals
+    /// and days, the points a ``Goal/connect(points:radius:)`` links aside
+    /// (they come from the map's seed).
+    static func hasTheSameTargets(_ lhs: Scenario, _ rhs: Scenario) -> Bool {
+        func targets(_ scenario: Scenario) -> [Goal] {
+            scenario.goals.map { goal in
+                if case .connect(_, let radius) = goal { return .connect(points: [], radius: radius) }
+                return goal
+            }
+        }
+        return targets(lhs) == targets(rhs)
+            && [lhs.goldDays, lhs.silverDays, lhs.deadlineDays] == [rhs.goldDays, rhs.silverDays, rhs.deadlineDays]
     }
 }

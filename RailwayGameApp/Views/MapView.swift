@@ -283,7 +283,7 @@ struct MapView: View {
                         // With the lines panel open the map is where the
                         // player picks stations for a line (the tutorial's
                         // line step), whichever tool is chosen.
-                        if session.isChoosingMapTile {
+                        if session.isChoosingMapTile, screen.panel != .lines {
                             // Decision 160: a tap chooses the tile to buy.
                             session.tapMapExpansion(at: point)
                         } else if session.tool == .network, screen.panel != .lines {
