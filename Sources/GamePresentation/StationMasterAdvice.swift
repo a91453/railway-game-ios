@@ -140,13 +140,14 @@ public enum StationMasterAdvice: Hashable, Sendable {
 
     /// Decision 153: the first passenger line, by ID, with a steam train
     /// shorter than ``shortSteamCars``, in a steam era whose company lost
-    /// money yesterday or is in the red. A freight line's train carries
-    /// goods, not 50 people a car (decision 155), so its cars are not why.
+    /// money yesterday (``lostMoney(on:)``) or is in the red. A freight
+    /// line's train carries goods, not 50 people a car (decision 155), so
+    /// its cars are not why.
     private static func shortSteamTrains(in world: GameWorld) -> StationMasterAdvice? {
         guard world.accounts.mode == .management, world.scenario?.scenario.trainTypes?.contains(.steam) == true else { return nil }
         let yesterday = world.clock.now.seconds / GameTime.secondsPerDay - 1
         let day = world.accounts.days.first { $0.day == yesterday }
-        let losing = world.economy.balance < .zero || day.map { $0.fareRevenue < $0.totalCost } ?? false
+        let losing = world.economy.balance < .zero || day.map(lostMoney(on:)) ?? false
         guard losing else { return nil }
         for line in world.lines where !line.isFreight {
             let short = line.assignedTrains.contains { id in
@@ -155,6 +156,15 @@ public enum StationMasterAdvice: Hashable, Sendable {
             if short { return .shortSteamTrains(line: line.id, name: line.name) }
         }
         return nil
+    }
+
+    /// Whether the company lost money on `day`: its operating profit, as
+    /// the finance report has it, below zero. The fares, the freight
+    /// (decision 155) and the buildings' rent (decision 94) against the
+    /// railway's running costs and the buildings' upkeep and tax: a company
+    /// whose freight or rent pays for its trains is not losing money.
+    static func lostMoney(on day: DayAccount) -> Bool {
+        day.fareRevenue + day.freightRevenue + day.propertyRevenue < day.totalCost + day.propertyCost
     }
 
     /// Decision 162: the first typhoon announced or blowing over a station
