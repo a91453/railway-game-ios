@@ -148,9 +148,11 @@ extension GameWorld {
         var world = newGame(eventSeed: eventSeed)
         // Decision 154: the challenges' targets were measured without
         // holidays (decision 145), so they keep none; decision 157: nor
-        // building materials.
+        // building materials; decision 169: nor dwells that lengthen in a
+        // crowd.
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
+        world.setDoorCrowding(false)
         do {
             try world.startScenario(challenge.scenario(seed: eventSeed, in: world.bounds))
         } catch {

@@ -222,9 +222,14 @@
 ///     which older saves have too. A build that reads only an earlier version
 ///     would drop the first and fail on the second, so it says the save is
 ///     newer than it instead.
+/// 44. Door crowding and the EMU3000 (decision 169): a world can have
+///     `"doorCrowding": true`, and a train the type `"EMU3000"`. A build that
+///     reads only an earlier version would drop the first, and every dwell
+///     would take as long however full the train, and fail on the second, so
+///     it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 43
+    public static let currentVersion = 44
 
     public let world: GameWorld
 
@@ -349,6 +354,8 @@ extension SavedGame: Codable {
         // 100,000 riders and $5 million a tile, as it did.
         // Version 42 to 43: a demand without `"hinterland"` has none, as
         // every one did.
+        // Version 43 to 44: a world without `"doorCrowding"` has it off, and
+        // every exchange takes as long as it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
