@@ -233,9 +233,11 @@ struct ContentView: View {
                     .padding(.bottom, strip)
                 }
                 // Decision 118: the station master beside the dock, not in
-                // the tutorial, whose card has the station master.
+                // the tutorial, whose card has the station master. Only once
+                // the dock is measured: before, it would stand on the Build
+                // button and then slide across the dock to its place.
                 .overlay(alignment: .bottomLeading) {
-                    if session.tutorial == nil {
+                    if session.tutorial == nil, dockSize != .zero {
                         let trailing = sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0
                         StationMasterCorner(
                             session: session,
