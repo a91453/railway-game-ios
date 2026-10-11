@@ -88,7 +88,7 @@ def night(fixture):
     steps = fixture["steps"]
     materials = any(s.get("command", {}).get("type") == "enableBuildingMaterials" for s in steps)
     stock = {i: LOCAL for i in range(1, 4)} if materials else None
-    used = 0
+    used, shorts = 0, []
     land_cells = next(s["command"]["cells"] for s in steps if s.get("command", {}).get("type") == "setLand")
     land = {}
     for index, c in enumerate(sorted(land_cells, key=lambda c: (c["row"], c["column"]))):
@@ -150,6 +150,7 @@ def night(fixture):
         if materials and stock[station] < tons(FLOORS[0]):
             short = True
         if short:
+            shorts.append(station)
             rate = max(1, rate // 4)
         grow = lambda amount: max(1, (amount * rate + 500) // 1000) if amount > 0 else 0
         # The station front as this station's turn comes (after the lower
@@ -186,7 +187,7 @@ def night(fixture):
     if materials:
         # The second midnight's 60 t each, after the growth.
         after = dict(materials=[{"station": i, "tons": stock[i] + LOCAL} for i in sorted(stock)],
-                     used=used, supplied=2 * 3 * LOCAL)
+                     used=used, supplied=2 * 3 * LOCAL, short=shorts)
     return before, land, after
 
 
@@ -228,7 +229,8 @@ def check(fixture):
             print("MISMATCH final", name, "fixture", got, "computed", want)
     if after is not None:
         freight = final.get("freight", {})
-        got = dict(materials=freight.get("materials"), used=freight.get("materialsUsed"), supplied=freight.get("materialsSupplied"))
+        got = dict(materials=freight.get("materials"), used=freight.get("materialsUsed"), supplied=freight.get("materialsSupplied"),
+                   short=freight.get("lastShort", []))
         if got != after:
             failures += 1
             print("MISMATCH final materials", "fixture", got, "computed", after)

@@ -166,6 +166,41 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Building materials (decisions 156–158): ``testALineBetweenTwoTowns``
+    /// with a freight line between the same two stations, on the same
+    /// track, both yards sending building materials (each town's industry
+    /// supplies the other's), one train of four cars. Measures whether one
+    /// freight line brings the growth back that the materials gate takes.
+    func testALineBetweenTwoTownsWithMaterials() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        let passenger = try XCTUnwrap(world.lines.first)
+        let train = try XCTUnwrap(world.train(id: try XCTUnwrap(passenger.assignedTrains.first)))
+        for station in world.stations.map(\.id) {
+            try world.buildFreightFacility(at: station)
+            try world.setFreightProduct(at: station, to: .materials)
+        }
+        // One track for both: without traffic control the trains pass
+        // through each other, as a second track would let them (this
+        // measures the materials, not the track).
+        try world.setTrafficControl(false)
+        // From the far end, so it does not stand on the passenger train.
+        let goods = try world.createLine(named: "Materials", stops: passenger.stops.reversed()).id
+        try world.setLineServiceWindow(goods, to: .allDay)
+        try world.setLineFreight(goods, to: true)
+        try world.setLineTrainsInService(goods, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let freight = try world.purchaseTrain(named: "Freight 1").id
+        try world.setTrainCars(freight, to: train.cars)
+        guard case .onEdge(let traversal, let offset)? = train.position else { throw XCTSkip("the passenger train is off the track") }
+        try world.placeTrain(freight, at: .onEdge(TrackTraversal(edge: traversal.edge, direction: .backward), offset: offset))
+        try world.setTrainContinuation(freight, along: [], stoppingAt: offset)
+        try world.setTrainMovementRate(freight, to: 512)
+        try world.assignTrain(freight, to: goods)
+        try play(&world, days: days, title: "A line between two towns, with a freight line of building materials")
+        print("materials received \(world.freight?.materialsReceived ?? 0) t, used \(world.freight?.materialsUsed ?? 0) t, short last night \(world.freight?.lastShort.map(\.rawValue) ?? [])")
+    }
+
     /// Freight (decision 155): the line of ``testALineBetweenTwoTowns`` (the
     /// first town to the second, 5.4 km, one train of four cars) as a
     /// freight line between two freight yards, with industry round the

@@ -4344,6 +4344,9 @@ struct FreightSummary: Codable, Equatable {
     var materialsSupplied: Int64?
     var materialsUsed: Int64?
     var materialsLost: Int64?
+    /// Schema 60 (decision 158): the stations short of materials at the
+    /// last midnight; left out when none was.
+    var lastShort: [Int]?
 
     init(_ state: FreightState) {
         facilities = state.facilities.map {
@@ -4361,6 +4364,7 @@ struct FreightSummary: Codable, Equatable {
         materialsSupplied = nonzero(state.materialsSupplied)
         materialsUsed = nonzero(state.materialsUsed)
         materialsLost = nonzero(state.materialsLost)
+        lastShort = state.lastShort.isEmpty ? nil : state.lastShort.map(\.rawValue)
         pendingRevenue = state.pendingRevenue.amount
         produced = state.produced
         delivered = state.delivered

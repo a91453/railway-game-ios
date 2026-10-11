@@ -844,4 +844,5 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 升級用新增樓層的樓地板 ÷ 200 m²／噸，無條件進位：D1→D2 31 噸、D2→D3 93 噸、D3→D4 169 噸；依選出的順序，第一個付不起的停下當晚的升級；新的一格 16 噸。
   - Alpha 升級 (0, 0) 到 D2（剩 29 噸），付不起 (0, 1)；Beta 升級 (0, 1)，付不起 (0, 4)；Gamma 升級 (0, 4)，付不起 (0, 5) 到 D4。
   - 三站都缺料，成長率都變成四分之一（12 → 3 千分比），各蓋一格新的（剩 13 噸）。之後那個午夜各再得 60 噸：73 噸，共用掉 141 噸、供應 360 噸。
+- 最終狀態的 `freight` 另有 `lastShort`（決策 158：當晚缺料的車站，沒有時省略）：`[1, 2, 3]`。
 - `tools/golden-checks/city_growth.py` 獨立算出每一個值（同一支程式也照舊驗 `city-buildings-raise.json`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

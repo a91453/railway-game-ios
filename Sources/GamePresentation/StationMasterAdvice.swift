@@ -39,6 +39,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 154: the holiday that ended yesterday carried `riders` a
     /// day, `percent` more than the days before it.
     case holidayOver(kind: HolidayKind, riders: Int64, percent: Int64)
+    /// The town round the station was short of building materials at the
+    /// last midnight (decision 158).
+    case materialsShort(station: StationID, name: String)
 
     /// The advice for `world`, or `nil` when all runs well. The worries
     /// first (debt, a full station, a line no one rides, a crowded
@@ -107,6 +110,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
         let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
         if let short = open.first(where: { $0.lastService > 0 && $0.lastService < LandDemand.upgradeService }) {
             return .underserved(station: short.station, name: name(short.station), percent: short.lastService / 10)
+        }
+        // Decision 158: then the first station short of building materials.
+        if let short = world.freight?.lastShort.first(where: { id in open.contains { $0.station == id } }) {
+            return .materialsShort(station: short, name: name(short))
         }
         // The first of the most grown, as `places` is by station.
         if let grown = open.filter({ $0.lastGrowth > 0 }).max(by: { $0.lastGrowth < $1.lastGrowth || ($0.lastGrowth == $1.lastGrowth && $0.station > $1.station) }) {
@@ -180,6 +187,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(kind.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): about \(percent)% more passengers on every line. Add trains or cars before it.",
                 "\(days) 天後是\(kind.title(in: language))，各線旅客約多 \(percent)%。先加開列車或加掛車廂吧。"
             )
+        case .materialsShort(_, let name):
+            language.text(
+                "The town round \(name) ran short of building materials last night and grew slowly. Have a freight yard send materials, and run a freight line to \(name)'s yard.",
+                "「\(name)」附近昨晚缺建材，城市長得慢。讓一座貨運場出建材，開一條貨運路線運到「\(name)」的貨運場。"
+            )
         case .holidayOver(let kind, let riders, let percent):
             percent >= 0
                 ? language.text(
@@ -197,7 +209,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved: true
+        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver: false
         }
     }
