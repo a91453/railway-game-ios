@@ -26,6 +26,10 @@ const TRA_STOCK = [
   { stripe: '#f2b400', body: '#c9ccce', cars: 10, length: 20, models: { cab: 'emu900-cab', car: 'emu900-car' } },     // EMU900 區間車
   { stripe: '#e8641c', body: '#eceeee', cars: 12, length: 20.5, models: { cab: 'emu3000-cab', car: 'emu3000-car' } }, // EMU3000 自強號
 ];
+// 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Its cab cars have a nose, so they are lofted
+// (shellGeometry) rather than boxes. A line is the high speed railway by name, the way the Tokyo stock matches.
+const HSR_STOCK = { stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 10.5, highSpeed: true };
+const HSR_NAME = /高鐵|高速鐵/;
 const SPEED = 15;        // m/s
 const GAP = 350;         // metres of pause before a train re-enters
 const MIN_PATH = 260;
@@ -34,20 +38,32 @@ const MIN_PATH = 260;
 // 16 px, the side of the car below them, the end of the car (cab window, lamps) in the lower left corner.
 // The second picture is what shines: saloon windows, lamps and the destination sign.
 const TEX_W = 2048, TEX_H = 512, SIDE_Y0 = 16, SIDE_Y1 = 256;
+const SWATCH_V = 1 - SIDE_Y0 / 2 / TEX_H;
+
+// One pane of glass: dark with a frame on the side picture, lit on the glow picture.
+function glass(g, e, x, y, w, h, lit = true) {
+  const k = g.createLinearGradient(0, y, 0, y + h);
+  k.addColorStop(0, '#2c3a47'); k.addColorStop(0.5, '#151b21'); k.addColorStop(1, '#0c1014');
+  g.fillStyle = '#5c6066'; g.fillRect(x - 3, y - 3, w + 6, h + 6);    // frame
+  g.fillStyle = k; g.fillRect(x, y, w, h);
+  if (lit) { e.fillStyle = '#fff0d0'; e.fillRect(x, y, w, h); }
+}
+
+// Everything that is not the side or the end of a car takes one plain swatch of the livery.
+function plainUv(geo, u) {
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, u, SWATCH_V);
+  return geo;
+}
+
 function carTextures(stock) {
+  if (stock.highSpeed) return highSpeedTextures(stock);
   const side = document.createElement('canvas'), glow = document.createElement('canvas');
   side.width = glow.width = TEX_W; side.height = glow.height = TEX_H;
   const g = side.getContext('2d'), e = glow.getContext('2d');
   e.fillStyle = '#000'; e.fillRect(0, 0, TEX_W, TEX_H);
   g.fillStyle = stock.body; g.fillRect(0, 0, TEX_W, TEX_H);
   g.fillStyle = '#26282b'; g.fillRect(TEX_W / 2, 0, TEX_W / 2, SIDE_Y0);  // underframe swatch
-  const glass = (x, y, w, h, lit = true) => {
-    const k = g.createLinearGradient(0, y, 0, y + h);
-    k.addColorStop(0, '#2c3a47'); k.addColorStop(0.5, '#151b21'); k.addColorStop(1, '#0c1014');
-    g.fillStyle = '#5c6066'; g.fillRect(x - 3, y - 3, w + 6, h + 6);    // frame
-    g.fillStyle = k; g.fillRect(x, y, w, h);
-    if (lit) { e.fillStyle = '#fff0d0'; e.fillRect(x, y, w, h); }
-  };
   // ---- the side
   const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0;
   const shade = g.createLinearGradient(0, Y, 0, Y + H);                  // a brushed body: lighter above, darker by the sill
@@ -60,10 +76,10 @@ function carTextures(stock) {
   const doors = 4, pitch = TEX_W / doors;
   for (let d = 0; d < doors; d++) {
     const x = pitch * (d + 0.5);
-    for (const [wx, ww] of [[x - pitch * 0.41, pitch * 0.25], [x + pitch * 0.16, pitch * 0.25]]) glass(wx, Y + 46, ww, 74); // windows between doors
+    for (const [wx, ww] of [[x - pitch * 0.41, pitch * 0.25], [x + pitch * 0.16, pitch * 0.25]]) glass(g, e, wx, Y + 46, ww, 74); // windows between doors
     g.fillStyle = stock.stripe; g.fillRect(x - 54, Y + 30, 108, H - 52);  // door leaves in the line colour
     g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x - 56, Y + 30, 2, H - 52); g.fillRect(x + 54, Y + 30, 2, H - 52);
-    glass(x - 42, Y + 48, 34, 82); glass(x + 8, Y + 48, 34, 82);
+    glass(g, e, x - 42, Y + 48, 34, 82); glass(g, e, x + 8, Y + 48, 34, 82);
     g.fillStyle = '#2a2c2f'; g.fillRect(x - 1, Y + 30, 3, H - 52);
   }
   // destination sign by the first door: amber on black, lit
@@ -74,7 +90,7 @@ function carTextures(stock) {
   g.fillStyle = stock.body; g.fillRect(0, EY, ES, ES);
   g.fillStyle = stock.stripe; g.fillRect(0, EY + ES * 0.52, ES, ES * 0.2);
   g.fillStyle = '#3a3d41'; g.fillRect(0, EY + ES * 0.9, ES, ES * 0.1);
-  glass(ES * 0.1, EY + ES * 0.1, ES * 0.8, ES * 0.36, false);
+  glass(g, e, ES * 0.1, EY + ES * 0.1, ES * 0.8, ES * 0.36, false);
   g.fillStyle = '#0a0a0a'; g.fillRect(ES * 0.3, EY + ES * 0.03, ES * 0.4, ES * 0.055);
   e.fillStyle = '#ffb030'; e.fillRect(ES * 0.33, EY + ES * 0.04, ES * 0.34, ES * 0.035);
   for (const sx of [0.16, 0.84]) {
@@ -90,8 +106,8 @@ function carTextures(stock) {
 // Car body (floor 1 m above the rail), underframe, bogies and the boxes on the roof. The long sides show the
 // side of the livery, the two ends its end; everything else takes a plain swatch.
 function carGeometry(length) {
-  const SWATCH = 1 - SIDE_Y0 / 2 / TEX_H;
-  const plain = (geo, u) => { const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, u, SWATCH); return geo; };
+  const SWATCH = SWATCH_V;
+  const plain = plainUv;
   const body = new THREE.BoxGeometry(2.9, 2.75, length - 0.6).translate(0, 1.0 + 1.375, 0);
   const uv = body.attributes.uv, v0 = 1 - SIDE_Y1 / TEX_H, v1 = 1 - SIDE_Y0 / TEX_H, end = (TEX_H - SIDE_Y1) / TEX_W;
   // BoxGeometry faces: +x, -x, +y, -y, +z, -z (4 vertices each)
@@ -114,6 +130,120 @@ function carGeometry(length) {
   for (const p of parts) { index.push(...Array.from(p.index.array, (i) => i + count)); count += p.attributes.position.count; }
   g.setIndex(index);
   return g;
+}
+
+// ---- Along the Line (decision 161): high-speed stock. A box cannot carry what makes a Shinkansen one, so these
+// cars are lofted instead: rings of a rounded rectangle swept along the car, the cab car's front rings narrowing
+// and dropping into the N700S "duck bill". Each ring point keeps how high it sits within its own ring, and that
+// is the livery's v, so a band painted straight across the picture follows the nose down and forward the way the
+// paint does on the real train. (Meshy's generated meshes were tried first and dropped: blobby at 391k triangles,
+// and diffusion texturing cannot put a stripe at a given height.)
+const RING = 16, NOSE_RINGS = 12;
+const HS_HALF_W = 1.45, HS_FLOOR = 0.62, HS_ROOF = 3.75;       // the body down to the hem of its skirt, in metres above the rail
+const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+
+function shellRing(z, t) {
+  const halfW = HS_HALF_W * (1 - 0.5 * ease((t - 0.35) / 0.65));
+  const top = HS_ROOF - 1.92 * ease(t), bottom = HS_FLOOR + 0.35 * ease((t - 0.5) / 0.5);  // the tip is a wide, low bill, not a point
+  const cy = (top + bottom) / 2, hy = (top - bottom) / 2, p = 2 / (7 - 4.6 * ease(t)); // a near-rectangle rounding into an oval
+  const pts = [];
+  for (let k = 0; k < RING; k++) {
+    const a = -Math.PI / 2 + (2 * Math.PI * k) / RING, c = Math.cos(a), s = Math.sin(a);
+    const y = cy + Math.sign(s) * Math.abs(s) ** p * hy;
+    pts.push([Math.sign(c) * Math.abs(c) ** p * halfW, y, (y - bottom) / (top - bottom)]);
+  }
+  return { z, pts };
+}
+
+// One high-speed car: the lofted shell (the nose only on a cab car), the underframe and the bogies. The cab car
+// takes the left half of the side picture, an intermediate car the right half.
+function shellGeometry(stock, cab) {
+  const L = stock.length - 0.6, half = L / 2, nose = cab ? stock.nose : 0;
+  const rings = [shellRing(-half, 0)];
+  if (nose) {
+    rings.push(shellRing(half - nose, 0));
+    for (let i = 1; i <= NOSE_RINGS; i++) rings.push(shellRing(half - nose + (nose * i) / NOSE_RINGS, i / NOSE_RINGS));
+  } else rings.push(shellRing(half, 0));
+  const u0 = cab ? 0 : 0.5, v0 = 1 - SIDE_Y1 / TEX_H, v1 = 1 - SIDE_Y0 / TEX_H;
+  const pos = [], uv = [], index = [];
+  for (const r of rings) {
+    const u = u0 + ((r.z + half) / L) * 0.5;
+    for (const [x, y, f] of r.pts) { pos.push(x, y, r.z); uv.push(u, v0 + f * (v1 - v0)); }
+  }
+  for (let i = 0; i + 1 < rings.length; i++) {
+    for (let k = 0; k < RING; k++) {
+      const a = i * RING + k, b = i * RING + ((k + 1) % RING);
+      index.push(a, b, a + RING, b, b + RING, a + RING);
+    }
+  }
+  const cap = (i, front) => {                                   // the flat rear end and the small face at the tip
+    const r = rings[i], centre = pos.length / 3;
+    let x = 0, y = 0;
+    for (const p of r.pts) { x += p[0] / RING; y += p[1] / RING; }
+    pos.push(x, y, r.z); uv.push(0.25, SWATCH_V);
+    for (let k = 0; k < RING; k++) {
+      const a = i * RING + k, b = i * RING + ((k + 1) % RING);
+      if (front) index.push(centre, a, b); else index.push(centre, b, a);
+    }
+  };
+  cap(0, false); cap(rings.length - 1, true);
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  shell.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  shell.setIndex(index);
+  shell.computeVertexNormals();
+  // the underframe and bogies live under the body only: the nose comes down to its own hem and has nothing beneath it
+  const back = -half + 1.2, forward = nose ? half - nose + 1.4 : half - 1.2;
+  const parts = [shell, plainUv(new THREE.BoxGeometry(2.2, 0.45, forward - back).translate(0, 0.42, (back + forward) / 2), 0.75)];
+  for (const z of [back + 2.6, forward - 2.6]) parts.push(plainUv(new THREE.BoxGeometry(2.3, 0.5, 3.2).translate(0, 0.25, z), 0.75));
+  return mergeGeometries(parts);
+}
+
+// The livery of a high-speed car, in the same picture as the other stock: the plain swatches in the top 16 px,
+// then the side — its left half a cab car (whose front is the nose), its right half an intermediate car. The
+// N700ST is white with a thin dark line over a wide orange band below the windows, plain white under the band
+// and a dark skirt, as the owner's photographs of set TS01 show.
+function highSpeedTextures(stock) {
+  const side = document.createElement('canvas'), glow = document.createElement('canvas');
+  side.width = glow.width = TEX_W; side.height = glow.height = TEX_H;
+  const g = side.getContext('2d'), e = glow.getContext('2d');
+  e.fillStyle = '#000'; e.fillRect(0, 0, TEX_W, TEX_H);
+  g.fillStyle = stock.body; g.fillRect(0, 0, TEX_W, TEX_H);
+  g.fillStyle = '#26282b'; g.fillRect(TEX_W / 2, 0, TEX_W / 2, SIDE_Y0);  // underframe swatch
+  const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0, HALF = TEX_W / 2, perM = HALF / stock.length;
+  const row = (f) => Y + (1 - f) * H;                           // f: how high up the car's section, 0 the floor, 1 the roof
+  const band = (f0, f1, colour) => { g.fillStyle = colour; g.fillRect(0, row(f1), TEX_W, row(f0) - row(f1)); };
+  const shade = g.createLinearGradient(0, Y, 0, Y + H);         // a gloss: lighter over the shoulder, darker by the skirt
+  shade.addColorStop(0, 'rgba(255,255,255,0.12)'); shade.addColorStop(0.5, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.16)');
+  g.fillStyle = shade; g.fillRect(0, Y, TEX_W, H);
+  band(0.409, 0.520, stock.stripe);                             // the orange band, white above and below it
+  band(0.520, 0.537, '#36393e');                                // the thin dark line over the orange
+  band(0, 0.201, '#9aa0a6');                                    // the grey hem of the skirt
+  // the side of one car: a door at each end, a row of saloon windows between them
+  const carSide = (x0, w) => {
+    const top = row(0.760), h = row(0.569) - top, door = 0.85 * perM, pitch = 1.04 * perM, pane = 0.62 * perM;
+    const doors = [x0 + 1.5 * perM, x0 + w - 1.5 * perM - door];
+    for (let x = doors[0] + door + pitch * 0.5; x + pane < doors[1] - pitch * 0.2; x += pitch) glass(g, e, x, top, pane, h);
+    for (const dx of doors) {
+      g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(dx, row(0.97), door, row(0.23) - row(0.97));
+      g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(dx, row(0.97), 1.5, row(0.23) - row(0.97)); g.fillRect(dx + door - 1.5, row(0.97), 1.5, row(0.23) - row(0.97));
+      glass(g, e, dx + door * 0.2, top, door * 0.6, h * 0.82);
+    }
+  };
+  const bodyW = HALF * (stock.length - stock.nose) / stock.length;
+  carSide(0, bodyW); carSide(HALF, HALF);
+  // the cab: the canopy wrapping the top of the nose where it starts to fall, the lamps on its shoulders
+  const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
+  oval(g, bodyW + 1.5 * perM, row(1), 3.6 * perM, (row(0.84) - row(1)) * 2, '#191d22');
+  oval(g, bodyW + 3.0 * perM, row(1), 2.2 * perM, (row(0.90) - row(1)) * 2, '#191d22');   // and on down the front
+  g.fillStyle = stock.body; g.fillRect(0, row(1), bodyW, row(0.74) - row(1));  // the canopy stops where the body does
+  for (const dx of [7.6, 8.5]) {                                               // the lamps, in one dark housing each
+    oval(g, bodyW + dx * perM, row(0.50), 1.0 * perM, row(0.465) - row(0.535), '#2a2e34');
+    oval(g, bodyW + dx * perM, row(0.50), 0.72 * perM, row(0.475) - row(0.525), '#fbf7ea');
+    oval(e, bodyW + dx * perM, row(0.50), 0.72 * perM, row(0.475) - row(0.525), '#fff4de');
+  }
+  const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  return { map: tex(side), emissiveMap: tex(glow) };
 }
 
 // Chains lines of the same name end to start into paths: [{ name, pts: [[x, y, z]], cum: [distance], length }].
@@ -194,17 +324,26 @@ export class Trains {
     const stocks = new Map(); // stock -> paths
     let tra = 0;
     for (const p of paths) {
-      const stock = taiwan && p.railway === 'rail' ? TRA_STOCK[tra++ % TRA_STOCK.length]
+      const stock = taiwan && p.railway === 'rail' ? (HSR_NAME.test(p.name) ? HSR_STOCK : TRA_STOCK[tra++ % TRA_STOCK.length])
         : STOCK.find((s) => p.name.includes(s.match)) ?? DEFAULT_STOCK;
       if (!stocks.has(stock)) stocks.set(stock, []);
       stocks.get(stock).push(p);
     }
     for (const [stock, list] of stocks) {
-      const material = new THREE.MeshStandardMaterial({ ...carTextures(stock), roughness: 0.32, metalness: 0.55, emissive: 0xffffff, emissiveIntensity: 0 });
-      const mesh = new THREE.InstancedMesh(carGeometry(stock.length), material, list.length * stock.cars);
-      mesh.castShadow = mesh.receiveShadow = true;
-      mesh.frustumCulled = false; // cars move across the whole area
-      this.group.add(mesh);
+      const paint = stock.highSpeed ? { roughness: 0.2, metalness: 0.08 } : { roughness: 0.32, metalness: 0.55 }; // painted gloss, not brushed steel
+      const material = new THREE.MeshStandardMaterial({ ...carTextures(stock), ...paint, emissive: 0xffffff, emissiveIntensity: 0 });
+      const instance = (geometry, count) => {
+        const im = new THREE.InstancedMesh(geometry, material, Math.max(1, count));
+        im.castShadow = im.receiveShadow = true;
+        im.frustumCulled = false; // cars move across the whole area
+        this.group.add(im);
+        return im;
+      };
+      // a stock whose cab cars have a nose is lofted, so its two ends and its middle are different geometries
+      const model = stock.nose
+        ? { cabs: instance(shellGeometry(stock, true), list.length * 2), cars: instance(shellGeometry(stock, false), list.length * (stock.cars - 2)) }
+        : null;
+      const mesh = model ? null : instance(carGeometry(stock.length), list.length * stock.cars);
       // the light of the leading car's headlamps on the track ahead (one pool per train; see the cars' in traffic.js)
       const pool = new THREE.BufferGeometry(), z0 = stock.length / 2 - 0.5, z1 = stock.length / 2 + 55;
       pool.setAttribute('position', new THREE.Float32BufferAttribute([-4.5, 0.12, z0, 4.5, 0.12, z0, 4.5, 0.12, z1, -4.5, 0.12, z0, 4.5, 0.12, z1, -4.5, 0.12, z1], 3));
@@ -213,7 +352,7 @@ export class Trains {
       beams.frustumCulled = false;
       beams.layers.set(LAMP_LAYER);
       this.lamps.add(beams);
-      this.sets.push({ stock, mesh, beams, material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
+      this.sets.push({ stock, mesh, model, beams, material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
     }
     this.dummy = new THREE.Object3D();
     this.a = new THREE.Vector3(); this.b = new THREE.Vector3();
@@ -273,7 +412,7 @@ export class Trains {
           put(c, dummy.matrix);
         }
       });
-      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
       if (model) model.cabs.instanceMatrix.needsUpdate = model.cars.instanceMatrix.needsUpdate = true;
       beams.instanceMatrix.needsUpdate = true;
     }
