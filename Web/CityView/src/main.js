@@ -27,7 +27,10 @@ installLampLight(); // (before any material is compiled)
 installSkyLight();
 
 const params = new URLSearchParams(location.search);
-const AREA = params.get('area') || 'tokyo'; // (the first of the city switch)
+// Along the Line: the website has Kaohsiung and Taichung only (tiles/areas.json); with no area, or another, the page
+// opens Kaohsiung, not Tokyo (decision 163)
+const AREAS = ['kaohsiung', 'taichung'];
+const AREA = AREAS.includes(params.get('area')) ? params.get('area') : AREAS[0];
 
 // Along the Line: the page speaks the app's language (the web view's is the app's) on its loading screen and credits.
 const ZH = /^zh/i.test(navigator.language);
