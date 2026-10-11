@@ -48,7 +48,7 @@ final class LiuMingchuanReportTests: XCTestCase {
         var trains: Int { ProcessInfo.processInfo.environment["LIU_TRAINS"].flatMap { Int($0) } ?? 1 }
     }
 
-    static let checkpoints: [Int64] = [30, 60, 120, 240, 360, 720, 1_080, 1_440]
+    static let checkpoints: [Int64] = [30, 60, 120, 240, 360, 720, 1_080, 1_440, 2_160]
 
     func testTheLiuMingchuanChallenge() throws {
         guard ProcessInfo.processInfo.environment["LIU_REPORT"] != nil else {

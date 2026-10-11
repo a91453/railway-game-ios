@@ -116,15 +116,17 @@ public enum LiuMingchuanChallenge {
     ]
 
     /// The targets were measured (decision 153, `LiuMingchuanReportTests`,
-    /// release build): the line to Twatutia and its station costs some
-    /// $5.7–5.9 million, the line on to Hsinchu $12.5–13.0 million with
+    /// release build): the line to Twatutia and its stations cost some
+    /// $5.4–5.7 million, the line on to Hsinchu $12.4–12.8 million with
     /// its train. A steam train of four cars loses $30,000 a day on the
-    /// line to Twatutia and never pays for the rest; one of eight cars
-    /// earns $10,000 a day and reaches Hsinchu around day 1,300 (bronze);
-    /// one of sixteen earns $108,000 and reaches it on day 109 (silver);
-    /// sixteen cars with the company's $5 million loan from the first day,
-    /// on day 57 (gold). The line on to Hsinchu loses money, as Liu's did:
-    /// with sixteen cars the two lines together about break even.
+    /// line to Twatutia, never pays for the rest and goes bankrupt on day
+    /// 150; one of eight cars earns $10,000 a day and reaches Hsinchu on
+    /// day 1,323 (bronze); one of sixteen earns $108,000 and reaches it on
+    /// day 106 (silver); sixteen cars with the company's $5 million loan
+    /// from the first day and fares by distance, on day 54 (gold). The
+    /// deadline is the six years from 1887 to 1893. The line on to Hsinchu
+    /// loses money, as Liu's did: with sixteen cars the two lines together
+    /// about break even.
     /// Riders a day to reach.
     static let ridersTarget: Int64 = 15_000
     /// What the governor's treasury starts the railway with: $8 million,
@@ -137,8 +139,28 @@ public enum LiuMingchuanChallenge {
     static let scenario = Scenario(
         id: "history.liuMingchuan",
         goals: milestones.map { .connect(points: $0.places.map(\.point), radius: Land.catchmentRadius) } + [.dailyRiders(ridersTarget)],
-        goldDays: 75, silverDays: year, deadlineDays: 4 * year, insolvencyDays: 60, trainTypes: [.steam]
+        goldDays: 75, silverDays: year, deadlineDays: 6 * year, insolvencyDays: 60, trainTypes: [.steam]
     )
+
+    /// What the station master says first (decision 153): what the
+    /// challenge asks, its era's catch, and where to begin.
+    static func welcomeText(in language: DisplayLanguage) -> String {
+        let years = scenario.deadlineDays / year
+        return language.text(
+            "1887: the governor wants Taiwan's first railway. Lay it from Keelung's harbour through Shiqiuling to Twatutia, then over the Tamsui to Hsinchu, within \(years) years. Steam trains carry only 50 a car, so make them long. Tap Build, then Network, to begin!",
+            "1887 年，巡撫要修台灣第一條鐵路：從基隆港穿過獅球嶺到大稻埕，再跨過淡水河鋪到新竹，\(years) 年內完成。蒸汽列車每節只坐 50 人，列車要夠長。點「建設」再選「路網」開始吧！"
+        )
+    }
+
+    /// What the station master says when milestone `index` is reached.
+    static func milestoneCheer(_ index: Int, in language: DisplayLanguage) -> String {
+        switch index {
+        case 0: language.text("Through Shiqiuling! Trains from Keelung reach Badu.", "獅球嶺打通了！基隆的列車開得到八堵了。")
+        case 1: language.text("Keelung to Twatutia is open, as in 1891!", "基隆到大稻埕通車了，就像 1891 年！")
+        case 2: language.text("Over the Tamsui! The way to Taoyuan is open.", "跨過淡水河了！往桃仔園的路通了。")
+        default: language.text("On to Hsinchu! Governor Liu's railway is done, as in 1893.", "通車到新竹了！劉巡撫的鐵路完成了，就像 1893 年。")
+        }
+    }
 
     /// The milestone goal `index` of the scenario names, if it is one.
     static func milestoneTitle(_ index: Int, in language: DisplayLanguage) -> String? {
@@ -157,6 +179,8 @@ public enum LiuMingchuanChallenge {
         world.setOutsideConnections(false)
         // Decision 154: its targets were measured without holidays.
         world.setDisruptions(nil)
+        // Decision 157: nor with building materials.
+        world.setBuildingMaterials(false)
         do {
             try world.startScenario(scenario)
         } catch {
