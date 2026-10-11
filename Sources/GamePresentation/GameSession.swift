@@ -1067,11 +1067,16 @@ public final class GameSession {
 
     /// Sets the type of the selected train's cars through
     /// `GameWorld.setTrainType(_:to:)` (`nil`: the standard car): only while
-    /// it is off the track.
+    /// it is off the track. A train still running as standard that is given a
+    /// type with its own way of running (the high-speed set, decision 168)
+    /// runs that way, in the same edit.
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.setTrainType(train.id, to: type)
+            if let performance = type?.performance, train.performance == .standard {
+                try world.setTrainPerformance(train.id, to: performance)
+            }
             let text = Train.typeText(type, in: language)
             return language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
         }

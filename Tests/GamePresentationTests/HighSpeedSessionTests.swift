@@ -82,6 +82,28 @@ final class HighSpeedSessionTests: XCTestCase {
         XCTAssertTrue(world.highSpeedLineHelp(in: .traditionalChinese).contains("每公里 $ 0.45"))
     }
 
+    func testAHighSpeedSetRunsAtHighSpeed() throws {
+        var world = try Self.world()
+        let train = try world.purchaseTrain(named: "N700").id
+        let session = GameSession(world: world)
+        session.selectTrain(train)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .standard)
+        session.setSelectedTrainType(.highSpeed)
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertEqual(session.world.train(id: train)?.type, .highSpeed)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .highSpeed, "PERF_HSR with the set")
+        session.undo()
+        XCTAssertNil(session.world.train(id: train)?.type)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .standard)
+
+        // A train the player gave a performance keeps it; another type changes nothing of it.
+        session.setSelectedTrainPerformance(.express)
+        session.setSelectedTrainType(.highSpeed)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .express)
+        session.setSelectedTrainType(.a)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .express)
+    }
+
     func testTheHighSpeedSetIsOfferedAndNamed() throws {
         let world = try Self.world()
         XCTAssertTrue(world.offeredTrainTypes.contains(.highSpeed))
