@@ -608,14 +608,30 @@ public final class GameSession {
 
     // MARK: - Disruptions
 
+    /// Whether this game's holidays and events stay as they are because it
+    /// has a scenario's goals (decision 154, later): a challenge is the
+    /// same for everyone (decision 145), so they cannot be turned on, only
+    /// off in an older save that has them on.
+    public var eventsAreFixed: Bool {
+        world.scenario != nil
+    }
+
     /// Sets how strongly disruptions bite, or turns them off with `nil`
     /// (decision 154), through `GameWorld.setDisruptions(_:)`. The country
     /// whose holidays the game keeps stays as it is; turned on again, it is
     /// the map's (``CountryLookup``), or Taiwan's on a blank map. Decision
     /// 162: the weather's seed stays too; turned on, it is the demand
-    /// events' (1 without them).
+    /// events' (1 without them). In a game with a scenario's goals they
+    /// can only be turned off (``eventsAreFixed``).
     public func setDisruptionLevel(_ level: DisruptionLevel?) {
         guard level != world.disruptions?.level else { return }
+        guard level == nil || !eventsAreFixed else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "A challenge's rules are fixed: it has no holidays, weather or other events.",
+                "挑戰的規則固定，不含連假、天氣與其他事件。"
+            ))
+            return
+        }
         let country = world.disruptions?.country ?? world.geoAnchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home
         let seed = world.disruptions?.seed ?? world.demandEvents?.seed ?? 1
         perform { world throws(GameError) in

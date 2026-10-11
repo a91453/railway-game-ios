@@ -130,6 +130,32 @@ final class WeatherTextTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice.fuelSpell(percent: -8, days: 9).text(in: .english), "Fuel and power cost 8% less for 9 days.")
     }
 
+    /// Decision 162, later: the economy panel shows the fuel price every day
+    /// of a spell, not only the station master's first day.
+    func testTheEconomyPanelShowsAFuelSpellWhileItLasts() throws {
+        func spell(seed: UInt32, dearer: Bool) throws -> FuelSpell {
+            let disruptions = try XCTUnwrap(Disruptions(level: .standard, country: "TW", seed: seed))
+            return try XCTUnwrap((Int64(0)..<7_200).lazy.compactMap(disruptions.fuelSpell(onDay:)).first { ($0.index > 1_000) == dearer })
+        }
+        let up = try spell(seed: 7, dearer: true)
+        let percent = (up.index - 1_000) / 10
+        let left = up.end - up.start
+        XCTAssertEqual(try world(seed: 7, day: up.start, managed: true).fuelText(in: .english), "Fuel and power +\(percent)%, \(left) more days")
+        XCTAssertEqual(try world(seed: 7, day: up.start, managed: true).fuelText(in: .traditionalChinese), "油電價格 +\(percent)%，還有 \(left) 天")
+        XCTAssertEqual(try world(seed: 7, day: up.end - 1, managed: true).fuelText(in: .english), "Fuel and power +\(percent)%, 1 more day")
+        XCTAssertNil(try world(seed: 7, day: up.end, managed: true).fuelText(in: .english), "over")
+        XCTAssertNil(try world(seed: 7, day: up.start - 1, managed: true).fuelText(in: .english), "not yet")
+        XCTAssertNil(try world(seed: 7, day: up.start).fuelText(in: .english), "free play pays no energy")
+        XCTAssertNil(try world(seed: nil, day: up.start, managed: true).fuelText(in: .english), "no seed, no spells")
+
+        let down = try spell(seed: 7, dearer: false)
+        let cheaper = (1_000 - down.index) / 10
+        XCTAssertEqual(
+            try world(seed: 7, day: down.start, managed: true).fuelText(in: .traditionalChinese),
+            "油電價格 −\(cheaper)%，還有 \(down.end - down.start) 天"
+        )
+    }
+
     @MainActor
     func testTheSettingsKeepTheSeedOrTakeTheEvents() throws {
         let session = GameSession(world: GameWorld.newGame(eventSeed: 42))

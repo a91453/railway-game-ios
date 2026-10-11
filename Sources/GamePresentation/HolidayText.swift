@@ -157,3 +157,21 @@ extension GameWorld {
         return lines
     }
 }
+
+extension GameWorld {
+    /// The fuel spell of today in the economy panel's words (decision 162,
+    /// later): "Fuel and power +19%, 6 more days", or −8% when cheaper;
+    /// `nil` outside a spell and in free play, which pays no energy. The
+    /// percent is the station master's (``StationMasterAdvice/fuelSpell(percent:days:)``).
+    public func fuelText(in language: DisplayLanguage) -> String? {
+        let today = clock.now.seconds / GameTime.secondsPerDay
+        guard accounts.mode == .management, let spell = fuelSpell(onDay: today) else { return nil }
+        let percent = (spell.index - 1_000) / 10
+        let signed = percent >= 0 ? "+\(percent)%" : "−\(-percent)%"
+        let left = spell.end - today
+        return language.text(
+            "Fuel and power \(signed), \(left) more day\(left == 1 ? "" : "s")",
+            "油電價格 \(signed)，還有 \(left) 天"
+        )
+    }
+}

@@ -65,7 +65,11 @@ struct SettingsView: View {
     /// events) bite, kept in the game's save, and whose holidays they are.
     private func eventsSection(_ session: GameSession) -> some View {
         let language = session.language
-        let levels: [DisruptionLevel?] = [nil, .light, .standard]
+        let current = session.world.disruptions?.level
+        // Decision 154, later: a challenge's rules are fixed, so there the
+        // menu only offers Off (to an older save that has them on).
+        let fixed = session.eventsAreFixed
+        let levels: [DisruptionLevel?] = fixed ? (current == nil ? [nil] : [nil, current]) : [nil, .light, .standard]
         return Section {
             Picker(selection: Binding(get: { session.world.disruptions?.level }, set: { session.setDisruptionLevel($0) })) {
                 ForEach(levels, id: \.self) { level in
@@ -78,6 +82,7 @@ struct SettingsView: View {
                     Image(systemName: "calendar")
                 }
             }
+            .disabled(fixed && current == nil)
             .accessibilityIdentifier("settings.disruptions")
             if let country = session.world.disruptions?.country {
                 LabeledContent {
@@ -89,10 +94,17 @@ struct SettingsView: View {
         } header: {
             Text(verbatim: language.text("This game", "這一局"))
         } footer: {
-            Text(verbatim: language.text(
-                "Public holidays raise demand on every line, announced a week ahead. Rain lowers it, a typhoon (announced days ahead) cuts it at the stations in its path, and fuel spells change the day's energy cost. Light is half as strong as Standard. Kept in this game's save.",
-                "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。設定存在這一局的存檔裡。"
-            ))
+            if fixed {
+                Text(verbatim: language.text(
+                    "A challenge's rules are fixed and the same for every player: no holidays, weather, typhoons or fuel spells. A game saved with them on can only turn them off, and its result is not kept.",
+                    "挑戰的規則固定，每位玩家都一樣：沒有連假、天氣、颱風與油電漲跌。之前存檔時已經打開的，只能關閉，成績也不會列入紀錄。"
+                ))
+            } else {
+                Text(verbatim: language.text(
+                    "Public holidays raise demand on every line, announced a week ahead. Rain lowers it, a typhoon (announced days ahead) cuts it at the stations in its path, and fuel spells change the day's energy cost. Light is half as strong as Standard. Kept in this game's save.",
+                    "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。設定存在這一局的存檔裡。"
+                ))
+            }
         }
     }
 
