@@ -163,6 +163,10 @@ final class LandBlocksTests: XCTestCase {
         XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [cell(25, 0)]), .invalidLand)
         XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [], water: [CellPosition(row: 25, column: 0)]), .invalidTerrain)
         XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 1, column: 0)], cells: [], steep: [CellPosition(row: 25, column: 0)]), .invalidTerrain)
+        // Nor west or north of it, which the first block's sums would
+        // otherwise take for its own (−1 ÷ 16 is 0).
+        XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 0, column: 0)], cells: [], water: [CellPosition(row: -1, column: 3)]), .invalidTerrain)
+        XCTAssertThrowsGameError(try world.expandLand([LandBlock(row: 0, column: 0)], cells: [], steep: [CellPosition(row: 2, column: -4)]), .invalidTerrain)
         XCTAssertEqual(world, before)
         try world.expandLand([LandBlock(row: 1, column: 0)], cells: [cell(19, 0)], water: [CellPosition(row: 18, column: 0)])
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)

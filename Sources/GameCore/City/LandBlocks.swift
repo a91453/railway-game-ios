@@ -146,9 +146,10 @@ extension GameWorld {
               !read.contains(where: new.contains)
         else { throw .invalidLand }
         // The last blocks of a world whose side is not whole blocks reach
-        // past it: what they hold must still lie in the world.
+        // past it: what they hold must still lie in the world. Nor west or
+        // north of it, which the first blocks' sums would take for theirs.
         let cellRows = Land.rows(in: bounds), cellColumns = Land.columns(in: bounds)
-        func inWorld(_ row: Int, _ column: Int) -> Bool { row < cellRows && column < cellColumns }
+        func inWorld(_ row: Int, _ column: Int) -> Bool { (0..<cellRows).contains(row) && (0..<cellColumns).contains(column) }
         let sorted = cells.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         guard sorted.allSatisfy({ $0.isValid && inWorld($0.row, $0.column) && new.contains(LandBlock(cellRow: $0.row, column: $0.column)) }),
               zip(sorted, sorted.dropFirst()).allSatisfy({ ($0.row, $0.column) < ($1.row, $1.column) })
