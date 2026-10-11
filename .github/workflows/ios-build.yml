@@ -17,8 +17,9 @@ name: iOS App Build
 #   tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's own files. Kept short and steady so
 #   a red result means something.
-# - The full lane: main every three hours (ios-full-lane.yml starts it when
-#   main's newest commit has had none), a nightly run and manual runs. All
+# - The full lane: main after a merge, at most every three hours
+#   (ios-full-lane.yml starts it unless main's newest commit has had one), a
+#   nightly run and manual runs. All
 #   the UI tests (map gestures, large text, landscape too), the iPad tutorial
 #   tests and, nightly and on request, the proof below that a missing toolbar
 #   button fails the smoke test. A red result here does not block a pull
@@ -64,8 +65,9 @@ on:
   # in bursts and a newer one cancelled the run in progress, so from
   # 2026-10-09 to 2026-10-11 52 of the 79 runs on main were cancelled and
   # only 27 finished, yet they took a third of all macOS runner time (1,826
-  # of 5,474 minutes). ios-full-lane.yml starts a full run of main every
-  # three hours instead, and only when main's newest commit has had none.
+  # of 5,474 minutes). A merge now starts ios-full-lane.yml instead, which
+  # starts a full run of main at most every three hours and only when main's
+  # newest commit has had none.
   # 18:17 UTC is 02:17 in Taipei. A scheduled run uses the default branch.
   schedule:
     - cron: "17 18 * * *"
@@ -80,7 +82,7 @@ permissions:
   contents: read
 
 # A newer push to a pull request cancels its older run. Every other run (the
-# full lane: started every three hours, nightly or by hand) has its own group
+# full lane: started after a merge, nightly or by hand) has its own group
 # and is never cancelled, so a manual run and the nightly one on the same
 # commit do not replace each other.
 concurrency:
@@ -110,7 +112,7 @@ jobs:
       # steps and tests) or this pipeline: the card's placement differs most
       # between an iPhone and an iPad. The screens the tutorial points at
       # (the map, the tool rail, the panels) are left to the full lane, which
-      # runs the iPad tests every three hours on main and finishes: from
+      # runs the iPad tests on main at most three hours apart: from
       # 2026-10-10 a change to any of them ran the iPad job too, 114 of the
       # 203 pull requests of the week to 2026-10-11 (26 touched the
       # tutorial's own files), while on the iPhone the gate still runs the
