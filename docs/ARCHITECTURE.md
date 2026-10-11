@@ -4515,6 +4515,31 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **golden、存檔、replay**：`line-runs.json` 的班次兩個方向都開全線，預期值都不變。測試：`LineRunsTests.testOnlyTheWaysAndStretchesTheRunsGoAreServed`（直接路徑與全網路徑各一次；修之前沒有回程班時，回程方向每天仍有 500／21 人次）。
 
+### 155. 貨運：貨運場、貨運路線與噸公里運費
+
+2026-10-11，作者要求依 `docs/research/FREIGHT_STUDY.md` 先做方案 C（最小貨運迴圈），一個 PR。號碼依工作登記 #231：決策 155、存檔版本 38、golden schema 58。
+
+規則（GameCore 的 `Freight/Freight.swift`；數字都是原生起始值，第 6 點量過）：
+1. **世界開關** `GameWorld.freight: FreightState?`：新世界與舊存檔是 `nil`（沒有貨運），`enableFreight()` 打開；只在打開時寫進存檔與 replay 狀態，所以沒有貨運的世界與以前逐位元相同。App 的新遊戲都打開（`NewGame`），打開了不花錢也不改任何數字，玩家蓋了貨運場才有貨運。
+2. **貨運場**（`buildFreightFacility(at:)`、`removeFreightFacility(at:)`）：車站可以加一座，$50,000（記為資本支出，不折舊，不開資產紀錄），最多存 2,000 噸，超過的貨溢出。拆掉貨運場，裡面的貨算損失，車上已裝的貨照樣送到。
+3. **生貨**：每個整點（包含遊戲第 0 小時）每座貨運場得到一小時的量：集貨半徑 1,600 公尺（`Freight.catchmentRadius`）內**離這座貨運場最近**（一樣近的，車站編號小的）的工業格，每個就業每天 0.5 噸；外地連絡站（決策 137）上的貨運場另有港口 200 噸一天。以千分之一噸累計（`accrual`，每 24,000 湊成一噸），整數、不用亂數。半徑 1,600 公尺不是乘客的 800 公尺：研究量到全台工業區只有 4.5% 在台鐵車站 1 公里內（`tools/freight-study/`）。
+4. **貨運路線**（`ServiceLine.isFreight`，`setLineFreight(_:to:)`，路線上沒有列車時才能改）：沒有人搭，客運的選路與計畫都略過它；它的列車照一般路線的派車、時刻與待避，容量是節數 × 40 噸（`Freight.tonsPerCar`）。
+5. **裝卸**（`exchangeCargo`，接在車門開完的 `exchangePassengers` 最前面）：停在有貨運場、沒封站的車站，先把車上**不是這站裝的**貨全部卸下並計運費，再（不是最後一站時）裝滿這站的存貨。貨在「下一個貨運場」卸，不做貨物配對、不做目的地。
+6. **運費**：噸 × 起訖站直線距離（公里）× $5（`centsPerTonKilometre` 500），每筆四捨五入到整元，只在經營模式計；每小時整點寫一列 `hourlyFreight`（`LedgerItem.freightRevenue`），在結算那小時的帳之前，所以午夜的稅算得到。自由模式貨照跑但不計錢。營運、維修、能源、人事照一般列車的公式，不另立。`BalanceReportTests.testAFreightLine` 量：新遊戲的第一個鎮到第二個鎮 5.4 公里、一列四節（160 噸），客運線建造 $1,228,400、營業利益每天 $213,875、5 天回本；貨運線（兩座貨運場多 $100,000）依貨源 10／60／150 格工業，第 3 天的貨運收入每天 $162,720／$182,445／$216,732，營業利益 $72,035／$91,760／$126,047，**18／14／10 天回本**：比客運慢，但貨多了可以一直加列車，客運會被需求卡住。一個滿載的客運車廂一趟 $1,430（286 座 × $5），一節貨車 40 噸 5.4 公里 $1,080，但只有單程載貨。
+7. **守恆**：做出的每一噸都是待運、車上、送達、溢出（貨運場滿了）或損失（貨運場、起點車站或列車沒了；列車離開貨運路線，下個整點車上的貨算損失）；`FreightState.isConserved`，存檔讀入時檢查。
+
+存檔版本 38：世界可以有 `"freight"`、路線可以有 `"freight": true`、帳本有 `hourlyFreight` 列與 `"freightRevenue"` 合計。舊版本的 build 會丟掉它們，所以它說存檔比自己新。為什麼貨運走路線的旗標而不是新的車種：`TrainType` 是參考庫 `TRAIN_TYPES` 的九種客車；`Train` 不動，貨運的狀態（車上的貨）放在 `FreightState`，不碰 `Train` 的編碼。為什麼運費不放進 `HourlyAccrual`：它是合成的 `Codable`，多一個欄位所有存檔都要有那個鍵。
+
+**參考**：參考庫沒有貨運規則（gap，見研究文件第 2 節）；OpenTTD（GPL-2.0）、Simutrans（Artistic 1.0）與 A 列車只讀概念，沒有複製任何程式碼或資料。
+
+**golden、存檔、replay**：新的 `freight.json`（schema 58）：貨運指令在沒打開時被拒、車站不存在被拒、同一站第二座貨運場被拒；三小時後 100 個就業做出 6 噸，全在 Alpha。新存檔 `SaveFixtures/v38-freight.json`（列車載著 40 噸、帳本有 `hourlyFreight`）。既有 golden、存檔與 replay fixture 都沒有改（`ReplayState` 只在貨運打開時多一行）。`GoldenScenarioTests` 與 `ReplayFixtureTests` 照舊全過。測試：`FreightTests`、`FreightSessionTests`。
+
+**限制**：
+- 貨運場不折舊（不是資產紀錄）；
+- 貨不配對目的地，也沒有易腐度、貨車種類、多種貨物；
+- 工業格只有就業，沒有產能；空白地圖的工業只來自城鎮與玩家劃的工業區；
+- 還沒有資材與城市成長的連結（方案 A 的第二步）、地圖上的貨運圖層。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

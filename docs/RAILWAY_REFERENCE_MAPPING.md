@@ -820,7 +820,7 @@ V 實際放行 → T、U（保證不互穿）
 | 同上 `binary_reference/relevant_symbols_and_settings.txt` | — | 沒有城鎮成長的數值 |
 | `Ci/` 的人口格與 poptravel（`panel-poptravel`） | GamePresentation 的 `PopulationGrid`、`PopTravel`（既有） | 只決定新站的初始運量，不成長 |
 | 第 1 項的全網路徑（決策 65） | 可達車站數 = 昨天的計畫裡該站的迄點數 | 原生 |
-| 產業 | — | gap：沒有貨物模型 |
+| 產業 | 決策 155 的貨運（`Freight/Freight.swift`） | gap → 原生：工業格的就業出貨，貨運場、貨運路線與噸公里運費（`docs/research/FREIGHT_STUDY.md` 第 2 節：參考庫沒有貨運規則） |
 
 ## 更名與路線顏色（決策 71）
 
