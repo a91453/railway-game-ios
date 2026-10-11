@@ -27,7 +27,7 @@
 # selection (everything but the campaigns), were removed on 2026-10-05.
 #
 # The campaign shards run every test of the classes they name and nothing else;
-# `rest` skips exactly those classes. Together they are the whole package
+# `rest` runs every other class. Together they are the whole package
 # once, which `run` proves before it starts (the selections partition the
 # `swift test list` output) and after it finishes (the tests XCTest reports
 # starting are exactly the selection). Moving a class to another shard is an
@@ -35,7 +35,8 @@
 #
 # `run` needs only bash and coreutils besides swift. SWIFT_EXTRA_ARGS is added
 # to every swift invocation (for example --scratch-path, locally);
-# SWIFT_TEST_LIST_FILE replaces `swift test list` for offline use.
+# SWIFT_TEST_LIST_FILE replaces `swift test list` for offline use;
+# SWIFT_SHARD_BATCH_CHARS bounds one `swift test` run (batch_classes).
 set -euo pipefail
 
 # The balance follows the measured class times; the `run` summary prints the
@@ -213,14 +214,29 @@ select_ids() {
   esac
 }
 
-# The arguments that make `swift test` run that selection (SELECT_ARGS).
-selection_args() {
-  SELECT_ARGS=()
-  case "$1" in
-    all) ;;
-    rest) SELECT_ARGS=(--skip "$(pattern_for "$(all_campaign_classes | tr '\n' ' ')")") ;;
-    *) SELECT_ARGS=(--filter "$(pattern_for "$(classes_of "$1")")") ;;
-  esac
+# The classes of shard $1's selection from the list file $2, in batches, one
+# line of class names each. SwiftPM hands a test runner the IDs a `swift test`
+# selects as one comma-separated argument, and Linux refuses an argument
+# longer than 128 KiB ("Argument list too long"): `rest` went past it at 1,656
+# tests. So a shard runs one `swift test --filter` per batch, each selecting
+# at most SWIFT_SHARD_BATCH_CHARS characters of test IDs (a class bigger than
+# that is a batch of its own).
+batch_classes() {
+  select_ids "$1" "$2" | awk -v limit="${SWIFT_SHARD_BATCH_CHARS:-60000}" '
+    {
+      split($0, id, "/"); split(id[1], name, ".")
+      if (!(name[2] in size)) order[++count] = name[2]
+      size[name[2]] += length($0) + 1
+    }
+    END {
+      for (i = 1; i <= count; i++) {
+        class = order[i]
+        if (used > 0 && used + size[class] > limit) { print line; line = ""; used = 0 }
+        line = (line == "" ? class : line " " class)
+        used += size[class]
+      }
+      if (line != "") print line
+    }'
 }
 
 # Module.Class/method  ->  Class.method, the name XCTest prints while running.
@@ -281,11 +297,18 @@ run_shard() {
   [[ "$expected_count" -gt 0 ]] || die "Shard $shard selects no tests."
   echo "Shard $shard: $expected_count of $total tests in the package."
 
-  selection_args "$shard"
-  local started rc=0
+  local batches="$WORK/batches.txt" classes batch_rc started rc=0
+  batch_classes "$shard" "$list" >"$batches"
+  echo "Shard $shard: $(wc -l <"$batches" | tr -d ' ') swift test runs."
+  : >"$log"
   started="$(date +%s)"
-  # shellcheck disable=SC2086
-  swift test --skip-build ${SWIFT_EXTRA_ARGS:-} ${SELECT_ARGS[@]+"${SELECT_ARGS[@]}"} 2>&1 | tee "$log" || rc=${PIPESTATUS[0]}
+  # A failed batch does not stop the others; the shard fails after them.
+  while IFS= read -r -u 3 classes; do
+    batch_rc=0
+    # shellcheck disable=SC2086
+    swift test --skip-build ${SWIFT_EXTRA_ARGS:-} --filter "$(pattern_for "$classes")" 2>&1 | tee -a "$log" || batch_rc=${PIPESTATUS[0]}
+    [[ "$batch_rc" -eq 0 ]] || rc=$batch_rc
+  done 3<"$batches"
   local seconds=$(($(date +%s) - started))
 
   local executed="$WORK/executed.txt"
