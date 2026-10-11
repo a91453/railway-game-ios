@@ -136,6 +136,16 @@ public struct TrainPerformance: Hashable, Sendable {
         guard let coast else { return true }
         return range.contains(coast.deceleration) && coast.deceleration < braking && (0..<1000).contains(coast.speedRatio)
     }
+
+    /// Whether this accelerates, brakes and coasts as ``highSpeed`` (`PERF_HSR`)
+    /// does, whatever its top speed (a design speed changes only that): what
+    /// makes a line a high-speed line (decision 168, ``ServiceLine/isHighSpeed``).
+    public var isHighSpeed: Bool {
+        TrainPerformance(
+            acceleration: acceleration, braking: braking, topSpeed: Self.highSpeed.topSpeed,
+            alternativeAcceleration: alternativeAcceleration, alternativeBraking: alternativeBraking, coast: coast
+        ) == Self.highSpeed
+    }
 }
 
 extension TrainPerformance.Coast: Codable {}

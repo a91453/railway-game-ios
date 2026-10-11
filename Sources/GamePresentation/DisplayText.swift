@@ -444,10 +444,6 @@ extension GameError {
             language.text("That tile is not on the map.", "那一塊不在地圖上。")
         case .invalidRidersStep:
             language.text("The riders each tile needs must be at least 1.", "每塊要的每日運量至少是 1 人次。")
-        case .lineIsFreight(let id):
-            language.text("Line #\(id.rawValue) is a freight line, which cannot be a high-speed line.", "路線 #\(id.rawValue) 是貨運線，不能同時是高鐵。")
-        case .lineIsHighSpeed(let id):
-            language.text("Line #\(id.rawValue) is a high-speed line, which cannot be a freight line.", "路線 #\(id.rawValue) 是高鐵，不能同時是貨運線。")
         case .mapTileOwned:
             language.text("You own that tile already.", "這一塊已經是你的了。")
         case .mapTileNotAdjacent:

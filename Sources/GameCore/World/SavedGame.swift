@@ -216,12 +216,12 @@
 ///     A build that reads only an earlier version would drop it and ask for
 ///     100,000 riders and $5 million, which a tile of a country town could
 ///     never carry or pay, so it says the save is newer than it instead.
-/// 43. High-speed rail (decision 168): a line can have `"highSpeed": true`,
-///     a station's `"demand"` a `"hinterland"` (the people round a
-///     high-speed station), and a train the type `"HSR"`. A build that
-///     reads only an earlier version would drop the first two, and charge
-///     the metro's fare on a line meant for the high-speed one, and fail on
-///     the third, so it says the save is newer than it instead.
+/// 43. High-speed rail (decision 168): a station's `"demand"` can have a
+///     `"hinterland"` (the people round a high-speed station), and a train
+///     the type `"HSR"`. A line is a high-speed line by its `"performance"`,
+///     which older saves have too. A build that reads only an earlier version
+///     would drop the first and fail on the second, so it says the save is
+///     newer than it instead.
 /// 44. Door crowding and the EMU3000 (decision 169): a world can have
 ///     `"doorCrowding": true`, and a train the type `"EMU3000"`. A build that
 ///     reads only an earlier version would drop the first, and every dwell
@@ -352,9 +352,8 @@ extension SavedGame: Codable {
         // alone, as before.
         // Version 41 to 42: a map bought without `"ridersStep"` asks
         // 100,000 riders and $5 million a tile, as it did.
-        // Version 42 to 43: a line without `"highSpeed"` is an ordinary
-        // one, and a demand without `"hinterland"` has none, as every one
-        // did.
+        // Version 42 to 43: a demand without `"hinterland"` has none, as
+        // every one did.
         // Version 43 to 44: a world without `"doorCrowding"` has it off, and
         // every exchange takes as long as it did.
         // Later versions add their steps here.

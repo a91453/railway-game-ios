@@ -38,6 +38,13 @@ struct StationLineChips: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
+                // Decision 168: a high-speed line's tag carries a bolt.
+                if line.isHighSpeed {
+                    Image(systemName: "bolt.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, 10)
             .frame(minHeight: 32)
@@ -46,7 +53,7 @@ struct StationLineChips: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: line.name))
+        .accessibilityLabel(Text(verbatim: line.isHighSpeed ? session.language.text("\(line.name), high-speed", "\(line.name)，高鐵") : line.name))
         .accessibilityHint(Text(verbatim: session.language.text("Opens the line.", "打開這條路線。")))
     }
 

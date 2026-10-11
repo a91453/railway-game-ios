@@ -257,9 +257,4 @@ public enum GameError: Error, Hashable, Sendable {
     /// The ground lies in a tile of the map the company does not own
     /// (decision 160): it buys the tile first.
     case mapTileNotOwned(MapTile)
-    /// A freight line cannot be a high-speed line (decision 168): freight
-    /// is carried by the ton, high-speed rail by the passenger.
-    case lineIsFreight(LineID)
-    /// A high-speed line cannot be a freight line (decision 168).
-    case lineIsHighSpeed(LineID)
 }

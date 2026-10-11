@@ -88,7 +88,7 @@ enum ReplayState {
             line("  stopped at \(world.stationsStoppedAt(by: train.id).map(\.rawValue))")
         }
         for entry in world.lines {
-            line("line \(entry.id.rawValue) \(entry.name) stops \(entry.stops.map(\.rawValue)) ring \(entry.isRing) window \(json(entry.window))\(entry.isFreight ? " freight" : "")\(entry.isHighSpeed ? " highspeed" : "")")
+            line("line \(entry.id.rawValue) \(entry.name) stops \(entry.stops.map(\.rawValue)) ring \(entry.isRing) window \(json(entry.window))\(entry.isFreight ? " freight" : "")")
             line("  performance \(json(entry.performance)) trains \(json(entry.trainsInService)) targets \(json(entry.targetHeadways))")
             line("  roster \(entry.trains.map(\.rawValue)) last \(time(entry.lastDispatch)) outer \(time(entry.outerLastDispatch))")
             if !entry.routePreferences.isEmpty { line(" routes \(json(entry.routePreferences))") }
