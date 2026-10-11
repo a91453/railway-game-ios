@@ -184,6 +184,41 @@ final class HeightGridTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.network.edges.count, 1)
     }
+    /// A platform track beside a line may run in a block the line's own
+    /// track never reached: its ground is read in first, as for any track,
+    /// or GameCore refuses the new nodes beside the line.
+    func testAPlatformTrackReadsTheGroundBesideTheLine() throws {
+        // Out in the strait the ground is level at 0 m, as a platform needs.
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 24.0, longitudeDegrees: 118.6))
+        var world = GameWorld.newGame(anchor: anchor)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .english)
+        session.heights = Self.grid
+        session.selectTool(.network)
+        let block = Land.blockLength
+        // 2.5 m south of the edge between block rows 4 and 5: the line's
+        // ground is row 5's; 5 m north of it is row 4.
+        let y = 5 * block + 160
+        let west = 4 * block + block / 2
+        session.tapNetwork(at: PlanPoint(x: west, y: y), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: west + 30_720, y: y), reach: 16)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: west + 15_360, y: y + 256), reach: 512)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let station = try XCTUnwrap(session.world.stations.first)
+        let platform = try XCTUnwrap(session.world.trackPlatforms(of: station.id).first)
+        XCTAssertEqual(session.world.missingGroundBlocks(under: [PlanPoint(x: west + 15_360, y: y - 320)]), [LandBlock(row: 4, column: 4)],
+                       "the north side's block is not read with the line")
+
+        XCTAssertNil(session.platformTrackPreview(beside: platform, layout: .side, side: .left).problem)
+        session.addPlatformTrack(beside: platform, layout: .side, side: .left)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.trackPlatforms(of: station.id).count, 2)
+    }
+
     /// The heights file can arrive after a saved game with ground opened:
     /// the preview worked out without it is not kept once it is there.
     func testThePreviewIsWorkedOutAgainWhenTheHeightsArrive() throws {

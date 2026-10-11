@@ -270,6 +270,24 @@ extension GameWorld {
     }
 }
 
+extension NetworkBuilding {
+    /// Where GameCore surveys the ground under an edge of `geometry`: the
+    /// middle of each pricing length (16 m). A straight edge's points are
+    /// only its ends, so a block it crosses between them would otherwise
+    /// stay unread.
+    static func surveyedPoints(of geometry: TrackGeometry) -> [PlanPoint] {
+        let priced = ConstructionCosts.trackPricingLength
+        var points: [PlanPoint] = []
+        var start: Int64 = 0
+        while start < geometry.length {
+            let end = min(geometry.length, start + priced)
+            points.append(geometry.location(at: (start + end) / 2).position.plan)
+            start = end
+        }
+        return points
+    }
+}
+
 extension GameWorld {
     /// Reads in the ground of the blocks under `points` that a world with
     /// ground has not read (decision 124), from the app's heights file:
