@@ -132,8 +132,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "Track alignments of the TRA and some metro and forest railway sections, station and platform positions, single and double track, places such as shops, offices, schools and sights that tell the game what kind of area a new station serves, and the industrial land, parks and farmland of real-world maps, and their coastline, rivers and lakes, where towns do not grow.",
-                            "提供台鐵與部分捷運、林鐵路段的軌道走向、車站與月台位置、單雙線資訊，商店、辦公室、學校、景點等地點（用來判斷新車站周邊是什麼樣的地方），以及實景地圖上的工業區、公園與農地，和海岸線、河川與湖泊（城鎮不會長到水上）。"
+                            "The track alignment of every real railway line (redrawn on OpenStreetMap's tracks; TDX's shape kept only where OpenStreetMap has no track in use, as at Duolin on the Alishan line), station and platform positions, single and double track, places such as shops, offices, schools and sights that tell the game what kind of area a new station serves, and the industrial land, parks and farmland of real-world maps, and their coastline, rivers and lakes, where towns do not grow.",
+                            "提供每條真實鐵道的軌道走向（照 OpenStreetMap 的軌道重畫；只有 OpenStreetMap 沒有現行軌道的地方，例如林鐵的多林一帶，保留 TDX 的線形）、車站與月台位置、單雙線資訊，商店、辦公室、學校、景點等地點（用來判斷新車站周邊是什麼樣的地方），以及實景地圖上的工業區、公園與農地，和海岸線、河川與湖泊（城鎮不會長到水上）。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link
