@@ -244,6 +244,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// The tile lies outside the world, or what the company built lies
     /// outside the tile it would own (decision 160).
     case invalidMapTile
+    /// The riders each tile bought needs are below 1 or above
+    /// ``MapExpansion/maximumRidersStep`` (decision 167).
+    case invalidRidersStep
     /// The company owns the tile already (decision 160).
     case mapTileOwned
     /// The tile is not beside one the company owns (decision 160).

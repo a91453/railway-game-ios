@@ -1,0 +1,109 @@
+{
+  "saveVersion" : 42,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 125000000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "mapTile",
+          "owner" : 13
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 125002000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 5242880,
+      "width" : 5242880
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 1874998000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "mapExpansion" : {
+      "bestDayRiders" : 26000,
+      "owned" : [
+        [
+          2,
+          2
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "ridersStep" : 25000
+    },
+    "nextStationID" : 3,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Middle",
+        "point" : {
+          "x" : 2621440,
+          "y" : 2621440
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "East",
+        "point" : {
+          "x" : 3670016,
+          "y" : 2621440
+        }
+      }
+    ],
+    "trains" : [
+
+    ]
+  }
+}

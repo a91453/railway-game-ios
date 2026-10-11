@@ -112,8 +112,19 @@ public final class GameLauncher {
 
     /// Starts a new game: on a blank map, bought tile by tile as the
     /// railway grows (decision 160), or with `anchor` on a real-world map
-    /// with its middle there (Stage E2).
+    /// with its middle there (Stage E2). A place of Taiwan, with the app's
+    /// people, is the island bought tile by tile from the 16 km round it
+    /// (decision 167, ``RealWorldExpansion``); any other place is a 16 km
+    /// map.
     public func startNewGame(at anchor: GeoAnchor? = nil) {
+        if let anchor, let population, let expansion = RealWorldExpansion(around: anchor) {
+            let step = expansion.ridersStep(population: population, places: places, water: water)
+            begin(
+                grounded(.newRealWorldExpansionGame(expansion, ridersStep: step, eventSeed: .random(in: .min ... .max))),
+                keepingAutosave: true
+            )
+            return
+        }
         let world = GameWorld.newGame(
             anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
             steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil

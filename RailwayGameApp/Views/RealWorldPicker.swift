@@ -8,7 +8,9 @@ import SwiftUI
 /// its "any city" from a point on the map): a place from the references'
 /// list or from a search moves the map there, the player moves it to taste,
 /// and the game's 16 km map starts with its middle at the middle of the
-/// view. Or the player starts on the whole of Taiwan (decision 88).
+/// view. Or the player starts on the whole of Taiwan (decision 88). A place
+/// of Taiwan starts with that square only, and buys the land round it as
+/// the railway grows (decision 167).
 ///
 /// Only that middle is kept, as the world's anchor. A search's results are
 /// Apple's map data, shown with the map and dropped (Attachment 6 §2.4 and
@@ -95,7 +97,7 @@ struct RealWorldPicker: View {
             // The 16 km square and its centre mark in the game map's
             // colours (decision 84): a station's warm fill with its navy
             // edge, which Apple's light map would lose a warm line on.
-            MapPolygon(coordinates: Self.square(around: middle))
+            MapPolygon(coordinates: square)
                 .foregroundStyle(Palette.station.opacity(0.15))
                 .stroke(Palette.ink, lineWidth: 2)
         }
@@ -153,9 +155,19 @@ struct RealWorldPicker: View {
                 }
             }
             Section {
-                Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
+                Group {
+                    if expansion != nil {
+                        // Decision 167: a place of Taiwan is bought tile by tile.
+                        Text(verbatim: launcher.language.text(
+                            "The square is the land you start with, 16 km a side. Move the map to choose where its middle is, then tap Build Here. Buy the land around it as your railway grows, out to the whole island.",
+                            "方框是你一開始擁有的土地，每邊 16 公里。移動地圖選擇它的中心，再按「在這裡建造」。鐵路成長後，再一塊一塊買下周圍的土地，一直買到整座島。"
+                        ))
+                    } else {
+                        Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
+                    }
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
             }
             ForEach(RealWorldPlace.Region.allCases, id: \.self) { region in
                 Section {
@@ -257,6 +269,26 @@ struct RealWorldPicker: View {
     /// The anchor at the middle of the view.
     private var anchor: GeoAnchor? {
         GeoAnchor(latitudeDegrees: middle.latitude, longitudeDegrees: middle.longitude)
+    }
+
+    /// The map bought tile by tile that a game here would be (decision 167),
+    /// or `nil` for a place outside Taiwan, whose map is the 16 km square.
+    private var expansion: RealWorldExpansion? {
+        anchor.flatMap(RealWorldExpansion.init(around:))
+    }
+
+    /// The corners of the land a game here starts with: the tile round the
+    /// middle of the view where Taiwan's map is bought tile by tile, the
+    /// 16 km square otherwise.
+    private var square: [CLLocationCoordinate2D] {
+        guard let expansion else { return Self.square(around: middle) }
+        let frame = expansion.frame
+        let length = Double(MapExpansion.tileLength)
+        let west = Double(expansion.start.column) * length, north = Double(expansion.start.row) * length
+        return [(west, north), (west + length, north), (west + length, north + length), (west, north + length)].map { corner in
+            let place = frame.coordinate(worldX: corner.0, worldY: corner.1)
+            return CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
+        }
     }
 
     private func start() {
