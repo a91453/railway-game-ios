@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 58,
+  "description": "Freight (schema 58, decision 155), 15 steps. Alpha (1536, 512) and Gamma (5632, 512) in a world 8192 by 4096 units, a managed company, 100 industrial jobs in the cell at row 0, column 0 (middle (2048, 2048), nearer Alpha), the line Goods between them. Freight commands are refused before enableFreight, an unknown station is refused, a second yard at Alpha is refused. Each yard costs 5,000,000 cents. Three hours at normal speed: 100 jobs make 100 x 500 = 50,000 thousandths of a ton a day, and each hour begins by making 50,000 thousandths, so hours 0, 1 and 2 make 2 t each (150,000 thousandths: 6 t and 6,000 over): 6 t made, all waiting at Alpha, none at Gamma. Balance 100,000,000 - 2 x 1,000 (stations) - 2 x 5,000,000 (yards) - 2 x 3,600 (operating cost of the two hours settled, 18 dollars a station) = 89,990,800.",
+  "initialState": {
+    "worldWidth": 8192,
+    "worldHeight": 4096,
+    "balance": 100000000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Alpha",
+        "point": {
+          "x": 1536,
+          "y": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Gamma",
+        "point": {
+          "x": 5632,
+          "y": 512
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setLand",
+        "cells": [
+          {
+            "row": 0,
+            "column": 0,
+            "use": "industrial",
+            "residents": 0,
+            "jobs": 100
+          }
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setEconomyMode",
+        "mode": "management"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Goods",
+        "stops": [
+          1,
+          2
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildFreightFacility",
+        "station": 1
+      },
+      "expect": {
+        "result": "freightNotEnabled"
+      }
+    },
+    {
+      "command": {
+        "type": "setLineFreight",
+        "line": 1,
+        "enabled": true
+      },
+      "expect": {
+        "result": "freightNotEnabled"
+      }
+    },
+    {
+      "command": {
+        "type": "enableFreight"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildFreightFacility",
+        "station": 9
+      },
+      "expect": {
+        "result": "unknownStation",
+        "station": 9
+      }
+    },
+    {
+      "command": {
+        "type": "buildFreightFacility",
+        "station": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildFreightFacility",
+        "station": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildFreightFacility",
+        "station": 1
+      },
+      "expect": {
+        "result": "freightFacilityExists",
+        "station": 1
+      }
+    },
+    {
+      "command": {
+        "type": "setLineFreight",
+        "line": 1,
+        "enabled": true
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setSpeed",
+        "speed": "normal"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "advance",
+        "ticks": 180
+      },
+      "expect": {
+        "result": "ok"
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [
+        {
+          "day": 0,
+          "energyCost": 0,
+          "fareRevenue": 0,
+          "maintenanceCost": 0,
+          "operatingCost": 7200,
+          "staffCost": 0
+        }
+      ],
+      "fareRules": null,
+      "ledger": [
+        {
+          "amount": -3600,
+          "breakdown": [
+            {
+              "amount": 0,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -3600,
+              "item": "operatingCost"
+            },
+            {
+              "amount": 0,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 0
+          },
+          "kind": "hourlyNet",
+          "time": 60
+        },
+        {
+          "amount": -3600,
+          "breakdown": [
+            {
+              "amount": 0,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -3600,
+              "item": "operatingCost"
+            },
+            {
+              "amount": 0,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 0
+          },
+          "kind": "hourlyNet",
+          "time": 120
+        }
+      ],
+      "mode": "management",
+      "openedAt": 120,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 89990800,
+    "freight": {
+      "delivered": 0,
+      "facilities": [
+        {
+          "station": 1,
+          "stock": 6
+        },
+        {
+          "station": 2,
+          "stock": 0
+        }
+      ],
+      "loads": [],
+      "lost": 0,
+      "pendingRevenue": 0,
+      "produced": 6,
+      "spilled": 0
+    },
+    "gameMinutes": 180,
+    "land": {
+      "cells": 1,
+      "jobs": 100,
+      "residents": 0
+    },
+    "lines": [
+      {
+        "freight": true,
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Goods",
+        "patterns": [],
+        "stops": [
+          1,
+          2
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "Alpha",
+        "point": {
+          "x": 1536,
+          "y": 512
+        }
+      },
+      {
+        "id": 2,
+        "name": "Gamma",
+        "point": {
+          "x": 5632,
+          "y": 512
+        }
+      }
+    ],
+    "trafficControl": false,
+    "trains": []
+  }
+}

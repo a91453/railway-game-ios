@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 57
+    static let schemaVersion = 58
 
     var description: String
     var initialState: InitialState
@@ -203,6 +203,7 @@ struct GoldenScenario: Decodable {
             case .command(.foundTowns, _), .command(.setLand, _), .command(.setLandDemand, _),
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
+                 .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -555,6 +556,10 @@ enum ScenarioCommand: Equatable {
     /// Schema 57 (decision 154): the country whose holidays the world
     /// keeps and the level, or off.
     case setDisruptions(Disruptions?)
+    /// Schema 58 (decision 155): freight.
+    case enableFreight
+    case buildFreightFacility(StationID)
+    case setLineFreight(LineID, Bool)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -685,6 +690,12 @@ enum ScenarioCommand: Equatable {
                 world.setAreaBuyOut(enabled)
             case .setDisruptions(let disruptions):
                 world.setDisruptions(disruptions)
+            case .enableFreight:
+                world.enableFreight()
+            case .buildFreightFacility(let id):
+                try world.buildFreightFacility(at: id)
+            case .setLineFreight(let line, let freight):
+                try world.setLineFreight(line, to: freight)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -770,6 +781,13 @@ extension ScenarioCommand: Decodable {
                 throw DecodingError.dataCorruptedError(forKey: .country, in: container, debugDescription: "No disruptions at \(level) for \(country).")
             }
             self = .setDisruptions(disruptions)
+        // Schema 58: freight (decision 155).
+        case "enableFreight":
+            self = .enableFreight
+        case "buildFreightFacility":
+            self = try .buildFreightFacility(container.decodeStation(forKey: .station))
+        case "setLineFreight":
+            self = try .setLineFreight(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1166,6 +1184,13 @@ extension StepOutcome: Codable {
             self = .rejected(.needsShore)
         case "onWater":
             self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
+        // Schema 58 (decision 155).
+        case "freightNotEnabled":
+            self = .rejected(.freightNotEnabled)
+        case "freightFacilityExists":
+            self = try .rejected(.freightFacilityExists(container.decodeStation(forKey: .station)))
+        case "noFreightFacility":
+            self = try .rejected(.noFreightFacility(container.decodeStation(forKey: .station)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1350,6 +1375,14 @@ extension StepOutcome: Codable {
             try container.encode("onSteepSlope", forKey: .result)
             try container.encode(row, forKey: .row)
             try container.encode(column, forKey: .column)
+        case .rejected(.freightNotEnabled):
+            try container.encode("freightNotEnabled", forKey: .result)
+        case .rejected(.freightFacilityExists(let id)):
+            try container.encode("freightFacilityExists", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.noFreightFacility(let id)):
+            try container.encode("noFreightFacility", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
         case .rejected(.onWater(let row, let column)):
             try container.encode("onWater", forKey: .result)
             try container.encode(row, forKey: .row)
@@ -2062,6 +2095,9 @@ struct WorldSummary: Codable, Equatable {
     /// Whether the company's buildings buy out by area (schema 55,
     /// decision 146); left out while it is off.
     var areaBuyOut: Bool?
+    /// The world's freight (schema 58, decision 155): its facilities, the
+    /// cargo on its trains and the totals; left out while freight is off.
+    var freight: FreightSummary?
     /// How many buildings of each density stand while the city's buildings
     /// are on (schema 37, Phase 6c-1); left out while they are off.
     var cityBuildings: CityBuildingsSummary?
@@ -2305,6 +2341,7 @@ struct WorldSummary: Codable, Equatable {
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil
         areaBuyOut = world.areaBuyOut ? true : nil
+        freight = world.freight.map(FreightSummary.init)
         cityBuildings = world.cityBuildings ? CityBuildingsSummary(world.buildings) : nil
         placedBuildings = world.placedBuildings.isEmpty ? nil : world.placedBuildings.map(PlacedBuildingSummary.init)
         zones = world.zones.isEmpty ? nil : world.zones.cells.reduce(into: ["cells": world.zones.cells.count]) { $0[$1.zone.rawValue, default: 0] += 1 }
@@ -2785,6 +2822,8 @@ struct LineSummary: Codable, Equatable {
     /// written only for a line with runs.
     var runs: [LineRun] = []
     var runDays: [Int64?] = []
+    /// Schema 58 (decision 155): written as `true` for a freight line only.
+    var isFreight = false
 
     init(
         id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
@@ -2819,12 +2858,14 @@ struct LineSummary: Codable, Equatable {
         routePreferences = line.routePreferences
         runs = line.runs
         runDays = line.runDays
+        isFreight = line.isFreight
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, routePreferences
         case isRing = "ring", outerLastDispatch
         case runs, runDays
+        case isFreight = "freight"
     }
 
     init(from decoder: any Decoder) throws {
@@ -2848,6 +2889,13 @@ struct LineSummary: Codable, Equatable {
         if container.contains(.runs) {
             runs = try container.decode([LineRun].self, forKey: .runs)
             runDays = try container.decode([Int64?].self, forKey: .runDays)
+        }
+        // Schema 58: a freight line says so, with `true`.
+        if container.contains(.isFreight) {
+            guard try container.decode(Bool.self, forKey: .isFreight) else {
+                throw DecodingError.dataCorruptedError(forKey: .isFreight, in: container, debugDescription: "\"freight\" is written only as true.")
+            }
+            isFreight = true
         }
         // Schema 27: a ring says so, and its outer dispatch is then
         // required; a line that is not a ring writes neither.
@@ -2888,6 +2936,7 @@ struct LineSummary: Codable, Equatable {
             try container.encode(runs, forKey: .runs)
             try container.encode(runDays, forKey: .runDays)
         }
+        if isFreight { try container.encode(true, forKey: .isFreight) }
         if isRing {
             try container.encode(true, forKey: .isRing)
             if let outerLastDispatch {
@@ -4233,6 +4282,46 @@ struct DaySummary: Codable, Equatable {
 /// kept here in seconds (Stage W2a), since a company opened between two
 /// minutes has no whole minute to write; such a time is printed in
 /// diagnostics as `"openedAtSeconds"`.
+/// Schema 58 (decision 155): `{"facilities": [{"station", "stock"}], "loads":
+/// [{"train", "groups": [{"origin", "tons"}]}], "pendingRevenue", "produced",
+/// "delivered", "spilled", "lost"}`.
+struct FreightSummary: Codable, Equatable {
+    struct Facility: Codable, Equatable {
+        var station: Int
+        var stock: Int64
+    }
+
+    struct Group: Codable, Equatable {
+        var origin: Int
+        var tons: Int64
+    }
+
+    struct Load: Codable, Equatable {
+        var train: Int
+        var groups: [Group]
+    }
+
+    var facilities: [Facility]
+    var loads: [Load]
+    var pendingRevenue: Int64
+    var produced: Int64
+    var delivered: Int64
+    var spilled: Int64
+    var lost: Int64
+
+    init(_ state: FreightState) {
+        facilities = state.facilities.map { Facility(station: $0.station.rawValue, stock: $0.stock) }
+        loads = state.loads.map { load in
+            Load(train: load.train.rawValue, groups: load.groups.map { Group(origin: $0.origin.rawValue, tons: $0.tons) })
+        }
+        pendingRevenue = state.pendingRevenue.amount
+        produced = state.produced
+        delivered = state.delivered
+        spilled = state.spilled
+        lost = state.lost
+    }
+}
+
 struct AccountsSummary: Codable, Equatable {
     var mode: String
     var fareRules: FareRulesSummary?

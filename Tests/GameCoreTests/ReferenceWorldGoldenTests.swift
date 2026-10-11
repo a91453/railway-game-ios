@@ -130,7 +130,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             preconditionFailure("the reference model does not run network routing")
         case .setDisruptions:
             preconditionFailure("the reference model does not keep holidays")
-        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok

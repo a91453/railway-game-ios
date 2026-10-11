@@ -55,6 +55,7 @@ struct StationPanel: View {
                     ridershipSections(station)
                     passengersSection(station)
                     removalSection(station)
+                    freightSection(station)
                 } else {
                     Section {
                         Text("Select a station on the map, or choose one above.")
@@ -222,6 +223,52 @@ struct StationPanel: View {
     /// Demolishing the station (decision 83), after a confirmation that
     /// says what goes with it, through `GameSession.removeSelectedStation()`;
     /// Undo puts it back.
+    /// Freight (decision 155): the station's freight yard, what it holds and
+    /// the industry round it makes, or the button that builds one. Shown
+    /// only in a game with freight, last in the form.
+    @ViewBuilder
+    private func freightSection(_ station: Station) -> some View {
+        let language = session.language
+        let world = session.world
+        if world.hasFreight {
+            Section {
+                if let text = world.freightYardText(at: station.id, in: language) {
+                    Text(verbatim: text)
+                        .font(.subheadline)
+                        .accessibilityIdentifier("station.freight.status")
+                    Button(role: .destructive) {
+                        session.removeFreightYardAtSelectedStation()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Remove Freight Yard", "拆除貨運場"))
+                        } icon: {
+                            Image(systemName: "shippingbox")
+                        }
+                    }
+                    .accessibilityIdentifier("station.freight.remove")
+                } else {
+                    Button {
+                        session.buildFreightYardAtSelectedStation()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text(
+                                "Build Freight Yard \(Freight.facilityCost.moneyText)",
+                                "蓋貨運場 \(Freight.facilityCost.moneyText)"
+                            ))
+                        } icon: {
+                            Image(systemName: "shippingbox")
+                        }
+                    }
+                    .accessibilityIdentifier("station.freight.build")
+                }
+            } header: {
+                Text(verbatim: language.text("Freight", "貨運"))
+            } footer: {
+                Text(verbatim: world.freightYardHelp(in: language))
+            }
+        }
+    }
+
     private func removalSection(_ station: Station) -> some View {
         let language = session.language
         return Section {

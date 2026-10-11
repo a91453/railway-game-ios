@@ -172,7 +172,7 @@ struct PassengerRouteGraph: Equatable {
     init(world: GameWorld) {
         var included: [ServicePath] = []
         var calls: [StationID: [PassengerRouteNode]] = [:]
-        for line in world.lines {
+        for line in world.lines where !line.isFreight {
             guard let level = world.serviceLevel(of: line.id, at: world.clock.now) else { continue }
             // What `lineHeadway` and `lineJourney` give for each service,
             // driving each service once: a service's plan depends on its

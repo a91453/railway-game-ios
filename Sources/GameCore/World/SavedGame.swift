@@ -185,9 +185,14 @@
 ///     holidays would raise no demand, so it says the save is newer than it
 ///     instead. (Version 36 is the Liu Ming-chuan scenario's, decision 153,
 ///     in the work registry.)
+/// 38. Freight (decision 155): a world can have `"freight"`, its facilities
+///     and the cargo on its trains, a line `"freight": true`, and the ledger
+///     the `hourlyFreight` rows and `"freightRevenue"` totals. A build that
+///     reads only an earlier version would drop them and the cargo would
+///     vanish, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 37
+    public static let currentVersion = 38
 
     public let world: GameWorld
 
@@ -300,6 +305,8 @@ extension SavedGame: Codable {
         // its buy-outs are reckoned from its densities as before.
         // Version 35 to 37: a world without `"disruptions"` has no
         // holidays, and its demand is as it was.
+        // Version 37 to 38: a world without `"freight"` has no freight, and a
+        // line without `"freight"` carries passengers, as every line did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
