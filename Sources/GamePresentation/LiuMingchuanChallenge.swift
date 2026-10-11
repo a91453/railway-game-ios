@@ -179,8 +179,12 @@ public enum LiuMingchuanChallenge {
         world.setOutsideConnections(false)
         // Decision 154: its targets were measured without holidays.
         world.setDisruptions(nil)
-        // Decision 157: nor with building materials.
+        // Decision 157: nor with building materials; decision 169: nor with
+        // dwells that lengthen in a crowd (its trains are steam coaches of
+        // 50, which a crowd would hardly slow, but the rule is the
+        // challenges' to keep out).
         world.setBuildingMaterials(false)
+        world.setDoorCrowding(false)
         do {
             try world.startScenario(scenario)
         } catch {

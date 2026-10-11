@@ -100,6 +100,9 @@ extension GameWorld {
             // whose edge is the sea.
             world.setDistanceDemand(true)
             world.setOutsideConnections(bounds != WholeTaiwan.bounds)
+            // Decision 169: a crowded train's doors pass fewer passengers a
+            // second, so a full train dwells longer.
+            world.setDoorCrowding(true)
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
@@ -208,6 +211,9 @@ public enum DemoWorld {
         // trips, as before; nothing of it is by the map's edge.
         world.setDistanceDemand(false)
         world.setOutsideConnections(false)
+        // Decision 169: nor do its dwells lengthen in a crowd; the demo's
+        // economy is as it was measured.
+        world.setDoorCrowding(false)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

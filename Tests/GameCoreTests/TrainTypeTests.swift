@@ -6,13 +6,13 @@ import XCTest
 /// how many doors it has.
 final class TrainTypeTests: XCTestCase {
     func testTheReferenceTableAndItsCapacities() {
-        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR"])
-        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50, 80])
+        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000"])
+        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50, 80, 45])
         // Decision 153: the reference's nine, and this project's steam train;
         // decision 168: and the high-speed set, which a world without an
-        // era offers as well.
-        XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.dropLast(2)))
-        XCTAssertEqual(TrainType.offered, TrainType.reference + [.highSpeed])
+        // era offers as well; decision 169: and the EMU3000.
+        XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.dropLast(3)))
+        XCTAssertEqual(TrainType.offered, TrainType.reference + [.highSpeed, .emu3000])
         XCTAssertEqual(TrainType.main, [.a, .b, .c])
         XCTAssertEqual(TrainType.referenceDefault, .b)
 
@@ -76,8 +76,33 @@ final class TrainTypeTests: XCTestCase {
         XCTAssertEqual(train.passengersPerSecond, 32)
     }
 
+    /// Decision 169: the Taiwan Railway's EMU3000, twelve cars rated 538
+    /// seats in all (the type's Wikipedia page, repeated by Taiwan News):
+    /// 538 ÷ 12 = 44.8, so 45 a car and 540 for a set, and the 1.1 every
+    /// type but the high-speed set takes: round(540 × 1.1) = 594. Two doors
+    /// a car side, as the owner's fleet catalogue counts and the 3D city
+    /// view draws them: 2 × 2 × 12 = 48 a second.
+    func testTheEMU3000IsTheTaiwanRailwaysExpress() {
+        XCTAssertEqual(TrainType.emu3000.rawValue, "EMU3000")
+        XCTAssertEqual(TrainType.emu3000.ratedCapacityPerCar, 45)
+        XCTAssertEqual(TrainType.emu3000.doorsPerCar, 2)
+        XCTAssertTrue(TrainType.emu3000.overloads)
+        XCTAssertEqual(TrainType.emu3000.performance, .emu3000, "It runs as the reference's EMU3000 expresses: 135 km/h")
+        XCTAssertEqual(TrainPerformance.emu3000.topSpeed, 135)
+        XCTAssertFalse(TrainType.reference.contains(.emu3000))
+        XCTAssertTrue(TrainType.offered.contains(.emu3000))
+        var train = Train(id: TrainID(rawValue: 1), name: "T")
+        train.type = .emu3000
+        train.cars = 12
+        XCTAssertEqual(train.ratedCapacity, 540)
+        XCTAssertEqual(train.capacity, 594)
+        XCTAssertEqual(train.passengersPerSecond, 48)
+        XCTAssertEqual(train.exchangeSeconds(100), 3)
+        XCTAssertLessThanOrEqual(train.capacity, Int64(train.cars) * Train.capacityPerCar, "A riding group in a save still fits")
+    }
+
     func testDoorsSetHowFastPassengersGetOffAndOn() {
-        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2, 2])
+        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2, 2, 2])
         var train = Train(id: TrainID(rawValue: 1), name: "T")
         train.cars = 4
         // Standard: 4 doors × 2 a second × 4 cars, as before types.

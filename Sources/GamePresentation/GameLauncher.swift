@@ -304,8 +304,10 @@ public final class GameLauncher {
         // holiday.
         var world = GameWorld.newGame(eventSeed: .random(in: .min ... .max))
         world.setDisruptions(nil)
-        // Decision 157: nor slowed by building materials.
+        // Decision 157: nor slowed by building materials; decision 169: nor
+        // by a crowd at the doors.
         world.setBuildingMaterials(false)
+        world.setDoorCrowding(false)
         guard begin(world, keepingAutosave: true) else { return }
         session?.startTutorial()
     }

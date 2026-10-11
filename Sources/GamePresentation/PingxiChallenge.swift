@@ -79,9 +79,11 @@ public enum PingxiChallenge {
         }
         let rules = Challenge.pingxi.scenario(seed: 0, in: world.bounds)
         // Decision 154: its targets were measured without holidays;
-        // decision 157: nor building materials.
+        // decision 157: nor building materials; decision 169: nor dwells
+        // that lengthen in a crowd.
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
+        world.setDoorCrowding(false)
         do {
             try world.startScenario(Scenario(
                 id: rules.id, goals: rules.goals, goldDays: rules.goldDays, silverDays: rules.silverDays, deadlineDays: rules.deadlineDays,

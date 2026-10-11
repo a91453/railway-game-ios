@@ -98,6 +98,9 @@ public enum RealWorldDemo {
         // its challenge's targets were not measured with.
         world.setDistanceDemand(false)
         world.setOutsideConnections(false)
+        // Decision 169: nor do its dwells lengthen in a crowd (its
+        // challenge's targets were measured without).
+        world.setDoorCrowding(false)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
         } catch {

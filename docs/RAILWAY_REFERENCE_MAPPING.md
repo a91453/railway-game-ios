@@ -1387,3 +1387,23 @@ V 實際放行 → T、U（保證不互穿）
 比例：沒有新的定點比例。地圖範圍以 `WholeTaiwan` 的方法算（Web Mercator，錨點在範圍中央）；目標的地點半徑是 `Land.catchmentRadius`（800 m）。
 
 外部專案：沒有用到程式碼或資料。史實取自公開來源（維基百科「劉銘傳」「臺灣鐵路（清治時期）」「獅球嶺隧道」「騰雲號」），只取年份與地名。
+
+## 車門流量隨擁擠變慢與臺鐵 EMU3000（決策 169）
+
+參考是 `a91453/railway-reference-private`（疊在高鐵的決策 168 上時的 `claude/hsr`）。CLAUDE.md 列的來源都搜過：`dwell`、`crowd`、`congest`、`alighting`、`boardingRate`、`serviceTicks`、`dwellTicks`、`EMU3000`、`doorCount`、`車門`、`座位`、`載客`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 的 `dwellTicks = doorOpen + serviceTicks + doorClose + platformCongestionPenalty` 與必要資料（`boardingRatePerDoor`、`alightingRatePerDoor`、`doorCount`、`capacity`、`onboardPassengers`） | `DoorCrowding.exchangeSeconds(_:rate:crowd:)`、`GameWorld.stepDwell` 的 `crowd` | gap 補上：參考包有 `platformCongestionPenalty` 這一項，沒有公式、沒有單位；這裡把它做成 `serviceTicks` 的倍數（`1 + 1.5 × 擁擠⁴`），所以 `doorOpen`、`doorClose` 與 `max(下車, 上車)` 維持決策 39 的（faithful） |
+| `Ci/` 的 `METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1`、`getMetroTrainOperationalCap` | `DoorCrowding.limit`（1,100‰） | direct：擁擠最多算到列車可載的 1.1 倍額定；高鐵（不超載）最多 1.0 |
+| `Ci/` 的 `PARAMS.BOARDING_RATE = 2`（沒有被讀、沒有單位） | `ServiceDwell.passengersPerDoorPerSecond`（決策 39，不變） | 沿用：擁擠乘在它上面 |
+| `Ci/` 的 `TRAIN_TYPES`（`ppc`）、`getTrainCap` | `TrainType.ratedCapacityPerCar`、`Train.ratedCapacity`（擁擠的分母，不變） | 沿用 |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 的 `emu3000-mid`（`inferred`：「每節每側 2 門在客室兩端」） | `TrainType.emu3000.doorsPerCar` = 2 | adapted：照片推測的門數，目錄標為 `inferred`；3D 城市（`trains.js` 的 `doorsOf`）畫的也是 2 扇 |
+| `Railway/site_archive_clean/index.html` 的 `PERF_RULES`（`/\(3000|110[KM]/`：EMU3000 自強號，加速 2,520、減速 3,600、135 km/h） | `TrainPerformance.emu3000`（早就在）、`TrainType.emu3000.performance` | 接上車種：和高鐵列車（決策 168）一樣，車種有自己的跑法，App 的 `setSelectedTrainType` 讓還是標準性能的列車一起改 |
+| `OpenWorld/reference_snapshot/play/src/world/taiwan-tra-data.js` 的 `emu3000`（`cars: 12`） | `TrainType.emu3000` 的 12 節編組（只在說明與測試裡；玩家自己選節數） | 參考：節數相同 |
+| （參考沒有）EMU3000 的載客數 | `TrainType.emu3000.ratedCapacityPerCar` = 45（編組定員 538 ÷ 12 = 44.8） | gap → 公開資料：維基百科〈台鐵EMU3000型電聯車〉列各節座位，合計 538；Taiwan News 的報導也是 538 席、12 節 |
+| （參考沒有）擁擠改變上下車速度的規則 | `DoorCrowding`（`crowd`、`multiplier`、`exchangeSeconds`）、`GameWorld.doorCrowding`、`setDoorCrowding(_:)`、`doorCrowd(of:at:)` | gap → 原生 |
+
+比例：擁擠與倍數都是千分比的整數（1,000 = 1.0）；乘方每次捨去到千分位，和 `PassengerCrowding` 一樣；時間是整秒，進位。
+
+外部專案：沒有用到程式碼或資料。OpenTTD（GPL-2.0）的逐步裝卸、TCRP Report 165（出版品）、A/B Street（Apache-2.0）都只看了說明，沒有讀程式碼，也沒有取公式；形式沿用本專案已有的 BPR 函數（`PassengerCrowding`）。
