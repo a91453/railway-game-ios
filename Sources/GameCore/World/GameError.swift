@@ -71,7 +71,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// A line's service window opens at a minute of the day (`0...1439`) and
     /// closes after it, no later than 06:00 the next morning (`1800`).
     case invalidServiceWindow
-    /// A line cannot be set to run a negative number of trains.
+    /// A line cannot be set to run fewer than 0 trains at a level, or more
+    /// than ``TrainsInService/maximum``.
     case invalidTrainsInService
     /// A service day's bands start at minute 0 of the day and strictly
     /// increase within the day.

@@ -1752,16 +1752,17 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Sets how many trains a line's own service, or its pattern at index
-    /// `pattern`, is to run at each service level. Any count of 0 or more
-    /// is kept as it is; how many it can run is derived (see
-    /// ``lineTrainsInService(_:at:pattern:)``).
+    /// `pattern`, is to run at each service level. Any count from 0 to
+    /// ``TrainsInService/maximum`` is kept as it is; how many it can run is
+    /// derived (see ``lineTrainsInService(_:at:pattern:)``).
     ///
     /// On a ring (decision 49) each count is made even, down: a ring runs
     /// its trains in pairs, one each way.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``,
     ///   ``GameError/unknownLinePattern(_:)``, or
-    ///   ``GameError/invalidTrainsInService`` for a negative count.
+    ///   ``GameError/invalidTrainsInService`` for a count below 0 or above
+    ///   ``TrainsInService/maximum``.
     public mutating func setLineTrainsInService(_ id: LineID, to trains: TrainsInService, pattern: Int? = nil) throws(GameError) {
         let (index, service) = try lineService(id, pattern: pattern)
         guard trains.isValid else { throw .invalidTrainsInService }

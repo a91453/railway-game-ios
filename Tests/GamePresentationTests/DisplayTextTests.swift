@@ -64,7 +64,7 @@ final class ErrorMessageTests: XCTestCase {
             .invalidLineStops: "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last.",
             .invalidTrainPerformance: "That acceleration, braking or top speed is out of range.",
             .invalidServiceWindow: "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
-            .invalidTrainsInService: "A line cannot run a negative number of trains.",
+            .invalidTrainsInService: "A line runs from 0 to 1,000 trains at each level.",
             .invalidServiceDay: "The day's service levels must start at 00:00 and change at later times within the day.",
             .invalidHeadway: "A target headway must be between 2 minutes and 24 hours.",
             .trainOnLine(TrainID(rawValue: 3)): "Train #3 runs for a line. Take it off the line first.",

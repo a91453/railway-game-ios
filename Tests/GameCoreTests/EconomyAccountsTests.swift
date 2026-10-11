@@ -484,6 +484,26 @@ final class EconomyAccountsTests: XCTestCase {
         }
     }
 
+    /// The company's daily costs count every train its lines are set to
+    /// run (decision 36), so a count beyond any line, which would overflow
+    /// them at the next midnight, is refused by the command and in a save.
+    func testATrainCountBeyondAnyLineIsRefused() throws {
+        var world = try makeWorld()
+        let before = world
+        let huge = TrainsInService(peak: 1_000_000_000_000, offPeak: 1, low: 1)
+        XCTAssertThrowsGameError(try world.setLineTrainsInService(main, to: huge), .invalidTrainsInService)
+        XCTAssertEqual(world, before)
+        let most = TrainsInService(peak: TrainsInService.maximum, offPeak: 1, low: 1)
+        try world.setLineTrainsInService(main, to: most)
+        XCTAssertEqual(world.line(id: main)?.trainsInService, most)
+
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(before)) as? [String: Any])
+        var lines = try XCTUnwrap(json["lines"] as? [[String: Any]])
+        lines[0]["trainsInService"] = ["peak": 1_000_000_000_000, "offPeak": 1, "low": 1]
+        json["lines"] = lines
+        XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: json)))
+    }
+
     /// A day's property rent and costs are held to the same bound as its
     /// other amounts: past it, the day's profit (fares + rent − costs), the
     /// finance report and the next midnight's tax would overflow and stop

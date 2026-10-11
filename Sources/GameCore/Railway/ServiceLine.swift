@@ -79,7 +79,7 @@ public enum ServiceWindow: Hashable, Sendable {
 }
 
 /// How many trains a line is to run at each ``ServiceLevel``. Each count is
-/// 0 or more; a line never runs more than its journey allows (see
+/// 0 to ``maximum``; a line never runs more than its journey allows (see
 /// ``GameWorld/lineTrainsInService(_:at:pattern:)``).
 public struct TrainsInService: Hashable, Sendable {
     public var peak: Int
@@ -95,6 +95,12 @@ public struct TrainsInService: Hashable, Sendable {
     /// None at any level, as on a new line.
     public static let none = TrainsInService(peak: 0, offPeak: 0, low: 0)
 
+    /// The most a service may be set to run at a level: far more than any
+    /// line can run (see ``GameWorld/lineTrainsInService(_:at:pattern:)``),
+    /// and few enough that the company's daily costs, which count every
+    /// train its lines are set to run (decision 36), stay in range.
+    public static let maximum = 1_000
+
     public subscript(level: ServiceLevel) -> Int {
         switch level {
         case .peak: peak
@@ -104,7 +110,7 @@ public struct TrainsInService: Hashable, Sendable {
     }
 
     var isValid: Bool {
-        peak >= 0 && offPeak >= 0 && low >= 0
+        [peak, offPeak, low].allSatisfy { (0...Self.maximum).contains($0) }
     }
 }
 
