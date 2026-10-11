@@ -4866,6 +4866,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（審查 #340–#357）：分割軌道（`splitTrackEdge`，分岔、月台岔線與渡線都會用到）會把兩段重新取樣，取樣點可能比原來的軌道多出去一個單位，跨進沒擁有的區塊；原本分割時不檢查，這樣的存檔讀不回來。現在兩段都照蓋軌道的規則檢查，跨出去就拒絕（`mapTileNotOwned`）。測試：`MapExpansionTests.testASplitStaysOnTheTilesOwned`。
 
+**之後的修正**（#361 留下的項目，2026-10-11）：`enableMapExpansion` 原本可以再打開一次，從一塊重新開始，買下的區塊忘了，帳上的土地資產卻還在。App 只在開新遊戲時打開，走不到這條路，但 GameCore 不留這種會讓帳不一致的路。
+- 現在已經打開時拒絕：新的 `GameError.mapExpansionEnabled`，排在 `invalidMapTile` 之前。
+- 新的 golden 結果名稱 `mapExpansionEnabled`（golden schema 63），新 fixture `map-expansion-once.json`。
+- 既有 golden、存檔與 replay 都不變（`map-expansion.json` 第一次打開本來就被拒）。
+- 測試：`MapExpansionTests.testItIsTurnedOnOnce`，修正前失敗。
+
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 
 2026-10-11，作者：「我有買 Meshy，你能接它的 API 做點東西嗎」，選了「3D 城市的列車模型」。高雄車站一帶的臺鐵與捷運都在地下（決策 152 的限制），畫面裡沒有列車，作者再選「加一個臺中車站區域」：臺鐵在臺中是高架。號碼依工作登記 #231：決策 161（160 由購買擴建地圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -4947,6 +4953,25 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 第 5 項的颱風在沒有需求事件時，吸引力先乘颱風再除以 1000，每天 4 人次以下的車站會被捨入成 0，一個旅次都分不到。現在沒有事件時吸引力保留千分之一的單位，只比較車站之間的比例，所以 golden、存檔、replay 都不變。測試：`WeatherTests.testASmallStationUnderATyphoonStillDrawsTravellers`。
 - 每個目的地的吸引力原本每個出發站都重算一次，颱風的倍數每次都要把整年的颱風算一遍，有颱風的國家排計畫約慢 2.4 倍。現在一個計畫只算一次（`pulls(of:)`），結果相同。
 - 站長的颱風預警原本連封站的車站、只有貨運路線停靠的車站都算進去；照建議封站之後預警也不會消失，還會連著幾天蓋住其他提醒。現在只算有開的客運車站。英文的「1 of our station」改成「one of our stations」。
+
+**之後的修正**（#361 留下的項目，作者同意，2026-10-11）：第 5、7 項的颱風降低出發站的總旅次，也降低目的站的吸引力。但出發站在颱風外時總旅次不變，所以去颱風那邊的旅客被轉給了沒有颱風的車站：沒颱風的站反而變多，和車站面板寫的「這站需求 −80%」不同。
+- 現在分配旅次時不看颱風：出發站的旅次照全網倍數（假日 × 天氣）算，依各目的地平常的吸引力分配。
+- 每一對起訖站再乘上兩端颱風倍數中較小的那個，四捨五入（`typhoonTrips`，在 `keptTrips` 的距離與票價之前）。
+- 所以進出颱風吹到的車站的旅次都 −80%（「輕」−40%）。兩端都在颱風裡也只減一次，不是 −96%。被減掉的旅次不轉給別站。
+- 各站的颱風倍數每個計畫只算一次（`typhoonMultipliers()`），不必每一對都把整年的颱風算一遍。
+- 吸引力回到決策 154 的算法；#361 為了小車站保留的千分之一單位不再需要。小車站的五分之一是在每一對的旅次上減，`WeatherTests.testASmallStationUnderATyphoonStillDrawsTravellers` 照樣通過。
+- 量到的差別（新 fixture `typhoon-demand.json`，種子 7、第 194 天下雨、颱風吹到 Home 與 Office，每站 1000 人次）：
+
+| 起訖 | 修正前 | 修正後 | 同一天沒有颱風（英國） |
+| --- | --: | --: | --: |
+| Home→Office（兩端都在颱風裡） | 16 | 60 | 300 |
+| Home→Port（出發站在颱風裡） | 82 | 60 | 300 |
+| Town→Home（目的站在颱風裡） | 129 | 60 | 300 |
+| Town→Port（兩端都不在） | 643 | 300 | 300 |
+
+- 對玩家：颱風天整個路網的運量比以前少；颱風外的車站不會突然擠滿；站長「那裡的旅客會少約 80%」照字面成立。
+- 存檔格式不變。既有 golden、存檔與 replay 的值都不變：`weather.json` 只在第 33 天（沒有颱風）觀察需求，`SavedGameTests` 與 `ReplayFixtureTests` 照舊通過。新的 `typhoon-demand.json` 每個值由 `tools/golden-checks/typhoon_demand.py` 照規則獨立算出。
+- 測試：`WeatherTests.testATyphoonCutsTheTripsToAndFromItsStationsAndSendsNoneElsewhere`（修正前失敗：S2→S3、S3→S2 兩端都不在颱風裡，卻從沒有颱風時的 1,714、2,000 變成 2,609、3,333；S0→S1 兩端都在颱風裡，平常 222，只剩 11，新規則是 44）；`testATyphoonCutsTheDemandOfTheStationsItCovers` 原本斷言「出發站去颱風站的比例變小」，在新規則下出發站自己也在颱風裡時比例不變，改成只檢查預警、倍數與結束。
 
 ## 目前規則摘要
 

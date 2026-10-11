@@ -236,6 +236,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// A command about buying the map in a world whose map is not bought
     /// (decision 160).
     case mapExpansionNotEnabled
+    /// Buying the map is turned on once, as a game starts, and is on
+    /// already (decision 160): turning it on again would forget the tiles
+    /// bought while their land stays in the books.
+    case mapExpansionEnabled
     /// The tile lies outside the world, or what the company built lies
     /// outside the tile it would own (decision 160).
     case invalidMapTile

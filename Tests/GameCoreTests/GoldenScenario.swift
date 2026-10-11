@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 62
+    static let schemaVersion = 63
 
     var description: String
     var initialState: InitialState
@@ -1250,6 +1250,9 @@ extension StepOutcome: Codable {
             self = try .rejected(.mapExpansionLocked(ridersNeeded: container.decode(Int64.self, forKey: .riders)))
         case "mapTileNotOwned":
             self = try .rejected(.mapTileNotOwned(MapTile(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))))
+        // Schema 63 (decision 160, turned on once).
+        case "mapExpansionEnabled":
+            self = .rejected(.mapExpansionEnabled)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1446,6 +1449,8 @@ extension StepOutcome: Codable {
             try container.encode("buildingMaterialsNotEnabled", forKey: .result)
         case .rejected(.mapExpansionNotEnabled):
             try container.encode("mapExpansionNotEnabled", forKey: .result)
+        case .rejected(.mapExpansionEnabled):
+            try container.encode("mapExpansionEnabled", forKey: .result)
         case .rejected(.invalidMapTile):
             try container.encode("invalidMapTile", forKey: .result)
         case .rejected(.mapTileOwned):
