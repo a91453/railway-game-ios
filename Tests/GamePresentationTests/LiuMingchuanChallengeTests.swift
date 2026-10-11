@@ -131,6 +131,24 @@ final class ScenarioStationMasterTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice(world: world), .scenarioWelcome(scenario: "history.liuMingchuan"))
     }
 
+    /// A short steam train on one of a line's patterns is as short as one
+    /// on its own service.
+    func testAShortSteamTrainOnAPatternIsNamed() throws {
+        var world = LiuMingchuanChallenge.make()
+        let keelung = try world.buildStation(named: "基隆", at: LiuMingchuanChallenge.keelung.point).id
+        let middle = PlanPoint(x: (LiuMingchuanChallenge.keelung.point.x + LiuMingchuanChallenge.badu.point.x) / 2,
+                               y: (LiuMingchuanChallenge.keelung.point.y + LiuMingchuanChallenge.badu.point.y) / 2)
+        let between = try world.buildStation(named: "中途", at: middle).id
+        let badu = try world.buildStation(named: "八堵", at: LiuMingchuanChallenge.badu.point).id
+        let line = try world.createLine(named: "基隆線", stops: [keelung, between, badu]).id
+        let express = try world.addLinePattern(line, calling: [0, 2])
+        let train = try world.purchaseTrain(named: "騰雲號").id
+        try world.assignTrain(train, to: line, pattern: express)
+        XCTAssertEqual(world.line(id: line)?.trains, [])
+        try world.advance(ticks: 1_441)
+        XCTAssertEqual(StationMasterAdvice(world: world), .shortSteamTrains(line: line, name: "基隆線"))
+    }
+
     func testAGoalOfAnyChallengeAndTheEnd() {
         XCTAssertEqual(
             StationMasterAdvice.goalMet(scenario: "sandbox.threeTowns", goal: 1, titles: ["Riders a day", "每日運量（人次）"]).text(in: .traditionalChinese),

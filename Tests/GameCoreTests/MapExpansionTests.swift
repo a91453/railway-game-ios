@@ -107,6 +107,24 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(world.network.edges.count, 2)
     }
 
+    /// A curve that keeps to the tile owned may be pulled by control points
+    /// beyond it (a Bézier curve goes only three quarters of the way to
+    /// them): it is built, and the save, which checks the track as it is
+    /// built, loads.
+    func testACurveWhoseControlPointsLieBeyondTheTileOwnedLoads() throws {
+        var world = try world()
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: at(2.4, 2.9).x, y: at(2.4, 2.9).y, z: 0))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: at(2.6, 2.9).x, y: at(2.6, 2.9).y, z: 0))
+        // The curve reaches y = 2.99 tiles, short of the tile below.
+        try world.buildTrackEdge(from: a, to: b, curve: .cubic(at(2.4, 3.02), at(2.6, 3.02)))
+        XCTAssertFalse(world.ownsMapTile(MapTile(row: 3, column: 2)))
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+        // One that does reach it is refused.
+        XCTAssertThrowsGameError(try world.buildTrackEdge(from: a, to: b, curve: .cubic(at(2.4, 3.2), at(2.6, 3.2))),
+                                 .mapTileNotOwned(MapTile(row: 3, column: 2)))
+    }
+
     func testTheLineTestIsExact() {
         let a = PlanPoint(x: 0, y: 0), b = PlanPoint(x: 10, y: 10)
         XCTAssertTrue(GameWorld.segment(a, b, touchesMinX: 5, minY: 5, maxX: 20, maxY: 20))

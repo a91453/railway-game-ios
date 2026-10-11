@@ -189,6 +189,8 @@ extension GameWorld {
     /// its lap ends back at the first stop.
     private func boardingPlan(of train: Train, at stop: Int) -> (record: Int, eligible: [Int])? {
         guard stop < train.timetable.count - 1, let line = assignedLine(of: train.id),
+              // Decision 155: nobody rides a freight line.
+              !(self.line(id: line)?.isFreight ?? false),
               let record = passengers.firstIndex(where: { $0.station == train.timetable[stop].station })
         else { return nil }
         let onRing = self.line(id: line)?.isRing ?? false

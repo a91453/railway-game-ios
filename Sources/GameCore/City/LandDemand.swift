@@ -313,7 +313,12 @@ extension GameWorld {
     /// follows the land, and each station's last growth is how its daily
     /// trips changed, in thousandths.
     mutating func growLand(reached: [StationID: Int]) {
-        guard var growth = townGrowth, drawsDemandFromLand else { return }
+        guard var growth = townGrowth, drawsDemandFromLand else {
+            // Decision 158: no town grew tonight, so none was short of
+            // building materials.
+            if freight?.lastShort.isEmpty == false { freight?.lastShort = [] }
+            return
+        }
         // Decision 139: the city's demand as the midnight begins, once it
         // has a mix.
         settleCityMix()

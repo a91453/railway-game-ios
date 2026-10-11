@@ -96,10 +96,12 @@ extension GameWorld {
     // MARK: - Commands
 
     /// Turns town growth on or off (item 5). Turning it off keeps every
-    /// station's ridership as it has grown.
+    /// station's ridership as it has grown, and no station is short of
+    /// building materials any more (decision 158).
     public mutating func setTownGrowth(_ enabled: Bool) {
         guard enabled != (townGrowth != nil) else { return }
         townGrowth = enabled ? TownGrowth() : nil
+        if !enabled, freight?.lastShort.isEmpty == false { freight?.lastShort = [] }
     }
 
     // MARK: - Queries
@@ -127,6 +129,8 @@ extension GameWorld {
     mutating func growTowns(reached: [StationID: Int]) {
         // Phase 6b: with demand from land, the land grows instead.
         guard !landDemand else { return growLand(reached: reached) }
+        // Decision 158: only the land's growth uses building materials.
+        if freight?.lastShort.isEmpty == false { freight?.lastShort = [] }
         guard var growth = townGrowth, accounts.mode == .management else { return }
         var places: [TownGrowth.Place] = []
         for index in passengers.indices {

@@ -175,6 +175,27 @@ final class LineRunsTests: XCTestCase {
         }
     }
 
+    /// The passengers set out are those `dailyDemand` counts (decision
+    /// 149): with the run out alone, a direct game sets out nobody at Beta
+    /// or Gamma for Alpha, who would wait for a train that never comes and
+    /// make the save unreadable.
+    func testOnlyTheWaysTheRunsGoAreSetOut() throws {
+        var world = try world(runs: [out])
+        world.setPassengerRoutingMode(.direct)
+        for station in [alpha, beta, gamma] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 1_000))
+        }
+        try world.advance(ticks: 600)
+        let waiting = world.passengers.flatMap { record in record.waiting.map { (record.station, $0) } }
+        XCTAssertFalse(waiting.isEmpty)
+        for (station, group) in waiting {
+            XCTAssertEqual(group.direction, .outbound, "\(group.count) at station \(station.rawValue) for \(group.destination.rawValue)")
+        }
+        XCTAssertNil(world.passengerProblem())
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+    }
+
     // MARK: - Commands
 
     func testSettingRunsChecksThem() throws {

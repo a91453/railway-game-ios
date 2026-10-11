@@ -180,6 +180,56 @@ final class FreightTests: XCTestCase {
         XCTAssertNil(freight.passengerTrip(from: alpha, to: gamma))
     }
 
+    /// Making a passenger line a freight line sends its waiting passengers
+    /// away as abandoned: no train of a freight line takes them on, so they
+    /// would wait for ever (and the save would keep them).
+    func testPassengersWaitingForALineThatTurnsFreightAreAbandoned() throws {
+        var world = try world(freightLine: false)
+        for station in [alpha, gamma] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 2_000))
+        }
+        try hours(3, &world)
+        let waiting = world.passengers.reduce(Int64(0)) { $0 + $1.waitingCount }
+        let abandoned = world.passengers.reduce(Int64(0)) { $0 + $1.abandoned }
+        XCTAssertGreaterThan(waiting, 0)
+        try world.unassignTrain(blue)
+        try world.setLineFreight(main, to: true)
+        XCTAssertEqual(world.passengers.reduce(Int64(0)) { $0 + $1.waitingCount }, 0, "nobody waits for a freight line")
+        XCTAssertEqual(world.passengers.reduce(Int64(0)) { $0 + $1.abandoned }, abandoned + waiting)
+        XCTAssertNil(world.passengerProblem())
+    }
+
+    /// A save made before that fix may hold passengers waiting for a
+    /// freight line: it still loads, and the next command that checks the
+    /// waiting (here putting a train on the line) sends them away.
+    func testASaveWithPassengersWaitingForAFreightLineLoads() throws {
+        var world = try world(freightLine: false)
+        for station in [alpha, gamma] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 2_000))
+        }
+        try hours(3, &world)
+        try world.unassignTrain(blue)
+        let waiting = world.passengers.reduce(Int64(0)) { $0 + $1.waitingCount }
+        let abandoned = world.passengers.reduce(Int64(0)) { $0 + $1.abandoned }
+        XCTAssertGreaterThan(waiting, 0)
+        // As the command did before the fix: the line turns, nobody leaves.
+        var save = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: world))) as? [String: Any])
+        var saved = try XCTUnwrap(save["world"] as? [String: Any])
+        var lines = try XCTUnwrap(saved["lines"] as? [[String: Any]])
+        lines[0]["freight"] = true
+        saved["lines"] = lines
+        save["world"] = saved
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: save)).world
+        XCTAssertEqual(loaded.line(id: main)?.isFreight, true)
+        XCTAssertEqual(loaded.passengers.reduce(Int64(0)) { $0 + $1.waitingCount }, waiting)
+        try loaded.assignTrain(blue, to: main)
+        XCTAssertEqual(loaded.passengers.reduce(Int64(0)) { $0 + $1.waitingCount }, 0)
+        XCTAssertEqual(loaded.passengers.reduce(Int64(0)) { $0 + $1.abandoned }, abandoned + waiting)
+        try hours(2, &loaded)
+        XCTAssertTrue(loaded.riders.allSatisfy { $0.groups.isEmpty }, "nobody boards a freight train")
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: loaded))))
+    }
+
     /// Without a yard a freight line's train goes through and carries
     /// nothing.
     func testNoYardNoCargo() throws {
@@ -334,6 +384,36 @@ final class FreightTests: XCTestCase {
         inner["freight"] = freight
         json["world"] = inner
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: json)))
+    }
+
+    /// A train carries at most a full train of the longest's tons: a save
+    /// with more on board (with the totals at their ceiling, which the sum
+    /// is not checked at) is refused, not paid for later with a fare that
+    /// overflows.
+    func testASaveWithMoreOnBoardThanATrainHoldsIsRefused() throws {
+        var world = try world(jobs: 40_000)
+        try hours(5, &world)
+        while (world.freight?.loads ?? []).isEmpty { try world.advance(ticks: 1) }
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: world))) as? [String: Any])
+        var inner = try XCTUnwrap(json["world"] as? [String: Any])
+        var freight = try XCTUnwrap(inner["freight"] as? [String: Any])
+        let full = GameWorld.freightCapacity(cars: Train.maximumCars)
+        func save(onBoard tons: Int64) throws -> Data {
+            var loads = try XCTUnwrap(freight["loads"] as? [[String: Any]])
+            var groups = try XCTUnwrap(loads[0]["groups"] as? [Any])
+            var group = try XCTUnwrap(groups[0] as? [String: Any])
+            group["tons"] = tons
+            groups = [group]
+            loads[0]["groups"] = groups
+            freight["loads"] = loads
+            freight["produced"] = Freight.maximumTons
+            inner["freight"] = freight
+            json["world"] = inner
+            return try JSONSerialization.data(withJSONObject: json)
+        }
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: save(onBoard: full)))
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: save(onBoard: full + 1)))
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: save(onBoard: Freight.maximumTons)))
     }
 
     /// Version 38 (decision 155): `world(jobs: 40_000)` run five hours and on

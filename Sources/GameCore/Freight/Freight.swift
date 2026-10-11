@@ -103,7 +103,7 @@ public enum Freight {
     /// The cents `tons` tons pay for being carried `distance` world units
     /// (1/64 m), in whole dollars, half up.
     static func fare(tons: Int64, distance: Int64) -> Money {
-        // tons ≤ 2^40 only in a damaged save; a train carries ≤ 40 × cars.
+        // A train carries ≤ 40 × cars, and the save checks it.
         let cents = tons * distance * centsPerTonKilometre / (WorldCoordinate.unitsPerMetre * 1_000)
         return GameWorld.wholeDollars(cents)
     }
@@ -367,13 +367,17 @@ extension FreightState: Codable {
         guard zip(facilities, facilities.dropFirst()).allSatisfy({ $0.station < $1.station }) else {
             throw corrupt("Freight facilities must be listed once each, by ascending station.")
         }
+        // A train takes on at most what its cars hold, and no train has
+        // more than `Train.maximumCars` (which also keeps a fare's product
+        // of tons and distance in range).
+        let fullTrain = GameWorld.freightCapacity(cars: Train.maximumCars)
         guard zip(loads, loads.dropFirst()).allSatisfy({ $0.train < $1.train }),
               loads.allSatisfy({ load in
-                  !load.groups.isEmpty && load.groups.allSatisfy { (1...Freight.maximumTons).contains($0.tons) }
+                  !load.groups.isEmpty && load.groups.allSatisfy { (1...fullTrain).contains($0.tons) } && load.tons <= fullTrain
                       && zip(load.groups, load.groups.dropFirst()).allSatisfy { $0.key < $1.key }
               })
         else {
-            throw corrupt("Freight loads must be listed once each, by ascending train, with groups of tons by ascending origin.")
+            throw corrupt("Freight loads must be listed once each, by ascending train, with groups of tons by ascending origin, no more than a train holds.")
         }
         guard buildingMaterials || (materials.isEmpty && facilities.allSatisfy { $0.product == .goods }
                   && loads.allSatisfy { $0.groups.allSatisfy { $0.kind == .goods } }),
