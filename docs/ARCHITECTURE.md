@@ -4592,6 +4592,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **之後的修正**（#361 留下的決定，作者同意）：
 - 3D 試作退到背景就關閉：scenePhase 變成 `.background` 時停止本機伺服器並關掉畫面；`.inactive`（例如拉下通知中心）不關。原因是推測：`NWListener` 在 App 被暫停後可能失效，回到前景時網頁一重新載入（`webViewWebContentProcessDidTerminate` 會 `reload()`）就連不上。沒有實機證據，所以不寫重連邏輯。
 - 實機檢查（repo 沒有現成的 TestFlight 檢查清單，寫在這裡）：開 3D 試作 → 切到別的 App → 回來，應該回到設定頁、沒有空白或錯誤畫面，再開一次試作可以正常載入。UNVERIFIED，要在 TestFlight 上看。
+- 決策 163：網頁改放官網、App 開官網的網址，本機伺服器與上面兩項伺服器的補充一起拿掉。
 
 ### 153. 台灣鐵道史劇本：劉銘傳鐵路與蒸汽列車
 
@@ -4988,6 +4989,22 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 對玩家：颱風天整個路網的運量比以前少；颱風外的車站不會突然擠滿；站長「那裡的旅客會少約 80%」照字面成立。
 - 存檔格式不變。既有 golden、存檔與 replay 的值都不變：`weather.json` 只在第 33 天（沒有颱風）觀察需求，`SavedGameTests` 與 `ReplayFixtureTests` 照舊通過。新的 `typhoon-demand.json` 每個值由 `tools/golden-checks/typhoon_demand.py` 照規則獨立算出。
 - 測試：`WeatherTests.testATyphoonCutsTheTripsToAndFromItsStationsAndSendsNoneElsewhere`（修正前失敗：S2→S3、S3→S2 兩端都不在颱風裡，卻從沒有颱風時的 1,714、2,000 變成 2,609、3,333；S0→S1 兩端都在颱風裡，平常 222，只剩 11，新規則是 44）；`testATyphoonCutsTheDemandOfTheStationsItCovers` 原本斷言「出發站去颱風站的比例變小」，在新規則下出發站自己也在颱風裡時比例不變，改成只檢查預警、倍數與結束。
+
+### 163. 3D 城市試作放到官網，遊戲開官網的網址
+
+2026-10-11，作者決定（接 #367：載入畫面用遊戲的 logo、署名置中一行、GitHub 連結換成官網）。號碼依工作登記 #231：決策 163；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+1. **頁面在官網**：決策 152 的網頁（`Web/CityView/` 建置的結果）不再打包進 App，改放在官網 `https://www.alongthelinegame.com/city/`。官網的原始碼是私有參考庫的 `Website/`（Cloudflare Pages，作者手動部署），建置結果放在它的 `site/city/`。`tools/procedural-city/build_city_view.sh` 改成輸出到指定的資料夾，授權說明（`notices.mjs`）寫在頁面旁邊的 `NOTICES.txt`。App 少了約 15 MB；頁面更新不必重新送審，但要先部署官網，App 裡才看得到。
+2. **App 開官網的網址**：`CityView3D` 的 WKWebView 直接讀 `CityViewArea.pageAddress`（`…/city/?area=kaohsiung&radius=400&clouds=0&birds=0&traffic=0`，和決策 152 一樣的輕量版）。決策 152 的本機伺服器（`CityViewServer`）與 GamePresentation 的 `CityViewServing` 拿掉，`Resources/CityView/` 與 `project.yml` 的資料夾參照也拿掉。決策 152 補充裡伺服器的連線問題（UI 測試的 `-1005`）、退到背景就關閉，都隨伺服器一起不需要了。
+3. **只留在 `/city/`**：GamePresentation 的 `CityViewPage.opensInView` 決定網頁可以自己開哪些網址：官網 `https` 的 `/city` 與底下的頁面、沒有主機的 `about:blank`。其他連結（頁面右下的「官網」按鈕連到首頁）交給 Safari。Linux 上有測試。
+4. **沒有網路**：載入失敗、錯誤是沒有網路或連不到官網時（`NSURLError` 的無網路、逾時、找不到主機等），畫面說「3D 城市要從遊戲官網載入：請連上網路再試一次」，並有「再試一次」按鈕（換一個新的 web view）；其他錯誤照舊寫出 WebKit 的錯誤。設定頁的說明加一句「它從遊戲官網載入，需要網路連線」。
+5. **頁面的腳本不再內嵌**：官網的 Content-Security-Policy 不允許內嵌腳本，`index.html` 原本的三段內嵌腳本（城市名、官網按鈕的語言、閒置回呼的期限）搬到 `public/boot.js`。頁面另外需要的（lil-gui 插入的樣式、GLTFLoader 的 `blob:` 圖片、tile worker）由官網 `_headers` 給 `/city/*` 的另一份 CSP 開放，其他頁面的 CSP 不變。
+6. **出處**：頁面本身的署名一行不變。資料來源畫面的「授權條款」連結改到官網的 `/city/NOTICES.txt`，說明改成「網頁放在遊戲官網」。官網的資料來源頁補上 3D 城市試作（Procedural Tokyo © Yong Su、Overture 的建物）；隱私權政策補上「開 3D 城市試作時，遊戲會連到本網站，Cloudflare 會處理連線所需的技術資料」。
+
+**限制**：
+- 沒有網路就看不到 3D 城市（作者選擇的取捨；也考慮過內建＋官網各一份、優先開官網再退回內建，都要維護兩份）。
+- 官網要先部署 `/city/`，App 才能載入；還沒部署時會開到官網的 404 頁。UI 測試 `testTheCityPreviewLoadsItsPageAndCloses` 等的是網頁載入完成，404 頁也算載入完成，所以它不證明 `/city/` 已經部署。
+- App 內實機（TestFlight）的載入時間、快取與離線畫面都還沒看過（UNVERIFIED）。
 
 ## 目前規則摘要
 

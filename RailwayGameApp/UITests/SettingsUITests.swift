@@ -45,13 +45,12 @@ final class SettingsUITests: XCTestCase {
     }
 
     /// Decision 152: the settings' 3D city preview opens full screen, its
-    /// page comes from the app's loopback server, and the close button goes
-    /// back to the settings. It waits for the loading indicator to go
-    /// (`cityView.loading`, shown until the web view finishes loading the
-    /// page): the server answered, whether or not the Simulator's WebGL
-    /// then draws the city. A view that could not start, or a page the web
-    /// view could not load, shows why (`cityView.error`), and the test
-    /// reports it.
+    /// page comes from the game's website (decision 163), and the close
+    /// button goes back to the settings. It waits for the loading indicator
+    /// to go (`cityView.loading`, shown until the web view finishes loading
+    /// the page): the website answered, whether or not the Simulator's
+    /// WebGL then draws the city. A page the web view could not load shows
+    /// why (`cityView.error`), and the test reports it.
     func testTheCityPreviewLoadsItsPageAndCloses() {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -73,7 +72,7 @@ final class SettingsUITests: XCTestCase {
         if error.exists {
             XCTFail(error.label)
         }
-        XCTAssertTrue(done, "The page did not load from the loopback server, and the web view reported no error")
+        XCTAssertTrue(done, "The page did not load from the website, and the web view reported no error")
         tap(app.buttons["cityView.close"], name: "cityView.close")
         XCTAssertTrue(app.buttons["cityView.close"].waitForNonExistence(timeout: 10), "Close did not close the 3D city preview")
         XCTAssertTrue(app.buttons["settings.done"].waitForExistence(timeout: 10))

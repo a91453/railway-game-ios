@@ -1,42 +1,52 @@
 import GamePresentation
-import Network
 import Observation
 import SwiftUI
 import UIKit
 import WebKit
 
 /// The 3D city view (ARCHITECTURE decision 152): jeantimex/tokyo's web
-/// renderer, built from `Web/CityView` into the bundled folder
-/// `Resources/CityView`, showing the area round Kaohsiung or Taichung
-/// Station (decision 161) from Overture's buildings and OpenStreetMap. A
-/// preview from the settings: it reads nothing of the game, and its traffic
-/// and trains are the page's own.
+/// renderer, built from `Web/CityView`, showing the area round Kaohsiung or
+/// Taichung Station (decision 161) from Overture's buildings and
+/// OpenStreetMap. Since decision 163 the game's website serves the page
+/// (``CityViewPage``) and the app opens it there, so it needs the internet.
+/// A preview from the settings: it reads nothing of the game, and its
+/// traffic and trains are the page's own.
 struct CityView3D: View {
     let area: CityViewArea
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.scenePhase) private var scenePhase
     @State private var host = CityViewHost()
 
     var body: some View {
         let language = DisplayLanguage.app
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
-            if let url = host.url {
-                CityWebView(url: url, onLoaded: { host.pageLoaded() }, onFailure: { message in host.loadFailed(message) })
+            if let url = URL(string: area.pageAddress) {
+                CityWebView(url: url, onLoaded: { host.pageLoaded() }, onFailure: { error in host.loadFailed(error) })
+                    .id(host.attempt)
                     .ignoresSafeArea()
                     .accessibilityIdentifier("cityView.web")
             }
             if let message = host.failureText(in: language) {
-                // (what went wrong, for a tester to read out)
-                Text(verbatim: message)
-                    .font(.footnote)
-                    .foregroundStyle(.white)
-                    .padding(12)
-                    .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("cityView.error")
+                // (what went wrong, for a tester to read out, and a way to try again)
+                VStack(spacing: 12) {
+                    Text(verbatim: message)
+                        .font(.footnote)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .accessibilityIdentifier("cityView.error")
+                    Button {
+                        host.retry()
+                    } label: {
+                        Text(verbatim: language.text("Try Again", "再試一次"))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("cityView.retry")
+                }
+                .padding(16)
+                .background(.black.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !host.loaded {
-                // until the web view has the page from the loopback server
+                // until the web view has the page from the website
                 ProgressView {
                     Text(verbatim: language.text("Loading the 3D city…", "正在載入 3D 城市…"))
                         .foregroundStyle(.white)
@@ -58,215 +68,68 @@ struct CityView3D: View {
             .accessibilityIdentifier("cityView.close")
         }
         .statusBarHidden()
-        .task { host.start(area: area) }
-        .onDisappear { host.stop() }
-        // Decision 152, later: the loopback listener may not outlive the app
-        // being suspended, and the page reloads from it when the system ends
-        // the web content, so the preview closes in the background (not
-        // when merely inactive, as under Notification Center).
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .background else { return }
-            host.stop()
-            dismiss()
-        }
     }
 }
 
-/// Starts the loopback server for the bundled page and gives the web view
-/// its address.
+/// Whether the web view has the page, and why not when it could not load
+/// it.
 @MainActor
 @Observable
 final class CityViewHost {
-    private(set) var url: URL?
-    private(set) var failed = false
     /// Whether the web view has loaded the page.
     private(set) var loaded = false
     /// Why the web view could not load the page, when it could not.
-    private(set) var loadError: String?
-    @ObservationIgnored private var server: CityViewServer?
+    private(set) var loadError: NSError?
+    /// Counts the tries: a new one makes a new web view.
+    private(set) var attempt = 0
 
     func pageLoaded() {
         loaded = true
     }
 
-    func loadFailed(_ message: String) {
-        loadError = message
+    func loadFailed(_ error: any Error) {
+        loadError = error as NSError
     }
 
-    /// What to tell the player when the view could not start or the page
-    /// did not load; `nil` while all is well.
+    func retry() {
+        loadError = nil
+        loaded = false
+        attempt += 1
+    }
+
+    /// What to tell the player when the page did not load; `nil` while all
+    /// is well. Without the internet (or the website out of reach), says
+    /// so; otherwise WebKit's own error, for a tester to read out.
     func failureText(in language: DisplayLanguage) -> String? {
-        if failed {
-            return language.text("The 3D view could not start.", "3D 畫面無法啟動。")
+        guard let error = loadError else { return nil }
+        if error.domain == NSURLErrorDomain, Self.offlineCodes.contains(error.code) {
+            return language.text(
+                "The 3D city loads from the game's website: connect to the internet and try again.",
+                "3D 城市要從遊戲官網載入：請連上網路再試一次。"
+            )
         }
-        return loadError.map { language.text("The 3D page did not load: ", "3D 網頁沒有載入：") + $0 }
+        return language.text("The 3D page did not load: ", "3D 網頁沒有載入：")
+            + "\(error.localizedDescription) (\(error.domain) \(error.code))"
     }
 
-    func start(area: CityViewArea) {
-        guard server == nil else { return }
-        guard let root = Bundle.main.url(forResource: "CityView", withExtension: nil),
-              let server = try? CityViewServer(root: root)
-        else {
-            failed = true
-            return
-        }
-        self.server = server
-        server.start { [weak self] port in
-            guard let self else { return }
-            if let port {
-                url = URL(string: "http://localhost:\(port)\(area.startPath)")
-            } else {
-                failed = true
-            }
-        }
-    }
-
-    func stop() {
-        server?.stop()
-        server = nil
-    }
+    /// The errors of no network, or of a website out of reach.
+    private static let offlineCodes: Set<Int> = [
+        NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost, NSURLErrorTimedOut,
+        NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorDNSLookupFailed,
+        NSURLErrorDataNotAllowed, NSURLErrorInternationalRoamingOff,
+    ]
 }
 
-/// A small HTTP server for one folder, listening on the loopback interface
-/// only (nothing on the network can reach it), on a port the system picks:
-/// both its addresses, as `localhost` may be IPv6's `::1` or IPv4's
-/// `127.0.0.1`; a connection from anywhere else is refused.
-/// It answers each request with the file, ends its side of the connection
-/// and lets it go once the web view has closed the other
-/// (``CityViewServing`` decides which file and writes the head). Its
-/// listener and connections all run on `queue`.
-final class CityViewServer: @unchecked Sendable {
-    private let listener: NWListener
-    private let root: URL
-    private let queue = DispatchQueue(label: "io.github.a91453.RailwayGame.CityViewServer")
-
-    init(root: URL) throws {
-        let parameters = NWParameters.tcp
-        parameters.requiredInterfaceType = .loopback
-        listener = try NWListener(using: parameters)
-        self.root = root.standardizedFileURL
-    }
-
-    /// Starts listening; `ready` gets the port, or `nil` when the listener
-    /// failed, on the main actor.
-    func start(ready: @escaping @MainActor @Sendable (UInt16?) -> Void) {
-        listener.stateUpdateHandler = { [weak self] state in
-            switch state {
-            case .ready:
-                let port = self?.listener.port?.rawValue
-                Task { @MainActor in ready(port) }
-            case .failed:
-                Task { @MainActor in ready(nil) }
-            default:
-                break
-            }
-        }
-        listener.newConnectionHandler = { [weak self] connection in
-            guard let self, Self.isLoopback(connection.endpoint) else {
-                connection.cancel()
-                return
-            }
-            serve(connection)
-        }
-        listener.start(queue: queue)
-    }
-
-    func stop() {
-        listener.cancel()
-    }
-
-    /// Whether a connection comes from this device's loopback address.
-    private static func isLoopback(_ endpoint: NWEndpoint) -> Bool {
-        guard case .hostPort(let host, _) = endpoint else { return false }
-        if case .ipv4(let address) = host {
-            return address.isLoopback
-        }
-        if case .ipv6(let address) = host {
-            return address.isLoopback || address.asIPv4?.isLoopback == true
-        }
-        if case .name(let name, _) = host {
-            return name == "localhost"
-        }
-        return false
-    }
-
-    private func serve(_ connection: NWConnection) {
-        connection.start(queue: queue)
-        receive(on: connection, head: Data())
-    }
-
-    /// Reads until the end of the request's head.
-    private func receive(on connection: NWConnection, head: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] data, _, isComplete, error in
-            guard let self else {
-                connection.cancel()
-                return
-            }
-            var head = head
-            if let data {
-                head.append(data)
-            }
-            if head.range(of: Data("\r\n\r\n".utf8)) != nil {
-                answer(on: connection, head: String(decoding: head, as: UTF8.self))
-            } else if isComplete || error != nil || head.count > 65_536 {
-                connection.cancel()
-            } else {
-                receive(on: connection, head: head)
-            }
-        }
-    }
-
-    private func answer(on connection: NWConnection, head: String) {
-        var body = Data()
-        var type: String?
-        if let file = CityViewServing.file(requestHead: head) {
-            let url = root.appendingPathComponent(file).standardizedFileURL
-            if url.path.hasPrefix(root.path + "/"), let data = try? Data(contentsOf: url, options: .mappedIfSafe) {
-                body = data
-                type = CityViewServing.contentType(of: file)
-            }
-        }
-        var reply = CityViewServing.responseHead(contentType: type, length: body.count)
-        if !CityViewServing.isHead(head) {
-            reply.append(body)
-        }
-        // The answer is the connection's last data (FIN after it), and ours
-        // is let go only once the web view has closed its side: cancelling
-        // it right after the send can reset it before the answer arrives
-        // (the Simulator's NSURLErrorDomain -1005, "connection lost").
-        connection.send(
-            content: reply, contentContext: .finalMessage, isComplete: true,
-            completion: .contentProcessed { [weak self] error in
-                guard let self, error == nil else {
-                    connection.cancel()
-                    return
-                }
-                awaitClose(of: connection)
-            })
-    }
-
-    /// Reads (and drops) until the web view closes its side, then lets the
-    /// connection go.
-    private func awaitClose(of connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] _, _, isComplete, error in
-            guard let self, !isComplete, error == nil else {
-                connection.cancel()
-                return
-            }
-            awaitClose(of: connection)
-        }
-    }
-}
-
-/// The web view of the page. It stays on the loopback page: a link out of
-/// it (the source's GitHub link) opens in the browser instead, and a page
-/// whose process the system ended (memory) is loaded again.
+/// The web view of the page. It stays on the city view's own pages
+/// (``CityViewPage/opensInView(_:)``): any other link (the website's home
+/// page) opens in the browser instead, and a page whose process the
+/// system ended (memory) is loaded again.
 struct CityWebView: UIViewRepresentable {
     let url: URL
     /// Told when the page has loaded.
     let onLoaded: @MainActor () -> Void
     /// Told why, when the page cannot be loaded.
-    let onFailure: @MainActor (String) -> Void
+    let onFailure: @MainActor (any Error) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onLoaded: onLoaded, onFailure: onFailure)
@@ -292,9 +155,9 @@ struct CityWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
         let onLoaded: @MainActor () -> Void
-        let onFailure: @MainActor (String) -> Void
+        let onFailure: @MainActor (any Error) -> Void
 
-        init(onLoaded: @escaping @MainActor () -> Void, onFailure: @escaping @MainActor (String) -> Void) {
+        init(onLoaded: @escaping @MainActor () -> Void, onFailure: @escaping @MainActor (any Error) -> Void) {
             self.onLoaded = onLoaded
             self.onFailure = onFailure
         }
@@ -317,11 +180,11 @@ struct CityWebView: UIViewRepresentable {
             if error.code == NSURLErrorCancelled || (error.domain == "WebKitErrorDomain" && error.code == 102) {
                 return
             }
-            onFailure("\(error.localizedDescription) (\(error.domain) \(error.code))")
+            onFailure(error)
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-            guard let url = navigationAction.request.url, let host = url.host, host != "localhost" else {
+            guard let url = navigationAction.request.url, !CityViewPage.opensInView(url) else {
                 return .allow
             }
             if url.scheme == "https" {

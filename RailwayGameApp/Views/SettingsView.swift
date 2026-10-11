@@ -138,8 +138,8 @@ struct SettingsView: View {
             Text(verbatim: language.text("Preview", "試作"))
         } footer: {
             Text(verbatim: language.text(
-                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. Drag to move, pinch to zoom, two fingers to turn.",
-                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。拖曳移動、兩指縮放、兩指旋轉。"
+                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. It loads from the game's website, so it needs the internet. Drag to move, pinch to zoom, two fingers to turn.",
+                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。它從遊戲官網載入，需要網路連線。拖曳移動、兩指縮放、兩指旋轉。"
             ))
         }
     }
