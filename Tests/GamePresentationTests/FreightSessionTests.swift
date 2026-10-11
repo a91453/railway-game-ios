@@ -82,4 +82,27 @@ final class FreightSessionTests: XCTestCase {
         XCTAssertEqual(rows.first { $0.title == "Operating profit" }?.current, Money(1_300))
         XCTAssertTrue(CompanyAccounts.incomeItems.contains(.freightRevenue))
     }
+
+    /// A freight train's load is its tons over its cars' tons, and it is
+    /// left out of the passenger fleet's load; a yard's stock is on the
+    /// station's tag.
+    func testFreightLoadsAndTags() throws {
+        var world = try Self.world()
+        world.enableFreight()
+        try world.createLine(named: "Goods", stops: [Self.alpha, Self.beta])
+        try world.setLineFreight(LineID(rawValue: 1), to: true)
+        let train = try world.purchaseTrain(named: "Freight").id
+        try world.setTrainCars(train, to: 3)
+        try world.assignTrain(train, to: LineID(rawValue: 1))
+        XCTAssertTrue(world.isFreightTrain(train))
+        XCTAssertEqual(world.trainLoadInfo(of: train)?.capacity, 120, "three cars of 40 t")
+        XCTAssertNil(world.loadText(of: train, in: .english), "nothing aboard yet")
+        XCTAssertNil(world.fleetLoadInfo(), "the only train is not on the track")
+
+        let tag = StationTag(station: Self.alpha, name: "Alpha", location: PlanPoint(x: 0, y: 0), waiting: 12, lines: [], freight: 1_200)
+        XCTAssertEqual(tag.waitingText(in: .english), "12 waiting · 1,200 t of freight")
+        XCTAssertEqual(tag.waitingText(in: .traditionalChinese), "候車 12 人 · 待運 1,200 噸")
+        let empty = StationTag(station: Self.alpha, name: "Alpha", location: PlanPoint(x: 0, y: 0), waiting: 0, lines: [], freight: 0)
+        XCTAssertNil(empty.waitingText(in: .english))
+    }
 }

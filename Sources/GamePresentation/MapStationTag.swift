@@ -31,7 +31,12 @@ public struct StationTag: Hashable, Sendable {
     /// The lines calling there, by ID.
     public let lines: [LineMark]
 
-    public init(station: StationID, name: String, location: PlanPoint, waiting: Int64, lines: [LineMark]) {
+    /// The tons waiting at its freight yard (decision 155), or `nil` for
+    /// a station without one.
+    public let freight: Int64?
+
+    public init(station: StationID, name: String, location: PlanPoint, waiting: Int64, lines: [LineMark], freight: Int64? = nil) {
+        self.freight = freight
         self.station = station
         self.name = name
         self.location = location
@@ -48,14 +53,22 @@ public struct StationTag: Hashable, Sendable {
             name: station.name,
             location: station.location,
             waiting: world.waitingPassengers(at: id).reduce(Int64(0)) { $0 + $1.count },
-            lines: world.lines(callingAt: id).map { LineMark(id: $0.id, color: $0.color) }
+            lines: world.lines(callingAt: id).map { LineMark(id: $0.id, color: $0.color) },
+            freight: world.freightFacility(at: id)?.stock
         )
     }
 
-    /// "123 waiting", or `nil` with no one waiting.
+    /// "123 waiting", and with a freight yard "· 40 t of freight" (decision
+    /// 155), or `nil` with no one and nothing waiting.
     public func waitingText(in language: DisplayLanguage) -> String? {
-        guard waiting > 0 else { return nil }
-        return language.text("\(Money(waiting).displayText) waiting", "候車 \(Money(waiting).displayText) 人")
+        var parts: [String] = []
+        if waiting > 0 {
+            parts.append(language.text("\(Money(waiting).displayText) waiting", "候車 \(Money(waiting).displayText) 人"))
+        }
+        if let freight, freight > 0 {
+            parts.append(language.text("\(Money(freight).displayText) t of freight", "待運 \(Money(freight).displayText) 噸"))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 

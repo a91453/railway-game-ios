@@ -266,6 +266,13 @@ extension GameWorld {
         freight?.loads.first { $0.train == id }?.tons ?? 0
     }
 
+    /// Whether train `id` is on a freight line, and so carries cargo rather
+    /// than passengers.
+    public func isFreightTrain(_ id: TrainID) -> Bool {
+        guard let line = assignedLine(of: id) else { return false }
+        return lines.first { $0.id == line }?.isFreight ?? false
+    }
+
     /// The tons a freight train of `cars` cars carries.
     public static func freightCapacity(cars: Int) -> Int64 {
         Int64(cars) * Freight.tonsPerCar

@@ -204,6 +204,10 @@ extension GameWorld {
     /// nobody rides it (or there is no such train).
     public func loadText(of id: TrainID, in language: DisplayLanguage) -> String? {
         guard let load = trainLoadInfo(of: id), load.passengerCount > 0 else { return nil }
+        // Decision 155: a freight train's load is its tons.
+        if isFreightTrain(id) {
+            return language.text("\(load.passengerCount) t aboard · \(load.percentage)%", "載貨 \(load.passengerCount) 噸 · \(load.percentage)%")
+        }
         return language.text("\(load.passengerCount) riding · \(load.percentage)%", "載客 \(load.passengerCount) 人 · \(load.percentage)%")
     }
 
@@ -211,6 +215,10 @@ extension GameWorld {
     /// capacity (cars × 320, the reference's `cap`). `nil` for an unknown ID.
     public func trainLoadInfo(of id: TrainID) -> TrainLoadInfo? {
         guard let train = train(id: id) else { return nil }
+        // Decision 155: a freight train's tons over its cars' tons.
+        if isFreightTrain(id) {
+            return TrainLoadInfo(passengerCount: cargoOnBoard(of: id), capacity: Self.freightCapacity(cars: train.cars))
+        }
         let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
         return TrainLoadInfo(passengerCount: count, capacity: train.ratedCapacity)
     }
@@ -220,7 +228,8 @@ extension GameWorld {
     /// rated capacities. A train off the track carries nobody and is not in
     /// service, so it counts in neither. `nil` when no train is placed.
     public func fleetLoadInfo() -> TrainLoadInfo? {
-        let placed = trains.filter { $0.position != nil }
+        // Decision 155: freight trains carry tons, not riders.
+        let placed = trains.filter { $0.position != nil && !isFreightTrain($0.id) }
         guard !placed.isEmpty else { return nil }
         let count = placed.reduce(Int64(0)) { sum, train in sum + riders(of: train.id).reduce(0) { $0 + $1.count } }
         let capacity = placed.reduce(Int64(0)) { $0 + $1.ratedCapacity }
