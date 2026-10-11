@@ -142,6 +142,16 @@ public enum LiuMingchuanChallenge {
         goldDays: 75, silverDays: year, deadlineDays: 6 * year, insolvencyDays: 60, trainTypes: [.steam]
     )
 
+    /// What the station master says when milestone `index` is reached.
+    static func milestoneCheer(_ index: Int, in language: DisplayLanguage) -> String {
+        switch index {
+        case 0: language.text("Through Shiqiuling! Trains from Keelung reach Badu.", "獅球嶺打通了！基隆的列車開得到八堵了。")
+        case 1: language.text("Keelung to Twatutia is open, as in 1891!", "基隆到大稻埕通車了，就像 1891 年！")
+        case 2: language.text("Over the Tamsui! The way to Taoyuan is open.", "跨過淡水河了！往桃仔園的路通了。")
+        default: language.text("On to Hsinchu! Governor Liu's railway is done, as in 1893.", "通車到新竹了！劉巡撫的鐵路完成了，就像 1893 年。")
+        }
+    }
+
     /// The milestone goal `index` of the scenario names, if it is one.
     static func milestoneTitle(_ index: Int, in language: DisplayLanguage) -> String? {
         milestones.indices.contains(index) ? language.text(milestones[index].english, milestones[index].chinese) : nil
