@@ -808,7 +808,9 @@ V 實際放行 → T、U（保證不互穿）
 | 同檔／事件文字 `metro.event.exhibition`、`metro.event.crowdSurge`、「{wait} 天後開始，持續 {days} 天」 | `DemandEventKind`、`GameWorld.demandEventTexts(at:in:)` | direct（繁中化） |
 | `aviation_disruptions__q_dc8f79f5de24b024.js`／`d(state, key)`（FNV-1a）、cadence `firstMin/firstMax/gapMin/gapMax`、`/ max(1, n / 10)` | `DemandEventSchedule.hash`、`roll`、`startDemandEventDay` | direct／adapted：雜湊照搬；秒數換成整天 |
 | `MetroEconomy.advanceMetroEvents`（不在快照） | 展覽 3–7 天 +20–50%、大量人潮 1–2 天 +50–100%，提前 2–5 天 | gap → 原生數值 |
-| `aviation_disruptions` 的天氣封閉、燃油、國定假日 | — | gap：沒有封站營運模式，之後處理 |
+| `aviation_disruptions` 的假日表 `x`、`K`（國家、名稱、天數、加成） | `HolidayCalendar.countries`（決策 154） | direct：名稱、天數、加成照搬（不搬載入時的 +0.2）；日期是遊戲曆法上 2026 年的月日（gap → 原生），每年同一天 |
+| `Railway/site_archive_clean/index.html` 的 `TW_DAYTYPE` | 台灣的假日列（決策 154） | adapted：補上和平紀念日、國慶日，清明 4 天 |
+| `aviation_disruptions` 的天氣封閉、燃油 | — | gap：方案 B2（`docs/research/DISRUPTION_STUDY.md`） |
 
 ## 城鎮成長（決策 70）
 
