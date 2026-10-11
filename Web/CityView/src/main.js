@@ -29,11 +29,16 @@ installSkyLight();
 const params = new URLSearchParams(location.search);
 const AREA = params.get('area') || 'tokyo'; // (the first of the city switch)
 
+// Along the Line: the page speaks the app's language (the web view's is the app's) on its loading screen and credits.
+const ZH = /^zh/i.test(navigator.language);
+const STEPS_ZH = { textures: '材質', terrain: '地形', 'railways and roads': '鐵道與道路', 'leaving for the next city': '前往下一個城市', 'city tiles': '城市街區' };
+const say = (step) => (ZH && step ? step.replace(/^[a-z ]+[a-z]/, (words) => STEPS_ZH[words] ?? words) : step);
+
 // The loading screen (index.html): the city's name, a bar and what is being done.
 const loader = {
   el: document.getElementById('loader'),
   show(city, step = '') { this.el.classList.remove('done'); if (city) this.el.querySelector('.city').textContent = city; this.set(0, step); },
-  set(fraction, step) { this.el.querySelector('.fill').style.width = `${Math.round(fraction * 100)}%`; if (step != null) this.el.querySelector('.step').textContent = step; },
+  set(fraction, step) { this.el.querySelector('.fill').style.width = `${Math.round(fraction * 100)}%`; if (step != null) this.el.querySelector('.step').textContent = say(step); },
   hide() { this.el.classList.add('done'); },
 };
 loader.show(null, 'textures'); // (index.html has already written the city's name)
@@ -156,7 +161,15 @@ if (manifest.structures) scene.add(await buildStructures(`tiles/${AREA}/${manife
 const traffic = new Traffic(await (await fetch(`tiles/${AREA}/${manifest.roads}`)).json(), streamer.surface);
 if (params.get('cars') != null) traffic.count = Math.min(MAX_CARS, Number(params.get('cars')) || 0);
 if (params.get('traffic') !== '0') scene.add(traffic.group); else traffic.lamps.visible = false;
-document.getElementById('credits').textContent = manifest.attribution.map((a) => a.split(' (')[0]).join(' · ');
+// Along the Line: one line, as on the game's real-world maps: the 3D city's author, in the same form as the data's
+// contributors, then the data (decision 152)
+const CREDITS_ZH = {
+  'Buildings: Overture Maps Foundation': '建物：Overture Maps Foundation',
+  'Roads, railways, parks and places: © OpenStreetMap contributors': '道路、鐵道、公園與地點：© OpenStreetMap 貢獻者',
+};
+document.getElementById('credits').replaceChildren(...[ZH ? '3D 城市：© Yong Su' : '3D city: © Yong Su',
+  ...manifest.attribution.map((a) => a.split(' (')[0]).map((a) => (ZH && CREDITS_ZH[a]) || a)]
+  .flatMap((text, i) => { const part = document.createElement('span'); part.textContent = text; return i ? [' · ', part] : [part]; }));
 
 // initial view: the area's own, or over its origin looking north-west (Shibuya: across the Scramble Crossing to the station)
 const [cx, cz, dist, az, el] = (params.get('cam') || manifest.view || '0,0,420,215,32').split(',').map(Number);
