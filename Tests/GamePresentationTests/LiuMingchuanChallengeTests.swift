@@ -175,7 +175,7 @@ final class ScenarioStationMasterTests: XCTestCase {
     /// and tax with the running costs.
     func testADayLosesMoneyByItsOperatingProfit() throws {
         func day(_ fields: String) throws -> DayAccount {
-            try JSONDecoder().decode(DayAccount.self, from: Data(#"{"day": 0, "fareRevenue": 100, "operatingCost": 500\#(fields)}"#.utf8))
+            try JSONDecoder().decode(DayAccount.self, from: Data(#"{"day": 0, "fareRevenue": 100, "operatingCost": 500, "maintenanceCost": 0, "energyCost": 0, "staffCost": 0\#(fields)}"#.utf8))
         }
         XCTAssertTrue(StationMasterAdvice.lostMoney(on: try day("")))
         XCTAssertFalse(StationMasterAdvice.lostMoney(on: try day(#", "freightRevenue": 400"#)), "freight pays the rest")

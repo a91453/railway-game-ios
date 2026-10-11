@@ -566,12 +566,17 @@ final class PassengerTransferTests: XCTestCase {
             journeys[0]["current"] = 1
             entry["journeys"] = journeys
         }
-        try rejects { entry in
-            let journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
-            entry["journeys"] = [journeys[0], journeys[0]]
-            entry["weights"] = [1, 1]
-            entry["balances"] = [0, 0]
-        }
+        // A journey listed twice, as builds before #366's item 10 saved, is
+        // not refused: that balance alone is dropped and the save loads.
+        var twice = saved
+        var entries = balances
+        let journeys = try XCTUnwrap(entries[0]["journeys"] as? [[String: Any]])
+        entries[0]["journeys"] = [journeys[0], journeys[0]]
+        entries[0]["weights"] = [1, 1]
+        entries[0]["balances"] = [0, 0]
+        twice["passengerRouteBalances"] = entries
+        let loaded = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: twice))
+        XCTAssertEqual(loaded.passengerRouteBalances.count, balances.count - 1)
         // A next ride that starts out of walking reach of the last.
         try rejects { entry in
             var journeys = try XCTUnwrap(entry["journeys"] as? [[String: Any]])
