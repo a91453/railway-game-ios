@@ -1637,9 +1637,10 @@ public struct GameWorld: Equatable, Sendable {
     /// MapBuilder's `handleLineDuplicate`, which names the copy
     /// "<name> - Fork"). Free. The copy has the line's stops, route
     /// preferences, performance, window, train counts, target headways,
-    /// patterns, ring and colour, but no trains: those belong to the line
-    /// they are assigned to, so the copy sends nothing out until trains are
-    /// assigned to it. Its ID is the next line ID.
+    /// patterns, ring, colour and freight (decision 155), but no trains:
+    /// those belong to the line they are assigned to, so the copy sends
+    /// nothing out until trains are assigned to it. Its ID is the next line
+    /// ID.
     ///
     /// - Throws, checked in this order: ``GameError/invalidName``,
     ///   ``GameError/unknownLine(_:)`` or ``GameError/idsExhausted``.
@@ -1662,6 +1663,8 @@ public struct GameWorld: Equatable, Sendable {
         }
         copy.isRing = original.isRing
         copy.color = original.color
+        // Decision 155: a freight line's copy carries freight too.
+        copy.isFreight = original.isFreight
         copy.runs = original.runs
         copy.runDays = Array(repeating: nil, count: original.runs.count)
         nextLineID = nextID
