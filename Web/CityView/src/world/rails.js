@@ -88,7 +88,8 @@ export function sections(pts, ground) {
 
 // ground(x, z): terrain height; cover(x, z): what is overhead for a track passing there — the terrain, or a
 // bridge deck (makeCover in src/shared/decks.js).
-export async function buildRailways(url, ground, cover = ground) {
+// (Along the Line: trainOptions go to Trains, decision 161)
+export async function buildRailways(url, ground, cover = ground, trainOptions = {}) {
   const lines = await (await fetch(url)).json();
   const concrete = [0.64, 0.64, 0.62], steel = [0.33, 0.31, 0.3], white = [1, 1, 1];
   const bed = new Soup(), structure = new Soup(), wires = [];
@@ -214,7 +215,7 @@ export async function buildRailways(url, ground, cover = ground) {
   const wg = new THREE.BufferGeometry();
   wg.setAttribute('position', new THREE.Float32BufferAttribute(wires, 3));
   group.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0x14161a })));
-  const trains = new Trains(lines);
+  const trains = new Trains(lines, trainOptions);
   group.add(trains.group);
   group.userData.trains = trains; // call trains.update(dt, night) every frame
   return group;

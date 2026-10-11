@@ -1,0 +1,41 @@
+{
+  "comment": "Models made with Meshy's Text to 3D API (tools/meshy/meshy.mjs; ARCHITECTURE decision 161). One entry per model: the prompts, the preview and refine options, and where the packed GLB goes. `front` is the axis the cab faces in Meshy's output, filled in after looking at the thumbnail (null until then; the city view assumes +x).",
+  "models": [
+    {
+      "id": "emu900-cab",
+      "use": "TRA EMU900 commuter train (區間車), the two end cars",
+      "prompt": "One single railway passenger car, the driving cab car of a Taiwan Railway EMU900 commuter electric multiple unit. Long straight box-shaped car, about 20 m long, 2.9 m wide and 3.8 m tall, standing on two bogies. One end is the driver's cab with a large windshield and headlights, the other end is flat with a gangway. Four double sliding doors and a row of windows on each side, air-conditioning units on the flat roof. Low poly game asset, clean simple shapes, no rails, no platform, no base.",
+      "texture_prompt": "Brushed stainless steel silver body, bright yellow driver's cab front with black windshield, a yellow stripe and a thin dark grey stripe along the sides under the windows, dark tinted windows, grey doors with yellow edges, dark grey roof equipment and black bogies.",
+      "target_polycount": 6000,
+      "front": null,
+      "out": "Web/CityView/public/models/trains/emu900-cab.glb"
+    },
+    {
+      "id": "emu900-car",
+      "use": "TRA EMU900 commuter train (區間車), the middle cars",
+      "prompt": "One single railway passenger car, an intermediate car of a Taiwan Railway EMU900 commuter electric multiple unit, without a driver's cab. Long straight box-shaped car, about 20 m long, 2.9 m wide and 3.8 m tall, standing on two bogies, both ends flat with gangway connections. Four double sliding doors and a row of windows on each side, air-conditioning units on the flat roof. Low poly game asset, clean simple shapes, no rails, no platform, no base.",
+      "texture_prompt": "Brushed stainless steel silver body, a yellow stripe and a thin dark grey stripe along the sides under the windows, dark tinted windows, grey doors with yellow edges, dark grey roof equipment and black bogies.",
+      "target_polycount": 5000,
+      "front": null,
+      "out": "Web/CityView/public/models/trains/emu900-car.glb"
+    },
+    {
+      "id": "emu3000-cab",
+      "use": "TRA EMU3000 intercity express (自強號), the two end cars",
+      "prompt": "One single railway passenger car, the driving cab car of a Taiwan Railway EMU3000 intercity express electric multiple unit. Long car, about 21 m long, 2.9 m wide and 3.8 m tall, standing on two bogies. One end is a smooth streamlined nose with a wide wraparound windshield and slim headlights, the other end is flat with a gangway. Two single plug doors near the ends and a long continuous row of windows on each side, smooth roof. Low poly game asset, clean simple shapes, no rails, no platform, no base.",
+      "texture_prompt": "Glossy white body, an orange stripe and a dark grey window band along the whole side, black windshield on the nose with an orange accent, dark tinted windows, white doors, light grey roof and black bogies.",
+      "target_polycount": 6000,
+      "front": null,
+      "out": "Web/CityView/public/models/trains/emu3000-cab.glb"
+    },
+    {
+      "id": "emu3000-car",
+      "use": "TRA EMU3000 intercity express (自強號), the middle cars",
+      "prompt": "One single railway passenger car, an intermediate car of a Taiwan Railway EMU3000 intercity express electric multiple unit, without a driver's cab. Long car, about 20 m long, 2.9 m wide and 3.8 m tall, standing on two bogies, both ends flat with gangway connections. Two single plug doors near the ends and a long continuous row of windows on each side, smooth roof. Low poly game asset, clean simple shapes, no rails, no platform, no base.",
+      "texture_prompt": "Glossy white body, an orange stripe and a dark grey window band along the whole side, dark tinted windows, white doors, light grey roof and black bogies.",
+      "target_polycount": 5000,
+      "front": null,
+      "out": "Web/CityView/public/models/trains/emu3000-car.glb"
+    }
+  ]
+}

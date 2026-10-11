@@ -10,12 +10,15 @@ Every change is marked `Along the Line` in the code:
 | File | Change |
 | --- | --- |
 | `tools/pipeline/taiwan.mjs` (new) | Overture buildings in place of PLATEAU's: usage from Overture's subtype and class, storeys estimated from the footprint where Overture has none; road outlines from the OpenStreetMap centrelines (PLATEAU has the right-of-way) |
-| `tools/pipeline/config.mjs` | The `kaohsiung` area: `source: 'taiwan'`, a square of `half` metres round the origin, its own attribution |
+| `tools/pipeline/config.mjs` | The `kaohsiung` area: `source: 'taiwan'`, a square of `half` metres round the origin, its own attribution; the `taichung` area (decision 161), where the TRA runs on a viaduct |
 | `tools/pipeline/compile.mjs` | A Taiwanese area: flat ground, no PLATEAU, Overture's buildings, road outlines from the centrelines; keeps right (`roads.json` `rightHand`); Taiwan's clock in the manifest (`utcOffset`, `zone`) |
 | `tools/pipeline/markings.mjs` | `rightHand`: lane symbols and stop lines on the right half; no 止まれ |
 | `src/world/traffic.js` | Cars keep right where `roads.json` says `rightHand` |
 | `src/world/signs.js` | Traditional Chinese fonts first |
-| `src/main.js` | The clock in the area's time zone (the manifest's `utcOffset`) |
+| `src/main.js` | The clock in the area's time zone (the manifest's `utcOffset`); tells the railways a Taiwanese area (the manifest's `zone`) |
+| `src/world/rails.js` | Passes the train options on to `Trains` |
+| `src/world/trains.js` | In a Taiwanese area every heavy-rail line runs the TRA's EMU900 and EMU3000 in turn; cars drawn with the Meshy models of `public/models/trains/` (`tools/meshy`, decision 161) when they are there, as boxes otherwise |
+| `public/models/trains/` (new) | The Meshy train models and their `index.json` (file, the axis the cab faces) |
 | `src/world/atmosphere.js` | The environment map is baked 10 m above the ground: from 0 m, at Kaohsiung's latitude, the sky gives NaNs and the city goes black |
 | `index.html` | The loading screen says 沿線 instead of 東京 |
 

@@ -7,10 +7,12 @@ import WebKit
 
 /// The 3D city view (ARCHITECTURE decision 152): jeantimex/tokyo's web
 /// renderer, built from `Web/CityView` into the bundled folder
-/// `Resources/CityView`, showing the area round Kaohsiung Station from
-/// Overture's buildings and OpenStreetMap. A preview from the settings: it
-/// reads nothing of the game, and its traffic and trains are the page's own.
+/// `Resources/CityView`, showing the area round Kaohsiung or Taichung
+/// Station (decision 161) from Overture's buildings and OpenStreetMap. A
+/// preview from the settings: it reads nothing of the game, and its traffic
+/// and trains are the page's own.
 struct CityView3D: View {
+    let area: CityViewArea
     @Environment(\.dismiss) private var dismiss
     @State private var host = CityViewHost()
 
@@ -44,7 +46,7 @@ struct CityView3D: View {
             .accessibilityIdentifier("cityView.close")
         }
         .statusBarHidden()
-        .task { host.start() }
+        .task { host.start(area: area) }
         .onDisappear { host.stop() }
     }
 }
@@ -58,7 +60,7 @@ final class CityViewHost {
     private(set) var failed = false
     @ObservationIgnored private var server: CityViewServer?
 
-    func start() {
+    func start(area: CityViewArea) {
         guard server == nil else { return }
         guard let root = Bundle.main.url(forResource: "CityView", withExtension: nil),
               let server = try? CityViewServer(root: root)
@@ -70,7 +72,7 @@ final class CityViewHost {
         server.start { [weak self] port in
             guard let self else { return }
             if let port {
-                url = URL(string: "http://localhost:\(port)\(CityViewServing.startPath)")
+                url = URL(string: "http://localhost:\(port)\(area.startPath)")
             } else {
                 failed = true
             }

@@ -199,8 +199,8 @@ public enum DataSourceCredits {
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings of the 3D city preview round Kaohsiung Station are its footprints too.",
-                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站周圍 3D 城市試作的建物也是它的足跡。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings of the 3D city preview round Kaohsiung and Taichung Stations are its footprints too.",
+                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍 3D 城市試作的建物也是它的足跡。"
                         ),
                         notice: language.text(
                             "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file the game derives from them is available under the same licence from the source repository.",
@@ -318,8 +318,8 @@ public enum DataSourceCredits {
                         id: "proceduralTokyo",
                         title: "Procedural Tokyo",
                         detail: language.text(
-                            "The software that draws the 3D city round Kaohsiung Station from Overture Maps’ buildings and OpenStreetMap’s roads, parks and places: buildings, street furniture, traffic, sky and light. With three.js, postprocessing, N8AO, takram three-geospatial, ez-tree, lil-gui and earcut bundled into it.",
-                            "繪製高雄車站周圍 3D 城市的軟體（建物、街道設施、車流、天空與光線），資料來自 Overture Maps 的建物與 OpenStreetMap 的道路、公園與地點。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut。"
+                            "The software that draws the 3D city round Kaohsiung and Taichung Stations from Overture Maps’ buildings and OpenStreetMap’s roads, parks and places: buildings, street furniture, traffic, trains, sky and light. With three.js, postprocessing, N8AO, takram three-geospatial, ez-tree, lil-gui and earcut bundled into it.",
+                            "繪製高雄車站與臺中車站周圍 3D 城市的軟體（建物、街道設施、車流、列車、天空與光線），資料來自 Overture Maps 的建物與 OpenStreetMap 的道路、公園與地點。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut。"
                         ),
                         notice: language.text(
                             "Copyright (c) 2026 Yong Su, under the MIT License. The licences of the libraries it bundles (MIT, Zlib, ISC) come with the app and are at the link below.",

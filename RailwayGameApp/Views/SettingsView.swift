@@ -19,7 +19,7 @@ struct SettingsView: View {
     /// screen.
     var session: GameSession? = nil
     @Environment(\.dismiss) private var dismiss
-    @State private var showsCityView = false
+    @State private var cityViewArea: CityViewArea?
 
     var body: some View {
         NavigationStack {
@@ -45,8 +45,8 @@ struct SettingsView: View {
                 aboutSection
             }
             .listStyle(.insetGrouped)
-            .fullScreenCover(isPresented: $showsCityView) {
-                CityView3D()
+            .fullScreenCover(item: $cityViewArea) { area in
+                CityView3D(area: area)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -97,12 +97,13 @@ struct SettingsView: View {
     }
 
     /// Decision 152: the 3D city view, a preview of what the game's 3D may
-    /// look like (``CityView3D``).
+    /// look like (``CityView3D``); decision 161 adds Taichung Station, where
+    /// the trains run on a viaduct.
     private var previewSection: some View {
         let language = DisplayLanguage.app
         return Section {
             Button {
-                showsCityView = true
+                cityViewArea = .kaohsiung
             } label: {
                 Label {
                     Text(verbatim: language.text("3D City: Kaohsiung Station", "3D 城市：高雄車站"))
@@ -111,12 +112,22 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.cityView")
+            Button {
+                cityViewArea = .taichung
+            } label: {
+                Label {
+                    Text(verbatim: language.text("3D City: Taichung Station", "3D 城市：臺中車站"))
+                } icon: {
+                    Image(systemName: "tram")
+                }
+            }
+            .accessibilityIdentifier("settings.cityView.taichung")
         } header: {
             Text(verbatim: language.text("Preview", "試作"))
         } footer: {
             Text(verbatim: language.text(
-                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung Station, drawn by the Procedural Tokyo renderer. It is not part of your game yet: the cars and the light are its own. Drag to move, pinch to zoom, two fingers to turn.",
-                "3D 城市的試作：高雄車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。還沒有接上你的遊戲：車流與光線都是它自己的。拖曳移動、兩指縮放、兩指旋轉。"
+                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. Drag to move, pinch to zoom, two fingers to turn.",
+                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。拖曳移動、兩指縮放、兩指旋轉。"
             ))
         }
     }

@@ -1,0 +1,452 @@
+{
+ "format": 7,
+ "area": "taichung",
+ "name": "臺中車站",
+ "compiled": "2026-10-11T02:40:47.755Z",
+ "origin": {
+  "lon": 120.6869,
+  "lat": 24.1371
+ },
+ "frame": "metres; x east, y up (TP height), z south",
+ "tileSize": 256,
+ "bounds": {
+  "minX": -750,
+  "maxX": 750,
+  "minZ": -750,
+  "maxZ": 750
+ },
+ "meshes": [],
+ "terrain": {
+  "file": "terrain.bin",
+  "x0": -750,
+  "z0": -750,
+  "step": 5,
+  "w": 301,
+  "h": 300,
+  "min": 0,
+  "max": 0
+ },
+ "roads": "roads.json",
+ "rails": "rails.json",
+ "structures": "structures.json",
+ "view": "-330,140,230,293,24",
+ "utcOffset": 8,
+ "zone": "Taiwan",
+ "decks": [],
+ "tiles": [
+  {
+   "x": -4,
+   "z": -3,
+   "file": "t_-4_-3.bin",
+   "buildings": 0,
+   "areas": 0,
+   "props": 4,
+   "signs": 0,
+   "bytes": 104
+  },
+  {
+   "x": -3,
+   "z": -3,
+   "file": "t_-3_-3.bin",
+   "buildings": 55,
+   "areas": 832,
+   "props": 120,
+   "signs": 40,
+   "bytes": 49742
+  },
+  {
+   "x": -2,
+   "z": -3,
+   "file": "t_-2_-3.bin",
+   "buildings": 28,
+   "areas": 586,
+   "props": 156,
+   "signs": 22,
+   "bytes": 33822
+  },
+  {
+   "x": -1,
+   "z": -3,
+   "file": "t_-1_-3.bin",
+   "buildings": 24,
+   "areas": 833,
+   "props": 238,
+   "signs": 14,
+   "bytes": 48134
+  },
+  {
+   "x": 0,
+   "z": -3,
+   "file": "t_0_-3.bin",
+   "buildings": 28,
+   "areas": 295,
+   "props": 175,
+   "signs": 3,
+   "bytes": 22120
+  },
+  {
+   "x": 1,
+   "z": -3,
+   "file": "t_1_-3.bin",
+   "buildings": 53,
+   "areas": 349,
+   "props": 170,
+   "signs": 5,
+   "bytes": 26044
+  },
+  {
+   "x": 2,
+   "z": -3,
+   "file": "t_2_-3.bin",
+   "buildings": 64,
+   "areas": 218,
+   "props": 124,
+   "signs": 8,
+   "bytes": 19448
+  },
+  {
+   "x": 3,
+   "z": -3,
+   "file": "t_3_-3.bin",
+   "buildings": 0,
+   "areas": 0,
+   "props": 29,
+   "signs": 0,
+   "bytes": 504
+  },
+  {
+   "x": -4,
+   "z": -2,
+   "file": "t_-4_-2.bin",
+   "buildings": 0,
+   "areas": 0,
+   "props": 14,
+   "signs": 0,
+   "bytes": 264
+  },
+  {
+   "x": -3,
+   "z": -2,
+   "file": "t_-3_-2.bin",
+   "buildings": 62,
+   "areas": 512,
+   "props": 107,
+   "signs": 33,
+   "bytes": 35999
+  },
+  {
+   "x": -2,
+   "z": -2,
+   "file": "t_-2_-2.bin",
+   "buildings": 39,
+   "areas": 1279,
+   "props": 190,
+   "signs": 36,
+   "bytes": 68917
+  },
+  {
+   "x": -1,
+   "z": -2,
+   "file": "t_-1_-2.bin",
+   "buildings": 33,
+   "areas": 1042,
+   "props": 214,
+   "signs": 16,
+   "bytes": 59369
+  },
+  {
+   "x": 0,
+   "z": -2,
+   "file": "t_0_-2.bin",
+   "buildings": 15,
+   "areas": 541,
+   "props": 265,
+   "signs": 7,
+   "bytes": 32813
+  },
+  {
+   "x": 1,
+   "z": -2,
+   "file": "t_1_-2.bin",
+   "buildings": 21,
+   "areas": 661,
+   "props": 245,
+   "signs": 3,
+   "bytes": 36996
+  },
+  {
+   "x": 2,
+   "z": -2,
+   "file": "t_2_-2.bin",
+   "buildings": 47,
+   "areas": 117,
+   "props": 183,
+   "signs": 3,
+   "bytes": 18284
+  },
+  {
+   "x": 3,
+   "z": -2,
+   "file": "t_3_-2.bin",
+   "buildings": 0,
+   "areas": 0,
+   "props": 85,
+   "signs": 0,
+   "bytes": 1400
+  },
+  {
+   "x": -3,
+   "z": -1,
+   "file": "t_-3_-1.bin",
+   "buildings": 59,
+   "areas": 856,
+   "props": 184,
+   "signs": 40,
+   "bytes": 53647
+  },
+  {
+   "x": -2,
+   "z": -1,
+   "file": "t_-2_-1.bin",
+   "buildings": 76,
+   "areas": 558,
+   "props": 127,
+   "signs": 62,
+   "bytes": 43271
+  },
+  {
+   "x": -1,
+   "z": -1,
+   "file": "t_-1_-1.bin",
+   "buildings": 47,
+   "areas": 893,
+   "props": 201,
+   "signs": 21,
+   "bytes": 59755
+  },
+  {
+   "x": 0,
+   "z": -1,
+   "file": "t_0_-1.bin",
+   "buildings": 19,
+   "areas": 322,
+   "props": 141,
+   "signs": 2,
+   "bytes": 22059
+  },
+  {
+   "x": 1,
+   "z": -1,
+   "file": "t_1_-1.bin",
+   "buildings": 7,
+   "areas": 98,
+   "props": 195,
+   "signs": 1,
+   "bytes": 16790
+  },
+  {
+   "x": 2,
+   "z": -1,
+   "file": "t_2_-1.bin",
+   "buildings": 9,
+   "areas": 72,
+   "props": 92,
+   "signs": 4,
+   "bytes": 9818
+  },
+  {
+   "x": -4,
+   "z": 0,
+   "file": "t_-4_0.bin",
+   "buildings": 0,
+   "areas": 0,
+   "props": 32,
+   "signs": 0,
+   "bytes": 552
+  },
+  {
+   "x": -3,
+   "z": 0,
+   "file": "t_-3_0.bin",
+   "buildings": 60,
+   "areas": 357,
+   "props": 190,
+   "signs": 8,
+   "bytes": 31350
+  },
+  {
+   "x": -2,
+   "z": 0,
+   "file": "t_-2_0.bin",
+   "buildings": 63,
+   "areas": 1298,
+   "props": 305,
+   "signs": 49,
+   "bytes": 80427
+  },
+  {
+   "x": -1,
+   "z": 0,
+   "file": "t_-1_0.bin",
+   "buildings": 65,
+   "areas": 710,
+   "props": 168,
+   "signs": 19,
+   "bytes": 45569
+  },
+  {
+   "x": 0,
+   "z": 0,
+   "file": "t_0_0.bin",
+   "buildings": 45,
+   "areas": 1119,
+   "props": 298,
+   "signs": 38,
+   "bytes": 66964
+  },
+  {
+   "x": 1,
+   "z": 0,
+   "file": "t_1_0.bin",
+   "buildings": 11,
+   "areas": 427,
+   "props": 147,
+   "signs": 4,
+   "bytes": 26591
+  },
+  {
+   "x": 2,
+   "z": 0,
+   "file": "t_2_0.bin",
+   "buildings": 8,
+   "areas": 690,
+   "props": 228,
+   "signs": 3,
+   "bytes": 38461
+  },
+  {
+   "x": -3,
+   "z": 1,
+   "file": "t_-3_1.bin",
+   "buildings": 51,
+   "areas": 600,
+   "props": 202,
+   "signs": 9,
+   "bytes": 36004
+  },
+  {
+   "x": -2,
+   "z": 1,
+   "file": "t_-2_1.bin",
+   "buildings": 73,
+   "areas": 732,
+   "props": 173,
+   "signs": 55,
+   "bytes": 48332
+  },
+  {
+   "x": -1,
+   "z": 1,
+   "file": "t_-1_1.bin",
+   "buildings": 64,
+   "areas": 46,
+   "props": 46,
+   "signs": 8,
+   "bytes": 9701
+  },
+  {
+   "x": 0,
+   "z": 1,
+   "file": "t_0_1.bin",
+   "buildings": 63,
+   "areas": 240,
+   "props": 133,
+   "signs": 13,
+   "bytes": 21100
+  },
+  {
+   "x": 1,
+   "z": 1,
+   "file": "t_1_1.bin",
+   "buildings": 20,
+   "areas": 430,
+   "props": 136,
+   "signs": 2,
+   "bytes": 29667
+  },
+  {
+   "x": 2,
+   "z": 1,
+   "file": "t_2_1.bin",
+   "buildings": 12,
+   "areas": 889,
+   "props": 198,
+   "signs": 12,
+   "bytes": 56781
+  },
+  {
+   "x": -3,
+   "z": 2,
+   "file": "t_-3_2.bin",
+   "buildings": 30,
+   "areas": 110,
+   "props": 82,
+   "signs": 2,
+   "bytes": 10520
+  },
+  {
+   "x": -2,
+   "z": 2,
+   "file": "t_-2_2.bin",
+   "buildings": 43,
+   "areas": 151,
+   "props": 67,
+   "signs": 6,
+   "bytes": 15349
+  },
+  {
+   "x": -1,
+   "z": 2,
+   "file": "t_-1_2.bin",
+   "buildings": 17,
+   "areas": 318,
+   "props": 115,
+   "signs": 2,
+   "bytes": 20076
+  },
+  {
+   "x": 0,
+   "z": 2,
+   "file": "t_0_2.bin",
+   "buildings": 47,
+   "areas": 431,
+   "props": 164,
+   "signs": 6,
+   "bytes": 30496
+  },
+  {
+   "x": 1,
+   "z": 2,
+   "file": "t_1_2.bin",
+   "buildings": 29,
+   "areas": 522,
+   "props": 240,
+   "signs": 19,
+   "bytes": 34410
+  },
+  {
+   "x": 2,
+   "z": 2,
+   "file": "t_2_2.bin",
+   "buildings": 17,
+   "areas": 486,
+   "props": 213,
+   "signs": 0,
+   "bytes": 29746
+  }
+ ],
+ "attribution": [
+  "Buildings: Overture Maps Foundation (ODbL 1.0; OpenStreetMap contributors, Shi et al. CC BY 4.0)",
+  "Roads, railways, parks and places: © OpenStreetMap contributors (ODbL 1.0)"
+ ]
+}
