@@ -7,7 +7,9 @@ import SwiftUI
 /// 5-point `.pax-bar-bg` track whose `.pax-bar-fill` is one neutral colour
 /// and turns red (`.is-overload`) only when the rounded percentage is over
 /// 100 (``TrainLoadInfo/isOverload``). The reference's rated capacity and
-/// current passengers rows (`#pt-cap`, `#pt-pax`) follow as one caption.
+/// current passengers rows (`#pt-cap`, `#pt-pax`) follow as one caption. A
+/// freight train's load is its tons (decision 155): its title and caption
+/// say so (``TrainLoadInfo/isFreight``).
 struct TrainLoadBar: View {
     let load: TrainLoadInfo
     let language: DisplayLanguage
@@ -15,7 +17,7 @@ struct TrainLoadBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(verbatim: language.text("Load Factor", "載客率"))
+                Text(verbatim: load.titleText(in: language))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
                 Spacer()
@@ -35,15 +37,12 @@ struct TrainLoadBar: View {
             .frame(height: 5)
             .animation(.linear(duration: 0.2), value: load.barFraction)
 
-            Text(verbatim: language.text(
-                "Current passengers \(load.passengerCount) · Rated capacity \(load.capacity)",
-                "當前載客 \(load.passengerCount) · 額定載客 \(load.capacity)"
-            ))
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(Theme.textSecondary)
+            Text(verbatim: load.detailText(in: language))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.textSecondary)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: language.text("Load Factor", "載客率")))
+        .accessibilityLabel(Text(verbatim: load.titleText(in: language)))
         .accessibilityValue(Text(verbatim: "\(load.percentage)% (\(load.passengerCount) / \(load.capacity))"))
     }
 }

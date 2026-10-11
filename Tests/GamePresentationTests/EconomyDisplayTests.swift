@@ -200,6 +200,11 @@ final class EconomyDisplayTests: XCTestCase {
         let train = world.trains[0]
         let load = try XCTUnwrap(world.trainLoadInfo(of: train.id))
         XCTAssertEqual(load, TrainLoadInfo(passengerCount: 0, capacity: 320))
+        XCTAssertFalse(load.isFreight)
+        XCTAssertEqual(load.titleText(in: .english), "Load Factor")
+        XCTAssertEqual(load.titleText(in: .traditionalChinese), "載客率")
+        XCTAssertEqual(load.detailText(in: .english), "Current passengers 0 · Rated capacity 320")
+        XCTAssertEqual(load.detailText(in: .traditionalChinese), "當前載客 0 · 額定載客 320")
         XCTAssertEqual(load.percentage, 0)
         XCTAssertEqual(load.barFraction, 0)
         XCTAssertFalse(load.isOverload)
