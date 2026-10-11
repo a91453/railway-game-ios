@@ -36,11 +36,7 @@ final class HighSpeedDemoTests: XCTestCase {
     /// every test that needs it: it takes a minute in a debug build.
     private static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld), Error> = Result {
         let layout = try HighSpeedDemo.Layout(railways: railways())
-        var world = GameWorld.newGame(
-            anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame),
-            eventSeed: 1, land: []
-        )
-        world.setLandOnDemand()
+        var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
         try layout.build(in: &world, language: .english)
         return (layout, world)
     }
@@ -105,6 +101,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertTrue(line.isHighSpeed, "planned at PERF_HSR: the line is a high-speed line (decision 168)")
         XCTAssertEqual(line.window, .standard, "the real day's first train is at 06:00 and the last at midnight")
         XCTAssertFalse(world.isTrafficControlEnabled, "one track for both ways")
+        XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
     }
 
     func testItsSetsAreTwelveCarHighSpeedSets() throws {
@@ -158,6 +155,7 @@ final class HighSpeedDemoTests: XCTestCase {
         let world = try Self.opened.get()
         XCTAssertEqual(world.clock.now.minute, 7 * 60)
         XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
+        XCTAssertFalse(world.doorCrowding)
         XCTAssertEqual(world.stations.count, 12)
         // The first set of each kind left at six, a third and a half more
         // since: seven by seven o'clock, spread along the line, the first

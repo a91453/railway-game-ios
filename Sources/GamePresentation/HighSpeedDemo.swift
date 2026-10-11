@@ -102,11 +102,7 @@ public enum HighSpeedDemo {
         water: WaterGrid? = nil, coverage: CoverageGrid? = nil, eventSeed: UInt32 = 1
     ) throws(Failure) -> GameWorld {
         let layout = try Layout(railways: railways)
-        var world = GameWorld.newGame(
-            anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame),
-            eventSeed: eventSeed, land: []
-        )
-        world.setLandOnDemand()
+        var world = newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: eventSeed)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
             // The first set leaves at 06:00. Until then nothing runs and no
@@ -120,6 +116,20 @@ public enum HighSpeedDemo {
         } catch {
             preconditionFailure("The high-speed demo no longer builds: \(error)")
         }
+        return world
+    }
+
+    /// The world the demo is built in: a new whole-Taiwan game with `cost`,
+    /// what the layout costs, on top of its money, and its land read in as
+    /// it is needed.
+    static func newWorld(paying cost: Money, eventSeed: UInt32) -> GameWorld {
+        var world = GameWorld.newGame(
+            anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: GameWorld.startingBalance + cost, eventSeed: eventSeed, land: []
+        )
+        world.setLandOnDemand()
+        // Decision 169: nor do its dwells lengthen in a crowd; the service
+        // levels were measured without.
+        world.setDoorCrowding(false)
         return world
     }
 
