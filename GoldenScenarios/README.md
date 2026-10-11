@@ -836,3 +836,12 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 貨運場在第 0 到第 24 個整點各做 50,000 千分之一噸，共 1,250,000：52 噸，餘 2,000；
   - 沒有路線，沒有營運成本：餘額 100,000,000 − 2 × 1,000 − 5,000,000 = 94,998,000。
 - 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 157：城市用建材成長（schema 60）
+
+- 沒有新指令；用 schema 59 的 `enableBuildingMaterials`。
+- `materials-growth.json`（新）：`city-buildings-raise.json` 打開建材。每站有第一個午夜由公路運來的 60 噸。第二個午夜：
+  - 升級用新增樓層的樓地板 ÷ 200 m²／噸，無條件進位：D1→D2 31 噸、D2→D3 93 噸、D3→D4 169 噸；依選出的順序，第一個付不起的停下當晚的升級；新的一格 16 噸。
+  - Alpha 升級 (0, 0) 到 D2（剩 29 噸），付不起 (0, 1)；Beta 升級 (0, 1)，付不起 (0, 4)；Gamma 升級 (0, 4)，付不起 (0, 5) 到 D4。
+  - 三站都缺料，成長率都變成四分之一（12 → 3 千分比），各蓋一格新的（剩 13 噸）。之後那個午夜各再得 60 噸：73 噸，共用掉 141 噸、供應 360 噸。
+- `tools/golden-checks/city_growth.py` 獨立算出每一個值（同一支程式也照舊驗 `city-buildings-raise.json`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

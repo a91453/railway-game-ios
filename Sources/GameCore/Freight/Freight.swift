@@ -67,6 +67,32 @@ public enum Freight {
     /// The tons a station that is an outside connection (decision 137)
     /// imports a day besides.
     public static let importedMaterialsPerDay: Int64 = 600
+    // The city builds with them (decision 157): this project's numbers
+    // (gap), chosen by `BalanceReportTests`.
+
+    /// The floor a ton of building materials builds, in m²: raising a
+    /// building takes its new storeys' floor (``Building/floorArea`` a
+    /// storey) over this, rounded up.
+    public static let floorPerTon: Int64 = 200
+    /// The tons a new cell (a D1 building of two storeys) takes.
+    public static var newCellMaterials: Int64 {
+        materials(forFloors: BuildingDensity.d1.floors)
+    }
+    /// How many times slower a station short of materials grows that night.
+    public static let shortGrowthDivisor: Int64 = 4
+
+    /// The tons `floors` new storeys of a cell take.
+    public static func materials(forFloors floors: Int64) -> Int64 {
+        let floor = floors * Building.floorArea
+        return (floor + floorPerTon - 1) / floorPerTon
+    }
+
+    /// The tons raising a building of `density` one density takes; 0 at D4.
+    public static func materials(toRaise density: BuildingDensity) -> Int64 {
+        guard let next = BuildingDensity(rawValue: density.rawValue + 1) else { return 0 }
+        return materials(forFloors: next.floors - density.floors)
+    }
+
     /// The most tons any total, or train's load, may hold in a save: far
     /// beyond any game.
     static let maximumTons: Int64 = 1 << 40
@@ -391,10 +417,31 @@ extension GameWorld {
     }
 
     /// Turns building materials on (decision 156), and freight with them.
-    /// Free; a world with them on keeps them on.
+    /// Free.
     public mutating func enableBuildingMaterials() {
-        enableFreight()
-        freight?.buildingMaterials = true
+        setBuildingMaterials(true)
+    }
+
+    /// Turns building materials on, with freight, or off (decision 157: the
+    /// tutorial and the challenges, measured without them, keep none). Off,
+    /// the materials the stations hold and those on board are lost, and
+    /// every yard sends goods. Free.
+    public mutating func setBuildingMaterials(_ enabled: Bool) {
+        if enabled { enableFreight() }
+        guard var state = freight, state.buildingMaterials != enabled else { return }
+        if !enabled {
+            state.count(state.materials.reduce(0) { $0 + $1.tons }, in: \.materialsLost)
+            state.materials = []
+            for index in state.facilities.indices { state.facilities[index].product = .goods }
+            for slot in state.loads.indices.reversed() {
+                let gone = state.loads[slot].groups.filter { $0.kind == .materials }.reduce(0) { $0 + $1.tons }
+                state.count(gone, in: \.lost)
+                state.loads[slot].groups.removeAll { $0.kind == .materials }
+                if state.loads[slot].groups.isEmpty { state.loads.remove(at: slot) }
+            }
+        }
+        state.buildingMaterials = enabled
+        freight = state
     }
 
     /// The tons of building materials station `id` holds (decision 156).

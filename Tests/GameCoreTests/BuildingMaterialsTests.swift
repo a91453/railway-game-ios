@@ -183,4 +183,37 @@ final class BuildingMaterialsTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 39,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
+
+    // MARK: - The city's growth (decision 157)
+
+    /// A raise takes its new storeys' floor at 200 m² a ton, rounded up; a
+    /// new cell is a D1 building's two storeys.
+    func testWhatBuildingTakes() {
+        XCTAssertEqual(Freight.materials(toRaise: .d1), 31, "4 storeys × 1,536 m² = 6,144 m², 30.72 t")
+        XCTAssertEqual(Freight.materials(toRaise: .d2), 93, "12 storeys, 18,432 m², 92.16 t")
+        XCTAssertEqual(Freight.materials(toRaise: .d3), 169, "22 storeys, 33,792 m², 168.96 t")
+        XCTAssertEqual(Freight.materials(toRaise: .d4), 0)
+        XCTAssertEqual(Freight.newCellMaterials, 16, "2 storeys, 3,072 m², 15.36 t")
+    }
+
+    /// Turning building materials off loses what the stations hold and what
+    /// trains carry of them, and every yard sends goods again.
+    func testTurningMaterialsOffLosesThem() throws {
+        var world = try world()
+        while world.freight?.loads.isEmpty ?? true { try world.advance(ticks: 1) }
+        let carried = try XCTUnwrap(world.freight?.onBoard)
+        let held = try XCTUnwrap(world.freight?.materials.reduce(0) { $0 + $1.tons })
+        world.setBuildingMaterials(false)
+        let state = try XCTUnwrap(world.freight)
+        XCTAssertFalse(state.buildingMaterials)
+        XCTAssertEqual(state.materials, [])
+        XCTAssertEqual(state.loads, [])
+        XCTAssertEqual(state.facilities.map(\.product), [.goods, .goods])
+        XCTAssertEqual(state.materialsLost, held)
+        XCTAssertEqual(state.lost, carried)
+        XCTAssertTrue(state.isConserved)
+        // And again on, with nothing.
+        world.setBuildingMaterials(true)
+        XCTAssertTrue(try XCTUnwrap(world.freight).buildingMaterials)
+    }
 }
