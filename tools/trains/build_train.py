@@ -43,6 +43,7 @@ STOCK = {
                   "tuck": 0.34, "cap": 0.56, "wing": 0.05, "shoulder": 0.66},
         "window": {"from": 0.555, "to": 0.780, "pitch": 1.0, "width": 0.50},
         "door": {"width": 0.85},
+        "skirtTop": 0.28, "screen": True,
     },
     "n700st-car": {
         "name": "THSR N700ST intermediate car",
@@ -51,6 +52,7 @@ STOCK = {
                   "tuck": 0.34, "cap": 0.56, "wing": 0.05, "shoulder": 0.66},
         "window": {"from": 0.555, "to": 0.780, "pitch": 1.0, "width": 0.50},
         "door": {"width": 0.85},
+        "skirtTop": 0.28, "screen": False,
     },
 }
 
@@ -62,7 +64,7 @@ BODY_STEP = 1.2
 # Which part of the livery a face takes. SIDE is the swept surface and everything standing on it, and
 # is unwrapped into the painter's side strip; the kit over and under the body takes one plain swatch,
 # exactly as the procedural geometry in trains.js does.
-SIDE, ROOF, UNDER = "side", "roof", "under"
+SIDE, ROOF, UNDER, SCREEN = "side", "roof", "under", "screen"
 
 
 def ease(x):
@@ -128,11 +130,15 @@ def build(spec):
     for x, pts in rings:
         for (y, z, _f) in pts:
             verts.append((x, y, z))
+    # The top of the nose is its own chart when this stock has a windscreen (see NOSE below), so its
+    # quads are told apart here and unwrapped differently; the rest of the sweep is unchanged.
+    k0, k1 = RING // 2 - NOSE_ACROSS, RING // 2 + NOSE_ACROSS
     for i in range(len(rings) - 1):
         for k in range(RING):
             a, b = i * RING + k, i * RING + (k + 1) % RING
             faces.append((a, b, b + RING, a + RING))
-            kind.append(SIDE)
+            kind.append(SCREEN if (spec["screen"] and steps <= i < steps + NOSE_RINGS
+                                   and k0 <= k < k1) else SIDE)
     # the flat rear end and the small face at the tip
     for idx, front in ((0, False), (len(rings) - 1, True)):
         x, pts = rings[idx]
@@ -142,7 +148,7 @@ def build(spec):
             a, b = idx * RING + k, idx * RING + (k + 1) % RING
             faces.append((centre, a, b) if front else (centre, b, a))
             kind.append(SIDE)
-    return verts, faces, kind
+    return verts, faces, kind, rings, steps
 
 
 def add_box(verts, faces, kind, cx, cy, cz, sx, sy, sz, where):
@@ -174,17 +180,40 @@ def add_cylinder(verts, faces, kind, cx, cy, cz, r, w, where, seg=12):
             kind.append(where)
 
 
-def add_plate(verts, faces, kind, spec, left, side, f0, f1, length, proud, deep):
+def add_panel(verts, faces, kind, spec, left, side, f0, f1, length, proud, rows):
     """A panel standing on the flank: a bonded window unit, a plug door leaf. `left` is its near edge
-    in metres from the car's rear end. It stands `proud` metres off the shell, which is what gives the
-    bake a contact shadow to lay around it — the recess the first version of this cut inward instead
-    was simply inside a closed body, and invisible."""
+    in metres from the car's rear end, and it stands `proud` metres off the shell, which is what gives
+    the bake a contact shadow to lay around it — the recess the first version of this cut inward
+    instead was simply inside a closed body, and invisible.
+
+    It follows the flank in `rows` steps rather than being a flat box. The section is widest at the
+    crease and tucks in towards the roof, so a box placed at the widest point stands 19 cm off the
+    body at the top of a door and reads as a slab hung crookedly on the side."""
     sh = spec["shell"]
     _half_w, top, bottom, _cap, _low, _up = section(0.0, sh)
-    z0, z1 = bottom + f0 * (top - bottom), bottom + f1 * (top - bottom)
-    out = max(flank(0.0, sh, f) for f in (f0, (f0 + f1) / 2, f1)) + proud
-    add_box(verts, faces, kind, -spec["length"] / 2 + left + length / 2,
-            side * (out - deep / 2), (z0 + z1) / 2, length, deep, z1 - z0, SIDE)
+    x0 = -spec["length"] / 2 + left
+    x1 = x0 + length
+    o = len(verts)
+    for r in range(rows + 1):
+        f = f0 + (f1 - f0) * r / rows
+        z = bottom + f * (top - bottom)
+        out = flank(0.0, sh, f)
+        for y in (out + proud, out):                      # the face, then where it meets the body
+            for x in (x0, x1):
+                verts.append((x, side * y, z))
+    # Wound for the +y flank; the other side is the mirror of it, so its faces are reversed.
+    def quad(*ix):
+        f = tuple(o + i for i in ix)
+        faces.append(f if side > 0 else f[::-1])
+        kind.append(SIDE)
+    for r in range(rows):
+        p, q = r * 4, (r + 1) * 4                          # p: this row, q: the one above
+        quad(p, q, q + 1, p + 1)                           # the face
+        quad(p + 2, q + 2, q, p)                           # the rim at the near end
+        quad(p + 1, q + 1, q + 3, p + 3)                   # and at the far end
+    t = rows * 4
+    quad(1, 3, 2, 0)                                       # the rim along the bottom
+    quad(t, t + 2, t + 3, t + 1)                           # and along the top
 
 
 def layout(spec):
@@ -216,16 +245,20 @@ def furnish(spec, verts, faces, kind):
     w = spec["window"]
     for side in (-1, 1):
         for d in doors:                                   # a plug door leaf, standing a little proud
-            add_plate(verts, faces, kind, spec, d, side, 0.24, 0.94, spec["door"]["width"], 0.012, 0.05)
+            add_panel(verts, faces, kind, spec, d, side, spec["skirtTop"], 0.94,
+                      spec["door"]["width"], 0.012, 5)
         for x in panes:
-            add_plate(verts, faces, kind, spec, x, side, w["from"], w["to"], w["width"], 0.022, 0.05)
+            add_panel(verts, faces, kind, spec, x, side, w["from"], w["to"], w["width"], 0.022, 3)
     for x in (body_from + 2.6, body_to - 2.6):            # bogies and their wheels
         add_box(verts, faces, kind, x, 0, 0.62, 2.9, 2.1, 0.42, UNDER)
         for wx in (x - 1.15, x + 1.15):
             for wy in (-1.06, 1.06):
                 add_cylinder(verts, faces, kind, wx, wy, 0.43, 0.43, 0.14, UNDER)
     add_box(verts, faces, kind, (body_from + body_to) / 2, 0, 0.42, body_to - body_from, 2.2, 0.45, UNDER)
-    run_from, run_to = body_from + 0.6, body_to - 0.6     # the air-conditioning run and its ducts
+    # The air-conditioning run and its ducts. On a cab car they stop short of the nose: a box left on
+    # the crown is the first thing a head-on view meets, and the real roof there is smooth.
+    run_from = body_from + 0.6
+    run_to = (half - nose - 1.0) if nose else body_to - 0.6
     units = max(2, round((run_to - run_from) / 3.2))
     for i in range(units):
         x = run_from + (run_to - run_from) * (i + 0.5) / units
@@ -242,7 +275,7 @@ def make_object(spec, verts, faces, kind):
     bpy.context.collection.objects.link(ob)
     # The swept surface is one smooth form; the kit is made of boxes and wants its edges.
     for i, poly in enumerate(mesh.polygons):
-        poly.use_smooth = kind[i] == SIDE
+        poly.use_smooth = kind[i] in (SIDE, SCREEN)
     mesh.validate()
     return ob
 
@@ -256,6 +289,9 @@ TEX_W, TEX_H, SIDE_Y0, SIDE_Y1 = 2048, 512, 16, 256
 V_SIDE = (1 - SIDE_Y1 / TEX_H, 1 - SIDE_Y0 / TEX_H)
 SWATCH = (1 - SIDE_Y0 / 2 / TEX_H)          # the plain swatches in the top 16 px
 SWATCH_U = {ROOF: 0.25, UNDER: 0.75}        # as plainUv is called in trains.js
+# The nose's own chart, laid out along the nose and across it: NOSE in trains.js, same numbers. A
+# windscreen painted at a height instead goes right round the ring and comes out as a visor.
+NOSE_X0, NOSE_X1, NOSE_Y0, NOSE_Y1, NOSE_ACROSS = 16, 1456, 264, 504, 3
 
 
 def written(u, v):
@@ -269,7 +305,12 @@ def written(u, v):
     return (u, 1 - v)
 
 
-def unwrap(ob, spec, kind):
+def nose_uv(along, across):
+    return ((NOSE_X0 + along * (NOSE_X1 - NOSE_X0)) / TEX_W,
+            1 - (NOSE_Y0 + across * (NOSE_Y1 - NOSE_Y0)) / TEX_H)
+
+
+def unwrap(ob, spec, kind, rings, nose_from):
     """UV0 by hand, UV1 by projection. The side's coordinates are the painter's and may not move, and
     a car body is a swept surface, so it already has them: along the car, and how high up its own
     section a point sits. A projection would scatter the same surface into arbitrary islands and the
@@ -282,13 +323,25 @@ def unwrap(ob, spec, kind):
     mesh.uv_layers.new(name="AO")
     project(ob, "AO")
     uv = mesh.uv_layers["UVMap"]            # looked up again: a trip through edit mode moves it
+    k0 = RING // 2 - NOSE_ACROSS
     for poly in mesh.polygons:
         where = kind[poly.index]
         for li in poly.loop_indices:
+            vi = mesh.loops[li].vertex_index
+            if where == SCREEN:
+                # A shell vertex's place in the sweep is its index: the rings were laid in order.
+                # `across` is the point's own lateral position over the band's half width, so the
+                # chart is a view from above; the ring index is not, because a superellipse keeps
+                # the top nearly flat and crowds its points towards the flanks.
+                i, k = vi // RING, vi % RING
+                pts = rings[i][1]
+                uv.data[li].uv = written(*nose_uv((i - nose_from) / NOSE_RINGS,
+                                                  0.5 - 0.5 * pts[k][0] / pts[k0][0]))
+                continue
             if where != SIDE:
                 uv.data[li].uv = written(SWATCH_U[where], SWATCH)
                 continue
-            v = mesh.vertices[mesh.loops[li].vertex_index].co
+            v = mesh.vertices[vi].co
             along = u0 + 0.004 + ((v.x + half) / L) * 0.492
             f = (v.z - sh["floor"]) / (sh["roof"] - sh["floor"])
             uv.data[li].uv = written(min(1, max(0, along)),
@@ -315,17 +368,21 @@ def audit(mesh, kind, u0):
     first version of the unwrap scattered the whole body across the picture and the result still
     rendered: a livery landing in the wrong place is not something a render reads as a defect."""
     uv = mesh.uv_layers["UVMap"]
+    strips = {SIDE: (V_SIDE, (u0, u0 + 0.5)),
+              SCREEN: ((1 - NOSE_Y1 / TEX_H, 1 - NOSE_Y0 / TEX_H), (NOSE_X0 / TEX_W, NOSE_X1 / TEX_W))}
     bad = 0
     for poly in mesh.polygons:
-        if kind[poly.index] != SIDE:
+        want = strips.get(kind[poly.index])
+        if want is None:
             continue
+        (lo, hi), (ulo, uhi) = want
         for li in poly.loop_indices:
             u, v = uv.data[li].uv
             v = 1 - v                                     # back into the coordinates trains.js uses
-            if not (V_SIDE[0] - 1e-4 <= v <= V_SIDE[1] + 1e-4 and u0 - 1e-4 <= u <= u0 + 0.5 + 1e-4):
+            if not (lo - 1e-4 <= v <= hi + 1e-4 and ulo - 1e-4 <= u <= uhi + 1e-4):
                 bad += 1
     if bad:
-        raise SystemExit(f"unwrap: {bad} of {len(mesh.loops)} loops landed outside the side strip")
+        raise SystemExit(f"unwrap: {bad} of {len(mesh.loops)} loops landed outside their strip")
 
 
 def bake_ao(ob, path, size=512, samples=64, distance=0.8):
@@ -368,10 +425,10 @@ def bake_ao(ob, path, size=512, samples=64, distance=0.8):
 
 def one(which, out_dir):
     spec = STOCK[which]
-    verts, faces, kind = build(spec)
+    verts, faces, kind, rings, nose_from = build(spec)
     furnish(spec, verts, faces, kind)
     ob = make_object(spec, verts, faces, kind)
-    unwrap(ob, spec, kind)
+    unwrap(ob, spec, kind, rings, nose_from)
     ao = bake_ao(ob, os.path.join(out_dir, which + "-ao.png"))
     glb = os.path.join(out_dir, which + ".glb")
     ob.data.materials.clear()
