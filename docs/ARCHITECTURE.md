@@ -4571,6 +4571,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 哪個檔、回應的檔頭由 GamePresentation 的 `CityViewServing` 決定（不能離開資料夾：`..`、隱藏檔、反斜線、NUL 都拒絕），Linux 上有測試。
    - 離開頁面的連結（Tokyo 的 GitHub 連結）用瀏覽器開；網頁的程序被系統結束時（記憶體）重新載入。
    - 2026-10-11 補：伺服器聽整個 loopback 介面（IPv4 的 `127.0.0.1` 與 IPv6 的 `::1`），因為 `localhost` 可能先解析成 `::1`；原本只聽 IPv4（`main` 上的 UI 測試等不到網頁，這是最可能的原因，還沒證實）。網頁載入完成前顯示「正在載入 3D 城市…」，載入失敗時把 WebKit 的錯誤寫在畫面上（`cityView.error`），UI 測試等的是載入指示消失，不再依賴網頁腳本與模擬器的 WebGL。
+   - 2026-10-11 再補：只聽 IPv4 不是原因。改聽整個 loopback 之後，UI 測試照樣失敗（run 38107355698），畫面上的錯誤是 `NSURLErrorDomain -1005`（連線中斷）：已經連上，連線又斷了，而不是連不上。現在做兩件事：
+     - 回應改成連線的最後一筆資料（`.finalMessage`，送完接 FIN），等網頁關掉它那一端才放掉連線。原本送完立刻 `cancel()`，回應可能還沒送到連線就被重設。
+     - 拿掉 `acceptLocalOnly`，改由伺服器自己檢查來源：只接本機 loopback 位址（`127.0.0.0/8`、`::1`）的連線。模擬器的紀錄在連線中斷前有 `SO_NECP_LISTENUUID failed`，這個篩選可能因此把連線關掉。
+     - 兩者哪個才是原因，還沒證實。
    - 不讀 GameCore：車流、光線、時間都是頁面自己的。
 5. **出處**：資料來源畫面多一節「3D 城市試作」（Procedural Tokyo 與它打包的程式庫、Poly Haven），Overture 與 OSM 的說明加上 3D 試作。
 
