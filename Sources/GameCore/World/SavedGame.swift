@@ -199,9 +199,15 @@
 ///     `"lastShort"` (decision 158). A build that reads only an earlier version would drop
 ///     them, and send the materials as goods, so it says the save is newer
 ///     than it instead.
+/// 41. Weather (decision 162): a world's `"disruptions"` can have a
+///     `"seed"`, which its weather, typhoons and fuel price are drawn from.
+///     A build that reads only an earlier version would drop it, and its
+///     days would all be clear, so it says the save is newer than it
+///     instead. (Version 40 is the work registry's for decision 160, buying
+///     map expansions, which this build does not have and refuses.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 39
+    public static let currentVersion = 41
 
     public let world: GameWorld
 
@@ -226,7 +232,9 @@ extension SavedGame: Codable {
                 forKey: .saveVersion, in: container, debugDescription: "Save version \(version) does not exist."
             )
         }
-        guard version <= Self.currentVersion else {
+        // Version 40 is the work registry's for decision 160, which this
+        // build does not have: a save of it is not guessed at.
+        guard version <= Self.currentVersion, version != 40 else {
             throw DecodingError.dataCorruptedError(
                 forKey: .saveVersion, in: container,
                 debugDescription: "The save is version \(version); this build reads up to version \(Self.currentVersion)."
@@ -318,6 +326,8 @@ extension SavedGame: Codable {
         // line without `"freight"` carries passengers, as every line did.
         // Version 38 to 39: freight without `"buildingMaterials"` has none,
         // and its yards send goods, as every yard did.
+        // Version 39 to 41: disruptions without `"seed"` have holidays
+        // alone, as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

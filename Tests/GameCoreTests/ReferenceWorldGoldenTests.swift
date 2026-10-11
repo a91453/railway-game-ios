@@ -140,7 +140,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         switch observation {
         case .landCatchment, .landCell, .building, .townGrowth, .landValue, .placedBuilding, .buildingSale, .zone, .water, .steep, .groundHeight, .cityDemand:
             preconditionFailure("the reference model does not hold land")
-        case .holiday:
+        case .holiday, .weather, .typhoons, .fuel:
             preconditionFailure("the reference model does not keep holidays")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))

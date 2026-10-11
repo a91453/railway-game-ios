@@ -63,6 +63,29 @@ schema 57（決策 154）：
 - 「輕」：加成是一半、無條件捨去，春節 +100、元旦 +25，今天的需求 1025。
 - 各小時的人次另以獨立的 Python 照規則重算，與 GameCore 一致；最終狀態取自 GameCore（只有兩站、一條線與 `disruptions`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
+## 天氣、颱風與油電價格（`weather.json`）
+
+schema 62（決策 162）：
+
+- `setDisruptions` 有 level 時可以有 `"seed"`（`UInt32`），沒有就只有假日（schema 57 的行為）。
+- 新觀察 `weather`（`day`）：`{"weather": "clear" | "rain" | "thunderstorm"}`。
+- 新觀察 `typhoons`（`day`）：那天已預警、還沒結束的颱風，`{"typhoons": [{"announced", "start", "end", "x", "y", "radius", "drop"}]}`。
+- 新觀察 `fuel`（`day`）：`{"found": true, "fuel": {"start", "end", "index"}}` 或 `{"found": false}`。
+- 最終狀態的 `disruptions` 有種子時多 `"seed"`。
+- 參考模型不放假也沒有天氣，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `WeatherTests` 驗證。
+
+情境：`holidays.json` 的 Home 與 Office，時鐘在第 33 天，不推進時間。
+
+- 沒有種子時第 33 天是晴天、沒有颱風、油電價格不變，需求 1000。
+- 種子 7、台灣、標準：
+  - 第 29 天以前平靜；第 33 天（2 月，下雨 300‰）的 `weather.33` 抽到 300 以下，下雨；第 71 天（3 月，雷雨 20‰）抽到 20 以下，雷雨。
+  - 今天下雨，全網需求 −100‰：1000 × 0.9 = 900，照同樣的權重分到各小時。
+  - 第 0 年只有第 0 個颱風來（抽到 500 以下）：第 194 天起吹 2 天，前一天預警，中心 (2865, 1399)，半徑 12288 × 442 ÷ 1000 = 5431，需求 −800‰。
+  - 第 5 個月的油電價格從第 151 天起 11 天，指數 1.186（漲）。
+- 「輕」：颱風 −400‰，油電 1.093（離 1 減半），下雨 −50‰，今天需求 950。
+- 英國：同一個種子天氣相同，但沒有颱風。
+- 每個值另以獨立的 Python 重寫 FNV-1a 與抽籤算出，與 GameCore 一致；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 依面積收購（`area-buyout.json`）
 
 12 步、不推進時間的情境（schema 55，決策 146）。32 × 24 格、經營模式、城市建物與依密度的方塊開啟；第 5 列第 5、6 行都是 48 位居民、8 個就業的住宅（D1，地價每 m² 2,000），整格收購價 (12,288,000 + 400 × 2,000) × 120% = 15,705,600。`setAreaBuyOut` 開啟後：

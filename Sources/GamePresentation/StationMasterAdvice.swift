@@ -42,9 +42,17 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// The town round the station was short of building materials at the
     /// last midnight (decision 158).
     case materialsShort(station: StationID, name: String)
+    /// Decision 162: a typhoon comes in `days` days (0 while it blows),
+    /// over `stations` of the network's stations, taking `percent` off their
+    /// demand.
+    case typhoonComing(days: Int64, stations: Int, percent: Int64)
+    /// Decision 162: a fuel spell started today, the day's energy `percent`
+    /// dearer (or cheaper when negative) for `days` days.
+    case fuelSpell(percent: Int64, days: Int64)
 
     /// The advice for `world`, or `nil` when all runs well. The worries
-    /// first (debt, a full station, a line no one rides, a crowded
+    /// first (debt, a typhoon on its way over a station a line serves
+    /// (decision 162), a full station, a line no one rides, a crowded
     /// station; the lowest ID of each), then the next step of building a
     /// first line, then a public holiday about to start or just over
     /// (decision 154), then how the towns grow (decision 128): a station
@@ -53,6 +61,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     public init?(world: GameWorld) {
         if world.accounts.mode == .management, world.economy.balance < .zero {
             self = .inDebt
+            return
+        }
+        if let typhoon = Self.typhoon(in: world) {
+            self = typhoon
             return
         }
         let alerts = world.mapAlerts()
@@ -88,8 +100,23 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// Decision 162: the first typhoon announced or blowing over a station
+    /// some line calls at.
+    private static func typhoon(in world: GameWorld) -> StationMasterAdvice? {
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        let served = Set(world.lines.flatMap(\.stops))
+        for typhoon in world.typhoons(onDay: today) {
+            let hit = world.stations.filter { served.contains($0.id) && typhoon.covers($0.point) }.count
+            if hit > 0 {
+                return .typhoonComing(days: max(0, typhoon.start - today), stations: hit, percent: typhoon.drop / 10)
+            }
+        }
+        return nil
+    }
+
     /// Decision 154: a holiday starting in one to three days, else the
-    /// review of one that ended yesterday.
+    /// review of one that ended yesterday; decision 162: else a fuel spell
+    /// that started today.
     private static func holiday(in world: GameWorld) -> StationMasterAdvice? {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         if let coming = world.holidays(from: today + 1, through: today + 3).first(where: { $0.start > today }) {
@@ -97,6 +124,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
         if let review = world.holidayReview() {
             return .holidayOver(kind: review.kind, riders: review.riders, percent: review.percent)
+        }
+        if world.accounts.mode == .management, let spell = world.fuelSpell(onDay: today), spell.start == today {
+            return .fuelSpell(percent: (spell.index - 1_000) / 10, days: spell.end - spell.start)
         }
         return nil
     }
@@ -202,6 +232,26 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "\(kind.title(in: language)) is over: \(Money(riders).displayText) riders a day, \(-percent)% fewer than before it. Were the trains full?",
                     "\(kind.title(in: language))結束了：每天 \(Money(riders).displayText) 人次，比連假前少 \(-percent)%。是不是車太擠了？"
                 )
+        case .typhoonComing(let days, let stations, let percent):
+            days > 0
+                ? language.text(
+                    "A typhoon comes in \(days) day\(days == 1 ? "" : "s"), over \(stations) of our station\(stations == 1 ? "" : "s"): about \(percent)% fewer passengers there. Run fewer trains, or close those stations for it.",
+                    "颱風 \(days) 天後來襲，影響 \(stations) 個車站，那裡的旅客會少約 \(percent)%。可以減少班次，或先把車站封站。"
+                )
+                : language.text(
+                    "A typhoon is blowing over \(stations) of our station\(stations == 1 ? "" : "s"): about \(percent)% fewer passengers there today.",
+                    "颱風正在影響 \(stations) 個車站，今天那裡的旅客少約 \(percent)%。"
+                )
+        case .fuelSpell(let percent, let days):
+            percent >= 0
+                ? language.text(
+                    "Fuel and power cost \(percent)% more for \(days) days. A train or two fewer saves on energy.",
+                    "油電價格上漲 \(percent)%，持續 \(days) 天。少開一兩列車可以省能源費。"
+                )
+                : language.text(
+                    "Fuel and power cost \(-percent)% less for \(days) days.",
+                    "油電價格下跌 \(-percent)%，持續 \(days) 天。"
+                )
         }
     }
 
@@ -209,8 +259,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort: true
-        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver: false
+        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .typhoonComing: true
+        case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .fuelSpell: false
         }
     }
 }

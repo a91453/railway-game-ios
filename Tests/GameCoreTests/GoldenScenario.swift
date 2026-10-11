@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 60
+    static let schemaVersion = 62
 
     var description: String
     var initialState: InitialState
@@ -177,7 +177,7 @@ struct GoldenScenario: Decodable {
     var usesHolidays: Bool {
         steps.contains { step in
             switch step {
-            case .command(.setDisruptions, _), .observe(.holiday, _): true
+            case .command(.setDisruptions, _), .observe(.holiday, _), .observe(.weather, _), .observe(.typhoons, _), .observe(.fuel, _): true
             default: false
             }
         }
@@ -277,6 +277,7 @@ extension GoldenScenario.Step: Decodable {
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
         case holiday
+        case weather, typhoons, fuel
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -320,6 +321,15 @@ extension GoldenScenario.Step: Decodable {
             case .water:
                 try requireOnly([.water], answering: "water")
                 self = try .observe(observation, expect: .water(expect.decode(Bool.self, forKey: .water)))
+            case .weather:
+                try requireOnly([.weather], answering: "weather")
+                self = try .observe(observation, expect: .weather(expect.decode(String.self, forKey: .weather)))
+            case .typhoons:
+                try requireOnly([.typhoons], answering: "typhoons")
+                self = try .observe(observation, expect: .typhoons(expect.decode([TyphoonSummary].self, forKey: .typhoons)))
+            case .fuel:
+                try requireOnly([.found, .fuel], answering: "fuel")
+                self = try .observe(observation, expect: .fuel(Self.found(expect, .fuel, FuelSummary.self)))
             case .holiday:
                 try requireOnly([.found, .holiday], answering: "holiday")
                 self = try .observe(observation, expect: .holiday(Self.found(expect, .holiday, HolidaySummary.self)))
@@ -775,7 +785,8 @@ extension ScenarioCommand: Decodable {
         case "setAreaBuyOut":
             self = try .setAreaBuyOut(container.decode(Bool.self, forKey: .enabled))
         // Schema 57: public holidays (decision 154). `"level"` is required,
-        // `null` for off; `"country"` with a level, a code the calendar has.
+        // `null` for off; `"country"` with a level, a code the calendar has;
+        // schema 62 (decision 162): with a level, an optional `"seed"`.
         case "setDisruptions":
             guard container.contains(.level) else {
                 throw DecodingError.keyNotFound(CodingKeys.level, DecodingError.Context(codingPath: container.codingPath, debugDescription: "setDisruptions needs \"level\"."))
@@ -785,7 +796,8 @@ extension ScenarioCommand: Decodable {
                 return
             }
             let country = try container.decode(String.self, forKey: .country)
-            guard let parsed = DisruptionLevel(rawValue: level), let disruptions = Disruptions(level: parsed, country: country) else {
+            let seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
+            guard let parsed = DisruptionLevel(rawValue: level), let disruptions = Disruptions(level: parsed, country: country, seed: seed) else {
                 throw DecodingError.dataCorruptedError(forKey: .country, in: container, debugDescription: "No disruptions at \(level) for \(country).")
             }
             self = .setDisruptions(disruptions)
@@ -1491,6 +1503,11 @@ enum ScenarioObservation: Equatable {
     case cityDemand
     /// Schema 57 (decision 154): the holiday running on a game day.
     case holiday(day: Int64)
+    /// Schema 62 (decision 162): a game day's weather, the typhoons
+    /// announced and not over then, and its fuel spell.
+    case weather(day: Int64)
+    case typhoons(day: Int64)
+    case fuel(day: Int64)
     /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
     /// Schema 47 (decision 124): the ground's height at a point, in world
@@ -1519,6 +1536,12 @@ enum ScenarioObservation: Equatable {
             .cityDemand(CityDemandSummary(world.cityDemandLevels))
         case .holiday(let day):
             .holiday(world.holiday(onDay: day).map(HolidaySummary.init))
+        case .weather(let day):
+            .weather(world.weather(onDay: day).rawValue)
+        case .typhoons(let day):
+            .typhoons(world.typhoons(onDay: day).map(TyphoonSummary.init))
+        case .fuel(let day):
+            .fuel(world.fuelSpell(onDay: day).map(FuelSummary.init))
         case .steep(let row, let column):
             .steep(world.isSteep(row: row, column: column))
         case .groundHeight(let point):
@@ -1664,6 +1687,13 @@ extension ScenarioObservation: Decodable {
         // Schema 57: public holidays (decision 154).
         case "holiday":
             self = try .holiday(day: container.decode(Int64.self, forKey: .day))
+        // Schema 62: weather, typhoons and fuel (decision 162).
+        case "weather":
+            self = try .weather(day: container.decode(Int64.self, forKey: .day))
+        case "typhoons":
+            self = try .typhoons(day: container.decode(Int64.self, forKey: .day))
+        case "fuel":
+            self = try .fuel(day: container.decode(Int64.self, forKey: .day))
         // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
@@ -1850,6 +1880,47 @@ enum ObservationAnswer: Equatable {
     case groundHeight(Int64?)
     case cityDemand(CityDemandSummary)
     case holiday(HolidaySummary?)
+    case weather(String)
+    case typhoons([TyphoonSummary])
+    case fuel(FuelSummary?)
+}
+
+/// Schema 62 (decision 162): a typhoon, `{"announced", "start", "end",
+/// "x", "y", "radius", "drop"}`: the day it is announced, its first day and
+/// the day after its last, its centre and radius in world units, and what
+/// it takes off a station's demand in thousandths.
+struct TyphoonSummary: Codable, Equatable {
+    var announced: Int64
+    var start: Int64
+    var end: Int64
+    var x: Int64
+    var y: Int64
+    var radius: Int64
+    var drop: Int64
+
+    init(_ typhoon: Typhoon) {
+        announced = typhoon.announced
+        start = typhoon.start
+        end = typhoon.end
+        x = typhoon.centre.x
+        y = typhoon.centre.y
+        radius = typhoon.radius
+        drop = typhoon.drop
+    }
+}
+
+/// Schema 62 (decision 162): a fuel spell, `{"start", "end", "index"}`, the
+/// index in thousandths of the day's energy.
+struct FuelSummary: Codable, Equatable {
+    var start: Int64
+    var end: Int64
+    var index: Int64
+
+    init(_ spell: FuelSpell) {
+        start = spell.start
+        end = spell.end
+        index = spell.index
+    }
 }
 
 /// Schema 57 (decision 154): a holiday's run, `{"kind", "start", "end",
@@ -1894,6 +1965,7 @@ extension ObservationAnswer: Encodable {
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
         case holiday
+        case weather, typhoons, fuel
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -1979,7 +2051,7 @@ extension ObservationAnswer: Encodable {
             try container.encode(true, forKey: .found)
             try container.encode(lateness, forKey: .lateness)
         case .times(nil), .lateness(nil), .landTotals(nil), .landCell(nil), .building(nil), .townGrowth(nil), .landValue(nil), .placedBuilding(nil), .zone(nil),
-             .groundHeight(nil), .buildingSale(nil), .holiday(nil):
+             .groundHeight(nil), .buildingSale(nil), .holiday(nil), .fuel(nil):
             try container.encode(false, forKey: .found)
         case .landTotals(let totals?):
             try container.encode(true, forKey: .found)
@@ -2017,6 +2089,13 @@ extension ObservationAnswer: Encodable {
         case .holiday(let run?):
             try container.encode(true, forKey: .found)
             try container.encode(run, forKey: .holiday)
+        case .weather(let weather):
+            try container.encode(weather, forKey: .weather)
+        case .typhoons(let typhoons):
+            try container.encode(typhoons, forKey: .typhoons)
+        case .fuel(let spell?):
+            try container.encode(true, forKey: .found)
+            try container.encode(spell, forKey: .fuel)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -2135,12 +2214,14 @@ struct WorldSummary: Codable, Equatable {
     /// 124); left out when none is.
     var groundBlocks: Int?
     /// The country whose holidays the world keeps and the level (schema
-    /// 57, decision 154), `{"country", "level"}`; left out while off.
+    /// 57, decision 154), `{"country", "level"}`, and (schema 62, decision
+    /// 162) its `"seed"` when it has one; left out while off.
     var disruptions: DisruptionsSummary?
 
     struct DisruptionsSummary: Codable, Equatable {
         var country: String
         var level: String
+        var seed: UInt32?
     }
 
     /// A station at a point (schema 26, Stage F1), `{ "id", "name", "point":
@@ -2366,7 +2447,7 @@ struct WorldSummary: Codable, Equatable {
         water = world.terrain.water.isEmpty ? nil : world.terrain.waterCellCount
         steep = world.terrain.steep.isEmpty ? nil : world.terrain.steepCellCount
         groundBlocks = world.ground.isEmpty ? nil : world.ground.blocks.count
-        disruptions = world.disruptions.map { DisruptionsSummary(country: $0.country, level: $0.level.rawValue) }
+        disruptions = world.disruptions.map { DisruptionsSummary(country: $0.country, level: $0.level.rawValue, seed: $0.seed) }
     }
 }
 

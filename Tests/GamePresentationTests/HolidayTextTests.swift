@@ -88,23 +88,23 @@ final class HolidayTextTests: XCTestCase {
     @MainActor
     func testTheSettingsSetTheLevelAndKeepTheCountry() throws {
         let session = GameSession(world: GameWorld.newGame(anchor: GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000)!))
-        XCTAssertEqual(session.world.disruptions, Disruptions(level: .light, country: "JP"))
+        XCTAssertEqual(session.world.disruptions, Disruptions(level: .light, country: "JP", seed: 1))
         session.setDisruptionLevel(.standard)
-        XCTAssertEqual(session.world.disruptions, Disruptions(level: .standard, country: "JP"))
+        XCTAssertEqual(session.world.disruptions, Disruptions(level: .standard, country: "JP", seed: 1))
         session.setDisruptionLevel(nil)
         XCTAssertNil(session.world.disruptions)
         XCTAssertEqual(session.message?.text, "Holidays and other events off: demand is the same every day of the week.")
         // On again, the map's country; and the change undoes.
         session.setDisruptionLevel(.light)
-        XCTAssertEqual(session.world.disruptions, Disruptions(level: .light, country: "JP"))
+        XCTAssertEqual(session.world.disruptions, Disruptions(level: .light, country: "JP", seed: 1))
         session.undo()
         XCTAssertNil(session.world.disruptions)
-        // A blank map's are Taiwan's.
+        // A blank map's are Taiwan's; the seed is the new game's (1).
         var blank = GameWorld.newGame()
         blank.setDisruptions(nil)
         let other = GameSession(world: blank, language: .traditionalChinese)
         other.setDisruptionLevel(.standard)
-        XCTAssertEqual(other.world.disruptions, Disruptions(level: .standard, country: "TW"))
+        XCTAssertEqual(other.world.disruptions, Disruptions(level: .standard, country: "TW", seed: 1))
         XCTAssertEqual(other.message?.text, "連假等事件已開啟：標準。")
         XCTAssertEqual(holidayCountryName("TW", in: .traditionalChinese), "台灣")
     }

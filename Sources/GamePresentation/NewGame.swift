@@ -67,7 +67,9 @@ extension GameWorld {
             world.setDemandEvents(seed: eventSeed)
             // Decision 154: the country's public holidays raise the whole
             // network's demand, gently.
-            world.setDisruptions(Disruptions(level: .light, country: anchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home))
+            // Decision 162: and its weather, typhoons and fuel price, drawn
+            // from the game's seed.
+            world.setDisruptions(Disruptions(level: .light, country: anchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home, seed: eventSeed))
             // Item 5: the towns round well-served stations grow.
             world.setTownGrowth(true)
             world.setGeoAnchor(anchor)
