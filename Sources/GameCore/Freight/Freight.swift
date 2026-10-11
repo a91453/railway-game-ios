@@ -52,8 +52,10 @@ public enum Freight {
     public static let milliTonsPerJobDay: Int64 = 500
     /// The tons a day a port is made besides.
     public static let portTonsPerDay: Int64 = 200
-    /// What a ton pays for a kilometre: 75 cents.
-    public static let centsPerTonKilometre: Int64 = 75
+    /// What a ton pays for a kilometre: $5 (500 cents). A full passenger car
+    /// pays $1,430 a trip at the standard $5 fare, a freight car one way only,
+    /// 40 t: over 5.4 km that is $1,080 (`BalanceReportTests.testAFreightLine`).
+    public static let centsPerTonKilometre: Int64 = 500
     /// The most tons any total, or train's load, may hold in a save: far
     /// beyond any game.
     static let maximumTons: Int64 = 1 << 40

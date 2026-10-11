@@ -23,7 +23,7 @@
           "day" : 0,
           "energyCost" : 0,
           "fareRevenue" : 0,
-          "freightRevenue" : 5000,
+          "freightRevenue" : 32500,
           "maintenanceCost" : 7000,
           "operatingCost" : 406500,
           "staffCost" : 0
@@ -31,10 +31,10 @@
       ],
       "entries" : [
         {
-          "amount" : 1000,
+          "amount" : 6500,
           "breakdown" : [
             {
-              "amount" : 1000,
+              "amount" : 6500,
               "item" : "freightRevenue"
             }
           ],
@@ -67,10 +67,10 @@
           "time" : 3600
         },
         {
-          "amount" : 1000,
+          "amount" : 6500,
           "breakdown" : [
             {
-              "amount" : 1000,
+              "amount" : 6500,
               "item" : "freightRevenue"
             }
           ],
@@ -103,10 +103,10 @@
           "time" : 7200
         },
         {
-          "amount" : 1000,
+          "amount" : 6500,
           "breakdown" : [
             {
-              "amount" : 1000,
+              "amount" : 6500,
               "item" : "freightRevenue"
             }
           ],
@@ -139,10 +139,10 @@
           "time" : 10800
         },
         {
-          "amount" : 1000,
+          "amount" : 6500,
           "breakdown" : [
             {
-              "amount" : 1000,
+              "amount" : 6500,
               "item" : "freightRevenue"
             }
           ],
@@ -175,10 +175,10 @@
           "time" : 14400
         },
         {
-          "amount" : 1000,
+          "amount" : 6500,
           "breakdown" : [
             {
-              "amount" : 1000,
+              "amount" : 6500,
               "item" : "freightRevenue"
             }
           ],
@@ -232,7 +232,7 @@
       "speed" : "normal"
     },
     "economy" : {
-      "balance" : 89583900,
+      "balance" : 89611400,
       "costs" : {
         "station" : 1000,
         "track" : 100,
