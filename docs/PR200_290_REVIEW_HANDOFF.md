@@ -391,7 +391,7 @@ Session：`claude/game-dev-decisions-w4p4wn`（2026-10-11），從 `main` 77a36d
 | 重複旅程讀不回來的存檔 | 讀檔時丟掉列了重複旅程的路線平衡，其他照常檢查；新 fixture `v41-duplicate-route-journeys.json` 由修正前的 `main`（d33dff7）寫出。 | 它只是釋放之間的捨入，下一次釋放會從計畫重建；合併出的權重計畫從來不會有，一樣會被重建，所以丟掉和合併效果相同，程式更簡單。 |
 | 照設定的列車數收費（決策 36） | 維持。 | 設定的列車數是公司的承諾；溢位已由第 12 項堵住。 |
 | 站長歡迎泡泡 | 扣掉地圖右下角那一欄的寬度，不等實機確認。 | 多扣最壞只是泡泡窄一點；不扣會擋住縮放鈕。 |
-| 3D 試作切換城市 | 只改 `area`、丟掉上一座城市的 `cam`，其他參數保留。 | App 給的輕量設定不該被頁面自己的選單丟掉。和 #369 的 session 檔案重疊（`main.js` 與官網的 bundle），已請它併入；它不做的話等 #369 合併後再做。 |
+| 3D 試作切換城市 | 只改 `area`、丟掉上一座城市的 `cam`，其他參數保留。 | App 給的輕量設定不該被頁面自己的選單丟掉。和 #369 的 session 檔案重疊（`main.js` 與官網的 bundle），請它併入：#369 的 7f3a14a 與官網 a91453/railway-reference-private#12 的 8ce870d，都已合併。 |
 | 參考模型的 `serviceNeeding` | 補上待避站：站在待避站時要它所在的月台與下一個停靠站的所有月台；開往待避站時要它路徑終點那個月台。 | 照 GameCore 文件寫的 Stage V2 規則。 |
 | `LineRoutePreferencePropertyTests` 的 680 | 改成每個種子 170 步乘上種子數，用 `assertVolume`（`PROPERTY_REPLAY` 時不算）。 | 和其他 campaign 一樣。 |
 | UI 測試「略過」沒反應（K4） | 先收集證據：`-ui-testing` 下 App 把每個觸控（落在哪個 window 的哪個 view）與「略過」「下一步」「上一步」、工具、選單的儲存、「繼續」的動作寫進 os_log（`UITestTrace`）；UI 測試失敗時 `ios-build.yml` 另外上傳 `ui-smoke-trace`／`ipad-tutorial-trace`。不加重試。 | 重試會把問題蓋掉；下一次失敗就能看出觸控有沒有到、落在哪、動作有沒有執行。 |
