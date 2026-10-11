@@ -125,6 +125,25 @@ final class MapExpansionTests: XCTestCase {
                                  .mapTileNotOwned(MapTile(row: 3, column: 2)))
     }
 
+    /// Splitting an edge samples each part afresh, so a part of a curve
+    /// that keeps one unit inside the tile owned can reach a unit beyond
+    /// it: the split is refused rather than leaving a save that will not
+    /// load.
+    func testASplitStaysOnTheTilesOwned() throws {
+        var world = try world()
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 2_621_440, y: 3_144_653, z: 0))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 2_624_657, y: 3_144_179, z: 0))
+        let edge = try world.buildTrackEdge(
+            from: a, to: b, curve: .cubic(PlanPoint(x: 2_622_843, y: 3_146_819), PlanPoint(x: 2_619_950, y: 3_145_208))
+        )
+        XCTAssertEqual(world.network.geometry(of: edge)?.points.map(\.plan.y).max(), 3 * length - 1)
+        let before = world
+        XCTAssertThrowsGameError(try world.splitTrackEdge(edge, at: 1_102), .mapTileNotOwned(MapTile(row: 3, column: 2)))
+        XCTAssertEqual(world, before)
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+    }
+
     func testTheLineTestIsExact() {
         let a = PlanPoint(x: 0, y: 0), b = PlanPoint(x: 10, y: 10)
         XCTAssertTrue(GameWorld.segment(a, b, touchesMinX: 5, minY: 5, maxX: 20, maxY: 20))
