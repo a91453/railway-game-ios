@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Procedural Tokyo</title>
+    <title>沿線｜3D 城市試作</title><!-- Along the Line: the game's, not Tokyo's (boot.js has the English) -->
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #0c1220; }
       canvas { display: block; }
@@ -12,18 +12,32 @@
         font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; color: #262c57; /* Along the Line: the game's look */
         background: rgba(255, 255, 255, 0.92); border: 1px solid rgba(38, 44, 87, 0.14); border-radius: 12px; pointer-events: none; white-space: pre;
       }
-      /* Along the Line: one credit line at the bottom, in the middle, as on the game's real-world maps */
+      /* Along the Line: one credit line at the bottom, in the middle, as on the game's real-world maps: between the
+         switch on the left and the website link on the right (each clear of the notch), as wide as its words and
+         no wider than the room it has */
+      :root {
+        --edge-left: max(12px, env(safe-area-inset-left)); --edge-right: max(12px, env(safe-area-inset-right));
+        --edge-bottom: max(12px, env(safe-area-inset-bottom)); --controls-bottom: var(--edge-bottom);
+      }
       #credits {
-        position: fixed; left: 50%; bottom: max(6px, env(safe-area-inset-bottom)); transform: translateX(-50%);
-        max-width: calc(100% - 220px); /* (clear of the switch on the left and the website on the right) */ width: max-content; box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
+        position: fixed; bottom: max(6px, env(safe-area-inset-bottom));
+        left: calc(var(--edge-left) + 80px); right: calc(var(--edge-right) + 120px); margin: 0 auto; width: fit-content;
+        box-sizing: border-box; padding: 1px 5px; border-radius: 4px;
         font: 11px/1.4 -apple-system, system-ui, "PingFang TC", sans-serif; text-align: center; color: rgba(60, 60, 67, 0.75);
         background: rgba(255, 255, 255, 0.7); pointer-events: none;
       }
       #credits:empty { display: none; }
-      #credits span { white-space: nowrap; } /* (a long line breaks between the sources, not inside one) */
+      /* (a long line breaks between the sources, each with its dot, and inside one only when it alone is too wide) */
+      #credits span { display: inline-block; max-width: 100%; }
+      /* a narrow screen (a phone held upright): the credits take the whole bottom row, the switch and the website
+         link sit above them */
+      @media (max-width: 699px) {
+        :root { --controls-bottom: calc(max(6px, env(safe-area-inset-bottom)) + 44px); }
+        #credits { left: var(--edge-left); right: var(--edge-right); }
+      }
       /* Along the Line: the game's website, where jeantimex's GitHub link was (the app opens it in Safari) */
       #website {
-        position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+        position: fixed; right: var(--edge-right); bottom: var(--controls-bottom);
         display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 16px;
         font: 600 12px -apple-system, system-ui, "PingFang TC", sans-serif; color: #262c57; text-decoration: none;
         background: rgba(255, 255, 255, 0.85); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
@@ -61,7 +75,8 @@
       :root .lil-gui input[type=checkbox] { background: rgba(38, 44, 87, 0.1); }
       :root .lil-gui input[type=checkbox]:checked { background: #0d766a; color: #ffffff; }
       :root .lil-gui .lil-controller button { background: rgba(13, 118, 106, 0.12); color: #0d766a; font-weight: 600; }
-      #mode { left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); }
+      /* (the scene draws the switch's picture inside it wherever it is: main.js reads its place) */
+      #mode { left: var(--edge-left); bottom: var(--controls-bottom); }
       /* shown while a city loads: at start-up and when another city is chosen */
       #loader {
         position: fixed; inset: 0; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;

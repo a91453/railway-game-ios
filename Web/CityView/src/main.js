@@ -195,7 +195,11 @@ const CREDITS_ZH = {
 };
 document.getElementById('credits').replaceChildren(...[ZH ? '3D 城市：© Yong Su' : '3D city: © Yong Su',
   ...manifest.attribution.map((a) => a.split(' (')[0]).map((a) => (ZH && CREDITS_ZH[a]) || a)]
-  .flatMap((text, i) => { const part = document.createElement('span'); part.textContent = text; return i ? [' · ', part] : [part]; }));
+  .flatMap((text, i, all) => {
+    // (the dot goes with the source before it, so a line never starts with one)
+    const part = document.createElement('span'); part.textContent = i < all.length - 1 ? `${text} ·` : text;
+    return i ? [' ', part] : [part];
+  }));
 
 // initial view: the area's own, or over its origin looking north-west (Shibuya: across the Scramble Crossing to the station)
 const [cx, cz, dist, az, el] = (params.get('cam') || manifest.view || '0,0,420,215,32').split(',').map(Number);
@@ -388,9 +392,11 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   const KEY = 'procedural-tokyo:settings:13'; // (a new number when the defaults change: what was kept before is left behind)
   const explicit = [...params.keys()].some((k) => k !== 'area');
   // (the city is the page's, not a setting; and the abstract model is never kept: the page always opens on the city as it is)
-  const strip = (saved) => { delete saved.controllers?.city; delete saved.folders?.['Abstract model']?.controllers?.['abstract model'];
-    // (nor is the hour: the page always opens on Tokyo's own time, the live clock running)
-    for (const k of ['live clock', 'auto play', 'time']) delete saved.folders?.['Time (Tokyo)']?.controllers?.[k];
+  // Along the Line: the panel's names are the page's language (GUI_ZH), and what it keeps is named by them
+  const named = (en) => (ZH ? GUI_ZH[en] ?? en : en);
+  const strip = (saved) => { delete saved.controllers?.[named('city')]; delete saved.folders?.[named('Abstract model')]?.controllers?.[named('abstract model')];
+    // (nor is the hour: the page always opens on the area's own time, the live clock running)
+    for (const k of ['live clock', 'auto play', 'time']) delete saved.folders?.[named('Time')]?.controllers?.[named(k)];
     return saved;
   };
   if (!explicit) {
@@ -399,7 +405,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
       if (saved) {
         gui.load(strip(saved));
         // (loading the time moved the slider, which stops the live clock: put the saved choice back)
-        const live = saved.folders?.['Time (Tokyo)']?.controllers?.['live clock'];
+        const live = saved.folders?.[named('Time')]?.controllers?.[named('live clock')];
         if (live != null) clockTime.live = live;
       }
     } catch (e) { console.warn('settings not restored:', e.message); }
@@ -602,6 +608,15 @@ function tick() {
 const PREVIEW_EVERY = 3;                 // live: the other mode is drawn at one frame in so many
 const PREVIEW_REST = 300;                // otherwise: so many milliseconds after the view has stopped moving
 const PREVIEW_BOX = { left: 14, bottom: 14, size: 64, radius: 10 }; // CSS pixels: the inside of the switch (index.html)
+// Along the Line: the switch moves (clear of the notch, above the credits on a phone), so the picture follows it:
+// its inside, from its place on the page, whenever the page changes size
+const placePreview = () => {
+  const r = document.getElementById('mode').getBoundingClientRect(), border = 2;
+  if (!r.width) return;
+  PREVIEW_BOX.left = r.left + border; PREVIEW_BOX.bottom = innerHeight - r.bottom + border; PREVIEW_BOX.size = r.width - 2 * border;
+};
+addEventListener('resize', placePreview);
+placePreview();
 const preview = { steps: [1152, 576, 288, 144].map((n) => new THREE.WebGLRenderTarget(n, n, { depthBuffer: false })), count: 0, ready: false, moved: 0, eye: new THREE.Vector3(), turn: new THREE.Quaternion(), hour: -1, loaded: -1 };
 preview.whole = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: false });
 preview.whole.texture.generateMipmaps = false;
