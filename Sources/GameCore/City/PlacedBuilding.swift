@@ -161,9 +161,11 @@ extension GameWorld {
     /// cells of land: their residents and jobs move in, up to what it
     /// holds, and the rest leave. Buying out by area (decision 146), it
     /// pulls nothing down: from each cell it covers part of
-    /// (``cityShares(coveredBy:)``), that share of the residents and of the
-    /// jobs, each rounded down, move in as before, and the cell keeps the
-    /// rest. Track in a tunnel is not in its way.
+    /// (``cityShares(coveredBy:)``), the share of the residents and of the
+    /// jobs that its ground is of the ground the company's buildings left
+    /// there, each rounded down, move in as before, and the cell keeps the
+    /// rest; a cell it finishes covering goes, its people all moved in
+    /// (decision 146, later). Track in a tunnel is not in its way.
     ///
     /// - Throws, checked in this order: ``GameError/outOfBounds(_:)`` naming
     ///   `centre` unless the whole square lies in the world;
@@ -214,12 +216,17 @@ extension GameWorld {
         building.buildingCost = quote.building
         building.landCost = quote.land + quote.buyOut
         let cleared = areaBuyOut ? [] : cityCells(claimedBy: candidate)
-        // Decision 146: the share of each covered cell's people, which
-        // leaves the cell someone, as the share is less than the whole.
-        let moved = areaBuyOut ? cityShares(coveredBy: candidate).map { share in
-            (cell: share.cell,
-             residents: share.cell.residents * share.area / Land.cellArea,
-             jobs: share.cell.jobs * share.area / Land.cellArea)
+        // Decision 146, later: each covered cell's people in the share of
+        // its ground the company's buildings left that this one covers, so
+        // its people go by the ground as its price does. The building that
+        // covers the last of the ground takes them all, and the cell with
+        // them.
+        let moved: [(cell: LandCell, residents: Int64, jobs: Int64, isLast: Bool)] = areaBuyOut ? cityShares(coveredBy: candidate).map { share in
+            let left = Land.cellArea - coveredArea(row: share.cell.row, column: share.cell.column)
+            return (cell: share.cell,
+                    residents: share.cell.residents * share.area / left,
+                    jobs: share.cell.jobs * share.area / left,
+                    isLast: share.area == left)
         } : []
         building.residents = min(kind.capacity.residents, cleared.reduce(0) { $0 + $1.residents } + moved.reduce(0) { $0 + $1.residents })
         building.jobs = min(kind.capacity.jobs, cleared.reduce(0) { $0 + $1.jobs } + moved.reduce(0) { $0 + $1.jobs })
@@ -230,12 +237,16 @@ extension GameWorld {
             removeLand(at: Set(cleared.map(\.position)))
             refreshLandDemand()
         }
-        let movers = moved.filter { $0.residents + $0.jobs > 0 }
-        if !movers.isEmpty {
-            for (cell, residents, jobs) in movers {
+        let movers = moved.filter { !$0.isLast && $0.residents + $0.jobs > 0 }
+        let whole = Set(moved.filter(\.isLast).map(\.cell.position))
+        if !movers.isEmpty || !whole.isEmpty {
+            for (cell, residents, jobs, _) in movers {
                 guard let index = land.cells.firstIndex(where: { $0.position == cell.position }) else { continue }
                 land.cells[index] = cell.with(residents: cell.residents - residents, jobs: cell.jobs - jobs)
             }
+            // A cell the company now covers whole is its own: the city
+            // keeps no land there (``isClaimedByPlacedBuilding(row:column:side:)``).
+            removeLand(at: whole)
             refreshLandDemand()
         }
         return building
