@@ -14,6 +14,7 @@ import WebKit
 struct CityView3D: View {
     let area: CityViewArea
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var host = CityViewHost()
 
     var body: some View {
@@ -59,6 +60,15 @@ struct CityView3D: View {
         .statusBarHidden()
         .task { host.start(area: area) }
         .onDisappear { host.stop() }
+        // Decision 152, later: the loopback listener may not outlive the app
+        // being suspended, and the page reloads from it when the system ends
+        // the web content, so the preview closes in the background (not
+        // when merely inactive, as under Notification Center).
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .background else { return }
+            host.stop()
+            dismiss()
+        }
     }
 }
 

@@ -125,6 +125,53 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertNotNil(records.best[today.id])
     }
 
+    /// Decision 154, later: a challenge is the same for everyone, so a
+    /// result played with holidays and events on (a save from before the
+    /// settings refused them) is not kept.
+    func testAResultWithEventsOnIsNotKept() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("records-\(UUID().uuidString).data")
+        defer { try? FileManager.default.removeItem(at: file) }
+        var records = ChallengeRecords(file: file)
+        var world = GameWorld.newGame(weekly: WeeklyChallenge(containing: monday))
+        world.setEconomyMode(.management)
+        world.scenario?.outcome = .completed(day: 1, rating: .gold)
+        var withEvents = world
+        withEvents.setDisruptions(Disruptions(level: .light, country: "TW", seed: 1))
+        XCTAssertFalse(records.record(withEvents, at: monday))
+        XCTAssertTrue(records.best.isEmpty)
+        XCTAssertTrue(records.record(world, at: monday))
+    }
+
+    /// Decision 154, later: in a game with a scenario's goals the settings
+    /// cannot turn holidays and events on, only off (for an older save that
+    /// has them on).
+    @MainActor
+    func testAChallengeKeepsItsEventsOff() throws {
+        let session = GameSession(world: GameWorld.newGame(weekly: WeeklyChallenge(containing: monday)))
+        XCTAssertTrue(session.eventsAreFixed)
+        XCTAssertNil(session.world.disruptions)
+        session.setDisruptionLevel(.light)
+        XCTAssertNil(session.world.disruptions)
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(
+            session.message?.text,
+            "A challenge's rules are fixed: it has no holidays, weather or other events."
+        )
+        XCTAssertFalse(session.canUndo)
+        // An older save with them on may turn them off.
+        var older = GameWorld.newGame(weekly: WeeklyChallenge(containing: monday))
+        older.setDisruptions(Disruptions(level: .standard, country: "TW", seed: 1))
+        let oldSession = GameSession(world: older, language: .traditionalChinese)
+        oldSession.setDisruptionLevel(.light)
+        XCTAssertEqual(oldSession.world.disruptions?.level, .standard)
+        XCTAssertEqual(oldSession.message?.text, "挑戰的規則固定，不含連假、天氣與其他事件。")
+        oldSession.setDisruptionLevel(nil)
+        XCTAssertNil(oldSession.world.disruptions)
+        XCTAssertEqual(oldSession.message?.kind, .success)
+        // A game without goals is not held.
+        XCTAssertFalse(GameSession(world: GameWorld.newGame()).eventsAreFixed)
+    }
+
     /// A result is the day it was completed on: later days, with more
     /// riders, while the game plays on, do not make it a new best again.
     func testAResultKeepsTheRidersOfItsDay() throws {
