@@ -124,10 +124,11 @@ needs OSM data reads the same extract.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
   the full lane runs every UI test and the iPad tutorial tests (the
-  missing-button proof nightly and on request) on `main` every three hours
-  (`ios-full-lane.yml` starts it unless `main`'s newest commit already had
-  one), nightly and by hand, and its red result does not block a pull
-  request; a push to `main` no longer starts it),
+  missing-button proof nightly and on request) on `main` after a merge, at
+  most every three hours (`ios-full-lane.yml` starts it unless `main`'s
+  newest commit already had one or one ran in the last three hours; its
+  schedule is only a fallback, GitHub runs it hours late or not at all),
+  nightly and by hand, and its red result does not block a pull request),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
   catalog or the localized Info.plist strings), `testflight.yml`
