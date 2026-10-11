@@ -111,9 +111,18 @@ final class NearestStationNamingTests: XCTestCase {
         let railways = try BundledRealData.railways()
         session.railways = railways
         let middle = RealRailways.Coordinate(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees)
+        // Decision 159: a real station names a new one only within 800 m
+        // (5 km before); the middle of this map is farther from one, and
+        // the place names name it (PlaceNamingTests).
         let nearest = try XCTUnwrap(railways.nearestStation(to: middle))
-        XCTAssertEqual(session.stationName, nearest.station.name(in: .traditionalChinese), "The real station nearest the middle of the map")
-        XCTAssertNotEqual(session.stationName, "車站 1")
+        XCTAssertGreaterThan(nearest.distanceMetres, GameSession.realStationNamingDistanceMetres)
+        XCTAssertEqual(session.stationName, "車站 1")
+
+        // A map whose middle is a real station is named after it.
+        let tra = try BundledRealData.station("猴硐", in: "tra_sched")
+        let atHoutong = GameSession(world: GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor)), language: .traditionalChinese)
+        atHoutong.railways = railways
+        XCTAssertEqual(atHoutong.stationName, "猴硐", "The real station at the middle of the map")
     }
 
     @MainActor

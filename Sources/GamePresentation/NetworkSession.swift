@@ -391,7 +391,7 @@ extension GameSession {
         }
         if let built {
             // The typed name went to the new station: suggest the next.
-            let suggestion = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways)
+            let suggestion = Self.suggestedStationName(for: world, at: middle, in: language, railways: railways, placeNames: placeNames)
             stationName = suggestion
             automaticStationName = suggestion
             platformStationID = built

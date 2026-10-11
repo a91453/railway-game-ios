@@ -35,6 +35,7 @@
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
 		4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = 92FBF87A0B909AF9C100FC70 /* sanying.json */; };
+		4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */ = {isa = PBXBuildFile; fileRef = CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */; };
 		4D8F006CF3A45F2966A0F276 /* FollowBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */; };
 		4DAC945C946CD6E54FCDFE63 /* build-done.wav in Resources */ = {isa = PBXBuildFile; fileRef = CB6CFDE772AE458BC8B1AD89 /* build-done.wav */; };
 		4E6FB096EF541BCE135C2911 /* HUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 903982CCE649E985E784BE87 /* HUDView.swift */; };
@@ -208,6 +209,7 @@
 		C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionStyle.swift; sourceTree = "<group>"; };
 		CB6CFDE772AE458BC8B1AD89 /* build-done.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "build-done.wav"; sourceTree = "<group>"; };
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
+		CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_place_names.json; sourceTree = "<group>"; };
 		CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */ = {isa = PBXFileReference; path = taiwan_coverage.dat; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -255,6 +257,7 @@
 			children = (
 				CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */,
 				2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */,
+				CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */,
 				894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */,
 				6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */,
 				31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */,
@@ -545,6 +548,7 @@
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,
 				A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */,
 				D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */,
+				4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */,
 				8163932343EEB39A635118DD /* taiwan_places.json in Resources */,
 				19E3457A000AB98921141272 /* taiwan_population.json in Resources */,
 				D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */,
