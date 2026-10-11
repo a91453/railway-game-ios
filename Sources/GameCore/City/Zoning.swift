@@ -216,6 +216,8 @@ extension GameWorld {
     ///
     /// - Throws: ``GameError/invalidZoneArea`` for a rectangle reaching
     ///   outside the world or more than ``Zoning/maximumSide`` cells a side;
+    ///   ``GameError/mapTileNotOwned(_:)`` for one reaching into a tile of
+    ///   the map the company does not own (decision 160);
     ///   when no cell of the rectangle may be zoned and `zone` is not `nil`,
     ///   ``GameError/onWater(row:column:)`` naming its first cell if that is
     ///   water, else ``GameError/onSteepSlope(row:column:)``.
@@ -225,6 +227,8 @@ extension GameWorld {
               rows.upperBound < Land.rows(in: bounds), columns.upperBound < Land.columns(in: bounds),
               rows.count <= Zoning.maximumSide, columns.count <= Zoning.maximumSide
         else { throw .invalidZoneArea }
+        // Decision 160: only on the company's own ground.
+        if let tile = firstTileNotOwned(cellRows: rows, columns: columns) { throw .mapTileNotOwned(tile) }
         guard zone != nil, !terrain.isEmpty else {
             return zones.set(zone, rows: rows, columns: columns)
         }

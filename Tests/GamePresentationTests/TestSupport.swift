@@ -24,8 +24,8 @@ func makeWorld(
 /// point), a line calling at them and one train of four cars running all
 /// day. A line through three points or more must run on without turning at
 /// them: two straight edges meet at a kink no train passes.
-func newGameLine(through points: [PlanPoint]) throws -> GameWorld {
-    var world = GameWorld.newGame()
+func newGameLine(through points: [PlanPoint], in start: GameWorld = .newGame()) throws -> GameWorld {
+    var world = start
     let cars = 4
     let platform = Int64(cars) * Train.carLength
     func beyond(_ from: PlanPoint, _ to: PlanPoint) -> WorldCoordinate {

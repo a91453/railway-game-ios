@@ -84,6 +84,12 @@ public final class GameSession {
     /// tapped it (decision 130): the map marks it, the card shows what it
     /// would bring in and the gain or loss, and the action button sells it.
     public internal(set) var saleCandidate: PlacedBuildingID?
+    /// Whether a tap on the map chooses a tile of the map to buy (decision
+    /// 160): the map marks the tiles for sale and their prices.
+    public internal(set) var isChoosingMapTile = false
+    /// The tile of the map chosen to buy (decision 160): the map marks it,
+    /// and the pill beside it buys it.
+    public internal(set) var chosenMapTile: MapTile?
     /// Whether a tap with the building tool builds there at once rather
     /// than showing the building first (decision 103): for putting up one
     /// building after another. Undo takes each back.
@@ -530,6 +536,7 @@ public final class GameSession {
         tool = newTool
         buildingSite = nil
         saleCandidate = nil
+        stopChoosingMapTile()
         zoneDrag = nil
         message = nil
         if newTool.pausesGame {

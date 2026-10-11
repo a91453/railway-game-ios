@@ -84,7 +84,8 @@ public struct MiniMap: Equatable, Sendable {
             return Line(id: line.id, color: line.color, stops: stops)
         }
         self.init(
-            region: WorldRegion(bounds: world.bounds),
+            // Decision 160: a map bought tile by tile shows the tiles owned.
+            region: WorldRegion.owned(in: world) ?? WorldRegion(bounds: world.bounds),
             track: track,
             lines: lines,
             stations: world.stations.map(Self.point)
