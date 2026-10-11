@@ -9,6 +9,12 @@
 // --stock      which stock to put on the line: hsr (台灣高鐵), tra (台鐵, the rotation's first
 //              entry), or a line name to match, e.g. --stock '山手線'.
 // --check-only run the gates and print them; draw nothing.
+// --reference  a reference model (.glb) to draw beside ours from the same cameras, scaled to
+//              --reference-metres along its longest axis. A reference model is ground truth for
+//              shape and colour in a way a photograph is not — no perspective, no specular streak
+//              read as paint, no hidden far side. It is never shipped: the owner's EMU3000 is
+//              199,588 triangles against about 3,300 for a whole set here. Measure one first with
+//              measure.cjs; this is for looking.
 //
 // The gates run before the picture, because every one of them catches a defect that a render can
 // hide: a car sunk below the rail reads fine from the side, and a nose that barely tapers reads
@@ -28,6 +34,8 @@ const flag = (name, fallback) => {
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback;
 };
 const stock = flag('stock', 'hsr');
+const reference = flag('reference', null);
+const referenceMetres = Number(flag('reference-metres', '0'));
 const out = flag('out', null);
 const port = Number(flag('port', '5321'));
 const checkOnly = args.includes('--check-only');
@@ -46,11 +54,15 @@ const VITE = path.join(WEB, 'node_modules/.bin/vite');
 const LINE = { hsr: '台灣高鐵', tra: '臺鐵縱貫線' }[stock] ?? stock;
 const TAIWAN = LINE === '台灣高鐵' || LINE === '臺鐵縱貫線' || !/[山埼小井銀]/.test(LINE);
 
+const REF_NAME = '.rolling-stock-reference.glb';
+const REF_COPY = path.join(WEB, REF_NAME);
+
 const page = `<!doctype html>
 <html><head><meta charset="utf-8"><title>rolling stock</title>
 <style>html,body{margin:0;background:#9fb4c8}canvas{display:block}</style></head><body>
 <script type="module">
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Trains } from './src/world/trains.js';
 
 const W = 1500, H = 900;
@@ -135,6 +147,33 @@ function measure() {
            hasNose: !!set.stock.nose, drawn };
 }
 
+// The reference, when there is one: loaded, turned to run along the track, scaled to its real
+// length, and set on the same rail so the two can be judged in the same frame.
+const REFERENCE = ${JSON.stringify(reference ? REF_NAME : null)}, REF_M = ${referenceMetres};
+let refGroup = null;
+if (REFERENCE) {
+  const gltf = await new GLTFLoader().loadAsync('./' + REFERENCE);
+  refGroup = gltf.scene;
+  refGroup.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(refGroup);
+  const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+  const longest = Math.max(size.x, size.y, size.z);
+  // turn the model's longest axis onto the track, which runs along x here
+  if (size.z === longest) refGroup.rotateY(Math.PI / 2);
+  else if (size.y === longest) refGroup.rotateZ(Math.PI / 2);
+  refGroup.updateMatrixWorld(true);
+  const after = new THREE.Box3().setFromObject(refGroup);
+  const k = REF_M > 0 ? REF_M / longest : 1;
+  refGroup.scale.multiplyScalar(k);
+  refGroup.updateMatrixWorld(true);
+  const placed = new THREE.Box3().setFromObject(refGroup);
+  refGroup.position.set(noseX - (placed.max.x - placed.getCenter(new THREE.Vector3()).x) - (placed.getCenter(new THREE.Vector3()).x - placed.getCenter(new THREE.Vector3()).x), -placed.min.y, -placed.getCenter(new THREE.Vector3()).z);
+  refGroup.position.x = noseX - placed.max.x;
+  refGroup.visible = false;
+  scene.add(refGroup);
+}
+window.showReference = (on) => { if (refGroup) { refGroup.visible = on; trains.group.visible = !on; } };
+
 const camera = new THREE.PerspectiveCamera(34, W / H, 0.5, 3000);
 const VIEWS = {
   'three-quarter': { pos: [cabCentre + 18, 4.2, 15], look: [cabCentre - 8, 2.3, 0] },
@@ -156,7 +195,16 @@ function shoot(name) {
 // city view actually shows a train, that is most of what a player sees.
 window.sheet = async () => {
   const shots = [];
-  for (const name of Object.keys(VIEWS)) shots.push([name, shoot(name)]);
+  if (refGroup) {
+    // one row per view: ours on the left, the reference on the right
+    for (const name of Object.keys(VIEWS)) {
+      window.showReference(false); shots.push([name, shoot(name)]);
+      window.showReference(true); shots.push([name + ' — reference', shoot(name)]);
+    }
+    window.showReference(false);
+  } else {
+    for (const name of Object.keys(VIEWS)) shots.push([name, shoot(name)]);
+  }
   trains.update(0, 1);
   shots.push(['night', shoot('three-quarter')]);
   shots.push(['silhouette (blurred)', shots[0][1]]);
@@ -196,6 +244,10 @@ function budgetFor(cars) {
     process.exit(2);
   }
   fs.writeFileSync(PAGE, page);
+  if (reference) {
+    if (!fs.existsSync(reference)) { console.error(`no reference model at ${reference}`); process.exit(2); }
+    fs.copyFileSync(reference, REF_COPY);   // vite only serves what is under its root
+  }
   const server = spawn(VITE, ['--port', String(port), '--strictPort'], { cwd: WEB, stdio: 'ignore' });
   let browser = null;
   try {
@@ -248,5 +300,6 @@ function budgetFor(cars) {
     if (browser) await browser.close();
     server.kill();
     fs.rmSync(PAGE, { force: true });
+    fs.rmSync(REF_COPY, { force: true });
   }
 })();

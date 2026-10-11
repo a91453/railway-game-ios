@@ -47,9 +47,43 @@ GitHub 上的 Shinkansen repo 都沒有 LICENSE 檔，CC0 素材庫沒有高鐵�
 斷面是超橢圓，稜線以下比以上飽滿（真車車身是圓角矩形，不是橢圓），稜線處微微外鼓成翼線。
 最後 12% 收口（`cap`），否則鼻尖會是一個平切面，**只有正面角度看得出來**。
 
-## 3. 流程
+## 3. 先去參考庫拿數字
 
-1. **先驗照片**。一張雜亂的照片會讓後面全白做。要求：主體佔畫面大部分、背景和車身分得開、
+作者的參考庫（`a91453/railway-reference-private`，CLAUDE.md 授權直接取用）裡有做好的車隊資料。
+開工前先接上：`add_repo` 之後 `git clone --depth 1 … /home/user/railway-reference-private`。
+
+| 路徑 | 是什麼 | 信不信 |
+| --- | --- | --- |
+| `Railway/…/memories/*/fleet/catalog.json` | 13 款車的工程尺寸（`pitchM`／`widthM`／`heightM`／`roofM`／`floorM`／`role`）**每筆附出處** | **信**。這是第一手的尺寸來源，比網路搜尋可靠 |
+| `OpenWorld/…/taiwan-tra/*.glb` | 作者做的整列模型（EMU3000、普悠瑪、太魯閣） | **顏色信，形狀不信**（見下） |
+| `Railway/…/rail-3d/assets/blender-map-v1/` | 40 款車的 LOD 網格與 `manifest.json`（含 700T） | 同上；`manifest.json` 標 `illustrative: true` |
+| `Railway/…/data/tra_special_trains.json` | 作者寫的車種說明 | 信（塗裝的文字描述） |
+
+**參考模型不是拿來出貨的，是拿來量的。** 作者的 EMU3000 GLB 是 199,588 個三角形，
+這裡整列 12 節約 3,300 個。但它比照片好用：沒有透視、不會把反光讀成塗裝、沒有看不到的另一側。
+
+**而且要分辨它哪裡可信。** 2026-10-11 量 EMU3000 的 GLB：斷面在整列 245.7 m 裡從未收窄到
+流線型該有的程度，每節車兩端都是圓頭——它沒有車頭，是示意用的地圖模型（manifest 自己標了
+`illustrative`）。材質名稱卻是刻意分部位命名的（`Pearl_Livery`、`Signature_Red`、
+`Smoked_Blue_Glass`…），顏色是作者的決定。**結論：顏色照抄，形狀另外找依據。**
+量完一定要算圖看一眼再決定信哪部分。
+
+```sh
+node .claude/skills/rolling-stock/measure.cjs <reference.glb> \
+  [--metres <真實全長>] [--pitch <車距>] [--slices 120] [--json]
+```
+
+它印出：整體尺寸、每個材質的顏色與**高度帶**（色帶的 row 從這裡讀）、以及沿車身的斷面。
+參考模型通常是**整列**而不是一節，斷面會每一節車縮腰一次；`--pitch` 會把整列**折成**
+一節頭車和一節中間車的斷面表，那就是放樣的 station。沒給 `--pitch` 它會自己從縮腰間距猜。
+
+模型常常不是以公尺為單位（EMU3000 那個是 1/6.5）。寬度或高度小得不像車時用 `--metres`
+給真實全長來換算，不要直接採用。
+
+## 4. 流程
+
+0. **先去參考庫量**（第 3 節）。有參考模型就用它，照片是補不足的，不是第一順位。
+1. **再驗照片**。一張雜亂的照片會讓後面全白做。要求：主體佔畫面大部分、背景和車身分得開、
    整節車入鏡。白車配白背景（發表會的白坡道、亮螢幕）是最糟的組合。
 2. **逐區看，不要整張看**。把照片切成九宮格逐區放大檢查，再放大鼻尖與車側兩處。
    整張看會漏掉東西——N700ST 車頭下半那一大片灰，就是這樣漏掉的。
@@ -71,7 +105,7 @@ GitHub 上的 Shinkansen repo 都沒有 LICENSE 檔，CC0 素材庫沒有高鐵�
 4. **頭車的色帶不是水平的**：N700ST 的橘帶往車頭俯衝，上面壓一條深藍帶；中間車才是水平的。
    做之前先確認這款車的頭車和中間車塗裝是不是一樣。
 
-## 4. 檢查與預覽
+## 5. 檢查與預覽
 
 ```sh
 # 先裝一次 Web/CityView 的套件
@@ -81,6 +115,9 @@ NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
   --stock hsr --out <scratchpad>/sheet.png          # 檢查 + 一張對照圖
 NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
   --stock hsr --check-only                          # 只跑檢查
+NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
+  --stock tra --reference <ref.glb> --reference-metres 245.7 \
+  --out <scratchpad>/compare.png                    # 和參考模型用同一組鏡頭並排
 ```
 
 `--stock` 是 `hsr`、`tra`，或任何路線名稱（選車是依路線名稱，和畫面裡一樣）。
@@ -102,10 +139,12 @@ NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
 用寬度判斷會把形狀推離真車。（這條檢查的想法來自 img2threejs 的 taper gate。）
 
 對照圖有六格：斜前方、頭車正側、**正面**、中間車正側、整列、夜景，最後一格是模糊後的剪影。
+給了 `--reference` 時每一列變成「我們的／參考的」並排，鏡頭完全相同——這是判斷形狀對不對
+最可靠的方式，比對照片準。
 **正面那格要看**——鼻尖的平切面只有從正面看得出來，N700ST 就是這樣抓到的。
 剪影那格是因為玩家在城市畫面裡只會掃一眼，剩下剪影還認得出來才算數。
 
-## 5. 現在做不到的事
+## 6. 現在做不到的事
 
 - **貼圖沒有橫向座標**。`v` 只帶斷面高度，所以同一高度的一圈都會上到色。想畫一塊
   「只在車頭正中央、不繞到兩側」的東西（例如比較窄的擋風玻璃）做不到——現在的駕駛窗從正面
@@ -115,13 +154,13 @@ NODE_PATH="$(npm root -g)" node .claude/skills/rolling-stock/preview.cjs \
 - **城市畫面沒有環境反射**（`environment.js` 的 `installSkyLight` 把環境貼圖反射關掉了，
   天光改由 light probe 提供）。亮面感只能靠色調映射和天光，不要指望反射。
 
-## 6. 驗證怎麼寫
+## 7. 驗證怎麼寫
 
 Linux 上能做的：`npm test`、`vite build`、這份 skill 的檢查與算圖。這些可以寫 **VERIFIED**。
 App 裡的實際畫面要 macOS CI 與 TestFlight，寫 **UNVERIFIED**（CLAUDE.md）。
 算圖用的是城市畫面相同的 ACES 色調映射與近似天光，但**不是** App 本身，不要寫成 App 驗過了。
 
-## 7. 外部工具
+## 8. 外部工具
 
 - [img2threejs](https://github.com/img2threejs/img2threejs)（Apache-2.0）：照參考圖用程式重建
   3D 的 Claude skill。2026-10-11 跑到 blockout pass。**它的檢查值得學**（這份的照片驗收、
