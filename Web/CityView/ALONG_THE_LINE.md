@@ -15,12 +15,12 @@ Every change is marked `Along the Line` in the code:
 | `tools/pipeline/markings.mjs` | `rightHand`: lane symbols and stop lines on the right half; no 止まれ |
 | `src/world/traffic.js` | Cars keep right where `roads.json` says `rightHand` |
 | `src/world/signs.js` | Traditional Chinese fonts first |
-| `src/main.js` | The clock in the area's time zone (the manifest's `utcOffset`); tells the railways a Taiwanese area (the manifest's `zone`) |
+| `src/main.js` | The clock in the area's time zone (the manifest's `utcOffset`); tells the railways a Taiwanese area (the manifest's `zone`); the credits as one line, as on the game's real-world maps, the 3D city's author first (`3D 城市：© Yong Su`), and the loading steps, in Traditional Chinese when the web view's language is Chinese |
 | `src/world/rails.js` | Passes the train options on to `Trains` |
 | `src/world/trains.js` | In a Taiwanese area every heavy-rail line runs the TRA's EMU900 and EMU3000 in turn; cars drawn with the Meshy models of `public/models/trains/` (`tools/meshy`, decision 161) when they are there, as boxes otherwise |
 | `public/models/trains/` (new) | The Meshy train models and their `index.json` (file, the axis the cab faces) |
 | `src/world/atmosphere.js` | The environment map is baked 10 m above the ground: from 0 m, at Kaohsiung's latitude, the sky gives NaNs and the city goes black |
-| `index.html` | The loading screen says 沿線 instead of 東京 |
+| `index.html` | The loading screen is the game's: its logo (`public/assets/ui/brand-mark.png`, the app's `BrandMark`), 沿線 / Along the Line and the website's colours, and the area's Chinese name; the game's website (官網, bottom right, opened by the app in Safari) where the GitHub link was; the credits at the bottom in the middle, on the same light band as the real-world maps' |
 
 The raw data (`data/raw/`), the compiled tiles (`public/tiles/`), the textures (`public/textures/`) and
 `node_modules/` are not committed (`.gitignore`); `tools/procedural-city/README.md` has the commands.
