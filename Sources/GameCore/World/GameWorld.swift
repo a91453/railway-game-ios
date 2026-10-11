@@ -3190,15 +3190,17 @@ public struct GameWorld: Equatable, Sendable {
     /// ``nextServiceEvent(after:)``) or the next second in which a run takes
     /// a train on (see ``nextRunMove(from:)``), or `nil` if there is
     /// neither. The step just taken ended at now, so an event at now has not
-    /// been seen yet. None at all while `passengersWaiting` and a train
-    /// waits with its doors open: passengers who come at a whole minute get
-    /// on.
+    /// been seen yet. None at all while a train waits with its doors open
+    /// and passengers may come at a whole minute and get on: those released
+    /// (`passengersWaiting`), or those changing trains who become ready now
+    /// or later (Phase 5F, ``WaitingGroup/readyAt``), with or without a
+    /// release.
     private func wholeMinutesUntilNextServiceEvent(passengersWaiting: Bool) -> Int64? {
         let now = clock.now
-        if passengersWaiting, trains.contains(where: { train in
+        if trains.contains(where: { train in
             if case .waitingAtStop? = train.execution, train.times?.closing == nil { return true }
             return false
-        }) {
+        }), passengersWaiting || passengers.contains(where: { $0.waiting.contains { $0.readyAt.map { $0 >= now } ?? false } }) {
             return 0
         }
         guard let event = [nextServiceEvent(after: Self.saturating(now, plus: -1)), nextRunMove(from: now)].compactMap({ $0 }).min() else {
