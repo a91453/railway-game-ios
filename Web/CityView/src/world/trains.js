@@ -147,7 +147,10 @@ const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 -
 function shellRing(z, t) {
   const halfW = HS_HALF_W * (1 - 0.34 * ease((t - 0.45) / 0.55));
   const top = HS_ROOF - 1.78 * ease(t), bottom = HS_FLOOR + 0.1 * ease((t - 0.6) / 0.4);  // a broad blunt bill: 1.9 m across and 1.25 m deep at the tip
-  const cy = (top + bottom) / 2, hy = (top - bottom) / 2;
+  // The last tenth rounds the bill over, so the sweep closes on a small cap instead of showing a
+  // flat face with a hard rim. Head-on is the only view that catches this.
+  const cap = 1 - 0.56 * ease((t - 0.88) / 0.12);
+  const cy = (top + bottom) / 2, hy = ((top - bottom) / 2) * cap;
   // The section is fuller below the crease than above it, the way the body tucks in towards the roof, and it
   // widens by a little at the crease itself: that is the wing line running the length of the nose.
   const low = 2 / (8.5 - 5.6 * ease(t)), up = 2 / (4.6 - 2.3 * ease(t));
@@ -157,7 +160,7 @@ function shellRing(z, t) {
     const y = cy + Math.sign(s) * Math.abs(s) ** (s < 0 ? low : up) * hy;
     const f = (y - bottom) / (top - bottom);
     const wing = 1 + 0.05 * Math.exp(-(((f - SHOULDER) / 0.1) ** 2));
-    pts.push([Math.sign(c) * Math.abs(c) ** low * halfW * wing, y, f]);
+    pts.push([Math.sign(c) * Math.abs(c) ** low * halfW * wing * cap, y, f]);
   }
   return { z, pts };
 }
