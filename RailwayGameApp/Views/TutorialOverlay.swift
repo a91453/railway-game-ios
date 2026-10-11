@@ -305,15 +305,22 @@ private struct TutorialCard: View {
 
     @ViewBuilder
     private var navigationButtons: some View {
-        Button("Skip") { session.skipTutorial() }
+        Button("Skip") {
+            UITestTrace.action("tutorial.skip")
+            session.skipTutorial()
+        }
             .buttonStyle(.bordered)
             .accessibilityIdentifier("tutorial.skip")
         if !tutorial.isFirstStep {
-            Button("Back") { session.showPreviousTutorialStep() }
+            Button("Back") {
+                UITestTrace.action("tutorial.back")
+                session.showPreviousTutorialStep()
+            }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("tutorial.back")
         }
         Button {
+            UITestTrace.action("tutorial.next")
             session.showNextTutorialStep()
         } label: {
             Group {

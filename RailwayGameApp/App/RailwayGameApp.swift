@@ -1,6 +1,11 @@
 import GameCore
 import GamePresentation
+import os
 import SwiftUI
+import UIKit
+#if DEBUG
+import UIKit.UIGestureRecognizerSubclass
+#endif
 
 @main
 struct RailwayGameApp: App {
@@ -141,16 +146,123 @@ private enum DebugLaunch {
 }
 #endif
 
+/// K4 (#366): a tap a UI test saw pressed whose action never ran. Under
+/// `-ui-testing`, in a Debug build, the app writes each touch its window
+/// receives (where, on which view of which window) and the actions of the
+/// buttons those failures named, to the unified log: the app's subsystem,
+/// category `ui-test`. `ios-build.yml` saves that log when a UI test fails,
+/// so the next failure says whether the touch arrived, where it landed and
+/// whether the action ran. A Release build writes nothing.
+enum UITestTrace {
+    #if DEBUG
+    static let isOn = ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "RailwayGame", category: "ui-test")
+    #endif
+
+    /// Writes that button `name`'s action ran.
+    static func action(_ name: String) {
+        #if DEBUG
+        guard isOn else { return }
+        log.notice("action \(name, privacy: .public)")
+        #endif
+    }
+
+    #if DEBUG
+    /// Writes a touch's phase, its point in the window, the view it was
+    /// delivered to (with the nearest accessibility identifier above it)
+    /// and its window.
+    @MainActor
+    static func touch(_ touch: UITouch, _ phase: String) {
+        let point = touch.location(in: nil)
+        var identified = touch.view
+        while let view = identified, (view.accessibilityIdentifier ?? "").isEmpty { identified = view.superview }
+        let view = touch.view.map { String(describing: type(of: $0)) } ?? "none"
+        let window = touch.window.map { "\(type(of: $0)) level \($0.windowLevel.rawValue)\($0.isKeyWindow ? " key" : "")" } ?? "none"
+        log.notice(
+            "touch \(phase, privacy: .public) at (\(Int(point.x)), \(Int(point.y))) view \(view, privacy: .public) id \(identified?.accessibilityIdentifier ?? "-", privacy: .public) window \(window, privacy: .public)"
+        )
+    }
+    #endif
+}
+
+#if DEBUG
+/// Watches every touch of its window for ``UITestTrace`` without taking
+/// part: it never recognizes, and never delays or cancels a touch.
+private final class TouchTraceRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    static func make() -> TouchTraceRecognizer {
+        let recognizer = TouchTraceRecognizer()
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = recognizer
+        return recognizer
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        for touch in touches { UITestTrace.touch(touch, "began") }
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        for touch in touches { UITestTrace.touch(touch, "ended") }
+        failOnceAllTouchesEnd(event)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        for touch in touches { UITestTrace.touch(touch, "cancelled") }
+        failOnceAllTouchesEnd(event)
+    }
+
+    private func failOnceAllTouchesEnd(_ event: UIEvent) {
+        if event.allTouches?.allSatisfy({ $0.phase == .ended || $0.phase == .cancelled }) ?? true {
+            state = .failed
+        }
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
+    }
+}
+
+/// Puts a ``TouchTraceRecognizer`` on the window it is shown in, once.
+private struct TouchTraceInstaller: UIViewRepresentable {
+    final class Anchor: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard let window, !(window.gestureRecognizers ?? []).contains(where: { $0 is TouchTraceRecognizer }) else { return }
+            window.addGestureRecognizer(TouchTraceRecognizer.make())
+        }
+    }
+
+    func makeUIView(context: Context) -> Anchor {
+        let anchor = Anchor()
+        anchor.isUserInteractionEnabled = false
+        return anchor
+    }
+
+    func updateUIView(_ uiView: Anchor, context: Context) {}
+}
+#endif
+
 /// The game being played, or the start screen when there is none.
 private struct RootView: View {
     let launcher: GameLauncher
 
     var body: some View {
-        if let session = launcher.session {
-            ContentView(session: session, launcher: launcher)
-        } else {
-            StartView(launcher: launcher)
+        Group {
+            if let session = launcher.session {
+                ContentView(session: session, launcher: launcher)
+            } else {
+                StartView(launcher: launcher)
+            }
         }
+        #if DEBUG
+        .background {
+            if UITestTrace.isOn {
+                TouchTraceInstaller()
+                    .accessibilityHidden(true)
+            }
+        }
+        #endif
     }
 }
 
