@@ -96,6 +96,16 @@ final class FreightSessionTests: XCTestCase {
         try world.assignTrain(train, to: LineID(rawValue: 1))
         XCTAssertTrue(world.isFreightTrain(train))
         XCTAssertEqual(world.trainLoadInfo(of: train)?.capacity, 120, "three cars of 40 t")
+        // The train card and the fleet list say tons, not riders.
+        let load = try XCTUnwrap(world.trainLoadInfo(of: train))
+        XCTAssertTrue(load.isFreight)
+        XCTAssertEqual(load.titleText(in: .english), "Cargo Load")
+        XCTAssertEqual(load.titleText(in: .traditionalChinese), "載貨率")
+        XCTAssertEqual(load.detailText(in: .english), "Current cargo 0 t · Rated load 120 t")
+        XCTAssertEqual(load.detailText(in: .traditionalChinese), "當前載貨 0 噸 · 額定載重 120 噸")
+        let full = TrainLoadInfo(passengerCount: 160, capacity: 160, isFreight: true)
+        XCTAssertEqual(full.percentage, 100)
+        XCTAssertEqual(full.detailText(in: .traditionalChinese), "當前載貨 160 噸 · 額定載重 160 噸")
         XCTAssertNil(world.loadText(of: train, in: .english), "nothing aboard yet")
         XCTAssertNil(world.fleetLoadInfo(), "the only train is not on the track")
 

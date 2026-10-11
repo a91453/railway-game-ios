@@ -4756,6 +4756,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 路線改成貨運路線時，`isServed` 不看 `isFreight`，在等這條線的乘客不會被放棄，從此永遠在等；全網路徑也會把轉乘排到這條線上。現在兩個 `isServed` 都把貨運路線當成沒有服務，`setLineFreight` 會把他們算成放棄；`boardingPlan` 也不讓任何人上貨運列車。修正前存下、還有人在等貨運路線的存檔照樣讀得回來（`passengerProblem` 暫時接受），下一個重新檢查的指令把他們算成放棄。測試：`FreightTests.testPassengersWaitingForALineThatTurnsFreightAreAbandoned`、`testASaveWithPassengersWaitingForAFreightLineLoads`。
 - 存檔裡一列車的貨原本可到 2^40 噸，卸貨時運費的乘積會溢位當掉。現在一列車最多是最長列車（`Train.maximumCars` 節）的噸數，遊戲裡到得了的狀態都在這之內。測試：`FreightTests.testASaveWithMoreOnBoardThanATrainHoldsIsRefused`。
 - （審查 #340–#357）上面那個修正之前，這種乘客會在停站時上車，之後就永遠下不了車。修正前存下的這種存檔照樣讀得回來，貨運列車下一次停站開門時，把車上的人算成放棄（`exchangePassengers`）。測試：`FreightTests.testRidersLeftOnAFreightTrainGetOffAbandoned`。
+- （2026-10-11，作者在 App 裡看到）點貨運列車時，列車資訊卡與列車總覽的載客條照舊寫「載客率」「當前載客 160 · 額定載客 160」，數字其實是噸。`TrainLoadInfo` 多了 `isFreight`，標題與說明改由 GamePresentation 的 `titleText(in:)`、`detailText(in:)` 給：貨運列車是「載貨率」「當前載貨 160 噸 · 額定載重 160 噸」，客運列車的字不變。測試：`FreightSessionTests.testFreightLoadsAndTags`、`EconomyDisplayTests.testTrainLoadInfoReadsRidersOverRatedCapacity`。
 
 ### 156. 建材：貨運場出建材、車站的建材置場、在地供應與進口
 

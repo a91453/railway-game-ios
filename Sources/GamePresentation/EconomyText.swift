@@ -217,7 +217,7 @@ extension GameWorld {
         guard let train = train(id: id) else { return nil }
         // Decision 155: a freight train's tons over its cars' tons.
         if isFreightTrain(id) {
-            return TrainLoadInfo(passengerCount: cargoOnBoard(of: id), capacity: Self.freightCapacity(cars: train.cars))
+            return TrainLoadInfo(passengerCount: cargoOnBoard(of: id), capacity: Self.freightCapacity(cars: train.cars), isFreight: true)
         }
         let count = riders(of: id).reduce(Int64(0)) { $0 + $1.count }
         return TrainLoadInfo(passengerCount: count, capacity: train.ratedCapacity)
@@ -248,16 +248,42 @@ extension GameWorld {
 /// percentage is over 100 (`.pax-bar-fill.is-overload`); the reference has
 /// no other load levels.
 public struct TrainLoadInfo: Equatable, Hashable, Sendable {
+    /// The riders, or a freight train's tons aboard (``isFreight``).
     public let passengerCount: Int64
-    /// The rated capacity, as the train has it (never adjusted for display).
+    /// The rated capacity, as the train has it (never adjusted for display):
+    /// riders, or a freight train's tons.
     public let capacity: Int64
     /// The load in whole percent, rounded half up; 0 when the capacity is 0.
     public let percentage: Int
+    /// Whether this is a freight train's cargo in tons (decision 155), not
+    /// riders.
+    public let isFreight: Bool
 
-    public init(passengerCount: Int64, capacity: Int64) {
+    public init(passengerCount: Int64, capacity: Int64, isFreight: Bool = false) {
         self.passengerCount = passengerCount
         self.capacity = capacity
         self.percentage = Self.percentage(passengers: passengerCount, capacity: capacity)
+        self.isFreight = isFreight
+    }
+
+    /// The bar's title: "Load Factor", or "Cargo Load" for a freight train.
+    public func titleText(in language: DisplayLanguage) -> String {
+        isFreight ? language.text("Cargo Load", "載貨率") : language.text("Load Factor", "載客率")
+    }
+
+    /// The caption under the bar, the reference's rated capacity and current
+    /// passengers rows (`#pt-cap`, `#pt-pax`) as one line; a freight train's
+    /// in tons.
+    public func detailText(in language: DisplayLanguage) -> String {
+        isFreight
+            ? language.text(
+                "Current cargo \(passengerCount) t · Rated load \(capacity) t",
+                "當前載貨 \(passengerCount) 噸 · 額定載重 \(capacity) 噸"
+            )
+            : language.text(
+                "Current passengers \(passengerCount) · Rated capacity \(capacity)",
+                "當前載客 \(passengerCount) · 額定載客 \(capacity)"
+            )
     }
 
     /// The reference's `Math.round(pax / cap * 100)`, in integers (half up,
