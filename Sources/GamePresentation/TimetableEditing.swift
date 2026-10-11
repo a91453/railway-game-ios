@@ -26,10 +26,19 @@ public enum TimetableEditing {
 
     /// `stops` with a stop at `station` added at the end: the default travel
     /// after the last departure, or at `start` for the first stop, waiting
-    /// the default dwell.
+    /// the default dwell. `stops` as they are when that would pass the
+    /// largest second a ``GameTime`` holds (a save may end there).
     public static func appending(_ station: StationID, to stops: [ScheduledStop], start: GameTime) -> [ScheduledStop] {
-        let arrival = stops.last.map { GameTime(seconds: $0.departure.seconds + defaultTravel) } ?? start
-        return stops + [ScheduledStop(station: station, arrival: arrival, departure: GameTime(seconds: arrival.seconds + defaultDwell))]
+        guard let arrival = stops.last.map({ adding(defaultTravel, to: $0.departure) }) ?? start,
+              let departure = adding(defaultDwell, to: arrival)
+        else { return stops }
+        return stops + [ScheduledStop(station: station, arrival: arrival, departure: departure)]
+    }
+
+    /// `time` `seconds` later, or `nil` past the largest second.
+    static func adding(_ seconds: Int64, to time: GameTime) -> GameTime? {
+        let (sum, overflow) = time.seconds.addingReportingOverflow(seconds)
+        return overflow ? nil : GameTime(seconds: sum)
     }
 
     /// The earliest the stop at `index` may arrive: when the stop before it
@@ -52,24 +61,28 @@ public enum TimetableEditing {
     /// negative), with its departure and every later stop moved with it,
     /// so the travel to it changes and nothing else: never before the stop
     /// before it leaves (or second 0). Moving the first stop moves the
-    /// whole timetable, the reference's start.
+    /// whole timetable, the reference's start. `stops` as they are when a
+    /// time would pass the largest second.
     public static func movingArrival(of index: Int, by delta: Int64, in stops: [ScheduledStop]) -> [ScheduledStop] {
         guard stops.indices.contains(index) else { return stops }
         let shift = max(delta, earliestArrival(of: index, in: stops) - stops[index].arrival.seconds)
-        return stops.enumerated().map { offset, stop in
+        let moved = stops.enumerated().compactMap { offset, stop in
             offset < index ? stop : stop.shifted(arrival: shift, departure: shift)
         }
+        return moved.count == stops.count ? moved : stops
     }
 
     /// The stop at `index` leaving `delta` seconds later (earlier when
     /// negative), with every later stop moved with it, so its wait changes
-    /// and nothing else: never before it arrives.
+    /// and nothing else: never before it arrives. `stops` as they are when
+    /// a time would pass the largest second.
     public static func movingDeparture(of index: Int, by delta: Int64, in stops: [ScheduledStop]) -> [ScheduledStop] {
         guard stops.indices.contains(index) else { return stops }
         let shift = max(delta, stops[index].arrival.seconds - stops[index].departure.seconds)
-        return stops.enumerated().map { offset, stop in
+        let moved = stops.enumerated().compactMap { offset, stop in
             offset < index ? stop : stop.shifted(arrival: offset == index ? 0 : shift, departure: shift)
         }
+        return moved.count == stops.count ? moved : stops
     }
 
     /// The stop at `index` turning the train round as it leaves, or no
@@ -92,11 +105,13 @@ public enum TimetableEditing {
 
     /// The shortest period `stops` can repeat with in whole minutes: from
     /// the first arrival to the last departure, rounded up, and at least a
-    /// minute. `nil` without stops.
+    /// minute. `nil` without stops, and when no whole number of minutes
+    /// that long fits in an `Int64`.
     public static func shortestPeriod(of stops: [ScheduledStop]) -> Int64? {
         guard let first = stops.first, let last = stops.last else { return nil }
         let span = last.departure.seconds - first.arrival.seconds
         let minute = GameTime.secondsPerMinute
+        guard span <= Int64.max - (minute - 1) else { return nil }
         return max(minute, (span + minute - 1) / minute * minute)
     }
 
@@ -109,13 +124,12 @@ public enum TimetableEditing {
 }
 
 private extension ScheduledStop {
-    func shifted(arrival arrivalShift: Int64, departure departureShift: Int64) -> ScheduledStop {
-        ScheduledStop(
-            station: station,
-            arrival: GameTime(seconds: arrival.seconds + arrivalShift),
-            departure: GameTime(seconds: departure.seconds + departureShift),
-            reverses: reverses
-        )
+    /// This stop moved by the shifts, or `nil` past the largest second.
+    func shifted(arrival arrivalShift: Int64, departure departureShift: Int64) -> ScheduledStop? {
+        guard let arrival = TimetableEditing.adding(arrivalShift, to: arrival),
+              let departure = TimetableEditing.adding(departureShift, to: departure)
+        else { return nil }
+        return ScheduledStop(station: station, arrival: arrival, departure: departure, reverses: reverses)
     }
 }
 
@@ -196,8 +210,10 @@ extension GameSession {
     /// stop arrives at the next whole minute.
     public func addStopToSelectedTrainTimetable(_ station: StationID) {
         guard let train = requireSelectedTrain() else { return }
-        let start = GameTime(seconds: (world.clock.now.seconds / GameTime.secondsPerMinute + 1) * GameTime.secondsPerMinute)
-        let stops = TimetableEditing.appending(station, to: train.timetable, start: start)
+        // At the end of time there is no next minute, and no stop fits.
+        let (start, overflow) = (world.clock.now.seconds / GameTime.secondsPerMinute + 1).multipliedReportingOverflow(by: GameTime.secondsPerMinute)
+        let stops = TimetableEditing.appending(station, to: train.timetable, start: GameTime(seconds: overflow ? .max : start))
+        guard stops.count > train.timetable.count else { return }
         setTimetable(of: train, to: stops) { world in
             let stop = stops[stops.count - 1]
             let firstDay = stops[0].arrival.seconds / GameTime.secondsPerDay
@@ -273,7 +289,9 @@ extension GameSession {
     /// ``TimetableEditing/shortestPeriod(of:)``.
     public func changeSelectedTrainTimetablePeriod(by delta: Int64) {
         guard let train = requireSelectedTrain(), let period = train.timetablePeriod else { return }
-        let changed = TimetableEditing.period(period + delta, fitting: train.timetable)
+        let (sum, overflow) = period.addingReportingOverflow(delta)
+        guard !overflow else { return }
+        let changed = TimetableEditing.period(sum, fitting: train.timetable)
         setTimetable(of: train, to: train.timetable, repeatingEvery: changed) { _ in
             Self.periodText(changed, of: train, in: language)
         }
