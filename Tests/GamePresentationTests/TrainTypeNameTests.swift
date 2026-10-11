@@ -2,9 +2,9 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// The names of the train types (ARCHITECTURE decision 171): the ones a
-/// player in Taiwan would not recognize, the reference's letters and its sky
-/// rail, are named for what they are; the others keep the names they had.
+/// The names of the train types (ARCHITECTURE decision 171), as the author
+/// named them for players in Taiwan: the metros are "…捷運", the other trains
+/// "…列車", and no letter or brand stands for a name.
 final class TrainTypeNameTests: XCTestCase {
     /// Every type with its name in both languages, as decision 171 lists
     /// them. A new type has to be named here: the test below fails until it
@@ -12,16 +12,16 @@ final class TrainTypeNameTests: XCTestCase {
     private static let names: [(type: TrainType, english: String, chinese: String)] = [
         (.a, "Large metro", "大型捷運"),
         (.b, "Medium metro", "中型捷運"),
-        (.c, "Light rail", "輕軌"),
+        (.c, "Light metro", "輕型捷運"),
         (.l, "Linear-motor metro", "線性馬達捷運"),
-        (.d, "Suburban express", "市郊快線"),
-        (.apm, "APM", "APM"),
-        (.maglev, "Maglev", "磁浮"),
+        (.d, "Multi-door metro", "多門捷運"),
+        (.apm, "Automated shuttle", "自動接駁列車"),
+        (.maglev, "Maglev train", "磁浮列車"),
         (.skyRail, "Light monorail", "輕型單軌"),
-        (.monorail, "Monorail", "單軌"),
+        (.monorail, "Monorail train", "單軌列車"),
         (.steam, "Steam train", "蒸汽列車"),
         (.highSpeed, "High-speed set", "高鐵列車"),
-        (.emu3000, "EMU3000", "EMU3000 新自強號"),
+        (.emu3000, "New Tze-Chiang", "新自強號"),
     ]
 
     func testEveryTypeHasItsName() {
@@ -33,50 +33,74 @@ final class TrainTypeNameTests: XCTestCase {
         }
     }
 
+    /// The car a train without a type has is named too, and no type shares
+    /// its name.
     func testNoTwoTypesShareAName() {
         for language in DisplayLanguage.allCases {
-            let titles = TrainType.allCases.map { $0.title(in: language) }
+            let titles = TrainType.allCases.map { $0.title(in: language) } + [Train.standardCarName(in: language)]
             XCTAssertEqual(Set(titles).count, titles.count, "\(language): \(titles)")
         }
     }
 
-    /// The point of the decision: a letter on its own tells a player nothing.
-    func testTheLettersAndTheSkyRailAreNamedForWhatTheyAre() {
+    /// The point of the decision: a letter or a brand on its own tells a
+    /// player nothing.
+    func testNoLetterOrBrandStandsForAName() {
         for type in [TrainType.a, .b, .c, .l, .d] {
             XCTAssertNotEqual(type.title(in: .english), "Type \(type.rawValue)")
             XCTAssertNotEqual(type.title(in: .traditionalChinese), "\(type.rawValue)型")
         }
+        XCTAssertNotEqual(TrainType.apm.title(in: .english), "APM")
+        XCTAssertNotEqual(TrainType.apm.title(in: .traditionalChinese), "APM")
         XCTAssertNotEqual(TrainType.skyRail.title(in: .traditionalChinese), "雲軌")
     }
 
-    /// The names that were already known stay as they were, so does the
-    /// standard car (a train without a type).
-    func testTheKnownNamesAndTheStandardCarStay() {
-        XCTAssertEqual(Train.typeText(.monorail, in: .traditionalChinese), "單軌 · 每節 224 人 · 2 門")
-        XCTAssertEqual(Train.typeText(.maglev, in: .traditionalChinese), "磁浮 · 每節 240 人 · 3 門")
-        XCTAssertEqual(Train.typeText(.apm, in: .english), "APM · 138 a car · 2 doors")
-        XCTAssertEqual(Train.typeText(nil, in: .traditionalChinese), "標準車 · 每節 320 人 · 4 門")
-        XCTAssertEqual(Train.typeText(nil, in: .english), "Standard car · 320 a car · 4 doors")
+    /// The scheme: the metros end in 捷運, the trains of the other systems in
+    /// 列車.
+    func testTheMetrosAreNamedMetroAndTheOtherTrainsTrain() {
+        for type in [TrainType.a, .b, .c, .l, .d] {
+            XCTAssertTrue(type.title(in: .traditionalChinese).hasSuffix("捷運"), type.rawValue)
+            XCTAssertTrue(type.title(in: .english).lowercased().hasSuffix("metro"), type.rawValue)
+        }
+        for type in [TrainType.apm, .maglev, .monorail, .steam, .highSpeed] {
+            XCTAssertTrue(type.title(in: .traditionalChinese).hasSuffix("列車"), type.rawValue)
+        }
+        XCTAssertTrue(Train.standardCarName(in: .traditionalChinese).hasSuffix("列車"))
+    }
+
+    /// A train without a type, which every old save has, is the general train.
+    func testTheStandardCarIsTheGeneralTrain() {
+        XCTAssertEqual(Train.standardCarName(in: .traditionalChinese), "通用列車")
+        XCTAssertEqual(Train.standardCarName(in: .english), "General train")
+        XCTAssertEqual(Train.typeText(nil, in: .traditionalChinese), "通用列車 · 每節 320 人 · 4 門")
+        XCTAssertEqual(Train.typeText(nil, in: .english), "General train · 320 a car · 4 doors")
     }
 
     /// What the menu, the train's card and the status line read.
-    func testTheTypeTextCarriesTheNewName() {
-        XCTAssertEqual(Train.typeText(.b, in: .traditionalChinese), "中型捷運 · 每節 260 人 · 4 門")
-        XCTAssertEqual(Train.typeText(.b, in: .english), "Medium metro · 260 a car · 4 doors")
+    func testTheTypeTextCarriesTheName() {
         XCTAssertEqual(Train.typeText(.a, in: .traditionalChinese), "大型捷運 · 每節 310 人 · 5 門")
+        XCTAssertEqual(Train.typeText(.b, in: .english), "Medium metro · 260 a car · 4 doors")
+        XCTAssertEqual(Train.typeText(.d, in: .traditionalChinese), "多門捷運 · 每節 230 人 · 5 門")
+        XCTAssertEqual(Train.typeText(.apm, in: .traditionalChinese), "自動接駁列車 · 每節 138 人 · 2 門")
+        XCTAssertEqual(Train.typeText(.monorail, in: .traditionalChinese), "單軌列車 · 每節 224 人 · 2 門")
         XCTAssertEqual(Train.typeText(.skyRail, in: .traditionalChinese), "輕型單軌 · 每節 140 人 · 2 門")
+        XCTAssertEqual(Train.typeText(.emu3000, in: .traditionalChinese), "新自強號 · 每節 45 人 · 2 門")
+        XCTAssertEqual(Train.typeText(.emu3000, in: .english), "New Tze-Chiang · 45 a car · 2 doors")
     }
 
-    /// The era's message puts the name in a sentence, so it has to read as one.
-    func testTheEraMessageReadsWithTheNewNames() {
-        XCTAssertEqual(
-            GameError.trainTypeUnavailable(.a).playerMessage(in: .traditionalChinese),
-            "這個年代還沒有大型捷運列車。"
-        )
+    /// The era's message puts the name in a sentence of its own, so a name
+    /// that ends in 列車 is not followed by another.
+    func testTheEraMessageReadsWithTheNames() {
+        XCTAssertEqual(GameError.trainTypeUnavailable(.maglev).playerMessage(in: .traditionalChinese), "這個年代還沒有磁浮列車。")
+        XCTAssertEqual(GameError.trainTypeUnavailable(.a).playerMessage(in: .traditionalChinese), "這個年代還沒有大型捷運。")
+        XCTAssertEqual(GameError.trainTypeUnavailable(.highSpeed).playerMessage(in: .traditionalChinese), "這個年代還沒有高鐵列車。")
+        XCTAssertEqual(GameError.trainTypeUnavailable(nil).playerMessage(in: .traditionalChinese), "這個年代還沒有通用列車。")
         XCTAssertEqual(
             GameError.trainTypeUnavailable(.c).playerMessage(in: .english),
-            "This era has no Light rail trains."
+            "Light metro is not available in this era."
         )
-        XCTAssertEqual(GameError.trainTypeUnavailable(nil).playerMessage(in: .traditionalChinese), "這個年代還沒有標準車。")
+        XCTAssertEqual(
+            GameError.trainTypeUnavailable(nil).playerMessage(in: .english),
+            "General train is not available in this era."
+        )
     }
 }

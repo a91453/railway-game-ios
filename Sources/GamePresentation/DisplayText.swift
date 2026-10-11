@@ -395,11 +395,14 @@ extension GameError {
             language.text("This challenge cannot be started here.", "這個挑戰無法在這裡開始。")
         case .trainTypeUnavailable(let type?):
             language.text(
-                "This era has no \(type.title(in: language)) trains.",
-                "這個年代還沒有\(type.title(in: language))列車。"
+                "\(type.title(in: language)) is not available in this era.",
+                "這個年代還沒有\(type.title(in: language))。"
             )
         case .trainTypeUnavailable(nil):
-            language.text("This era has no standard cars.", "這個年代還沒有標準車。")
+            language.text(
+                "\(Train.standardCarName(in: language)) is not available in this era.",
+                "這個年代還沒有\(Train.standardCarName(in: language))。"
+            )
         case .buildingOverlaps(let id):
             language.text("That would stand on building #\(id.rawValue).", "這裡已經有建物 #\(id.rawValue)。")
         case .buildingOnTrack:
@@ -584,44 +587,49 @@ extension GameSession {
 }
 
 extension TrainType {
-    /// The type's name (decision 171). The reference labels its types
+    /// The type's name, as the author named them for players in Taiwan
+    /// (decision 171). The reference labels its types
     /// `TRAIN_TYPES[type].label` ("A型" to "D型", "APM", "磁浮", "云轨",
-    /// "单轨"). The names a player in Taiwan knows keep them: "APM",
-    /// "Maglev" / "磁浮", "Monorail" / "單軌". The letters and the sky rail,
-    /// which nobody there would recognize, are named for what they are: the
-    /// large (A) and medium (B) metro, the light rail (C), the linear-motor
-    /// metro (L), the suburban express (D) and the light monorail (BYD's
-    /// SkyRail, a medium-capacity monorail, rated here below the monorail).
-    /// Only this text changes: a type is saved and replayed by its raw value.
+    /// "单轨"): a letter or a brand tells a player there nothing. The metros
+    /// are named for their size or build ("大型捷運", "多門捷運"), the
+    /// others for what they are ("磁浮列車", "自動接駁列車"). Only this text
+    /// changes: a type is saved and replayed by its raw value.
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .a: language.text("Large metro", "大型捷運")
         case .b: language.text("Medium metro", "中型捷運")
-        case .c: language.text("Light rail", "輕軌")
+        case .c: language.text("Light metro", "輕型捷運")
         case .l: language.text("Linear-motor metro", "線性馬達捷運")
-        case .d: language.text("Suburban express", "市郊快線")
-        case .apm: "APM"
-        case .maglev: language.text("Maglev", "磁浮")
+        case .d: language.text("Multi-door metro", "多門捷運")
+        case .apm: language.text("Automated shuttle", "自動接駁列車")
+        case .maglev: language.text("Maglev train", "磁浮列車")
         case .skyRail: language.text("Light monorail", "輕型單軌")
-        case .monorail: language.text("Monorail", "單軌")
+        case .monorail: language.text("Monorail train", "單軌列車")
         case .steam: language.text("Steam train", "蒸汽列車")
         case .highSpeed: language.text("High-speed set", "高鐵列車")
-        case .emu3000: language.text("EMU3000", "EMU3000 新自強號")
+        case .emu3000: language.text("New Tze-Chiang", "新自強號")
         }
     }
 }
 
 extension Train {
     /// The type of its cars, what each carries and its doors:
-    /// "Medium metro · 260 a car · 4 doors", or "Standard car · 320 a car · 4
+    /// "Medium metro · 260 a car · 4 doors", or "General train · 320 a car · 4
     /// doors".
     public func typeText(in language: DisplayLanguage) -> String {
         Self.typeText(type, in: language)
     }
 
+    /// The name of the car a train without a type has (decision 171):
+    /// "General train" / "通用列車". Code and documents still call it the
+    /// standard car.
+    public static func standardCarName(in language: DisplayLanguage) -> String {
+        language.text("General train", "通用列車")
+    }
+
     /// The same for a train of cars of `type` (`nil`: the standard car).
     public static func typeText(_ type: TrainType?, in language: DisplayLanguage) -> String {
-        let name = type?.title(in: language) ?? language.text("Standard car", "標準車")
+        let name = type?.title(in: language) ?? standardCarName(in: language)
         let perCar = type?.ratedCapacityPerCar ?? ratedCapacityPerCar
         let doors = type?.doorsPerCar ?? ServiceDwell.doorsPerCar
         return language.text("\(name) · \(perCar) a car · \(doors) doors", "\(name) · 每節 \(perCar) 人 · \(doors) 門")
