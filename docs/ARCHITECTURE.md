@@ -5058,6 +5058,24 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能建置 App；卡片與訊息的文字要在 macOS CI 與 TestFlight 上看。
 
+### 165. 官網截圖由 macOS 模擬器產生
+
+2026-10-11，作者要更新官網，要求「透過 GitHub Actions 的 macOS 模擬器」拿遊戲截圖。之前官網的截圖都是作者在實機上拍、再用官網的 `tools/screens.py` 轉成 WebP（私有參考庫 `Website/README.md` 的「換遊戲畫面截圖」）。號碼依工作登記 #231：決策 165；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+參考檢查（`a91453/railway-reference-private`）：`Website/tools/screens.py` 只做轉檔與尺寸，截圖本身一直是手拍；參考沒有自動截圖的流程。外部專案沒有找：XCTest 的 `XCTAttachment` 與 `xcresulttool export attachments` 是 Xcode 內建的做法。
+
+1. **截圖場景**（GamePresentation 的 `ScreenshotScene`）：用 GameCore 自己的指令蓋好、跑到要拍的那一刻、暫停的世界。現在只有 `freight`：示範地圖（`DemoWorld`）加上一條在內環裡、1 號線南邊 40 m 的貨運軌道，西站與東站各一座貨運場，兩站外 1 km 各一塊工業區（每格 750 個就業），一條貨運線、一列四節的貨運列車；跑到第二天 08:00:30（第一個午夜的成長之後、整點進貨後半分鐘：短軌道上的列車幾分鐘就把貨運場清空，只有整點剛過時兩座貨運場都有貨、列車滿載）。Linux 上的 `ScreenshotSceneTests` 檢查它還蓋得起來、拍得到要拍的東西。在 Linux 的 Debug 建置約 22 秒，所以 `GameLauncher.openScreenshotScene(_:)` 在主執行緒外跑，跑完才開局（這段時間顯示開始畫面）。
+2. **Debug 啟動參數** `-screenshot-scene <名稱>`（`RailwayGameApp.swift` 的 `DebugLaunch.value(of:)`，和 `-demo-layout` 同一套，只在 Debug 版）：launcher 開那個場景。
+3. **拍照的 UI 測試**（`RailwayGameApp/UITests/WebsiteScreenshotTests.swift`）：繁體中文、橫拿，每個測試開一個畫面，用 `XCTAttachment`（`keepAlways`）留下截圖：貨運場景的缺建材泡泡、點泡泡選到的西站（標籤寫待運噸數）、跟隨貨運列車的資訊卡（載貨率），空白新遊戲的擴建地圖，劉銘傳劇本開局，實景示範的自製底圖。它們不測任何東西：PR 的 gate 本來就不列它們，完整 lane 用 `-skip-testing` 跳過。
+4. **Workflow**（`.github/workflows/website-screenshots.yml`）：手動執行，或 PR 動到截圖測試、截圖場景或它自己時執行。選一台 iPhone Pro 模擬器（官網截圖是 iPhone Pro 橫拿的比例）、深色模式、狀態列固定 9:41，只跑這個類別，用 `xcrun xcresulttool export attachments` 匯出，依附件名稱存成 `<名稱>.png`，上傳成 `website-screenshots` 產物（14 天）。官網那邊照舊用 `tools/screens.py` 轉檔。
+
+**限制**：
+- 模擬器的截圖不是實機：地圖的字型、陰影與真機相同，但沒有實機的效能問題與網路狀況。
+- Apple 地圖的圖磚要網路；實景示範用遊戲自己打包的台灣 OSM 圖磚（決策 151），不需要網路。
+- 場景是示範用的布置（工業區是場景放的），規則與數字都是遊戲的。
+
+**沒有驗證的**：Linux 不能跑模擬器；截圖要看 workflow 的產物。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

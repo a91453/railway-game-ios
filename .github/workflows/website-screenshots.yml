@@ -1,0 +1,140 @@
+# Screenshots for the game's website (ARCHITECTURE decision 165): builds the
+# Debug app, runs RailwayGameUITests/WebsiteScreenshotTests on an iPhone
+# Simulator on its side, in dark mode as the website's screenshots are, and
+# uploads what the tests kept as PNGs in the `website-screenshots` artifact.
+# The website's own tools/screens.py turns them into its WebP sizes.
+#
+# By hand from the Actions tab, or on a pull request that changes the
+# screenshot tests, their scenes or this file. It tests nothing: the gate
+# and the full lane (ios-build.yml) skip these tests.
+name: Website screenshots
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "RailwayGameApp/UITests/WebsiteScreenshotTests.swift"
+      - "Sources/GamePresentation/ScreenshotScene.swift"
+      - ".github/workflows/website-screenshots.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Website screenshots (iOS Simulator)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      # The website's screenshots are from an iPhone Pro (2622 × 1206 on
+      # its side): the first available Pro that is not a Max, else the first
+      # iPhone.
+      - name: Select an iPhone Simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          devices = json.loads(Path(os.environ["RUNNER_TEMP"], "simulators.json").read_text())["devices"]
+          iphones = [device for runtime, group in devices.items()
+                     if ".iOS-" in runtime for device in group
+                     if device["isAvailable"] and device["name"].startswith("iPhone")]
+          if not iphones:
+              raise SystemExit("No available iPhone Simulator")
+          pros = [d for d in iphones if d["name"].endswith(" Pro")]
+          device = (pros or iphones)[-1]
+          print(f"Selected {device['name']} ({device['udid']})")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"SIMULATOR_UDID={device['udid']}\n")
+          PY
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGNING_ALLOWED=NO
+
+      # Dark, with the status bar a clean 9:41 should it show.
+      - name: Boot the Simulator in dark mode
+        timeout-minutes: 14
+        run: |
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          xcrun simctl ui "$SIMULATOR_UDID" appearance dark
+          xcrun simctl status_bar "$SIMULATOR_UDID" override --time 9:41 --batteryState charged --batteryLevel 100 \
+            --cellularBars 4 --wifiBars 3 || echo "::warning::Could not set the status bar"
+
+      - name: Take the screenshots
+        id: screenshots
+        timeout-minutes: 30
+        run: |
+          xcodebuild test-without-building \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resultBundlePath "$RUNNER_TEMP/screenshots.xcresult" \
+            -only-testing:RailwayGameUITests/WebsiteScreenshotTests \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 480 \
+            -maximum-test-execution-time-allowance 600 \
+            CODE_SIGN_IDENTITY=-
+
+      # Each kept attachment as <name>.png, whether or not every test passed.
+      - name: Export the screenshots
+        if: always() && steps.screenshots.outcome != 'skipped'
+        run: |
+          out="$RUNNER_TEMP/attachments"
+          mkdir -p "$out" "$RUNNER_TEMP/website-screenshots"
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/screenshots.xcresult" --output-path "$out"
+          python3 - <<'PY' || echo "::warning::Could not name the screenshots; the artifact has the raw export"
+          import json, os, shutil
+          from pathlib import Path
+          out = Path(os.environ["RUNNER_TEMP"], "attachments")
+          dest = Path(os.environ["RUNNER_TEMP"], "website-screenshots")
+          manifest = json.loads((out / "manifest.json").read_text())
+          for test in manifest:
+              for attachment in test.get("attachments", []):
+                  name = attachment.get("suggestedHumanReadableName", "")
+                  stem = name.split("_")[0] if name else Path(attachment["exportedFileName"]).stem
+                  target = dest / f"{stem}{Path(attachment['exportedFileName']).suffix}"
+                  shutil.copy(out / attachment["exportedFileName"], target)
+                  print(f"{test.get('testIdentifier', '?')}: {target.name}")
+          PY
+          ls -l "$RUNNER_TEMP/website-screenshots"
+
+      - name: Upload the screenshots
+        if: always() && steps.screenshots.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: website-screenshots
+          # The named PNGs, and the export as xcresulttool wrote it in case
+          # its manifest changes.
+          path: |
+            ${{ runner.temp }}/website-screenshots
+            ${{ runner.temp }}/attachments
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload the result bundle
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          overwrite: true
+          name: website-screenshots-xcresult
+          path: ${{ runner.temp }}/screenshots.xcresult
+          if-no-files-found: warn
+          retention-days: 7

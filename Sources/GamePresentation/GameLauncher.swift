@@ -197,6 +197,19 @@ public final class GameLauncher {
         begin(DemoWorld.make(in: language), keepingAutosave: true)
     }
 
+    /// Opens a website screenshot scene (decision 165), paused at the
+    /// moment it shows; only the Debug app's `-screenshot-scene` launch
+    /// argument asks for one. The scene runs on to its moment off the main
+    /// actor (some 20 seconds), with the start screen showing meanwhile.
+    @discardableResult
+    public func openScreenshotScene(_ scene: ScreenshotScene) -> Task<Void, Never> {
+        let language = language
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) { scene.make(in: language) }.value
+            self.begin(world, keepingAutosave: true)
+        }
+    }
+
     /// Opens ``RealWorldDemo``: Taiwan's Yilan, Western Trunk, Pingxi and
     /// Shenao Lines built on `railways` over the ground of the app's
     /// heights (decision 132) and running over Apple's map.
