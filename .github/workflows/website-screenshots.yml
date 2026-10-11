@@ -119,6 +119,17 @@ jobs:
                   shutil.copy(out / exported, target)
                   print(f"{test.get('testIdentifier', '?')}: {target.name}")
           PY
+          # The screen's screenshot is the display as it is built, upright:
+          # a phone on its side comes out turned a quarter. Turn it back, a
+          # quarter anticlockwise (sips turns clockwise).
+          for shot in "$RUNNER_TEMP"/website-screenshots/*.png; do
+            [[ -e "$shot" ]] || continue
+            width=$(sips -g pixelWidth "$shot" | awk '/pixelWidth/ { print $2 }')
+            height=$(sips -g pixelHeight "$shot" | awk '/pixelHeight/ { print $2 }')
+            if (( width < height )); then
+              sips -r 270 "$shot" >/dev/null
+            fi
+          done
           ls -l "$RUNNER_TEMP/website-screenshots"
 
       - name: Upload the screenshots

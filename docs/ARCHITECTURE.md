@@ -5069,7 +5069,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 1. **截圖場景**（GamePresentation 的 `ScreenshotScene`）：用 GameCore 自己的指令蓋好、跑到要拍的那一刻、暫停的世界。現在只有 `freight`：示範地圖（`DemoWorld`）加上一條在內環裡、1 號線南邊 40 m 的貨運軌道，西站與東站各一座貨運場，兩站外 1 km 各一塊工業區（每格 750 個就業），一條貨運線、一列四節的貨運列車；跑到第二天 08:00:30（第一個午夜的成長之後、整點進貨後半分鐘：短軌道上的列車幾分鐘就把貨運場清空，只有整點剛過時兩座貨運場都有貨、列車滿載）。Linux 上的 `ScreenshotSceneTests` 檢查它還蓋得起來、拍得到要拍的東西。在 Linux 的 Debug 建置約 22 秒，所以 `GameLauncher.openScreenshotScene(_:)` 在主執行緒外跑，跑完才開局（這段時間顯示開始畫面）。
 2. **Debug 啟動參數** `-screenshot-scene <名稱>`（`RailwayGameApp.swift` 的 `DebugLaunch.value(of:)`，和 `-demo-layout` 同一套，只在 Debug 版）：launcher 開那個場景。
 3. **拍照的 UI 測試**（`RailwayGameApp/UITests/WebsiteScreenshotTests.swift`）：繁體中文、橫拿，每個測試開一個畫面，用 `XCTAttachment`（`keepAlways`）留下截圖：貨運場景的缺建材泡泡、點泡泡選到的西站（標籤寫待運噸數）、跟隨貨運列車的資訊卡（載貨率），空白新遊戲的擴建地圖，劉銘傳劇本開局，實景示範的自製底圖。它們不測任何東西：PR 的 gate 本來就不列它們，完整 lane 用 `-skip-testing` 跳過。
-4. **Workflow**（`.github/workflows/website-screenshots.yml`）：手動執行，或 PR 動到截圖測試、截圖場景或它自己時執行。選一台 iPhone Pro 模擬器（官網截圖是 iPhone Pro 橫拿的比例）、深色模式、狀態列固定 9:41，只跑這個類別，用 `xcrun xcresulttool export attachments` 匯出，依附件名稱存成 `<名稱>.png`，上傳成 `website-screenshots` 產物（14 天）。官網那邊照舊用 `tools/screens.py` 轉檔。
+4. **Workflow**（`.github/workflows/website-screenshots.yml`）：手動執行，或 PR 動到截圖測試、截圖場景或它自己時執行。選一台 iPhone Pro 模擬器（官網截圖是 iPhone Pro 橫拿的比例）、深色模式、狀態列固定 9:41，只跑這個類別，用 `xcrun xcresulttool export attachments` 匯出，依附件名稱存成 `<名稱>.png`，上傳成 `website-screenshots` 產物（14 天）。截圖取整個螢幕（`XCUIScreen.main.screenshot()`）：App 自己的截圖在橫拿時轉了方向、只剩一半；整個螢幕的截圖是直的，workflow 用 `sips` 逆時針轉 90° 成橫式。官網那邊照舊用 `tools/screens.py` 轉檔。
 
 **限制**：
 - 模擬器的截圖不是實機：地圖的字型、陰影與真機相同，但沒有實機的效能問題與網路狀況。
