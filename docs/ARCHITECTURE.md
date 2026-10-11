@@ -4570,6 +4570,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
    - 網頁不能從 `file:` 執行（ES module、worker 與讀圖塊的 `fetch` 都要網頁來源），所以 App 在 loopback 位址開一個只服務這個資料夾的 HTTP 伺服器（`CityViewServer`，Network 框架，系統挑埠號，網路上的其他裝置連不到），WKWebView 讀 `http://localhost:<port>/index.html?area=kaohsiung&radius=400&clouds=0&birds=0&traffic=0`（作者試過的輕量版）。ATS 允許 `localhost` 這類不含點的網域，不需要例外。
    - 哪個檔、回應的檔頭由 GamePresentation 的 `CityViewServing` 決定（不能離開資料夾：`..`、隱藏檔、反斜線、NUL 都拒絕），Linux 上有測試。
    - 離開頁面的連結（Tokyo 的 GitHub 連結）用瀏覽器開；網頁的程序被系統結束時（記憶體）重新載入。
+   - 2026-10-11 補：伺服器聽整個 loopback 介面（IPv4 的 `127.0.0.1` 與 IPv6 的 `::1`），因為 `localhost` 可能先解析成 `::1`；原本只聽 IPv4（`main` 上的 UI 測試等不到網頁，這是最可能的原因，還沒證實）。網頁載入完成前顯示「正在載入 3D 城市…」，載入失敗時把 WebKit 的錯誤寫在畫面上（`cityView.error`），UI 測試等的是載入指示消失，不再依賴網頁腳本與模擬器的 WebGL。
    - 不讀 GameCore：車流、光線、時間都是頁面自己的。
 5. **出處**：資料來源畫面多一節「3D 城市試作」（Procedural Tokyo 與它打包的程式庫、Poly Haven），Overture 與 OSM 的說明加上 3D 試作。
 
