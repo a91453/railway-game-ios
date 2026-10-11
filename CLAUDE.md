@@ -119,17 +119,18 @@ needs OSM data reads the same extract.
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
   build, iPhone UI tests, the Traditional Chinese translation check; not run
   for changes the app cannot see: docs, the
-  package's tests and fixtures, `Web/`, `tools/`, the Linux checks' files.
+  package's tests and fixtures, `Web/`, `tools/`, `.claude/`, the other
+  workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's screens;
-  pushes to `main`, a nightly run and manual runs run every UI test and the
-  iPad tutorial tests (the missing-button proof nightly and on request), and
-  their red result does not block a pull request; a newer push to `main`
-  cancels the older one's run, so the newest `main` commit always has a
-  complete one),
+  the full lane runs every UI test and the iPad tutorial tests (the
+  missing-button proof nightly and on request) on `main` every three hours
+  (`ios-full-lane.yml` starts it unless `main`'s newest commit already had
+  one), nightly and by hand, and its red result does not block a pull
+  request; a push to `main` no longer starts it),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
-  and on PRs that change project settings, the app's entry point or its
-  resources other than the string catalog), `testflight.yml`
+  and on PRs that change project settings, the app's entry point, the asset
+  catalog or the localized Info.plist strings), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no
