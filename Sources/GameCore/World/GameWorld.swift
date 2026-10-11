@@ -4156,8 +4156,10 @@ extension GameWorld: Codable {
             }
             if envelope.moves, !envelope.resources.isSubset(of: Set(train.reservation)) {
                 // Stage U2: a train following another holds its route part
-                // of the way, from where it stands.
-                guard authorityEnvelope(of: train, to: 0).isSubset(of: Set(train.reservation)) else {
+                // of the way, from where it stands, and never where it ends:
+                // one that holds the end is taken to hold all of it (see
+                // ``authority(of:)``), so a hole before it is refused.
+                guard isFollowing(train), authorityEnvelope(of: train, to: 0).isSubset(of: Set(train.reservation)) else {
                     return "Train \(id)'s reservation does not hold the rest of its route."
                 }
             }
