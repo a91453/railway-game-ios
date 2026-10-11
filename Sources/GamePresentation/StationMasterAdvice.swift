@@ -42,8 +42,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// The town round the station was short of building materials at the
     /// last midnight (decision 158).
     case materialsShort(station: StationID, name: String)
-    /// Decision 153: the challenge's first words, in its first days (or,
-    /// on a map with nothing built, until the first track).
+    /// Decision 153: the challenge's first words, what it asks and how, in
+    /// its first days (or, on a map with nothing built, until the first
+    /// track).
     case scenarioWelcome(scenario: String)
     /// Decision 153: goal `goal` of the scenario was met at the last
     /// midnight; `titles` is how the goals panel names it, in English and
@@ -281,15 +282,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "「\(name)」附近昨晚缺建材，城市長得慢。讓一座貨運場出建材，開一條貨運路線運到「\(name)」的貨運場。"
             )
         case .scenarioWelcome(let scenario):
-            scenario == Challenge.liuMingchuan.id
-                ? language.text(
-                    "1887: the governor wants a railway from Keelung's harbour to Twatutia. Tap Build, then Network, and start through the Shiqiuling ridge!",
-                    "1887 年，巡撫要我們從基隆港鋪到大稻埕。點「建設」再選「路網」，先穿過獅球嶺吧！"
-                )
-                : language.text(
-                    "The Pingxi Line is ours now, and it loses money. Fill its trains, and get ready for the Sky Lantern Festival crowds at Shifen and Pingxi.",
-                    "平溪線交給我們了，它一直在虧錢。讓列車坐滿，也為十分和平溪天燈節的人潮做好準備。"
-                )
+            scenario == Challenge.liuMingchuan.id ? LiuMingchuanChallenge.welcomeText(in: language) : PingxiChallenge.welcomeText(in: language)
         case .goalMet(let scenario, let goal, let titles):
             scenario == Challenge.liuMingchuan.id && LiuMingchuanChallenge.milestones.indices.contains(goal)
                 ? LiuMingchuanChallenge.milestoneCheer(goal, in: language)

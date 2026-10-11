@@ -95,7 +95,11 @@ final class ScenarioStationMasterTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice(world: world), .scenarioWelcome(scenario: "history.liuMingchuan"))
         XCTAssertEqual(
             StationMasterAdvice(world: world)?.text(in: .traditionalChinese),
-            "1887 年，巡撫要我們從基隆港鋪到大稻埕。點「建設」再選「路網」，先穿過獅球嶺吧！"
+            "1887 年，巡撫要修台灣第一條鐵路：從基隆港穿過獅球嶺到大稻埕，再跨過淡水河鋪到新竹，6 年內完成。蒸汽列車每節只坐 50 人，列車要夠長。點「建設」再選「路網」開始吧！"
+        )
+        XCTAssertEqual(
+            StationMasterAdvice.scenarioWelcome(scenario: "history.pingxi").text(in: .traditionalChinese),
+            "平溪線交給我們了：這條為運煤而建的支線一直在虧錢。目標是每日運量 80,000 人次、一年淨利 \(PingxiChallenge.profitTarget.moneyText)。天燈節會有大批人潮湧進十分和平溪，先把列車準備好！"
         )
 
         // Keelung and Badu joined by a line with a steam train of one car:

@@ -142,6 +142,16 @@ public enum LiuMingchuanChallenge {
         goldDays: 75, silverDays: year, deadlineDays: 6 * year, insolvencyDays: 60, trainTypes: [.steam]
     )
 
+    /// What the station master says first (decision 153): what the
+    /// challenge asks, its era's catch, and where to begin.
+    static func welcomeText(in language: DisplayLanguage) -> String {
+        let years = scenario.deadlineDays / year
+        return language.text(
+            "1887: the governor wants Taiwan's first railway. Lay it from Keelung's harbour through Shiqiuling to Twatutia, then over the Tamsui to Hsinchu, within \(years) years. Steam trains carry only 50 a car, so make them long. Tap Build, then Network, to begin!",
+            "1887 年，巡撫要修台灣第一條鐵路：從基隆港穿過獅球嶺到大稻埕，再跨過淡水河鋪到新竹，\(years) 年內完成。蒸汽列車每節只坐 50 人，列車要夠長。點「建設」再選「路網」開始吧！"
+        )
+    }
+
     /// What the station master says when milestone `index` is reached.
     static func milestoneCheer(_ index: Int, in language: DisplayLanguage) -> String {
         switch index {
