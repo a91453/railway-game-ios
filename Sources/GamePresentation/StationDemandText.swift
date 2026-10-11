@@ -158,6 +158,110 @@ public struct StationRidership: Hashable, Sendable {
     }
 }
 
+/// What each station's day of demand (``GameWorld/stationRidership(of:)``,
+/// ``GameWorld/travelDemandMap()``) is worked out from, for a view that
+/// works them out again, off the main actor, only when this changes (the
+/// station panel's ridership, the travel demand layers): the stations and
+/// those with demand, the lines as passengers ride them, the track and
+/// traffic control, the trains' lengths and seats, the service day, the
+/// transfer groups, how passengers are routed, the fares, the day and what
+/// changes demand by the day (weekly demand, events, holidays and
+/// weather), demand by distance, the outside connections and the map's
+/// tiles owned. Not when a line last sent a train out, which changes every
+/// few minutes and none of it reads, nor who is waiting at a station
+/// without demand of its own. Within a day the service level that network
+/// routing reads can change; the views show the day's first reading until
+/// the next.
+public struct RidershipInputs: Equatable, Sendable {
+    struct Line: Equatable, Sendable {
+        let id: LineID
+        let stops: [StationID]
+        let isRing: Bool
+        let isFreight: Bool
+        let trains: [TrainID]
+        let window: ServiceWindow
+        let trainsInService: TrainsInService
+        let targetHeadways: TargetHeadways
+        let patternCalls: [[Int]]
+        let patternTrains: [[TrainID]]
+        let patternTrainsInService: [TrainsInService]
+        let patternTargetHeadways: [TargetHeadways]
+        let runs: [LineRun]
+        let performance: TrainPerformance
+        let routePreferences: [[LineRoutePreference]]
+
+        init(_ line: ServiceLine) {
+            id = line.id
+            stops = line.stops
+            isRing = line.isRing
+            isFreight = line.isFreight
+            trains = line.trains
+            window = line.window
+            trainsInService = line.trainsInService
+            targetHeadways = line.targetHeadways
+            patternCalls = line.patterns.map(\.calls)
+            patternTrains = line.patterns.map(\.trains)
+            patternTrainsInService = line.patterns.map(\.trainsInService)
+            patternTargetHeadways = line.patterns.map(\.targetHeadways)
+            runs = line.runs
+            performance = line.performance
+            routePreferences = [line.routePreferences] + line.patterns.map(\.routePreferences)
+        }
+    }
+
+    let day: Int64
+    let serviceDay: ServiceDay
+    let stations: [Station]
+    let demandStations: [StationID]
+    let demands: [StationDemand]
+    let lines: [Line]
+    let network: RailwayNetwork
+    let trafficControl: Bool
+    let trains: [TrainID]
+    let trainLengths: [Int64]
+    let trainCapacities: [Int64]
+    let transferGroups: [TransferGroup]
+    let routing: PassengerRoutingMode
+    let economy: EconomyMode
+    let fares: FareRules?
+    let fareBaseline: Money
+    let weeklyDemand: Bool
+    let demandEvents: DemandEventSchedule?
+    let disruptions: Disruptions?
+    let distanceDemand: Bool
+    let outsideConnections: Bool
+    let ownedTiles: [MapTile]?
+
+    public init(world: GameWorld) {
+        day = world.clock.now.seconds / GameTime.secondsPerDay
+        serviceDay = world.serviceDay
+        stations = world.stations
+        // Only the records with demand: the others come and go with who
+        // is waiting.
+        let withDemand = world.passengers.filter { $0.demand != nil }
+        demandStations = withDemand.map(\.station)
+        demands = withDemand.compactMap(\.demand)
+        lines = world.lines.map(Line.init)
+        // Unchanged storage compares at once, so this costs a tick little.
+        network = world.network
+        trafficControl = world.isTrafficControlEnabled
+        trains = world.trains.map(\.id)
+        trainLengths = world.trains.map(\.length)
+        trainCapacities = world.trains.map(\.capacity)
+        transferGroups = world.transferGroups
+        routing = world.passengerRoutingMode
+        economy = world.accounts.mode
+        fares = world.accounts.fareRules
+        fareBaseline = world.accounts.fareBaseline
+        weeklyDemand = world.weeklyDemand
+        demandEvents = world.demandEvents
+        disruptions = world.disruptions
+        distanceDemand = world.distanceDemand
+        outsideConnections = world.outsideConnections
+        ownedTiles = world.mapExpansion?.owned
+    }
+}
+
 extension GameWorld {
     /// Station `id`'s ``stationFlow(of:)`` and ``stationDemandPairs(of:)``
     /// in one pass: the station's own day once, and each other station's
@@ -165,14 +269,21 @@ extension GameWorld {
     /// for every hour. On a real-world map of hundreds of stations, with
     /// network routing, asking pair by pair took seconds.
     public func stationRidership(of id: StationID) -> StationRidership {
+        stationRidership(of: id, days: nil)
+    }
+
+    /// The same, reading each station's day (``dailyDemands(from:)``) from
+    /// `days` when it is there: what ``travelDemandMap()`` asks of every
+    /// station, each day worked out once for all of them.
+    func stationRidership(of id: StationID, days: [StationID: [StationID: Int64]]?) -> StationRidership {
         guard let demand = stationDemand(of: id) else { return StationRidership(flow: nil, pairs: []) }
-        let outbound = dailyDemands(from: id)
+        let outbound = days?[id] ?? dailyDemands(from: id)
         var entries = Array(repeating: Int64(0), count: 24)
         var exits = entries
         var pairs: [StationDemandPair] = []
         for other in stations where other.id != id && stationDemand(of: other.id) != nil {
             let there = outbound[other.id] ?? 0
-            let back = dailyDemands(from: other.id)[id] ?? 0
+            let back = (days?[other.id] ?? dailyDemands(from: other.id))[id] ?? 0
             let leaving = hourlyDemand(of: there, from: id, to: other.id)
             let coming = hourlyDemand(of: back, from: other.id, to: id)
             for hour in 0..<24 {

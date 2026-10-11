@@ -126,9 +126,16 @@ extension GameWorld {
     /// station's trips in each hour (``stationFlow(of:)``'s entries) in the
     /// square it stands in.
     public func travelDemandMap() -> TravelDemandMap {
+        // Each station's day once, not again for every station it trades
+        // with: with network routing each is a search over the whole map,
+        // and the real-world demo's dozen stations took seconds.
+        var days: [StationID: [StationID: Int64]] = [:]
+        for station in stations where stationDemand(of: station.id) != nil {
+            days[station.id] = dailyDemands(from: station.id)
+        }
         var trips: [TravelDemandMap.Cell: [Int64]] = [:]
         for station in stations {
-            guard let flow = stationFlow(of: station.id), flow.entries.count == 24 else { continue }
+            guard let flow = stationRidership(of: station.id, days: days).flow, flow.entries.count == 24 else { continue }
             let cell = TravelDemandMap.cell(atX: station.location.x, y: station.location.y)
             var hours = trips[cell] ?? Array(repeating: 0, count: 24)
             for hour in 0..<24 {

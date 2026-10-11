@@ -658,79 +658,15 @@ struct StationPanel: View {
 
 /// What a station's ridership (``GameWorld/stationRidership(of:)``) is
 /// worked out from, so the panel works it out again only when one of them
-/// changes, not on every tick: the station, the game day (weekly demand,
-/// events and the city's ridership change by the day), the stations, their
-/// demand and the lines, how passengers route, and the fares, which change
-/// demand. Network routing also reads the track the lines run over, their
-/// performance and routes, the trains' capacity and the transfer groups
-/// (``PassengerRouteGraph``). Within a day the service level that network routing reads can
-/// change; the panel shows the day's first reading until the next.
+/// changes, not on every tick: the station and what its day reads
+/// (``RidershipInputs``, shared with the map's travel layers).
 private struct RidershipKey: Equatable {
-    /// What of a line passengers go by: not when it last sent a train
-    /// (``ServiceLine/lastDispatch``, ``ServiceLine/runDays``), which
-    /// changes every few minutes of the game.
-    struct LineKey: Equatable {
-        let id: LineID
-        let stops: [StationID]
-        let isRing: Bool
-        let trains: [TrainID]
-        let window: ServiceWindow
-        let trainsInService: TrainsInService
-        let targetHeadways: TargetHeadways
-        let patternCalls: [[Int]]
-        let patternTrains: [[TrainID]]
-        let runs: [LineRun]
-        let performance: TrainPerformance
-        let routePreferences: [[LineRoutePreference]]
-
-        init(_ line: ServiceLine) {
-            id = line.id
-            stops = line.stops
-            isRing = line.isRing
-            trains = line.trains
-            window = line.window
-            trainsInService = line.trainsInService
-            targetHeadways = line.targetHeadways
-            patternCalls = line.patterns.map(\.calls)
-            patternTrains = line.patterns.map(\.trains)
-            runs = line.runs
-            performance = line.performance
-            routePreferences = [line.routePreferences] + line.patterns.map(\.routePreferences)
-        }
-    }
-
     let station: StationID?
-    let day: Int64
-    let stations: [Station]
-    let demandStations: [StationID]
-    let demands: [StationDemand]
-    let lines: [LineKey]
-    let network: RailwayNetwork
-    let trainCapacities: [Int64]
-    let transferGroups: [TransferGroup]
-    let routing: PassengerRoutingMode
-    let economy: EconomyMode
-    let fares: FareRules?
-    let fareBaseline: Money
+    let inputs: RidershipInputs
 
     init(world: GameWorld, station: StationID?) {
         self.station = station
-        day = world.clock.now.seconds / GameTime.secondsPerDay
-        stations = world.stations
-        // Only the records with demand: the others come and go with who
-        // is waiting.
-        let withDemand = world.passengers.filter { $0.demand != nil }
-        demandStations = withDemand.map(\.station)
-        demands = withDemand.compactMap(\.demand)
-        lines = world.lines.map(LineKey.init)
-        // Unchanged storage compares at once, so this costs a tick little.
-        network = world.network
-        trainCapacities = world.trains.map(\.capacity)
-        transferGroups = world.transferGroups
-        routing = world.passengerRoutingMode
-        economy = world.accounts.mode
-        fares = world.accounts.fareRules
-        fareBaseline = world.accounts.fareBaseline
+        inputs = RidershipInputs(world: world)
     }
 }
 
