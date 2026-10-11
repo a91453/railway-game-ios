@@ -1,0 +1,1007 @@
+{
+  "schemaVersion": 62,
+  "description": "A typhoon's day (decision 162's later fix, schema 62): a typhoon cuts the trips to and from the stations it blows over, once even when it blows over both ends, and sends none of them elsewhere; every value below was worked out by tools/golden-checks/typhoon_demand.py from the rules. Home (1, residential), Office (2, office), Port (3, office) and Town (4, residential), 1000 trips a day each, on line Main; the clock is at day 194 (15 July, no holiday in Taiwan or Great Britain). Without a seed every origin shares its 1000 trips among the other three by their daily trips: 334, 333, 333 (the unit left over to the lowest ID). With seed 7 it rains on day 194 (July, 'weather.194' rolls 414: not under 250, under 450), taking 100 per mille off: 900 trips, 300 to each. Year 0's typhoon (weather.json) blows on days 194 and 195, centred at (2865, 1399) with a radius of 5431: Home (1336 away) and Office (2770 away) are under it, Port (6863) and Town (8911) are not. Each pair keeps the smaller of its two ends' multipliers: Home to Office 300 x 200 / 1000 = 60 (a fifth, not a fifth of a fifth), Home to Port 60, Town to Home 60, and Town to Port keeps its 300. Great Britain with the same seed has the same rain and no typhoon: 300 for every pair, so Town to Port is what it is without the typhoon: none of the trips cut go elsewhere. At the light level the rain takes 50 (950 trips: 317, 317, 316) and the typhoon 400: 317 x 600 / 1000 = 190 for the pairs it cuts, and Town to Port keeps its 316. The hours are the day's shape times the origin's departure and the destination's arrival peaks, as in holidays.json.",
+  "initialState": {
+    "worldWidth": 12288,
+    "worldHeight": 3072,
+    "balance": 5000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 279360,
+    "speed": "normal"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Port",
+        "point": {
+          "x": 9728,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Town",
+        "point": {
+          "x": 11776,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "createLine",
+        "name": "Main",
+        "stops": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 1,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 2,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 3,
+        "demand": {
+          "kind": "office",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setStationDemand",
+        "station": 4,
+        "demand": {
+          "kind": "residential",
+          "dailyTrips": 1000
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "TW",
+        "level": "standard"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 334,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          11,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 333,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          10,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 1
+      },
+      "expect": {
+        "daily": 334,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          27,
+          37,
+          27,
+          12,
+          11,
+          11,
+          11,
+          12,
+          12,
+          22,
+          27,
+          37,
+          27,
+          15,
+          14,
+          14,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 3
+      },
+      "expect": {
+        "daily": 333,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          37,
+          57,
+          37,
+          13,
+          11,
+          10,
+          11,
+          11,
+          11,
+          19,
+          19,
+          22,
+          19,
+          12,
+          13,
+          13,
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "TW",
+        "level": "standard",
+        "seed": 7
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "weather",
+        "day": 194
+      },
+      "expect": {
+        "weather": "rain"
+      }
+    },
+    {
+      "observe": {
+        "type": "typhoons",
+        "day": 194
+      },
+      "expect": {
+        "typhoons": [
+          {
+            "announced": 193,
+            "start": 194,
+            "end": 196,
+            "x": 2865,
+            "y": 1399,
+            "radius": 5431,
+            "drop": 800
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 60,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          7,
+          10,
+          7,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 60,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          7,
+          10,
+          7,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 1
+      },
+      "expect": {
+        "daily": 60,
+        "hourly": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          5,
+          7,
+          5,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          5,
+          7,
+          5,
+          3,
+          2,
+          3,
+          0
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 3
+      },
+      "expect": {
+        "daily": 300,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          10,
+          33,
+          51,
+          33,
+          12,
+          10,
+          9,
+          10,
+          10,
+          10,
+          17,
+          17,
+          20,
+          17,
+          11,
+          11,
+          12,
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "GB",
+        "level": "standard",
+        "seed": 7
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "weather",
+        "day": 194
+      },
+      "expect": {
+        "weather": "rain"
+      }
+    },
+    {
+      "observe": {
+        "type": "typhoons",
+        "day": 194
+      },
+      "expect": {
+        "typhoons": []
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 300,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          10,
+          33,
+          51,
+          33,
+          12,
+          10,
+          9,
+          10,
+          10,
+          10,
+          17,
+          17,
+          20,
+          17,
+          11,
+          11,
+          12,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 300,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          10,
+          33,
+          51,
+          33,
+          12,
+          10,
+          9,
+          10,
+          10,
+          10,
+          17,
+          17,
+          20,
+          17,
+          11,
+          11,
+          12,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 1
+      },
+      "expect": {
+        "daily": 300,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          9,
+          25,
+          33,
+          25,
+          10,
+          10,
+          10,
+          10,
+          10,
+          11,
+          20,
+          25,
+          33,
+          25,
+          13,
+          12,
+          12,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 3
+      },
+      "expect": {
+        "daily": 300,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          10,
+          33,
+          51,
+          33,
+          12,
+          10,
+          9,
+          10,
+          10,
+          10,
+          17,
+          17,
+          20,
+          17,
+          11,
+          11,
+          12,
+          1
+        ]
+      }
+    },
+    {
+      "command": {
+        "type": "setDisruptions",
+        "country": "TW",
+        "level": "light",
+        "seed": 7
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "observe": {
+        "type": "weather",
+        "day": 194
+      },
+      "expect": {
+        "weather": "rain"
+      }
+    },
+    {
+      "observe": {
+        "type": "typhoons",
+        "day": 194
+      },
+      "expect": {
+        "typhoons": [
+          {
+            "announced": 193,
+            "start": 194,
+            "end": 196,
+            "x": 2865,
+            "y": 1399,
+            "radius": 5431,
+            "drop": 400
+          }
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 2
+      },
+      "expect": {
+        "daily": 190,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          6,
+          21,
+          32,
+          21,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          11,
+          11,
+          13,
+          10,
+          7,
+          7,
+          7,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 1,
+        "to": 3
+      },
+      "expect": {
+        "daily": 190,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          6,
+          21,
+          32,
+          21,
+          7,
+          6,
+          6,
+          6,
+          6,
+          6,
+          11,
+          11,
+          13,
+          10,
+          7,
+          7,
+          7,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 1
+      },
+      "expect": {
+        "daily": 190,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          6,
+          16,
+          21,
+          15,
+          7,
+          6,
+          6,
+          6,
+          6,
+          7,
+          12,
+          15,
+          21,
+          15,
+          8,
+          8,
+          8,
+          1
+        ]
+      }
+    },
+    {
+      "observe": {
+        "type": "demand",
+        "from": 4,
+        "to": 3
+      },
+      "expect": {
+        "daily": 316,
+        "hourly": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          11,
+          35,
+          54,
+          35,
+          12,
+          10,
+          10,
+          10,
+          10,
+          11,
+          18,
+          18,
+          21,
+          18,
+          12,
+          12,
+          12,
+          1
+        ]
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "gameMinutes": 279360,
+    "speed": "normal",
+    "balance": 1000,
+    "stations": [
+      {
+        "id": 1,
+        "name": "Home",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      {
+        "id": 2,
+        "name": "Office",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      },
+      {
+        "id": 3,
+        "name": "Port",
+        "point": {
+          "x": 9728,
+          "y": 1536
+        }
+      },
+      {
+        "id": 4,
+        "name": "Town",
+        "point": {
+          "x": 11776,
+          "y": 1536
+        }
+      }
+    ],
+    "trains": [],
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": null,
+        "name": "Main",
+        "patterns": [],
+        "stops": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [],
+        "trainsInService": {
+          "low": 0,
+          "offPeak": 0,
+          "peak": 0
+        },
+        "window": {
+          "close": 1440,
+          "open": 360,
+          "type": "hours"
+        }
+      }
+    ],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "trafficControl": false,
+    "passengers": [
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 1,
+        "waiting": []
+      },
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "office"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 2,
+        "waiting": []
+      },
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "office"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 3,
+        "waiting": []
+      },
+      {
+        "abandoned": 0,
+        "arrived": 0,
+        "demand": {
+          "dailyTrips": 1000,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 0,
+        "station": 4,
+        "waiting": []
+      }
+    ],
+    "riders": [],
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "disruptions": {
+      "country": "TW",
+      "level": "light",
+      "seed": 7
+    }
+  }
+}

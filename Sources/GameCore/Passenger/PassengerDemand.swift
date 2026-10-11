@@ -44,36 +44,33 @@ extension GameWorld {
     /// trips, or with weekly demand today's share of its week (see
     /// ``StationDemand/trips(onDay:)``), raised by any event there (see
     /// ``demandMultiplier(at:)``) and by today's holiday (decision 154,
-    /// ``holidayMultiplier``), lowered by today's weather and a typhoon
-    /// there (decision 162), rounded half up.
+    /// ``holidayMultiplier``), lowered by today's weather (decision 162),
+    /// rounded half up. A typhoon lowers each pair's trips after they are
+    /// shared out (``keptTrips(_:from:to:typhoons:)``), so that the
+    /// stations it misses draw no more than before.
     func trips(of demand: StationDemand, at station: StationID) -> Int64 {
         let trips = weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips
         guard demandEvents != nil || disruptions != nil else { return trips }
-        // Without holidays, weather or typhoons the network's and the
-        // station's multipliers are the event's and 1000, and this is the
-        // event's rounding alone, as before them.
+        // Without holidays or weather the network's multiplier is 1000, and
+        // this is the event's rounding alone, as before them.
         let network = holidayMultiplier * weatherMultiplier / 1_000
-        let local = (demandEvents != nil ? demandMultiplier(at: station) : 1_000) * typhoonMultiplier(at: station) / 1_000
+        let local = demandEvents != nil ? demandMultiplier(at: station) : 1_000
         return (trips * local * network + 500_000) / 1_000_000
     }
 
     /// Each of `drawing`'s stations' ``attraction(of:at:)``, worked out
-    /// once for a plan rather than once for each origin (a typhoon's is a
-    /// search of the year's typhoons).
+    /// once for a plan rather than once for each origin.
     func pulls(of drawing: [StationPassengers]) -> [StationID: Int64] {
         Dictionary(uniqueKeysWithValues: drawing.map { ($0.station, attraction(of: $0.demand!, at: $0.station)) })
     }
 
     /// How strongly station `station`, with `demand`, draws travellers
-    /// today: its daily trips, raised by any event there, and (decision
-    /// 162) lowered by a typhoon there. Only the ratios between stations
-    /// count (see ``apportion(_:by:)``).
+    /// today: its daily trips, raised by any event there. Only the ratios
+    /// between stations count (see ``apportion(_:by:)``). A typhoon does
+    /// not change them (decision 162): it cuts the trips to its stations
+    /// rather than sending them to others.
     func attraction(of demand: StationDemand, at station: StationID) -> Int64 {
-        let attraction = demandEvents != nil ? demand.dailyTrips * demandMultiplier(at: station) : demand.dailyTrips
-        guard disruptions?.seed != nil else { return attraction }
-        // Without events the pull is whole trips: kept in thousandths, so a
-        // small station's typhoon fifth is not rounded to nothing.
-        return demandEvents != nil ? attraction * typhoonMultiplier(at: station) / 1_000 : attraction * typhoonMultiplier(at: station)
+        demandEvents != nil ? demand.dailyTrips * demandMultiplier(at: station) : demand.dailyTrips
     }
 
     // MARK: - Commands
@@ -382,8 +379,9 @@ extension GameWorld {
             reached.append((record.station, weight, trip))
         }
         let shares = Self.apportion(trips(of: demand, at: origin), by: reached.map(\.weight))
+        let typhoons = typhoonMultipliers()
         return zip(reached, shares).compactMap { reached, trips in
-            var trips = keptTrips(trips, from: origin, to: reached.destination)
+            var trips = keptTrips(trips, from: origin, to: reached.destination, typhoons: typhoons)
             if let minutes = fastest[reached.destination] {
                 trips = PassengerCrowding.decayed(trips, minutes: minutes)
             }
@@ -571,6 +569,7 @@ extension GameWorld {
         }
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
         let pull = pulls(of: drawing)
+        let typhoons = typhoonMultipliers()
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
         for record in passengers {
@@ -578,7 +577,7 @@ extension GameWorld {
             let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
             let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
             for ((destination, trip), shared) in zip(reached, shares) {
-                let trips = keptTrips(shared, from: record.station, to: destination.station)
+                let trips = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
                 guard trips > 0 else { continue }
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
@@ -596,6 +595,7 @@ extension GameWorld {
     private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
         let pull = pulls(of: drawing)
+        let typhoons = typhoonMultipliers()
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
         struct Draft {
@@ -625,7 +625,7 @@ extension GameWorld {
             }
             let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
-                let fared = keptTrips(shared, from: record.station, to: destination.station)
+                let fared = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
                 let trips = PassengerCrowding.decayed(fared, minutes: options.map(\.route.totalMinutes).min()!)
                 guard trips > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,

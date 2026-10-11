@@ -136,6 +136,24 @@ final class WeatherTests: XCTestCase {
         XCTAssertTrue(Disruptions(level: .light, country: "TW", seed: 3)!.typhoons(ofYear: 1, in: bounds).allSatisfy { $0.drop == 400 })
     }
 
+    /// A seed whose second year has one typhoon, over S0 and S1 and
+    /// neither S2 nor S3, on a clear day, and the typhoon: the same day
+    /// without it differs only by the typhoon.
+    private func clearTyphoonOverS0AndS1() throws -> (seed: UInt32, typhoon: Typhoon) {
+        let world = try world()
+        let point = { (index: Int) in world.station(id: self.ids[index])!.point }
+        for seed in UInt32(1)...5_000 {
+            let disruptions = Disruptions(level: .standard, country: "TW", seed: seed)!
+            let typhoons = disruptions.typhoons(ofYear: 1, in: world.bounds)
+            if typhoons.count == 1, let typhoon = typhoons.first, typhoon.covers(point(0)), typhoon.covers(point(1)),
+               !typhoon.covers(point(2)), !typhoon.covers(point(3)), disruptions.weather(onDay: typhoon.start) == .clear {
+                return (seed, typhoon)
+            }
+        }
+        XCTFail("no seed to 5,000 has a typhoon over S0 and S1 alone on a clear day")
+        throw XCTSkip()
+    }
+
     func testATyphoonCutsTheDemandOfTheStationsItCovers() throws {
         let (seed, typhoon) = try typhoonOverS1()
         // Announced, then blowing.
@@ -143,24 +161,51 @@ final class WeatherTests: XCTestCase {
         XCTAssertFalse(before.typhoons(onDay: typhoon.announced - 1).contains(typhoon))
         XCTAssertTrue(try world(seed: seed, day: typhoon.announced).typhoons(onDay: typhoon.announced).contains(typhoon))
         let blowing = try world(seed: seed, day: typhoon.start)
-        let plain = try world(seed: nil, day: typhoon.start)
         XCTAssertEqual(blowing.typhoonMultiplier(at: ids[1]), 200)
         XCTAssertEqual(blowing.typhoonMultiplier(at: ids[3]), 1_000)
-        // S1 sets out with a fifth of its trips (and today's weather), and
-        // draws a fifth as many to it.
-        let weather = blowing.weatherMultiplier
-        let holiday = blowing.holidayMultiplier
-        let expected = (trips(plain, from: ids[1]) * 200 * holiday * weather / 1_000 + 500_000) / 1_000_000
-        XCTAssertTrue(abs(trips(blowing, from: ids[1]) - expected) <= 1, "\(trips(blowing, from: ids[1])) against \(expected)")
-        let share = { (world: GameWorld) in world.dailyDemand(from: self.ids[0]).first { $0.destination == self.ids[1] }!.trips * 1_000 / max(1, self.trips(world, from: self.ids[0])) }
-        XCTAssertLessThan(share(blowing), share(plain))
-        // Over, it is gone.
+        // Before it blows, and over, it cuts nothing.
+        XCTAssertTrue(try world(seed: seed, day: typhoon.announced).typhoonMultipliers().isEmpty)
         XCTAssertEqual(try world(seed: seed, day: typhoon.end).typhoonMultiplier(at: ids[1]), 1_000)
     }
 
-    /// A small station under a typhoon still draws its fifth: its pull is
-    /// not rounded to nothing before it is weighed against the others
-    /// (4 trips a day at −80% is 0.8, not 0).
+    /// The trips that set out from or go to a station a typhoon blows over
+    /// keep a fifth, once even when it blows over both ends, and none of
+    /// them go elsewhere: the trips between stations it misses are those
+    /// of the same day without it (decision 162, as the station's panel
+    /// says: "demand −80%").
+    func testATyphoonCutsTheTripsToAndFromItsStationsAndSendsNoneElsewhere() throws {
+        let (seed, typhoon) = try clearTyphoonOverS0AndS1()
+        let blowing = try world(seed: seed, day: typhoon.start)
+        // Without a seed: the same day's holiday, no weather, no typhoon.
+        let calm = try world(seed: nil, day: typhoon.start)
+        XCTAssertEqual(blowing.weatherMultiplier, 1_000)
+        let left = blowing.typhoonMultipliers()
+        XCTAssertEqual(left, [ids[0]: 200, ids[1]: 200])
+        var pairs = (cut: 0, kept: 0)
+        for origin in ids {
+            let before = calm.dailyDemands(from: origin), after = blowing.dailyDemands(from: origin)
+            for destination in ids where destination != origin {
+                let multiplier = min(left[origin] ?? 1_000, left[destination] ?? 1_000)
+                XCTAssertEqual(after[destination] ?? 0, ((before[destination] ?? 0) * multiplier + 500) / 1_000, "\(origin) to \(destination)")
+                if multiplier == 1_000 { pairs.kept += 1 } else { pairs.cut += 1 }
+            }
+        }
+        // S2 and S3 trade as many trips as without the typhoon, and every
+        // pair with S0 or S1 at an end is cut.
+        XCTAssertEqual(blowing.dailyDemands(from: ids[2])[ids[3]], calm.dailyDemands(from: ids[2])[ids[3]])
+        XCTAssertEqual(blowing.dailyDemands(from: ids[3])[ids[2]], calm.dailyDemands(from: ids[3])[ids[2]])
+        XCTAssertEqual(pairs.kept, 2)
+        XCTAssertEqual(pairs.cut, 10)
+        // Where it blows over both ends, a pair keeps a fifth, not a
+        // fifth of a fifth.
+        let both = try XCTUnwrap(calm.dailyDemands(from: ids[0])[ids[1]])
+        XCTAssertEqual(blowing.dailyDemands(from: ids[0])[ids[1]], (both * 200 + 500) / 1_000)
+    }
+
+    /// A small station under a typhoon still draws its fifth: the cut is
+    /// made on each pair's trips (S0's share for it, some 48 trips on a
+    /// clear day, keeps a fifth), not on its pull, which a day of 4 trips
+    /// at −80% would round to nothing.
     func testASmallStationUnderATyphoonStillDrawsTravellers() throws {
         let (seed, typhoon) = try typhoonOverS1()
         var world = try world(seed: seed, day: typhoon.start)

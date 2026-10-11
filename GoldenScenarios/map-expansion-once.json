@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 63,
+  "description": "Buying the map is turned on once (decision 160's later fix, schema 63). A world of 2 x 1 tiles of 1,048,576 units, free play, 1,000,000,000 at the start. Turned on owning tile (0, 0), it refuses to be turned on again (mapExpansionEnabled): starting over from one tile would forget the tiles bought while their land stays in the books. Tile (0, 1) is bought for 1 x 500,000,000; turning it on again, even with the tile first owned, is still refused, and so is a tile outside the world (row 5): the refusal is checked first. The company keeps both tiles; balance 1,000,000,000 - 500,000,000 = 500,000,000.",
+  "initialState": {
+    "worldWidth": 2097152,
+    "worldHeight": 1048576,
+    "balance": 1000000000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 0,
+        "column": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 0,
+        "column": 1
+      },
+      "expect": {
+        "result": "mapExpansionEnabled"
+      }
+    },
+    {
+      "command": {
+        "type": "buyMapTile",
+        "row": 0,
+        "column": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 0,
+        "column": 0
+      },
+      "expect": {
+        "result": "mapExpansionEnabled"
+      }
+    },
+    {
+      "command": {
+        "type": "enableMapExpansion",
+        "row": 5,
+        "column": 0
+      },
+      "expect": {
+        "result": "mapExpansionEnabled"
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 500000000,
+    "gameMinutes": 0,
+    "lines": [],
+    "mapExpansion": {
+      "owned": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [],
+    "trafficControl": false,
+    "trains": []
+  }
+}

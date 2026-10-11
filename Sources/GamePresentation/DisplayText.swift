@@ -438,6 +438,8 @@ extension GameError {
             language.text("This game has no building materials.", "這局遊戲沒有建材。")
         case .mapExpansionNotEnabled:
             language.text("This map is not bought tile by tile.", "這張地圖沒有分區塊購買。")
+        case .mapExpansionEnabled:
+            language.text("This map is bought tile by tile already.", "這張地圖已經是分區塊購買。")
         case .invalidMapTile:
             language.text("That tile is not on the map.", "那一塊不在地圖上。")
         case .mapTileOwned:

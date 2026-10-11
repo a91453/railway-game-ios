@@ -148,10 +148,13 @@ extension GameWorld {
         return (trips * DistanceDemand.share(squaredDistance: squared) + 500) / 1_000
     }
 
-    /// `trips` from `origin` to `destination` as their distance and then
-    /// their fare keep them: the pair's trips of its origin's share.
-    func keptTrips(_ trips: Int64, from origin: StationID, to destination: StationID) -> Int64 {
-        faredTrips(distancedTrips(trips, from: origin, to: destination), from: origin, to: destination)
+    /// `trips` from `origin` to `destination` as today's typhoons (decision
+    /// 162, with ``typhoonMultipliers()``), their distance and then their
+    /// fare keep them: the pair's trips of its origin's share.
+    func keptTrips(_ trips: Int64, from origin: StationID, to destination: StationID,
+                   typhoons: [StationID: Int64]) -> Int64 {
+        let left = Self.typhoonTrips(trips, from: origin, to: destination, multipliers: typhoons)
+        return faredTrips(distancedTrips(left, from: origin, to: destination), from: origin, to: destination)
     }
 
     /// The outside's trips each of `stations` adds to its ridership:

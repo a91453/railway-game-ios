@@ -209,9 +209,37 @@ extension GameWorld {
     /// How much today's typhoons leave of station `id`'s demand, in
     /// thousandths: 1000 where none blows.
     func typhoonMultiplier(at id: StationID) -> Int64 {
-        guard disruptions?.seed != nil, let point = station(id: id)?.point else { return 1_000 }
+        typhoonMultipliers()[id] ?? 1_000
+    }
+
+    /// How much today's typhoons leave of the demand of each station they
+    /// blow over, in thousandths, by station: empty where none blows.
+    /// Worked out once for a plan rather than once for each pair (each
+    /// is a search of the year's typhoons).
+    func typhoonMultipliers() -> [StationID: Int64] {
+        guard disruptions?.seed != nil else { return [:] }
         let day = dayIndex(of: clock.now)
-        let drop = typhoons(onDay: day).filter { $0.isActive(onDay: day) && $0.covers(point) }.map(\.drop).max() ?? 0
-        return 1_000 - drop
+        let blowing = typhoons(onDay: day).filter { $0.isActive(onDay: day) }
+        guard !blowing.isEmpty else { return [:] }
+        var multipliers: [StationID: Int64] = [:]
+        for station in stations {
+            let drop = blowing.filter { $0.covers(station.point) }.map(\.drop).max() ?? 0
+            if drop > 0 {
+                multipliers[station.id] = 1_000 - drop
+            }
+        }
+        return multipliers
+    }
+
+    /// `trips` from `origin` to `destination` as today's typhoons leave
+    /// them: times the smaller of the two ends' `multipliers` (see
+    /// ``typhoonMultipliers()``), rounded half up. A typhoon cuts the trips
+    /// that set out from or go to a station it blows over, once even when
+    /// it blows over both ends, and sends none of them elsewhere: the
+    /// stations it misses keep their trips.
+    static func typhoonTrips(_ trips: Int64, from origin: StationID, to destination: StationID,
+                             multipliers: [StationID: Int64]) -> Int64 {
+        let left = min(multipliers[origin] ?? 1_000, multipliers[destination] ?? 1_000)
+        return left == 1_000 ? trips : (trips * left + 500) / 1_000
     }
 }

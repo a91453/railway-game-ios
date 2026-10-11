@@ -163,13 +163,16 @@ extension GameWorld {
     /// Splits the world into tiles of ``MapExpansion/tileLength`` of which
     /// the company owns only `tile` (decision 160): it builds only there
     /// until it buys more (``buyMapTile(_:)``). A tile bought grows towns
-    /// drawn from `townSeed` (a blank map), or none with `nil`. Turning it
-    /// on again starts over from `tile`, the best day forgotten. Free.
+    /// drawn from `townSeed` (a blank map), or none with `nil`. It is
+    /// turned on once, as a game starts: again, it would forget the tiles
+    /// bought while their land stays in the books. Free.
     ///
-    /// - Throws: ``GameError/invalidMapTile`` for a tile outside the world,
-    ///   or when a station, a track node, one of the company's buildings or
-    ///   a zone lies outside it.
+    /// - Throws, checked in this order: ``GameError/mapExpansionEnabled``
+    ///   when it is on already; ``GameError/invalidMapTile`` for a tile
+    ///   outside the world, or when a station, a track node, one of the
+    ///   company's buildings or a zone lies outside it.
     public mutating func enableMapExpansion(owning tile: MapTile, townSeed: UInt32?) throws(GameError) {
+        guard mapExpansion == nil else { throw .mapExpansionEnabled }
         let expansion = MapExpansion(owned: [tile], townSeed: townSeed)
         guard isOnMap(tile), mapExpansionProblem(expansion) == nil else { throw .invalidMapTile }
         mapExpansion = expansion

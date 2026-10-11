@@ -75,6 +75,19 @@ final class MapExpansionTests: XCTestCase {
         XCTAssertEqual(world.mapExpansion, MapExpansion(owned: [MapTile(row: 2, column: 0)], townSeed: nil))
     }
 
+    /// Turning it on again would start over from one tile while the land
+    /// bought stays in the books: it is turned on once.
+    func testItIsTurnedOnOnce() throws {
+        var world = try world()
+        world.mapExpansion?.bestDayRiders = 100_000
+        try world.buyMapTile(MapTile(row: 2, column: 3))
+        XCTAssertEqual(world.accounts.assets.filter { $0.kind == .mapTile }.count, 1)
+        let before = world
+        XCTAssertThrowsGameError(try world.enableMapExpansion(owning: middle, townSeed: 7), .mapExpansionEnabled)
+        XCTAssertThrowsGameError(try world.enableMapExpansion(owning: MapTile(row: 2, column: 3), townSeed: nil), .mapExpansionEnabled)
+        XCTAssertEqual(world, before)
+    }
+
     // MARK: - Building only on the company's own ground
 
     func testStationsAndTrackStandOnlyOnTilesOwned() throws {
