@@ -127,6 +127,67 @@ final class TerrainPresentationTests: XCTestCase {
         XCTAssertEqual(session.networkPreview?.costParts?.lines(in: .english).map(\.name), ["Track", "Total"])
     }
 
+    // MARK: - Level track and platforms (decision 164)
+
+    /// The two ends' ground 0.75 m apart: the new end takes the start's
+    /// height, so the stretch is level and a platform stands on it. The
+    /// ground's corner column 0 is at 10 m and the rest at 11 m, so
+    /// x = 1,024 (16 m in) is at 10.25 m (656) and x = 17,408 at 11 m (704).
+    func testTrackOnNearlyFlatGroundIsLaidLevelAndTakesAPlatform() throws {
+        let session = preview(try world(columns: [10, 11]), from: 1_024, to: 17_408)
+        XCTAssertTrue(session.networkEasesGrade, "easing the grade is the default")
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual([preview.startHeight, preview.endHeight], [656, 656])
+        XCTAssertEqual(preview.profile, .uniform, "a level stretch has no grade to ease")
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.nodes.map(\.position.z), [656, 656])
+
+        session.setNetworkMode(.platform)
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
+        XCTAssertNil(session.networkPlatformGrade)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.stations.count, 1)
+        XCTAssertEqual(session.world.trackPlatforms(of: session.world.stations[0].id).count, 1)
+    }
+
+    /// The ends' ground 3.75 m apart, more than the 2 m the track may stand
+    /// off it level: the stretch climbs as before (11.25 m to 15 m, 720 to
+    /// 960), eased at both ends, and the platform tool says the grade and
+    /// what to do rather than GameCore's general refusal.
+    func testTrackOnSlopingGroundClimbsAndThePlatformToolSaysWhy() throws {
+        let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertEqual([preview.startHeight, preview.endHeight], [720, 960])
+        XCTAssertEqual(preview.profile, TrackProfile(startTransition: 4_096, endTransition: 4_096))
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+
+        session.setNetworkMode(.platform)
+        // The middle half's steady grade: 4/3 of 240 over 16,384, 19.5‰.
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
+        let grade = try XCTUnwrap(session.networkPlatformGrade)
+        XCTAssertEqual(grade, 20)
+        XCTAssertTrue(session.networkDraftText().hasSuffix(" · climbs 20‰: a platform needs level track"), session.networkDraftText())
+        let before = session.world
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: """
+            This track climbs about 20‰, and a platform needs level track. Lay a stretch on flatter ground: \
+            where the ground differs by 2 m or less, new track is laid level.
+            """))
+        XCTAssertEqual(session.world, before)
+
+        let chinese = GameSession(world: session.world, language: .traditionalChinese)
+        chinese.selectTool(.network)
+        chinese.setNetworkMode(.platform)
+        chinese.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
+        XCTAssertTrue(chinese.networkDraftText().hasSuffix(" · 坡度 20‰：月台要放在水平的軌道上"), chinese.networkDraftText())
+        chinese.addNetworkPlatform()
+        XCTAssertEqual(chinese.message?.text, "這段軌道有約 20‰ 的坡度，月台要放在水平的軌道上。請在較平的地方重新鋪一段：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。")
+    }
+
     // MARK: - The height and steep slope layer
 
     func testABlankMapIsFlat() throws {

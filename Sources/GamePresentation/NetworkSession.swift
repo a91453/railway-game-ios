@@ -198,7 +198,7 @@ extension GameSession {
             // No curve: the straight line between the ends, drawn as one
             // that cannot be built, and the reason. Without the ends (a node
             // was removed) there is nothing to show.
-            guard let from = draft.position(of: start, height: networkHeight), let to = draft.position(of: end, height: networkHeight) else {
+            guard let (from, to) = endPositions(from: start, to: end, in: draft) else {
                 return nil
             }
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
@@ -235,7 +235,7 @@ extension GameSession {
     /// continues the track at each end that has some (when
     /// ``networkFollowsTrack`` is on), and the vertical profile.
     private func edgePlan(from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld) -> Result<EdgePlan, NetworkProblem> {
-        guard let from = world.position(of: start, height: networkHeight), let to = world.position(of: end, height: networkHeight) else {
+        guard let (from, to) = endPositions(from: start, to: end, in: world) else {
             return .failure(.missingNode)
         }
         let isNewPoint: (NetworkAnchor) -> Bool = { if case .node = $0 { false } else { true } }
@@ -270,14 +270,43 @@ extension GameSession {
         var geometry = TrackGeometry(from: from, to: to, curve: curve)
         if networkEasesGrade, from.z != to.z, let length = geometry?.length {
             // A quarter of the length at each end eases into and out of
-            // the grade; the middle half is steady.
-            profile = TrackProfile(startTransition: length / 4, endTransition: length / 4)
-            geometry = TrackGeometry(from: from, to: to, curve: curve, profile: profile)
+            // the grade; the middle half is steady. Decision 164: easing
+            // steepens the middle by a third, so a stretch that would then
+            // be too steep keeps its steady grade.
+            let eased = TrackProfile(startTransition: length / 4, endTransition: length / 4)
+            if let easedGeometry = TrackGeometry(from: from, to: to, curve: curve, profile: eased),
+               easedGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) {
+                profile = eased
+                geometry = easedGeometry
+            }
         }
         return .success(EdgePlan(
             start: start, end: end, from: from, to: to, curve: curve, profile: profile, geometry: geometry,
             joinsStart: startTangent != nil, joinsEnd: endTangent != nil
         ))
+    }
+
+    /// Where the stretch from `start` to `end` would begin and end
+    /// (decision 164). On a map with ground a new point stands at the
+    /// ground there plus ``networkHeight`` (decision 124), so two taps are
+    /// almost never at the same height and every stretch would climb or
+    /// fall a little, too much for a platform, which must be level. So a
+    /// new point within ``TrackSectionRules/level`` (2 m, the track's
+    /// surface band, which pays no earthwork) of the other end's height
+    /// takes that height: track on flat ground is laid level, and only
+    /// ground that rises or falls more makes a grade. Two new points level
+    /// with the first; a blank map, which has no ground, is unchanged.
+    func endPositions(from start: NetworkAnchor, to end: NetworkAnchor, in world: GameWorld) -> (WorldCoordinate, WorldCoordinate)? {
+        guard var from = world.position(of: start, height: networkHeight), var to = world.position(of: end, height: networkHeight) else {
+            return nil
+        }
+        guard world.ground.isMapped else { return (from, to) }
+        if case .point = end {
+            to = NetworkBuilding.levelled(to, with: from)
+        } else if case .point = start {
+            from = NetworkBuilding.levelled(from, with: to)
+        }
+        return (from, to)
     }
 
     // MARK: - Platforms
@@ -291,6 +320,26 @@ extension GameSession {
         let length = min(Int64(max(1, platformCars)) * Train.carLength, edge.length)
         let start = min(max(0, point.distance - length / 2), edge.length - length)
         return (point.edge, start, start + length)
+    }
+
+    /// How steeply the stretch ``networkPlatformStretch`` climbs or falls,
+    /// in whole per mille, at least 1; `nil` where it is level, as a
+    /// platform must be (decision 164), or nothing is picked.
+    public var networkPlatformGrade: Int64? {
+        guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else { return nil }
+        let rise = abs(geometry.height(at: stretch.end) - geometry.height(at: stretch.start))
+        let run = stretch.end - stretch.start
+        guard rise > 0, run > 0 else { return nil }
+        return max(1, (rise * 1_000 + run / 2) / run)
+    }
+
+    /// Why a platform cannot stand on track that climbs `grade` per mille,
+    /// and what to do (decision 164).
+    func platformGradeText(_ grade: Int64) -> String {
+        language.text(
+            "This track climbs about \(grade)‰, and a platform needs level track. Lay a stretch on flatter ground: where the ground differs by 2 m or less, new track is laid level.",
+            "這段軌道有約 \(grade)‰ 的坡度，月台要放在水平的軌道上。請在較平的地方重新鋪一段：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+        )
     }
 
     /// The ridership a managed company gives a new station at `point`: on
@@ -349,6 +398,12 @@ extension GameSession {
     public func addNetworkPlatform() {
         guard let stretch = networkPlatformStretch, let geometry = world.trackGeometry(of: stretch.edge) else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
+            return
+        }
+        // Decision 164: say why a platform cannot stand on a grade, and
+        // what to do, rather than GameCore's general refusal.
+        if let grade = networkPlatformGrade {
+            message = StatusMessage(kind: .failure, text: platformGradeText(grade))
             return
         }
         let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
@@ -673,9 +728,15 @@ extension GameSession {
                 return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
-            return language.text(
+            let place = language.text(
                 "\(length) platform on \(stretch.edge.displayText(in: language).lowercased()), \(stretch.start)–\(stretch.end) units along",
                 "\(stretch.edge.displayText(in: language)) 上 \(length) 的月台，距起點 \(stretch.start)–\(stretch.end) 單位"
+            )
+            // Decision 164: a grade says so before the tap on ✓.
+            guard let grade = networkPlatformGrade else { return place }
+            return place + language.text(
+                " · climbs \(grade)‰: a platform needs level track",
+                " · 坡度 \(grade)‰：月台要放在水平的軌道上"
             )
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
@@ -794,7 +855,11 @@ extension GameSession {
         var overlay = NetworkOverlay()
         switch networkMode {
         case .build:
-            overlay.anchors = [networkStart, networkEnd].compactMap { $0.flatMap { world.position(of: $0, height: networkHeight) } }
+            if let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) {
+                overlay.anchors = [from, to]
+            } else {
+                overlay.anchors = [networkStart, networkEnd].compactMap { $0.flatMap { world.position(of: $0, height: networkHeight) } }
+            }
             if let draft = networkDraftPreview {
                 overlay.preview = draft.preview.points
                 overlay.crossing = draft.crossing

@@ -247,8 +247,9 @@ public final class GameSession {
     /// the middle (see ``networkPicksCrossover``), rather than one.
     public var networkBuildsScissors = false
     /// Whether a stretch that climbs or falls eases into and out of its
-    /// grade with vertical curves at both ends.
-    public var networkEasesGrade = false
+    /// grade with vertical curves at both ends (the default, decision 164),
+    /// where it fits under the steepest grade.
+    public var networkEasesGrade = true
     /// The place on an edge the platform and remove modes picked.
     public internal(set) var networkEdgePoint: NetworkEdgePoint?
     /// How many cars the next platform is long enough for.

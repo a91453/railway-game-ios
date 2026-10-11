@@ -5037,6 +5037,27 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 官網要先部署 `/city/`，App 才能載入；還沒部署時會開到官網的 404 頁。UI 測試 `testTheCityPreviewLoadsItsPageAndCloses` 等的是網頁載入完成，404 頁也算載入完成，所以它不證明 `/city/` 已經部署。
 - App 內實機（TestFlight）的載入時間、快取與離線畫面都還沒看過（UNVERIFIED）。
 
+### 164. 實景地圖鋪軌能平就平，月台放不上去時說出坡度；緩和坡度預設打開
+
+2026-10-11，作者在 App 的實景地圖（台北善導寺一帶）放月台，一直得到「月台必須位於同一個軌段上的平坦區間」。號碼依工作登記 #231：決策 164；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**原因**：決策 124 的 H2 起，有地面的世界裡新點的軌道高度是「點下去那一點的地面＋新節點高度」。地面是 64 m 格角點的雙線性內插，以世界單位（1/64 公尺）計，兩次點擊幾乎不會一樣高，所以新鋪的每一段都有一點坡；月台（Stage S4）要那一段兩端的高度完全相同。實景新遊戲裡新鋪的軌道因此幾乎放不上月台。空白地圖、示範與劇本（沒有地面，或預先蓋成水平）不受影響；`HeightGridTests` 為了放月台把測試放在海上（0 m）就是這個原因。
+
+參考檢查（`a91453/railway-reference-private`）：決策 124 已查過，參考沒有玩家鋪軌時依地面決定高度的規則；`Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的「車站水平」只用在預先算好的臺鐵線（`RealWorldDemoGround` 已照用）。外部專案沒有找：這是一個高度的取捨，沒有難處。規則與數字是本專案的（gap）。
+
+1. **能平就平**（GamePresentation 的 `GameSession.endPositions(from:to:in:)`、`NetworkBuilding.levelled(_:with:)`）：有地面的世界裡，新點（`NetworkAnchor.point`）的高度和另一端相差在 `TrackSectionRules.level`（2 m）以內時，改用另一端的高度。兩端都是新點時，終點跟起點；起點是新點而終點是既有的節點或軌道上一點時，起點跟終點。2 m 內本來就算地面（決策 124 第 4 點），不付土方，所以造價只在軌道中段的地面起伏超過 2 m 時變（照常算路堤或路塹）。超過 2 m 照舊跟著地面。空白地圖沒有地面，不變。預覽、建造、地圖上的兩端與失敗時畫的直線都用同一組高度。
+2. **月台放不上去時說出坡度**（`GameSession.networkPlatformGrade`、`platformGradeText(_:)`）：月台模式選到的區間兩端不一樣高時，卡片後面寫「坡度 N‰：月台要放在水平的軌道上」，按 ✓ 時說「這段軌道有約 N‰ 的坡度，月台要放在水平的軌道上。請在較平的地方重新鋪一段：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。」，不再是 GameCore 的一般訊息（和其他月台重疊時照舊）。N 是區間兩端的高差 ÷ 長度，四捨五入到整數千分比，至少 1。
+3. **緩和坡度預設打開**（`networkEasesGrade = true`）：作者要求。緩和會讓中段的坡度變成平均的 4/3（兩端各四分之一長的豎曲線），所以緩和後超過最陡 40‰ 時，那一段改用固定坡度，不再因為緩和而建不了。水平的一段沒有坡度可緩和，不受影響。
+
+**測試**：`TerrainPresentationTests.testTrackOnNearlyFlatGroundIsLaidLevelAndTakesAPlatform`（地面差 0.75 m：兩端同高、放得上月台）、`testTrackOnSlopingGroundClimbsAndThePlatformToolSaysWhy`（差 3.75 m：照舊爬坡並緩和，月台說出 20‰）、`NetworkBuildingSessionTests.testEasingTheGradeAddsVerticalCurvesAtBothEnds`（緩和太陡時退回固定坡度）。
+
+**限制**：
+- 已經鋪好、有坡的軌道不會自己變平；要拆掉重鋪。
+- 台北等市中心的地面資料混了建物（決策 124 記的偏高約 10 m），兩點的地面可能差超過 2 m，那裡照舊有坡，月台模式會說出坡度。
+- 長距離連續鋪設時，每一段都跟上一段的高度比；地面緩慢上升時，水平的一段會一直延伸到地面差超過 2 m 才開始爬坡。
+
+**沒有驗證的**：Linux 不能建置 App；卡片與訊息的文字要在 macOS CI 與 TestFlight 上看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
