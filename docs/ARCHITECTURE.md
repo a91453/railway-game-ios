@@ -4770,6 +4770,38 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **golden、存檔、replay**：`materials-growth.json`（schema 60，決策 157 新加的、還沒合併）最終狀態多了 `"lastShort": [1, 2, 3]`，`city_growth.py` 一起驗；其他既有 fixture 都沒有改。測試：`FreightSessionTests.testAStationShortOfMaterialsShowsOnTheMap`。
 
+### 159. 新車站依所在的地名命名
+
+2026-10-11，作者說之前講好要改車站的自動命名、後來忘了，並把做法交給 Claude Code 決定。參考移植盤點的 M2（MapBuilder 的自動命名）一直沒有移植。之前：實景地圖上新車站取 5 公里內最近、還沒用過的真實車站名，沒有就叫「車站 N」；所以離台北車站 4 公里的地方也叫「臺北」，山裡、田中央的車站都是「車站 3」「車站 4」。號碼依工作登記 #231：決策 159；存檔、golden schema 不動。
+
+規則（GamePresentation 的 `GameSession.suggestedStationName`，新的 `PlaceNames`；只是建議，玩家照舊可以改）：
+1. **真實車站只在 800 m 內**（`realStationNamingDistanceMetres`，以前 5 km）：步行十分鐘，車站集客的範圍（實景人口的 800 m）。規則和以前一樣：最近、還沒用過的；同一站在任何系統或語言的名字都算用過。
+2. **再來是地名**：最近、還沒用過的聚落名（OSM 的 `place` = hamlet、village、locality、neighbourhood、isolated_dwelling、quarter，2 km 內）或村里名（`admin_level` 9，1.5 km 內，以外框範圍的中心為點；村里小而多、名字常重複，例如中山、中正，所以距離算兩倍），依距離排；都用過了，就用所在的鄉鎮市區（`admin_level` 7、8，MapBuilder 鐵道模式取的「最在地的行政區，`admin_level` ≤ 8」，用外框判斷在哪一個裡面）。村里與鄉鎮市區去掉「村、里、鄉、鎮、市、區」（中和區 → 中和，Zhonghe District → Zhonghe），只剩一個字時保留（北區、東區）。**別處真實車站的名字不給**（例如某個聚落叫「大林」）：那一站之後可能會蓋。
+3. **都用過了，加方位**：最近那個名字加上「已經叫這個名字的車站」到新站的方位，照台鐵替第二座站命名的方式：北新竹、North Hsinchu。方位取東西、南北差得多的那一軸。
+4. **最後才是「車站 N」**；空白地圖沒有地理，一律是它。
+5. **英文**：有 `name:en` 用它，沒有就用中文（MapBuilder 的 `name:en` 優先）；「豐南 Cilamitay」這種中文後面接拉丁字的名字，中文是名字、拉丁字是英文名。
+
+資料：`tools/place-names/build_place_names.py` 從 osmtoday.com 的台灣整包檔（和其他資料工具同一份，決策 93）離線讀出，打包成 `RailwayGameApp/Resources/RealWorld/taiwan_place_names.json`（1.53 MB：聚落 16,627、村里 7,772、鄉鎮市區 367 個外框，簡化到約 0.0003°）。名字是 OSM 的，ODbL 1.0，資料來源畫面的 OpenStreetMap 一項已補上。只收台灣的：整包檔伸到福建，那裡的行政區用簡體字（区、乡、镇），依字尾排除。和村里同名的聚落點只是村里的標籤，略過。`RealWorldData` 多一個 `placeNames`，launcher 和 railways 一起交給 session；它到了，還是第一次建議的站名會照地圖中央重新建議（和 railways 一樣）。
+
+**參考**（私有參考 `581db83`）：
+
+| 參考 | 遊戲 |
+| --- | --- |
+| `MapBuilder/reference_snapshot/_next/static/chunks/611-2cd22d6d6f5c40f4.js` 的 `el`：`is_in` 查站點所在的行政區，取 `admin_level` ≤ 8 中最大（最在地）的，`name:en` 優先 | `PlaceNames.township(containing:)`：預先打包的鄉鎮市區外框（`admin_level` 7、8），點在多邊形內（奇偶）；`PlaceNames.Name.name(in:)` |
+| 同上 `el` 的 500 m 內具名道路（非 `useAdminName` 時先用路名）、`ed` 的 25 m 內建物 `addr:street`、100 m 內道路、25 m 內具名建物 | 不移植：`_app` 的模式表裡鐵道（REGIONAL、MLDISTANCE、HSR）都是 `useAdminName`，只用行政區；路名留給之後的公車、路面電車 |
+| `eh`：查不到名字時用 "Station Name" | `suggestedName("車站", …)` 的「車站 N」（原有） |
+| `ec`：每次建站向 Overpass 查詢 | 不查伺服器：工具離線讀出、App 打包（建站時不能等網路，Overpass 也常忙） |
+
+和參考不同（原生）：村里（`admin_level` 9，比參考更在地）與聚落點、去掉行政字尾、別處真實站名不給、方位命名、真實車站的距離改 800 m。參考已有可用的做法，所以沒有另找外部專案。
+
+**限制**：
+- 旗津區的外框在 OSM 是斷的，讀不出來；那裡靠聚落與村里的名字，最後是「車站 N」。
+- 聚落與村里以點計，不判斷在不在同一個鄉鎮裡；城市裡聚落少，常用村里或鄉鎮市區名。
+- 新竹科學園區一帶 OSM 少了村里的外框，所以聚落點的「科園里」照 OSM 原樣。
+- 只有台灣有資料；其他國家的實景地圖照舊是真實車站名或「車站 N」。
+
+**相容**：GameCore、存檔、golden、replay 都不變（站名只是建議，由 `buildStation(named:)` 照舊寫進世界）。測試：`PlaceNamingTests`；`NearestStationNamingTests` 的「地圖中央第一次建議」改成照 800 m（以前的 5 km 會把離四腳亭 800 m 以外的中央叫做四腳亭）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
