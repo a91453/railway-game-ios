@@ -347,7 +347,9 @@ extension ReferenceWorld {
             points.insert(span.end)
             points.insert(span.end - Self.junctionZone + 1)
             for piece in resourceSpans(of: run.edge, length: span.end - span.start) {
-                points.insert(run.forward ? span.start + piece.start : span.end - piece.end)
+                // The first span of a run is only covered once the window
+                // reaches into the run, one past the node it enters by.
+                points.insert(max(span.start + 1, run.forward ? span.start + piece.start : span.end - piece.end))
             }
         }
         return points.filter { $0 > window.head && $0 <= window.finish }.sorted()

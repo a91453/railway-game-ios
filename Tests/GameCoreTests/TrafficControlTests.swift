@@ -933,6 +933,76 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(world.reservedResources(of: service), [])
     }
 
+    /// Stage U2, decision 56 point 8: a departure waiting for its route
+    /// may set off following a train ahead from the second the leader has
+    /// freed enough, even when the leader comes to the end of its route
+    /// later in the same step, after which it no longer leads the way.
+    /// Stepping by minutes gives the same world as stepping by seconds.
+    func testAHeldDepartureFollowsALeaderThatArrivesLaterInTheStep() throws {
+        var (world, stations) = try makeFollowingWorld()
+        let (m, n, b) = (stations[1], stations[2], stations[3])
+        try world.setTrafficControl(true)
+        // The leader (2 cars, 1024 long) runs from M via N on to B, so it
+        // leads while it travels; stopped part of the way along e3.
+        let leader = try stand(&world, cars: 2, at: forward(2), 16_384)
+        try world.setTrainMovementRate(leader, to: 1_024)
+        try world.setTrainTimetable(leader, to: [
+            ScheduledStop(station: m, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 0)),
+            ScheduledStop(station: n, arrival: GameTime(minutes: 2), departure: GameTime(minutes: 2)),
+            ScheduledStop(station: b, arrival: GameTime(minutes: 4), departure: GameTime(minutes: 4)),
+        ])
+        try world.startTrainService(leader)
+        world.setSpeed(.x10)
+        try world.advance(ticks: 120)
+        guard case .onEdge(forward(3), let stoppedAt)? = world.train(id: leader)?.position else { return XCTFail("leader on e3") }
+        XCTAssertLessThan(stoppedAt, 9_216)
+        try world.setTrainMovementRate(leader, to: 0)
+        // The follower stands at M and runs to N. Its head is at 16384 on
+        // e2, so it may follow only once nothing holds its route up to
+        // 16384 + 25600 + 1 on, 9217 along e3: once the leader's tail has
+        // passed 10240, the end of the span there.
+        let follower = try stand(&world, cars: 2, at: forward(2), 16_384)
+        try world.setTrainMovementRate(follower, to: 1_024)
+        try world.setTrainTimetable(follower, to: [
+            ScheduledStop(station: m, arrival: GameTime(minutes: 2), departure: GameTime(minutes: 2)),
+            ScheduledStop(station: n, arrival: GameTime(minutes: 6), departure: GameTime(minutes: 6)),
+        ])
+        try world.startTrainService(follower)
+        try world.advance(ticks: 60)
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 3))
+        XCTAssertEqual(world.train(id: follower)?.execution, .waitingAtStop(0, cycle: 0))
+        XCTAssertEqual(world.trainHoldingRoute(of: follower), leader)
+        // At 3:00 the leader goes on again.
+        try world.setTrainMovementRate(leader, to: 1_024)
+        let start = world
+
+        // Second by second: the follower sets off in the first second
+        // whose start finds the leader's tail past 10240, and the leader
+        // arrives at N later in the same minute.
+        var freedAt: Int64?
+        var arrivedAt: Int64?
+        for _ in 0..<60 {
+            if freedAt == nil, case .onEdge(forward(3), let head)? = world.train(id: leader)?.position, head - 1_024 > 10_240 {
+                freedAt = world.clock.now.seconds
+            }
+            try world.advance(ticks: 1)
+            if arrivedAt == nil, world.train(id: leader)?.execution == .waitingAtStop(1, cycle: 0) {
+                arrivedAt = world.clock.now.seconds
+            }
+        }
+        let freed = try XCTUnwrap(freedAt)
+        XCTAssertEqual(world.train(id: follower)?.execution, .travellingToStop(1, cycle: 0))
+        XCTAssertEqual(world.train(id: follower)?.times?.departure, GameTime(seconds: freed))
+        XCTAssertLessThan(freed, try XCTUnwrap(arrivedAt))
+
+        // One step of a minute gives the same world.
+        var minute = start
+        minute.setSpeed(.normal)
+        try minute.advance(ticks: 1)
+        minute.setSpeed(.x10)
+        XCTAssertEqual(minute, world)
+    }
+
     /// A save from before Stage U may hold track its train has already
     /// passed (Stage T kept it until the route ended): it loads as it is,
     /// that track stays held, and the train lets it go when it next moves.
