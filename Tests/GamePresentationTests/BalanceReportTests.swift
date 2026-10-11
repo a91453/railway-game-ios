@@ -247,6 +247,11 @@ final class BalanceReportTests: XCTestCase {
         if ProcessInfo.processInfo.environment["BALANCE_NO_CITY_DEMAND"] != nil {
             world.setCityDemand(false)
         }
+        // Decision 157: `BALANCE_NO_MATERIALS=1` measures the city without
+        // building materials, as before it.
+        if ProcessInfo.processInfo.environment["BALANCE_NO_MATERIALS"] != nil {
+            world.setBuildingMaterials(false)
+        }
         let stops = world.stations.map(\.id)
         let cost = GameWorld.startingBalance - world.economy.balance
         var lines = [

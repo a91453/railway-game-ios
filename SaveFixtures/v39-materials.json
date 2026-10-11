@@ -1,0 +1,533 @@
+{
+  "saveVersion" : 39,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 5000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "train",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 10005000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "freightRevenue" : 32500,
+          "maintenanceCost" : 7000,
+          "operatingCost" : 406500,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : 6500,
+          "breakdown" : [
+            {
+              "amount" : 6500,
+              "item" : "freightRevenue"
+            }
+          ],
+          "kind" : "hourlyFreight",
+          "time" : 3600
+        },
+        {
+          "amount" : -82700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -81300,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -1400,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 3600
+        },
+        {
+          "amount" : 6500,
+          "breakdown" : [
+            {
+              "amount" : 6500,
+              "item" : "freightRevenue"
+            }
+          ],
+          "kind" : "hourlyFreight",
+          "time" : 7200
+        },
+        {
+          "amount" : -82700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -81300,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -1400,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 7200
+        },
+        {
+          "amount" : 6500,
+          "breakdown" : [
+            {
+              "amount" : 6500,
+              "item" : "freightRevenue"
+            }
+          ],
+          "kind" : "hourlyFreight",
+          "time" : 10800
+        },
+        {
+          "amount" : -82700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -81300,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -1400,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 10800
+        },
+        {
+          "amount" : 6500,
+          "breakdown" : [
+            {
+              "amount" : 6500,
+              "item" : "freightRevenue"
+            }
+          ],
+          "kind" : "hourlyFreight",
+          "time" : 14400
+        },
+        {
+          "amount" : -82700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -81300,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -1400,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 14400
+        },
+        {
+          "amount" : 6500,
+          "breakdown" : [
+            {
+              "amount" : 6500,
+              "item" : "freightRevenue"
+            }
+          ],
+          "kind" : "hourlyFreight",
+          "time" : 18000
+        },
+        {
+          "amount" : -82700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -81300,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -1400,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 18000
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 18000,
+      "pending" : {
+        "departures" : 1,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 320,
+        "trainDistance" : 4096
+      }
+    },
+    "bounds" : {
+      "height" : 4096,
+      "width" : 8192
+    },
+    "clock" : {
+      "now" : 18060,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 89611400,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "freight" : {
+      "buildingMaterials" : true,
+      "delivered" : 1000,
+      "facilities" : [
+        {
+          "product" : "materials",
+          "station" : 1,
+          "stock" : 1960
+        },
+        {
+          "station" : 2
+        }
+      ],
+      "loads" : [
+        {
+          "groups" : [
+            {
+              "kind" : "materials",
+              "origin" : 1,
+              "tons" : 40
+            }
+          ],
+          "train" : 1
+        }
+      ],
+      "materials" : [
+        {
+          "station" : 1,
+          "tons" : 60
+        },
+        {
+          "station" : 2,
+          "tons" : 1060
+        }
+      ],
+      "materialsReceived" : 1000,
+      "materialsSupplied" : 120,
+      "produced" : 5000,
+      "spilled" : 2000
+    },
+    "land" : [
+      {
+        "column" : 0,
+        "jobs" : [
+          40000
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 0,
+        "use" : "industrial"
+      }
+    ],
+    "lines" : [
+      {
+        "freight" : true,
+        "id" : 1,
+        "lastDispatch" : 18000,
+        "name" : "Goods",
+        "performance" : {
+          "acceleration" : 125,
+          "braking" : 100,
+          "topSpeed" : 1
+        },
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        }
+      ],
+      "nextEdgeID" : 7,
+      "nextNodeID" : 8,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 2,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Alpha",
+        "point" : {
+          "x" : 1536,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Gamma",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "edges" : [
+            3,
+            4,
+            5
+          ],
+          "rate" : 1024
+        },
+        "name" : "T0",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 2,
+            "offset" : 302
+          }
+        },
+        "times" : {
+          "arrival" : 18000,
+          "departure" : 18042,
+          "run" : {
+            "length" : 4096,
+            "seconds" : 240,
+            "start" : 18042
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 18000,
+            "departure" : 18042,
+            "station" : 1
+          },
+          {
+            "arrival" : 18282,
+            "departure" : 18402,
+            "reverse" : true,
+            "station" : 2
+          },
+          {
+            "arrival" : 18642,
+            "departure" : 18642,
+            "reverse" : true,
+            "station" : 1
+          }
+        ]
+      }
+    ]
+  }
+}

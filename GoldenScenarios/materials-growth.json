@@ -1,0 +1,2489 @@
+{
+  "description": "Building materials in the city's growth (schema 60, decision 157): city-buildings-raise.json with building materials on. Each station holds the 60 t it got by road at the first midnight. At the second, raising takes the new storeys' floor at 200 m2 a ton, rounded up (D1 to D2 31 t, D2 to D3 93 t, D3 to D4 169 t), in the order the raises are chosen, the first unpaid stopping them; a new cell takes 16 t. Alpha raises (0, 0) to D2 (29 t left) and cannot pay for (0, 1); Beta raises (0, 1) and cannot pay for (0, 4); Gamma raises (0, 4) and cannot pay for (0, 5) to D4. All three are short, so each grows at a quarter of its rate (12 to 3 thousandths), and each builds its new cell (13 t left). The midnight then brings 60 t more: 73 t each, 141 t used, 360 t supplied. tools/golden-checks/city_growth.py works every value out independently.",
+  "expectedFinalState": {
+    "accounts": {
+      "days": [
+        {
+          "day": 0,
+          "energyCost": 37200,
+          "fareRevenue": 500,
+          "maintenanceCost": 1400,
+          "operatingCost": 142800,
+          "staffCost": 234000
+        },
+        {
+          "day": 1,
+          "energyCost": 37200,
+          "fareRevenue": 733500,
+          "maintenanceCost": 33600,
+          "operatingCost": 3267600,
+          "staffCost": 234000
+        }
+      ],
+      "fareRules": null,
+      "ledger": [
+        {
+          "amount": -143700,
+          "breakdown": [
+            {
+              "amount": 500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 3,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1440
+        },
+        {
+          "amount": -37200,
+          "breakdown": [
+            {
+              "amount": -1200,
+              "item": "routeEnergy"
+            },
+            {
+              "amount": -36000,
+              "item": "trainEnergy"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyEnergy",
+          "time": 1439
+        },
+        {
+          "amount": -234000,
+          "breakdown": [
+            {
+              "amount": -186000,
+              "item": "stationStaff"
+            },
+            {
+              "amount": -48000,
+              "item": "trainStaff"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyStaff",
+          "time": 1439
+        },
+        {
+          "amount": -133100,
+          "breakdown": [
+            {
+              "amount": 3500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 6,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1500
+        },
+        {
+          "amount": -134600,
+          "breakdown": [
+            {
+              "amount": 2000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1560
+        },
+        {
+          "amount": -133600,
+          "breakdown": [
+            {
+              "amount": 3000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1620
+        },
+        {
+          "amount": -132600,
+          "breakdown": [
+            {
+              "amount": 4000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 6,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1680
+        },
+        {
+          "amount": -134100,
+          "breakdown": [
+            {
+              "amount": 2500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 3,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 1740
+        },
+        {
+          "amount": -126100,
+          "breakdown": [
+            {
+              "amount": 10500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 1800
+        },
+        {
+          "amount": -104700,
+          "breakdown": [
+            {
+              "amount": 39500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 25,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 1860
+        },
+        {
+          "amount": -67100,
+          "breakdown": [
+            {
+              "amount": 69500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 41,
+            "maxWaiting": 7
+          },
+          "kind": "hourlyNet",
+          "time": 1920
+        },
+        {
+          "amount": -65100,
+          "breakdown": [
+            {
+              "amount": 71500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 7
+          },
+          "kind": "hourlyNet",
+          "time": 1980
+        },
+        {
+          "amount": -90100,
+          "breakdown": [
+            {
+              "amount": 46500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 2040
+        },
+        {
+          "amount": -110100,
+          "breakdown": [
+            {
+              "amount": 26500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2100
+        },
+        {
+          "amount": -112600,
+          "breakdown": [
+            {
+              "amount": 24000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2160
+        },
+        {
+          "amount": -114600,
+          "breakdown": [
+            {
+              "amount": 22000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2220
+        },
+        {
+          "amount": -118200,
+          "breakdown": [
+            {
+              "amount": 26000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2280
+        },
+        {
+          "amount": -112600,
+          "breakdown": [
+            {
+              "amount": 24000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2340
+        },
+        {
+          "amount": -102100,
+          "breakdown": [
+            {
+              "amount": 34500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 25,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 2400
+        },
+        {
+          "amount": -83600,
+          "breakdown": [
+            {
+              "amount": 53000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 5
+          },
+          "kind": "hourlyNet",
+          "time": 2460
+        },
+        {
+          "amount": -65600,
+          "breakdown": [
+            {
+              "amount": 71000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 34,
+            "maxWaiting": 5
+          },
+          "kind": "hourlyNet",
+          "time": 2520
+        },
+        {
+          "amount": -66100,
+          "breakdown": [
+            {
+              "amount": 70500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 28,
+            "maxWaiting": 6
+          },
+          "kind": "hourlyNet",
+          "time": 2580
+        },
+        {
+          "amount": -91100,
+          "breakdown": [
+            {
+              "amount": 45500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2640
+        },
+        {
+          "amount": -111700,
+          "breakdown": [
+            {
+              "amount": 32500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -142800,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 4
+          },
+          "kind": "hourlyNet",
+          "time": 2700
+        },
+        {
+          "amount": -105600,
+          "breakdown": [
+            {
+              "amount": 31000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 13,
+            "maxWaiting": 3
+          },
+          "kind": "hourlyNet",
+          "time": 2760
+        },
+        {
+          "amount": -119100,
+          "breakdown": [
+            {
+              "amount": 17500,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2820
+        },
+        {
+          "amount": -133600,
+          "breakdown": [
+            {
+              "amount": 3000,
+              "item": "fareRevenue"
+            },
+            {
+              "amount": -135200,
+              "item": "operatingCost"
+            },
+            {
+              "amount": -1400,
+              "item": "maintenanceCost"
+            }
+          ],
+          "crowding": {
+            "crowdedStations": 0,
+            "fullTrains": 0,
+            "maxLoad": 0,
+            "maxWaiting": 2
+          },
+          "kind": "hourlyNet",
+          "time": 2880
+        },
+        {
+          "amount": -37200,
+          "breakdown": [
+            {
+              "amount": -1200,
+              "item": "routeEnergy"
+            },
+            {
+              "amount": -36000,
+              "item": "trainEnergy"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyEnergy",
+          "time": 2879
+        },
+        {
+          "amount": -234000,
+          "breakdown": [
+            {
+              "amount": -186000,
+              "item": "stationStaff"
+            },
+            {
+              "amount": -48000,
+              "item": "trainStaff"
+            }
+          ],
+          "crowding": null,
+          "kind": "dailyStaff",
+          "time": 2879
+        }
+      ],
+      "mode": "management",
+      "openedAt": 2880,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 500,
+        "fareTrips": 1,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": -2609800,
+    "cityBuildings": {
+      "buildings": 13,
+      "d1": 6,
+      "d2": 4,
+      "d3": 1,
+      "d4": 1,
+      "existingStock": 1
+    },
+    "freight": {
+      "buildingMaterials": true,
+      "delivered": 0,
+      "facilities": [],
+      "loads": [],
+      "lost": 0,
+      "materials": [
+        {
+          "station": 1,
+          "tons": 73
+        },
+        {
+          "station": 2,
+          "tons": 73
+        },
+        {
+          "station": 3,
+          "tons": 73
+        }
+      ],
+      "materialsSupplied": 360,
+      "materialsUsed": 141,
+      "pendingRevenue": 0,
+      "produced": 0,
+      "spilled": 0
+    },
+    "gameMinutes": 2881,
+    "land": {
+      "cells": 13,
+      "jobs": 157,
+      "residents": 3531
+    },
+    "landDemand": true,
+    "lines": [
+      {
+        "id": 1,
+        "lastDispatch": 2878,
+        "name": "Main",
+        "patterns": [],
+        "performance": {
+          "acceleration": 250,
+          "braking": 250,
+          "topSpeed": 1
+        },
+        "stops": [
+          1,
+          2,
+          3
+        ],
+        "targetHeadways": {
+          "low": null,
+          "offPeak": null,
+          "peak": null
+        },
+        "trains": [
+          1
+        ],
+        "trainsInService": {
+          "low": 1,
+          "offPeak": 1,
+          "peak": 1
+        },
+        "window": {
+          "type": "allDay"
+        }
+      }
+    ],
+    "network": {
+      "edges": [
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 1,
+          "id": 1,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 2
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 2,
+          "id": 2,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 3
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 3,
+          "id": 3,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 4
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 4,
+          "id": 4,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 5
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 5,
+          "id": 5,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 6
+        },
+        {
+          "curve": {
+            "type": "straight"
+          },
+          "from": 6,
+          "id": 6,
+          "length": 1024,
+          "profile": {
+            "endTransition": 0,
+            "startTransition": 0
+          },
+          "structure": "surface",
+          "to": 7
+        }
+      ],
+      "nodes": [
+        {
+          "id": 1,
+          "x": 512,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 2,
+          "x": 1536,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 3,
+          "x": 2560,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 4,
+          "x": 3584,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 5,
+          "x": 4608,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 6,
+          "x": 5632,
+          "y": 1536,
+          "z": 0
+        },
+        {
+          "id": 7,
+          "x": 6656,
+          "y": 1536,
+          "z": 0
+        }
+      ],
+      "platforms": [
+        {
+          "edge": 1,
+          "end": 1024,
+          "start": 512,
+          "station": 1
+        },
+        {
+          "edge": 2,
+          "end": 512,
+          "start": 0,
+          "station": 1
+        },
+        {
+          "edge": 3,
+          "end": 1024,
+          "start": 512,
+          "station": 2
+        },
+        {
+          "edge": 4,
+          "end": 512,
+          "start": 0,
+          "station": 2
+        },
+        {
+          "edge": 5,
+          "end": 1024,
+          "start": 512,
+          "station": 3
+        },
+        {
+          "edge": 6,
+          "end": 512,
+          "start": 0,
+          "station": 3
+        }
+      ]
+    },
+    "passengers": [
+      {
+        "abandoned": 0,
+        "arrived": 480,
+        "demand": {
+          "dailyTrips": 482,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 482,
+        "station": 1,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 2,
+            "direction": "outbound",
+            "line": 1,
+            "since": 2879
+          },
+          {
+            "count": 1,
+            "destination": 3,
+            "direction": "outbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      },
+      {
+        "abandoned": 0,
+        "arrived": 490,
+        "demand": {
+          "dailyTrips": 492,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 492,
+        "station": 2,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 1,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      },
+      {
+        "abandoned": 0,
+        "arrived": 498,
+        "demand": {
+          "dailyTrips": 502,
+          "kind": "residential"
+        },
+        "overflowed": 0,
+        "refused": 0,
+        "released": 500,
+        "station": 3,
+        "waiting": [
+          {
+            "count": 1,
+            "destination": 1,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          },
+          {
+            "count": 1,
+            "destination": 2,
+            "direction": "inbound",
+            "line": 1,
+            "since": 2879
+          }
+        ]
+      }
+    ],
+    "riders": [
+      {
+        "groups": [
+          {
+            "count": 1,
+            "destination": 3,
+            "origin": 2
+          }
+        ],
+        "train": 1
+      }
+    ],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "normal",
+    "stations": [
+      {
+        "id": 1,
+        "name": "Alpha",
+        "point": {
+          "x": 1536,
+          "y": 512
+        }
+      },
+      {
+        "id": 2,
+        "name": "Beta",
+        "point": {
+          "x": 3584,
+          "y": 512
+        }
+      },
+      {
+        "id": 3,
+        "name": "Gamma",
+        "point": {
+          "x": 5632,
+          "y": 512
+        }
+      }
+    ],
+    "trafficControl": false,
+    "trains": [
+      {
+        "cars": 1,
+        "execution": {
+          "cycle": 0,
+          "stop": 1,
+          "type": "waiting"
+        },
+        "id": 1,
+        "movement": {
+          "cursor": 0,
+          "edges": [],
+          "rate": 1024
+        },
+        "name": "Blue",
+        "position": {
+          "direction": "forward",
+          "edge": 3,
+          "offset": 1024,
+          "type": "edge"
+        },
+        "repeat": {
+          "type": "once"
+        },
+        "reservation": [],
+        "times": {
+          "arrival": 172842,
+          "departure": 172722,
+          "exchangeEnd": 172851
+        },
+        "timetable": [
+          {
+            "arrival": 2878,
+            "departureSeconds": 172722,
+            "reverse": false,
+            "station": 1
+          },
+          {
+            "arrivalSeconds": 172842,
+            "departureSeconds": 172902,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrivalSeconds": 173022,
+            "departureSeconds": 173142,
+            "reverse": true,
+            "station": 3
+          },
+          {
+            "arrivalSeconds": 173262,
+            "departureSeconds": 173322,
+            "reverse": false,
+            "station": 2
+          },
+          {
+            "arrivalSeconds": 173442,
+            "departureSeconds": 173442,
+            "reverse": true,
+            "station": 1
+          }
+        ],
+        "trailEdges": []
+      }
+    ]
+  },
+  "initialState": {
+    "balance": 1000000,
+    "costs": {
+      "station": 50000,
+      "track": 1000,
+      "train": 200000
+    },
+    "gameMinutes": 1380,
+    "speed": "normal",
+    "worldHeight": 8192,
+    "worldWidth": 32768
+  },
+  "schemaVersion": 60,
+  "steps": [
+    {
+      "command": {
+        "mode": "management",
+        "type": "setEconomyMode"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "cells": [
+          {
+            "column": 0,
+            "jobs": 0,
+            "residents": 56,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 1,
+            "jobs": 72,
+            "residents": 0,
+            "row": 0,
+            "use": "commercial"
+          },
+          {
+            "column": 2,
+            "jobs": 0,
+            "residents": 1120,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 3,
+            "jobs": 0,
+            "residents": 1500,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 4,
+            "jobs": 84,
+            "residents": 0,
+            "row": 0,
+            "use": "office"
+          },
+          {
+            "column": 5,
+            "jobs": 0,
+            "residents": 503,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 6,
+            "jobs": 0,
+            "residents": 168,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 7,
+            "jobs": 0,
+            "residents": 56,
+            "row": 0,
+            "use": "residential"
+          },
+          {
+            "column": 0,
+            "jobs": 0,
+            "residents": 56,
+            "row": 1,
+            "use": "residential"
+          },
+          {
+            "column": 1,
+            "jobs": 0,
+            "residents": 56,
+            "row": 1,
+            "use": "residential"
+          }
+        ],
+        "type": "setLand"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "enabled": true,
+        "type": "setLandDemand"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "enabled": true,
+        "type": "setTownGrowth"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "enabled": true,
+        "type": "setCityBuildings"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "enableBuildingMaterials"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 1,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 0,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 2,
+          "jobs": 72,
+          "kind": "city",
+          "residents": 16,
+          "use": "commercial"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 1,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 4,
+          "id": 3,
+          "jobs": 240,
+          "kind": "city",
+          "residents": 1120,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 2,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 4,
+          "id": 4,
+          "jobs": 240,
+          "kind": "existingStock",
+          "residents": 1500,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 3,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 5,
+          "jobs": 84,
+          "kind": "city",
+          "residents": 8,
+          "use": "office"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 4,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 3,
+          "id": 6,
+          "jobs": 108,
+          "kind": "city",
+          "residents": 504,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 5,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 2,
+          "id": 7,
+          "jobs": 36,
+          "kind": "city",
+          "residents": 168,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 6,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 8,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 7,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 9,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 0,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 10,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 1,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 512,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 1536,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 2560,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 3584,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 4608,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 5632,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildTrackNode",
+        "x": 6656,
+        "y": 1536,
+        "z": 0
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 1,
+        "to": 2,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 2,
+        "to": 3,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 3,
+        "to": 4,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 4,
+        "to": 5,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 5,
+        "to": 6,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "curve": {
+          "type": "straight"
+        },
+        "from": 6,
+        "to": 7,
+        "type": "buildTrackEdge"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Alpha",
+        "point": {
+          "x": 1536,
+          "y": 512
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Beta",
+        "point": {
+          "x": 3584,
+          "y": 512
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Gamma",
+        "point": {
+          "x": 5632,
+          "y": 512
+        },
+        "type": "buildStationAt"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 1,
+        "end": 1024,
+        "start": 512,
+        "station": 1,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 2,
+        "end": 512,
+        "start": 0,
+        "station": 1,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 3,
+        "end": 1024,
+        "start": 512,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 4,
+        "end": 512,
+        "start": 0,
+        "station": 2,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 5,
+        "end": 1024,
+        "start": 512,
+        "station": 3,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "edge": 6,
+        "end": 512,
+        "start": 0,
+        "station": 3,
+        "type": "addTrackPlatform"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Blue",
+        "type": "purchaseTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "position": {
+          "direction": "forward",
+          "edge": 1,
+          "offset": 1024,
+          "type": "edge"
+        },
+        "train": 1,
+        "type": "placeTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "rate": 1024,
+        "train": 1,
+        "type": "setTrainMovementRate"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "name": "Main",
+        "stops": [
+          1,
+          2,
+          3
+        ],
+        "type": "createLine"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "performance": {
+          "acceleration": 250,
+          "braking": 250,
+          "topSpeed": 1
+        },
+        "type": "setLinePerformance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "type": "setLineServiceWindow",
+        "window": {
+          "type": "allDay"
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "trains": {
+          "low": 1,
+          "offPeak": 1,
+          "peak": 1
+        },
+        "type": "setLineTrainsInService"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "line": 1,
+        "train": 1,
+        "type": "assignTrain"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "ticks": 61,
+        "type": "advance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 480,
+          "lastGrowth": 0,
+          "lastReached": 0,
+          "lastService": 0
+        }
+      },
+      "observe": {
+        "station": 1,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 490,
+          "lastGrowth": 0,
+          "lastReached": 0,
+          "lastService": 0
+        }
+      },
+      "observe": {
+        "station": 2,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 498,
+          "lastGrowth": 0,
+          "lastReached": 0,
+          "lastService": 0
+        }
+      },
+      "observe": {
+        "station": 3,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "command": {
+        "ticks": 1440,
+        "type": "advance"
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 480,
+          "lastGrowth": 4,
+          "lastReached": 2,
+          "lastService": 1000
+        }
+      },
+      "observe": {
+        "station": 1,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 490,
+          "lastGrowth": 4,
+          "lastReached": 2,
+          "lastService": 1000
+        }
+      },
+      "observe": {
+        "station": 2,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "townGrowth": {
+          "base": 498,
+          "lastGrowth": 8,
+          "lastReached": 2,
+          "lastService": 1000
+        }
+      },
+      "observe": {
+        "station": 3,
+        "type": "townGrowth"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 0,
+          "jobs": 0,
+          "residents": 59,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 0,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 2,
+          "id": 1,
+          "jobs": 36,
+          "kind": "city",
+          "residents": 168,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 0,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 1,
+          "jobs": 72,
+          "residents": 0,
+          "row": 0,
+          "use": "commercial"
+        }
+      },
+      "observe": {
+        "column": 1,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 2,
+          "id": 2,
+          "jobs": 216,
+          "kind": "city",
+          "residents": 48,
+          "use": "commercial"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 1,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 2,
+          "jobs": 0,
+          "residents": 1120,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 2,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 4,
+          "id": 3,
+          "jobs": 240,
+          "kind": "city",
+          "residents": 1120,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 2,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 3,
+          "jobs": 0,
+          "residents": 1500,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 3,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 4,
+          "id": 4,
+          "jobs": 240,
+          "kind": "existingStock",
+          "residents": 1500,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 3,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 4,
+          "jobs": 85,
+          "residents": 0,
+          "row": 0,
+          "use": "office"
+        }
+      },
+      "observe": {
+        "column": 4,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 2,
+          "id": 5,
+          "jobs": 252,
+          "kind": "city",
+          "residents": 24,
+          "use": "office"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 4,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 5,
+          "jobs": 0,
+          "residents": 504,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 5,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 3,
+          "id": 6,
+          "jobs": 108,
+          "kind": "city",
+          "residents": 504,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 5,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 6,
+          "jobs": 0,
+          "residents": 168,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 6,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 2,
+          "id": 7,
+          "jobs": 36,
+          "kind": "city",
+          "residents": 168,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 6,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 7,
+          "jobs": 0,
+          "residents": 56,
+          "row": 0,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 7,
+        "row": 0,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 8,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 7,
+        "row": 0,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 0,
+          "jobs": 0,
+          "residents": 56,
+          "row": 1,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 0,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 9,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 0,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 1,
+          "jobs": 0,
+          "residents": 56,
+          "row": 1,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 1,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 10,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 1,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 2,
+          "jobs": 0,
+          "residents": 4,
+          "row": 1,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 2,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 11,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 2,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 3,
+          "jobs": 0,
+          "residents": 4,
+          "row": 1,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 3,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 12,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 3,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": true,
+        "landCell": {
+          "column": 4,
+          "jobs": 0,
+          "residents": 4,
+          "row": 1,
+          "use": "residential"
+        }
+      },
+      "observe": {
+        "column": 4,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "building": {
+          "density": 1,
+          "id": 13,
+          "jobs": 12,
+          "kind": "city",
+          "residents": 56,
+          "use": "residential"
+        },
+        "found": true
+      },
+      "observe": {
+        "column": 4,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 5,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 5,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 6,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 6,
+        "row": 1,
+        "type": "building"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 7,
+        "row": 1,
+        "type": "landCell"
+      }
+    },
+    {
+      "expect": {
+        "found": false
+      },
+      "observe": {
+        "column": 7,
+        "row": 1,
+        "type": "building"
+      }
+    }
+  ]
+}

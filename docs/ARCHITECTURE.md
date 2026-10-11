@@ -4658,6 +4658,53 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 工業格只有就業，沒有產能；空白地圖的工業只來自城鎮與玩家劃的工業區；
 - 還沒有資材與城市成長的連結（方案 A 的第二步）、地圖上的貨運圖層。
 
+### 156. 建材：貨運場出建材、車站的建材置場、在地供應與進口
+
+2026-10-11，作者要求做研究文件方案 A（貨運第二步）的第一個 PR，設計交給 Claude Code。號碼依工作登記 #231：決策 156、存檔版本 39、golden schema 59。這一步只讓建材存在，不改城市成長（閘門是決策 157）。
+
+規則（`Freight/Freight.swift`；數字是原生起始值，決策 157 量）：
+1. **開關**：`FreightState.buildingMaterials`，`enableBuildingMaterials()` 打開（貨運跟著打開）。只在打開時寫進存檔；App 的新遊戲打開。
+2. **貨物種類** `CargoKind`：一般貨物（`goods`）或建材（`materials`）。貨運場的 `product` 決定它出什麼（`setFreightProduct(at:to:)`，免費；改了以後存貨照新的種類出）。車上的貨依起點、種類分組。
+3. **卸下的建材留在那一站**：照決策 155 在下一個貨運場卸、照噸公里付運費，另外放進那站的**建材置場**（`FreightState.materials`），每站最多 5,000 噸，多的算損失。
+4. **在地供應與進口**：每個午夜（包含第 0 天）每座車站由公路得到 60 噸（`localMaterialsPerDay`），外地連絡站（決策 137）另外進口 600 噸（`importedMaterialsPerDay`）。這是保底：在地供應夠新格與低樓層，大樓要靠鐵路運（決策 157）。為什麼不是只有外地連絡站：空白地圖或沒接到地圖邊緣的第一條線，會一直沒有建材。
+5. **守恆**：收到（`materialsReceived`）＋供應（`materialsSupplied`）＝各站存量＋用掉（`materialsUsed`，決策 157）＋損失（`materialsLost`）；存檔讀入時檢查。拆站時那站的建材算損失。
+
+存檔版本 39：`"freight"` 可以有 `"buildingMaterials": true`、`"materials"` 與四個合計，貨運場 `"product": "materials"`，車上的貨 `"kind": "materials"`；一般貨物都不寫，舊存檔照舊。新錯誤 `buildingMaterialsNotEnabled`。
+
+**參考**：參考庫沒有建材或資材（研究文件第 2 節）；A 列車的資材置場只讀概念。
+
+**golden、存檔、replay**：新的 `materials.json`（schema 59）；`freight.json`（schema 58）的預期值不變。新存檔 `SaveFixtures/v39-materials.json`。既有 golden、存檔與 replay 都沒有改。測試：`BuildingMaterialsTests`、`FreightSessionTests`。
+
+**App**：車站面板的「貨運」一節多了建材置場的存量與每天的供應、貨運場的「出貨」選單。
+
+### 157. 城市用建材成長：升級與新格要建材，缺料成長率四分之一
+
+2026-10-11，貨運第二步（研究文件方案 A）的第二個 PR，作者把設計交給 Claude Code。號碼依工作登記 #231：決策 157、golden schema 60；存檔版本不動（用決策 156 的 `buildingMaterials`）。
+
+規則（`City/LandDemand.swift` 的 `growLand(reached:)`，只在 `buildingMaterials` 打開時；數字在 `Freight`）：
+1. **升級要建材**：每棟升級用新增樓層的樓地板（每層 1,536 m²）÷ 200 m²／噸，無條件進位：D1→D2 31 噸、D2→D3 93 噸、D3→D4 169 噸（`Freight.materials(toRaise:)`）。從那站的建材置場扣。依原本選出的順序（決策 139 的需求先），**第一棟付不起就停**當晚的升級。
+2. **新格要建材**：16 噸（D1 兩層）。那站有 16 噸才蓋，蓋了才扣。
+3. **缺料**：當晚有一棟升級付不起，或升級後剩不到 16 噸，那站當晚的成長率變成四分之一（`shortGrowthDivisor`，至少 1 千分比）；站前三倍（決策 129）照舊乘在打折後的成長率上。這是軟閘門：不會卡死，只是慢。
+4. **保底**：決策 156 的在地供應每站每天 60 噸、外地連絡站另 600 噸。午夜先成長、再供應，所以當晚用的是之前累積的。
+5. **關閉**：教學、沙盒挑戰（含每週挑戰）與平溪線劇本關閉建材（`setBuildingMaterials(false)`），它們的目標是不用建材量的（決策 145）。關閉時各站的建材與車上的建材算損失，貨運場改出一般貨物。
+6. **玩家建物不用建材**：決策 92–95、130 的房地產經濟照舊。
+
+**量測**（`BalanceReportTests.testALineBetweenTwoTowns`，`BALANCE_NO_MATERIALS=1` 是關閉時，40 天，沒有建材貨運線）：
+
+| | 關閉 | 打開（只有在地供應） |
+| --- | --- | --- |
+| D4 | 38 → 81 | 38 → 58 |
+| 每日旅次 | 58,617 → 108,719 | 57,687 → 65,429 |
+| 第 40 天餘額 | $10,818,068 | $8,628,588 |
+
+新的 D4 在前 5 天就出現（早期節奏不變）；之後沒有鐵路運建材，成長大約剩一半。全速成長兩站一天約要 400 噸，一列四節貨運列車在 5.4 km 上一天能運約 5,900 噸（決策 155），一條建材貨運線就夠：這就是要給玩家的理由。第一條線（`testAFirstLine`）兩種設定完全相同（它不升級建物）。
+
+**參考**：參考庫沒有建材（gap）；A 列車「資材不足蓋不了」只讀概念，改成軟閘門。
+
+**golden、存檔、replay**：新的 `materials-growth.json`（schema 60，`city-buildings-raise.json` 打開建材）；`tools/golden-checks/city_growth.py` 擴充成也驗這份（獨立寫法，值全部一致）；`city_buildings.py` 驗的是建物的初建，不受影響。既有 golden、存檔與 replay 都沒有改。測試：`BuildingMaterialsTests`。
+
+**限制**：缺料只看當晚，不記帳；建材不會因為放久而損壞；沒有缺料的提示（下一步）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
