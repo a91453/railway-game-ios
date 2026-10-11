@@ -21,8 +21,8 @@ import GameCore
 ///   for a set of twelve cars (16 m each).
 /// - The line calls at all twelve; its two patterns are the real day's
 ///   nine-stop and five-stop expresses, every one a service of its own:
-///   every 30, 15 and 12 minutes, as the real schedule (`thsr-schedule.json`)
-///   has them on its busiest level.
+///   every 30, 20 and 30 minutes, with the sets that takes (see
+///   ``services``).
 /// - Its trains are high-speed sets (`TrainType.highSpeed`, twelve cars
 ///   rated 80 each), planned at `PERF_HSR`; the line is a high-speed line
 ///   (decision 168), so its stations draw the people round them and its
@@ -37,9 +37,9 @@ public enum HighSpeedDemo {
     static let platformLength = Int64(cars + 1) * Train.carLength
     /// How far the track may stray from the real alignment, and how long
     /// an edge may be (``RealWorldDemo/TrackPlan``): the real line is
-    /// straight or curves gently (its curves are 5 km in radius or more),
-    /// and every edge costs the game its time to build (each is checked
-    /// against all before it), so the edges are long and the fit loose.
+    /// straight or curves gently, and every edge costs the game its time to
+    /// build (each is checked against all before it), so the edges are long
+    /// and the fit loose.
     static let tolerance = 10.0 * RealWorldDemo.metre
     static let longestEdge = 4_000.0 * RealWorldDemo.metre
 
@@ -167,8 +167,9 @@ public enum HighSpeedDemo {
 
         /// What building it costs at `costs` (the prices of
         /// ``GameWorld/buildTrackEdge(from:to:curve:profile:structure:)``,
-        /// ``GameWorld/buildStation(named:at:)`` and the trains, which are
-        /// bought a few at a time after it; every track is on the ground).
+        /// ``GameWorld/buildStation(named:at:)``, ``GameWorld/purchaseTrain(named:)``
+        /// and ``GameWorld/setTrainCars(_:to:)``; every track is on the
+        /// ground).
         func cost(at costs: ConstructionCosts) -> Money {
             let track = plan.lengths.map { length in
                 max(1, (length + ConstructionCosts.trackPricingLength - 1) / ConstructionCosts.trackPricingLength) * TrackStructure.surface.costFactor
