@@ -102,12 +102,14 @@ final class SettingsUITests: XCTestCase {
     /// Opens the game menu and chooses Settings, and waits for its music
     /// switch. A native menu's action can report hittable and still fail
     /// to compute its activation point (as in StartSaveFlowSmokeTests):
-    /// touch the middle of its frame, and once more if the menu is still
-    /// open.
+    /// touch the middle of its frame once the menu has finished opening
+    /// (a frame read while it opens is not where the action ends up), and
+    /// once more if the menu is still open.
     private func openSettingsFromTheGameMenu(_ app: XCUIApplication) {
         tap(app.buttons["hud.menu"], name: "hud.menu")
         let action = app.buttons["menu.settings"]
         XCTAssertTrue(action.waitForExistence(timeout: 30), "Missing menu.settings")
+        action.waitUntilSettled()
         let frame = action.frame, bounds = app.frame
         let point = app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - bounds.minX, dy: frame.midY - bounds.minY))
