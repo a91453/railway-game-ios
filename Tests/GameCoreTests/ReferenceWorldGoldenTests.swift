@@ -130,7 +130,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             preconditionFailure("the reference model does not run network routing")
         case .setDisruptions:
             preconditionFailure("the reference model does not keep holidays")
-        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setLineHighSpeed, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok
@@ -222,7 +222,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .ledger(LedgerSummary(model.ledger(of: id.rawValue)))
         case .riders(let id):
             return .riders(model.riders(of: id.rawValue).map(RidingGroupSummary.init))
-        case .tripFare(let origin, let destination):
+        case .tripFare(let origin, let destination, _):
             return .fare(model.tripFare(from: origin.rawValue, to: destination.rawValue))
         case .serviceTimes(let id):
             return .times(model.trains.first { $0.id == id.rawValue }?.service.map { TimesSummary($0.times) })

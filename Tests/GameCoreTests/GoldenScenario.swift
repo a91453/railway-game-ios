@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 64
+    static let schemaVersion = 65
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setLineHighSpeed, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -572,6 +572,8 @@ enum ScenarioCommand: Equatable {
     case enableFreight
     case buildFreightFacility(StationID)
     case setLineFreight(LineID, Bool)
+    /// Schema 65 (decision 168): a high-speed line.
+    case setLineHighSpeed(LineID, Bool)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -715,6 +717,8 @@ enum ScenarioCommand: Equatable {
                 try world.buildFreightFacility(at: id)
             case .setLineFreight(let line, let freight):
                 try world.setLineFreight(line, to: freight)
+            case .setLineHighSpeed(let line, let highSpeed):
+                try world.setLineHighSpeed(line, to: highSpeed)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -819,6 +823,9 @@ extension ScenarioCommand: Decodable {
             self = try .buildFreightFacility(container.decodeStation(forKey: .station))
         case "setLineFreight":
             self = try .setLineFreight(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
+        // Schema 65: a high-speed line (decision 168).
+        case "setLineHighSpeed":
+            self = try .setLineHighSpeed(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
         // Schema 59: building materials (decision 156).
         case "enableBuildingMaterials":
             self = .enableBuildingMaterials
@@ -1260,6 +1267,11 @@ extension StepOutcome: Codable {
         // Schema 64 (decision 167).
         case "invalidRidersStep":
             self = .rejected(.invalidRidersStep)
+        // Schema 65 (decision 168).
+        case "lineIsFreight":
+            self = try .rejected(.lineIsFreight(container.decodeLine(forKey: .line)))
+        case "lineIsHighSpeed":
+            self = try .rejected(.lineIsHighSpeed(container.decodeLine(forKey: .line)))
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1460,6 +1472,12 @@ extension StepOutcome: Codable {
             try container.encode("mapExpansionEnabled", forKey: .result)
         case .rejected(.invalidRidersStep):
             try container.encode("invalidRidersStep", forKey: .result)
+        case .rejected(.lineIsFreight(let id)):
+            try container.encode("lineIsFreight", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
+        case .rejected(.lineIsHighSpeed(let id)):
+            try container.encode("lineIsHighSpeed", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
         case .rejected(.invalidMapTile):
             try container.encode("invalidMapTile", forKey: .result)
         case .rejected(.mapTileOwned):
@@ -1534,7 +1552,9 @@ enum ScenarioObservation: Equatable {
     case waitingPassengers(StationID)
     case passengerLedger(StationID)
     case riders(TrainID)
-    case tripFare(from: StationID, to: StationID)
+    /// Schema 65 (decision 168): `highSpeed`, for a trip that rides a
+    /// high-speed line.
+    case tripFare(from: StationID, to: StationID, highSpeed: Bool)
     case accounts
     case financeReport(FinancePeriod)
     /// Schema 24 (Stage W2b): a train's service times, and its lateness.
@@ -1682,8 +1702,8 @@ enum ScenarioObservation: Equatable {
             .ledger(LedgerSummary(world.passengerLedger(of: id)))
         case .riders(let id):
             .riders(world.riders(of: id).map(RidingGroupSummary.init))
-        case .tripFare(let origin, let destination):
-            .fare(world.tripFare(from: origin, to: destination)?.amount)
+        case .tripFare(let origin, let destination, let highSpeed):
+            .fare(world.tripFare(from: origin, to: destination, highSpeed: highSpeed)?.amount)
         case .accounts:
             .accounts(AccountsSummary(world.accounts))
         case .financeReport(let period):
@@ -1699,6 +1719,7 @@ enum ScenarioObservation: Equatable {
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, from, to, train, station, line, gameMinutes, level, pattern, cars, building
+        case highSpeed
         case edge, direction, distance, node, period
         case row, column
         case point
@@ -1851,7 +1872,10 @@ extension ScenarioObservation: Decodable {
             self = try .riders(container.decodeTrain(forKey: .train))
         // Schema 22: the economy (G1c).
         case "tripFare":
-            self = try .tripFare(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+            self = try .tripFare(
+                from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to),
+                highSpeed: container.decodeIfPresent(Bool.self, forKey: .highSpeed) ?? false
+            )
         case "serviceTimes":
             self = try .serviceTimes(container.decodeTrain(forKey: .train))
         case "lateness":
@@ -2755,6 +2779,9 @@ struct LandCellSummary: Codable, Equatable {
 struct DemandSummary: Codable, Equatable {
     var kind: String
     var dailyTrips: Int64
+    /// Schema 65 (decision 168): the people of a high-speed station's
+    /// hinterland, written only when there are some.
+    var hinterland: Int64 = 0
 
     private static let kinds: [(String, StationDemandKind)] = [
         ("residential", .residential), ("office", .office), ("shopping", .shopping), ("scenic", .scenic), ("civic", .civic),
@@ -2763,23 +2790,32 @@ struct DemandSummary: Codable, Equatable {
     init(_ demand: StationDemand) {
         kind = Self.kinds.first { $0.1 == demand.kind }!.0
         dailyTrips = demand.dailyTrips
+        hinterland = demand.hinterland
     }
 
     private enum CodingKeys: String, CodingKey {
-        case kind, dailyTrips
+        case kind, dailyTrips, hinterland
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(String.self, forKey: .kind)
         dailyTrips = try container.decode(Int64.self, forKey: .dailyTrips)
+        hinterland = try container.decodeIfPresent(Int64.self, forKey: .hinterland) ?? 0
         guard Self.kinds.contains(where: { $0.0 == kind }) else {
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown demand kind \"\(kind)\".")
         }
     }
 
     var demand: StationDemand {
-        StationDemand(kind: Self.kinds.first { $0.0 == kind }!.1, dailyTrips: dailyTrips)
+        StationDemand(kind: Self.kinds.first { $0.0 == kind }!.1, dailyTrips: dailyTrips, hinterland: hinterland)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(dailyTrips, forKey: .dailyTrips)
+        if hinterland != 0 { try container.encode(hinterland, forKey: .hinterland) }
     }
 }
 
@@ -2989,6 +3025,8 @@ struct LineSummary: Codable, Equatable {
     var runDays: [Int64?] = []
     /// Schema 58 (decision 155): written as `true` for a freight line only.
     var isFreight = false
+    /// Schema 65 (decision 168): written as `true` for a high-speed line only.
+    var isHighSpeed = false
 
     init(
         id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
@@ -3024,6 +3062,7 @@ struct LineSummary: Codable, Equatable {
         runs = line.runs
         runDays = line.runDays
         isFreight = line.isFreight
+        isHighSpeed = line.isHighSpeed
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -3031,6 +3070,7 @@ struct LineSummary: Codable, Equatable {
         case isRing = "ring", outerLastDispatch
         case runs, runDays
         case isFreight = "freight"
+        case isHighSpeed = "highSpeed"
     }
 
     init(from decoder: any Decoder) throws {
@@ -3061,6 +3101,13 @@ struct LineSummary: Codable, Equatable {
                 throw DecodingError.dataCorruptedError(forKey: .isFreight, in: container, debugDescription: "\"freight\" is written only as true.")
             }
             isFreight = true
+        }
+        // Schema 65: a high-speed line says so, with `true`.
+        if container.contains(.isHighSpeed) {
+            guard try container.decode(Bool.self, forKey: .isHighSpeed) else {
+                throw DecodingError.dataCorruptedError(forKey: .isHighSpeed, in: container, debugDescription: "\"highSpeed\" is written only as true.")
+            }
+            isHighSpeed = true
         }
         // Schema 27: a ring says so, and its outer dispatch is then
         // required; a line that is not a ring writes neither.
@@ -3102,6 +3149,7 @@ struct LineSummary: Codable, Equatable {
             try container.encode(runDays, forKey: .runDays)
         }
         if isFreight { try container.encode(true, forKey: .isFreight) }
+        if isHighSpeed { try container.encode(true, forKey: .isHighSpeed) }
         if isRing {
             try container.encode(true, forKey: .isRing)
             if let outerLastDispatch {

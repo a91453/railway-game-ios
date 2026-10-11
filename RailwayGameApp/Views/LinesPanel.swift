@@ -326,6 +326,23 @@ struct LinesPanel: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
+            // Decision 168: a high-speed line pays the high-speed fare and
+            // its stations draw intercity trips; never a freight line.
+            if !line.isFreight {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(isOn: Binding(
+                        get: { session.selectedLine?.isHighSpeed ?? false },
+                        set: { session.setSelectedLineHighSpeed($0) }
+                    )) {
+                        Text(verbatim: session.language.text("High-speed line", "高鐵路線"))
+                    }
+                    .accessibilityIdentifier("line.highSpeed")
+                    Text(verbatim: session.world.highSpeedLineText(line.id, in: session.language)
+                        ?? session.world.highSpeedLineHelp(in: session.language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
             PerformanceMenu(performance: line.performance, language: session.language) { performance in

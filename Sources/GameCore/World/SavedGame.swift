@@ -216,9 +216,15 @@
 ///     A build that reads only an earlier version would drop it and ask for
 ///     100,000 riders and $5 million, which a tile of a country town could
 ///     never carry or pay, so it says the save is newer than it instead.
+/// 43. High-speed rail (decision 168): a line can have `"highSpeed": true`,
+///     a station's `"demand"` a `"hinterland"` (the people round a
+///     high-speed station), and a train the type `"HSR"`. A build that
+///     reads only an earlier version would drop the first two, and charge
+///     the metro's fare on a line meant for the high-speed one, and fail on
+///     the third, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 42
+    public static let currentVersion = 43
 
     public let world: GameWorld
 
@@ -341,6 +347,9 @@ extension SavedGame: Codable {
         // alone, as before.
         // Version 41 to 42: a map bought without `"ridersStep"` asks
         // 100,000 riders and $5 million a tile, as it did.
+        // Version 42 to 43: a line without `"highSpeed"` is an ordinary
+        // one, and a demand without `"hinterland"` has none, as every one
+        // did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

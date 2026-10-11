@@ -103,11 +103,15 @@ extension GameWorld {
     /// The fare a passenger from `origin` to `destination` pays: the rule's
     /// fare for the straight-line distance between the stations' points, or
     /// 5 if that is 0 or less, and ``outsideFare`` more to or from an outside
-    /// connection (decision 137). `nil` for the same station or an unknown
-    /// one.
-    public func tripFare(from origin: StationID, to destination: StationID) -> Money? {
+    /// connection (decision 137). With `highSpeed`, a trip that rides a
+    /// high-speed line (decision 168), the high-speed fare for that distance
+    /// if it is more. `nil` for the same station or an unknown one.
+    public func tripFare(from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money? {
         guard origin != destination, let squared = squaredDistance(from: origin, to: destination) else { return nil }
-        let fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
+        var fare = FareRules.charged(accounts.effectiveFareRules.fare(squaredDistance: squared))
+        // Decision 168: a trip that rides a high-speed line pays the
+        // high-speed fare, if that is more than the network's.
+        if highSpeed { fare = max(fare, HighSpeed.fare(squaredDistance: squared)) }
         guard isOutsideConnection(origin) || isOutsideConnection(destination) else { return fare }
         return fare + outsideFare
     }
@@ -148,8 +152,8 @@ extension GameWorld {
     /// hour's fares and counts stop at ``maximumHourly``, the most a save
     /// holds: the largest fare the commands take, ``FareRules/maximumFare``,
     /// reaches it with about a thousand boarders, far beyond any real fare.
-    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID) {
-        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination) else { return }
+    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) {
+        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return }
         let fares = accounts.pending.fareRevenue.amount + Self.wholeDollars(count * fare.amount).amount
         accounts.pending.fareRevenue = Money(min(fares, Self.maximumHourly / 100 * 100))
         accounts.pending.fareTrips = min(accounts.pending.fareTrips + count, Self.maximumHourly)

@@ -1532,8 +1532,12 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws: ``GameError/unknownLine(_:)``.
     public mutating func removeLine(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
+        let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         abandonUnservedPassengers()
+        // Decision 168: its stations draw no intercity trips unless
+        // another high-speed line calls at them.
+        if wasHighSpeed { refreshLandDemand() }
     }
 
     /// Replaces a line's stops with `stops`, in order. Its patterns keep
@@ -1567,6 +1571,9 @@ public struct GameWorld: Equatable, Sendable {
         lines[index].runs = []
         lines[index].runDays = []
         abandonUnservedPassengers()
+        // Decision 168: the stations of a high-speed line draw intercity
+        // trips.
+        if lines[index].isHighSpeed { refreshLandDemand() }
     }
 
     /// Reverses the order of a line's stops (decision 80, MapBuilder's
@@ -1663,8 +1670,10 @@ public struct GameWorld: Equatable, Sendable {
         }
         copy.isRing = original.isRing
         copy.color = original.color
-        // Decision 155: a freight line's copy carries freight too.
+        // Decision 155: a freight line's copy carries freight too, and
+        // (decision 168) a high-speed line's high speed.
         copy.isFreight = original.isFreight
+        copy.isHighSpeed = original.isHighSpeed
         copy.runs = original.runs
         copy.runDays = Array(repeating: nil, count: original.runs.count)
         nextLineID = nextID
@@ -1905,16 +1914,38 @@ public struct GameWorld: Equatable, Sendable {
     /// Makes line `id` a freight line, or a passenger line again. Free.
     ///
     /// - Throws, checked in this order: ``GameError/freightNotEnabled`` (to
-    ///   make one), ``GameError/unknownLine(_:)`` or ``GameError/trainOnLine(_:)``
+    ///   make one), ``GameError/unknownLine(_:)``, ``GameError/lineIsHighSpeed(_:)``
+    ///   (to make a high-speed line one, decision 168) or ``GameError/trainOnLine(_:)``
     ///   naming a train assigned to it (take them off first).
     public mutating func setLineFreight(_ id: LineID, to isFreight: Bool) throws(GameError) {
         if isFreight, freight == nil { throw .freightNotEnabled }
         guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
         guard lines[index].isFreight != isFreight else { return }
+        if isFreight, lines[index].isHighSpeed { throw .lineIsHighSpeed(id) }
         if let train = lines[index].assignedTrains.first { throw .trainOnLine(train) }
         lines[index].isFreight = isFreight
         passengerPlan = PassengerPlanCache()
         abandonUnservedPassengers()
+    }
+
+    /// Makes line `id` a high-speed line, or an ordinary passenger line
+    /// again (decision 168). Free, and trains may stay on it.
+    ///
+    /// Those who ride a high-speed line pay the high-speed fare for how
+    /// far they go (``HighSpeed/fare(squaredDistance:)``), and the stations
+    /// it calls at draw the intercity trips of the people round them
+    /// (``HighSpeed``): the land demand reads the lines again at once, for
+    /// a company whose land sets its ridership.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/lineIsFreight(_:)`` (to make a freight line one).
+    public mutating func setLineHighSpeed(_ id: LineID, to isHighSpeed: Bool) throws(GameError) {
+        let index = try lineIndex(of: id)
+        guard lines[index].isHighSpeed != isHighSpeed else { return }
+        if isHighSpeed, lines[index].isFreight { throw .lineIsFreight(id) }
+        lines[index].isHighSpeed = isHighSpeed
+        passengerPlan = PassengerPlanCache()
+        refreshLandDemand()
     }
 
     // MARK: - Time

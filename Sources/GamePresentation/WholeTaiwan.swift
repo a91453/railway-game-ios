@@ -54,6 +54,11 @@ public enum WholeTaiwan {
     /// town round it is likely to reach, two and a half times its 800 m
     /// catchment.
     public static let landReach: Int64 = 2_000 * WorldCoordinate.unitsPerMetre
+
+    /// How far round a high-speed station its land is read in (decision
+    /// 168): the radius of the hinterland its intercity trips come from
+    /// (``HighSpeed/hinterlandRadius``, 8 km), four times a metro station's.
+    public static let highSpeedLandReach: Int64 = HighSpeed.hinterlandRadius
 }
 
 extension GameWorld {
@@ -81,10 +86,20 @@ extension GameSession {
     /// map it buys tile by tile (``GameWorld/mapExpansion``): the first as
     /// the game begins, each next as it is bought (the same edit, so Undo
     /// takes both back).
+    ///
+    /// Since decision 168 the land within ``WholeTaiwan/highSpeedLandReach``
+    /// of the stations a high-speed line calls at, which are the people
+    /// their intercity trips come from.
     static func readLand(
         roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil
     ) {
         var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
+        let fast = world.highSpeedStations
+        if !fast.isEmpty {
+            wanted.formUnion(blocks(
+                within: WholeTaiwan.highSpeedLandReach, of: world.stations.filter { fast.contains($0.id) }.map(\.location), in: world.bounds
+            ))
+        }
         if let expansion = world.mapExpansion {
             for tile in expansion.owned {
                 wanted.formUnion(tile.landBlocks(in: world.bounds))

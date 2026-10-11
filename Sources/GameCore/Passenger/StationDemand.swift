@@ -104,18 +104,30 @@ public struct StationDemand: Hashable, Sendable {
     /// reach from it, in proportion to those stations' own daily trips (see
     /// ``GameWorld/dailyDemand(from:to:)``).
     public let dailyTrips: Int64
+    /// The people of a high-speed station's hinterland (decision 168): the
+    /// residents and jobs within ``HighSpeed/hinterlandRadius`` of it that
+    /// no other high-speed station is nearer to, in
+    /// `0...maximumHinterland`. They make the intercity trips between it and
+    /// the other high-speed stations (``HighSpeed/pairTrips(_:_:)``), which
+    /// are not part of its ``dailyTrips``. 0 for any other station.
+    public let hinterland: Int64
 
     /// The most trips a day a station can start: keeps every product of
     /// the demand's integer arithmetic well inside an `Int64`.
     public static let maximumDailyTrips: Int64 = 1_000_000
+    /// The most people a hinterland can have (a hundred million, far beyond
+    /// any real one), small enough that every product of the intercity
+    /// trips' arithmetic fits an `Int64`.
+    public static let maximumHinterland: Int64 = 100_000_000
 
-    public init(kind: StationDemandKind, dailyTrips: Int64) {
+    public init(kind: StationDemandKind, dailyTrips: Int64, hinterland: Int64 = 0) {
         self.kind = kind
         self.dailyTrips = dailyTrips
+        self.hinterland = hinterland
     }
 
     var isValid: Bool {
-        (0...Self.maximumDailyTrips).contains(dailyTrips)
+        (0...Self.maximumDailyTrips).contains(dailyTrips) && (0...Self.maximumHinterland).contains(hinterland)
     }
 
     /// How busy each hour of the day is for every trip, in thousandths:
@@ -159,24 +171,37 @@ public struct StationDemand: Hashable, Sendable {
     /// A station's trips on game day `day`: its daily trips times the
     /// day's ``weekdayFactors``, rounded half up.
     public func trips(onDay day: Int64) -> Int64 {
-        (dailyTrips * Self.weekdayFactors[Self.weekday(ofDay: day)] + 500) / 1_000
+        Self.trips(dailyTrips, onDay: day)
+    }
+
+    /// `trips` a day times the day's ``weekdayFactors``, rounded half up.
+    static func trips(_ trips: Int64, onDay day: Int64) -> Int64 {
+        (trips * Self.weekdayFactors[Self.weekday(ofDay: day)] + 500) / 1_000
     }
 }
 
 extension StationDemand: Codable {
     private enum CodingKeys: String, CodingKey {
-        case kind, dailyTrips
+        case kind, dailyTrips, hinterland
     }
 
     /// Decodes a demand, rejecting daily trips outside
-    /// `0...maximumDailyTrips`.
+    /// `0...maximumDailyTrips`. A station with no hinterland (decision 168,
+    /// save version 43) has no `"hinterland"`, which is also how demands
+    /// saved before it read.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(StationDemandKind.self, forKey: .kind)
         dailyTrips = try container.decode(Int64.self, forKey: .dailyTrips)
-        guard isValid else {
+        hinterland = try container.decodeIfPresent(Int64.self, forKey: .hinterland) ?? 0
+        guard (0...Self.maximumDailyTrips).contains(dailyTrips) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .dailyTrips, in: container, debugDescription: "A station starts 0 to \(Self.maximumDailyTrips) trips a day."
+            )
+        }
+        guard (0...Self.maximumHinterland).contains(hinterland) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .hinterland, in: container, debugDescription: "A hinterland has 0 to \(Self.maximumHinterland) people."
             )
         }
     }
@@ -185,5 +210,8 @@ extension StationDemand: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(kind, forKey: .kind)
         try container.encode(dailyTrips, forKey: .dailyTrips)
+        if hinterland != 0 {
+            try container.encode(hinterland, forKey: .hinterland)
+        }
     }
 }

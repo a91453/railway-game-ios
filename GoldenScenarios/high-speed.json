@@ -1,0 +1,978 @@
+{
+ "schemaVersion": 65,
+ "description": "A high-speed line (schema 65, decision 168), 44 steps. A straight road 61 km long with three stations on it: A at its west end, N 5 km along (numbered 3) and B 61 km along (numbered 2), platforms of 128 m, and the line Fast A-N-B, all day, every ten minutes with three trains, planned at PERF_HSR; network routing. Before it is a high-speed line a trip from A to B pays the network's flat $5 (500 cents). setLineHighSpeed makes it one (again changes nothing; an unknown line is refused). The stations are given hinterlands, which the land would otherwise count: A 2,000,000 people (homes), N 500,000 (shops) and B 1,000,000 (offices), none with trips of their own. Between two high-speed stations the intercity trips of a day, one way, are K x a x b with K = 2,400 for a million and a million, in millions and rounded down a step at a time, kept by a share of the straight-line distance (none up to 10 km, all from 80 km, in a straight line between), rounded half up: A to B, 61 km, 2 x 1 x 2,400 = 4,800, 728 thousandths of it = 3,494 (1000 x (3,904,000 - 640,000) / 4,480,000 = 728.6); N to B, 56 km, 0.5 x 1 x 2,400 = 1,200, 657 thousandths = 788; A to N, 5 km, none. Both ways the same. The fastest routes take under the half hour a trip is kept whole for (three trains, every ten minutes), so the minutes take nothing off. The hours are the day's shape times the origin's departure peak and the destination's arrival peak (tools/golden-checks/high_speed.py works every value out from the rules). A trip that rides the line pays the high-speed fare, max(20, round(km x .45)) dollars for the straight-line distance, if that is more than the network's: A to B 61 km = 27.45, $27 = 2,700 cents; A to N 5 km = 2.25, the least $20 = 2,000; N to B 56 km = 25.2, $25 = 2,500; without the line, 500. A freight line is not a high-speed line nor the other way round (lineIsFreight, lineIsHighSpeed).",
+ "initialState": {
+  "worldWidth": 5000000,
+  "worldHeight": 200000,
+  "balance": 100000000000,
+  "costs": {
+   "track": 100,
+   "station": 1000,
+   "train": 5000
+  },
+  "gameMinutes": 0,
+  "speed": "paused"
+ },
+ "steps": [
+  {
+   "command": {
+    "type": "buildTrackNode",
+    "x": 100000,
+    "y": 100000,
+    "z": 0
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackNode",
+    "x": 420000,
+    "y": 100000,
+    "z": 0
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackNode",
+    "x": 4004000,
+    "y": 100000,
+    "z": 0
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackEdge",
+    "from": 1,
+    "to": 2,
+    "curve": {
+     "type": "straight"
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackEdge",
+    "from": 2,
+    "to": 3,
+    "curve": {
+     "type": "straight"
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildStationAt",
+    "name": "A",
+    "point": {
+     "x": 100000,
+     "y": 100000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildStationAt",
+    "name": "B",
+    "point": {
+     "x": 4004000,
+     "y": 100000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildStationAt",
+    "name": "N",
+    "point": {
+     "x": 420000,
+     "y": 100000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "addTrackPlatform",
+    "station": 1,
+    "edge": 1,
+    "start": 0,
+    "end": 8192
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "addTrackPlatform",
+    "station": 3,
+    "edge": 1,
+    "start": 311808,
+    "end": 320000
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "addTrackPlatform",
+    "station": 3,
+    "edge": 2,
+    "start": 0,
+    "end": 8192
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "addTrackPlatform",
+    "station": 2,
+    "edge": 2,
+    "start": 3575808,
+    "end": 3584000
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "createLine",
+    "name": "Fast",
+    "stops": [
+     1,
+     3,
+     2
+    ]
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineServiceWindow",
+    "line": 1,
+    "window": {
+     "type": "allDay"
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineTargetHeadways",
+    "line": 1,
+    "targetHeadways": {
+     "peak": 10,
+     "offPeak": 10,
+     "low": 10
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLinePerformance",
+    "line": 1,
+    "performance": "highSpeed"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "purchaseTrain",
+    "name": "One"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "purchaseTrain",
+    "name": "Two"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "purchaseTrain",
+    "name": "Three"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "assignTrain",
+    "train": 1,
+    "line": 1
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "assignTrain",
+    "train": 2,
+    "line": 1
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "assignTrain",
+    "train": 3,
+    "line": 1
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setPassengerRoutingMode",
+    "mode": "network"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "observe": {
+    "type": "tripFare",
+    "from": 1,
+    "to": 2
+   },
+   "expect": {
+    "found": true,
+    "fare": 500
+   }
+  },
+  {
+   "command": {
+    "type": "setLineHighSpeed",
+    "line": 1,
+    "enabled": true
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineHighSpeed",
+    "line": 1,
+    "enabled": true
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineHighSpeed",
+    "line": 9,
+    "enabled": true
+   },
+   "expect": {
+    "result": "unknownLine",
+    "line": 9
+   }
+  },
+  {
+   "command": {
+    "type": "setStationDemand",
+    "station": 1,
+    "demand": {
+     "kind": "residential",
+     "dailyTrips": 0,
+     "hinterland": 2000000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setStationDemand",
+    "station": 3,
+    "demand": {
+     "kind": "shopping",
+     "dailyTrips": 0,
+     "hinterland": 500000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setStationDemand",
+    "station": 2,
+    "demand": {
+     "kind": "office",
+     "dailyTrips": 0,
+     "hinterland": 1000000
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "observe": {
+    "type": "demand",
+    "from": 1,
+    "to": 2
+   },
+   "expect": {
+    "daily": 3494,
+    "hourly": [
+     13,
+     13,
+     13,
+     13,
+     13,
+     13,
+     120,
+     387,
+     597,
+     387,
+     133,
+     111,
+     109,
+     112,
+     114,
+     117,
+     195,
+     195,
+     234,
+     195,
+     130,
+     132,
+     135,
+     13
+    ]
+   }
+  },
+  {
+   "observe": {
+    "type": "demand",
+    "from": 2,
+    "to": 1
+   },
+   "expect": {
+    "daily": 3494,
+    "hourly": [
+     13,
+     13,
+     13,
+     13,
+     13,
+     13,
+     92,
+     192,
+     231,
+     192,
+     103,
+     105,
+     108,
+     110,
+     113,
+     120,
+     246,
+     383,
+     591,
+     383,
+     164,
+     136,
+     134,
+     13
+    ]
+   }
+  },
+  {
+   "observe": {
+    "type": "demand",
+    "from": 3,
+    "to": 2
+   },
+   "expect": {
+    "daily": 788,
+    "hourly": [
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     22,
+     58,
+     80,
+     60,
+     27,
+     27,
+     30,
+     32,
+     34,
+     35,
+     58,
+     60,
+     75,
+     63,
+     39,
+     35,
+     32,
+     3
+    ]
+   }
+  },
+  {
+   "observe": {
+    "type": "demand",
+    "from": 2,
+    "to": 3
+   },
+   "expect": {
+    "daily": 788,
+    "hourly": [
+     3,
+     3,
+     3,
+     3,
+     3,
+     3,
+     19,
+     39,
+     49,
+     43,
+     25,
+     27,
+     30,
+     32,
+     32,
+     34,
+     64,
+     84,
+     115,
+     79,
+     37,
+     30,
+     28,
+     3
+    ]
+   }
+  },
+  {
+   "observe": {
+    "type": "demand",
+    "from": 1,
+    "to": 3
+   },
+   "expect": {
+    "daily": 0,
+    "hourly": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "observe": {
+    "type": "tripFare",
+    "from": 1,
+    "to": 2
+   },
+   "expect": {
+    "found": true,
+    "fare": 500
+   }
+  },
+  {
+   "observe": {
+    "type": "tripFare",
+    "from": 1,
+    "to": 2,
+    "highSpeed": true
+   },
+   "expect": {
+    "found": true,
+    "fare": 2700
+   }
+  },
+  {
+   "observe": {
+    "type": "tripFare",
+    "from": 1,
+    "to": 3,
+    "highSpeed": true
+   },
+   "expect": {
+    "found": true,
+    "fare": 2000
+   }
+  },
+  {
+   "observe": {
+    "type": "tripFare",
+    "from": 3,
+    "to": 2,
+    "highSpeed": true
+   },
+   "expect": {
+    "found": true,
+    "fare": 2500
+   }
+  },
+  {
+   "command": {
+    "type": "enableFreight"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "createLine",
+    "name": "Goods",
+    "stops": [
+     1,
+     2
+    ]
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineFreight",
+    "line": 2,
+    "enabled": true
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setLineHighSpeed",
+    "line": 2,
+    "enabled": true
+   },
+   "expect": {
+    "result": "lineIsFreight",
+    "line": 2
+   }
+  },
+  {
+   "command": {
+    "type": "setLineFreight",
+    "line": 1,
+    "enabled": true
+   },
+   "expect": {
+    "result": "lineIsHighSpeed",
+    "line": 1
+   }
+  }
+ ],
+ "expectedFinalState": {
+  "accounts": {
+   "days": [],
+   "fareRules": null,
+   "ledger": [],
+   "mode": "free",
+   "openedAt": null,
+   "pending": {
+    "departures": 0,
+    "fareRevenue": 0,
+    "fareTrips": 0,
+    "passengers": 0,
+    "seats": 0,
+    "trainDistance": 0
+   }
+  },
+  "balance": 99999600700,
+  "freight": {
+   "delivered": 0,
+   "facilities": [],
+   "loads": [],
+   "lost": 0,
+   "pendingRevenue": 0,
+   "produced": 0,
+   "spilled": 0
+  },
+  "gameMinutes": 0,
+  "lines": [
+   {
+    "highSpeed": true,
+    "id": 1,
+    "lastDispatch": null,
+    "name": "Fast",
+    "patterns": [],
+    "performance": "highSpeed",
+    "stops": [
+     1,
+     3,
+     2
+    ],
+    "targetHeadways": {
+     "low": 10,
+     "offPeak": 10,
+     "peak": 10
+    },
+    "trains": [
+     1,
+     2,
+     3
+    ],
+    "trainsInService": {
+     "low": 0,
+     "offPeak": 0,
+     "peak": 0
+    },
+    "window": {
+     "type": "allDay"
+    }
+   },
+   {
+    "freight": true,
+    "id": 2,
+    "lastDispatch": null,
+    "name": "Goods",
+    "patterns": [],
+    "stops": [
+     1,
+     2
+    ],
+    "targetHeadways": {
+     "low": null,
+     "offPeak": null,
+     "peak": null
+    },
+    "trains": [],
+    "trainsInService": {
+     "low": 0,
+     "offPeak": 0,
+     "peak": 0
+    },
+    "window": {
+     "close": 1440,
+     "open": 360,
+     "type": "hours"
+    }
+   }
+  ],
+  "network": {
+   "edges": [
+    {
+     "curve": {
+      "type": "straight"
+     },
+     "from": 1,
+     "id": 1,
+     "length": 320000,
+     "profile": {
+      "endTransition": 0,
+      "startTransition": 0
+     },
+     "structure": "surface",
+     "to": 2
+    },
+    {
+     "curve": {
+      "type": "straight"
+     },
+     "from": 2,
+     "id": 2,
+     "length": 3584000,
+     "profile": {
+      "endTransition": 0,
+      "startTransition": 0
+     },
+     "structure": "surface",
+     "to": 3
+    }
+   ],
+   "nodes": [
+    {
+     "id": 1,
+     "x": 100000,
+     "y": 100000,
+     "z": 0
+    },
+    {
+     "id": 2,
+     "x": 420000,
+     "y": 100000,
+     "z": 0
+    },
+    {
+     "id": 3,
+     "x": 4004000,
+     "y": 100000,
+     "z": 0
+    }
+   ],
+   "platforms": [
+    {
+     "edge": 1,
+     "end": 8192,
+     "start": 0,
+     "station": 1
+    },
+    {
+     "edge": 1,
+     "end": 320000,
+     "start": 311808,
+     "station": 3
+    },
+    {
+     "edge": 2,
+     "end": 8192,
+     "start": 0,
+     "station": 3
+    },
+    {
+     "edge": 2,
+     "end": 3584000,
+     "start": 3575808,
+     "station": 2
+    }
+   ]
+  },
+  "passengerRoutingMode": "network",
+  "passengers": [
+   {
+    "abandoned": 0,
+    "arrived": 0,
+    "demand": {
+     "dailyTrips": 0,
+     "hinterland": 2000000,
+     "kind": "residential"
+    },
+    "overflowed": 0,
+    "refused": 0,
+    "released": 0,
+    "station": 1,
+    "waiting": []
+   },
+   {
+    "abandoned": 0,
+    "arrived": 0,
+    "demand": {
+     "dailyTrips": 0,
+     "hinterland": 1000000,
+     "kind": "office"
+    },
+    "overflowed": 0,
+    "refused": 0,
+    "released": 0,
+    "station": 2,
+    "waiting": []
+   },
+   {
+    "abandoned": 0,
+    "arrived": 0,
+    "demand": {
+     "dailyTrips": 0,
+     "hinterland": 500000,
+     "kind": "shopping"
+    },
+    "overflowed": 0,
+    "refused": 0,
+    "released": 0,
+    "station": 3,
+    "waiting": []
+   }
+  ],
+  "riders": [],
+  "serviceDay": [
+   {
+    "level": "low",
+    "start": 0
+   },
+   {
+    "level": "peak",
+    "start": 420
+   },
+   {
+    "level": "offPeak",
+    "start": 600
+   },
+   {
+    "level": "peak",
+    "start": 960
+   },
+   {
+    "level": "offPeak",
+    "start": 1200
+   },
+   {
+    "level": "low",
+    "start": 1260
+   }
+  ],
+  "speed": "paused",
+  "stations": [
+   {
+    "id": 1,
+    "name": "A",
+    "point": {
+     "x": 100000,
+     "y": 100000
+    }
+   },
+   {
+    "id": 2,
+    "name": "B",
+    "point": {
+     "x": 4004000,
+     "y": 100000
+    }
+   },
+   {
+    "id": 3,
+    "name": "N",
+    "point": {
+     "x": 420000,
+     "y": 100000
+    }
+   }
+  ],
+  "trafficControl": false,
+  "trains": [
+   {
+    "cars": 1,
+    "execution": {
+     "type": "inactive"
+    },
+    "id": 1,
+    "movement": {
+     "cursor": 0,
+     "edges": [],
+     "rate": 0
+    },
+    "name": "One",
+    "position": {
+     "type": "unplaced"
+    },
+    "repeat": {
+     "type": "once"
+    },
+    "reservation": [],
+    "timetable": [],
+    "trailEdges": []
+   },
+   {
+    "cars": 1,
+    "execution": {
+     "type": "inactive"
+    },
+    "id": 2,
+    "movement": {
+     "cursor": 0,
+     "edges": [],
+     "rate": 0
+    },
+    "name": "Two",
+    "position": {
+     "type": "unplaced"
+    },
+    "repeat": {
+     "type": "once"
+    },
+    "reservation": [],
+    "timetable": [],
+    "trailEdges": []
+   },
+   {
+    "cars": 1,
+    "execution": {
+     "type": "inactive"
+    },
+    "id": 3,
+    "movement": {
+     "cursor": 0,
+     "edges": [],
+     "rate": 0
+    },
+    "name": "Three",
+    "position": {
+     "type": "unplaced"
+    },
+    "repeat": {
+     "type": "once"
+    },
+    "reservation": [],
+    "timetable": [],
+    "trailEdges": []
+   }
+  ]
+ }
+}

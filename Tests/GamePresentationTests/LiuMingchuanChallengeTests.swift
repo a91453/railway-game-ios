@@ -64,7 +64,7 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         }
         // Without an era: the reference's types and the standard car.
         let free = GameWorld.newGame()
-        XCTAssertEqual(free.offeredTrainTypes, TrainType.reference)
+        XCTAssertEqual(free.offeredTrainTypes, TrainType.offered)
         XCTAssertTrue(free.offersStandardCar)
     }
 

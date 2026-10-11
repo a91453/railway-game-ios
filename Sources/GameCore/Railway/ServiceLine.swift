@@ -343,6 +343,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// facility, and no passenger rides it. Set by
     /// ``GameWorld/setLineFreight(_:to:)`` only.
     public internal(set) var isFreight: Bool = false
+    /// Whether the line is a high-speed line (decision 168): those who ride
+    /// it pay the high-speed fare for how far they go
+    /// (``HighSpeed/fare(squaredDistance:)``), and its stations draw the
+    /// intercity trips of the people round them (``HighSpeed``). Set by
+    /// ``GameWorld/setLineHighSpeed(_:to:)`` only; a freight line is never
+    /// one.
+    public internal(set) var isHighSpeed: Bool = false
 
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1
@@ -895,7 +902,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight
+        case runs, runDays, freight, highSpeed
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -938,6 +945,14 @@ extension ServiceLine: Codable {
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
         isFreight = try container.decodeIfPresent(Bool.self, forKey: .freight) ?? false
+        // Decision 168 (save version 43): a high-speed line has
+        // `"highSpeed": true`, and is not a freight line.
+        isHighSpeed = try container.decodeIfPresent(Bool.self, forKey: .highSpeed) ?? false
+        guard !(isFreight && isHighSpeed) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .highSpeed, in: container, debugDescription: "Line \(id.rawValue) cannot be both a freight line and a high-speed line."
+            )
+        }
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -1020,6 +1035,9 @@ extension ServiceLine: Codable {
         try container.encodeIfPresent(color, forKey: .color)
         if isFreight {
             try container.encode(true, forKey: .freight)
+        }
+        if isHighSpeed {
+            try container.encode(true, forKey: .highSpeed)
         }
         if hasRuns {
             try container.encode(runs, forKey: .runs)
