@@ -4547,6 +4547,39 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 底圖的 OSM 是 2026-10-08 的，水域、分區、地點是 2026-10-06 的檔（那份已經下載不到），兩天的差別。
 - 還沒有 3D 建物與 3D 地形（地形圖磚之後可以直接給 MapLibre 的 `terrain` 用），沒有興趣點；台灣以外仍要網路，也沒有山的陰影。
 
+### 152. 3D 城市試作：照搬 jeantimex/tokyo 的網頁 renderer，地點改成高雄車站
+
+2026-10-11，接研究 [PROCEDURAL_CITY_STUDY.md](research/PROCEDURAL_CITY_STUDY.md)（#323）。作者在 iPhone 17 Pro 的 Safari 試過 Tokyo 的輕量版（視野 400 m、不畫雲、鳥與車流）可行，選「直接照搬」，不先翻成 Swift。號碼依工作登記 #231：決策 152（148–150 由審查 session 保留，151 由自製 OSM 底圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+參考檢查：私有參考庫（`581db83`）的 city_world 有台灣風格的地塊生成器、圖塊 LOD 與設施 pool，但都是壓縮過的打包檔，缺 `regionDriver`（研究文件 §4）；這一步照作者的選擇用 Tokyo 可讀的原始碼。外部專案：[jeantimex/tokyo](https://github.com/jeantimex/tokyo)（`17c8bbe`，MIT，Copyright (c) 2026 Yong Su），整個網頁原樣放進 `Web/CityView/`；它打包的程式庫 three.js（MIT）、postprocessing（Zlib）、N8AO（ISC）、takram three-geospatial（MIT）、ez-tree（MIT）、lil-gui（MIT）、earcut（ISC），貼圖是 Poly Haven（CC0）。授權全文隨 App 提供（`Resources/Licenses/CityView-NOTICES.md`，`tools/procedural-city/notices.mjs` 產生）。
+
+1. **照搬**：`Web/CityView/` 是 Tokyo 的原始碼（`src/`、`tools/pipeline/`、`index.html`、`package.json` 與 lock）。改的地方都標了「Along the Line」，清單在 `Web/CityView/ALONG_THE_LINE.md`：
+   - 編譯工具多一種地點來源 `source: 'taiwan'`（`tools/pipeline/taiwan.mjs`、`config.mjs`、`compile.mjs`）：沒有 PLATEAU、國土地理院的資料，改讀下面的 Overture 與 OSM；地面先是 0 m 的平地。
+   - 台灣靠右行駛：`roads.json` 帶 `rightHand`，車流（`traffic.js`）與標線（`markings.mjs`：方向箭頭、停止線在右半邊）照它；不畫日文的「止まれ」。
+   - 店招字型先用繁體中文（PingFang TC）；時鐘用地點的時區（台灣 UTC+8，原本固定 JST）；載入畫面的「東京」改成「沿線」。
+   - 環境貼圖修正：Tokyo 從原點、地面 0 m 的位置烘焙天空的環境貼圖，在高雄的緯度（22.6°）天空會算出 NaN，整個畫面變黑（在東京的緯度不會）。烘焙的位置抬高 10 m（`atmosphere.js` 的 `environmentSky`）。用 headless Chromium 逐一關掉效果、移動原點找到的。
+2. **台灣的資料**（`tools/procedural-city/taiwan_area.py`）：高雄車站周圍 1.5 × 1.5 km。
+   - 建物：Overture buildings（release `2026-09-23.1`，DuckDB 讀 S3），足跡與 Overture 知道的樓層、高度、用途。
+   - 道路、鐵路、公園、水域、樹、斑馬線、號誌、店名與街道設施：osmtoday 的 `taiwan.pbf`（pyosmium，決策 93），照 Tokyo 的 Overpass 查詢同樣的標籤寫成同樣的 JSON。
+   - 路面：Tokyo 的路面外框來自 PLATEAU；台灣用 OSM 中心線依車道數加寬（主要道路兩側加人行道），在圖塊邊界切開，再交給 Tokyo 原本的車道與人行道切分。
+   - 樓層：高雄車站這一帶 1,212 棟只有 33 棟（約 3%）在 Overture 有樓層或高度。沒有的暫時依足跡面積估：35 m² 以下 1–2 層、180 m² 以下 3–5 層（透天店屋）、700 m² 以下 5–10 層、3,000 m² 以下 7–14 層、更大的 2–5 層（車站、市場、賣場），用建物的雜湊分散。用途對到 PLATEAU 的代碼（大多是 413 店舖併用住宅：一樓店面）。之後接上遊戲時改用土地格的密度（D1–D4）。
+   - 結果：1,212 棟建物、70 km 道路、147 塊中文店招、1,351 棵樹、1,169 支電線桿；54 個 256 m 圖塊，共 2.0 MB。
+3. **建置**（`tools/procedural-city/build_city_view.sh`）：編譯圖塊、把貼圖縮成 512 px（14.2 MB → 0.7 MB；頁面本來就把每層放大到 1024 px）、Vite 建置，輸出到 `RailwayGameApp/Resources/CityView/`（約 12 MB，其中 JS 5.5 MB、雲的資料 3.8 MB），以資料夾參照放進 App（`project.yml`），提交建置結果。原始資料與 `node_modules` 不提交。
+4. **App**：
+   - 設定頁多一節「試作」，「3D 城市：高雄車站」全螢幕開啟 `CityView3D`。
+   - 網頁不能從 `file:` 執行（ES module、worker 與讀圖塊的 `fetch` 都要網頁來源），所以 App 在 loopback 位址開一個只服務這個資料夾的 HTTP 伺服器（`CityViewServer`，Network 框架，系統挑埠號，網路上的其他裝置連不到），WKWebView 讀 `http://localhost:<port>/index.html?area=kaohsiung&radius=400&clouds=0&birds=0&traffic=0`（作者試過的輕量版）。ATS 允許 `localhost` 這類不含點的網域，不需要例外。
+   - 哪個檔、回應的檔頭由 GamePresentation 的 `CityViewServing` 決定（不能離開資料夾：`..`、隱藏檔、反斜線、NUL 都拒絕），Linux 上有測試。
+   - 離開頁面的連結（Tokyo 的 GitHub 連結）用瀏覽器開；網頁的程序被系統結束時（記憶體）重新載入。
+   - 不讀 GameCore：車流、光線、時間都是頁面自己的。
+5. **出處**：資料來源畫面多一節「3D 城市試作」（Procedural Tokyo 與它打包的程式庫、Poly Haven），Overture 與 OSM 的說明加上 3D 試作。
+
+**限制與之後**：
+- 只在 iPhone 17 Pro 的 Safari 試過 Tokyo 原本的東京；這個 App 內的高雄版本在實機上的幀時間、記憶體、發熱都還沒量（UNVERIFIED），較舊的 iPhone 也沒試。
+- 高雄車站一帶的鐵路與捷運都在地下，畫面裡看不到列車。
+- 地面是平的；之後接 H1 的高度格網（Copernicus DEM）。
+- 外觀仍是 Tokyo 的東京：日本式電線桿、販賣機、色盤與陽台。台灣的零件（騎樓、鐵窗、頂樓加蓋）在參考庫的 city_world，之後移植。
+- 之後要接上遊戲：玩家的軌道與列車（`railwaySnapshot()`）、土地格的密度決定樓層、決策 146 收購的建物不畫。
+
 ### 154. 國定假日與干擾事件的骨架
 
 2026-10-11，`docs/research/DISRUPTION_STUDY.md` 方案 B 的第一步。作者選了 B → Q4 → A，並決定國定假日用遊戲固定曆法、但實景地圖依所在國家放各自的假日；預設難度與挑戰交給 Claude Code 決定（輕；挑戰先關）。號碼依工作登記 #231：存檔版本 37（36 是劉銘傳劇本的，決策 153）、決策 154（148–152 由其他 session 登記或使用）、golden schema 57。
