@@ -2571,7 +2571,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 3. **在哪裡**：移動段（`advance` 的第 2 段）每台列車移動之後，`releasePassedTrack(_:)`（取代 T 的 `releaseEndedRoute(_:)`，決策 32 第 16 點留下的接點）。沒有移動的列車不變。
 4. **以秒批次推進仍然精確**：同一個基本步長裡，路被持有的出發（服務停在站上、出發時刻已到）每一步重試。T 的軌道只在某台列車走完路時釋放，批次在那一秒結束就夠了（`secondsUntilARouteEnds`）。U1 的釋放是連續的，所以批次也在「等待中的出發需要的軌道空出來」的那一秒結束（`secondsUntilARouteFrees(_:from:within:)`）：
    - 出發段（第 1 段）被擋的出發把它需要的軌道記下（`HeldRoute`，`Reserving.held` 多帶 `needs`）；
-   - 在世界的複本上讓列車移動 k 秒（同一個 `moveTrains`，會釋放），看是否有一個等待的出發已經沒有持有者；其他列車的持有在批次裡只會變小，所以這是單調的，對 k 二分搜尋；
+   - 在世界的複本上讓列車移動 k 秒（同一個 `moveTrains`，會釋放），看是否有一個等待的出發已經沒有持有者；其他列車的持有在批次裡只會變小，所以這是單調的，對 k 二分搜尋。只問到批次的最後一秒之前（2026-10-11 補充）：批次在某台列車走完路的那一秒結束，那一秒它已不再帶領跟在後面的列車（Stage U2），「走 k 秒後可以跟車出發」在那一秒可能又變回否；只問到 `span − 1`，在 `span` 才空出的照舊由下一步重試。之前問 `span` 得到否就整段跳過，`TrafficFollowingPropertyTests` 的壓力種子 `9E03B1A53EA6991E` 第 0 例因此晚了 31 秒才跟車出發；
    - 批次結束在最小的那個 k，下一步從那一秒開始，出發照 ID 順序重試，與逐秒推進相同。
    - 只在有等待的出發時才計算。派車只在整分鐘，批次本來就在整分鐘結束；指令在兩次 `advance` 之間，看到的都是釋放之後的狀態。釋放在批次結束時一次做，結果與逐秒相同（預約範圍單調）。
 5. **存檔**：格式不變（沒有新的 key，存檔版本不變：U1 寫成時是 5，F3d 之後是 6）。U1 之前的存檔裡，行駛中的列車可能還預約著已經走過的軌道（T 保留到路的終點）；照決策 32 第 14 點照樣讀取（多預約的資源只是保守），那段軌道一直被持有，列車下一次移動時釋放。讀檔的檢查不變：預約必須包含預約範圍。
@@ -4515,6 +4515,38 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **golden、存檔、replay**：`line-runs.json` 的班次兩個方向都開全線，預期值都不變。測試：`LineRunsTests.testOnlyTheWaysAndStretchesTheRunsGoAreServed`（直接路徑與全網路徑各一次；修之前沒有回程班時，回程方向每天仍有 500／21 人次）。
 
+### 151. 自製的 OSM 底圖：遊戲自己的樣式與台灣的離線圖磚（E3 第二步）
+
+2026-10-10，作者問「需要自製的 osm 嗎」，接著要求一個 PR 做兩步：(1) 遊戲自己的底圖樣式；(2) 台灣的圖磚由同一份整包檔產生、隨 App 打包。號碼依工作登記 #231：決策 151（148–150 由 #300–#326 審查的 session 保留）；存檔版本、golden schema 不動。
+
+**為什麼**：實景地圖的水域、分區、地點都來自 osmtoday 的台灣整包檔（決策 93、96、105），OSM 底圖（決策 97）卻是 OpenFreeMap 另一份一直在更新的 OSM，海岸、河面和遊戲的水域遮罩對不齊，底圖自己的建物也疊在遊戲的城市建物（決策 126）下面；沒有網路或 OpenFreeMap 停止服務時底圖是空白；Positron 不是遊戲的畫風；決策 97 留下的軍事設施標示也要自己控制圖層才拿得掉。
+
+參考檢查（`a91453/railway-reference-private` `581db83`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「自製的 OSM 底圖（決策 151）」）：`Ci/` 的 `osmSensitiveFacilityLabelFilter`／`applyOsmSensitiveFacilityLabelFilter`（直接移植）、`external/openfreemap-tiles/fonts/`（三個 glyph 範圍，和 OpenFreeMap 伺服器的檔逐位元相同）、`styles/liberty.json` 與 `planet.json`（OpenMapTiles schema 的圖層與欄位）；`Railway/site_archive_clean/data/offline_land_style.json`（沒網路時墊底的陸地，只取想法：底圖離線也要有陸地）與 `rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles；App 用 MapLibre Native 內建的 `pmtiles://`）。參考庫沒有產生圖磚的工具，`Ci/` 的虛擬島 `city.pmtiles` 本體也不在快照裡（gap → 原生）。新的 `OpenWorld/` 快照的地圖是 OSM 的點陣圖磚，沒有可用的。
+
+1. **圖磚**（`tools/basemap/build_basemap.py`，pyosmium，決策 93 同意的依賴）：讀實景資料同一份整包檔，切成 zoom 0–14 的 Mapbox Vector Tiles（4096 單位、64 的邊），寫成 PMTiles v3（gzip）。圖層照 OpenMapTiles schema 的一部分：`water`（海是台灣陸地外 2° 的框、海岸線的 704 個環是洞；湖、水庫、河面；魚塭不是水，決策 96）、`waterway`（河、運河、溪流）、`landcover`（森林、草地、濕地、沙灘；沒有農地）、`park`、`boundary`（縣市、鄉鎮市區）、`transportation`（國道到服務道路，匝道、橋、隧道；沒有鐵道、步道、停車場）、`transportation_name`、`place`。每一層從哪個 zoom 起、依面積的門檻在工具的常數與 README。切法照 geojson-vt（ISC）：點先排一次簡化順序，再由上一層切成四塊；整塊是海的圖磚往下全部同一份內容。2026-10-10 下載的檔（OSM 資料到 2026-10-08）：353,695 塊、12,340 種內容、47.4 MB，四核心約 3.5 分鐘。
+2. **樣式**（`BaseMapStyle`，GamePresentation，有測試）：遊戲自己寫的樣式 JSON，淺色、深色（顏色在 `docs/UI_THEME.md`）：地面是 `Palette.land`、字是 `ink`、淡藍的水、淡綠的森林與公園、白色道路（國道與快速道路暖黃）、虛線的縣市界；地名從直轄市到聚落分層，重要的放上層（MapLibre 先排上層）；巷弄的路名 15.5 級起才出現。沒有建物、土地使用、興趣點、鐵道；路名套 `Ci/` 的 `osmSensitiveFacilityLabelFilter`（`sensitiveFacilityLabelFilter()`）。同一份樣式也畫 OpenFreeMap 的圖磚（同一個 schema）：圖層名、`class` 都是 OpenMapTiles 的。
+3. **哪裡用哪份圖磚**（`BaseMapStyle.drawsTaiwan`）：地圖中心 2 km 內有台灣的陸地（水域格網 `WaterGrid.hasLand`，它把廈門等非台灣的陸地當海）就用打包的圖磚，否則（廈門、外國、沒有水域格網）用 OpenFreeMap 的。
+4. **字型**（`tools/basemap/fetch_glyphs.py`）：OpenFreeMap 的 Noto Sans glyph（OFL 1.1，`Resources/Licenses/NotoSans-OFL.txt`）。MapLibre Native 用裝置的字型畫中文、假名與諺文（`allowsFixedWidthGlyphGeneration`），整段都是這些字的範圍不放；地名用到的拉丁字母、標點與符號放真的 glyph（15 個範圍），其餘 179 個範圍是空的檔：MapLibre 某個範圍讀不到時（`GlyphManager::processResponse` 遇到錯誤就不再通知），整塊圖磚的文字都不排，所以要每個可能要的範圍都有檔。共 1.19 MB。打包的字型台灣以外也用。
+5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
+6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
+7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
+8. **山的陰影**（同日，作者問「沒有衛星好嗎」，同意不做衛星底圖、用地形陰影補上立體感；同一個 PR，不另取號）：衛星照片照舊是 Apple 地圖的「衛星」「混合」，給規劃時對照；遊戲的底圖不放衛星照片（照片裡真實的房子、道路、鐵道會和玩家的軌道、遊戲的城市疊在一起，也和遊戲的資料對不齊；授權與容量也不划算）。台灣的底圖改用遊戲自己的地面高度（`taiwan_heights.dat`，決策 124）畫山的陰影：`tools/basemap/build_terrain.py` 把它寫成 Terrarium 編碼的 512 像素 PNG（`raster-dem`），zoom 0–10（台灣約 70 m 一個像素，和高度的 1.875″ 一格相當；zoom 11 是 29 MB，只多了內插），只寫有陸地的圖磚：115 塊、10.0 MB，約 1 分鐘。樣式照 `Railway/` 網站的 `landscape-hillshade`（`rail-3d/integration/map3d.js`：陰影強度 0.42、光從 315°），顏色換成遊戲的（`docs/UI_THEME.md`），畫在森林、公園之上、水與道路之下；只有台灣的樣式有，台灣以外沒有地形資料。陰影和遊戲判斷路堤、路塹、隧道的高度是同一份資料。檢查：圖磚的高度和 `HeightGrid` 的同一點差 4–5 m 以內（像素中心與點的差），阿里山車站 2,207 m、玉山 3,881 m。
+9. **鐵道線形以 OSM 為準**（2026-10-11 作者：「既然底圖都是了就線形以 OSM 為準，只保留林鐵本線的多林一帶」）：`tools/real-railways/match_osm.py` 讀和底圖同一份整包檔，把 `Railway/` 網站原檔（TDX）的 79 條線沿 OSM 的軌道重畫，路線、站名、顏色照舊。做法照參考 `rail-3d/physical/topology.js`（軌道靠共用節點相接，`railwaySystem` 判斷系統，直接移植）：沿原線每 2 km 一個錨點，兩錨點間在該系統的軌道圖上找成本最低的路（長度 ×（1 +（離原線 ÷ 15 m）²）），每段接在上一段的終點，所以雙線只走一條；離原線超過 100 m 或附近沒有軌道的段保留原線並列出。結果：原線到新線的中位數多半 0–5 m，最多 77 m（高捷紅線草衙–機場，原本 `osm_patches.json` 手動修的那段；三段手動修正都在新線 2.5 m 內，修正檔與 `apply_osm_patches.py` 退休）。保留原線的只有：林鐵本線多林一帶約 1 km（`osm_exceptions.json`，OSM 只有已崩塌的多林隧道，way 340255673，最多差 90 m；工具也不再走任何名為已崩塌、已廢的線）；高鐵兩端畫進車輛基地的 1–1.4 km 與林鐵嘉義站頭 200 m（OSM 那裡沒有正線）。車站：同系統、同名的站一起移到新線最近的點（60 m 內，549 個站點，中位數 4 m、最多 57 m），台鐵車埕、高鐵板橋、機捷機場第一航廈超過 60 m 留在原處。
+   - **示範地圖**：平地版的實景示範（`RealWorldDemo.makeFlat`，平溪線挑戰用它）照線形重蓋，猴硐的待避線在新線形下和主線不到 4 m（`RailwayNetwork.trackSpacing`）而互相干涉（`network.fouls`），兩股道等於一條、排不出待避（`RealWorldDemoTests` 的猴硐待避測試抓到）。原因是待避線只離主線 5 m，貼合誤差卻是一般的 3 m（`TrackPlan.tolerance`）；地形版（`RealWorldDemoGround`）本來就在待避一帶用 1 m（`closeTolerance`）、整組一起蓋。平地版照做：主線的待避區段與整條待避線用 `closeTolerance`，待避線 `together` 一起蓋（漸變的第一段離主線不到 4 m，要靠下一段分開）。換回舊線形、舊車站的四種組合都排得出猴硐的待避。
+   - **預設底圖**（同日，作者同意）：實景地圖的預設底圖改成 OSM（`MapView` 的 `@AppStorage("realWorldMapStyle")` 預設 `.openStreetMap`，取代第 7 點與決策 97 的「Apple 地圖仍是預設」）。理由：底圖、鐵道線形、水域、分區、地形是同一份 OSM，台灣離線也有底圖，遊戲的畫風。`@AppStorage` 只在玩家選過時存值，所以選過 Apple 地圖、衛星或混合的玩家照舊；三種 Apple 地圖都留在選單裡。台灣以外也是 OSM（OpenFreeMap 的圖磚、同一份樣式；和 Apple 地圖一樣要網路，只是沒有服務保證）。選點畫面仍是 Apple 地圖。
+   - **測試的期望值**（不是 golden，是寫死的資料點）：`RealRailwaysTests` 的第一條線起點（移 5 m）與點數（485 → 245，OSM 的線簡化到 1 m）、平鎮站（移 4 m）、台北車站的錨點（移到地下的軌道上，比選點畫面的點往北 12 m）照新資料改，各有註解；原本「打包的線含有每段手動修正」的測試換成「三個 OSM 點在新線 3 m 內、多林段保留 TDX 的頂點」。golden、存檔、replay fixture 都不變（都沒有用到實景鐵道的檔）。
+
+**外部專案**：geojson-vt（https://github.com/mapbox/geojson-vt ，ISC）的 `clip.js`、`simplify.js` 移植成 Python，著作權聲明在工具的說明裡；PMTiles v3 規格（https://github.com/protomaps/PMTiles ）與 MVT 2.1 規格照文件自己寫編碼；評估過 Planetiler（Apache-2.0，OpenMapTiles 的 profile，要 Java 21，另外下載 Natural Earth 與 OSM 的海洋多邊形，是新的依賴）與 tippecanoe（BSD 2-Clause，要另外編譯 C++），都沒用：pyosmium 已經同意，切法本身不大。MapLibre Native 6.31.0 的原始碼確認了 `pmtiles://file://`（6.10.0 起，`pmtiles_file_source.cpp`）、本機檔的路徑解碼（`local_file_source.cpp`）、glyph 讀不到的行為與本機畫的字的範圍。
+
+**驗證**：Linux 上用 MapLibre GL JS 4.7.1 在 Chromium 畫打包的圖磚與樣式（台北、平溪、金門、全島，淺色與深色；巴黎用 OpenFreeMap 的圖磚）；`pmtiles`、`mapbox-vector-tile` 兩個 Python 套件讀得出每一層（只在 scratchpad 驗證用，不是依賴）。
+
+**限制**：
+- MapLibre Native 在 iOS 上畫打包的圖磚、讀本機 glyph 沒有在這個環境驗證（只有 CI 的 Xcode 建置）；要在實機上看。
+- App 多約 58 MB（圖磚 47.4 MB、地形 10.0 MB、字型 1.2 MB）。
+- 整包檔只有台灣：金門、馬祖對岸的陸地畫成海（和水域格網一致）。
+- 底圖的 OSM 是 2026-10-08 的，水域、分區、地點是 2026-10-06 的檔（那份已經下載不到），兩天的差別。
+- 還沒有 3D 建物與 3D 地形（地形圖磚之後可以直接給 MapLibre 的 `terrain` 用），沒有興趣點；台灣以外仍要網路，也沒有山的陰影。
+
 ### 152. 3D 城市試作：照搬 jeantimex/tokyo 的網頁 renderer，地點改成高雄車站
 
 2026-10-11，接研究 [PROCEDURAL_CITY_STUDY.md](research/PROCEDURAL_CITY_STUDY.md)（#323）。作者在 iPhone 17 Pro 的 Safari 試過 Tokyo 的輕量版（視野 400 m、不畫雲、鳥與車流）可行，選「直接照搬」，不先翻成 Swift。號碼依工作登記 #231：決策 152（148–150 由審查 session 保留，151 由自製 OSM 底圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -4547,6 +4579,84 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 地面是平的；之後接 H1 的高度格網（Copernicus DEM）。
 - 外觀仍是 Tokyo 的東京：日本式電線桿、販賣機、色盤與陽台。台灣的零件（騎樓、鐵窗、頂樓加蓋）在參考庫的 city_world，之後移植。
 - 之後要接上遊戲：玩家的軌道與列車（`railwaySnapshot()`）、土地格的密度決定樓層、決策 146 收購的建物不畫。
+
+### 154. 國定假日與干擾事件的骨架
+
+2026-10-11，`docs/research/DISRUPTION_STUDY.md` 方案 B 的第一步。作者選了 B → Q4 → A，並決定國定假日用遊戲固定曆法、但實景地圖依所在國家放各自的假日；預設難度與挑戰交給 Claude Code 決定（輕；挑戰先關）。號碼依工作登記 #231：存檔版本 37（36 是劉銘傳劇本的，決策 153）、決策 154（148–152 由其他 session 登記或使用）、golden schema 57。
+
+參考檢查（`a91453/railway-reference-private` `581db83`，研究文件第 2 節）：
+
+| 參考 | 本專案 | 方式 |
+| --- | --- | --- |
+| `Ci/.../aviation_disruptions__q_dc8f79f5de24b024.js` 的假日表 `x` 與 `K`（`[國家, 名稱, 天數, 加成]`） | `HolidayCalendar.countries`、`HolidayKind`、`Holiday.days`／`boost` | 直接搬名稱、天數、加成；來源載入時把每個加成再加 0.2（`E(e)`），那是航空遊戲自己的，不搬 |
+| `Railway/site_archive_clean/index.html` 的 `TW_DAYTYPE`（2026、2027 台灣假日） | 台灣那一列：多了和平紀念日、國慶日，清明是兒童節連假的 4 天 | 刻意改動：參考 `Ci/` 的台灣列少了這些 |
+| 來源以 `d(seed, key)` 隨機抽一個國家的假日 | 每年同一天 | 原生：鐵路的行事曆是已知的 |
+| （沒有） | 遊戲曆法上的月日、國家判定、難度 | gap → 原生 |
+
+外部專案：OpenTTD 的三級難度（無／減少／一般，GPL-2.0，只讀概念）是「輕／標準」的出處。
+
+1. **骨架**（GameCore，`Passenger/Holidays.swift`）：
+   - `GameWorld.disruptions`：國家代碼與難度（`DisruptionLevel` 的 `light`、`standard`），`nil` 是關閉。
+   - `setDisruptions(_:)` 免費；`Disruptions(level:country:)` 只接受 `HolidayCalendar` 有的國家。
+   - 之後的天候、故障（方案 B2、A）掛在同一個欄位與同一個難度上。
+2. **假日**：
+   - 24 個國家，每個假日是遊戲曆法（一年 360 天，12 個 30 天的月）上的某月某日，起算第幾天、連續幾天、加成千分比。
+   - 日期取 2026 年的實際日期（農曆與移動節日取那一年落在哪天），這是本專案的（gap）；每年同一天。
+   - `holiday(onDay:)`：那天放的假日，兩個重疊時取加成大的；`holidays(from:through:)` 列出幾天內的假日。
+   - 「輕」的加成是「標準」的一半，無條件捨去。
+3. **效果**：
+   - 假日當天，全網每站出發的旅次乘上 `1000 + 加成` 千分比（`holidayMultiplier`），和車站事件的倍數一起只四捨五入一次。沒有假日時倍數是 1000，算式和以前完全相同。
+   - 有每週需求時，假日照週末的時段分布（`isDemandWeekend`）。
+   - 吸引力（迄點權重）不變：全網一起乘不改變比例。
+   - 開啟時需求計畫每天重建（`demandDay`），批量、逐分鐘、存檔續玩都相同（`HolidayTests`）。
+4. **國家**（GamePresentation，`CountryLookup`）：
+   - 用 Natural Earth 1:50m 的國界（公有領域，`tools/country-borders/` 簡化到約 1 公里、寫成 `CountryBorders.swift`）判斷實景地圖中心在哪一國。
+   - 在國界外 30 公里內取最近的國家（港口、海灣）。
+   - 金門、馬祖在簡化的國界裡沒有，另用方框歸台灣。
+   - 都不是時用台灣。空白地圖也是台灣。
+   - 開新遊戲時算一次，存在存檔裡；不需要網路，每台裝置答案相同。
+5. **新遊戲**：`GameWorld.newGame` 開「輕」。
+   - 教學（`GameLauncher.startTutorial`）、沙盒挑戰與每週挑戰（`newGame(challenge:)`）、平溪線劇本都關閉：它們的目標是不放假量的（決策 145）。
+   - 設定頁（從遊戲打開時）多「這一局」的「連假與事件」：關／輕／標準，以及是哪一國的國定假日。改了是可以復原的編輯（`GameSession.setDisruptionLevel(_:)`）；重新打開時國家照舊，原本關閉的取地圖的國家。
+6. **提示**：
+   - 車站面板的「活動」區列出一週內的假日：「春節：全線需求 +20%，3 天後開始，連續 9 天」「……還有 5 天」。
+   - 站長在假日前 1 到 3 天提醒加開列車或加掛車廂（`holidayComing`），假日結束的隔天說連假期間每天多少人次、比連假前（同樣天數）多或少幾 %（`holidayOver`，只在經營模式、那些天都有帳時）。站長的順序在「煩惱」與第一條線的步驟之後、城市成長之前。
+7. **存檔 37**：世界多了 `"disruptions": {"country", "level"}`，只在開啟時寫；讀檔拒絕不認得的國家或難度。只讀到 35 的 build 會丟掉它，所以升版。版本 36 是工作登記給決策 153 的，這個 build 沒有它，讀到就拒絕（之後合併時拿掉這個例外）。新的 `SaveFixtures/v37-holidays.json`。
+8. **golden schema 57**：新指令 `setDisruptions`、觀察 `holiday`，最終狀態的 `disruptions`；新的 `holidays.json`，各小時的人次另以獨立的 Python 照規則重算。參考模型不放假，這份不在 `ReferenceWorldGoldenTests` 上重播。既有 golden、存檔與 replay 都不變（預設關閉，`ReplayState` 沒有新欄位）。
+
+**限制**：
+- 每年同一天：農曆與移動節日不會隨年份移動；
+- 國界簡化約 1 公里，邊界附近（例如深圳與香港之間）可能判成鄰國；只有 24 國有假日，其他國家用台灣的；
+- 固定班次的路線（決策 133）假日照平常的星期開，沒有「假日班表」；
+- 連假的去程、回程兩段高峰（參考的 `pilgrimage`）沒有做；
+- 天候、颱風、燃油指數是方案 B2；故障與檢修是方案 A（在 Q4 之後）。
+
+**沒有驗證的**：Linux 不能跑 App；設定頁的選單與車站面板的文字要在 macOS CI 與 TestFlight 上看。
+
+### 155. 貨運：貨運場、貨運路線與噸公里運費
+
+2026-10-11，作者要求依 `docs/research/FREIGHT_STUDY.md` 先做方案 C（最小貨運迴圈），一個 PR。號碼依工作登記 #231：決策 155、存檔版本 38、golden schema 58。
+
+規則（GameCore 的 `Freight/Freight.swift`；數字都是原生起始值，第 6 點量過）：
+1. **世界開關** `GameWorld.freight: FreightState?`：新世界與舊存檔是 `nil`（沒有貨運），`enableFreight()` 打開；只在打開時寫進存檔與 replay 狀態，所以沒有貨運的世界與以前逐位元相同。App 的新遊戲都打開（`NewGame`），打開了不花錢也不改任何數字，玩家蓋了貨運場才有貨運。
+2. **貨運場**（`buildFreightFacility(at:)`、`removeFreightFacility(at:)`）：車站可以加一座，$50,000（記為資本支出，不折舊，不開資產紀錄），最多存 2,000 噸，超過的貨溢出。拆掉貨運場，裡面的貨算損失，車上已裝的貨照樣送到。
+3. **生貨**：每個整點（包含遊戲第 0 小時）每座貨運場得到一小時的量：集貨半徑 1,600 公尺（`Freight.catchmentRadius`）內**離這座貨運場最近**（一樣近的，車站編號小的）的工業格，每個就業每天 0.5 噸；外地連絡站（決策 137）上的貨運場另有港口 200 噸一天。以千分之一噸累計（`accrual`，每 24,000 湊成一噸），整數、不用亂數。半徑 1,600 公尺不是乘客的 800 公尺：研究量到全台工業區只有 4.5% 在台鐵車站 1 公里內（`tools/freight-study/`）。
+4. **貨運路線**（`ServiceLine.isFreight`，`setLineFreight(_:to:)`，路線上沒有列車時才能改）：沒有人搭，客運的選路與計畫都略過它；它的列車照一般路線的派車、時刻與待避，容量是節數 × 40 噸（`Freight.tonsPerCar`）。
+5. **裝卸**（`exchangeCargo`，接在車門開完的 `exchangePassengers` 最前面）：停在有貨運場、沒封站的車站，先把車上**不是這站裝的**貨全部卸下並計運費，再（不是最後一站時）裝滿這站的存貨。貨在「下一個貨運場」卸，不做貨物配對、不做目的地。
+6. **運費**：噸 × 起訖站直線距離（公里）× $5（`centsPerTonKilometre` 500），每筆四捨五入到整元，只在經營模式計；每小時整點寫一列 `hourlyFreight`（`LedgerItem.freightRevenue`），在結算那小時的帳之前，所以午夜的稅算得到。自由模式貨照跑但不計錢。營運、維修、能源、人事照一般列車的公式，不另立。`BalanceReportTests.testAFreightLine` 量：新遊戲的第一個鎮到第二個鎮 5.4 公里、一列四節（160 噸），客運線建造 $1,228,400、營業利益每天 $213,875、5 天回本；貨運線（兩座貨運場多 $100,000）依貨源 10／60／150 格工業，第 3 天的貨運收入每天 $162,720／$182,445／$216,732，營業利益 $72,035／$91,760／$126,047，**18／14／10 天回本**：比客運慢，但貨多了可以一直加列車，客運會被需求卡住。一個滿載的客運車廂一趟 $1,430（286 座 × $5），一節貨車 40 噸 5.4 公里 $1,080，但只有單程載貨。
+7. **守恆**：做出的每一噸都是待運、車上、送達、溢出（貨運場滿了）或損失（貨運場、起點車站或列車沒了；列車離開貨運路線，下個整點車上的貨算損失）；`FreightState.isConserved`，存檔讀入時檢查。
+
+存檔版本 38：世界可以有 `"freight"`、路線可以有 `"freight": true`、帳本有 `hourlyFreight` 列與 `"freightRevenue"` 合計。舊版本的 build 會丟掉它們，所以它說存檔比自己新。為什麼貨運走路線的旗標而不是新的車種：`TrainType` 是參考庫 `TRAIN_TYPES` 的九種客車；`Train` 不動，貨運的狀態（車上的貨）放在 `FreightState`，不碰 `Train` 的編碼。為什麼運費不放進 `HourlyAccrual`：它是合成的 `Codable`，多一個欄位所有存檔都要有那個鍵。
+
+**參考**：參考庫沒有貨運規則（gap，見研究文件第 2 節）；OpenTTD（GPL-2.0）、Simutrans（Artistic 1.0）與 A 列車只讀概念，沒有複製任何程式碼或資料。
+
+**golden、存檔、replay**：新的 `freight.json`（schema 58）：貨運指令在沒打開時被拒、車站不存在被拒、同一站第二座貨運場被拒；三小時後 100 個就業做出 6 噸，全在 Alpha。新存檔 `SaveFixtures/v38-freight.json`（列車載著 40 噸、帳本有 `hourlyFreight`）。既有 golden、存檔與 replay fixture 都沒有改（`ReplayState` 只在貨運打開時多一行）。`GoldenScenarioTests` 與 `ReplayFixtureTests` 照舊全過。測試：`FreightTests`、`FreightSessionTests`。
+
+**限制**：
+- 貨運場不折舊（不是資產紀錄）；
+- 貨不配對目的地，也沒有易腐度、貨車種類、多種貨物；
+- 工業格只有就業，沒有產能；空白地圖的工業只來自城鎮與玩家劃的工業區；
+- 還沒有資材與城市成長的連結（方案 A 的第二步）、地圖上的貨運圖層。
 
 ## 目前規則摘要
 

@@ -137,6 +137,8 @@ extension GameWorld {
     /// on passengers (see ``boardPassengers(_:at:)``). Returns the larger of
     /// the two numbers, which sets how long the exchange takes.
     mutating func exchangePassengers(_ index: Int, at stop: Int, memo: inout DispatchMemo) -> Int64 {
+        // Decision 155: a freight line's train carries cargo, not people.
+        if let cargo = exchangeCargo(index, at: stop) { return cargo }
         guard !passengers.isEmpty || !riders.isEmpty else { return 0 }
         let train = trains[index]
         let entry = train.timetable[stop]

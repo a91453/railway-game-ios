@@ -805,6 +805,68 @@ final class TrafficFollowingPropertyTests: XCTestCase {
     }
 }
 
+extension TrafficFollowingPropertyTests {
+    /// A fixed case (seed 9E03B1A53EA6991E, case 1 under PROPERTY_STRESS=8,
+    /// cut to two trains): the follower stands at S2 with its head at 7168
+    /// on e2, exactly 25600 short of node 3, while the train ahead's tail
+    /// crosses node 3 onto e3's first span. The span lies past the node, so
+    /// the follower may set off only once the tail has left it (decision
+    /// 56, point 3): the reference model agrees with GameCore every minute.
+    func testAFollowerWaitsForTheFirstSpanPastANode() throws {
+        let minute: Int64 = 1_378
+        let costs = ConstructionCosts(track: 100, station: 1_000, train: 500)
+        var world = try GameWorld(bounds: WorldBounds(width: 204_800, height: 16_384), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
+        var model = ReferenceWorld(width: 204_800, height: 16_384, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)
+        func both(_ operation: TrafficControlPropertyTests.Operation) {
+            XCTAssertEqual(TrafficControlPropertyTests.apply(operation, to: &world), TrafficControlPropertyTests.apply(operation, to: &model), "\(operation)")
+        }
+        for index in 0...6 {
+            let node = WorldCoordinate(x: 2_048 + Int64(index) * 32_768, y: 8_192, z: 0)
+            _ = try world.buildTrackNode(at: node)
+            XCTAssertNil(model.buildNetworkNode(at: node))
+        }
+        for index in 1...6 {
+            _ = try world.buildTrackEdge(from: .node(index), to: .node(index + 1))
+            XCTAssertNil(model.buildNetworkEdge(from: .node(index), to: .node(index + 1), curve: .straight))
+        }
+        for (index, start) in [11_264, 3_072, 22_528, 23_552, 6_144, 24_576].enumerated() as EnumeratedSequence<[Int64]> {
+            let point = PlanPoint(x: 2_048 + Int64(index) * 32_768 + 16_384, y: 9_216)
+            _ = try world.buildStation(named: "S\(index + 1)", at: point)
+            XCTAssertNil(model.buildStation(named: "S\(index + 1)", at: point))
+            both(.addPlatform(StationID(rawValue: index + 1), .edge(index + 1), start, start + 4_096))
+        }
+        both(.trafficControl(true))
+        // The leader (1 car) at S2's berth, the follower (3 cars) at S1's.
+        for (cars, edge, offset) in [(1, 2, Int64(7_168)), (3, 1, 15_360)] {
+            let train = try world.purchaseTrain(named: "T").id
+            _ = model.purchaseTrain(named: "T")
+            try world.setTrainCars(train, to: cars)
+            _ = model.setCars(train, cars)
+            both(.place(train, .onEdge(TrackTraversal(edge: .edge(edge), direction: .forward), offset: offset)))
+            both(.path(train, [], offset))
+            both(.rate(train, 2_048))
+        }
+        func stop(_ station: Int, _ arrival: Int64, _ departure: Int64) -> ScheduledStop {
+            ScheduledStop(station: StationID(rawValue: station), arrival: GameTime(seconds: arrival), departure: GameTime(seconds: departure))
+        }
+        let (leader, follower) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        both(.run(leader, [stop(2, 82_740, 82_740), stop(3, 83_400, 83_400), stop(4, 84_120, 84_180)], nil))
+        both(.run(follower, [stop(1, 82_740, 82_740), stop(2, 82_980, 83_040), stop(3, 83_400, 83_460)], nil))
+        var followed = false
+        for _ in 0..<9 {
+            both(.advance(1))
+            var tally: [String: Int] = [:]
+            let problems = TrafficControlPropertyTests.differences(world, model, tally: &tally)
+            XCTAssertEqual(problems, [], "at \(world.clock.now.seconds)")
+            guard problems.isEmpty else { return }
+            if case .travellingToStop(2, cycle: 0)? = world.train(id: follower)?.execution, world.trainHoldingRoute(of: follower) == leader {
+                followed = true
+            }
+        }
+        XCTAssertTrue(followed, "the follower set off from S2 following the leader")
+    }
+}
+
 extension GameWorld {
     /// Where train `train` would stand turned round, for generating
     /// timetables that turn it first: its head at its tail, read through a

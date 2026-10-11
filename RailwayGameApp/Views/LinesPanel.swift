@@ -308,6 +308,24 @@ struct LinesPanel: View {
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
+            // Decision 155: a line that carries freight, offered once the
+            // game has a freight yard (or the line already carries freight).
+            if line.isFreight || session.world.freight?.facilities.isEmpty == false {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(isOn: Binding(
+                        get: { session.selectedLine?.isFreight ?? false },
+                        set: { session.setSelectedLineFreight($0) }
+                    )) {
+                        Text(verbatim: session.language.text("Freight line", "貨運路線"))
+                    }
+                    .disabled(!line.assignedTrains.isEmpty)
+                    .accessibilityIdentifier("line.freight")
+                    Text(verbatim: session.world.freightLineText(line.id, in: session.language)
+                        ?? session.world.freightLineHelp(in: session.language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
             PerformanceMenu(performance: line.performance, language: session.language) { performance in

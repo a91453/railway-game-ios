@@ -1,17 +1,23 @@
+import GameCore
 import GamePresentation
 import SwiftUI
 import UIKit
 
 /// The app's settings: the music and the sound effects on or off
 /// (``GameAudio``), from the start screen and the game menu. Kept on the
-/// device, never in a save. Under them, the 3D city preview (decision 152),
-/// the app's version and a way to report a problem (decision 127).
+/// device, never in a save. Under them, from a game, that game's own
+/// settings (decision 154); the 3D city preview (decision 152); the app's
+/// version and a way to report a problem (decision 127).
 struct SettingsView: View {
     let audio: GameAudio
     /// What is in the game the settings were opened from
     /// (``GameSession/problemReportGame``), for a problem report; `nil`
     /// from the start screen.
     var game: String? = nil
+    /// The game the settings were opened from, for its own settings
+    /// (decision 154: holidays and other events); `nil` from the start
+    /// screen.
+    var session: GameSession? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var showsCityView = false
 
@@ -32,6 +38,9 @@ struct SettingsView: View {
                 } footer: {
                     Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
                 }
+                if let session {
+                    eventsSection(session)
+                }
                 previewSection
                 aboutSection
             }
@@ -49,6 +58,41 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// Decision 154: how strongly the game's holidays (and later its other
+    /// events) bite, kept in the game's save, and whose holidays they are.
+    private func eventsSection(_ session: GameSession) -> some View {
+        let language = session.language
+        let levels: [DisruptionLevel?] = [nil, .light, .standard]
+        return Section {
+            Picker(selection: Binding(get: { session.world.disruptions?.level }, set: { session.setDisruptionLevel($0) })) {
+                ForEach(levels, id: \.self) { level in
+                    Text(verbatim: level?.title(in: language) ?? language.text("Off", "關")).tag(level)
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Holidays and events", "連假與事件"))
+                } icon: {
+                    Image(systemName: "calendar")
+                }
+            }
+            .accessibilityIdentifier("settings.disruptions")
+            if let country = session.world.disruptions?.country {
+                LabeledContent {
+                    Text(verbatim: holidayCountryName(country, in: language))
+                } label: {
+                    Text(verbatim: language.text("Public holidays of", "國定假日"))
+                }
+            }
+        } header: {
+            Text(verbatim: language.text("This game", "這一局"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Public holidays raise demand on every line, announced a week ahead. Light adds half as much as Standard. Kept in this game's save.",
+                "國定假日時各線需求增加，一週前公布。「輕」的增加是「標準」的一半。設定存在這一局的存檔裡。"
+            ))
         }
     }
 

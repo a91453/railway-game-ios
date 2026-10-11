@@ -43,13 +43,19 @@ targets:
       - path: Views
       - path: Resources
         excludes:
+          - "BaseMap"
+          - "BaseMap/**"
+          - "CityView"
           - "CityView/**"
+      # Decision 151: the base map's tiles and glyphs, copied as one folder
+      # (BaseMapFiles finds them by path; the fonts' ranges share names).
+      - path: Resources/BaseMap
+        type: folder
       # Decision 152: the 3D city view's web page (built from Web/CityView by
       # tools/procedural-city/build_city_view.sh), copied as one folder so its
       # relative paths (assets/, textures/, tiles/) stay as they are.
       - path: Resources/CityView
         type: folder
-        buildPhase: resources
     dependencies:
       - package: RailwayGame
         product: GameCore

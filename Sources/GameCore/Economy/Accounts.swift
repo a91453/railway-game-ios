@@ -58,6 +58,10 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// reference has no tax): half of what the day made before tax beyond
     /// ``CompanyAccounts/taxFreeProfit``.
     case incomeTax
+    /// The hour's freight delivered, in (decision 155; native, the
+    /// reference has no freight): tons by kilometres at
+    /// ``Freight/centsPerTonKilometre``.
+    case freightRevenue
 }
 
 /// One line of a ledger row's breakdown.
@@ -116,6 +120,9 @@ public struct LedgerEntry: Hashable, Sendable {
         case buildingDemolition
         /// A day's tax on its profit (decision 131).
         case dailyTax
+        /// An hour's freight delivered (decision 155), written beside the
+        /// hour's `hourlyNet` row.
+        case hourlyFreight
     }
 
     public let kind: Kind
@@ -160,6 +167,8 @@ public struct DayAccount: Hashable, Sendable {
     /// The tax on the day's profit (decision 131): not a running cost, so
     /// not in ``totalCost``.
     public internal(set) var taxCost: Money = .zero
+    /// Freight delivered that day (decision 155).
+    public internal(set) var freightRevenue: Money = .zero
 
     public init(day: Int64) {
         self.day = day
@@ -183,6 +192,7 @@ public struct DayAccount: Hashable, Sendable {
             case .propertyRent: propertyRevenue = propertyRevenue + line.amount
             case .propertyUpkeep, .propertyTax, .propertyDemolition: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
+            case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }
         }
     }
@@ -233,6 +243,8 @@ public struct FinanceSummary: Hashable, Sendable {
     public var saleBookValue: Money = .zero
     /// The tax on each day's profit (decision 131), paid in cash.
     public var taxCost: Money = .zero
+    /// The freight delivered (decision 155).
+    public var freightRevenue: Money = .zero
 
     /// The railway's running costs.
     public var totalCost: Money {
@@ -242,7 +254,7 @@ public struct FinanceSummary: Hashable, Sendable {
     /// Revenue less every running cost: the railway's, and since decision
     /// 94 the company's buildings'.
     public var operatingProfit: Money {
-        fareRevenue - totalCost + propertyRevenue - propertyCost
+        fareRevenue + freightRevenue - totalCost + propertyRevenue - propertyCost
     }
 
     /// The gain realized on the company's buildings sold, or the loss when
@@ -415,6 +427,7 @@ public struct CompanyAccounts: Hashable, Sendable {
             summary.saleProceeds = capitalTotal(\.saleProceeds)
             summary.saleBookValue = capitalTotal(\.saleBookValue)
             summary.taxCost = total(\.taxCost)
+            summary.freightRevenue = total(\.freightRevenue)
             return summary
         }
         return (summary(current), summary(current - 1))
@@ -435,7 +448,7 @@ extension FinanceSummary: Codable {
     private enum CodingKeys: String, CodingKey {
         case index, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost
         case depreciationCost, writeOffCost, capitalSpending, loanBorrowed, loanRepaid, propertyRevenue, propertyCost
-        case saleProceeds, saleBookValue, taxCost
+        case saleProceeds, saleBookValue, taxCost, freightRevenue
     }
 
     /// Decodes a closed year's statement; one without the company's
@@ -463,6 +476,7 @@ extension FinanceSummary: Codable {
         saleProceeds = try container.decodeIfPresent(Money.self, forKey: .saleProceeds) ?? .zero
         saleBookValue = try container.decodeIfPresent(Money.self, forKey: .saleBookValue) ?? .zero
         taxCost = try container.decodeIfPresent(Money.self, forKey: .taxCost) ?? .zero
+        freightRevenue = try container.decodeIfPresent(Money.self, forKey: .freightRevenue) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -484,13 +498,14 @@ extension FinanceSummary: Codable {
         if saleProceeds != .zero { try container.encode(saleProceeds, forKey: .saleProceeds) }
         if saleBookValue != .zero { try container.encode(saleBookValue, forKey: .saleBookValue) }
         if taxCost != .zero { try container.encode(taxCost, forKey: .taxCost) }
+        if freightRevenue != .zero { try container.encode(freightRevenue, forKey: .freightRevenue) }
     }
 }
 
 extension DayAccount: Codable {
     private enum CodingKeys: String, CodingKey {
         case day, fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, interestCost, fareTrips
-        case propertyRevenue, propertyCost, taxCost
+        case propertyRevenue, propertyCost, taxCost, freightRevenue
     }
 
     /// Decodes a day; a day without interest, as every day before loans,
@@ -510,6 +525,8 @@ extension DayAccount: Codable {
         propertyCost = try container.decodeIfPresent(Money.self, forKey: .propertyCost) ?? .zero
         // Decision 131: a day without tax has none.
         taxCost = try container.decodeIfPresent(Money.self, forKey: .taxCost) ?? .zero
+        // Decision 155: a day without freight has none.
+        freightRevenue = try container.decodeIfPresent(Money.self, forKey: .freightRevenue) ?? .zero
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -534,6 +551,9 @@ extension DayAccount: Codable {
         }
         if taxCost != .zero {
             try container.encode(taxCost, forKey: .taxCost)
+        }
+        if freightRevenue != .zero {
+            try container.encode(freightRevenue, forKey: .freightRevenue)
         }
     }
 }

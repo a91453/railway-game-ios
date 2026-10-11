@@ -55,6 +55,11 @@ enum ReplayState {
         for period in FinancePeriod.allCases {
             line("report \(json(ReportSummary(world.financeReport(period))))")
         }
+        // Decision 155: freight is written only while it is on, so a world
+        // without it keeps the checksums it had.
+        if let freight = world.freight {
+            line("freight \(json(FreightSummary(freight)))")
+        }
         for node in world.network.nodes {
             line("node \(node.id.number) \(node.position.x) \(node.position.y) \(node.position.z)")
         }
@@ -83,7 +88,7 @@ enum ReplayState {
             line("  stopped at \(world.stationsStoppedAt(by: train.id).map(\.rawValue))")
         }
         for entry in world.lines {
-            line("line \(entry.id.rawValue) \(entry.name) stops \(entry.stops.map(\.rawValue)) ring \(entry.isRing) window \(json(entry.window))")
+            line("line \(entry.id.rawValue) \(entry.name) stops \(entry.stops.map(\.rawValue)) ring \(entry.isRing) window \(json(entry.window))\(entry.isFreight ? " freight" : "")")
             line("  performance \(json(entry.performance)) trains \(json(entry.trainsInService)) targets \(json(entry.targetHeadways))")
             line("  roster \(entry.trains.map(\.rawValue)) last \(time(entry.lastDispatch)) outer \(time(entry.outerLastDispatch))")
             if !entry.routePreferences.isEmpty { line(" routes \(json(entry.routePreferences))") }

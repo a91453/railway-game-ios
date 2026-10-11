@@ -224,4 +224,10 @@ public enum GameError: Error, Hashable, Sendable {
     case trackOverWater
     /// A viaduct or bridge more than 64 m above the ground (decision 124).
     case structureTooHigh
+    /// A freight command in a world without freight (decision 155).
+    case freightNotEnabled
+    /// The station already has a freight facility (decision 155).
+    case freightFacilityExists(StationID)
+    /// The station has no freight facility (decision 155).
+    case noFreightFacility(StationID)
 }

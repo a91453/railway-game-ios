@@ -68,6 +68,8 @@ extension FinanceSummary {
             row(LedgerItem.propertyRent.displayName(in: language), \.propertyRevenue),
             row(language.text("Building upkeep, land tax and demolition", "建物維護、土地資產稅與拆除")) { out($0.propertyCost) },
         ] : []
+        // Decision 155: freight, only where it brought something in.
+        let freight = hasFreight(previous: previous) ? [row(LedgerItem.freightRevenue.displayName(in: language), \.freightRevenue)] : []
         // Decision 130: buildings sold, what they brought in less their
         // book value, the gain or loss realized; only where there were any.
         let sales = hasSales(previous: previous) ? [
@@ -82,6 +84,7 @@ extension FinanceSummary {
         ] : []
         return [
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
+        ] + freight + [
             row(LedgerItem.operatingCost.displayName(in: language)) { out($0.operatingCost) },
             row(LedgerItem.maintenanceCost.displayName(in: language)) { out($0.maintenanceCost) },
             row(language.text("Energy", "能源費用")) { out($0.energyCost) },
@@ -123,6 +126,7 @@ extension FinanceSummary {
         return [
             .section(language.text("Operating activities", "營業活動之現金流量")),
             row(LedgerItem.fareRevenue.displayName(in: language), \.fareRevenue),
+        ] + (hasFreight(previous: previous) ? [row(LedgerItem.freightRevenue.displayName(in: language), \.freightRevenue)] : []) + [
             row(language.text("Running costs paid", "營運支出")) { out($0.totalCost) },
         ] + property + [
             row(language.text("Interest paid", "利息支出")) { out($0.interestCost) },
@@ -175,6 +179,11 @@ extension FinanceSummary {
     /// or costs (decision 94).
     private func hasProperty(previous: FinanceSummary?) -> Bool {
         [self, previous].contains { $0.map { $0.propertyRevenue != .zero || $0.propertyCost != .zero } ?? false }
+    }
+
+    /// Whether this period or `previous` brought freight in (decision 155).
+    private func hasFreight(previous: FinanceSummary?) -> Bool {
+        [self, previous].contains { $0.map { $0.freightRevenue != .zero } ?? false }
     }
 
     /// Whether this period or `previous` paid tax (decision 131).

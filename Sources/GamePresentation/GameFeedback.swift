@@ -35,7 +35,7 @@ public struct IncomePulse: Hashable, Sendable {
 extension CompanyAccounts {
     /// The ledger items that are money in (``LedgerItem``): fares, settled
     /// each hour, and the company's buildings' rent, settled each day.
-    public static let incomeItems: Set<LedgerItem> = [.fareRevenue, .propertyRent]
+    public static let incomeItems: Set<LedgerItem> = [.fareRevenue, .propertyRent, .freightRevenue]
 
     /// The money in among the ledger rows written after `last` (the
     /// newest row before; `nil` when there was none): the sum of their

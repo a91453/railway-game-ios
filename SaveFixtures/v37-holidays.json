@@ -1,0 +1,523 @@
+{
+  "saveVersion" : 37,
+  "world" : {
+    "bounds" : {
+      "height" : 4096,
+      "width" : 16384
+    },
+    "clock" : {
+      "now" : 1800,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "disruptions" : {
+      "country" : "TW",
+      "level" : "standard"
+    },
+    "economy" : {
+      "balance" : 994700,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "L",
+        "stops" : [
+          1,
+          2,
+          3,
+          4
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 8,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 9,
+          "id" : 9,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 10,
+          "id" : 10,
+          "to" : 11
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 11,
+          "id" : 11,
+          "to" : 12
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 12,
+          "id" : 12,
+          "to" : 13
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 13,
+          "id" : 13,
+          "to" : 14
+        }
+      ],
+      "nextEdgeID" : 14,
+      "nextNodeID" : 15,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 7680,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 8704,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 9728,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 10752,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 12,
+          "x" : 11776,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 13,
+          "x" : 12800,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 14,
+          "x" : 13824,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 9,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 10,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 13,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 4
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 5,
+    "nextTrainID" : 1,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 1000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 1800
+          },
+          {
+            "destination" : 3,
+            "value" : 1800
+          },
+          {
+            "destination" : 4,
+            "value" : 1800
+          }
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 2000,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 2,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1800
+          },
+          {
+            "destination" : 4,
+            "value" : 1800
+          }
+        ],
+        "station" : 2,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 4,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1140
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1740
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 3000,
+          "kind" : "residential"
+        },
+        "overflowed" : 0,
+        "released" : 3,
+        "remainders" : [
+          {
+            "destination" : 1,
+            "value" : 1800
+          },
+          {
+            "destination" : 2,
+            "value" : 1800
+          },
+          {
+            "destination" : 4,
+            "value" : 2235
+          }
+        ],
+        "station" : 3,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 4,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 660
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1140
+          },
+          {
+            "count" : 1,
+            "destination" : 4,
+            "direction" : "outbound",
+            "line" : 1,
+            "since" : 1380
+          }
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 4000,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 6,
+        "remainders" : [
+          {
+            "destination" : 2,
+            "value" : 435
+          }
+        ],
+        "station" : 4,
+        "waiting" : [
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 540
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 840
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1140
+          },
+          {
+            "count" : 1,
+            "destination" : 2,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1680
+          },
+          {
+            "count" : 1,
+            "destination" : 1,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1740
+          },
+          {
+            "count" : 1,
+            "destination" : 3,
+            "direction" : "inbound",
+            "line" : 1,
+            "since" : 1740
+          }
+        ]
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S0",
+        "point" : {
+          "x" : 1536,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S1",
+        "point" : {
+          "x" : 5632,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S2",
+        "point" : {
+          "x" : 9728,
+          "y" : 1536
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "S3",
+        "point" : {
+          "x" : 13824,
+          "y" : 1536
+        }
+      }
+    ],
+    "trains" : [
+
+    ],
+    "weeklyDemand" : true
+  }
+}

@@ -90,11 +90,13 @@
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
+		CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */ = {isa = PBXBuildFile; fileRef = DA79BA929F6262FB0DD353E2 /* BaseMap */; };
 		CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = 825875E22D08C0197C0EC180 /* coins.wav */; };
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
 		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */ = {isa = PBXBuildFile; fileRef = 2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
+		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
 		DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */; };
 		DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
@@ -210,12 +212,14 @@
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
+		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
+		F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSans-OFL.txt"; sourceTree = "<group>"; };
 		F34F5FAD9996ED6204B4F23C /* tra_station_class.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_class.json; sourceTree = "<group>"; };
 		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
 		F655E31850005DBAC32D5142 /* OSMMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSMMapBackground.swift; sourceTree = "<group>"; };
@@ -366,6 +370,7 @@
 			children = (
 				94419EAD9D80CDC157F5A2BE /* CityView-NOTICES.md */,
 				F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */,
+				F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */,
 			);
 			path = Licenses;
 			sourceTree = "<group>";
@@ -373,6 +378,7 @@
 		A1765EA1CC06988CA8C37FF3 = {
 			isa = PBXGroup;
 			children = (
+				DA79BA929F6262FB0DD353E2 /* BaseMap */,
 				4F36C2904247BEA21E929C73 /* CityView */,
 				323CCFDFD5FC7E9426C5F161 /* App */,
 				828A069B3EBF9E0D71CBF431 /* Packages */,
@@ -514,11 +520,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */,
+				CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */,
 				754F4F7DB688C00FD5E89AA0 /* CityView in Resources */,
 				DF5B9A8F8B7143BB95C2CE70 /* CityView-NOTICES.md in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,
 				D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */,
 				68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */,
+				D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */,
 				1E9DD55C059CAB8D682CA656 /* afr.json in Resources */,
 				4DAC945C946CD6E54FCDFE63 /* build-done.wav in Resources */,
 				CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */,
