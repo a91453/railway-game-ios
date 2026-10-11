@@ -207,6 +207,10 @@ public struct FreightState: Hashable, Sendable {
     public internal(set) var materialsSupplied: Int64 = 0
     public internal(set) var materialsUsed: Int64 = 0
     public internal(set) var materialsLost: Int64 = 0
+    /// The stations short of building materials at the last midnight
+    /// (decision 158): those whose growth went at a quarter (decision 157),
+    /// by ascending ID.
+    public internal(set) var lastShort: [StationID] = []
 
     public init() {}
 
@@ -331,6 +335,7 @@ extension FreightState: Codable {
     private enum CodingKeys: String, CodingKey {
         case facilities, loads, pendingRevenue, produced, delivered, spilled, lost
         case buildingMaterials, materials, materialsReceived, materialsSupplied, materialsUsed, materialsLost
+        case lastShort
     }
 
     /// Decodes the freight of a world that has it. A facility list or load
@@ -355,6 +360,7 @@ extension FreightState: Codable {
         materialsSupplied = try container.decodeIfPresent(Int64.self, forKey: .materialsSupplied) ?? 0
         materialsUsed = try container.decodeIfPresent(Int64.self, forKey: .materialsUsed) ?? 0
         materialsLost = try container.decodeIfPresent(Int64.self, forKey: .materialsLost) ?? 0
+        lastShort = try container.decodeIfPresent([StationID].self, forKey: .lastShort) ?? []
         func corrupt(_ why: String) -> DecodingError {
             DecodingError.dataCorrupted(DecodingError.Context(codingPath: container.codingPath, debugDescription: why))
         }
@@ -372,6 +378,7 @@ extension FreightState: Codable {
         guard buildingMaterials || (materials.isEmpty && facilities.allSatisfy { $0.product == .goods }
                   && loads.allSatisfy { $0.groups.allSatisfy { $0.kind == .goods } }),
               zip(materials, materials.dropFirst()).allSatisfy({ $0.station < $1.station }),
+              buildingMaterials || lastShort.isEmpty, zip(lastShort, lastShort.dropFirst()).allSatisfy({ $0 < $1 }),
               materials.allSatisfy({ (1...Freight.materialsLimit).contains($0.tons) })
         else {
             throw corrupt("Building materials must be on to be held or sent, and each station's are 1 to \(Freight.materialsLimit) tons, by ascending station.")
@@ -404,6 +411,7 @@ extension FreightState: Codable {
         if materialsSupplied != 0 { try container.encode(materialsSupplied, forKey: .materialsSupplied) }
         if materialsUsed != 0 { try container.encode(materialsUsed, forKey: .materialsUsed) }
         if materialsLost != 0 { try container.encode(materialsLost, forKey: .materialsLost) }
+        if !lastShort.isEmpty { try container.encode(lastShort, forKey: .lastShort) }
     }
 }
 
@@ -432,6 +440,7 @@ extension GameWorld {
         if !enabled {
             state.count(state.materials.reduce(0) { $0 + $1.tons }, in: \.materialsLost)
             state.materials = []
+            state.lastShort = []
             for index in state.facilities.indices { state.facilities[index].product = .goods }
             for slot in state.loads.indices.reversed() {
                 let gone = state.loads[slot].groups.filter { $0.kind == .materials }.reduce(0) { $0 + $1.tons }
@@ -442,6 +451,12 @@ extension GameWorld {
         }
         state.buildingMaterials = enabled
         freight = state
+    }
+
+    /// Whether station `id`'s town was short of building materials at the
+    /// last midnight, and grew at a quarter (decisions 157, 158).
+    public func isShortOfMaterials(_ id: StationID) -> Bool {
+        freight?.lastShort.contains(id) ?? false
     }
 
     /// The tons of building materials station `id` holds (decision 156).
@@ -685,6 +700,7 @@ extension GameWorld {
             state.count(state.facilities[index].stock, in: \.lost)
             state.facilities.remove(at: index)
         }
+        state.lastShort.removeAll { $0 == id }
         // Decision 156: and the building materials it held.
         if let index = state.materials.firstIndex(where: { $0.station == id }) {
             state.count(state.materials[index].tons, in: \.materialsLost)
@@ -711,7 +727,7 @@ extension GameWorld {
         guard state.loads.allSatisfy({ load in train(id: load.train) != nil && load.groups.allSatisfy { station(id: $0.origin) != nil } }) else {
             return "Cargo is on a train, or from a station, that does not exist."
         }
-        guard state.materials.allSatisfy({ station(id: $0.station) != nil }) else {
+        guard state.materials.allSatisfy({ station(id: $0.station) != nil }), state.lastShort.allSatisfy({ station(id: $0) != nil }) else {
             return "Building materials are held at a station that does not exist."
         }
         return nil

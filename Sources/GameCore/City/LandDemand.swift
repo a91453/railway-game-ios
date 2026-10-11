@@ -340,6 +340,8 @@ extension GameWorld {
                 growing.append((station, rate, raises))
             }
         }
+        // Decision 158: the stations short of building materials tonight.
+        var shortTonight: [StationID] = []
         if !growing.isEmpty {
             let shares = LandDemand.shares(of: land, among: landStations)
             // Phase 6c-2: the buildings full as the midnight begins, and
@@ -359,6 +361,7 @@ extension GameWorld {
                 if gated, materialsStock(at: station.id) < Freight.newCellMaterials {
                     short = true
                 }
+                if short { shortTonight.append(station.id) }
                 let rate = short ? max(1, fullRate / Freight.shortGrowthDivisor) : fullRate
                 let share = shares[station.id] ?? LandDemand.Share()
                 if let levels, let mix = cityDemand?.baseline {
@@ -378,6 +381,9 @@ extension GameWorld {
                     freight?.useMaterials(Freight.newCellMaterials, at: station.id)
                 }
             }
+        }
+        if freight?.buildingMaterials == true {
+            freight?.lastShort = shortTonight.sorted()
         }
         refreshLandDemand()
         for index in places.indices {

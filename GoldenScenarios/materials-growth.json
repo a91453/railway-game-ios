@@ -1,5 +1,5 @@
 {
-  "description": "Building materials in the city's growth (schema 60, decision 157): city-buildings-raise.json with building materials on. Each station holds the 60 t it got by road at the first midnight. At the second, raising takes the new storeys' floor at 200 m2 a ton, rounded up (D1 to D2 31 t, D2 to D3 93 t, D3 to D4 169 t), in the order the raises are chosen, the first unpaid stopping them; a new cell takes 16 t. Alpha raises (0, 0) to D2 (29 t left) and cannot pay for (0, 1); Beta raises (0, 1) and cannot pay for (0, 4); Gamma raises (0, 4) and cannot pay for (0, 5) to D4. All three are short, so each grows at a quarter of its rate (12 to 3 thousandths), and each builds its new cell (13 t left). The midnight then brings 60 t more: 73 t each, 141 t used, 360 t supplied. tools/golden-checks/city_growth.py works every value out independently.",
+  "description": "Building materials in the city's growth (schema 60, decision 157): city-buildings-raise.json with building materials on. Each station holds the 60 t it got by road at the first midnight. At the second, raising takes the new storeys' floor at 200 m2 a ton, rounded up (D1 to D2 31 t, D2 to D3 93 t, D3 to D4 169 t), in the order the raises are chosen, the first unpaid stopping them; a new cell takes 16 t. Alpha raises (0, 0) to D2 (29 t left) and cannot pay for (0, 1); Beta raises (0, 1) and cannot pay for (0, 4); Gamma raises (0, 4) and cannot pay for (0, 5) to D4. All three are short (lastShort [1, 2, 3], decision 158), so each grows at a quarter of its rate (12 to 3 thousandths), and each builds its new cell (13 t left). The midnight then brings 60 t more: 73 t each, 141 t used, 360 t supplied. tools/golden-checks/city_growth.py works every value out independently.",
   "expectedFinalState": {
     "accounts": {
       "days": [
@@ -756,7 +756,12 @@
       "materialsUsed": 141,
       "pendingRevenue": 0,
       "produced": 0,
-      "spilled": 0
+      "spilled": 0,
+      "lastShort": [
+        1,
+        2,
+        3
+      ]
     },
     "gameMinutes": 2881,
     "land": {

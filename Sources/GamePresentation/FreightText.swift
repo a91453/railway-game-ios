@@ -35,9 +35,15 @@ extension GameWorld {
     public func materialsText(at station: StationID, in language: DisplayLanguage) -> String? {
         guard freight?.buildingMaterials == true else { return nil }
         let stock = materialsStock(at: station), daily = materialsSuppliedPerDay(at: station)
-        return language.text(
+        let held = language.text(
             "Building materials: \(stock) t (up to \(Freight.materialsLimit) t); \(daily) t a day arrive by road.",
             "建材置場：\(stock) 噸（最多 \(Freight.materialsLimit) 噸）；每天由公路運來 \(daily) 噸。"
+        )
+        // Decision 158: and whether the town ran short last night.
+        guard isShortOfMaterials(station) else { return held }
+        return held + "\n" + language.text(
+            "Short last night: the town grew at a quarter. A raise takes 31 to 169 t, a new block 16 t.",
+            "昨晚缺建材：城市只長了四分之一。升級一棟要 31 到 169 噸，新的一格 16 噸。"
         )
     }
 

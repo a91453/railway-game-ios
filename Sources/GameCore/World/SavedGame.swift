@@ -195,7 +195,8 @@
 /// 39. Building materials (decision 156): a world's `"freight"` can have
 ///     `"buildingMaterials": true`, the stations' `"materials"` and their
 ///     totals, a yard `"product": "materials"`, and cargo `"kind":
-///     "materials"`. A build that reads only an earlier version would drop
+///     "materials"`, and the stations short of them at the last midnight,
+///     `"lastShort"` (decision 158). A build that reads only an earlier version would drop
 ///     them, and send the materials as goods, so it says the save is newer
 ///     than it instead.
 public struct SavedGame: Equatable, Sendable {
