@@ -232,10 +232,10 @@ node .claude/skills/rolling-stock/measure.cjs <reference.glb> \
 6. **跑預覽，自己先看**（Read 那張 PNG），再用 SendUserFile 給作者。
 7. **值得的話再進 Blender**（第 2 節）：指名的車、玩家會看久的車值得；塗裝已經對了才做。
    在 `build_train.py` 的 `STOCK` 加一筆，跑一次，給 stock 加 `models`，再算一次圖。
-8. **重新建置 App 的網頁**並提交（`trains.js` 或 `public/models/` 一改，
-   `RailwayGameApp/Resources/CityView/` 的 bundle 就過期了）。臺中的圖塊資料不在雲端容器裡，
-   所以只能重跑 vite 那一步，輸出到暫存再把 `assets/`、`models/`、`index.html` 複製回去，
-   `tiles/` 和 `textures/` 不要動。
+8. **重新建置官網上的網頁**並提交（決策 163：App 開的是官網的 `/city/`，`trains.js` 或
+   `public/models/` 一改，私有參考庫 `Website/site/city/` 的 bundle 就過期了）。臺中的圖塊資料不在雲端容器裡，
+   所以只能重跑 vite 那一步，輸出到暫存再把 `assets/`、`models/`、`index.html`、`boot.js` 複製回去，
+   `tiles/` 和 `textures/` 不要動。官網要作者部署了，App 裡才看得到。
 
 ### 塗裝的四個坑（N700ST 四個都踩到了）
 

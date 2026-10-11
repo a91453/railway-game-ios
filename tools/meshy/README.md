@@ -22,7 +22,7 @@
 1. 在 `models.json` 加一筆：id、prompt、面數、`out`。
 2. 照 skill 的流程生成（文字或照片轉 3D、要遊戲用的低面數就用 smart topology）。`WORKSPACE` 是 `Web/CityView/data/raw/meshy/<id>/`（不提交），交付的檔案是那裡的 `<id>.glb`。花點數之前先報價、等作者同意。
 3. `node tools/meshy/meshy.mjs pack <id>`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`，更新同一個資料夾的 `index.json`；workspace 裡 CLI 的任務紀錄（任務編號、prompt、模型、點數）記進 `generated.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
-4. `tools/procedural-city/build_city_view.sh` 重新建置 App 打包的頁面。
+4. `tools/procedural-city/build_city_view.sh <官網>/site/city` 重新建置官網上的頁面（決策 163），再部署官網。
 
 價格（2026-10，Meshy 7.1）：文字轉 3D 的網格 20 點、上貼圖 10 點；照片轉 3D 含 2K 貼圖 30 點；smart topology（meshy-t2）的網格 5 點。實際用掉的看任務的 `consumed_credits`。
 
@@ -30,7 +30,7 @@
 
 1. 看預覽：是不是單獨一節車、比例對不對。不對就改 `models.json` 的 prompt 再生成（又要花點數，先問作者）。
 2. 看駕駛室朝哪一個軸，把 `models.json` 的 `front` 填成 `+x`、`-x`、`+z` 或 `-z`（沒填時當作 `+x`），再 `pack`。城市頁面把模型轉成駕駛室朝前、縮放成車長 × 2.9 m 寬 × 3.9 m 高，頭尾車用 `-cab`（尾車轉 180°），中間用 `-car`；兩個只有一個時每節都用它。
-3. `tools/procedural-city/build_city_view.sh`，提交 `Web/CityView/public/models/trains/` 與 `RailwayGameApp/Resources/CityView/`。
+3. `tools/procedural-city/build_city_view.sh <官網>/site/city`，提交 `Web/CityView/public/models/trains/`，官網那邊提交 `site/city/` 並部署。
 4. 沒有模型（`index.json` 是 `{}` 或讀不到檔）時列車照舊畫方塊，塗裝是臺鐵的顏色。
 
 ## 授權

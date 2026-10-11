@@ -1,12 +1,14 @@
 // Writes the notices of the 3D city view (decision 152): the licence of jeantimex/tokyo and of every
-// library its built page bundles, from the installed packages, and the textures' CC0.
-//   node tools/procedural-city/notices.mjs Web/CityView RailwayGameApp/Resources/Licenses/CityView-NOTICES.md
+// library its built page bundles, from the installed packages, and the textures' CC0. Since decision 163 the
+// page and its notices are on the game's website (`/city/NOTICES.txt`):
+//   node tools/procedural-city/notices.mjs Web/CityView <website>/site/city/NOTICES.txt
 import fs from 'node:fs';
 import path from 'node:path';
 
 const [webArg, outArg] = process.argv.slice(2);
 const web = path.resolve(webArg ?? 'Web/CityView');
-const out = path.resolve(outArg ?? 'RailwayGameApp/Resources/Licenses/CityView-NOTICES.md');
+if (!outArg) { console.error('usage: notices.mjs <Web/CityView> <out>'); process.exit(1); }
+const out = path.resolve(outArg);
 // The packages in the page's bundle (src/ imports them; the compiler's own packages are not shipped).
 const PACKAGES = ['three', 'postprocessing', 'n8ao', '@takram/three-atmosphere', '@takram/three-clouds', '@takram/three-geospatial',
   '@takram/three-geospatial-effects', '@dgreenheck/ez-tree', 'lil-gui', 'earcut'];
@@ -40,10 +42,10 @@ const licenceOf = (dir) => {
 const parts = [
   '# 3D city view: notices',
   '',
-  'The 3D city view (ARCHITECTURE decision 152) is the web page of Procedural Tokyo',
-  '(https://github.com/jeantimex/tokyo), adapted to Taiwan, with the libraries below bundled into it.',
-  'Its textures are from Poly Haven (https://polyhaven.com) under CC0 1.0. The data it shows is credited',
-  'on the data sources screen (Overture Maps Foundation, OpenStreetMap contributors).',
+  'The 3D city view of Along the Line (ARCHITECTURE decisions 152 and 163) is the web page of Procedural Tokyo',
+  'by Yong Su, adapted to Taiwan, with the libraries below bundled into it. Its textures are from Poly Haven',
+  '(https://polyhaven.com) under CC0 1.0. The data it shows is credited on the page itself and on the data sources',
+  'page (https://www.alongthelinegame.com/credits): Overture Maps Foundation, OpenStreetMap contributors.',
   '',
   '## Procedural Tokyo',
   '',

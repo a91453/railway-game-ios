@@ -63,16 +63,9 @@
       <div class="bar"><div class="fill"></div></div>
       <div class="step"></div>
     </div>
-    <script>
-      // The city's name goes on the loading screen before anything else runs, so it never changes under the eye.
-      (function () {
-        var id = new URLSearchParams(location.search).get('area') || 'tokyo', name = null;
-        try { name = localStorage.getItem('procedural-tokyo:name:' + id); } catch (e) {}
-        // Along the Line: the app's areas by their names (the app's page has a new origin, and so no storage, each time)
-        name = name || { kaohsiung: '高雄車站', taichung: '臺中車站' }[id];
-        document.querySelector('#loader .city').textContent = name || id.charAt(0).toUpperCase() + id.slice(1);
-      })();
-    </script>
+    <!-- Along the Line: the page's own scripts in a file, not inline, so the website's Content-Security-Policy can
+         forbid inline scripts (decision 163): the city's name, the website link's language, the idle callbacks -->
+    <script src="/boot.js"></script>
     <!-- the info panel: hidden until asked for (control panel: info panel) -->
     <div id="hud" style="display: none">loading…</div>
     <button id="mode" type="button" aria-label="Switch between the photorealistic city and the abstract model"></button>
@@ -80,20 +73,6 @@
       <img src="/assets/ui/brand-mark.png" alt="" /><span>Website</span>
     </a>
     <div id="credits"></div>
-    <script>
-      // Along the Line: the website link in the app's language (the web view's is the app's)
-      if (/^zh/i.test(navigator.language)) document.querySelector('#website span').textContent = '官網';
-    </script>
-    <script>
-      // The atmosphere works out its tables (the sky's colours, the light on the clouds) in the browser's idle
-      // time, of which a busy page — the whole city loaded, clouds on — has none: the sky would stay dull and the
-      // clouds dark for as long as it is busy. Idle work is given a deadline, so that it is done all the same.
-      // (Here, before the modules: the library takes hold of the function when it is loaded.)
-      if (window.requestIdleCallback) {
-        const idle = window.requestIdleCallback.bind(window);
-        window.requestIdleCallback = (callback, options) => idle(callback, { timeout: 30, ...options });
-      }
-    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

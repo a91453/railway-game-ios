@@ -61,8 +61,8 @@ public enum DataSourceCredits {
     static let mapLibreLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"
     static let proceduralTokyoURL = "https://github.com/jeantimex/tokyo"
     /// The notices of the 3D city view's page and the libraries it bundles
-    /// (decision 152), as the app bundles them.
-    static let cityViewNoticesURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/CityView-NOTICES.md"
+    /// (decision 152), next to the page on the game's website (decision 163).
+    static let cityViewNoticesURL = "https://www.alongthelinegame.com/city/NOTICES.txt"
     static let polyHavenURL = "https://polyhaven.com"
     static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
 
@@ -322,8 +322,8 @@ public enum DataSourceCredits {
                             "繪製高雄車站與臺中車站周圍 3D 城市的軟體（建物、街道設施、車流、列車、天空與光線），資料來自 Overture Maps 的建物與 OpenStreetMap 的道路、公園與地點。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut。"
                         ),
                         notice: language.text(
-                            "Copyright (c) 2026 Yong Su, under the MIT License. The licences of the libraries it bundles (MIT, Zlib, ISC) come with the app and are at the link below.",
-                            "Copyright (c) 2026 Yong Su，依 MIT 授權使用。它內含的程式庫的授權條款（MIT、Zlib、ISC）隨 App 提供，也可以從下方連結閱讀。"
+                            "Copyright (c) 2026 Yong Su, under the MIT License. The page is on the game's website, and the licences of the libraries it bundles (MIT, Zlib, ISC) are next to it, at the link below.",
+                            "Copyright (c) 2026 Yong Su，依 MIT 授權使用。網頁放在遊戲官網，它內含的程式庫的授權條款（MIT、Zlib、ISC）也在官網，可以從下方連結閱讀。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Procedural Tokyo", url: proceduralTokyoURL),

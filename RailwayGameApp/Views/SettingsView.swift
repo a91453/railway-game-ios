@@ -20,6 +20,9 @@ struct SettingsView: View {
     var session: GameSession? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var cityViewArea: CityViewArea?
+    /// Whether the game's website is open (decision 163), in Safari's view
+    /// in the app.
+    @State private var showsWebsite = false
 
     var body: some View {
         NavigationStack {
@@ -47,6 +50,12 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .fullScreenCover(item: $cityViewArea) { area in
                 CityView3D(area: area)
+            }
+            .sheet(isPresented: $showsWebsite) {
+                if let url = URL(string: GameWebsite.home) {
+                    SafariView(url: url)
+                        .ignoresSafeArea()
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -138,8 +147,8 @@ struct SettingsView: View {
             Text(verbatim: language.text("Preview", "試作"))
         } footer: {
             Text(verbatim: language.text(
-                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. Drag to move, pinch to zoom, two fingers to turn.",
-                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。拖曳移動、兩指縮放、兩指旋轉。"
+                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. It loads from the game's website, so it needs the internet. Drag to move, pinch to zoom, two fingers to turn.",
+                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。它從遊戲官網載入，需要網路連線。拖曳移動、兩指縮放、兩指旋轉。"
             ))
         }
     }
@@ -169,12 +178,22 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.report")
+            Button {
+                showsWebsite = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Website", "官網"))
+                } icon: {
+                    Image(systemName: "globe")
+                }
+            }
+            .accessibilityIdentifier("settings.website")
         } header: {
             Text(verbatim: language.text("About", "關於"))
         } footer: {
             Text(verbatim: language.text(
-                "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
-                "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送；你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
+                "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there. Website opens alongthelinegame.com in the game.",
+                "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送；你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。「官網」在遊戲裡打開 alongthelinegame.com。"
             ))
         }
     }
