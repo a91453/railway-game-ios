@@ -4,7 +4,9 @@
 
 // The city's name goes on the loading screen before anything else runs, so it never changes under the eye.
 (function () {
-  var id = new URLSearchParams(location.search).get('area') || 'tokyo', name = null;
+  // Along the Line: Kaohsiung when no area, or one the website does not have, is asked for (as main.js)
+  var id = new URLSearchParams(location.search).get('area'), name = null;
+  if (id !== 'kaohsiung' && id !== 'taichung') id = 'kaohsiung';
   try { name = localStorage.getItem('procedural-tokyo:name:' + id); } catch (e) {}
   // Along the Line: the app's areas by their names, before the page has stored them
   name = name || { kaohsiung: '高雄車站', taichung: '臺中車站' }[id];

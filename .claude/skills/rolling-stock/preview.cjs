@@ -53,9 +53,8 @@ const VITE = path.join(WEB, 'node_modules/.bin/vite');
 
 // The line's name decides the stock (see STOCK/TRA_STOCK/HSR_STOCK in src/world/trains.js), so the
 // preview picks a train by naming its line, exactly as an area's data does.
-// The TRA's lines take turns between the commuter stock and the express, so reaching the second
-// one means laying two lines and looking at the second train.
-const PICK = { hsr: ['台灣高鐵', 1], emu900: ['臺鐵縱貫線', 1], emu3000: ['臺鐵縱貫線', 2], tra: ['臺鐵縱貫線', 1] };
+// The TRA's lines run the EMU3000 only (the EMU900, still a box, is out of the rotation: TRA_STOCK).
+const PICK = { hsr: ['台灣高鐵', 1], emu3000: ['臺鐵縱貫線', 1], tra: ['臺鐵縱貫線', 1] };
 const [LINE, LINES] = PICK[stock] ?? [stock, 1];
 const SET = LINES - 1;
 const TAIWAN = !/[山埼小井銀]/.test(LINE);
