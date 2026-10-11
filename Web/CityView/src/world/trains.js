@@ -141,6 +141,7 @@ function carGeometry(length) {
 const RING = 24, NOSE_RINGS = 18;
 const HS_HALF_W = 1.45, HS_FLOOR = 0.62, HS_ROOF = 3.75;       // the body down to the hem of its skirt, in metres above the rail
 const SHOULDER = 0.66;                                          // where the crease runs, as a height within the section
+const NAVY = '#2b3356', SKIRT = '#8f959b';                      // the band under the windows, and the lower body over the bogies
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
 function shellRing(z, t) {
@@ -220,36 +221,66 @@ function highSpeedTextures(stock) {
   g.fillStyle = '#26282b'; g.fillRect(TEX_W / 2, 0, TEX_W / 2, SIDE_Y0);  // underframe swatch
   const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0, HALF = TEX_W / 2, perM = HALF / stock.length;
   const row = (f) => Y + (1 - f) * H;                           // f: how high up the car's section, 0 the floor, 1 the roof
-  const band = (f0, f1, colour) => { g.fillStyle = colour; g.fillRect(0, row(f1), TEX_W, row(f0) - row(f1)); };
   const shade = g.createLinearGradient(0, Y, 0, Y + H);         // a gloss: lighter over the shoulder, darker by the skirt
   shade.addColorStop(0, 'rgba(255,255,255,0.12)'); shade.addColorStop(0.5, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.16)');
   g.fillStyle = shade; g.fillRect(0, Y, TEX_W, H);
-  band(0.409, 0.520, stock.stripe);                             // the orange band, white above and below it
-  band(0.520, 0.537, '#36393e');                                // the thin dark line over the orange
-  band(0, 0.201, '#9aa0a6');                                    // the grey hem of the skirt
-  // the side of one car: a door at each end, a row of saloon windows between them
-  const carSide = (x0, w) => {
-    const top = row(0.760), h = row(0.569) - top, door = 0.85 * perM, pitch = 1.04 * perM, pane = 0.62 * perM;
-    const doors = [x0 + 1.5 * perM, x0 + w - 1.5 * perM - door];
-    for (let x = doors[0] + door + pitch * 0.5; x + pane < doors[1] - pitch * 0.2; x += pitch) glass(g, e, x, top, pane, h);
-    for (const dx of doors) {
-      g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(dx, row(0.97), door, row(0.23) - row(0.97));
-      g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(dx, row(0.97), 1.5, row(0.23) - row(0.97)); g.fillRect(dx + door - 1.5, row(0.97), 1.5, row(0.23) - row(0.97));
-      glass(g, e, dx + door * 0.2, top, door * 0.6, h * 0.82);
+  g.fillStyle = SKIRT; g.fillRect(0, row(0.28), TEX_W, row(0) - row(0.28));   // the grey lower body over the bogies
+  // A band of the livery from x0 to x1, between heights f0 and f1, falling by `drop` on the way (0: level). On the
+  // cab car the navy and orange bands dive together towards the nose; on an intermediate car they run level.
+  const band = (x0, x1, f0, f1, drop, colour) => {
+    g.fillStyle = colour;
+    g.beginPath();
+    const edge = (f, back) => {
+      for (let i = 0; i <= 24; i++) {
+        const x = x0 + ((x1 - x0) * (back ? 24 - i : i)) / 24;
+        g.lineTo(x, row(f - drop * ease((x - x0) / (x1 - x0))));
+      }
+    };
+    edge(f1, false); edge(f0, true);
+    g.closePath(); g.fill();
+  };
+  // One pane of saloon glass: the N700's small upright window with rounded ends, tinted green.
+  const pane = (x, y, w, h) => {
+    const r = w / 2;
+    g.fillStyle = '#d8d9d6'; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, r + 2); g.fill();
+    g.fillStyle = '#1d4a44'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.roundRect(x, y, w, h * 0.42, [r, r, 0, 0]); g.fill();
+    e.fillStyle = '#fff0d0'; e.beginPath(); e.roundRect(x, y, w, h, r); e.fill();
+  };
+  // The side of one car: a door at each end in its dark frame, a row of windows between them. The doors go on
+  // before the bands, because the livery runs straight across them, and the windows after.
+  const DOOR = 0.85 * perM;
+  const doorsOf = (x0, w) => [x0 + 1.3 * perM, x0 + w - 1.3 * perM - DOOR];
+  const carDoors = (x0, w) => {
+    for (const dx of doorsOf(x0, w)) {
+      g.fillStyle = '#22262b'; g.fillRect(dx - 0.13 * perM, row(0.96), DOOR + 0.26 * perM, row(0.22) - row(0.96));
+      g.fillStyle = stock.body; g.fillRect(dx, row(0.94), DOOR, row(0.24) - row(0.94));
     }
   };
-  const bodyW = HALF * (stock.length - stock.nose) / stock.length;
-  carSide(0, bodyW); carSide(HALF, HALF);
-  // the cab: the canopy wrapping the top of the nose where it starts to fall, the lamps on its shoulders
+  const carWindows = (x0, w) => {
+    const top = row(0.780), h = row(0.555) - top, pitch = 1.0 * perM, pw = 0.50 * perM;
+    const doors = doorsOf(x0, w);
+    for (let x = doors[0] + DOOR + pitch * 0.6; x + pw < doors[1] - pitch * 0.3; x += pitch) pane(x, top, pw, h);
+    for (const dx of doors) pane(dx + DOOR * 0.26, top, DOOR * 0.48, h * 0.78);
+  };
+  const L = stock.length - 0.6;
+  const noseX = (0.004 + ((L - stock.nose) / L) * 0.492) * TEX_W;   // where the cab car's nose begins, in the same u as the shell
+  carDoors(0, noseX); carDoors(HALF, HALF);
+  band(HALF, TEX_W, 0.380, 0.500, 0, stock.stripe);             // an intermediate car: a level orange band, edged above
+  band(HALF, TEX_W, 0.500, 0.516, 0, '#3a3f49');
+  band(0, TEX_W / 2, 0.380, 0.500, 0.20, stock.stripe);         // the cab car: the orange and the navy over it dive towards the nose
+  band(0, TEX_W / 2, 0.500, 0.566, 0.20, NAVY);
+  carWindows(0, noseX); carWindows(HALF, HALF);
+  // the cab: the canopy where the nose starts to fall, and the almond lamp of two lights on each shoulder
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
-  g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(bodyW, row(0.645), HALF - bodyW, 3);         // the crease along its shoulder
-  oval(g, bodyW + 1.0 * perM, row(1), 4.2 * perM, (row(0.70) - row(1)) * 2, '#191d22');
-  oval(g, bodyW + 2.7 * perM, row(1), 2.6 * perM, (row(0.82) - row(1)) * 2, '#191d22');     // and on down the front
-  g.fillStyle = stock.body; g.fillRect(0, row(1), bodyW, row(0.68) - row(1));  // the canopy stops where the body does
-  oval(g, bodyW + 5.6 * perM, row(0.52), 1.6 * perM, row(0.45) - row(0.59), '#23272c');  // one housing of two lamps on each shoulder
-  for (const k of [-0.35, 0.35]) {
-    oval(g, bodyW + (5.6 + k) * perM, row(0.52), 0.56 * perM, row(0.482) - row(0.558), '#fbf7ea');
-    oval(e, bodyW + (5.6 + k) * perM, row(0.52), 0.56 * perM, row(0.482) - row(0.558), '#fff4de');
+  g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(noseX, row(0.645), HALF - noseX, 3);          // the crease along its shoulder
+  oval(g, noseX + 0.9 * perM, row(1), 3.4 * perM, (row(0.73) - row(1)) * 2, '#161a20');
+  oval(g, noseX + 2.2 * perM, row(1), 2.0 * perM, (row(0.84) - row(1)) * 2, '#161a20');     // and on down the front
+  g.fillStyle = stock.body; g.fillRect(0, row(1), noseX, row(0.70) - row(1));  // the canopy stops where the body does
+  oval(g, noseX + 5.3 * perM, row(0.52), 2.1 * perM, row(0.472) - row(0.568), '#2b3036');
+  for (const k of [-0.42, 0.42]) {
+    oval(g, noseX + (5.3 + k) * perM, row(0.52), 0.6 * perM, row(0.482) - row(0.558), '#fbf7ea');
+    oval(e, noseX + (5.3 + k) * perM, row(0.52), 0.6 * perM, row(0.482) - row(0.558), '#fff4de');
   }
   const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   return { map: tex(side), emissiveMap: tex(glow) };
