@@ -4921,6 +4921,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 生成用官方的 `meshy-cli` 0.4.0（MIT，`npm exec` 暫時執行，不裝進專案、不進 App）。它支援瀏覽器登入（device flow），不需要 `MESHY_API_KEY`；憑證留在容器，不進 repo。它也有照片轉 3D、遊戲用的低面數（smart topology）、重新上色與 LOD，花點數前先報價。
 - `tools/meshy/meshy.mjs` 拿掉自己寫的 `balance`、`generate`，只留 `pack`；`pack` 從 CLI 的任務紀錄（workspace 裡的 `task_<id>.json`）把任務編號、prompt、模型與點數記進 `generated.json`。
 
+**之後（2026-10-11，作者決定，#369）**：台灣地區的每一條鐵路都改跑作者自己的 N700ST（`HSR_STOCK`，他的 Meshy 模型），臺中的臺鐵高架也一樣；上面的 EMU900／EMU3000 輪流不再使用，`trains.js` 裡保留它們的設定，等臺鐵自己的車回來再用。
+
 ### 162. 天氣、颱風與油電價格
 
 2026-10-11，`docs/research/DISRUPTION_STUDY.md` 方案 B 的第二步（作者同意開工），掛在決策 154 的開關與難度上。號碼依工作登記 #231：存檔版本 41（40 是購買擴建地圖，決策 160）、決策 162（161 是 Meshy 列車）、golden schema 62（61 是擴建地圖）。
