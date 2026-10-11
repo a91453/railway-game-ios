@@ -115,6 +115,16 @@ public enum LiuMingchuanChallenge {
         Milestone(places: [keelung, twatutia, hsinchu], english: "On to Hsinchu (1893)", chinese: "延伸到新竹（1893）"),
     ]
 
+    /// The targets were measured (decision 153, `LiuMingchuanReportTests`,
+    /// release build): the line to Twatutia and its station costs some
+    /// $5.7–5.9 million, the line on to Hsinchu $12.5–13.0 million with
+    /// its train. A steam train of four cars loses $30,000 a day on the
+    /// line to Twatutia and never pays for the rest; one of eight cars
+    /// earns $10,000 a day and reaches Hsinchu around day 1,300 (bronze);
+    /// one of sixteen earns $108,000 and reaches it on day 109 (silver);
+    /// sixteen cars with the company's $5 million loan from the first day,
+    /// on day 57 (gold). The line on to Hsinchu loses money, as Liu's did:
+    /// with sixteen cars the two lines together about break even.
     /// Riders a day to reach.
     static let ridersTarget: Int64 = 15_000
     /// What the governor's treasury starts the railway with: $8 million,
@@ -127,7 +137,7 @@ public enum LiuMingchuanChallenge {
     static let scenario = Scenario(
         id: "history.liuMingchuan",
         goals: milestones.map { .connect(points: $0.places.map(\.point), radius: Land.catchmentRadius) } + [.dailyRiders(ridersTarget)],
-        goldDays: 60, silverDays: year, deadlineDays: 4 * year, insolvencyDays: 60, trainTypes: [.steam]
+        goldDays: 75, silverDays: year, deadlineDays: 4 * year, insolvencyDays: 60, trainTypes: [.steam]
     )
 
     /// The milestone goal `index` of the scenario names, if it is one.
@@ -156,8 +166,8 @@ public enum LiuMingchuanChallenge {
     /// The milestones' line on the challenge card.
     public static func milestonesText(in language: DisplayLanguage) -> String {
         language.text(
-            "Milestones: Shiqiuling, Twatutia, the Tamsui bridge, Hsinchu · steam trains only",
-            "里程碑：獅球嶺、大稻埕、淡水河鐵橋、新竹 · 只有蒸汽列車"
+            "Milestones: Shiqiuling, Twatutia, the Tamsui bridge, Hsinchu · steam trains only, 50 a car",
+            "里程碑：獅球嶺、大稻埕、淡水河鐵橋、新竹 · 只有蒸汽列車，每節 50 人"
         )
     }
 }
