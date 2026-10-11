@@ -40,6 +40,29 @@ Swift 參考實作：`Tests/GameCoreTests/GoldenScenario.swift`（讀取與執�
 
 每個值都是手算的。schema 56 起，`setLand` 的格與 `landCell` 觀察可以有 `"coverage"`（整數百分比，0 到 100，不知道時省略）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
+## 國定假日（`holidays.json`）
+
+schema 57（決策 154）：
+
+- 新指令 `setDisruptions`（`level`：`"light"`、`"standard"`，或 `null` 表示關閉；有 level 時 `country` 是 `HolidayCalendar` 有的 ISO 代碼）。
+- 新觀察 `holiday`（`day`）：那一天放的假日，`{"found": true, "holiday": {"kind", "start", "end", "boost"}}`（`end` 是最後一天的隔天，`boost` 千分比），沒有是 `{"found": false}`。
+- 最終狀態在開啟時多一個 `disruptions`：`{"country", "level"}`。
+- 參考模型不放假，所以用到它們的 fixture 不在 `ReferenceWorldGoldenTests` 裡重播，由 `HolidayTests` 驗證。
+
+情境：Home（住宅 1000 人次）與 Office（辦公）在路線 Main 上，時鐘在第 0 天，不推進時間。
+
+- 關閉時沒有假日。Home 往 Office 的 1000 人次照 `dayShape` × 早上尖峰 × 早上尖峰的權重，以最大餘數法分到各小時。
+- 台灣、標準：
+  - 第 0 天是元旦（1 月 1 日，1 天，+50‰）。
+  - 春節從第 43 天（2 月 14 日）起 9 天，+200‰。
+  - 國慶日是第 279 天（10 月 10 日），+100‰。
+  - 每年同一天：第 407 天在隔年的春節（403 到 412），第 −81 天是前一年的國慶日。
+  - 今天的需求乘上今天假日的倍數：1000 × 1.050 = 1050，照同樣的權重分到各小時。
+- 中國：元旦 3 天；國慶從第 270 天起 7 天；第 279 天不是假日。
+- 關閉後又沒有假日，需求回到 1000。
+- 「輕」：加成是一半、無條件捨去，春節 +100、元旦 +25，今天的需求 1025。
+- 各小時的人次另以獨立的 Python 照規則重算，與 GameCore 一致；最終狀態取自 GameCore（只有兩站、一條線與 `disruptions`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
 ## 依面積收購（`area-buyout.json`）
 
 12 步、不推進時間的情境（schema 55，決策 146）。32 × 24 格、經營模式、城市建物與依密度的方塊開啟；第 5 列第 5、6 行都是 48 位居民、8 個就業的住宅（D1，地價每 m² 2,000），整格收購價 (12,288,000 + 400 × 2,000) × 120% = 15,705,600。`setAreaBuyOut` 開啟後：

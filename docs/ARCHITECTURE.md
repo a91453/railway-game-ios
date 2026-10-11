@@ -4485,6 +4485,59 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑 App；實機上的價格與 App 讀檔的時間要在 TestFlight 上看。
 
+### 154. 國定假日與干擾事件的骨架
+
+2026-10-11，`docs/research/DISRUPTION_STUDY.md` 方案 B 的第一步。作者選了 B → Q4 → A，並決定國定假日用遊戲固定曆法、但實景地圖依所在國家放各自的假日；預設難度與挑戰交給 Claude Code 決定（輕；挑戰先關）。號碼依工作登記 #231：存檔版本 37（36 是劉銘傳劇本的，決策 153）、決策 154（148–152 由其他 session 登記或使用）、golden schema 57。
+
+參考檢查（`a91453/railway-reference-private` `581db83`，研究文件第 2 節）：
+
+| 參考 | 本專案 | 方式 |
+| --- | --- | --- |
+| `Ci/.../aviation_disruptions__q_dc8f79f5de24b024.js` 的假日表 `x` 與 `K`（`[國家, 名稱, 天數, 加成]`） | `HolidayCalendar.countries`、`HolidayKind`、`Holiday.days`／`boost` | 直接搬名稱、天數、加成；來源載入時把每個加成再加 0.2（`E(e)`），那是航空遊戲自己的，不搬 |
+| `Railway/site_archive_clean/index.html` 的 `TW_DAYTYPE`（2026、2027 台灣假日） | 台灣那一列：多了和平紀念日、國慶日，清明是兒童節連假的 4 天 | 刻意改動：參考 `Ci/` 的台灣列少了這些 |
+| 來源以 `d(seed, key)` 隨機抽一個國家的假日 | 每年同一天 | 原生：鐵路的行事曆是已知的 |
+| （沒有） | 遊戲曆法上的月日、國家判定、難度 | gap → 原生 |
+
+外部專案：OpenTTD 的三級難度（無／減少／一般，GPL-2.0，只讀概念）是「輕／標準」的出處。
+
+1. **骨架**（GameCore，`Passenger/Holidays.swift`）：
+   - `GameWorld.disruptions`：國家代碼與難度（`DisruptionLevel` 的 `light`、`standard`），`nil` 是關閉。
+   - `setDisruptions(_:)` 免費；`Disruptions(level:country:)` 只接受 `HolidayCalendar` 有的國家。
+   - 之後的天候、故障（方案 B2、A）掛在同一個欄位與同一個難度上。
+2. **假日**：
+   - 24 個國家，每個假日是遊戲曆法（一年 360 天，12 個 30 天的月）上的某月某日，起算第幾天、連續幾天、加成千分比。
+   - 日期取 2026 年的實際日期（農曆與移動節日取那一年落在哪天），這是本專案的（gap）；每年同一天。
+   - `holiday(onDay:)`：那天放的假日，兩個重疊時取加成大的；`holidays(from:through:)` 列出幾天內的假日。
+   - 「輕」的加成是「標準」的一半，無條件捨去。
+3. **效果**：
+   - 假日當天，全網每站出發的旅次乘上 `1000 + 加成` 千分比（`holidayMultiplier`），和車站事件的倍數一起只四捨五入一次。沒有假日時倍數是 1000，算式和以前完全相同。
+   - 有每週需求時，假日照週末的時段分布（`isDemandWeekend`）。
+   - 吸引力（迄點權重）不變：全網一起乘不改變比例。
+   - 開啟時需求計畫每天重建（`demandDay`），批量、逐分鐘、存檔續玩都相同（`HolidayTests`）。
+4. **國家**（GamePresentation，`CountryLookup`）：
+   - 用 Natural Earth 1:50m 的國界（公有領域，`tools/country-borders/` 簡化到約 1 公里、寫成 `CountryBorders.swift`）判斷實景地圖中心在哪一國。
+   - 在國界外 30 公里內取最近的國家（港口、海灣）。
+   - 金門、馬祖在簡化的國界裡沒有，另用方框歸台灣。
+   - 都不是時用台灣。空白地圖也是台灣。
+   - 開新遊戲時算一次，存在存檔裡；不需要網路，每台裝置答案相同。
+5. **新遊戲**：`GameWorld.newGame` 開「輕」。
+   - 教學（`GameLauncher.startTutorial`）、沙盒挑戰與每週挑戰（`newGame(challenge:)`）、平溪線劇本都關閉：它們的目標是不放假量的（決策 145）。
+   - 設定頁（從遊戲打開時）多「這一局」的「連假與事件」：關／輕／標準，以及是哪一國的國定假日。改了是可以復原的編輯（`GameSession.setDisruptionLevel(_:)`）；重新打開時國家照舊，原本關閉的取地圖的國家。
+6. **提示**：
+   - 車站面板的「活動」區列出一週內的假日：「春節：全線需求 +20%，3 天後開始，連續 9 天」「……還有 5 天」。
+   - 站長在假日前 1 到 3 天提醒加開列車或加掛車廂（`holidayComing`），假日結束的隔天說連假期間每天多少人次、比連假前（同樣天數）多或少幾 %（`holidayOver`，只在經營模式、那些天都有帳時）。站長的順序在「煩惱」與第一條線的步驟之後、城市成長之前。
+7. **存檔 37**：世界多了 `"disruptions": {"country", "level"}`，只在開啟時寫；讀檔拒絕不認得的國家或難度。只讀到 35 的 build 會丟掉它，所以升版。版本 36 是工作登記給決策 153 的，這個 build 沒有它，讀到就拒絕（之後合併時拿掉這個例外）。新的 `SaveFixtures/v37-holidays.json`。
+8. **golden schema 57**：新指令 `setDisruptions`、觀察 `holiday`，最終狀態的 `disruptions`；新的 `holidays.json`，各小時的人次另以獨立的 Python 照規則重算。參考模型不放假，這份不在 `ReferenceWorldGoldenTests` 上重播。既有 golden、存檔與 replay 都不變（預設關閉，`ReplayState` 沒有新欄位）。
+
+**限制**：
+- 每年同一天：農曆與移動節日不會隨年份移動；
+- 國界簡化約 1 公里，邊界附近（例如深圳與香港之間）可能判成鄰國；只有 24 國有假日，其他國家用台灣的；
+- 固定班次的路線（決策 133）假日照平常的星期開，沒有「假日班表」；
+- 連假的去程、回程兩段高峰（參考的 `pilgrimage`）沒有做；
+- 天候、颱風、燃油指數是方案 B2；故障與檢修是方案 A（在 Q4 之後）。
+
+**沒有驗證的**：Linux 不能跑 App；設定頁的選單與車站面板的文字要在 macOS CI 與 TestFlight 上看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

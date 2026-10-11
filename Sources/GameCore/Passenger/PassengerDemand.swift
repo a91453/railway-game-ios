@@ -27,25 +27,31 @@ extension GameWorld {
     /// spread over the 60 minutes of the hour.
     static let releaseUnit: Int64 = 3_600
 
-    /// The game day demand is worked out for, with weekly demand or
-    /// events: today's. `nil` without either, when every day is the same.
+    /// The game day demand is worked out for, with weekly demand, events
+    /// or holidays: today's. `nil` without any, when every day is the same.
     var demandDay: Int64? {
-        weeklyDemand || demandEvents != nil ? dayIndex(of: clock.now) : nil
+        weeklyDemand || demandEvents != nil || disruptions != nil ? dayIndex(of: clock.now) : nil
     }
 
-    /// Whether today's demand follows the weekend's hours.
+    /// Whether today's demand follows the weekend's hours: on a weekend,
+    /// and (decision 154) on a holiday.
     var isDemandWeekend: Bool {
-        weeklyDemand && StationDemand.isWeekend(day: dayIndex(of: clock.now))
+        let day = dayIndex(of: clock.now)
+        return weeklyDemand && (StationDemand.isWeekend(day: day) || holiday(onDay: day) != nil)
     }
 
     /// The trips station `station`, with `demand`, starts today: its daily
     /// trips, or with weekly demand today's share of its week (see
     /// ``StationDemand/trips(onDay:)``), raised by any event there (see
-    /// ``demandMultiplier(at:)``), rounded half up.
+    /// ``demandMultiplier(at:)``) and by today's holiday (decision 154,
+    /// ``holidayMultiplier``), rounded half up.
     func trips(of demand: StationDemand, at station: StationID) -> Int64 {
         let trips = weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips
-        guard demandEvents != nil else { return trips }
-        return (trips * demandMultiplier(at: station) + 500) / 1_000
+        guard demandEvents != nil || disruptions != nil else { return trips }
+        // Without holidays the network's multiplier is 1000, and this is
+        // the event's rounding alone, as before them.
+        let multiplier = (demandEvents != nil ? demandMultiplier(at: station) : 1_000) * holidayMultiplier
+        return (trips * multiplier + 500_000) / 1_000_000
     }
 
     /// How strongly station `station`, with `demand`, draws travellers
@@ -480,6 +486,8 @@ extension GameWorld {
         let day: Int64?
         let weeklyDemand: Bool
         let demandEvents: DemandEventSchedule?
+        /// Decision 154: the holidays.
+        let disruptions: Disruptions?
         /// Decision 137: each pair's share by its distance, and which
         /// stations are outside connections (their points are in
         /// ``stations``).
@@ -496,7 +504,7 @@ extension GameWorld {
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
-            day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents,
+            day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections
         )
     }

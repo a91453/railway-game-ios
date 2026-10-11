@@ -218,7 +218,11 @@ public final class GameLauncher {
     /// Starts a new game with the tutorial on its first step (the start
     /// screen's tutorial entry, Stage C5).
     public func startTutorial() {
-        guard begin(.newGame(eventSeed: .random(in: .min ... .max)), keepingAutosave: true) else { return }
+        // Decision 154: the tutorial's first line is not raised by a
+        // holiday.
+        var world = GameWorld.newGame(eventSeed: .random(in: .min ... .max))
+        world.setDisruptions(nil)
+        guard begin(world, keepingAutosave: true) else { return }
         session?.startTutorial()
     }
 
