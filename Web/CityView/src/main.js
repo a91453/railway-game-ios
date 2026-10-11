@@ -253,7 +253,9 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   gui.close(); // (out of the way until it is asked for)
   gui.add(state, 'city', Object.fromEntries(areas.map((a) => [a.name, a.id]))).onChange((id) => {
     const url = new URL(location.href);
-    url.search = '';
+    // Along the Line: keep the page's other parameters (the app's lighter settings, app=1) and drop only the camera,
+    // which is the previous city's (the original cleared them all)
+    url.searchParams.delete('cam');
     url.searchParams.set('area', id);
     loader.show(areas.find((a) => a.id === id)?.name ?? id, 'leaving for the next city');
     setTimeout(() => { location.href = url.href; }, 60); // (let the screen appear first)
