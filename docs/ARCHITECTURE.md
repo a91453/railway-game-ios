@@ -5078,6 +5078,37 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑模擬器；截圖要看 workflow 的產物。
 
+### 166. 官網的「沿線生長」時間軸由遊戲真的跑出來
+
+2026-10-11，作者問官網怎麼讓玩家有提前玩到的感覺，選了「時間軸」：官網上一段可以拖的地圖，看城市沿著鐵路一天天長大。號碼依工作登記 #231：決策 166；存檔版本、golden schema 不動。GameCore 與 App 都不動，存檔、golden、replay 都不變。
+
+參考檢查（`a91453/railway-reference-private`）：`Ci/`、`Railway/`、`Simulator/`、`MapBuilder/`、`Website/` 的 JS 與 HTML 搜尋 timelapse、growth timeline、history slider，沒有城市成長的時間軸或回放可以移植（`Ci/` 的 range input 都是設定用的滑桿）。外部專案沒有找：資料是遊戲自己的，畫法照這個專案的 `MapArt`。
+
+1. **劇本**（`Tests/GamePresentationTests/WebsiteTimelineTests.swift` 的 `GrowthTimeline`）：和 App 開空白新遊戲一樣（`GameWorld.newGame(eventSeed:buysMap: true)`），種子 2467：三座城鎮幾乎在一直線上（偏 4°），地圖比較寬。腳本玩家：
+   - 第 1 天早上，從西南的城鎮到中央的城鎮鋪一段直線、兩站、一條全天的路線、一列四節（和 `newGameLine(through:in:)` 一樣的月台與列車）。
+   - 第 30 天早上（`extensionDay` = 29，從 0 算）從那段的端點接著鋪到東北的城鎮、加一站，路線延伸過去。列車停在中央站時拿著那個節點，交通控制會拒絕新的軌道；玩家一分鐘一分鐘等它離開，和 App 一樣。
+   - 只有一列車：第一次試著第二列，兩列在沒有待避站的單線上面對面停住，城市就不長了。
+   - 其他照新遊戲的規則：建材（決策 157）、天氣與假日（決策 154、162）都開著。所以多數晚上車站缺建材，成長是四分之一。這是玩家沒有開建材貨運線時的樣子，不另外調。
+2. **記錄**（`GrowthTimelineRecording`）：每天早上（午夜成長後一分鐘）記一次，共 365 次（`days` = 364）：
+   - 城市建物：`CitySkyline` 的每一格，記用途、密度與方塊邊長。第一天整份，之後只記變了的格。
+   - 三站的資料：800 m 內的居民加就業、每日旅次。還沒通車的站也算它將來位置的人數。
+   - 城市的總居民、總就業、現金。
+   - 軌道的兩段與通車的天。
+   - 地圖裁到城鎮出現過的格外加 3 格，座標以格（64 m）為單位。
+3. **匯出**：`WEBSITE_TIMELINE=<檔案> swift test -c release -Xswiftc -enable-testing --filter WebsiteTimelineTests` 寫出 JSON（約 56 KB），release 約 38 秒。沒設時跳過，和 `BalanceReportTests` 一樣。
+   - 另一個測試每次 CI 都跑：只玩 3 天，第 2 天就延伸，檢查劇本還蓋得起來、列車有服務到第三站、記錄的格式。
+   - 官網那邊（私有參考庫 `Website/`）的 `site/timeline.js` 照 `MapArt.drawSkyline` 與 `Palette` 的深色地圖畫，`Website/README.md` 寫怎麼重新產生。
+4. **量到的**（第 1 天 → 第 365 天，800 m 內的人）：
+   - 西南 46,005 → 123,705。
+   - 中央 86,737 → 209,952。
+   - 東北第 30 天通車前一直是 24,097，通車後到 83,942。
+   - D4 從 38 格到 226 格。
+
+**限制**：
+- 只有一種玩法（一條線、一列車、沒有貨運）。真的玩家會加車、開建材貨運線，城市長得更快。
+- 遊戲的成長規則改了，官網的 JSON 不會自己更新，要重新匯出。
+- 官網上「第 1 天之後新蓋或長高的屋頂塗成暖黃」是網站自己加的標示，遊戲裡沒有。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
