@@ -2,7 +2,8 @@ name: TestFlight Checks
 
 # Tests the TestFlight release workflow (testflight.yml) and its scripts with
 # no Apple account and no secret: fake values only; nothing is signed with an
-# Apple certificate and nothing is uploaded. It cannot show that real
+# Apple certificate and nothing is uploaded, and the processing check talks
+# to a fake App Store Connect on the runner itself. It cannot show that real
 # signing, upload or TestFlight processing work; see
 # docs/TESTFLIGHT_GITHUB_ACTIONS.md for what is verified where.
 #
@@ -14,7 +15,7 @@ on:
     paths:
       - .github/workflows/testflight.yml
       - .github/workflows/testflight-checks.yml
-      - .github/scripts/testflight-*.sh
+      - .github/scripts/testflight-*
   workflow_dispatch:
 
 permissions:
@@ -30,7 +31,7 @@ defaults:
 
 jobs:
   scripts:
-    name: Scripts (lint, preflight, build numbers)
+    name: Scripts (lint, preflight, build numbers, retry, processing)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -60,6 +61,16 @@ jobs:
       - name: Preflight and build-number tests (fake values)
         run: .github/scripts/testflight-selftest.sh
 
+      - name: Retry tests (fake command and sleep)
+        run: .github/scripts/testflight-selftest-retry.sh
+
+      # A fake App Store Connect and GitHub on 127.0.0.1, a throwaway key and
+      # a throwaway git history.
+      - name: Processing and What to Test tests (fakes only)
+        run: |
+          python3 --version
+          python3 -I .github/scripts/testflight-selftest-processing.py
+
   macos-dry-run:
     name: macOS dry run (no Apple account; nothing signed or uploaded)
     runs-on: macos-26
@@ -78,6 +89,12 @@ jobs:
 
       - name: Keychain and API key file (fake key, failing step, cleanup)
         run: .github/scripts/testflight-selftest-macos.sh signing
+
+      # The release runs testflight-retry.sh with this runner's bash.
+      - name: Retry tests under the macOS runner's bash
+        run: |
+          bash --version | head -n 1
+          .github/scripts/testflight-selftest-retry.sh
 
       # The steps below run the release workflow's own scripts in the order
       # testflight.yml does, minus the account: no key, an unsigned archive.

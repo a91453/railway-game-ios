@@ -6,7 +6,11 @@ name: TestFlight
 # way, to App Store Connect for TestFlight testing. The manual run chooses
 # whether the uploaded build is internal-only or external-capable. Export
 # and upload use xcodebuild with the API key; the archive is signed ad hoc by
-# default (see archive_signing).
+# default (see archive_signing). Both are tried again when they fail, so a
+# dropped connection to Apple does not cost the archive. A Linux job then
+# waits for App Store Connect to process the build, reports the result, and
+# fills the build's What to Test with the pull requests merged since the
+# last release.
 #
 # Started only by hand (Actions -> TestFlight -> Run workflow) and
 # only from main. Pull requests never run it; its secrets live in the
@@ -48,12 +52,6 @@ on:
 permissions:
   contents: read
 
-# One release at a time: a second run waits instead of uploading in parallel,
-# and a running upload is never cancelled.
-concurrency:
-  group: testflight-release
-  cancel-in-progress: false
-
 defaults:
   run:
     shell: bash
@@ -88,6 +86,16 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 45
     environment: testflight
+    # One release at a time: a second run's release job waits instead of
+    # uploading in parallel, and a running upload is never cancelled. Only
+    # this job: waiting for Apple's processing does not hold up the next one.
+    concurrency:
+      group: testflight-release
+      cancel-in-progress: false
+    outputs:
+      build_number: ${{ steps.build.outputs.build_number }}
+      version: ${{ steps.ipa.outputs.version }}
+      upload_started: ${{ steps.upload-start.outputs.started }}
     env:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
@@ -101,6 +109,7 @@ jobs:
       # computed here, from this job's own run attempt, so that re-running
       # only the failed jobs still gets a build number no attempt has used.
       - name: Check settings and set the build number
+        id: build
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
           BUILD_NUMBER_OFFSET: ${{ vars.BUILD_NUMBER_OFFSET }}
@@ -135,12 +144,15 @@ jobs:
 
       # Automatic signing for App Store Connect distribution; with no local
       # distribution certificate, xcodebuild uses the team's cloud-managed one.
+      # That talks to Apple, so a failed export is tried again (run #48 lost
+      # its archive to "The network connection was lost.").
       - name: Sign and export the IPA
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          xcodebuild -quiet -exportArchive \
+          RETRY_CLEAN="$EXPORT_PATH" .github/scripts/testflight-retry.sh "Export" \
+            xcodebuild -quiet -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportPath "$EXPORT_PATH" \
             -exportOptionsPlist "$EXPORT_OPTIONS" \
@@ -171,9 +183,16 @@ jobs:
             echo "version=$EXPECTED_VERSION"
           } >>"$GITHUB_OUTPUT"
 
+      # From here on App Store Connect may have the build, even if the upload
+      # step fails (a retried upload that Apple refuses as a duplicate), so
+      # the processing job looks for it.
+      - name: Mark the upload as started
+        id: upload-start
+        run: echo "started=true" >>"$GITHUB_OUTPUT"
+
       # Runs only after the IPA check passed. It re-exports the same archive
       # with the same signing options; only destination changes to upload
-      # (supported with API keys since Xcode 15).
+      # (supported with API keys since Xcode 15). Tried again when it fails.
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
@@ -182,7 +201,8 @@ jobs:
           BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
           VERSION: ${{ steps.ipa.outputs.version }}
         run: |
-          xcodebuild -quiet -exportArchive \
+          RETRY_CLEAN="$TESTFLIGHT_DIR/upload" .github/scripts/testflight-retry.sh "Upload" \
+            xcodebuild -quiet -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportPath "$TESTFLIGHT_DIR/upload" \
             -exportOptionsPlist "$UPLOAD_OPTIONS" \
@@ -192,7 +212,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           {
             echo ""
-            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER) for $TESTING_SCOPE TestFlight. App Store Connect now processes it; it appears in TestFlight when processing ends:"
+            echo "Uploaded $BUNDLE_ID $VERSION ($BUILD_NUMBER) for $TESTING_SCOPE TestFlight. App Store Connect now processes it (the processing job below waits for it); it appears in TestFlight when processing ends:"
             echo "https://appstoreconnect.apple.com/apps/$ASC_APP_ID/testflight/ios"
           } >>"$GITHUB_STEP_SUMMARY"
 
@@ -200,3 +220,47 @@ jobs:
       - name: Clean up signing material
         if: always()
         run: .github/scripts/testflight-signing.sh cleanup
+
+  # Linux, so the wait costs no macOS runner. It also runs after a failed
+  # upload step once the upload started: App Store Connect may have the build
+  # anyway. Re-running only this job checks the same build again.
+  processing:
+    name: Wait for App Store Connect processing, fill What to Test
+    needs: release
+    if: ${{ !cancelled() && needs.release.outputs.upload_started == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment: testflight
+    permissions:
+      contents: read
+      # The last successful run of this workflow, and pull request titles.
+      actions: read
+      pull-requests: read
+    steps:
+      # main's whole history, for the merges since the last release; only
+      # .github is checked out.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          sparse-checkout: .github
+
+      - name: List the changes since the last release (What to Test)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BUILD_NUMBER_OFFSET: ${{ vars.BUILD_NUMBER_OFFSET }}
+        run: |
+          python3 .github/scripts/testflight-changes.py >"$RUNNER_TEMP/whats-new.txt"
+          cat "$RUNNER_TEMP/whats-new.txt"
+
+      # Without the list, it still waits and reports; What to Test stays empty.
+      - name: Wait for App Store Connect processing and fill What to Test
+        if: ${{ !cancelled() }}
+        env:
+          ASC_APP_ID: ${{ vars.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          BUILD_NUMBER: ${{ needs.release.outputs.build_number }}
+          APP_VERSION: ${{ needs.release.outputs.version }}
+        run: python3 .github/scripts/testflight-processing.py --whats-new "$RUNNER_TEMP/whats-new.txt"
