@@ -370,7 +370,10 @@ struct MapView: View {
                         }
                     }
                     .padding(12)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bottomTrailingHeight = $0 }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                        bottomTrailingHeight = frame.height
+                        screen.mapCornerFrame = frame
+                    }
                     // Beside the trailing controls only where they reach,
                     // and then above the dock too: moved in from the edge on
                     // a phone, the zoom buttons were under it.
