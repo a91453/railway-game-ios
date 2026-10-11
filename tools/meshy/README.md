@@ -1,6 +1,6 @@
 # Meshy 的 3D 模型
 
-`meshy.mjs` 用作者的 [Meshy](https://www.meshy.ai/) 帳號，以 Text to 3D API 文字生成 3D 模型，縮小之後放進 3D 城市試作（`Web/CityView/`，ARCHITECTURE 決策 161）。要做哪些模型寫在 `models.json`，做好的紀錄在 `generated.json`。
+用作者的 [Meshy](https://www.meshy.ai/) 帳號生成 3D 模型，縮小之後放進 3D 城市試作（`Web/CityView/`，ARCHITECTURE 決策 161）。生成照 Meshy 官方的 skill（`.claude/skills/meshy-3d-generation/`，[meshy-dev/meshy-3d-agent](https://github.com/meshy-dev/meshy-3d-agent) `644fd70`，MIT）用官方的 CLI（`meshy-cli` 0.4.0，MIT）；`meshy.mjs` 只負責之後的 `pack`。要做哪些模型寫在 `models.json`，做好的出處記在 `generated.json`。
 
 目前的模型是臺鐵的兩種列車，在臺中車站的高架上跑（`Web/CityView/src/world/trains.js`）：
 
@@ -9,34 +9,27 @@
 | `emu900-cab`、`emu900-car` | EMU900 區間車的頭尾車與中間車（10 節） |
 | `emu3000-cab`、`emu3000-car` | EMU3000 自強號的頭尾車與中間車（12 節） |
 
-## API 金鑰
+## 登入
 
-金鑰只從環境變數 `MESHY_API_KEY` 讀，不寫進任何檔案，也不能進 repo（這個 repo 是公開的）。
+不用 API 金鑰。在 session 裡執行 CLI 的瀏覽器登入（`meshy auth login --device`），畫面上會出現一個網址與一組代碼；作者打開網址、登入 Meshy、輸入代碼、按同意，CLI 自己拿到憑證。憑證存在容器的 `~/.config/meshy/`，不進 repo、commit 或對話；容器回收後要重新登入。
 
-- Claude Code 雲端 session：在環境設定（session 標題列的雲端環境選單 → Edit）加上 `MESHY_API_KEY`，新的 session 才會讀到。
-- 本機：`export MESHY_API_KEY=...` 再執行。
+已經有 API 金鑰的話，也可以放在環境變數 `MESHY_API_KEY`（雲端 session 的環境設定），CLI 會優先用它。不要把金鑰或代碼貼到對話、issue 或 PR 裡。
 
-金鑰在 Meshy 網站的 API 設定頁建立。不要把金鑰貼到對話、issue 或 PR 裡。
+## 做一個模型
 
-## 指令
+從 repository 根目錄，需要 Node 22.12 以上與 `Web/CityView` 的套件（`cd Web/CityView && npm ci`，`pack` 用其中的 sharp）。CLI 不用安裝，以 `npm exec --yes --package=meshy-cli@0.4.0 -- meshy …` 執行。
 
-從 repository 根目錄執行，需要 Node 22 與 `Web/CityView` 的套件（`cd Web/CityView && npm ci`，`pack` 用其中的 sharp）：
+1. 在 `models.json` 加一筆：id、prompt、面數、`out`。
+2. 照 skill 的流程生成（文字或照片轉 3D、要遊戲用的低面數就用 smart topology）。`WORKSPACE` 是 `Web/CityView/data/raw/meshy/<id>/`（不提交），交付的檔案是那裡的 `<id>.glb`。花點數之前先報價、等作者同意。
+3. `node tools/meshy/meshy.mjs pack <id>`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`，更新同一個資料夾的 `index.json`；workspace 裡 CLI 的任務紀錄（任務編號、prompt、模型、點數）記進 `generated.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
+4. `tools/procedural-city/build_city_view.sh` 重新建置 App 打包的頁面。
 
-```sh
-node tools/meshy/meshy.mjs balance                       # 剩下的點數
-node tools/meshy/meshy.mjs generate emu900-cab emu900-car emu3000-cab emu3000-car
-node tools/meshy/meshy.mjs pack emu900-cab emu900-car emu3000-cab emu3000-car
-tools/procedural-city/build_city_view.sh                 # 重新建置 App 打包的頁面
-```
-
-- `generate`：先做 preview（網格，Meshy 7.1，重新拓樸到 `target_polycount` 個三角形），再 refine（貼圖 2K，不要 PBR），把 GLB 與縮圖下載到 `Web/CityView/data/raw/meshy/<id>/`（不提交），prompt、任務編號、用掉的點數記在 `generated.json`。已經有紀錄的 id 會從那個任務重新下載，不再花點數；要重做加 `--again`。
-- `pack`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`（`Web/CityView/public/models/trains/`），並更新同一個資料夾的 `index.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
-- 每個模型 30 點（preview 20、refine 10，2026-10 的 Meshy 7.1 價格）；四個共 120 點。
+價格（2026-10，Meshy 7.1）：文字轉 3D 的網格 20 點、上貼圖 10 點；照片轉 3D 含 2K 貼圖 30 點；smart topology（meshy-t2）的網格 5 點。實際用掉的看任務的 `consumed_credits`。
 
 ## 做好之後
 
-1. 看 `data/raw/meshy/<id>/thumbnail.png`：是不是單獨一節車、比例對不對。不對就改 `models.json` 的 prompt，`generate --again`。
-2. 看駕駛室朝哪一個軸，把 `front` 填成 `+x`、`-x`、`+z` 或 `-z`（沒填時當作 `+x`），再 `pack`。城市頁面把模型轉成駕駛室朝前、縮放成車長 × 2.9 m 寬 × 3.9 m 高，頭尾車用 `-cab`（尾車轉 180°），中間用 `-car`；兩個只有一個時每節都用它。
+1. 看預覽：是不是單獨一節車、比例對不對。不對就改 `models.json` 的 prompt 再生成（又要花點數，先問作者）。
+2. 看駕駛室朝哪一個軸，把 `models.json` 的 `front` 填成 `+x`、`-x`、`+z` 或 `-z`（沒填時當作 `+x`），再 `pack`。城市頁面把模型轉成駕駛室朝前、縮放成車長 × 2.9 m 寬 × 3.9 m 高，頭尾車用 `-cab`（尾車轉 180°），中間用 `-car`；兩個只有一個時每節都用它。
 3. `tools/procedural-city/build_city_view.sh`，提交 `Web/CityView/public/models/trains/` 與 `RailwayGameApp/Resources/CityView/`。
 4. 沒有模型（`index.json` 是 `{}` 或讀不到檔）時列車照舊畫方塊，塗裝是臺鐵的顏色。
 

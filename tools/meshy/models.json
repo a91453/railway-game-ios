@@ -1,5 +1,5 @@
 {
-  "comment": "Models made with Meshy's Text to 3D API (tools/meshy/meshy.mjs; ARCHITECTURE decision 161). One entry per model: the prompts, the preview and refine options, and where the packed GLB goes. `front` is the axis the cab faces in Meshy's output, filled in after looking at the thumbnail (null until then; the city view assumes +x).",
+  "comment": "Models made with Meshy (its CLI, as .claude/skills/meshy-3d-generation says) and packed by tools/meshy/meshy.mjs (ARCHITECTURE decision 161). One entry per model: the prompts, the preview and refine options, and where the packed GLB goes. `front` is the axis the cab faces in Meshy's output, filled in after looking at the thumbnail (null until then; the city view assumes +x).",
   "models": [
     {
       "id": "emu900-cab",
