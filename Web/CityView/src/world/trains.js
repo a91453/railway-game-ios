@@ -83,9 +83,6 @@ const EMU3000_STOCK = {
            lamp: { at: 3.9, f: 0.60, width: 1.5, tall: 0.045, lens: 0.52, gap: 0.36, housing: '#1b2330' } },
   },
 };
-// Along the Line: the owner's call (2026-10-11): every heavy-rail line of a Taiwanese area runs his N700ST
-// (HSR_STOCK, his Meshy model), the TRA's viaduct at Taichung included. The TRA's two stay here for when its
-// own trains come back; nothing picks them now.
 const TRA_STOCK = [EMU900_STOCK, EMU3000_STOCK];
 const HSR_NAME = /高鐵|高速鐵/;
 const SPEED = 15;        // m/s
@@ -586,8 +583,9 @@ export class Trains {
     const paths = chain(lines);
     this.beam = lampMaterial(beamTexture());
     const stocks = new Map(); // stock -> paths
+    let tra = 0;
     for (const p of paths) {
-      const stock = taiwan && p.railway === 'rail' ? HSR_STOCK // (the owner's N700ST on every line, above)
+      const stock = taiwan && p.railway === 'rail' ? (HSR_NAME.test(p.name) ? HSR_STOCK : TRA_STOCK[tra++ % TRA_STOCK.length])
         : STOCK.find((s) => p.name.includes(s.match)) ?? DEFAULT_STOCK;
       if (!stocks.has(stock)) stocks.set(stock, []);
       stocks.get(stock).push(p);
