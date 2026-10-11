@@ -138,16 +138,17 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// The scenario's days its first words are said on.
     static let welcomeDays: Int64 = 3
 
-    /// Decision 153: the first line, by ID, with a steam train shorter than
-    /// ``shortSteamCars``, in a steam era whose company lost money
-    /// yesterday or is in the red.
+    /// Decision 153: the first passenger line, by ID, with a steam train
+    /// shorter than ``shortSteamCars``, in a steam era whose company lost
+    /// money yesterday or is in the red. A freight line's train carries
+    /// goods, not 50 people a car (decision 155), so its cars are not why.
     private static func shortSteamTrains(in world: GameWorld) -> StationMasterAdvice? {
         guard world.accounts.mode == .management, world.scenario?.scenario.trainTypes?.contains(.steam) == true else { return nil }
         let yesterday = world.clock.now.seconds / GameTime.secondsPerDay - 1
         let day = world.accounts.days.first { $0.day == yesterday }
         let losing = world.economy.balance < .zero || day.map { $0.fareRevenue < $0.totalCost } ?? false
         guard losing else { return nil }
-        for line in world.lines {
+        for line in world.lines where !line.isFreight {
             let short = line.assignedTrains.contains { id in
                 world.train(id: id).map { $0.type == .steam && $0.cars < shortSteamCars } ?? false
             }

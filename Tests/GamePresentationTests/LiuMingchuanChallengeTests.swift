@@ -149,6 +149,27 @@ final class ScenarioStationMasterTests: XCTestCase {
         XCTAssertEqual(StationMasterAdvice(world: world), .shortSteamTrains(line: line, name: "基隆線"))
     }
 
+    /// A freight line's steam train carries goods, not 50 people a car
+    /// (decision 155): its cars are no reason to warn of seats, and it does
+    /// not hide a passenger line whose steam train is short.
+    func testAShortSteamTrainOnAFreightLineIsNotTheOneNamed() throws {
+        var world = LiuMingchuanChallenge.make()
+        let keelung = try world.buildStation(named: "基隆", at: LiuMingchuanChallenge.keelung.point).id
+        let badu = try world.buildStation(named: "八堵", at: LiuMingchuanChallenge.badu.point).id
+        let coal = try world.createLine(named: "煤線", stops: [keelung, badu]).id
+        try world.setLineFreight(coal, to: true)
+        let freightTrain = try world.purchaseTrain(named: "貨車").id
+        try world.assignTrain(freightTrain, to: coal, pattern: nil)
+        try world.advance(ticks: 1_441)
+        XCTAssertNotEqual(StationMasterAdvice(world: world), .shortSteamTrains(line: coal, name: "煤線"))
+
+        let line = try world.createLine(named: "基隆線", stops: [keelung, badu]).id
+        let train = try world.purchaseTrain(named: "騰雲號").id
+        try world.assignTrain(train, to: line, pattern: nil)
+        try world.advance(ticks: 1_440)
+        XCTAssertEqual(StationMasterAdvice(world: world), .shortSteamTrains(line: line, name: "基隆線"))
+    }
+
     func testAGoalOfAnyChallengeAndTheEnd() {
         XCTAssertEqual(
             StationMasterAdvice.goalMet(scenario: "sandbox.threeTowns", goal: 1, titles: ["Riders a day", "每日運量（人次）"]).text(in: .traditionalChinese),
