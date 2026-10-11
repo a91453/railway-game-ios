@@ -392,9 +392,11 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
   const KEY = 'procedural-tokyo:settings:13'; // (a new number when the defaults change: what was kept before is left behind)
   const explicit = [...params.keys()].some((k) => k !== 'area');
   // (the city is the page's, not a setting; and the abstract model is never kept: the page always opens on the city as it is)
-  const strip = (saved) => { delete saved.controllers?.city; delete saved.folders?.['Abstract model']?.controllers?.['abstract model'];
-    // (nor is the hour: the page always opens on Tokyo's own time, the live clock running)
-    for (const k of ['live clock', 'auto play', 'time']) delete saved.folders?.['Time (Tokyo)']?.controllers?.[k];
+  // Along the Line: the panel's names are the page's language (GUI_ZH), and what it keeps is named by them
+  const named = (en) => (ZH ? GUI_ZH[en] ?? en : en);
+  const strip = (saved) => { delete saved.controllers?.[named('city')]; delete saved.folders?.[named('Abstract model')]?.controllers?.[named('abstract model')];
+    // (nor is the hour: the page always opens on the area's own time, the live clock running)
+    for (const k of ['live clock', 'auto play', 'time']) delete saved.folders?.[named('Time')]?.controllers?.[named(k)];
     return saved;
   };
   if (!explicit) {
@@ -403,7 +405,7 @@ const previewMode = { on: params.get('preview') !== '0', live: params.get('previ
       if (saved) {
         gui.load(strip(saved));
         // (loading the time moved the slider, which stops the live clock: put the saved choice back)
-        const live = saved.folders?.['Time (Tokyo)']?.controllers?.['live clock'];
+        const live = saved.folders?.[named('Time')]?.controllers?.[named('live clock')];
         if (live != null) clockTime.live = live;
       }
     } catch (e) { console.warn('settings not restored:', e.message); }

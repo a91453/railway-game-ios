@@ -13,6 +13,9 @@
   document.querySelector('#loader .city').textContent = name || id.charAt(0).toUpperCase() + id.slice(1);
 })();
 
+// Along the Line: the page's title in English when the page is not Chinese (index.html has the Chinese)
+if (!/^zh/i.test(navigator.language)) document.title = 'Along the Line — 3D City Preview';
+
 // Along the Line: the website link in the page's language (in the app, the web view's is the app's); none in the
 // game (?app=1), whose settings have their own
 document.addEventListener('DOMContentLoaded', function () {
