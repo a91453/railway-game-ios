@@ -9,8 +9,8 @@ import SwiftUI
 /// (``BaseMapStyle``, light or dark). In Taiwan the tiles are the ones the
 /// app bundles (`Resources/BaseMap/`, from the same OpenStreetMap as the
 /// game's water and zones; no network needed), elsewhere OpenFreeMap's. The
-/// map style menu's OpenStreetMap; Apple's map (``AppleMapBackground``) stays
-/// the default.
+/// map style menu's OpenStreetMap, the default since decision 151; Apple's
+/// maps (``AppleMapBackground``) stay in the menu.
 ///
 /// Like Apple's map it follows the game's camera, top-down and north up
 /// (``OpenStreetMapBase/camera(of:in:width:height:)``), takes no gestures of
