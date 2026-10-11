@@ -36,6 +36,15 @@
       "target_polycount": 5000,
       "front": null,
       "out": "Web/CityView/public/models/trains/emu3000-car.glb"
+    },
+    {
+      "id": "n700st-cab",
+      "use": "THSR N700ST high-speed train (台灣高鐵), the two end cars",
+      "prompt": "One single high-speed train car, the leading driving car of a Taiwan High Speed Rail N700ST bullet train, based on the Japanese N700S Shinkansen. A long slender body 27 m long but only 3.4 m wide and 3.6 m tall, eight times longer than it is wide, on two bogies hidden behind side skirts. The front end is a very long, low, flat duck-bill nose with a sharp crease along each side, a small cockpit windshield on top and slim headlights; the rear end is flat with a gangway. One door near the rear end and a long row of small windows along each side. Low poly game asset, no rails, no base.",
+      "texture_prompt": "Glossy pure white body and nose. A wide orange band runs along the side below the windows, with a thin dark grey line just above it and plain white below it; towards the front the orange band sweeps down and forward onto the nose. Dark grey skirt along the bottom edge with a thin orange line above it. Black cockpit windshield, dark tinted side windows, white door, white roof.",
+      "target_polycount": 7000,
+      "front": null,
+      "out": "Web/CityView/public/models/trains/n700st-cab.glb"
     }
   ]
 }
