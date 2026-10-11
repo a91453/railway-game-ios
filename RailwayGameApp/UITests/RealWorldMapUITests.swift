@@ -64,6 +64,25 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(authority.waitForExistence(timeout: 60), "The demo's trains take their routes under traffic control")
     }
 
+    /// Decision 170: the High Speed Rail demo is built off the main actor (a
+    /// few seconds on a device, minutes in the Simulator's unoptimised
+    /// build), the demo sheet saying so, and opens on the map with the
+    /// clock running. Full lane only (not in the pull request gate).
+    func testTheHighSpeedDemoOpensOnTheMapAndRuns() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.highSpeed")
+
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 600), "The demo is built and opens")
+        // It runs at once, like the other demos: a pause button, not a play one.
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.waitForExistence(timeout: 30))
+    }
+
     /// A blank new game has no Apple map and no style menu.
     func testABlankGameHasNoMapStyle() {
         continueAfterFailure = false

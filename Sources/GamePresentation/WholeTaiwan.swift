@@ -90,7 +90,7 @@ extension GameSession {
     /// Since decision 168 the land within ``WholeTaiwan/highSpeedLandReach``
     /// of the stations a high-speed line calls at, which are the people
     /// their intercity trips come from.
-    static func readLand(
+    nonisolated static func readLand(
         roundStationsOf world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil, coverage: CoverageGrid? = nil
     ) {
         var wanted = blocks(within: WholeTaiwan.landReach, of: world.stations.map(\.location), in: world.bounds)
@@ -112,7 +112,7 @@ extension GameSession {
     /// are not read yet, as ``readLand(roundStationsOf:population:places:water:)``
     /// does round stations: also under a building about to be placed
     /// (decision 95), so it buys out the city's buildings there.
-    static func readLand(
+    nonisolated static func readLand(
         within reach: Int64, of points: [PlanPoint], in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid? = nil,
         coverage: CoverageGrid? = nil
     ) {
@@ -124,7 +124,7 @@ extension GameSession {
 
     /// The blocks of a world of `bounds` some part of which lies within
     /// `reach` of one of `points`.
-    private static func blocks(within reach: Int64, of points: [PlanPoint], in bounds: WorldBounds) -> Set<LandBlock> {
+    nonisolated private static func blocks(within reach: Int64, of points: [PlanPoint], in bounds: WorldBounds) -> Set<LandBlock> {
         var found = Set<LandBlock>()
         for point in points {
             found.formUnion(Land.blocks(within: reach, of: point, in: bounds))
@@ -133,7 +133,7 @@ extension GameSession {
     }
 
     /// Reads in whichever of `blocks` the map has not read yet.
-    private static func readLand(
+    nonisolated private static func readLand(
         blocks candidates: Set<LandBlock>, in world: inout GameWorld, population: PopulationGrid?, places: PlaceGrid?, water: WaterGrid?,
         coverage: CoverageGrid?
     ) {

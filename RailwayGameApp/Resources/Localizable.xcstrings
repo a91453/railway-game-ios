@@ -1623,6 +1623,36 @@
         }
       }
     },
+    "High-Speed Rail Demo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高鐵示範"
+          }
+        }
+      }
+    },
+    "Building the High Speed Rail…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在蓋高鐵…"
+          }
+        }
+      }
+    },
+    "The Taiwan High Speed Rail from Nangang to Zuoying, built on its real alignment with its three stopping patterns running" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台灣高鐵南港到左營，照真實路線蓋好，三種停站的列車已經在跑"
+          }
+        }
+      }
+    },
     "Railways already built and running: Taiwan’s real lines, or a simple one to try things on" : {
       "localizations" : {
         "zh-Hant" : {

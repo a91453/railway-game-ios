@@ -1,0 +1,270 @@
+import Foundation
+@testable import GameCore
+@testable import GamePresentation
+import XCTest
+
+/// The high-speed demo (ARCHITECTURE decision 170, the author's idea of
+/// 2026-10-11): the real Taiwan High Speed Rail built as the game's own
+/// track on its real alignment, with its twelve stations and three stopping
+/// patterns running at once.
+final class HighSpeedDemoTests: XCTestCase {
+    private static let root = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+
+    static func railways() throws -> RealRailways {
+        func file(_ name: String) throws -> Data {
+            try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/\(name)"))
+        }
+        return try RealRailways(lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"))
+    }
+
+    static let population = try? PopulationGrid(
+        data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_population.json"))
+    )
+
+    static let places = try? PlaceGrid(
+        data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_places.json"))
+    )
+
+    private static let metre = Double(WorldCoordinate.unitsPerMetre)
+
+    /// The layout as the game builds it, then built on a world with just
+    /// what it costs on top of a new game's money, and not run: the tracks,
+    /// the stations and the sets as they stand at midnight. Built once for
+    /// every test that needs it: it takes a minute in a debug build.
+    private static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld), Error> = Result {
+        let layout = try HighSpeedDemo.Layout(railways: railways())
+        var world = GameWorld.newGame(
+            anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: GameWorld.startingBalance + layout.cost(at: ConstructionCosts.newGame),
+            eventSeed: 1, land: []
+        )
+        world.setLandOnDemand()
+        try layout.build(in: &world, language: .english)
+        return (layout, world)
+    }
+
+    /// The demo as the game opens it, with the people round its stations.
+    private static let opened: Result<GameWorld, Error> = Result {
+        try HighSpeedDemo.make(in: .english, railways: railways(), population: population, places: places)
+    }
+
+    // MARK: - The track and the stations
+
+    func testItBuildsTheRealHighSpeedRailsTwelveStations() throws {
+        let world = try Self.built.get().world
+        XCTAssertEqual(
+            world.stations.map(\.name),
+            ["Nangang", "Taipei", "Banqiao", "Taoyuan", "Hsinchu", "Miaoli", "Taichung", "Changhua", "Yunlin", "Chiayi", "Tainan", "Zuoying"]
+        )
+    }
+
+    func testItsStationsStandWhereTheRealOnesDo() throws {
+        let (layout, world) = try Self.built.get()
+        for (station, stop) in zip(world.stations, layout.stops) {
+            let east = Double(station.point.x) - stop.point.x
+            let south = Double(station.point.y) - stop.point.y
+            // The platform is on the track, which passes the real station
+            // within a few hundred metres.
+            XCTAssertLessThan((east * east + south * south).squareRoot() / Self.metre, 500, station.name)
+        }
+    }
+
+    func testItsTrackIsTheRealAlignmentsLength() throws {
+        let (layout, world) = try Self.built.get()
+        let track = world.network.edges.reduce(0) { $0 + $1.length }
+        let real = layout.plan.path.length
+        // From Nangang's end to Zuoying's: about 352 km; the cubic edges
+        // are a few metres either side of the polyline.
+        XCTAssertEqual(Double(track) / Self.metre / 1_000, 352.2, accuracy: 2)
+        XCTAssertEqual(Double(track), real, accuracy: real * 0.005)
+        XCTAssertLessThan(world.network.edges.count, 300, "the track is fitted loosely: every edge is checked against all before it")
+    }
+
+    func testItsEdgesNeverStrayFarFromTheRealAlignment() throws {
+        let (layout, _) = try Self.built.get()
+        let plan = layout.plan
+        var worst = 0.0
+        for index in plan.curves.indices {
+            guard case .cubic(let c1, let c2) = plan.curves[index] else { continue }
+            let curve = (WorldVector(plan.nodes[index].point), WorldVector(c1), WorldVector(c2), WorldVector(plan.nodes[index + 1].point))
+            worst = max(worst, RealWorldDemo.deviation(of: curve, from: plan.path, between: plan.distances[index], and: plan.distances[index + 1]))
+        }
+        XCTAssertLessThanOrEqual(worst / Self.metre, 10, "within the fit's tolerance of the real centre line")
+    }
+
+    // MARK: - The line and its sets
+
+    func testItsLineCallsAtAllTwelveStationsAndIsAHighSpeedLine() throws {
+        let world = try Self.built.get().world
+        let line = try XCTUnwrap(world.lines.first)
+        XCTAssertEqual(world.lines.count, 1)
+        XCTAssertEqual(line.stops, world.stations.map(\.id))
+        XCTAssertEqual(line.patterns.map(\.calls), [[0, 1, 2, 3, 4, 6, 9, 10, 11], [0, 1, 2, 6, 11]])
+        XCTAssertTrue(line.isHighSpeed, "planned at PERF_HSR: the line is a high-speed line (decision 168)")
+        XCTAssertEqual(line.window, .standard, "the real day's first train is at 06:00 and the last at midnight")
+        XCTAssertFalse(world.isTrafficControlEnabled, "one track for both ways")
+    }
+
+    func testItsSetsAreTwelveCarHighSpeedSets() throws {
+        let world = try Self.built.get().world
+        XCTAssertEqual(world.trains.count, HighSpeedDemo.services.reduce(0) { $0 + $1.sets })
+        for train in world.trains {
+            XCTAssertEqual(train.type, .highSpeed, train.name)
+            XCTAssertEqual(train.cars, 12, train.name)
+            XCTAssertEqual(train.performance, .highSpeed, train.name)
+            XCTAssertEqual(train.capacity, 960, "12 cars of 80, not overloaded")
+        }
+    }
+
+    /// The sets of every service are what its headway needs of its round
+    /// trip on the track as built (the money to buy them is worked out
+    /// from the count before anything is built).
+    func testEveryServiceHasTheSetsItsHeadwayNeeds() throws {
+        let world = try Self.built.get().world
+        let line = try XCTUnwrap(world.lines.first)
+        for (index, service) in HighSpeedDemo.services.enumerated() {
+            let pattern: Int? = index == 0 ? nil : index - 1
+            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: pattern), service.english)
+            XCTAssertEqual(
+                HighSpeedDemo.sets(roundTripMinutes: journey.roundTripMinutes, headway: service.headway), service.sets,
+                "\(service.english): a round trip of \(journey.roundTripMinutes) minutes every \(service.headway)"
+            )
+            XCTAssertEqual((index == 0 ? line.trains : line.patterns[index - 1].trains).count, service.sets, service.english)
+            XCTAssertEqual(
+                index == 0 ? line.targetHeadways : line.patterns[index - 1].targetHeadways,
+                TargetHeadways(peak: service.headway, offPeak: service.headway, low: service.headway), service.english
+            )
+        }
+    }
+
+    /// The game starts with the money of a new game: what the track, the
+    /// stations and the sets cost was added to it.
+    func testItIsPaidForBeforeItStarts() throws {
+        let world = try Self.built.get().world
+        XCTAssertEqual(world.economy.balance, GameWorld.startingBalance)
+    }
+
+    func testItSavesAndLoads() throws {
+        let world = try Self.built.get().world
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+    }
+
+    // MARK: - The game as it opens
+
+    func testItOpensAtSevenWithTheSetsOnTheirWay() throws {
+        let world = try Self.opened.get()
+        XCTAssertEqual(world.clock.now.minute, 7 * 60)
+        XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
+        XCTAssertEqual(world.stations.count, 12)
+        // The first set of each kind left at six, a third and a half more
+        // since: seven by seven o'clock, spread along the line, the first
+        // already past Taichung (the edges are numbered from Nangang).
+        let running = world.trains.filter { $0.execution != nil }
+        XCTAssertGreaterThanOrEqual(running.count, 7)
+        let numbers = running.compactMap { train -> Int? in
+            if case .onEdge(let traversal, _) = train.position { return traversal.edge.networkNumber }
+            return nil
+        }
+        XCTAssertGreaterThanOrEqual(Set(numbers).count, 5, "spread along the line")
+        XCTAssertGreaterThan(numbers.max() ?? 0, world.network.edges.count / 2, "the first sets are in the south")
+    }
+
+    func testPeopleLiveRoundItsStationsAndTravelBetweenThem() throws {
+        try XCTSkipIf(Self.population == nil, "The population file is not here.")
+        let world = try Self.opened.get()
+        var total: Int64 = 0
+        for station in world.stations {
+            let hinterland = try XCTUnwrap(world.stationDemand(of: station.id)?.hinterland, station.name)
+            XCTAssertGreaterThan(hinterland, 100_000, "\(station.name): the people within 8 km")
+            total += hinterland
+        }
+        XCTAssertGreaterThan(total, 10_000_000, "Taipei, Taichung and Kaohsiung's towns are in it")
+        // An hour of the day has passed with the people there: passengers
+        // were released at the stations and some have arrived.
+        XCTAssertGreaterThan(world.passengers.reduce(0) { $0 + $1.released }, 0)
+        XCTAssertGreaterThan(world.passengers.reduce(0) { $0 + $1.arrived }, 0)
+    }
+
+    // MARK: - The game launcher
+
+    /// The launcher builds it off the main actor, says so while it does,
+    /// and opens the game when it is built.
+    @MainActor
+    func testTheLauncherBuildsAndOpensIt() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HighSpeedDemoTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let railways = try Self.railways()
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.population = Self.population
+        launcher.places = Self.places
+        let task = launcher.openHighSpeedDemo(railways: railways)
+        // A second tap while it builds does nothing.
+        XCTAssertNil(launcher.openHighSpeedDemo(railways: railways), "one build at a time")
+        XCTAssertTrue(launcher.isOpeningHighSpeedDemo)
+        XCTAssertNil(launcher.session, "still on the start screen")
+        await task?.value
+        XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
+        XCTAssertEqual(launcher.session?.world.stations.count, 12, "the game is open")
+        XCTAssertEqual(launcher.session?.world.lines.first?.isHighSpeed, true)
+        try XCTSkipIf(Self.population == nil, "The population file is not here.")
+        let taipei = try XCTUnwrap(launcher.session?.world.stations.first { $0.name == "Taipei" })
+        XCTAssertGreaterThan(launcher.session?.world.stationDemand(of: taipei.id)?.hinterland ?? 0, 1_000_000, "the people were handed to the build")
+    }
+
+    // MARK: - Report
+
+    /// What the demo is, measured: the track, what it costs, the services
+    /// and two days' accounts. Printed, and only on request:
+    ///
+    ///     HSR_DEMO_REPORT=1 swift test -c release -Xswiftc -enable-testing --filter HighSpeedDemoTests/testReport
+    func testReport() throws {
+        guard ProcessInfo.processInfo.environment["HSR_DEMO_REPORT"] != nil else { throw XCTSkip("Set HSR_DEMO_REPORT=1.") }
+        func say(_ text: String) {
+            FileHandle.standardError.write(Data((text + "\n").utf8))
+        }
+        var clock = Date()
+        func lap(_ what: String) {
+            say("\(what): \(String(format: "%.2f", Date().timeIntervalSince(clock))) s")
+            clock = Date()
+        }
+        let railways = try Self.railways()
+        let layout = try HighSpeedDemo.Layout(railways: railways)
+        say("\(layout.plan.curves.count) edges, \(Int(layout.plan.path.length / Self.metre / 1_000)) km; costs \(layout.cost(at: ConstructionCosts.newGame).moneyText)")
+        clock = Date()
+        var world = try HighSpeedDemo.make(in: .english, railways: railways, population: Self.population, places: Self.places)
+        lap("make")
+        say("at \(world.clock.now.minute / 60):00, balance \(world.economy.balance.moneyText); stations \(world.stations.count), sets \(world.trains.count), edges \(world.network.edges.count), land cells \(world.land.cells.count)")
+        for line in world.lines {
+            let services: [(pattern: Int?, calls: Int, sets: Int)] =
+                [(nil, line.stops.count, line.trains.count)] + line.patterns.enumerated().map { ($0.offset, $0.element.calls.count, $0.element.trains.count) }
+            for (service, entry) in services.enumerated() {
+                let journey = world.lineJourney(line.id, pattern: entry.pattern)
+                say("service \(service): \(entry.calls) calls, \(entry.sets) sets, round trip \(journey?.roundTripMinutes ?? -1) min")
+            }
+        }
+        say("hinterlands \(world.stations.map { world.stationDemand(of: $0.id)?.hinterland ?? 0 })")
+        let ordinary = world.stations.map { world.stationDemand(of: $0.id)?.dailyTrips ?? 0 }
+        say("stations' own daily trips \(ordinary), together \(ordinary.reduce(0, +))")
+        // To midnight, then two whole days.
+        try world.advance(ticks: Int(1_440 - world.clock.now.minute % 1_440))
+        for _ in 1...2 {
+            try world.advance(ticks: 1_440)
+            lap("day")
+            if let last = world.accounts.days.last {
+                say("day \(last.day): trips \(last.fareTrips), fares \(last.fareRevenue.moneyText), costs \(last.totalCost.moneyText), balance \(world.economy.balance.moneyText)")
+            }
+        }
+        let released = world.passengers.reduce(0) { $0 + $1.released }
+        let arrived = world.passengers.reduce(0) { $0 + $1.arrived }
+        let overflowed = world.passengers.reduce(0) { $0 + $1.overflowed }
+        let abandoned = world.passengers.reduce(0) { $0 + $1.abandoned }
+        say("released \(released), arrived \(arrived), overflowed \(overflowed), abandoned \(abandoned)")
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        lap("encode \(data.count / 1_000) kB")
+        _ = try JSONDecoder().decode(SavedGame.self, from: data)
+        lap("decode")
+    }
+}

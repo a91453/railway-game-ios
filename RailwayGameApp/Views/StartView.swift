@@ -297,8 +297,8 @@ struct StartView: View {
 }
 
 /// The start screen's demos (decision 135), the real-world one first: the
-/// game as it looks on Taiwan's real lines, then the simple demo, a small
-/// network to try things on.
+/// game as it looks on Taiwan's real lines, then the High Speed Rail
+/// (decision 170), then the simple demo, a small network to try things on.
 private struct DemoPicker: View {
     let launcher: GameLauncher
     /// What the real-world demo says while the real-world data is read.
@@ -324,6 +324,28 @@ private struct DemoPicker: View {
                     // sources screen) there is no demo to open.
                     .disabled(launcher.railways == nil)
                     .accessibilityIdentifier("demo.realWorld")
+                    // Decision 170: the Taiwan High Speed Rail, built on its
+                    // real alignment. It takes seconds to build, so the
+                    // sheet stays up, saying so, until the game begins.
+                    StartButton(
+                        title: String(localized: "High-Speed Rail Demo"),
+                        detail: launcher.isOpeningHighSpeedDemo
+                            ? String(localized: "Building the High Speed Rail…")
+                            : launcher.isLoadingRealWorldData
+                            ? loadingDetail
+                            : String(localized: "The Taiwan High Speed Rail from Nangang to Zuoying, built on its real alignment with its three stopping patterns running"),
+                        systemImage: "bolt.fill",
+                        tone: .accent
+                    ) {
+                        if let railways = launcher.railways {
+                            Task {
+                                await launcher.openHighSpeedDemo(railways: railways)?.value
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(launcher.railways == nil || launcher.isOpeningHighSpeedDemo)
+                    .accessibilityIdentifier("demo.highSpeed")
                     StartButton(
                         title: String(localized: "Simple Demo"),
                         detail: String(localized: "Three lines already running, in a city that grows"),
