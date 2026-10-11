@@ -2,8 +2,8 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// High-speed rail (ARCHITECTURE decision 168): the line kind, the fare, the
-/// hinterland and the intercity trips. Every expectation is worked out by
+/// High-speed rail (ARCHITECTURE decision 168): the high-speed line, the fare,
+/// the hinterland and the intercity trips. Every expectation is worked out by
 /// hand from the rules.
 final class HighSpeedTests: XCTestCase {
     // MARK: - The fare
@@ -65,7 +65,27 @@ final class HighSpeedTests: XCTestCase {
     private let b = StationID(rawValue: 2)
     private let n = StationID(rawValue: 3)
 
-    func testALineIsMadeHighSpeedByACommand() throws {
+    /// What makes a line high-speed is how it is planned: at `PERF_HSR`,
+    /// whatever top speed. There is no switch.
+    func testAHighSpeedPerformanceIsOneThatRunsAsPERFHSR() {
+        XCTAssertTrue(TrainPerformance.highSpeed.isHighSpeed)
+        let slower = TrainPerformance(
+            acceleration: 1_400, braking: 1_500, topSpeed: 200, alternativeAcceleration: 2_000, alternativeBraking: 2_700,
+            coast: TrainPerformance.Coast(deceleration: 450, speedRatio: 450)
+        )
+        XCTAssertTrue(slower.isHighSpeed, "a design speed changes only the top speed")
+        let other = TrainPerformance(
+            acceleration: 1_400, braking: 1_500, topSpeed: 300, alternativeAcceleration: 2_000, alternativeBraking: 2_700,
+            coast: TrainPerformance.Coast(deceleration: 400, speedRatio: 450)
+        )
+        XCTAssertFalse(other.isHighSpeed, "it coasts differently")
+        for performance in [TrainPerformance.standard, .metro, .local, .express, .semiExpress, .ordinary, .emu3000, .pushPull,
+                            .tiltingTaroko, .tiltingPuyuma, .dieselExpress, .dieselRailcar, .forestRailway, .steam] {
+            XCTAssertFalse(performance.isHighSpeed)
+        }
+    }
+
+    func testALineIsHighSpeedWhenItIsPlannedAtHighSpeed() throws {
         var world = try makeWorld(width: 40_960, height: 4_096, balance: 100_000)
         for (index, name) in ["A", "B", "N"].enumerated() {
             try world.buildStation(named: name, at: PlanPoint(x: 2_048 + 8_192 * Int64(index), y: 2_048))
@@ -75,55 +95,47 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.lines.map(\.isHighSpeed), [false, false])
         XCTAssertEqual(world.highSpeedStations, [])
 
-        try world.setLineHighSpeed(line, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
         XCTAssertEqual(world.lines.map(\.isHighSpeed), [true, false])
         XCTAssertEqual(world.highSpeedStations, [a, b])
         XCTAssertTrue(world.isHighSpeedStation(b))
         XCTAssertFalse(world.isHighSpeedStation(n))
         let before = world
-        try world.setLineHighSpeed(line, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
         XCTAssertEqual(world, before, "again changes nothing")
 
         // The stops of a high-speed line are high-speed stations.
         try world.setLineStops(line, to: [a, n])
         XCTAssertEqual(world.highSpeedStations, [a, n])
         // A station on a second high-speed line stays one when the first goes.
-        try world.setLineHighSpeed(other, to: true)
+        try world.setLinePerformance(other, to: .highSpeed)
         XCTAssertEqual(world.highSpeedStations, [a, b, n])
         try world.removeLine(line)
         XCTAssertEqual(world.highSpeedStations, [b, n])
 
-        try world.setLineHighSpeed(other, to: false)
+        // Another performance, and it is an ordinary line again.
+        try world.setLinePerformance(other, to: .express)
         XCTAssertEqual(world.highSpeedStations, [])
-        XCTAssertThrowsGameError(try world.setLineHighSpeed(LineID(rawValue: 99), to: true), .unknownLine(LineID(rawValue: 99)))
+        XCTAssertEqual(world.lines.map(\.isHighSpeed), [false])
     }
 
-    func testAFreightLineIsNotHighSpeedNorTheOtherWayRound() throws {
-        var world = try makeWorld(width: 40_960, height: 4_096, balance: 100_000)
-        for index in 0..<2 {
-            try world.buildStation(named: "S\(index)", at: PlanPoint(x: 2_048 + 8_192 * Int64(index), y: 2_048))
-        }
-        let freight = try world.createLine(named: "Goods", stops: [a, b]).id
-        let fast = try world.createLine(named: "Fast", stops: [a, b]).id
+    func testAFreightLineIsNeverAHighSpeedLine() throws {
+        var world = try landWorld()
+        let line = LineID(rawValue: 1)
         world.enableFreight()
-        try world.setLineFreight(freight, to: true)
-        try world.setLineHighSpeed(fast, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
+        XCTAssertEqual(world.stationDemand(of: a)?.hinterland, 1_860)
 
-        let before = world
-        XCTAssertThrowsGameError(try world.setLineHighSpeed(freight, to: true), .lineIsFreight(freight))
-        XCTAssertThrowsGameError(try world.setLineFreight(fast, to: true), .lineIsHighSpeed(fast))
-        XCTAssertEqual(world, before, "a refusal changes nothing")
-        // Either goes back first, and the lines swap kinds.
-        try world.setLineHighSpeed(fast, to: false)
-        try world.setLineFreight(fast, to: true)
-        try world.setLineFreight(freight, to: false)
-        try world.setLineHighSpeed(freight, to: true)
-        XCTAssertEqual(world.lines.map(\.isHighSpeed), [true, false])
-        XCTAssertEqual(world.lines.map(\.isFreight), [false, true])
-        // A freight line's stations are not high-speed stations.
-        XCTAssertEqual(world.highSpeedStations, [a, b])
-        try world.setLineHighSpeed(freight, to: false)
+        // Freight is carried by the ton: the stations lose their hinterlands.
+        try world.setLineFreight(line, to: true)
+        XCTAssertEqual(world.lines.map(\.isHighSpeed), [false])
         XCTAssertEqual(world.highSpeedStations, [])
+        XCTAssertEqual(world.stationDemand(of: a)?.hinterland, 0)
+        XCTAssertFalse(world.isHighSpeedStation(a))
+        // And a passenger line again, planned as it was, has them back.
+        try world.setLineFreight(line, to: false)
+        XCTAssertEqual(world.lines.map(\.isHighSpeed), [true])
+        XCTAssertEqual(world.stationDemand(of: a)?.hinterland, 1_860)
     }
 
     func testAHighSpeedLineIsCopiedAndSaved() throws {
@@ -134,26 +146,26 @@ final class HighSpeedTests: XCTestCase {
         let line = try world.createLine(named: "Fast", stops: [a, b]).id
         // An ordinary world saves nothing of it: saves from before it read as they did.
         let plain = String(decoding: try JSONEncoder().encode(SavedGame(world: world)), as: UTF8.self)
-        XCTAssertFalse(plain.contains("highSpeed"))
         XCTAssertFalse(plain.contains("hinterland"))
+        XCTAssertFalse(plain.contains("HSR"))
 
-        try world.setLineHighSpeed(line, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
         let copy = try world.duplicateLine(line, named: "Fast 2")
-        XCTAssertTrue(copy.isHighSpeed)
+        XCTAssertTrue(copy.isHighSpeed, "the copy is planned as the line is")
         try world.setStationDemand(a, to: StationDemand(kind: .office, dailyTrips: 100, hinterland: 654_321))
         let train = try world.purchaseTrain(named: "N700").id
         try world.setTrainType(train, to: .highSpeed)
 
         let data = try JSONEncoder().encode(SavedGame(world: world))
         let text = String(decoding: data, as: UTF8.self)
-        XCTAssertTrue(text.contains(#""highSpeed":true"#))
+        XCTAssertFalse(text.contains(#""highSpeed""#), "a line is high-speed by its performance, which is all it saves")
         XCTAssertTrue(text.contains(#""hinterland":654321"#))
         XCTAssertTrue(text.contains(#""type":"HSR""#))
-        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.lines.map(\.isHighSpeed), [true, true])
 
-        // A line cannot be both, and a hinterland is bounded.
-        let both = text.replacingOccurrences(of: #""highSpeed":true"#, with: #""highSpeed":true,"freight":true"#)
-        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: Data(both.utf8)))
+        // A hinterland is bounded.
         let huge = text.replacingOccurrences(of: #""hinterland":654321"#, with: #""hinterland":100000001"#)
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: Data(huge.utf8)))
         let negative = text.replacingOccurrences(of: #""hinterland":654321"#, with: #""hinterland":-1"#)
@@ -236,7 +248,7 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.stationDemand(of: a), StationDemand(kind: .residential, dailyTrips: 400))
         XCTAssertNil(world.stationDemand(of: b))
 
-        try world.setLineHighSpeed(line, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
         // S1: P 1,000 + Q 30 + 330 + T 500 = 1,860. S2: Q 70 + 770 + R 500 +
         // U 400 = 1,740, with no trips of its own.
         XCTAssertEqual(world.stationDemand(of: a), StationDemand(kind: .residential, dailyTrips: 400, hinterland: 1_860))
@@ -261,16 +273,38 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.stationDemand(of: a), StationDemand(kind: .residential, dailyTrips: 600, hinterland: 2_360))
 
         // Not a high-speed line any more: the hinterlands go.
-        try world.setLineHighSpeed(line, to: false)
+        try world.setLinePerformance(line, to: .standard)
         XCTAssertEqual(world.stationDemand(of: a), StationDemand(kind: .residential, dailyTrips: 600))
         XCTAssertNil(world.stationDemand(of: b))
+    }
+
+    /// A save from before this build has lines already planned at high speed
+    /// (the line menu always had "High-speed rail"): they are high-speed lines
+    /// when it reads them, and their stations have their hinterlands the next
+    /// time the land demand is read again.
+    func testASaveFromBeforeReadsALinePlannedAtHighSpeedAsOne() throws {
+        var world = try landWorld()
+        try world.setLinePerformance(LineID(rawValue: 1), to: .highSpeed)
+        // Sorted keys, so that the key follows "dailyTrips" in every run.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let text = String(decoding: try encoder.encode(SavedGame(world: world)), as: UTF8.self)
+        let older = text.replacingOccurrences(of: #","hinterland":1860"#, with: "").replacingOccurrences(of: #","hinterland":1740"#, with: "")
+        XCTAssertFalse(older.contains("hinterland"), "what an older build saved")
+        var loaded = try JSONDecoder().decode(SavedGame.self, from: Data(older.utf8)).world
+        XCTAssertEqual(loaded.lines.map(\.isHighSpeed), [true])
+        XCTAssertEqual(loaded.stationDemand(of: a)?.hinterland, 0)
+
+        try loaded.setLand(loaded.land.cells)
+        XCTAssertEqual(loaded.stationDemand(of: a)?.hinterland, 1_860)
+        XCTAssertEqual(loaded.stationDemand(of: b)?.hinterland, 1_740)
     }
 
     func testAFreeCompanysStationsKeepTheirRidershipAndHaveNoHinterland() throws {
         // The land sets the ridership of a managed company only (Phase 6b).
         var world = try landWorld()
         world.setEconomyMode(.free)
-        try world.setLineHighSpeed(LineID(rawValue: 1), to: true)
+        try world.setLinePerformance(LineID(rawValue: 1), to: .highSpeed)
         XCTAssertEqual(world.stationDemand(of: a), StationDemand(kind: .residential, dailyTrips: 400))
         XCTAssertNil(world.stationDemand(of: b))
     }
@@ -328,7 +362,6 @@ final class HighSpeedTests: XCTestCase {
             try world.setTrainMovementRate(train, to: 1024)
         }
         try world.assignTrain(train, to: line)
-        try world.setLineHighSpeed(line, to: true)
         world.setPassengerRoutingMode(.network)
         for (station, people) in zip([a, n, b], hinterlands) {
             try world.setStationDemand(station, to: StationDemand(kind: .residential, dailyTrips: 0, hinterland: people))
@@ -421,7 +454,8 @@ final class HighSpeedTests: XCTestCase {
     private func boardingWorld(highSpeed: Bool) throws -> GameWorld {
         var world = try corridor(hinterlands: [0, 0, 0], placesTrain: true)
         if !highSpeed {
-            try world.setLineHighSpeed(LineID(rawValue: 1), to: false)
+            // Planned as a Tze-Chiang express instead: the same train at the same stop.
+            try world.setLinePerformance(LineID(rawValue: 1), to: .express)
         }
         world.setEconomyMode(.management)
         world.setSpeed(.normal)

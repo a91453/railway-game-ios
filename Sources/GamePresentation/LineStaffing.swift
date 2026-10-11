@@ -79,8 +79,15 @@ extension GameSession {
         perform { world throws(GameError) in
             var draft = world
             var waiting = 0
+            // Decision 168: a high-speed line is run with high-speed sets,
+            // where the game offers them (not in an era with types of its own).
+            let highSpeedSets = line.isHighSpeed && draft.offeredTrainTypes.contains(.highSpeed)
             for _ in 0..<plan.trains {
                 let train = try draft.purchaseTrain(named: Self.suggestedTrainName(for: draft, in: language))
+                if highSpeedSets {
+                    try draft.setTrainType(train.id, to: .highSpeed)
+                    try draft.setTrainPerformance(train.id, to: .highSpeed)
+                }
                 var placed = draft
                 do throws(GameError) {
                     try placed.placeTrain(train.id, at: journey.start)

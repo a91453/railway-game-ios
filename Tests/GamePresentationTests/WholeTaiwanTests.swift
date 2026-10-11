@@ -117,7 +117,7 @@ final class WholeTaiwanTests: XCTestCase {
     /// cells of those blocks; a station of an ordinary line reads 2 km. The
     /// hinterland is the residents and jobs the land holds within 8 km of
     /// each (the stations are 160 km apart, sharing nothing), and Undo takes
-    /// the switch and the land back together.
+    /// the line's performance and the land back together.
     func testAHighSpeedStationReadsInTheLandOfItsHinterland() throws {
         let session = GameSession(world: .newWholeTaiwanGame(), language: .english)
         session.population = Self.population
@@ -134,7 +134,7 @@ final class WholeTaiwanTests: XCTestCase {
         XCTAssertEqual(session.world.landBlocks, ordinary.sorted())
         XCTAssertEqual(session.world.stationDemand(of: StationID(rawValue: 1))?.hinterland, 0)
 
-        try session.performEdit { world throws(GameError) in try world.setLineHighSpeed(LineID(rawValue: 1), to: true) }
+        try session.performEdit { world throws(GameError) in try world.setLinePerformance(LineID(rawValue: 1), to: .highSpeed) }
         let bounds = session.world.bounds
         let wide = Set(Land.blocks(within: WholeTaiwan.highSpeedLandReach, of: taichung, in: bounds)
             + Land.blocks(within: WholeTaiwan.highSpeedLandReach, of: zuoying, in: bounds))

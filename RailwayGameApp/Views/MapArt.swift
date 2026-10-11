@@ -85,10 +85,13 @@ enum MapArt {
         }
         drawPlacedBuildings(world, projection: projection, in: context)
         if let building { drawBuildingOverlay(building, projection: projection, in: context) }
+        // Decision 168: the stations a high-speed line calls at have a second ring.
+        let fast = world.highSpeedStations
         for station in world.stations {
             drawPointStation(
                 station,
                 isSelected: station.id == selectedStationID,
+                isHighSpeed: fast.contains(station.id),
                 layers: layers,
                 waitingCount: waitingCounts[station.id] ?? 0,
                 projection: projection,
@@ -111,7 +114,7 @@ enum MapArt {
                 context.stroke(body, with: .color(Palette.train.opacity(0.75)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.3), lineCap: .round, lineJoin: .round))
             }
             if region.contains(location.position) {
-                drawTrain(at: location, isSelected: train.id == selectedTrainID, projection: projection, in: context)
+                drawTrain(at: location, isSelected: train.id == selectedTrainID, isHighSpeed: train.type == .highSpeed, projection: projection, in: context)
             }
         }
         drawWaitMarks(traffic, projection: projection, in: context)
@@ -366,12 +369,16 @@ enum MapArt {
     /// Each line in its colour along the track its trains take, side by
     /// side where lines share it (``LineMap``, MapBuilder's
     /// `js-Map-segments--solid`: butt caps, each line its offset out); in
-    /// a tunnel, faded as the track is.
+    /// a tunnel, faded as the track is. Decision 168: a high-speed line has
+    /// a navy casing, drawn under every line, so it reads as the heavier
+    /// line of the network (the app icon's thick navy outline) without
+    /// moving the lines beside it.
     private static func drawLines(_ lines: LineMap, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
         guard !lines.stretches.isEmpty else { return }
         let region = drawingRegion(projection)
         let width = lineWidth(projection)
         var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
+        var drawn: [(path: Path, color: Color, isHighSpeed: Bool, inTunnel: Bool)] = []
         for stretch in lines.stretches {
             guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
             drawings[stretch.edge] = drawing
@@ -384,7 +391,20 @@ enum MapArt {
             // Decision 124: in an automatic edge's tunnel too.
             let middle = (stretch.start + end) / 2
             let inTunnel = drawing.edge.sectionSpans.first { $0.start <= middle && middle <= $0.end }?.kind == .tunnel
-            context.stroke(path, with: .color(inTunnel ? color.opacity(0.5) : color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+            drawn.append((path, color, stretch.isHighSpeed, inTunnel))
+        }
+        let casing = width + max(4, width * 0.9)
+        for stretch in drawn where stretch.isHighSpeed {
+            context.stroke(
+                stretch.path, with: .color(stretch.inTunnel ? Palette.ink.opacity(0.5) : Palette.ink),
+                style: StrokeStyle(lineWidth: casing, lineCap: .butt, lineJoin: .round)
+            )
+        }
+        for stretch in drawn {
+            context.stroke(
+                stretch.path, with: .color(stretch.inTunnel ? stretch.color.opacity(0.5) : stretch.color),
+                style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round)
+            )
         }
     }
 
@@ -441,24 +461,48 @@ enum MapArt {
         return path
     }
 
-    private static func drawTrain(at location: TrackLocation, isSelected: Bool, projection: some MapProjection, in context: GraphicsContext) {
+    /// A train's head: a dot, and in full detail a nose along the way it is
+    /// going. Decision 168: a high-speed set's head is an arrow along that
+    /// way instead, so that it reads as another kind of train at a glance
+    /// (and in grey: the shape is the difference, not the colour).
+    private static func drawTrain(
+        at location: TrackLocation, isSelected: Bool, isHighSpeed: Bool, projection: some MapProjection, in context: GraphicsContext
+    ) {
         let center = projection.screenPoint(of: location.position)
         let radius = max(2.5, projection.referenceSize * 0.26)
-        if projection.detail == .full {
-            let dx = Double(location.direction.dx), dy = Double(location.direction.dy)
-            let length = (dx * dx + dy * dy).squareRoot()
-            if length > 0 {
-                let distance = radius * 1.7 / projection.pointsPerUnit
-                let end = projection.screenPoint(worldX: Double(location.position.x) + dx / length * distance, worldY: Double(location.position.y) + dy / length * distance)
-                var nose = Path()
-                nose.move(to: cgPoint(center))
-                nose.addLine(to: cgPoint(end))
-                context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
+        let dx = Double(location.direction.dx), dy = Double(location.direction.dy)
+        let length = (dx * dx + dy * dy).squareRoot()
+        // A point ahead of the train, on the screen.
+        var ahead: CGPoint?
+        if length > 0 {
+            let distance = radius * 1.7 / projection.pointsPerUnit
+            ahead = cgPoint(projection.screenPoint(worldX: Double(location.position.x) + dx / length * distance, worldY: Double(location.position.y) + dy / length * distance))
+        }
+        if projection.detail == .full, !isHighSpeed, let ahead {
+            var nose = Path()
+            nose.move(to: cgPoint(center))
+            nose.addLine(to: ahead)
+            context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
+        }
+        var head = disc(at: center, radius: radius)
+        if isHighSpeed, let ahead {
+            let from = cgPoint(center)
+            let along = CGVector(dx: ahead.x - from.x, dy: ahead.y - from.y)
+            let size = (along.dx * along.dx + along.dy * along.dy).squareRoot()
+            if size > 0 {
+                let ux = along.dx / size, uy = along.dy / size
+                let tip = CGPoint(x: from.x + ux * radius * 2, y: from.y + uy * radius * 2)
+                let back = CGPoint(x: from.x - ux * radius, y: from.y - uy * radius)
+                let left = CGPoint(x: back.x - uy * radius * 1.2, y: back.y + ux * radius * 1.2)
+                let right = CGPoint(x: back.x + uy * radius * 1.2, y: back.y - ux * radius * 1.2)
+                head = polygon([tip, left, right])
             }
         }
-        let dot = disc(at: center, radius: radius)
-        context.fill(dot, with: .color(Palette.train))
-        context.stroke(dot, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)), lineWidth: isSelected ? 3 : 1.5)
+        context.fill(head, with: .color(Palette.train))
+        context.stroke(
+            head, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)),
+            style: StrokeStyle(lineWidth: isSelected ? 3 : 1.5, lineJoin: .round)
+        )
     }
 
     private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
@@ -868,6 +912,7 @@ enum MapArt {
     private static func drawPointStation(
         _ station: Station,
         isSelected: Bool,
+        isHighSpeed: Bool,
         layers: MapLayerPreferences,
         waitingCount: Int64,
         projection: some MapProjection,
@@ -895,6 +940,11 @@ enum MapArt {
         let badge = Path(ellipseIn: badgeRect)
         context.fill(badge, with: .color(Palette.station))
         context.stroke(badge, with: .color(Palette.ink), lineWidth: 1.5)
+        // Decision 168: a station a high-speed line calls at has a second
+        // ring round the badge, under the selection's.
+        if isHighSpeed {
+            context.stroke(Path(ellipseIn: badgeRect.insetBy(dx: -3, dy: -3)), with: .color(Palette.ink), lineWidth: 1.5)
+        }
         if isSelected {
             let ring = disc(at: center, radius: radius + 3)
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)

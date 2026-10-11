@@ -38,7 +38,6 @@
     },
     "lines" : [
       {
-        "highSpeed" : true,
         "id" : 1,
         "name" : "Fast",
         "performance" : {

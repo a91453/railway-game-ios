@@ -1,6 +1,9 @@
 // High-speed rail (ARCHITECTURE decision 168, step C of the whole-island
-// map): a line the player marks high-speed is paid and filled by its own
-// rules.
+// map): a line planned at high speed (``ServiceLine/isHighSpeed``) is paid
+// and filled by its own rules. It is not a kind of line the player declares,
+// as the metro game's `lineKind` makes it: it is built like any line, with
+// the "High-speed rail" the line menu already had or a high-speed set, and
+// shown differently.
 //
 // From the owner's `Ci/` reference
 // (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`):
@@ -8,13 +11,13 @@
 // - the fare, `hsrFarePassengerPrice`'s legacy branch (no per-type rate, the
 //   absent v3 rules not active): `Math.max(20, Math.round(Math.max(1, km) ×
 //   .45))`, in the reference's dollars, where the metro's flat fare is 5.
-//   Deliberately without the reference's floor of 20: a line is high-speed by
-//   a switch here, not by being built of high-speed stations, and a floor
-//   would let any metro line be switched to charge 4 times its fare on every
-//   short ride (the fare does not change demand). The fare is the network's
-//   or the kilometres', whichever is more, which is also nearer the real
-//   Taiwan High Speed Rail's shortest fare against its longest (NT$40 for
-//   NT$1,490, 3 %, against 13 %);
+//   Deliberately without the reference's floor of 20: a line is high-speed
+//   by how it is planned here, not by being built of high-speed stations, and
+//   a floor would let any metro line be planned at high speed to charge 4
+//   times its fare on every short ride (the fare does not change demand). The
+//   fare is the network's or the kilometres', whichever is more, which is
+//   also nearer the real Taiwan High Speed Rail's shortest fare against its
+//   longest (NT$40 for NT$1,490, 3 %, against 13 %);
 // - a high-speed train never overloads (`TrainType.highSpeed`, in
 //   `TrainType.swift`).
 //
@@ -124,12 +127,12 @@ extension GameWorld {
 
     /// The stations a high-speed line calls at (decision 168).
     public var highSpeedStations: Set<StationID> {
-        Set(lines.filter { $0.isHighSpeed && !$0.isFreight }.flatMap(\.stops))
+        Set(lines.filter(\.isHighSpeed).flatMap(\.stops))
     }
 
     /// Whether station `id` is called at by a high-speed line.
     public func isHighSpeedStation(_ id: StationID) -> Bool {
-        lines.contains { $0.isHighSpeed && !$0.isFreight && $0.stops.contains(id) }
+        lines.contains { $0.isHighSpeed && $0.stops.contains(id) }
     }
 
     /// Whether the passengers of `group` ride a high-speed line on their

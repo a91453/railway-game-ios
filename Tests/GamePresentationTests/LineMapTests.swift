@@ -54,6 +54,22 @@ final class LineMapTests: XCTestCase {
         XCTAssertEqual(map.transfers, [])
     }
 
+    /// Decision 168: the stretches of a high-speed line say so, so that the
+    /// map draws them differently, side by side with an ordinary line's.
+    func testAHighSpeedLinesStretchesAreMarked() throws {
+        var (world, west, middle, east) = try makeWorld()
+        let fast = try world.createLine(named: "Fast", stops: [west, east]).id
+        let slow = try world.createLine(named: "Slow", stops: [middle, east]).id
+        XCTAssertTrue(LineMap(world: world).stretches.allSatisfy { !$0.isHighSpeed })
+
+        try world.setLinePerformance(fast, to: .highSpeed)
+        let map = LineMap(world: world)
+        XCTAssertFalse(map.stretches.filter { $0.line == fast }.isEmpty)
+        XCTAssertTrue(map.stretches.filter { $0.line == fast }.allSatisfy(\.isHighSpeed), "every stretch of it")
+        XCTAssertFalse(map.stretches.filter { $0.line == slow }.isEmpty)
+        XCTAssertTrue(map.stretches.filter { $0.line == slow }.allSatisfy { !$0.isHighSpeed })
+    }
+
     /// Where a second line shares the track, the two are drawn half a
     /// width out either side, the lower ID first; where the first runs
     /// alone it stays on the track.

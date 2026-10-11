@@ -71,7 +71,7 @@ final class HighSpeedReportTests: XCTestCase {
             ids.append(try world.buildStation(named: station.name, at: PlanPoint(x: Int64(at.x.rounded()), y: Int64(at.y.rounded()))).id)
         }
         let line = try world.createLine(named: "THSR", stops: ids).id
-        try world.setLineHighSpeed(line, to: true)
+        try world.setLinePerformance(line, to: .highSpeed)
         let start = Date()
         GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
         let seconds = Date().timeIntervalSince(start)
@@ -130,7 +130,6 @@ final class HighSpeedReportTests: XCTestCase {
                 try world.setTrainPerformance(train, to: .highSpeed)
                 try world.assignTrain(train, to: line)
             }
-            try world.setLineHighSpeed(line, to: true)
             lines.append(line)
         }
         world.setPassengerRoutingMode(.network)
@@ -165,7 +164,7 @@ final class HighSpeedReportTests: XCTestCase {
             }
             let line = try ids.count > 1 ? world.createLine(named: "THSR", stops: ids).id : nil
             let start = Date()
-            if let line { try world.setLineHighSpeed(line, to: true) }
+            if let line { try world.setLinePerformance(line, to: .highSpeed) }
             GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
             let readMs = Date().timeIntervalSince(start) * 1_000
             let encodeStart = Date()
@@ -176,9 +175,9 @@ final class HighSpeedReportTests: XCTestCase {
             let decodeMs = Date().timeIntervalSince(decodeStart) * 1_000
             var again = 0.0
             if let line {
-                try world.setLineHighSpeed(line, to: false)
+                try world.setLinePerformance(line, to: .standard)
                 let t = Date()
-                try world.setLineHighSpeed(line, to: true)
+                try world.setLinePerformance(line, to: .highSpeed)
                 again = Date().timeIntervalSince(t) * 1_000
             }
             world.setSpeed(.normal)
