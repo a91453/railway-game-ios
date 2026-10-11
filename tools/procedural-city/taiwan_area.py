@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 
 # Name: (latitude, longitude) of the centre, half the side in metres. Must
 # match the area in Web/CityView/tools/pipeline/config.mjs.
-AREAS = {'kaohsiung': ((22.6394, 120.3024), 750.0)}
+AREAS = {'kaohsiung': ((22.6394, 120.3024), 750.0), 'taichung': ((24.1371, 120.6869), 750.0)}
 # Data are read this far beyond the area, so that roads and parks reach its
 # edge; the compiler cuts at the area itself.
 MARGIN = 150.0

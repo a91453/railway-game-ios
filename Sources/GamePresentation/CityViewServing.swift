@@ -9,13 +9,25 @@ import Foundation
 // part of that server with no networking in it: which file a request asks
 // for, and the head of the answer.
 
+/// The areas of the bundled city view, in the settings' order: Kaohsiung
+/// Station (decision 152), whose railways are all underground, and
+/// Taichung Station (decision 161), whose TRA viaduct shows the trains.
+public enum CityViewArea: String, CaseIterable, Identifiable, Sendable {
+    case kaohsiung
+    case taichung
+
+    public var id: String { rawValue }
+
+    /// The page the app opens for the area, as light as the owner tried it
+    /// on an iPhone 17 Pro (a 400 m view, no clouds, no birds, no traffic).
+    public var startPath: String {
+        "/index.html?area=\(rawValue)&radius=400&clouds=0&birds=0&traffic=0"
+    }
+}
+
 /// How the app's loopback server answers the city view's requests
 /// (decision 152).
 public enum CityViewServing {
-    /// The page the app opens: the Kaohsiung Station area, as light as the
-    /// owner tried it on an iPhone 17 Pro (a 400 m view, no clouds, no
-    /// birds, no traffic).
-    public static let startPath = "/index.html?area=kaohsiung&radius=400&clouds=0&birds=0&traffic=0"
 
     /// The file a request's head asks for, relative to the served folder
     /// ("index.html" for the root), or `nil`: not a GET or HEAD, no path,

@@ -58,6 +58,19 @@ export const AREAS = {
       'Roads, railways, parks and places: © OpenStreetMap contributors (ODbL 1.0)',
     ],
   },
+  // Along the Line (ARCHITECTURE decision 161): Taichung Station, where the TRA runs on a viaduct, so the trains
+  // (and their Meshy models, tools/meshy) can be seen.
+  taichung: {
+    name: '臺中車站',
+    origin: [120.6869, 24.1371],   // Taichung Station (TRA; tools/procedural-city/taiwan_area.py has the same square)
+    half: 750,
+    source: 'taiwan',
+    view: '-330,140,230,293,24',   // opens from the west, along the viaduct into the station
+    attribution: [
+      'Buildings: Overture Maps Foundation (ODbL 1.0; OpenStreetMap contributors, Shi et al. CC BY 4.0)',
+      'Roads, railways, parks and places: © OpenStreetMap contributors (ODbL 1.0)',
+    ],
+  },
 };
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
