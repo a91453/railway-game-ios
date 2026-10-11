@@ -59,6 +59,12 @@ for k in ${skips[@]+"${skips[@]}"}; do
   grep -v -E "$k" "$selected" >"$selected.next" || true
   mv "$selected.next" "$selected"
 done
+# SwiftPM passes the selected IDs to the test runner as one argument, which
+# Linux refuses past a length (FAKE_ARG_MAX plays it).
+if [[ -n "${FAKE_ARG_MAX:-}" && "$(sort -u "$selected" | paste -s -d , | wc -c)" -gt "$FAKE_ARG_MAX" ]]; then
+  echo "error: posix_spawn error: Argument list too long (7)"
+  exit 1
+fi
 sed -E 's#^[^.]+\.([^/]+)/(.*)$#\1.\2#' "$selected" | sort -u >"$selected.names"
 case "${FAKE_MODE:-ok}" in
   drop) sed -i '1d' "$selected.names" ;;                      # one selected test never runs
@@ -102,6 +108,9 @@ FAKE_MODE=drop WHY='not the tests the shard selects' expect fail "a selected tes
 FAKE_MODE=extra WHY='not the tests the shard selects' expect fail "a test outside the selection that runs fails the shard" "$script" run campaigns-2
 FAKE_MODE=exit1 WHY='swift test failed in shard rest' expect fail "swift test exiting non-zero fails the shard" "$script" run rest
 FAKE_MODE=failline WHY='tests failed in shard campaigns-1' expect fail "a failed test fails the shard" "$script" run campaigns-1
+
+SWIFT_SHARD_BATCH_CHARS=60 FAKE_ARG_MAX=80 expect pass "a shard too long for one argument runs in batches" "$script" run rest
+SWIFT_SHARD_BATCH_CHARS=100000 FAKE_ARG_MAX=80 WHY='swift test failed in shard rest' expect fail "one batch too long for an argument fails the shard" "$script" run rest
 
 grep -v 'NetworkServicePropertyTests' "$work/list.txt" >"$work/renamed.txt"
 FAKE_LIST="$work/renamed.txt" WHY='NetworkServicePropertyTests .* has no tests' expect fail "a campaign class that no longer exists fails" "$script" run rest
