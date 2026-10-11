@@ -21,7 +21,7 @@ Every change is marked `Along the Line` in the code:
 | `src/world/trains.js` | In a Taiwanese area every heavy-rail line runs the TRA's EMU900 and EMU3000 in turn; cars drawn with the Meshy models of `public/models/trains/` (`tools/meshy`, decision 161) when they are there, as boxes otherwise |
 | `public/models/trains/` (new) | The Meshy train models and their `index.json` (file, the axis the cab faces) |
 | `src/world/atmosphere.js` | The environment map is baked 10 m above the ground: from 0 m, at Kaohsiung's latitude, the sky gives NaNs and the city goes black |
-| `public/boot.js` (new) | The scripts `index.html` had inline (the city's name on the loading screen, the website link's language, the idle callbacks' deadline), so that the website's Content-Security-Policy can forbid inline scripts |
+| `public/boot.js` (new) | The scripts `index.html` had inline (the city's name on the loading screen, the website link's language, and no website link in the game, `?app=1`; the idle callbacks' deadline), so that the website's Content-Security-Policy can forbid inline scripts |
 | `index.html` | The loading screen is the game's: its logo (`public/assets/ui/brand-mark.png`, the app's `BrandMark`), 沿線 / Along the Line and the website's colours, and the area's Chinese name; the game's website (官網, bottom right, opened by the app in Safari) where the GitHub link was; the credits at the bottom in the middle, on the same light band as the real-world maps' |
 
 The raw data (`data/raw/`), the compiled tiles (`public/tiles/`), the textures (`public/textures/`) and

@@ -90,8 +90,9 @@ struct LinkedPage: Identifiable {
     var id: String { url.absoluteString }
 }
 
-/// Safari's view in the app (`SFSafariViewController`): the linked page
-/// over the city view, closed with Done, without leaving the game.
+/// Safari's view in the app (`SFSafariViewController`): a web page (the
+/// game's website, a page the city view links to) over the game, closed
+/// with Done, without leaving the game.
 struct SafariView: UIViewControllerRepresentable {
     let url: URL
 

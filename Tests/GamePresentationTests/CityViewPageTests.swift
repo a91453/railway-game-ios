@@ -10,12 +10,17 @@ final class CityViewPageTests: XCTestCase {
         for area in CityViewArea.allCases {
             XCTAssertEqual(
                 area.pageAddress,
-                "https://www.alongthelinegame.com/city/?area=\(area.rawValue)&radius=400&clouds=0&birds=0&traffic=0"
+                "https://www.alongthelinegame.com/city/?area=\(area.rawValue)&radius=400&clouds=0&birds=0&traffic=0&app=1"
             )
             let url = URL(string: area.pageAddress)
             XCTAssertNotNil(url)
             XCTAssertTrue(url.map(CityViewPage.opensInView) ?? false, area.rawValue)
         }
+    }
+
+    func testTheWebsiteIsItsHomePage() {
+        XCTAssertEqual(GameWebsite.home, "https://www.alongthelinegame.com/")
+        XCTAssertFalse(CityViewPage.opensInView(URL(string: GameWebsite.home)!))
     }
 
     func testTheCityViewsOwnPagesStayInTheView() {

@@ -11,9 +11,12 @@
   document.querySelector('#loader .city').textContent = name || id.charAt(0).toUpperCase() + id.slice(1);
 })();
 
-// Along the Line: the website link in the page's language (in the app, the web view's is the app's)
+// Along the Line: the website link in the page's language (in the app, the web view's is the app's); none in the
+// game (?app=1), whose settings have their own
 document.addEventListener('DOMContentLoaded', function () {
-  if (/^zh/i.test(navigator.language)) document.querySelector('#website span').textContent = '官網';
+  var link = document.getElementById('website');
+  if (new URLSearchParams(location.search).get('app') === '1') link.remove();
+  else if (/^zh/i.test(navigator.language)) link.querySelector('span').textContent = '官網';
 });
 
 // The atmosphere works out its tables (the sky's colours, the light on the clouds) in the browser's idle
