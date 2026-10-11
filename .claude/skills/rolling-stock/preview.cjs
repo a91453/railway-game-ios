@@ -9,6 +9,13 @@
 // --stock      which stock to put on the line: hsr (台灣高鐵), tra (台鐵, the rotation's first
 //              entry), or a line name to match, e.g. --stock '山手線'.
 // --check-only run the gates and print them; draw nothing.
+// --atlas      also write the stock's livery picture, as the painter made it, to this file.
+// --reference  a reference model (.glb) to draw beside ours from the same cameras, scaled to
+//              --reference-metres along its longest axis. A reference model is ground truth for
+//              shape and colour in a way a photograph is not — no perspective, no specular streak
+//              read as paint, no hidden far side. It is never shipped: the owner's EMU3000 is
+//              199,588 triangles against about 3,300 for a whole set here. Measure one first with
+//              measure.cjs; this is for looking.
 //
 // The gates run before the picture, because every one of them catches a defect that a render can
 // hide: a car sunk below the rail reads fine from the side, and a nose that barely tapers reads
@@ -28,6 +35,9 @@ const flag = (name, fallback) => {
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback;
 };
 const stock = flag('stock', 'hsr');
+const atlas = flag('atlas', null);
+const reference = flag('reference', null);
+const referenceMetres = Number(flag('reference-metres', '0'));
 const out = flag('out', null);
 const port = Number(flag('port', '5321'));
 const checkOnly = args.includes('--check-only');
@@ -43,14 +53,22 @@ const VITE = path.join(WEB, 'node_modules/.bin/vite');
 
 // The line's name decides the stock (see STOCK/TRA_STOCK/HSR_STOCK in src/world/trains.js), so the
 // preview picks a train by naming its line, exactly as an area's data does.
-const LINE = { hsr: '台灣高鐵', tra: '臺鐵縱貫線' }[stock] ?? stock;
-const TAIWAN = LINE === '台灣高鐵' || LINE === '臺鐵縱貫線' || !/[山埼小井銀]/.test(LINE);
+// The TRA's lines take turns between the commuter stock and the express, so reaching the second
+// one means laying two lines and looking at the second train.
+const PICK = { hsr: ['台灣高鐵', 1], emu900: ['臺鐵縱貫線', 1], emu3000: ['臺鐵縱貫線', 2], tra: ['臺鐵縱貫線', 1] };
+const [LINE, LINES] = PICK[stock] ?? [stock, 1];
+const SET = LINES - 1;
+const TAIWAN = !/[山埼小井銀]/.test(LINE);
+
+const REF_NAME = '.rolling-stock-reference.glb';
+const REF_COPY = path.join(WEB, REF_NAME);
 
 const page = `<!doctype html>
 <html><head><meta charset="utf-8"><title>rolling stock</title>
 <style>html,body{margin:0;background:#9fb4c8}canvas{display:block}</style></head><body>
 <script type="module">
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Trains } from './src/world/trains.js';
 
 const W = 1500, H = 900;
@@ -73,23 +91,34 @@ const sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
 sun.position.set(-50, 60, 55);
 scene.add(sun);
 
-const pts = [];
-for (let i = 0; i <= 40; i++) pts.push(-400 + i * 20, 0, 0);
-const trains = new Trains([{ name: ${JSON.stringify(LINE)}, railway: 'rail', pts }], { taiwan: ${TAIWAN} });
+const lines = [];
+for (let n = 0; n < ${LINES}; n++) {
+  const pts = [];
+  for (let i = 0; i <= 40; i++) pts.push(-400 + i * 20, 0, n * 60);   // parallel lines, far enough not to overlap
+  lines.push({ name: ${JSON.stringify(LINE)}, railway: 'rail', pts });
+}
+const trains = new Trains(lines, { taiwan: ${TAIWAN} });
 scene.add(trains.group);
 await trains.ready;            // the Meshy models, when an area has them, arrive asynchronously
 trains.update(20.0, 0);
 // car 0's nose sits at x = -400 + SPEED * 20 = -100; the cars run back from there
-const set = trains.sets[0];
+const set = trains.sets[${SET}] ?? trains.sets[0];
+// Reaching the second stock of a rotation means laying a second line, and the first line's train
+// would otherwise stand in the background of every shot. Only the stock being looked at is shown.
+for (const other of trains.sets) {
+  if (other === set) continue;
+  for (const m of [other.mesh, other.model?.cabs, other.model?.cars]) if (m) m.visible = false;
+}
 const LEN = set.stock.length, CARS = set.stock.cars;
-const noseX = -100, cabCentre = noseX - LEN * 0.5, midCentre = noseX - LEN * 4.5;
+const noseX = -100, trackZ = ${SET} * 60, cabCentre = noseX - LEN * 0.5, midCentre = noseX - LEN * 4.5;
 
 function measure() {
   const per = [];
   let total = 0;
   const box = new THREE.Box3();
+  const mine = new Set([set.mesh, set.model?.cabs, set.model?.cars].filter(Boolean));
   scene.traverse((o) => {
-    if (!o.isInstancedMesh) return;
+    if (!o.isInstancedMesh || !mine.has(o)) return;
     const g = o.geometry;
     const tri = (g.index ? g.index.count : g.attributes.position.count) / 3;
     total += tri * o.count;
@@ -107,7 +136,7 @@ function measure() {
   // a tube however long it is.
   let taper = null, frontIsNose = null;
   const meshes = [];
-  scene.traverse((o) => { if (o.isInstancedMesh) meshes.push(o); });
+  scene.traverse((o) => { if (o.isInstancedMesh && mine.has(o)) meshes.push(o); });
   const cab = meshes[0];
   if (cab) {
     const pos = cab.geometry.attributes.position;
@@ -135,13 +164,40 @@ function measure() {
            hasNose: !!set.stock.nose, drawn };
 }
 
+// The reference, when there is one: loaded, turned to run along the track, scaled to its real
+// length, and set on the same rail so the two can be judged in the same frame.
+const REFERENCE = ${JSON.stringify(reference ? REF_NAME : null)}, REF_M = ${referenceMetres};
+let refGroup = null;
+if (REFERENCE) {
+  const gltf = await new GLTFLoader().loadAsync('./' + REFERENCE);
+  refGroup = gltf.scene;
+  refGroup.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(refGroup);
+  const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+  const longest = Math.max(size.x, size.y, size.z);
+  // turn the model's longest axis onto the track, which runs along x here
+  if (size.z === longest) refGroup.rotateY(Math.PI / 2);
+  else if (size.y === longest) refGroup.rotateZ(Math.PI / 2);
+  refGroup.updateMatrixWorld(true);
+  const after = new THREE.Box3().setFromObject(refGroup);
+  const k = REF_M > 0 ? REF_M / longest : 1;
+  refGroup.scale.multiplyScalar(k);
+  refGroup.updateMatrixWorld(true);
+  const placed = new THREE.Box3().setFromObject(refGroup);
+  refGroup.position.set(noseX - (placed.max.x - placed.getCenter(new THREE.Vector3()).x) - (placed.getCenter(new THREE.Vector3()).x - placed.getCenter(new THREE.Vector3()).x), -placed.min.y, -placed.getCenter(new THREE.Vector3()).z);
+  refGroup.position.x = noseX - placed.max.x;
+  refGroup.visible = false;
+  scene.add(refGroup);
+}
+window.showReference = (on) => { if (refGroup) { refGroup.visible = on; trains.group.visible = !on; } };
+
 const camera = new THREE.PerspectiveCamera(34, W / H, 0.5, 3000);
 const VIEWS = {
-  'three-quarter': { pos: [cabCentre + 18, 4.2, 15], look: [cabCentre - 8, 2.3, 0] },
-  'side (cab)': { pos: [cabCentre, 3.0, 40], look: [cabCentre, 2.6, 0] },
-  'head-on': { pos: [noseX + 11, 2.6, 1.6], look: [noseX - 2, 2.0, 0] },
-  'side (intermediate)': { pos: [midCentre, 3.2, 26], look: [midCentre, 2.6, 0] },
-  'whole set': { pos: [cabCentre + 60, 36, 100], look: [midCentre - 60, 0, 0] },
+  'three-quarter': { pos: [cabCentre + 18, 4.2, trackZ + 15], look: [cabCentre - 8, 2.3, trackZ] },
+  'side (cab)': { pos: [cabCentre, 3.0, trackZ + 40], look: [cabCentre, 2.6, trackZ] },
+  'head-on': { pos: [noseX + 11, 2.6, trackZ + 1.6], look: [noseX - 2, 2.0, trackZ] },
+  'side (intermediate)': { pos: [midCentre, 3.2, trackZ + 26], look: [midCentre, 2.6, trackZ] },
+  'whole set': { pos: [cabCentre + 60, 36, trackZ + 100], look: [midCentre - 60, 0, trackZ] },
 };
 function shoot(name) {
   const v = VIEWS[name];
@@ -156,7 +212,16 @@ function shoot(name) {
 // city view actually shows a train, that is most of what a player sees.
 window.sheet = async () => {
   const shots = [];
-  for (const name of Object.keys(VIEWS)) shots.push([name, shoot(name)]);
+  if (refGroup) {
+    // one row per view: ours on the left, the reference on the right
+    for (const name of Object.keys(VIEWS)) {
+      window.showReference(false); shots.push([name, shoot(name)]);
+      window.showReference(true); shots.push([name + ' — reference', shoot(name)]);
+    }
+    window.showReference(false);
+  } else {
+    for (const name of Object.keys(VIEWS)) shots.push([name, shoot(name)]);
+  }
   trains.update(0, 1);
   shots.push(['night', shoot('three-quarter')]);
   shots.push(['silhouette (blurred)', shots[0][1]]);
@@ -180,14 +245,25 @@ window.sheet = async () => {
   }
   return c.toDataURL('image/png');
 };
+// The livery's own picture, as the painter made it. When a train comes out the wrong colour this
+// says which half of the problem it is: paint that is wrong in the picture, or paint that is right
+// in the picture and sampled from the wrong place by the geometry.
+window.atlas = () => {
+  const map = set.materials[0].map, c = document.createElement('canvas');
+  c.width = map.image.width; c.height = map.image.height;
+  c.getContext('2d').drawImage(map.image, 0, 0);
+  return c.toDataURL('image/png');
+};
 window.measure = measure;
 window.ready = true;
 </script></body></html>`;
 
 function budgetFor(cars) {
-  // A city view draws several trains at once on a phone. 400 triangles a car is roomy for a shape
-  // this simple, and well under what the surrounding buildings cost.
-  return cars * 400;
+  // Measured against the owner's own practice rather than guessed: his near-LOD car shed meshes are
+  // about 7,200 triangles a car and his EMU3000 GLB about 16,000, for a map view on the same phones.
+  // 3,500 leaves room for the kit that makes a train read as one — roof units, bogies with wheels,
+  // door recesses — while staying half his lightest and well under what a city block costs.
+  return cars * 3500;
 }
 
 (async () => {
@@ -196,6 +272,10 @@ function budgetFor(cars) {
     process.exit(2);
   }
   fs.writeFileSync(PAGE, page);
+  if (reference) {
+    if (!fs.existsSync(reference)) { console.error(`no reference model at ${reference}`); process.exit(2); }
+    fs.copyFileSync(reference, REF_COPY);   // vite only serves what is under its root
+  }
   const server = spawn(VITE, ['--port', String(port), '--strictPort'], { cwd: WEB, stdio: 'ignore' });
   let browser = null;
   try {
@@ -237,6 +317,12 @@ function budgetFor(cars) {
     console.log(`\n${m.cars} cars of ${m.stockLength} m; ${m.drawn}`);
     for (const x of m.meshes) console.log(`  ${x.name}: ${x.count} x ${x.trianglesEach} triangles, ${x.size.join(' x ')} m`);
 
+    if (atlas) {
+      const data = await tab.evaluate(() => window.atlas());
+      fs.mkdirSync(path.dirname(path.resolve(atlas)), { recursive: true });
+      fs.writeFileSync(path.resolve(atlas), Buffer.from(data.split(',')[1], 'base64'));
+      console.log(`livery: ${path.resolve(atlas)}`);
+    }
     if (!checkOnly) {
       const data = await tab.evaluate(() => window.sheet());
       fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
@@ -248,5 +334,6 @@ function budgetFor(cars) {
     if (browser) await browser.close();
     server.kill();
     fs.rmSync(PAGE, { force: true });
+    fs.rmSync(REF_COPY, { force: true });
   }
 })();
