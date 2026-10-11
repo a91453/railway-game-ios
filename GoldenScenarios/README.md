@@ -941,3 +941,13 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 貨運線不是高鐵，高鐵也不是貨運線：`lineIsFreight`（路線 2）、`lineIsHighSpeed`（路線 1）。
 - `tools/golden-checks/high_speed.py` 照規則獨立算出每一個旅次與票價（`--check` 比對 fixture）；最終狀態取自 GameCore。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 169：車門流量隨擁擠變慢（schema 66）
+
+- 新指令 `setDoorCrowding`（`enabled`）；最終狀態的 `doorCrowding: true` 只在打開時寫。參考模型（`ReferenceWorld`）沒有擁擠，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `DoorCrowdingTests` 驗證。
+- `door-crowding.json`（新）：`boarding.json` 的世界（三站一線 Main，一輛標準車 Blue：額定 320、可載 352、4 扇門每扇每秒 2 人，一秒通過 8 人；Alpha 住宅每天 1,000,000 人次，07:50 的一分鐘內排滿 4,000 人），打開擁擠，Blue 在 480（28,800 秒）發車。
+  - 28,808 車門開好：車上 0 人（0 ÷ 320），Alpha 候車 4,000（4,000 ÷ 4,000），擁擠是兩者較大的 1,000‰；倍數 = 1 + 1.5 × 1.0⁴ = 2.5（2,500‰）。上車的人數和 `boarding.json` 一樣：352 人（遠的先上：225 人去 Beta、127 人去 Gamma），但花 ceil(352 × 2,500 ÷ 8,000) = 110 秒，不是 44 秒。
+  - 481:00（28,860）：車上與 Alpha 的帳和 `boarding.json` 的一樣（擁擠只改上下車花多久，不改誰上車）；上下車還沒完，在 28,808 + 110 = 28,918 結束（`boarding.json`：28,852）；誤點 18 秒（排定 28,842 發車）。
+  - 482:00（28,920）：車門在 28,918 開始關（上下車結束、最短停站 28,800 + 42 − 9 = 28,833、排定發車 28,842 − 9 = 28,833 三者最晚的），還沒關完，誤點 78 秒。
+- 每個值都是手算的，`tools/golden-checks/door_crowding.py` 照規則獨立算出（`--check` 比對 fixture）；沒有依擁擠改變的值是 `boarding.json` 的。最終狀態取自 GameCore。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

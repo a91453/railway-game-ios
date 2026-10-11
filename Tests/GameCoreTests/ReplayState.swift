@@ -109,6 +109,10 @@ enum ReplayState {
         if world.landDemand {
             line("landDemand")
         }
+        // Decision 169: likewise only a world with door crowding on.
+        if world.doorCrowding {
+            line("doorCrowding")
+        }
         for cell in world.land.cells {
             line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
         }

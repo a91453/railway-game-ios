@@ -97,6 +97,11 @@ public struct GameWorld: Equatable, Sendable {
     /// 137). Off in a new world and in saves from before it; the app's new
     /// games turn it on. Set by ``setDistanceDemand(_:)`` only.
     public internal(set) var distanceDemand: Bool = false
+    /// Whether the crowd at a train's doors slows the passengers going
+    /// through them (decision 169). Off in a new world and in saves from
+    /// before it; the app's new games turn it on. Set by
+    /// ``setDoorCrowding(_:)`` only.
+    public internal(set) var doorCrowding: Bool = false
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -2026,7 +2031,7 @@ public struct GameWorld: Equatable, Sendable {
     ///      farthest first, up to its ``Train/capacity`` (G1b; see
     ///      ``riders(of:)`` and ``PassengerLedger``). Both use the doors at
     ///      once, so the exchange lasts the larger number's
-    ///      ``Train/exchangeSeconds(_:)``.
+    ///      ``Train/exchangeSeconds(_:crowd:)``.
     ///    - **Doors held open.** At each whole minute while they are open,
     ///      newly released passengers board too, and the exchange runs on.
     ///    - **Doors closing.** They start closing at the first second when
@@ -2846,7 +2851,9 @@ public struct GameWorld: Equatable, Sendable {
     /// - once its doors have opened, the passengers for that stop get off
     ///   and those waiting for the train get on (see
     ///   ``exchangePassengers(_:at:memo:)``), taking as long as the larger
-    ///   number does (see ``Train/exchangeSeconds(_:)``);
+    ///   number does (see ``Train/exchangeSeconds(_:crowd:)``), and longer in
+    ///   a crowd at its doors when door crowding is on (decision 169, see
+    ///   ``DoorCrowding``), the crowd taken when the doors have opened;
     /// - while its doors stay open, at each whole minute, when new
     ///   passengers have come, they get on too, after those still getting
     ///   on;
@@ -2859,16 +2866,22 @@ public struct GameWorld: Equatable, Sendable {
         var changed = false
         if let end = times.exchangeEnd {
             if times.closing == nil, now.isWholeMinute {
+                // Decision 169: the crowd is taken before those who come
+                // get on.
+                let crowd = doorCrowd(of: trains[index].id, at: trains[index].timetable[stop].station)
                 let boarded = boardPassengers(trains[index], at: stop)
                 if boarded > 0 {
-                    times.exchangeEnd = Self.saturating(max(end, now), plus: trains[index].exchangeSeconds(boarded))
+                    times.exchangeEnd = Self.saturating(max(end, now), plus: trains[index].exchangeSeconds(boarded, crowd: crowd))
                     changed = true
                 }
             }
         } else {
             guard now >= Self.saturating(times.arrival, plus: ServiceDwell.doorOpening) else { return false }
+            // Decision 169: the crowd at the doors as they have opened,
+            // before anyone gets off or on.
+            let crowd = doorCrowd(of: trains[index].id, at: trains[index].timetable[stop].station)
             let busy = exchangePassengers(index, at: stop, memo: &memo)
-            times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy))
+            times.exchangeEnd = Self.saturating(now, plus: trains[index].exchangeSeconds(busy, crowd: crowd))
             changed = true
         }
         if times.closing == nil, let start = closingStart(of: trains[index], stop: stop, cycle: cycle, times: times), now >= start {
@@ -3696,7 +3709,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3795,6 +3808,7 @@ extension GameWorld: Codable {
         }
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
+        doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3908,6 +3922,9 @@ extension GameWorld: Codable {
         }
         if distanceDemand {
             try container.encode(true, forKey: .distanceDemand)
+        }
+        if doorCrowding {
+            try container.encode(true, forKey: .doorCrowding)
         }
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)

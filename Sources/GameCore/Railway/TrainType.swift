@@ -23,6 +23,18 @@
 // 640 and 1,280 for 8 and 16 cars) and its rule that a high-speed train
 // never overloads (`metroTrainUsesOperationalOverload` is false for
 // `lineKind === "hsr"`): it takes what it is rated for, not 1.1 times.
+//
+// The Taiwan Railway's EMU3000 (decision 169), the express the 3D city view
+// draws, is in neither reference. A car is rated 45 persons: the set's
+// rated 538 (the Wikipedia page of the type, which gives the cars' seats and
+// their total as the set's `編組定員`; Taiwan News repeats the 538) over its 12
+// cars, 44.8 rounded. Two doors a side, as the owner's fleet catalogue counts
+// them from photographs (`fleet/catalog.json`, `emu3000-mid`: 「每節每側 2 門
+// 在客室兩端」, marked inferred) and as the city view draws them. It takes
+// 1.1 times what it is rated for, as every type but the high-speed set does,
+// and runs as the owner's `PERF_RULES` have the EMU3000 express run
+// (``TrainPerformance/emu3000``: 135 km/h, which the performance menu has
+// offered since the performance presets).
 
 /// A type of train car (the reference's `TRAIN_TYPES`): what a car is rated
 /// to carry and how many doors it has on the platform side. A train without
@@ -45,6 +57,10 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
     /// side, rated 80 persons, which never takes more than it is rated for.
     /// Not one of the reference's `TRAIN_TYPES`: its `HSR_TRAIN_*` options.
     case highSpeed = "HSR"
+    /// The Taiwan Railway's EMU3000 express (decision 169): twelve cars of
+    /// 45 seats, two doors a side. Not one of the reference's types: neither
+    /// reference has a Taiwanese train but its high-speed options.
+    case emu3000 = "EMU3000"
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -52,14 +68,15 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
     public static let main: [TrainType] = [.a, .b, .c]
 
     /// The reference's types (`TRAIN_TYPES`), main and extra: every type
-    /// but the steam train of decision 153, which only an era offers, and
-    /// the high-speed set of decision 168, which is the reference's HSR
-    /// option rather than a `TRAIN_TYPES` entry.
+    /// but the steam train of decision 153, which only an era offers, the
+    /// high-speed set of decision 168, which is the reference's HSR
+    /// option rather than a `TRAIN_TYPES` entry, and the EMU3000 of
+    /// decision 169, which is in neither.
     public static let reference: [TrainType] = [.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail]
 
-    /// The types a world without an era offers (decision 168): the
-    /// reference's and the high-speed set.
-    public static let offered: [TrainType] = reference + [.highSpeed]
+    /// The types a world without an era offers (decisions 168 and 169): the
+    /// reference's, the high-speed set and the EMU3000.
+    public static let offered: [TrainType] = reference + [.highSpeed, .emu3000]
 
     /// The type the reference gives a new line (`_lineFormState.type`, and
     /// `normalizeLineTrainTypeForCityKey`'s fallback).
@@ -79,6 +96,7 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
         case .monorail: 224
         case .steam: 50
         case .highSpeed: 80
+        case .emu3000: 45
         }
     }
 
@@ -91,24 +109,28 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
 
     /// Doors on a car's platform side (gap: the reference has no doors).
     /// Wide-body metro cars five, standard and light ones four, linear-motor
-    /// and maglev cars three, people movers, sky rail and monorail two.
+    /// and maglev cars three, people movers, sky rail, monorail and the
+    /// long-distance types (the high-speed set, the EMU3000) two.
     public var doorsPerCar: Int64 {
         switch self {
         case .a, .d: 5
         case .b, .c: 4
         case .l, .maglev: 3
-        case .apm, .skyRail, .monorail, .steam, .highSpeed: 2
+        case .apm, .skyRail, .monorail, .steam, .highSpeed, .emu3000: 2
         }
     }
 
     /// How a train of this type runs, when the type has its own way
-    /// (decision 153): the steam train's ``TrainPerformance/steam``, and
-    /// since decision 168 the high-speed set's ``TrainPerformance/highSpeed``
-    /// (`PERF_HSR`). Every other type runs as the train is set to.
+    /// (decision 153): the steam train's ``TrainPerformance/steam``, since
+    /// decision 168 the high-speed set's ``TrainPerformance/highSpeed``
+    /// (`PERF_HSR`) and since decision 169 the EMU3000's
+    /// ``TrainPerformance/emu3000`` (`PERF_RULES`' EMU3000 expresses, already
+    /// a performance preset). Every other type runs as the train is set to.
     public var performance: TrainPerformance? {
         switch self {
         case .steam: .steam
         case .highSpeed: .highSpeed
+        case .emu3000: .emu3000
         default: nil
         }
     }
@@ -148,9 +170,10 @@ extension Train {
     }
 
     /// The whole seconds `count` passengers take to get off or on, rounded
-    /// up (see ``ServiceDwell/exchangeSeconds(_:cars:)``).
-    func exchangeSeconds(_ count: Int64) -> Int64 {
-        let rate = passengersPerSecond
-        return count / rate + (count % rate == 0 ? 0 : 1)
+    /// up (see ``ServiceDwell/exchangeSeconds(_:cars:)``), in a crowd of
+    /// `crowd` thousandths of the train's rating at its doors (decision 169,
+    /// see ``DoorCrowding``); none, as before it.
+    func exchangeSeconds(_ count: Int64, crowd: Int64 = 0) -> Int64 {
+        DoorCrowding.exchangeSeconds(count, rate: passengersPerSecond, crowd: crowd)
     }
 }

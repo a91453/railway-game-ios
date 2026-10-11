@@ -48,6 +48,8 @@ extension RealWorldDemo {
             // (decision 137).
             world.setDistanceDemand(false)
             world.setOutsideConnections(false)
+            // Decision 169: nor do its dwells lengthen in a crowd.
+            world.setDoorCrowding(false)
             try world.mapGround()
             if !ground.isEmpty { try world.setGround(ground) }
             return world

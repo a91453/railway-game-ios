@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 65
+    static let schemaVersion = 66
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setLineHighSpeed, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setLineHighSpeed, _), .command(.setDoorCrowding, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -574,6 +574,8 @@ enum ScenarioCommand: Equatable {
     case setLineFreight(LineID, Bool)
     /// Schema 65 (decision 168): a high-speed line.
     case setLineHighSpeed(LineID, Bool)
+    /// Schema 66 (decision 169): door crowding.
+    case setDoorCrowding(Bool)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -719,6 +721,8 @@ enum ScenarioCommand: Equatable {
                 try world.setLineFreight(line, to: freight)
             case .setLineHighSpeed(let line, let highSpeed):
                 try world.setLineHighSpeed(line, to: highSpeed)
+            case .setDoorCrowding(let enabled):
+                world.setDoorCrowding(enabled)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -826,6 +830,9 @@ extension ScenarioCommand: Decodable {
         // Schema 65: a high-speed line (decision 168).
         case "setLineHighSpeed":
             self = try .setLineHighSpeed(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
+        // Schema 66: door crowding (decision 169).
+        case "setDoorCrowding":
+            self = try .setDoorCrowding(container.decode(Bool.self, forKey: .enabled))
         // Schema 59: building materials (decision 156).
         case "enableBuildingMaterials":
             self = .enableBuildingMaterials
@@ -2266,6 +2273,9 @@ struct WorldSummary: Codable, Equatable {
     /// left out otherwise.
     var distanceDemand: Bool?
     var outsideConnections: Bool?
+    /// `true` while a crowd at the doors slows the passengers going through
+    /// them (schema 66, decision 169); left out otherwise.
+    var doorCrowding: Bool?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2525,6 +2535,7 @@ struct WorldSummary: Codable, Equatable {
         land = world.land.isEmpty ? nil : LandSummary(world.land)
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
+        doorCrowding = world.doorCrowding ? true : nil
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil
