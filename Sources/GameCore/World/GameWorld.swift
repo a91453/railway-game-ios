@@ -3369,7 +3369,11 @@ public struct GameWorld: Equatable, Sendable {
     /// so the step ends there and the departure or the following train
     /// tries again at the next, as it would one second at a time. Every
     /// train only moves on in the step, and what it holds only shrinks as it
-    /// does, so once free the track stays free.
+    /// does, so once free the track stays free, up to the step's last
+    /// second: `span` ends where a train comes to the end of its route
+    /// (``secondsUntilARouteEnds(from:within:)``), and there it no longer
+    /// leads a train that would follow it, so only the seconds before
+    /// `span` are asked.
     ///
     /// `moves` gets the trains as each span tried leaves them (see
     /// ``moveTrains(from:for:)``), and whether any moved.
@@ -3393,8 +3397,15 @@ public struct GameWorld: Equatable, Sendable {
         // moving on takes more of its route almost every second, so then
         // the first second is tried first.
         if trains.contains(where: isFollowing), frees(after: 1) { return 1 }
-        guard frees(after: span) else { return nil }
-        var (low, high) = (Int64(1), span)
+        // The step ends after `span` anyway, so only the seconds before it
+        // are asked. After `span` a train may have come to the end of its
+        // route (see ``secondsUntilARouteEnds(from:within:)``), and one
+        // that has no longer leads the way (see
+        // ``isLeading(_:onto:for:)``): a departure that could follow it a
+        // second earlier may not then.
+        let last = span - 1
+        guard last >= 1, frees(after: last) else { return nil }
+        var (low, high) = (Int64(1), last)
         while low < high {
             let middle = (low + high) / 2
             if frees(after: middle) {
