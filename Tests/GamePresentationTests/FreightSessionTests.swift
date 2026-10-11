@@ -105,4 +105,25 @@ final class FreightSessionTests: XCTestCase {
         let empty = StationTag(station: Self.alpha, name: "Alpha", location: PlanPoint(x: 0, y: 0), waiting: 0, lines: [], freight: 0)
         XCTAssertNil(empty.waitingText(in: .english))
     }
+
+    /// Building materials (decision 156): a new game has them; the station
+    /// panel's text and the session's command to send them.
+    func testBuildingMaterialsText() throws {
+        XCTAssertTrue(GameWorld.newGame().hasBuildingMaterials)
+        var world = try Self.world()
+        world.enableFreight()
+        XCTAssertNil(world.materialsText(at: Self.alpha, in: .english))
+        world.enableBuildingMaterials()
+        XCTAssertEqual(world.materialsText(at: Self.alpha, in: .english),
+                       "Building materials: 0 t (up to 5000 t); 60 t a day arrive by road.")
+        XCTAssertEqual(world.materialsText(at: Self.alpha, in: .traditionalChinese),
+                       "建材置場：0 噸（最多 5000 噸）；每天由公路運來 60 噸。")
+        try world.buildFreightFacility(at: Self.alpha)
+        let session = GameSession(world: world)
+        session.selectStation(Self.alpha)
+        session.setFreightProductAtSelectedStation(.materials)
+        XCTAssertEqual(session.world.freightFacility(at: Self.alpha)?.product, .materials)
+        XCTAssertEqual(session.message?.text, "Alpha's yard sends building materials.")
+        XCTAssertEqual(CargoKind.materials.title(in: .traditionalChinese), "建材")
+    }
 }

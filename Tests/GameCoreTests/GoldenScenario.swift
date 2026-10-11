@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 58
+    static let schemaVersion = 59
 
     var description: String
     var initialState: InitialState
@@ -204,6 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
                  .command(.placeBuilding, _), .command(.removePlacedBuilding, _), .observe(.placedBuilding, _),
@@ -560,6 +561,9 @@ enum ScenarioCommand: Equatable {
     case enableFreight
     case buildFreightFacility(StationID)
     case setLineFreight(LineID, Bool)
+    /// Schema 59 (decision 156): building materials.
+    case enableBuildingMaterials
+    case setFreightProduct(StationID, CargoKind)
     /// Schema 37 (Phase 6c-1): the city's buildings, and town growth, which
     /// grows the land.
     case setCityBuildings(Bool)
@@ -696,6 +700,10 @@ enum ScenarioCommand: Equatable {
                 try world.buildFreightFacility(at: id)
             case .setLineFreight(let line, let freight):
                 try world.setLineFreight(line, to: freight)
+            case .enableBuildingMaterials:
+                world.enableBuildingMaterials()
+            case .setFreightProduct(let id, let kind):
+                try world.setFreightProduct(at: id, to: kind)
             case .setCityBuildings(let enabled):
                 world.setCityBuildings(enabled)
             case .setTownGrowth(let enabled):
@@ -788,6 +796,11 @@ extension ScenarioCommand: Decodable {
             self = try .buildFreightFacility(container.decodeStation(forKey: .station))
         case "setLineFreight":
             self = try .setLineFreight(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .enabled))
+        // Schema 59: building materials (decision 156).
+        case "enableBuildingMaterials":
+            self = .enableBuildingMaterials
+        case "setFreightProduct":
+            self = try .setFreightProduct(container.decodeStation(forKey: .station), container.decode(CargoKind.self, forKey: .kind))
         // Schema 37: city buildings (Phase 6c-1).
         case "setCityBuildings":
             self = try .setCityBuildings(container.decode(Bool.self, forKey: .enabled))
@@ -1191,6 +1204,9 @@ extension StepOutcome: Codable {
             self = try .rejected(.freightFacilityExists(container.decodeStation(forKey: .station)))
         case "noFreightFacility":
             self = try .rejected(.noFreightFacility(container.decodeStation(forKey: .station)))
+        // Schema 59 (decision 156).
+        case "buildingMaterialsNotEnabled":
+            self = .rejected(.buildingMaterialsNotEnabled)
         default:
             throw DecodingError.dataCorruptedError(forKey: .result, in: container, debugDescription: "Unknown result \"\(result)\".")
         }
@@ -1383,6 +1399,8 @@ extension StepOutcome: Codable {
         case .rejected(.noFreightFacility(let id)):
             try container.encode("noFreightFacility", forKey: .result)
             try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.buildingMaterialsNotEnabled):
+            try container.encode("buildingMaterialsNotEnabled", forKey: .result)
         case .rejected(.onWater(let row, let column)):
             try container.encode("onWater", forKey: .result)
             try container.encode(row, forKey: .row)
@@ -4289,10 +4307,19 @@ struct FreightSummary: Codable, Equatable {
     struct Facility: Codable, Equatable {
         var station: Int
         var stock: Int64
+        /// Schema 59: `"materials"`, left out for goods.
+        var product: String?
     }
 
     struct Group: Codable, Equatable {
         var origin: Int
+        /// Schema 59: `"materials"`, left out for goods.
+        var kind: String?
+        var tons: Int64
+    }
+
+    struct Materials: Codable, Equatable {
+        var station: Int
         var tons: Int64
     }
 
@@ -4308,12 +4335,32 @@ struct FreightSummary: Codable, Equatable {
     var delivered: Int64
     var spilled: Int64
     var lost: Int64
+    /// Schema 59 (decision 156): `true` with building materials, and then
+    /// the stations' stocks and the totals received, supplied, used and
+    /// lost; each left out while off, empty or 0.
+    var buildingMaterials: Bool?
+    var materials: [Materials]?
+    var materialsReceived: Int64?
+    var materialsSupplied: Int64?
+    var materialsUsed: Int64?
+    var materialsLost: Int64?
 
     init(_ state: FreightState) {
-        facilities = state.facilities.map { Facility(station: $0.station.rawValue, stock: $0.stock) }
-        loads = state.loads.map { load in
-            Load(train: load.train.rawValue, groups: load.groups.map { Group(origin: $0.origin.rawValue, tons: $0.tons) })
+        facilities = state.facilities.map {
+            Facility(station: $0.station.rawValue, stock: $0.stock, product: $0.product == .goods ? nil : $0.product.rawValue)
         }
+        loads = state.loads.map { load in
+            Load(train: load.train.rawValue, groups: load.groups.map {
+                Group(origin: $0.origin.rawValue, kind: $0.kind == .goods ? nil : $0.kind.rawValue, tons: $0.tons)
+            })
+        }
+        func nonzero(_ value: Int64) -> Int64? { value == 0 ? nil : value }
+        buildingMaterials = state.buildingMaterials ? true : nil
+        materials = state.materials.isEmpty ? nil : state.materials.map { Materials(station: $0.station.rawValue, tons: $0.tons) }
+        materialsReceived = nonzero(state.materialsReceived)
+        materialsSupplied = nonzero(state.materialsSupplied)
+        materialsUsed = nonzero(state.materialsUsed)
+        materialsLost = nonzero(state.materialsLost)
         pendingRevenue = state.pendingRevenue.amount
         produced = state.produced
         delivered = state.delivered

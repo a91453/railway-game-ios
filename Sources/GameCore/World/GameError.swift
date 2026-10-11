@@ -230,4 +230,6 @@ public enum GameError: Error, Hashable, Sendable {
     case freightFacilityExists(StationID)
     /// The station has no freight facility (decision 155).
     case noFreightFacility(StationID)
+    /// Building materials in a world without them (decision 156).
+    case buildingMaterialsNotEnabled
 }
