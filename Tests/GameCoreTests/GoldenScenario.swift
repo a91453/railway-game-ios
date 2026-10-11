@@ -1165,7 +1165,7 @@ extension StepOutcome: Codable {
         case "invalidScenario":
             self = .rejected(.invalidScenario)
         case "trainTypeUnavailable":
-            self = .rejected(.trainTypeUnavailable(try container.decode(TrainType.self, forKey: .trainType)))
+            self = .rejected(.trainTypeUnavailable(try container.decodeIfPresent(TrainType.self, forKey: .trainType)))
         case "buildingOverlaps":
             self = .rejected(.buildingOverlaps(PlacedBuildingID(rawValue: try container.decode(Int.self, forKey: .building))))
         case "buildingOnTrack":
@@ -1363,7 +1363,7 @@ extension StepOutcome: Codable {
             try container.encode("invalidScenario", forKey: .result)
         case .rejected(.trainTypeUnavailable(let type)):
             try container.encode("trainTypeUnavailable", forKey: .result)
-            try container.encode(type, forKey: .trainType)
+            try container.encodeIfPresent(type, forKey: .trainType)
         case .rejected(.buildingOverlaps(let id)):
             try container.encode("buildingOverlaps", forKey: .result)
             try container.encode(id.rawValue, forKey: .building)

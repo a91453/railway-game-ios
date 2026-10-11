@@ -116,6 +116,11 @@ public struct TrainPerformance: Hashable, Sendable {
     /// per second, exactly), and a new line's design speed of 80 km/h
     /// (`maxSpeedKmh: e.maxSpeedKmh || 80`).
     public static let metro = TrainPerformance(acceleration: 3960, braking: 4680, topSpeed: 80)
+    /// A steam train of the 1890s (decision 153, ``TrainType/steam``):
+    /// 40 km/h at most, reached slowly (0.4 km/h a second, some 0.11
+    /// m/s²), and braked gently (1.2 km/h a second). The references have no
+    /// steam train; the values are this project's.
+    public static let steam = TrainPerformance(acceleration: 400, braking: 1200, topSpeed: 40)
 
     /// Whether a train or line may have this performance (Stage W2c): every
     /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast

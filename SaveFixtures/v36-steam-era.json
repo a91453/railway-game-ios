@@ -1,0 +1,209 @@
+{
+  "saveVersion" : 36,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 3
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 4
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 5
+        },
+        {
+          "acquired" : 0,
+          "cost" : 5000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "train",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 10000,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 8192,
+      "width" : 400000
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 990000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "performance" : {
+          "acceleration" : 400,
+          "braking" : 1200,
+          "topSpeed" : 40
+        },
+        "stops" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "nextLineID" : 2,
+    "nextStationID" : 6,
+    "nextTrainID" : 2,
+    "scenario" : {
+      "achieved" : [
+        null
+      ],
+      "scenario" : {
+        "deadlineDays" : 120,
+        "goals" : [
+          {
+            "kind" : "connect",
+            "points" : [
+              {
+                "x" : 1024,
+                "y" : 4096
+              },
+              {
+                "x" : 65024,
+                "y" : 4096
+              }
+            ],
+            "radius" : 2048
+          }
+        ],
+        "goldDays" : 30,
+        "id" : "test",
+        "silverDays" : 60,
+        "trainTypes" : [
+          "STEAM"
+        ]
+      },
+      "startDay" : 0
+    },
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "S1",
+        "point" : {
+          "x" : 1024,
+          "y" : 4096
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "S2",
+        "point" : {
+          "x" : 65024,
+          "y" : 4096
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "S3",
+        "point" : {
+          "x" : 129024,
+          "y" : 4096
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "S4",
+        "point" : {
+          "x" : 193024,
+          "y" : 4096
+        }
+      },
+      {
+        "id" : 5,
+        "name" : "S5",
+        "point" : {
+          "x" : 257024,
+          "y" : 4096
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "cars" : 3,
+        "id" : 1,
+        "name" : "Teng-Yun",
+        "performance" : {
+          "acceleration" : 400,
+          "braking" : 1200,
+          "topSpeed" : 40
+        },
+        "type" : "STEAM"
+      }
+    ]
+  }
+}

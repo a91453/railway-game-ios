@@ -6,8 +6,10 @@ import XCTest
 /// how many doors it has.
 final class TrainTypeTests: XCTestCase {
     func testTheReferenceTableAndItsCapacities() {
-        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224])
+        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM"])
+        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50])
+        // Decision 153: the reference's nine, and this project's steam train.
+        XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.dropLast()))
         XCTAssertEqual(TrainType.main, [.a, .b, .c])
         XCTAssertEqual(TrainType.referenceDefault, .b)
 
@@ -44,7 +46,7 @@ final class TrainTypeTests: XCTestCase {
     }
 
     func testDoorsSetHowFastPassengersGetOffAndOn() {
-        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2])
+        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2])
         var train = Train(id: TrainID(rawValue: 1), name: "T")
         train.cars = 4
         // Standard: 4 doors × 2 a second × 4 cars, as before types.

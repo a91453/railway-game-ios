@@ -186,8 +186,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// A scenario needs a managed company, at least one goal, its days in
     /// order and its targets positive and in the world (decision 86).
     case invalidScenario
-    /// The scenario's era has no trains of this type (decision 86).
-    case trainTypeUnavailable(TrainType)
+    /// The scenario's era has no trains of this type (decision 86), or,
+    /// `nil`, no standard cars (decision 153).
+    case trainTypeUnavailable(TrainType?)
     /// A building would share ground with this placed building (decision 92).
     case buildingOverlaps(PlacedBuildingID)
     /// A building would stand on, or too near, this edge's track (decision 92).
