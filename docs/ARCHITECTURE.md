@@ -4589,6 +4589,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 外觀仍是 Tokyo 的東京：日本式電線桿、販賣機、色盤與陽台。台灣的零件（騎樓、鐵窗、頂樓加蓋）在參考庫的 city_world，之後移植。
 - 之後要接上遊戲：玩家的軌道與列車（`railwaySnapshot()`）、土地格的密度決定樓層、決策 146 收購的建物不畫。
 
+**之後的修正**（#361 留下的決定，作者同意）：
+- 3D 試作退到背景就關閉：scenePhase 變成 `.background` 時停止本機伺服器並關掉畫面；`.inactive`（例如拉下通知中心）不關。原因是推測：`NWListener` 在 App 被暫停後可能失效，回到前景時網頁一重新載入（`webViewWebContentProcessDidTerminate` 會 `reload()`）就連不上。沒有實機證據，所以不寫重連邏輯。
+- 實機檢查（repo 沒有現成的 TestFlight 檢查清單，寫在這裡）：開 3D 試作 → 切到別的 App → 回來，應該回到設定頁、沒有空白或錯誤畫面，再開一次試作可以正常載入。UNVERIFIED，要在 TestFlight 上看。
+
 ### 153. 台灣鐵道史劇本：劉銘傳鐵路與蒸汽列車
 
 2026-10-11，作者要求第二個台灣鐵道史劇本「劉銘傳鐵路」：清代的基隆—台北（大稻埕），之後延伸到新竹；參考平溪線（決策 90），但要有自己的玩法。號碼依工作登記 #231：決策 153、存檔版本 36（#300–#326 待決項目的 session 寫過「若需要再登記 36」，已用 send_message 告知）；golden schema 不動。
@@ -4694,6 +4698,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 天候、颱風、燃油指數是方案 B2；故障與檢修是方案 A（在 Q4 之後）。
 
 **沒有驗證的**：Linux 不能跑 App；設定頁的選單與車站面板的文字要在 macOS CI 與 TestFlight 上看。
+
+**之後的修正**（#361 留下的決定，作者同意）：挑戰中鎖住「連假與事件」。每週挑戰同一週大家相同（決策 145），原本挑戰中仍可在設定頁打開假日、天氣、颱風，成績照樣列入紀錄，連假的尖峰可能讓「每日運量」目標提早達成。
+- `GameSession.setDisruptionLevel` 在有劇本目標的一局（`world.scenario != nil`，`eventsAreFixed`）拒絕改成非 `nil` 的難度，訊息是「挑戰的規則固定，不含連假、天氣與其他事件。」；改成關閉仍然允許，給已經打開過的舊存檔改回來。
+- 設定頁的「連假與事件」：這種局目前是「關」時選單停用；已經打開時只能選「關」；footer 說明挑戰的規則固定。整節照樣顯示。
+- `ChallengeRecords.record` 在 `world.disruptions != nil` 時不記錄（舊存檔的保險）。
+- 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`、`testAResultWithEventsOnIsNotKept`。GameCore、存檔、golden、replay 都不變。
 
 ### 155. 貨運：貨運場、貨運路線與噸公里運費
 
@@ -4953,6 +4963,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 第 5 項的颱風在沒有需求事件時，吸引力先乘颱風再除以 1000，每天 4 人次以下的車站會被捨入成 0，一個旅次都分不到。現在沒有事件時吸引力保留千分之一的單位，只比較車站之間的比例，所以 golden、存檔、replay 都不變。測試：`WeatherTests.testASmallStationUnderATyphoonStillDrawsTravellers`。
 - 每個目的地的吸引力原本每個出發站都重算一次，颱風的倍數每次都要把整年的颱風算一遍，有颱風的國家排計畫約慢 2.4 倍。現在一個計畫只算一次（`pulls(of:)`），結果相同。
 - 站長的颱風預警原本連封站的車站、只有貨運路線停靠的車站都算進去；照建議封站之後預警也不會消失，還會連著幾天蓋住其他提醒。現在只算有開的客運車站。英文的「1 of our station」改成「one of our stations」。
+
+**之後的修正**（#361 留下的決定，作者同意）：油電價格常駐顯示。原本只有站長在漲跌開始的那一天說一次，而站長一次只講一件事，中後期常被「車站擁擠」等煩惱佔住，玩家幾乎看不到。站長那一句保留、不延長。
+- GamePresentation 的 `GameWorld.fuelText(in:)`：經營模式下、今天在漲跌期間時回傳「油電價格 +19%，還有 6 天」／「Fuel and power +19%, 6 more days」（下跌是 −）；百分比和站長的 `.fuelSpell` 一樣是 `(index − 1000) / 10`，天數照假日的「還有 N 天」（含今天）。不在期間或自由模式時是 `nil`。
+- 經營面板在地圖區塊那行下面顯示（`economy.fuel`）。
+- 損益表的能源費列沒有放註記的寫法（`StatementRow` 只有標題、本期與上期），而且是一整期的數字，所以沒有標。
+- 測試：`WeatherTextTests.testTheEconomyPanelShowsAFuelSpellWhileItLasts`。
 
 **之後的修正**（#361 留下的項目，作者同意，2026-10-11）：第 5、7 項的颱風降低出發站的總旅次，也降低目的站的吸引力。但出發站在颱風外時總旅次不變，所以去颱風那邊的旅客被轉給了沒有颱風的車站：沒颱風的站反而變多，和車站面板寫的「這站需求 −80%」不同。
 - 現在分配旅次時不看颱風：出發站的旅次照全網倍數（假日 × 天氣）算，依各目的地平常的吸引力分配。

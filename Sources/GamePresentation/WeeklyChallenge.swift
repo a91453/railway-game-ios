@@ -190,10 +190,14 @@ public struct ChallengeRecords: Sendable {
     /// than the best so far, and writes the file. Returns whether it is a
     /// new best. A challenge played under other targets than its current
     /// ones (a save started before decision 145, which keeps its rules) is
-    /// not a result under ``rulesVersion`` and is not kept.
+    /// not a result under ``rulesVersion`` and is not kept, nor is one
+    /// played with holidays and events on.
     @discardableResult
     public mutating func record(_ world: GameWorld, at date: Date = Date()) -> Bool {
         guard let state = world.scenario, case .completed(let day, let rating)? = state.outcome else { return false }
+        // Decision 154, later: a result with holidays and events on (a save
+        // from before the settings held them off) is not the same challenge.
+        guard world.disruptions == nil else { return false }
         if let current = Challenge.named(state.scenario.id)?.scenario(seed: 0, in: world.bounds),
            !Self.hasTheSameTargets(state.scenario, current) {
             return false

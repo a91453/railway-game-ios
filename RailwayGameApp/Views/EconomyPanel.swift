@@ -90,6 +90,15 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
             }
+            // Decision 162, later: the fuel price while a spell lasts, not
+            // only the station master's first day.
+            if let fuel = session.world.fuelText(in: session.language) {
+                Text(verbatim: fuel)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("economy.fuel")
+            }
             // Free play cannot become managed again (decision 46), so the
             // switch goes one way, after a confirmation.
             if accounts.mode == .management {
