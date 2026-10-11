@@ -496,6 +496,18 @@ final class GoldenScenarioTests: XCTestCase {
             return [.cityDemand(homes), .cityDemand(shops), .cityDemand(work)]
         case .steep(let steep):
             return [.steep(!steep)]
+        case .weather(let weather):
+            return [.weather(weather == "clear" ? "rain" : "clear")]
+        case .typhoons(let typhoons):
+            guard var first = typhoons.first else { return [] }
+            first.radius += 1
+            return [.typhoons([]), .typhoons([first] + typhoons.dropFirst())]
+        case .fuel(nil):
+            return []
+        case .fuel(let spell?):
+            var index = spell
+            index.index += 1
+            return [.fuel(nil), .fuel(index)]
         case .holiday(nil):
             return []
         case .holiday(let run?):

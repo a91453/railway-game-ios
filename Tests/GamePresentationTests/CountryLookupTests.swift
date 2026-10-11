@@ -49,8 +49,8 @@ final class CountryLookupTests: XCTestCase {
 
     func testANewRealWorldGameKeepsItsCountrysHolidaysAndABlankOneTaiwans() {
         let tokyo = GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000)!
-        XCTAssertEqual(GameWorld.newGame(anchor: tokyo).disruptions, Disruptions(level: .light, country: "JP"))
-        XCTAssertEqual(GameWorld.newGame().disruptions, Disruptions(level: .light, country: "TW"))
+        XCTAssertEqual(GameWorld.newGame(anchor: tokyo).disruptions, Disruptions(level: .light, country: "JP", seed: 1))
+        XCTAssertEqual(GameWorld.newGame().disruptions, Disruptions(level: .light, country: "TW", seed: 1))
         XCTAssertNil(GameWorld.newGame(challenge: .threeTowns, eventSeed: 1).disruptions)
     }
 }

@@ -44,21 +44,26 @@ extension GameWorld {
     /// trips, or with weekly demand today's share of its week (see
     /// ``StationDemand/trips(onDay:)``), raised by any event there (see
     /// ``demandMultiplier(at:)``) and by today's holiday (decision 154,
-    /// ``holidayMultiplier``), rounded half up.
+    /// ``holidayMultiplier``), lowered by today's weather and a typhoon
+    /// there (decision 162), rounded half up.
     func trips(of demand: StationDemand, at station: StationID) -> Int64 {
         let trips = weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips
         guard demandEvents != nil || disruptions != nil else { return trips }
-        // Without holidays the network's multiplier is 1000, and this is
-        // the event's rounding alone, as before them.
-        let multiplier = (demandEvents != nil ? demandMultiplier(at: station) : 1_000) * holidayMultiplier
-        return (trips * multiplier + 500_000) / 1_000_000
+        // Without holidays, weather or typhoons the network's and the
+        // station's multipliers are the event's and 1000, and this is the
+        // event's rounding alone, as before them.
+        let network = holidayMultiplier * weatherMultiplier / 1_000
+        let local = (demandEvents != nil ? demandMultiplier(at: station) : 1_000) * typhoonMultiplier(at: station) / 1_000
+        return (trips * local * network + 500_000) / 1_000_000
     }
 
     /// How strongly station `station`, with `demand`, draws travellers
-    /// today: its daily trips, raised by any event there.
+    /// today: its daily trips, raised by any event there, and (decision
+    /// 162) lowered by a typhoon there.
     func attraction(of demand: StationDemand, at station: StationID) -> Int64 {
-        guard demandEvents != nil else { return demand.dailyTrips }
-        return demand.dailyTrips * demandMultiplier(at: station)
+        let attraction = demandEvents != nil ? demand.dailyTrips * demandMultiplier(at: station) : demand.dailyTrips
+        guard disruptions?.seed != nil else { return attraction }
+        return attraction * typhoonMultiplier(at: station) / 1_000
     }
 
     // MARK: - Commands

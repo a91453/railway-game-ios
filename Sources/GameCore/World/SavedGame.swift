@@ -205,9 +205,14 @@
 ///     close a year with `"land"`. A build that reads only an earlier
 ///     version would drop them, and the company could build anywhere, so
 ///     it says the save is newer than it instead.
+/// 41. Weather (decision 162): a world's `"disruptions"` can have a
+///     `"seed"`, which its weather, typhoons and fuel price are drawn from.
+///     A build that reads only an earlier version would drop it, and its
+///     days would all be clear, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 40
+    public static let currentVersion = 41
 
     public let world: GameWorld
 
@@ -326,6 +331,8 @@ extension SavedGame: Codable {
         // and its yards send goods, as every yard did.
         // Version 39 to 40: a world without `"mapExpansion"` owns the
         // whole of its map, and builds anywhere in it as it did.
+        // Version 40 to 41: disruptions without `"seed"` have holidays
+        // alone, as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

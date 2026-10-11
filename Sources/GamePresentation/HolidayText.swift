@@ -107,3 +107,53 @@ extension GameWorld {
         return HolidayReview(kind: run.holiday.kind, riders: after / length, percent: ((after - base) * 100 + (after >= base ? base / 2 : -base / 2)) / base)
     }
 }
+
+// Decision 162: the weather and typhoons in the station panel's words.
+
+extension Weather {
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .clear: language.text("Clear", "晴")
+        case .rain: language.text("Rain", "下雨")
+        case .thunderstorm: language.text("Thunderstorms", "雷雨")
+        }
+    }
+}
+
+extension GameWorld {
+    /// Today's weather when it is not clear, and the typhoons announced or
+    /// blowing over station `id`, in the station panel's words: "Rain today:
+    /// −10% demand on every line", "Typhoon: −80% demand here, comes in 2
+    /// days, lasts 2 days", or "Typhoon: −80% demand here, 1 more day".
+    public func weatherTexts(at id: StationID, in language: DisplayLanguage) -> [String] {
+        guard disruptions != nil else { return [] }
+        let today = clock.now.seconds / GameTime.secondsPerDay
+        var lines: [String] = []
+        let weather = weather(onDay: today)
+        if weather != .clear {
+            let percent = weatherDrop(onDay: today) / 10
+            lines.append(language.text(
+                "\(weather.title(in: language)) today: −\(percent)% demand on every line",
+                "今天\(weather.title(in: language))：全線需求 −\(percent)%"
+            ))
+        }
+        guard let point = station(id: id)?.point else { return lines }
+        for typhoon in typhoons(onDay: today) where typhoon.covers(point) {
+            let percent = typhoon.drop / 10
+            if typhoon.start > today {
+                let wait = typhoon.start - today, days = typhoon.end - typhoon.start
+                lines.append(language.text(
+                    "Typhoon: −\(percent)% demand here, comes in \(wait) day\(wait == 1 ? "" : "s"), lasts \(days) day\(days == 1 ? "" : "s")",
+                    "颱風：這站需求 −\(percent)%，\(wait) 天後來襲，持續 \(days) 天"
+                ))
+            } else {
+                let left = typhoon.end - today
+                lines.append(language.text(
+                    "Typhoon: −\(percent)% demand here, \(left) more day\(left == 1 ? "" : "s")",
+                    "颱風：這站需求 −\(percent)%，還有 \(left) 天"
+                ))
+            }
+        }
+        return lines
+    }
+}

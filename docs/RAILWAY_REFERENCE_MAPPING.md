@@ -810,7 +810,9 @@ V 實際放行 → T、U（保證不互穿）
 | `MetroEconomy.advanceMetroEvents`（不在快照） | 展覽 3–7 天 +20–50%、大量人潮 1–2 天 +50–100%，提前 2–5 天 | gap → 原生數值 |
 | `aviation_disruptions` 的假日表 `x`、`K`（國家、名稱、天數、加成） | `HolidayCalendar.countries`（決策 154） | direct：名稱、天數、加成照搬（不搬載入時的 +0.2）；日期是遊戲曆法上 2026 年的月日（gap → 原生），每年同一天 |
 | `Railway/site_archive_clean/index.html` 的 `TW_DAYTYPE` | 台灣的假日列（決策 154） | adapted：補上和平紀念日、國慶日，清明 4 天 |
-| `aviation_disruptions` 的天氣封閉、燃油 | — | gap：方案 B2（`docs/research/DISRUPTION_STUDY.md`） |
+| `aviation_disruptions` 的 `airportClosed`（`typhoon`） | `Typhoon`、`Disruptions.typhoons(ofYear:in:)`（決策 162） | adapted：機場封閉數小時改成車站需求以天計；季節、機率、半徑、降幅是原生 |
+| `aviation_disruptions` 的 `fuelUp`／`fuelDown`（`fuelIndex`） | `FuelSpell`、每日能源費（決策 162） | direct：指數範圍、7–14 天、前 6 週沒有；漲價機率五分之三是原生 |
+| `Railway/city_world_reference/.../world-DCb11kLR.js` 的天氣狀態機 | `Weather`（決策 162） | 概念：晴、雨、雷雨與季節；機率與對需求的影響是原生 |
 
 ## 城鎮成長（決策 70）
 

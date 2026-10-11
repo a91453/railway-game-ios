@@ -90,8 +90,8 @@ struct SettingsView: View {
             Text(verbatim: language.text("This game", "這一局"))
         } footer: {
             Text(verbatim: language.text(
-                "Public holidays raise demand on every line, announced a week ahead. Light adds half as much as Standard. Kept in this game's save.",
-                "國定假日時各線需求增加，一週前公布。「輕」的增加是「標準」的一半。設定存在這一局的存檔裡。"
+                "Public holidays raise demand on every line, announced a week ahead. Rain lowers it, a typhoon (announced days ahead) cuts it at the stations in its path, and fuel spells change the day's energy cost. Light is half as strong as Standard. Kept in this game's save.",
+                "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。設定存在這一局的存檔裡。"
             ))
         }
     }

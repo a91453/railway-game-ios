@@ -611,12 +611,15 @@ public final class GameSession {
     /// Sets how strongly disruptions bite, or turns them off with `nil`
     /// (decision 154), through `GameWorld.setDisruptions(_:)`. The country
     /// whose holidays the game keeps stays as it is; turned on again, it is
-    /// the map's (``CountryLookup``), or Taiwan's on a blank map.
+    /// the map's (``CountryLookup``), or Taiwan's on a blank map. Decision
+    /// 162: the weather's seed stays too; turned on, it is the demand
+    /// events' (1 without them).
     public func setDisruptionLevel(_ level: DisruptionLevel?) {
         guard level != world.disruptions?.level else { return }
         let country = world.disruptions?.country ?? world.geoAnchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home
+        let seed = world.disruptions?.seed ?? world.demandEvents?.seed ?? 1
         perform { world throws(GameError) in
-            world.setDisruptions(level.flatMap { Disruptions(level: $0, country: country) })
+            world.setDisruptions(level.flatMap { Disruptions(level: $0, country: country, seed: seed) })
             return level == nil
                 ? language.text("Holidays and other events off: demand is the same every day of the week.", "連假等事件已關閉：每週的需求都一樣。")
                 : language.text("Holidays and other events on: \(level!.title(in: language)).", "連假等事件已開啟：\(level!.title(in: language))。")

@@ -267,9 +267,17 @@ extension GameWorld {
         let day = dayIndex(of: time)
         // Each part is rounded on its own; the total is the rounded sum, as
         // in the reference, so they may differ by a dollar.
-        let routeEnergy = Self.roundedDollars(220 * assets.routeLength, over: km)
-        let trainEnergy = Money(360 * assets.trains * 100)
-        let energy = Self.roundedDollars(220 * assets.routeLength + 360 * assets.trains * km, over: km)
+        var routeEnergy = Self.roundedDollars(220 * assets.routeLength, over: km)
+        var trainEnergy = Money(360 * assets.trains * 100)
+        var energy = Self.roundedDollars(220 * assets.routeLength + 360 * assets.trains * km, over: km)
+        // Decision 162: a fuel spell makes the day's energy dearer or
+        // cheaper, each part rounded to whole dollars and the row their sum
+        // (a ledger row is its breakdown's sum).
+        if let index = fuelSpell(onDay: day)?.index {
+            routeEnergy = Self.roundedDollars(220 * assets.routeLength * index, over: km * 1_000)
+            trainEnergy = Self.roundedDollars(360 * assets.trains * index, over: 1_000)
+            energy = routeEnergy + trainEnergy
+        }
         if energy > .zero {
             write(LedgerEntry(
                 kind: .dailyEnergy, time: time, amount: .zero - energy,

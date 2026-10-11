@@ -266,13 +266,19 @@ public struct Disruptions: Hashable, Sendable {
     /// An ISO 3166 code of ``HolidayCalendar/countries``.
     public let country: String
     public let level: DisruptionLevel
+    /// Decision 162: what the weather, the typhoons and the fuel price are
+    /// drawn from (see `Weather.swift`), or `nil` for holidays alone, as
+    /// every world had before.
+    public let seed: UInt32?
 
-    /// Disruptions at `level` with `country`'s holidays, or `nil` for a
-    /// country ``HolidayCalendar`` does not have.
-    public init?(level: DisruptionLevel, country: String) {
+    /// Disruptions at `level` with `country`'s holidays and, with a `seed`,
+    /// its weather, typhoons and fuel price; `nil` for a country
+    /// ``HolidayCalendar`` does not have.
+    public init?(level: DisruptionLevel, country: String, seed: UInt32? = nil) {
         guard HolidayCalendar.countries[country] != nil else { return nil }
         self.country = country
         self.level = level
+        self.seed = seed
     }
 
     /// The country's holidays.
@@ -283,14 +289,18 @@ public struct Disruptions: Hashable, Sendable {
 
 extension Disruptions: Codable {
     private enum CodingKeys: String, CodingKey {
-        case country, level
+        case country, level, seed
     }
 
-    /// Decodes disruptions, rejecting a country the calendar does not have.
+    /// Decodes disruptions, rejecting a country the calendar does not have;
+    /// one without `"seed"` (decision 162) has holidays alone.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let country = try container.decode(String.self, forKey: .country)
-        guard let disruptions = Disruptions(level: try container.decode(DisruptionLevel.self, forKey: .level), country: country) else {
+        guard let disruptions = Disruptions(
+            level: try container.decode(DisruptionLevel.self, forKey: .level), country: country,
+            seed: try container.decodeIfPresent(UInt32.self, forKey: .seed)
+        ) else {
             throw DecodingError.dataCorruptedError(forKey: .country, in: container, debugDescription: "No holidays are known for \(country).")
         }
         self = disruptions
@@ -300,6 +310,7 @@ extension Disruptions: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(country, forKey: .country)
         try container.encode(level, forKey: .level)
+        try container.encodeIfPresent(seed, forKey: .seed)
     }
 }
 
