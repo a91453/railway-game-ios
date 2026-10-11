@@ -288,20 +288,45 @@ extension ReferenceWorld {
     /// Decision 31: whether removing `platform` would take a platform from
     /// a service: one waiting at its station with its head on it, or
     /// travelling there along a path whose last edge is the platform's.
+    /// Stage V2: one standing aside at a passing place needs the platform
+    /// its head is on and every platform of the call it goes on to; one on
+    /// its way to a passing place, the platform of the other station its
+    /// path ends at.
     func serviceNeeding(_ platform: TrackPlatform) -> TrainID? {
         for train in trains.sorted(by: { $0.id < $1.id }) {
-            guard let service = train.service, train.timetable[service.stop].station == platform.station,
-                  case .onEdge(let traversal, let offset)? = train.position, let run = Run(traversal)
+            guard let service = train.service, case .onEdge(let traversal, let offset)? = train.position, let run = Run(traversal)
             else { continue }
-            if service.waiting {
+            let call = train.timetable[service.stop].station
+            let headOn = traversal.edge == platform.edge && {
                 let (from, to) = stretch(of: platform, along: run)
-                if traversal.edge == platform.edge, from <= offset, offset <= to { return TrainID(rawValue: train.id) }
+                return from <= offset && offset <= to
+            }()
+            if service.waiting {
+                if platform.station == call, headOn { return TrainID(rawValue: train.id) }
+            } else if atPassingPlace(train) {
+                if headOn || platform.station == call { return TrainID(rawValue: train.id) }
             } else {
                 let last = train.cursor < train.edges.count ? train.edges[train.edges.count - 1] : run.edge
-                if TrackEdgeID.edge(last) == platform.edge { return TrainID(rawValue: train.id) }
+                guard TrackEdgeID.edge(last) == platform.edge else { continue }
+                if platform.station == call || (!pathEnds(train, atBerthOf: call) && pathEnds(train, atBerthOf: platform.station)) {
+                    return TrainID(rawValue: train.id)
+                }
             }
         }
         return nil
+    }
+
+    /// Whether `train`'s path on the network ends where it stops for
+    /// station `id`: at the far end, the way it travels then, of a platform
+    /// of `id` it fits.
+    func pathEnds(_ train: Train, atBerthOf id: StationID) -> Bool {
+        guard case .onEdge(let traversal, _)? = train.position, var run = Run(traversal) else { return false }
+        for edge in train.edges.dropFirst(train.cursor) {
+            guard let next = runs(after: run).first(where: { $0.edge == edge }) else { return false }
+            run = next
+        }
+        let end = train.end ?? networkEdges[run.edge]!.length
+        return berthsForStation(id, length: Self.length(train))[run]?.contains(end) == true
     }
 
     // MARK: - Lines
