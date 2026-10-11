@@ -153,6 +153,22 @@ public final class GameLauncher {
                 ),
                 keepingAutosave: true
             )
+        case .liuMingchuan:
+            // Decision 153: the map from Keelung to Hsinchu, its towns read
+            // in round the places the milestones name, and its ground. Its
+            // towns are the real-world data's, read at launch.
+            guard population != nil else {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "The real-world data is not ready yet.", "實景資料還沒準備好。"
+                ))
+                return
+            }
+            var world = LiuMingchuanChallenge.make(eventSeed: .random(in: .min ... .max))
+            GameSession.readLand(
+                within: WholeTaiwan.landReach, of: LiuMingchuanChallenge.towns.map(\.point), in: &world, population: population, places: places,
+                water: water, coverage: coverage
+            )
+            begin(grounded(world), keepingAutosave: true)
         }
     }
 

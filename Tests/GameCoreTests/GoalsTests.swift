@@ -194,8 +194,77 @@ final class GoalsTests: XCTestCase {
         try world.startScenario(scenario([.population(1)], types: [.c, .d]))
         try world.setTrainType(train, to: .c)
         expect(.trainTypeUnavailable(.maglev)) { try world.setTrainType(train, to: .maglev) }
-        try world.setTrainType(train, to: nil)
-        XCTAssertNil(world.train(id: train)?.type)
+        // Decision 153: nor the standard car; a train bought before the
+        // scenario began keeps running without a type, as it was.
+        expect(.trainTypeUnavailable(nil)) { try world.setTrainType(train, to: nil) }
+        XCTAssertEqual(world.train(id: train)?.type, .c)
+        // A train bought in the era has its first type, and runs as
+        // standard: type C has no way of its own.
+        let bought = try world.purchaseTrain(named: "T2")
+        XCTAssertEqual(bought.type, .c)
+        XCTAssertEqual(bought.performance, .standard)
+        XCTAssertEqual(try world.createLine(named: "L", stops: Array(world.stations.prefix(2).map(\.id))).performance, .standard)
+    }
+
+    /// Decision 153: the steam era's trains and lines run as steam trains.
+    func testTheSteamErasTrainsAndLinesRunAsSteamTrains() throws {
+        var (world, _) = try makeStations()
+        let before = try world.purchaseTrain(named: "Before")
+        XCTAssertNil(before.type)
+        try world.startScenario(scenario([.population(1)], types: [.steam]))
+        let train = try world.purchaseTrain(named: "Steam")
+        XCTAssertEqual(train.type, .steam)
+        XCTAssertEqual(train.performance, .steam)
+        XCTAssertEqual(train.ratedCapacityPerCar, 50)
+        XCTAssertEqual(train.doorsPerCar, 2)
+        let line = try world.createLine(named: "Line", stops: Array(world.stations.prefix(2).map(\.id)))
+        XCTAssertEqual(line.performance, .steam)
+        XCTAssertEqual(world.train(id: before.id)?.type, nil)
+        expect(.trainTypeUnavailable(.b)) { try world.setTrainType(train.id, to: .b) }
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+        // Without a scenario a new train and line are standard, as before.
+        var free = try makeStations().0
+        XCTAssertNil(try free.purchaseTrain(named: "T").type)
+        XCTAssertEqual(try free.createLine(named: "L", stops: Array(free.stations.prefix(2).map(\.id))).performance, .standard)
+    }
+
+    /// The version 36 save's world (decision 153): the five stations, a
+    /// steam era scenario (`test.steam`) to connect the first two
+    /// stations' places, the line West from the first to the second
+    /// planned as a steam train runs, and a steam train of three cars
+    /// bought in the era, unplaced; run ten minutes.
+    private func steamWorld() throws -> GameWorld {
+        var (world, s) = try makeStations()
+        try world.startScenario(scenario([.connect(points: [point(0), point(1)], radius: 2_048)], gold: 30, silver: 60, deadline: 120, types: [.steam]))
+        try world.createLine(named: "West", stops: [s[0], s[1]])
+        let train = try world.purchaseTrain(named: "Teng-Yun").id
+        try world.setTrainCars(train, to: 3)
+        try world.advance(ticks: 10)
+        return world
+    }
+
+    /// Version 36 (decision 153): `steamWorld()`. It saves byte for byte
+    /// and is the world this build makes.
+    func testVersionThirtySixKeepsTheSteamTrain() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v36-steam-era.json")
+        let made = try steamWorld()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["STEAM_ERA_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: made)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 36)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, made)
+        XCTAssertEqual(world.trains.first?.type, .steam)
+        XCTAssertEqual(world.trains.first?.performance, .steam)
+        XCTAssertEqual(world.lines.first?.performance, .steam)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 36,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 
     func testFastForwardRunsTenMinutesATick() throws {

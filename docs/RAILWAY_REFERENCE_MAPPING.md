@@ -1328,3 +1328,20 @@ V 實際放行 → T、U（保證不互穿）
 比例：時刻是當天的秒數（遊戲時間的秒），星期幾照 `StationDemand.weekday(ofDay:)`（0 是星期日）。
 
 外部專案：沒有用到程式碼。資料：臺鐵開放資料（ods.railway.gov.tw），政府資料開放授權條款第 1 版，資料來源畫面已列。
+
+## 台灣鐵道史：劉銘傳鐵路（決策 153）
+
+參考是 `a91453/railway-reference-private` `581db83`。CLAUDE.md 列的六個來源都搜過（`劉銘傳`、`清代`、`獅球嶺`、`騰雲`、`御風`、`大稻埕`、`海山口`、`龜崙嶺`、`桃仔園`、`水返腳`、`錫口`、`蒸汽`、`steam`、`locomotive`、`1887`／`1891`／`1893`、`scenario`、`mission`）。參考沒有清代鐵路的路線、車站、年表、劇本或蒸汽車的性能與定員。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/data/tra.json`（經 `RealRailways`：基隆、八堵、桃園、新竹的 OSM 站點） | `LiuMingchuanChallenge.keelung`、`badu`、`taoyuan`、`hsinchu`（里程碑的地點） | 沿用既有的移植（同一份座標） |
+| `Railway/site_archive_clean/data/track_lines.geojson`（縱貫線北段的線形，經 `RealRailways`） | `LiuMingchuanReportTests.Route`（量測時的路線） | 沿用：只用在量測，玩家自己鋪 |
+| `Railway/city_world_reference/source/assets/content-DcQ2Whr5.js` 的 `loco` 告示牌與「騰雲號蒸汽機車」導覽（「清代臺灣鐵路首批機車」「劉銘傳時期自德國購入」） | `Challenge.liuMingchuan` 的劇情 | adapted：只取史實的一句（騰雲號從德國買來），文字是本專案的 |
+| `Railway/site_archive_clean/index.html` 的 `PERF_RULES`（最慢的是阿里山 `{a: 0.7, b: 1.1, v: 45}`，柴油車） | `TrainPerformance.steam`（0.4／1.2 km/h/s、40 km/h） | 參考過、沒有照抄：參考沒有蒸汽車，阿里山是柴油的林鐵；蒸汽的數值是本專案的 |
+| `Railway/site_archive_clean/train-garage-catalog.js` 的 `ct273`、`ck124`、`dt668`（`family: "steam"`）、`Simulator/` 的 CT273 3D 模型 | （沒有用） | 日治以後的蒸汽機車，不是清代；3D 模型留給之後的車輛外觀 |
+| （參考沒有） | `TrainType.steam`（每節 50 人、2 門）、年代車種的預設（`purchaseTrain`、`createLine`、`setTrainType(nil)`）、`ChallengeMap.liuMingchuan`、`LiuMingchuanChallenge`（地圖範圍、里程碑、目標）、`Challenge.milestoneTitle` | gap → 原生 |
+
+比例：沒有新的定點比例。地圖範圍以 `WholeTaiwan` 的方法算（Web Mercator，錨點在範圍中央）；目標的地點半徑是 `Land.catchmentRadius`（800 m）。
+
+外部專案：沒有用到程式碼或資料。史實取自公開來源（維基百科「劉銘傳」「臺灣鐵路（清治時期）」「獅球嶺隧道」「騰雲號」），只取年份與地名。

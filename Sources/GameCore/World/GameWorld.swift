@@ -951,6 +951,10 @@ public struct GameWorld: Equatable, Sendable {
     /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
     /// the track with ``placeTrain(_:at:)``.
     ///
+    /// In a scenario whose era has train types (decision 153) the train has
+    /// the era's first type, and runs as that type does
+    /// (``TrainType/performance``), or as standard.
+    ///
     /// - Throws: ``GameError/invalidName``, ``GameError/idsExhausted``, or
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
@@ -959,7 +963,11 @@ public struct GameWorld: Equatable, Sendable {
         let (id, nextID) = try Self.allocateID(from: nextTrainID)
         try economy.spend(economy.costs.train)
 
-        let train = Train(id: TrainID(rawValue: id), name: name)
+        var train = Train(id: TrainID(rawValue: id), name: name)
+        if let era = eraTrainType {
+            train.type = era
+            train.performance = era.performance ?? .standard
+        }
         nextTrainID = nextID
         trains.append(train)
         acquireAsset(.train, owner: id, cost: economy.costs.train)
@@ -1085,15 +1093,24 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws, checked in this order: ``GameError/unknownTrain(_:)``,
     ///   ``GameError/trainAlreadyPlaced(_:)``, or
     ///   ``GameError/trainTypeUnavailable(_:)`` for a type the scenario's era
-    ///   does not have (decision 86).
+    ///   does not have (decision 86), or `nil` in an era with types, which
+    ///   has no standard car (decision 153).
     public mutating func setTrainType(_ id: TrainID, to type: TrainType?) throws(GameError) {
         let index = try trainIndex(of: id)
         guard trains[index].position == nil else { throw .trainAlreadyPlaced(id) }
-        // Decision 86: a scenario's era has only its own train types.
-        if let type, let allowed = scenario?.scenario.trainTypes, !allowed.contains(type) {
+        // Decision 86: a scenario's era has only its own train types, and
+        // since decision 153 no standard car.
+        if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
         }
         trains[index].type = type
+    }
+
+    /// The type a train bought in the scenario's era has, and whose
+    /// performance its new lines plan with (decision 153): the era's
+    /// first, or `nil` without an era.
+    var eraTrainType: TrainType? {
+        scenario?.scenario.trainTypes?.first
     }
 
     /// Takes a placed train off the track. The train keeps its ID, name and
@@ -1452,13 +1469,19 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/invalidLineStops`` (fewer than two, or a station twice
     ///   in a row), ``GameError/unknownStation(_:)`` naming the first stop
     ///   whose station does not exist, or ``GameError/idsExhausted``.
+    ///
+    /// In a scenario whose era's first train type runs its own way (decision
+    /// 153), the line plans its journeys with that type's performance.
     @discardableResult
     public mutating func createLine(named name: String, stops: [StationID]) throws(GameError) -> ServiceLine {
         guard Self.isValidName(name) else { throw .invalidName }
         try requireLineStops(stops)
         let (id, nextID) = try Self.allocateID(from: nextLineID)
 
-        let line = ServiceLine(id: LineID(rawValue: id), name: name, stops: stops)
+        var line = ServiceLine(id: LineID(rawValue: id), name: name, stops: stops)
+        if let performance = eraTrainType?.performance {
+            line.performance = performance
+        }
         nextLineID = nextID
         lines.append(line)
         passengerPlan = PassengerPlanCache()

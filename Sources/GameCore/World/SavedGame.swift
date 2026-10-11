@@ -179,9 +179,12 @@
 ///     reads only an earlier version would drop it, and a real-world map's
 ///     buy-outs would be reckoned from the cells' densities again, so it
 ///     says the save is newer than it instead.
+/// 36. The steam train (decision 153): a train can have the type
+///     `"STEAM"`. A build that reads only an earlier version would call
+///     such a save damaged, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 35
+    public static let currentVersion = 36
 
     public let world: GameWorld
 
@@ -290,6 +293,8 @@ extension SavedGame: Codable {
         // squares, as it did.
         // Version 34 to 35: land without `"coverage"` has none known, and
         // its buy-outs are reckoned from its densities as before.
+        // Version 35 to 36: a version 35 world has no steam train, which
+        // version 36 reads as before.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

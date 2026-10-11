@@ -15,6 +15,9 @@ public enum ChallengeMap: Hashable, Sendable {
     /// Pingxi, Yilan and Shenao Lines built flat (decision 90): it needs
     /// the app's real railways.
     case pingxi
+    /// The real-world map from Keelung to Hsinchu with nothing built, its
+    /// land read in as stations are built (decision 153).
+    case liuMingchuan
 }
 
 /// A challenge the start screen offers: its words, its map, and the
@@ -183,7 +186,8 @@ extension GameWorld {
     /// `[]` without one.
     public func goalProgress(in language: DisplayLanguage) -> [GoalProgress] {
         guard let state = scenario else { return [] }
-        return zip(state.scenario.goals, state.achieved).map { goal, achieved in
+        return zip(state.scenario.goals, state.achieved).enumerated().map { index, pair in
+            let (goal, achieved) = pair
             let met = achieved.map { state.elapsedDays(through: $0) }
             func counted(_ now: Int64, _ target: Int64, _ title: String) -> GoalProgress {
                 GoalProgress(
@@ -202,7 +206,8 @@ extension GameWorld {
                 let served = points.count { point in stationsServed(near: point, radius: radius) }
                 let joined = connectedStations(near: points, radius: radius) != nil
                 return GoalProgress(
-                    title: language.text("Link all \(points.count) towns by rail", "用鐵路連通全部 \(points.count) 座城鎮"),
+                    title: Challenge.milestoneTitle(of: state.scenario.id, goal: index, in: language)
+                        ?? language.text("Link all \(points.count) towns by rail", "用鐵路連通全部 \(points.count) 座城鎮"),
                     detail: joined
                         ? language.text("All linked", "已全部連通")
                         : language.text("\(served) of \(points.count) have a station on a line", "\(served) / \(points.count) 座有路線停靠的車站"),
@@ -231,6 +236,19 @@ extension GameWorld {
             let dx = station.point.x - point.x, dy = station.point.y - point.y
             return served.contains(station.id) && dx * dx + dy * dy <= squared
         }
+    }
+
+    /// The train types a train may be given (decision 153): the
+    /// scenario's era's, or without an era the reference's, which leave out
+    /// the era-only steam train.
+    public var offeredTrainTypes: [TrainType] {
+        scenario?.scenario.trainTypes ?? TrainType.reference
+    }
+
+    /// Whether a train may have the standard car: not in an era with types
+    /// (decision 153).
+    public var offersStandardCar: Bool {
+        scenario?.scenario.trainTypes == nil
     }
 
     /// The scenario's title, by its challenge, or `nil` without one.
@@ -286,6 +304,12 @@ extension GameWorld {
 }
 
 extension Challenge {
+    /// What goal `goal` of the scenario `id` is called when it is a named
+    /// milestone (decision 153), or `nil`.
+    static func milestoneTitle(of id: String, goal: Int, in language: DisplayLanguage) -> String? {
+        id == liuMingchuan.id ? LiuMingchuanChallenge.milestoneTitle(goal, in: language) : nil
+    }
+
     /// The ratings' days on the challenge card.
     public func ratingsText(in language: DisplayLanguage) -> String {
         GameWorld.ratingsText(scenario(seed: 1, in: GameWorld.newGameBounds), in: language)
@@ -293,10 +317,11 @@ extension Challenge {
 
     /// The goals on the challenge card, one line each.
     public func goalsText(in language: DisplayLanguage) -> [String] {
-        scenario(seed: 1, in: GameWorld.newGameBounds).goals.map { goal in
+        scenario(seed: 1, in: GameWorld.newGameBounds).goals.enumerated().map { index, goal in
             switch goal {
             case .connect(let points, _):
-                language.text("Link all \(points.count) towns by rail", "用鐵路連通全部 \(points.count) 座城鎮")
+                Self.milestoneTitle(of: id, goal: index, in: language)
+                    ?? language.text("Link all \(points.count) towns by rail", "用鐵路連通全部 \(points.count) 座城鎮")
             case .dailyRiders(let count):
                 language.text("\(Money(count).displayText) riders a day", "每日運量 \(Money(count).displayText) 人次")
             case .population(let count):

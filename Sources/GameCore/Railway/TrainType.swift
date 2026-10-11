@@ -12,6 +12,10 @@
 // The reference has no doors: its boarding is instant and its dwell fixed.
 // The door count of each type is this project's (gap), as the four doors of
 // the standard car already were (``ServiceDwell/doorsPerCar``).
+//
+// The steam train (decision 153) is this project's too: the references have
+// no steam train or 19th-century car. It is the era type of the Liu
+// Mingchuan Railway challenge.
 
 /// A type of train car (the reference's `TRAIN_TYPES`): what a car is rated
 /// to carry and how many doors it has on the platform side. A train without
@@ -26,11 +30,19 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
     case maglev = "MAGLEV"
     case skyRail = "SKYRAIL"
     case monorail = "MONORAIL"
+    /// A steam train of the 1890s (decision 153): small four-wheeled
+    /// coaches behind a tank engine, slow on its way. Not one of the
+    /// reference's types.
+    case steam = "STEAM"
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
     /// (`LINE_TRAIN_TYPE_EXTRA`).
     public static let main: [TrainType] = [.a, .b, .c]
+
+    /// The reference's types (`TRAIN_TYPES`), main and extra: every type
+    /// but the steam train of decision 153, which only an era offers.
+    public static let reference: [TrainType] = [.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail]
 
     /// The type the reference gives a new line (`_lineFormState.type`, and
     /// `normalizeLineTrainTypeForCityKey`'s fallback).
@@ -48,6 +60,7 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
         case .maglev: 240
         case .skyRail: 140
         case .monorail: 224
+        case .steam: 50
         }
     }
 
@@ -59,7 +72,17 @@ public enum TrainType: String, CaseIterable, Codable, Sendable {
         case .a, .d: 5
         case .b, .c: 4
         case .l, .maglev: 3
-        case .apm, .skyRail, .monorail: 2
+        case .apm, .skyRail, .monorail, .steam: 2
+        }
+    }
+
+    /// How a train of this type runs, when the type has its own way
+    /// (decision 153): the steam train's ``TrainPerformance/steam``. Every
+    /// other type runs as the train is set to.
+    public var performance: TrainPerformance? {
+        switch self {
+        case .steam: .steam
+        default: nil
         }
     }
 }

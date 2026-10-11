@@ -48,7 +48,9 @@ struct TrainControls: View {
                     }
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
-                    TrainTypeMenu(type: train.type, language: session.language) { type in
+                    TrainTypeMenu(
+                        type: train.type, offered: session.world.offeredTrainTypes, standard: session.world.offersStandardCar, language: session.language
+                    ) { type in
                         session.setSelectedTrainType(type)
                     }
                     headingPicker
@@ -324,23 +326,28 @@ struct TrainControls: View {
 }
 
 /// The type of a train's cars (the reference's `TRAIN_TYPES`): the standard
-/// car, the reference's main types and its extras. Keeps no type of its own:
-/// a choice calls `choose`, which applies one `GameWorld` command through
-/// the session.
+/// car, the reference's main types and its extras; in a scenario's era
+/// (decision 153), only the era's types. Keeps no type of its own: a choice
+/// calls `choose`, which applies one `GameWorld` command through the
+/// session.
 private struct TrainTypeMenu: View {
     let type: TrainType?
+    let offered: [TrainType]
+    let standard: Bool
     let language: DisplayLanguage
     let choose: @MainActor (TrainType?) -> Void
 
     var body: some View {
         Menu {
-            Button {
-                choose(nil)
-            } label: {
-                option(Train.typeText(nil, in: language), isChosen: type == nil)
+            if standard {
+                Button {
+                    choose(nil)
+                } label: {
+                    option(Train.typeText(nil, in: language), isChosen: type == nil)
+                }
             }
             Section {
-                ForEach(TrainType.allCases, id: \.self) { candidate in
+                ForEach(offered, id: \.self) { candidate in
                     Button {
                         choose(candidate)
                     } label: {
