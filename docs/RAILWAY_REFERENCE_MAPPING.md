@@ -535,6 +535,21 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | — | 營運 | 平溪線（瑞芳–菁桐）兩台、宜蘭線（四腳亭–三貂嶺）一台、深澳線（八斗子–瑞芳）一台，都是 3 節；全日營運；每站設遊戲的運量（不是真實的運量） | — | 這裡的：給測試 V3 的交會、待避與共線用 |
 | — | 開局資金 | 先算好全部的建造費（`TrackGeometry` 的長度與 `ConstructionCosts`），新遊戲的資金加上它，蓋完剛好剩 $3,000,000 | 美分 | 這裡的 |
 
+### 高鐵示範
+
+2026-10-11 作者問「該不該左邊獨立出一個選單，還是建立南港到左營實景示範地圖」，ARCHITECTURE 決策 170。只動 GamePresentation 與 App：用一般的 `GameWorld` 指令蓋，GameCore、golden、存檔都沒有改。
+
+| 參考 | 行為 | Swift | 倍率 | 分類 |
+| --- | --- | --- | --- | --- |
+| `Railway` `data/track_lines.geojson` 名稱「高鐵」的 11 段（352.2 km，TDX 的同一條形狀） | 真實高鐵的中心線 | `HighSpeedDemo.Layout`：11 段依檔案順序接成一條 `WorldPath`，用 `RealWorldDemo.TrackPlan` 擬合成三次曲線的邊（容許誤差 10 m、最長 4 km，221 條） | 世界單位 | direct（資料）；擬合的值是這裡的（見決策 170 的對照表） |
+| `Railway` `data/track_stations.geojson` 的高鐵 12 站、`station_names.json` | 車站與英文名 | `HighSpeedDemo.stationNames`、`Layout.stops`：每站一個 13 節長（208 m）的月台，在路徑上離真實車站最近處 | 世界單位 | direct（資料） |
+| `Railway` `api/thsr-schedule.json`（169 班、12 種停站） | 最多的三種停站：各站 32 班、九站 58 班、五站 28 班 | `HighSpeedDemo.services`：一條各站停車的路線加九站、五站兩個停站模式；班距 30、20、30 分鐘（每個方向每小時 7 班），組數是來回時間除以班距進位 | 分鐘 | adapted（班數 → 班距，真實的一天各種停站合計台北站每小時 4 到 9 班） |
+| `Railway` `PERF_HSR` | 高鐵的行駛性能 | `TrainPerformance.highSpeed`，路線與列車都用它（決策 168） | — | 已在 |
+| `Railway/city_world_reference` `source/assets/cities-B860zks8.js` 的高鐵車票（`every: 30`，首班 6:30／6:00，末班 22:30） | 兩地之間每 30 分鐘一班 | 只當參考，和各站、五站的 30 分鐘一致 | — | 參考 |
+| `OpenWorld` `play/src/world/taiwan-hsr-data.js` | 2068 年環島高鐵的虛構劇本（500 km/h） | 不用 | — | 不採用：常數是劇本的，不是高鐵的規則 |
+| `Simulator`、`MapBuilder`、`Ci` | 沒有可以蓋出一條真實高鐵的資料或程式 | — | — | gap：自己的（取自 `RealWorldDemo` 的鋪軌） |
+| — | 開局資金 | 新遊戲的錢加上全部的建造費（軌道、12 站、24 組列車：$52,120,000），鋪完剛好是新遊戲的錢（測試） | 美分 | 這裡的，同平溪線示範 |
+
 ### Stage F3：移除方格
 
 2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 51；盤點見 [F3_GRID_INVENTORY](research/F3_GRID_INVENTORY.md)。F3 歷史差異（非移植閘門）新的行為，只拿掉方格的相容層；這張表記下三份參考對「方格還是 graph」的做法，以及 F3 之後對應的 GameCore。

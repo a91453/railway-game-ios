@@ -408,7 +408,8 @@ public enum RealWorldDemo {
         init(
             _ path: WorldPath, forced: [Double], avoiding: [ClosedRange<Double>], looseUntil: Double = 0, close: [ClosedRange<Double>] = [],
             start: (point: PlanPoint, direction: WorldVector)? = nil, end: (point: PlanPoint, direction: WorldVector)? = nil,
-            rise: TrackRise? = nil, structure: TrackStructure = .surface
+            rise: TrackRise? = nil, structure: TrackStructure = .surface,
+            tolerance: Double = RealWorldDemo.tolerance, longestEdge: Double = RealWorldDemo.longestEdge
         ) {
             self.path = path
             self.structure = structure
