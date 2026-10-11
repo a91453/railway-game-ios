@@ -105,4 +105,51 @@ final class FreightSessionTests: XCTestCase {
         let empty = StationTag(station: Self.alpha, name: "Alpha", location: PlanPoint(x: 0, y: 0), waiting: 0, lines: [], freight: 0)
         XCTAssertNil(empty.waitingText(in: .english))
     }
+
+    /// Building materials (decision 156): a new game has them; the station
+    /// panel's text and the session's command to send them.
+    func testBuildingMaterialsText() throws {
+        XCTAssertTrue(GameWorld.newGame().hasBuildingMaterials)
+        var world = try Self.world()
+        world.enableFreight()
+        XCTAssertNil(world.materialsText(at: Self.alpha, in: .english))
+        world.enableBuildingMaterials()
+        XCTAssertEqual(world.materialsText(at: Self.alpha, in: .english),
+                       "Building materials: 0 t (up to 5000 t); 60 t a day arrive by road.")
+        XCTAssertEqual(world.materialsText(at: Self.alpha, in: .traditionalChinese),
+                       "建材置場：0 噸（最多 5000 噸）；每天由公路運來 60 噸。")
+        try world.buildFreightFacility(at: Self.alpha)
+        let session = GameSession(world: world)
+        session.selectStation(Self.alpha)
+        session.setFreightProductAtSelectedStation(.materials)
+        XCTAssertEqual(session.world.freightFacility(at: Self.alpha)?.product, .materials)
+        XCTAssertEqual(session.message?.text, "Alpha's yard sends building materials.")
+        XCTAssertEqual(CargoKind.materials.title(in: .traditionalChinese), "建材")
+    }
+
+    /// A town short of building materials (decisions 157, 158): the line
+    /// between the first two towns of a new game, with only what comes by
+    /// road, runs short within days; the map shows a bubble over the
+    /// station and its panel says so.
+    func testAStationShortOfMaterialsShowsOnTheMap() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 1 + 3 * 1_440)
+        let short = try XCTUnwrap(world.freight?.lastShort.first, "a growing town runs short without a freight line")
+        XCTAssertTrue(world.isShortOfMaterials(short))
+        let alerts = world.mapAlerts().filter { $0.kind == .materialsShort }
+        XCTAssertEqual(alerts.map(\.station), world.freight?.lastShort)
+        XCTAssertEqual(alerts.first?.text(in: .traditionalChinese), "缺建材")
+        XCTAssertEqual(try XCTUnwrap(world.materialsText(at: short, in: .english)).components(separatedBy: "\n").last,
+                       "Short last night: the town grew at a quarter. A raise takes 31 to 169 t, a new block 16 t.")
+        let name = try XCTUnwrap(world.station(id: short)?.name)
+        XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).isWorry)
+        XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).text(in: .traditionalChinese).contains("缺建材"))
+
+        // Without building materials no station is ever short.
+        var off = try newGameLine(through: [towns[0], towns[1]])
+        off.setBuildingMaterials(false)
+        try off.advance(ticks: 1 + 3 * 1_440)
+        XCTAssertTrue(off.mapAlerts().allSatisfy { $0.kind != .materialsShort })
+    }
 }

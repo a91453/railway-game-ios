@@ -26,6 +26,9 @@ public enum PerformancePreset: CaseIterable, Hashable, Sendable {
     case dieselRailcar
     case forestRailway
     case highSpeed
+    /// The steam train of decision 153: this project's, not the
+    /// reference's.
+    case steam
 
     public var performance: TrainPerformance {
         switch self {
@@ -43,6 +46,7 @@ public enum PerformancePreset: CaseIterable, Hashable, Sendable {
         case .dieselRailcar: .dieselRailcar
         case .forestRailway: .forestRailway
         case .highSpeed: .highSpeed
+        case .steam: .steam
         }
     }
 
@@ -64,6 +68,7 @@ public enum PerformancePreset: CaseIterable, Hashable, Sendable {
         case .dieselRailcar: language.text("DR1000 railcar", "DR1000")
         case .forestRailway: language.text("Alishan Forest Railway", "阿里山林鐵")
         case .highSpeed: language.text("High-speed rail", "高鐵")
+        case .steam: language.text("Steam train", "蒸汽列車")
         }
     }
 

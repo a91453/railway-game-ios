@@ -17,7 +17,7 @@ import GameCore
 
 extension Challenge {
     /// The Taiwan railway history challenges, oldest era first.
-    public static let history: [Challenge] = [pingxi]
+    public static let history: [Challenge] = [liuMingchuan, pingxi]
 
     /// The Pingxi Line, home of the sky lanterns.
     static let pingxi = Challenge(
@@ -78,8 +78,10 @@ public enum PingxiChallenge {
             return ScenarioEvent(station: station.id, dayOfYear: festivalDay, days: festivalDays, boost: festivalBoost, notice: festivalNotice)
         }
         let rules = Challenge.pingxi.scenario(seed: 0, in: world.bounds)
-        // Decision 154: its targets were measured without holidays.
+        // Decision 154: its targets were measured without holidays;
+        // decision 157: nor building materials.
         world.setDisruptions(nil)
+        world.setBuildingMaterials(false)
         do {
             try world.startScenario(Scenario(
                 id: rules.id, goals: rules.goals, goldDays: rules.goldDays, silverDays: rules.silverDays, deadlineDays: rules.deadlineDays,

@@ -100,8 +100,9 @@ extension GameWorld {
             // Decision 146: a real-world map's buildings are the base map's,
             // so the company's buy out the city's by the ground they cover.
             world.setAreaBuyOut(anchor != nil)
-            // Decision 155: freight, for a company that builds a yard.
-            world.enableFreight()
+            // Decision 155: freight, for a company that builds a yard;
+            // decision 156: and building materials.
+            world.enableBuildingMaterials()
             return world
         } catch {
             // An empty world has no trains to share track, and land and

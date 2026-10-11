@@ -89,7 +89,11 @@ public struct Scenario: Hashable, Sendable {
     /// `nil`: the balance may stay below zero.
     public let insolvencyDays: Int64?
     /// The train types the player may give a train (the era's), or `nil`
-    /// for all of them. A train without a type is always allowed.
+    /// for all of them. Since decision 153 an era with types has no
+    /// standard car either: a train bought in it has its first type (and
+    /// that type's performance, ``TrainType/performance``), and a line
+    /// created in it plans with that performance. A train that had no type
+    /// before the scenario began keeps running as it is.
     public let trainTypes: [TrainType]?
     /// The festivals it holds every year (decision 90).
     public let events: [ScenarioEvent]

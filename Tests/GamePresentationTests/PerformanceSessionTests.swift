@@ -33,12 +33,12 @@ final class PerformanceSessionTests: XCTestCase {
     // MARK: - Presets and text
 
     func testThePresetsAreTheReferencesTrainsByName() {
-        XCTAssertEqual(PerformancePreset.allCases.count, 14)
+        XCTAssertEqual(PerformancePreset.allCases.count, 15)
         XCTAssertEqual(PerformancePreset.metro.performance, .metro)
         XCTAssertEqual(PerformancePreset.taroko.performance, .tiltingTaroko)
         XCTAssertEqual(
             PerformancePreset.allCases.map { $0.title(in: .traditionalChinese) },
-            ["標準", "捷運", "區間車", "普通車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵"]
+            ["標準", "捷運", "區間車", "普通車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵", "蒸汽列車"]
         )
         XCTAssertEqual(PerformancePreset.designSpeeds, [60, 80, 90, 100, 120, 140, 150, 160, 180, 200])
         // A design speed changes only the top speed: still the metro.

@@ -104,6 +104,8 @@ struct MapAlertBubbles: View {
         case .crowded: .crowd
         case .full: .full
         case .lineWithoutTrains: .train
+        // Decision 158: a building, for the town that could not build.
+        case .materialsShort: .office
         }
     }
 
@@ -112,6 +114,7 @@ struct MapAlertBubbles: View {
         case .crowded: Theme.warning
         case .full: Theme.error
         case .lineWithoutTrains: Theme.primary
+        case .materialsShort: Theme.warning
         }
     }
 }

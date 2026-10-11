@@ -340,6 +340,8 @@ extension GameWorld {
                 growing.append((station, rate, raises))
             }
         }
+        // Decision 158: the stations short of building materials tonight.
+        var shortTonight: [StationID] = []
         if !growing.isEmpty {
             let shares = LandDemand.shares(of: land, among: landStations)
             // Phase 6c-2: the buildings full as the midnight begins, and
@@ -347,10 +349,20 @@ extension GameWorld {
             // stations' and the cells').
             let full = cityBuildings ? fullBuildingCells() : []
             var raised: Set<CellPosition> = []
-            for (station, rate, raises) in growing {
+            // Decision 157: with building materials, raising a building and
+            // building a new cell use the station's; a station short of them
+            // grows at a quarter of its rate that night.
+            let gated = freight?.buildingMaterials == true
+            for (station, fullRate, raises) in growing {
+                var short = false
                 if raises, !full.isEmpty {
-                    raiseBuildings(around: station, full: full, raised: &raised, levels: levels)
+                    short = !raiseBuildings(around: station, full: full, raised: &raised, levels: levels)
                 }
+                if gated, materialsStock(at: station.id) < Freight.newCellMaterials {
+                    short = true
+                }
+                if short { shortTonight.append(station.id) }
+                let rate = short ? max(1, fullRate / Freight.shortGrowthDivisor) : fullRate
                 let share = shares[station.id] ?? LandDemand.Share()
                 if let levels, let mix = cityDemand?.baseline {
                     growSteered(around: station, share: share, rate: rate, levels: levels, mix: mix)
@@ -363,8 +375,15 @@ extension GameWorld {
                         around: station, residents: Self.grown(share.residents + front.residents * extra, rate),
                         jobs: Self.grown(jobs + front.jobs * extra, rate))
                 }
-                spread(towards: station, levels: levels)
+                if !gated {
+                    spread(towards: station, levels: levels)
+                } else if materialsStock(at: station.id) >= Freight.newCellMaterials, spread(towards: station, levels: levels) {
+                    freight?.useMaterials(Freight.newCellMaterials, at: station.id)
+                }
             }
+        }
+        if freight?.buildingMaterials == true {
+            freight?.lastShort = shortTonight.sorted()
         }
         refreshLandDemand()
         for index in places.indices {
@@ -424,8 +443,14 @@ extension GameWorld {
     /// tonight by one density, by row and then column; with the city's
     /// demand `levels` (decision 139), those whose use is wanted most first
     /// (a use the valves leave alone counts as 0), then by row and column.
+    ///
+    /// With building materials (decision 157), each raise uses the
+    /// station's (``Freight/materials(toRaise:)``), in that order: the
+    /// first it cannot pay for stops the night's raising. Returns whether
+    /// every raise it wanted was paid for.
+    @discardableResult
     mutating func raiseBuildings(around station: Station, full: Set<CellPosition>, raised: inout Set<CellPosition>,
-                                 levels: CityDemand.Levels? = nil) {
+                                 levels: CityDemand.Levels? = nil) -> Bool {
         var cells: [CellPosition] = []
         var wanted: [Int64] = []
         land.forEachCell(within: Land.catchmentRadius, of: station.location) { index, _ in
@@ -444,10 +469,17 @@ extension GameWorld {
             // and column among equals.
             cells = cells.indices.sorted { (-wanted[$0], $0) < (-wanted[$1], $1) }.map { cells[$0] }
         }
+        let gated = freight?.buildingMaterials == true
         for position in cells.prefix(LandDemand.upgradesPerStation) {
+            if gated {
+                let tons = buildings.building(row: position.row, column: position.column).map { Freight.materials(toRaise: $0.density) } ?? 0
+                guard materialsStock(at: station.id) >= tons else { return false }
+                freight?.useMaterials(tons, at: station.id)
+            }
             buildings.raise(at: position)
             raised.insert(position)
         }
+        return true
     }
 
     /// The residents and jobs of the cells of `station`'s front: those whose
@@ -512,13 +544,16 @@ extension GameWorld {
     /// is the use most in demand, when that is above 0: homes, shops
     /// (``Zone/commercial``'s new cell) or work (``Zone/office``'s), the
     /// first of them on a tie.
-    mutating func spread(towards station: Station, levels: CityDemand.Levels? = nil) {
+    ///
+    /// Returns whether it built a cell.
+    @discardableResult
+    mutating func spread(towards station: Station, levels: CityDemand.Levels? = nil) -> Bool {
         let radius = Land.catchmentRadius, length = Land.cellLength
         let point = station.location
         let rows = Land.rows(in: bounds), columns = Land.columns(in: bounds)
         let firstRow = max(0, Land.cellIndex(point.y - radius)), lastRow = min(rows - 1, Land.cellIndex(point.y + radius))
         let firstColumn = max(0, Land.cellIndex(point.x - radius)), lastColumn = min(columns - 1, Land.cellIndex(point.x + radius))
-        guard firstRow <= lastRow, firstColumn <= lastColumn else { return }
+        guard firstRow <= lastRow, firstColumn <= lastColumn else { return false }
         let zoned = !zones.isEmpty && zones.hasZone(rows: firstRow...lastRow, columns: firstColumn...lastColumn)
         var best: (squared: Int64, row: Int, column: Int)?
         var candidates: [(squared: Int64, position: CellPosition, use: LandUse, zone: Zone)] = []
@@ -557,9 +592,9 @@ extension GameWorld {
             }
             let cell = candidates[chosen], counts = cell.zone.newCell
             addLand(LandCell(row: cell.position.row, column: cell.position.column, use: cell.use, residents: counts.residents, jobs: counts.jobs))
-            return
+            return true
         }
-        guard let best else { return }
+        guard let best else { return false }
         var zone = Zone.residential
         if let levels {
             // Homes unless shops or work is wanted more, and at all.
@@ -570,6 +605,7 @@ extension GameWorld {
         }
         let counts = zone.newCell
         addLand(LandCell(row: best.row, column: best.column, use: zone.use!, residents: counts.residents, jobs: counts.jobs))
+        return true
     }
 
     /// Decision 139: a growing `station`'s day of growth at `rate`, steered

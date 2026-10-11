@@ -232,10 +232,30 @@ struct StationPanel: View {
         let world = session.world
         if world.hasFreight {
             Section {
+                // Decision 156: the station's building materials.
+                if let materials = world.materialsText(at: station.id, in: language) {
+                    Text(verbatim: materials)
+                        .font(.footnote)
+                        .accessibilityIdentifier("station.materials")
+                }
                 if let text = world.freightYardText(at: station.id, in: language) {
                     Text(verbatim: text)
                         .font(.subheadline)
                         .accessibilityIdentifier("station.freight.status")
+                    // Decision 156: what the yard sends.
+                    if world.hasBuildingMaterials {
+                        Picker(selection: Binding(
+                            get: { world.freightFacility(at: station.id)?.product ?? .goods },
+                            set: { session.setFreightProductAtSelectedStation($0) }
+                        )) {
+                            ForEach(CargoKind.allCases, id: \.self) { kind in
+                                Text(verbatim: kind.title(in: language)).tag(kind)
+                            }
+                        } label: {
+                            Text(verbatim: language.text("Sends", "出貨"))
+                        }
+                        .accessibilityIdentifier("station.freight.product")
+                    }
                     Button(role: .destructive) {
                         session.removeFreightYardAtSelectedStation()
                     } label: {

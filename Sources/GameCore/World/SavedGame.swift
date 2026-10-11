@@ -179,20 +179,29 @@
 ///     reads only an earlier version would drop it, and a real-world map's
 ///     buy-outs would be reckoned from the cells' densities again, so it
 ///     says the save is newer than it instead.
+/// 36. The steam train (decision 153): a train can have the type
+///     `"STEAM"`. A build that reads only an earlier version would call
+///     such a save damaged, so it says the save is newer than it instead.
 /// 37. Public holidays (decision 154): a world can have `"disruptions"`,
 ///     the country whose holidays it keeps and how strongly they bite. A
 ///     build that reads only an earlier version would drop them, and its
 ///     holidays would raise no demand, so it says the save is newer than it
-///     instead. (Version 36 is the Liu Ming-chuan scenario's, decision 153,
-///     in the work registry.)
+///     instead.
 /// 38. Freight (decision 155): a world can have `"freight"`, its facilities
 ///     and the cargo on its trains, a line `"freight": true`, and the ledger
 ///     the `hourlyFreight` rows and `"freightRevenue"` totals. A build that
 ///     reads only an earlier version would drop them and the cargo would
 ///     vanish, so it says the save is newer than it instead.
+/// 39. Building materials (decision 156): a world's `"freight"` can have
+///     `"buildingMaterials": true`, the stations' `"materials"` and their
+///     totals, a yard `"product": "materials"`, and cargo `"kind":
+///     "materials"`, and the stations short of them at the last midnight,
+///     `"lastShort"` (decision 158). A build that reads only an earlier version would drop
+///     them, and send the materials as goods, so it says the save is newer
+///     than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 38
+    public static let currentVersion = 39
 
     public let world: GameWorld
 
@@ -217,9 +226,7 @@ extension SavedGame: Codable {
                 forKey: .saveVersion, in: container, debugDescription: "Save version \(version) does not exist."
             )
         }
-        // Version 36 is the work registry's for decision 153, which this
-        // build does not have: a save of it is not guessed at.
-        guard version <= Self.currentVersion, version != 36 else {
+        guard version <= Self.currentVersion else {
             throw DecodingError.dataCorruptedError(
                 forKey: .saveVersion, in: container,
                 debugDescription: "The save is version \(version); this build reads up to version \(Self.currentVersion)."
@@ -303,10 +310,14 @@ extension SavedGame: Codable {
         // squares, as it did.
         // Version 34 to 35: land without `"coverage"` has none known, and
         // its buy-outs are reckoned from its densities as before.
-        // Version 35 to 37: a world without `"disruptions"` has no
+        // Version 35 to 36: a version 35 world has no steam train, which
+        // version 36 reads as before.
+        // Version 36 to 37: a world without `"disruptions"` has no
         // holidays, and its demand is as it was.
         // Version 37 to 38: a world without `"freight"` has no freight, and a
         // line without `"freight"` carries passengers, as every line did.
+        // Version 38 to 39: freight without `"buildingMaterials"` has none,
+        // and its yards send goods, as every yard did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

@@ -16,6 +16,16 @@ the cells within 256 m, growing three times as fast: its people counted
 three times in the share of the growth and twice more in the growth itself,
 decision 129), and the new cells with D1 homes. It compares every land and building observation after that night.
 
+It checks GoldenScenarios/materials-growth.json too: the same fixture with
+building materials on (decisions 156 and 157). Each station holds the 60 t
+it got by road at the first midnight; raising a building takes its new
+storeys' floor (1,536 m2 a storey) at 200 m2 a ton, rounded up, from the
+station's materials, in the order the raises are chosen, and the first it
+cannot pay for stops its raising; a new cell takes 16 t. A station that
+could not pay for a raise, or holds less than a new cell's 16 t after its
+raises, grows at a quarter of its rate (at least 1); it builds its new cell
+only if it holds 16 t. Each station then gets 60 t more at that midnight.
+
 Python 3 standard library only: python3 -I tools/golden-checks/city_growth.py
 """
 import json
@@ -30,6 +40,11 @@ TABLE = {
     "office": [(8, 84), (24, 252), (72, 756), (160, 1680)],
 }
 STATIONS = [(1536, 512), (3584, 512), (5632, 512)]  # Alpha, Beta, Gamma
+FLOORS, STOREY, PER_TON, LOCAL = [2, 6, 18, 40], 1536, 200, 60  # decisions 74, 156, 157
+
+
+def tons(floors):
+    return (floors * STOREY + PER_TON - 1) // PER_TON
 COLUMNS, ROWS = 32768 // CELL, 8192 // CELL
 
 
@@ -68,8 +83,12 @@ def largest_remainder(total, weights):
 
 
 def night(fixture):
-    """The land before and after the second midnight, cell by cell."""
+    """The land before and after the second midnight, cell by cell, and the
+    materials each station holds after it (or None without them)."""
     steps = fixture["steps"]
+    materials = any(s.get("command", {}).get("type") == "enableBuildingMaterials" for s in steps)
+    stock = {i: LOCAL for i in range(1, 4)} if materials else None
+    used, shorts = 0, []
     land_cells = next(s["command"]["cells"] for s in steps if s.get("command", {}).get("type") == "setLand")
     land = {}
     for index, c in enumerate(sorted(land_cells, key=lambda c: (c["row"], c["column"]))):
@@ -116,10 +135,23 @@ def night(fixture):
         if rate <= 0:
             continue
         reach = [p for p in sorted(land) if d2(p, STATIONS[station - 1]) < R2]
+        short = False
         if raises[station]:
             for pos in [p for p in reach if p in full and p not in raised][:2]:
+                if materials:
+                    cost = tons(FLOORS[land[pos]["density"]] - FLOORS[land[pos]["density"] - 1])
+                    if stock[station] < cost:
+                        short = True
+                        break
+                    stock[station] -= cost
+                    used += cost
                 land[pos]["density"] += 1
                 raised.append(pos)
+        if materials and stock[station] < tons(FLOORS[0]):
+            short = True
+        if short:
+            shorts.append(station)
+            rate = max(1, rate // 4)
         grow = lambda amount: max(1, (amount * rate + 500) // 1000) if amount > 0 else 0
         # The station front as this station's turn comes (after the lower
         # stations grew and spread).
@@ -140,12 +172,23 @@ def night(fixture):
                 dist = d2(pos, STATIONS[station - 1])
                 if pos not in land and dist < R2 and beside and (best is None or (dist, row, column) < best):
                     best = (dist, row, column)
+        if best and materials:
+            if stock[station] < tons(FLOORS[0]):
+                best = None
+            else:
+                stock[station] -= tons(FLOORS[0])
+                used += tons(FLOORS[0])
         if best:
             land[best[1:]] = dict(use="residential", residents=4, jobs=0, id=max(p["id"] for p in land.values()) + 1, kind="city", density=1)
-    print("raised", raised)
+    print("raised", raised, "materials left", stock, "used", used)
     for pos in sorted(land):
         print(pos, land[pos], "capacity", capacity(land[pos]))
-    return before, land
+    after = None
+    if materials:
+        # The second midnight's 60 t each, after the growth.
+        after = dict(materials=[{"station": i, "tons": stock[i] + LOCAL} for i in sorted(stock)],
+                     used=used, supplied=2 * 3 * LOCAL, short=shorts)
+    return before, land, after
 
 
 def answer(source, observe):
@@ -159,11 +202,9 @@ def answer(source, observe):
     return {"found": True, "building": {"id": plot["id"], "kind": plot["kind"], "use": plot["use"], "density": plot["density"], "residents": r, "jobs": j}}
 
 
-def main():
-    root = pathlib.Path(__file__).resolve().parents[2]
-    fixture = json.loads((root / "GoldenScenarios" / "city-buildings-raise.json").read_text())
+def check(fixture):
     steps = fixture["steps"]
-    before, land = night(fixture)
+    before, land, after = night(fixture)
 
     failures, advances = 0, 0
     for s in steps:
@@ -186,6 +227,22 @@ def main():
         if got != want:
             failures += 1
             print("MISMATCH final", name, "fixture", got, "computed", want)
+    if after is not None:
+        freight = final.get("freight", {})
+        got = dict(materials=freight.get("materials"), used=freight.get("materialsUsed"), supplied=freight.get("materialsSupplied"),
+                   short=freight.get("lastShort", []))
+        if got != after:
+            failures += 1
+            print("MISMATCH final materials", "fixture", got, "computed", after)
+    return failures
+
+
+def main():
+    root = pathlib.Path(__file__).resolve().parents[2]
+    failures = 0
+    for name in ("city-buildings-raise.json", "materials-growth.json"):
+        print("==", name)
+        failures += check(json.loads((root / "GoldenScenarios" / name).read_text()))
     print("checked: every land and building observation and the final counts match" if failures == 0 else "%d mismatches" % failures)
     return 1 if failures else 0
 

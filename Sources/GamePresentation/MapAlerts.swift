@@ -20,6 +20,9 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
         case full(waiting: Int64)
         /// The line has no train, so no one rides it.
         case lineWithoutTrains(LineID)
+        /// The town round the station was short of building materials at
+        /// the last midnight and grew slowly (decision 158).
+        case materialsShort
     }
 
     public let kind: Kind
@@ -45,6 +48,8 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
             language.text("Full", "滿了")
         case .lineWithoutTrains:
             language.text("\(lineName ?? "Line"): no trains", "\(lineName ?? "路線")：沒有列車")
+        case .materialsShort:
+            language.text("Short of building materials", "缺建材")
         }
     }
 }
@@ -72,6 +77,11 @@ extension GameWorld {
             guard let first = line.stops.first, let station = station(id: first) else { continue }
             alerts.append(MapAlert(kind: .lineWithoutTrains(line.id), station: first, location: station.location))
         }
+        // Decision 158: then the stations short of building materials.
+        for id in freight?.lastShort ?? [] {
+            guard let station = station(id: id) else { continue }
+            alerts.append(MapAlert(kind: .materialsShort, station: id, location: station.location))
+        }
         return alerts
     }
 }
@@ -84,7 +94,7 @@ extension GameSession {
     @discardableResult
     public func respond(to alert: MapAlert) -> Bool {
         switch alert.kind {
-        case .crowded, .full:
+        case .crowded, .full, .materialsShort:
             selectStation(alert.station)
             return false
         case .lineWithoutTrains(let line):

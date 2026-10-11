@@ -827,3 +827,22 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 兩座貨運場各 5,000,000，路線改貨運路線；開到第 3 小時（180 分鐘）：100 個就業 × 500 = 50,000 千分之一噸一天，每個整點（第 0、1、2 小時）做 50,000 千分之一噸，各得 2 噸，共 6 噸，全在 Alpha，Gamma 沒有。
   - 餘額 100,000,000 − 2 × 1,000（車站）− 2 × 5,000,000（貨運場）− 2 × 3,600（兩個結算過的小時，每站 18 元的營運成本）= 89,990,800。
 - 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 156：建材（schema 59）
+
+- 新指令 `enableBuildingMaterials`、`setFreightProduct`（`station`、`kind`：`goods` 或 `materials`）；新結果 `buildingMaterialsNotEnabled`。最終狀態的 `freight` 另有 `buildingMaterials`、`materials`（`[{"station", "tons"}]`）、`materialsReceived`、`materialsSupplied`、`materialsUsed`、`materialsLost`，貨運場的 `product`、車上貨物的 `kind`；關閉、空的、0 或一般貨物時都省略，所以 `freight.json`（schema 58）照舊。
+- `materials.json`（新）：`freight.json` 的兩站與工業格，沒有路線。貨運場在 Alpha。建材沒打開前不能改出建材（`buildingMaterialsNotEnabled`）；沒有貨運場的 Gamma 不能改（`noFreightFacility`）。打開後 Alpha 出建材，開一天又一分鐘：
+  - 午夜（第 0、1440 分鐘）每站各得 60 噸在地供應，各 120 噸，共供應 240 噸；
+  - 貨運場在第 0 到第 24 個整點各做 50,000 千分之一噸，共 1,250,000：52 噸，餘 2,000；
+  - 沒有路線，沒有營運成本：餘額 100,000,000 − 2 × 1,000 − 5,000,000 = 94,998,000。
+- 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 157：城市用建材成長（schema 60）
+
+- 沒有新指令；用 schema 59 的 `enableBuildingMaterials`。
+- `materials-growth.json`（新）：`city-buildings-raise.json` 打開建材。每站有第一個午夜由公路運來的 60 噸。第二個午夜：
+  - 升級用新增樓層的樓地板 ÷ 200 m²／噸，無條件進位：D1→D2 31 噸、D2→D3 93 噸、D3→D4 169 噸；依選出的順序，第一個付不起的停下當晚的升級；新的一格 16 噸。
+  - Alpha 升級 (0, 0) 到 D2（剩 29 噸），付不起 (0, 1)；Beta 升級 (0, 1)，付不起 (0, 4)；Gamma 升級 (0, 4)，付不起 (0, 5) 到 D4。
+  - 三站都缺料，成長率都變成四分之一（12 → 3 千分比），各蓋一格新的（剩 13 噸）。之後那個午夜各再得 60 噸：73 噸，共用掉 141 噸、供應 360 噸。
+- 最終狀態的 `freight` 另有 `lastShort`（決策 158：當晚缺料的車站，沒有時省略）：`[1, 2, 3]`。
+- `tools/golden-checks/city_growth.py` 獨立算出每一個值（同一支程式也照舊驗 `city-buildings-raise.json`）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

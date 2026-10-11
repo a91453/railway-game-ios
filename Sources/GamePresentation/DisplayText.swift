@@ -393,11 +393,13 @@ extension GameError {
             language.text("A station cannot be linked with itself.", "車站不能和自己組成轉乘群組。")
         case .invalidScenario:
             language.text("This challenge cannot be started here.", "這個挑戰無法在這裡開始。")
-        case .trainTypeUnavailable(let type):
+        case .trainTypeUnavailable(let type?):
             language.text(
                 "This era has no \(type.title(in: language)) trains.",
                 "這個年代還沒有\(type.title(in: language))列車。"
             )
+        case .trainTypeUnavailable(nil):
+            language.text("This era has no standard cars.", "這個年代還沒有標準車。")
         case .buildingOverlaps(let id):
             language.text("That would stand on building #\(id.rawValue).", "這裡已經有建物 #\(id.rawValue)。")
         case .buildingOnTrack:
@@ -432,6 +434,8 @@ extension GameError {
             language.text("Station #\(id.rawValue) already has a freight yard.", "車站 #\(id.rawValue) 已經有貨運場。")
         case .noFreightFacility(let id):
             language.text("Station #\(id.rawValue) has no freight yard.", "車站 #\(id.rawValue) 沒有貨運場。")
+        case .buildingMaterialsNotEnabled:
+            language.text("This game has no building materials.", "這局遊戲沒有建材。")
         case .invalidGround:
             language.text(
                 "Each block of the ground's heights must lie in the world and be read once.",
@@ -570,6 +574,7 @@ extension TrainType {
         case .maglev: language.text("Maglev", "磁浮")
         case .skyRail: language.text("Sky rail", "雲軌")
         case .monorail: language.text("Monorail", "單軌")
+        case .steam: language.text("Steam train", "蒸汽列車")
         }
     }
 }

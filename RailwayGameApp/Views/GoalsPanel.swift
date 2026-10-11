@@ -167,6 +167,15 @@ struct ChallengePicker: View {
                                     }
                                     .font(.caption)
                                     .foregroundStyle(Theme.primary)
+                                } else if challenge.map == .liuMingchuan {
+                                    // Decision 153: its milestones and era.
+                                    Label {
+                                        Text(verbatim: LiuMingchuanChallenge.milestonesText(in: language))
+                                    } icon: {
+                                        Image(systemName: "flag.checkered")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.primary)
                                 }
                             }
                         }
@@ -178,7 +187,7 @@ struct ChallengePicker: View {
                 } footer: {
                     Text(verbatim: launcher.railways == nil
                         ? language.text("Waiting for the real-world data.", "正在等待實景資料。")
-                        : language.text("On a map of the real place, with its real lines.", "在真實地點的地圖上，以真實的路線開局。"))
+                        : language.text("On a map of the real place.", "在真實地點的地圖上開局。"))
                 }
                 Section {
                     ForEach(Challenge.sandbox) { challenge in
