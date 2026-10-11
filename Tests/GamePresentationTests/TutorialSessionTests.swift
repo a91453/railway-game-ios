@@ -304,7 +304,8 @@ final class TutorialSessionTests: XCTestCase {
 
     /// The start screen's tutorial entry starts a new game on the first
     /// step, keeping the autosave as starting a new game does; the
-    /// tutorial's game keeps no holidays (decision 154).
+    /// tutorial's game keeps no holidays (decision 154) and no building
+    /// materials (decision 157).
     func testTheStartScreenStartsANewGameWithTheTutorial() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -312,9 +313,11 @@ final class TutorialSessionTests: XCTestCase {
             let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
             launcher.startTutorial()
             let session = try XCTUnwrap(launcher.session)
-            // A new game, without its holidays (decision 154).
+            // A new game, without its holidays (decision 154) or its
+            // building materials (decision 157).
             var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
             expected.setDisruptions(nil)
+            expected.setBuildingMaterials(false)
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.tutorial?.index, 0)
             XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)

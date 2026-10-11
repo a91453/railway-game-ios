@@ -179,6 +179,8 @@ public enum LiuMingchuanChallenge {
         world.setOutsideConnections(false)
         // Decision 154: its targets were measured without holidays.
         world.setDisruptions(nil)
+        // Decision 157: nor with building materials.
+        world.setBuildingMaterials(false)
         do {
             try world.startScenario(scenario)
         } catch {

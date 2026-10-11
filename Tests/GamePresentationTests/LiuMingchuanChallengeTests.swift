@@ -23,6 +23,8 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         XCTAssertEqual(world.landBlocks, [])
         XCTAssertFalse(world.outsideConnections)
         XCTAssertNil(world.disruptions)
+        // Its targets were measured without building materials (decision 157).
+        XCTAssertFalse(world.hasBuildingMaterials)
     }
 
     func testItsGoalsAreTheMilestonesAndTheRiders() throws {
