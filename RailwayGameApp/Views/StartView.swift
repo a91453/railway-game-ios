@@ -338,7 +338,7 @@ private struct DemoPicker: View {
                         tone: .accent
                     ) {
                         if let railways = launcher.railways {
-                            Task {
+                            Task { @MainActor in
                                 await launcher.openHighSpeedDemo(railways: railways)?.value
                                 dismiss()
                             }

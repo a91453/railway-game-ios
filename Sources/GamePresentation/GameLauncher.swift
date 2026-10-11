@@ -243,7 +243,7 @@ public final class GameLauncher {
     /// track, the land round twelve stations, the sets sent out), so it is
     /// built off the main actor, with the start screen showing meanwhile
     /// (``isOpeningHighSpeedDemo``). Returns the task, or `nil` while one
-    /// is being built already.
+    /// is being built already. A game the player starts meanwhile stays.
     @discardableResult
     public func openHighSpeedDemo(railways: RealRailways) -> Task<Void, Never>? {
         guard !isOpeningHighSpeedDemo else { return nil }
@@ -257,13 +257,16 @@ public final class GameLauncher {
                 )
             }.value
             isOpeningHighSpeedDemo = false
-            if let world {
-                begin(world, keepingAutosave: true)
-            } else {
+            guard let world else {
                 message = StatusMessage(kind: .failure, text: language.text(
                     "The High Speed Rail could not be built from the real-world data.", "無法用實景資料蓋出高鐵。"
                 ))
+                return
             }
+            // A game started meanwhile, from the start screen behind the
+            // sheet, is not replaced.
+            guard session == nil else { return }
+            begin(world, keepingAutosave: true)
         }
     }
 

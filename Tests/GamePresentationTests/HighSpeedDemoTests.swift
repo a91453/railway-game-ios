@@ -214,6 +214,20 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertGreaterThan(launcher.session?.world.stationDemand(of: taipei.id)?.hinterland ?? 0, 1_000_000, "the people were handed to the build")
     }
 
+    /// A game the player starts while it builds is not taken over by it.
+    @MainActor
+    func testAGameStartedWhileItBuildsStays() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("HighSpeedDemoTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let task = launcher.openHighSpeedDemo(railways: try Self.railways())
+        launcher.openDemo()
+        let simple = try XCTUnwrap(launcher.session?.world)
+        await task?.value
+        XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
+        XCTAssertEqual(launcher.session?.world, simple, "the simple demo is still the game being played")
+    }
+
     // MARK: - Report
 
     /// What the demo is, measured: the track, what it costs, the services
