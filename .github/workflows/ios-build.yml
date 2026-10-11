@@ -296,8 +296,14 @@ jobs:
       # 37112399702 xcodebuild did not start launching the app for 80 s and
       # the first UI test timed out, while the next launched in under a
       # second. Launch the built app once here, outside any test.
+      # It only helps the tests, so a warm-up that fails or runs out of time
+      # is a warning, not a red job: in #355's run 38111760884, on a slow
+      # runner, the step hit its 5-minute limit and the job ended there
+      # without running a single UI test (it took 87 s, 182 s at the 90th
+      # percentile, from 2026-10-09 to 2026-10-11).
       - name: Warm up the app's first launch
         timeout-minutes: 5
+        continue-on-error: true
         run: |
           app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
           xcrun simctl install "$SIMULATOR_UDID" "$app"
