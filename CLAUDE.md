@@ -122,7 +122,7 @@ needs OSM data reads the same extract.
   package's tests and fixtures, `Web/`, `tools/`, `.claude/`, the other
   workflows' files.
   A pull request runs a short gate list of UI tests,
-  and the iPad tutorial tests only when it touches the tutorial's screens;
+  and the iPad tutorial tests only when it touches the tutorial's own files;
   the full lane runs every UI test and the iPad tutorial tests (the
   missing-button proof nightly and on request) on `main` every three hours
   (`ios-full-lane.yml` starts it unless `main`'s newest commit already had

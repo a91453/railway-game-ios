@@ -15,8 +15,8 @@ name: iOS App Build
 #   start screen, the three tools, starting, saving and continuing a game
 #   (in English; the other languages run in the full lane), and the
 #   tutorial's first steps. The iPad job runs only
-#   when the change touches the tutorial's screens. Kept short and steady so a
-#   red result means something.
+#   when the change touches the tutorial's own files. Kept short and steady so
+#   a red result means something.
 # - The full lane: main every three hours (ios-full-lane.yml starts it when
 #   main's newest commit has had none), a nightly run and manual runs. All
 #   the UI tests (map gestures, large text, landscape too), the iPad tutorial
@@ -104,10 +104,17 @@ jobs:
           fetch-depth: 2
 
       # Everything but a pull request runs the iPad job. A pull request runs
-      # it when it touches the tutorial's screens or this pipeline: the card's
-      # placement differs most between an iPhone and an iPad. If the changed
-      # files cannot be listed, run it.
-      - name: Detect changes to the tutorial's screens
+      # it when it touches the tutorial's own files (its card, targets,
+      # steps and tests) or this pipeline: the card's placement differs most
+      # between an iPhone and an iPad. The screens the tutorial points at
+      # (the map, the tool rail, the panels) are left to the full lane, which
+      # runs the iPad tests every three hours on main and finishes: from
+      # 2026-10-10 a change to any of them ran the iPad job too, 114 of the
+      # 203 pull requests of the week to 2026-10-11 (26 touched the
+      # tutorial's own files), while on the iPhone the gate still runs the
+      # tutorial's first steps on every pull request. If the changed files
+      # cannot be listed, run it.
+      - name: Detect changes to the tutorial's own files
         id: detect
         env:
           EVENT: ${{ github.event_name }}
@@ -117,7 +124,7 @@ jobs:
             if files="$(git diff --name-only HEAD^1 HEAD)"; then
               echo "Changed files:"
               echo "$files"
-              if grep -Eq '^(RailwayGameApp/Views/(Tutorial|ContentView|ControlPanel|HUDView|MapView|NetworkControls|BuildToolRail|LinesPanel|TrainControls|StartView)|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml)' <<<"$files"; then
+              if grep -Eq '^(RailwayGameApp/Views/Tutorial|RailwayGameApp/UITests/TutorialUITests|Sources/GamePresentation/Tutorial|\.github/workflows/ios-build\.yml)' <<<"$files"; then
                 ipad=true
               else
                 ipad=false
@@ -437,7 +444,7 @@ jobs:
   ipad-tutorial:
     name: iPad tutorial tests (iOS Simulator)
     # A skipped job passes a required check, so a pull request that leaves the
-    # tutorial's screens alone is not held up by it.
+    # tutorial's own files alone is not held up by it.
     needs: changes
     if: needs.changes.outputs.ipad == 'true'
     runs-on: macos-26
