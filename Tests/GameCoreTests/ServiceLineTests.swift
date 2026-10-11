@@ -152,7 +152,10 @@ final class ServiceLineTests: XCTestCase {
             XCTAssertThrowsGameError(try world.setLineServiceWindow(first, to: window), .invalidServiceWindow)
         }
         XCTAssertThrowsGameError(try world.setLineTrainsInService(unknown, to: TrainsInService(peak: -1, offPeak: 0, low: 0)), .unknownLine(unknown))
-        for trains in [TrainsInService(peak: -1, offPeak: 0, low: 0), TrainsInService(peak: 0, offPeak: -1, low: 0), TrainsInService(peak: 0, offPeak: 0, low: .min)] {
+        for trains in [
+            TrainsInService(peak: -1, offPeak: 0, low: 0), TrainsInService(peak: 0, offPeak: -1, low: 0), TrainsInService(peak: 0, offPeak: 0, low: .min),
+            TrainsInService(peak: TrainsInService.maximum + 1, offPeak: 0, low: 0), TrainsInService(peak: 0, offPeak: 0, low: .max),
+        ] {
             XCTAssertThrowsGameError(try world.setLineTrainsInService(first, to: trains), .invalidTrainsInService)
         }
         XCTAssertThrowsGameError(try world.removeLine(unknown), .unknownLine(unknown))
@@ -161,7 +164,7 @@ final class ServiceLineTests: XCTestCase {
         // The widest windows are allowed: open at 23:59, close at 06:00.
         try world.setLineServiceWindow(first, to: .hours(open: 1439, close: 1800))
         try world.setLineServiceWindow(first, to: .hours(open: 0, close: 1))
-        try world.setLineTrainsInService(first, to: TrainsInService(peak: .max, offPeak: 0, low: 0))
+        try world.setLineTrainsInService(first, to: TrainsInService(peak: TrainsInService.maximum, offPeak: 0, low: 0))
         let limit = RunningCurve.maximumRate
         try world.setLinePerformance(first, to: TrainPerformance(acceleration: limit, braking: limit, topSpeed: limit))
     }

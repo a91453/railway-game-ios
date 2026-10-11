@@ -257,7 +257,7 @@ extension GameError {
                 "開班時間須在 00:00 到 23:59 之間，收班時間須晚於開班時間，最晚到次日 06:00。"
             )
         case .invalidTrainsInService:
-            language.text("A line cannot run a negative number of trains.", "路線的上線列車數不能是負數。")
+            language.text("A line runs from 0 to 1,000 trains at each level.", "路線每個時段的上線列車數要在 0 到 1,000 列之間。")
         case .invalidServiceDay:
             language.text(
                 "The day's service levels must start at 00:00 and change at later times within the day.",

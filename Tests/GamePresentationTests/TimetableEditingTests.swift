@@ -140,6 +140,33 @@ final class TimetableEditingTests: XCTestCase {
         }
     }
 
+    /// A timetable at the end of time, which a save may hold (GameCore asks
+    /// only that its times never go back): an edit that would pass the
+    /// largest second leaves it as it is instead of stopping the game.
+    func testAnEditPastTheEndOfTimeChangesNothing() async throws {
+        try await MainActor.run {
+            var world = try makeLine()
+            let end = GameTime(seconds: .max)
+            try world.setTrainTimetable(TrainID(rawValue: 1), to: [ScheduledStop(station: alpha, arrival: end, departure: end)])
+            let session = GameSession(world: world)
+            session.moveSelectedTrainArrival(at: 0, by: TimetableEditing.step)
+            session.moveSelectedTrainDeparture(at: 0, by: TimetableEditing.step)
+            session.addStopToSelectedTrainTimetable(beta)
+            XCTAssertEqual(session.world, world)
+            XCTAssertEqual(session.world.timetableRows(of: TrainID(rawValue: 1), in: .english).count, 1)
+            XCTAssertNotNil(session.world.timetableSummary(of: TrainID(rawValue: 1), in: .english))
+
+            let first = GameTime(seconds: 0)
+            try world.setTrainTimetable(
+                TrainID(rawValue: 1), to: [ScheduledStop(station: alpha, arrival: first, departure: end)], repeatingEvery: .max
+            )
+            let repeating = GameSession(world: world)
+            repeating.changeSelectedTrainTimetablePeriod(by: TimetableEditing.step)
+            XCTAssertEqual(repeating.world, world)
+            XCTAssertEqual(TimetableEditing.shortestPeriod(of: world.train(id: TrainID(rawValue: 1))?.timetable ?? []), nil)
+        }
+    }
+
     func testTimesOnALaterDayShowTheDay() {
         let first = GameTime(seconds: 23 * 3_600 + 50 * 60)
         let firstDay = first.seconds / GameTime.secondsPerDay

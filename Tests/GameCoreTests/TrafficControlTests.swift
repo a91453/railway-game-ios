@@ -1003,6 +1003,28 @@ final class TrafficControlTests: XCTestCase {
         XCTAssertEqual(minute, world)
     }
 
+    /// Only a train following another holds its route part of the way
+    /// (Stage U2), and then never where the route ends. A save whose train
+    /// holds where its route ends but not track before it (here the node
+    /// between its edges) is refused: otherwise the train is taken to hold
+    /// all of it and runs onto track it does not hold.
+    func testAReservationWithAHoleBeforeTheRoutesEndIsRefused() throws {
+        var world = try makeLineWorld()
+        try world.setTrafficControl(true)
+        let one = try buy(&world)
+        try world.placeTrain(one, at: .onEdge(forward(1), offset: 4_600))
+        try world.setTrainContinuation(one, along: [forward(2)], stoppingAt: 1_500)
+        var json = try encoded(world)
+        var trains = try XCTUnwrap(json["trains"] as? [[String: Any]])
+        var reservation = try XCTUnwrap(trains[0]["reservation"] as? [[String: Any]])
+        let count = reservation.count
+        reservation.removeAll { ($0["node"] as? Int) == 2 }
+        XCTAssertEqual(reservation.count, count - 1, "the node between the edges was held")
+        trains[0]["reservation"] = reservation
+        json["trains"] = trains
+        XCTAssertThrowsError(try decode(json))
+    }
+
     /// A save from before Stage U may hold track its train has already
     /// passed (Stage T kept it until the route ended): it loads as it is,
     /// that track stays held, and the train lets it go when it next moves.

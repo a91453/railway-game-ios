@@ -523,9 +523,21 @@ extension GameWorld {
     }
 
     /// The key of the network plan ``makePassengerPlan()`` works out now.
+    /// The lines without when they last sent trains out
+    /// (``ServiceLine/lastDispatch`` and the run days), which change at
+    /// every departure and which no plan reads: otherwise the plan was
+    /// worked out again after almost every departure.
     func passengerPlanKey() -> PassengerPlanKey {
-        PassengerPlanKey(
-            lines: lines, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
+        let planned = lines.map { line in
+            var line = line
+            line.lastDispatch = nil
+            line.outerLastDispatch = nil
+            line.runDays = []
+            for index in line.patterns.indices { line.patterns[index].lastDispatch = nil }
+            return line
+        }
+        return PassengerPlanKey(
+            lines: planned, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
             trains: trains.map(\.id), trainLengths: trains.map(\.length),
             trainCapacities: trains.map(\.capacity), serviceDay: serviceDay,
             levels: lines.map { serviceLevel(of: $0.id, at: clock.now) },
@@ -617,7 +629,11 @@ extension GameWorld {
                 var options: [PassengerRouteChoice] = []
                 var journeys: [PassengerJourney] = []
                 for choice in found {
-                    guard let journey = PassengerJourney(origin: record.station, route: choice.route) else { continue }
+                    // A line calling twice at the same stations rides between
+                    // them twice, the rides differing only in their seconds:
+                    // one journey, kept once, as the first (better) choice.
+                    guard let journey = PassengerJourney(origin: record.station, route: choice.route),
+                          !journeys.contains(journey) else { continue }
                     options.append(choice)
                     journeys.append(journey)
                 }

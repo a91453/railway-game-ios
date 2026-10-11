@@ -554,9 +554,16 @@ struct MapView: View {
             landTiles = session.world.geoAnchor == nil ? LandMap.tiles(of: land) : []
             landTilesVersion &+= 1
         }
-        .onChange(of: TravelDemandKey(world: session.world, isShown: mapLayers.popTravelMode?.usesHour == true), initial: true) { _, key in
-            if key.isShown {
-                travelDemand = session.world.travelDemandMap()
+        .task(id: TravelDemandKey(world: session.world, isShown: mapLayers.popTravelMode?.usesHour == true)) {
+            // Every station's day of demand, each a search over the whole
+            // map with network routing: too slow for a frame on a large map.
+            guard mapLayers.popTravelMode?.usesHour == true else { return }
+            let world = session.world
+            let demand = await Task.detached(priority: .userInitiated) {
+                world.travelDemandMap()
+            }.value
+            if !Task.isCancelled {
+                travelDemand = demand
             }
         }
         .onChange(of: TravelTilesKey(mode: mapLayers.popTravelMode, hour: screen.popTravelHour, demand: travelDemand), initial: true) { _, key in
@@ -890,7 +897,9 @@ struct MapView: View {
 /// What the lines' map (``LineMap``, decision 84) is worked out from: the
 /// track and its platforms, the lines' stops, ways and colours, the
 /// stations and the transfer groups; not the trains or the clock, so it is
-/// worked out again only after an edit.
+/// worked out again only after an edit. The small map drawn with it also
+/// shows only the tiles owned (decision 160), so buying one, or undoing
+/// the purchase, draws it again.
 private struct LineMapKey: Equatable {
     struct Line: Equatable {
         let id: LineID
@@ -904,12 +913,14 @@ private struct LineMapKey: Equatable {
     let lines: [Line]
     let stations: [PlanPoint]
     let groups: [TransferGroup]
+    let ownedTiles: [MapTile]?
 
     init(world: GameWorld) {
         network = world.network
         lines = world.lines.map { Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color) }
         stations = world.stations.map(\.location)
         groups = world.transferGroups
+        ownedTiles = world.mapExpansion?.owned
     }
 }
 
@@ -1295,9 +1306,6 @@ private struct HeatmapKey: Equatable {
     let realWorld: RealWorldFrame?
 }
 
-/// What the travel demand map is worked out from (``GameWorld/stationFlow(of:)``:
-/// the stations, their demand and the lines), and whether a travel layer is
-/// shown at all.
 /// What the travel layer's squares depend on.
 private struct TravelTilesKey: Equatable {
     let mode: PopTravelMode?
@@ -1305,23 +1313,15 @@ private struct TravelTilesKey: Equatable {
     let demand: TravelDemandMap
 }
 
+/// What the travel demand map is worked out from (``RidershipInputs``,
+/// what each station's day of demand reads, as the station panel's), and
+/// whether a travel layer is shown at all; not when a line last sent a
+/// train out, which none of it reads.
 private struct TravelDemandKey: Equatable {
-    let stations: [Station]
-    let demands: [StationDemand?]
-    let lines: [ServiceLine]
-    let isShown: Bool
+    let inputs: RidershipInputs?
 
     init(world: GameWorld, isShown: Bool) {
-        self.isShown = isShown
-        if isShown {
-            stations = world.stations
-            demands = world.stations.map { world.stationDemand(of: $0.id) }
-            lines = world.lines
-        } else {
-            stations = []
-            demands = []
-            lines = []
-        }
+        inputs = isShown ? RidershipInputs(world: world) : nil
     }
 }
 

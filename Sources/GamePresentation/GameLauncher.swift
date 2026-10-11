@@ -363,6 +363,9 @@ public final class GameLauncher {
             session.coverage = coverage
             session.placeNames = placeNames
             session.railways = railways
+            // Decision 88: land not read round a station built while the
+            // app had no population, as when a game begins (``begin``).
+            session.readLandRoundStations()
         }
         isLoadingRealWorldData = false
     }

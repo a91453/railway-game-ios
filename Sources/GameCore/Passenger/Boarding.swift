@@ -207,7 +207,19 @@ extension GameWorld {
            let next = served.stops.firstIndex(of: train.timetable[stop + 1].station) {
             direction = here < next ? .outbound : .inbound
         }
-        let ringDirection: LineDirection = self.line(id: line)?.ringDirection(of: train.id) == .outer ? .inbound : .outbound
+        // Decision 49: a ring train goes round the way of the lap it runs,
+        // its timetable's second call the ring's next stop or its last,
+        // which a change of the ring's trains turns only from its next lap;
+        // its place among them decides only for a lap that tells neither.
+        let ringWay: RingDirection? = self.line(id: line).flatMap { served in
+            guard served.isRing else { return nil }
+            if train.timetable.count > 1, let next = served.stops.dropFirst().first, let last = served.stops.last {
+                let second = train.timetable[1].station
+                if (second == next) != (second == last) { return second == next ? .inner : .outer }
+            }
+            return served.ringDirection(of: train.id)
+        }
+        let ringDirection: LineDirection = ringWay == .outer ? .inbound : .outbound
         let pattern = assignedPattern(of: train.id)
         // How far along each destination is: the first call at it.
         var reach: [StationID: Int] = [:]

@@ -125,6 +125,29 @@ final class RealWorldDataLoadTests: XCTestCase {
 
     /// The data is read once: a second call (another window) waits for
     /// the first read rather than starting its own.
+    /// A whole-Taiwan game continued while the data is still being read:
+    /// the land round its station, built while the app had no population
+    /// (decision 88), is read in once the data arrives, as it is when a game
+    /// begins with the data there.
+    func testTheLandRoundStationsIsReadWhenTheDataArrivesDuringAGame() async throws {
+        let library = SaveLibrary(directory: directory)
+        var world = GameWorld.newWholeTaiwanGame()
+        let kaohsiung = RealWorldFrame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds).worldPosition(latitude: 22.6395321, longitude: 120.3025585)
+        _ = try world.buildStation(named: "Kaohsiung", at: PlanPoint(x: Int64(kaohsiung.x.rounded()), y: Int64(kaohsiung.y.rounded())))
+        XCTAssertEqual(world.landBlocks, [])
+        try library.save(world, as: .autosave, at: Date(timeIntervalSince1970: 0))
+        let launcher = GameLauncher(library: library, language: .english)
+        let population = try PopulationGrid(data: Self.file("taiwan_population", "json"))
+        let load = launcher.loadRealWorldData { RealWorldData(population: population, places: nil, railways: nil, issues: []) }
+        launcher.continueGame()
+        let session = try XCTUnwrap(launcher.session)
+        XCTAssertTrue(session.world.land.isEmpty, "nothing to read it from yet")
+
+        await load.value
+        XCTAssertTrue(launcher.session === session)
+        XCTAssertFalse(session.world.land.isEmpty, "read in when the data arrives")
+    }
+
     func testTheDataIsReadOnce() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         let first = RealDataLoadIssue(file: "first.json", reason: "first")

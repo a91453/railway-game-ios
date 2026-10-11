@@ -180,6 +180,17 @@ final class FreightTests: XCTestCase {
         XCTAssertNil(freight.passengerTrip(from: alpha, to: gamma))
     }
 
+    /// A copy of a freight line (the Lines panel's Duplicate) carries
+    /// freight too, as it copies everything of the line but its trains.
+    func testACopyOfAFreightLineCarriesFreight() throws {
+        var world = try world()
+        let copy = try world.duplicateLine(main, named: "Goods - Fork")
+        XCTAssertTrue(copy.isFreight)
+        XCTAssertTrue(world.line(id: copy.id)?.isFreight == true)
+        var passenger = try self.world(freightLine: false)
+        XCTAssertFalse(try passenger.duplicateLine(main, named: "Goods - Fork").isFreight)
+    }
+
     /// Making a passenger line a freight line sends its waiting passengers
     /// away as abandoned: no train of a freight line takes them on, so they
     /// would wait for ever (and the save would keep them).

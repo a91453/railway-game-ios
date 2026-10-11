@@ -303,3 +303,72 @@ CI（Linux）、Wasm Probe、App Localization（#245 那次除外）在範圍內
   - 通過：`LineRunsTests`、`AreaBuyOutTests`、`CityFootprintsTests`、`CityDemandTests`、`RealCoverageTests`、`GoldenScenarioTests`、`ReplayFixtureTests`、`SavedGameTests`、`ReferenceWorldGoldenTests`、`LineDispatchPropertyTests`（campaigns-3 的大項），以及 GamePresentation 的 `RealWorldDemo*`、`RealWorldMapTests`、`RealRailwayGameplayTests`、`BuildingSessionTests`、`LineEditingTests`、`StationMasterAdviceTests`。
 - **VERIFIED（GitHub Actions，head 2593c71）**：CI（Linux 全部分片）、PR 的 iOS 閘門、Wasm Probe；手動觸發的 `ios-build.yml`（run 38075245693：完整 UI 測試與 iPad 教學測試）全綠。
 - **UNVERIFIED LOCALLY**：`ContentView.swift` 與 UI 測試只能在 macOS CI 上跑，本機只做了語法檢查。
+
+## 十一、#1–#365 全面審查（PR #366）
+
+Session：`claude/railway-game-ios-pr-review-6tm61x`（2026-10-11），從 `main` d33dff7 開始。存檔版本、決策編號、golden schema 都沒有用到；GoldenScenarios、ReplayFixtures、SaveFixtures 都沒有改。
+
+**合併狀態**：#1–#365 共 364 個 PR（#231 是工作登記 issue），全部已關閉。
+- 350 個已合併，head 都在 `main` 上（`git merge-base --is-ancestor`，要先 `git fetch --unshallow`）。
+- 14 個沒合併，內容都已在 `main` 或被取代：
+  - #21：base 被刪後自動關閉，同一分支改由 #23 合併。
+  - #31：被 #40 取代（Stage T 改在路網上重寫）。
+  - #93：同一個修改由 #92 cherry-pick 進 `main`。
+  - #110：被 #111 取代，#111 併入其中兩項，另兩項刻意不收。
+  - #128：被 #131 接手。
+  - #146：#145 做了同樣的修正。
+  - #152–#155（T1–T4）：被 #160 取代（加上 #151）；`PassengerPlanKey`、站務模式、擁擠、路徑模式切換都在 `main`。
+  - #158、#159：commit 原樣在 #160。
+  - #289：實驗沒有變快，作者關閉。
+  - #310：空 PR，head 就是 #309 的合併 commit。
+
+**`main` 的 CI**（每次合併後）：
+- **CI（Linux）**：344 次，14 次失敗，另有 2 次第一輪失敗、重跑後通過。
+  - 6 次是 GitHub 的 runner 故障（10/5 與 10/7 的 incident），沒有任何程式跑起來。
+  - #144：測試預期列車速率 0，實際是 117333，#145 修。
+  - #332（#334、#335 跟著紅）：測試沒有用 `.sortedKeys`，卻比對 JSON 的鍵順序，而 Dictionary 的順序每個行程不同。#337 修。
+  - #340（#341–#344 跟著紅）：教學測試的預期世界沒有關建材，#345 修。
+  - #349：rest 分片的測試 ID 參數 131,536 bytes，超過 Linux 單一參數上限 131,072，test runner 起不來。#352 改成分批跑。
+  - 這四個程式錯誤，都是在 PR 自己的 CI 跑完之前就合併了。
+- **Wasm Probe**：119 次，沒有紅燈。
+- **App Localization**（到 #274 為止）：131 次，2 次紅。
+  - #133：`MapView.swift:44` 不能在非 mutating 的 getter 裡呼叫 setter，#134 修。#133 在自己的 PR 檢查紅著時合併。
+  - #245：`PopulationLegendView.swift:234` 少了 `import GameCore`。實際由 #246 帶進的 e4a54f16 修好；#249、#250 合併時已經是空的。
+- **iOS App Build**：
+  - 10/7 以前 137 次，34 次紅。
+  - 10/7 以後 159 次，31 次紅，78 次被下一次推送取消。
+  - 最新一次完整 lane（run 38118906157，#362，28 個 UI 測試加 iPad 4 個）全綠。
+  - 完整 lane 的 UI 步驟上限原本是 25 分鐘，是當時只要 12 分 29 秒時定的。10/9–10/11 的 21 次完整 run，中位數 20 分 11 秒，最慢 24 分 49 秒，只剩 11 秒；慢一點的 runner 就會被步驟上限切掉。PR #366 改成 40 分鐘，依同一段註解的 1.8 倍規則。
+  - 各紅燈的根因表在 PR #366 的描述裡。
+- **之前的紀錄要更正的地方**：
+  - #202 的啟動逾時不是音樂造成：那 64 秒卡在 xcodebuild 第一次啟動 App 之前（`IDELaunchParametersSnapshot: no debugger version` 到逾時前一刻才印出，之後每個測試都在 0.5 秒內印出）。那時 App 還沒啟動，暖機步驟也已經把它結束，沒有音樂在播。
+  - #221 的 8 分鐘逾時：#227 在 #230、#272 之前就已通過，所以不是這兩個 PR 修好的。
+  - #290 的「繼續」：失敗時多出的第二個 window，在通過的 run 裡也有。
+  - #197 的圖例關閉：錄影顯示不是動畫太慢。
+  - #345／#350 的 -1005：不是「只聽 IPv4」，是連線送完就被立刻關掉，由 #353 修好。
+  - 37225382897 的教學「略過」：錄影顯示卡片根本沒開始收起，所以 #244 等它收起的修法對不上。這一下點擊沒有觸發動作。
+- **根因還沒確立**：
+  - 第一個測試啟動 App 逾時（#199 的 80 秒、#202 的 64 秒）：卡在 xcodebuild 啟動 App 之前，log 沒有記錄這段時間在做什麼。
+  - 點擊顯示按下、動作卻沒執行：「略過」、「選擇」、選單的「儲存」；「略過」至今沒有重試。
+  - iPad 上 XCTest 讀系統程序的 AX 屬性逾時（#96）。
+  - xcodebuild 看不到任何模擬器（#109、#237）。
+  - 實景示範按鈕 15 秒內不能按（#290 夜間）：App 沒有記錄資料讀取各段的時間。
+  - 實景地圖「繼續」那一下沒反應（#290）。
+  - 主執行緒飽和的熱點（#221）。
+  - #190 的 runner 從沒分配到。
+- **第十節「範圍外」那一項已經解決**：`TrafficFollowingPropertyTests` 用額外種子時的不一致，#333 已修，兩邊各有一個 bug。在 d33dff7 上用 `PROPERTY_STRESS=8` 與 16 跑都通過。
+
+**修的 bug**：PR #366 的描述有逐項表格與重現測試；GameCore 與 GamePresentation 的每一項，測試都先在修正前失敗。
+
+**沒修，需要作者決定**：
+- 挑戰中切到自由模式，挑戰就永遠不再判定，目標面板之後顯示錯誤的狀態。
+- 擴建地圖：打開「擴建」會讓建造暫停結束，買下區塊後只要過一個 tick 就不能復原。
+- 依面積收購：同一格有好幾棟公司建物時，每棟取的是格子裡「剩下的人」的比例，不是「剩下的地」的比例；整格蓋滿後仍留著人。修正會改到 `area-buyout.json` 的值。
+- 站長的「虧錢」判斷只比票價收入，沒算貨運收入。
+- 已經因為重複旅程而讀不回來的存檔：要不要讓讀檔時丟掉不合法的路線平衡（它只是四捨五入的狀態），讓這些存檔重新讀得回來。
+- 公司每天的費用照「設定的」列車數算（決策 36）：沒有車或跑不動的列車也要付錢。
+- 站長歡迎泡泡在手機橫向時可能蓋住縮放鈕（幾何推算，需要實機確認）。
+- 3D 試作頁面切換城市時，會清掉 App 給的輕量參數。
+- 測試端：
+  - 參考模型的 `serviceNeeding` 沒有待避站的情況，額外種子下 `traffic.reservation` 會不一致。
+  - `LineRoutePreferencePropertyTests` 用 `XCTAssertEqual(tally, 680)` 比對次數，用 replay 或額外種子跑時一定失敗。

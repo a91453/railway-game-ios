@@ -116,6 +116,49 @@ final class PassengerTransferTests: XCTestCase {
         }
     }
 
+    /// With no trips to release (no plan), a transfer that becomes ready
+    /// while a train waits with its doors open boards at the same minute in
+    /// one long advance as minute by minute: the idle minutes are not
+    /// skipped over it. Second's run leaves B at 07:09:10; its train is sent
+    /// out at 07:05 and waits there; 400 change at B at 07:06, ready at
+    /// 07:08.
+    func testATransferReadyWhileATrainWaitsBoardsTheSameInABatch() throws {
+        var world = try GameWorld(bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                                  clock: GameClock(now: GameTime(minutes: 365), speed: .normal))
+        let track = TestLine(tiles: 7)
+        try track.build(in: &world)
+        for (name, x) in [("A", 1), ("B", 3), ("C", 5)] {
+            try track.buildStation(named: name, beside: x, at: 1, in: &world)
+        }
+        let first = try world.createLine(named: "First", stops: [a, b]).id
+        let second = try world.createLine(named: "Second", stops: [b, c]).id
+        for line in [first, second] {
+            try world.setLineServiceWindow(line, to: .allDay)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        }
+        try world.setLineRuns(second, to: [LineRun(from: 0, to: 1, times: [
+            LineRunTime(arrival: 25_750, departure: 25_750), LineRunTime(arrival: 25_870, departure: 25_870),
+        ])])
+        let train = try world.purchaseTrain(named: "Two").id
+        try world.placeTrain(train, at: track.at(3, facingEast: true))
+        try world.setTrainMovementRate(train, to: 1024)
+        try world.assignTrain(train, to: second)
+        // No trips of its own to release: A's demand is 0.
+        try world.setStationDemand(a, to: StationDemand(kind: .residential, dailyTrips: 0))
+        world.setPassengerRoutingMode(.network)
+        try world.advance(ticks: 61)
+        let route = try XCTUnwrap(world.passengerRoutes(from: a, to: c).first)
+        let next = try XCTUnwrap(PassengerJourney(origin: a, route: route)?.next)
+        world.passengers.insert(StationPassengers(station: b), at: 1)
+        XCTAssertEqual(world.passengers[1].enqueueTransfer(400, along: next, at: world.clock.now, readyAt: GameTime(minutes: 428)), 400)
+        world.passengers[0].released += 400
+        var batched = world, stepped = world
+        try batched.advance(ticks: 4)
+        for _ in 0..<4 { try stepped.advance(ticks: 1) }
+        XCTAssertGreaterThan(stepped.riderCount(of: train), 0)
+        XCTAssertEqual(batched, stepped)
+    }
+
     /// B has no demand of its own: passengers only change trains there.
     /// Those the smaller connecting train leaves behind are counted at B,
     /// and the count stays once B's queue is empty and through a save.

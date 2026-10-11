@@ -214,6 +214,73 @@ final class StationDemandSessionTests: XCTestCase {
         }
     }
 
+    /// The travel demand map asks each station's day once for all of them,
+    /// and is the sum of each station's flow as it was asked one by one.
+    func testTheTravelMapIsEachStationsFlow() {
+        var world = DemoWorld.make(in: .english)
+        for mode in [PassengerRoutingMode.network, .direct] {
+            world.setPassengerRoutingMode(mode)
+            var trips: [TravelDemandMap.Cell: [Int64]] = [:]
+            for station in world.stations {
+                guard let flow = world.stationFlow(of: station.id) else { continue }
+                let cell = TravelDemandMap.cell(atX: station.location.x, y: station.location.y)
+                trips[cell] = zip(trips[cell] ?? Array(repeating: 0, count: 24), flow.entries).map(+)
+            }
+            XCTAssertEqual(world.travelDemandMap(), TravelDemandMap(trips: trips), "\(mode)")
+        }
+    }
+
+    /// What the station panel's ridership and the travel layers are worked
+    /// out from (``RidershipInputs``): not a line sending a train out,
+    /// which changes none of it, but each thing that changes a station's
+    /// day, even while the game is paused.
+    func testTheRidershipInputsSeeWhatChangesTheDayAndNotADeparture() throws {
+        var world = DemoWorld.make(in: .english)
+        world.setPassengerRoutingMode(.network)
+        world.setSpeed(.normal)
+        let start = RidershipInputs(world: world)
+        let sent = world.lines.map(\.lastDispatch)
+        var minutes = 0
+        repeat {
+            try world.advance(ticks: 1)
+            minutes += 1
+        } while world.lines.map(\.lastDispatch) == sent && minutes < 120
+        XCTAssertNotEqual(world.lines.map(\.lastDispatch), sent, "a line sent a train out")
+        XCTAssertEqual(world.clock.now.seconds / GameTime.secondsPerDay, start.day)
+        XCTAssertEqual(RidershipInputs(world: world), start, "a departure changes nothing a station's day reads")
+
+        world.pause()
+        let paused = RidershipInputs(world: world)
+        let first = world.stations[0].id, second = world.stations[1].id
+        var changes: [(String, GameWorld)] = []
+        var linked = world
+        _ = try linked.linkTransfer(first, second)
+        changes.append(("a transfer group", linked))
+        var fares = world
+        fares.setEconomyMode(.management)
+        try fares.setFareRules(FareRules.standard)
+        changes.append(("the fares", fares))
+        var disrupted = world
+        disrupted.setDisruptions(disrupted.disruptions == nil ? Disruptions(level: .light, country: "TW") : nil)
+        changes.append(("holidays and weather", disrupted))
+        var traffic = world
+        try traffic.setTrafficControl(!world.isTrafficControlEnabled)
+        changes.append(("traffic control", traffic))
+        var direct = world
+        direct.setPassengerRoutingMode(.direct)
+        changes.append(("routing", direct))
+        for (name, changed) in changes {
+            XCTAssertNotEqual(RidershipInputs(world: changed), paused, name)
+        }
+        // A line without trains made a freight line (decision 155).
+        var withLine = world
+        withLine.enableFreight()
+        let line = try withLine.createLine(named: "Goods", stops: [first, second]).id
+        var freight = withLine
+        try freight.setLineFreight(line, to: true)
+        XCTAssertNotEqual(RidershipInputs(world: freight), RidershipInputs(world: withLine), "a freight line")
+    }
+
     func testTheLedgerRowsReadTheAudit() throws {
         var world = try makeStations()
         try world.createLine(named: "Main", stops: [alpha, beta])

@@ -338,6 +338,28 @@ final class RingLineTests: XCTestCase {
         XCTAssertEqual(world.passengerLedger(of: beta).abandoned + world.passengerLedger(of: delta).abandoned, 0)
     }
 
+    /// A ring train boards for the lap it is running: when the trains of
+    /// the ring change mid-lap (here the inner one is taken off), the outer
+    /// train still on its outer lap takes the passengers planned the outer
+    /// way, not those planned the inner way, until its lap ends (decision
+    /// 49: the trains after it switch direction from their next lap).
+    func testARingTrainBoardsForTheLapItRunsWhenTheRingsTrainsChange() throws {
+        var world = try makeRingWorld(trains: 2, running: pairs(2))
+        try world.setStationDemand(delta, to: StationDemand(kind: .residential, dailyTrips: 0))
+        let (inner, outer) = (TrainID(rawValue: 1), TrainID(rawValue: 2))
+        try world.advance(ticks: 1)
+        XCTAssertEqual(world.train(id: outer)?.execution, .travellingToStop(1))
+        XCTAssertEqual(world.train(id: outer)?.timetable[1].station, delta, "an outer lap: Alpha, Delta, …")
+        try world.unassignTrain(inner)
+        let innerWay = try XCTUnwrap(world.passengerRoutes(from: delta, to: alpha).first { $0.legs.count == 1 })
+        let outerWay = try XCTUnwrap(world.passengerRoutes(from: delta, to: gamma).first { $0.legs.count == 1 })
+        let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == delta })
+        world.passengers[record].release(10, along: try XCTUnwrap(PassengerJourney(origin: delta, route: innerWay)), at: world.clock.now)
+        world.passengers[record].release(10, along: try XCTUnwrap(PassengerJourney(origin: delta, route: outerWay)), at: world.clock.now)
+        try world.advance(ticks: 5)
+        XCTAssertEqual(world.riders(of: outer).map(\.destination), [gamma])
+    }
+
     /// Making a ring a line again while its trains carry passengers moves
     /// where their direction ends (``GameWorld/directionEnd(of:from:)``):
     /// those riding past it leave at once, counted as abandoned, so the

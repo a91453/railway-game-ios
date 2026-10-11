@@ -114,6 +114,10 @@ final class MapInteractionTests: XCTestCase {
         buildEntry.tap()
         let network = app.buttons["tool.network"]
         XCTAssertTrue(network.waitForExistence(timeout: 10))
+        // The tools slide in from the side: a point read mid-slide falls on
+        // the map, which under the network tool chooses a track start (as
+        // #326 found for the train tool).
+        network.waitUntilSettled()
         network.tap()
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 10))
@@ -390,6 +394,10 @@ final class MapInteractionTests: XCTestCase {
         buildEntry.tap()
         let network = app.buttons["tool.network"]
         XCTAssertTrue(network.waitForExistence(timeout: 10))
+        // The tools slide in from the side: a point read mid-slide falls on
+        // the map, which under the network tool chooses a track start (as
+        // #326 found for the train tool).
+        network.waitUntilSettled()
         network.tap()
 
         let map = app.descendants(matching: .any)["map"].firstMatch

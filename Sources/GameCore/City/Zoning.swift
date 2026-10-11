@@ -272,7 +272,9 @@ extension Zoning: Codable {
         let container = try decoder.singleValueContainer()
         var cells: [ZonedCell] = []
         for run in try container.decode([Run].self) {
-            guard run.row >= 0, run.column >= 0, run.count > 0, run.count <= Int.max - run.column, cells.count + run.count <= 1 << 26 else {
+            // `cells` holds at most 2^26 cells here, so the subtraction
+            // cannot overflow where adding a huge count would.
+            guard run.row >= 0, run.column >= 0, run.count > 0, run.count <= Int.max - run.column, run.count <= (1 << 26) - cells.count else {
                 throw DecodingError.dataCorruptedError(in: container, debugDescription: "A run of zones is empty or out of range.")
             }
             for offset in 0..<run.count {

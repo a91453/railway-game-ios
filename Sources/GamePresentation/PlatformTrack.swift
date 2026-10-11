@@ -192,6 +192,13 @@ extension GameSession {
     /// edges as one and the new platform along the middle one, for the same
     /// station. Returns the new platform.
     func build(_ plan: PlatformTrackPlan, in world: inout GameWorld) throws(GameError) -> TrackPlatform {
+        // Decision 124: the ground under the new track read in first, as the
+        // track and crossover tools do. Beside the line it may lie in a
+        // block the line's own track never reached.
+        let ends = [plan.near.position, plan.beside.near, plan.beside.far, plan.far.position]
+        let legs = [(ends[0], ends[1], plan.curves.out), (ends[1], ends[2], plan.curves.along), (ends[2], ends[3], plan.curves.back)]
+        let surveyed = legs.compactMap { TrackGeometry(from: $0.0, to: $0.1, curve: $0.2) }.flatMap(NetworkBuilding.surveyedPoints(of:))
+        try world.readGround(under: ends.map(\.plan) + surveyed, from: heights)
         func node(_ turnout: PlatformTrackTurnout) throws(GameError) -> TrackNodeID {
             if let node = turnout.node { return node }
             guard let point = turnout.point else { throw .invalidTrackGeometry }

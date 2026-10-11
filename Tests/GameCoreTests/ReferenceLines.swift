@@ -100,7 +100,9 @@ extension ReferenceWorld {
     mutating func setLineTrains(_ id: LineID, _ trains: TrainsInService, pattern: Int? = nil) -> GameError? {
         guard let index = lineIndex(id) else { return .unknownLine(id) }
         if let pattern, !lines[index].patterns.indices.contains(pattern) { return .unknownLinePattern(pattern) }
-        guard min(trains.peak, trains.offPeak, trains.low) >= 0 else { return .invalidTrainsInService }
+        guard min(trains.peak, trains.offPeak, trains.low) >= 0, max(trains.peak, trains.offPeak, trains.low) <= TrainsInService.maximum else {
+            return .invalidTrainsInService
+        }
         var counts: [ServiceLevel: Int] = [.peak: trains.peak, .offPeak: trains.offPeak, .low: trains.low]
         // Decision 49: in pairs on a ring.
         if lines[index].ring { counts = counts.mapValues { $0 / 2 * 2 } }

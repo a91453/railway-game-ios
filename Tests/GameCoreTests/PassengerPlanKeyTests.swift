@@ -165,6 +165,40 @@ final class PassengerPlanKeyTests: XCTestCase {
         expectCurrent(world, "a day later")
     }
 
+    /// A line sending a train out changes when it last sent one, which no
+    /// plan reads: the plan is kept, not worked out again after every
+    /// departure, and is the plan a fresh graph gives; batches, single
+    /// minutes and a world without a kept plan still give the same world.
+    func testATrainSentOutKeepsThePlan() throws {
+        var world = try Self.grid(columns: 4, rows: 3)
+        let train = try world.purchaseTrain(named: "T").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 1_024))
+        try world.setTrainContinuation(train, along: [], stoppingAt: 1_024)
+        try world.setTrainMovementRate(train, to: 1_024)
+        try world.assignTrain(train, to: LineID(rawValue: 1))
+        var kept = world, stepped = world, fresh = world
+
+        try world.advance(ticks: 1)
+        XCTAssertNotNil(world.line(id: LineID(rawValue: 1))?.lastDispatch, "the line sent its train out")
+        world.passengerRouteMemo = PassengerRouteMemo()
+        try world.advance(ticks: 1)
+        XCTAssertNil(world.passengerRouteMemo.graph, "the plan was kept, not worked out again")
+        expectCurrent(world, "after a departure")
+
+        try kept.advance(ticks: 90)
+        for _ in 0..<90 {
+            try stepped.advance(ticks: 1)
+            fresh.passengerPlan = GameWorld.PassengerPlanCache()
+            fresh.passengerRouteMemo = PassengerRouteMemo()
+            try fresh.advance(ticks: 1)
+        }
+        XCTAssertGreaterThan(stepped.passengerLedger(of: StationID(rawValue: 1)).arrived + stepped.riderCount(of: train), 0, "the train carried passengers")
+        XCTAssertEqual(stepped, fresh)
+        XCTAssertEqual(stepped.passengers, fresh.passengers)
+        XCTAssertEqual(kept, stepped)
+        XCTAssertEqual(kept.riders, stepped.riders)
+    }
+
     /// Batches, single minutes and a world without a kept plan give the
     /// same world: the plan is not game state.
     func testKeptAndFreshPlansGiveTheSameWorld() throws {

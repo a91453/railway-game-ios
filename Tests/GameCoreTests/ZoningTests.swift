@@ -253,6 +253,11 @@ final class ZoningTests: XCTestCase {
         XCTAssertThrowsError(try decoder.decode(Zoning.self, from: Data(#"[{"row": 1, "column": 0, "zone": "office", "count": 1}, {"row": 0, "column": 0, "zone": "office", "count": 1}]"#.utf8)))
         XCTAssertThrowsError(try decoder.decode(Zoning.self, from: Data(#"[{"row": 0, "column": 0, "zone": "office", "count": 2}, {"row": 0, "column": 1, "zone": "civic", "count": 1}]"#.utf8)), "a cell twice")
         XCTAssertThrowsError(try decoder.decode(Zoning.self, from: Data(#"[{"row": 0, "column": 0, "zone": "farm", "count": 1}]"#.utf8)))
+        // A count as large as an Int can be, after another run: refused,
+        // not added to the cells already read past what an Int holds.
+        XCTAssertThrowsError(try decoder.decode(Zoning.self, from: Data(
+            #"[{"row": 0, "column": 0, "zone": "office", "count": 1}, {"row": 1, "column": 0, "zone": "office", "count": 9223372036854775807}]"#.utf8
+        )))
         // A world refuses a zone outside it: 32 columns, 0 to 31.
         var world = try world()
         try world.setZone(.office, rows: 0...0, columns: 31...31)
