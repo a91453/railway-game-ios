@@ -594,6 +594,7 @@ extension TrainType {
         case .skyRail: language.text("Sky rail", "雲軌")
         case .monorail: language.text("Monorail", "單軌")
         case .steam: language.text("Steam train", "蒸汽列車")
+        case .highSpeed: language.text("High-speed set", "高鐵列車")
         }
     }
 }

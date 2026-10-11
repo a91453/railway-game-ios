@@ -898,7 +898,8 @@ struct MapView: View {
 /// reservations, the lines that send them out, the track and whether
 /// traffic control is on.
 /// What the lines' map (``LineMap``, decision 84) is worked out from: the
-/// track and its platforms, the lines' stops, ways and colours, the
+/// track and its platforms, the lines' stops, ways, colours and whether they
+/// are high-speed lines (decision 168), the
 /// stations and the transfer groups; not the trains or the clock, so it is
 /// worked out again only after an edit. The small map drawn with it also
 /// shows only the tiles owned (decision 160), so buying one, or undoing
@@ -910,6 +911,8 @@ private struct LineMapKey: Equatable {
         let routes: [LineRoutePreference]
         let isRing: Bool
         let color: LineColor?
+        /// Decision 168: a high-speed line is drawn differently.
+        let isHighSpeed: Bool
     }
 
     let network: RailwayNetwork
@@ -920,7 +923,9 @@ private struct LineMapKey: Equatable {
 
     init(world: GameWorld) {
         network = world.network
-        lines = world.lines.map { Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color) }
+        lines = world.lines.map {
+            Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color, isHighSpeed: $0.isHighSpeed)
+        }
         stations = world.stations.map(\.location)
         groups = world.transferGroups
         ownedTiles = world.mapExpansion?.owned

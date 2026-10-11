@@ -232,8 +232,16 @@ struct LinesPanel: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(line.name)
-                    .font(.subheadline.weight(.semibold))
+                // Decision 168: a high-speed line's name carries a bolt.
+                HStack(spacing: 4) {
+                    Text(line.name)
+                        .font(.subheadline.weight(.semibold))
+                    if line.isHighSpeed {
+                        Image(systemName: "bolt.fill")
+                            .font(.caption2.weight(.bold))
+                            .accessibilityLabel(Text(verbatim: session.language.text("High-speed", "高鐵")))
+                    }
+                }
                 Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
@@ -330,6 +338,21 @@ struct LinesPanel: View {
             // (Stage W2c), and the journey that gives.
             PerformanceMenu(performance: line.performance, language: session.language) { performance in
                 session.setSelectedLinePerformance(performance)
+            }
+            // Decision 168: planned at high speed, a line is a high-speed
+            // line: what that pays and fills it with. There is no switch; a
+            // high-speed set put on a line that runs nothing else does the
+            // same.
+            if line.isHighSpeed {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(verbatim: session.world.highSpeedLineHelp(in: session.language))
+                    if let people = session.world.highSpeedLineText(line.id, in: session.language) {
+                        Text(verbatim: people)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("line.highSpeedText")
             }
             if let journey = session.world.lineJourneyText(line.id, in: session.language) {
                 Text(journey)

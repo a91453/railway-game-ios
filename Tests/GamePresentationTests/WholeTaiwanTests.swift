@@ -112,6 +112,51 @@ final class WholeTaiwanTests: XCTestCase {
         )
     }
 
+    /// Decision 168: the stations a high-speed line calls at read in the land
+    /// within 8 km, whose people their intercity trips come from, exactly the
+    /// cells of those blocks; a station of an ordinary line reads 2 km. The
+    /// hinterland is the residents and jobs the land holds within 8 km of
+    /// each (the stations are 160 km apart, sharing nothing), and Undo takes
+    /// the line's performance and the land back together.
+    func testAHighSpeedStationReadsInTheLandOfItsHinterland() throws {
+        let session = GameSession(world: .newWholeTaiwanGame(), language: .english)
+        session.population = Self.population
+        session.places = Self.places
+        let taichung = point(24.112484, 120.615967)
+        let zuoying = point(22.687391, 120.307487)
+        try session.performEdit { world throws(GameError) in
+            _ = try world.buildStation(named: "Taichung", at: taichung)
+            _ = try world.buildStation(named: "Zuoying", at: zuoying)
+            _ = try world.createLine(named: "THSR", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
+        }
+        let ordinary = Set(Land.blocks(within: WholeTaiwan.landReach, of: taichung, in: session.world.bounds)
+            + Land.blocks(within: WholeTaiwan.landReach, of: zuoying, in: session.world.bounds))
+        XCTAssertEqual(session.world.landBlocks, ordinary.sorted())
+        XCTAssertEqual(session.world.stationDemand(of: StationID(rawValue: 1))?.hinterland, 0)
+
+        try session.performEdit { world throws(GameError) in try world.setLinePerformance(LineID(rawValue: 1), to: .highSpeed) }
+        let bounds = session.world.bounds
+        let wide = Set(Land.blocks(within: WholeTaiwan.highSpeedLandReach, of: taichung, in: bounds)
+            + Land.blocks(within: WholeTaiwan.highSpeedLandReach, of: zuoying, in: bounds))
+        XCTAssertEqual(session.world.landBlocks, wide.sorted())
+        XCTAssertGreaterThan(wide.count, 10 * ordinary.count, "8 km against 2 km")
+        for (id, point) in [(StationID(rawValue: 1), taichung), (StationID(rawValue: 2), zuoying)] {
+            let totals = session.world.land.totals(within: HighSpeed.hinterlandRadius, of: point)
+            let demand = try XCTUnwrap(session.world.stationDemand(of: id))
+            XCTAssertEqual(demand.hinterland, totals.residents + totals.jobs)
+            XCTAssertGreaterThan(demand.hinterland, 500_000, "a city's people")
+            XCTAssertGreaterThan(demand.hinterland, demand.dailyTrips * 100 / LandDemand.tripsPerHundred / 2, "far more than its own catchment")
+        }
+        // The 8 km round Taichung holds about what the grid counts there.
+        let sampled = try XCTUnwrap(Self.population.people(within: 8_000, ofLatitude: 24.112484, longitude: 120.615967))
+        let residents = session.world.land.totals(within: HighSpeed.hinterlandRadius, of: taichung).residents
+        XCTAssertEqual(Double(residents), Double(sampled), accuracy: Double(sampled) * 0.05, "\(residents) against \(sampled)")
+
+        session.undo()
+        XCTAssertEqual(session.world.landBlocks, ordinary.sorted(), "the land of the switch goes with it")
+        XCTAssertEqual(session.world.stationDemand(of: StationID(rawValue: 1))?.hinterland, 0)
+    }
+
     /// A station far from the others says who it reaches from the land read
     /// in with it, not that no one lives there (decision 128).
     func testAFarStationSaysWhoItReachesFromItsOwnLand() throws {

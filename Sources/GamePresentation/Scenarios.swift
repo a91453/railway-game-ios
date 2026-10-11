@@ -244,10 +244,10 @@ extension GameWorld {
     }
 
     /// The train types a train may be given (decision 153): the
-    /// scenario's era's, or without an era the reference's, which leave out
-    /// the era-only steam train.
+    /// scenario's era's, or without an era the reference's and (decision
+    /// 168) the high-speed set, which leave out the era-only steam train.
     public var offeredTrainTypes: [TrainType] {
-        scenario?.scenario.trainTypes ?? TrainType.reference
+        scenario?.scenario.trainTypes ?? TrainType.offered
     }
 
     /// Whether a train may have the standard car: not in an era with types

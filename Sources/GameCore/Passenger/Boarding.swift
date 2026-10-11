@@ -182,6 +182,18 @@ extension GameWorld {
         return max(alighted, boarded)
     }
 
+    /// Boarders who pay their fare together (G1c): those going to one
+    /// destination, on a journey that rides a high-speed line (decision
+    /// 168) or not.
+    private struct FarePayers: Hashable, Comparable {
+        let destination: StationID
+        let highSpeed: Bool
+
+        static func < (lhs: Self, rhs: Self) -> Bool {
+            (lhs.destination, lhs.highSpeed ? 1 : 0) < (rhs.destination, rhs.highSpeed ? 1 : 0)
+        }
+    }
+
     /// The passengers at stop `stop` of `train`'s timetable it may take on:
     /// with its record's index and the eligible groups' indices among those
     /// waiting, in boarding order. `nil` at the last stop, where the train
@@ -264,7 +276,7 @@ extension GameWorld {
         var taken: [Int: Int64] = [:]
         var boarded: Int64 = 0
         var boarding = riders.first { $0.train == train.id } ?? TrainRiders(train: train.id, groups: [])
-        var paying: [StationID: Int64] = [:]
+        var paying: [FarePayers: Int64] = [:]
         for index in eligible where room > 0 {
             let group = waiting[index]
             let count = min(group.count, room)
@@ -274,13 +286,15 @@ extension GameWorld {
             boarding.add(count, from: group.journey?.origin ?? passengers[record].station,
                          to: group.destination, journey: group.journey)
             if group.journey?.current == nil || group.journey?.current == 0 {
-                paying[group.journey?.destination ?? group.destination, default: 0] += count
+                // Decision 168: a journey that rides a high-speed line pays
+                // its fare.
+                paying[FarePayers(destination: group.journey?.destination ?? group.destination, highSpeed: ridesHighSpeed(group)), default: 0] += count
             }
         }
         // Each destination's boarders pay together, rounded to whole
         // dollars (G1c; the reference's fare trips of a boarding plan).
-        for destination in paying.keys.sorted() {
-            chargeFares(paying[destination]!, from: passengers[record].station, to: destination)
+        for payers in paying.keys.sorted() {
+            chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed)
         }
         passengers[record].board(taken)
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {

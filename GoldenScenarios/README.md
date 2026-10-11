@@ -928,3 +928,15 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 改成經營模式，買 (0, 2)：第三塊要 2 × 25,000 = 50,000 人次，最佳一天是 0，被拒（`mapExpansionLocked`，`riders` 50,000）；標準步長會要 200,000。
   - 餘額 3,000,000,000 − 125,000,000 = 2,875,000,000；最終狀態的 `mapExpansion` 擁有 (0, 0) 與 (0, 1)、`ridersStep` 25,000。
 - 每個值都是手算的。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 168：高鐵（schema 65）
+
+- 沒有新指令：路線以 PERF_HSR 規劃（`setLinePerformance`，`performance: highSpeed`）就是高鐵路線，沒有另外的開關，路線也沒有新的欄位。車站需求（`setStationDemand` 與最終狀態）多一個可省略的 `hinterland`（腹地人口，是 0 就不寫）；觀察 `tripFare` 多一個可省略的 `highSpeed`（行程搭高鐵路線）。
+- 參考模型（`ReferenceWorld`）沒有土地、腹地與高鐵，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `HighSpeedTests` 驗證。
+- `high-speed.json`（新）：一條 61 公里的直路，三個車站：A 在西端、N 在 5 km（編號 3）、B 在 61 km（編號 2），月台各 128 m，路線 Fast（A–N–B）全天每十分鐘、三列車，網路路徑。
+  - 一般路線，A 到 B 付路網的均一 $5（500 美分）。`setLinePerformance` 以 PERF_HSR 規劃讓它成為高鐵路線；不存在的路線被拒（`unknownLine`）。
+  - 車站給腹地（土地本來會算出來）：A 2,000,000 人（住宅）、N 500,000（商業）、B 1,000,000（辦公），自己都沒有旅次。
+  - 兩個高鐵站之間每天單向的城際旅次 = 腹地（以百萬人計）相乘 × K（兩個一百萬人是 2,400），每一步往下取整，再乘兩站直線距離的比例（10 km 以內沒有、80 km 起全部、中間直線，千分之一往下取整，四捨五入）。A→B 61 km：2 × 1 × 2,400 = 4,800，乘 728‰ = 3,494（1000 × (3,904,000 − 640,000) / 4,480,000 = 728.6）；N→B 56 km：0.5 × 1 × 2,400 = 1,200，乘 657‰ = 788；A→N 5 km：0。兩個方向一樣。最快的路線都在半小時內（三列車、十分鐘一班），所以分鐘不扣旅次。各小時照當天的時段分布 × 出發站的出發高峰 × 目的站的到達高峰分配。
+  - 搭高鐵路線的行程付高鐵票價，`round(公里 × 0.45)` 美元（直線距離，四捨五入），比路網的票價高才用：A→B 61 km = 27.45 → $27 = 2,700 美分；A→N 5 km = 2.25，比路網的 $5 低，付 500；N→B 56 km = 25.2 → $25 = 2,500；不搭高鐵還是 500。
+- `tools/golden-checks/high_speed.py` 照規則獨立算出每一個旅次與票價（`--check` 比對 fixture）；最終狀態取自 GameCore。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

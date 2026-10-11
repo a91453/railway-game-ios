@@ -343,6 +343,18 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// facility, and no passenger rides it. Set by
     /// ``GameWorld/setLineFreight(_:to:)`` only.
     public internal(set) var isFreight: Bool = false
+    /// Whether the line is a high-speed line (decision 168): a passenger
+    /// line whose journeys are planned at high speed (``performance`` is
+    /// ``TrainPerformance/isHighSpeed``, which the line menu's "High-speed
+    /// rail" and a high-speed set assigned to a standard line give it). Those
+    /// who ride it pay the high-speed fare for how far they go
+    /// (``HighSpeed/fare(squaredDistance:)``), and its stations draw the
+    /// intercity trips of the people round them (``HighSpeed``). There is no
+    /// switch for it, and nothing saved: it is built like any line, and
+    /// shown differently.
+    public var isHighSpeed: Bool {
+        !isFreight && performance.isHighSpeed
+    }
 
     /// Minutes a train stays at a stop between the ends of the line.
     public static let dwellMinutes: Int64 = 1

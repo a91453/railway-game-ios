@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 64
+    static let schemaVersion = 65
 
     var description: String
     var initialState: InitialState
@@ -1534,7 +1534,9 @@ enum ScenarioObservation: Equatable {
     case waitingPassengers(StationID)
     case passengerLedger(StationID)
     case riders(TrainID)
-    case tripFare(from: StationID, to: StationID)
+    /// Schema 65 (decision 168): `highSpeed`, for a trip that rides a
+    /// high-speed line.
+    case tripFare(from: StationID, to: StationID, highSpeed: Bool)
     case accounts
     case financeReport(FinancePeriod)
     /// Schema 24 (Stage W2b): a train's service times, and its lateness.
@@ -1682,8 +1684,8 @@ enum ScenarioObservation: Equatable {
             .ledger(LedgerSummary(world.passengerLedger(of: id)))
         case .riders(let id):
             .riders(world.riders(of: id).map(RidingGroupSummary.init))
-        case .tripFare(let origin, let destination):
-            .fare(world.tripFare(from: origin, to: destination)?.amount)
+        case .tripFare(let origin, let destination, let highSpeed):
+            .fare(world.tripFare(from: origin, to: destination, highSpeed: highSpeed)?.amount)
         case .accounts:
             .accounts(AccountsSummary(world.accounts))
         case .financeReport(let period):
@@ -1699,6 +1701,7 @@ enum ScenarioObservation: Equatable {
 extension ScenarioObservation: Decodable {
     private enum CodingKeys: String, CodingKey {
         case type, from, to, train, station, line, gameMinutes, level, pattern, cars, building
+        case highSpeed
         case edge, direction, distance, node, period
         case row, column
         case point
@@ -1851,7 +1854,10 @@ extension ScenarioObservation: Decodable {
             self = try .riders(container.decodeTrain(forKey: .train))
         // Schema 22: the economy (G1c).
         case "tripFare":
-            self = try .tripFare(from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to))
+            self = try .tripFare(
+                from: container.decodeStation(forKey: .from), to: container.decodeStation(forKey: .to),
+                highSpeed: container.decodeIfPresent(Bool.self, forKey: .highSpeed) ?? false
+            )
         case "serviceTimes":
             self = try .serviceTimes(container.decodeTrain(forKey: .train))
         case "lateness":
@@ -2755,6 +2761,9 @@ struct LandCellSummary: Codable, Equatable {
 struct DemandSummary: Codable, Equatable {
     var kind: String
     var dailyTrips: Int64
+    /// Schema 65 (decision 168): the people of a high-speed station's
+    /// hinterland, written only when there are some.
+    var hinterland: Int64 = 0
 
     private static let kinds: [(String, StationDemandKind)] = [
         ("residential", .residential), ("office", .office), ("shopping", .shopping), ("scenic", .scenic), ("civic", .civic),
@@ -2763,23 +2772,32 @@ struct DemandSummary: Codable, Equatable {
     init(_ demand: StationDemand) {
         kind = Self.kinds.first { $0.1 == demand.kind }!.0
         dailyTrips = demand.dailyTrips
+        hinterland = demand.hinterland
     }
 
     private enum CodingKeys: String, CodingKey {
-        case kind, dailyTrips
+        case kind, dailyTrips, hinterland
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         kind = try container.decode(String.self, forKey: .kind)
         dailyTrips = try container.decode(Int64.self, forKey: .dailyTrips)
+        hinterland = try container.decodeIfPresent(Int64.self, forKey: .hinterland) ?? 0
         guard Self.kinds.contains(where: { $0.0 == kind }) else {
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown demand kind \"\(kind)\".")
         }
     }
 
     var demand: StationDemand {
-        StationDemand(kind: Self.kinds.first { $0.0 == kind }!.1, dailyTrips: dailyTrips)
+        StationDemand(kind: Self.kinds.first { $0.0 == kind }!.1, dailyTrips: dailyTrips, hinterland: hinterland)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(dailyTrips, forKey: .dailyTrips)
+        if hinterland != 0 { try container.encode(hinterland, forKey: .hinterland) }
     }
 }
 

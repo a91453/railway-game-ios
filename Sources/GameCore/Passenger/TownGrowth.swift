@@ -152,7 +152,7 @@ extension GameWorld {
             // would otherwise record more than +1000.
             place.lastGrowth = max(-1_000, min(1_000, (trips - demand.dailyTrips) * 1_000 / max(1, demand.dailyTrips)))
             if trips != demand.dailyTrips {
-                passengers[index].demand = StationDemand(kind: demand.kind, dailyTrips: trips)
+                passengers[index].demand = StationDemand(kind: demand.kind, dailyTrips: trips, hinterland: demand.hinterland)
                 passengerPlan = PassengerPlanCache()
             }
             places.append(place)

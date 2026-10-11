@@ -1532,8 +1532,12 @@ public struct GameWorld: Equatable, Sendable {
     /// - Throws: ``GameError/unknownLine(_:)``.
     public mutating func removeLine(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
+        let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
         abandonUnservedPassengers()
+        // Decision 168: its stations draw no intercity trips unless
+        // another high-speed line calls at them.
+        if wasHighSpeed { refreshLandDemand() }
     }
 
     /// Replaces a line's stops with `stops`, in order. Its patterns keep
@@ -1567,6 +1571,9 @@ public struct GameWorld: Equatable, Sendable {
         lines[index].runs = []
         lines[index].runDays = []
         abandonUnservedPassengers()
+        // Decision 168: the stations of a high-speed line draw intercity
+        // trips.
+        if lines[index].isHighSpeed { refreshLandDemand() }
     }
 
     /// Reverses the order of a line's stops (decision 80, MapBuilder's
@@ -1736,8 +1743,17 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func setLinePerformance(_ id: LineID, to performance: TrainPerformance) throws(GameError) {
         let index = try lineIndex(of: id)
         guard performance.isValid else { throw .invalidTrainPerformance }
+        let wasHighSpeed = lines[index].isHighSpeed
         lines[index].performance = performance
         abandonUnservedPassengers()
+        // Decision 168: planned at high speed, a line is a high-speed line:
+        // its stations have the hinterlands of the people round them, and
+        // those who ride it pay the high-speed fare. Read again at once, for
+        // a company whose land sets its ridership.
+        if lines[index].isHighSpeed != wasHighSpeed {
+            passengerPlan = PassengerPlanCache()
+            refreshLandDemand()
+        }
     }
 
     /// Sets when a line runs during the day (see ``ServiceWindow``).
@@ -1912,9 +1928,13 @@ public struct GameWorld: Equatable, Sendable {
         guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
         guard lines[index].isFreight != isFreight else { return }
         if let train = lines[index].assignedTrains.first { throw .trainOnLine(train) }
+        let wasHighSpeed = lines[index].isHighSpeed
         lines[index].isFreight = isFreight
         passengerPlan = PassengerPlanCache()
         abandonUnservedPassengers()
+        // Decision 168: a freight line is not a high-speed line, whatever
+        // it is planned at.
+        if lines[index].isHighSpeed != wasHighSpeed { refreshLandDemand() }
     }
 
     // MARK: - Time

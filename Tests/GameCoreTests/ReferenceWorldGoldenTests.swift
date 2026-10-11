@@ -222,7 +222,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             return .ledger(LedgerSummary(model.ledger(of: id.rawValue)))
         case .riders(let id):
             return .riders(model.riders(of: id.rawValue).map(RidingGroupSummary.init))
-        case .tripFare(let origin, let destination):
+        case .tripFare(let origin, let destination, _):
             return .fare(model.tripFare(from: origin.rawValue, to: destination.rawValue))
         case .serviceTimes(let id):
             return .times(model.trains.first { $0.id == id.rawValue }?.service.map { TimesSummary($0.times) })

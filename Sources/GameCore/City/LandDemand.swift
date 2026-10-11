@@ -92,13 +92,17 @@ public enum LandDemand {
             self.leisureJobs = leisureJobs
         }
 
+        /// The people of the share: its residents and every kind of job.
+        public var people: Int64 {
+            residents + officeJobs + shopJobs + civicJobs + leisureJobs
+        }
+
         /// The ridership it makes: ``tripsPerHundred`` for every 100
         /// residents and jobs, rounded half up, at most
         /// ``StationDemand/maximumDailyTrips``, of the kind most of it is
         /// (homes, then offices, then shops, then schools and public
         /// offices, then sights on a tie); `nil` for none.
         public var demand: StationDemand? {
-            let people = residents + officeJobs + shopJobs + civicJobs + leisureJobs
             let trips = min(StationDemand.maximumDailyTrips, (people * tripsPerHundred + 50) / 100)
             guard trips > 0 else { return nil }
             let kinds: [(StationDemandKind, Int64)] = [
@@ -122,8 +126,12 @@ public enum LandDemand {
     /// Decision 94: each building the player placed with someone in it is
     /// shared the same way after the cells, by ascending ID, as a point at
     /// its centre with its residents and jobs and its kind's use.
-    public static func shares(of land: Land, among stations: [Station], placed: [PlacedBuilding] = []) -> [StationID: Share] {
-        let radius = Land.catchmentRadius
+    ///
+    /// Decision 168: `radius` is how far a station reaches, the metro
+    /// station's ``Land/catchmentRadius`` unless a high-speed station's
+    /// hinterland (``HighSpeed/hinterlandRadius``) is shared.
+    public static func shares(of land: Land, among stations: [Station], placed: [PlacedBuilding] = [],
+                              radius: Int64 = Land.catchmentRadius) -> [StationID: Share] {
         let squaredRadius = radius * radius
         // Each cell's stations (in the stations' order) and their weights,
         // by cell and then station.
@@ -235,18 +243,26 @@ extension GameWorld {
     /// ``LandDemand/shares(of:among:)``), when the land sets it; a closed
     /// station has none (decision 77). Decision 137: an outside connection
     /// adds its share of the outside's trips, of its land's kind or homes
-    /// (``outsideTrips(among:)``). Passengers already waiting stay.
+    /// (``outsideTrips(among:)``). Decision 168: a high-speed station also
+    /// has the people of its hinterland (``highSpeedHinterlands()``).
+    /// Passengers already waiting stay.
     mutating func refreshLandDemand() {
         guard drawsDemandFromLand else { return }
         // Decision 94: the people in the player's buildings ride too.
         let shares = LandDemand.shares(of: land, among: landStations, placed: placedBuildings)
         let outside = outsideTrips(among: landStations)
+        // Decision 168: a high-speed station's wide hinterland, whose
+        // intercity trips are the pair's, not the station's own.
+        let hinterlands = highSpeedHinterlands()
         var changed = false
         for station in stations {
             var demand = shares[station.id]?.demand
             if let trips = outside[station.id], trips > 0 {
                 demand = StationDemand(kind: demand?.kind ?? .residential,
                                        dailyTrips: min(StationDemand.maximumDailyTrips, (demand?.dailyTrips ?? 0) + trips))
+            }
+            if let people = hinterlands[station.id], people > 0 {
+                demand = StationDemand(kind: demand?.kind ?? .residential, dailyTrips: demand?.dailyTrips ?? 0, hinterland: people)
             }
             if let index = passengers.firstIndex(where: { $0.station == station.id }) {
                 guard passengers[index].demand != demand else { continue }

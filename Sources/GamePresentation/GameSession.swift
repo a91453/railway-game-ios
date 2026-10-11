@@ -1067,13 +1067,24 @@ public final class GameSession {
 
     /// Sets the type of the selected train's cars through
     /// `GameWorld.setTrainType(_:to:)` (`nil`: the standard car): only while
-    /// it is off the track.
+    /// it is off the track. A train still running as standard that is given a
+    /// type with its own way of running (the high-speed set, decision 168)
+    /// runs that way, in the same edit; and so does the line it is assigned
+    /// to, if it runs high-speed sets and nothing else.
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
             try world.setTrainType(train.id, to: type)
+            if let performance = type?.performance, train.performance == .standard {
+                try world.setTrainPerformance(train.id, to: performance)
+            }
             let text = Train.typeText(type, in: language)
-            return language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+            var said = language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+            if let id = world.assignedLine(of: train.id), try world.planAtHighSpeedWhenRunByHighSpeedSets(id),
+               let line = world.line(id: id) {
+                said += language.nowHighSpeedText(line.name)
+            }
+            return said
         }
     }
 
@@ -1515,6 +1526,9 @@ public final class GameSession {
             var draft = world
             try draft.assignTrain(train.id, to: line.id, pattern: pattern)
             if train.position != nil { try draft.useTrainPerformanceForMovement(train.id) }
+            // Decision 168: a line that runs high-speed sets and nothing else
+            // is a high-speed line, without a second step.
+            let fast = try draft.planAtHighSpeedWhenRunByHighSpeedSets(line.id)
             var started = 0
             if let assigned = draft.line(id: line.id) {
                 let service = pattern.map { $0 + 1 } ?? 0
@@ -1528,10 +1542,11 @@ public final class GameSession {
             }
             world = draft
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name
-            let text = language.text(
+            var text = language.text(
                 "\(train.name) now runs for \(service). It leaves once it waits at the first stop.",
                 "\(train.name) 現在為 \(service) 服務。它在第一站等候後就會出發。"
             )
+            if fast { text += language.nowHighSpeedText(line.name) }
             // A line outside its window sends nobody out until it opens.
             let opens: String
             if let assigned = world.line(id: line.id), world.serviceLevel(of: line.id, at: world.clock.now) == nil,

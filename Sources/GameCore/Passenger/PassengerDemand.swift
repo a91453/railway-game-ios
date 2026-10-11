@@ -49,7 +49,13 @@ extension GameWorld {
     /// shared out (``keptTrips(_:from:to:typhoons:)``), so that the
     /// stations it misses draw no more than before.
     func trips(of demand: StationDemand, at station: StationID) -> Int64 {
-        let trips = weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips
+        scaledTrips(weeklyDemand ? demand.trips(onDay: dayIndex(of: clock.now)) : demand.dailyTrips, at: station)
+    }
+
+    /// `trips` of station `station` raised by any event there and by
+    /// today's holiday, lowered by today's weather, rounded half up (see
+    /// ``trips(of:at:)``).
+    func scaledTrips(_ trips: Int64, at station: StationID) -> Int64 {
         guard demandEvents != nil || disruptions != nil else { return trips }
         // Without holidays or weather the network's multiplier is 1000, and
         // this is the event's rounding alone, as before them.
@@ -356,15 +362,20 @@ extension GameWorld {
         // The reference releases passengers only where they may enter
         // (`metroStationAllowsEntryForLine`), for destinations that are not
         // closed (`metroStationAllowsPassengerDestination`).
-        guard let demand = stationDemand(of: origin), demand.dailyTrips > 0, allowsEntry(at: origin) else { return [] }
+        // Decision 168: in a network game a high-speed station with people
+        // round it has intercity trips though its own catchment has none.
+        let network = passengerRoutingMode == .network
+        guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 || (network && demand.hinterland > 0), allowsEntry(at: origin) else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
-        let graph = passengerRoutingMode == .network ? PassengerRouteGraph(world: self) : nil
+        let graph = network ? PassengerRouteGraph(world: self) : nil
         var fastest: [StationID: Int64] = [:]
+        var destinations: [StationID: StationDemand] = [:]
         for record in passengers {
-            guard let demand = record.demand, demand.dailyTrips > 0, allowsService(at: record.station) else { continue }
-            let weight = attraction(of: demand, at: record.station)
+            guard let demand = record.demand, demand.dailyTrips > 0 || (network && demand.hinterland > 0), allowsService(at: record.station) else { continue }
+            let weight = demand.dailyTrips > 0 ? attraction(of: demand, at: record.station) : 0
+            destinations[record.station] = demand
             let trip: PassengerTrip?
-            if passengerRoutingMode == .network {
+            if network {
                 let choices = passengerRouteChoices(from: origin, to: record.station, graph: graph)
                 if let leg = choices.first?.route.legs.first {
                     trip = PassengerTrip(line: leg.line, direction: leg.direction)
@@ -382,10 +393,16 @@ extension GameWorld {
         let typhoons = typhoonMultipliers()
         return zip(reached, shares).compactMap { reached, trips in
             var trips = keptTrips(trips, from: origin, to: reached.destination, typhoons: typhoons)
+            // Decision 168: the pair's intercity trips, kept by the minutes
+            // of the way as its others are.
+            var between = network ? destinations[reached.destination].map {
+                intercityTrips(from: origin, demand, to: reached.destination, $0, typhoons: typhoons)
+            } ?? 0 : 0
             if let minutes = fastest[reached.destination] {
                 trips = PassengerCrowding.decayed(trips, minutes: minutes)
+                between = PassengerCrowding.decayed(between, minutes: minutes)
             }
-            return trips > 0 ? (reached.destination, trips, reached.trip) : nil
+            return trips + between > 0 ? (reached.destination, trips + between, reached.trip) : nil
         }
     }
 
@@ -605,7 +622,13 @@ extension GameWorld {
     /// crowded costs under the plan's own daily loads (see
     /// ``PassengerCrowding``).
     private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
-        let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
+        // Decision 168: a high-speed station is also a place intercity
+        // trips go to and set out from, whether or not its own catchment
+        // has people (`pull` is 0 then: the others' ordinary trips are
+        // not drawn to it).
+        let drawing = passengers.filter {
+            (($0.demand?.dailyTrips ?? 0) > 0 || ($0.demand?.hinterland ?? 0) > 0) && allowsService(at: $0.station)
+        }
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
         let graph = PassengerRouteGraph(world: self)
@@ -621,7 +644,7 @@ extension GameWorld {
         }
         var drafts: [Draft] = []
         for (index, record) in passengers.enumerated() {
-            guard let origin = record.demand, origin.dailyTrips > 0, allowsEntry(at: record.station) else { continue }
+            guard let origin = record.demand, origin.dailyTrips > 0 || origin.hinterland > 0, allowsEntry(at: record.station) else { continue }
             let reached = drawing.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
                 let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
                 let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
@@ -642,7 +665,11 @@ extension GameWorld {
             let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
                 let fared = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
-                let trips = PassengerCrowding.decayed(fared, minutes: options.map(\.route.totalMinutes).min()!)
+                let minutes = options.map(\.route.totalMinutes).min()!
+                // Decision 168: the pair's intercity trips, kept by the
+                // minutes of the way like its ordinary ones.
+                let intercity = intercityTrips(from: record.station, origin, to: destination.station, destination.demand!, typhoons: typhoons)
+                let trips = PassengerCrowding.decayed(fared, minutes: minutes) + PassengerCrowding.decayed(intercity, minutes: minutes)
                 guard trips > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,
                                     kind: origin.kind, options: options, journeys: journeys, trips: trips))

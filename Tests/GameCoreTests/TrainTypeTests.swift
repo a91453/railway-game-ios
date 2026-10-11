@@ -6,10 +6,13 @@ import XCTest
 /// how many doors it has.
 final class TrainTypeTests: XCTestCase {
     func testTheReferenceTableAndItsCapacities() {
-        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM"])
-        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50])
-        // Decision 153: the reference's nine, and this project's steam train.
-        XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.dropLast()))
+        XCTAssertEqual(TrainType.allCases.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR"])
+        XCTAssertEqual(TrainType.allCases.map(\.ratedCapacityPerCar), [310, 260, 200, 243, 230, 138, 240, 140, 224, 50, 80])
+        // Decision 153: the reference's nine, and this project's steam train;
+        // decision 168: and the high-speed set, which a world without an
+        // era offers as well.
+        XCTAssertEqual(TrainType.reference, Array(TrainType.allCases.dropLast(2)))
+        XCTAssertEqual(TrainType.offered, TrainType.reference + [.highSpeed])
         XCTAssertEqual(TrainType.main, [.a, .b, .c])
         XCTAssertEqual(TrainType.referenceDefault, .b)
 
@@ -45,8 +48,36 @@ final class TrainTypeTests: XCTestCase {
         XCTAssertTrue(TrainType.allCases.allSatisfy { $0.ratedCapacityPerCar <= Train.ratedCapacityPerCar })
     }
 
+    /// Decision 168: a high-speed set never takes more than it is rated
+    /// for (the reference's `metroTrainUsesOperationalOverload` is false on
+    /// a high-speed line), 80 persons a car: 640 for the reference's
+    /// 8 cars (its 650), 960 for the 12 of a real Taiwan High Speed Rail
+    /// set (989 seats) and 1,280 for 16 (its 1,200 and 1,283).
+    func testAHighSpeedSetNeverOverloads() {
+        var train = Train(id: TrainID(rawValue: 1), name: "T")
+        train.type = .highSpeed
+        XCTAssertFalse(TrainType.highSpeed.overloads)
+        XCTAssertTrue(TrainType.allCases.filter { $0 != .highSpeed }.allSatisfy(\.overloads))
+        for (cars, rated) in [(1, 80), (8, 640), (12, 960), (16, 1_280)] {
+            train.cars = cars
+            XCTAssertEqual(train.ratedCapacity, Int64(rated))
+            XCTAssertEqual(train.capacity, Int64(rated), "\(cars) cars take what they are rated for")
+        }
+        // The others keep the 1.1.
+        train.type = .a
+        XCTAssertEqual(train.capacity, (train.ratedCapacity * 11 + 5) / 10)
+        // It runs as the reference's `PERF_HSR`.
+        XCTAssertEqual(TrainType.highSpeed.performance, .highSpeed)
+        XCTAssertNil(TrainType.a.performance)
+        // Two doors a car, as the other long-distance types have.
+        XCTAssertEqual(TrainType.highSpeed.doorsPerCar, 2)
+        train.type = .highSpeed
+        train.cars = 8
+        XCTAssertEqual(train.passengersPerSecond, 32)
+    }
+
     func testDoorsSetHowFastPassengersGetOffAndOn() {
-        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2])
+        XCTAssertEqual(TrainType.allCases.map(\.doorsPerCar), [5, 4, 4, 3, 5, 2, 3, 2, 2, 2, 2])
         var train = Train(id: TrainID(rawValue: 1), name: "T")
         train.cars = 4
         // Standard: 4 doors × 2 a second × 4 cars, as before types.

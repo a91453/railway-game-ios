@@ -20,6 +20,9 @@ public struct LineMap: Equatable, Sendable {
         /// The colour the player chose for the line, or `nil` (see
         /// ``ServiceLine/color``).
         public let color: LineColor?
+        /// Whether the line is a high-speed line (decision 168): the map
+        /// draws it differently.
+        public let isHighSpeed: Bool
         public let edge: TrackEdgeID
         /// Where the stretch starts and ends along the edge, from its
         /// `from` node: `0 <= start < end <=` the edge's length.
@@ -31,9 +34,10 @@ public struct LineMap: Equatable, Sendable {
         /// (MapBuilder's `offsets`, in its 8 px line widths).
         public let offset: Double
 
-        public init(line: LineID, color: LineColor?, edge: TrackEdgeID, start: Int64, end: Int64, offset: Double) {
+        public init(line: LineID, color: LineColor?, isHighSpeed: Bool = false, edge: TrackEdgeID, start: Int64, end: Int64, offset: Double) {
             self.line = line
             self.color = color
+            self.isHighSpeed = isHighSpeed
             self.edge = edge
             self.start = start
             self.end = end
@@ -65,9 +69,11 @@ public struct LineMap: Equatable, Sendable {
     public init(world: GameWorld) {
         var ranges: [TrackEdgeID: [LineID: [ClosedRange<Int64>]]] = [:]
         var colors: [LineID: LineColor?] = [:]
+        var fast = Set<LineID>()
         for line in world.lines {
             guard let journey = world.lineJourney(line.id) else { continue }
             colors[line.id] = line.color
+            if line.isHighSpeed { fast.insert(line.id) }
             for (edge, range) in Self.ranges(of: journey, in: world.network) {
                 ranges[edge, default: [:]][line.id, default: []].append(range)
             }
@@ -85,10 +91,14 @@ public struct LineMap: Equatable, Sendable {
                 let offsets = Self.offsets(count: over.count)
                 for (line, offset) in zip(over, offsets) {
                     if let last = open[line], last.end == start, last.offset == offset {
-                        open[line] = Stretch(line: line, color: last.color, edge: edge, start: last.start, end: end, offset: offset)
+                        open[line] = Stretch(
+                            line: line, color: last.color, isHighSpeed: last.isHighSpeed, edge: edge, start: last.start, end: end, offset: offset
+                        )
                     } else {
                         if let last = open[line] { done.append(last) }
-                        open[line] = Stretch(line: line, color: colors[line] ?? nil, edge: edge, start: start, end: end, offset: offset)
+                        open[line] = Stretch(
+                            line: line, color: colors[line] ?? nil, isHighSpeed: fast.contains(line), edge: edge, start: start, end: end, offset: offset
+                        )
                     }
                 }
             }
