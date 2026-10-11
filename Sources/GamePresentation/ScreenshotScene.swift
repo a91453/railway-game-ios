@@ -51,6 +51,9 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         } catch {
             preconditionFailure("The freight screenshot scene no longer builds: \(error)")
         }
+        // Paused, to go on at the usual speed (the HUD shows the speed a
+        // paused game resumes at).
+        world.setSpeed(.normal)
         world.setSpeed(.paused)
         return world
     }

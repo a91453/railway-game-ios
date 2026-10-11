@@ -15,12 +15,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 120), "The scene opens")
-        let alert = app.buttons.matching(identifier: "map.alert").firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 30), "The stations short of materials show")
+        let alerts = app.buttons.matching(identifier: "map.alert")
+        XCTAssertTrue(alerts.firstMatch.waitForExistence(timeout: 30), "The stations short of materials show")
+        // Out a step, to show the whole network round Central.
+        app.buttons["縮小"].tap()
         settle()
         keep("freight-materials", app)
 
-        alert.tap()
+        // A bubble on screen picks its station, whose tag shows.
+        let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
+        XCTAssertNotNil(alert, "A bubble is on screen")
+        alert?.tap()
         settle()
         keep("freight-station", app)
 
@@ -32,9 +37,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         if !fleet.isHittable { app.swipeUp() }
         XCTAssertTrue(fleet.waitForExistence(timeout: 5))
         fleet.tap()
+        // The freight train is the last of five: the list loads its rows
+        // as they scroll in.
         let follow = app.buttons["fleet.follow.貨運列車 1"]
-        XCTAssertTrue(follow.waitForExistence(timeout: 5))
-        for _ in 0..<3 where !follow.isHittable { app.swipeUp() }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(follow), "The freight train is in the fleet")
         follow.tap()
         XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
         settle()
@@ -104,9 +110,10 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// Keeps the screen as an attachment named `name`, which the workflow
-    /// exports as `name.png`.
+    /// exports as `name.png`. The whole screen: the app's own screenshot
+    /// of a phone on its side came out turned and cut in half.
     private func keep(_ name: String, _ app: XCUIApplication) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
