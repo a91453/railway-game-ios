@@ -17,11 +17,12 @@ name: iOS App Build
 #   tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's screens. Kept short and steady so a
 #   red result means something.
-# - Pushes to main, a nightly run and manual runs (everything else): all the
-#   UI tests (map gestures, large text, landscape too), the iPad tutorial tests
-#   and, nightly and on request, the proof below that a missing toolbar button
-#   fails the smoke test. A red result here does not block a pull request; it
-#   is fixed by the next one.
+# - The full lane: main every three hours (ios-full-lane.yml starts it when
+#   main's newest commit has had none), a nightly run and manual runs. All
+#   the UI tests (map gestures, large text, landscape too), the iPad tutorial
+#   tests and, nightly and on request, the proof below that a missing toolbar
+#   button fails the smoke test. A red result here does not block a pull
+#   request; it is fixed by the next one.
 #
 # The UI tests are the check. They take no screenshots and nothing compares
 # images: what the screen looks like is checked on devices through TestFlight.
@@ -34,9 +35,10 @@ name: iOS App Build
 
 on:
   # Changes the app cannot see do not run it: the docs, the package's tests
-  # and fixtures, the web probe, the tools and the Linux checks' own files.
-  # The app builds only RailwayGameApp/ and the package's Sources/. The
-  # nightly run runs everything whatever changed.
+  # and fixtures, the web probe, the tools, the session tooling (.claude/)
+  # and the other workflows' own files. The app builds only RailwayGameApp/
+  # and the package's Sources/. The full lane runs everything whatever
+  # changed.
   pull_request:
     paths-ignore:
       - "**/*.md"
@@ -47,23 +49,21 @@ on:
       - "ReplayFixtures/**"
       - "Web/**"
       - "tools/**"
+      - ".claude/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/wasm-probe.yml"
+      - ".github/workflows/ios-full-lane.yml"
+      - ".github/workflows/release-archive.yml"
+      - ".github/workflows/testflight*.yml"
       - ".github/scripts/swift-shards*.sh"
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "Tests/**"
-      - "GoldenScenarios/**"
-      - "SaveFixtures/**"
-      - "ReplayFixtures/**"
-      - "Web/**"
-      - "tools/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/wasm-probe.yml"
-      - ".github/scripts/swift-shards*.sh"
+      - ".github/scripts/testflight-*.sh"
+      - ".github/scripts/install-swift-linux.sh"
+  # Pushes to main no longer run it (until 2026-10-11 each did): merges come
+  # in bursts and a newer one cancelled the run in progress, so from
+  # 2026-10-09 to 2026-10-11 52 of the 79 runs on main were cancelled and
+  # only 27 finished, yet they took a third of all macOS runner time (1,826
+  # of 5,474 minutes). ios-full-lane.yml starts a full run of main every
+  # three hours instead, and only when main's newest commit has had none.
   # 18:17 UTC is 02:17 in Taipei. A scheduled run uses the default branch.
   schedule:
     - cron: "17 18 * * *"
@@ -77,16 +77,13 @@ on:
 permissions:
   contents: read
 
-# A newer push to a pull request cancels its older run, and a newer push to
-# main its older full run: the newest main commit always gets a complete run,
-# and it holds every change the cancelled ones did. Merges come in bursts,
-# and each full run took a macOS runner for 15 to 27 minutes, so pull
-# requests merged together queued behind one another (42.5 minutes of
-# waiting for a runner on 2026-10-07). The nightly run and manual runs keep
-# their own groups and are never cancelled.
+# A newer push to a pull request cancels its older run. Every other run (the
+# full lane: started every three hours, nightly or by hand) has its own group
+# and is never cancelled, so a manual run and the nightly one on the same
+# commit do not replace each other.
 concurrency:
-  group: ios-build-${{ (github.event_name == 'pull_request' || github.event_name == 'push') && github.ref || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+  group: ios-build-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -141,7 +138,11 @@ jobs:
     # the translation check (about a minute).
     timeout-minutes: 60
     steps:
+      # Depth 2: a pull request's checkout is the pull request merged into its
+      # base, and the archivable-products check below compares the two.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       # The translation check compares the export with the committed catalog,
       # not with what an Xcode build or export may add to the working copy.
@@ -195,10 +196,20 @@ jobs:
       # Xcode Cloud onboarding lists the products this command finds (Apple:
       # "Configuring your first Xcode Cloud workflow"); the app must be one.
       # The local package's GameCore and GamePresentation libraries are
-      # listed too.
+      # listed too. What it lists comes from the project alone, so a pull
+      # request that changes neither the project nor how it is generated
+      # skips the check (about 25 seconds); the full lane always runs it. If
+      # the changed files cannot be listed, it runs.
       - name: List schemes and archivable products
+        env:
+          EVENT: ${{ github.event_name }}
         run: |
           project=RailwayGameApp/RailwayGame.xcodeproj
+          if [[ "$EVENT" == pull_request ]] && git diff --quiet HEAD^1 HEAD -- \
+            RailwayGameApp/project.yml "$project" .github/actions/setup-xcodegen .github/workflows/ios-build.yml; then
+            echo "The pull request changes neither the project nor its generation; the products are the ones the base branch already checked."
+            exit 0
+          fi
           xcodebuild -list -project "$project"
           products="$(xcodebuild -project "$project" -describeAllArchivableProducts -json)"
           echo "$products"
@@ -206,35 +217,6 @@ jobs:
             echo "::error::Xcode finds no archivable io.github.a91453.RailwayGame app, so Xcode Cloud could not offer it."
             exit 1
           fi
-
-      # A generic destination needs no booted Simulator. Code signing is
-      # disabled: Simulator builds need no certificate or Apple Developer account.
-      # Package resolution is disabled as on Xcode Cloud, which only uses a
-      # committed Package.resolved, so a missing one fails here first.
-      - name: Build for iOS Simulator
-        id: app-build
-        run: |
-          xcodebuild build \
-            -project RailwayGameApp/RailwayGame.xcodeproj \
-            -scheme RailwayGame \
-            -configuration Debug \
-            -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
-            -disableAutomaticPackageResolution \
-            CODE_SIGNING_ALLOWED=NO
-
-      # release-archive.yml proves no Debug-only launch argument code is in
-      # the Release binary by not finding this marker there. Prove it finds
-      # the marker where the code is, or that check would pass vacuously.
-      - name: Check the Debug app carries the Debug-only marker
-        run: |
-          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
-          marker="RailwayGame Debug-only launch argument"
-          if ! grep -rqF -- "$marker" "$app"; then
-            echo "::error::The Debug app does not contain \"$marker\" (see DebugLaunch in RailwayGameApp.swift); the Release archive check that looks for it would prove nothing."
-            exit 1
-          fi
-          echo "The Debug app carries the Debug-only marker."
 
       - name: Select an available iPhone Simulator
         run: |
@@ -253,6 +235,41 @@ jobs:
           with open(os.environ["GITHUB_ENV"], "a") as env:
               env.write(f"SIMULATOR_UDID={device['udid']}\n")
           PY
+
+      # Built for the selected Simulator, the destination the UI tests use, so
+      # only for its architecture (Debug builds only the active one). Building
+      # needs no booted Simulator. The generic Simulator destination used until
+      # 2026-10-11 has no active architecture and compiled every file for
+      # x86_64 too (225 files twice in run 38107355047, about 35 seconds),
+      # which no test on the Apple-silicon runner runs, and the UI tests then
+      # relinked the app for arm64 alone. Code signing is disabled: Simulator
+      # builds need no certificate or Apple Developer account. Package
+      # resolution is disabled as on Xcode Cloud, which only uses a committed
+      # Package.resolved, so a missing one fails here first.
+      - name: Build for iOS Simulator
+        id: app-build
+        run: |
+          xcodebuild build \
+            -project RailwayGameApp/RailwayGame.xcodeproj \
+            -scheme RailwayGame \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGNING_ALLOWED=NO
+
+      # release-archive.yml proves no Debug-only launch argument code is in
+      # the Release binary by not finding this marker there. Prove it finds
+      # the marker where the code is, or that check would pass vacuously.
+      - name: Check the Debug app carries the Debug-only marker
+        run: |
+          app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          marker="RailwayGame Debug-only launch argument"
+          if ! grep -rqF -- "$marker" "$app"; then
+            echo "::error::The Debug app does not contain \"$marker\" (see DebugLaunch in RailwayGameApp.swift); the Release archive check that looks for it would prove nothing."
+            exit 1
+          fi
+          echo "The Debug app carries the Debug-only marker."
 
       # Booted only after the build: booting while the app built (#211) slowed
       # the build from 1.4 to 4.8 minutes on the runner's 3 cores and saved

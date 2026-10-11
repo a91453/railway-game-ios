@@ -8,10 +8,11 @@ name: Release Archive (unsigned)
 # Store Connect or TestFlight, which only a signed Xcode Cloud archive can.
 #
 # Normally started by hand: Actions -> Release Archive (unsigned) -> Run workflow.
-# It also runs on pull requests that change the project settings, the app's
-# resources, its entry point (where the Debug-only launch arguments are) or
-# this workflow, and every night on main, which catches whatever else would
-# break a Release build.
+# It also runs on pull requests that change the project settings, the asset
+# catalog (the app icon this job inspects), the localized Info.plist strings,
+# the app's entry point (where the Debug-only launch arguments are) or this
+# workflow, and every night on main, which catches whatever else would break a
+# Release build.
 #
 # Since 2026-10-09 a pull request no longer runs it for the string catalog or
 # the regenerated Xcode project alone. Almost every app change touches one of
@@ -21,6 +22,12 @@ name: Release Archive (unsigned)
 # project.yml, which ios-build.yml proves the project matches; and a new file
 # reaches the Release build the same way a changed one does, which the
 # nightly run catches.
+#
+# Since 2026-10-11 it no longer runs for the bundled data either (the real
+# world grids, the railways, the city view, the base map, audio, licences):
+# 15 of the 42 pull requests that ran it in the week before changed only
+# those. Data is copied into the app as it is, the same in Debug and Release,
+# and ios-build.yml builds and launches the app with it.
 
 on:
   workflow_dispatch:
@@ -31,8 +38,8 @@ on:
   pull_request:
     paths:
       - RailwayGameApp/project.yml
-      - RailwayGameApp/Resources/**
-      - "!RailwayGameApp/Resources/Localizable.xcstrings"
+      - RailwayGameApp/Resources/Assets.xcassets/**
+      - RailwayGameApp/Resources/*.lproj/**
       - RailwayGameApp/App/**
       - .github/workflows/release-archive.yml
 

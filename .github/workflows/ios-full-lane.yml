@@ -1,0 +1,74 @@
+name: iOS Full Lane (every 3 hours)
+
+# Starts ios-build.yml's full lane (every UI test and the iPad tutorial tests)
+# on main every three hours, unless main's newest commit has already had a
+# full run that finished or is still going. A Linux job of a few seconds; the
+# full lane itself takes two macOS runners for about half an hour.
+#
+# Until 2026-10-11 every push to main started the full lane, and a newer push
+# cancelled the run in progress. Merges come in bursts: from 2026-10-09 to
+# 2026-10-11, 52 of the 79 runs on main were cancelled and only 27 finished,
+# yet they took 1,826 of the 5,474 macOS runner minutes and held two macOS
+# runners that pull requests waited for. Every run started here finishes; a
+# regression only the full lane catches shows within about three and a half
+# hours (the next start, then the run), and spans the merges since the last
+# full run, which a run by hand on an earlier commit can narrow down.
+#
+# ios-build.yml's own nightly run (with the missing-button proof) runs
+# whatever this one did. A run of a commit's full lane that was cancelled
+# does not count, so the next start runs it again.
+
+on:
+  schedule:
+    # 17 minutes past every third hour (UTC), except 18:17, when ios-build.yml's
+    # nightly run starts. A scheduled run uses the default branch.
+    - cron: "17 0,3,6,9,12,15,21 * * *"
+  # The same check by hand: starts the full lane only if main's newest
+  # commit has had none. ios-build.yml's own Run workflow always starts one.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-full-lane
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  start:
+    name: Start the full lane unless main's newest commit had one
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      # Starting ios-build.yml (workflow_dispatch) and reading its runs.
+      actions: write
+      contents: read
+    steps:
+      - name: Look for a full run of main's newest commit; start one if there is none
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          sha="$(gh api "repos/$REPO/commits/main" --jq .sha)"
+          echo "main is at $sha."
+          # Every run of ios-build.yml that is not a pull request's is the
+          # full lane (manual, nightly, started here, or a push before
+          # 2026-10-11). One that is queued or running, or finished green or
+          # red, counts; a cancelled one does not.
+          runs="$(gh api "repos/$REPO/actions/workflows/ios-build.yml/runs?head_sha=$sha&per_page=100" \
+            --jq '.workflow_runs[]
+              | select(.event != "pull_request")
+              | select(.status != "completed" or .conclusion == "success" or .conclusion == "failure")
+              | "\(.html_url) (\(.event), \(.conclusion // .status))"')"
+          if [[ -n "$runs" ]]; then
+            echo "Already has a full run, so none is started:"
+            echo "$runs"
+            echo "main's newest commit ($sha) already has a full run: $(head -n 1 <<<"$runs")" >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run ios-build.yml --repo "$REPO" --ref main
+          echo "Started ios-build.yml's full lane on main ($sha)." | tee -a "$GITHUB_STEP_SUMMARY"
