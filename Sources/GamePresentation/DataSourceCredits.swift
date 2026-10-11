@@ -59,6 +59,12 @@ public enum DataSourceCredits {
     /// MapLibre Native's licence and its third-party notices, as the app
     /// bundles them (`Resources/Licenses/`).
     static let mapLibreLicenseURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"
+    static let proceduralTokyoURL = "https://github.com/jeantimex/tokyo"
+    /// The notices of the 3D city view's page and the libraries it bundles
+    /// (decision 152), as the app bundles them.
+    static let cityViewNoticesURL = "https://github.com/a91453/railway-game-ios/blob/main/RailwayGameApp/Resources/Licenses/CityView-NOTICES.md"
+    static let polyHavenURL = "https://polyhaven.com"
+    static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -132,8 +138,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track alignment of every real railway line (redrawn on OpenStreetMap's tracks; TDX's shape kept only where OpenStreetMap has no track in use, as at Duolin on the Alishan line), station and platform positions, single and double track, places such as shops, offices, schools and sights that tell the game what kind of area a new station serves, and the industrial land, parks and farmland of real-world maps, and their coastline, rivers and lakes, where towns do not grow.",
-                            "提供每條真實鐵道的軌道走向（照 OpenStreetMap 的軌道重畫；只有 OpenStreetMap 沒有現行軌道的地方，例如林鐵的多林一帶，保留 TDX 的線形）、車站與月台位置、單雙線資訊，商店、辦公室、學校、景點等地點（用來判斷新車站周邊是什麼樣的地方），以及實景地圖上的工業區、公園與農地，和海岸線、河川與湖泊（城鎮不會長到水上）。"
+                            "The track alignment of every real railway line (redrawn on OpenStreetMap's tracks; TDX's shape kept only where OpenStreetMap has no track in use, as at Duolin on the Alishan line), station and platform positions, single and double track, places such as shops, offices, schools and sights that tell the game what kind of area a new station serves, and the industrial land, parks and farmland of real-world maps, and their coastline, rivers and lakes, where towns do not grow; the roads, parks and shop names of the 3D city preview.",
+                            "提供每條真實鐵道的軌道走向（照 OpenStreetMap 的軌道重畫；只有 OpenStreetMap 沒有現行軌道的地方，例如林鐵的多林一帶，保留 TDX 的線形）、車站與月台位置、單雙線資訊，商店、辦公室、學校、景點等地點（用來判斷新車站周邊是什麼樣的地方），以及實景地圖上的工業區、公園與農地，和海岸線、河川與湖泊（城鎮不會長到水上）；3D 城市試作的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link
@@ -193,8 +199,8 @@ public enum DataSourceCredits {
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot.",
-                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings of the 3D city preview round Kaohsiung Station are its footprints too.",
+                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站周圍 3D 城市試作的建物也是它的足跡。"
                         ),
                         notice: language.text(
                             "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file the game derives from them is available under the same licence from the source repository.",
@@ -299,6 +305,45 @@ public enum DataSourceCredits {
                         notice: "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
                         links: [
                             DataSourceCredit.Link(title: "Copernicus DEM", url: copernicusDEMURL),
+                        ]
+                    ),
+                ]
+            ),
+            // Decision 152: the 3D city view of the settings' preview.
+            DataSourceSection(
+                id: "cityView",
+                title: language.text("3D City Preview", "3D 城市試作"),
+                credits: [
+                    DataSourceCredit(
+                        id: "proceduralTokyo",
+                        title: "Procedural Tokyo",
+                        detail: language.text(
+                            "The software that draws the 3D city round Kaohsiung Station from Overture Maps’ buildings and OpenStreetMap’s roads, parks and places: buildings, street furniture, traffic, sky and light. With three.js, postprocessing, N8AO, takram three-geospatial, ez-tree, lil-gui and earcut bundled into it.",
+                            "繪製高雄車站周圍 3D 城市的軟體（建物、街道設施、車流、天空與光線），資料來自 Overture Maps 的建物與 OpenStreetMap 的道路、公園與地點。內含 three.js、postprocessing、N8AO、takram three-geospatial、ez-tree、lil-gui 與 earcut。"
+                        ),
+                        notice: language.text(
+                            "Copyright (c) 2026 Yong Su, under the MIT License. The licences of the libraries it bundles (MIT, Zlib, ISC) come with the app and are at the link below.",
+                            "Copyright (c) 2026 Yong Su，依 MIT 授權使用。它內含的程式庫的授權條款（MIT、Zlib、ISC）隨 App 提供，也可以從下方連結閱讀。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Procedural Tokyo", url: proceduralTokyoURL),
+                            DataSourceCredit.Link(title: language.text("Licences", "授權條款"), url: cityViewNoticesURL),
+                        ]
+                    ),
+                    DataSourceCredit(
+                        id: "polyHaven",
+                        title: "Poly Haven",
+                        detail: language.text(
+                            "The textures of the 3D city’s walls, roofs, roads, pavements and grass.",
+                            "3D 城市的牆面、屋頂、道路、人行道與草地材質。"
+                        ),
+                        notice: language.text(
+                            "Under CC0 1.0 (public domain dedication).",
+                            "依 CC0 1.0（公眾領域貢獻宣告）使用。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "Poly Haven", url: polyHavenURL),
+                            DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
                         ]
                     ),
                 ]
