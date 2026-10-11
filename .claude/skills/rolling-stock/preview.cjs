@@ -51,8 +51,12 @@ const VITE = path.join(WEB, 'node_modules/.bin/vite');
 
 // The line's name decides the stock (see STOCK/TRA_STOCK/HSR_STOCK in src/world/trains.js), so the
 // preview picks a train by naming its line, exactly as an area's data does.
-const LINE = { hsr: '台灣高鐵', tra: '臺鐵縱貫線' }[stock] ?? stock;
-const TAIWAN = LINE === '台灣高鐵' || LINE === '臺鐵縱貫線' || !/[山埼小井銀]/.test(LINE);
+// The TRA's lines take turns between the commuter stock and the express, so reaching the second
+// one means laying two lines and looking at the second train.
+const PICK = { hsr: ['台灣高鐵', 1], emu900: ['臺鐵縱貫線', 1], emu3000: ['臺鐵縱貫線', 2], tra: ['臺鐵縱貫線', 1] };
+const [LINE, LINES] = PICK[stock] ?? [stock, 1];
+const SET = LINES - 1;
+const TAIWAN = !/[山埼小井銀]/.test(LINE);
 
 const REF_NAME = '.rolling-stock-reference.glb';
 const REF_COPY = path.join(WEB, REF_NAME);
@@ -85,23 +89,28 @@ const sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
 sun.position.set(-50, 60, 55);
 scene.add(sun);
 
-const pts = [];
-for (let i = 0; i <= 40; i++) pts.push(-400 + i * 20, 0, 0);
-const trains = new Trains([{ name: ${JSON.stringify(LINE)}, railway: 'rail', pts }], { taiwan: ${TAIWAN} });
+const lines = [];
+for (let n = 0; n < ${LINES}; n++) {
+  const pts = [];
+  for (let i = 0; i <= 40; i++) pts.push(-400 + i * 20, 0, n * 60);   // parallel lines, far enough not to overlap
+  lines.push({ name: ${JSON.stringify(LINE)}, railway: 'rail', pts });
+}
+const trains = new Trains(lines, { taiwan: ${TAIWAN} });
 scene.add(trains.group);
 await trains.ready;            // the Meshy models, when an area has them, arrive asynchronously
 trains.update(20.0, 0);
 // car 0's nose sits at x = -400 + SPEED * 20 = -100; the cars run back from there
-const set = trains.sets[0];
+const set = trains.sets[${SET}] ?? trains.sets[0];
 const LEN = set.stock.length, CARS = set.stock.cars;
-const noseX = -100, cabCentre = noseX - LEN * 0.5, midCentre = noseX - LEN * 4.5;
+const noseX = -100, trackZ = ${SET} * 60, cabCentre = noseX - LEN * 0.5, midCentre = noseX - LEN * 4.5;
 
 function measure() {
   const per = [];
   let total = 0;
   const box = new THREE.Box3();
+  const mine = new Set([set.mesh, set.model?.cabs, set.model?.cars].filter(Boolean));
   scene.traverse((o) => {
-    if (!o.isInstancedMesh) return;
+    if (!o.isInstancedMesh || !mine.has(o)) return;
     const g = o.geometry;
     const tri = (g.index ? g.index.count : g.attributes.position.count) / 3;
     total += tri * o.count;
@@ -119,7 +128,7 @@ function measure() {
   // a tube however long it is.
   let taper = null, frontIsNose = null;
   const meshes = [];
-  scene.traverse((o) => { if (o.isInstancedMesh) meshes.push(o); });
+  scene.traverse((o) => { if (o.isInstancedMesh && mine.has(o)) meshes.push(o); });
   const cab = meshes[0];
   if (cab) {
     const pos = cab.geometry.attributes.position;
@@ -176,11 +185,11 @@ window.showReference = (on) => { if (refGroup) { refGroup.visible = on; trains.g
 
 const camera = new THREE.PerspectiveCamera(34, W / H, 0.5, 3000);
 const VIEWS = {
-  'three-quarter': { pos: [cabCentre + 18, 4.2, 15], look: [cabCentre - 8, 2.3, 0] },
-  'side (cab)': { pos: [cabCentre, 3.0, 40], look: [cabCentre, 2.6, 0] },
-  'head-on': { pos: [noseX + 11, 2.6, 1.6], look: [noseX - 2, 2.0, 0] },
-  'side (intermediate)': { pos: [midCentre, 3.2, 26], look: [midCentre, 2.6, 0] },
-  'whole set': { pos: [cabCentre + 60, 36, 100], look: [midCentre - 60, 0, 0] },
+  'three-quarter': { pos: [cabCentre + 18, 4.2, trackZ + 15], look: [cabCentre - 8, 2.3, trackZ] },
+  'side (cab)': { pos: [cabCentre, 3.0, trackZ + 40], look: [cabCentre, 2.6, trackZ] },
+  'head-on': { pos: [noseX + 11, 2.6, trackZ + 1.6], look: [noseX - 2, 2.0, trackZ] },
+  'side (intermediate)': { pos: [midCentre, 3.2, trackZ + 26], look: [midCentre, 2.6, trackZ] },
+  'whole set': { pos: [cabCentre + 60, 36, trackZ + 100], look: [midCentre - 60, 0, trackZ] },
 };
 function shoot(name) {
   const v = VIEWS[name];

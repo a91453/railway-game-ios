@@ -22,13 +22,54 @@ const DEFAULT_STOCK = { stripe: '#7b8794', body: '#c9ccce', cars: 8, length: 20 
 // (`commuter` 8 x 20 m as EMU700/800, EMU900 sets are 10; `emu3000` 12 cars of 20.3 m with 21.35 m ends).
 // `models` names the Meshy models (tools/meshy) listed in models/trains/index.json; without them the cars
 // stay boxes in the stock's livery.
-const TRA_STOCK = [
-  { stripe: '#f2b400', body: '#c9ccce', cars: 10, length: 20, models: { cab: 'emu900-cab', car: 'emu900-car' } },     // EMU900 區間車
-  { stripe: '#e8641c', body: '#eceeee', cars: 12, length: 20.5, models: { cab: 'emu3000-cab', car: 'emu3000-car' } }, // EMU3000 自強號
-];
-// 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Its cab cars have a nose, so they are lofted
-// (shellGeometry) rather than boxes. A line is the high speed railway by name, the way the Tokyo stock matches.
-const HSR_STOCK = { stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 9, highSpeed: true };
+// 臺鐵 EMU900 區間車: still boxes. Its cab is flat-fronted, so it needs no nose, but its band is the
+// bright green of its "smile" livery, not the yellow this was: the owner's own tra_special_trains.json
+// says 「彎彎的『微笑頭燈』配亮綠色腰帶」, and every public source says silver and green.
+const EMU900_STOCK = { stripe: '#7ac143', body: '#c9ccce', cars: 10, length: 20.3, models: { cab: 'emu900-cab', car: 'emu900-car' } };
+// A line is the high speed railway by name, the way the Tokyo stock matches. The TRA's own lines
+// carry both kinds, and their OSM names say which line they are, not which train runs on them, so
+// the paths take turns between the commuter stock and the express, as they did before.
+// A lofted stock: its cab cars have a nose, so they are swept (shellGeometry) rather than boxed, and
+// everything that differs between two such trains is data. `shell` is the section in metres above the
+// rail; `livery` is painted in f, how high up that section a thing sits (0 the skirt hem, 1 the roof).
+// Measure a reference with .claude/skills/rolling-stock/measure.cjs before filling either in.
+const HSR_STOCK = {
+  stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 9, highSpeed: true,
+  // 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Dimensions are the N700S's,
+  // which is all any public source gives; the nose is shaped from the owner's photographs.
+  shell: { halfW: 1.45, floor: 0.62, roof: 3.75, drop: 1.78, lift: 0.1, tuck: 0.34, cap: 0.56, wing: 0.05, shoulder: 0.66 },
+  livery: {
+    body: '#f6f6f4', skirt: '#8f959b', skirtTop: 0.28,
+    bands: [{ from: 0.380, to: 0.500, colour: '#ea6a1e', dive: 0.20 },
+            { from: 0.500, to: 0.566, colour: '#2b3356', dive: 0.20 }],
+    window: { from: 0.555, to: 0.780, pitch: 1.0, width: 0.50, tint: '#1d4a44' },
+    door: { width: 0.85, frame: '#22262b', leaf: '#f6f6f4' },
+    cab: { crease: 0.645, glass: '#161a20', canopyStops: 0.70,
+           canopy: [{ at: 0.9, length: 3.4, to: 0.73 }, { at: 2.2, length: 2.0, to: 0.84 }],
+           lamp: { at: 5.3, f: 0.52, width: 2.1, tall: 0.048, lens: 0.6, gap: 0.42, housing: '#2b3036' } },
+  },
+};
+// 臺鐵 EMU3000 新自強號: 12 cars, cabs at both ends (the owner: 車頭 = 車尾). The dimensions are the
+// owner's fleet catalogue, each with its own source, and agree with measure.cjs on his own mesh to the
+// centimetre: body 2.91 m wide (half-width 1.455), roof 3.49, pantograph 3.75, floor 1.18. The colours
+// are the material names in his EMU3000 model. The nose is the one thing no reference carries — all
+// three of his are map-scale and narrow for barely 2 m — so 4 m here is a judgement, not a measurement.
+const EMU3000_STOCK = {
+  stripe: '#9c385c', body: '#f6f3ee', cars: 12, length: 20.5, nose: 4, highSpeed: true,
+  shell: { halfW: 1.455, floor: 0.53, roof: 3.49, drop: 0.95, lift: 0.22, tuck: 0.26, cap: 0.5, wing: 0.03, shoulder: 0.7 },
+  livery: {
+    body: '#f6f3ee', skirt: '#8a8f93', skirtTop: 0.16,
+    // Signature_Red sits low on the side: 0.79–1.33 m above the rail in his model, which on a body
+    // from 0.53 to 3.49 is these two rows. It runs level, not diving: it is level the whole set long.
+    bands: [{ from: 0.088, to: 0.270, colour: '#9c385c' }],
+    window: { from: 0.430, to: 0.700, pitch: 1.6, width: 1.05, round: 0.12, tint: '#293e4c' },
+    door: { width: 1.0, frame: '#b9bdbe', leaf: '#dcdcd7' },
+    cab: { crease: 0, glass: '#293e4c', canopyStops: 0.66,
+           canopy: [{ at: 0.6, length: 2.6, to: 0.70 }],
+           lamp: { at: 2.6, f: 0.42, width: 1.4, tall: 0.05, lens: 0.5, gap: 0.34, housing: '#3a4046' } },
+  },
+};
+const TRA_STOCK = [EMU900_STOCK, EMU3000_STOCK];
 const HSR_NAME = /高鐵|高速鐵/;
 const SPEED = 15;        // m/s
 const GAP = 350;         // metres of pause before a train re-enters
@@ -139,41 +180,42 @@ function carGeometry(length) {
 // paint does on the real train. (Meshy's generated meshes were tried first and dropped: blobby at 391k triangles,
 // and diffusion texturing cannot put a stripe at a given height.)
 const RING = 24, NOSE_RINGS = 18;
-const HS_HALF_W = 1.45, HS_FLOOR = 0.62, HS_ROOF = 3.75;       // the body down to the hem of its skirt, in metres above the rail
-const SHOULDER = 0.66;                                          // where the crease runs, as a height within the section
-const NAVY = '#2b3356', SKIRT = '#8f959b';                      // the band under the windows, and the lower body over the bogies
 const ease = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
 
-function shellRing(z, t) {
-  const halfW = HS_HALF_W * (1 - 0.34 * ease((t - 0.45) / 0.55));
-  const top = HS_ROOF - 1.78 * ease(t), bottom = HS_FLOOR + 0.1 * ease((t - 0.6) / 0.4);  // a broad blunt bill: 1.9 m across and 1.25 m deep at the tip
-  // The last tenth rounds the bill over, so the sweep closes on a small cap instead of showing a
-  // flat face with a hard rim. Head-on is the only view that catches this.
-  const cap = 1 - 0.56 * ease((t - 0.88) / 0.12);
+// One ring of a lofted shell at `z`, `t` along the nose (0 at the body, 1 at the tip). `shell` is the
+// stock's own section, in metres above the rail. Each point carries how high it sits within its own
+// ring, and that is the livery's v, so a band painted straight across the picture follows the nose
+// down and forward the way the paint does on the real train.
+function shellRing(z, t, shell) {
+  const halfW = shell.halfW * (1 - shell.tuck * ease((t - 0.45) / 0.55));
+  const top = shell.roof - shell.drop * ease(t), bottom = shell.floor + shell.lift * ease((t - 0.6) / 0.4);
+  // The last eighth rounds the end over, so the sweep closes on a small cap instead of showing a flat
+  // face with a hard rim. Head-on is the only view that catches this.
+  const cap = 1 - shell.cap * ease((t - 0.88) / 0.12);
   const cy = (top + bottom) / 2, hy = ((top - bottom) / 2) * cap;
-  // The section is fuller below the crease than above it, the way the body tucks in towards the roof, and it
-  // widens by a little at the crease itself: that is the wing line running the length of the nose.
+  // The section is fuller below the crease than above it, the way a body tucks in towards its roof,
+  // and it widens by a little at the crease itself: that is the wing line running along the nose.
   const low = 2 / (8.5 - 5.6 * ease(t)), up = 2 / (4.6 - 2.3 * ease(t));
   const pts = [];
   for (let k = 0; k < RING; k++) {
     const a = -Math.PI / 2 + (2 * Math.PI * k) / RING, c = Math.cos(a), s = Math.sin(a);
     const y = cy + Math.sign(s) * Math.abs(s) ** (s < 0 ? low : up) * hy;
     const f = (y - bottom) / (top - bottom);
-    const wing = 1 + 0.05 * Math.exp(-(((f - SHOULDER) / 0.1) ** 2));
+    const wing = 1 + shell.wing * Math.exp(-(((f - shell.shoulder) / 0.1) ** 2));
     pts.push([Math.sign(c) * Math.abs(c) ** low * halfW * wing * cap, y, f]);
   }
   return { z, pts };
 }
 
-// One high-speed car: the lofted shell (the nose only on a cab car), the underframe and the bogies. The cab car
-// takes the left half of the side picture, an intermediate car the right half.
+// One lofted car: the shell (with the nose only on a cab car), the underframe and the bogies. The cab
+// car takes the left half of the side picture, an intermediate car the right half.
 function shellGeometry(stock, cab) {
-  const L = stock.length - 0.6, half = L / 2, nose = cab ? stock.nose : 0;
-  const rings = [shellRing(-half, 0)];
+  const L = stock.length - 0.6, half = L / 2, nose = cab ? stock.nose : 0, sh = stock.shell;
+  const rings = [shellRing(-half, 0, sh)];
   if (nose) {
-    rings.push(shellRing(half - nose, 0));
-    for (let i = 1; i <= NOSE_RINGS; i++) rings.push(shellRing(half - nose + (nose * i) / NOSE_RINGS, i / NOSE_RINGS));
-  } else rings.push(shellRing(half, 0));
+    rings.push(shellRing(half - nose, 0, sh));
+    for (let i = 1; i <= NOSE_RINGS; i++) rings.push(shellRing(half - nose + (nose * i) / NOSE_RINGS, i / NOSE_RINGS, sh));
+  } else rings.push(shellRing(half, 0, sh));
   const u0 = cab ? 0 : 0.5, v0 = 1 - SIDE_Y1 / TEX_H, v1 = 1 - SIDE_Y0 / TEX_H;
   const pos = [], uv = [], index = [];
   // u is kept just inside this car's half of the picture, so the tip does not sample the other car's
@@ -192,7 +234,7 @@ function shellGeometry(stock, cab) {
     const r = rings[i], centre = pos.length / 3;
     let x = 0, y = 0;
     for (const p of r.pts) { x += p[0] / RING; y += p[1] / RING; }
-    pos.push(x, y, r.z); uv.push(uAt(r.z), v0 + 0.5 * (v1 - v0));  // the cap takes its own ring's paint, not a swatch from elsewhere
+    pos.push(x, y, r.z); uv.push(uAt(r.z), v0 + 0.5 * (v1 - v0));  // the cap takes its own ring's paint
     for (let k = 0; k < RING; k++) {
       const a = i * RING + k, b = i * RING + ((k + 1) % RING);
       if (front) index.push(centre, a, b); else index.push(centre, b, a);
@@ -204,86 +246,90 @@ function shellGeometry(stock, cab) {
   shell.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   shell.setIndex(index);
   shell.computeVertexNormals();
-  // the underframe and bogies live under the body only: the nose comes down to its own hem and has nothing beneath it
+  // the underframe and bogies live under the body only: the nose has nothing beneath it
   const back = -half + 1.2, forward = nose ? half - nose + 1.4 : half - 1.2;
   const parts = [shell, plainUv(new THREE.BoxGeometry(2.2, 0.45, forward - back).translate(0, 0.42, (back + forward) / 2), 0.75)];
   for (const z of [back + 2.6, forward - 2.6]) parts.push(plainUv(new THREE.BoxGeometry(2.3, 0.5, 3.2).translate(0, 0.25, z), 0.75));
   return mergeGeometries(parts);
 }
 
-// The livery of a high-speed car, in the same picture as the other stock: the plain swatches in the top 16 px,
-// then the side — its left half a cab car (whose front is the nose), its right half an intermediate car. The
-// N700ST is white with a thin dark line over a wide orange band below the windows, plain white under the band
-// and a dark skirt, as the owner's photographs of set TS01 show.
+// The livery of a lofted car, in the same picture as the other stock: the plain swatches in the top
+// 16 px, then the side — its left half a cab car (whose front is the nose), its right half an
+// intermediate car. Everything that differs between trains is in the stock's `livery` record.
 function highSpeedTextures(stock) {
   const side = document.createElement('canvas'), glow = document.createElement('canvas');
   side.width = glow.width = TEX_W; side.height = glow.height = TEX_H;
   const g = side.getContext('2d'), e = glow.getContext('2d');
+  const lv = stock.livery;
   e.fillStyle = '#000'; e.fillRect(0, 0, TEX_W, TEX_H);
-  g.fillStyle = stock.body; g.fillRect(0, 0, TEX_W, TEX_H);
+  g.fillStyle = lv.body; g.fillRect(0, 0, TEX_W, TEX_H);
   g.fillStyle = '#26282b'; g.fillRect(TEX_W / 2, 0, TEX_W / 2, SIDE_Y0);  // underframe swatch
   const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0, HALF = TEX_W / 2, perM = HALF / stock.length;
-  const row = (f) => Y + (1 - f) * H;                           // f: how high up the car's section, 0 the floor, 1 the roof
+  const row = (f) => Y + (1 - f) * H;                           // f: how high up the section, 0 the floor, 1 the roof
   const shade = g.createLinearGradient(0, Y, 0, Y + H);         // a gloss: lighter over the shoulder, darker by the skirt
   shade.addColorStop(0, 'rgba(255,255,255,0.12)'); shade.addColorStop(0.5, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.16)');
   g.fillStyle = shade; g.fillRect(0, Y, TEX_W, H);
-  g.fillStyle = SKIRT; g.fillRect(0, row(0.28), TEX_W, row(0) - row(0.28));   // the grey lower body over the bogies
-  // A band of the livery from x0 to x1, between heights f0 and f1, falling by `drop` on the way (0: level). On the
-  // cab car the navy and orange bands dive together towards the nose; on an intermediate car they run level.
-  const band = (x0, x1, f0, f1, drop, colour) => {
+  g.fillStyle = lv.skirt; g.fillRect(0, row(lv.skirtTop), TEX_W, row(0) - row(lv.skirtTop));
+  const L = stock.length - 0.6;
+  const noseX = (0.004 + ((L - stock.nose) / L) * 0.492) * TEX_W;   // where the cab car's nose begins, in the shell's own u
+  // A band from x0 to x1 between heights f0 and f1, falling by `dive` on the way. The N700ST's cab car
+  // dives its bands towards the nose; EMU3000's run level.
+  const band = (x0, x1, f0, f1, dive, colour) => {
     g.fillStyle = colour;
     g.beginPath();
     const edge = (f, back) => {
       for (let i = 0; i <= 24; i++) {
         const x = x0 + ((x1 - x0) * (back ? 24 - i : i)) / 24;
-        g.lineTo(x, row(f - drop * ease((x - x0) / (x1 - x0))));
+        g.lineTo(x, row(f - dive * ease((x - x0) / (x1 - x0))));
       }
     };
     edge(f1, false); edge(f0, true);
     g.closePath(); g.fill();
   };
-  // One pane of saloon glass: the N700's small upright window with rounded ends, tinted green.
+  // One pane of saloon glass: an upright window with rounded ends, in the stock's own tint.
   const pane = (x, y, w, h) => {
-    const r = w / 2;
+    // A capsule on the N700ST, a rounded rectangle on the EMU3000: `round` is the corner radius as a
+    // fraction of the pane's width, and 0.5 is as round as a pane can be.
+    const r = w * (lv.window.round ?? 0.5);
     g.fillStyle = '#d8d9d6'; g.beginPath(); g.roundRect(x - 2, y - 2, w + 4, h + 4, r + 2); g.fill();
-    g.fillStyle = '#1d4a44'; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
+    g.fillStyle = lv.window.tint; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
     g.fillStyle = 'rgba(255,255,255,0.16)'; g.beginPath(); g.roundRect(x, y, w, h * 0.42, [r, r, 0, 0]); g.fill();
     e.fillStyle = '#fff0d0'; e.beginPath(); e.roundRect(x, y, w, h, r); e.fill();
   };
-  // The side of one car: a door at each end in its dark frame, a row of windows between them. The doors go on
-  // before the bands, because the livery runs straight across them, and the windows after.
-  const DOOR = 0.85 * perM;
+  // The side of one car: a door at each end in its frame, a row of windows between them. The doors go
+  // on before the bands, because the livery runs straight across them, and the windows after.
+  const DOOR = lv.door.width * perM;
   const doorsOf = (x0, w) => [x0 + 1.3 * perM, x0 + w - 1.3 * perM - DOOR];
   const carDoors = (x0, w) => {
     for (const dx of doorsOf(x0, w)) {
-      g.fillStyle = '#22262b'; g.fillRect(dx - 0.13 * perM, row(0.96), DOOR + 0.26 * perM, row(0.22) - row(0.96));
-      g.fillStyle = stock.body; g.fillRect(dx, row(0.94), DOOR, row(0.24) - row(0.94));
+      g.fillStyle = lv.door.frame; g.fillRect(dx - 0.13 * perM, row(0.96), DOOR + 0.26 * perM, row(0.22) - row(0.96));
+      g.fillStyle = lv.door.leaf; g.fillRect(dx, row(0.94), DOOR, row(0.24) - row(0.94));
     }
   };
   const carWindows = (x0, w) => {
-    const top = row(0.780), h = row(0.555) - top, pitch = 1.0 * perM, pw = 0.50 * perM;
+    const top = row(lv.window.to), h = row(lv.window.from) - top;
+    const pitch = lv.window.pitch * perM, pw = lv.window.width * perM;
     const doors = doorsOf(x0, w);
     for (let x = doors[0] + DOOR + pitch * 0.6; x + pw < doors[1] - pitch * 0.3; x += pitch) pane(x, top, pw, h);
     for (const dx of doors) pane(dx + DOOR * 0.26, top, DOOR * 0.48, h * 0.78);
   };
-  const L = stock.length - 0.6;
-  const noseX = (0.004 + ((L - stock.nose) / L) * 0.492) * TEX_W;   // where the cab car's nose begins, in the same u as the shell
   carDoors(0, noseX); carDoors(HALF, HALF);
-  band(HALF, TEX_W, 0.380, 0.500, 0, stock.stripe);             // an intermediate car: a level orange band, edged above
-  band(HALF, TEX_W, 0.500, 0.516, 0, '#3a3f49');
-  band(0, TEX_W / 2, 0.380, 0.500, 0.20, stock.stripe);         // the cab car: the orange and the navy over it dive towards the nose
-  band(0, TEX_W / 2, 0.500, 0.566, 0.20, NAVY);
+  for (const b of lv.bands) {
+    band(HALF, TEX_W, b.from, b.to, 0, b.colour);                 // an intermediate car: level
+    band(0, HALF, b.from, b.to, b.dive ?? 0, b.colour);           // a cab car: it may dive to the nose
+  }
   carWindows(0, noseX); carWindows(HALF, HALF);
-  // the cab: the canopy where the nose starts to fall, and the almond lamp of two lights on each shoulder
+  // the cab: the canopy where the nose starts to fall, and the lamps on its shoulders
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
-  g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(noseX, row(0.645), HALF - noseX, 3);          // the crease along its shoulder
-  oval(g, noseX + 0.9 * perM, row(1), 3.4 * perM, (row(0.73) - row(1)) * 2, '#161a20');
-  oval(g, noseX + 2.2 * perM, row(1), 2.0 * perM, (row(0.84) - row(1)) * 2, '#161a20');     // and on down the front
-  g.fillStyle = stock.body; g.fillRect(0, row(1), noseX, row(0.70) - row(1));  // the canopy stops where the body does
-  oval(g, noseX + 5.3 * perM, row(0.52), 2.1 * perM, row(0.472) - row(0.568), '#2b3036');
-  for (const k of [-0.42, 0.42]) {
-    oval(g, noseX + (5.3 + k) * perM, row(0.52), 0.6 * perM, row(0.482) - row(0.558), '#fbf7ea');
-    oval(e, noseX + (5.3 + k) * perM, row(0.52), 0.6 * perM, row(0.482) - row(0.558), '#fff4de');
+  const cab = lv.cab;
+  if (cab.crease) { g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(noseX, row(cab.crease), HALF - noseX, 3); }
+  for (const c of cab.canopy) oval(g, noseX + c.at * perM, row(1), c.length * perM, (row(c.to) - row(1)) * 2, cab.glass);
+  g.fillStyle = lv.body; g.fillRect(0, row(1), noseX, row(cab.canopyStops) - row(1));  // it stops where the body does
+  const lp = cab.lamp;
+  oval(g, noseX + lp.at * perM, row(lp.f), lp.width * perM, row(lp.f - lp.tall) - row(lp.f + lp.tall), lp.housing);
+  for (const k of [-lp.gap, lp.gap]) {
+    oval(g, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fbf7ea');
+    oval(e, noseX + (lp.at + k) * perM, row(lp.f), lp.lens * perM, row(lp.f - lp.tall * 0.55) - row(lp.f + lp.tall * 0.55), '#fff4de');
   }
   const tex = (c) => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   return { map: tex(side), emissiveMap: tex(glow) };
