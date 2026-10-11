@@ -140,6 +140,39 @@ public struct WaterGrid: Sendable {
         return isWater(row: row, column: column)
     }
 
+    /// Whether any cell of the grid within `metres` (a square of that half
+    /// side) of `latitude`° north, `longitude`° east is land: Taiwan's land,
+    /// as the grid has no other (decision 151's choice of tiles).
+    public func hasLand(nearLatitude latitude: Double, longitude: Double, within metres: Double) -> Bool {
+        let rowDegrees = metres / 110_574
+        let columnDegrees = metres / (111_320 * cos(latitude * .pi / 180))
+        let north = ((self.north - (latitude + rowDegrees)) / cellDegrees).rounded(.down)
+        let south = ((self.north - (latitude - rowDegrees)) / cellDegrees).rounded(.down)
+        let west = ((longitude - columnDegrees - self.west) / cellDegrees).rounded(.down)
+        let east = ((longitude + columnDegrees - self.west) / cellDegrees).rounded(.down)
+        guard north.isFinite, south.isFinite, west.isFinite, east.isFinite,
+              south >= 0, north < Double(rows), east >= 0, west < Double(columns)
+        else { return false }
+        let first = Int(max(west, 0)), last = Int(min(east, Double(columns - 1)))
+        for row in Int(max(north, 0))...Int(min(south, Double(rows - 1))) {
+            // Land unless one run of water holds every column.
+            let runs = water[row]
+            var low = 0, high = runs.count
+            while low < high {
+                let middle = (low + high) / 2
+                if runs[middle].upperBound <= first {
+                    low = middle + 1
+                } else {
+                    high = middle
+                }
+            }
+            if !(low < runs.count && runs[low].lowerBound <= first && runs[low].upperBound > last) {
+                return true
+            }
+        }
+        return false
+    }
+
     /// The grid's row for each 64 m row of a world of `bounds` laid over
     /// the Earth by `frame`, and its column for each 64 m column: the cell
     /// a 64 m cell's middle lies in (Web Mercator puts it in a row by its y

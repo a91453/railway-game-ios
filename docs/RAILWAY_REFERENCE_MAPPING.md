@@ -1328,3 +1328,23 @@ V 實際放行 → T、U（保證不互穿）
 比例：時刻是當天的秒數（遊戲時間的秒），星期幾照 `StationDemand.weekday(ofDay:)`（0 是星期日）。
 
 外部專案：沒有用到程式碼。資料：臺鐵開放資料（ods.railway.gov.tw），政府資料開放授權條款第 1 版，資料來源畫面已列。
+
+## 自製的 OSM 底圖（決策 151）
+
+2026-10-10 clone `a91453/railway-reference-private`（`581db83`），依 CLAUDE.md 的順序查了 `Ci/reference_snapshot/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Simulator/`、`MapBuilder/` 與新的 `OpenWorld/`（`REFERENCE_REFRESH_2026-10-10.md`）：搜尋 `pmtiles`、`mbtiles`、`.pbf`、`style*.json`、`tile`、`offline`、`osmSensitiveFacility`、`positron`、`glyph`。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`osmSensitiveFacilityLabelFilter`、`applyOsmSensitiveFacilityLabelFilter`、`isOsmSensitiveFacilityLabelLayer`（路名、POI、土地使用的標籤套上過濾） | `BaseMapStyle.sensitiveFacilityLabelFilter()`，套在 `road-label`、`road-label-minor` | direct：同樣的 22 個字與 10 個欄位、同樣的 `["!", ["any", ["in", …]]]`；POI 與土地使用的標籤本來就不畫 |
+| `Ci/reference_snapshot/external/openfreemap-tiles/fonts/Noto_20Sans_20{Regular,Bold}/*.pbf` | `RailwayGameApp/Resources/BaseMap/fonts/`（`tools/basemap/fetch_glyphs.py`） | direct：同一套檔（三個範圍逐位元相同），其他範圍從同一個來源（OpenFreeMap）取 |
+| 同上／`styles/liberty.json`、`planet.json`（OpenMapTiles schema 的 `vector_layers`、`class`） | `tools/basemap/build_basemap.py` 的圖層與欄位、`BaseMapStyle.sourceLayers` | adapted：取其中八層與它們的 `class`／欄位，樣式是自己寫的 |
+| 同上／`osmStyleKey` 的 `positron`、`dark` | `BaseMapStyle.Colors.light`、`.dark` | adapted：一樣分淺色、深色，顏色換成 App 圖示的色票 |
+| `Railway/site_archive_clean/data/offline_land_style.json`（沒網路時墊底的陸地填色） | 打包的圖磚（台灣的陸地與海都在本機） | 只取想法：離線也有陸地；這裡整份底圖都在本機 |
+| `Railway/site_archive_clean/rail-3d/vendor/pmtiles.js`（網頁讀 PMTiles） | MapLibre Native 6.31.0 內建的 `pmtiles://file://`（`BaseMapFiles`） | 不用：App 不跑 JS，MapLibre Native 自己讀 PMTiles |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js` 的 `terrain` 來源（`raster-dem`、Terrarium、512 像素）與 `landscape-hillshade`（`hillshade-exaggeration` 0.42、`hillshade-illumination-direction` 315） | `tools/basemap/build_terrain.py`、`BaseMapStyle.hillshade(_:)` | adapted：同樣的來源與圖層設定，顏色換成遊戲的；DEM 圖磚（`island-dem://`，Mapterhorn、內政部 20 m）不在快照裡，改用遊戲自己的 `taiwan_heights.dat` 產生 |
+| `Ci/…/virtual_island_city__q_21ffa7f6ae58fc9e.js` 的 `city.pmtiles` | — | gap：本體不在快照裡 |
+| （參考沒有）產生向量圖磚的工具 | `tools/basemap/build_basemap.py` | gap → 原生（切法照 geojson-vt，見下） |
+
+固定小數：圖磚 4096 單位、邊 64 單位；PMTiles 的範圍是千萬分之一度（和 `GeoAnchor` 相同）。
+
+外部專案：geojson-vt（https://github.com/mapbox/geojson-vt ，ISC，Copyright (c) 2015, Mapbox）的 `clip.js`、`simplify.js` 移植成 Python，聲明留在 `build_basemap.py` 的說明裡；PMTiles v3 規格（https://github.com/protomaps/PMTiles ，BSD 3-Clause）與 Mapbox Vector Tile 2.1 規格照文件寫，沒有複製程式碼；MapLibre Native 6.31.0（BSD 2-Clause，已是依賴）只讀原始碼確認行為（`pmtiles_file_source.cpp`、`local_file_source.cpp`、`glyph_manager.cpp`、`i18n.cpp` 的 `allowsFixedWidthGlyphGeneration`，後者照抄成 `build_basemap.drawn_on_device` 的範圍表）。評估過、沒有用：Planetiler（https://github.com/onthegomap/planetiler ，Apache-2.0；要 Java 21 與另外下載的海洋、Natural Earth 資料，是新的依賴）、tippecanoe（https://github.com/felt/tippecanoe ，BSD 2-Clause；要編譯 C++）。OpenMapTiles schema（https://openmaptiles.org/schema/ ，CC BY 4.0）只照它的圖層與欄位名，地圖上標「© OpenMapTiles」。

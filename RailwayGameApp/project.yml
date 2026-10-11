@@ -42,6 +42,13 @@ targets:
       - path: App
       - path: Views
       - path: Resources
+        excludes:
+          - "BaseMap"
+          - "BaseMap/**"
+      # Decision 151: the base map's tiles and glyphs, copied as one folder
+      # (BaseMapFiles finds them by path; the fonts' ranges share names).
+      - path: Resources/BaseMap
+        type: folder
     dependencies:
       - package: RailwayGame
         product: GameCore
