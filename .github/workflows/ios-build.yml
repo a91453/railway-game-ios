@@ -38,10 +38,12 @@ on:
   # and fixtures, the web probe, the tools, the session tooling (.claude/)
   # and the other workflows' own files. The app builds only RailwayGameApp/
   # and the package's Sources/. The full lane runs everything whatever
-  # changed.
+  # changed. Markdown is ignored at the top level only: the app bundles
+  # licence files written in Markdown (Resources/Licenses/,
+  # Resources/CityView/textures/), and the project lists each of them.
   pull_request:
     paths-ignore:
-      - "**/*.md"
+      - "*.md"
       - "docs/**"
       - "Tests/**"
       - "GoldenScenarios/**"
