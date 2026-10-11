@@ -9,6 +9,7 @@
 // --stock      which stock to put on the line: hsr (台灣高鐵), tra (台鐵, the rotation's first
 //              entry), or a line name to match, e.g. --stock '山手線'.
 // --check-only run the gates and print them; draw nothing.
+// --atlas      also write the stock's livery picture, as the painter made it, to this file.
 // --reference  a reference model (.glb) to draw beside ours from the same cameras, scaled to
 //              --reference-metres along its longest axis. A reference model is ground truth for
 //              shape and colour in a way a photograph is not — no perspective, no specular streak
@@ -34,6 +35,7 @@ const flag = (name, fallback) => {
   return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback;
 };
 const stock = flag('stock', 'hsr');
+const atlas = flag('atlas', null);
 const reference = flag('reference', null);
 const referenceMetres = Number(flag('reference-metres', '0'));
 const out = flag('out', null);
@@ -243,6 +245,15 @@ window.sheet = async () => {
   }
   return c.toDataURL('image/png');
 };
+// The livery's own picture, as the painter made it. When a train comes out the wrong colour this
+// says which half of the problem it is: paint that is wrong in the picture, or paint that is right
+// in the picture and sampled from the wrong place by the geometry.
+window.atlas = () => {
+  const map = set.materials[0].map, c = document.createElement('canvas');
+  c.width = map.image.width; c.height = map.image.height;
+  c.getContext('2d').drawImage(map.image, 0, 0);
+  return c.toDataURL('image/png');
+};
 window.measure = measure;
 window.ready = true;
 </script></body></html>`;
@@ -306,6 +317,12 @@ function budgetFor(cars) {
     console.log(`\n${m.cars} cars of ${m.stockLength} m; ${m.drawn}`);
     for (const x of m.meshes) console.log(`  ${x.name}: ${x.count} x ${x.trianglesEach} triangles, ${x.size.join(' x ')} m`);
 
+    if (atlas) {
+      const data = await tab.evaluate(() => window.atlas());
+      fs.mkdirSync(path.dirname(path.resolve(atlas)), { recursive: true });
+      fs.writeFileSync(path.resolve(atlas), Buffer.from(data.split(',')[1], 'base64'));
+      console.log(`livery: ${path.resolve(atlas)}`);
+    }
     if (!checkOnly) {
       const data = await tab.evaluate(() => window.sheet());
       fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });

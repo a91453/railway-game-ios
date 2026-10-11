@@ -33,8 +33,14 @@ const EMU900_STOCK = { stripe: '#7ac143', body: '#c9ccce', cars: 10, length: 20.
 // everything that differs between two such trains is data. `shell` is the section in metres above the
 // rail; `livery` is painted in f, how high up that section a thing sits (0 the skirt hem, 1 the roof).
 // Measure a reference with .claude/skills/rolling-stock/measure.cjs before filling either in.
+// `models` are the ones tools/trains/build_train.py builds in Blender: the same loft as shellGeometry
+// below, plus window units and door leaves standing proud of the body and the occlusion that collects
+// around them, baked into a second UV channel. The livery stays this file's: the model's first UV
+// channel is written in the very coordinates highSpeedTextures paints in, so the canvas below dresses
+// the Blender car as it dresses the lofted one. Until the model arrives the lofted car runs.
 const HSR_STOCK = {
   stripe: '#ea6a1e', body: '#f6f6f4', cars: 12, length: 25, nose: 9, highSpeed: true,
+  models: { cab: 'n700st-cab', car: 'n700st-car' },
   // 台灣高鐵 N700ST: 12 cars of 25 m (Hitachi: a set is about 300 m). Dimensions are the N700S's,
   // which is all any public source gives; the nose is shaped from the owner's photographs.
   shell: { halfW: 1.45, floor: 0.62, roof: 3.75, drop: 1.78, lift: 0.1, tuck: 0.34, cap: 0.56, wing: 0.05, shoulder: 0.66 },
@@ -42,7 +48,9 @@ const HSR_STOCK = {
     body: '#f6f6f4', skirt: '#8f959b', skirtTop: 0.28,
     bands: [{ from: 0.380, to: 0.500, colour: '#ea6a1e', dive: 0.20 },
             { from: 0.500, to: 0.566, colour: '#2b3356', dive: 0.20 }],
-    window: { from: 0.555, to: 0.780, pitch: 1.0, width: 0.50, tint: '#1d4a44' },
+    // `lit` is dim because the material keeps a little emissive on by day: left at the default the
+    // saloon lights washed this train's dark green glass out to pale grey in full sun.
+    window: { from: 0.555, to: 0.780, pitch: 1.0, width: 0.50, tint: '#1d4a44', lit: '#8a7f63' },
     door: { width: 0.85, frame: '#22262b', leaf: '#f6f6f4' },
     cab: { crease: 0.645, glass: '#161a20', canopyStops: 0.70,
            canopy: [{ at: 0.9, length: 3.4, to: 0.73 }, { at: 2.2, length: 2.0, to: 0.84 }],
@@ -82,6 +90,14 @@ const MIN_PATH = 260;
 // The second picture is what shines: saloon windows, lamps and the destination sign.
 const TEX_W = 2048, TEX_H = 512, SIDE_Y0 = 16, SIDE_Y1 = 256;
 const SWATCH_V = 1 - SIDE_Y0 / 2 / TEX_H;
+// One mapping from a place on a car to a place in the picture, for the painter and the geometry
+// alike: a car body is `length - 0.6` m long and its half of the picture runs from u0 + U0 to
+// u0 + U0 + USPAN, kept just inside the half so the nose cannot sample the other car's paint.
+// tools/trains/build_train.py writes the same one into the models it builds, which is what lets one
+// canvas dress a car modelled in Blender. Painting on one scale and modelling on another leaves the
+// window glass sitting beside the window.
+const U0 = 0.004, USPAN = 0.492;
+const uOf = (m, L, u0) => u0 + U0 + (m / L) * USPAN;   // m: metres from the car's rear end
 
 // One pane of glass: dark with a frame on the side picture, lit on the glow picture.
 function glass(g, e, x, y, w, h, lit = true) {
@@ -221,7 +237,7 @@ function shellGeometry(stock, cab) {
   const u0 = cab ? 0 : 0.5, v0 = 1 - SIDE_Y1 / TEX_H, v1 = 1 - SIDE_Y0 / TEX_H;
   const pos = [], uv = [], index = [];
   // u is kept just inside this car's half of the picture, so the tip does not sample the other car's
-  const uAt = (z) => u0 + 0.004 + ((z + half) / L) * 0.492;
+  const uAt = (z) => uOf(z + half, L, u0);
   for (const r of rings) {
     const u = uAt(r.z);
     for (const [x, y, f] of r.pts) { pos.push(x, y, r.z); uv.push(u, v0 + f * (v1 - v0)); }
@@ -282,14 +298,17 @@ function highSpeedTextures(stock) {
   e.fillStyle = '#000'; e.fillRect(0, 0, TEX_W, TEX_H);
   g.fillStyle = lv.body; g.fillRect(0, 0, TEX_W, TEX_H);
   g.fillStyle = '#26282b'; g.fillRect(TEX_W / 2, 0, TEX_W / 2, SIDE_Y0);  // underframe swatch
-  const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0, HALF = TEX_W / 2, perM = HALF / stock.length;
+  const Y = SIDE_Y0, H = SIDE_Y1 - SIDE_Y0, HALF = TEX_W / 2;
   const row = (f) => Y + (1 - f) * H;                           // f: how high up the section, 0 the floor, 1 the roof
   const shade = g.createLinearGradient(0, Y, 0, Y + H);         // a gloss: lighter over the shoulder, darker by the skirt
   shade.addColorStop(0, 'rgba(255,255,255,0.12)'); shade.addColorStop(0.5, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.16)');
   g.fillStyle = shade; g.fillRect(0, Y, TEX_W, H);
   g.fillStyle = lv.skirt; g.fillRect(0, row(lv.skirtTop), TEX_W, row(0) - row(lv.skirtTop));
-  const L = stock.length - 0.6;
-  const noseX = (0.004 + ((L - stock.nose) / L) * 0.492) * TEX_W;   // where the cab car's nose begins, in the shell's own u
+  // The picture's scale is the geometry's own (uOf): `perM` pixels to the metre, and a car's rear end
+  // at `rearOf(u0)`. A cab car's painted side runs from there to where the nose begins.
+  const L = stock.length - 0.6, perM = (USPAN * TEX_W) / L;
+  const rearOf = (u0) => (u0 + U0) * TEX_W;
+  const CAB = rearOf(0), MID = rearOf(0.5), noseX = CAB + (L - stock.nose) * perM;
   // A band from x0 to x1 between heights f0 and f1, falling by `dive` on the way. The N700ST's cab car
   // dives its bands towards the nose; EMU3000's run level.
   // `dive` is how far the band falls on the way: one number moves both edges together, a pair moves
@@ -323,27 +342,28 @@ function highSpeedTextures(stock) {
   };
   // The side of one car: a door at each end in its frame, a row of windows between them. The doors go
   // on before the bands, because the livery runs straight across them, and the windows after.
+  // `span` is how long the painted side of this car is, in metres: a cab car's stops at the nose.
   const DOOR = lv.door.width * perM;
-  const doorsOf = (x0, w) => [x0 + 1.3 * perM, x0 + w - 1.3 * perM - DOOR];
-  const carDoors = (x0, w) => {
-    for (const dx of doorsOf(x0, w)) {
+  const doorsOf = (x0, span) => [x0 + 1.3 * perM, x0 + (span - 1.3) * perM - DOOR];
+  const carDoors = (x0, span) => {
+    for (const dx of doorsOf(x0, span)) {
       g.fillStyle = lv.door.frame; g.fillRect(dx - 0.13 * perM, row(0.96), DOOR + 0.26 * perM, row(0.22) - row(0.96));
       g.fillStyle = lv.door.leaf; g.fillRect(dx, row(0.94), DOOR, row(0.24) - row(0.94));
     }
   };
-  const carWindows = (x0, w) => {
+  const carWindows = (x0, span) => {
     const top = row(lv.window.to), h = row(lv.window.from) - top;
     const pitch = lv.window.pitch * perM, pw = lv.window.width * perM;
-    const doors = doorsOf(x0, w);
+    const doors = doorsOf(x0, span);
     for (let x = doors[0] + DOOR + pitch * 0.6; x + pw < doors[1] - pitch * 0.3; x += pitch) pane(x, top, pw, h);
     for (const dx of doors) pane(dx + DOOR * 0.26, top, DOOR * 0.48, h * 0.78);
   };
-  carDoors(0, noseX); carDoors(HALF, HALF);
+  carDoors(CAB, L - stock.nose); carDoors(MID, L);
   for (const b of lv.bands) {
     band(HALF, TEX_W, b.from, b.to, 0, b.colour);                 // an intermediate car: level
     band(0, HALF, b.from, b.to, b.dive ?? 0, b.colour);           // a cab car: it may dive to the nose
   }
-  carWindows(0, noseX); carWindows(HALF, HALF);
+  carWindows(CAB, L - stock.nose); carWindows(MID, L);
   // the cab: the canopy where the nose starts to fall, and the lamps on its shoulders
   const oval = (c, x, y, w, h, colour) => { c.fillStyle = colour; c.beginPath(); c.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2); c.fill(); };
   const cab = lv.cab;
@@ -398,20 +418,24 @@ function pointAt(path, s, out) {
   return out.set(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
 }
 
-// Along the Line (decision 161): a Meshy car (tools/meshy) as one geometry and material for an InstancedMesh, in the frame of carGeometry: the
-// cab (`front`, the axis it faces in the model) towards +z, the rail top at y = 0, the body fitted to the stock's
-// car length, 2.9 m wide and 3.9 m tall. Null when the model is not there: the cars stay boxes.
+// Along the Line (decision 161): a car model as one geometry and material for an InstancedMesh, in the frame of
+// carGeometry: the cab (`front`, the axis it faces in the model) towards +z and the rail top at y = 0. A Meshy
+// model (tools/meshy) is then fitted to the stock's car length, 2.9 m wide and 3.9 m tall, because nothing about
+// a generated mesh's scale can be relied on; one from tools/trains/build_train.py says `fit: false` in the index,
+// because it was modelled in the game's own metres and squeezing it into a box would only lose them. Null when
+// the model is not there: the cars stay as they were.
 const loader = new GLTFLoader();
-async function carModel(url, front, length) {
+async function carModel(url, { front, fit = true }, length) {
   let gltf;
   try { gltf = await loader.loadAsync(url); } catch { return null; }
   gltf.scene.updateMatrixWorld(true);
   const parts = [];
-  let material;
+  let material = null;
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
     const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+    // uv1 is kept: it is where the baked occlusion lives (aoMap reads channel 1).
+    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'uv1'].includes(name)) g.deleteAttribute(name);
     parts.push(g.index ? g : g.toNonIndexed());
     material ??= Array.isArray(o.material) ? o.material[0] : o.material;
   });
@@ -420,13 +444,33 @@ async function carModel(url, front, length) {
   if (!geometry) return null;
   const turn = { '+z': 0, '-z': Math.PI, '+x': -Math.PI / 2, '-x': Math.PI / 2 }[front] ?? -Math.PI / 2;
   geometry.rotateY(turn);
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
-  geometry.translate(-centre.x, -box.min.y, -centre.z);
-  geometry.scale(2.9 / size.x, 3.9 / size.y, (length - 0.6) / size.z);
+  if (fit) {
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox, size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3());
+    geometry.translate(-centre.x, -box.min.y, -centre.z);
+    geometry.scale(2.9 / size.x, 3.9 / size.y, (length - 0.6) / size.z);
+  }
   if (!geometry.attributes.normal) geometry.computeVertexNormals();
-  material.side = THREE.FrontSide;
+  if (material) material.side = THREE.FrontSide;
   return { geometry, material };
+}
+
+// The occlusion baked beside a model (tools/trains/build_train.py) lives in its second UV channel, so
+// three.js reads it as what it is — a shadow term on the indirect light — rather than it being burnt
+// into the paint, where it would also darken the train in direct sun. Each model carries its own bake,
+// which is why this clones: one material cannot hold two.
+const textures = new THREE.TextureLoader();
+async function occluded(material, url) {
+  let map;
+  try { map = await textures.loadAsync(url); } catch { return material; }
+  map.channel = 1;
+  map.colorSpace = THREE.NoColorSpace;   // a shadow term, not a colour
+  map.flipY = false;                     // the UVs came from a glTF, which measures v from the top
+  map.anisotropy = 8;
+  const dressed = material.clone();
+  dressed.aoMap = map;
+  dressed.needsUpdate = true;
+  return dressed;
 }
 
 export class Trains {
@@ -469,22 +513,38 @@ export class Trains {
       beams.frustumCulled = false;
       beams.layers.set(LAMP_LAYER);
       this.lamps.add(beams);
-      this.sets.push({ stock, mesh, model, beams, material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
+      // `materials` is every material the set draws with: the painted one, and later a clone per model
+      // carrying that model's baked occlusion. The saloon lights are turned up on all of them together.
+      this.sets.push({ stock, mesh, model, beams, materials: [material], material, trains: list.map((path, i) => ({ path, s: (i * 613) % (path.length + GAP) })) });
     }
     this.dummy = new THREE.Object3D();
     this.a = new THREE.Vector3(); this.b = new THREE.Vector3();
     this.ready = this.loadModels(); // (the boxes run until the models arrive)
   }
 
-  // Along the Line (decision 161): swaps a stock's boxes for its Meshy models: the cab model at both ends (the rear one turned round), the middle
-  // model between them. A stock with only one of the two uses it for every car.
+  // Along the Line (decision 161): swaps what a stock is drawing with for its models: the cab model at both ends
+  // (the rear one turned round), the middle model between them. A stock with only one of the two uses it for every
+  // car. What it replaces is whatever was running — the boxes, or the shell lofted in code.
   async loadModels() {
     const wanted = this.sets.filter((set) => set.stock.models);
     if (!wanted.length) return;
     let index;
     try { index = await (await fetch('models/trains/index.json')).json(); } catch { return; }
     await Promise.all(wanted.map(async (set) => {
-      const { stock, trains } = set, load = (id) => (index[id] ? carModel(`models/trains/${index[id].file}`, index[id].front, stock.length) : null);
+      const { stock, trains } = set;
+      const load = async (id) => {
+        const spec = index[id];
+        if (!spec) return null;
+        const model = await carModel(`models/trains/${spec.file}`, spec, stock.length);
+        if (!model) return null;
+        // A stock that paints its own livery keeps it: the model carries the shape, this file's canvas
+        // the paint. Only a model with no livery of its own (a Meshy one) uses the material it came with.
+        let material = stock.livery ? set.material : model.material;
+        if (!material) return null;
+        if (spec.ao) material = await occluded(material, `models/trains/${spec.ao}`);
+        if (material !== set.material) set.materials.push(material);
+        return { geometry: model.geometry, material };
+      };
       const [cab, car] = await Promise.all([load(stock.models.cab), load(stock.models.car)]);
       if (!cab && !car) return;
       const mesh = (m, count) => {
@@ -494,9 +554,15 @@ export class Trains {
         this.group.add(im);
         return im;
       };
+      // Nothing may await between taking the old meshes down and putting the new ones up: update()
+      // runs every frame and reads `mesh` or `model` depending on which of them is there.
+      for (const old of [set.mesh, set.model?.cabs, set.model?.cars]) {
+        if (!old) continue;
+        this.group.remove(old);
+        old.geometry.dispose();
+      }
+      set.mesh = null;
       set.model = { cabs: mesh(cab ?? car, trains.length * 2), cars: mesh(car ?? cab, trains.length * Math.max(0, stock.cars - 2)) };
-      this.group.remove(set.mesh);
-      set.mesh.geometry.dispose();
     }));
   }
 
@@ -504,8 +570,8 @@ export class Trains {
     const { dummy, a, b } = this;
     this.beam.color.setRGB(2.2 * night, 2.1 * night, 1.8 * night);
     this.beam.visible = night > 0.02;
-    for (const { stock, mesh, beams, material, trains, model } of this.sets) {
-      material.emissiveIntensity = 0.2 + night * 2.2; // the saloon lights and the lamps are always on
+    for (const { stock, mesh, beams, materials, trains, model } of this.sets) {
+      for (const m of materials) m.emissiveIntensity = 0.2 + night * 2.2; // the saloon lights and the lamps are always on
       let n = 0, ends = 0, middles = 0;
       const put = (c, matrix) => {
         if (!model) mesh.setMatrixAt(n, matrix);

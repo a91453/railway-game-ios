@@ -1,1 +1,14 @@
-{}
+{
+  "n700st-cab": {
+    "ao": "n700st-cab-ao.png",
+    "file": "n700st-cab.glb",
+    "fit": false,
+    "front": "+x"
+  },
+  "n700st-car": {
+    "ao": "n700st-car-ao.png",
+    "file": "n700st-car.glb",
+    "fit": false,
+    "front": "+x"
+  }
+}
