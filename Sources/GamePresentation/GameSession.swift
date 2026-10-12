@@ -349,6 +349,9 @@ public final class GameSession {
     /// Called when the player finishes the tutorial's last step (decision
     /// 177): the launcher notes it in its preferences. Not on Skip.
     @ObservationIgnored public var onTutorialCompleted: (@MainActor () -> Void)?
+    /// Called after a step that passed midnight (decision 181): the
+    /// launcher checks the achievements.
+    @ObservationIgnored public var onMidnight: (@MainActor () -> Void)?
 
     /// The world as it was before each of the latest edits, oldest first,
     /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what
@@ -902,6 +905,9 @@ public final class GameSession {
         }
         // Decision 175: the secretary room reads what the step changed.
         observeNews(closedBefore: closedBefore)
+        if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
+            onMidnight?()
+        }
     }
 
     /// A tick of the game loop being worked out off the main actor

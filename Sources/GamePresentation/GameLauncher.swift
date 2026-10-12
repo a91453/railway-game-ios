@@ -89,6 +89,9 @@ public final class GameLauncher {
     /// The player's best result in each challenge (decision 87), kept in
     /// the saves' folder in a file that is not a save.
     public private(set) var records: ChallengeRecords
+    /// The achievements unlocked (decision 181), kept beside the challenge
+    /// records in a file that is not a save.
+    public private(set) var achievements: AchievementRecords
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
@@ -97,6 +100,7 @@ public final class GameLauncher {
         self.library = library
         self.language = language
         records = ChallengeRecords(file: library.directory.appendingPathComponent("challenge-records.data"))
+        achievements = AchievementRecords(file: library.directory.appendingPathComponent(AchievementRecords.fileName))
         let read = LauncherPreferences.read(from: library.directory.appendingPathComponent(Self.preferencesFileName))
         isFirstLaunch = read == nil
         preferences = read ?? LauncherPreferences()
@@ -261,9 +265,17 @@ public final class GameLauncher {
         session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
     }
 
+    /// Unlocks the achievements `session`'s world meets (decision 181),
+    /// unless it is a demo, and says so in the game.
+    func checkAchievements(of session: GameSession, at date: Date = Date()) {
+        guard !session.news.isDemo else { return }
+        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date)
+        session.noteAchievements(unlocked)
+    }
+
     /// Opens ``DemoWorld``: three lines already running.
     public func openDemo() {
-        begin(DemoWorld.make(in: language), keepingAutosave: true)
+        begin(DemoWorld.make(in: language), keepingAutosave: true, isDemo: true)
     }
 
     /// Opens a website screenshot scene (decision 165), paused at the
@@ -275,7 +287,7 @@ public final class GameLauncher {
         let language = language
         return Task {
             let world = await Task.detached(priority: .userInitiated) { scene.make(in: language) }.value
-            self.begin(world, keepingAutosave: true)
+            self.begin(world, keepingAutosave: true, isDemo: true)
         }
     }
 
@@ -288,7 +300,7 @@ public final class GameLauncher {
                 in: language, railways: railways, land: land(at: RealWorldDemo.anchor), water: water(at: RealWorldDemo.anchor),
                 steep: steep(at: RealWorldDemo.anchor), heights: heights
             ),
-            keepingAutosave: true
+            keepingAutosave: true, isDemo: true
         )
     }
 
@@ -324,7 +336,7 @@ public final class GameLauncher {
             // A game started meanwhile, from the start screen behind the
             // sheet, is not replaced.
             guard session == nil else { return }
-            begin(world, keepingAutosave: true)
+            begin(world, keepingAutosave: true, isDemo: true)
         }
     }
 
@@ -412,9 +424,10 @@ public final class GameLauncher {
         }
     }
 
-    /// Plays `world`. Returns whether it started.
+    /// Plays `world`. Returns whether it started. A demo (`isDemo`)
+    /// unlocks no achievements (decision 181), nor does its save later.
     @discardableResult
-    private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil) -> Bool {
+    private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false) -> Bool {
         if keepingAutosave {
             do throws(SaveError) {
                 try library.archiveAutosave()
@@ -438,7 +451,12 @@ public final class GameLauncher {
         started.readLandRoundStations()
         started.playSound = playSound
         if let news { started.restoreNews(news) }
+        if isDemo { started.news.isDemo = true }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
+        started.onMidnight = { [weak self, weak started] in
+            guard let self, let started else { return }
+            self.checkAchievements(of: started)
+        }
         session = started
         message = nil
         playSound?(.transition)

@@ -323,6 +323,39 @@ final class BalanceReportTests: XCTestCase {
         try play(&world, days: days, title: "The demo map")
     }
 
+    /// Decision 181: the company's rank as a game goes on, every 30 days:
+    /// the first line, a line between two towns, and the demo map
+    /// (`BALANCE_RANK_DEMO=1`, slow), each left to run without a player.
+    func testTheCompanyRank() throws {
+        let days = try requestedDays()
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var games: [(String, GameWorld)] = [
+            ("A first line", try firstLine()),
+            ("A line between two towns", try newGameLine(through: [towns[0], towns[1]])),
+        ]
+        if ProcessInfo.processInfo.environment["BALANCE_RANK_DEMO"] != nil {
+            games.append(("The demo map", DemoWorld.make(in: .english)))
+        }
+        for (title, start) in games {
+            var world = start
+            var lines = [
+                "### The company's rank: \(title), \(days) days, \(world.land.totals.residents) residents on the map",
+                "",
+                "| Day | Score | Title | " + RankMeasure.allCases.map { $0.title(in: .english) }.joined(separator: " | ") + " |",
+                "| --: | --: | --- |" + String(repeating: " --- |", count: RankMeasure.allCases.count),
+            ]
+            try world.advance(ticks: 1)
+            for day in 1...days {
+                try world.advance(ticks: 1_440)
+                guard day % 30 == 0 || day == days else { continue }
+                let rank = CompanyRank(world: world)
+                let parts = rank.parts.map { "\($0.value.map($0.measure.valueText) ?? "—") (\($0.points))" }
+                lines.append("| \(day) | \(rank.score) | \(rank.title.title(in: .english)) | " + parts.joined(separator: " | ") + " |")
+            }
+            print(lines.joined(separator: "\n"))
+        }
+    }
+
     private func requestedDays() throws -> Int {
         guard let value = ProcessInfo.processInfo.environment["BALANCE_REPORT"] else {
             throw XCTSkip("set BALANCE_REPORT=<days> to print the balance report")
