@@ -112,6 +112,7 @@
 		DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
 		E0751BAC4F08ABCE62170267 /* GoalsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */; };
+		E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */; };
 		E2EBB2C322FFE308B9EABCBE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41251B12461A0FD34DFCB786 /* Assets.xcassets */; };
 		EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */; };
 		EBF4B51615CD5EA956ADD087 /* tra_station_class.json in Resources */ = {isa = PBXBuildFile; fileRef = F34F5FAD9996ED6204B4F23C /* tra_station_class.json */; };
@@ -210,6 +211,7 @@
 		AFA812528CA2F00BD6143418 /* MapStationTagView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapStationTagView.swift; sourceTree = "<group>"; };
 		B00B0A86FFD245909EF3231A /* ntdlrt_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt_times.json; sourceTree = "<group>"; };
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
+		B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialJourneyUITests.swift; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLineChips.swift; sourceTree = "<group>"; };
@@ -442,6 +444,7 @@
 				7E833A49B8766511EF574847 /* SettingsUITests.swift */,
 				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
+				B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */,
 				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
 				2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */,
 			);
@@ -677,6 +680,7 @@
 				5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */,
 				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
+				E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */,
 				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,
 				3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */,
 			);

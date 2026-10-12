@@ -115,6 +115,55 @@ final class TutorialCardPlacementTests: XCTestCase {
         }
     }
 
+    /// The line's stations step on that phone, with the lines panel open
+    /// (run 38307741519, the whole tutorial walked on the Simulator): the
+    /// player's two stations, where the walk built them, as the touch they
+    /// take (``NetworkBuilding/touchRadius`` round each), and the card the
+    /// map steps take there, 164 points tall.
+    private static let lineStations = [
+        Frame(x: 140, y: 197, width: 48, height: 48),
+        Frame(x: 255, y: 197, width: 48, height: 48),
+    ]
+
+    private static func mapStepCard(_ proposal: Size) -> Size {
+        Size(width: proposal.width, height: min(164, proposal.height))
+    }
+
+    private static func lineStationsStep(stationsKnown: Bool) -> TutorialCardPlacement {
+        TutorialCardPlacement(
+            target: mapBesidePanel,
+            controls: hud + [zoomBesidePanel, linePick],
+            panels: [sidePanel],
+            required: stationsKnown ? lineStations : [],
+            map: mapBesidePanel,
+            maxWidth: 320
+        )
+    }
+
+    /// Before the stations were known to it, the card went to the bottom of
+    /// the strip of map beside the lines panel, over both stations, and
+    /// stayed open: the player could not pick them.
+    func testTheLineStationsStepCoveredTheStationsBeforeTheyWereKnown() {
+        let placement = Self.lineStationsStep(stationsKnown: false)
+        let open = placement.frame(in: Self.screen, measure: Self.mapStepCard)
+        XCTAssertTrue(placement.leavesStepFree(open), "open \(open)")
+        XCTAssertTrue(Self.lineStations.contains { open.intersects($0) }, "open \(open)")
+    }
+
+    /// Decision 188, later fix: the stations the step has the player tap are
+    /// the step's own (``GameSession/tutorialPlacesToTap``). The card keeps
+    /// clear of them or, where it cannot, folds, and folded it covers
+    /// neither them nor the lines panel.
+    func testTheLineStationsStepKeepsThePlayersStationsFree() {
+        let placement = Self.lineStationsStep(stationsKnown: true)
+        let open = placement.frame(in: Self.screen, measure: Self.mapStepCard)
+        let shown = placement.leavesStepFree(open) ? open : placement.frame(in: Self.screen, measure: Self.foldedCard)
+        for covered in Self.lineStations + [Self.sidePanel, Self.linePick] {
+            XCTAssertFalse(shown.intersects(covered), "card \(shown) (open \(open)) covers \(covered)")
+        }
+        XCTAssertTrue(placement.leavesStepFree(shown), "card \(shown)")
+    }
+
     /// The steps before it, with the details card open: nothing the step
     /// asks for is covered and the card stays open (it is not folded), as
     /// the UI tests check on the Simulator.

@@ -46,6 +46,18 @@ final class TutorialSessionTests: XCTestCase {
                     let id = tutorial.step.id
                     visited.append(id)
                     XCTAssertEqual(session.isTutorialStepDone, tutorial.step.goal == .read, "\(id) starts \(tutorial.step.goal == .read ? "done" : "undone")")
+                    // The card keeps clear of what the player taps on the
+                    // map: the ends of the stretch just built, then the two
+                    // stations just built, not the demo's own.
+                    switch id {
+                    case "station.first.site", "station.second.site":
+                        XCTAssertEqual(Set(session.tutorialPlacesToTap), [Self.point(2, in: session), Self.point(13, in: session)], id)
+                    case "line.stations", "station.select":
+                        let (first, second) = Self.newStations(session)
+                        XCTAssertEqual(session.tutorialPlacesToTap, [first.location, second.location], id)
+                    default:
+                        XCTAssertEqual(session.tutorialPlacesToTap, [], id)
+                    }
                     Self.carryOut(id, in: session)
                     XCTAssertTrue(session.isTutorialStepDone, "\(id) is done")
                     if tutorial.step.goal == .read {
@@ -383,6 +395,11 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertFalse(session.isTutorialStepDone)
             session.startPickingLineStops(announces: false)
             XCTAssertTrue(session.isTutorialStepDone)
+            // Begun after the stations chapter, every station is one to tap.
+            XCTAssertEqual(session.tutorialPlacesToTap, [])
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "line.stations")
+            XCTAssertEqual(session.tutorialPlacesToTap, session.world.stations.map(\.location))
 
             launcher.startTutorial(atStep: "line.create")
             session = try XCTUnwrap(launcher.session)

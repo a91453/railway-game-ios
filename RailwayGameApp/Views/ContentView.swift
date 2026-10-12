@@ -41,7 +41,7 @@ struct ContentView: View {
         gameLayout
             // Inside the text size limit below: the tutorial's card shares the
             // screen with the controls it must not cover.
-            .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets)
+            .tutorialOverlay(session: session, panelTargets: screen.tutorialPanelTargets, mapSites: screen.tutorialMapSites)
             // The map and controls share one screen, so text stops growing at the
             // largest standard size instead of pushing the map off screen.
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
@@ -704,6 +704,11 @@ final class GameScreenState {
     /// their marks (``TutorialTargetBounds``) from the overlay, so they
     /// report here (`tutorialPanelTarget(_:)`).
     var tutorialPanelTargets: [TutorialTarget: CGRect] = [:]
+    /// Where the places the tutorial's step has the player tap on the map
+    /// stand on the screen (global coordinates), as the map measured them
+    /// (``GameSession/tutorialPlacesToTap``): the card keeps clear of
+    /// them (decision 188, later fix).
+    var tutorialMapSites: [CGRect] = []
     @ObservationIgnored private var popTravelPlay: Task<Void, Never>?
 
     /// Play: the next hour every 1.2 s, back to 0 after 23

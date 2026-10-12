@@ -592,6 +592,11 @@ struct MapView: View {
                 guard let request else { return }
                 camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y))
             }
+            // Decision 188, later fix: where the places the tutorial's
+            // step has the player tap stand, which its card keeps clear of.
+            .onChange(of: tutorialSites(projection: projection, origin: proxy.frame(in: .global).origin), initial: true) { _, sites in
+                screen.tutorialMapSites = sites
+            }
             .onChange(of: session.world.clock) { _, _ in
                 centerOnFollowedTrain(projection: projection)
             }
@@ -876,6 +881,17 @@ struct MapView: View {
         }
         let place = projection.worldPosition(at: location)
         cellTooltip = heatmap.cellInfo(atX: place.x, y: place.y).map { ($0, location) }
+    }
+
+    /// The touch each place the tutorial's step has the player tap takes
+    /// on the screen (``GameSession/tutorialPlacesToTap``), in global
+    /// coordinates: a tap within ``NetworkBuilding/touchRadius`` reaches it.
+    private func tutorialSites(projection: PlanCamera, origin: CGPoint) -> [CGRect] {
+        let radius = CGFloat(NetworkBuilding.touchRadius)
+        return session.tutorialPlacesToTap.map { place in
+            let point = projection.screenPoint(of: place)
+            return CGRect(x: origin.x + CGFloat(point.x) - radius, y: origin.y + CGFloat(point.y) - radius, width: 2 * radius, height: 2 * radius)
+        }
     }
 
     /// The camera a game opens on (Stage E1): what it has built, or the
