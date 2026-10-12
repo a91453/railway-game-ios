@@ -59,12 +59,21 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
 
         tap(app.buttons["start.settings"], name: "start.settings")
+        XCTAssertTrue(app.switches["settings.sounds"].waitForExistence(timeout: 10), "The settings did not open")
+        // A phone on its side shows only the first sections, and a List
+        // makes a row only once it scrolls into view: since the Map section
+        // (decision 182) the preview starts below the fold. On its side
+        // neither the app's own swipe (it began on the navigation bar and
+        // scrolled nothing) nor the row's own tap (it landed at the screen's
+        // left edge, beside the row) reached it (PR #427's runs), so drag
+        // the row into the middle of the screen and tap the centre of its
+        // frame, as openSettingsFromTheGameMenu taps the menu's Settings.
         let preview = app.buttons["settings.cityView"]
-        XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
-        for _ in 0..<3 where !preview.isHittable {
-            app.swipeUp()
-        }
-        preview.tap()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview), "The 3D city preview never came into view")
+        let frame = preview.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY))
+            .tap()
         XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
         let loading = app.descendants(matching: .any)["cityView.loading"]
         let error = app.staticTexts["cityView.error"]
