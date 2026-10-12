@@ -43,6 +43,24 @@ final class PassengerCrowdingTests: XCTestCase {
         XCTAssertEqual(graph.segments(of: first), [PassengerRouteGraph.Segment(path: 0, stop: 0)])
     }
 
+    /// A line with runs (decision 149) whose stretches overlap, A–C and
+    /// B–D: a ride from B to D is on the second, though the first also
+    /// calls at B.
+    func testALegOnTheSecondOfOverlappingStretchesIsFound() throws {
+        let stations = (1...4).map { StationID(rawValue: $0) }
+        func path(_ calls: [StationID]) -> PassengerRouteGraph.ServicePath {
+            PassengerRouteGraph.ServicePath(
+                line: LineID(rawValue: 1), pattern: nil, direction: .outbound,
+                stations: calls, runSeconds: [60, 60], headway: 600, isRing: false
+            )
+        }
+        let graph = PassengerRouteGraph(paths: [path(Array(stations[0...2])), path(Array(stations[1...3]))])
+        let route = try XCTUnwrap(graph.shortest(from: stations[1], to: stations[3], banning: [])?.0)
+        XCTAssertEqual(graph.segments(of: route), [
+            PassengerRouteGraph.Segment(path: 1, stop: 0), PassengerRouteGraph.Segment(path: 1, stop: 1),
+        ])
+    }
+
     /// Two lines A–C with the same headway: the one with one-car trains
     /// fills, so the plan gives it the smaller share.
     private func world(smallCars: Int, bigCars: Int) throws -> GameWorld {
