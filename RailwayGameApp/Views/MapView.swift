@@ -783,7 +783,7 @@ struct MapView: View {
             cellTooltip = nil
             cityTooltip = nil
             terrainTooltip = nil
-            let place = projection.worldPosition(at: location)
+            let place = projection.planPoint(at: location)
             let reach = Double(projection.worldDistance(NetworkBuilding.touchRadius))
             let hour = screen.popTravelHour
             sectionFlowTooltip = sectionFlow.nearestSection(toX: place.x, y: place.y, at: hour, within: reach, in: session.world)
