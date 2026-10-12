@@ -497,7 +497,7 @@ struct LinesPanel: View {
             }
             // Stage C3: the performance its journeys are planned with
             // (Stage W2c), and the journey that gives.
-            PerformanceMenu(performance: line.performance, language: session.language) { performance in
+            PerformanceMenu(performance: line.performance, language: session.language, identifier: "line.performance") { performance in
                 session.setSelectedLinePerformance(performance)
             }
             .equatable()

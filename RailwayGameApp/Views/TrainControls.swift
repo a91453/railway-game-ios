@@ -22,7 +22,7 @@ struct TrainControls: View {
             if let train = session.selectedTrain {
                 status(of: train)
                 // Stage C3: how it runs between calls (Stage W2c).
-                PerformanceMenu(performance: train.performance, language: session.language) { performance in
+                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance") { performance in
                     session.setSelectedTrainPerformance(performance)
                 }
                 .equatable()

@@ -303,7 +303,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             "Alishan Forest Railway", "High-speed rail", "Steam train",
         ]
         checkMenuStaysStillAndChooses(
-            "performance.menu",
+            "train.performance",
             rows: app.buttons.matching(NSPredicate(format: "label IN %@", presets)),
             in: app
         )

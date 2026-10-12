@@ -14,10 +14,12 @@ import SwiftUI
 struct PerformanceMenu: View, Equatable {
     let performance: TrainPerformance
     let language: DisplayLanguage
+    /// `train.performance` or `line.performance`.
+    let identifier: String
     let choose: @MainActor (TrainPerformance) -> Void
 
     nonisolated static func == (lhs: PerformanceMenu, rhs: PerformanceMenu) -> Bool {
-        lhs.performance == rhs.performance && lhs.language == rhs.language
+        lhs.performance == rhs.performance && lhs.language == rhs.language && lhs.identifier == rhs.identifier
     }
 
     var body: some View {
@@ -45,7 +47,7 @@ struct PerformanceMenu: View, Equatable {
                 .font(.footnote)
                 .monospacedDigit()
         }
-        .accessibilityIdentifier("performance.menu")
+        .accessibilityIdentifier(identifier)
         .accessibilityLabel("Performance: \(performance.displayText(in: language))")
         .accessibilityHint("Chooses how it accelerates, brakes and how fast it may run.")
     }
