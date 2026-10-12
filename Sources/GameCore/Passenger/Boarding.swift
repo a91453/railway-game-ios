@@ -132,6 +132,13 @@ extension GameWorld {
                 operatingPermille: rollingStockEconomics ? RollingStock.pricing(of: train.type).operatingPermille : 1_000
             )
         }
+        // Decision 183: a passenger train leaving a stop for its next
+        // counts a call for a settlement's request (once at a terminus:
+        // the service that ends there does not count, the next leaving it
+        // does).
+        if cityRequests != nil, distance != nil, !train.isDeadheading, let line = assignedLine(of: id), lines.first(where: { $0.id == line })?.isFreight == false {
+            countRequestCall(at: train.timetable[stop].station)
+        }
     }
 
     /// The exchange of train `index` at stop `stop` of its timetable, as its
