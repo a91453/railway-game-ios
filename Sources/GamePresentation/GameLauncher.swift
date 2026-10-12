@@ -385,7 +385,7 @@ public final class GameLauncher {
     /// autosave.
     public func load(_ entry: SaveLibrary.Entry) {
         do throws(SaveError) {
-            begin(try library.load(entry), keepingAutosave: entry.kind != .autosave)
+            begin(try library.load(entry), keepingAutosave: entry.kind != .autosave, news: library.news(for: entry))
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -415,7 +415,7 @@ public final class GameLauncher {
 
     /// Plays `world`. Returns whether it started.
     @discardableResult
-    private func begin(_ world: GameWorld, keepingAutosave: Bool) -> Bool {
+    private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil) -> Bool {
         if keepingAutosave {
             do throws(SaveError) {
                 try library.archiveAutosave()
@@ -438,6 +438,7 @@ public final class GameLauncher {
         // had no population.
         started.readLandRoundStations()
         started.playSound = playSound
+        if let news { started.restoreNews(news) }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
         session = started
         message = nil
@@ -500,7 +501,7 @@ public final class GameLauncher {
     public func saveCurrentGame(at date: Date = Date()) {
         guard let session else { return }
         do throws(SaveError) {
-            try library.save(session.world, as: .manual, at: date)
+            try library.save(session.world, news: session.news, as: .manual, at: date)
             session.message = StatusMessage(kind: .success, text: language.text("Saved the game.", "已儲存遊戲。"))
         } catch {
             session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -516,7 +517,7 @@ public final class GameLauncher {
         guard let session else { return false }
         recordChallengeResult(at: date)
         do throws(SaveError) {
-            try library.save(session.world, as: .autosave, at: date)
+            try library.save(session.world, news: session.news, as: .autosave, at: date)
             refresh()
             return true
         } catch {

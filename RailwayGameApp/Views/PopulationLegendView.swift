@@ -81,19 +81,21 @@ struct PopulationLegendView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
 
-            HStack {
-                Text(verbatim: language.text("Opacity", "透明度"))
-                Spacer()
-                Text(verbatim: "\(Int((opacity * 100).rounded()))%")
-                    .monospacedDigit()
+            if mode != .sectionFlow {
+                HStack {
+                    Text(verbatim: language.text("Opacity", "透明度"))
+                    Spacer()
+                    Text(verbatim: "\(Int((opacity * 100).rounded()))%")
+                        .monospacedDigit()
+                }
+                .font(.caption2)
+                .foregroundStyle(Theme.textPrimary)
+                Slider(value: $opacity, in: PopTravel.opacityRange, step: 0.01)
+                    .accessibilityLabel(Text(verbatim: language.text("\(title) opacity", "\(title)透明度")))
+                    .accessibilityIdentifier("map.popTravel.opacity")
             }
-            .font(.caption2)
-            .foregroundStyle(Theme.textPrimary)
-            Slider(value: $opacity, in: PopTravel.opacityRange, step: 0.01)
-                .accessibilityLabel(Text(verbatim: language.text("\(title) opacity", "\(title)透明度")))
-                .accessibilityIdentifier("map.popTravel.opacity")
 
-            if mode.usesHour {
+            if mode.followsTimeline {
                 timeline
             }
         }
@@ -118,7 +120,7 @@ struct PopulationLegendView: View {
         case .population: language.text("Population grid", "人口網格")
         case .travel: language.text("Travel demand", "交通需求")
         case .movement: language.text("Demand change", "需求變化")
-        case .landUse, .landValue, .coverage, .zoning, .terrain: mode.title(in: language)
+        case .landUse, .landValue, .coverage, .zoning, .terrain, .sectionFlow: mode.title(in: language)
         }
     }
 
@@ -129,6 +131,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Decrease", "減少")
         case .landUse: language.text("Low-rise (D1)", "低層（D1）")
         case .landValue: "$ 0"
+        case .sectionFlow: language.text("Empty", "空")
         case .coverage, .zoning, .terrain: ""
         }
     }
@@ -140,6 +143,7 @@ struct PopulationLegendView: View {
         case .movement: language.text("Increase", "增加")
         case .landUse: language.text("Towers (D4)", "超高層（D4）")
         case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
+        case .sectionFlow: language.text("Full", "滿載")
         case .coverage, .zoning, .terrain: ""
         }
     }
@@ -259,6 +263,35 @@ struct PopulationLegendView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             }
+        case .sectionFlow:
+            // Decision 178: pale to deep blue by load against capacity,
+            // red over it; the line's width is the number of riders.
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 4) {
+                    LinearGradient(
+                        colors: stride(from: 0.0, through: 1.0, by: 0.25).map { Color(SectionFlow.color(ratio: $0)) },
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(height: 12)
+                    .clipShape(Capsule())
+                    Color(SectionFlow.overloadedColor)
+                        .frame(width: 24, height: 12)
+                        .clipShape(Capsule())
+                }
+                HStack(spacing: 6) {
+                    Capsule().fill(Theme.textSecondary).frame(width: 14, height: 2)
+                    Capsule().fill(Theme.textSecondary).frame(width: 14, height: 6)
+                    Text(verbatim: language.text("Wider line, more riders; red is over capacity", "線越寬人越多；紅色超過運能"))
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(verbatim: language.text("Tap a stretch of track for its riders", "點一段軌道看載客量"))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .accessibilityIdentifier("map.sectionFlowLegend")
         case .terrain:
             // Decision 124, H3: the tints by height, and the hatching.
             VStack(alignment: .leading, spacing: 3) {
