@@ -398,14 +398,20 @@ public final class GameLauncher {
 
     /// Starts the tutorial's game at step `id` (Debug builds'
     /// `-tutorial-step`, for the UI tests of a later step's screen): from
-    /// the line step on, with the track and the two stations the steps
-    /// before it have the player build, near the middle of the map, the
-    /// network tool still choosing a platform's place as they leave it.
+    /// the line chapter on, with what the steps before it have the player
+    /// build near the middle of the map: a stretch of track with a station
+    /// near each end (nothing left picked), and from `line.create` the two
+    /// stations picked for the line, from `line.staff` the line, from
+    /// `build.done` its trains. The network tool is left chosen.
     public func startTutorial(atStep id: String) {
         startTutorial()
         guard let session else { return }
         let steps = Tutorial.standardSteps.map(\.id)
-        if let index = steps.firstIndex(of: id), let line = steps.firstIndex(of: "line.create"), index >= line {
+        func reaches(_ step: String) -> Bool {
+            guard let index = steps.firstIndex(of: id), let first = steps.firstIndex(of: step) else { return false }
+            return index >= first
+        }
+        if reaches("line.open") {
             let tile: Int64 = 1_024
             let reach: Int64 = 512
             let bounds = session.world.bounds
@@ -414,18 +420,24 @@ public final class GameLauncher {
             }
             session.selectTool(.network)
             session.tapNetwork(at: point(2), reach: reach)
-            session.tapNetwork(at: point(7), reach: reach)
-            session.buildNetworkTrack()
-            session.setNetworkMode(.platform)
-            session.tapNetwork(at: point(4), reach: reach)
-            session.addNetworkPlatform()
-            session.setNetworkMode(.build)
-            session.tapNetwork(at: point(7), reach: reach)
             session.tapNetwork(at: point(13), reach: reach)
             session.buildNetworkTrack()
             session.setNetworkMode(.platform)
-            session.tapNetwork(at: point(11), reach: reach)
-            session.addNetworkPlatform()
+            for x: Int64 in [4, 11] {
+                session.tapNetwork(at: point(x), reach: reach)
+                session.addNetworkPlatform()
+            }
+            session.networkStart = nil
+            session.networkEnd = nil
+            session.networkEdgePoint = nil
+            if reaches("line.create") {
+                for station in session.world.stations.suffix(2) {
+                    session.selectStation(station.id)
+                    session.addSelectedStationToLineDraft()
+                }
+            }
+            if reaches("line.staff") { session.createLineFromDraft() }
+            if reaches("build.done") { session.staffSelectedLine(headway: 10) }
         }
         session.startTutorial(atStep: id)
     }

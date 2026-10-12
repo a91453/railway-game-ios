@@ -432,6 +432,12 @@ struct PlanBox {
         self.init(minimum: shape.minimum, maximum: shape.maximum, lowest: shape.lowest, highest: shape.highest)
     }
 
+    /// Whether the two boxes meet in plan, edges included: the test
+    /// ``TrackClearance/isClear(_:_:)`` makes first.
+    func meets(_ other: PlanBox) -> Bool {
+        minimum.x <= other.maximum.x && other.minimum.x <= maximum.x && minimum.y <= other.maximum.y && other.minimum.y <= maximum.y
+    }
+
     /// Whether some point of the one edge can be less than the track
     /// spacing in plan and less than the clearance in height from some
     /// point of the other: the test ``TrackSpacing`` makes first.

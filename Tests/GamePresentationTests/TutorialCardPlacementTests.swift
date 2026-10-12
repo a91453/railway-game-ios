@@ -106,15 +106,15 @@ final class TutorialCardPlacementTests: XCTestCase {
     func testTheBuildingStepsKeepTheirControlsFreeWithTheCardOpen() {
         let steps: [(name: String, target: Frame, required: [Frame], map: Bool)] = [
             ("build.network", Self.networkTool, [Self.networkTool], false),
-            ("build.track", Self.mapBesideCard, [Self.actionButton], true),
+            ("track.draw", Self.mapBesideCard, [Self.actionButton], true),
             ("map.move", Self.mapBesideCard, [Self.zoomBesideCard], true),
-            ("build.firstStation", Self.networkModes, [Self.networkModes, Self.actionButton], true),
+            ("station.mode", Self.networkModes, [Self.networkModes], true),
         ]
         for step in steps {
             let placement = TutorialCardPlacement(
                 target: step.target,
                 controls: Self.hud + [Self.zoomBesideCard, Self.networkModes, Self.actionButton],
-                panels: [Self.detailsCard],
+                backdrops: [Self.detailsCard],
                 required: step.required,
                 map: Self.mapBesideCard
             )
@@ -123,6 +123,52 @@ final class TutorialCardPlacementTests: XCTestCase {
             for control in step.required {
                 XCTAssertFalse(card.intersects(control), "\(step.name): card \(card) covers \(control)")
             }
+        }
+    }
+
+    /// A read step beside a panel (decision 188: the ridership step, the
+    /// station's panel open beside the map), placed with no map to leave
+    /// free: the card stays open and leaves the panel in sight.
+    func testAReadStepBesideAPanelLeavesThePanelInSight() {
+        for maxWidth in [320.0, 340] {
+            let placement = TutorialCardPlacement(
+                target: Self.sidePanel,
+                controls: Self.hud + [Self.zoomBesidePanel],
+                panels: [Self.sidePanel],
+                required: [Self.sidePanel],
+                map: nil,
+                maxWidth: maxWidth
+            )
+            let card = placement.frame(in: Self.screen, measure: Self.lineStepCard)
+            XCTAssertFalse(card.intersects(Self.sidePanel), "width \(maxWidth): card \(card)")
+            XCTAssertTrue(placement.leavesStepFree(card), "width \(maxWidth): card \(card)")
+        }
+    }
+
+    /// The first step with the largest text (`testLargeTextTutorialNavigation`
+    /// in the full lane after #429, run 38249605095): the details card, its
+    /// controls marked, is a backdrop, so the tall card covers it rather
+    /// than the tool rail, whose Done the player taps. As a panel it pushed
+    /// the card over Done. At every text size here, no tool is covered.
+    func testWithLargeTextTheCardCoversTheDetailsCardRatherThanTheTools() {
+        for scale in [1.0, 1.3, 1.6] {
+            let card = { (proposal: Size) -> Size in
+                let lines = (600 * scale / (proposal.width - 32)).rounded(.up)
+                return Size(width: proposal.width, height: max(200, min(150 * scale + lines * 20 * scale, proposal.height)))
+            }
+            let placement = TutorialCardPlacement(
+                target: Self.networkTool,
+                controls: Self.hud + [Self.zoomBesideCard, Self.networkModes, Self.actionButton],
+                backdrops: [Self.detailsCard],
+                required: [Self.networkTool],
+                map: Self.mapBesideCard,
+                maxWidth: 320
+            )
+            let shown = placement.frame(in: Self.screen, measure: card)
+            for tool in Self.tools {
+                XCTAssertFalse(shown.intersects(tool), "text \(scale)×: card \(shown) covers \(tool)")
+            }
+            XCTAssertTrue(placement.leavesStepFree(shown), "text \(scale)×: card \(shown)")
         }
     }
 
@@ -139,7 +185,7 @@ final class TutorialCardPlacementTests: XCTestCase {
             TutorialCardPlacement(
                 target: Self.mapBesideCard,
                 controls: Self.hud + [Self.zoomBesideCard, Self.networkModes, Self.actionButton],
-                panels: [Self.detailsCard],
+                backdrops: [Self.detailsCard],
                 required: [Self.networkModes, Self.actionButton],
                 map: Self.mapBesideCard
             ),
@@ -147,7 +193,7 @@ final class TutorialCardPlacementTests: XCTestCase {
         for placement in screens {
             let folded = placement.frame(in: Self.screen, measure: Self.foldedCard)
             XCTAssertTrue(placement.leavesStepFree(folded), "folded \(folded)")
-            for control in placement.controls + placement.panels {
+            for control in placement.controls + placement.panels + placement.backdrops {
                 XCTAssertFalse(folded.intersects(control), "folded \(folded) covers \(control)")
             }
         }

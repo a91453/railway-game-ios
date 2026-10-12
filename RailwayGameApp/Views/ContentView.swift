@@ -93,6 +93,19 @@ struct ContentView: View {
                     }
                 }
             }
+            // Decision 188: the panel a tutorial step needs opens for it (the
+            // reference's `openUI`), and one beside the map closes for a step
+            // about the map's own controls.
+            .onChange(of: session.tutorial?.index, initial: true) { _, _ in
+                switch session.tutorial?.step.panel {
+                case .lines:
+                    if screen.panel != .lines { screen.panel = .lines }
+                case .closed:
+                    if screen.panel?.isBesideMap == true { screen.panel = nil }
+                case nil:
+                    break
+                }
+            }
             .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) { _, _ in
                 detailsChoice = nil
             }
@@ -359,9 +372,11 @@ private struct MapTutorialTarget: View {
 /// tool's options and the action button) shows: by itself when there is
 /// something to show (a tool other than Select, a selection) and not
 /// otherwise, so the map gets the screen; or as the player chose, until
-/// what it would show changes; and always during the tutorial, which
-/// points at controls in it. A station selected while looking at the map
-/// shows its tag over it instead (decision 119), which opens the card.
+/// what it would show changes. During the tutorial (decision 188), which
+/// has no toggle, when its step points into it, or for a selection, and
+/// else as for a tool, so a phone's map steps keep the whole map. A
+/// station selected while looking at the map shows its tag over it
+/// instead (decision 119), which opens the card.
 /// On a phone, track being drawn folds it (decision 136): the map's
 /// construction HUD and the ✕ and ✓ beside the track say and do what it
 /// would, and the map gets the room to draw in.
@@ -400,7 +415,12 @@ private enum ControlDetails {
     /// beside the card to draw in (decision 136).
     @MainActor
     static func isOpen(_ session: GameSession, choice: Bool?, foldsWhileDrawing: Bool) -> Bool {
-        if session.tutorial != nil { return true }
+        if let step = session.tutorial?.step {
+            if step.usesDetailsCard { return true }
+            // The station's tag is hidden in the tutorial.
+            if session.tool == .select { return session.selectionText() != nil }
+            return !foldsWhileDrawing
+        }
         if let choice { return choice }
         if session.tool != .select { return !(foldsWhileDrawing && drawsTrack(session)) }
         // Decision 119: a station's tag stands in for the card.
@@ -409,7 +429,7 @@ private enum ControlDetails {
 }
 
 /// Shows or hides the details card, from the dock. Hidden during the
-/// tutorial, when the card stays open.
+/// tutorial, whose steps open the card when they need it.
 private struct ControlDetailsToggle: View {
     let isOpen: Bool
     let action: () -> Void

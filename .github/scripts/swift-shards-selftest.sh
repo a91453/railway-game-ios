@@ -315,6 +315,38 @@ final class ReplayFixtureTests: XCTestCase {
     func testEveryReplay() { _ = "ReplayFixtures" }
 }
 SWIFT
+cat >"$tree/Tests/GameCoreTests/ScheduledTrafficPropertyTests.swift" <<'SWIFT'
+import XCTest
+
+final class ScheduledTrafficPropertyTests: XCTestCase {
+    func testCampaign() {}
+}
+
+final class ScheduledTrafficSecondHalfPropertyTests: XCTestCase {
+    func testCampaign() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/ServiceRepeatingPropertyTests.swift" <<'SWIFT'
+import XCTest
+
+final class ServiceRepeatingPropertyTests: XCTestCase {
+    func testCampaign() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/DeadlockPropertyTests.swift" <<'SWIFT'
+import XCTest
+
+final class DeadlockPropertyTests: XCTestCase {
+    func testCampaign() {}
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/TourismSessionTests.swift" <<'SWIFT'
+import XCTest
+
+final class TourismSessionTests: XCTestCase {
+    func testTheCatalogIsTheToolsFile() { _ = "tools/tourism-spots/taiwan_attractions.json" }
+}
+SWIFT
 cat >"$tree/Tests/GamePresentationTests/FinanceHistoryTests.swift" <<'SWIFT'
 import XCTest
 
@@ -376,11 +408,18 @@ expect_plan fixtures "ReplayFixtureTests" "a replay fixture" ReplayFixtures/kern
 expect_plan presentation "$present" "the app's bundled data" RailwayGameApp/Resources/RealWorld/taiwan_places.json
 expect_plan full "" "the package, the CI scripts and ci.yml" Package.resolved .github/scripts/swift-shards.sh
 expect_plan full "" "another test module" Tests/OtherTests/X.swift
+expect_plan presentation "$present" "a tool's file a GamePresentation test reads" tools/tourism-spots/taiwan_attractions.json
+expect_plan tests-only ServiceRepeatingPropertyTests "one campaign file" Tests/GameCoreTests/ServiceRepeatingPropertyTests.swift
+expect_plan full "" "a file of two campaigns, which one job cannot hold" Tests/GameCoreTests/ScheduledTrafficPropertyTests.swift
+expect_plan tests-only DeadlockPropertyTests "another campaign file" Tests/GameCoreTests/DeadlockPropertyTests.swift
+expect_plan full "" "two campaign files" Tests/GameCoreTests/ServiceRepeatingPropertyTests.swift Tests/GameCoreTests/DeadlockPropertyTests.swift
+expect_plan full "" "a campaign file beside GamePresentation" Tests/GameCoreTests/ServiceRepeatingPropertyTests.swift "${pr414[@]}"
 # Every path `relevant` counts runs some tests, and none it does not count does.
 for path in Package.swift Sources/GameCore/World/GameWorld.swift Tests/GameCoreTests/FreightTests.swift \
   GoldenScenarios/line-dispatch.json SaveFixtures/v1-demo-90-minutes.json ReplayFixtures/kernel.json .github/workflows/ci.yml \
   .github/scripts/swift-shards-selftest.sh RailwayGameApp/Resources/RealWorld/taiwan_places.json \
-  Sources/GamePresentation/GameSession.swift Tests/GamePresentationTests/FinanceHistoryTests.swift; do
+  Sources/GamePresentation/GameSession.swift Tests/GamePresentationTests/FinanceHistoryTests.swift \
+  tools/tourism-spots/taiwan_attractions.json; do
   tier="$(cd "$tree" && echo "$path" | "$script" plan 2>/dev/null | sed -n 's/^tier=//p')"
   if [[ "$(relevant "$path")" == true && -n "$tier" && "$tier" != none ]]; then
     echo "ok   pass  plan: $path is tested ($tier)"

@@ -2346,10 +2346,13 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 卡片的擺放從 App 的 `Layout` 抽到 GamePresentation 的 `TutorialCardPlacement`（演算法不變），用實機截圖量出的畫面在 Linux 上測（`TutorialCardPlacementTests`，含「改之前會蓋住」的重現）。它用自己的矩形（`TutorialCardPlacement.Frame`），不用 `CGRect`：GamePresentation 不 import CoreGraphics（決策 45），而 Apple 平台上的 Foundation 不帶 `CGRect` 的幾何運算。
 - 新的目標：`line.draft.pick`、`line.draft.create`（路線面板的兩個按鈕，第 6 步框它們並當成必須留空的控制項）、`panel.details`、`panel.side`（細節卡片與地圖旁的面板，不框，但卡片要避開）。第 6 步的目標改成「路線」按鈕、兩個面板按鈕與地圖（要在地圖上點車站）。
 - **面板和步驟要用的控制項一樣重**（蓋到每平方點的代價 ×1000），蓋到就收合：第一版只把面板當一般控制項，iPhone 的 CI（run 38243536829）上卡片仍為了留地圖而蓋住面板 15 點，正好蓋到「在地圖上選站」。原因是**面板裡的 `NavigationStack` 不讓 preference 傳出來**：面板裡用 `tutorialTarget(_:)` 標的按鈕（包括決策 125 的 `line.staff.start`）教學層從來沒收到過。面板裡的目標改用 `tutorialPanelTarget(_:)`：用 `onGeometryChange` 把自己在畫面上的位置寫進 `GameScreenState.tutorialPanelTargets`，教學層換算成自己的座標、只算面板裡看得到的部分。
+- **細節卡片改成「背景」**（#429 之後，full lane run 38249605095 的 `testLargeTextTutorialNavigation`：iPhone、最大字體，卡片蓋住工具列的「完成」）：#429 把細節卡片也當成重的面板，字體大時卡片沒地方放，就改去蓋工具列。細節卡片裡的控制項都有正常標記（沒有 NavigationStack），所以它改成 `TutorialCardPlacement.backdrops`：每平方點代價 0.01，整張蓋住（約 300 × 270 點）也比蓋任何一個控制項便宜；有空間就避開，沒空間時寧可蓋它也不蓋按鈕，而且蓋到它不會讓卡片收合。地圖旁的面板維持重的 `panels`。
 - 候選位置多了「沒被遮住的地圖的四個角」。
 - 卡片可以收合成一行（站長、第幾步、標題）：玩家按 ⌄ 收合、按膠囊打開；卡片打開時若蓋到這一步要用的控制項，或沒有留下 96 點寬的地圖，就自己收合；這一步完成時自己打開（玩家自己收合的除外），讓「下一步」出現。畫面上的東西改變（面板開關、轉向、要用的按鈕捲進畫面）時重新試一次打開。
 - 手機橫放（compact 高度）時卡片小一號：最寬 320 點、內文 footnote、按鈕 regular。
 - Debug build 的 `-tutorial-step <id>`（`GameLauncher.startTutorial(atStep:)`）：從某一步開始，第 6 步以後先蓋好前面幾步會蓋的軌道與兩座車站；UI 測試 `testTheLineStepLeavesTheLinesPanelUsable` 用它在 iPhone 上確認路線面板的按鈕沒被蓋住、按得到，卡片能收合與打開，加入 PR 的閘門清單。
+
+**之後的修正（2026-10-12，決策 188）**：步驟重做成十九步、五章，一步一個動作、做完自己前進。第 4 點的「步驟自動打開面板（`openUI`）」現在有了：`TutorialPanel` 與路線面板自己開始選站。「完成這一步自己打開卡片」只留給要按「下一步」的步驟（只讀的、按「上一步」回來的）。`-tutorial-step` 從路線那一章（`line.open`）起蓋一段軌道與兩站，`line.create`、`line.staff`、`build.done` 再依序選好兩站、建好路線、配好車。
 
 ### 48. 大地圖：稀疏的地圖與存檔版本 2、相機的開局與縮放（Stage E1）
 
@@ -3923,6 +3926,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **沒有驗證的**：Linux 不能建置 App；教學框是否框得到路線面板裡的按鈕（`Form` 加了 `tutorialClip()`）、現金的框，要看 CI 的 Xcode 建置與實機。
 
+**之後的修正（2026-10-12，決策 188）**：`time.speed`／`changeSpeed` 換成 `build.done`（點「完成」，時間恢復）加 `time.play`（時間在走，通常直接跳過）：暫停不再算「改了速度」。車資的比較從 `line.staff` 那一章開始算。
+
 **參考**：`Ci/` 的 `TUTORIAL_STEPS[7]`「设置发车」框的就是路線資訊面板的上線列車數（`#panel-line-info`、`#line-info-capacity-row`，並替玩家打開第一條線的面板），和這裡指向路線面板的配車按鈕相同；`[10]`「控制模拟」照舊。參考沒有等收入的步驟，第 3 點是本專案自己的。
 
 ### 126. 城市建物畫在一般地圖上
@@ -4209,7 +4214,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 1. **原因（客源）**：車站面板每次重畫都算「每小時進出」（`stationFlow`）與「各站每日往返」（`stationDemandPairs`）。兩者都一對一對問 GameCore：每問一對（`dailyDemand(from:to:)`、`hourlyDemand(from:to:)`），GameCore 就把出發站一整天的分配重算一次，全網路徑模式下那是對每一站的路徑搜尋。N 站時一次重畫是 4N 份分配、約 4N² 次路徑搜尋；遊戲在跑時每個 tick 都重畫，實景地圖上主執行緒被佔滿，細節卡讓位與面板滑入的動畫停在第一格。
 2. **一次算完**：GameCore 新增唯讀的 `dailyDemands(from:)`（出發站對每一站的每日旅次，一次算完，和逐對問的結果相同）與 `hourlyDemand(of:from:to:)`（已知每日旅次時分到 24 小時，和 `hourlyDemand(from:to:)` 相同）。GamePresentation 的 `stationRidership(of:)` 用它們一次算出每小時進出與各站往返：自己一份、其他每站各一份，共 N + 1 份分配。`stationFlow`、`stationDemandPairs` 改用它，結果逐值相同（`StationDemandSessionTests.testTheRidershipPassMatchesThePairs` 在示範地圖上對每一站、全網與直達兩種路徑模式比對舊的逐對算法）。地圖的旅次圖層（`travelDemandMap`）讀的 `stationFlow` 也因此從 2N 份分配降到 N + 1 份。
 3. **背景算、該變才重算**：車站面板在背景（`Task.detached`）算，算好之前那兩節顯示「正在計算客流…」；結果留到它依據的東西變了才重算（`RidershipKey`）：選的車站、遊戲的日子（每週需求、事件與城市給的客源以日為單位變）、車站、需求、路線（停靠、列車、班距、營運時間、服務模式、真實班次；不含每次派車都會變的 `lastDispatch`、`runDays`）、路徑模式與票價。全網路徑讀的服務等級一天之中會變，面板顯示當天第一次算的值，直到隔天或上述任何一項改變。
-4. **手機上畫軌道時細節卡收起**：手機（高度 compact）用路網工具鋪軌、已經選了起點（建好一段後它的終點就是下一段的起點）時，細節卡自己收起，地圖頂端的施工資訊（長度、高度、費用）與軌道旁的 ✕／✓（決策 107）就是卡片會說、會做的事，地圖拿回右邊約四成的寬度。工具列的細節鈕隨時能再打開（玩家的選擇保留到開始或結束畫軌道）；按 ✕ 清掉草稿（或選工具、換模式）卡片就回來。月台、拆除模式、iPad 與教學（卡片一直開著）都不變。只選了起點時地圖上還沒有 ✕，要清除就打開卡片按「清除」，或按「完成」。
+4. **手機上畫軌道時細節卡收起**：手機（高度 compact）用路網工具鋪軌、已經選了起點（建好一段後它的終點就是下一段的起點）時，細節卡自己收起，地圖頂端的施工資訊（長度、高度、費用）與軌道旁的 ✕／✓（決策 107）就是卡片會說、會做的事，地圖拿回右邊約四成的寬度。工具列的細節鈕隨時能再打開（玩家的選擇保留到開始或結束畫軌道）；按 ✕ 清掉草稿（或選工具、換模式）卡片就回來。月台、拆除模式、iPad 與教學（卡片一直開著；決策 188 起教學不再強制打開，見那裡第 8 點）都不變。只選了起點時地圖上還沒有 ✕，要清除就打開卡片按「清除」，或按「完成」。
 5. **UI 測試**：`MapInteractionTests` 的兩個測試（完整 UI 測試，不在 PR 閘門）跟著改：`testNavigationDoesNotChooseConstructionPoints` 在手機上以細節鈕變成「顯示」確認起點已選、用地圖的 ✓（`map.build.confirm`）建造，其他裝置仍用卡片的「清除」與「鋪設軌道」；`testConstructionHUDAppearsDuringTrackPreview` 改用地圖的 ✕（`map.build.cancel`，有預覽時哪種裝置都有）取消。
 
 ### 137. 需求隨距離；地圖邊緣的外地連絡站
@@ -5361,13 +5366,33 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 外部專案：沒有。OpenTTD、Simutrans、A/B Street 沒有台灣高鐵的路徑，也沒有等價的「照真實路徑蓋好再跑」的示範；「nothing usable」，程式是這個專案自己的，取自 `RealWorldDemo` 的鋪軌（`TrackPlan`、`Track`）。
 
 **限制**：
-- 單線、交通管制關掉（上面）。雙線的版本要兩條並排的軌道與車站的對向月台，是下一步。
+- 單線、交通管制關掉（上面）。雙線的版本要兩條並排的軌道與車站的對向月台，是下一步。（2026-10-12 改成雙線，交通管制仍關著，見下面的「之後的修正」。）
 - 平地、地面：沒有真實的高架與隧道，也沒有地形（`mapGround` 沒有用，真實高鐵大半在高架上，坡度規則不會限制它）。
 - 土地一站 8 公里（決策 168）：12 站 566,412 格，存檔 7.2 MB。手機的自動存檔（每 15 分鐘）與復原要看實機。
 - 人次比真實高（上面）；票價是參考的美元（台北到左營 $153）。
 - 高鐵的路徑與 12 站是 `RealRailways` 的；如果檔案裡沒有高鐵或不到 12 站，示範打不開（`HighSpeedDemo.Failure.noHighSpeedRail`），開始畫面說「無法用實景資料蓋出高鐵」。
 
 **測試**：`HighSpeedDemoTests`（12 站與英文名、站離真實座標 500 m 內、軌道長度 352 km 與每條邊離中心線 10 m 內、路線停 12 站且是高鐵路線、停站模式、24 組 12 節的高鐵車組、每個服務的組數等於班距要的組數、鋪完餘額恰好是新遊戲的錢、存檔來回、07:00 開局時 7 組在線上且最前面的過了中點、站的腹地與旅客、`GameLauncher` 在背景建好並進遊戲）；UI 測試 `testTheHighSpeedDemoOpensOnTheMapAndRuns`（完整測試，不在 PR 的閘門裡）。
+
+**之後的修正（2026-10-12，修 bug 輪，派工 session_01WqneoRKVdxbKuAMTid84Pd 指派）：雙線，兩個方向各走自己的軌道。** 存檔版本、決策編號、golden schema 不動；golden、存檔、replay 的預期值都沒改。
+- **問題**：作者在實機上看到示範只有一條軌道，南下與北上的列車互相穿過、不在任何地方待避（上面的「單線，交通管制關掉」）。在玩家眼中這違反鐵道常識。
+- **雙線**（`HighSpeedDemo.Layout`）：下行（南下）就是原本那條沿真實路徑的軌道（`plan`，擬合與邊數照舊）；上行（北上）在它西側 5 m（`trackOffset`，真實高鐵的線間距約 4.5 m，遊戲最少 4 m），真實列車靠左行駛。上行從南港月台南邊、左營月台北邊各一個轉轍器接上下行（`junctions`：月台外 16 m 再 100 m），100 m 的坡道從 0 移到 5 m（`rampLength`）。上行的每個節點是下行同一個節點往旁邊推 5 m、方向相同，邊是同樣的三次曲線（`TrackPlan.init(beside:at:offsets:)`），所以處處和下行並排：兩條邊的中點相距 4 到 5.5 m（測試）。十個中間站各有兩個月台（下行一個、上行一個，位置相同）；南港與左營各一個，在下行過了轉轍器的那一段，列車在那裡折返。鋪軌的錢多了上行（開局多花的錢從 $5,212 萬變 $8,734 萬，扣掉後仍是新遊戲的 $300 萬）。
+- **每段 leg 指定月台**（決策 61 的 `setLineRoutePreferences`，三個服務各自設）：南下的 leg 停該站在下行的月台、北上的停上行的；進南港、左營的 leg 不指定（那裡只有一個月台）。不指定時列車走最短的路，而出了兩端的轉轍器，另一條軌道在彎道內側時會短幾公尺：開發中真的有一列南下車從南港開上了上行軌。來回時間、組數不變（213／194／168 分，8／10／6 組）。
+- **交通管制仍然關著**：打開時（雙線、南港 24 股停車場、左營 4 股折返、各站兩個月台錯開 10 m 讓退回最短路時也走自己的軌道），遊戲的進路預約要一次預約整段 leg，高鐵一段 30 到 180 km，是幾千個 16 m 的 span；授權延伸、喚醒與死結偵測每一步都走過它們。Linux release 量到的：同時在跑 4、7、10 列時，每個遊戲小時要 28、99、191 秒（取樣：`resolveDeadlock` 30%、`extendAuthorities` 27%、`runServices` 22%、`secondsUntilARouteFrees` 17%），大約和列車數的平方成正比，24 組估計每個遊戲小時 15 到 20 分鐘；原本的示範一整天 6 到 10 秒。要打開得先做 GameCore 的效能（另案，報給派工 session）。所以現在：兩個方向各在自己的軌道上，不會再相遇；同方向的列車追上時（快車追上停站中的慢車）仍會重疊，南港的月台夜裡照舊疊著停。
+- **GameCore 的效能修正（結果不變）**：`RailwayNetwork.firstConflict`（`TrackClearance.swift`）每蓋一條邊，就把所有既有邊的幾何重新取樣一次（邊數的平方），雖然它的註解寫「只取樣外框相交的邊」。現在先比外框（`PlanBox.meets`：和 `TrackClearance.isClear` 的第一個 guard 同一個條件、同樣的角點，`planBox(of:)` 的兩端節點與控制點），不相交的直接跳過；這些邊 `isClear` 本來就回 `true`，所以回傳值逐一相同。下行一條的鋪軌從 1.35 秒變成 0.67 秒。上行另外要約 3 秒：一條緊貼另一條的軌道，間距（`firstTooClose`）與妨礙（`addFouling`）的檢查得沿著整條走一遍，各佔一半，這是規則本身要做的事，沒有再改。
+- **量測**（Linux、Swift 6.4、release，`HSR_DEMO_REPORT=1` 的 `testReport`，前後同一台機器）：
+
+| | 修正前（`main` 3f97f18） | 雙線 |
+| --- | --: | --: |
+| 邊數 | 221 | 460（下行 232、上行 228） |
+| 建好示範（`make`，含鋪軌、土地與開局的 6 小時） | 2.90 s | 5.15 s |
+| 第一天／第二天 | 10.70 s／6.07 s | 12.33 s／6.52 s |
+| 第一天人次、車資 | 248,900、$11.52M | 248,916、$11.52M |
+| 存檔寫／讀 | 0.81 s／2.60 s（7,251 kB） | 0.67 s／4.11 s（7,317 kB） |
+
+  建置多了 2.3 秒（開始畫面的「正在蓋高鐵…」照舊）；讀檔多了 1.5 秒（讀檔時所有邊兩兩再檢查一次間距）。debug 的 `HighSpeedDemoTests` 從 150 秒變成約 530 秒（每建一次示範約 60 秒，新的全天測試約 185 秒）。
+- **測試**（`HighSpeedDemoTests`）：下行長度仍是 352 km、邊數少於 300，上行與下行轉轍器之間等長（差 30 m 內）、兩者就是整個路網；兩條軌道並排（`testItsTwoTracksRunSideBySide`）；每個服務的每段 leg 照遊戲實際開的路，南下只用下行、北上只用上行，只在轉轍器外折返（`testEveryLegKeepsToItsWaysTrack`）；開局 07:00 時在跑的都在下行上；從開局跑到隔天 07:30，每 10 分鐘檢查一次，沒有任何一列逆著自己軌道的方向，兩條軌道都有人用，隔天早上又有 7 組以上在跑（`testItsSetsKeepToTheirWaysTracksAllDay`）。交通管制關著，所以沒有「同一段軌道不會有兩列」的測試。
+- **參考庫**：`a91453/railway-reference-private`（`a1faaf9`）的 `Railway/site_archive_clean/rail-3d/physical/network.json` 有 OSM 的實體軌道，高鐵 643 條 way（主線 595、側線 29、渡線 19），就是真實的雙線與兩端的側線。沒有移植：App 只帶中心線（`track_lines.geojson`），要把 4.4 MB 的檔案放進 App、把 way 接成兩條軌道與轉轍器，超出修 bug 的範圍；這裡的雙線是從中心線推出來的，間距取真實的量級。`rail-3d/physical/topology.js` 的最短路對渡線加 4 倍長度的懲罰：遊戲沒有渡線的種類，改用每段 leg 的月台偏好。`rail-structures.js` 的註解（高鐵雙線橋面約 13 m）只是畫面。`Simulator/`、`MapBuilder/`、`Ci/`：沒有雙線或待避可用的程式。外部專案：沒有找（遊戲已有月台偏好，問題在用法，不在演算法）。
 
 ### 173. 子公司事業化：百貨公司、飯店、遊樂園與逐棟損益
 
@@ -5919,6 +5944,13 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **之後的修正**（2026-10-12，決策 187）：`pull_request` 不再在 `labeled` 時觸發（加任何 label 都會取消正在跑的那輪再重來）。要全跑：加上 `full-ci`，再對那輪按 Re-run all jobs；`changes` 執行時用 API 讀 label，所以重跑看得到。前提的「GitHub Free 同時 20 個 job」在作者升級 Pro 後是 40 個（macOS 仍 5 個）。
 
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：兩個分層的漏洞。
+
+1. **測試讀的 `tools/` 檔**：「Swift 測試不讀 `tools/`」不對。`TourismSessionTests` 讀 `tools/tourism-spots/taiwan_attractions.json`，`RealRailwaysTests` 讀 `tools/real-railways/osm_exceptions.json`；只改這兩個檔的 PR 判成 none，Swift 全跳過、gate 綠，`main` 的 push 也跳過（push-base 跳過那個 commit），壞掉要等之後別的 push 才看到。現在 `tools/` 底下的檔，只要有測試檔寫到它的路徑，就照讀它的模組分層（只有 GamePresentation 的測試讀 → presentation，否則 full），`relevant` 也算它；其他 `tools/` 照舊跳過。
+2. **改到的 campaign 擠進同一個 job**：tests-only 只有一個 job（20 分鐘上限）。`ScheduledTrafficPropertyTests.swift` 一個檔宣告六個 campaign（平常分在五個分片，測試共約 30 分鐘），只改它的 PR 一定逾時；一個 campaign 檔加上 GamePresentation 的改動也會和三分之一的 GamePresentation 測試擠同一個 job（`ServiceRepeatingPropertyTests` 一個就 792 秒）。現在 tests-only 選到兩個以上 campaign 類（`classes_of` 列的），或一個 campaign 類又同時跑 GamePresentation 測試時，改成 full，每個 campaign 在自己的分片。fixtures 選到的照舊（golden 的三個 campaign 合計約 370 秒）。
+
+自測加了這幾種情況（`swift-shards-selftest.sh`）。
+
 ### 186. 拆不掉班次中列車前方的軌道
 
 2026-10-12。全程式碼審查（#420）找到的問題，作者把決定交給派工 session（session_017he2Q1QSeaBKJD1PR3XMma），採「拒絕拆除」。號碼依工作登記 #231：決策 186；存檔版本、golden schema 不動，GoldenScenarios、SaveFixtures、ReplayFixtures 都沒有改。
@@ -5977,6 +6009,28 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **參考庫與外部專案**：參考庫沒有 CI。用 patch-id 判斷「同一份改動」是 git 本身的做法（`git cherry`、`git rebase` 用它找已套用的 commit）；cache 是 GitHub 官方的 `actions/cache`，沒有新的依賴。
 
 **沒有驗證的**：Linux 上驗證了 YAML、actionlint（含 shellcheck）、分片自測、key 的計算（同一份改動加文件 commit 時相同，空白改動與上下文改動時不同）與 `only_testing` 的解析；跳過與存 key、`run-name`、gate 在取消時的顯示，要等 GitHub 上真的跑過。
+
+### 188. 教學重做：一步一個動作、做完自己前進
+
+2026-10-12。作者宣布功能凍結（修 bug 輪），但要求優先重做教學：實機上卡片擋住操作、第 6 步卡死（PR #429 已修遮擋），步驟本身也要重做。派工 session（session_01WqneoRKVdxbKuAMTid84Pd）的設計工作流定了規格（`docs/research/TUTORIAL_REDO_SPEC.md`，逐步稽核在 `TUTORIAL_REDO_AUDIT.md`）；這個決策實作它的 P0。號碼依工作登記 #231：決策 188；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+1. **十九步、五章**（`TutorialChapter`：軌道、車站、路線、營運、乘客）：每一步一個動作，標題就是指示（「點起點，再點終點」），內文一行說為什麼（英文最多 90 字、中文 36 字，測試檢查）。同一種的兩次點選（軌道的兩端、路線的兩站）算一個動作，卡片不在兩次點選之間跳。保留 `build.network`、`map.move`、`line.create`、`line.staff` 這幾個 id（UI 測試與 `-tutorial-step` 用）。步驟表見 [UI_INTERFACES](UI_INTERFACES.md#步驟)。
+2. **做完自己前進**：做完的動作步驟 0.8 秒後（`Tutorial.autoAdvanceDelay`；VoiceOver 開著時 1.5 秒）自己到下一步，由教學層的 `.task(id:)` 呼叫 `showNextTutorialStep(from:)`，那一步已經不在畫面上就不動。按「上一步」回到的步驟（`reachedByBack`）等玩家按「下一步」。「下一步」、自己前進與「略過這一步」都會**跳過已經做完的動作步驟**：手快的玩家（例如還在「點起點，再點終點」就按了地圖的 ✓）不會被留在前一步。
+3. **「新的」比較整章的開頭**：要求「蓋了什麼」的條件改成和**這一章最早出現的那一步**的快照比較（`snapshot(forChapterOf:)`），不再是這一步自己的；短暫的條件也算它導致的結果（例如「選好月台位置」在車站蓋好後也算）。快照拿掉速度。
+4. **新的條件**（`TutorialGoal`）：`drawTrack`（選好兩端、預覽可蓋且至少 160 公尺，或已經蓋了那麼長；這一步先蓋的短軌加上預覽一起算）、`buildTrack`（新軌道至少 160 公尺）、`chooseNetworkMode(.platform)`、`pickPlatformSite(n)`（選了平的、會開新站的位置，或已有 n 座新站）、`buildStation(n)`、`startPickingStops`、`pickLineStations`（選了兩站而且有軌道相連）、`createLine`（新路線的列車開得了：`tutorialStaffingPlan` 每 10 分鐘一班有方案，依世界版本記住）、`timeRuns`、`selectStation`。拿掉 `buildSecondStation` 與 `changeSpeed`（只有教學用；站長的 `StationMasterAdvice.buildSecondStation` 是另一個 enum）。`isStepDone(in:tool:)` 搬到 session。
+5. **軌道至少 160 公尺**（`Tutorial.minimumTrackMetres`）：兩座 64 公尺的月台需要 128 公尺；192 公尺的軌道上第一站放在哪裡都還放得下第二站。太短時卡片提示拉長；以前唯一的出路是略過。車站的標題說「靠近一端」「另一端」。
+6. **每一步的準備**（`TutorialSetup`，只在第一次往前出現時做，「上一步」不做，都不改 `message`）：`layTrack`（回到鋪設模式，移動地圖時點的起點保留）、`clearPicks`（清掉終點旗與選的位置）、`clearLeftoverSite`（清掉蓋好第一站後留在它上面的 ✗／✓ 泡泡，作者截圖裡的那個；另一個 session 修好 `addNetworkPlatform` 之後它不做事，兩者相容）、`clearLineDraft`、`clearSelection`。
+7. **提示與「略過這一步」**：`tutorialHint` 說哪裡不對（problem：預覽的問題、會併入既有車站、坡度、圈裡沒人、蓋站失敗的訊息、兩站沒有軌道相連、錢不夠、路線開不了）或接下來做什麼（tip：再點終點、拉長、再點另一站、時間暫停、列車 6 點才開）。problem 立刻出現「略過這一步」並念給 VoiceOver；tip 等 20 秒（等車資 90 秒）。略過只往前、不完成教學（決策 177：只有最後一步的「完成教學」算看完）。卡片原本的「做完這一步才能繼續」只在 regular 高度、沒有提示時顯示。
+8. **面板與細節卡片**：步驟可以要面板（`TutorialPanel`）：路線的兩站、建立路線、開始營運打開路線面板，第一步與「完成」關掉地圖旁的面板（參考的 `openUI`）。路線面板在選站的步驟自己開始選站（`startPickingLineStops(announces: false)`，不出現底部的說明，表單不被擠小），並把「建立路線」「購買…列並開始營運」捲進畫面（`ScrollViewReader`）。細節卡片不再整個教學都開著（決策 136 第 4 點的例外拿掉）：步驟框到卡片裡的控制項（月台模式、客源）時打開，選取工具有選取時打開，其他照工具（手機上地圖的步驟收起，地圖的 ✓ 做卡片按鈕的事）。
+9. **時間**：「完成」（`build.done`，回到選取工具，決策 99 會恢復時間）後接 `time.play`（時間在走），時間已經在走（通常如此）就跳過；以前「改了速度」連暫停也算。教學裡選路網工具不再出現「建造時自動暫停，每一步都能復原」：教學裡不能復原。
+10. **乘客**：`station.select`（用選取工具點一座車站）接 `station.ridership`（框「客源」按鈕，新的 `inspector.ridership`）；以前這一步在路網工具下做不到。新的目標還有地圖的 ✓（`map.build.confirm`）。只讀的步驟擺卡片時不必留地圖。
+11. **UI 測試**：三個閘門測試的名稱不變（`ios-build.yml` 不改），內容照新步驟改；新的 `testCreateLineAndBuyAreInReach` 只在完整 lane 與 iPad 跑。
+
+**沒有做的（P1、P2，之後另開 PR）**：相機框住兩站（`frameStations`、`lookAt(framing:)`、`PlanCamera.framing`）、地圖上新車站的框（`newStations`）、依章保存收合狀態、regular 高度的章節清單。所以 `line.stations` 只框地圖。
+
+**參考**：見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#stage-c5最小教學)。`Ci/` 的 `TUTORIAL_STEPS[n].openUI` 替步驟打開建線畫面或路線資訊面板 → `TutorialPanel` 與路線面板自己開始選站；高鐵導覽的 `data-tt-confirm-prompt`（要先確認才往下的提示）→ `tutorialHint`；city-world 參考的教學任務 `LP`（一連串單一動作的小步驟）→ 一步一個動作、做完自己前進；它的說明卡 `hud-help`（`zs`，短標題加一行內文，矮螢幕 `short` 時更精簡）→ 標題就是指示。高鐵導覽替玩家蓋線（`transportTutorialBuildHsr`）沒有移植（功能凍結）。外部專案沒有搜尋：參考已經夠用。
+
+**沒有驗證的**：Linux 不能建置 App；自己前進的時機、面板的捲動、地圖 ✓ 的框（它在 `.offset` 裡）、手機上 160 公尺的距離（開局每點 0.5 公尺，縮小一級後 1 公尺）都要看 macOS CI 與實機。
 
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 

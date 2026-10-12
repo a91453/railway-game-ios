@@ -416,6 +416,9 @@ relevant_paths() {
       # grids, the railways and their timetables, the licences).
       RailwayGameApp/Resources/*) echo true; return ;;
       .github/workflows/ci.yml | .github/scripts/swift-shards.sh | .github/scripts/swift-shards-selftest.sh) echo true; return ;;
+      # A tool's file a test reads (the tourism catalogue, the railways'
+      # OSM exceptions).
+      tools/*) if grep -rqF -- "$path" Tests 2>/dev/null; then echo true; return; fi ;;
     esac
   done
   echo false
@@ -777,6 +780,17 @@ path_plan() {
       fi ;;
     Sources/* | Tests/*)
       echo full ;;
+    tools/*)
+      # Most of tools/ is only run by hand, but a test may read a tool's
+      # file (TourismSessionTests the tourism catalogue, RealRailwaysTests
+      # the railways' OSM exceptions): those tests' module then runs.
+      if grep -rlF -- "$path" Tests 2>/dev/null | grep -qv '^Tests/GamePresentationTests/'; then
+        echo full
+      elif grep -rqF -- "$path" Tests/GamePresentationTests 2>/dev/null; then
+        echo "presentation GamePresentationTests.*"
+      else
+        echo none
+      fi ;;
     *)
       echo none ;;
   esac
@@ -791,7 +805,7 @@ path_plan() {
 declare -A FIXTURE_PLANS=()
 PRESENTATION_PARTS=3
 pr_plan() {
-  local path line tier rank best=0 tests="" plans
+  local path line tier rank best=0 tests="" edited="" plans
   code_cache
   plans="$WORK/plans.txt"
   while IFS= read -r path; do
@@ -803,6 +817,7 @@ pr_plan() {
     rank="$(tier_rank "$tier")"
     [[ "$rank" -le "$best" ]] || best="$rank"
     [[ "$line" != *" "* ]] || tests+=" ${line#* }"
+    [[ "$tier" != tests-only ]] || edited+=" ${line#* }"
   done
   tier="${TIERS[$best]}"
   local parts=1
@@ -815,6 +830,24 @@ pr_plan() {
     # on a slow runner, after a build of about 5 minutes); PRESENTATION_PARTS
     # jobs share them (selected_part), so a job stays near 10 minutes.
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
+    # An edited campaign file's class can take most of a job's 20 minutes
+    # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of
+    # them, or one beside a part of the GamePresentation tests, would share
+    # a job and reach the limit (ScheduledTrafficPropertyTests.swift
+    # declares six campaigns, about 30 minutes of tests in one job). Those
+    # run every shard, where each campaign has its own place. The fixtures'
+    # readers are measured as they are (the golden scenarios' three
+    # campaigns, about 370 s).
+    local campaigns=0 class
+    for class in $(all_campaign_classes); do
+      [[ " $edited " != *" $class "* ]] || campaigns=$((campaigns + 1))
+    done
+    if [[ "$campaigns" -ge 2 || ( "$campaigns" -ge 1 && "$parts" -gt 1 ) ]]; then
+      echo "  Edited campaign classes ($campaigns) would share a job: every shard runs." >&2
+      tier=full
+      tests=""
+      parts=1
+    fi
   fi
   echo "tier=$tier"
   echo "tests=$tests"

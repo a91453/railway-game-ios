@@ -177,8 +177,12 @@ extension RailwayNetwork {
     /// meet the new edge's are sampled.
     func firstConflict(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, geometry: TrackGeometry) -> TrackEdgeID? {
         let shape = ClearanceShape(from: from, to: to, curve: curve, geometry: geometry)
+        let box = PlanBox(shape)
         for edge in edges {
-            guard let other = clearanceShape(of: edge.id) else { continue }
+            // An edge whose box does not meet the new one's is clear of it
+            // (``TrackClearance/isClear(_:_:)`` asks that first): its
+            // geometry is not worked out.
+            guard let near = planBox(of: edge), near.meets(box), let other = clearanceShape(of: edge.id) else { continue }
             if !TrackClearance.isClear(shape, other) { return edge.id }
         }
         return nil

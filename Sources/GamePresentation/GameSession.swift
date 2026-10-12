@@ -38,6 +38,9 @@ public final class GameSession {
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
+    /// The tutorial's staffing plan of a line, kept for the world it was
+    /// worked out for (see ``tutorialStaffingPlan(_:)``).
+    @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
@@ -673,7 +676,8 @@ public final class GameSession {
         zoneDrag = nil
         message = nil
         if newTool.pausesGame {
-            if pauseForBuilding() {
+            // Not in the tutorial, where Undo is off (decision 188).
+            if pauseForBuilding(), tutorial == nil {
                 message = StatusMessage(
                     kind: .success,
                     text: language.text(
@@ -1447,9 +1451,12 @@ public final class GameSession {
 
     /// Starts adding the stations tapped on the map (``tapMap(at:reach:)``)
     /// to the new line (decision 100). The app sends map taps there while
-    /// the lines panel is open, whichever tool is chosen.
-    public func startPickingLineStops() {
+    /// the lines panel is open, whichever tool is chosen. `announces`:
+    /// whether the status line says how; the tutorial's lines panel starts
+    /// picking by itself, its card saying it (decision 188).
+    public func startPickingLineStops(announces: Bool = true) {
         isPickingLineStops = true
+        guard announces else { return }
         message = StatusMessage(
             kind: .success,
             text: language.text(

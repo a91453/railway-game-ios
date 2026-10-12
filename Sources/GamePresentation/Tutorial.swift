@@ -12,6 +12,13 @@ import GameCore
 // Only UI state: the tutorial is never saved, and GameCore knows nothing
 // of it. Whether a step is done is read from the world and the session
 // (see ``GameSession/isTutorialStepDone``).
+//
+// Decision 188 redid the steps: one action each, in five chapters, moving
+// on by themselves once done (the city-world reference's tutorial mission,
+// `LP` in `Railway/city_world_reference/`, and its short help card), with a
+// hint that says what is wrong (the transport tutorial's
+// `data-tt-confirm-prompt`) and the panel a step needs opened for it (the
+// `Ci/` steps' `openUI`).
 
 /// A control a tutorial step is about: the tutorial outlines it and puts
 /// its card beside the first one (the reference's `target` and `targets`,
@@ -63,6 +70,20 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case detailsCard = "panel.details"
     /// A panel beside the map: the lines, a station or the company's figures.
     case sidePanel = "panel.side"
+    /// The ✓ of the bubble over the map that builds what the network tool
+    /// picked (``GameSession/networkPreview``, a platform's site).
+    case mapConfirm = "map.build.confirm"
+    /// The details card's Ridership button, for a selected station.
+    case ridership = "inspector.ridership"
+
+    /// Whether the control is in the details card, which a step pointing
+    /// at it opens (``TutorialStep/usesDetailsCard``).
+    public var isInDetailsCard: Bool {
+        switch self {
+        case .networkModes, .actionButton, .ridership: true
+        default: false
+        }
+    }
 
     /// The tool picker's button for `tool`. Optional because the grid's
     /// tools had none until Stage F3c removed them; every tool has one now.
@@ -76,41 +97,70 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     }
 }
 
+/// The parts of the tutorial (decision 188), each a few steps of one
+/// thing: the card names the chapter, and a goal that asks for something
+/// new compares the world with what it had when the chapter began
+/// (``Tutorial/snapshot(forChapterOf:)``).
+public enum TutorialChapter: CaseIterable, Hashable, Sendable {
+    case track, stations, line, service, passengers
+
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .track: language.text("Track", "軌道")
+        case .stations: language.text("Stations", "車站")
+        case .line: language.text("Line", "路線")
+        case .service: language.text("Service", "營運")
+        case .passengers: language.text("Passengers", "乘客")
+        }
+    }
+}
+
 /// What a step asks the player to do before Next is available (the
 /// reference's `_tutorialStepDoneAction`). Read from the world and the
 /// session, never recorded: a goal is met while what it asks for is so.
 ///
 /// The goals that ask for something to be built are about what is new
-/// since the step was first shown, so a game that already has track,
-/// stations or lines still has the player do each step.
+/// since the step's chapter began, so a game that already has track,
+/// stations or lines still has the player do each step, and a step done
+/// ahead (a fast player, the map's ✓) is not asked for again.
 public enum TutorialGoal: Hashable, Sendable {
     /// Nothing: reading the step is enough.
     case read
     /// Choose `tool` in the tool picker.
     case chooseTool(ConstructionTool)
-    /// Build a stretch of track on the network: an edge that was not there
-    /// when the step was shown.
+    /// Pick both ends of a stretch of track at least
+    /// ``Tutorial/minimumTrackMetres`` long that GameCore would build, or
+    /// have built that much.
+    case drawTrack
+    /// Build at least ``Tutorial/minimumTrackMetres`` of new track.
     case buildTrack
-    /// Build a station: one that was not there when the step was shown.
-    case buildStation
-    /// Have a second station for a line: build one that was not there
-    /// when the step was shown, unless two were built since the step
-    /// before that asks for a station was shown.
-    case buildSecondStation
-    /// Create a service line: one that was not there when the step was
-    /// shown.
+    /// Choose the network tool's mode `mode`; a station built counts for
+    /// the platform mode.
+    case chooseNetworkMode(NetworkToolMode)
+    /// Pick a level place on the track for a new station's platform, or
+    /// have built that many new stations.
+    case pickPlatformSite(Int)
+    /// Have built that many new stations.
+    case buildStation(Int)
+    /// Start picking a new line's stations on the map (the lines panel
+    /// starts it by itself), or have picked one, or made the line.
+    case startPickingStops
+    /// Pick two stations that track joins, or have made the line.
+    case pickLineStations
+    /// Create a service line whose trains can run: a new one with a
+    /// staffing plan (``GameSession/tutorialStaffingPlan(_:)``).
     case createLine
     /// Start a line's service: assign a train that was not assigned when
-    /// the step was shown to a line that is set to run trains.
+    /// the chapter began to a line that is set to run trains.
     case startService
-    /// Earn a fare (decision 125): a settlement written since the step was
-    /// shown took fares in. A free game, which charges none, has nothing
+    /// Have time running.
+    case timeRuns
+    /// Earn a fare (decision 125): a settlement written since the chapter
+    /// began took fares in. A free game, which charges none, has nothing
     /// to wait for.
     case earnFare
-    /// Change the game's speed, by pausing, resuming or choosing another
-    /// (the reference's `speedOrPause`): it differs from what it was when
-    /// the step was shown.
-    case changeSpeed
+    /// Select a station with the Select tool.
+    case selectStation
     /// Move the map, by pinching, dragging or a zoom button, while the step
     /// is shown (Stage E1). The camera is the map view's, so the view tells
     /// the session (``GameSession/mapDidMove()``); a turned device or a
@@ -118,15 +168,57 @@ public enum TutorialGoal: Hashable, Sendable {
     case moveMap
 }
 
+/// What the session does when a step is first shown, going forward
+/// (decision 188), so the step starts from what it needs. None of them
+/// changes the world or the message on screen (but `clearSelection`).
+enum TutorialSetup: Hashable, Sendable {
+    /// The network tool's Lay mode, the ends picked in another mode
+    /// forgotten (a start tapped while the map was moved is kept).
+    case layTrack
+    /// Forget the ends and the place picked with the network tool.
+    case clearPicks
+    /// Forget the platform's place that is the station just built.
+    case clearLeftoverSite
+    /// Forget the stations picked for a new line.
+    case clearLineDraft
+    /// Let go of the selection.
+    case clearSelection
+}
+
+/// The panel beside the map a step needs, which the app opens or closes
+/// when the step is shown (the `Ci/` steps' `openUI`).
+public enum TutorialPanel: Hashable, Sendable {
+    case lines
+    case closed
+}
+
+/// What the card says under a step that is not done yet: what is wrong
+/// (a problem, which offers to skip the step at once) or what comes next.
+public struct TutorialHint: Hashable, Sendable {
+    public let text: String
+    public let isProblem: Bool
+
+    public init(_ text: String, isProblem: Bool = false) {
+        self.text = text
+        self.isProblem = isProblem
+    }
+}
+
 /// One step of the tutorial: its card's title and text in both languages,
 /// the controls it is about and what it asks the player to do.
 public struct TutorialStep: Hashable, Sendable, Identifiable {
     /// A stable name for the step, never shown.
     public let id: String
+    public let chapter: TutorialChapter
     /// The controls to outline; the card goes beside the first. With none,
     /// the card is in the middle of the screen.
     public let targets: [TutorialTarget]
     public let goal: TutorialGoal
+    /// What the session does when the step is first shown going forward.
+    let setup: [TutorialSetup]
+    /// The panel beside the map the app opens or closes for the step;
+    /// `nil` leaves it as it is.
+    public let panel: TutorialPanel?
     private let englishTitle: String
     private let chineseTitle: String
     private var englishBody: String
@@ -137,15 +229,21 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
 
     init(
         id: String,
+        chapter: TutorialChapter,
         targets: [TutorialTarget],
         goal: TutorialGoal,
+        setup: [TutorialSetup] = [],
+        panel: TutorialPanel? = nil,
         title: (english: String, chinese: String),
         body: (english: String, chinese: String),
         distanceNote: (english: String, chinese: String)? = nil
     ) {
         self.id = id
+        self.chapter = chapter
         self.targets = targets
         self.goal = goal
+        self.setup = setup
+        self.panel = panel
         englishTitle = title.english
         chineseTitle = title.chinese
         englishBody = body.english
@@ -154,7 +252,8 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     }
 
     public static func == (lhs: TutorialStep, rhs: TutorialStep) -> Bool {
-        lhs.id == rhs.id && lhs.targets == rhs.targets && lhs.goal == rhs.goal
+        lhs.id == rhs.id && lhs.chapter == rhs.chapter && lhs.targets == rhs.targets && lhs.goal == rhs.goal
+            && lhs.setup == rhs.setup && lhs.panel == rhs.panel
             && lhs.englishTitle == rhs.englishTitle && lhs.chineseTitle == rhs.chineseTitle
             && lhs.englishBody == rhs.englishBody && lhs.chineseBody == rhs.chineseBody
             && lhs.distanceNote?.english == rhs.distanceNote?.english && lhs.distanceNote?.chinese == rhs.distanceNote?.chinese
@@ -162,6 +261,9 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(chapter)
+        hasher.combine(setup)
+        hasher.combine(panel)
         hasher.combine(englishBody)
         hasher.combine(distanceNote?.english)
     }
@@ -181,6 +283,31 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
         guard let note = distanceNote else { return language.text(englishBody, chineseBody) }
         return language.text(englishBody + " " + note.english, chineseBody + note.chinese)
     }
+
+    /// Whether the step points into the details card, which then opens
+    /// (decision 188: otherwise the map gets the screen).
+    public var usesDetailsCard: Bool {
+        targets.contains(where: \.isInDetailsCard)
+    }
+
+    /// Whether the step picks a new line's stations on the map, which the
+    /// lines panel starts by itself.
+    public var picksLineStops: Bool {
+        goal == .startPickingStops || goal == .pickLineStations
+    }
+
+    /// The lines panel's button the step asks for, which the panel scrolls
+    /// into view.
+    public var revealsInPanel: TutorialTarget? {
+        targets.first { $0 == .createLine || $0 == .staffLine }
+    }
+
+    /// How long the card waits before it offers to skip a step that is not
+    /// done (a problem offers it at once): longer for the first fares,
+    /// which take a while.
+    public var skipOfferSeconds: Int {
+        goal == .earnFare ? 90 : 20
+    }
 }
 
 /// The tutorial being shown: its steps and which one is on screen. Moved
@@ -189,6 +316,9 @@ public struct Tutorial: Hashable, Sendable {
     public let steps: [TutorialStep]
     /// The step on screen, from 0.
     public private(set) var index: Int
+    /// Whether the step on screen was reached by Back: it waits for Next
+    /// rather than moving on by itself.
+    public private(set) var reachedByBack = false
     /// What the world had when each step was first shown, by step, for the
     /// goals that ask for something new. Going back to a step keeps its
     /// first snapshot: a new one would hide what was built for it, and
@@ -197,6 +327,19 @@ public struct Tutorial: Hashable, Sendable {
     /// The steps the player moved the map on (``TutorialGoal/moveMap``).
     /// Kept when going back, as the snapshots are.
     private var movedMapOn: Set<Int> = []
+
+    /// The shortest first stretch of track (decision 188): two platforms of
+    /// 64 m and the gap between two stations fit on 160 m wherever the
+    /// first is placed.
+    public static let minimumTrackMetres: Int64 = 160
+
+    /// ``minimumTrackMetres`` in world units.
+    static var minimumTrackLength: Int64 {
+        minimumTrackMetres * WorldCoordinate.unitsPerMetre
+    }
+
+    /// How long a done step stays on screen before the next is shown.
+    public static let autoAdvanceDelay: Duration = .milliseconds(800)
 
     /// The first of `steps`, shown over `world`.
     ///
@@ -220,19 +363,38 @@ public struct Tutorial: Hashable, Sendable {
         index == 0
     }
 
-    /// Whether Next reads Done and ends the tutorial (the reference's
+    /// Whether Next reads Finish and ends the tutorial (the reference's
     /// `common.done`).
     public var isLastStep: Bool {
         index == steps.count - 1
     }
 
-    /// Shows step `index` over `world`.
-    mutating func show(_ index: Int, over world: GameWorld) {
+    /// Shows step `index` over `world`, by Back or going forward: `true`
+    /// when it is shown for the first time.
+    @discardableResult
+    mutating func show(_ index: Int, over world: GameWorld, byBack: Bool = false) -> Bool {
         precondition(steps.indices.contains(index), "show(_:over:) needs one of the steps")
         self.index = index
-        if whenFirstShown[index] == nil {
-            whenFirstShown[index] = Snapshot(of: world)
-        }
+        reachedByBack = byBack
+        guard whenFirstShown[index] == nil else { return false }
+        whenFirstShown[index] = Snapshot(of: world)
+        return true
+    }
+
+    /// What the goals of step `index` compare the world with: the snapshot
+    /// of the earliest step of its chapter that was shown, else its own.
+    func snapshot(forChapterOf index: Int) -> Snapshot? {
+        snapshot(of: steps[index].chapter) ?? whenFirstShown[index]
+    }
+
+    /// The snapshot of the earliest step of `chapter` that was shown.
+    func snapshot(of chapter: TutorialChapter) -> Snapshot? {
+        steps.indices.first { steps[$0].chapter == chapter && whenFirstShown[$0] != nil }.flatMap { whenFirstShown[$0] }
+    }
+
+    /// Whether the player moved the map while step `index` was shown.
+    func hasMovedMap(on index: Int) -> Bool {
+        movedMapOn.contains(index)
     }
 
     /// Whether the step on screen asks the player to move the map and they
@@ -246,56 +408,12 @@ public struct Tutorial: Hashable, Sendable {
         movedMapOn.insert(index)
     }
 
-    /// Whether the player has done what the step on screen asks, in
-    /// `world` with `tool` active.
-    func isStepDone(in world: GameWorld, tool: ConstructionTool) -> Bool {
-        let before = whenFirstShown[index] ?? Snapshot(of: world)
-        switch step.goal {
-        case .read:
-            return true
-        case .chooseTool(let wanted):
-            return tool == wanted
-        case .buildTrack:
-            return world.network.edges.contains { !before.edges.contains($0.id) }
-        case .buildStation:
-            return world.stations.contains { !before.stations.contains($0.id) }
-        case .buildSecondStation:
-            if world.stations.contains(where: { !before.stations.contains($0.id) }) { return true }
-            // Two built since the first station's step was shown are the
-            // two a line needs.
-            guard let first = steps.indices.last(where: { $0 < index && steps[$0].goal == .buildStation }),
-                  let earlier = whenFirstShown[first] else { return false }
-            return world.stations.filter { !earlier.stations.contains($0.id) }.count >= 2
-        case .createLine:
-            return world.lines.contains { !before.lines.contains($0.id) }
-        case .startService:
-            return world.trains.contains { train in
-                guard !before.assignedTrains.contains(train.id),
-                      let id = world.assignedLine(of: train.id),
-                      let line = world.lines.first(where: { $0.id == id })
-                else { return false }
-                // Target headways set the count when they are set
-                // (see ``ServiceLine/service(at:roundTrip:)`` in GameCore).
-                return line.trainsInService != .none || line.targetHeadways != .none
-                    || line.patterns.contains { $0.trainsInService != .none || $0.targetHeadways != .none }
-            }
-        case .changeSpeed:
-            return world.clock.speed != before.speed
-        case .earnFare:
-            return world.accounts.mode == .free
-                || CompanyAccounts.income(writtenAfter: before.lastEntry, in: world.accounts.entries, of: [.fareRevenue]) > .zero
-        case .moveMap:
-            return movedMapOn.contains(index)
-        }
-    }
-
     /// What a goal that asks for something new compares the world with.
-    private struct Snapshot: Hashable, Sendable {
+    struct Snapshot: Hashable, Sendable {
         let edges: Set<TrackEdgeID>
         let stations: Set<StationID>
         let lines: Set<LineID>
         let assignedTrains: Set<TrainID>
-        let speed: GameSpeed
         /// The newest ledger row, which the fares are counted after.
         let lastEntry: LedgerEntry?
 
@@ -304,7 +422,6 @@ public struct Tutorial: Hashable, Sendable {
             stations = Set(world.stations.map(\.id))
             lines = Set(world.lines.map(\.id))
             assignedTrains = Set(world.trains.map(\.id).filter { world.assignedLine(of: $0) != nil })
-            speed = world.clock.speed
             lastEntry = world.accounts.entries.last
         }
     }
@@ -318,162 +435,240 @@ extension Tutorial {
         world.distanceDemand ? standardSteps : standardSteps.map { $0.withoutDistanceNote() }
     }
 
-    /// The tutorial's steps: the reference's content steps (`Ci/`
-    /// `TUTORIAL_STEPS` 0–1, 4, 7, 10 and 11) rewritten for touch and this
-    /// app's tools, in the order a first line is built and run, until its
-    /// first fares come in (decision 125). Its mouse and keyboard shortcut
-    /// steps (2, 3, 5, 6, 8 and 9) have no touch counterpart.
+    /// The tutorial's steps (decision 188): one action each, in the order a
+    /// first line is built and run until its first fares come in (decision
+    /// 125), in five chapters. Each title is the instruction itself, and a
+    /// body says why in a line. They carry the reference's content steps
+    /// (`Ci/` `TUTORIAL_STEPS` 0–1, 4, 7, 10 and 11), rewritten for touch
+    /// and this app's tools; its mouse and keyboard shortcut steps (2, 3,
+    /// 5, 6, 8 and 9) have no touch counterpart.
     ///
-    /// The first two steps keep the order the app's UI tests rely on (the
-    /// network tool, then a stretch of track). Moving the map follows them
-    /// (Stage E1): the reference has no step for it, only its guide's
-    /// shortcuts (`guide.metro.shortcut.1`, the mouse wheel zooms), and on
-    /// the 16 km map the second station and longer lines need it.
+    /// The ids `build.network`, `map.move`, `line.create` and `line.staff`
+    /// are kept for the app's UI tests and its `-tutorial-step`.
     public static let standardSteps: [TutorialStep] = [
         // Reference step 0, "开始建线": the reference opens its line builder.
         TutorialStep(
-            id: "build.network",
+            id: "build.network", chapter: .track,
             targets: [.networkTool],
             goal: .chooseTool(.network),
-            title: ("Start building a line", "開始建線"),
+            // No setup: the first step changes neither the world nor the clock.
+            panel: .closed,
+            title: ("Tap Network", "點「路網」"),
             body: (
-                "Tap Network. Track, platforms and stations are all built with it.",
-                "點「路網」。軌道、月台和車站都用它來建造。"
+                "Your goal: a line that earns its first fares. Track and stations are built with Network.",
+                "目標：蓋一條賺到第一筆車資的路線。軌道和車站都用「路網」蓋。"
+            )
+        ),
+        // No reference step: the guide's "缩放地图" (the mouse wheel zooms)
+        // and the flight mode's "移动地图" (W/A/S/D pans), for touch. Before
+        // the track, so a drag only moves the map.
+        TutorialStep(
+            id: "map.move", chapter: .track,
+            targets: [.zoomControls],
+            goal: .moveMap,
+            title: ("Zoom out to see the town", "縮小地圖看看城鎮"),
+            body: (
+                "Pinch, or tap the − button. Drag to move the map.",
+                "兩指開合或按「−」縮放，一指拖曳移動地圖。"
             )
         ),
         // Reference steps 0–1, placing stops and nodes so the line bends.
         TutorialStep(
-            id: "build.track",
-            targets: [.map, .actionButton],
-            goal: .buildTrack,
-            title: ("Lay the track", "鋪設軌道"),
+            id: "track.draw", chapter: .track,
+            targets: [.map],
+            goal: .drawTrack,
+            setup: [.layTrack],
+            title: ("Tap the start, then the end", "點起點，再點終點"),
             body: (
-                "In Build mode, tap the map where the track starts, then where it ends, and tap Build Track. "
-                    + "The end becomes the next start, so keep tapping to extend the track or bend it. "
-                    + "Turns over 90° and stretches under 22 m are refused.",
-                "在「鋪設」模式下，點地圖上軌道的起點，再點終點，然後按「鋪設軌道」。"
-                    + "終點會變成下一段的起點，可以接著點下去延伸或轉彎。轉彎超過 90 度或短於 22 公尺會被拒絕。"
+                "Lay it across the town, at least \(minimumTrackMetres) m, so two stations fit.",
+                "讓軌道穿過城鎮，至少 \(minimumTrackMetres) 公尺，才放得下兩座車站。"
             )
         ),
-        // No reference step: the guide's "缩放地图" (the mouse wheel zooms)
-        // and the flight mode's "移动地图" (W/A/S/D pans), for touch.
         TutorialStep(
-            id: "map.move",
-            targets: [.map, .zoomControls],
-            goal: .moveMap,
-            title: ("Move around the map", "移動與縮放地圖"),
+            id: "track.build", chapter: .track,
+            targets: [.mapConfirm],
+            goal: .buildTrack,
+            title: ("Tap ✓ to build the track", "按 ✓ 蓋好軌道"),
             body: (
-                "The map is about 16 km across. Pinch to zoom in or out and drag with one finger to move it, "
-                    + "or use the magnifying glass buttons. Try moving it.",
-                "地圖大約 16 公里見方。用兩指開合放大或縮小，用一指拖曳移動地圖，也可以用放大鏡按鈕。試著移動一下。"
+                "The price is on the button. Time stays paused while you build.",
+                "按鈕上就是價錢。建造時時間會先暫停。"
             )
         ),
         // Reference step 1, placing a station.
         TutorialStep(
-            id: "build.firstStation",
-            targets: [.networkModes, .map, .actionButton],
-            goal: .buildStation,
-            title: ("Build a station", "建造車站"),
+            id: "station.mode", chapter: .stations,
+            targets: [.networkModes],
+            goal: .chooseNetworkMode(.platform),
+            setup: [.clearPicks],
+            title: ("Tap Platform", "點「月台」"),
             body: (
-                "Switch to Platform mode, tap the track where the station goes, and tap Add Platform. "
-                    + "A platform away from every other station opens a new one.",
-                "切到「月台」模式，點選要設車站的軌道，再按「設置月台」。離其他車站有一段距離的月台會開出一座新車站。"
+                "A station is a platform on your track.",
+                "車站就是蓋在軌道上的月台。"
+            )
+        ),
+        TutorialStep(
+            id: "station.first.site", chapter: .stations,
+            targets: [.map],
+            goal: .pickPlatformSite(1),
+            title: ("Tap your track near one end", "點軌道靠近一端的地方"),
+            body: (
+                "Pick a spot in the town. The ring shows who lives within a walk.",
+                "選在城鎮裡。圓圈裡是走路就能到站的居民。"
+            )
+        ),
+        TutorialStep(
+            id: "station.first.build", chapter: .stations,
+            targets: [.mapConfirm],
+            goal: .buildStation(1),
+            title: ("Tap ✓ to build the station", "按 ✓ 蓋車站"),
+            body: (
+                "The more people in the ring, the more riders.",
+                "圓圈裡的人越多，搭車的人越多。"
             )
         ),
         // Reference step 4, "确认建设线路": a line needs at least two stops.
         TutorialStep(
-            id: "build.secondStation",
-            targets: [.networkModes, .map, .actionButton],
-            goal: .buildSecondStation,
-            title: ("A line needs two stations", "路線至少要兩座車站"),
+            id: "station.second.site", chapter: .stations,
+            targets: [.map],
+            goal: .pickPlatformSite(2),
+            setup: [.clearLeftoverSite],
+            title: ("Tap the track near the other end", "點軌道另一端的地方"),
             body: (
-                "Switch back to Build, extend the track at least 32 m past the first station, then add a platform there too.",
-                "切回「鋪設」模式，把軌道延伸到離第一座車站至少 32 公尺以外，再設置一座月台。"
+                "A line needs two stations.",
+                "一條路線至少要兩座車站。"
             ),
             distanceNote: (
-                "Passengers walk short trips: the farther apart the stations, up to 2 km, the more of them ride.",
-                "距離近的人會用走的：兩站離得越遠（到 2 公里為止），搭車的人越多。"
+                "Farther apart, up to 2 km, more people ride.",
+                "兩站離得越遠（最多 2 公里），搭車的人越多。"
             )
         ),
-        // Reference step 4, ending the line's construction.
-        // Its Pick on Map and Create Line are in the lines panel, which the
-        // card must leave free (on a phone the card once covered them, and
-        // the step could not be done), and the stations are picked on the map.
         TutorialStep(
-            id: "line.create",
-            targets: [.linesButton, .pickLineStops, .createLine, .map],
-            goal: .createLine,
-            title: ("Create the line", "建立路線"),
+            id: "station.second.build", chapter: .stations,
+            targets: [.mapConfirm],
+            goal: .buildStation(2),
+            title: ("Tap ✓ for the second station", "按 ✓ 蓋第二座車站"),
             body: (
-                "Tap Lines, then Pick on Map. Tap the first station on the map, then the other one: the stations the track passes "
-                    + "between are found for you. Then tap Create Line. The first stop is where trains start.",
-                "點「路線」，再按「在地圖上選站」。在地圖上點第一座車站，再點另一座：軌道沿途經過的車站會自動找出。然後按「建立路線」。第一站是列車出發的地方。"
+                "Next, a line joins the two.",
+                "接下來用路線把兩站連起來。"
+            )
+        ),
+        // Reference step 4, ending the line's construction. The lines
+        // panel starts picking by itself once open (its `openUI`).
+        TutorialStep(
+            id: "line.open", chapter: .line,
+            targets: [.linesButton],
+            goal: .startPickingStops,
+            setup: [.clearPicks, .clearLineDraft],
+            title: ("Tap Lines", "點「路線」"),
+            body: (
+                "A line tells trains where to stop. It opens on the right.",
+                "路線決定列車停哪些站，會在右邊打開。"
+            )
+        ),
+        TutorialStep(
+            id: "line.stations", chapter: .line,
+            targets: [.map],
+            goal: .pickLineStations,
+            panel: .lines,
+            title: ("Tap one station, then the other", "點一座車站，再點另一座"),
+            body: (
+                "Trains start from the first. Stations the track passes are added for you.",
+                "列車從先點的站出發，沿途的車站會自動加入。"
+            )
+        ),
+        TutorialStep(
+            id: "line.create", chapter: .line,
+            targets: [.createLine],
+            goal: .createLine,
+            panel: .lines,
+            title: ("Tap Create Line", "按「建立路線」"),
+            body: (
+                "Your line appears on the map.",
+                "新路線會畫在地圖上。"
             )
         ),
         // Reference step 7, "开始列车运营": the reference's lines come with
         // their trains. Decision 125: the lines panel's one step (decision
-        // 101) buys, places and assigns them, so the first line runs from
-        // the panel the line was made in.
+        // 101) buys, places and assigns them.
         TutorialStep(
-            id: "line.staff",
-            targets: [.staffLine, .linesButton],
+            id: "line.staff", chapter: .service,
+            targets: [.staffLine],
             goal: .startService,
-            title: ("Start service", "開始營運"),
+            panel: .lines,
+            title: ("Tap Buy … and Start Service", "按「購買…列並開始營運」"),
             body: (
-                "Your new line is selected in Lines. Choose how often a train should come, then tap Buy … and Start Service: "
-                    + "the trains are bought, placed at the first stop and sent out one after another.",
-                "新路線已在「路線」裡選好。選擇多久來一班車，再按「購買…列並開始營運」：列車會自動購買、放到第一站，依班距陸續出發。"
+                "Pick how often a train comes. The trains are bought and set off in turn.",
+                "選多久來一班車，列車會自動買好、依序發車。"
             )
         ),
-        // Reference step 10, "控制模拟". Decision 125: it follows the line's
-        // trains, while building has the game paused (decision 99).
+        // Reference step 10, "控制模拟". Leaving the building tools resumes
+        // the clock the network tool paused (decision 99).
         TutorialStep(
-            id: "time.speed",
-            targets: [.speedControl],
-            goal: .changeSpeed,
-            title: ("Control time", "控制時間"),
+            id: "build.done", chapter: .service,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
             body: (
-                "Time stops while you build. Press play, or pick a speed from the menu: trains and passengers move only while time passes.",
-                "建造時時間會暫停。按繼續，或從選單選倍速：時間流動，列車和乘客才會動。"
+                "Time runs again, and your trains set off.",
+                "時間會繼續走，列車就出發了。"
+            )
+        ),
+        // Passed when Done set time running, as it usually does.
+        TutorialStep(
+            id: "time.play", chapter: .service,
+            targets: [.speedControl],
+            goal: .timeRuns,
+            title: ("Tap \u{25B6}\u{FE0E} to run time", "按 \u{25B6}\u{FE0E} 讓時間走"),
+            body: (
+                "Trains and passengers move only while time runs.",
+                "時間在走，列車和乘客才會動。"
             )
         ),
         // No reference step: decision 125 waits for the line's first fares,
         // which the hour's settlement pays into the cash.
         TutorialStep(
-            id: "first.fare",
+            id: "first.fare", chapter: .service,
             targets: [.cash, .speedControl],
             goal: .earnFare,
-            title: ("Your first fares", "第一筆車資"),
+            title: ("Wait for your first fares", "等第一筆車資進帳"),
             body: (
-                "Let time run. Passengers board at your stations, and at the end of each hour the fares they paid "
-                    + "come into the cash at the top. Wait for your first; a faster speed gets there sooner. "
-                    + "No one coming? Stations need people living or working within 800 m.",
-                "讓時間繼續走。乘客會在你的車站上車，每小時結束時，他們付的車資會進到上方的現金。等第一筆車資進帳吧，倍速調快會更快看到。"
-                    + "一直沒有人搭車？車站 800 公尺內要有人住或工作。"
+                "Trains run from 06:00. Fares come in each hour; a faster speed gets there sooner.",
+                "列車早上 6 點開始跑，車資每小時進帳，調快倍速更快。"
             )
         ),
         // No reference step: its stations carry their ridership in the line
         // builder. Read-only because a managed company's city sets it.
         TutorialStep(
-            id: "station.ridership",
+            id: "station.select", chapter: .passengers,
             targets: [.map],
-            goal: .read,
-            title: ("Passengers", "乘客"),
+            goal: .selectStation,
+            setup: [.clearSelection],
+            title: ("Tap one of your stations", "點你的一座車站"),
             body: (
-                "Select a station on the map, then tap the people icon (Ridership) to see the trips it starts by the hour "
-                    + "and the passengers waiting. The more people live and work near your stations, the more ride.",
-                "在地圖上選一座車站，點人形圖示（客源），可以看它每小時的進出站人次和候車的乘客。車站附近住和工作的人越多，搭車的人就越多。"
+                "See who rides from it.",
+                "看看有誰從這裡搭車。"
+            )
+        ),
+        TutorialStep(
+            id: "station.ridership", chapter: .passengers,
+            targets: [.ridership, .sidePanel],
+            goal: .read,
+            title: ("Tap Ridership to see who rides", "點「客源」看誰在搭車"),
+            body: (
+                "Trips by the hour and who is waiting. More homes and jobs nearby, more riders.",
+                "每小時的進出站人次和候車人數。附近住的、上班的人越多，搭車越多。"
             )
         ),
         // Reference step 11, "导览结束".
         TutorialStep(
-            id: "end",
+            id: "end", chapter: .passengers,
             targets: [.gameMenu],
             goal: .read,
             title: ("That's the tour", "導覽結束"),
             body: (
-                "Open the tutorial again any time from the game menu. Happy building!",
-                "隨時可以從遊戲選單重新開啟教學。祝建造順利！"
+                "Replay it from the game menu. Next, extend your line to the next town.",
+                "隨時可以從遊戲選單重看。下一步，把路線延伸到下一個城鎮吧！"
             )
         ),
     ]
