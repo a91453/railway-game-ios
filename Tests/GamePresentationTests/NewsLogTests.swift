@@ -191,6 +191,29 @@ final class NewsSessionTests: XCTestCase {
         XCTAssertFalse(session.news.items.contains { $0.text(in: .english).hasPrefix("Paused") }, "the pause note is not news twice")
     }
 
+    /// An absurd counter in a damaged file is refused, not trapped on later.
+    func testALogWithAnAbsurdCounterIsRefused() throws {
+        var log = NewsLog()
+        log.add(day: 1, .success, english: "a", chinese: nil)
+        let data = try JSONEncoder().encode(log)
+        let text = String(decoding: data, as: UTF8.self)
+        for nextID in ["9223372036854775807", "0", "-5"] {
+            let damaged = text.replacingOccurrences(of: "\"nextID\":2", with: "\"nextID\":\(nextID)")
+            XCTAssertNotEqual(damaged, text)
+            XCTAssertThrowsError(try JSONDecoder().decode(NewsLog.self, from: Data(damaged.utf8)), nextID)
+        }
+    }
+
+    func testTheSameMessageAgainIsNotAnotherNewsItem() throws {
+        let session = GameSession(world: try Self.world(day: 3), language: .english)
+        for _ in 0..<6 {
+            session.message = StatusMessage(kind: .failure, text: "Not enough cash.")
+        }
+        XCTAssertEqual(session.news.items.filter { $0.category == .failure }.count, 1)
+        session.message = StatusMessage(kind: .failure, text: "Can't build here.")
+        XCTAssertEqual(session.news.items.filter { $0.category == .failure }.count, 2)
+    }
+
     func testTheNewsLogGoesBesideASaveAndIsNoSaveItself() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("news-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }

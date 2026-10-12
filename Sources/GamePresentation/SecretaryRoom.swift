@@ -21,6 +21,9 @@ struct NewsWatch {
     var landUnlocked: Bool
     /// The day each kind of advice was last written, by key.
     var adviceDays: [String: Int64] = [:]
+    /// The day cash last fell below zero and said so: cash that hovers
+    /// about zero crosses it again and again, which is told once in ten days.
+    var debtNewsDay: Int64 = -100
 
     init(world: GameWorld) {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
@@ -63,6 +66,10 @@ extension GameSession {
     /// monthly report it had stays; the watch starts from the world.
     public func restoreNews(_ log: NewsLog) {
         news = log
+        // A baseline of a month not yet come (a file from another game) would
+        // stop the reports until the clock caught up.
+        let month = world.clock.now.seconds / GameTime.secondsPerDay / FinancePeriod.month.days
+        if let reported = news.baseline?.reportedMonth, reported > month { news.baseline = nil }
         if news.baseline == nil { news.baseline = MonthlyBaseline(world: world) }
         newsWatch = NewsWatch(world: world)
     }
@@ -72,6 +79,8 @@ extension GameSession {
         guard let message, !isMessageKeptOutOfNews, !message.text.isEmpty else { return }
         let kind: NewsCategory = message.kind == .success ? .success : .failure
         let isEnglish = language == .english
+        // The same words again and again (a failed tap repeated) are one item.
+        if news.items.prefix(5).contains(where: { $0.text(in: language) == message.text }) { return }
         news.add(
             day: newsToday, kind, english: isEnglish ? message.text : nil, chinese: isEnglish ? nil : message.text
         )
@@ -185,7 +194,8 @@ extension GameSession {
         let inDebt = managed && world.economy.balance < .zero
         if inDebt != newsWatch.inDebt {
             newsWatch.inDebt = inDebt
-            if inDebt {
+            if inDebt, today - newsWatch.debtNewsDay >= 10 {
+                newsWatch.debtNewsDay = today
                 let countdown = world.insolvencyCountdown
                 news.add(day: today, .debt) { language in
                     let base = language.text("Cash is below zero.", "現金低於零。")
@@ -294,7 +304,8 @@ extension GameSession {
         }
         guard monthlyReportMode != .off, let report = MonthlyReport.make(month: month, in: world, baseline: baseline) else { return }
         news.add(day: today, .monthly) { report.newsText(in: $0) }
-        if monthlyReportMode == .openAndPause {
+        // Not over the tutorial's cards, nor a demo being looked at.
+        if monthlyReportMode == .openAndPause, pausesForImportantEvents, tutorial == nil, !news.isDemo {
             monthEndReport = report
             pauseForEvent()
         }
