@@ -59,11 +59,16 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
 
         tap(app.buttons["start.settings"], name: "start.settings")
+        XCTAssertTrue(app.switches["settings.sounds"].waitForExistence(timeout: 10), "The settings did not open")
+        // A phone on its side shows only the first sections, and a List
+        // makes a row only once it scrolls into view: since the Map section
+        // (decision 182) the preview starts below the fold, so scroll to it
+        // before waiting for it. Slowly, so the list does not fling past it.
         let preview = app.buttons["settings.cityView"]
-        XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
-        for _ in 0..<3 where !preview.isHittable {
-            app.swipeUp()
+        for _ in 0..<10 where !(preview.exists && preview.isHittable) {
+            app.swipeUp(velocity: .slow)
         }
+        XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
         preview.tap()
         XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
         let loading = app.descendants(matching: .any)["cityView.loading"]
