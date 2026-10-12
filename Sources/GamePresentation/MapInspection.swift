@@ -35,9 +35,15 @@ extension GameWorld {
     /// network does not have. A train on the edge is reported before one
     /// that has only reserved it, the first by ID.
     public func trackInspection(of id: TrackEdgeID) -> TrackInspection? {
+        trackInspection(of: id, along: LineMap(world: self))
+    }
+
+    /// ``trackInspection(of:)`` with the world's line map `lineMap` already
+    /// built (``GameSession/trackInspection(of:)`` keeps it).
+    func trackInspection(of id: TrackEdgeID, along lineMap: LineMap) -> TrackInspection? {
         guard let edge = network.edge(id) else { return nil }
         var lines: [LineID] = []
-        for stretch in LineMap(world: self).stretches where stretch.edge == id && !lines.contains(stretch.line) {
+        for stretch in lineMap.stretches where stretch.edge == id && !lines.contains(stretch.line) {
             lines.append(stretch.line)
         }
         func touches(_ resources: [TrackResource]) -> Bool {
@@ -62,7 +68,11 @@ extension GameWorld {
     /// "Track · 320 m · Elevated · Lines: Red, Blue · Signal: clear", or
     /// in Chinese "軌道 · 320 公尺 · 高架 · 路線：紅線、藍線 · 號誌：綠燈（無列車）".
     public func trackInspectionText(of id: TrackEdgeID, in language: DisplayLanguage) -> String? {
-        guard let inspection = trackInspection(of: id) else { return nil }
+        trackInspection(of: id).map { trackInspectionText(of: $0, in: language) }
+    }
+
+    /// What ``trackInspectionText(of:in:)`` says of `inspection`.
+    func trackInspectionText(of inspection: TrackInspection, in language: DisplayLanguage) -> String {
         let names = inspection.lines.compactMap { line(id: $0)?.name }
         let lines = names.isEmpty
             ? language.text("No line runs here", "沒有路線經過")
@@ -109,5 +119,29 @@ extension GameWorld {
             parts.append(punctuality.text(in: language))
         }
         return parts.joined(separator: " · ")
+    }
+}
+
+extension GameSession {
+    /// ``GameWorld/trackInspection(of:)`` for the inspector, which reads it
+    /// several times a frame while the game runs: the line map it needs (a
+    /// route search a leg of every line) is built once for each
+    /// ``commandRevision``, as only a command changes the track and the
+    /// lines; the signal is read from the world as it is now.
+    public func trackInspection(of id: TrackEdgeID) -> TrackInspection? {
+        guard world.network.edge(id) != nil else { return nil }
+        let map: LineMap
+        if let kept = inspectionLineMap, kept.revision == commandRevision {
+            map = kept.map
+        } else {
+            map = LineMap(world: world)
+            inspectionLineMap = (commandRevision, map)
+        }
+        return world.trackInspection(of: id, along: map)
+    }
+
+    /// ``GameWorld/trackInspectionText(of:in:)`` from ``trackInspection(of:)``.
+    public func trackInspectionText(of id: TrackEdgeID) -> String? {
+        trackInspection(of: id).map { world.trackInspectionText(of: $0, in: language) }
     }
 }
