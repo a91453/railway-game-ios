@@ -184,6 +184,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
         // Newest first, so IDs fall, and all are below the next.
         guard items.count <= Self.capacity,
               zip(items, items.dropFirst()).allSatisfy({ $0.id > $1.id }),
+              nextID >= 1, nextID < Int.max / 2, items.allSatisfy({ $0.id >= 1 }),
               items.first.map({ $0.id < nextID }) ?? true,
               (0..<nextID).contains(readThrough) || readThrough == 0
         else {
