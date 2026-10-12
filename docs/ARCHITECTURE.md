@@ -5919,6 +5919,13 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **之後的修正**（2026-10-12，決策 187）：`pull_request` 不再在 `labeled` 時觸發（加任何 label 都會取消正在跑的那輪再重來）。要全跑：加上 `full-ci`，再對那輪按 Re-run all jobs；`changes` 執行時用 API 讀 label，所以重跑看得到。前提的「GitHub Free 同時 20 個 job」在作者升級 Pro 後是 40 個（macOS 仍 5 個）。
 
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：兩個分層的漏洞。
+
+1. **測試讀的 `tools/` 檔**：「Swift 測試不讀 `tools/`」不對。`TourismSessionTests` 讀 `tools/tourism-spots/taiwan_attractions.json`，`RealRailwaysTests` 讀 `tools/real-railways/osm_exceptions.json`；只改這兩個檔的 PR 判成 none，Swift 全跳過、gate 綠，`main` 的 push 也跳過（push-base 跳過那個 commit），壞掉要等之後別的 push 才看到。現在 `tools/` 底下的檔，只要有測試檔寫到它的路徑，就照讀它的模組分層（只有 GamePresentation 的測試讀 → presentation，否則 full），`relevant` 也算它；其他 `tools/` 照舊跳過。
+2. **改到的 campaign 擠進同一個 job**：tests-only 只有一個 job（20 分鐘上限）。`ScheduledTrafficPropertyTests.swift` 一個檔宣告六個 campaign（平常分在五個分片，測試共約 30 分鐘），只改它的 PR 一定逾時；一個 campaign 檔加上 GamePresentation 的改動也會和三分之一的 GamePresentation 測試擠同一個 job（`ServiceRepeatingPropertyTests` 一個就 792 秒）。現在 tests-only 選到兩個以上 campaign 類（`classes_of` 列的），或一個 campaign 類又同時跑 GamePresentation 測試時，改成 full，每個 campaign 在自己的分片。fixtures 選到的照舊（golden 的三個 campaign 合計約 370 秒）。
+
+自測加了這幾種情況（`swift-shards-selftest.sh`）。
+
 ### 186. 拆不掉班次中列車前方的軌道
 
 2026-10-12。全程式碼審查（#420）找到的問題，作者把決定交給派工 session（session_017he2Q1QSeaBKJD1PR3XMma），採「拒絕拆除」。號碼依工作登記 #231：決策 186；存檔版本、golden schema 不動，GoldenScenarios、SaveFixtures、ReplayFixtures 都沒有改。
