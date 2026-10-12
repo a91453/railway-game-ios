@@ -3473,6 +3473,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **限制**：只處理本線，不處理停站模式；環線照舊用列車工具；列車用預設編組（1 節）與路線的性能。
 
+**之後的修正**（修 bug 輪，2026-10-12，#447 的實驗 V2 找到）：第 3 項「放不上去的列車留在軌道外、已指派」會讓付了錢的車永遠不跑：派車要列車在軌道上（`readyTrip`），而配屬的車每天照付人事、能源與保養（決策 180 的車輛經濟打開時每列每天約 $984）。現在放不上起點的列車只買不指派（不配屬就不算營運成本，只剩折舊），訊息分兩種原因說：交通控制下月台一次只停一列（請玩家月台空出後放到起點站再指派），或列車太長、起點停不下（減少節數）。訊息不引導玩家把車放到線的另一端：單線兩端各停一列閒置配屬車會讓整條線死結（另一個 session 修）。測試 `LineStaffingTests.testATrainTrafficControlKeepsOffTheTrackIsNotAssigned`、`testATrainTooLongForTheStartIsNotAssigned`；`RollingStockSessionTests.testReformingIntoFewerCarsPaysOnlyForTheCarsKept` 原本用 4 節 L 型車，在測試的短線上放不上起點（之前是軌道外的配屬車，改編組時被放回去），改成 2 節改 1 節，測的仍是「改成較少節數只付留下的節數」。
+
 ### 102. 用手指拖曳鋪軌
 
 2026-10-08，作者要求的 UI/UX 改版（UX-1b）：鋪軌原本要點起點、點終點、再按建造。加上拖曳：從起點或既有軌道開始拖，就畫出下一段軌道，預覽（曲線、費用、問題）跟著手指；放手後預覽留著，按「建造軌道」才建造、扣款。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。
@@ -5486,6 +5488,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **量到的結果**（`BalanceReportTests.testAFirstLineWithSubsidiaries`，第一條線在第 30 天於中間站南邊蓋三棟、補 $3,000 萬現金，360 天）：百貨每天 1,760 到 2,550 位客人、淨賺 $8,100 到 $13,100，回本 560 到 900 天；遊樂園每天 1,270 到 1,860 位、淨賺 $15,700 到 $24,800（造價 $1,101 萬，約 700 天）；飯店在沒有景點與城際站的線旁一位客人也沒有，每天虧 $1,533（它要等觀光景點，決策 174）。第一條線蓋不起百貨（$735 萬）：要先賺到錢，這正是「中後期現金沒地方花」的出口。
 
+
+**之後的修正**（修 bug 輪，2026-10-12，#447 的實驗 V2 找到）：第 1 項的「有服務的車站」原本是「有任何配屬列車的客運路線的每一站」，所以封閉的車站、路線所有列車都過站不停的站，也帶來客人。現在和觀光（決策 174 的之後的修正，#442）、城市的請求一樣用 `isServedStation`：車站收旅客（`allowsService`），且有列車停靠（`ServiceLine.hasTrainsCalling(at:)`，本線的車停每一站，停站模式的車只停它的停靠站）。遊樂園的「沿線其他站」也只算這條線的列車停靠、收旅客的站。`SubsidiaryTests` 原有的值都沒有變；新測試 `testAClosedStationDrawsNoCustomers`、`testAStationEveryTrainPassesDrawsNoCustomers`、`testAnAmusementParkTakesNothingOfAStopAlongTheLineNoTrainServes`。golden、replay 沒有子公司，存檔格式不變。仍然沒有分辨的：玩家自己把軌道外的列車指派給路線時，那條線照樣算有服務（和觀光、請求相同）；一步配車已經不會留下這種車（決策 101 的之後的修正）。
 
 ### 171. 車種的名稱：作者取的臺灣名稱
 

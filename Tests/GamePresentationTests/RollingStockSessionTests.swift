@@ -109,18 +109,21 @@ final class RollingStockSessionTests: XCTestCase {
     /// the ones taken off at once (decision 180, a later fix).
     func testReformingIntoFewerCarsPaysOnlyForTheCarsKept() throws {
         let session = GameSession(world: try lineWorld())
-        session.staffSelectedLine(headway: 30, type: .l, cars: 4)
+        // Two cars: three would be too long to stand at Alpha, and a train
+        // that cannot be placed is not assigned (decision 101, a later fix).
+        session.staffSelectedLine(headway: 30, type: .l, cars: 2)
         let waiting = session.world.trains.map(\.id)
         XCTAssertFalse(waiting.isEmpty)
+        XCTAssertEqual(session.world.line(id: Self.main)?.assignedTrains, waiting)
         let before = session.world.economy.balance
-        session.reformSelectedLine(type: .maglev, cars: 2)
+        session.reformSelectedLine(type: .maglev, cars: 1)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         for id in waiting {
             XCTAssertEqual(session.world.train(id: id)?.type, .maglev)
-            XCTAssertEqual(session.world.train(id: id)?.cars, 2)
+            XCTAssertEqual(session.world.train(id: id)?.cars, 1)
         }
-        // Each: two maglev cars less 70 % of the two L cars kept.
-        let each = RollingStock.price(of: .maglev, cars: 2).amount - RollingStock.price(of: .l, cars: 2).amount * 70 / 100
+        // Each: one maglev car less 70 % of the one L car kept.
+        let each = RollingStock.price(of: .maglev, cars: 1).amount - RollingStock.price(of: .l, cars: 1).amount * 70 / 100
         XCTAssertEqual(before - session.world.economy.balance, Money(each * Int64(waiting.count)))
     }
 

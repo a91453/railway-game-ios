@@ -83,6 +83,49 @@ final class LineStaffingTests: XCTestCase {
         XCTAssertEqual(session.world, start)
     }
 
+    /// Under traffic control only one train takes the berth the line's
+    /// trips start from. A train that cannot be placed would never be sent
+    /// out (a trip starts from the track), so it is not assigned: it would
+    /// otherwise pay its crew, energy and upkeep every day for nothing.
+    func testATrainTrafficControlKeepsOffTheTrackIsNotAssigned() throws {
+        var start = try lineWorld(balance: 100_000_000)
+        try start.setTrafficControl(true)
+        start.setRollingStockEconomics(true)
+        let plan = try XCTUnwrap(start.lineStaffingPlan(Self.main, headway: 5))
+        XCTAssertGreaterThan(plan.trains, 1, "the test needs several trains")
+        let session = GameSession(world: start)
+
+        session.staffSelectedLine(headway: 5)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let world = session.world
+        XCTAssertEqual(world.trains.count, plan.trains, "every train is bought")
+        let placed = world.trains.filter { $0.position != nil }.map(\.id)
+        XCTAssertEqual(placed.count, 1, "one train takes the berth")
+        let line = try XCTUnwrap(world.line(id: Self.main))
+        XCTAssertEqual(line.assignedTrains, placed, "only the train on the track is assigned")
+        let text = try XCTUnwrap(session.message?.text)
+        XCTAssertTrue(text.contains("1 train"), text)
+        XCTAssertTrue(text.contains("\(plan.trains - 1) more"), text)
+        XCTAssertFalse(text.contains("other end"), text)
+        XCTAssertEqual(session.undoCount, 1, "one edit")
+    }
+
+    /// A train too long to stand where the line's trips start is not
+    /// assigned either, and the message says why.
+    func testATrainTooLongForTheStartIsNotAssigned() throws {
+        var start = try lineWorld(balance: 1_000_000_000)
+        start.setRollingStockEconomics(true)
+        let session = GameSession(world: start)
+        session.staffSelectedLine(headway: 30, type: .maglev, cars: 4)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertFalse(session.world.trains.isEmpty)
+        XCTAssertTrue(session.world.trains.allSatisfy { $0.position == nil })
+        XCTAssertEqual(session.world.line(id: Self.main)?.assignedTrains, [])
+        let text = try XCTUnwrap(session.message?.text)
+        XCTAssertTrue(text.contains("too long"), text)
+        XCTAssertFalse(text.contains("traffic control"), text)
+    }
+
     func testStaffingIsRefusedWholeWhenTheMoneyDoesNotReach() throws {
         let rich = try lineWorld()
         let plan = try XCTUnwrap(rich.lineStaffingPlan(Self.main, headway: 3))

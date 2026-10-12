@@ -78,10 +78,12 @@ extension GameSession {
     /// level to `headway`. The line sends them out one `headway` apart.
     ///
     /// Without traffic control the trains wait one behind another on that
-    /// berth (placement does not mind other trains). Under traffic control
-    /// a train that cannot take the berth now stays off the track,
-    /// assigned, and the message says so. Refused as a whole when the
-    /// money does not reach.
+    /// berth (placement does not mind other trains). A train that cannot be
+    /// placed there (under traffic control, the berth is taken; or it is too
+    /// long to stand there) stays off the track and is not assigned: a trip
+    /// starts from the track, so it would never be sent out and still pay
+    /// its running costs (decision 101, a later fix). The message says how
+    /// many and why. Refused as a whole when the money does not reach.
     ///
     /// The trains are of `type` with `cars` cars each when the player chose
     /// them (decision 180); without a choice a high-speed line gets
@@ -98,7 +100,9 @@ extension GameSession {
         }
         perform { world throws(GameError) in
             var draft = world
-            var waiting = 0
+            // Trains left off the track: the berth held under traffic
+            // control, or too long to stand there.
+            var held = 0, unfit = 0
             // Decision 168: a high-speed line is run with high-speed sets,
             // where the game offers them (not in an era with types of its own).
             for _ in 0..<plan.trains {
@@ -115,7 +119,8 @@ extension GameSession {
                     try Self.placeAtStart(train.id, of: journey, in: &placed)
                     draft = placed
                 } catch {
-                    waiting += 1
+                    if case .trackReserved = error { held += 1 } else { unfit += 1 }
+                    continue
                 }
                 try draft.assignTrain(train.id, to: line.id, pattern: nil)
             }
@@ -124,16 +129,38 @@ extension GameSession {
             )
             world = draft
             let first = world.station(id: line.stops[0])?.name ?? line.name
-            var text = language.text(
-                "\(line.name) now runs \(plan.trains) \(plan.trains == 1 ? "train" : "trains"), "
-                    + "\(headwayText(minutes: plan.actualHeadway, in: language).lowercased()), from \(first), for \(plan.cost.moneyText).",
-                "\(line.name) 現在有 \(plan.trains) 列車，\(headwayText(minutes: plan.actualHeadway, in: language))，從\(first)出發，花費 \(plan.cost.moneyText)。"
-            )
-            if waiting > 0 {
-                text += language.text(
-                    " \(waiting) wait off the track: traffic control holds the platform. Place them there once it is free.",
-                    "有 \(waiting) 列因交通控制佔用月台而尚未放上軌道，月台空出後請把它們放到起點站。"
+            let running = plan.trains - held - unfit
+            var text: String
+            if running == plan.trains {
+                text = language.text(
+                    "\(line.name) now runs \(plan.trains) \(plan.trains == 1 ? "train" : "trains"), "
+                        + "\(headwayText(minutes: plan.actualHeadway, in: language).lowercased()), from \(first), for \(plan.cost.moneyText).",
+                    "\(line.name) 現在有 \(plan.trains) 列車，\(headwayText(minutes: plan.actualHeadway, in: language))，從\(first)出發，花費 \(plan.cost.moneyText)。"
                 )
+            } else {
+                // Decision 101, a later fix: the trains left off the track
+                // are bought but not assigned, so they cost nothing to run.
+                text = language.text(
+                    "Bought \(plan.trains) \(plan.trains == 1 ? "train" : "trains") for \(plan.cost.moneyText); "
+                        + "\(line.name) now runs \(running) \(running == 1 ? "train" : "trains") from \(first).",
+                    "買了 \(plan.trains) 列車，花費 \(plan.cost.moneyText)；\(line.name) 現在有 \(running) 列車從\(first)出發。"
+                )
+                if held > 0 {
+                    text += language.text(
+                        " \(held) more \(held == 1 ? "stays" : "stay") off the track, not assigned to the line: "
+                            + "traffic control lets only one train wait at \(first)'s platform. "
+                            + "Once it is free, place \(held == 1 ? "it" : "them") at \(first) and assign \(held == 1 ? "it" : "them") to \(line.name).",
+                        "另外 \(held) 列沒有放上軌道，也沒有配屬給路線：交通控制下\(first)的月台一次只能停一列。"
+                            + "月台空出後，請把它們放到\(first)，再配屬給\(line.name)。"
+                    )
+                }
+                if unfit > 0 {
+                    text += language.text(
+                        " \(unfit) more \(unfit == 1 ? "stays" : "stay") off the track, not assigned to the line: "
+                            + "\(unfit == 1 ? "it is" : "they are") too long to stand at \(first). Fewer cars would fit.",
+                        "另外 \(unfit) 列沒有放上軌道，也沒有配屬給路線：列車太長，\(first)停不下。減少節數就停得下。"
+                    )
+                }
             }
             if let assigned = world.line(id: line.id), world.serviceLevel(of: line.id, at: world.clock.now) == nil,
                case .hours(let open, _) = assigned.window {

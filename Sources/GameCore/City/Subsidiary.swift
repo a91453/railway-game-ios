@@ -150,13 +150,11 @@ public struct SubsidiaryDay: Hashable, Sendable {
 extension GameWorld {
     // MARK: - Queries
 
-    /// Stations a train calls at: on a passenger line with a train.
+    /// Stations a passenger train calls at that take passengers (decision
+    /// 173, a later fix: not a closed one, nor one every train of its line
+    /// passes, as ``isServedStation(_:)``).
     private func servedStationIDs() -> Set<StationID> {
-        var served: Set<StationID> = []
-        for line in lines where !line.isFreight && !line.assignedTrains.isEmpty {
-            served.formUnion(line.stops)
-        }
-        return served
+        Set(stations.lazy.map(\.id).filter(isServedStation))
     }
 
     /// The customers `building` would have on day `day`, shared with the
@@ -213,8 +211,10 @@ extension GameWorld {
             // The other stations on the lines that call at the stations in reach.
             var inReach: Set<StationID> = [], along: Set<StationID> = []
             for station in stations where served.contains(station.id) && weight(of: station) > 0 { inReach.insert(station.id) }
-            for line in lines where !line.isFreight && !line.assignedTrains.isEmpty && line.stops.contains(where: inReach.contains) {
-                along.formUnion(line.stops)
+            for line in lines where !line.isFreight {
+                // The stops its trains call at that take passengers.
+                let calls = line.stops.filter { served.contains($0) && line.hasTrainsCalling(at: $0) }
+                if calls.contains(where: inReach.contains) { along.formUnion(calls) }
             }
             for id in along.sorted() where !inReach.contains(id) {
                 if let station = station(id: id), let (_, t) = trips(of: station) {
