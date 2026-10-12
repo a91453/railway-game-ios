@@ -267,12 +267,14 @@ private final class TutorialJourney {
     /// Checks that `element`, what the step asks the player to tap, is in
     /// reach and that the card, open or folded, leaves it free. A card that
     /// is still moving to its place, or folding itself, has a few seconds.
-    private func check(_ element: XCUIElement, _ name: String) {
+    private func check(_ element: XCUIElement, _ name: String, onCard: Bool = false) {
         XCTAssertTrue(element.waitForExistence(timeout: 10), failure("\(name) is not on the screen"))
         let deadline = Date().addingTimeInterval(10)
         var covering: String?
         repeat {
-            covering = element.exists ? coveringCard(element.frame) : nil
+            // The card's own buttons are on it: only whether they can be
+            // tapped counts.
+            covering = element.exists && !onCard ? coveringCard(element.frame) : nil
             if element.exists, element.isHittable, covering == nil { return }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
@@ -337,7 +339,7 @@ private final class TutorialJourney {
     private func tapNext(finishing: Bool) {
         if folded.exists, !card.exists { folded.tap() }
         let next = app.buttons["tutorial.next"]
-        check(next, finishing ? "Finish" : "Next")
+        check(next, finishing ? "Finish" : "Next", onCard: true)
         let deadline = Date().addingTimeInterval(10)
         while !next.isEnabled, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.25)
