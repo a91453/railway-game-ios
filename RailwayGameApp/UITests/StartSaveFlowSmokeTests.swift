@@ -266,7 +266,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertEqual(visibleRows(), opened, "The open train menu changed by itself while the clock ran")
         // Choose a row in the middle of those it shows, which is not the
         // selected train (the lowest, at the menu's faded edge, took no tap
-        // in run 38289773400, clock or not).
+        // in run 38289773400).
         let touchable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
         let row = touchable[touchable.count / 2]
         let name = row.label
