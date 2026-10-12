@@ -99,7 +99,7 @@ final class TutorialSessionTests: XCTestCase {
             session.addNetworkPlatform()
         case 5:
             // The line through both stations.
-            Self.expect(session, step: 5, goal: .createLine, targets: [.linesButton])
+            Self.expect(session, step: 5, goal: .createLine, targets: [.linesButton, .pickLineStops, .createLine, .map])
             let (first, second) = Self.newStations(session)
             session.selectStation(first)
             session.addSelectedStationToLineDraft()
@@ -359,6 +359,38 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
+    /// Debug builds' `-tutorial-step`, for the UI test of the line step's
+    /// screen on a phone (2026-10-12): the tutorial's game at that step,
+    /// with the track and the two stations the steps before it build,
+    /// waiting for a line between them; an unknown step starts at the first.
+    func testTheTutorialStartsAtALaterStepOverWhatTheStepsBeforeBuild() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try await MainActor.run {
+            let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+            launcher.startTutorial(atStep: "line.create")
+            let session = try XCTUnwrap(launcher.session)
+            XCTAssertEqual(session.tutorial?.step.id, "line.create")
+            XCTAssertEqual(session.tutorial?.isFirstStep, false)
+            XCTAssertEqual(session.world.stations.count, 2)
+            XCTAssertEqual(session.tool, .network)
+            XCTAssertFalse(session.isTutorialStepDone, "the line is still to make")
+            let (first, second) = Self.newStations(session)
+            session.selectStation(first)
+            session.addSelectedStationToLineDraft()
+            session.selectStation(second)
+            session.addSelectedStationToLineDraft()
+            session.createLineFromDraft()
+            XCTAssertTrue(session.isTutorialStepDone)
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "line.staff")
+
+            launcher.startTutorial(atStep: "no.such.step")
+            XCTAssertEqual(launcher.session?.tutorial?.index, 0)
+            XCTAssertEqual(launcher.session?.world.stations.isEmpty, true)
+        }
+    }
+
     /// Every target has its own stable name, and the tool picker's buttons
     /// are named as their accessibility identifiers (`tool.<tool>`).
     func testEveryTargetHasItsOwnStableName() {
@@ -366,7 +398,8 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(names, [
             "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "line.staff.start", "network.modes",
-            "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu",
+            "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu", "line.draft.pick",
+            "line.draft.create", "panel.details", "panel.side",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")

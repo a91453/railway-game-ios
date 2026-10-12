@@ -2342,6 +2342,16 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **4. 沒有的**（留給之後）：~~縮放與平移的步驟（E1）~~（決策 48 已加入）、實景模式的步驟（E2）、參考的「看過就不再自動開啟」（`metrobuilder_tutorial_done`）、步驟自動打開面板（`openUI`）、sheet 裡的框。
 
+**之後的修正（2026-10-12，作者實機回報：手機橫放第 6 步卡住）**：iPhone 橫放（874 × 402 點）時，「建立路線」這一步打開的路線面板在右側（決策 106 的「地圖旁的面板」），教學卡片只避開有標記的控制項，不知道面板在那裡，就蓋在面板上：「在地圖上選站」「建立路線」按不到，「下一步」永遠不會亮，只能略過。改法：
+- 卡片的擺放從 App 的 `Layout` 抽到 GamePresentation 的 `TutorialCardPlacement`（演算法不變），用實機截圖量出的畫面在 Linux 上測（`TutorialCardPlacementTests`，含「改之前會蓋住」的重現）。它用自己的矩形（`TutorialCardPlacement.Frame`），不用 `CGRect`：GamePresentation 不 import CoreGraphics（決策 45），而 Apple 平台上的 Foundation 不帶 `CGRect` 的幾何運算。
+- 新的目標：`line.draft.pick`、`line.draft.create`（路線面板的兩個按鈕，第 6 步框它們並當成必須留空的控制項）、`panel.details`、`panel.side`（細節卡片與地圖旁的面板，不框，但卡片要避開）。第 6 步的目標改成「路線」按鈕、兩個面板按鈕與地圖（要在地圖上點車站）。
+- **面板和步驟要用的控制項一樣重**（蓋到每平方點的代價 ×1000），蓋到就收合：第一版只把面板當一般控制項，iPhone 的 CI（run 38243536829）上卡片仍為了留地圖而蓋住面板 15 點，正好蓋到「在地圖上選站」。原因是**面板裡的 `NavigationStack` 不讓 preference 傳出來**：面板裡用 `tutorialTarget(_:)` 標的按鈕（包括決策 125 的 `line.staff.start`）教學層從來沒收到過。面板裡的目標改用 `tutorialPanelTarget(_:)`：用 `onGeometryChange` 把自己在畫面上的位置寫進 `GameScreenState.tutorialPanelTargets`，教學層換算成自己的座標、只算面板裡看得到的部分。
+- **細節卡片改成「背景」**（#429 之後，full lane run 38249605095 的 `testLargeTextTutorialNavigation`：iPhone、最大字體，卡片蓋住工具列的「完成」）：#429 把細節卡片也當成重的面板，字體大時卡片沒地方放，就改去蓋工具列。細節卡片裡的控制項都有正常標記（沒有 NavigationStack），所以它改成 `TutorialCardPlacement.backdrops`：每平方點代價 0.01，整張蓋住（約 300 × 270 點）也比蓋任何一個控制項便宜；有空間就避開，沒空間時寧可蓋它也不蓋按鈕，而且蓋到它不會讓卡片收合。地圖旁的面板維持重的 `panels`。
+- 候選位置多了「沒被遮住的地圖的四個角」。
+- 卡片可以收合成一行（站長、第幾步、標題）：玩家按 ⌄ 收合、按膠囊打開；卡片打開時若蓋到這一步要用的控制項，或沒有留下 96 點寬的地圖，就自己收合；這一步完成時自己打開（玩家自己收合的除外），讓「下一步」出現。畫面上的東西改變（面板開關、轉向、要用的按鈕捲進畫面）時重新試一次打開。
+- 手機橫放（compact 高度）時卡片小一號：最寬 320 點、內文 footnote、按鈕 regular。
+- Debug build 的 `-tutorial-step <id>`（`GameLauncher.startTutorial(atStep:)`）：從某一步開始，第 6 步以後先蓋好前面幾步會蓋的軌道與兩座車站；UI 測試 `testTheLineStepLeavesTheLinesPanelUsable` 用它在 iPhone 上確認路線面板的按鈕沒被蓋住、按得到，卡片能收合與打開，加入 PR 的閘門清單。
+
 ### 48. 大地圖：稀疏的地圖與存檔版本 2、相機的開局與縮放（Stage E1）
 
 2026-10-03。新遊戲的地圖從 32 × 24 格放大到 1024 × 1024 格（`GridMap.maximumSideLength`，每格 16 公尺，約 16 公里見方），要能蓋幾公里長的線、看得出 W2c 的加減速。大地圖的繪製（只畫畫面內、依縮放分級、雙指縮放與平移）由 CX-4 照第 0 步的相機介面做好（PR #69–#71）；E1 剩下 GameCore 的存檔、新遊戲與示範地圖、相機的開局與縮放步長、教學的一步。
@@ -3576,6 +3586,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 3. **顯示人口分布**：月台模式的選項多一顆「顯示人口分布」，把地圖的人口與交通圖層切到人口（`mapPopTravelMode` 偏好，和圖層選單是同一個）；圖層的圖例可以關掉它。
 
 **參考**：參考庫沒有可以移植的選址提示（`Ci/` 的車站服務範圍是建好之後畫的 800 m 圈，決策 84 的 `showsCatchmentRings`）。作者的 SimCity BuildIt 截圖在擺放中的建築上顯示它帶來的效果（「+0 👥」），TheoTown 擺放時把地面染成好或不好；只看做法。程式是本專案自己寫的。
+
+**之後的修正**（2026-10-12，修 bug 輪，作者實機截圖：教學第 5→6 步）：月台蓋好後 `networkEdgePoint` 還留著，地圖上的「800 公尺內…」膠囊與 ✗／✓ 留在原地（切到路線面板也還在），再按 ✓ 會被 GameCore 以「月台重疊」拒絕，看起來像壞掉。`addNetworkPlatform` 成功後清掉選的位置（和拆軌道成功後一樣），膠囊與涵蓋圈跟著消失；成功訊息保留，`platformStationID` 不動。要再蓋月台就再點一次軌道。失敗時選取不變，玩家可以改了再按。
 
 ### 109. 地圖上的狀態泡泡：擁擠、滿站、沒有列車的路線
 
@@ -5079,6 +5091,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑模擬器；截圖要看 workflow 的產物。
 
+**之後的修正**（2026-10-12，決策 187）：`website-screenshots.yml` 不再在 PR 上自動執行，只留手動（Actions 頁面選要拍的分支）。2026-10-12 有 4 個 PR run 用了 76 分鐘 macOS（2 個失敗、1 個取消），每次佔 5 台 macOS 之一 13–24 分鐘；它不測任何東西，也不擋合併，所以只在需要截圖時跑。
+
 ### 166. 官網的「沿線生長」時間軸由遊戲真的跑出來
 
 2026-10-11，作者問官網怎麼讓玩家有提前玩到的感覺，選了「時間軸」：官網上一段可以拖的地圖，看城市沿著鐵路一天天長大。號碼依工作登記 #231：決策 166；存檔版本、golden schema 不動。GameCore 與 App 都不動，存檔、golden、replay 都不變。
@@ -5924,6 +5938,8 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **參考庫與外部專案**：參考庫沒有 CI。依變更選測試是常見做法（Bazel、Nx 的 affected、`pytest-testmon`），沒有取用程式；判斷與檢查是本專案自己的。
 
+**之後的修正**（2026-10-12，決策 187）：`pull_request` 不再在 `labeled` 時觸發（加任何 label 都會取消正在跑的那輪再重來）。要全跑：加上 `full-ci`，再對那輪按 Re-run all jobs；`changes` 執行時用 API 讀 label，所以重跑看得到。前提的「GitHub Free 同時 20 個 job」在作者升級 Pro 後是 40 個（macOS 仍 5 個）。
+
 ### 186. 拆不掉班次中列車前方的軌道
 
 2026-10-12。全程式碼審查（#420）找到的問題，作者把決定交給派工 session（session_017he2Q1QSeaBKJD1PR3XMma），採「拒絕拆除」。號碼依工作登記 #231：決策 186；存檔版本、golden schema 不動，GoldenScenarios、SaveFixtures、ReplayFixtures 都沒有改。
@@ -5950,6 +5966,38 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **刻意改掉的測試**：`TrainServiceTests.testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted` 原本斷言拆除成功、列車停在 c 等待並丟掉 run、蓋回軌道後仍不改路。它改成 `testTrackAheadOfATravellingTrainCannotBeRemoved`：拆除被拒、世界不變；列車到站後可以拆。「班次不改路徑」仍然成立，寫在註解裡。
 
 **留待以後**：讓班次在前方軌道被拆時重新規劃到下一站的路徑（B），需要動 `LineJourney` 的快取與 run 的計時，這次不做。
+
+### 187. CI 的流程規則與不降低覆蓋的省 runner 做法
+
+2026-10-12。作者升級 GitHub Pro 後 runner 仍然排隊，問怎麼改善流程；派工 session（session_01WqneoRKVdxbKuAMTid84Pd，作者授權指派與合併）依調查報告 `docs/research/CI_INCIDENT_2026-10-12.md` 第 4A 節指派。號碼依工作登記 #231：決策 187；存檔版本、golden schema 不動。GameCore、App、測試都不動，存檔、golden、replay 都不變。
+
+**原因**（報告第 1、3 節）：帳號同時最多 40 個 job（macOS 5 個），完整的 Swift CI 一輪 18 個；台灣 08:29–11:37 一直滿在 40，Linux 最久等 82.7 分鐘。GitHub 沒有事故。重跑主要來自把 `main` 合進 PR（PR 的 Linux 時間 39%、macOS 41%，約三分之二沒改到 PR 自己的內容）、被取消的 run（約 22% 的 Linux 時間）與手動取消 `main` 的 push run（10 個沒有任何測試失敗的紅 X）。
+
+**規則**（CLAUDE.md 的 Workflow、`ci.yml` 的 `concurrency:` 註解）：
+- 不手動、也不從 session 取消 `main` 的 `ci.yml` push run；要騰位子只取消 PR 的 run。
+- 只有衝突或需要 `main` 上的東西時，才把 `main` 合進 PR；一次一個，準備合併前才合，不一次合進所有 PR。改好才 push。
+- 同時在跑 CI 的 GameCore PR 最多 2 個。
+- 合併一批 3–5 個全綠的 PR，等 `main` 的 `ci.yml` 綠了再下一批；合併前也確認 `iOS App Build` 是綠的（或因同一份改動已通過而跳過），因為必要檢查只有 `Swift CI (gate)`。
+- 發 TestFlight 前，確認那個 commit 在 `main` 上的 `ci.yml` 全量與 full lane 都綠。
+
+**Workflow 的改動**（每項放棄的覆蓋都是「無」，除非另外寫）：
+1. **iOS 同一份改動已通過就不重跑**（`ios-build.yml`）：`changes` job 對同 repo 的 PR 算 key：`git diff --binary --no-renames HEAD^1 HEAD`（PR 合進 base 的那個 commit 對 base）排除 workflow 自己的 `paths-ignore`，接 `git patch-id --verbatim`，加上 iPad 要不要跑。`actions/cache/restore` 精確比對到就跳過 `build` 與 `ipad-tutorial`；兩者都通過（iPad 通過或不需要）時，新的 Linux job `remember` 用 `actions/cache/save` 存下 key（內容是通過的那輪的網址，下一輪寫進摘要）。
+   - patch-id 不含行號與 blob 雜湊：`main` 在別處前進，key 不變；`main` 改到 PR 改動的上下文、解衝突動到 App 路徑、PR 再推任何 App 改動，key 都會變。`--binary` 讓圖片等二進位檔算進去，`--verbatim` 保留空白（YAML、Python 依賴縮排）。
+   - 安全：fork 的 PR 不算 key，永遠全跑。PR 存的 cache 只在它自己的 `refs/pull/N/merge` 範圍，別的 PR 讀不到也寫不進；`main` 範圍的 cache 只有有寫入權限的人能產生。
+   - 失敗時偏向重跑：key 算不出來（git 錯誤、App 路徑沒有差異）或讀 cache 失敗就照跑；`changes` 失敗時 `build` 照跑。要強制重跑：刪掉那筆 cache，或把 key 的 `v1` 改成 `v2`。
+   - 放棄的覆蓋：乾淨地合進新的 `main`、沒動到 App 路徑的 PR，不會在 macOS 上對新的 `main` 再測一次（和 base 前進但 PR 沒 push 一樣）；`main` 的 full lane 會接住。`ios-build` 不是必要檢查。代價：`build` 要等 `changes`（Linux，十幾秒；40 格全滿時要等一個 Linux 位子）。
+2. **`rest` shard 重新分配**（`swift-shards.sh` 的 `classes_of`）：`HighSpeedDemoTests` 到 campaigns-11、`RealWorldDemoTests` 到 campaigns-15。`rest` 最長 18.9 分鐘、上限 20 分鐘，估計降到約 15.8。`run` 的分配檢查仍證明每個測試剛好跑一次。
+3. **被取消的 `main` push 不塗紅 gate**（`ci.yml`）：`gate` 的 `if:` 改成 `always() && !(cancelled() && github.event_name == 'push')`。名稱 `Swift CI (gate)` 不變；PR 與手動執行仍 `always()`；shard 逾時不會取消整輪，所以照樣紅；被取消的那輪沒有成功，下一輪 push 仍從最後一次成功比起（push-base）。
+4. **手動只跑指定的 UI 測試**（`ios-build.yml` 的 `only_testing` 輸入）：類別或 `類別/testMethod`，空白或逗號分隔，不合格的名字直接失敗；不跑 iPad；run 名稱是「UI tests by hand: …」，`ios-full-lane.yml` 不把它當 full lane。留空時和以前一樣。
+5. **`website-screenshots.yml` 只留手動**（決策 165 的之後的修正）。放棄的：PR 弄壞截圖測試要等有人手動跑才知道；它不測任何東西、也不擋合併。
+6. **PR 的 UI 測試步驟上限 40 → 25 分鐘**：今天 PR 上最長 12.7 分鐘（8 個測試；#429 加的第 9 個約多 1 分鐘）。App 卡住時少佔一台 macOS 15 分鐘。清單再變長或 runner 慢兩倍以上時要調回。
+7. **觸發條件**：`ci.yml` 的 `pull_request` 拿掉 `labeled`（決策 185 的之後的修正）；`ios-full-lane.yml` 的 `paths-ignore` 補上 `website-screenshots.yml`，和 `ios-build.yml` 一致；`wasm-probe.yml` 在 `main` 上每個 commit 一個群組、不取消（今天 3 次被下一個合併取消），PR 照舊取消舊的。
+
+**沒有做、需要作者決定的**（報告 4B、4C）：`main` 的 push 也分級並每晚全量、Swift gate 的「已通過」標記、PR 的繁中翻譯檢查不再另外編譯、PR 全量先跑 `rest`；以及花錢或自架的 runner。
+
+**參考庫與外部專案**：參考庫沒有 CI。用 patch-id 判斷「同一份改動」是 git 本身的做法（`git cherry`、`git rebase` 用它找已套用的 commit）；cache 是 GitHub 官方的 `actions/cache`，沒有新的依賴。
+
+**沒有驗證的**：Linux 上驗證了 YAML、actionlint（含 shellcheck）、分片自測、key 的計算（同一份改動加文件 commit 時相同，空白改動與上下文改動時不同）與 `only_testing` 的解析；跳過與存 key、`run-name`、gate 在取消時的顯示，要等 GitHub 上真的跑過。
 
 ## 目前規則摘要
 

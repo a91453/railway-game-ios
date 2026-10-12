@@ -517,11 +517,57 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.platformStationID, station.id)
             XCTAssertEqual(session.stationName, "Station 2")
             XCTAssertEqual(session.world.trackEdgeSummary(.edge(1), in: .english), "Edge #1 · 128 m · Surface · 0 m · platforms: Station 1")
+            XCTAssertNil(session.networkEdgePoint, "the place picked is forgotten once built")
 
-            // Another platform over the same stretch overlaps it.
+            // Another platform over the same stretch, tapped again, overlaps it.
+            session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
+            XCTAssertEqual(session.platformStationID, station.id)
             session.addNetworkPlatform()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.invalidPlatform.playerMessage(in: .english)))
             XCTAssertEqual(session.world, expected)
+        }
+    }
+
+    /// Once a platform is built the map's ✓ pill and its catchment ring go
+    /// (decision 108, fixed after a device screenshot of the tutorial): the
+    /// site is no longer picked, the details card's button is off, and the
+    /// success message stays rather than a second ✓ refusing the overlap.
+    func testBuildingAPlatformClearsTheSiteSoItsConfirmGoes() async throws {
+        let world = try makeLineWorld()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
+            XCTAssertNotNil(session.platformSitePlanPoint)
+            XCTAssertNotNil(session.platformSiteCatchment)
+
+            session.addNetworkPlatform()
+
+            XCTAssertEqual(session.message?.kind, .success)
+            XCTAssertNil(session.networkEdgePoint)
+            XCTAssertNil(session.networkPlatformStretch)
+            XCTAssertNil(session.platformSitePlanPoint, "no pill on the map")
+            XCTAssertNil(session.platformSiteCatchment, "no catchment ring")
+            XCTAssertEqual(session.world.stations.count, 1)
+            XCTAssertEqual(session.networkMode, .platform, "the next tap on the track picks the next platform")
+        }
+    }
+
+    /// A refused platform keeps the site, so the player can change it and
+    /// try again.
+    func testARefusedPlatformKeepsTheSite() async throws {
+        let world = try makeLineWorld()
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
+            session.stationName = ""
+            session.addNetworkPlatform()
+            XCTAssertEqual(session.message?.kind, .failure)
+            XCTAssertNotNil(session.platformSitePlanPoint)
+            XCTAssertEqual(session.world, world)
         }
     }
 

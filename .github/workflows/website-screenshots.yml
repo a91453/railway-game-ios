@@ -4,18 +4,16 @@
 # uploads what the tests kept as PNGs in the `website-screenshots` artifact.
 # The website's own tools/screens.py turns them into its WebP sizes.
 #
-# By hand from the Actions tab, or on a pull request that changes the
-# screenshot tests, their scenes or this file. It tests nothing: the gate
-# and the full lane (ios-build.yml) skip these tests.
+# By hand only, from the Actions tab: choose the branch (a pull request's
+# own branch to take a change's screenshots). It tests nothing: the gate and
+# the full lane (ios-build.yml) skip these tests. Until 2026-10-12 a pull
+# request that changed the screenshot tests, their scenes or this file also
+# ran it, holding one of the account's five macOS runners for 13 to 24
+# minutes a run (decision 187).
 name: Website screenshots
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "RailwayGameApp/UITests/WebsiteScreenshotTests.swift"
-      - "Sources/GamePresentation/ScreenshotScene.swift"
-      - ".github/workflows/website-screenshots.yml"
 
 permissions:
   contents: read

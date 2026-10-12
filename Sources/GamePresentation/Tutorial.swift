@@ -52,6 +52,17 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case cash = "hud.cash"
     /// The game menu: save, export, back to the start screen.
     case gameMenu = "hud.menu"
+    /// The lines panel's Pick on Map, which starts picking a new line's
+    /// stations on the map (decision 100).
+    case pickLineStops = "line.draft.pick"
+    /// The lines panel's Create Line.
+    case createLine = "line.draft.create"
+    /// The details card at the trailing side (decision 106): never outlined,
+    /// but the tutorial's card keeps clear of it, as of a panel beside the
+    /// map, whose own controls are not all marked.
+    case detailsCard = "panel.details"
+    /// A panel beside the map: the lines, a station or the company's figures.
+    case sidePanel = "panel.side"
 
     /// The tool picker's button for `tool`. Optional because the grid's
     /// tools had none until Stage F3c removed them; every tool has one now.
@@ -385,9 +396,12 @@ extension Tutorial {
             )
         ),
         // Reference step 4, ending the line's construction.
+        // Its Pick on Map and Create Line are in the lines panel, which the
+        // card must leave free (on a phone the card once covered them, and
+        // the step could not be done), and the stations are picked on the map.
         TutorialStep(
             id: "line.create",
-            targets: [.linesButton],
+            targets: [.linesButton, .pickLineStops, .createLine, .map],
             goal: .createLine,
             title: ("Create the line", "建立路線"),
             body: (

@@ -86,6 +86,11 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing-paused") {
             launcher.session?.setSpeed(.paused)
         }
+        // The tutorial at a later step, over what the steps before it
+        // build (TutorialUITests: the line step's screen on a phone).
+        if let step = DebugLaunch.value(of: "-tutorial-step") {
+            launcher.startTutorial(atStep: step)
+        }
         // Decision 165: the website screenshot test opens a scene set up
         // for it, paused at the moment it shows.
         if let name = DebugLaunch.value(of: "-screenshot-scene"), let scene = ScreenshotScene(rawValue: name) {
