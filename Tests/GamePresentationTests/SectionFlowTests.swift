@@ -123,4 +123,20 @@ final class SectionFlowTests: XCTestCase {
         let english = try XCTUnwrap(flow.tooltip(of: stroke.section, at: hour, world: world, language: .english))
         XCTAssertTrue(english.contains("riders / capacity"), english)
     }
+
+    func testThePassengerLoadLayerIsOneOfTheMapLayersAndFollowsTheTimeline() {
+        XCTAssertTrue(PopTravelMode.allCases.contains(.sectionFlow))
+        XCTAssertTrue(PopTravelMode.sectionFlow.followsTimeline)
+        XCTAssertFalse(PopTravelMode.sectionFlow.usesHour, "it reads no travel demand grid")
+        XCTAssertFalse(PopTravelMode.sectionFlow.isCityLayer)
+        XCTAssertEqual(PopTravelMode.sectionFlow.title(in: .traditionalChinese), "載客量")
+        XCTAssertFalse(PopTravelMode.sectionFlow.description(in: .english).isEmpty)
+        var layers = MapLayerPreferences()
+        layers.setShows(.sectionFlow, true)
+        XCTAssertTrue(layers.shows(.sectionFlow))
+        layers.setShows(.travel, true)
+        XCTAssertFalse(layers.shows(.sectionFlow), "one layer at a time")
+        XCTAssertTrue(PopTravelMode.travel.followsTimeline)
+        XCTAssertFalse(PopTravelMode.landValue.followsTimeline)
+    }
 }
