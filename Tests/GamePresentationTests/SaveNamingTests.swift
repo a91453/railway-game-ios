@@ -87,10 +87,10 @@ final class SaveNamingTests: XCTestCase {
     }
 
     @MainActor
-    func testTheLauncherSavesWithANameAndRenames() throws {
+    func testTheLauncherSavesWithANameAndRenames() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
         launcher.startNewGame()
-        launcher.saveCurrentGame(at: date(0), named: "週末")
+        await launcher.saveCurrentGame(at: date(0), named: "週末").value
         XCTAssertEqual(launcher.session?.message, StatusMessage(kind: .success, text: "已儲存遊戲：「週末」。"))
         let save = try XCTUnwrap(launcher.otherSaves.first { $0.kind == .manual })
         XCTAssertEqual(save.name, "週末")

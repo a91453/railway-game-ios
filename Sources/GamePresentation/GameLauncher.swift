@@ -80,6 +80,12 @@ public final class GameLauncher {
     }
 
     @ObservationIgnored let library: SaveLibrary
+    /// Where the saves are written, one after another (decision 45,
+    /// later): a save is encoded and written here, off the main thread,
+    /// from a copy of the world taken on it, and whatever else reads or
+    /// changes the folder waits here for the saves queued before it, so it
+    /// sees the latest of them and no two writes cross.
+    @ObservationIgnored private let saveQueue = DispatchQueue(label: "GameLauncher.saves", qos: .userInitiated)
     /// What the launcher keeps between launches (decision 177): the
     /// options of the next new game, whether the tutorial was done.
     public private(set) var preferences: LauncherPreferences
@@ -158,7 +164,8 @@ public final class GameLauncher {
     }
 
     public func refresh() {
-        entries = library.entries()
+        let library = library
+        entries = saveQueue.sync { library.entries() }
     }
 
     // MARK: - Starting a game
@@ -455,7 +462,9 @@ public final class GameLauncher {
     /// autosave.
     public func load(_ entry: SaveLibrary.Entry) {
         do throws(SaveError) {
-            begin(try library.load(entry), keepingAutosave: entry.kind != .autosave, news: library.news(for: entry))
+            let library = library
+            let (world, news) = try afterSaves { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }
+            begin(world, keepingAutosave: entry.kind != .autosave, news: news)
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -489,7 +498,8 @@ public final class GameLauncher {
     private func begin(_ world: GameWorld, keepingAutosave: Bool, news: NewsLog? = nil, isDemo: Bool = false) -> Bool {
         if keepingAutosave {
             do throws(SaveError) {
-                try library.archiveAutosave()
+                let library = library
+                try afterSaves { () throws(SaveError) in try library.archiveAutosave() }
             } catch {
                 // Starting anyway would write over the last game.
                 message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -573,42 +583,107 @@ public final class GameLauncher {
     // MARK: - Saving
 
     /// Saves the game being played as a new save of the player's own,
-    /// reported in the game's status line.
+    /// reported in the game's status line when it is written.
     /// Named `name` (decision 184), when the player gave one.
-    public func saveCurrentGame(at date: Date = Date(), named name: String? = nil) {
-        guard let session else { return }
-        do throws(SaveError) {
-            let entry = try library.save(session.worldToSave, news: session.news, as: .manual, at: date, named: name)
-            session.message = StatusMessage(kind: .success, text: entry.name.map {
-                language.text("Saved the game as \"\($0)\".", "已儲存遊戲：「\($0)」。")
-            } ?? language.text("Saved the game.", "已儲存遊戲。"))
-        } catch {
-            session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+    ///
+    /// The game is saved as it is now: the world is copied here, and
+    /// encoded and written off the main thread (decision 45, later). The
+    /// task ends once the status line and the list of saves say so.
+    @discardableResult
+    public func saveCurrentGame(at date: Date = Date(), named name: String? = nil) -> Task<Void, Never> {
+        guard let session else { return Task {} }
+        let language = language
+        return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name) { [weak self, weak session] result in
+            switch result {
+            case .success(let entry):
+                session?.message = StatusMessage(kind: .success, text: entry.name.map {
+                    language.text("Saved the game as \"\($0)\".", "已儲存遊戲：「\($0)」。")
+                } ?? language.text("Saved the game.", "已儲存遊戲。"))
+            case .failure(let error):
+                session?.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            }
+            self?.refresh()
         }
-        refresh()
     }
 
-    /// Writes the game being played over the autosave. A failure is
-    /// reported in the game's status line. Returns whether it was saved;
-    /// `false` without a game.
+    /// Writes the game being played over the autosave, waiting for it to
+    /// be written. A failure is reported in the game's status line.
+    /// Returns whether it was saved; `false` without a game.
     ///
     /// `refreshing` false leaves the list of saves as it was (decision 184,
-    /// later): the autosave on leaving the app, and the periodic one,
-    /// happen during a game, where no list of saves is on screen, and
-    /// reading the list decodes the head of every save in the folder on the
-    /// main thread. The start screen reads it again (``returnToStart()``).
+    /// later): reading the list decodes the head of every save in the
+    /// folder on the main thread. The start screen reads it again
+    /// (``returnToStart()``).
+    ///
+    /// The autosave on leaving the app and the periodic one are written in
+    /// the background instead (``autosaveInBackground(at:)``).
     @discardableResult
     public func autosaveCurrentGame(at date: Date = Date(), refreshing: Bool = true) -> Bool {
         guard let session else { return false }
         recordChallengeResult(at: date)
+        let (library, world, news) = (library, session.worldToSave, session.news)
         do throws(SaveError) {
-            try library.save(session.worldToSave, news: session.news, as: .autosave, at: date)
+            try afterSaves { () throws(SaveError) in try library.save(world, news: news, as: .autosave, at: date) }
             if refreshing { refresh() }
             return true
         } catch {
             session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return false
         }
+    }
+
+    /// Writes the game being played over the autosave in the background
+    /// (decision 45, later): the autosave on leaving the app and the
+    /// periodic one. The world is copied now, the moment it is saved; it
+    /// is encoded and written off the main thread, so the game does not
+    /// stop while it is. A failure is reported in the game's status line
+    /// when the task ends. The list of saves is left as it was, as
+    /// ``autosaveCurrentGame(at:refreshing:)`` leaves it with `refreshing`
+    /// false. `nil` without a game.
+    @discardableResult
+    public func autosaveInBackground(at date: Date = Date()) -> Task<Void, Never>? {
+        guard let session else { return nil }
+        recordChallengeResult(at: date)
+        let language = language
+        return write(session.worldToSave, news: session.news, as: .autosave, at: date) { [weak session] result in
+            guard case .failure(let error) = result else { return }
+            session?.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+    }
+
+    /// Returns once every save queued so far is written: the app keeps
+    /// running in the background until then after leaving the
+    /// foreground.
+    public func savesWritten() async {
+        await withCheckedContinuation { (written: CheckedContinuation<Void, Never>) in
+            saveQueue.async { written.resume() }
+        }
+    }
+
+    /// Queues `world` to be written after the saves already queued, at
+    /// once, and calls `done` on the main actor with how it went.
+    private func write(
+        _ world: GameWorld, news: NewsLog, as kind: SaveLibrary.Kind, at date: Date, named name: String? = nil,
+        then done: @escaping @MainActor (Result<SaveLibrary.Entry, SaveError>) -> Void
+    ) -> Task<Void, Never> {
+        let library = library
+        let (written, report) = AsyncStream.makeStream(of: Result<SaveLibrary.Entry, SaveError>.self)
+        saveQueue.async {
+            report.yield(Result { () throws(SaveError) in try library.save(world, news: news, as: kind, at: date, named: name) })
+            report.finish()
+        }
+        return Task {
+            for await result in written {
+                done(result)
+            }
+        }
+    }
+
+    /// Runs `work`, which reads or changes the saves' folder, after the
+    /// saves queued before it are written.
+    @discardableResult
+    private func afterSaves<T>(_ work: () throws(SaveError) -> T) throws(SaveError) -> T {
+        try saveQueue.sync { Result(catching: work) }.get()
     }
 
     /// Autosaves and goes back to the start screen. If the autosave fails
@@ -630,7 +705,8 @@ public final class GameLauncher {
     /// `name` is empty (decision 184).
     public func rename(_ entry: SaveLibrary.Entry, to name: String) {
         do throws(SaveError) {
-            try library.rename(entry, to: name)
+            let library = library
+            try afterSaves { () throws(SaveError) in try library.rename(entry, to: name) }
             message = nil
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -640,7 +716,8 @@ public final class GameLauncher {
 
     public func delete(_ entry: SaveLibrary.Entry) {
         do throws(SaveError) {
-            try library.delete(entry)
+            let library = library
+            try afterSaves { () throws(SaveError) in try library.delete(entry) }
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -651,7 +728,8 @@ public final class GameLauncher {
 
     /// Whether the app is in the foreground. The game loop and the
     /// periodic autosave run only then; leaving the foreground stops them
-    /// and autosaves, and time spent away is not replayed.
+    /// and autosaves in the background (``savesWritten()`` returns once it
+    /// is written), and time spent away is not replayed.
     public func setActive(_ active: Bool) {
         guard active != isActive else { return }
         isActive = active
@@ -665,14 +743,14 @@ public final class GameLauncher {
                         return
                     }
                     guard !Task.isCancelled, let self else { return }
-                    self.autosaveCurrentGame(refreshing: false)
+                    self.autosaveInBackground()
                 }
             }
         } else {
             autosaveLoop?.cancel()
             autosaveLoop = nil
             session?.stopGameLoop()
-            autosaveCurrentGame(refreshing: false)
+            autosaveInBackground()
         }
     }
 }
