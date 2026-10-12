@@ -225,6 +225,17 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// showed two layers of text. Fifteen trains, more than the menu shows
     /// at once on a phone on its side; choose the first, then the last.
     func testTheTrainMenuScrollsAndChoosesWhileTheClockRuns() {
+        checkTheTrainMenu(paused: false)
+    }
+
+    /// The same with the game paused: the control for the test above. If
+    /// only the running one fails, the menu is still rebuilt by the ticks;
+    /// if both fail, it is how XCTest scrolls a native menu.
+    func testTheTrainMenuScrollsAndChoosesWhilePaused() {
+        checkTheTrainMenu(paused: true)
+    }
+
+    private func checkTheTrainMenu(paused: Bool) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -233,7 +244,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         // A blank new game: $3,000,000, enough for fifteen trains.
         requiredButton("start.newGame", in: app).tap()
-        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
+        let pause = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
+        if paused { pause.tap() }
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.train", in: app).tap()
         let buy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train"))
@@ -243,7 +255,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         let picker = app.buttons.matching(identifier: "train.picker")
         XCTAssertTrue(picker.firstMatch.waitForExistence(timeout: 10), "Missing the train menu")
         waitForLabel("Train: Train 15", of: picker.firstMatch)
-        XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
+        XCTAssertTrue(app.buttons[paused ? "Resume" : "Pause"].exists, paused ? "The clock must stay paused" : "The clock must keep running")
 
         chooseTrain("Train 1", in: app)
         chooseTrain("Train 15", in: app)
