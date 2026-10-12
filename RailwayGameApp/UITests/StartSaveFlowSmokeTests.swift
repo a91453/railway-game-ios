@@ -175,7 +175,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-broken-save", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        requiredButton("start.savedGames", in: app).tap()
+        // On a phone on its side Saved Games lies below the screen, in the
+        // start screen's column beside the title, which the shared helper
+        // did not find (run 38260619251): drag that column at the button's
+        // own x until it can be tapped.
+        let saves = app.buttons["start.savedGames"]
+        XCTAssertTrue(saves.waitForExistence(timeout: 10), "An unreadable save is still listed")
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !saves.isHittable {
+            let x = saves.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        XCTAssertTrue(saves.isHittable, "Saved Games can be brought into view: \(saves.frame)")
+        saves.tap()
         let row = app.buttons["saves.row.save-broken.json"]
         XCTAssertTrue(row.waitForExistence(timeout: 10), "The unreadable save is listed")
         row.swipeLeft()
