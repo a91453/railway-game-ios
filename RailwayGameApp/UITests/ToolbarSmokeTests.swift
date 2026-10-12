@@ -275,6 +275,14 @@ extension XCUIApplication {
         bringStartButtonIntoView(button)
         button.tap()
         let demo = buttons[identifier]
+        // A tap while the app is still busy after launch can be lost: one
+        // accessibility query took 9 s, the tap was sent and the sheet never
+        // opened (PR run 38208781302 on 8b08998, which changed no app code
+        // and passed on its re-run). Tap again while the button is still
+        // there to tap and the sheet is not.
+        for _ in 0..<2 where !demo.waitForExistence(timeout: 10) && button.isHittable {
+            button.tap()
+        }
         XCTAssertTrue(demo.waitForExistence(timeout: 10), "Missing demo: \(identifier)")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed, "The demo never became enabled: \(identifier)")
