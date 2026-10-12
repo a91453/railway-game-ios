@@ -61,7 +61,7 @@ struct InspectorView: View {
                         .foregroundStyle(Theme.textPrimary)
                         // Three lines: in a phone's card "Station · Ruifang ·
                         // 2 platforms, 128 m" took two and lost its end.
-                        .lineLimit(3)
+                        .lineLimit(session.selectedBuildingID == nil ? 3 : 7)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
@@ -82,6 +82,23 @@ struct InspectorView: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
+            if session.selectedBuildingID != nil {
+                Button {
+                    session.sellSelectedBuilding()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.caption.weight(.bold))
+                        Text("Sell")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: 30)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .accessibilityLabel("Sell")
+                .accessibilityHint("Opens the building tool's sale of this building, with the price it would bring.")
+            }
             if session.selectedStation != nil {
                 Button {
                     screen.panel = .station

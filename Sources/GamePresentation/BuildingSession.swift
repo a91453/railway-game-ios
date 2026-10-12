@@ -39,6 +39,9 @@ extension PlacedBuildingKind {
         case .office: language.text("Office block", "辦公樓")
         case .wharf: language.text("Wharf", "漁人碼頭")
         case .marina: language.text("Marina", "遊艇港")
+        case .departmentStore: language.text("Department store", "百貨公司")
+        case .hotel: language.text("Hotel", "飯店")
+        case .amusementPark: language.text("Amusement park", "遊樂園")
         }
     }
 }

@@ -1,0 +1,515 @@
+{
+  "saveVersion" : 46,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 3
+        },
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 4
+        },
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 5
+        },
+        {
+          "acquired" : 0,
+          "cost" : 100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 6
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 3
+        },
+        {
+          "acquired" : 0,
+          "cost" : 5000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "train",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 76032000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "building",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 58368000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "building",
+          "owner" : 2
+        },
+        {
+          "acquired" : 0,
+          "cost" : 62720000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "building",
+          "owner" : 3
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 197128600,
+          "day" : 0
+        }
+      ],
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "maintenanceCost" : 0,
+          "operatingCost" : 0,
+          "propertyCost" : 868491,
+          "propertyRevenue" : 1288700,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : 458046,
+          "breakdown" : [
+            {
+              "amount" : 1288700,
+              "item" : "subsidiarySales"
+            },
+            {
+              "amount" : -830654,
+              "item" : "subsidiaryCost"
+            }
+          ],
+          "kind" : "dailySubsidiary",
+          "time" : 0
+        },
+        {
+          "amount" : -37837,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "propertyRent"
+            },
+            {
+              "amount" : -36251,
+              "item" : "propertyUpkeep"
+            },
+            {
+              "amount" : -1586,
+              "item" : "propertyTax"
+            }
+          ],
+          "kind" : "dailyProperty",
+          "time" : 0
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 32768,
+      "width" : 32768
+    },
+    "clock" : {
+      "now" : 0,
+      "resumeSpeed" : "x10",
+      "speed" : "x10"
+    },
+    "economy" : {
+      "balance" : 803291609,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "stops" : [
+          1,
+          3
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        }
+      ],
+      "nextEdgeID" : 7,
+      "nextNodeID" : 8,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextPlacedBuildingID" : 4,
+    "nextStationID" : 4,
+    "nextTrainID" : 2,
+    "passengers" : [
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 4000,
+          "kind" : "scenic"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 1,
+        "waiting" : [
+
+        ]
+      },
+      {
+        "abandoned" : 0,
+        "demand" : {
+          "dailyTrips" : 0,
+          "kind" : "office"
+        },
+        "overflowed" : 0,
+        "released" : 0,
+        "remainders" : [
+
+        ],
+        "station" : 3,
+        "waiting" : [
+
+        ]
+      }
+    ],
+    "placedBuildings" : [
+      {
+        "books" : {
+          "closed" : [
+            {
+              "cost" : 310043,
+              "sales" : 430200
+            }
+          ],
+          "month" : 1,
+          "thisMonth" : {
+            "cost" : 400,
+            "sales" : 1000
+          },
+          "totalCost" : 310443,
+          "totalSales" : 431200
+        },
+        "buildingCost" : 73728000,
+        "centre" : {
+          "x" : 1536,
+          "y" : 3712
+        },
+        "id" : 1,
+        "kind" : "departmentStore",
+        "landCost" : 2304000
+      },
+      {
+        "books" : {
+          "closed" : [
+            {
+              "cost" : 200998,
+              "sales" : 323000
+            }
+          ],
+          "month" : 1,
+          "thisMonth" : {
+            "cost" : 400,
+            "sales" : 1000
+          },
+          "totalCost" : 201398,
+          "totalSales" : 324000
+        },
+        "buildingCost" : 57344000,
+        "centre" : {
+          "x" : 1536,
+          "y" : 8912
+        },
+        "id" : 2,
+        "kind" : "hotel",
+        "landCost" : 1024000
+      },
+      {
+        "books" : {
+          "closed" : [
+            {
+              "cost" : 319613,
+              "sales" : 535500
+            }
+          ],
+          "month" : 1,
+          "thisMonth" : {
+            "cost" : 400,
+            "sales" : 1000
+          },
+          "totalCost" : 320013,
+          "totalSales" : 536500
+        },
+        "buildingCost" : 50176000,
+        "centre" : {
+          "x" : 10536,
+          "y" : 5312
+        },
+        "id" : 3,
+        "kind" : "amusementPark",
+        "landCost" : 12544000
+      }
+    ],
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Alpha",
+        "point" : {
+          "x" : 1536,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Beta",
+        "point" : {
+          "x" : 3584,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "Gamma",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "id" : 1,
+        "name" : "T1",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 1024
+          }
+        }
+      }
+    ]
+  }
+}

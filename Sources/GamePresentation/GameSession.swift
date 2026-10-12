@@ -124,6 +124,10 @@ public final class GameSession {
     /// command selects a station or a point instead.
     public private(set) var tappedTrainID: TrainID?
 
+    /// The company's building the last tap on the map picked with the
+    /// select tool (decision 173), which the inspector shows; an ID only.
+    public private(set) var selectedBuildingID: PlacedBuildingID?
+
     /// The train the camera follows: the `Ci/` reference's
     /// `trackedTrainId`, kept apart from the selection
     /// (``selectedTrainID``, the reference's `selectedTrainId`), so picking
@@ -401,6 +405,12 @@ public final class GameSession {
             return
         }
         station = station ?? world.station(near: point, within: reach)?.id
+        if station == nil, tool == .select, let building = world.placedBuildings.first(where: {
+            point.x >= $0.minX && point.x < $0.maxX && point.y >= $0.minY && point.y < $0.maxY
+        }) {
+            selectBuilding(building.id, at: point)
+            return
+        }
         // A stop the draft refused keeps the message saying why.
         var refused = false
         if isPickingLineStops, let station {
@@ -410,7 +420,28 @@ public final class GameSession {
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
+        selectedBuildingID = nil
         if !refused { message = nil }
+    }
+
+    /// Chooses the building the inspector shows as the one to sell: opens
+    /// the building tool's sell mode on it (decision 173).
+    public func sellSelectedBuilding() {
+        guard let id = selectedBuildingID, world.placedBuilding(id: id) != nil else { return }
+        selectTool(.building)
+        buildingMode = .sell
+        saleCandidate = id
+    }
+
+    /// Selects the company's building `id` for the inspector (decision
+    /// 173), letting go of the station and train. Never changes the world.
+    private func selectBuilding(_ id: PlacedBuildingID, at point: PlanPoint) {
+        guard id != selectedBuildingID else { return }
+        selectedBuildingID = id
+        selectedPoint = point
+        selectedStationID = nil
+        tappedTrainID = nil
+        message = nil
     }
 
     /// A tap that picked train `id`: it becomes the train the train tool
@@ -424,6 +455,7 @@ public final class GameSession {
         if tool == .select {
             selectedPoint = nil
             selectedStationID = nil
+            selectedBuildingID = nil
         }
         message = nil
     }
@@ -435,6 +467,7 @@ public final class GameSession {
         selectedPoint = station.point
         selectedStationID = id
         tappedTrainID = nil
+        selectedBuildingID = nil
         message = nil
     }
 
@@ -445,6 +478,7 @@ public final class GameSession {
         selectedPoint = nil
         selectedStationID = nil
         tappedTrainID = nil
+        selectedBuildingID = nil
         followedTrainID = nil
         message = nil
     }
