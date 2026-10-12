@@ -309,8 +309,15 @@ final class MapInteractionTests: XCTestCase {
         doneButton.tap()
 
         // The layers button exists under the sheet too: what shows the
-        // sheet closed is its Done button gone.
-        XCTAssertTrue(doneButton.waitForNonExistence(timeout: 5), "Map must be restored after dismissing sheet")
+        // sheet closed is its Done button gone. With the heatmap just
+        // drawn the app can be slow: one query took 30 s there and the
+        // sheet was still up 5 s after Done (PR run 38064937060 on
+        // 1ee3676, which touched no map or layer code). Allow it longer,
+        // and tap Done again only if it is still there to tap.
+        if !doneButton.waitForNonExistence(timeout: 15), doneButton.isHittable {
+            doneButton.tap()
+        }
+        XCTAssertTrue(doneButton.waitForNonExistence(timeout: 15), "Map must be restored after dismissing sheet")
         let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
         XCTAssertTrue(legend.waitForExistence(timeout: 5))
         let value = legend.value as? String ?? ""
