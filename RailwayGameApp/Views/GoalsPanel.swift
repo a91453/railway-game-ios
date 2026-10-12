@@ -56,6 +56,21 @@ struct GoalsSections: View {
                     }
                     .accessibilityIdentifier("goals.status")
                 }
+                // Decision 175: the days left before the red ends it.
+                if let days = world.insolvencyCountdown {
+                    Label {
+                        Text(verbatim: insolvencyCountdownText(days, in: language) + language.text(
+                            ": cash has been below zero at midnight",
+                            "：午夜現金仍低於零"
+                        ))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.error)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Theme.error)
+                    }
+                    .accessibilityIdentifier("goals.insolvency")
+                }
                 if let story = world.scenario.flatMap({ Challenge.named($0.scenario.id) })?.story(in: language) {
                     Text(verbatim: story)
                         .font(.footnote)

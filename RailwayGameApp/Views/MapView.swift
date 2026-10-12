@@ -520,6 +520,11 @@ struct MapView: View {
             .onChange(of: session.world.clock) { _, _ in
                 centerOnFollowedTrain(projection: projection)
             }
+            // Decision 175: the news log's Go moves the map.
+            .onChange(of: session.mapFocus) { _, focus in
+                guard let focus else { return }
+                camera = projection.centered(atX: focus.x, y: focus.y)
+            }
             .onChange(of: session.followedTrain?.id) { _, _ in
                 // A new follow snaps to its train, as the reference's
                 // cleared `_trackCenter` does.

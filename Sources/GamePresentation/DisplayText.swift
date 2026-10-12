@@ -587,7 +587,7 @@ extension GameTime {
     public func calendarText(in language: DisplayLanguage) -> String {
         let minuteOfDay = (minute % Self.minutesPerDay + Self.minutesPerDay) % Self.minutesPerDay
         let time = "\(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
-        return "\(date.text(in: language)) \(time)"
+        return language.text("\(date.text(in: language)) \(time)", "\(date.text(in: language))\(time)")
     }
 }
 
@@ -599,6 +599,18 @@ extension GameClock {
     public func displayText(in language: DisplayLanguage) -> String {
         now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
             ? now.displayText(in: language) : now.displayTextWithSeconds(in: language)
+    }
+}
+
+extension GameClock {
+    /// The clock with the calendar (decision 175), as the HUD shows it:
+    /// ``GameTime/calendarText(in:)``, with the seconds while they matter
+    /// (see ``displayText(in:)``).
+    public func calendarText(in language: DisplayLanguage) -> String {
+        let text = now.calendarText(in: language)
+        guard !(now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)) else { return text }
+        let seconds = now.secondOfMinute
+        return "\(text):\(seconds < 10 ? "0" : "")\(seconds)"
     }
 }
 

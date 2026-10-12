@@ -218,3 +218,14 @@ extension MonthlyFigure {
     /// "1,234", for riders.
     public func countText() -> String { Money(value).displayText }
 }
+
+extension MonthlyReportMode {
+    /// The name in the settings.
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .openAndPause: language.text("Open and pause", "自動開啟並暫停")
+        case .logOnly: language.text("News log only", "只記在新聞紀錄")
+        case .off: language.text("Off", "關閉")
+        }
+    }
+}
