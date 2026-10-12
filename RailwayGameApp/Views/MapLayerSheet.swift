@@ -94,6 +94,20 @@ struct MapLayerSheet: View {
                 } footer: {
                     Text("The ground's height on real-world maps, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; tap a cell for its height. Blank maps are flat.")
                 }
+
+                // Decision 178: the passengers on each stretch of track
+                // against its trains' capacity, one layer at a time with
+                // those above.
+                Section {
+                    Toggle(isOn: modeBinding(.sectionFlow)) {
+                        Label("Passenger Load", systemImage: "chart.bar.xaxis")
+                    }
+                    .accessibilityIdentifier("layer.sectionFlow")
+                } header: {
+                    Text("Service")
+                } footer: {
+                    Text("Passenger load: the riders each stretch of track carries each way in the chosen hour, against what its trains can carry. A wider line has more riders, a darker blue a fuller train, and red is over capacity: add trains, run faster ones, or build a parallel line. Tap a stretch for the numbers.")
+                }
             }
             .navigationTitle("Map Layers")
             .navigationBarTitleDisplayMode(.inline)

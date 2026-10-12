@@ -148,7 +148,10 @@ public final class GameSession {
     /// The outcome of the last action, for the status line. Cleared when the
     /// player selects another point or tool.
     public internal(set) var message: StatusMessage? {
-        didSet { messageSerial &+= 1 }
+        didSet {
+            messageSerial &+= 1
+            noteMessageInNews()
+        }
     }
 
     /// Counts each time ``message`` is set, the same message again
@@ -173,6 +176,35 @@ public final class GameSession {
     public func dismissYearEnd() {
         yearEndYear = nil
     }
+
+    // MARK: - The secretary room (decision 175)
+
+    /// The news log (``NewsLog``): what the station master said, what
+    /// happened and when. Kept with the save, never in it.
+    public internal(set) var news = NewsLog()
+
+    /// The month that closed while the game ran, until the player has seen
+    /// its report (set by the month's closing, like ``yearEndYear``).
+    public internal(set) var monthEndReport: MonthlyReport?
+
+    /// The player has seen the monthly report.
+    public func dismissMonthEnd() {
+        monthEndReport = nil
+    }
+
+    /// Whether the game pauses for typhoons, goals met, debt and a
+    /// challenge's last week (the settings; kept on the device, so the app
+    /// sets it).
+    public var pausesForImportantEvents = true
+
+    /// What happens when a month closes (the settings).
+    public var monthlyReportMode: MonthlyReportMode = .openAndPause
+
+    /// What the log last saw of the world, to tell what is new.
+    @ObservationIgnored var newsWatch: NewsWatch
+    /// Set while the session writes a message of its own into the log in
+    /// words of its own.
+    @ObservationIgnored var isMessageKeptOutOfNews = false
 
     /// Whether the scenario ended while the game ran (decision 86), until
     /// the player has seen how: its goals panel opens. Not set by loading a
@@ -390,6 +422,9 @@ public final class GameSession {
         self.automaticStationName = suggested
         self.selectedTrainID = world.trains.first?.id
         self.selectedLineID = world.lines.first?.id
+        self.newsWatch = NewsWatch(world: world)
+        // What the first monthly report compares with.
+        self.news.baseline = MonthlyBaseline(world: world)
     }
 
     // MARK: - Selection
@@ -634,6 +669,13 @@ public final class GameSession {
         clock.setSpeed(speed)
         guard clock != world.clock else { return }
         world.setSpeed(speed)
+    }
+
+    /// Pauses a running game for an event the player should see (decision
+    /// 175); does nothing to one already paused.
+    func pauseForEvent() {
+        guard !world.clock.isPaused else { return }
+        world.pause()
     }
 
     /// Pauses a running game, or resumes a paused one at the speed it ran
@@ -892,6 +934,8 @@ public final class GameSession {
         if !endedBefore, world.scenario?.outcome != nil {
             scenarioJustEnded = true
         }
+        // Decision 175: the secretary room reads what the step changed.
+        observeNews(closedBefore: closedBefore)
     }
 
     /// A tick of the game loop being worked out off the main actor

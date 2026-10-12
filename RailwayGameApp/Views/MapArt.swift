@@ -43,6 +43,7 @@ enum MapArt {
         waitingCounts: [StationID: Int64] = [:],
         lines: LineMap = LineMap(),
         labels: StationLabels = StationLabels(),
+        flowStrokes: [SectionFlow.Stroke] = [],
         latitude: Double = 0,
         in context: GraphicsContext
     ) {
@@ -77,7 +78,11 @@ enum MapArt {
         }
 
         drawNetwork(world, projection: projection, cached: edges, in: context)
-        drawLines(lines, world: world, projection: projection, cached: edges, in: context)
+        if flowStrokes.isEmpty {
+            drawLines(lines, world: world, projection: projection, cached: edges, in: context)
+        } else {
+            drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
+        }
         drawTransfers(lines, projection: projection, in: context)
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
         if let building {
@@ -405,6 +410,32 @@ enum MapArt {
                 stretch.path, with: .color(stretch.inTunnel ? stretch.color.opacity(0.5) : stretch.color),
                 style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round)
             )
+        }
+    }
+
+    /// Decision 178: the passenger load layer. Each section of track in the
+    /// shown hour as a line as wide as its riders (2 to 10 points) and as
+    /// dark as its trains are full, red over capacity, in place of the lines'
+    /// colours; the two ways of a track are drawn side by side, each on the
+    /// left of the way it is ridden, so they never cover each other.
+    private static func drawSectionFlow(_ strokes: [SectionFlow.Stroke], world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+        let region = drawingRegion(projection)
+        var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
+        for stroke in strokes {
+            let width = projection.detail == .full ? stroke.width : max(1.5, stroke.width * 0.6)
+            let color = Color(stroke.color)
+            for piece in stroke.pieces {
+                guard let drawing = drawings[piece.edge] ?? cached[piece.edge] ?? world.network.edge(piece.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
+                drawings[piece.edge] = drawing
+                guard region.intersects(drawing.bounds) else { continue }
+                let end = min(piece.end, drawing.geometry.length)
+                guard piece.start < end else { continue }
+                let points = drawing.geometry.points(from: piece.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
+                // The left of the way it is ridden: the edge's own left when
+                // ridden forward, its right when ridden backward.
+                let path = offsetPolyline(points, by: (piece.forward ? 1 : -1) * width / 2)
+                context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+            }
         }
     }
 

@@ -1473,6 +1473,26 @@
         }
       }
     },
+    "Passenger Load" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "載客量"
+          }
+        }
+      }
+    },
+    "Passenger load: the riders each stretch of track carries each way in the chosen hour, against what its trains can carry. A wider line has more riders, a darker blue a fuller train, and red is over capacity: add trains, run faster ones, or build a parallel line. Tap a stretch for the numbers." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "載客量：選定時段每個區間每個方向載運的乘客，對照列車的運能。線越寬人越多，越深藍列車越滿，紅色表示超過運能：可以加車、開快一點的車，或蓋一條平行線。點一段軌道看數字。"
+          }
+        }
+      }
+    },
     "Passengers" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2039,6 +2059,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "派 %@ 到這裡"
+          }
+        }
+      }
+    },
+    "Service" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "營運"
           }
         }
       }

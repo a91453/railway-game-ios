@@ -13,6 +13,8 @@ struct HUDView: View {
     let session: GameSession
     let launcher: GameLauncher
     @Environment(GameScreenState.self) private var screen
+    /// Whether the forecast of the next days is open (decision 175).
+    @State private var showsForecast = false
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -24,6 +26,7 @@ struct HUDView: View {
                 cash
                 time
                 SpeedControl(session: session)
+                newsBell
                 gameMenu
             }
             HStack(spacing: 10) {
@@ -32,12 +35,14 @@ struct HUDView: View {
                     time
                 }
                 SpeedControl(session: session)
+                newsBell
                 gameMenu
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 10) {
                     cash
                     SpeedControl(session: session)
+                    newsBell
                     gameMenu
                 }
                 time
@@ -134,6 +139,17 @@ struct HUDView: View {
                     .foregroundStyle(isNegative ? Theme.error : Theme.success)
                 Text(text)
                     .foregroundStyle(isNegative ? Theme.error : Theme.textPrimary)
+                // Decision 175: a challenge that is lost to the red says how
+                // long is left.
+                if let days = session.world.insolvencyCountdown {
+                    Text(verbatim: insolvencyCountdownText(days, in: session.language))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Theme.error))
+                        .accessibilityIdentifier("hud.insolvency")
+                }
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 5)
@@ -150,18 +166,118 @@ struct HUDView: View {
         .tutorialTarget(.cash)
     }
 
+    /// The date and time (decision 175), today's weather and holiday; it
+    /// opens the forecast of the next days.
     private var time: some View {
-        let text = session.world.clock.displayText(in: session.language)
-        return HStack(spacing: 6) {
-            Image(systemName: "clock.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.primary)
-            Text(text)
-                .foregroundStyle(Theme.textPrimary)
+        let language = session.language
+        let text = session.world.clock.calendarText(in: language)
+        return Button {
+            showsForecast = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.primary)
+                Text(text)
+                    .foregroundStyle(Theme.textPrimary)
+                if let symbol = session.world.todaySymbol() {
+                    Image(systemName: symbol)
+                        .font(.caption.weight(.semibold))
+                        .symbolRenderingMode(.multicolor)
+                        .accessibilityIdentifier("hud.weather")
+                }
+                if let holiday = session.world.todayHoliday() {
+                    Text(verbatim: holiday.title(in: language))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Theme.warning.opacity(0.35)))
+                        .accessibilityIdentifier("hud.holiday")
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 5)
+        .buttonStyle(.plain)
+        .popover(isPresented: $showsForecast) {
+            ForecastView(session: session)
+                .presentationCompactAdaptation(.popover)
+        }
         .accessibilityLabel("Game time \(text)")
+        .accessibilityHint(Text(verbatim: language.text("Shows the forecast of the next seven days.", "顯示未來七天的預報。")))
+        .accessibilityIdentifier("hud.time")
+    }
+
+    /// The news log's bell (decision 175), with the number of items not
+    /// yet seen.
+    private var newsBell: some View {
+        let unread = session.news.unread
+        let language = session.language
+        return Button {
+            screen.panel = .news
+        } label: {
+            Image(systemName: unread > 0 ? "bell.badge.fill" : "bell.fill")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(unread > 0 ? Theme.warning : Theme.primary)
+                .frame(width: 34, height: 32)
+                .overlay(alignment: .topTrailing) {
+                    if unread > 0 {
+                        Text(verbatim: unread > 99 ? "99+" : "\(unread)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4)
+                            .background(Capsule().fill(Theme.error))
+                            .offset(x: 4, y: -2)
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(Text(verbatim: language.text("News", "新聞紀錄")))
+        .accessibilityValue(Text(verbatim: unread > 0 ? language.text("\(unread) unread", "\(unread) 則未讀") : ""))
+        .accessibilityIdentifier("hud.news")
+    }
+}
+
+/// The next days' holidays, weather, typhoons and energy prices (decision
+/// 175), from GameCore's own queries.
+private struct ForecastView: View {
+    let session: GameSession
+
+    var body: some View {
+        let language = session.language
+        let days = session.world.forecast()
+        VStack(alignment: .leading, spacing: 8) {
+            Text(verbatim: language.text("Next 7 days", "未來 7 天"))
+                .font(.headline)
+            if days.isEmpty {
+                Text(verbatim: language.text(
+                    "This game has no holidays or weather. Turn on Holidays and events in the settings.",
+                    "這一局沒有連假和天氣。在設定裡打開「連假與事件」。"
+                ))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: 260, alignment: .leading)
+            } else {
+                ForEach(Array(days.enumerated()), id: \.offset) { index, day in
+                    HStack(spacing: 8) {
+                        Text(verbatim: index == 0 ? language.text("Today", "今天") : day.date.shortText(in: language))
+                            .font(.footnote.weight(.semibold))
+                            .frame(width: 84, alignment: .leading)
+                        Image(systemName: day.typhoonBlowing ? "tropicalstorm" : day.weather.symbolName)
+                            .symbolRenderingMode(.multicolor)
+                            .frame(width: 22)
+                        Text(verbatim: day.text(in: language))
+                            .font(.footnote)
+                            .foregroundStyle(day.holiday != nil || day.typhoonBlowing ? Theme.textPrimary : Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .accessibilityIdentifier("hud.forecast")
     }
 }
 

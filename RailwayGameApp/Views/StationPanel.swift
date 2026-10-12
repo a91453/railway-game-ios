@@ -27,11 +27,15 @@ struct StationPanel: View {
     /// tick, they held the main thread for seconds on a real-world map,
     /// and the panel stopped halfway as it slid in.
     @State private var ridership: (key: RidershipKey, value: StationRidership)?
+    /// Whether the "arriving soon" board is open (decision 178); kept for
+    /// the next station and the next launch.
+    @AppStorage("stationBoardExpanded") private var boardExpanded = true
 
     var body: some View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    departureBoardSection(station)
                     Section {
                         Button {
                             renaming = station.name
@@ -103,6 +107,89 @@ struct StationPanel: View {
         }.value
         guard !Task.isCancelled else { return }
         ridership = (key, value)
+    }
+
+    /// Decision 178: the trains due at the station, a direction at a time,
+    /// soonest first (``DepartureBoard``, the `Railway/` site's board):
+    /// the line's colour, the train, where it goes, and in how many minutes
+    /// (or "Arriving" under one, "Boarding" at the platform); a late train
+    /// carries "N min late" from its lateness, a fast train that does not
+    /// call "Passes", and a fixed-timetable line's runs not yet sent out
+    /// are listed at their timetable's time. Read from the world on every
+    /// tick; collapsible.
+    private func departureBoardSection(_ station: Station) -> some View {
+        let language = session.language
+        let board = DepartureBoard(world: session.world, station: station.id)
+        return Section {
+            DisclosureGroup(isExpanded: $boardExpanded) {
+                if board.isEmpty {
+                    Text(verbatim: language.text("No train is due in the next three hours.", "未來三小時沒有列車進站。"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                ForEach(board.directions) { direction in
+                    Text(verbatim: direction.endsHere
+                        ? language.text("Ending here", "抵達本站")
+                        : language.text("To \(session.world.station(id: direction.destination)?.name ?? "")", "往 \(session.world.station(id: direction.destination)?.name ?? "")"))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                    ForEach(direction.rows) { row in
+                        departureRow(row, language: language)
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Arriving Soon", "即將進站"))
+                } icon: {
+                    Image(systemName: "clock")
+                }
+            }
+            .accessibilityIdentifier("station.board")
+        }
+    }
+
+    private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage) -> some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Palette.lineColor(row.line, custom: row.color))
+                .frame(width: 6, height: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
+                    .font(.subheadline.weight(.semibold))
+                Text(verbatim: departureDetail(row, language: language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer(minLength: 4)
+            if let late = row.lateText(in: language) {
+                Text(verbatim: late)
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.orange.opacity(0.25)))
+                    .foregroundStyle(Color.orange)
+            }
+            if row.passes {
+                Text(verbatim: language.text("Passes", "通過"))
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.textSecondary.opacity(0.2)))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Text(verbatim: row.awayText(in: language))
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(row.isBoarding ? Color.green : Theme.textPrimary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("station.board.row")
+    }
+
+    /// "Line 1 · to East", "Line 1 · ends here" or the line alone.
+    private func departureDetail(_ row: DepartureBoard.Row, language: DisplayLanguage) -> String {
+        let destination = session.world.station(id: row.destination)?.name ?? ""
+        if row.endsHere { return row.lineName + " · " + language.text("ends here", "終點到達") }
+        return row.lineName + " · " + language.text("to \(destination)", "往 \(destination)")
     }
 
     /// How the station is run (Phase 5F, the reference's `operationMode`):
