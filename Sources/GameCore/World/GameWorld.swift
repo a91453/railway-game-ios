@@ -1219,6 +1219,7 @@ public struct GameWorld: Equatable, Sendable {
         sellAsset(.train, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.train, owner: owner)))
         sellAsset(.cars, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.cars, owner: owner)))
         abandonRiders(of: id)
+        loseCargo(of: id)
         trains.remove(at: index)
         abandonUnservedPassengers()
     }
