@@ -257,7 +257,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
         Thread.sleep(forTimeInterval: 1)
         func visibleRows() -> [String] {
-            menuRows.allElementsBoundByIndex.filter { $0.isHittable }.map { "\($0.label) \($0.frame)" }
+            menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
         }
         let opened = visibleRows()
         XCTAssertGreaterThan(opened.count, 1, "The train menu shows its rows")
@@ -267,8 +267,8 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // Choose a row in the middle of those it shows, which is not the
         // selected train (the lowest, at the menu's faded edge, took no tap
         // in run 38289773400).
-        let touchable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
-        let row = touchable[touchable.count / 2]
+        let rows = menuRows.allElementsBoundByIndex.filter(touchable)
+        let row = rows[rows.count / 2]
         let name = row.label
         XCTAssertNotEqual(name, "Train 15")
         touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
@@ -363,7 +363,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     private func menuCloses(_ query: XCUIElementQuery, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
-            if !query.allElementsBoundByIndex.contains(where: { $0.isHittable }) { return true }
+            if !query.allElementsBoundByIndex.contains(where: touchable) { return true }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
         return false
@@ -404,6 +404,18 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         return requiredButton(app.buttons.matching(identifier: identifier), name: identifier)
     }
 
+    /// Whether `element` can be touched. Only a copy with a frame on the
+    /// screen is asked: asking one without (an unplaced copy that
+    /// ViewThatFits exposes, or a menu row still being laid out) whether it
+    /// is hittable fails the test outright ("Failed to determine
+    /// hittability … Activation point invalid", full lane run 38296188423,
+    /// whose recording shows the menu drawn and still).
+    private func touchable(_ element: XCUIElement) -> Bool {
+        let frame = element.frame
+        guard !frame.isEmpty, XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
+        return element.isHittable
+    }
+
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {
         XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing UI flow button: \(name)")
         // ViewThatFits can also expose an unplaced copy of a menu action.
@@ -411,7 +423,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // finish, and still fail if it is disabled or no copy is tappable.
         let deadline = Date().addingTimeInterval(10)
         repeat {
-            if let button = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+            if let button = query.allElementsBoundByIndex.first(where: touchable) {
                 XCTAssertTrue(button.isEnabled, "UI flow button is disabled: \(name)")
                 return button
             }
