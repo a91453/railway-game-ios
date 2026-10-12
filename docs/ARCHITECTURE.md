@@ -5899,7 +5899,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
 
-**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：存檔列表把讀不了的存檔整列 `.disabled`，SwiftUI 的停用列也拿掉了滑動與長按選單，結果它列出來就是為了讓玩家刪掉，卻刪不掉。現在列不停用，點了不做事（列上已經顯示問題與警示圖示）。UI 測試 `StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`，用 Debug 才有的啟動參數 `-broken-save` 放一個讀不了的存檔。
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：查過「讀不了的存檔整列 `.disabled` 會連帶拿掉滑動刪除」的疑慮，在 iOS 26.5 Simulator 上不成立（停用的列仍可滑動刪除，run 38262744959），不改；加了回歸測試 `StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`，用 Debug 才有的啟動參數 `-broken-save` 放一個讀不了的存檔。
 
 ### 185. PR 的 Linux CI 依改動分層
 
