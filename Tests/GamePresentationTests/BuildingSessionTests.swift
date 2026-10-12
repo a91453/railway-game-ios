@@ -42,7 +42,7 @@ final class BuildingSessionTests: XCTestCase {
     /// code, never its name: the office's Chinese name changed, its code
     /// ("office") did not, so every saved office still reads as an office.
     func testTheCodesTheSavesStoreDidNotMove() throws {
-        let codes = ["house", "shop", "office", "wharf", "marina"]
+        let codes = ["house", "shop", "office", "wharf", "marina", "departmentStore", "hotel", "amusementPark"]
         XCTAssertEqual(PlacedBuildingKind.allCases.map(\.rawValue), codes)
         for kind in PlacedBuildingKind.allCases {
             let data = try JSONEncoder().encode([kind])
