@@ -503,6 +503,8 @@ extension GameWorld {
         /// The game day the plan is for, with weekly demand; `nil` without,
         /// when every day is the same.
         var day: Int64?
+        /// The sights' ratings the plan was worked out with (decision 174).
+        var stars: [Int] = []
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -547,8 +549,16 @@ extension GameWorld {
         /// ``stations``).
         let distanceDemand: Bool
         let outsideConnections: Bool
-        /// Decision 174: the sights and their shops.
+        /// Decision 174: the sights and their shops, and each one's rating
+        /// with the hotels near it.
         let tourism: Tourism?
+        let tourismStars: [Int]
+    }
+
+    /// Each sight's rating now, with its hotels (empty without tourism): a
+    /// plan is worked out again when a hotel goes up or comes down.
+    var tourismStars: [Int] {
+        tourism?.attractions.map { stars(of: $0) } ?? []
     }
 
     /// The key of the network plan ``makePassengerPlan()`` works out now.
@@ -566,7 +576,8 @@ extension GameWorld {
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
-            distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism
+            distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
+            tourismStars: tourismStars
         )
     }
 
@@ -746,12 +757,13 @@ extension GameWorld {
     /// has trips; works the plan out first if no current one is kept.
     mutating func passengerRelease() -> PassengerRelease? {
         // With weekly demand a plan is for one day.
-        if passengerPlan.plan != nil, passengerPlan.day != demandDay {
+        if passengerPlan.plan != nil, passengerPlan.day != demandDay || passengerPlan.stars != tourismStars {
             passengerPlan = PassengerPlanCache()
         }
         if passengerPlan.plan == nil {
             passengerPlan.key = passengerRoutingMode == .network ? passengerPlanKey() : nil
             passengerPlan.day = demandDay
+            passengerPlan.stars = tourismStars
             passengerPlan.plan = .some(makePassengerPlan(memo: &passengerRouteMemo))
         }
         guard case .some(.some(let plan)) = passengerPlan.plan else { return nil }
