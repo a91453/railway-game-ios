@@ -127,6 +127,10 @@ public final class GameSession {
     /// The company's building the last tap on the map picked with the
     /// select tool (decision 173), which the inspector shows; an ID only.
     public private(set) var selectedBuildingID: PlacedBuildingID?
+    /// The track the last tap with the select tool picked where there was
+    /// no station, train or building (decision 184), which the inspector
+    /// shows (``GameWorld/trackInspectionText(of:in:)``); an ID only.
+    public private(set) var selectedTrackEdge: TrackEdgeID?
 
     /// The train the camera follows: the `Ci/` reference's
     /// `trackedTrainId`, kept apart from the selection
@@ -463,11 +467,14 @@ public final class GameSession {
         if isPickingLineStops, let station {
             refused = !appendToLineDraft(station)
         }
-        guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil else { return }
+        // Decision 184: with nothing else there, the track under the tap.
+        let track = station == nil && tool == .select ? world.trackEdgePoint(near: point, within: reach)?.edge : nil
+        guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil || track != selectedTrackEdge else { return }
         selectedPoint = point
         selectedStationID = station
         tappedTrainID = nil
         selectedBuildingID = nil
+        selectedTrackEdge = track
         if !refused { message = nil }
     }
 
@@ -488,6 +495,7 @@ public final class GameSession {
         selectedPoint = point
         selectedStationID = nil
         tappedTrainID = nil
+        selectedTrackEdge = nil
         message = nil
     }
 
@@ -503,6 +511,7 @@ public final class GameSession {
             selectedPoint = nil
             selectedStationID = nil
             selectedBuildingID = nil
+            selectedTrackEdge = nil
         }
         message = nil
     }
@@ -515,6 +524,7 @@ public final class GameSession {
         selectedStationID = id
         tappedTrainID = nil
         selectedBuildingID = nil
+        selectedTrackEdge = nil
         message = nil
     }
 
@@ -526,6 +536,7 @@ public final class GameSession {
         selectedStationID = nil
         tappedTrainID = nil
         selectedBuildingID = nil
+        selectedTrackEdge = nil
         followedTrainID = nil
         message = nil
     }
@@ -1985,6 +1996,7 @@ public final class GameSession {
         if let id = tappedTrainID, world.train(id: id) == nil { tappedTrainID = nil }
         endFollowIfGone()
         if let id = selectedLineID, world.line(id: id) == nil { selectedLineID = nil }
+        if let id = selectedTrackEdge, world.network.edge(id) == nil { selectedTrackEdge = nil }
         func exists(_ anchor: NetworkAnchor?) -> Bool {
             switch anchor {
             case nil, .point: true
