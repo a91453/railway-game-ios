@@ -155,6 +155,8 @@ public final class GameSession {
         didSet {
             messageSerial &+= 1
             noteMessageInNews()
+            // Decision 184: something refused sounds so.
+            if message?.kind == .failure { playSound?(.refused) }
         }
     }
 
@@ -185,7 +187,19 @@ public final class GameSession {
 
     /// The news log (``NewsLog``): what the station master said, what
     /// happened and when. Kept with the save, never in it.
-    public internal(set) var news = NewsLog()
+    /// Whether ``restoreNews(_:)`` is putting a save's log in place.
+    @ObservationIgnored var isRestoringNews = false
+    public internal(set) var news = NewsLog() {
+        didSet {
+            // Decision 184: a new worry (debt, a deadline, a typhoon, a town
+            // short of materials) rings the warning. A refusal has its own
+            // sound; a log read from a save rings nothing.
+            guard !isRestoringNews, let newest = news.items.first, newest.id != oldValue.items.first?.id,
+                  newest.category.isWorry, newest.category != .failure
+            else { return }
+            playSound?(.warning)
+        }
+    }
 
     /// The month that closed while the game ran, until the player has seen
     /// its report (set by the month's closing, like ``yearEndYear``).

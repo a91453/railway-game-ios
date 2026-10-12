@@ -1,6 +1,7 @@
 import AVFoundation
 import GamePresentation
 import Observation
+import UIKit
 
 /// Plays the game's music and sounds (`Resources/Audio/`, made by
 /// `tools/audio/make_game_audio.py`): the soundtrack of the first promo
@@ -24,6 +25,9 @@ final class GameAudio {
     @ObservationIgnored private var sounds: [SoundCue: [AVAudioPlayer]] = [:]
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
     @ObservationIgnored private var isActive = false
+    /// Decision 184: the taps the phone gives with a refusal, a warning
+    /// and something put up.
+    @ObservationIgnored private let haptics = UINotificationFeedbackGenerator()
     /// Whether anything is played at all: not in UI tests (see `init`).
     @ObservationIgnored private let plays: Bool
 
@@ -89,10 +93,21 @@ final class GameAudio {
     /// trains arrive within a second, and one chime stands for them. The
     /// trains the player is not looking at ring quieter and at most every
     /// few seconds, so a busy network does not ring all the time.
+    ///
+    /// Decision 184: a refusal, a warning and something put up also tap
+    /// the phone (the system's haptics setting decides whether it does),
+    /// with the sounds off too.
     func play(_ cue: SoundCue) {
-        guard plays, soundsOn, isActive else { return }
+        guard plays, isActive else { return }
         let now = ContinuousClock.now
         if let last = lastPlayed[cue], now - last < Self.spacing(of: cue) { return }
+        if let feedback = Self.haptic(of: cue) {
+            haptics.notificationOccurred(feedback)
+        }
+        guard soundsOn else {
+            lastPlayed[cue] = now
+            return
+        }
         let players = sounds[cue] ?? loadSound(cue)
         // A free player of the sound's few, so a sound can overlap itself.
         guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
@@ -125,6 +140,8 @@ final class GameAudio {
         case .transition: ("whoosh", 0.3)
         case .built: ("build-done", 0.6)
         case .income: ("coins", 0.35)
+        case .refused: ("refused", 0.5)
+        case .warning: ("warning", 0.45)
         }
         let players = (0..<3).compactMap { _ in Self.player(named: name, extension: "wav", volume: volume) }
         sounds[cue] = players
@@ -142,6 +159,20 @@ final class GameAudio {
         // At high speed an hour settles every second or two: one ding
         // stands for several.
         case .income: .seconds(3)
+        // Decision 184: a burst of refusals (a drag across water) or of
+        // worries (a new day's) sounds once.
+        case .refused: .milliseconds(600)
+        case .warning: .seconds(2)
+        }
+    }
+
+    /// The tap a cue gives, if any (decision 184).
+    private static func haptic(of cue: SoundCue) -> UINotificationFeedbackGenerator.FeedbackType? {
+        switch cue {
+        case .refused: .error
+        case .warning: .warning
+        case .built: .success
+        case .arrival, .track, .transition, .income: nil
         }
     }
 
