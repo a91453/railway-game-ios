@@ -19,6 +19,17 @@ final class FinanceHistoryTests: XCTestCase {
         return accounts
     }
 
+    /// A young game's first 90-day or one-year bucket reaches back before
+    /// day 1; its label starts at day 1, not at a negative day.
+    func testAYoungGamesFirstBucketIsLabelledFromDayOne() {
+        let history = FinanceHistory.make(.oneYear, accounts: accounts(days: [5: (500, 5), 100: (700, 7)]), today: 100)
+        let first = try! XCTUnwrap(history.points.first)
+        XCTAssertLessThan(first.startDay, 0)
+        XCTAssertFalse(first.label(for: .oneYear, in: .english).contains("-"), first.label(for: .oneYear, in: .english))
+        XCTAssertTrue(first.label(for: .oneYear, in: .english).hasPrefix("Days 1–"))
+        XCTAssertTrue(first.label(for: .ninetyDays, in: .traditionalChinese).hasPrefix("第 1–"))
+    }
+
     func testThirtyDaysAreOneBucketPerDayEndingToday() {
         let history = FinanceHistory.make(.thirtyDays, accounts: accounts(days: [100: (500, 5), 129: (700, 7)], cost: 100), today: 129)
         XCTAssertEqual(history.points.count, 30)

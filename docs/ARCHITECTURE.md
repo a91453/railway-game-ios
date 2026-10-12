@@ -5471,6 +5471,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **每月報告**歸 `claude/secretary-news`（決策 175）。它要月彙整時請用 `FinanceHistory.make(.oneYear, …)` 的格子（30 天一格），不要另算一份。
 - 參考：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardFinanceTrendData`（窗口結束在現在、每格一個區段的 delta；它另外從整本帳推現金餘額，這裡不做）。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：遊戲還年輕時，90 天與一年的第一格會跨到第 1 天之前，標籤寫成「第 −18–11 天」；現在從第 1 天算起（`FinanceHistoryTests.testAYoungGamesFirstBucketIsLabelledFromDayOne`）。
+
 ### 177. 開局體驗：新遊戲選項、第一次玩的引導、首條線虧損教學、說明手冊
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車：開始吧觀光補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
@@ -5500,6 +5502,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
 
 **測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
+
+**之後的修正**（查 bug，2026-10-12，發佈前）：`firstLineLosing` 不再對還沒有任何列車的路線說話：車站與軌道的固定成本讓昨天的營業結果是負的，站長卻說「車站太近、客太少」，還擋住「路線沒有車」的提醒（`OnboardingTests.testAShortLineWithNoTrainIsNotCalledLosing`）。
+
 ### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
 
 2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。
