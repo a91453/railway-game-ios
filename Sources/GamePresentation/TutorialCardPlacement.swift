@@ -93,9 +93,14 @@ public struct TutorialCardPlacement: Sendable {
     /// The first of the step's targets on screen, which the card goes
     /// beside; `nil` puts it in the middle.
     public var target: Frame?
-    /// Every control and panel on screen but the map, which can be tapped
-    /// outside the card.
+    /// Every control on screen but the map, which can be tapped outside the
+    /// card.
     public var controls: [Frame]
+    /// The details card and a panel beside the map: covering them costs as
+    /// much as covering the step's own controls, which they may hold
+    /// unmarked (a panel's NavigationStack keeps its controls' marks from
+    /// the overlay), and a card over them folds.
+    public var panels: [Frame]
     /// The step's own controls (not the map), among `controls`.
     public var required: [Frame]
     /// The part of the map that shows (``TutorialTarget/map``).
@@ -115,14 +120,15 @@ public struct TutorialCardPlacement: Sendable {
     /// The narrowest a card is measured to leave a band of the map free
     /// beside it.
     static let minimumCardWidth: Double = 240
-    /// Above covering any ordinary control or panel with the whole card,
-    /// below covering a sliver of the step's own controls.
+    /// Above covering any ordinary control with the whole card, below
+    /// covering a sliver of the step's own controls or of a panel.
     static let mapCoveredCost: Double = 400_000
 
     /// All in the screen's coordinates, as the app reads them.
-    public init(target: Frame?, controls: [Frame], required: [Frame], map: Frame?, maxWidth: Double = 340) {
+    public init(target: Frame?, controls: [Frame], panels: [Frame] = [], required: [Frame], map: Frame?, maxWidth: Double = 340) {
         self.target = target
         self.controls = controls
+        self.panels = panels
         self.required = required
         self.map = map
         self.maxWidth = maxWidth
@@ -173,9 +179,10 @@ public struct TutorialCardPlacement: Sendable {
     }
 
     /// Whether a card at `frame`, in the screen's coordinates, leaves the
-    /// step's own controls uncovered and a band of the map free to tap.
+    /// step's own controls and the panels uncovered and a band of the map
+    /// free to tap.
     public func leavesStepFree(_ frame: Frame) -> Bool {
-        !required.contains { $0.intersects(frame) } && Self.leavesMapFree(frame, map: map)
+        !(required + panels).contains { $0.intersects(frame) } && Self.leavesMapFree(frame, map: map)
     }
 
     /// Whether a band of `map` at least ``minimumFreeMap`` deep stays free
@@ -200,7 +207,7 @@ public struct TutorialCardPlacement: Sendable {
         // before comparing candidates.
         guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
         let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let required = self.required.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let required = (self.required + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
         let gap = Self.gap
         let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))

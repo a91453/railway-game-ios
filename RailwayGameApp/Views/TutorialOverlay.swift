@@ -4,38 +4,51 @@ import SwiftUI
 extension View {
     /// The reference's tour card and outlines, attached at the root of the
     /// screen whose controls report TutorialTargetBounds. Sheets need their
-    /// own attachment when C5 adds targets inside them.
-    func tutorialOverlay(session: GameSession) -> some View {
+    /// own attachment when C5 adds targets inside them. `panelTargets`:
+    /// the targets inside a panel beside the map, on the screen (global
+    /// coordinates), which report there (`tutorialPanelTarget(_:)`).
+    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:]) -> some View {
         overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
                     let viewport = CGRect(origin: .zero, size: proxy.size)
-                    let frames = tutorial.step.targets.compactMap { target -> CGRect? in
-                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
+                    // A panel beside the map: what is inside it shows only
+                    // within it.
+                    let panel = anchors[.sidePanel]?.visibleFrame(in: proxy, viewport: viewport)
+                    let origin = proxy.frame(in: .global).origin
+                    let inPanels = panelTargets.compactMapValues { frame -> CGRect? in
+                        guard let panel else { return nil }
+                        let visible = frame.offsetBy(dx: -origin.x, dy: -origin.y).intersection(panel)
+                        return visible.isNull || visible.isEmpty ? nil : visible
                     }
+                    let frameOf = { (target: TutorialTarget) -> CGRect? in
+                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport) ?? inPanels[target]
+                    }
+                    let frames = tutorial.step.targets.compactMap(frameOf)
                     // Every control the player may need stays clear of the card,
                     // whatever its size (a full-width Build Track button is
-                    // one), and so do the details card and a panel beside the
-                    // map, whose controls are not all marked: at the line step
-                    // a card over the lines panel left Pick on Map and Create
-                    // Line out of reach on a phone (2026-10-12). The map is the
-                    // exception: it fills the screen and is tapped past the card.
-                    let controls = anchors.compactMap { target, anchor -> CGRect? in
-                        target == .map ? nil : anchor.visibleFrame(in: proxy, viewport: viewport)
-                    }
+                    // one). The map is the exception: it fills the screen and
+                    // is tapped past the card.
+                    let controls = Set(anchors.keys).union(inPanels.keys)
+                        .filter { $0 != .map && !tutorialPanels.contains($0) }
+                        .compactMap(frameOf)
+                    // The details card and a panel beside the map, kept clear
+                    // as the step's own controls are: at the line step a card
+                    // over the lines panel left Pick on Map and Create Line out
+                    // of reach on a phone (2026-10-12).
+                    let panels = tutorialPanels.compactMap(frameOf)
                     // What the step asks the player to use matters most when
                     // no placement leaves every control clear.
-                    let required = tutorial.step.targets.compactMap { target -> CGRect? in
-                        target == .map ? nil : anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
-                    }
+                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
                     // The map's own frame, so the card leaves some of it
                     // free to tap even where little of it shows.
-                    let map = anchors[.map]?.visibleFrame(in: proxy, viewport: viewport)
+                    let map = frameOf(.map)
                     TutorialOverlay(
                         session: session, tutorial: tutorial, frames: frames,
                         placement: TutorialCardPlacement(
                             target: frames.first.map { TutorialCardPlacement.Frame($0) },
                             controls: controls.map { TutorialCardPlacement.Frame($0) },
+                            panels: panels.map { TutorialCardPlacement.Frame($0) },
                             required: required.map { TutorialCardPlacement.Frame($0) },
                             map: map.map { TutorialCardPlacement.Frame($0) }
                         )
@@ -45,6 +58,10 @@ extension View {
         }
     }
 }
+
+/// The areas the tutorial's card keeps clear of as of the step's own
+/// controls: the details card and a panel beside the map.
+private let tutorialPanels: [TutorialTarget] = [.detailsCard, .sidePanel]
 
 /// The overlay's coordinates, the frames' (the GeometryReader's).
 private let tutorialOverlaySpace = "tutorial.overlay"

@@ -2345,6 +2345,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **之後的修正（2026-10-12，作者實機回報：手機橫放第 6 步卡住）**：iPhone 橫放（874 × 402 點）時，「建立路線」這一步打開的路線面板在右側（決策 106 的「地圖旁的面板」），教學卡片只避開有標記的控制項，不知道面板在那裡，就蓋在面板上：「在地圖上選站」「建立路線」按不到，「下一步」永遠不會亮，只能略過。改法：
 - 卡片的擺放從 App 的 `Layout` 抽到 GamePresentation 的 `TutorialCardPlacement`（演算法不變），用實機截圖量出的畫面在 Linux 上測（`TutorialCardPlacementTests`，含「改之前會蓋住」的重現）。它用自己的矩形（`TutorialCardPlacement.Frame`），不用 `CGRect`：GamePresentation 不 import CoreGraphics（決策 45），而 Apple 平台上的 Foundation 不帶 `CGRect` 的幾何運算。
 - 新的目標：`line.draft.pick`、`line.draft.create`（路線面板的兩個按鈕，第 6 步框它們並當成必須留空的控制項）、`panel.details`、`panel.side`（細節卡片與地圖旁的面板，不框，但卡片要避開）。第 6 步的目標改成「路線」按鈕、兩個面板按鈕與地圖（要在地圖上點車站）。
+- **面板和步驟要用的控制項一樣重**（蓋到每平方點的代價 ×1000），蓋到就收合：第一版只把面板當一般控制項，iPhone 的 CI（run 38243536829）上卡片仍為了留地圖而蓋住面板 15 點，正好蓋到「在地圖上選站」。原因是**面板裡的 `NavigationStack` 不讓 preference 傳出來**：面板裡用 `tutorialTarget(_:)` 標的按鈕（包括決策 125 的 `line.staff.start`）教學層從來沒收到過。面板裡的目標改用 `tutorialPanelTarget(_:)`：用 `onGeometryChange` 把自己在畫面上的位置寫進 `GameScreenState.tutorialPanelTargets`，教學層換算成自己的座標、只算面板裡看得到的部分。
 - 候選位置多了「沒被遮住的地圖的四個角」。
 - 卡片可以收合成一行（站長、第幾步、標題）：玩家按 ⌄ 收合、按膠囊打開；卡片打開時若蓋到這一步要用的控制項，或沒有留下 96 點寬的地圖，就自己收合；這一步完成時自己打開（玩家自己收合的除外），讓「下一步」出現。畫面上的東西改變（面板開關、轉向、要用的按鈕捲進畫面）時重新試一次打開。
 - 手機橫放（compact 高度）時卡片小一號：最寬 320 點、內文 footnote、按鈕 regular。

@@ -71,22 +71,33 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertTrue(card.intersects(Self.linePick) || card.intersects(Self.lineCreate), "card \(card)")
     }
 
-    /// The line step with the lines panel open: the panel and its Pick on
-    /// Map and Create Line buttons are known, and whatever the card shows,
-    /// open or folded, those buttons and the Lines button stay free.
-    func testTheLineStepLeavesPickOnMapAndCreateLineFree() {
-        let placement = TutorialCardPlacement(
-            target: Self.linesButton,
-            controls: Self.hud + [Self.zoomBesidePanel, Self.sidePanel, Self.linePick, Self.lineCreate],
-            required: [Self.linesButton, Self.linePick, Self.lineCreate],
-            map: Self.mapBesidePanel
-        )
-        let shown = Self.shownCard(placement)
-        for button in [Self.linesButton, Self.linePick, Self.lineCreate] {
-            XCTAssertFalse(shown.intersects(button), "card \(shown) covers \(button)")
+    /// The line step with the lines panel open: whatever the card shows,
+    /// open or folded, it keeps clear of the panel, so Pick on Map and
+    /// Create Line stay free, and of the Lines button. The panel's buttons
+    /// may be known (reported through the screen state) or not (marks do
+    /// not leave its NavigationStack: the card covered Pick on Map by 15
+    /// points in the first CI run of this fix, run 38243536829), both at
+    /// the card's widths on a phone (320) and elsewhere (340).
+    func testTheLineStepKeepsTheLinesPanelFree() {
+        for buttonsKnown in [true, false] {
+            for maxWidth in [320.0, 340] {
+                let buttons = buttonsKnown ? [Self.linePick, Self.lineCreate] : []
+                let placement = TutorialCardPlacement(
+                    target: Self.linesButton,
+                    controls: Self.hud + [Self.zoomBesidePanel] + buttons,
+                    panels: [Self.sidePanel],
+                    required: [Self.linesButton] + buttons,
+                    map: Self.mapBesidePanel,
+                    maxWidth: maxWidth
+                )
+                let shown = Self.shownCard(placement)
+                let context = "buttons known: \(buttonsKnown), width \(maxWidth): card \(shown)"
+                for control in [Self.linesButton, Self.linePick, Self.lineCreate, Self.sidePanel] {
+                    XCTAssertFalse(shown.intersects(control), "\(context) covers \(control)")
+                }
+                XCTAssertTrue(placement.leavesStepFree(shown), context)
+            }
         }
-        XCTAssertTrue(placement.leavesStepFree(shown), "card \(shown)")
-        XCTAssertFalse(shown.intersects(Self.sidePanel), "card \(shown) over the lines panel")
     }
 
     /// The steps before it, with the details card open: nothing the step
@@ -102,7 +113,8 @@ final class TutorialCardPlacementTests: XCTestCase {
         for step in steps {
             let placement = TutorialCardPlacement(
                 target: step.target,
-                controls: Self.hud + [Self.zoomBesideCard, Self.detailsCard, Self.networkModes, Self.actionButton],
+                controls: Self.hud + [Self.zoomBesideCard, Self.networkModes, Self.actionButton],
+                panels: [Self.detailsCard],
                 required: step.required,
                 map: Self.mapBesideCard
             )
@@ -119,13 +131,15 @@ final class TutorialCardPlacementTests: XCTestCase {
         let screens: [TutorialCardPlacement] = [
             TutorialCardPlacement(
                 target: Self.linesButton,
-                controls: Self.hud + [Self.zoomBesidePanel, Self.sidePanel, Self.linePick, Self.lineCreate],
-                required: [Self.linesButton, Self.linePick, Self.lineCreate],
+                controls: Self.hud + [Self.zoomBesidePanel],
+                panels: [Self.sidePanel],
+                required: [Self.linesButton],
                 map: Self.mapBesidePanel
             ),
             TutorialCardPlacement(
                 target: Self.mapBesideCard,
-                controls: Self.hud + [Self.zoomBesideCard, Self.detailsCard, Self.networkModes, Self.actionButton],
+                controls: Self.hud + [Self.zoomBesideCard, Self.networkModes, Self.actionButton],
+                panels: [Self.detailsCard],
                 required: [Self.networkModes, Self.actionButton],
                 map: Self.mapBesideCard
             ),
@@ -133,7 +147,7 @@ final class TutorialCardPlacementTests: XCTestCase {
         for placement in screens {
             let folded = placement.frame(in: Self.screen, measure: Self.foldedCard)
             XCTAssertTrue(placement.leavesStepFree(folded), "folded \(folded)")
-            for control in placement.controls {
+            for control in placement.controls + placement.panels {
                 XCTAssertFalse(folded.intersects(control), "folded \(folded) covers \(control)")
             }
         }

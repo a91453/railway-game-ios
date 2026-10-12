@@ -69,9 +69,9 @@ struct LinesPanel: View {
                     }
                 }
             }
-            // The tutorial counts its first line's Start Service button only
-            // where the form shows it (decision 125).
-            .tutorialClip()
+            // The tutorial's targets in the form report their place on the
+            // screen themselves (`tutorialPanelTarget(_:)`); the overlay
+            // counts them only inside the panel.
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
             // The pattern's stops are indices into the selected line's:
@@ -823,7 +823,7 @@ struct LinesPanel: View {
                 .disabled(session.world.economy.balance < plan.cost)
                 .accessibilityIdentifier("line.staff.start")
                 // Decision 125: the tutorial's first line starts here.
-                .tutorialTarget(.staffLine)
+                .tutorialPanelTarget(.staffLine)
                 // Decision 180: the trains already on the line, into this type and cars.
                 if !line.assignedTrains.isEmpty {
                     Button {
@@ -906,7 +906,7 @@ struct LinesPanel: View {
                 }
             }
             .accessibilityIdentifier("line.draft.pick")
-            .tutorialTarget(.pickLineStops)
+            .tutorialPanelTarget(.pickLineStops)
             Button("Add Selected Station") {
                 session.addSelectedStationToLineDraft()
             }
@@ -950,7 +950,7 @@ struct LinesPanel: View {
             .buttonStyle(ThemeProminentButtonStyle())
             .disabled(stops.count < 2)
             .accessibilityIdentifier("line.draft.create")
-            .tutorialTarget(.createLine)
+            .tutorialPanelTarget(.createLine)
             if !draft.isEmpty {
                 Button(role: .destructive) {
                     session.clearLineDraft()
