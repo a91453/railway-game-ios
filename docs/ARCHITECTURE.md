@@ -5702,7 +5702,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **更多地圖泡泡**（`GameWorld.situationAlerts()`，和 `mapAlerts()` 分開，因為站長每一步都問 `mapAlerts()`，而死結要從每列等候的列車算）：交通控制下**死結的列車**（`deadlockedTrains()`，在車頭；點了選取那列車）、**四星以上沒有車站的景點**（`tourism` 開著、而且已經有客運路線時；在景點上；點了地圖移過去並打開觀光面板）、**挑戰破產倒數**（`insolvencyCountdown`，在第一個車站；點了打開經營資料）。「車站爆滿」原本就有（決策 109 的 `full`）。`MapAlert.station` 改成可以沒有（列車與景點的泡泡）；泡泡在同一個位置疊起來，改以位置分組。泡泡只在選取工具時計算。圖示沿用既有的 `MapGlyph`（`train`、`star`、`warningSolid`），沒有新畫圖示。
 
-**提示音與觸覺**：新的 `SoundCue.refused`（任何失敗訊息：兩個往下的低音撥弦）與 `.warning`（新聞紀錄新增一則「警訊」類：負債、期限、颱風、缺建材；讀檔還原的紀錄不響）。兩個新音檔由 `tools/audio/make_game_audio.py` 合成（本專案自己的素材；重新執行後既有的音檔位元組完全相同）。App 的 `GameAudio` 另外給觸覺回饋：拒絕 `.error`、警訊 `.warning`、放好建物／月台（`.built`）`.success`；觸覺不受「音效」開關影響（系統的觸覺設定決定），和音效共用最短間隔。**行為改變**：原本拒絕是無聲的（`SoundCueTests`、`GameFeedbackTests` 的兩個斷言），現在有拒絕音，測試跟著改。
+**提示音與觸覺**：新的 `SoundCue.refused`（任何失敗訊息：兩個往下的低音撥弦）與 `.warning`（新聞紀錄新增一則「警訊」類：負債、期限、颱風、缺建材；讀檔還原的紀錄不響）。兩個新音檔由 `tools/audio/make_game_audio.py` 合成（本專案自己的素材；重新執行後既有的音檔位元組完全相同）。App 的 `GameAudio` 另外給觸覺回饋（SwiftUI 的 `sensoryFeedback`，掛在 App 的場景上）：拒絕 `.error`、警訊 `.warning`、放好建物／月台（`.built`）`.success`；觸覺不受「音效」開關影響（系統的觸覺設定決定），和音效共用最短間隔。**行為改變**：原本拒絕是無聲的（`SoundCueTests`、`GameFeedbackTests` 的兩個斷言），現在有拒絕音，測試跟著改。
 
 **參考庫與外部專案**：重做移植 `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `past`／`future`（`sY`、`sq`、`sG`、`canRedo`）。搜尋、存檔命名、軌道檢視、新泡泡、提示音在參考庫裡沒有對應（Ci 的存檔是 `buildLocalSavePayload` 的槽位，沒有命名；MapBuilder 沒有號誌），是本專案自己的。外部專案沒有取用程式。
 

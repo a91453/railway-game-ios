@@ -1,7 +1,7 @@
 import AVFoundation
 import GamePresentation
 import Observation
-import UIKit
+import SwiftUI
 
 /// Plays the game's music and sounds (`Resources/Audio/`, made by
 /// `tools/audio/make_game_audio.py`): the soundtrack of the first promo
@@ -25,9 +25,16 @@ final class GameAudio {
     @ObservationIgnored private var sounds: [SoundCue: [AVAudioPlayer]] = [:]
     @ObservationIgnored private var lastPlayed: [SoundCue: ContinuousClock.Instant] = [:]
     @ObservationIgnored private var isActive = false
-    /// Decision 184: the taps the phone gives with a refusal, a warning
-    /// and something put up.
-    @ObservationIgnored private let haptics = UINotificationFeedbackGenerator()
+    /// Decision 184: the latest tap of the phone a cue asked for, which
+    /// the app's scene gives (`sensoryFeedback`): a refusal, a warning or
+    /// something put up.
+    private(set) var haptic: HapticPulse?
+
+    /// A tap of the phone, numbered so the same kind twice is two taps.
+    struct HapticPulse: Equatable {
+        let feedback: SensoryFeedback
+        let serial: Int
+    }
     /// Whether anything is played at all: not in UI tests (see `init`).
     @ObservationIgnored private let plays: Bool
 
@@ -101,8 +108,8 @@ final class GameAudio {
         guard plays, isActive else { return }
         let now = ContinuousClock.now
         if let last = lastPlayed[cue], now - last < Self.spacing(of: cue) { return }
-        if let feedback = Self.haptic(of: cue) {
-            haptics.notificationOccurred(feedback)
+        if let feedback = Self.feedback(for: cue) {
+            haptic = HapticPulse(feedback: feedback, serial: (haptic?.serial ?? 0) &+ 1)
         }
         guard soundsOn else {
             lastPlayed[cue] = now
@@ -167,7 +174,7 @@ final class GameAudio {
     }
 
     /// The tap a cue gives, if any (decision 184).
-    private static func haptic(of cue: SoundCue) -> UINotificationFeedbackGenerator.FeedbackType? {
+    private static func feedback(for cue: SoundCue) -> SensoryFeedback? {
         switch cue {
         case .refused: .error
         case .warning: .warning

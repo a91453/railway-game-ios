@@ -19,7 +19,7 @@ struct ListSearchField: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityHidden(true)
-            TextField(text: $search.query) {
+            TextField(text: $search.query, prompt: Text(verbatim: prompt)) {
                 Text(verbatim: prompt)
             }
             .textInputAutocapitalization(.never)
