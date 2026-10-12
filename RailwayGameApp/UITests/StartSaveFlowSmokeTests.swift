@@ -264,13 +264,14 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // Thirty ticks: the menu must not move, close or change.
         Thread.sleep(forTimeInterval: 3)
         XCTAssertEqual(visibleRows(), opened, "The open train menu changed by itself while the clock ran")
-        // Choose the lowest row it shows, which is not the selected train.
-        guard let last = menuRows.allElementsBoundByIndex.last(where: { $0.isHittable }) else {
-            return XCTFail("No row of the train menu can be touched")
-        }
-        let name = last.label
+        // Choose a row in the middle of those it shows, which is not the
+        // selected train (the lowest, at the menu's faded edge, took no tap
+        // in run 38289773400, clock or not).
+        let touchable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
+        let row = touchable[touchable.count / 2]
+        let name = row.label
         XCTAssertNotEqual(name, "Train 15")
-        touchMenuRow(last, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
+        touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
         waitForLabel("Train: \(name)", of: picker.firstMatch)
     }
 
