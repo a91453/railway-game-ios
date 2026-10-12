@@ -13,8 +13,9 @@ name: CI
 #
 # A pull request runs the tier its changed files need (decision 185,
 # swift-shards.sh plan): everything for a change to GameCore, the package,
-# the CI scripts or a shared test file; only the GamePresentation tests for a
-# change there (or to the app's bundled data); only the classes that read
+# the CI scripts, a shared test file or several edited campaigns; only the
+# GamePresentation tests for a change there (or to the app's bundled data, or
+# a tools/ file they read); only the classes that read
 # the fixtures for a fixture change; only the classes a GameCore test file
 # declares when no other file uses it. The label `full-ci` makes a pull
 # request run everything: add it, then re-run the pull request's run (Re-run
