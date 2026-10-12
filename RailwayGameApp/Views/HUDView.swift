@@ -122,43 +122,56 @@ struct HUDView: View {
                 Label("Tutorial", systemImage: "hand.point.up.left")
             }
             .accessibilityIdentifier("menu.tutorial")
-            // Decision 86: a game with a challenge shows its goals;
-            // decision 183: and one with the city's requests.
-            if session.world.scenario != nil || session.world.hasCityRequests {
+            // The panels opened less often, in one row whatever the game
+            // has: on a phone on its side the menu shows about six rows,
+            // and the goals (decisions 86 and 183) and the sights (decision
+            // 174) pushed Back to Start out of reach.
+            Menu {
+                // Decision 86: a game with a challenge shows its goals;
+                // decision 183: and one with the city's requests.
+                if session.world.scenario != nil || session.world.hasCityRequests {
+                    Button {
+                        screen.panel = .goals
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Goals", "目標"))
+                        } icon: {
+                            Image(systemName: "flag.checkered")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.goals")
+                }
+                // Decision 174: a game with sights shows them.
+                if session.world.hasTourism {
+                    Button {
+                        screen.panel = .tourism
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Sights", "觀光景點"))
+                        } icon: {
+                            Image(systemName: "star")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.tourism")
+                }
                 Button {
-                    screen.panel = .goals
+                    screen.panel = .help
                 } label: {
                     Label {
-                        Text(verbatim: session.language.text("Goals", "目標"))
+                        Text(verbatim: session.language.text("Help", "說明"))
                     } icon: {
-                        Image(systemName: "flag.checkered")
+                        Image(systemName: "questionmark.circle")
                     }
                 }
-                .accessibilityIdentifier("menu.goals")
-            }
-            // Decision 174: a game with sights shows them.
-            if session.world.hasTourism {
-                Button {
-                    screen.panel = .tourism
-                } label: {
-                    Label {
-                        Text(verbatim: session.language.text("Sights", "觀光景點"))
-                    } icon: {
-                        Image(systemName: "star")
-                    }
-                }
-                .accessibilityIdentifier("menu.tourism")
-            }
-            Button {
-                screen.panel = .help
+                .accessibilityIdentifier("menu.help")
             } label: {
                 Label {
-                    Text(verbatim: session.language.text("Help", "說明"))
+                    Text(verbatim: session.language.text("More", "更多"))
                 } icon: {
-                    Image(systemName: "questionmark.circle")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
-            .accessibilityIdentifier("menu.help")
+            .accessibilityIdentifier("menu.more")
             Divider()
             Button {
                 screen.panel = .settings

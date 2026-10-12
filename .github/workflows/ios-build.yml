@@ -13,7 +13,8 @@ name: iOS App Build
 # - Pull requests (the gate): the build, the project check and a short list of
 #   UI tests on an iPhone Simulator, the ones only a Simulator can answer: the
 #   start screen, the three tools, starting, saving and continuing a game
-#   (in English; the other languages run in the full lane), and the
+#   (the demo map, a blank new game and a real-world map, in English; the
+#   other languages run in the full lane), and the
 #   tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's own files. Kept short and steady so
 #   a red result means something.
@@ -346,6 +347,12 @@ jobs:
             only=(
               -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testEnglishStartSaveFlow
+              # A blank new game (sights and the city's requests on) and a
+              # real-world one: their game menus are the longest, and the
+              # demo map's flow above never showed that Back to Start fell
+              # out of reach on a phone on its side.
+              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing
+              -only-testing:RailwayGameUITests/RealWorldMapUITests/testARealWorldGameStartsFromAPlaceAndIsSavedAsOne
               -only-testing:RailwayGameUITests/MapInteractionTests/testSwitchingFollowTargetWhilePausedCentersTheCamera
               -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
