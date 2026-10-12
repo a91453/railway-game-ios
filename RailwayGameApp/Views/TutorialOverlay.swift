@@ -7,7 +7,9 @@ extension View {
     /// own attachment when C5 adds targets inside them. `panelTargets`:
     /// the targets inside a panel beside the map, on the screen (global
     /// coordinates), which report there (`tutorialPanelTarget(_:)`).
-    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:]) -> some View {
+    /// `mapSites`: where the stations the step has the player tap stand on
+    /// the screen (global coordinates), as the map reports them.
+    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:], mapSites: [CGRect] = []) -> some View {
         overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
@@ -42,11 +44,21 @@ extension View {
                     let backdrops = frameOf(.detailsCard).map { [$0] } ?? []
                     // What the step asks the player to use matters most when
                     // no placement leaves every control clear.
-                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
+                    // So do the stations the step has the player tap on the
+                    // map, where the map shows them (decision 188, later
+                    // fix): on a phone on its side, the card stood over both
+                    // of the line's stations beside the lines panel.
+                    let mapFrame = frameOf(.map)
+                    let sites = mapSites.compactMap { site -> CGRect? in
+                        guard let mapFrame else { return nil }
+                        let visible = site.offsetBy(dx: -origin.x, dy: -origin.y).intersection(mapFrame)
+                        return visible.isNull || visible.isEmpty ? nil : visible
+                    }
+                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf) + sites
                     // The map's own frame, so the card leaves some of it
                     // free to tap even where little of it shows; a step that
                     // is only read has nothing to tap there (decision 188).
-                    let map = tutorial.step.goal == .read ? nil : frameOf(.map)
+                    let map = tutorial.step.goal == .read ? nil : mapFrame
                     TutorialOverlay(
                         session: session, tutorial: tutorial, frames: frames,
                         placement: TutorialCardPlacement(

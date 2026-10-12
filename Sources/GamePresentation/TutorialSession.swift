@@ -43,6 +43,25 @@ extension GameSession {
         return tutorial.step.goal != .read && !tutorial.reachedByBack && isTutorialStepDone
     }
 
+    /// Where the stations stand that the step on screen has the player tap
+    /// on the map: the line's two stations, then one to select (decision
+    /// 188, later fix). The tutorial's card keeps clear of them, or folds:
+    /// on a phone on its side, with the lines panel open, it stood over
+    /// both and the player could not pick them (run 38307741519). The
+    /// stations built since the stations chapter began, the player's; all
+    /// of them when the tutorial began after it (`-tutorial-step`). Empty
+    /// for every other step.
+    public var tutorialStationsToTap: [PlanPoint] {
+        guard let tutorial else { return [] }
+        switch tutorial.step.goal {
+        case .pickLineStations, .selectStation:
+            let before = tutorial.snapshot(of: .stations)
+            return world.stations.filter { before?.stations.contains($0.id) != true }.map(\.location)
+        default:
+            return []
+        }
+    }
+
     /// Next: the following step, or, on the last step, Finish, which ends
     /// the tutorial. Does nothing until the step on screen is done. Steps
     /// already done on the way are passed over.

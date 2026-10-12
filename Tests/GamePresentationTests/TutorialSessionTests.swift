@@ -46,6 +46,14 @@ final class TutorialSessionTests: XCTestCase {
                     let id = tutorial.step.id
                     visited.append(id)
                     XCTAssertEqual(session.isTutorialStepDone, tutorial.step.goal == .read, "\(id) starts \(tutorial.step.goal == .read ? "done" : "undone")")
+                    // The card keeps clear of the stations the player taps
+                    // on the map: the two just built, not the demo's own.
+                    if id == "line.stations" || id == "station.select" {
+                        let (first, second) = Self.newStations(session)
+                        XCTAssertEqual(session.tutorialStationsToTap, [first.location, second.location], id)
+                    } else {
+                        XCTAssertEqual(session.tutorialStationsToTap, [], id)
+                    }
                     Self.carryOut(id, in: session)
                     XCTAssertTrue(session.isTutorialStepDone, "\(id) is done")
                     if tutorial.step.goal == .read {
@@ -383,6 +391,11 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertFalse(session.isTutorialStepDone)
             session.startPickingLineStops(announces: false)
             XCTAssertTrue(session.isTutorialStepDone)
+            // Begun after the stations chapter, every station is one to tap.
+            XCTAssertEqual(session.tutorialStationsToTap, [])
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "line.stations")
+            XCTAssertEqual(session.tutorialStationsToTap, session.world.stations.map(\.location))
 
             launcher.startTutorial(atStep: "line.create")
             session = try XCTUnwrap(launcher.session)
