@@ -403,6 +403,68 @@ SELECTED_TESTS='UnitTests GamePresentationTests.*' expect pass "a selection runs
 SELECTED_TESTS='GamePresentationTests.*' SELECTED_PART=1/2 expect pass "a part of a selection runs exactly its tests" "$script" run selected
 FAKE_MODE=drop SELECTED_TESTS='UnitTests' WHY='not the tests the shard selects' expect fail "a selected test that does not run fails the selection" "$script" run selected
 
+# ci.yml's decision (decide): a push to main and a manual run are full
+# whenever the Swift jobs run, a pull request runs its tier unless labelled
+# full-ci. In the same tree as the plans above.
+full_matrix="$("$script" matrix)"
+# expect_decision <swift> <tier> <matrix: full, none, or a jq-free fragment
+# the matrix must contain> <description> <VAR=value...> -- <path>...
+expect_decision() {
+  local want_swift="$1" want_tier="$2" want_matrix="$3" what="$4" got matrix ok=true
+  shift 4
+  local -a vars=()
+  while [[ $# -gt 0 && "$1" != -- ]]; do vars+=("$1"); shift; done
+  shift
+  got="$(cd "$tree" && printf '%s\n' "$@" | env "${vars[@]}" "$script" decide 2>"$work/err.txt")" || got="exit $?"
+  matrix="$(sed -n 's/^matrix=//p' <<<"$got")"
+  [[ "$(sed -n 's/^swift=//p' <<<"$got")" == "$want_swift" && "$(sed -n 's/^tier=//p' <<<"$got")" == "$want_tier" ]] || ok=false
+  case "$want_matrix" in
+    full) [[ "$matrix" == "$full_matrix" ]] || ok=false ;;
+    none) ;;
+    *) [[ "$matrix" == *"$want_matrix"* && "$matrix" != "$full_matrix" ]] || ok=false ;;
+  esac
+  if [[ "$ok" == true ]]; then
+    echo "ok   pass  decide: $what -> $want_tier"
+  else
+    echo "FAIL decide: $what: expected swift $want_swift, tier $want_tier, matrix $want_matrix; got: $(tr '\n' ' ' <<<"$got")"
+    sed 's/^/     | /' "$work/err.txt" | tail -5
+    failures=$((failures + 1))
+  fi
+}
+expect_decision true full full "a push to main of GameCore" EVENT=push LISTED=true -- Sources/GameCore/World/GameWorld.swift
+expect_decision true full full "a push to main of GamePresentation only is still full" EVENT=push LISTED=true -- "${pr414[@]}"
+expect_decision true full full "a push to main of one test file only is still full" EVENT=push LISTED=true -- "${pr401[@]}"
+expect_decision false none none "a push to main of docs skips" EVENT=push LISTED=true -- docs/ROADMAP.md
+expect_decision true full full "a push to main whose files could not be listed" EVENT=push LISTED=false --
+expect_decision true full full "a manual run" EVENT=workflow_dispatch LISTED=false --
+expect_decision true presentation '{"shard":"selected-3","tests":"GamePresentationTests.*","part":"3/3"}' \
+  "a pull request of GamePresentation runs it in 3 parts" EVENT=pull_request LISTED=true -- "${pr414[@]}"
+expect_decision true tests-only '{"include":[{"shard":"selected","tests":"FlexDispatchPropertyTests","part":"1/1"}]}' \
+  "a pull request of one campaign file" EVENT=pull_request LISTED=true -- "${pr401[@]}"
+expect_decision true full full "a pull request labelled full-ci" EVENT=pull_request LISTED=true LABELS="full-ci" -- "${pr414[@]}"
+expect_decision true full full "a pull request with full-ci among other labels" EVENT=pull_request LISTED=true \
+  LABELS=$'bug\nfull-ci documentation' -- "${pr401[@]}"
+expect_decision true full full "a pull request labelled full-ci with only docs" EVENT=pull_request LISTED=true LABELS="full-ci" -- docs/ROADMAP.md
+expect_decision true presentation 'GamePresentationTests' "a label that only looks like full-ci" EVENT=pull_request LISTED=true \
+  LABELS="no-full-ci full-cid" -- "${pr414[@]}"
+expect_decision false none none "a pull request of docs skips" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
+expect_decision true full full "a pull request whose files could not be listed" EVENT=pull_request LISTED=false --
+
+# The gate: red when the detection or any Swift job of the tier did not
+# succeed (a failed or cancelled job makes the combined result so), green
+# when every job passed or none was needed and none ran.
+gate() { env -u CHANGES -u SWIFT_NEEDED -u TIER -u CURRENT "$@" "$script" gate; }
+expect pass "gate: every job of a full run passed" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=success
+expect pass "gate: every job of a partial tier passed" gate CHANGES=success SWIFT_NEEDED=true TIER=presentation CURRENT=success
+expect pass "gate: nothing needed, nothing ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=skipped
+WHY='did not succeed \(Swift 6.4: failure\)' expect fail "gate: a selected job failed" gate CHANGES=success SWIFT_NEEDED=true TIER=tests-only CURRENT=failure
+WHY='did not succeed \(Swift 6.4: cancelled\)' expect fail "gate: a selected job was cancelled" gate CHANGES=success SWIFT_NEEDED=true TIER=fixtures CURRENT=cancelled
+WHY='did not succeed \(Swift 6.4: skipped\)' expect fail "gate: needed jobs that did not run" gate CHANGES=success SWIFT_NEEDED=true TIER=full CURRENT=skipped
+WHY='not needed but did not skip' expect fail "gate: unneeded jobs that ran" gate CHANGES=success SWIFT_NEEDED=false TIER=none CURRENT=success
+WHY='change detection did not succeed' expect fail "gate: the detection failed" gate CHANGES=failure SWIFT_NEEDED= TIER= CURRENT=skipped
+WHY='change detection did not succeed' expect fail "gate: the detection was cancelled" gate CHANGES=cancelled SWIFT_NEEDED=false TIER=none CURRENT=skipped
+WHY='neither' expect fail "gate: no answer from the detection" gate CHANGES=success SWIFT_NEEDED= TIER= CURRENT=skipped
+
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
   exit 1

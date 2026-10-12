@@ -121,8 +121,8 @@ needs OSM data reads the same extract.
   its tests or the app's bundled data; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
-  several apply. The label `full-ci` runs every shard (add it, then re-run
-  or push). Pull requests and pushes to `main` that change nothing the
+  several apply. The label `full-ci` runs every shard (adding it starts a
+  new run). Pull requests and pushes to `main` that change nothing the
   package builds or tests skip the Swift jobs, and the `Swift CI (gate)` job
   always reports; `main`'s branch rule requires that job, so never rename
   it. Pushes to `main` share one concurrency group: a burst of merges runs

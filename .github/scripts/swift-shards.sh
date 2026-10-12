@@ -15,6 +15,9 @@
 #   swift-shards.sh plan             read a pull request's changed files on
 #                                    stdin; print its tier and the tests it
 #                                    runs (pr_plan below)
+#   swift-shards.sh decide           ci.yml's change detection: whether the
+#                                    Swift jobs run, the tier, the matrix
+#   swift-shards.sh gate             the "Swift CI (gate)" verdict
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
 #   campaigns-1 .. campaigns-15   the long property, differential and mutation
@@ -810,6 +813,80 @@ pr_plan() {
   echo "parts=$parts"
 }
 
+# What ci.yml's change detection decides, from the event and what it found:
+#   EVENT    push, pull_request or workflow_dispatch
+#   LISTED   true when the changed files (on stdin) could be listed
+#   LABELS   the pull request's labels, separated by spaces or new lines
+# Prints swift=<true|false>, tier=<tier> and matrix=<JSON> for $GITHUB_OUTPUT
+# (and the tests and tier on stderr). A push to main and a manual run are
+# full whenever the Swift jobs run; only a pull request has a smaller tier,
+# and only when its files were listed and it is not labelled full-ci.
+ci_decide() {
+  local files swift=true tier=full matrix plan tests parts k sep
+  files="$(cat)"
+  matrix="$("$0" matrix)"
+  if [[ "${LISTED:-false}" == true ]]; then
+    swift="$(relevant_paths <<<"$files")"
+    if [[ "${EVENT:-}" == pull_request ]]; then
+      if [[ " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
+        echo "Label full-ci: every shard runs." >&2
+        swift=true
+      elif plan="$("$0" plan <<<"$files")"; then
+        tier="$(sed -n 's/^tier=//p' <<<"$plan")"
+        tests="$(sed -n 's/^tests=//p' <<<"$plan")"
+        parts="$(sed -n 's/^parts=//p' <<<"$plan")"
+        case "$tier" in
+          full) swift=true ;;
+          none) swift=false ;;
+          tests-only | fixtures | presentation)
+            swift=true
+            [[ "$tests" =~ ^[A-Za-z0-9_.*\ ]+$ && "$parts" =~ ^[1-9][0-9]*$ ]] || die "Bad plan: tests '$tests', parts '$parts'."
+            echo "Tests: $tests" >&2
+            matrix='{"include":['
+            sep=""
+            for ((k = 1; k <= parts; k++)); do
+              matrix+="$sep{\"shard\":\"selected$([[ "$parts" -eq 1 ]] || echo "-$k")\",\"tests\":\"$tests\",\"part\":\"$k/$parts\"}"
+              sep=","
+            done
+            matrix+=']}' ;;
+          *) die "Unknown tier '$tier' from plan." ;;
+        esac
+      else
+        echo "::warning::Could not plan the pull request's tier; running every shard." >&2
+        tier=full
+        swift=true
+      fi
+    fi
+  fi
+  [[ "$swift" == true ]] || tier=none
+  echo "swift=$swift"
+  echo "tier=$tier"
+  echo "matrix=$matrix"
+}
+
+# The gate's verdict ("Swift CI (gate)", the check main's branch rule
+# requires), from the jobs' results:
+#   CHANGES       the change detection's result
+#   SWIFT_NEEDED  its swift output
+#   TIER          its tier output
+#   CURRENT       the Swift jobs' combined result (failure if any job failed,
+#                 cancelled if any was cancelled, skipped if none ran)
+# Passes only when the detection succeeded and either every Swift job of the
+# tier succeeded or none was needed and none ran.
+ci_gate() {
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; Swift 6.4: ${CURRENT:-}"
+  [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
+  if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
+    echo "Every Swift 6.4 job of tier ${TIER:-?} passed."
+  elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
+    echo "No file that can change the Swift package changed; the Swift jobs were skipped."
+  else
+    die "The change detection said neither that the Swift jobs are needed nor that they are not ('${SWIFT_NEEDED:-}')."
+  fi
+}
+
 case "${1:-}" in
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
@@ -844,7 +921,13 @@ case "${1:-}" in
   plan)
     pr_plan
     ;;
+  decide)
+    ci_decide
+    ;;
+  gate)
+    ci_gate
+    ;;
   *)
-    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan"
+    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate"
     ;;
 esac

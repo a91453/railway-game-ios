@@ -5855,7 +5855,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一個 GameCore 測試檔時兩邊都跑，不會因為「取最大」漏掉）。測試檔是當文字讀，不編譯：頂層宣告就是從第 0 欄開始的那行（這裡每個測試檔都是這個寫法），`private`／`fileprivate` 的不算；讀不懂的（不是直接繼承 `XCTestCase` 的類、加在別處型別上的 init、subscript、運算子、conformance）一律當共用，也就是 full。挑出來的類在跑之前要在 `swift test list` 裡找得到，跑完要正好是選到的那些測試（和分片同一套檢查）。
 
-**例外與不變的部分**：PR 有 label `full-ci` 時全跑（`changes` 執行時用 API 讀 label，所以加上 label 後重跑或再 push 就會看到）。`main` 的 push 與手動執行照舊全跑（push 仍和最近一輪成功的 push run 比，沒有影響 package 的改動才跳過）。`Swift CI (gate)` 的名稱與一定回報不變，它要求該層的每個 Swift job 都成功。
+**例外與不變的部分**：PR 有 label `full-ci` 時全跑。`pull_request` 也在 `labeled` 時觸發，所以加上 label 就會重跑成 full（加其他 label 也會重跑一次並取消正在跑的那輪，結果一樣是照規則判定的，gate 不會因此失真）；`changes` 執行時用 API 讀 label，手動重跑也看得到之後加的 label。`main` 的 push 與手動執行照舊全跑（push 仍和最近一輪成功的 push run 比，沒有影響 package 的改動才跳過）。`Swift CI (gate)` 的名稱與一定回報不變：該層任何一個 Swift job 失敗或被取消就紅，不需要 Swift 的（none）在 Swift job 都跳過時綠。判定（`swift-shards.sh decide`）與 gate（`swift-shards.sh gate`）都在腳本裡，自測涵蓋：`main` 的 push 只改 GamePresentation 或只改一個測試檔仍是 full、手動執行是 full、`full-ci`（含和其他 label 並列）是 full、gate 在失敗、取消、該跑沒跑、不該跑卻跑、偵測失敗時紅。
 
 **代價**：PR 綠了不代表全部 campaign 都過；那些在合併後 `main` 的 push run 上跑。`main` 紅了時看那輪的失敗，需要時手動 `workflow_dispatch` 被取代的 commit 二分。對 PR 有疑慮時加 `full-ci`。
 
