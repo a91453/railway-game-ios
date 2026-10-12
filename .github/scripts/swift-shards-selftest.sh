@@ -201,6 +201,208 @@ WHY='Cannot fetch' expect_base "" "a commit that cannot be fetched: test everyth
 WHY='Could not list' expect_base "" "the API failing: test everything" FAKE_RUNS="$sha_b" FAKE_GH_FAIL=1
 WHY='GITHUB_REPOSITORY is not set' expect_base "" "no repository name: test everything" FAKE_RUNS="$sha_b" GITHUB_REPOSITORY=
 
+# A pull request's tier (pr_plan). A small tree of test files, shaped like
+# the real ones: a campaign whose static generator another campaign calls, a
+# helper every campaign uses, a golden loader and the classes that read
+# through it, a class another reads a save fixture through, a class that is
+# not directly an XCTestCase, and one named only in another file's comments.
+tree="$work/tree"
+mkdir -p "$tree/Tests/GameCoreTests" "$tree/Tests/GamePresentationTests"
+cat >"$tree/Tests/GameCoreTests/PropertySupport.swift" <<'SWIFT'
+import XCTest
+
+func runCampaign(_ name: String, cases: Int, _ body: (Int) throws -> Void) rethrows -> Int { 0 }
+SWIFT
+cat >"$tree/Tests/GameCoreTests/LineDispatchPropertyTests.swift" <<'SWIFT'
+@testable import GameCore
+import XCTest
+
+final class LineDispatchPropertyTests: XCTestCase {
+    static func generate(_ count: Int) -> [Int] { [] }
+    func testCampaign() throws { _ = try runCampaign("line.dispatch", cases: 4) { _ in } }
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/FlexDispatchPropertyTests.swift" <<'SWIFT'
+@testable import GameCore
+import XCTest
+
+/// Uses the dispatch campaign's commands (LineDispatchPropertyTests).
+final class FlexDispatchPropertyTests: XCTestCase {
+    func testCampaign() throws {
+        _ = try runCampaign("flex.dispatch", cases: 8) { _ in _ = LineDispatchPropertyTests.generate(70) }
+    }
+
+    func testSavable() throws {}
+}
+
+private struct Helper {}
+
+private extension FlexDispatchPropertyTests {
+    func local() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/FreightTests.swift" <<'SWIFT'
+@testable import GameCore
+import XCTest
+
+final class FreightTests: XCTestCase {
+    func testCargo() {} // FlexDispatchPropertyTests does not use this
+}
+
+extension FreightTests {
+    func testMore() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/GoldenScenario.swift" <<'SWIFT'
+import Foundation
+
+struct GoldenScenario: Decodable {
+    let name: String
+    static func load() throws -> [GoldenScenario] { _ = GoldenScenarioFixtures.directory; return [] }
+}
+
+extension GoldenScenario: Equatable {}
+
+extension GameTime {
+    var minutes: Int64 { 0 }
+}
+
+enum GoldenScenarioFixtures {
+    static let directory = URL(fileURLWithPath: #filePath)
+        .appendingPathComponent("GoldenScenarios", isDirectory: true)
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/GoldenScenarioTests.swift" <<'SWIFT'
+import XCTest
+
+final class GoldenScenarioTests: XCTestCase {
+    func testEveryFixture() throws { _ = try GoldenScenario.load() }
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/ReferenceWorldGoldenTests.swift" <<'SWIFT'
+import XCTest
+
+final class ReferenceWorldGoldenTests: XCTestCase {
+    func testTheReferenceAgrees() throws { _ = try GoldenScenario.load().map(\.name) }
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/SavedGameTests.swift" <<'SWIFT'
+import XCTest
+
+final class SavedGameTests: XCTestCase {
+    static let fixtures = URL(fileURLWithPath: #filePath).appendingPathComponent("SaveFixtures")
+    func testEveryVersionLoads() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/PassengerRoutesTests.swift" <<'SWIFT'
+import XCTest
+
+final class PassengerRoutesTests: XCTestCase {
+    func testAnOldSave() throws { _ = SavedGameTests.fixtures.appendingPathComponent("v41.json") }
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/ShapeTests.swift" <<'SWIFT'
+import XCTest
+
+class ShapeTests: ShapeCase {
+    func testShapes() {}
+}
+SWIFT
+cat >"$tree/Tests/GameCoreTests/ReplayFixtureTests.swift" <<'SWIFT'
+import XCTest
+
+final class ReplayFixtureTests: XCTestCase {
+    func testEveryReplay() { _ = "ReplayFixtures" }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/FinanceHistoryTests.swift" <<'SWIFT'
+import XCTest
+
+@MainActor
+final class FinanceHistoryTests: XCTestCase {
+    func testBuckets() {}
+}
+SWIFT
+
+# expect_plan <tier> <tests> <description> <path>...
+expect_plan() {
+  local want_tier="$1" want_tests="$2" what="$3" got
+  shift 3
+  got="$(cd "$tree" && printf '%s\n' "$@" | "$script" plan 2>"$work/err.txt")" || got="exit $?"
+  if [[ "$(sed -n 's/^tier=//p' <<<"$got")" == "$want_tier" && "$(sed -n 's/^tests=//p' <<<"$got")" == "$want_tests" ]]; then
+    echo "ok   pass  plan: $what -> $want_tier"
+  else
+    echo "FAIL plan: $what: expected tier $want_tier, tests '$want_tests'; got: $(tr '\n' ' ' <<<"$got")"
+    sed 's/^/     | /' "$work/err.txt" | tail -8
+    failures=$((failures + 1))
+  fi
+}
+present='GamePresentationTests.*'
+# The pull requests of 2026-10-12, as they changed the files.
+pr398=(Sources/GameCore/Freight/Freight.swift Tests/GameCoreTests/FreightTests.swift docs/ARCHITECTURE.md)
+pr401=(Tests/GameCoreTests/FlexDispatchPropertyTests.swift)
+pr403=(RailwayGameApp/RailwayGame.xcodeproj/project.pbxproj RailwayGameApp/Views/AchievementsView.swift
+  RailwayGameApp/Views/ContentView.swift Sources/GamePresentation/Achievements.swift
+  Sources/GamePresentation/CompanyRank.swift Sources/GamePresentation/GameSession.swift
+  Tests/GamePresentationTests/AchievementsTests.swift Tests/GamePresentationTests/BalanceReportTests.swift
+  docs/ARCHITECTURE.md)
+pr406=(RailwayGameApp/App/GameAudio.swift RailwayGameApp/Resources/Audio/refused.wav
+  RailwayGameApp/Views/HUDView.swift Sources/GamePresentation/ListSearch.swift
+  Tests/GamePresentationTests/ListSearchTests.swift docs/research/REFERENCE_PORT_INVENTORY.md
+  tools/audio/README.md tools/audio/make_game_audio.py)
+pr414=(Sources/GamePresentation/FinanceHistory.swift Sources/GamePresentation/StationMasterAdvice.swift
+  Tests/GamePresentationTests/FinanceHistoryTests.swift Tests/GamePresentationTests/OnboardingTests.swift
+  docs/ARCHITECTURE.md)
+slim=(GoldenScenarios/city-requests.json GoldenScenarios/README.md)
+expect_plan full "" "#398 (two lines of GameCore and a test)" "${pr398[@]}"
+expect_plan tests-only FlexDispatchPropertyTests "#401 and #419 (a GameCore campaign file only)" "${pr401[@]}"
+expect_plan presentation "$present" "#403 (GamePresentation and the app)" "${pr403[@]}"
+expect_plan presentation "$present" "#406 (GamePresentation, the app, its sounds)" "${pr406[@]}"
+expect_plan presentation "$present" "#414 (GamePresentation and its tests)" "${pr414[@]}"
+expect_plan fixtures "GoldenScenarioTests ReferenceWorldGoldenTests" "#413's golden made smaller" "${slim[@]}"
+expect_plan presentation "FlexDispatchPropertyTests $present" "mixed: presentation and a campaign file run both" "${pr414[@]}" "${pr401[@]}"
+expect_plan fixtures "FlexDispatchPropertyTests GoldenScenarioTests ReferenceWorldGoldenTests" "mixed: a fixture and a test file" "${slim[@]}" "${pr401[@]}"
+expect_plan full "" "mixed: anything with GameCore is full" "${pr403[@]}" Sources/GameCore/World/GameWorld.swift
+expect_plan none "" "docs, tools, the app's code and other workflows" docs/ROADMAP.md tools/golden-checks/city_requests.py \
+  RailwayGameApp/Views/MapView.swift .github/workflows/ios-build.yml README.md
+expect_plan tests-only FreightTests "a test file named only in another file's comments, with its own extension" Tests/GameCoreTests/FreightTests.swift
+expect_plan full "" "a campaign whose static generator another campaign calls" Tests/GameCoreTests/LineDispatchPropertyTests.swift
+expect_plan full "" "a helper other test files use" Tests/GameCoreTests/PropertySupport.swift
+expect_plan full "" "a golden loader" Tests/GameCoreTests/GoldenScenario.swift
+expect_plan full "" "a class that is not directly an XCTestCase" Tests/GameCoreTests/ShapeTests.swift
+expect_plan full "" "a deleted or renamed test file" Tests/GameCoreTests/GoneTests.swift
+expect_plan fixtures "PassengerRoutesTests SavedGameTests" "a save fixture, read through SavedGameTests.fixtures" SaveFixtures/v50-city-requests.json
+expect_plan fixtures "ReplayFixtureTests" "a replay fixture" ReplayFixtures/kernel.json
+expect_plan presentation "$present" "the app's bundled data" RailwayGameApp/Resources/RealWorld/taiwan_places.json
+expect_plan full "" "the package, the CI scripts and ci.yml" Package.resolved .github/scripts/swift-shards.sh
+expect_plan full "" "another test module" Tests/OtherTests/X.swift
+# Every path `relevant` counts runs some tests, and none it does not count does.
+for path in Package.swift Sources/GameCore/World/GameWorld.swift Tests/GameCoreTests/FreightTests.swift \
+  GoldenScenarios/line-dispatch.json SaveFixtures/v1-demo-90-minutes.json ReplayFixtures/kernel.json .github/workflows/ci.yml \
+  .github/scripts/swift-shards-selftest.sh RailwayGameApp/Resources/RealWorld/taiwan_places.json \
+  Sources/GamePresentation/GameSession.swift Tests/GamePresentationTests/FinanceHistoryTests.swift; do
+  tier="$(cd "$tree" && echo "$path" | "$script" plan 2>/dev/null | sed -n 's/^tier=//p')"
+  if [[ "$(relevant "$path")" == true && -n "$tier" && "$tier" != none ]]; then
+    echo "ok   pass  plan: $path is tested ($tier)"
+  else
+    echo "FAIL plan: $path: relevant $(relevant "$path"), tier '$tier'"
+    failures=$((failures + 1))
+  fi
+done
+# A part of a selection: the classes dealt out in turn, each in one part.
+printf 'M.A/t1\nM.A/t2\nM.B/t\nM.C/t\nN.D/t\n' >"$work/parts.txt"
+parts="$(for k in 1 2; do SELECTED_TESTS='M.* D' SELECTED_PART="$k/2" SWIFT_TEST_LIST_FILE="$work/parts.txt" "$script" select selected | tr '\n' ' '; echo; done)"
+if [[ "$parts" == $'M.A/t1 M.A/t2 M.C/t \nM.B/t N.D/t ' ]]; then
+  echo "ok   pass  selected parts split the classes"
+else
+  echo "FAIL selected parts: $parts"
+  failures=$((failures + 1))
+fi
+SELECTED_TESTS='GoneTests' WHY='GoneTests has no tests' expect fail "a selected class that does not exist fails" "$script" run selected
+SELECTED_TESTS='UnitTests GamePresentationTests.*' expect pass "a selection runs exactly its tests" "$script" run selected
+SELECTED_TESTS='GamePresentationTests.*' SELECTED_PART=1/2 expect pass "a part of a selection runs exactly its tests" "$script" run selected
+FAKE_MODE=drop SELECTED_TESTS='UnitTests' WHY='not the tests the shard selects' expect fail "a selected test that does not run fails the selection" "$script" run selected
+
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
   exit 1

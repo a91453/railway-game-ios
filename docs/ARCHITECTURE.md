@@ -5839,6 +5839,28 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
 
+### 185. PR 的 Linux CI 依改動分層
+
+2026-10-12。作者同意改掉「每個 PR 都跑全部測試（campaign 不縮）」的規則（派工 session_017he2Q1QSeaBKJD1PR3XMma）。號碼依工作登記 #231：決策 185；存檔版本、golden schema 不動。
+
+**理由**：GitHub Free 同時最多 20 個 job，完整的 Linux CI 一輪就是 17 個（`changes`、16 個分片、gate）。2026-10-12 晚上 9 個 PR 排隊，一次只容得下大約一個 PR 的完整 CI；其中一半只改 GamePresentation（#403、#406、#414）或只加 GameCore 的測試檔（#401、#419），卻每個都跑全部 campaign。
+
+**規則**（`swift-shards.sh plan`，`ci.yml` 的 `changes` job）：PR 一律 `swift build --build-tests -Xswiftc -warnings-as-errors` 建置全部，測試依改到的檔案分層，取最大的一層：
+
+- **full**（全部 16 分片）：`Sources/GameCore/`、`Package.swift`、`Package.resolved`、`.github/scripts/`、`ci.yml`、其他 `Sources/` 或 `Tests/` 目錄、被刪除或改名的測試檔，以及**被其他測試檔用到的 GameCore 測試檔**（共用輔助檔：`PropertySupport.swift`、`GoldenScenario.swift`、`TestLine.swift`、`Reference*.swift`，或被別的類呼叫 static 的測試類，例如 `LineDispatchPropertyTests.generate`、`SavedGameTests.fixtures`）。
+- **presentation**（所有 `GamePresentationTests`，分 3 個 job）：`Sources/GamePresentation/`、`Tests/GamePresentationTests/`、`RailwayGameApp/Resources/`（App 內附的資料只有 GamePresentation 的測試讀；哪天 GameCore 的測試讀了，就自動變成 full）。GameCore 的測試看不到 GamePresentation，所以不跑。本機 452 秒的測試，慢的 runner 約 1.8 倍，加上約 5 分鐘的建置，分成 3 份讓每個 job 在 10 分鐘左右。
+- **fixtures**：`GoldenScenarios/`、`SaveFixtures/`、`ReplayFixtures/` → 讀它們的測試類：程式碼裡寫到該目錄的頂層宣告，加上用名字引用這些宣告的頂層宣告，一路追下去（`GoldenScenarioFixtures` → `GoldenScenario` → `GoldenScenarioTests`、`ReferenceWorldGoldenTests`…；`SavedGameTests.fixtures` → `PassengerRoutesTests`）。追到無法用名字追的地方（別處型別的 extension 裡）就是 full。`tools/golden-checks/` 是獨立的 Python 檢查，Swift 測試不讀，維持跳過。
+- **tests-only**：只改 `Tests/GameCoreTests/` 裡沒有被其他檔用到的測試檔 → 只跑檔案裡宣告的 `XCTestCase` 類。
+- **none**：App 的程式、文件、`tools/`、其他 workflow → 跳過 Swift（同以前）。
+
+full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一個 GameCore 測試檔時兩邊都跑，不會因為「取最大」漏掉）。測試檔是當文字讀，不編譯：頂層宣告就是從第 0 欄開始的那行（這裡每個測試檔都是這個寫法），`private`／`fileprivate` 的不算；讀不懂的（不是直接繼承 `XCTestCase` 的類、加在別處型別上的 init、subscript、運算子、conformance）一律當共用，也就是 full。挑出來的類在跑之前要在 `swift test list` 裡找得到，跑完要正好是選到的那些測試（和分片同一套檢查）。
+
+**例外與不變的部分**：PR 有 label `full-ci` 時全跑（`changes` 執行時用 API 讀 label，所以加上 label 後重跑或再 push 就會看到）。`main` 的 push 與手動執行照舊全跑（push 仍和最近一輪成功的 push run 比，沒有影響 package 的改動才跳過）。`Swift CI (gate)` 的名稱與一定回報不變，它要求該層的每個 Swift job 都成功。
+
+**代價**：PR 綠了不代表全部 campaign 都過；那些在合併後 `main` 的 push run 上跑。`main` 紅了時看那輪的失敗，需要時手動 `workflow_dispatch` 被取代的 commit 二分。對 PR 有疑慮時加 `full-ci`。
+
+**參考庫與外部專案**：參考庫沒有 CI。依變更選測試是常見做法（Bazel、Nx 的 affected、`pytest-testmon`），沒有取用程式；判斷與檢查是本專案自己的。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

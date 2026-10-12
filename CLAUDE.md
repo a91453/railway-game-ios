@@ -111,11 +111,20 @@ needs OSM data reads the same extract.
   replay to the same states; run by
   `Tests/GameCoreTests/ReplayFixtureTests.swift` (`ReplayFixtures/README.md`).
 - `.github/workflows/` — `ci.yml` (the Swift package on Linux with Swift 6.4
-  only: every test with the campaigns not reduced, split into parallel shards
-  by `.github/scripts/swift-shards.sh`, which also proves each shard ran
-  exactly its tests; pull requests and pushes to `main` that change nothing
-  the package builds or tests skip the Swift jobs, and the `Swift CI (gate)`
-  job always reports; `main`'s branch rule requires that job, so never rename
+  only: a push to `main` and a manual run build everything and run every
+  test with the campaigns not reduced, split into parallel shards by
+  `.github/scripts/swift-shards.sh`, which also proves each job ran exactly
+  its tests. A pull request builds everything but runs the tier its changed
+  files need (ARCHITECTURE decision 185, `swift-shards.sh plan`): every shard
+  for GameCore, the package, the CI scripts or a test file other test files
+  use; all the GamePresentation tests (in three jobs) for GamePresentation,
+  its tests or the app's bundled data; the classes that read the fixtures
+  for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
+  GameCore test file declares when no other file uses it; the union when
+  several apply. The label `full-ci` runs every shard (add it, then re-run
+  or push). Pull requests and pushes to `main` that change nothing the
+  package builds or tests skip the Swift jobs, and the `Swift CI (gate)` job
+  always reports; `main`'s branch rule requires that job, so never rename
   it. Pushes to `main` share one concurrency group: a burst of merges runs
   the run in progress and the newest one, the replaced runs show as
   cancelled with no result of their own, and a push is compared with the
@@ -221,7 +230,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   then the tests the change touches with
   `swift test --skip-build --filter <Class>`, and the shard of any campaign
   whose code or behaviour it changes with
-  `.github/scripts/swift-shards.sh run <shard>`. The full suite is CI's job:
+  `.github/scripts/swift-shards.sh run <shard>`. The full suite is CI's job
+  (on `main` after the merge; a pull request's own run is its tier):
   when CI turns red, fix the failure and push rather than rerunning
   everything locally. Run more locally only when the task needs it (to
   reproduce a CI failure, or to measure shard times). Report the local checks
