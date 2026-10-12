@@ -499,38 +499,137 @@ private struct ControlDock: View {
 /// details) in a glass card at the trailing side (decision 106): a
 /// station's nameboard and its lines (decision 112) over them when one is
 /// selected, and on an iPad, which has the room, the network's overview
-/// under them. As tall as what it shows, up to `maxHeight`, then it
-/// scrolls. It floats over the map, so its height changing as the game
-/// runs moves nothing else.
+/// under them. As tall as what it shows, up to `maxHeight`; then only the
+/// options in its middle scroll, between the inspector at its head and the
+/// action button at its foot, which stay put: with the whole card
+/// scrolling, reaching the button took the status away (TestFlight 54.1).
+/// Where those two leave the middle too little room, the whole card
+/// scrolls as before. It floats over the map, so its height changing as
+/// the game runs moves nothing else.
 private struct DetailsCard: View {
     let session: GameSession
     let maxHeight: CGFloat
     /// Regular height: an iPad, not a phone.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-    @State private var contentHeight: CGFloat = 0
+    @State private var headHeight: CGFloat = 0
+    @State private var middleHeight: CGFloat = 0
+    @State private var footHeight: CGFloat = 0
+
+    /// The card's inner margin, and the gap between its parts.
+    private static let padding: CGFloat = 14
+    private static let spacing: CGFloat = 12
+    /// The least the middle keeps of its own while the head and foot stay
+    /// put: about two rows of options.
+    private static let leastMiddle: CGFloat = 88
+    /// How far the middle fades into the head and foot when it scrolls.
+    private static let fade: CGFloat = 8
+
+    private var hasHead: Bool {
+        selectedStation != nil || ControlPanel.showsInspector(session)
+    }
+
+    private var hasFoot: Bool {
+        ControlPanel.showsAction(session)
+    }
+
+    private var selectedStation: Station? {
+        session.tool == .select ? session.selectedStation : nil
+    }
+
+    /// The heights of the parts the card shows: a part it stopped showing
+    /// keeps the last height it reported.
+    private var ends: CGFloat {
+        (hasHead ? headHeight : 0) + (hasFoot ? footHeight : 0)
+    }
+
+    /// Whether the head and foot stay put, the middle scrolling between.
+    private var pinsEnds: Bool {
+        ends + Self.leastMiddle <= maxHeight
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if session.tool == .select, let station = session.selectedStation {
-                    VStack(alignment: .leading, spacing: 8) {
-                        StationNameboard(name: station.name)
-                        StationLineChips(session: session, station: station)
+        Group {
+            if pinsEnds {
+                VStack(spacing: 0) {
+                    if hasHead { head }
+                    ScrollView {
+                        middle
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicatorsFlash(onAppear: true)
+                    .scrollIndicatorsFlash(trigger: session.tool)
+                    .mask {
+                        // Scrolled options fade into the head and foot
+                        // instead of being cut off at a hard edge.
+                        VStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                                .frame(height: hasHead ? Self.fade : 0)
+                            Color.black
+                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                                .frame(height: hasFoot ? Self.fade : 0)
+                        }
+                    }
+                    .tutorialClip()
+                    if hasFoot { foot }
+                }
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if hasHead { head }
+                        middle
+                        if hasFoot { foot }
                     }
                 }
-                ControlPanel(session: session, arrangement: .details)
-                if verticalSizeClass == .regular {
-                    Divider()
-                    NetworkOverview(session: session)
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicatorsFlash(onAppear: true)
+                .tutorialClip()
+            }
+        }
+        .frame(height: min(max(ends + middleHeight, 1), maxHeight), alignment: .top)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("details.card")
+    }
+
+    /// The selection, or what the network tool's taps picked.
+    private var head: some View {
+        VStack(alignment: .leading, spacing: Self.spacing) {
+            if let station = selectedStation {
+                VStack(alignment: .leading, spacing: 8) {
+                    StationNameboard(name: station.name)
+                    StationLineChips(session: session, station: station)
                 }
             }
-            .padding(14)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+            ControlPanel(session: session, arrangement: .inspector)
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .tutorialClip()
-        .frame(height: min(max(contentHeight, 1), maxHeight))
-        .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding([.top, .horizontal], Self.padding)
+        .padding(.bottom, Self.spacing - Self.fade)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headHeight = $0 }
+    }
+
+    /// The tool's options, and on an iPad the network's overview.
+    private var middle: some View {
+        VStack(alignment: .leading, spacing: Self.spacing) {
+            ControlPanel(session: session, arrangement: .options)
+            if verticalSizeClass == .regular {
+                Divider()
+                NetworkOverview(session: session)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Self.padding)
+        .padding(.top, hasHead ? Self.fade : Self.padding)
+        .padding(.bottom, hasFoot ? Self.fade : Self.padding)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { middleHeight = $0 }
+    }
+
+    /// The action button.
+    private var foot: some View {
+        ControlPanel(session: session, arrangement: .action)
+            .padding([.bottom, .horizontal], Self.padding)
+            .padding(.top, Self.spacing - Self.fade)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footHeight = $0 }
     }
 }
 

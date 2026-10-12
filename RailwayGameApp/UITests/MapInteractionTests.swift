@@ -474,4 +474,124 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(toggle.isEnabled)
         XCTAssertEqual(toggle.label, cardBefore, "Closing the panel must leave the details card as it was")
     }
+
+    /// The details card keeps its status at its head and its action
+    /// button at its foot, and scrolls only the options between: in a
+    /// phone's card held on its side, the platform mode's options pushed
+    /// Add Platform below the card's edge, and scrolling to it took the
+    /// status, with its grade warning, away (TestFlight 54.1).
+    func testPlatformModeKeepsItsStatusAndActionInTheCard() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        newGame.tap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        network.waitUntilSettled()
+        network.tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+
+        // A stretch of track in the map's leading half, clear of the card
+        // (decision 106); a phone folds the card while drawing and builds
+        // with the map's ✓ (decision 136).
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.4)).tap()
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4)).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let buildTrack = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
+        let build = confirm.waitForExistence(timeout: 5) ? confirm : buildTrack
+        XCTAssertTrue(build.waitForExistence(timeout: 5))
+        build.tap()
+
+        let platform = app.buttons["Platform"]
+        if !platform.waitForExistence(timeout: 3) || !platform.isHittable {
+            let controls = app.buttons["controls.toggle"]
+            XCTAssertTrue(controls.waitForExistence(timeout: 5))
+            controls.tap()
+        }
+        platform.waitUntilSettled()
+        platform.tap()
+
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        let placed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "units along"), object: status)
+        let mid = map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.4))
+        mid.tap()
+        if XCTWaiter().wait(for: [placed], timeout: 5) != .completed { mid.tap() }
+        XCTAssertEqual(XCTWaiter().wait(for: [placed], timeout: 5), .completed,
+                       "A tap on the track must place a platform; status: \(status.label)")
+
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        waitUntilStill(card)
+        let action = app.buttons["panel.action"]
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        XCTAssertTrue(action.isHittable, "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
+        assertWhollyInside(status, card, "before scrolling")
+        assertWhollyInside(action, card, "before scrolling")
+
+        // Scrolling the options leaves the status and the button in place.
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+            .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)))
+        assertWhollyInside(status, card, "after scrolling the options")
+        XCTAssertTrue(action.isHittable, "Add Platform must stay in reach after scrolling the options")
+    }
+
+    /// The train tool's card keeps its head (the selection) whole while
+    /// its options scroll: an iPad's train tool card showed only the lower
+    /// half of its head (TestFlight 54.1).
+    func testTrainToolCardKeepsItsHead() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        waitUntilStill(card)
+        let status = app.descendants(matching: .any)["inspector.status"].firstMatch
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        assertWhollyInside(status, card, "when the train tool opens")
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
+        assertWhollyInside(status, card, "after scrolling the options")
+    }
+
+    /// Waits until `element` is in the same place twice in a row, a
+    /// quarter of a second apart: the card slides in, and grows as its
+    /// content arrives. Unlike ``XCUIElement/waitUntilSettled(timeout:)``
+    /// it asks nothing of hit testing, which a card is not made for.
+    private func waitUntilStill(_ element: XCUIElement) {
+        var last = element.frame
+        for _ in 0..<20 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = element.frame
+            if now == last { return }
+            last = now
+        }
+        XCTFail("\(element) did not stop moving")
+    }
+
+    private func assertWhollyInside(_ element: XCUIElement, _ card: XCUIElement, _ when: String,
+                                    file: StaticString = #filePath, line: UInt = #line) {
+        // Half a point either way for rounding.
+        XCTAssertTrue(card.frame.insetBy(dx: -0.5, dy: -0.5).contains(element.frame),
+                      "\(element.identifier) \(element.frame) must lie wholly in the details card \(card.frame) \(when)",
+                      file: file, line: line)
+    }
 }

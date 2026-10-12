@@ -4,22 +4,39 @@ import SwiftUI
 import UIKit
 
 /// The way into building, selection inspector, tool options and the
-/// action button, in two parts: the Build entry, always shown in the dock,
-/// and the details, in a card the screen shows only when there is
-/// something to show (``ContentView``). The tools themselves are in a
+/// action button: the Build entry, always shown in the dock, and the
+/// details, in a card the screen shows only when there is something to
+/// show (``ContentView``), with the inspector at its head, the options in
+/// its middle and the action button at its foot. The tools themselves are in a
 /// column at the map's edge while building (``BuildToolRail``, decision
 /// 114).
 struct ControlPanel: View {
     enum Arrangement {
         /// The Build entry, the lines and the figures, and Undo, in a row.
         case tools
-        /// The selection inspector, the tool's options and the action
-        /// button, in one column.
-        case details
+        /// The selection inspector, or what the network tool's taps
+        /// picked: the details card's head, which stays put.
+        case inspector
+        /// The tool's options: the details card's middle, which scrolls.
+        case options
+        /// The action button: the details card's foot, which stays put.
+        case action
     }
 
     let session: GameSession
     let arrangement: Arrangement
+
+    /// Whether the details card has an inspector to show: the building
+    /// tool's taps pick a site, not a station, so the selection row only
+    /// took the room its kinds need.
+    static func showsInspector(_ session: GameSession) -> Bool {
+        session.tool != .building
+    }
+
+    /// Whether the details card has an action button to show.
+    static func showsAction(_ session: GameSession) -> Bool {
+        ActionButton(session: session).title != nil
+    }
 
     var body: some View {
         switch arrangement {
@@ -37,17 +54,15 @@ struct ControlPanel: View {
                     RedoButton(session: session)
                 }
             }
-        case .details:
-            VStack(alignment: .leading, spacing: 12) {
-                // The building tool's taps pick a site, not a station: the
-                // selection row only took the room its kinds need.
-                if session.tool != .building {
-                    InspectorView(session: session)
-                }
-                ToolOptions(session: session)
-                    .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
-                ActionButton(session: session)
+        case .inspector:
+            if Self.showsInspector(session) {
+                InspectorView(session: session)
             }
+        case .options:
+            ToolOptions(session: session)
+                .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
+        case .action:
+            ActionButton(session: session)
         }
     }
 }
@@ -501,7 +516,7 @@ private struct ActionButton: View {
         }
     }
 
-    private var title: String? {
+    fileprivate var title: String? {
         switch session.tool {
         case .select: return nil
         case .building:

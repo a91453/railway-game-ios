@@ -97,11 +97,17 @@ struct InspectorView: View {
                 Text(session.networkDraftText())
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
+                    // Not two lines: a start's hint, a platform's place
+                    // with its grade warning, and a real map's height and
+                    // line took three or four in a phone's card, and lost
+                    // their end (TestFlight 54.1).
+                    .lineLimit(8)
+                    .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
             .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("inspector.status")
         }
     }
 
@@ -150,6 +156,7 @@ struct InspectorView: View {
                 }
             }
             .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("inspector.status")
             Spacer(minLength: 0)
             if session.selectedBuildingID != nil {
                 Button {
