@@ -256,6 +256,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// stations, that lost money yesterday.
     private static func firstLineLosing(in world: GameWorld) -> StationMasterAdvice? {
         guard world.accounts.mode == .management, world.scenario == nil, isShortRailway(world) else { return nil }
+        // A line with no train yet has not been tried: its station and track
+        // costs are not its fares' fault, and "add a train" is what to say.
+        guard world.lines.contains(where: { !$0.isFreight && !$0.trains.isEmpty }) else { return nil }
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         guard today <= firstLineDays, let day = world.accounts.days.first(where: { $0.day == today - 1 }) else { return nil }
         let result = operatingResult(on: day)
