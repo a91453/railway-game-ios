@@ -62,7 +62,9 @@ extension GameSession {
     /// Takes the log read from a save's side file. The baseline of the
     /// monthly report it had stays; the watch starts from the world.
     public func restoreNews(_ log: NewsLog) {
+        isRestoringNews = true
         news = log
+        isRestoringNews = false
         if news.baseline == nil { news.baseline = MonthlyBaseline(world: world) }
         newsWatch = NewsWatch(world: world)
     }

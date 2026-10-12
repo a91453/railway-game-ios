@@ -163,8 +163,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
         let alerts = world.mapAlerts()
         let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
-        if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }) {
-            self = .stationFull(station: full.station, name: name(full.station))
+        if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }), let station = full.station {
+            self = .stationFull(station: station, name: name(station))
             return
         }
         for alert in alerts {
@@ -173,8 +173,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 return
             }
         }
-        if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }) {
-            self = .stationCrowded(station: crowded.station, name: name(crowded.station))
+        if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }), let station = crowded.station {
+            self = .stationCrowded(station: station, name: name(station))
             return
         }
         if let event = Self.scenarioEvent(in: world) {

@@ -50,6 +50,8 @@ struct RailwayGameApp: App {
         WindowGroup {
             RootView(launcher: launcher)
                 .environment(audio)
+                // Decision 184: the taps the sounds' cues ask for.
+                .sensoryFeedback(trigger: audio.haptic) { _, pulse in pulse?.feedback }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // One game loop for the whole app, however many windows are

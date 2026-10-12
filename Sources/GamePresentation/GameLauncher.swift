@@ -520,11 +520,14 @@ public final class GameLauncher {
 
     /// Saves the game being played as a new save of the player's own,
     /// reported in the game's status line.
-    public func saveCurrentGame(at date: Date = Date()) {
+    /// Named `name` (decision 184), when the player gave one.
+    public func saveCurrentGame(at date: Date = Date(), named name: String? = nil) {
         guard let session else { return }
         do throws(SaveError) {
-            try library.save(session.world, news: session.news, as: .manual, at: date)
-            session.message = StatusMessage(kind: .success, text: language.text("Saved the game.", "已儲存遊戲。"))
+            let entry = try library.save(session.world, news: session.news, as: .manual, at: date, named: name)
+            session.message = StatusMessage(kind: .success, text: entry.name.map {
+                language.text("Saved the game as \"\($0)\".", "已儲存遊戲：「\($0)」。")
+            } ?? language.text("Saved the game.", "已儲存遊戲。"))
         } catch {
             session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -561,6 +564,18 @@ public final class GameLauncher {
         if left {
             playSound?(.transition)
         }
+    }
+
+    /// Names the player's save `entry` `name`, or takes its name away when
+    /// `name` is empty (decision 184).
+    public func rename(_ entry: SaveLibrary.Entry, to name: String) {
+        do throws(SaveError) {
+            try library.rename(entry, to: name)
+            message = nil
+        } catch {
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+        refresh()
     }
 
     public func delete(_ entry: SaveLibrary.Entry) {
