@@ -62,6 +62,10 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// reference has no freight): tons by kilometres at
     /// ``Freight/centsPerTonKilometre``.
     case freightRevenue
+    /// The souvenir shops of the sights (decision 174; native): what the
+    /// tourists spend in them, in, and their upkeep, out.
+    case tourismRevenue
+    case tourismUpkeep
 }
 
 /// One line of a ledger row's breakdown.
@@ -123,6 +127,8 @@ public struct LedgerEntry: Hashable, Sendable {
         /// An hour's freight delivered (decision 155), written beside the
         /// hour's `hourlyNet` row.
         case hourlyFreight
+        /// The souvenir shops: takings and upkeep (decision 174).
+        case dailyTourism
     }
 
     public let kind: Kind
@@ -189,8 +195,8 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .propertyTax, .propertyDemolition: propertyCost = propertyCost + cost
+            case .propertyRent, .tourismRevenue: propertyRevenue = propertyRevenue + line.amount
+            case .propertyUpkeep, .tourismUpkeep, .propertyTax, .propertyDemolition: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }

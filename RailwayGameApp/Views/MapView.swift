@@ -414,6 +414,10 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapAlertBubbles(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
+                // Decision 174: the sights, with their stars.
+                .overlay(alignment: .topLeading) {
+                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
                     MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear)

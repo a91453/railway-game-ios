@@ -130,6 +130,8 @@ public enum HighSpeedDemo {
         // Decision 169: nor do its dwells lengthen in a crowd; the service
         // levels were measured without.
         world.setDoorCrowding(false)
+        // Decision 174: nor do tourists come to its sights.
+        world.setTourism(nil)
         return world
     }
 

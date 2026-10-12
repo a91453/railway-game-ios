@@ -227,9 +227,15 @@
 ///     reads only an earlier version would drop the first, and every dwell
 ///     would take as long however full the train, and fail on the second, so
 ///     it says the save is newer than it instead.
+/// 47. Tourism (decision 174): a world can have `"tourism"`, the sights
+///     with their shops and counts. A build that reads only an earlier
+///     version would drop it, and its next save would turn the sights
+///     off and lose the shops (versions 45 and 46 are the work registry's
+///     for decisions 172 and 173, which this build does not have), so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 44
+    public static let currentVersion = 47
 
     public let world: GameWorld
 
@@ -356,6 +362,8 @@ extension SavedGame: Codable {
         // every one did.
         // Version 43 to 44: a world without `"doorCrowding"` has it off, and
         // every exchange takes as long as it did.
+        // Version 46 to 47: a world without `"tourism"` has no sights, and
+        // its passengers are as they were.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

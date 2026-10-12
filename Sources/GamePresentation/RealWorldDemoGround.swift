@@ -50,6 +50,8 @@ extension RealWorldDemo {
             world.setOutsideConnections(false)
             // Decision 169: nor do its dwells lengthen in a crowd.
             world.setDoorCrowding(false)
+            // Decision 174: nor do tourists come to its sights.
+            world.setTourism(nil)
             try world.mapGround()
             if !ground.isEmpty { try world.setGround(ground) }
             return world

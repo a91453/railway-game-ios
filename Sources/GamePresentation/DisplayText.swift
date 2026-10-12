@@ -453,6 +453,12 @@ extension GameError {
                 "Carry \(Money(riders).displayText) riders in a day to buy one more tile.",
                 "要有一天的運量達到 \(Money(riders).displayText) 人次，才能再買一塊。"
             )
+        case .tourismNotEnabled:
+            language.text("This game has no tourism.", "這局遊戲沒有觀光。")
+        case .unknownAttraction:
+            language.text("There is no such attraction.", "沒有這個景點。")
+        case .attractionMaxedOut:
+            language.text("The souvenir shop is at its top level.", "名產店已經是最高等級。")
         case .mapTileNotOwned:
             language.text("You don't own this land yet: buy the tile with Expand the Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
         case .invalidGround:

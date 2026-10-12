@@ -257,4 +257,10 @@ public enum GameError: Error, Hashable, Sendable {
     /// The ground lies in a tile of the map the company does not own
     /// (decision 160): it buys the tile first.
     case mapTileNotOwned(MapTile)
+    /// A tourism command in a world without tourism (decision 174).
+    case tourismNotEnabled
+    /// There is no attraction with this ID (decision 174).
+    case unknownAttraction(AttractionID)
+    /// The attraction's souvenir shop is at its top level (decision 174).
+    case attractionMaxedOut
 }

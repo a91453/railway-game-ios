@@ -13,6 +13,7 @@
 		10D525FC9BA6C8175B84AB5F /* station_names.json in Resources */ = {isa = PBXBuildFile; fileRef = 31AA7BB032ACE4E009B42AF1 /* station_names.json */; };
 		10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8372106A7EF953548452B15 /* MapBuildConfirm.swift */; };
 		1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A68301E79140AEFC540BBA0 /* TrainControls.swift */; };
+		164F3A88D054D2F1AE5298C5 /* MapAttractionMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BC83D8380E4C09D3E46DBD /* MapAttractionMarks.swift */; };
 		196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B00B0A86FFD245909EF3231A /* ntdlrt_times.json */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
 		1D588A25E6C866FD0509878D /* trtc.json in Resources */ = {isa = PBXBuildFile; fileRef = 56ABC6AFF31D91F9079F6044 /* trtc.json */; };
@@ -86,6 +87,7 @@
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
+		B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */; };
 		BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */; };
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
@@ -176,9 +178,11 @@
 		905E65E0102E822A86C5ECF8 /* trtc_codes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_codes.json; sourceTree = "<group>"; };
 		9066371AFA922B8308EA3748 /* tymc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tymc.json; sourceTree = "<group>"; };
 		908DF494BE421AA1D9D8EE60 /* InspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectorView.swift; sourceTree = "<group>"; };
+		92BC83D8380E4C09D3E46DBD /* MapAttractionMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapAttractionMarks.swift; sourceTree = "<group>"; };
 		92FBF87A0B909AF9C100FC70 /* sanying.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying.json; sourceTree = "<group>"; };
 		95B22F52AC2B7370C697A499 /* tra_track_sections.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_track_sections.json; sourceTree = "<group>"; };
 		9A68301E79140AEFC540BBA0 /* TrainControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainControls.swift; sourceTree = "<group>"; };
+		9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourismPanel.swift; sourceTree = "<group>"; };
 		9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailwayGameApp.swift; sourceTree = "<group>"; };
 		9E428A92A98C07A45636F5E3 /* trtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_times.json; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
@@ -327,6 +331,7 @@
 				17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */,
 				0B4F958A2EC6D131F9218CDD /* MapAlertBubbles.swift */,
 				A92B62C199B3DE4F7602175F /* MapArt.swift */,
+				92BC83D8380E4C09D3E46DBD /* MapAttractionMarks.swift */,
 				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
@@ -349,6 +354,7 @@
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
+				9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
@@ -593,6 +599,7 @@
 				6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */,
 				376974C84B7F85117BB54C8D /* MapAlertBubbles.swift in Sources */,
 				4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */,
+				164F3A88D054D2F1AE5298C5 /* MapAttractionMarks.swift in Sources */,
 				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
@@ -616,6 +623,7 @@
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
+				B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,

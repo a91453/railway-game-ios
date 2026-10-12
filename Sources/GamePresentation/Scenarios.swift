@@ -153,6 +153,8 @@ extension GameWorld {
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        // Decision 174: nor do tourists come to its sights.
+        world.setTourism(nil)
         do {
             try world.startScenario(challenge.scenario(seed: eventSeed, in: world.bounds))
         } catch {

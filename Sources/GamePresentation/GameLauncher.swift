@@ -308,6 +308,8 @@ public final class GameLauncher {
         // by a crowd at the doors.
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        // Decision 174: nor do tourists come to its sights.
+        world.setTourism(nil)
         guard begin(world, keepingAutosave: true) else { return }
         session?.startTutorial()
     }

@@ -88,6 +88,47 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 174: the first line with a 4-star town 47 m from its last
+    /// station, whose shop is built to level 2 on day 10, against the same
+    /// line without it: the tourists' fares, the shop's takings and what they
+    /// do to the cash (the tourists come from the map's edge and the busiest
+    /// stations, and all of them ride the line). Printed as a table.
+    func testAFirstLineWithASight() throws {
+        let days = try requestedDays()
+        var plain = try firstLine()
+        plain.setTourism(nil)
+        var sight = plain
+        let station = try XCTUnwrap(sight.stations.last)
+        sight.setTourism([Attraction(
+            id: AttractionID(rawValue: 1), name: "Sight", englishName: "Sight",
+            point: PlanPoint(x: station.point.x + 3_000, y: station.point.y), kind: .town, baseStars: 400
+        )])
+        var lines = [
+            "### A first line with a 4-star town beside its last station (shop level 2 on day 10)",
+            "",
+            "| Day | Balance without | Balance with | Difference | Tourists | Shop takings | Fares without | Fares with |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        try plain.advance(ticks: 1)
+        try sight.advance(ticks: 1)
+        for day in 1...days {
+            try plain.advance(ticks: 1_440)
+            try sight.advance(ticks: 1_440)
+            if day == 10 {
+                try sight.investInSouvenirShop(of: AttractionID(rawValue: 1))
+                try sight.investInSouvenirShop(of: AttractionID(rawValue: 1))
+            }
+            let without = plain.financeReport(.day).previous, with = sight.financeReport(.day).previous
+            let tourists = sight.attraction(id: AttractionID(rawValue: 1))?.yesterday ?? 0
+            lines.append(
+                "| \(day) | \(dollars(plain.economy.balance.amount)) | \(dollars(sight.economy.balance.amount)) | "
+                    + "\(dollars((sight.economy.balance - plain.economy.balance).amount)) | \(tourists) | "
+                    + "\(dollars((with.propertyRevenue - with.propertyCost).amount)) | \(dollars(without.fareRevenue.amount)) | \(dollars(with.fareRevenue.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// `NewGameBalanceTests`' first line: three stations through the first
     /// town on 448 m of track and one train of four cars, $914,800.
     private func firstLine() throws -> GameWorld {

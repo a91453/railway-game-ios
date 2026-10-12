@@ -157,6 +157,9 @@ struct ContentView: View {
         case .goals:
             GoalsPanel(session: session)
                 .presentationDetents([.medium, .large])
+        case .tourism:
+            TourismPanel(session: session)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -485,6 +488,8 @@ final class GameScreenState {
         case yearEnd
         /// The scenario's goals (decision 86), opened also when it ends.
         case goals
+        /// The sights and their souvenir shops (decision 174).
+        case tourism
 
         var id: Self { self }
 
@@ -493,7 +498,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism: false
             }
         }
     }
