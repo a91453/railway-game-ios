@@ -45,26 +45,34 @@ struct MapAlertBubbles: View {
         var id: MapAlert { alert }
     }
 
-    /// The alerts on screen: each over its station, the second at a
-    /// station over the first.
+    /// The alerts on screen: each over its station (or train, or sight),
+    /// the second at a place over the first.
     private var placed: [PlacedAlert] {
-        var perStation: [StationID: Int] = [:]
-        return session.world.mapAlerts().compactMap { alert in
+        var perStation: [PlanPoint: Int] = [:]
+        guard session.tool == .select else { return [] }
+        return (session.world.mapAlerts() + session.world.situationAlerts()).compactMap { alert in
             let at = camera.screenPoint(of: alert.location)
             guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                   at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom)
             else { return nil }
-            let index = perStation[alert.station, default: 0]
-            perStation[alert.station] = index + 1
+            let index = perStation[alert.location, default: 0]
+            perStation[alert.location] = index + 1
             return PlacedAlert(alert: alert, point: CGPoint(x: at.x, y: at.y - 14 - Double(index) * 34))
         }
     }
 
     private func bubble(_ alert: MapAlert) -> some View {
-        let text = alert.text(in: session.language, lineName: lineName(of: alert))
+        let text = alert.text(in: session.language, lineName: lineName(of: alert), subject: subject(of: alert))
         return Button {
             if session.respond(to: alert) {
                 screen.panel = .lines
+            }
+            // Decision 184: a sight opens the sights, a challenge in the
+            // red the company's figures.
+            switch alert.kind {
+            case .sightWithoutStation: screen.panel = .tourism
+            case .insolvency: screen.panel = .economy
+            default: break
             }
         } label: {
             HStack(spacing: 4) {
@@ -106,6 +114,16 @@ struct MapAlertBubbles: View {
         }
     }
 
+    /// The train's or the sight's name (decision 184).
+    private func subject(of alert: MapAlert) -> String? {
+        switch alert.kind {
+        case .trainStuck(let id): return session.world.train(id: id)?.name
+        case .sightWithoutStation(let id):
+            return session.world.attraction(id: id).map { session.language.text($0.englishName, $0.name) }
+        default: return nil
+        }
+    }
+
     private func glyph(_ alert: MapAlert) -> MapGlyph {
         switch alert.kind {
         case .crowded: .crowd
@@ -115,6 +133,10 @@ struct MapAlertBubbles: View {
         case .lineLosingMoney: .warning
         // Decision 158: a building, for the town that could not build.
         case .materialsShort: .office
+        // Decision 184.
+        case .trainStuck: .train
+        case .sightWithoutStation: .star
+        case .insolvency: .warningSolid
         }
     }
 
@@ -125,6 +147,9 @@ struct MapAlertBubbles: View {
         case .lineWithoutTrains: Theme.primary
         case .lineLosingMoney: Theme.error
         case .materialsShort: Theme.warning
+        case .trainStuck: Theme.error
+        case .sightWithoutStation: Theme.primary
+        case .insolvency: Theme.error
         }
     }
 }

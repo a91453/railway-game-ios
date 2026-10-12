@@ -983,11 +983,24 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 ## 決策 180：車輛經濟（schema 71）
 
 - 新指令 `setRollingStockEconomics`（`enabled`）、`setTrainType`（`train`，`trainType` 是車種代號，省略是標準車）、`sellTrain`（`train`）；新結果 `trainInService`（`train`）。最終狀態的 `rollingStockEconomics: true` 只在打開時寫。參考模型（`ReferenceWorld`）沒有車種價格，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `RollingStockEconomicsTests` 驗證。
-- `rolling-stock-economics.json`（新）：經營模式、單位是美分，軌道只有一條 1,024 單位的邊（花 1,000）。開關打開後列車價格是車種的、不是 `costs.train`（200,000）：
-  - 藍車（標準車）15,000,000（$150,000，A 型首節）；改成 MAGLEV 付新車種一節價 $600,000 的 30 %＝18,000,000；加到 4 節付 3 節磁浮車廂 3 × 15,000,000＝45,000,000。
-  - 綠車 15,000,000，放上軌道後賣被拒 `trainInService`；取下後改成 L 型付 $90,000 的 30 %＝2,700,000，加到 2 節付一節 $25,000＝2,500,000。
-  - 賣藍車：列車的帳面 15,000,000 + 18,000,000＝33,000,000 取回 70 %＝23,100,000，車廂的 45,000,000 取回 31,500,000；再賣一次是 `unknownTrain`。
-  - 餘額：200,000,000 − 15,000,000 − 18,000,000 − 45,000,000 − 15,000,000 − 1,000 − 2,700,000 − 2,500,000 + 54,600,000＝156,399,000。
+- `rolling-stock-economics.json`（新）：經營模式、單位是美分，軌道只有一條 1,024 單位的邊（花 1,000）。開關打開後列車價格是車種的、不是 `costs.train`（200,000）。改車種的費用（之後的修正）＝新車種的價格（目前節數）減去舊列車照出售規則能拿回的錢（帳面價值 × 70 %），最少 0，記成「賣舊車、買新車」：
+  - 藍車（標準車）15,000,000（$150,000，A 型首節）；改成 MAGLEV 付 60,000,000 − 10,500,000 = 49,500,000，列車資產變成新價格 60,000,000；加到 4 節付 3 節磁浮車廂 3 × 15,000,000＝45,000,000。
+  - 綠車 15,000,000，放上軌道後賣被拒 `trainInService`；取下後改成 L 型：新價 9,000,000 低於舊車的出售價 10,500,000，不付也不退；加到 2 節付一節 $25,000＝2,500,000。
+  - 賣藍車：列車的帳面 60,000,000 取回 42,000,000，車廂的 45,000,000 取回 31,500,000；再賣一次是 `unknownTrain`。
+  - 餘額：200,000,000 − 15,000,000 − 49,500,000 − 45,000,000 − 15,000,000 − 1,000 − 0 − 2,500,000 + 73,500,000＝146,499,000。
 - 每個值都是手算的，`tools/golden-checks/rolling_stock.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。
+- 改裝費規則改過一次（作者決定，堵「先買便宜車、加節、再改高鐵」只付 30 % 的套利）：這份 golden 只有 `expectedFinalState.balance` 從 156,399,000 變成 146,499,000（−9,900,000：藍車改裝 18,000,000 → 49,500,000、綠車改裝 2,700,000 → 0、賣藍車取回 54,600,000 → 73,500,000），步驟的結果都沒變。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
+
+## 決策 183：城市委託案與補助金（schema 72）
+
+- 新指令 `setCityRequests`（`seed`；`null` 是關閉）、`acceptRequest` 與 `declineRequest`（`request`）；新結果 `cityRequestsNotEnabled`、`unknownCityRequest`（`request`）、`cityRequestLimitReached`（`limit`）；新觀察 `cityRequests`（`{"found": true, "cityRequests": {"trust", "owed", "paid", "bestDayTrips", "offers", "active", "results"}}`，委託是 `id`、`kind`、`station`／`x`、`y`／`attraction`、`baseline`、`target`、`reward`（分）、`days`、`offeredDay`、`acceptedDay`、`progress`，結果是 `id`、`kind`、`succeeded`、`day`；關著是 `{"found": false}`）；最終狀態的 `cityRequests` 只在打開時寫。參考模型沒有委託，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `CityRequestsTests` 驗證。
+- `city-requests.json`（新）：Home（1，每天 1,500 人次）、Work（2，800）、Far（3，300）在有一輛車的線 Main 上，一格 1,200 位居民（世界只有 192 m 寬，三站的 800 m 內都有）。
+  - 關著時沒有委託，`acceptRequest` 是 `cityRequestsNotEnabled`。
+  - 經營模式下用種子 7 打開：第 0 月六種依 FNV-1a(`7|requests.0.order.<種類>`) 排序，成立的是人口（先）與車站運量；沒有 3,000 人的無站聚落、沒有載客的日子、沒有貨運與景點。
+  - 人口抽到 Far：1,200 → ⌈×1.2⌉ 1,440 人，120 天，$100 × 240 低於 $1,000,000 的下限。車站運量抽到 Work（Home 與 Work 有 500 以上）：800 → 1,120，60 天，$40 × 320 低於 $200,000 的下限。
+  - 一星信賴度只能同時承接一件：第二件是 `cityRequestLimitReached`（`limit` 1），委託 9 是 `unknownCityRequest`。
+  - 土地長到 1,440 人，下一個午夜達成：欠 $1,000,000、兩星，第 1 天可以再承接第二件。
+  - 第 30 天開始的午夜付款（`monthlySubsidy` 列在第 43,199 分，記在第 29 天）並抽第 1 月：Home 的運量與 Far 的人口（1,440 → 1,728）；Work 的運量在手上，不再出。
+- 每個值都由 `tools/golden-checks/city_requests.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

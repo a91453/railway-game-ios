@@ -50,7 +50,7 @@ struct TrainControls: View {
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
                         type: train.type, offered: session.world.offeredTrainTypes, standard: session.world.offersStandardCar,
-                        card: { session.world.trainTypeCard($0) }, language: session.language
+                        detail: { session.world.trainTypeMenuText($0, for: train.id, in: session.language) }, language: session.language
                     ) { type in
                         session.setSelectedTrainType(type)
                     }
@@ -335,9 +335,9 @@ private struct TrainTypeMenu: View {
     let type: TrainType?
     let offered: [TrainType]
     let standard: Bool
-    /// The card of a type (decision 180): its capacity, prices, daily cost
-    /// and top speed, shown under its name.
-    let card: (TrainType?) -> TrainTypeCard
+    /// The line under a type's name (decision 180): its capacity, prices,
+    /// daily cost and top speed, and what changing the train to it costs.
+    let detail: (TrainType?) -> String
     let language: DisplayLanguage
     let choose: @MainActor (TrainType?) -> Void
 
@@ -347,7 +347,7 @@ private struct TrainTypeMenu: View {
                 Button {
                     choose(nil)
                 } label: {
-                    option(Train.typeText(nil, in: language), detail: card(nil).text(in: language), isChosen: type == nil)
+                    option(Train.typeText(nil, in: language), detail: detail(nil), isChosen: type == nil)
                 }
             }
             Section {
@@ -355,7 +355,7 @@ private struct TrainTypeMenu: View {
                     Button {
                         choose(candidate)
                     } label: {
-                        option(Train.typeText(candidate, in: language), detail: card(candidate).text(in: language), isChosen: candidate == type)
+                        option(Train.typeText(candidate, in: language), detail: detail(candidate), isChosen: candidate == type)
                     }
                 }
             }

@@ -4,7 +4,8 @@
 The same synth as the first promo video's soundtrack, so the game sounds as
 the video does: a pad, a plucked arpeggio and rail joints over I - vi - IV - V
 in C, a station chime, a whoosh, a rail joint, and the sounds of something
-put up and of money coming in (decision 117). Everything is made here from
+put up and of money coming in (decision 117), and of something refused
+and a warning (decision 184). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
@@ -176,6 +177,22 @@ def main(out_dir):
         start = int(at * SR)
         coins[start : start + len(ding)] += (1.0 - 0.25 * i) * ding[: len(coins) - start]
     write_wav(os.path.join(out_dir, "coins.wav"), normalized(coins, 0.5))
+
+    # Decision 184: something refused, two soft low plucks falling a minor
+    # third (E, then C#); and a warning, two short bells a tone apart
+    # (A, then B), quieter than the station chime.
+    refused = np.zeros(int(0.55 * SR))
+    for m, at, gain in [(52, 0.0, 1.0), (49, 0.14, 0.9)]:
+        tone = pluck(m, 0.4)
+        start = int(at * SR)
+        refused[start : start + len(tone)] += gain * tone
+    write_wav(os.path.join(out_dir, "refused.wav"), normalized(refused, 0.5))
+    warning = np.zeros(int(0.9 * SR))
+    for m, at in [(81, 0.0), (83, 0.16)]:
+        ding = bell(m, 0.7)
+        start = int(at * SR)
+        warning[start : start + len(ding)] += ding[: len(warning) - start]
+    write_wav(os.path.join(out_dir, "warning.wav"), normalized(warning, 0.45))
 
 
 if __name__ == "__main__":

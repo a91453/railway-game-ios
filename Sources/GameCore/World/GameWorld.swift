@@ -120,6 +120,11 @@ public struct GameWorld: Equatable, Sendable {
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. Set by ``setTourism(_:)`` and every midnight only.
     public internal(set) var tourism: Tourism?
+    /// The city's requests of the company and its trust (decision 183), or
+    /// `nil`: off in a new world and in saves from before them; the app's
+    /// new free games turn them on. Set by ``setCityRequests(seed:)``, the
+    /// request commands, the counts and every managed midnight only.
+    public internal(set) var cityRequests: CityRequests?
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -976,6 +981,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
+                removeLineAccounts(of: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -1000,6 +1006,7 @@ public struct GameWorld: Equatable, Sendable {
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
+        removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
 
         abandonUnservedPassengers()
@@ -1189,12 +1196,24 @@ public struct GameWorld: Equatable, Sendable {
         if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
         }
-        // Decision 180: a change of type is a refit, a share of the new
-        // type's price for the cars the train has.
+        // Decision 180: a change of type is the old train sold on the sale
+        // rule and the new one bought: the new type's price for the cars it
+        // has, less what the old would bring, at least nothing.
         if rollingStockEconomics, trains[index].type != type {
-            let fee = RollingStock.refitFee(to: type, cars: trains[index].cars)
-            try economy.spend(fee)
-            capitalizeAsset(.train, owner: id.rawValue, cost: fee)
+            let price = RollingStock.price(of: type, cars: trains[index].cars)
+            let tradeIn = trainSaleQuote(id)
+            let fee = RollingStock.refitFee(price: price, tradeIn: tradeIn)
+            guard economy.canAfford(fee) else { throw .insufficientFunds(required: fee, available: economy.balance) }
+            // Dearer than the new train, the old brings no more than the
+            // new costs: nothing is paid back.
+            let owner = id.rawValue
+            let proceeds = min(tradeIn, price)
+            let trainPart = RollingStock.salePrice(bookValue: bookValue(.train, owner: owner))
+            let trainShare = tradeIn > .zero ? Money(trainPart.amount * proceeds.amount / tradeIn.amount) : .zero
+            sellAsset(.train, owner: owner, for: trainShare)
+            sellAsset(.cars, owner: owner, for: proceeds - trainShare)
+            try economy.spend(price)
+            acquireAsset(.train, owner: owner, cost: price)
         }
         trains[index].type = type
     }
@@ -1217,6 +1236,7 @@ public struct GameWorld: Equatable, Sendable {
         sellAsset(.train, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.train, owner: owner)))
         sellAsset(.cars, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.cars, owner: owner)))
         abandonRiders(of: id)
+        loseCargo(of: id)
         trains.remove(at: index)
         abandonUnservedPassengers()
     }
@@ -3829,7 +3849,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, rollingStockEconomics, lineAccounts, tourism, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3933,6 +3953,7 @@ extension GameWorld: Codable {
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
+        cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -4060,6 +4081,7 @@ extension GameWorld: Codable {
             try container.encode(lineAccounts, forKey: .lineAccounts)
         }
         try container.encodeIfPresent(tourism, forKey: .tourism)
+        try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
         }
@@ -4226,6 +4248,7 @@ extension GameWorld: Codable {
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }
         if let problem = tourismProblem() { return problem }
+        if let problem = cityRequestsProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }

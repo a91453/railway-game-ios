@@ -3,6 +3,7 @@
 # exactly the tests it was meant to run.
 #
 #   swift-shards.sh run <shard>      run one shard after `swift build --build-tests`
+#                                    (`selected`: the classes in SELECTED_TESTS)
 #   swift-shards.sh select <shard>   print the test IDs a shard selects (offline)
 #   swift-shards.sh shards           print the shard names, one per line
 #   swift-shards.sh classes          print every class the campaign shards name
@@ -11,6 +12,12 @@
 #                                    true if any can change the package's tests
 #   swift-shards.sh push-base        print the commit a push to main is compared
 #                                    with (push_base below), or nothing
+#   swift-shards.sh plan             read a pull request's changed files on
+#                                    stdin; print its tier and the tests it
+#                                    runs (pr_plan below)
+#   swift-shards.sh decide           ci.yml's change detection: whether the
+#                                    Swift jobs run, the tier, the matrix
+#   swift-shards.sh gate             the "Swift CI (gate)" verdict
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
 #   campaigns-1 .. campaigns-15   the long property, differential and mutation
@@ -24,6 +31,9 @@
 #                                (it was the slowest shard once they ran on
 #                                the track network)
 #   all                          everything, for a local full run
+#   selected                     the tests SELECTED_TESTS names: a pull
+#                                request's partial tier (pr_plan). Words are
+#                                class names, or `Module.*` for a module
 #
 # Every shard runs on Swift 6.4 only; the Swift 6.0 job, and its `light`
 # selection (everything but the campaigns), were removed on 2026-10-05.
@@ -201,16 +211,43 @@ all_campaign_classes() {
 
 is_shard() {
   local shard
-  for shard in "${SHARDS[@]}" all; do
+  [[ "$1" != selected || -n "${SELECTED_TESTS:-}" ]] || return 1
+  for shard in "${SHARDS[@]}" all selected; do
     [[ "$shard" == "$1" ]] && return 0
   done
   return 1
+}
+
+# The regex for SELECTED_TESTS: `^Module\.` for `Module.*`, `\.Class/` for
+# a class.
+selected_pattern() {
+  local word words modules=() classes=() parts=()
+  read -r -a words <<<"${SELECTED_TESTS:-}"
+  for word in "${words[@]}"; do
+    if [[ "$word" == *.\* ]]; then modules+=("${word%.\*}"); else classes+=("$word"); fi
+  done
+  [[ ${#modules[@]} -eq 0 ]] || parts+=("^($(IFS='|'; echo "${modules[*]}"))\\.")
+  [[ ${#classes[@]} -eq 0 ]] || parts+=("$(pattern_for "${classes[*]}")")
+  local IFS='|'
+  echo "${parts[*]}"
+}
+
+# With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts: the
+# classes, sorted by name, dealt out in turn (a class stays in one part).
+selected_part() {
+  local part="${SELECTED_PART:-1/1}"
+  [[ "$part" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ && "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ]] ||
+    die "SELECTED_PART '$part' is not k/n."
+  sort | awk -v k="${BASH_REMATCH[1]}" -v n="${BASH_REMATCH[2]}" '
+    { split($0, id, "/"); if (id[1] != last) { index_ = index_ + 1; last = id[1] } }
+    (index_ - 1) % n == k - 1'
 }
 
 # The test IDs shard $1 selects from the list file $2.
 select_ids() {
   case "$1" in
     all) cat "$2" ;;
+    selected) grep -E "$(selected_pattern)" "$2" | selected_part || true ;;
     rest) grep -v -E "$(pattern_for "$(all_campaign_classes | tr '\n' ' ')")" "$2" || true ;;
     *) grep -E "$(pattern_for "$(classes_of "$1")")" "$2" || true ;;
   esac
@@ -291,6 +328,17 @@ run_shard() {
   total="$(wc -l <"$list" | tr -d ' ')"
 
   check_partition "$list"
+  if [[ "$shard" == selected ]]; then
+    local word words
+    read -r -a words <<<"$SELECTED_TESTS"
+    for word in "${words[@]}"; do
+      if [[ "$word" == *.\* ]]; then
+        grep -q -E "^${word%.\*}\\." "$list" || die "Module ${word%.\*} has no tests."
+      else
+        grep -q -E "\\.$word/" "$list" || die "$word has no tests: the class was not found (renamed, or not an XCTestCase)."
+      fi
+    done
+  fi
 
   local expected="$WORK/expected.txt"
   select_ids "$shard" "$list" | to_xctest_names | sort >"$expected"
@@ -336,7 +384,9 @@ run_shard() {
     {
       echo "### Shard \`$shard\`"
       echo "- selected **$expected_count** of $total tests; executed **$executed_count**; failed **$failed_count**; ${seconds}s"
-      if [[ "$shard" != rest && "$shard" != all ]]; then
+      if [[ "$shard" == selected ]]; then
+        echo "- tests: $SELECTED_TESTS"
+      elif [[ "$shard" != rest && "$shard" != all ]]; then
         echo "- classes: $(classes_of "$shard")"
       fi
     } >>"$GITHUB_STEP_SUMMARY"
@@ -403,6 +453,440 @@ push_base() {
   echo "$sha"
 }
 
+# ---------------------------------------------------------------------------
+# Pull request tiers (decision 185). A push to main and a manual run test
+# everything; a pull request runs what its changed files can affect:
+#
+#   full          every shard. Anything GameCore is built from or tested
+#                 with: Sources/GameCore, Package.swift and Package.resolved,
+#                 the CI scripts and ci.yml, any other Sources/ or Tests/
+#                 directory, a deleted or renamed test file, and a GameCore
+#                 test file that other test files use (single_owner_classes).
+#   presentation  every GamePresentationTests test: Sources/GamePresentation,
+#                 Tests/GamePresentationTests, and RailwayGameApp/Resources
+#                 (the app's bundled data, which only those tests read). No
+#                 GameCore test can see GamePresentation.
+#   fixtures      the test classes that read GoldenScenarios/, SaveFixtures/
+#                 or ReplayFixtures/ (fixture_readers), for a change there.
+#   tests-only    the XCTestCase classes a changed GameCore test file
+#                 declares, when no other test file uses it.
+#   none          nothing the package builds or tests (the app's code, docs,
+#                 tools, other workflows): the Swift jobs are skipped.
+#
+# A pull request's tier is its largest file's. Below full, the tests of every
+# file are run together (the union), so a pull request that changes
+# GamePresentation and adds a GameCore test runs both; nothing a changed file
+# selects is dropped. A pull request labelled `full-ci` runs everything
+# (ci.yml reads the label).
+#
+# The test files are read as text, not compiled: a top-level declaration is
+# one that starts in column 0, the style of every test file here. Anything
+# the reading cannot follow counts as shared, which means full.
+
+TIERS=(none tests-only fixtures presentation full)
+
+tier_rank() {
+  local i
+  for i in "${!TIERS[@]}"; do
+    [[ "${TIERS[$i]}" == "$1" ]] && { echo "$i"; return; }
+  done
+  die "Unknown tier '$1'."
+}
+
+# A Swift file's lines without comments (a `//` line, a `*` line of a block
+# comment, a ` // ` comment at the end of a line), so that a name in a
+# comment is not a use.
+code_lines() {
+  if [[ -n "${CODE_CACHE:-}" && -f "$CODE_CACHE/$1" ]]; then
+    cat "$CODE_CACHE/$1"
+  else
+    grep -v -E '^[[:space:]]*(//|/\*|\*)' "$1" | sed -E 's#[[:space:]]//.*$##' || true
+  fi
+}
+
+# Every test file's code_lines, once, under $CODE_CACHE (the same paths).
+CODE_CACHE=""
+code_cache() {
+  [[ -z "$CODE_CACHE" ]] || return 0
+  [[ -n "$WORK" ]] || WORK="$(mktemp -d)"
+  local file
+  mkdir -p "$WORK/code"
+  for file in Tests/*/*.swift; do
+    [[ -f "$file" ]] || continue
+    mkdir -p "$WORK/code/${file%/*}"
+    code_lines "$file" >"$WORK/code/$file"
+  done
+  CODE_CACHE="$WORK/code"
+}
+
+# What a test file declares at the top level, one per line:
+#   test <Class>   an XCTestCase subclass
+#   name <Name>    a type, function or constant, or a member of an extension
+#                  of a type from elsewhere, that another file could use by
+#                  name
+#   opaque         something whose uses cannot be found by a name: a class
+#                  that is not directly an XCTestCase (it may be a test), an
+#                  init, subscript, operator or conformance added to a type
+#                  from elsewhere, or a line this reading does not know
+# private and fileprivate declarations (and private extensions) are the
+# file's own and are not listed; neither is an extension of a type the file
+# declares, whose uses name that type.
+swift_declarations() {
+  code_lines "$1" | awk '
+    function strip_attributes(s) {
+      while (s ~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]+/) sub(/^@[A-Za-z_]+(\([^)]*\))?[ \t]+/, "", s)
+      return s
+    }
+    function identifier(s) { match(s, /^[A-Za-z_][A-Za-z0-9_]*/); return substr(s, RSTART, RLENGTH) }
+    function top(s) {
+      s = strip_attributes(s)
+      sub(/^((public|internal|open|final|nonisolated|private|fileprivate)[ \t]+)*/, "", s)
+      return s
+    }
+    { line[NR] = $0 }
+    END {
+      for (i = 1; i <= NR; i++) {
+        if (line[i] !~ /^[A-Za-z@]/) continue
+        s = top(line[i])
+        if (match(s, /^(struct|enum|class|actor|protocol|typealias)[ \t]+/)) own[identifier(substr(s, RLENGTH + 1))] = 1
+      }
+      extension = 0
+      for (i = 1; i <= NR; i++) {
+        l = line[i]
+        if (l ~ /^[A-Za-z@#]/) {
+          extension = 0
+          s = strip_attributes(l)
+          if (s ~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]*$/ || s ~ /^#/) continue   # an attribute line, #if
+          if (s ~ /^(@testable[ \t]+)?import[ \t]/) continue
+          if (s ~ /^(private|fileprivate)[ \t]/) continue
+          sub(/^((public|internal|open|final|nonisolated)[ \t]+)*/, "", s)
+          if (s ~ /^class[ \t]/) {
+            sub(/^class[ \t]+/, "", s)
+            name = identifier(s)
+            if (name != "" && substr(s, length(name) + 1) ~ /^[ \t]*:[ \t]*XCTestCase([ \t{,]|$)/) print "test " name
+            else print "opaque"
+            continue
+          }
+          if (s ~ /^extension[ \t]/) {
+            sub(/^extension[ \t]+/, "", s)
+            name = identifier(s)
+            if (name in own) continue
+            if (substr(s, length(name) + 1) ~ /^[ \t]*:/) print "opaque"   # a conformance is used without a name
+            extension = 1
+            continue
+          }
+          if (match(s, /^(struct|enum|actor|protocol|typealias|func|let|var)[ \t]+/)) {
+            name = identifier(substr(s, RLENGTH + 1))
+            print (name == "" ? "opaque" : "name " name)
+            continue
+          }
+          print "opaque"
+          continue
+        }
+        if (extension && l ~ /^    [A-Za-z@]/) {
+          s = strip_attributes(substr(l, 5))
+          if (s ~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]*$/) continue
+          if (s ~ /^(private|fileprivate)[ \t]/) continue
+          sub(/^((public|internal|static|class|mutating|nonmutating|override|nonisolated|final|convenience|required|lazy)[ \t]+)*/, "", s)
+          if (s ~ /^(init|subscript)([ \t(<?!]|$)/) { print "opaque"; continue }
+          if (match(s, /^(func|var|let|case|struct|enum|class|typealias)[ \t]+/)) {
+            name = identifier(substr(s, RLENGTH + 1))
+            print (name == "" ? "opaque" : "name " name)   # an operator has no identifier
+          }
+        }
+      }
+    }
+  '
+}
+
+# The names test file $1 declares that another file could use: its test
+# classes (a static generator another campaign calls) and its other
+# declarations. Fails if one cannot be followed by name.
+usable_names() {
+  local declarations
+  declarations="$(swift_declarations "$1")"
+  ! grep -q -x opaque <<<"$declarations" || return 1
+  sed -n -E 's/^(test|name) //p' <<<"$declarations" | sort -u
+}
+
+# The other test files of $1's module whose code names one of names $2 (one
+# per line).
+users_of() {
+  local file="$1" names="$2" other
+  [[ -n "$names" ]] || return 0
+  code_cache
+  grep -l -w -F -f <(printf '%s\n' "$names") "$CODE_CACHE/${file%/*}"/*.swift 2>/dev/null |
+    while IFS= read -r other; do
+      other="${other#"$CODE_CACHE/"}"
+      [[ "$other" == "$file" ]] || echo "$other"
+    done
+}
+
+# The test classes of test file $1 if no other file can use what it
+# declares; fails otherwise (a helper, or a class another file calls).
+single_owner_classes() {
+  local file="$1" names tests
+  names="$(usable_names "$file")" || return 1
+  tests="$(swift_declarations "$file" | sed -n 's/^test //p')"
+  [[ -n "$tests" ]] || return 1
+  [[ -z "$(users_of "$file" "$names")" ]] || return 1
+  echo $tests
+}
+
+# The top-level declarations of the test files in directory $1 whose code
+# mentions token $2 (a whole word, or with $3 = text, any text), one per line
+# as "<file>|<declaration>", the declaration as swift_declarations prints it;
+# a mention inside an extension of a type from elsewhere is `opaque` (which
+# of its members uses it is not followed). Reads code_cache.
+containers_of() {
+  local dir="$1" token="$2" mode="${3:-word}"
+  grep -l -F -e "$token" "$CODE_CACHE/$dir"/*.swift 2>/dev/null | xargs -r awk -v token="$token" -v mode="$mode" -v cache="$CODE_CACHE/" '
+    function strip_attributes(s) {
+      while (s ~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]+/) sub(/^@[A-Za-z_]+(\([^)]*\))?[ \t]+/, "", s)
+      return s
+    }
+    function identifier(s) { match(s, /^[A-Za-z_][A-Za-z0-9_]*/); return substr(s, RSTART, RLENGTH) }
+    function mentions(l,   at, before, after) {
+      if (mode == "text") return index(l, token) > 0
+      while ((at = index(l, token)) > 0) {
+        before = at == 1 ? "" : substr(l, at - 1, 1)
+        after = substr(l, at + length(token), 1)
+        if (before !~ /[A-Za-z0-9_]/ && after !~ /[A-Za-z0-9_]/) return 1
+        l = substr(l, at + length(token))
+      }
+      return 0
+    }
+    function file_done(   i, l, s, rest, name, current, n) {
+      split("", own); split("", printed)
+      for (i = 1; i <= count; i++) {
+        if (line[i] !~ /^[A-Za-z@]/) continue
+        s = strip_attributes(line[i])
+        sub(/^((public|internal|open|final|nonisolated|private|fileprivate)[ \t]+)*/, "", s)
+        if (match(s, /^(struct|enum|class|actor|protocol|typealias)[ \t]+/)) own[identifier(substr(s, RLENGTH + 1))] = 1
+      }
+      n = substr(file, length(cache) + 1)
+      current = ""
+      for (i = 1; i <= count; i++) {
+        l = line[i]
+        if (l ~ /^[A-Za-z@]/) {
+          s = strip_attributes(l)
+          if (s !~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]*$/ && s !~ /^(@testable[ \t]+)?import[ \t]/) {
+            sub(/^((public|internal|open|final|nonisolated|private|fileprivate)[ \t]+)*/, "", s)
+            current = "opaque"
+            if (match(s, /^class[ \t]+/)) {
+              rest = substr(s, RLENGTH + 1); name = identifier(rest)
+              if (name != "") current = (substr(rest, length(name) + 1) ~ /^[ \t]*:[ \t]*XCTestCase([ \t{,]|$)/ ? "test " : "name ") name
+            } else if (match(s, /^extension[ \t]+/)) {
+              name = identifier(substr(s, RLENGTH + 1))
+              if (name in own) current = "name " name
+            } else if (match(s, /^(struct|enum|actor|protocol|typealias|func|let|var)[ \t]+/)) {
+              name = identifier(substr(s, RLENGTH + 1))
+              if (name != "") current = "name " name
+            }
+          }
+        }
+        if (current != "" && mentions(l) && !(current in printed)) { printed[current] = 1; print n "|" current }
+      }
+    }
+    FNR == 1 && NR > 1 { file_done() }
+    FNR == 1 { file = FILENAME; count = 0 }
+    { line[++count] = $0 }
+    END { if (NR > 0) file_done() }
+  '
+}
+
+# The test classes that can read fixture directory $1 (GoldenScenarios,
+# SaveFixtures or ReplayFixtures): those whose code names it, and those that
+# use, by name, a declaration that names it or uses one that does, and so on
+# (a loader such as GoldenScenarioFixtures, a `SavedGameTests.fixtures`
+# another class reads through). Followed at the granularity of top-level
+# declarations, within each test module. Fails if a mention is somewhere
+# this cannot follow.
+fixture_readers() {
+  local dir="$1" file module entry kind name
+  local -a queue=() classes=()
+  local seen=" "
+  code_cache
+  for module in Tests/*/; do
+    module="${module%/}"
+    while IFS= read -r entry; do
+      [[ -n "$entry" ]] || continue
+      queue+=("$module|${entry#*|}")
+    done < <(containers_of "$module" "$dir" text)
+  done
+  local i=0
+  while [[ $i -lt ${#queue[@]} ]]; do
+    entry="${queue[$i]}"
+    i=$((i + 1))
+    module="${entry%%|*}"
+    entry="${entry#*|}"
+    [[ "$entry" != opaque ]] || return 1
+    kind="${entry%% *}"
+    name="${entry#* }"
+    [[ "$seen" != *" $module:$name "* ]] || continue
+    seen+="$module:$name "
+    [[ "$kind" != test ]] || classes+=("$name")
+    while IFS= read -r entry; do
+      [[ -n "$entry" ]] || continue
+      queue+=("$module|${entry#*|}")
+    done < <(containers_of "$module" "$name")
+  done
+  printf '%s\n' "${classes[@]}" | sort -u | tr '\n' ' ' | sed 's/ $//'
+}
+
+# The tier of one changed path, and the tests it selects below full:
+# prints "<tier>[ <test>...]".
+path_plan() {
+  local path="$1" classes dir
+  case "$path" in
+    Package.swift | Package.resolved | Sources/GameCore/* | .github/scripts/* | .github/workflows/ci.yml)
+      echo full ;;
+    Sources/GamePresentation/* | Tests/GamePresentationTests/*)
+      echo "presentation GamePresentationTests.*" ;;
+    RailwayGameApp/Resources/*)
+      # Only the GamePresentation tests read the app's bundled data; if a
+      # GameCore test ever does, this is full.
+      if grep -l -F 'RailwayGameApp' Tests/GameCoreTests/*.swift 2>/dev/null | while read -r f; do code_lines "$f"; done | grep -q -F 'RailwayGameApp'; then
+        echo full
+      else
+        echo "presentation GamePresentationTests.*"
+      fi ;;
+    GoldenScenarios/* | SaveFixtures/* | ReplayFixtures/*)
+      dir="${path%%/*}"
+      if [[ -z "${FIXTURE_PLANS[$dir]:-}" ]]; then
+        if classes="$(fixture_readers "$dir")" && [[ -n "$classes" ]]; then
+          FIXTURE_PLANS[$dir]="fixtures $classes"
+        else
+          FIXTURE_PLANS[$dir]=full
+        fi
+      fi
+      echo "${FIXTURE_PLANS[$dir]}" ;;
+    Tests/GameCoreTests/*.swift)
+      if [[ -f "$path" ]] && classes="$(single_owner_classes "$path")"; then
+        echo "tests-only $classes"
+      else
+        echo full
+      fi ;;
+    Sources/* | Tests/*)
+      echo full ;;
+    *)
+      echo none ;;
+  esac
+}
+
+# A pull request's plan from its changed files on stdin, read in the
+# repository root:
+#   tier=<tier>
+#   tests=<what `selected` runs (SELECTED_TESTS); empty for full and none>
+#   parts=<how many jobs share it (SELECTED_PART)>
+# with one line per file on stderr: its tier and why.
+declare -A FIXTURE_PLANS=()
+PRESENTATION_PARTS=3
+pr_plan() {
+  local path line tier rank best=0 tests="" plans
+  code_cache
+  plans="$WORK/plans.txt"
+  while IFS= read -r path; do
+    [[ -n "$path" ]] || continue
+    path_plan "$path" >"$plans"
+    line="$(cat "$plans")"
+    tier="${line%% *}"
+    echo "  $path: $line" >&2
+    rank="$(tier_rank "$tier")"
+    [[ "$rank" -le "$best" ]] || best="$rank"
+    [[ "$line" != *" "* ]] || tests+=" ${line#* }"
+  done
+  tier="${TIERS[$best]}"
+  local parts=1
+  if [[ "$tier" == full || "$tier" == none ]]; then
+    tests=""
+  else
+    tests="$(tr ' ' '\n' <<<"$tests" | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+    # All the GamePresentation tests take longer than the rest of a partial
+    # tier (452 s of tests locally on 2026-10-12, up to about 1.8 times that
+    # on a slow runner, after a build of about 5 minutes); PRESENTATION_PARTS
+    # jobs share them (selected_part), so a job stays near 10 minutes.
+    [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
+  fi
+  echo "tier=$tier"
+  echo "tests=$tests"
+  echo "parts=$parts"
+}
+
+# What ci.yml's change detection decides, from the event and what it found:
+#   EVENT    push, pull_request or workflow_dispatch
+#   LISTED   true when the changed files (on stdin) could be listed
+#   LABELS   the pull request's labels, separated by spaces or new lines
+# Prints swift=<true|false>, tier=<tier> and matrix=<JSON> for $GITHUB_OUTPUT
+# (and the tests and tier on stderr). A push to main and a manual run are
+# full whenever the Swift jobs run; only a pull request has a smaller tier,
+# and only when its files were listed and it is not labelled full-ci.
+ci_decide() {
+  local files swift=true tier=full matrix plan tests parts k sep
+  files="$(cat)"
+  matrix="$("$0" matrix)"
+  if [[ "${LISTED:-false}" == true ]]; then
+    swift="$(relevant_paths <<<"$files")"
+    if [[ "${EVENT:-}" == pull_request ]]; then
+      if [[ " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
+        echo "Label full-ci: every shard runs." >&2
+        swift=true
+      elif plan="$("$0" plan <<<"$files")"; then
+        tier="$(sed -n 's/^tier=//p' <<<"$plan")"
+        tests="$(sed -n 's/^tests=//p' <<<"$plan")"
+        parts="$(sed -n 's/^parts=//p' <<<"$plan")"
+        case "$tier" in
+          full) swift=true ;;
+          none) swift=false ;;
+          tests-only | fixtures | presentation)
+            swift=true
+            [[ "$tests" =~ ^[A-Za-z0-9_.*\ ]+$ && "$parts" =~ ^[1-9][0-9]*$ ]] || die "Bad plan: tests '$tests', parts '$parts'."
+            echo "Tests: $tests" >&2
+            matrix='{"include":['
+            sep=""
+            for ((k = 1; k <= parts; k++)); do
+              matrix+="$sep{\"shard\":\"selected$([[ "$parts" -eq 1 ]] || echo "-$k")\",\"tests\":\"$tests\",\"part\":\"$k/$parts\"}"
+              sep=","
+            done
+            matrix+=']}' ;;
+          *) die "Unknown tier '$tier' from plan." ;;
+        esac
+      else
+        echo "::warning::Could not plan the pull request's tier; running every shard." >&2
+        tier=full
+        swift=true
+      fi
+    fi
+  fi
+  [[ "$swift" == true ]] || tier=none
+  echo "swift=$swift"
+  echo "tier=$tier"
+  echo "matrix=$matrix"
+}
+
+# The gate's verdict ("Swift CI (gate)", the check main's branch rule
+# requires), from the jobs' results:
+#   CHANGES       the change detection's result
+#   SWIFT_NEEDED  its swift output
+#   TIER          its tier output
+#   CURRENT       the Swift jobs' combined result (failure if any job failed,
+#                 cancelled if any was cancelled, skipped if none ran)
+# Passes only when the detection succeeded and either every Swift job of the
+# tier succeeded or none was needed and none ran.
+ci_gate() {
+  echo "changes: ${CHANGES:-}; Swift needed: ${SWIFT_NEEDED:-}; tier: ${TIER:-}; Swift 6.4: ${CURRENT:-}"
+  [[ "${CHANGES:-}" == success ]] || die "The change detection did not succeed (${CHANGES:-no result})."
+  if [[ "${SWIFT_NEEDED:-}" == true ]]; then
+    [[ "${CURRENT:-}" == success ]] || die "A Swift job of tier ${TIER:-?} did not succeed (Swift 6.4: ${CURRENT:-no result})."
+    echo "Every Swift 6.4 job of tier ${TIER:-?} passed."
+  elif [[ "${SWIFT_NEEDED:-}" == false ]]; then
+    [[ "${CURRENT:-}" == skipped ]] || die "The Swift jobs were not needed but did not skip (Swift 6.4: ${CURRENT:-no result})."
+    echo "No file that can change the Swift package changed; the Swift jobs were skipped."
+  else
+    die "The change detection said neither that the Swift jobs are needed nor that they are not ('${SWIFT_NEEDED:-}')."
+  fi
+}
+
 case "${1:-}" in
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
@@ -434,7 +918,16 @@ case "${1:-}" in
   push-base)
     push_base
     ;;
+  plan)
+    pr_plan
+    ;;
+  decide)
+    ci_decide
+    ;;
+  gate)
+    ci_gate
+    ;;
   *)
-    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base"
+    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate"
     ;;
 esac

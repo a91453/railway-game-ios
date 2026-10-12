@@ -37,6 +37,14 @@ struct TourismPanel: View {
                                 .foregroundStyle(row.status == .ok ? Theme.success : Theme.warning)
                         }
                         .font(.footnote)
+                        if row.hotels > 0 {
+                            Text(verbatim: language.text(
+                                "\(row.hotels) hotel\(row.hotels == 1 ? "" : "s") within 800 m",
+                                "800 公尺內有 \(row.hotels) 家飯店"
+                            ))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                        }
                         if let station = row.stationName {
                             Text(verbatim: language.text("Station: \(station)", "車站：\(station)"))
                                 .font(.footnote)

@@ -223,7 +223,15 @@ extension GameWorld {
             }
         }
         let rivals = Int64(placedBuildings.filter { $0.kind == building.kind && Self.distanceSquared($0.centre, building.centre) <= reach * reach }.count)
-        return numerator / denominator / max(1, rivals)
+        var guests: Int64 = 0
+        if building.kind == .hotel, let sights = tourism?.attractions {
+            // Decision 174, a later fix: the tourists of the sights near it
+            // who stay the night, shared with the hotels there.
+            for sight in sights where Self.distanceSquared(sight.point, building.centre) <= reach * reach {
+                guests += hotelGuests(of: sight, onDay: day)
+            }
+        }
+        return numerator / denominator / max(1, rivals) + guests
     }
 
     private static func distanceSquared(_ a: PlanPoint, _ b: PlanPoint) -> Int64 {

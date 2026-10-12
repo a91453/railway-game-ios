@@ -23,9 +23,17 @@ extension Attraction {
         language.text(englishName, name)
     }
 
-    /// Its rating, "3.5★".
+    /// Its rating before any hotel, "3.5★".
     public var starsText: String {
         StationMasterAdvice.starsText(stars)
+    }
+}
+
+extension GameWorld {
+    /// `attraction`'s rating now, with the hotels near it (decision 174),
+    /// "3.75★".
+    public func starsText(of attraction: Attraction) -> String {
+        StationMasterAdvice.starsText(stars(of: attraction))
     }
 }
 
@@ -59,6 +67,8 @@ public struct AttractionRow: Identifiable, Hashable, Sendable {
     public let stars: Int
     public let starsText: String
     public let souvenir: Int
+    /// The hotels near it that raise its rating (at most two count).
+    public let hotels: Int
     public let status: AttractionStatus
     public let statusText: String
     /// The station that serves it, by name.
@@ -105,14 +115,14 @@ extension GameWorld {
                 offer = ShopOffer(
                     cost: cost, canAfford: economy.canAfford(cost),
                     preview: language.text(
-                        "\(sight.starsText) → \(next.starsText); about \(today) → \(after) tourists today and \(revenue.moneyText) a day in the shop (upkeep \(Money(Tourism.souvenirCost * Int64(next.souvenir) * Tourism.upkeepPerDay / 100_000).moneyText)).",
-                        "\(sight.starsText) → \(next.starsText)；今天觀光客約 \(today) → \(after) 人，名產店每天約收 \(revenue.moneyText)（維護 \(Money(Tourism.souvenirCost * Int64(next.souvenir) * Tourism.upkeepPerDay / 100_000).moneyText)）。"
+                        "\(starsText(of: sight)) → \(starsText(of: next)); about \(today) → \(after) tourists today and \(revenue.moneyText) a day in the shop (upkeep \(Money(Tourism.souvenirCost * Int64(next.souvenir) * Tourism.upkeepPerDay / 100_000).moneyText)).",
+                        "\(starsText(of: sight)) → \(starsText(of: next))；今天觀光客約 \(today) → \(after) 人，名產店每天約收 \(revenue.moneyText)（維護 \(Money(Tourism.souvenirCost * Int64(next.souvenir) * Tourism.upkeepPerDay / 100_000).moneyText)）。"
                     )
                 )
             }
             return AttractionRow(
-                id: sight.id, name: sight.name(in: language), kind: sight.kind.title(in: language), stars: sight.stars,
-                starsText: sight.starsText, souvenir: sight.souvenir, status: status, statusText: status.title(in: language),
+                id: sight.id, name: sight.name(in: language), kind: sight.kind.title(in: language), stars: stars(of: sight),
+                starsText: starsText(of: sight), souvenir: sight.souvenir, hotels: hotelsNear(sight), status: status, statusText: status.title(in: language),
                 stationName: attractionStation(of: sight.id).flatMap { station(id: $0)?.name }, today: today,
                 yesterday: sight.yesterday, thisYear: sight.thisYear, lastYear: sight.lastYear, nextShop: offer, point: sight.point
             )
@@ -128,8 +138,8 @@ extension GameWorld {
     /// The tourism panel's help text.
     public func tourismHelp(in language: DisplayLanguage) -> String {
         language.text(
-            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Tourism.spendPerLevel / 100) dollars a tourist a level.",
-            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Tourism.spendPerLevel / 100) 元。"
+            "Tourists come to a sight from the outside connections and the busiest towns, more at weekends and holidays, by season and in fine weather, and ride to the station within 800 m. A souvenir shop adds a quarter star a level and earns \(Tourism.spendPerLevel / 100) dollars a tourist a level. A hotel within 800 m adds a quarter star too (two count) and takes in \(Tourism.hotelStayPermille / 10)% of the tourists as guests.",
+            "觀光客從外部連接站和最大的城鎮出發，週末與連假更多，看季節與天氣，搭車到 800 公尺內的車站。名產店每級加 0.25 星，每位觀光客每級在店裡花 \(Tourism.spendPerLevel / 100) 元。800 公尺內的飯店也各加 0.25 星（算兩家），並接待 \(Tourism.hotelStayPermille / 10)% 的觀光客住宿。"
         )
     }
 }
