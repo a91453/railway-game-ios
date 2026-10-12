@@ -34,6 +34,20 @@ name: iOS App Build
 # Two jobs run in parallel, each on its own runner with its own Simulator, so
 # the wall time is the slower job rather than the sum. A cold Simulator boot
 # costs about 4 minutes on a fresh runner, so each device is booted once.
+#
+# A pull request whose change to the app has already passed here is not
+# tested again (decision 187): the changes job keys the change (see "Key of
+# the pull request's change to the app" below), and a run whose macOS jobs
+# all passed records the key in the pull request's cache. On 2026-10-12, 35
+# of 100 pull request runs (524 macOS minutes) tested again a change that
+# had passed: main merged into the branch, a docs fix, a re-run.
+#
+# By hand, the input only_testing runs just the named UI tests (fixing one
+# test should not take the whole full lane's 48 minutes of macOS); its run
+# is named "UI tests by hand: ...", and ios-full-lane.yml does not count it
+# as a full run.
+
+run-name: "${{ inputs.only_testing && format('UI tests by hand: {0}', inputs.only_testing) || (github.event_name == 'pull_request' && github.event.pull_request.title || github.workflow) }}"
 
 on:
   # Changes the app cannot see do not run it: the docs, the package's tests
@@ -42,7 +56,8 @@ on:
   # and the package's Sources/. The full lane runs everything whatever
   # changed. Markdown is ignored at the top level only: the app bundles
   # licence files written in Markdown (Resources/Licenses/), and the
-  # project lists each of them.
+  # project lists each of them. The changes job's key leaves out the same
+  # paths; keep the lists the same.
   pull_request:
     paths-ignore:
       - "*.md"
@@ -79,6 +94,10 @@ on:
         description: Temporarily remove Select (the tool rail's Done) and prove the English smoke test fails
         type: boolean
         default: false
+      only_testing:
+        description: "Only these UI tests, separated by spaces or commas (Class or Class/testMethod, e.g. SettingsUITests/testTheCityPreviewLoadsItsPageAndCloses); no iPad job. Empty: the full lane"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -97,11 +116,13 @@ defaults:
 
 jobs:
   changes:
-    name: Changes (does the iPad job need to run?)
+    name: Changes (does the iPad job need to run? has this change passed?)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       ipad: ${{ steps.detect.outputs.ipad }}
+      key: ${{ steps.key.outputs.key }}
+      passed: ${{ steps.passed.outputs.cache-hit }}
     steps:
       # Depth 2 is enough: on a pull request the checkout is the pull request
       # merged into its base, whose two parents are both fetched.
@@ -124,9 +145,13 @@ jobs:
         id: detect
         env:
           EVENT: ${{ github.event_name }}
+          ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
           ipad=true
-          if [[ "$EVENT" == pull_request ]]; then
+          if [[ -n "$ONLY_TESTING" ]]; then
+            # The named UI tests run on the iPhone alone.
+            ipad=false
+          elif [[ "$EVENT" == pull_request ]]; then
             if files="$(git diff --name-only HEAD^1 HEAD)"; then
               echo "Changed files:"
               echo "$files"
@@ -142,8 +167,68 @@ jobs:
           echo "ipad=$ipad" >> "$GITHUB_OUTPUT"
           echo "iPad job: $ipad"
 
+      # The key of what this pull request changes in the app: the patch ID
+      # of its diff against the base (HEAD^1 is the base, HEAD the pull
+      # request merged into it), over every path this workflow does not
+      # ignore. git patch-id leaves out line numbers and the blobs' hashes,
+      # so main moving on elsewhere keeps the key, while a change near the
+      # pull request's own lines (in the diff's context), a conflict
+      # resolved in an app file, or any new commit to the app changes it.
+      # --binary keeps images and other binary files in it; --verbatim keeps
+      # whitespace (YAML and Python depend on it). The iPad decision is in
+      # the key too. Only a pull request from this repository has a key: a
+      # fork's always runs everything. Its cache is the pull request's own
+      # (refs/pull/N/merge), which no other pull request can read or write.
+      # Nothing to key (an empty diff, a git error) runs everything. To force
+      # a run, delete the cache entry (Actions, Caches) or bump v1.
+      - name: Key of the pull request's change to the app
+        id: key
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        env:
+          IPAD: ${{ steps.detect.outputs.ipad }}
+        run: |
+          set -o pipefail
+          # The paths of pull_request.paths-ignore above.
+          id="$(git diff --binary --no-renames HEAD^1 HEAD -- . \
+            ':(exclude,glob)*.md' ':(exclude,glob)docs/**' ':(exclude,glob)Tests/**' \
+            ':(exclude,glob)GoldenScenarios/**' ':(exclude,glob)SaveFixtures/**' ':(exclude,glob)ReplayFixtures/**' \
+            ':(exclude,glob)Web/**' ':(exclude,glob)tools/**' ':(exclude,glob).claude/**' \
+            ':(exclude,glob).github/workflows/ci.yml' ':(exclude,glob).github/workflows/wasm-probe.yml' \
+            ':(exclude,glob).github/workflows/ios-full-lane.yml' ':(exclude,glob).github/workflows/release-archive.yml' \
+            ':(exclude,glob).github/workflows/testflight*.yml' ':(exclude,glob).github/workflows/website-screenshots.yml' \
+            ':(exclude,glob).github/scripts/swift-shards*.sh' ':(exclude,glob).github/scripts/testflight-*' \
+            ':(exclude,glob).github/scripts/install-swift-linux.sh' \
+            | git patch-id --verbatim | cut -d' ' -f1)"
+          if [[ ! "$id" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Nothing in the app to key; the macOS jobs run."
+            exit 0
+          fi
+          echo "key=ios-pr-passed-v1-ipad-$IPAD-$id" >> "$GITHUB_OUTPUT"
+          echo "Key of this change to the app: ios-pr-passed-v1-ipad-$IPAD-$id"
+
+      # Exact key only. A failure to read the cache runs everything.
+      - name: Has this change passed before?
+        id: passed
+        if: steps.key.outputs.key != ''
+        continue-on-error: true
+        uses: actions/cache/restore@v4
+        with:
+          path: .ios-pr-passed
+          key: ${{ steps.key.outputs.key }}
+
+      - name: Report a change that passed before
+        if: steps.passed.outputs.cache-hit == 'true'
+        run: |
+          run="$(cat .ios-pr-passed/run 2>/dev/null || echo "an earlier run")"
+          echo "This pull request's change to the app passed in $run; the macOS jobs are skipped (decision 187)." | tee -a "$GITHUB_STEP_SUMMARY"
+
   build:
     name: Xcode build (iOS Simulator)
+    # Skipped only when this change passed before; if the changes job
+    # failed, it runs.
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
     runs-on: macos-26
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
@@ -338,8 +423,12 @@ jobs:
         # counting cold XCTest startup and Xcode writing the result bundle;
         # the 25 minutes set when it took 12m29s left the slowest 11 s. A
         # slower runner can take 1.8 times as long: 36 minutes. The gate list
-        # is shorter than that.
-        timeout-minutes: 40
+        # took at most 12.7 minutes on 2026-10-12 (8 tests; a ninth, the
+        # tutorial's line step, adds about a minute), so a pull request has
+        # 25: a hung app then holds a macOS runner 15 minutes less.
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 40 }}
+        env:
+          ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
           only=()
           if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
@@ -366,6 +455,26 @@ jobs:
             # Decision 165: the website's screenshots are taken by
             # website-screenshots.yml alone; they test nothing.
             only=(-skip-testing:RailwayGameUITests/WebsiteScreenshotTests)
+          fi
+          # By hand, only the named tests (Class or Class/testMethod; the
+          # target is added).
+          if [[ -n "$ONLY_TESTING" ]]; then
+            only=()
+            IFS=', ' read -r -a tests <<<"$ONLY_TESTING"
+            for test in "${tests[@]}"; do
+              [[ -n "$test" ]] || continue
+              if [[ ! "$test" =~ ^[A-Za-z0-9_]+(/[A-Za-z0-9_]+){0,2}$ ]]; then
+                echo "::error::Not a UI test name: $test"
+                exit 1
+              fi
+              [[ "$test" == RailwayGameUITests/* ]] || test="RailwayGameUITests/$test"
+              only+=("-only-testing:$test")
+            done
+            if (( ${#only[@]} == 0 )); then
+              echo "::error::only_testing names no test."
+              exit 1
+            fi
+            lane="by hand: ${only[*]}"
           fi
           echo "UI test lane: $lane"
           echo "- **UI test lane:** $lane" >> "$GITHUB_STEP_SUMMARY"
@@ -500,7 +609,7 @@ jobs:
     # A skipped job passes a required check, so a pull request that leaves the
     # tutorial's own files alone is not held up by it.
     needs: changes
-    if: needs.changes.outputs.ipad == 'true'
+    if: needs.changes.outputs.ipad == 'true' && needs.changes.outputs.passed != 'true'
     runs-on: macos-26
     # Room for the step limits below (boot 14, tests 20) and the rest.
     timeout-minutes: 45
@@ -589,3 +698,28 @@ jobs:
           path: ${{ runner.temp }}/ipad-tutorial-trace.log
           if-no-files-found: warn
           retention-days: 7
+
+  # Records that this pull request's change to the app passed: the build
+  # passed, and the iPad job passed or was not needed (the key says which).
+  # A Linux job of a few seconds, so no macOS runner waits for the upload.
+  remember:
+    name: Remember that this change passed
+    needs: [changes, build, ipad-tutorial]
+    if: >-
+      ${{ !cancelled() && needs.changes.outputs.key != '' && needs.changes.outputs.passed != 'true'
+      && needs.build.result == 'success'
+      && (needs.ipad-tutorial.result == 'success' || needs.ipad-tutorial.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Write the mark
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p .ios-pr-passed
+          echo "$RUN_URL (attempt $GITHUB_RUN_ATTEMPT, ${GITHUB_SHA})" > .ios-pr-passed/run
+
+      - uses: actions/cache/save@v4
+        with:
+          path: .ios-pr-passed
+          key: ${{ needs.changes.outputs.key }}

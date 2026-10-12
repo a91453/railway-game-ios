@@ -47,6 +47,7 @@ on:
       - ".github/workflows/ios-full-lane.yml"
       - ".github/workflows/release-archive.yml"
       - ".github/workflows/testflight*.yml"
+      - ".github/workflows/website-screenshots.yml"
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
@@ -90,12 +91,14 @@ jobs:
           echo "main is at $sha."
           # Every run of ios-build.yml that is not a pull request's is the
           # full lane (manual, nightly, started here, or a push before
-          # 2026-10-11). Each counts, queued, running or finished however
+          # 2026-10-11), except a run by hand of only some UI tests (its
+          # name starts "UI tests by hand:", decision 187). Each counts, queued, running or finished however
           # (a timed-out one reads cancelled), except one that never
           # started (startup_failure).
           runs="$(gh api "repos/$REPO/actions/workflows/ios-build.yml/runs?head_sha=$sha&per_page=100" \
             --jq '.workflow_runs[]
               | select(.event != "pull_request")
+              | select((.display_title // "") | startswith("UI tests by hand:") | not)
               | select(.conclusion != "startup_failure")
               | "\(.html_url) (\(.event), \(.conclusion // .status))"')"
           if [[ -n "$runs" ]]; then
@@ -111,6 +114,7 @@ jobs:
             last="$(gh api "repos/$REPO/actions/workflows/ios-build.yml/runs?branch=main&per_page=30" \
               --jq '[.workflow_runs[]
                   | select(.event != "pull_request")
+                  | select((.display_title // "") | startswith("UI tests by hand:") | not)
                   | select(.conclusion != "startup_failure")][0] // empty
                 | "\(.status) \(.created_at) \(.html_url)"')"
             if [[ -n "$last" ]]; then

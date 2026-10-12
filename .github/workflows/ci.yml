@@ -17,10 +17,13 @@ name: CI
 # change there (or to the app's bundled data); only the classes that read
 # the fixtures for a fixture change; only the classes a GameCore test file
 # declares when no other file uses it. The label `full-ci` makes a pull
-# request run everything (adding it starts a new run). A push to main and a
-# manual run always run every shard (swift-shards.sh decide).
+# request run everything: add it, then re-run the pull request's run (Re-run
+# all jobs; the change detection reads the labels the pull request has
+# then). A push to main and a manual run always run every shard
+# (swift-shards.sh decide).
 #
-# The workflow always starts, so the "Swift CI (gate)" check always reports:
+# The workflow always starts, so the "Swift CI (gate)" check always reports
+# (but on a cancelled push run of main, see the gate job):
 # on a pull request or a push to main that changes nothing the package builds
 # or tests (only docs, the app, the release workflows), the Swift jobs are
 # skipped and the gate passes; otherwise the gate passes only when every
@@ -38,10 +41,10 @@ on:
   push:
     branches: [main]
   pull_request:
-    # labeled: adding full-ci re-runs the pull request as full. Any label
-    # starts a new run (which cancels the one in progress, see concurrency);
-    # it decides the same way, so its gate is as true as the one it replaced.
-    types: [opened, synchronize, reopened, labeled]
+    # Not on labeled (until 2026-10-12 it was): adding any label started a
+    # new run and cancelled the one in progress. To run a pull request in
+    # full, add full-ci and re-run its run (decision 187).
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -62,6 +65,22 @@ permissions:
 # compared with the last success), but when it turns red, start this
 # workflow by hand (workflow_dispatch) on the replaced commits to find which
 # one broke it. Manual runs keep a group per commit.
+#
+# Rules for the people and sessions that merge (decision 187,
+# docs/research/CI_INCIDENT_2026-10-12.md):
+# - Never cancel a push run of main, by hand or from a session (`gh run
+#   cancel` acts with the owner's token): this group already keeps a burst
+#   of merges to the run in progress and the newest one, and on 2026-10-12
+#   cancelling them wasted 729 runner-minutes and left ten commits with a red
+#   gate and no failing test. To free runners, cancel pull request runs.
+# - Merge main into a pull request only when it conflicts or needs something
+#   on main (main's rule does not require an up-to-date branch), one pull
+#   request at a time, just before it is merged; never into every open pull
+#   request at once. Push a change when it is ready, not piece by piece.
+# - Merge in batches of 3 to 5 green pull requests, then wait for this
+#   workflow to turn green on main before the next batch. Keep at most 2
+#   pull requests that change GameCore running CI at once (a full tier is 18
+#   jobs of the account's 40).
 concurrency:
   group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -187,7 +206,14 @@ jobs:
   gate:
     name: Swift CI (gate)
     needs: [changes, swift-current]
-    if: always()
+    # A push run of main that was cancelled (by hand, or replaced while
+    # waiting) has no verdict to give, so the gate is skipped there rather
+    # than red on a commit where no test failed; the next push run tests its
+    # changes (push-base). A shard that reaches its time limit does not
+    # cancel the run, so it still turns the gate red. A pull request and a
+    # manual run keep always(): their gate reports even when cancelled
+    # (decision 187).
+    if: ${{ always() && !(cancelled() && github.event_name == 'push') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
