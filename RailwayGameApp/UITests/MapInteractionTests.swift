@@ -521,12 +521,15 @@ final class MapInteractionTests: XCTestCase {
 
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
         XCTAssertTrue(status.waitForExistence(timeout: 5))
-        let placed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "units along"), object: status)
+        // An expectation is waited on once: a new one for each wait.
+        func placed() -> Bool {
+            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "units along"), object: status)
+            return XCTWaiter().wait(for: [expectation], timeout: 5) == .completed
+        }
         let mid = map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.4))
         mid.tap()
-        if XCTWaiter().wait(for: [placed], timeout: 5) != .completed { mid.tap() }
-        XCTAssertEqual(XCTWaiter().wait(for: [placed], timeout: 5), .completed,
-                       "A tap on the track must place a platform; status: \(status.label)")
+        if !placed() { mid.tap() }
+        XCTAssertTrue(placed(), "A tap on the track must place a platform; status: \(status.label)")
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 5))
