@@ -551,7 +551,8 @@ extension ReferenceWorld {
     /// Whether service `k` of line `l` sends a train out now if one is
     /// ready; on a ring (decision 49) one way, `outer` or not, which runs
     /// half the trains at the ring's headway since its own last dispatch.
-    func isDue(_ l: Int, service k: Int, outer: Bool? = nil, memo: inout DispatchMemo) -> Bool {
+    /// Without `headway`, only whether it runs fewer trains than it plans.
+    func isDue(_ l: Int, service k: Int, outer: Bool? = nil, headway checksHeadway: Bool = true, memo: inout DispatchMemo) -> Bool {
         let line = lines[l]
         let service = line.service(k)
         let roster = Self.roster(of: line, service: k, outer: outer)
@@ -589,7 +590,7 @@ extension ReferenceWorld {
         guard journeys[k] != nil, let plan = Self.plans(line, at: level, journeys: journeys, capacities: limits)[k], plan.trains > 0,
               let headway = plan.headway
         else { return false }
-        if let last = outer == true ? line.outerLastDispatch : service.lastDispatch, minutes - last < headway { return false }
+        if checksHeadway, let last = outer == true ? line.outerLastDispatch : service.lastDispatch, minutes - last < headway { return false }
         let busy = trains.filter { roster.contains($0.id) && $0.service != nil }.count
         return busy < (outer == nil ? plan.trains : plan.trains / 2)
     }

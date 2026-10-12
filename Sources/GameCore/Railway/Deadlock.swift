@@ -9,10 +9,14 @@
 // one and, where it can, sends one of its services to a passing place: a
 // berth of a station on the way where it stands aside, so that another can
 // go, and from where it goes on to its call once its route is free.
+// A line's spare train (a later fix to decision 58) has no service, so
+// nothing else ever moves it: it keeps its track as a waiting train does,
+// and where no service can step aside the dispatcher moves the spare out
+// of the way instead.
 //
 // Everything here is derived from the world as it is, read-only: which
 // trains wait, for whom, and whether a passing place would help. Only the
-// passing place a service sets off for is ever committed, by
+// passing place a service (or a spare) sets off for is ever committed, by
 // `resolveDeadlock(memo:)` in GameWorld.swift.
 
 extension GameWorld {
@@ -121,6 +125,25 @@ extension GameWorld {
         }
     }
 
+    /// Whether `train` is a spare of its line (decision 58, a later fix):
+    /// assigned to a line that sends its trains out by headway (not by
+    /// runs, decision 133), without a service, standing where its path
+    /// ends with a rate above 0, while the line's window is open and it
+    /// already runs as many trains as it plans (see
+    /// ``isDispatchDue(_:_:at:deadhead:memo:)``).
+    /// Until the line wants another train nothing sends it anywhere, so a
+    /// train waiting for its track waits as long as for a train of a
+    /// deadlock (see ``deadlock(memo:)``).
+    func isSpare(_ train: Train) -> Bool {
+        guard train.execution == nil, train.movement.rate > 0, standingPoint(of: train) != nil,
+              let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), !line.hasRuns,
+              line.window.contains(minuteOfDay: clock.now.minuteOfDay),
+              let stream = line.dispatchStream(of: train.id)
+        else { return false }
+        var memo = DispatchMemo()
+        return !isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
+    }
+
     /// Everything the trains `among` (other than `id`) keep train `id`
     /// from, as ``blockedTrack(except:)`` does for all of them.
     func blockedTrack(except id: TrainID, among ids: Set<TrainID>) -> Set<TrackResource> {
@@ -159,18 +182,21 @@ extension GameWorld {
     /// away, again and again in ID order, any that could go with only those
     /// left keeping their track, until none can. A train that waits for a
     /// moving train, or for one that will set off later, is never in one:
-    /// that one will leave. Empty when there is none, and when traffic
-    /// control is off.
+    /// that one will leave. A line's spare (see ``isSpare(_:)``) always
+    /// keeps its track, as the trains left do, but is not in the deadlock
+    /// itself: it waits for nothing. Empty when there is none, and when
+    /// traffic control is off.
     func deadlock(memo: inout DirectionMemo) -> [TrainID: (candidate: Train, departs: Bool)] {
         var waiting: [TrainID: (candidate: Train, departs: Bool)] = [:]
         for train in trains {
             if let request = waitingRoute(of: train, memo: &memo) { waiting[train.id] = request }
         }
+        let spares = waiting.isEmpty ? [] : Set(trains.lazy.filter { waiting[$0.id] == nil && self.isSpare($0) }.map(\.id))
         var changed = true
         while changed {
             changed = false
             for id in waiting.keys.sorted() {
-                let others = Set(waiting.keys).subtracting([id])
+                let others = Set(waiting.keys).union(spares).subtracting([id])
                 if couldGo(waiting[id]!, among: others, memo: &memo) {
                     waiting[id] = nil
                     changed = true
@@ -182,11 +208,12 @@ extension GameWorld {
 
     /// The trains in a deadlock under traffic control (Stage V2, see
     /// ``deadlock(memo:)``), in ascending ID order: each waits for a route that
-    /// only trains waiting with it hold, so none of them can ever go by
-    /// itself. Once a minute the dispatcher sends one of their services to
-    /// a passing place where that lets another go; a deadlock with no such
-    /// place stays until the player changes something (more platforms, a
-    /// passing loop, fewer trains). Derived on every call, never saved.
+    /// only trains waiting with it, or a line's spares, hold, so none of
+    /// them can ever go by itself. Once a minute the dispatcher sends one
+    /// of their services to a passing place where that lets another go, or
+    /// else moves a spare out of the way; a deadlock with neither stays
+    /// until the player changes something (more platforms, a passing loop,
+    /// fewer trains). Derived on every call, never saved.
     public func deadlockedTrains() -> [TrainID] {
         var memo = DirectionMemo()
         return deadlock(memo: &memo).keys.sorted()
@@ -277,5 +304,65 @@ extension GameWorld {
             }
         }
         return best
+    }
+
+    // MARK: - A spare out of the way
+
+    /// A line's spare (see ``isSpare(_:)``) moved out of the way of deadlock
+    /// `stuck` (decision 58, a later fix), as it sets off, or `nil`: of the
+    /// spares in ascending ID order, the first that holds track a train of
+    /// the deadlock waits for, and has a way to a berth where, standing,
+    /// it lets one of those trains go. Of the stations in ascending ID
+    /// order, each one's nearest berth (see
+    /// ``path(from:toStation:length:avoiding:forbidden:only:)``) that the
+    /// spare can take the way to now, from where it stands or, beside a
+    /// platform its whole length, turned round; the shortest way, the first
+    /// found on a tie. The spare keeps no service: it stays where it stops
+    /// until its line sends it out.
+    func spareStandingAside(in stuck: [TrainID: (candidate: Train, departs: Bool)], memo: inout DirectionMemo) -> Train? {
+        guard isTrafficControlEnabled, !stuck.isEmpty else { return nil }
+        for spare in trains where isSpare(spare) {
+            guard let place = spare.placement else { continue }
+            let own = held(spare)
+            let waiting = stuck.keys.sorted().filter { network.fouls(own, routeEnvelope(of: stuck[$0]!.candidate).resources) }
+            guard !waiting.isEmpty else { continue }
+            let blocked = blockedTrack(except: spare.id)
+            let starts = stationsBesideWholeTrain(spare.id).isEmpty ? [place] : [place, turnedRound(place)]
+            var best: (train: Train, distance: Int64)?
+            for start in starts {
+                for station in stations {
+                    guard let way = path(from: start.position, toStation: station.id, length: spare.length, avoiding: blocked),
+                          way.distance > 0, way.distance < best?.distance ?? .max
+                    else { continue }
+                    var moving = spare
+                    moving.position = start.position
+                    moving.trailEdges = start.trailEdges
+                    follow(way, &moving)
+                    guard case .granted(let granted) = reserving(moving) else { continue }
+                    // Standing there, it must let a train it held up go.
+                    let there = placement(start, after: way)
+                    var standing = spare
+                    standing.position = there.position
+                    standing.trailEdges = there.trailEdges
+                    standing.movement.edges = []
+                    standing.movement.cursor = 0
+                    standing.movement.end = way.end
+                    standing.reservation = []
+                    let aside = replacing(standing)
+                    let frees = waiting.contains { id in
+                        let request = stuck[id]!
+                        guard request.departs else {
+                            return aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil
+                        }
+                        if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { return true }
+                        return false
+                    }
+                    guard frees else { continue }
+                    best = (granted, way.distance)
+                }
+            }
+            if let best { return best.train }
+        }
+        return nil
     }
 }

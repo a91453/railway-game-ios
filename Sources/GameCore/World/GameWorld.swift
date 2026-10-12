@@ -2977,7 +2977,9 @@ public struct GameWorld: Equatable, Sendable {
     /// ``passingPlace(for:in:memo:)``) sets off for it, taking the way there
     /// whole, as fast as it can: one train at most each minute. Leaving a
     /// stop so is a departure like any other (G1b, G1c), counted over the
-    /// whole way to its call. Returns the train's ID, or `nil`.
+    /// whole way to its call. Failing that, a line's spare holding track
+    /// one of them waits for moves out of the way (a later fix, see
+    /// ``spareStandingAside(in:memo:)``). Returns the train's ID, or `nil`.
     private mutating func resolveDeadlock(memo: inout DispatchMemo) -> TrainID? {
         // Only such a service is ever sent: without one, nothing to find.
         guard isTrafficControlEnabled, trains.contains(where: { train in
@@ -3006,6 +3008,13 @@ public struct GameWorld: Equatable, Sendable {
                 serve(departureOf: id, from: left, distance: passing.distance)
             }
             return id
+        }
+        // A later fix: with no service to step aside, a line's spare in
+        // the way steps aside instead.
+        if let aside = spareStandingAside(in: stuck, memo: &memo.directions),
+           let index = trains.firstIndex(where: { $0.id == aside.id }) {
+            trains[index] = aside
+            return aside.id
         }
         return nil
     }
