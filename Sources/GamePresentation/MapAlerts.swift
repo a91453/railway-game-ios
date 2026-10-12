@@ -153,7 +153,8 @@ extension GameWorld {
             }
         }
         if let tourism, lines.contains(where: { !$0.isFreight }) {
-            for sight in tourism.attractions where sight.stars >= Self.alertedSightStars && attractionStation(of: sight.id) == nil {
+            // The rating with its hotels (``stars(of:)``), as the panel shows it.
+            for sight in tourism.attractions where stars(of: sight) >= Self.alertedSightStars && attractionStation(of: sight.id) == nil {
                 alerts.append(MapAlert(kind: .sightWithoutStation(sight.id), station: nil, location: sight.point))
             }
         }
@@ -183,7 +184,8 @@ extension GameSession {
             selectLine(line)
             return true
         case .trainStuck(let train):
-            selectTrain(train)
+            // As a tap on the train: the inspector shows it alone.
+            if world.train(id: train) != nil { tapTrain(train) }
             return false
         case .sightWithoutStation:
             lookAt(alert.location)

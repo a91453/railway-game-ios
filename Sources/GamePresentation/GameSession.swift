@@ -540,8 +540,9 @@ public final class GameSession {
     /// A tap that picked train `id`: it becomes the train the train tool
     /// acts on, and the select tool's inspector shows it. The select tool
     /// lets go of the station or point it had; the train tool keeps it, as
-    /// the place it sends the train to.
-    private func tapTrain(_ id: TrainID) {
+    /// the place it sends the train to. A stuck train's bubble and the news
+    /// log's "Go" pick a train the same way.
+    func tapTrain(_ id: TrainID) {
         guard tappedTrainID != id || selectedTrainID != id || (tool == .select && selectedPoint != nil) else { return }
         selectedTrainID = id
         tappedTrainID = id

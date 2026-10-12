@@ -201,7 +201,10 @@ extension AchievementsTests {
         facts.trainTypes = 3
         facts.longestTrainCars = 8
         facts.rollingStockCost = Money(120_000_000)
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("mixedFleet")).isMet(by: facts), "not where trains are priced flat")
+        facts.hasRollingStockEconomics = true
         XCTAssertTrue(try XCTUnwrap(Achievement.named("mixedFleet")).isMet(by: facts))
+        facts.hasRollingStockEconomics = false
         XCTAssertFalse(try XCTUnwrap(Achievement.named("longTrain")).isMet(by: facts))
         XCTAssertEqual(try XCTUnwrap(Achievement.named("fleetInvestment")).progressText(of: facts), "$ 1,200,000 / $ 5,000,000")
         let mixed = try XCTUnwrap(Achievement.named("mixedFleet"))
@@ -220,5 +223,27 @@ extension AchievementsTests {
         XCTAssertTrue(facts.hasRollingStockEconomics)
         XCTAssertEqual(facts.trainTypes, 1)
         XCTAssertEqual(facts.longestTrainCars, 4)
+    }
+}
+
+extension AchievementsTests {
+    /// Decision 180's later fix: the three rolling-stock marks are had only
+    /// where trains are priced by type. A challenge or an old save prices
+    /// them flat, but a train there still takes ten cars or a type, free.
+    @MainActor
+    func testTheRollingStockMarksAreNotHadWhereTrainsArePricedFlat() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        world.setRollingStockEconomics(false)
+        let train = try world.purchaseTrain(named: "Long").id
+        try world.setTrainCars(train, to: 10)
+        XCTAssertEqual(AchievementFacts(world: world).longestTrainCars, 10)
+        launcher.checkAchievements(of: GameSession(world: world, language: .english))
+        XCTAssertNil(launcher.achievements.unlocked["longTrain"], "not listed in this game, so not had in it")
+
+        world.setRollingStockEconomics(true)
+        launcher.checkAchievements(of: GameSession(world: world, language: .english))
+        XCTAssertNotNil(launcher.achievements.unlocked["longTrain"])
     }
 }

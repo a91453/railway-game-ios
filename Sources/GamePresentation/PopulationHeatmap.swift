@@ -146,8 +146,15 @@ public struct PopulationHeatmap: Sendable {
     /// `blockSize` a side (see ``blockSize(pointsPerUnit:)``), in a fixed
     /// order (north to south, west to east).
     public func tiles(in region: WorldRegion, blockSize: Int = 1) -> [Tile] {
-        guard let range = range(of: region) else { return [] }
+        guard let cells = range(of: region) else { return [] }
         let size = max(1, blockSize)
+        // Whole blocks, those at the region's edges too (as ``CityMap``'s
+        // tiles): a block cut by the edge would be shaded lighter than it
+        // is, and its shade would change as the map pans.
+        func whole(_ cells: ClosedRange<Int>, last: Int) -> ClosedRange<Int> {
+            cells.lowerBound / size * size ... min(last, (cells.upperBound / size + 1) * size - 1)
+        }
+        let range = (rows: whole(cells.rows, last: rows.count - 1), columns: whole(cells.columns, last: columnCount - 1))
         struct Block: Hashable { let row: Int; let column: Int }
         var people: [Block: Int] = [:]
         var order: [Block] = []
