@@ -986,6 +986,8 @@ E2 的實景模式可以先用 MapKit 的真實地形高度與 3D 建築當立�
 
 **Meshy 列車模型與臺中車站**（決策 161，2026-10-11，作者要求）：3D 城市試作多一個地點臺中車站（臺鐵是高架，看得到列車），列車改用臺鐵的區間車與自強號；`tools/meshy/` 用作者的 Meshy 帳號文字生成兩種列車的 3D 模型，頁面有模型時畫模型、沒有時畫臺鐵塗裝的方塊。模型等作者在環境加上 `MESHY_API_KEY` 後生成。
 
+**3D 開發方向的研究**（2026-10-12）：[3D_DIRECTION_STUDY.md](research/3D_DIRECTION_STUDY.md)。內容包括：查證 EveryCityMap 的 3D（線上版是 Mapbox Standard，不是 MapLibre）；MapLibre Native iOS 沒有 3D 地形；參考庫 `rail-3d` 的 MapLibre GL JS 加 three.js 做法。建議第一步是以 rail-3d 為底、讀 `railwaySnapshot()` 的唯讀 3D 檢視，並在實機量測。底用哪個、頁面放哪、排在哪，由作者決定。
+
 ## 跨階段議題
 
 - 在地化（**L1 ✅**，ARCHITECTURE 決策 38）：繁體中文（台灣用語）與英文，跟著系統語言切換；用語以參考 `Ci/` 的簡體中文介面為來源。之後新增的畫面文字要同時寫兩種語言：GamePresentation 的文字函式接收語言，App 的字面字串要加進 `Localizable.xcstrings`。
