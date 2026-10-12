@@ -107,7 +107,7 @@ public struct Tourism: Hashable, Sendable {
     public static let hotelsCounted = 2
     /// The share of an attraction's tourists who stay the night in a hotel
     /// near it, in thousandths (shared among the hotels there).
-    public static let hotelStayPermille: Int64 = 150
+    public static let hotelStayPermille: Int64 = 80
     public static let starsPerSouvenirLevel = 25
     /// What a level of the shop costs: $300,000, in cents.
     public static let souvenirCost: Int64 = 30_000_000

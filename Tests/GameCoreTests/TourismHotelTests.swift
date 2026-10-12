@@ -71,14 +71,14 @@ final class TourismHotelTests: XCTestCase {
     func testAHotelsGuestsAreAShareOfTheTourists() throws {
         var world = try world()
         let one = try hotel(&world, dx: 0)
-        // 315 tourists, 150 per mille stay: 47 (rounded down), the only hotel.
-        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 0), 47)
+        // 315 tourists, 80 per mille stay: 25 (rounded down), the only hotel.
+        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 0), 25)
         let two = try hotel(&world, dx: 4_000)
-        // 3.5 stars: 3,250 × 0.6 × 0.2 = 390, 58 stay, 29 in each.
-        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 0), 29)
-        XCTAssertEqual(world.subsidiaryCustomers(of: two, onDay: 0), 29)
-        // A weekend (day 5, a Saturday): 3,250 × 1.6 × 0.2 = 1,040; 156; 78 each.
-        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 5), 78)
+        // 3.5 stars: 3,250 × 0.6 × 0.2 = 390, 31 stay, 15 in each (rounded down).
+        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 0), 15)
+        XCTAssertEqual(world.subsidiaryCustomers(of: two, onDay: 0), 15)
+        // A weekend (day 5, a Saturday): 3,250 × 1.6 × 0.2 = 1,040; 83; 41 each.
+        XCTAssertEqual(world.subsidiaryCustomers(of: one, onDay: 5), 41)
     }
 
     func testWithoutTourismAHotelHasNoGuests() throws {
@@ -99,9 +99,9 @@ final class TourismHotelTests: XCTestCase {
         let one = try hotel(&world, dx: 0)
         world.setSpeed(.normal)
         try world.advance(ticks: 1_442)
-        // Day 0's 315 tourists, 47 stay at $85: $3,995 taken; its cost 55%
+        // Day 0's 315 tourists, 25 stay at $85: $2,125 taken; its cost 55%
         // of that and the staff, 0.04% of the hotel's cost, rounded up.
-        let sales = 47 * 8_500
+        let sales = 25 * 8_500
         let building = try XCTUnwrap(world.placedBuilding(id: one.id))
         let staff = (building.cost.amount * 4 + 9_999) / 10_000
         XCTAssertEqual(building.books.totalSales, Money(Int64(sales)))

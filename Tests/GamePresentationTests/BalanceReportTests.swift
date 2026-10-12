@@ -196,7 +196,7 @@ final class BalanceReportTests: XCTestCase {
     }
 
     /// Decision 174's hotels: a hotel built on day 10 beside a sight, whose
-    /// guests are 150 per mille of its tourists, for a sight of 3, 4 and 4.5
+    /// guests are 80 per mille of its tourists, for a sight of 3, 4 and 4.5
     /// stars before it (a hotel adds a quarter star). The hotel's customers,
     /// profit a day and the days to pay back what it cost, and the cash
     /// against the same line without the hotel. The aim: 2 to 4 years
@@ -225,6 +225,10 @@ final class BalanceReportTests: XCTestCase {
                 try base.advance(ticks: 1_440)
                 try with.advance(ticks: 1_440)
                 if day == 10 {
+                    // A first line cannot yet pay for a hotel: the cash is topped
+                    // up (in both worlds) so the measure is of the trade alone.
+                    with.economy.earn(Money(3_000_000_000))
+                    base.economy.earn(Money(3_000_000_000))
                     hotel = try with.placeBuilding(.hotel, at: PlanPoint(x: station.point.x + 3_000, y: station.point.y - 6_000)).id
                 }
                 if day > 10, let id = hotel, let building = with.placedBuilding(id: id) {
