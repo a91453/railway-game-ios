@@ -5473,6 +5473,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **每月報告**歸 `claude/secretary-news`（決策 175）。它要月彙整時請用 `FinanceHistory.make(.oneYear, …)` 的格子（30 天一格），不要另算一份。
 - 參考：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardFinanceTrendData`（窗口結束在現在、每格一個區段的 delta；它另外從整本帳推現金餘額，這裡不做）。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：遊戲還年輕時，90 天與一年的第一格會跨到第 1 天之前，標籤寫成「第 −18–11 天」；現在從第 1 天算起（`FinanceHistoryTests.testAYoungGamesFirstBucketIsLabelledFromDayOne`）。
+
 ### 177. 開局體驗：新遊戲選項、第一次玩的引導、首條線虧損教學、說明手冊
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車：開始吧觀光補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
@@ -5502,6 +5504,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
 
 **測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
+
+**之後的修正**（查 bug，2026-10-12，發佈前）：`firstLineLosing` 不再對還沒有任何列車的路線說話：車站與軌道的固定成本讓昨天的營業結果是負的，站長卻說「車站太近、客太少」，還擋住「路線沒有車」的提醒（`OnboardingTests.testAShortLineWithNoTrainIsNotCalledLosing`）。
+
 ### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
 
 2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。
@@ -5712,6 +5717,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12，發佈前）：進站看板列出「沒有車發出去」的固定班次：一班在容許的 30 分鐘內沒有列車可發（`LineRun.latestDispatch`）就當天作廢，但下游各站仍照時刻表時間列著，像是有一班車要來。現在過了作廢時間就不列（`DepartureBoardTests.testARunNeverSentOutIsNotListedDownTheLine`）。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：`ServiceLine.withoutDispatchTimes`（乘客計畫與載客量圖層的鍵）也清掉空車回送里程 `deadheadDistance`：它每趟空車回送都增加、沒有計畫讀它，開了彈性發車後每趟回送都讓乘客計畫在下一次 `advance` 整個重算（`FlexDispatchTests.testALineKeyDoesNotChangeWithAnEmptyRun`）。
+
 ### 181. 公司評等、職稱與成就：自由遊戲的長期目標
 
 2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 181；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
@@ -5858,6 +5865,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **提示音與觸覺**：新的 `SoundCue.refused`（任何失敗訊息：兩個往下的低音撥弦）與 `.warning`（新聞紀錄新增一則「警訊」類：負債、期限、颱風、缺建材；讀檔還原的紀錄不響）。兩個新音檔由 `tools/audio/make_game_audio.py` 合成（本專案自己的素材；重新執行後既有的音檔位元組完全相同）。App 的 `GameAudio` 另外給觸覺回饋（SwiftUI 的 `sensoryFeedback`，掛在 App 的場景上）：拒絕 `.error`、警訊 `.warning`、放好建物／月台（`.built`）`.success`；觸覺不受「音效」開關影響（系統的觸覺設定決定），和音效共用最短間隔。**行為改變**：原本拒絕是無聲的（`SoundCueTests`、`GameFeedbackTests` 的兩個斷言），現在有拒絕音，測試跟著改。
 
 **參考庫與外部專案**：重做移植 `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `past`／`future`（`sY`、`sq`、`sG`、`canRedo`）。搜尋、存檔命名、軌道檢視、新泡泡、提示音在參考庫裡沒有對應（Ci 的存檔是 `buildLocalSavePayload` 的槽位，沒有命名；MapBuilder 沒有號誌），是本專案自己的。外部專案沒有取用程式。
+
+**之後的修正（遊戲選單溢出）**：#391（觀光景點）、#403、決策 183（城市委託案的「目標」）各在遊戲選單加一列後，空白新遊戲與實景地圖的選單有八列，iPhone 橫向時「回到開始畫面」（`menu.backToStart`）落到點不到的位置；PR 閘門只跑示範地圖（沒有觀光、沒有目標）的存檔流程，所以只有 `main` 的完整 lane 紅。選單改成固定六列：儲存遊戲、另存或匯出 ▸（另存新檔…、匯出存檔）、教學、更多 ▸（目標、觀光景點、說明，依世界而有）、設定、回到開始畫面，和觀光加入前的列數相同，不再隨世界變長；UI 測試點的 `menu.saveGame`、`menu.tutorial`、`menu.settings`、`menu.backToStart` 留在第一層。閘門加上空白新遊戲與實景地圖的存檔流程（`testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing`、`testARealWorldGameStartsFromAPlaceAndIsSavedAsOne`，各約 50 秒）；劃分區的拖曳那一個照它自己的說明留在完整 lane（手勢較不穩定，選單的路徑和蓋房子那一個相同）。以後要加選單項目，放進「更多」。
 
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 

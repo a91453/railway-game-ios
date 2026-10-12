@@ -1940,7 +1940,7 @@ public final class GameSession {
     /// speed stays as the player has it now, since pausing and the speed
     /// are not edits; game time is the snapshot's, which it still is (any
     /// tick empties the history). The selection and the drafts let go of
-    /// stations, trains, lines and track the world no longer has.
+    /// stations, trains, lines, buildings and track the world no longer has.
     ///
     /// Refused, with a message, when there is nothing to take back, and
     /// while the tutorial is on screen: its steps compare the world with
@@ -2037,6 +2037,9 @@ public final class GameSession {
         endFollowIfGone()
         if let id = selectedLineID, world.line(id: id) == nil { selectedLineID = nil }
         if let id = selectedTrackEdge, world.network.edge(id) == nil { selectedTrackEdge = nil }
+        // Undo gives a building's ID out again: the next one is not this.
+        if let id = selectedBuildingID, world.placedBuilding(id: id) == nil { selectedBuildingID = nil }
+        if let id = saleCandidate, world.placedBuilding(id: id) == nil { saleCandidate = nil }
         func exists(_ anchor: NetworkAnchor?) -> Bool {
             switch anchor {
             case nil, .point: true

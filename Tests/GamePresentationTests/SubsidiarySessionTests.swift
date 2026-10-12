@@ -63,6 +63,23 @@ final class SubsidiarySessionTests: XCTestCase {
         XCTAssertNil(session.selectionText())
     }
 
+    /// Undo takes back a building the inspector shows: the selection lets
+    /// go of it, so the next building, given the same ID, is not selected
+    /// in its place.
+    func testUndoingASelectedBuildingLetsGoOfIt() throws {
+        let session = try session()
+        session.selectTool(.building)
+        session.buildingKind = .hotel
+        XCTAssertTrue(session.placeBuilding(at: PlanPoint(x: 20_000, y: 20_000)))
+        session.selectTool(.select)
+        session.tapMap(at: PlanPoint(x: 20_000, y: 20_000), reach: 400)
+        XCTAssertEqual(session.selectedBuildingID, PlacedBuildingID(rawValue: 3))
+        session.undo()
+        XCTAssertNil(session.world.placedBuilding(id: PlacedBuildingID(rawValue: 3)))
+        XCTAssertNil(session.selectedBuildingID)
+        XCTAssertNil(session.selectionText())
+    }
+
     func testTheInspectorShowsTheBooksReturnAndPriceInChinese() throws {
         var world = try makeWorld(width: 30_720, height: 30_720, balance: 10_000_000_000)
         world.setEconomyMode(.management)

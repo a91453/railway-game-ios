@@ -229,8 +229,8 @@ public enum HelpGuide {
             "saveGame", .running,
             question: ("How do I save, and where is my game?", "怎麼存檔？遊戲存在哪？"),
             answer: (
-                "The game saves itself every 15 minutes and whenever you leave it. Open the game menu (the three lines at the top) to Save Game or Export Save. Continue on the start screen resumes the autosave, and Saved Games lists your own saves.",
-                "遊戲每 15 分鐘與離開時都會自動存檔。打開遊戲選單（頂端的三條線）可以「儲存遊戲」或「匯出存檔」。開始畫面的「繼續」會接續自動存檔，「存檔」則列出你自己的存檔。"
+                "The game saves itself every 15 minutes and whenever you leave it. Open the game menu (the three lines at the top) to Save Game, or Save As or Export to name a save or share it as a file. Continue on the start screen resumes the autosave, and Saved Games lists your own saves.",
+                "遊戲每 15 分鐘與離開時都會自動存檔。打開遊戲選單（頂端的三條線）可以「儲存遊戲」，或在「另存或匯出」裡為存檔命名、匯出成檔案。開始畫面的「繼續」會接續自動存檔，「存檔」則列出你自己的存檔。"
             ),
             keywords: "load autosave export 讀檔 自動存檔 匯出"
         ),

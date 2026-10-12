@@ -340,14 +340,15 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     public internal(set) var runDays: [Int64?]
 
     /// The line without when it last sent trains out (``lastDispatch``, the
-    /// outer ring's, its patterns' and the run days), which change at every
-    /// departure: for a key of what a result depends on that no departure
+    /// outer ring's, its patterns' and the run days) and the distance of its
+    /// empty runs (decision 172), which change at every departure: for a key of what a result depends on that no departure
     /// time changes.
     public var withoutDispatchTimes: ServiceLine {
         var line = self
         line.lastDispatch = nil
         line.outerLastDispatch = nil
         line.runDays = []
+        line.deadheadDistance = 0
         for index in line.patterns.indices { line.patterns[index].lastDispatch = nil }
         return line
     }

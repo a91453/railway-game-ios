@@ -155,6 +155,20 @@ final class OnboardingTests: XCTestCase {
         XCTAssertNil(world.scenario)
     }
 
+    /// A line nobody has put a train on is not "losing money": the station
+    /// master does not blame its stations.
+    func testAShortLineWithNoTrainIsNotCalledLosing() throws {
+        var world = try shortLine()
+        for train in world.trains.map(\.id) {
+            try world.unassignTrain(train)
+        }
+        world.setSpeed(.normal)
+        try world.advance(ticks: 3 * 1_440)
+        if case .firstLineLosing? = StationMasterAdvice(world: world) {
+            XCTFail("a line with no train yet")
+        }
+    }
+
     // MARK: - Feedback
 
     func testALossFloatsRedAndShort() {

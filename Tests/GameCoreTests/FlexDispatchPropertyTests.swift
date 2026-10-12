@@ -62,4 +62,46 @@ final class FlexDispatchPropertyTests: XCTestCase {
         print("[digest] flex.dispatch \(digest.hex) (\(summary))")
         assertVolume(ran == 8 * PropertySeeds.active.count, "every case should run")
     }
+
+    /// Every switch a new game turns on (line accounts, rolling-stock
+    /// economics, flexible dispatch, a managed company) with stations
+    /// removed and trains sold among the generated commands: after every
+    /// step the world must save and load back equal. A command that leaves
+    /// records of what it removed makes the next save unloadable.
+    func testEveryCommandLeavesTheWorldSavable() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let ran = try runCampaign("savable", cases: 6) { c in
+            let (setup, operations) = try LineDispatchPropertyTests.generate(&c, operations: 70)
+            c.note("setup: \(setup.summary), second \(setup.seconds), \(setup.speed)")
+            var world = try setup.build().0
+            world.setFlexDispatch(true)
+            world.setRollingStockEconomics(true)
+            world.setLineAccounts(true)
+            world.setEconomyMode(.management)
+            var random = c.random
+            for (index, operation) in operations.enumerated() {
+                _ = KernelDifferentialTests.apply(operation, to: &world)
+                var step = "step \(index) \(operation)"
+                if index % 4 == 3 {
+                    if random.chance(1, in: 2), let station = world.stations.isEmpty ? nil : random.element(of: world.stations.map(\.id)) {
+                        let removed: Bool = (try? world.removeStation(station)) != nil
+                        step += ", removeStation(\(station)) \(removed ? "done" : "refused")"
+                    } else if let train = world.trains.isEmpty ? nil : random.element(of: world.trains.map(\.id)) {
+                        try? world.sellTrain(train)
+                        step += ", sellTrain(\(train))"
+                    }
+                }
+                let data = try encoder.encode(world)
+                do {
+                    let loaded = try JSONDecoder().decode(GameWorld.self, from: data)
+                    c.expect(loaded == world, "\(step): did not load back equal")
+                } catch {
+                    c.fail("\(step): the saved world did not load: \(error)")
+                    return
+                }
+            }
+        }
+        assertVolume(ran == 6 * PropertySeeds.active.count, "every case should run")
+    }
 }

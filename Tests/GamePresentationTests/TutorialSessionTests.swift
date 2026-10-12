@@ -88,7 +88,7 @@ final class TutorialSessionTests: XCTestCase {
             session.addNetworkPlatform()
         case 4:
             // The second station, further along new track.
-            Self.expect(session, step: 4, goal: .buildStation, targets: [.networkModes, .map, .actionButton])
+            Self.expect(session, step: 4, goal: .buildSecondStation, targets: [.networkModes, .map, .actionButton])
             session.setNetworkMode(.build)
             session.tapNetwork(at: point(7 * Self.tile, y), reach: Self.reach)
             session.tapNetwork(at: point(13 * Self.tile, y), reach: Self.reach)
@@ -228,6 +228,34 @@ final class TutorialSessionTests: XCTestCase {
             session.selectTool(.network)
             session.showNextTutorialStep()
             XCTAssertFalse(session.isTutorialStepDone, "starting again snapshots the track that is there now")
+        }
+    }
+
+    /// Two stations built on the first station's step are the two a line
+    /// needs: the next step does not wait for a third.
+    func testTwoStationsOnTheFirstStationStepAreEnough() async throws {
+        let world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
+        await MainActor.run {
+            let session = GameSession(world: world)
+            session.startTutorial()
+            session.selectTool(.network)
+            session.showNextTutorialStep()
+            session.tapNetwork(at: PlanPoint(x: 2_048, y: 2_048), reach: Self.reach)
+            session.tapNetwork(at: PlanPoint(x: 14_336, y: 2_048), reach: Self.reach)
+            session.buildNetworkTrack()
+            session.showNextTutorialStep()
+            session.mapDidMove()
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "build.firstStation")
+            session.setNetworkMode(.platform)
+            for x: Int64 in [4_096, 12_288] {
+                session.tapNetwork(at: PlanPoint(x: x, y: 2_048), reach: Self.reach)
+                session.addNetworkPlatform()
+            }
+            XCTAssertEqual(session.world.stations.count, 2)
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "build.secondStation")
+            XCTAssertTrue(session.isTutorialStepDone, "the two stations are there")
         }
     }
 

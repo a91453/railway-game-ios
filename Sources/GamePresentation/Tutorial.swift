@@ -82,6 +82,10 @@ public enum TutorialGoal: Hashable, Sendable {
     case buildTrack
     /// Build a station: one that was not there when the step was shown.
     case buildStation
+    /// Have a second station for a line: build one that was not there
+    /// when the step was shown, unless two were built since the step
+    /// before that asks for a station was shown.
+    case buildSecondStation
     /// Create a service line: one that was not there when the step was
     /// shown.
     case createLine
@@ -244,6 +248,13 @@ public struct Tutorial: Hashable, Sendable {
             return world.network.edges.contains { !before.edges.contains($0.id) }
         case .buildStation:
             return world.stations.contains { !before.stations.contains($0.id) }
+        case .buildSecondStation:
+            if world.stations.contains(where: { !before.stations.contains($0.id) }) { return true }
+            // Two built since the first station's step was shown are the
+            // two a line needs.
+            guard let first = steps.indices.last(where: { $0 < index && steps[$0].goal == .buildStation }),
+                  let earlier = whenFirstShown[first] else { return false }
+            return world.stations.filter { !earlier.stations.contains($0.id) }.count >= 2
         case .createLine:
             return world.lines.contains { !before.lines.contains($0.id) }
         case .startService:
@@ -362,7 +373,7 @@ extension Tutorial {
         TutorialStep(
             id: "build.secondStation",
             targets: [.networkModes, .map, .actionButton],
-            goal: .buildStation,
+            goal: .buildSecondStation,
             title: ("A line needs two stations", "路線至少要兩座車站"),
             body: (
                 "Switch back to Build, extend the track at least 32 m past the first station, then add a platform there too.",
