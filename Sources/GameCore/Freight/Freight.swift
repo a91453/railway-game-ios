@@ -672,6 +672,7 @@ extension GameWorld {
                     if group.kind == .materials {
                         state.count(group.tons, in: \.materialsReceived)
                         state.storeMaterials(group.tons, at: here)
+                        countRequestMaterials(group.tons, at: here)
                     }
                     if accounts.mode == .management, let squared = squaredDistance(from: group.origin, to: here) {
                         let fare = Freight.fare(tons: group.tons, distance: FixedPoint.squareRoot(squared))

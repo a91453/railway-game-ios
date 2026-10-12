@@ -195,6 +195,104 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 174's hotels: a hotel built on day 10 beside a sight, whose
+    /// guests are 80 per mille of its tourists, for a sight of 3, 4 and 4.5
+    /// stars before it (a hotel adds a quarter star). The hotel's customers,
+    /// profit a day and the days to pay back what it cost, and the cash
+    /// against the same line without the hotel. The aim: 2 to 4 years
+    /// (720 to 1,440 days) for a good sight, no snowball.
+    func testAHotelBesideASight() throws {
+        let days = try requestedDays()
+        var lines = [
+            "### A hotel beside a sight on the first line (built on day 10)",
+            "",
+            "| Sight stars | Hotel cost | Tourists a day (mean) | Guests a day (mean) | Profit a day (mean) | Payback days | Balance with hotel | without |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        for stars in [300, 400, 450] {
+            var base = try firstLine()
+            let station = try XCTUnwrap(base.stations.last)
+            base.setTourism([Attraction(
+                id: AttractionID(rawValue: 1), name: "Sight", englishName: "Sight",
+                point: PlanPoint(x: station.point.x + 3_000, y: station.point.y), kind: .town, baseStars: stars
+            )])
+            var with = base
+            var hotel: PlacedBuildingID?
+            try base.advance(ticks: 1)
+            try with.advance(ticks: 1)
+            var guests: Int64 = 0, profit: Int64 = 0, tourists: Int64 = 0, counted: Int64 = 0
+            for day in 1...days {
+                try base.advance(ticks: 1_440)
+                try with.advance(ticks: 1_440)
+                if day == 10 {
+                    // A first line cannot yet pay for a hotel: the cash is topped
+                    // up (in both worlds) so the measure is of the trade alone.
+                    with.economy.earn(Money(3_000_000_000))
+                    base.economy.earn(Money(3_000_000_000))
+                    hotel = try with.placeBuilding(.hotel, at: PlanPoint(x: station.point.x + 3_000, y: station.point.y - 6_000)).id
+                }
+                if day > 10, let id = hotel, let building = with.placedBuilding(id: id) {
+                    let result = with.subsidiaryDay(of: building, onDay: Int64(day) - 1)
+                    guests += result.customers
+                    profit += (result.sales - result.cost).amount
+                    tourists += with.attraction(id: AttractionID(rawValue: 1))?.yesterday ?? 0
+                    counted += 1
+                }
+            }
+            let building = try XCTUnwrap(hotel.flatMap { with.placedBuilding(id: $0) })
+            let mean = max(1, counted)
+            let payback = profit > 0 ? building.cost.amount * mean / profit : 0
+            lines.append(
+                "| \(Double(stars) / 100) | \(dollars(building.cost.amount)) | \(tourists / mean) | \(guests / mean) | \(dollars(profit / mean)) | \(payback) | "
+                    + "\(dollars(with.economy.balance.amount)) | \(dollars(base.economy.balance.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
+    /// Decision 183: the first line with the city's requests, against the
+    /// same line without them, sights off in both. Every midnight the
+    /// company takes on the best paying offers of riders and residents it
+    /// has room for, and does nothing else to meet them: what the
+    /// subsidies bring a railway left to itself, so that they do not
+    /// snowball the cash.
+    func testAFirstLineTakingTheCitysRequests() throws {
+        let days = try requestedDays()
+        var plain = try firstLine()
+        plain.setTourism(nil)
+        plain.setCityRequests(seed: nil)
+        var asked = plain
+        asked.setCityRequests(seed: 1)
+        var lines = [
+            "### A first line taking the riders and residents requests it can (seed 1)",
+            "",
+            "| Day | Balance without | Balance with | Difference | Trust | In hand | Offers | Met / missed | Paid so far |",
+            "| --: | --: | --: | --: | --: | --- | --- | --: | --: |",
+        ]
+        try plain.advance(ticks: 1)
+        try asked.advance(ticks: 1)
+        for day in 1...days {
+            // What the town's growth can meet alone: riders and
+            // residents, the best paying first; never a station to build,
+            // freight or a sight.
+            let passive: Set<CityRequestKind> = [.stationRiders, .networkRiders, .population]
+            for offer in (asked.cityRequests?.offers ?? []).filter({ passive.contains($0.kind) }).sorted(by: { $0.reward > $1.reward }) {
+                try? asked.acceptRequest(offer.id)
+            }
+            try plain.advance(ticks: 1_440)
+            try asked.advance(ticks: 1_440)
+            let requests = try XCTUnwrap(asked.cityRequests)
+            let met = requests.results.count { $0.succeeded }, missed = requests.results.count { !$0.succeeded }
+            lines.append(
+                "| \(day) | \(dollars(plain.economy.balance.amount)) | \(dollars(asked.economy.balance.amount)) | "
+                    + "\(dollars((asked.economy.balance - plain.economy.balance).amount)) | \(requests.trust) | "
+                    + "\(requests.active.map(\.kind.rawValue).joined(separator: ", ")) | \(requests.offers.map(\.kind.rawValue).joined(separator: ", ")) | "
+                    + "\(met) / \(missed) | \(dollars(requests.paid.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// `NewGameBalanceTests`' first line: three stations through the first
     /// town on 448 m of track and one train of four cars, $914,800.
     private func firstLine() throws -> GameWorld {

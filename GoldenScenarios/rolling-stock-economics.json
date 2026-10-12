@@ -1,6 +1,6 @@
 {
  "schemaVersion": 71,
- "description": "Rolling-stock economics (ARCHITECTURE decision 180): a managed company, money in cents, on a track of one 1,024-unit edge (nodes (512, 1536) and (1536, 1536), track 1,000 an edge of 1,024 units). With the switch on, a train costs its type's prices, not costs.train (200,000): Blue, a standard car, costs the first car of type A, $150,000 (15,000,000); refitted to MAGLEV it pays 30 percent of a one-car maglev's $600,000, 18,000,000; set to 4 cars it pays 3 maglev cars of $150,000, 45,000,000. Green (15,000,000) placed on the track cannot be sold (trainInService). Taken off, it is refitted to L (30 percent of $90,000, 2,700,000), set to 2 cars (one L car of $25,000, 2,500,000). Blue is sold at 70 percent of its books: the train's 15,000,000 + 18,000,000 = 33,000,000 brings 23,100,000, its cars' 45,000,000 brings 31,500,000; a second sale is unknownTrain. The balance: 200,000,000 - 15,000,000 - 18,000,000 - 45,000,000 - 15,000,000 - 1,000 - 2,700,000 - 2,500,000 + 54,600,000 = 156,399,000. Every expectation is from tools/golden-checks/rolling_stock.py.",
+ "description": "Rolling-stock economics (ARCHITECTURE decision 180): a managed company, money in cents, on a track of one 1,024-unit edge (nodes (512, 1536) and (1536, 1536), track 1,000 an edge of 1,024 units). With the switch on, a train costs its type's prices, not costs.train (200,000): Blue, a standard car, costs the first car of type A, $150,000 (15,000,000). A change of type costs the new type's price for the cars the train has, less what the old train would sell for (70 percent of its books), at least nothing, and is booked as selling the old train and buying the new: Blue changed to MAGLEV pays $600,000 less 70 percent of $150,000, 60,000,000 - 10,500,000 = 49,500,000, and its train record is now the new $600,000; set to 4 cars it pays 3 maglev cars of $150,000, 45,000,000. Green (15,000,000) placed on the track cannot be sold (trainInService). Taken off, it is changed to L: $90,000 is less than the 10,500,000 the standard train would sell for, so nothing is paid and nothing paid back; set to 2 cars it pays one L car of $25,000, 2,500,000. Blue is sold at 70 percent of its books: the train's 60,000,000 brings 42,000,000, its cars' 45,000,000 brings 31,500,000; a second sale is unknownTrain. The balance: 200,000,000 - 15,000,000 - 49,500,000 - 45,000,000 - 15,000,000 - 1,000 - 0 - 2,500,000 + 73,500,000 = 146,499,000. Every expectation is from tools/golden-checks/rolling_stock.py.",
  "initialState": {
   "worldWidth": 8192,
   "worldHeight": 4096,
@@ -182,7 +182,7 @@
  "expectedFinalState": {
   "gameMinutes": 0,
   "speed": "normal",
-  "balance": 156399000,
+  "balance": 146499000,
   "rollingStockEconomics": true,
   "stations": [],
   "trains": [
