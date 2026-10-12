@@ -6001,7 +6001,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 「匯出存檔」不再在選單的 body 裡建出整個要存的世界（以前每個 tick 一次）：`ExportedSave` 拿 session，分享時才取 `worldToSave`。
 - 「回到開始畫面」從最後一列移到第一個區塊（「儲存遊戲」「另存或匯出」之後）：矮的手機或字級較大時最後一列會被擠出畫面。仍是六列，其他項目順序不變。自動存檔失敗時照舊留在遊戲、狀態列顯示原因。
 - 其他原生選單（車種、運轉方式、車隊總覽、時刻表、路線的班次與停站方式、車站的月台軌道等）的內容較短，這次沒改，仍會隨 tick 重建；之後若有回報照同一做法處理。
-- UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（XXXL 字級）、`testTheTrainMenuScrollsAndChoosesWhileTheClockRuns`（15 列車，選第一列再選最後一列）。
+- UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`（示範地圖，600×）、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（空白新遊戲，XXXL 字級；加進 PR 閘門）、`testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns`（15 列車，選單打開 3 秒不動、選得到另一列）。XCTest 捲不動原生選單（按住拖曳是滑過選取、swipe 會關掉選單，暫停時也一樣），捲到最後一列只能在實機確認。
 
 ### 185. PR 的 Linux CI 依改動分層
 

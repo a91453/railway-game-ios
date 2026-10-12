@@ -223,19 +223,13 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// TestFlight 54.1: with many trains and the clock running, the train
     /// menu could not be scrolled (each tick took it back to its top) and
     /// showed two layers of text. Fifteen trains, more than the menu shows
-    /// at once on a phone on its side; choose the first, then the last.
-    func testTheTrainMenuScrollsAndChoosesWhileTheClockRuns() {
-        checkTheTrainMenu(paused: false)
-    }
-
-    /// The same with the game paused: the control for the test above. If
-    /// only the running one fails, the menu is still rebuilt by the ticks;
-    /// if both fail, it is how XCTest scrolls a native menu.
-    func testTheTrainMenuScrollsAndChoosesWhilePaused() {
-        checkTheTrainMenu(paused: true)
-    }
-
-    private func checkTheTrainMenu(paused: Bool) {
+    /// at once on a phone on its side: with the clock running the open
+    /// menu stays as it opened, and a row other than the selected train's
+    /// can be chosen. XCTest cannot scroll a native menu (a press and drag
+    /// chooses the row under the finger, a swipe closes the menu, paused or
+    /// not: runs 38285634450 and 38287892415), so scrolling to the last row
+    /// is left to a device.
+    func testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -244,8 +238,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
         // A blank new game: $3,000,000, enough for fifteen trains.
         requiredButton("start.newGame", in: app).tap()
-        let pause = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
-        if paused { pause.tap() }
+        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.train", in: app).tap()
         let buy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train"))
@@ -255,10 +248,30 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         let picker = app.buttons.matching(identifier: "train.picker")
         XCTAssertTrue(picker.firstMatch.waitForExistence(timeout: 10), "Missing the train menu")
         waitForLabel("Train: Train 15", of: picker.firstMatch)
-        XCTAssertTrue(app.buttons[paused ? "Resume" : "Pause"].exists, paused ? "The clock must stay paused" : "The clock must keep running")
+        XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
 
-        chooseTrain("Train 1", in: app)
-        chooseTrain("Train 15", in: app)
+        requiredButton("train.picker", in: app).tap()
+        // The menu's rows ("Train 3"), not the picker ("Train: …") or the
+        // train tool.
+        let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
+        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
+        Thread.sleep(forTimeInterval: 1)
+        func visibleRows() -> [String] {
+            menuRows.allElementsBoundByIndex.filter { $0.isHittable }.map { "\($0.label) \($0.frame)" }
+        }
+        let opened = visibleRows()
+        XCTAssertGreaterThan(opened.count, 1, "The train menu shows its rows")
+        // Thirty ticks: the menu must not move, close or change.
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertEqual(visibleRows(), opened, "The open train menu changed by itself while the clock ran")
+        // Choose the lowest row it shows, which is not the selected train.
+        guard let last = menuRows.allElementsBoundByIndex.last(where: { $0.isHittable }) else {
+            return XCTFail("No row of the train menu can be touched")
+        }
+        let name = last.label
+        XCTAssertNotEqual(name, "Train 15")
+        touchMenuRow(last, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
+        waitForLabel("Train: \(name)", of: picker.firstMatch)
     }
 
     private func checkBackToStartWhileTheClockRuns(arguments: [String], demo: Bool) {
@@ -282,38 +295,6 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         tapMenuAction("menu.backToStart", in: app)
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.continue", in: app)
-    }
-
-    /// Opens the train menu, scrolls it to `name` and chooses it.
-    private func chooseTrain(_ name: String, in app: XCUIApplication) {
-        requiredButton("train.picker", in: app).tap()
-        // The menu's rows ("Train 3"), not the picker ("Train: …") or the
-        // train tool.
-        let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
-        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
-        Thread.sleep(forTimeInterval: 1)
-        let rows = app.buttons.matching(NSPredicate(format: "label == %@", name))
-        func shown() -> Bool { rows.firstMatch.exists && rows.allElementsBoundByIndex.contains { $0.isHittable } }
-        func visibleRows() -> [String] { menuRows.allElementsBoundByIndex.filter { $0.isHittable }.map(\.label) }
-        // A row below the menu's fold is not in the accessibility tree:
-        // swipe the menu up to it. A swipe, not a press and drag: pressing
-        // a row and dragging chooses the row under the finger (run
-        // 38285634450). Each time, the menu must stay where it was
-        // scrolled; before the fix every tick took it back to its top.
-        for attempt in 0..<6 where !shown() {
-            let visible = visibleRows()
-            print("chooseTrain(\(name)) attempt \(attempt): \(visible.joined(separator: ", "))")
-            guard visible.count > 1 else { break }
-            let row = menuRows.allElementsBoundByIndex.filter { $0.isHittable }[visible.count / 2]
-            row.swipeUp()
-            let scrolled = visibleRows()
-            Thread.sleep(forTimeInterval: 3)
-            XCTAssertEqual(visibleRows(), scrolled, "The open train menu moved by itself")
-        }
-        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name); it shows: \(visibleRows())")
-        let row = requiredButton(rows, name: name)
-        touchMenuRow(row, closing: rows, in: app, name: name)
-        waitForLabel("Train: \(name)", of: app.buttons.matching(identifier: "train.picker").firstMatch)
     }
 
     private func waitForLabel(_ label: String, of element: XCUIElement) {

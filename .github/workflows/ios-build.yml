@@ -442,6 +442,11 @@ jobs:
               # out of reach on a phone on its side.
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing
               -only-testing:RailwayGameUITests/RealWorldMapUITests/testARealWorldGameStartsFromAPlaceAndIsSavedAsOne
+              # TestFlight 54.1: Back to Start with the clock running and
+              # the largest text short of the accessibility sizes (an open
+              # menu was rebuilt every tick and its last row was out of
+              # reach).
+              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testBackToStartWorksWithLargeTextWhileTheClockRuns
               -only-testing:RailwayGameUITests/MapInteractionTests/testSwitchingFollowTargetWhilePausedCentersTheCamera
               -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
