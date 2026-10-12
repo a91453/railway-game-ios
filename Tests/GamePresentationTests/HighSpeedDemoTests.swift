@@ -37,11 +37,11 @@ final class HighSpeedDemoTests: XCTestCase {
     private static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks), Error> = Result {
         let layout = try HighSpeedDemo.Layout(railways: railways())
         var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
-        let (down, up) = try layout.build(in: &world, language: .english)
-        return (layout, world, Tracks(layout: layout, down: down, up: up))
+        let built = try layout.build(in: &world, language: .english)
+        return (layout, world, Tracks(layout: layout, built: built))
     }
 
-    /// The two tracks' edges, as built (the demo's game builds the same).
+    /// The tracks' edges, as built (the demo's game builds the same).
     struct Tracks {
         let down: [TrackEdgeID]
         let upInOrder: [TrackEdgeID]
@@ -50,22 +50,31 @@ final class HighSpeedDemoTests: XCTestCase {
         /// southbound sets run: beyond them are the ends' platforms, where
         /// the sets turn back.
         let between: Set<TrackEdgeID>
+        let downLoops: Set<TrackEdgeID>
+        let upLoops: Set<TrackEdgeID>
 
-        init(layout: HighSpeedDemo.Layout, down: RealWorldDemo.Track, up: RealWorldDemo.Track) {
-            self.down = down.edges
-            upInOrder = up.edges
-            self.up = Set(up.edges)
+        init(layout: HighSpeedDemo.Layout, built: HighSpeedDemo.Built) {
+            down = built.down.edges
+            upInOrder = built.up.edges
+            up = Set(built.up.edges)
             let distances = layout.plan.distances
-            between = Set(down.edges.indices.filter {
+            between = Set(down.indices.filter {
                 distances[$0] >= layout.junctions.north - 1 && distances[$0 + 1] <= layout.junctions.south + 1
-            }.map { down.edges[$0] })
+            }.map { built.down.edges[$0] })
+            downLoops = Set(built.loops.flatMap(\.down.edges))
+            upLoops = Set(built.loops.flatMap(\.up.edges))
         }
 
+        /// The edges only southbound sets run on, and only northbound.
+        var southbound: Set<TrackEdgeID> { between.union(downLoops) }
+        var northbound: Set<TrackEdgeID> { up.union(upLoops) }
+
         /// Whether a set travelling `traversal` runs against its track: on
-        /// the down track between the turnouts northbound, or on the up
-        /// track southbound.
+        /// a southbound edge northbound or the other way round (every edge
+        /// runs north to south).
         func isAgainst(_ traversal: TrackTraversal) -> Bool {
-            (between.contains(traversal.edge) && traversal.direction == .backward) || (up.contains(traversal.edge) && traversal.direction == .forward)
+            (southbound.contains(traversal.edge) && traversal.direction == .backward)
+                || (northbound.contains(traversal.edge) && traversal.direction == .forward)
         }
     }
 
@@ -111,7 +120,11 @@ final class HighSpeedDemoTests: XCTestCase {
         // within a few metres (the inside of a curve is shorter), and the
         // two make up the whole network.
         XCTAssertEqual(Double(length(tracks.up)), Double(length(tracks.between)), accuracy: 30 * Self.metre)
-        XCTAssertEqual(tracks.down.count + tracks.up.count, world.network.edges.count)
+        // With a loop beside each track at each of the ten stations between
+        // the ends, they make up the whole network.
+        XCTAssertEqual(tracks.downLoops.count, 30)
+        XCTAssertEqual(tracks.upLoops.count, 30)
+        XCTAssertEqual(tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count, world.network.edges.count)
     }
 
     /// Double track: between its ramps the up track runs 5 m beside the
@@ -187,8 +200,9 @@ final class HighSpeedDemoTests: XCTestCase {
     /// Each way keeps to its own track (the author saw the sets of the two
     /// ways run through each other on what was one track): every leg of
     /// every service, as the game drives it, runs southbound on the down
-    /// track only and northbound on the up track, turning back only beyond
-    /// the turnouts at the ends.
+    /// track (and its loops) only and northbound on the up track, turning
+    /// back only beyond the turnouts at the ends; the stopping sets call on
+    /// the loops, and the expresses never use them.
     func testEveryLegKeepsToItsWaysTrack() throws {
         let (_, world, tracks) = try Self.built.get()
         let line = try XCTUnwrap(world.lines.first)
@@ -200,7 +214,13 @@ final class HighSpeedDemoTests: XCTestCase {
                 for traversal in leg.path.traversals {
                     let place = "\(service.english), \(leg.from) to \(leg.to)"
                     XCTAssertFalse(tracks.isAgainst(traversal), place)
-                    XCTAssertFalse((southbound ? tracks.up : tracks.between).contains(traversal.edge), "\(place): on the other way's track")
+                    XCTAssertFalse((southbound ? tracks.northbound : tracks.southbound).contains(traversal.edge), "\(place): on the other way's track")
+                    // The sets that call at every station stop on the
+                    // loops; the expresses keep to the through tracks.
+                    if index > 0 { XCTAssertFalse(tracks.downLoops.union(tracks.upLoops).contains(traversal.edge), "\(place): an express on a loop") }
+                }
+                if index == 0, leg.to != 0, leg.to != 11, let last = leg.path.traversals.last {
+                    XCTAssertTrue((southbound ? tracks.downLoops : tracks.upLoops).contains(last.edge), "\(leg.from) to \(leg.to): stops on the loop")
                 }
             }
         }
@@ -256,8 +276,8 @@ final class HighSpeedDemoTests: XCTestCase {
             for train in world.trains where train.execution != nil {
                 guard case .onEdge(let traversal, _)? = train.position else { continue }
                 XCTAssertFalse(tracks.isAgainst(traversal), "\(train.name) at minute \(world.clock.now.minute)")
-                if tracks.between.contains(traversal.edge) { seen.down += 1 }
-                if tracks.up.contains(traversal.edge) { seen.up += 1 }
+                if tracks.southbound.contains(traversal.edge) { seen.down += 1 }
+                if tracks.northbound.contains(traversal.edge) { seen.up += 1 }
             }
         }
         XCTAssertGreaterThan(seen.down, 500)
