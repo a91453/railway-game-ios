@@ -102,6 +102,22 @@ final class NewsSessionTests: XCTestCase {
         XCTAssertTrue(session.finish(tick, with: .success(step)))
     }
 
+    /// Decision 175, later: a challenge loaded in its last week was warned
+    /// already; loading it again must not write the warning (and pause) again.
+    func testTheChallengeLastWeekWarningIsNotRepeatedAfterALoad() throws {
+        var world = try Self.world(day: 0)
+        try world.startScenario(Scenario(id: "test", goals: [.equity(Money(1_000_000_000_000))], goldDays: 30, silverDays: 30, deadlineDays: 30))
+        let session = GameSession(world: world, language: .english)
+        try run(session, ticks: 23 * 1_440)
+        func warnings(_ session: GameSession) -> Int { session.news.items.filter { $0.category == .deadline }.count }
+        XCTAssertEqual(warnings(session), 1)
+        let loaded = GameSession(world: session.world, language: .english)
+        loaded.restoreNews(session.news)
+        loaded.setSpeed(.normal)
+        try run(loaded, ticks: 1_440)
+        XCTAssertEqual(warnings(loaded), 1, "no second warning after the load")
+    }
+
     func testAHolidayBeginningIsWrittenOnceInBothLanguages() throws {
         let session = GameSession(world: try Self.world(day: 42), language: .english)
         try run(session, ticks: 1_440)
