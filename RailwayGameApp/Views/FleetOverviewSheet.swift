@@ -11,6 +11,8 @@ struct FleetOverviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     /// The train a sale is being confirmed for (decision 180).
     @State private var sellingTrain: Train?
+    /// Decision 179: how the roster is ordered.
+    @State private var sort: FleetSort = .name
 
     var body: some View {
         NavigationStack {
@@ -27,7 +29,7 @@ struct FleetOverviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        ForEach(session.world.trains) { train in
+                        ForEach(session.world.fleet(sortedBy: sort, in: session.language)) { train in
                             trainRow(train)
                         }
                     }
@@ -38,6 +40,26 @@ struct FleetOverviewSheet: View {
             .navigationTitle(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Decision 179: in the bar, not a row of the list, so the
+                // rows (and the UI tests that tap them) stay where they were.
+                ToolbarItem(placement: .cancellationAction) {
+                    Menu {
+                        Picker(selection: $sort) {
+                            ForEach(FleetSort.allCases, id: \.self) { order in
+                                Text(verbatim: order.displayName(in: session.language)).tag(order)
+                            }
+                        } label: {
+                            Text(verbatim: session.language.text("Sort by", "排序"))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Sort", "排序"))
+                        } icon: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                    }
+                    .accessibilityIdentifier("fleet.sort")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         dismiss()

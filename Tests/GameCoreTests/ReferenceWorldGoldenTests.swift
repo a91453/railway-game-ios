@@ -130,7 +130,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             preconditionFailure("the reference model does not run network routing")
         case .setDisruptions:
             preconditionFailure("the reference model does not keep holidays")
-        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setDoorCrowding, .reverseLineStops, .setFlexDispatch, .setRollingStockEconomics, .setTrainType, .sellTrain, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setDoorCrowding, .setTourism, .investInSouvenirShop, .reverseLineStops, .setFlexDispatch, .setLineAccounts, .setRollingStockEconomics, .setTrainType, .sellTrain, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok
@@ -140,7 +140,7 @@ final class ReferenceWorldGoldenTests: XCTestCase {
         switch observation {
         case .landCatchment, .landCell, .building, .townGrowth, .landValue, .placedBuilding, .buildingSale, .zone, .water, .steep, .groundHeight, .cityDemand:
             preconditionFailure("the reference model does not hold land")
-        case .holiday, .weather, .typhoons, .fuel:
+        case .holiday, .weather, .typhoons, .fuel, .lineAccounts:
             preconditionFailure("the reference model does not keep holidays")
         case .scheduledWaits:
             return .scheduledWaits(model.scheduledPlan().waits.map(TrafficWaitSummary.init))

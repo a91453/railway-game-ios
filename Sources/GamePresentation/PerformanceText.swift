@@ -57,7 +57,7 @@ public enum PerformancePreset: CaseIterable, Hashable, Sendable {
         case .standard: language.text("Standard", "標準")
         case .metro: language.text("Metro", "捷運")
         case .local: language.text("Local EMU", "區間車")
-        case .ordinary: language.text("Ordinary", "普通車")
+        case .ordinary: language.text("Ordinary", "普快車")
         case .semiExpress: language.text("Chu-Kuang / Fu-Hsing", "莒光／復興")
         case .express: language.text("Tze-Chiang", "自強")
         case .emu3000: "EMU3000"

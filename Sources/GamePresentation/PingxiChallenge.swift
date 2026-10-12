@@ -86,6 +86,12 @@ public enum PingxiChallenge {
         world.setDoorCrowding(false)
         world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
+        // Decision 174: but the Sky Lanterns of Pingxi are a sight tourists
+        // come to (the only one on this map), by the festival's days and
+        // all year; its riders' target counts them.
+        world.setTourism(RealWorldFrame(world: world).map {
+            AttractionCatalog.attractions(in: $0, bounds: world.bounds, only: ["p01"])
+        })
         do {
             try world.startScenario(Scenario(
                 id: rules.id, goals: rules.goals, goldDays: rules.goldDays, silverDays: rules.silverDays, deadlineDays: rules.deadlineDays,

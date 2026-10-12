@@ -1,0 +1,205 @@
+{
+ "schemaVersion": 69,
+ "description": "Tourists (ARCHITECTURE decision 174, schema 69). Home (1, residential, 1,000 trips a day) and Foot (2, scenic, none) on line Main with a train; the world is so small that Home is an outside connection, the tourists' only source. Without tourism Home sends Foot nothing. setTourism adds one attraction, Old Street (a 3-star town) 1,000 units (15.6 m) from Foot: on day 0, a Monday, 2,000 potential tourists x 600 per mille (a weekday) x 1,000 (a town has no season) x 1,000 (clear) x 200 per mille captured = 240 a day, sent out from Home by the scenic arrival curve times the day's shape and back from Foot by the scenic departure curve (largest remainder). A souvenir shop adds a quarter star a level: level 1 is 3.25 stars, 2,625 potential, 315 tourists; level 2 is 3.5 stars, 3,250 potential, 390. A third level is attractionMaxedOut, an attraction 5 is unknownAttraction. With Taiwan's holidays on, day 0 is New Year's Day, x2,000 per mille: 3,250 x 2 x 0.2 = 1,300. Tourism off sends nothing and its commands are tourismNotEnabled. An attraction 51,201 units (one more than 800 m) from Foot has no station and draws nothing; at 51,200 it draws 2,000 x 2 x 0.2 = 800 on the holiday. Every number is worked out in tools/golden-checks/tourism.py from the rules, not from the Swift code.",
+ "initialState": {"worldWidth": 12288, "worldHeight": 3072, "balance": 100000000, "costs": {"track": 100, "station": 1000, "train": 5000}, "gameMinutes": 0, "speed": "normal"},
+ "steps": [
+  {"command": {"type": "buildStationAt", "name": "Home", "point": {"x": 1536, "y": 1536}}, "expect": {"result": "ok"}},
+  {"command": {"type": "buildStationAt", "name": "Foot", "point": {"x": 5632, "y": 1536}}, "expect": {"result": "ok"}},
+  {"command": {"type": "createLine", "name": "Main", "stops": [1, 2]}, "expect": {"result": "ok"}},
+  {"command": {"type": "purchaseTrain", "name": "T"}, "expect": {"result": "ok"}},
+  {"command": {"type": "assignTrain", "train": 1, "line": 1}, "expect": {"result": "ok"}},
+  {"command": {"type": "setStationDemand", "station": 1, "demand": {"kind": "residential", "dailyTrips": 1000}}, "expect": {"result": "ok"}},
+  {"command": {"type": "setStationDemand", "station": 2, "demand": {"kind": "scenic", "dailyTrips": 0}}, "expect": {"result": "ok"}},
+  {"command": {"type": "setOutsideConnections", "enabled": true}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 0, "hourly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}},
+  {"command": {"type": "setTourism", "attractions": [{"name": "Old Street", "englishName": "Old Street", "x": 6632, "y": 1536, "kind": "town", "stars": 300}]}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 240, "hourly": [1, 1, 1, 1, 1, 1, 7, 16, 22, 21, 13, 14, 14, 12, 11, 10, 15, 15, 18, 15, 10, 10, 10, 1]}},
+  {"observe": {"type": "demand", "from": 2, "to": 1}, "expect": {"daily": 240, "hourly": [1, 1, 1, 1, 1, 1, 7, 14, 17, 14, 8, 8, 9, 10, 12, 14, 24, 23, 25, 18, 10, 10, 10, 1]}},
+  {"command": {"type": "investInSouvenirShop", "attraction": 1}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 315, "hourly": [1, 1, 1, 1, 1, 2, 10, 22, 29, 28, 17, 19, 18, 16, 14, 13, 20, 20, 23, 19, 13, 13, 13, 1]}},
+  {"command": {"type": "investInSouvenirShop", "attraction": 1}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 390, "hourly": [2, 2, 1, 1, 2, 2, 12, 27, 36, 35, 21, 23, 22, 20, 18, 16, 25, 24, 28, 24, 16, 16, 16, 1]}},
+  {"observe": {"type": "demand", "from": 2, "to": 1}, "expect": {"daily": 390, "hourly": [2, 2, 2, 1, 1, 1, 11, 23, 27, 23, 12, 13, 14, 17, 20, 23, 40, 38, 40, 29, 17, 16, 16, 2]}},
+  {"command": {"type": "investInSouvenirShop", "attraction": 1}, "expect": {"result": "attractionMaxedOut"}},
+  {"command": {"type": "investInSouvenirShop", "attraction": 5}, "expect": {"result": "unknownAttraction", "attraction": 5}},
+  {"command": {"type": "setDisruptions", "country": "TW", "level": "standard"}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 1300, "hourly": [5, 5, 5, 5, 5, 5, 40, 89, 121, 117, 70, 76, 74, 67, 59, 53, 83, 80, 95, 79, 53, 54, 55, 5]}},
+  {"observe": {"type": "demand", "from": 2, "to": 1}, "expect": {"daily": 1300, "hourly": [5, 5, 5, 5, 5, 5, 37, 76, 91, 76, 41, 43, 48, 55, 66, 76, 133, 127, 135, 97, 57, 54, 53, 5]}},
+  {"command": {"type": "setTourism", "attractions": []}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 0, "hourly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}},
+  {"command": {"type": "investInSouvenirShop", "attraction": 1}, "expect": {"result": "tourismNotEnabled"}},
+  {"command": {"type": "setTourism", "attractions": [{"name": "Old Street", "englishName": "Old Street", "x": 56833, "y": 1536, "kind": "town", "stars": 300}]}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 0, "hourly": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}},
+  {"command": {"type": "setTourism", "attractions": [{"name": "Old Street", "englishName": "Old Street", "x": 56832, "y": 1536, "kind": "town", "stars": 300}]}, "expect": {"result": "ok"}},
+  {"observe": {"type": "demand", "from": 1, "to": 2}, "expect": {"daily": 800, "hourly": [3, 3, 3, 3, 3, 3, 24, 55, 74, 72, 43, 47, 46, 41, 36, 33, 51, 49, 59, 49, 33, 33, 34, 3]}},
+  {"observe": {"type": "demand", "from": 2, "to": 1}, "expect": {"daily": 800, "hourly": [3, 3, 3, 3, 3, 3, 23, 47, 56, 47, 25, 27, 29, 34, 41, 47, 82, 78, 83, 59, 35, 33, 33, 3]}}
+ ],
+ "expectedFinalState": {
+  "accounts": {
+   "days": [],
+   "fareRules": null,
+   "ledger": [],
+   "mode": "free",
+   "openedAt": null,
+   "pending": {
+    "departures": 0,
+    "fareRevenue": 0,
+    "fareTrips": 0,
+    "passengers": 0,
+    "seats": 0,
+    "trainDistance": 0
+   }
+  },
+  "balance": 39993000,
+  "disruptions": {
+   "country": "TW",
+   "level": "standard"
+  },
+  "gameMinutes": 0,
+  "lines": [
+   {
+    "id": 1,
+    "lastDispatch": null,
+    "name": "Main",
+    "patterns": [],
+    "stops": [
+     1,
+     2
+    ],
+    "targetHeadways": {
+     "low": null,
+     "offPeak": null,
+     "peak": null
+    },
+    "trains": [
+     1
+    ],
+    "trainsInService": {
+     "low": 0,
+     "offPeak": 0,
+     "peak": 0
+    },
+    "window": {
+     "close": 1440,
+     "open": 360,
+     "type": "hours"
+    }
+   }
+  ],
+  "network": {
+   "edges": [],
+   "nodes": [],
+   "platforms": []
+  },
+  "outsideConnections": true,
+  "passengers": [
+   {
+    "abandoned": 0,
+    "arrived": 0,
+    "demand": {
+     "dailyTrips": 1000,
+     "kind": "residential"
+    },
+    "overflowed": 0,
+    "refused": 0,
+    "released": 0,
+    "station": 1,
+    "waiting": []
+   },
+   {
+    "abandoned": 0,
+    "arrived": 0,
+    "demand": {
+     "dailyTrips": 0,
+     "kind": "scenic"
+    },
+    "overflowed": 0,
+    "refused": 0,
+    "released": 0,
+    "station": 2,
+    "waiting": []
+   }
+  ],
+  "riders": [],
+  "serviceDay": [
+   {
+    "level": "low",
+    "start": 0
+   },
+   {
+    "level": "peak",
+    "start": 420
+   },
+   {
+    "level": "offPeak",
+    "start": 600
+   },
+   {
+    "level": "peak",
+    "start": 960
+   },
+   {
+    "level": "offPeak",
+    "start": 1200
+   },
+   {
+    "level": "low",
+    "start": 1260
+   }
+  ],
+  "speed": "normal",
+  "stations": [
+   {
+    "id": 1,
+    "name": "Home",
+    "point": {
+     "x": 1536,
+     "y": 1536
+    }
+   },
+   {
+    "id": 2,
+    "name": "Foot",
+    "point": {
+     "x": 5632,
+     "y": 1536
+    }
+   }
+  ],
+  "tourism": [
+   {
+    "id": 1,
+    "lastYear": 0,
+    "souvenir": 0,
+    "stars": 300,
+    "thisYear": 0,
+    "yesterday": 0
+   }
+  ],
+  "trafficControl": false,
+  "trains": [
+   {
+    "cars": 1,
+    "execution": {
+     "type": "inactive"
+    },
+    "id": 1,
+    "movement": {
+     "cursor": 0,
+     "edges": [],
+     "rate": 0
+    },
+    "name": "T",
+    "position": {
+     "type": "unplaced"
+    },
+    "repeat": {
+     "type": "once"
+    },
+    "reservation": [],
+    "timetable": [],
+    "trailEdges": []
+   }
+  ]
+ }
+}

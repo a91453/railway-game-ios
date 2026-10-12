@@ -57,6 +57,8 @@ public struct AssetRecord: Hashable, Sendable {
         /// A tile of the map bought, ``owner`` its number, row by row from
         /// the north west (decision 160).
         case mapTile
+        /// The souvenir shop of attraction ``owner`` (decision 174).
+        case souvenirShop
 
         public var assetClass: AssetClass {
             switch self {
@@ -65,6 +67,7 @@ public struct AssetRecord: Hashable, Sendable {
             case .train, .cars: .rollingStock
             case .building: .buildings
             case .mapTile: .land
+            case .souvenirShop: .buildings
             }
         }
     }
@@ -476,6 +479,7 @@ extension GameWorld {
             case .station: station(id: StationID(rawValue: record.owner)) != nil
             case .train, .cars: train(id: TrainID(rawValue: record.owner)) != nil
             case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
+            case .souvenirShop: tourism?.attractions.contains { $0.id.rawValue == record.owner && $0.souvenir > 0 } ?? false
             case .mapTile: mapExpansion.map { record.owner >= 0 && $0.owns(MapTile(row: record.owner / mapTileColumns, column: record.owner % mapTileColumns)) } ?? false
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }

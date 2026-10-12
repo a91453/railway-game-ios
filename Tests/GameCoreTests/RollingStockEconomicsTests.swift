@@ -201,6 +201,35 @@ final class RollingStockEconomicsTests: XCTestCase {
         XCTAssertEqual(energy.amount, energy.breakdown.reduce(Money.zero) { $0 + $1.amount })
     }
 
+    /// Decision 179 with decision 180: two lines with trains of different
+    /// type and cars still add up to the company's day, and each line's staff
+    /// and energy follow its trains' weight.
+    func testLinesStillAddUpToTheCompanyWithWeightedTrains() throws {
+        var world = try makeWorld(economics: true)
+        world.setLineAccounts(true)
+        let beta = StationID(rawValue: 2)
+        try world.createLine(named: "First", stops: [alpha, beta])
+        try world.createLine(named: "Second", stops: [beta, gamma])
+        let first = LineID(rawValue: 1), second = LineID(rawValue: 2)
+        let heavy = try world.purchaseTrain(named: "Heavy", as: .maglev)
+        try world.setTrainCars(heavy.id, to: 4)
+        let light = try world.purchaseTrain(named: "Light", as: .l)
+        try world.setTrainCars(light.id, to: 2)
+        try world.assignTrain(heavy.id, to: first)
+        try world.assignTrain(light.id, to: second)
+        try world.advance(ticks: 1_441)
+        let company = try XCTUnwrap(world.accounts.days.first { $0.day == 0 })
+        let one = try XCTUnwrap(world.lineDays(first).first { $0.day == 0 }?.tally)
+        let two = try XCTUnwrap(world.lineDays(second).first { $0.day == 0 }?.tally)
+        XCTAssertEqual(one.staffCost + two.staffCost, company.staffCost)
+        XCTAssertEqual(one.energyCost + two.energyCost, company.energyCost)
+        XCTAssertEqual(one.maintenanceCost + two.maintenanceCost, company.maintenanceCost)
+        // Train staff: 4 maglev cars weigh 7,200 (3,456 dollars), 2 L cars 1,400 (672 dollars);
+        // each line also pays its own two stations' 620.
+        XCTAssertEqual(one.staffCost, Money((620 * 2 + 3_456) * dollar))
+        XCTAssertEqual(two.staffCost, Money((620 * 2 + 672) * dollar))
+    }
+
     func testAStandardTrainCostsWhatItAlwaysDidWithOrWithoutTheSwitch() throws {
         var costs: [Money] = []
         for economics in [false, true] {

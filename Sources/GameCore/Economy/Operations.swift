@@ -153,21 +153,27 @@ extension GameWorld {
     /// hour's fares and counts stop at ``maximumHourly``, the most a save
     /// holds: the largest fare the commands take, ``FareRules/maximumFare``,
     /// reaches it with about a thousand boarders, far beyond any real fare.
-    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) {
-        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return }
-        let fares = accounts.pending.fareRevenue.amount + Self.wholeDollars(count * fare.amount).amount
+    /// Returns what was added to the hour's fares (decision 179 shares it
+    /// among the lines).
+    @discardableResult
+    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money {
+        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return .zero }
+        let before = accounts.pending.fareRevenue
+        let fares = before.amount + Self.wholeDollars(count * fare.amount).amount
         accounts.pending.fareRevenue = Money(min(fares, Self.maximumHourly / 100 * 100))
         accounts.pending.fareTrips = min(accounts.pending.fareTrips + count, Self.maximumHourly)
+        return accounts.pending.fareRevenue - before
     }
 
     /// A line's train left a stop for its next, `distance` world units
     /// away, with `passengers` on board and `seats` rated; each count stops
     /// at its bound, as the fares do.
-    /// With rolling-stock economics on (decision 180) the distance counts
-    /// `operatingPermille` thousandths of itself, the train type's weight,
-    /// rounded down.
-    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64, operatingPermille: Int64 = 1_000) {
+    /// With rolling-stock economics on (decision 180) the company's
+    /// distance counts `operatingPermille` thousandths of itself, the train
+    /// type's weight, rounded down; the line's own keeps the real distance.
+    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64, on line: LineID? = nil, operatingPermille: Int64 = 1_000) {
         guard accounts.mode == .management else { return }
+        if let line { countLineDeparture(on: line, distance: distance, passengers: passengers, seats: seats) }
         accounts.pending.departures = min(accounts.pending.departures + 1, Self.maximumDepartures)
         let weighted = operatingPermille == 1_000 ? distance : distance * operatingPermille / 1_000
         accounts.pending.trainDistance = min(accounts.pending.trainDistance + weighted, Self.maximumHourly)
@@ -208,6 +214,17 @@ extension GameWorld {
         /// whether or not the line has it in service now. A train on no line
         /// costs nothing to run, as before.
         let trainWeight: Int64
+        /// The same, line by line (decision 179): they add up to the totals.
+        let lines: [LineAssets]
+    }
+
+    struct LineAssets {
+        let id: LineID
+        let stations: Int64
+        let routeLength: Int64
+        let trains: Int64
+        /// Its trains' weight, as ``FixedAssets/trainWeight`` (decision 180).
+        let trainWeight: Int64
     }
 
     func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
@@ -215,7 +232,11 @@ extension GameWorld {
         var length: Int64 = 0
         var trains: Int64 = 0
         var weight: Int64 = 0
+        var perLine: [LineAssets] = []
         for line in lines {
+            var lineLength: Int64 = 0
+            var lineTrains: Int64 = 0
+            var lineWeight: Int64 = 0
             stations += Int64(Set(line.stops).count)
             let journey: LineJourney?
             if let known = memo.journeys[line.id]?[0] {
@@ -228,19 +249,26 @@ extension GameWorld {
                 // A ring's journey is one lap (see ``LineJourney/legs``), its
                 // whole route, as the reference measures a ring closed.
                 let route = journey.isRing ? journey.legs[...] : journey.legs.prefix(journey.legs.count / 2)
-                length += route.reduce(0) { $0 + $1.path.distance }
+                lineLength = route.reduce(0) { $0 + $1.path.distance }
+                length += lineLength
             }
             for service in 0..<line.serviceCount {
                 let counts = service == 0 ? line.trainsInService : line.patterns[service - 1].trainsInService
-                trains += Int64(max(counts.peak, counts.offPeak, counts.low))
+                lineTrains += Int64(max(counts.peak, counts.offPeak, counts.low))
                 if rollingStockEconomics {
                     for id in line.trains(ofService: service) {
-                        if let train = train(id: id) { weight += RollingStock.weight(of: train.type, cars: train.cars) }
+                        if let train = train(id: id) { lineWeight += RollingStock.weight(of: train.type, cars: train.cars) }
                     }
                 }
             }
+            trains += lineTrains
+            if !rollingStockEconomics { lineWeight = lineTrains * 1_000 }
+            weight += lineWeight
+            perLine.append(LineAssets(
+                id: line.id, stations: Int64(Set(line.stops).count), routeLength: lineLength, trains: lineTrains, trainWeight: lineWeight
+            ))
         }
-        return FixedAssets(stations: stations, routeLength: length, trains: trains, trainWeight: rollingStockEconomics ? weight : trains * 1_000)
+        return FixedAssets(stations: stations, routeLength: length, trains: trains, trainWeight: weight, lines: perLine)
     }
 
     /// World units in a kilometre.
@@ -271,6 +299,8 @@ extension GameWorld {
         // economics weighs 1,000 a train and rounds as it always did.
         let maintenance = Self.roundedDollars((12 * assets.routeLength + 9 * pending.trainDistance) * 1_000 + 8 * assets.trainWeight * km, over: km * 1_000)
         accounts.pending = .empty
+        // Decision 179: the lines' shares of the hour.
+        settleLineHour(day: dayIndex(of: GameTime(seconds: now.seconds - GameTime.secondsPerMinute)), assets: assets, operating: operating, maintenance: maintenance)
         guard pending.fareRevenue > .zero || operating > .zero || maintenance > .zero else { return }
         let breakdown = [
             LedgerLine(item: .fareRevenue, amount: pending.fareRevenue),
@@ -319,6 +349,7 @@ extension GameWorld {
             ), day: day)
         }
         let trainStaff = Self.roundedDollars(480 * assets.trainWeight, over: 1_000)
+        settleLineDay(day: day, assets: assets, routeEnergy: routeEnergy, trainEnergy: trainEnergy, trainStaff: trainStaff)
         let staff = Money(620 * assets.stations * 100) + trainStaff
         if staff > .zero {
             write(LedgerEntry(
@@ -331,6 +362,7 @@ extension GameWorld {
         }
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
+        settleTourism(day: day, time: time)
         // Phase 7a: the assets are written down for the day, then the day's
         // profit is taxed (decision 131), then a year's last day closes the
         // year.
@@ -458,9 +490,10 @@ extension GameWorld {
         case .dailyTax: [.incomeTax]
         case .hourlyFreight: [.freightRevenue]
         case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
+        case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

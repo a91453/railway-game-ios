@@ -240,6 +240,17 @@
 ///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
 ///     earlier version would fail on the kinds, so it says the save is newer
 ///     than it instead. (Version 45 is flexible dispatch, decision 172.)
+/// 47. Tourism (decision 174): a world can have `"tourism"`, the sights
+///     with their shops and counts. A build that reads only an earlier
+///     version would drop it, and its next save would turn the sights
+///     off and lose the shops (versions 45 and 46 are flexible dispatch and
+///     the subsidiaries), so it
+///     says the save is newer than it instead.
+/// 48. Line accounts (decision 179): a world can have `"lineAccounts"`, each
+///     line's records of its last 30 days and each station's flow of
+///     yesterday. A build that reads only an earlier version would drop
+///     them and the lines would lose their history, so it says the save is
+///     newer than it instead.
 /// 49. Rolling-stock economics (decision 180): a world can have
 ///     `"rollingStockEconomics": true`. A build that reads only an earlier
 ///     version would drop it, and charge every train the one price and cost
@@ -378,6 +389,8 @@ extension SavedGame: Codable {
         // nothing empty, as every one had.
         // Version 45 to 46: a building has no `"books"` and the ledger no
         // subsidiary rows, as none traded.
+        // Version 46 to 47: a world without `"tourism"` has no sights, and
+        // its passengers are as they were.
         // Version 48 to 49: a world without `"rollingStockEconomics"` has it
         // off, and every train costs and weighs what it did.
         // Later versions add their steps here.

@@ -63,6 +63,8 @@ final class NewGameBalanceTests: XCTestCase {
     /// their trips and the rest walk (the balance report's item 3).
     func testAShortLineThroughOneTownDoesNotPay() throws {
         var world = GameWorld.newGame()
+        // Measured without the sights tourists come to (decision 174).
+        world.setTourism(nil)
         // The test layout's spacing: 1024 units, 16 m (the world has no cells).
         let tile = Int64(1_024)
         let cars = 4

@@ -113,6 +113,10 @@ enum ReplayState {
         if world.doorCrowding {
             line("doorCrowding")
         }
+        // Decision 174: likewise only a world with tourism on.
+        for attraction in world.tourism?.attractions ?? [] {
+            line("attraction \(attraction.id.rawValue) \(attraction.stars) \(attraction.souvenir) \(attraction.yesterday) \(attraction.thisYear) \(attraction.lastYear)")
+        }
         // Decision 180: likewise only a world with rolling-stock economics.
         if world.rollingStockEconomics {
             line("rollingStockEconomics")
