@@ -361,6 +361,11 @@ public final class GameSession {
     /// game time moves on, and never saved, so a new game, a loaded save
     /// and the start screen (each a new session) start without any.
     private(set) var undoHistory: [GameWorld] = []
+    /// The worlds ``undo()`` took back, the latest undone last (decision
+    /// 184, the simulator's `future` stack): what ``redo()`` goes forward
+    /// to. Emptied by any new edit and, like ``undoHistory``, as soon as
+    /// game time moves on; never saved.
+    private(set) var redoHistory: [GameWorld] = []
 
     /// Whether a control is being dragged (``beginEditGesture()``), so its
     /// edits make one snapshot between them.
@@ -919,6 +924,7 @@ public final class GameSession {
         world = step.world
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
+        redoHistory.removeAll()
         editGestureHasSnapshot = false
         endFollowIfGone()
         if let playSound, !step.arrived.isEmpty {
@@ -1821,6 +1827,9 @@ public final class GameSession {
             editGestureHasSnapshot = isEditGestureOpen
             forgetEditsPastTheLandReadingLimit(before: edited)
         }
+        // Decision 184: a new edit ends the line Redo went forward along
+        // (the simulator's push clears `future`).
+        redoHistory.removeAll()
         world = edited
         return result
     }
@@ -1894,10 +1903,63 @@ public final class GameSession {
             ))
             return
         }
-        guard var restored = undoHistory.popLast() else {
+        guard let restored = undoHistory.popLast() else {
             message = StatusMessage(kind: .failure, text: language.text("Nothing to undo.", "沒有可復原的編輯。"))
             return
         }
+        // Decision 184: the edit taken back can be made again.
+        redoHistory.append(world)
+        if redoHistory.count > Self.undoLimit {
+            redoHistory.removeFirst(redoHistory.count - Self.undoLimit)
+        }
+        step(to: restored)
+        message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
+    }
+
+    /// How many undone edits ``redo()`` could make again, one at a time.
+    public var redoCount: Int {
+        redoHistory.count
+    }
+
+    /// Whether ``redo()`` has an undone edit to make again now (decision
+    /// 184): one was undone, no edit has been made since, game time has
+    /// not moved, and no tutorial is on screen (the same rule as
+    /// ``canUndo``).
+    public var canRedo: Bool {
+        !redoHistory.isEmpty && tutorial == nil
+    }
+
+    /// Makes again the edit ``undo()`` last took back (decision 184, the
+    /// simulator's redo, `future` → `past`): the world goes to what it was
+    /// before that undo, money included, and the world it leaves is kept
+    /// for ``undo()`` once more. The clock's speed and pause stay as the
+    /// player has them, as Undo keeps them. Refused, with a message, when
+    /// there is nothing to redo and during the tutorial.
+    public func redo() {
+        guard tutorial == nil else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "Redo is off during the tutorial.",
+                "教學進行中無法重做。"
+            ))
+            return
+        }
+        guard let restored = redoHistory.popLast() else {
+            message = StatusMessage(kind: .failure, text: language.text("Nothing to redo.", "沒有可重做的編輯。"))
+            return
+        }
+        undoHistory.append(world)
+        if undoHistory.count > Self.undoLimit {
+            undoHistory.removeFirst(undoHistory.count - Self.undoLimit)
+        }
+        step(to: restored)
+        message = StatusMessage(kind: .success, text: language.text("Redid the edit.", "已重做編輯。"))
+    }
+
+    /// Puts `snapshot`, a world Undo or Redo goes to, in place of
+    /// ``world``, keeping the clock's speed and pause as they are now, and
+    /// lets go of what the selection names that it does not have.
+    private func step(to snapshot: GameWorld) {
+        var restored = snapshot
         // A drag still under way keeps a new snapshot at its next change.
         editGestureHasSnapshot = false
         restored.setSpeed(world.clock.runningSpeed)
@@ -1909,7 +1971,6 @@ public final class GameSession {
         if let site = buildingSite {
             readLand(within: Self.buildingLandReach, of: site)
         }
-        message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
     }
 
     /// Lets go of what the selection and the drafts name that ``world``
