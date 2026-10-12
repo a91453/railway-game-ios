@@ -5597,6 +5597,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`TourismTests`（星等與係數、潛在人數、名產店、直接與網路計畫都等於查詢、年度計數、颱風、存檔來回、帳目與資產）；`TourismSessionTests`（目錄與工具檔一致、新遊戲的景點、量過的世界關閉、面板的列、按鈕、站長兩句話）；golden `tourism.json`；`SaveFixtures/v47-tourism.json`。
 
+**之後的修正**（查 bug，2026-10-12）：貨運線上空車回送的列車（`isDeadheading`）原本照樣在中間站裝貨、在端站卸貨並收運費，和「空車回送不載客、不收票、不賺錢」不符。`exchangeCargo` 現在對回送中的列車什麼都不做（`FreightTests.testATrainRunningEmptyToAnEndTakesNoCargo`）。開關關著時沒有回送，行為不變。
+
 ### 178. 載客量圖層與車站「即將進站」看板
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
@@ -5686,3 +5688,6 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
+
+**之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
+

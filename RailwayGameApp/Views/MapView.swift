@@ -1405,7 +1405,10 @@ private struct SectionFlowKey: Equatable {
     init(world: GameWorld, isShown: Bool) {
         self.isShown = isShown
         hasPlan = world.keepsPassengerPlan
-        lines = isShown ? world.lines : []
+        // Without when each line last sent a train out, which changes at every
+        // departure and which the sections do not read (the passenger plan's
+        // key does the same): the layer was worked out again at each one.
+        lines = isShown ? world.lines.map(\.withoutDispatchTimes) : []
         trains = isShown ? world.trains.count : 0
         window = isShown ? world.clock.now.seconds / (6 * GameTime.secondsPerHour) : 0
     }
