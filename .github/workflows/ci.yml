@@ -14,11 +14,15 @@ name: CI
 # The workflow always starts, so the "Swift CI (gate)" check always reports:
 # on a pull request or a push to main that changes nothing the package builds
 # or tests (only docs, the app, the release workflows), the Swift jobs are
-# skipped and the gate passes. A push to main is compared with the commit main
-# was at before it: its package files are then the ones that commit ran. A
-# required status check should name the gate, not the jobs behind it. Manual
-# runs always run everything, and so does a push whose earlier commit cannot
-# be read.
+# skipped and the gate passes. A push to main is compared with the head of
+# the last successful push run of this workflow on main (swift-shards.sh
+# push-base), not with the commit main was at before it: a commit whose run
+# was replaced (see concurrency below) is then still tested by the next run,
+# and after a red run every later run tests again until one passes. The
+# branch rule of main (main-gate) requires the gate, "Swift CI (gate)": keep
+# that name. Manual runs always run everything, and so does a push whose base
+# cannot be found (no successful run, the API failing, a commit that is not
+# an ancestor).
 
 on:
   push:
@@ -28,11 +32,21 @@ on:
 
 permissions:
   contents: read
+  # push-base reads the earlier runs of this workflow.
+  actions: read
 
-# A newer push to a pull request cancels its older run. Every commit on main
-# keeps its own complete run: a later merge never cancels or replaces it.
+# A newer push to a pull request cancels its older run. Pushes to main share
+# one group and never cancel a running run: at most one runs and one waits,
+# and a newer push replaces the waiting one, which GitHub shows as cancelled.
+# A burst of merges therefore runs the run in progress and the newest one,
+# not one each (2026-10-12: 9 merges in 70 minutes queued 9 runs of 17 jobs,
+# and every pull request waited behind them). The cost: a replaced commit has
+# no result of its own. The newest run still tests its changes (it is
+# compared with the last success), but when it turns red, start this
+# workflow by hand (workflow_dispatch) on the replaced commits to find which
+# one broke it. Manual runs keep a group per commit.
 concurrency:
-  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: ${{ github.event_name == 'push' && 'ci-main' || format('ci-{0}', github.event_name == 'pull_request' && github.ref || github.sha) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
@@ -48,17 +62,21 @@ jobs:
       swift: ${{ steps.detect.outputs.swift }}
       matrix: ${{ steps.detect.outputs.matrix }}
     steps:
-      # Depth 2 is enough: on a pull request the checkout is the pull request
-      # merged into its base, whose two parents are both fetched.
+      # On a pull request depth 2 is enough: the checkout is the pull request
+      # merged into its base, whose two parents are both fetched. A push to
+      # main needs the history back to its base (push-base checks that it is
+      # an ancestor); commits and trees only, no file contents, which the
+      # file list does not need.
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: ${{ github.event_name == 'push' && '0' || '2' }}
+          filter: ${{ github.event_name == 'push' && 'blob:none' || '' }}
 
       - name: Detect Swift-relevant changes
         id: detect
         env:
           EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           swift=true
           base=""
@@ -66,19 +84,22 @@ jobs:
             # The first parent of the merge commit is the base, so this is
             # what the pull request changes.
             base=HEAD^1
-          elif [[ "$EVENT" == push && -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]]; then
-            # Where main was before this push: one merge, or several commits
-            # pushed at once, are all compared with it.
-            if git cat-file -e "$BEFORE^{commit}" 2>/dev/null ||
-              git fetch --no-tags --depth=1 origin "$BEFORE"; then
-              base="$BEFORE"
+          elif [[ "$EVENT" == push ]]; then
+            # The head of the last successful push run: this run tests
+            # everything since, including the commits whose runs were
+            # replaced or failed.
+            base="$(.github/scripts/swift-shards.sh push-base)" || base=""
+            if [[ -n "$base" ]]; then
+              echo "Compared with $base, the head of the last successful push run of ci.yml on main." | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           fi
           # If the changed files cannot be read, test.
           if [[ -z "$base" && "$EVENT" != workflow_dispatch ]]; then
             echo "::warning::No earlier commit to compare with; running the Swift jobs."
           elif [[ -n "$base" ]]; then
-            if files="$(git diff --name-only "$base" HEAD)"; then
+            # No rename detection: it would read file contents, and a
+            # renamed file then lists both its names.
+            if files="$(git diff --no-renames --name-only "$base" HEAD)"; then
               echo "Changed files:"
               echo "$files"
               swift="$(.github/scripts/swift-shards.sh relevant <<<"$files")"
