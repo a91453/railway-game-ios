@@ -33,7 +33,12 @@ extension View {
                     let map = anchors[.map]?.visibleFrame(in: proxy, viewport: viewport)
                     TutorialOverlay(
                         session: session, tutorial: tutorial, frames: frames,
-                        placement: TutorialCardPlacement(target: frames.first, controls: controls, required: required, map: map)
+                        placement: TutorialCardPlacement(
+                            target: frames.first.map { TutorialCardPlacement.Frame($0) },
+                            controls: controls.map { TutorialCardPlacement.Frame($0) },
+                            required: required.map { TutorialCardPlacement.Frame($0) },
+                            map: map.map { TutorialCardPlacement.Frame($0) }
+                        )
                     )
                 }
             }
@@ -119,7 +124,7 @@ private struct TutorialCardSlot: View {
                     folded = true
                 }
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                    if folded == nil, !session.isTutorialStepDone, !placement.leavesStepFree(frame) {
+                    if folded == nil, !session.isTutorialStepDone, !placement.leavesStepFree(TutorialCardPlacement.Frame(frame)) {
                         foldedItself = true
                     }
                 }
@@ -136,11 +141,11 @@ private struct TutorialCardSlot: View {
     /// What decides whether the card fits, without the frames of controls
     /// that scroll, which change on every frame of a scroll.
     private struct Fit: Equatable {
-        let map: CGRect?
+        let map: [Double]?
         let required: Int
 
         init(_ placement: TutorialCardPlacement) {
-            map = placement.map.map { $0.integral }
+            map = placement.map.map { map in [map.x, map.y, map.width, map.height].map { $0.rounded() } }
             required = placement.required.count
         }
     }
@@ -157,8 +162,22 @@ private struct TutorialCardLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard let card = subviews.first else { return }
-        let frame = placement.frame(in: bounds) { card.sizeThatFits(ProposedViewSize($0)) }
-        card.place(at: frame.origin, anchor: .topLeading, proposal: ProposedViewSize(frame.size))
+        let frame = placement.frame(in: TutorialCardPlacement.Frame(bounds)) { proposed in
+            let size = card.sizeThatFits(ProposedViewSize(width: CGFloat(proposed.width), height: CGFloat(proposed.height)))
+            return TutorialCardPlacement.Size(width: Double(size.width), height: Double(size.height))
+        }
+        card.place(
+            at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
+            proposal: ProposedViewSize(width: CGFloat(frame.width), height: CGFloat(frame.height))
+        )
+    }
+}
+
+extension TutorialCardPlacement.Frame {
+    /// `rect`, in the placement's own rectangles (GamePresentation has no
+    /// CoreGraphics).
+    init(_ rect: CGRect) {
+        self.init(x: Double(rect.minX), y: Double(rect.minY), width: Double(rect.width), height: Double(rect.height))
     }
 }
 

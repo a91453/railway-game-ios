@@ -2343,7 +2343,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **4. 沒有的**（留給之後）：~~縮放與平移的步驟（E1）~~（決策 48 已加入）、實景模式的步驟（E2）、參考的「看過就不再自動開啟」（`metrobuilder_tutorial_done`）、步驟自動打開面板（`openUI`）、sheet 裡的框。
 
 **之後的修正（2026-10-12，作者實機回報：手機橫放第 6 步卡住）**：iPhone 橫放（874 × 402 點）時，「建立路線」這一步打開的路線面板在右側（決策 106 的「地圖旁的面板」），教學卡片只避開有標記的控制項，不知道面板在那裡，就蓋在面板上：「在地圖上選站」「建立路線」按不到，「下一步」永遠不會亮，只能略過。改法：
-- 卡片的擺放從 App 的 `Layout` 抽到 GamePresentation 的 `TutorialCardPlacement`（演算法不變），用實機截圖量出的畫面在 Linux 上測（`TutorialCardPlacementTests`，含「改之前會蓋住」的重現）。
+- 卡片的擺放從 App 的 `Layout` 抽到 GamePresentation 的 `TutorialCardPlacement`（演算法不變），用實機截圖量出的畫面在 Linux 上測（`TutorialCardPlacementTests`，含「改之前會蓋住」的重現）。它用自己的矩形（`TutorialCardPlacement.Frame`），不用 `CGRect`：GamePresentation 不 import CoreGraphics（決策 45），而 Apple 平台上的 Foundation 不帶 `CGRect` 的幾何運算。
 - 新的目標：`line.draft.pick`、`line.draft.create`（路線面板的兩個按鈕，第 6 步框它們並當成必須留空的控制項）、`panel.details`、`panel.side`（細節卡片與地圖旁的面板，不框，但卡片要避開）。第 6 步的目標改成「路線」按鈕、兩個面板按鈕與地圖（要在地圖上點車站）。
 - 候選位置多了「沒被遮住的地圖的四個角」。
 - 卡片可以收合成一行（站長、第幾步、標題）：玩家按 ⌄ 收合、按膠囊打開；卡片打開時若蓋到這一步要用的控制項，或沒有留下 96 點寬的地圖，就自己收合；這一步完成時自己打開（玩家自己收合的除外），讓「下一步」出現。畫面上的東西改變（面板開關、轉向、要用的按鈕捲進畫面）時重新試一次打開。
