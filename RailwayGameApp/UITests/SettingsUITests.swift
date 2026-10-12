@@ -63,10 +63,18 @@ final class SettingsUITests: XCTestCase {
         // A phone on its side shows only the first sections, and a List
         // makes a row only once it scrolls into view: since the Map section
         // (decision 182) the preview starts below the fold, so scroll to it
-        // before waiting for it. Slowly, so the list does not fling past it.
+        // before waiting for it. Swipe the settings' list, not the app: on
+        // its side the app's own swipe starts on the navigation bar and
+        // scrolls nothing (PR #427's first run). Slowly, so the list does
+        // not fling past the row.
+        let lists = [app.collectionViews, app.tables, app.scrollViews].map {
+            $0.containing(.switch, identifier: "settings.sounds").firstMatch
+        }
+        let list = lists.first { $0.exists } ?? lists[0]
+        XCTAssertTrue(list.exists, "Missing the settings' list")
         let preview = app.buttons["settings.cityView"]
         for _ in 0..<10 where !(preview.exists && preview.isHittable) {
-            app.swipeUp(velocity: .slow)
+            list.swipeUp(velocity: .slow)
         }
         XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
         preview.tap()
