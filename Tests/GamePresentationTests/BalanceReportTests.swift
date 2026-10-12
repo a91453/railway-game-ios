@@ -195,6 +195,49 @@ final class BalanceReportTests: XCTestCase {
         print(lines.joined(separator: "\n"))
     }
 
+    /// Decision 183: the first line with the city's requests, against the
+    /// same line without them, sights off in both. Every midnight the
+    /// company takes on the best paying offers of riders and residents it
+    /// has room for, and does nothing else to meet them: what the
+    /// subsidies bring a railway left to itself, so that they do not
+    /// snowball the cash.
+    func testAFirstLineTakingTheCitysRequests() throws {
+        let days = try requestedDays()
+        var plain = try firstLine()
+        plain.setTourism(nil)
+        plain.setCityRequests(seed: nil)
+        var asked = plain
+        asked.setCityRequests(seed: 1)
+        var lines = [
+            "### A first line taking the riders and residents requests it can (seed 1)",
+            "",
+            "| Day | Balance without | Balance with | Difference | Trust | In hand | Offers | Met / missed | Paid so far |",
+            "| --: | --: | --: | --: | --: | --- | --- | --: | --: |",
+        ]
+        try plain.advance(ticks: 1)
+        try asked.advance(ticks: 1)
+        for day in 1...days {
+            // What the town's growth can meet alone: riders and
+            // residents, the best paying first; never a station to build,
+            // freight or a sight.
+            let passive: Set<CityRequestKind> = [.stationRiders, .networkRiders, .population]
+            for offer in (asked.cityRequests?.offers ?? []).filter({ passive.contains($0.kind) }).sorted(by: { $0.reward > $1.reward }) {
+                try? asked.acceptRequest(offer.id)
+            }
+            try plain.advance(ticks: 1_440)
+            try asked.advance(ticks: 1_440)
+            let requests = try XCTUnwrap(asked.cityRequests)
+            let met = requests.results.count { $0.succeeded }, missed = requests.results.count { !$0.succeeded }
+            lines.append(
+                "| \(day) | \(dollars(plain.economy.balance.amount)) | \(dollars(asked.economy.balance.amount)) | "
+                    + "\(dollars((asked.economy.balance - plain.economy.balance).amount)) | \(requests.trust) | "
+                    + "\(requests.active.map(\.kind.rawValue).joined(separator: ", ")) | \(requests.offers.map(\.kind.rawValue).joined(separator: ", ")) | "
+                    + "\(met) / \(missed) | \(dollars(requests.paid.amount)) |"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
     /// `NewGameBalanceTests`' first line: three stations through the first
     /// town on 448 m of track and one train of four cars, $914,800.
     private func firstLine() throws -> GameWorld {

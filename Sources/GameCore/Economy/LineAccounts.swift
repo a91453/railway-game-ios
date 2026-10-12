@@ -357,4 +357,9 @@ extension GameWorld {
     mutating func removeLineAccounts(of id: LineID) {
         lineAccounts?.lines.removeAll { $0.line == id }
     }
+
+    /// Forgets how many got on and off at station `id`: it is gone.
+    mutating func removeStationFlows(of id: StationID) {
+        lineAccounts?.flows.removeAll { $0.station == id }
+    }
 }
