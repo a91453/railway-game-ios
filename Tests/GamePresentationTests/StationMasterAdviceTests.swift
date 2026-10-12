@@ -66,6 +66,9 @@ final class StationMasterAdviceTests: XCTestCase {
     /// that grew most.
     func testOnceALineRunsItSaysHowTheTownsGrew() throws {
         var world = GameWorld.newGame()
+        // Decision 183: the city's offers of the month's first days would
+        // be said first.
+        world.setCityRequests(seed: nil)
         let tile = Int64(1_024), platform = 4 * Train.carLength
         let x = GameWorld.newGameBounds.width / 2 - 16 * tile, y = GameWorld.newGameBounds.height / 2
         let west = try world.buildTrackNode(at: WorldCoordinate(x: x + 2 * tile, y: y))

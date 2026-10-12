@@ -81,6 +81,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// day) and the sights a station serves draw about `times` as many
     /// tourists.
     case touristsComing(kind: HolidayKind, days: Int64, times: Int64)
+    /// Decision 183: the city's new offers of month `month` (`count` of
+    /// them, the best paying `reward`), while the company can take one on;
+    /// `target` is where the best paying one is.
+    case newCityRequests(month: Int64, count: Int, reward: Money, target: PlanPoint?)
 
     /// Decision 177: where the nearest town no station serves lies, from the
     /// railway's nearest station (``UnservedCluster``).
@@ -117,6 +121,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     public var cameraTarget: PlanPoint? {
         switch self {
         case .inDebtShortLine(let hint), .firstLineLosing(_, let hint): hint?.target
+        case .newCityRequests(_, _, _, let target): target
         default: nil
         }
     }
@@ -186,6 +191,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .createLine
         } else if let welcome = Self.welcome(in: world), (world.scenarioDay() ?? .max) <= Self.welcomeDays {
             self = welcome
+        } else if let requests = Self.newCityRequests(in: world) {
+            self = requests
         } else if let tourists = Self.touristsComing(in: world) {
             self = tourists
         } else if let holiday = Self.holiday(in: world) {
@@ -326,6 +333,17 @@ public enum StationMasterAdvice: Hashable, Sendable {
         guard today > 0, let coming = world.holidays(from: today, through: today + 3).first,
               sights.contains(where: { world.attractionStation(of: $0.id) != nil }) else { return nil }
         return .touristsComing(kind: coming.holiday.kind, days: max(0, coming.start - today), times: 2)
+    }
+
+    /// Decision 183: the city's offers in the first three days of a month,
+    /// while one more can be taken on.
+    private static func newCityRequests(in world: GameWorld) -> StationMasterAdvice? {
+        guard let requests = world.cityRequests, world.accounts.mode == .management, requests.active.count < requests.capacity,
+              let best = requests.offers.max(by: { ($0.reward, $1.id) < ($1.reward, $0.id) }) else { return nil }
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        guard today % CityRequests.monthDays < 3 else { return nil }
+        return .newCityRequests(month: today / CityRequests.monthDays, count: requests.offers.count, reward: best.reward,
+                                target: world.location(of: best))
     }
 
     /// Decision 174: the best-rated sight (the lowest ID of equals) with a
@@ -529,6 +547,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "\(kind.title(in: language)) has begun: about ×\(times) tourists at the sights today.",
                     "\(kind.title(in: language))到了，今天景點的觀光客約 ×\(times)。"
                 )
+        case .newCityRequests(_, let count, let reward, _):
+            language.text(
+                "The city has \(count) new request\(count == 1 ? "" : "s") for us, paying up to \(reward.moneyText). See Goals.",
+                "城市提出 \(count) 件新委託，最高補助 \(reward.moneyText)。到「目標」看看吧。"
+            )
         case .fuelSpell(let percent, let days):
             percent >= 0
                 ? language.text(
@@ -549,7 +572,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing: false
+             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests: false
         }
     }
 

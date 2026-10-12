@@ -196,6 +196,8 @@ final class ScenarioStationMasterTests: XCTestCase {
     func testTheFestivalIsAnnounced() throws {
         var world = GameWorld.newGame(eventSeed: 1)
         world.setDisruptions(nil)
+        // Decision 183: nor the city's offers of the month's first days.
+        world.setCityRequests(seed: nil)
         let middle = PlanPoint(x: world.bounds.width / 2, y: world.bounds.height / 2)
         let shifen = try world.buildStation(named: "十分", at: middle).id
         let pingxi = try world.buildStation(named: "平溪", at: PlanPoint(x: middle.x + 64_000, y: middle.y)).id
