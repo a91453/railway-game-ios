@@ -517,13 +517,14 @@ struct MapView: View {
                     }
                 }
             }
+            .onChange(of: session.cameraRequest) { _, request in
+                // Decision 177: the station master's tap on advice that
+                // points at a place (the next town to extend to).
+                guard let request else { return }
+                camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y))
+            }
             .onChange(of: session.world.clock) { _, _ in
                 centerOnFollowedTrain(projection: projection)
-            }
-            // Decision 175: the news log's Go moves the map.
-            .onChange(of: session.mapFocus) { _, focus in
-                guard let focus else { return }
-                camera = projection.centered(atX: focus.x, y: focus.y)
             }
             .onChange(of: session.followedTrain?.id) { _, _ in
                 // A new follow snaps to its train, as the reference's

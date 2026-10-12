@@ -102,10 +102,16 @@ struct StationMasterCorner: View {
                     }
                 }
                 .frame(maxWidth: width, alignment: .leading)
-                // Decision 175: a tap on the bubble opens the news log.
                 .onTapGesture {
+                    // Decision 177: advice that points at a place takes
+                    // the map there. Decision 175: any other opens the
+                    // news log.
                     isTalking = false
-                    screen.panel = .news
+                    if let target = advice?.cameraTarget {
+                        session.lookAt(target)
+                    } else {
+                        screen.panel = .news
+                    }
                 }
                 .accessibilityHidden(true)
                 .transition(.scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity))

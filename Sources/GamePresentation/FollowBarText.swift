@@ -12,18 +12,23 @@ import GameCore
 /// repeating timetable's current cycle). The status is the site's
 /// `setFollowStatus`: "Not departed" (`pre`, 尚未發車) before it leaves
 /// its first stop, "Arrived" (`done`, 已抵達) at its last stop, and nothing
-/// while it runs. Read from the world each time it is shown; never stored.
+/// while it runs; a line's train on an empty run to an end of its line
+/// (decision 172) says "Running empty" (回送中). Read from the world each time it is shown; never stored.
 public struct FollowBarInfo: Hashable, Sendable {
     public enum Status: Hashable, Sendable {
         case notDeparted
         case running
         case arrived
+        /// Decision 172: an empty run to one end of its line, with no
+        /// passengers.
+        case deadheading
 
         /// The site's status text, or `nil` while it runs.
         public func text(in language: DisplayLanguage) -> String? {
             switch self {
             case .notDeparted: language.text("Not departed", "尚未發車")
             case .running: nil
+            case .deadheading: language.text("Running empty", "回送中")
             case .arrived: language.text("Arrived", "已抵達")
             }
         }
@@ -82,6 +87,8 @@ extension GameWorld {
         let offset = (train.timetablePeriod ?? 0) &* (execution?.cycle ?? 0)
         let status: FollowBarInfo.Status
         switch execution {
+        case _? where train.isDeadheading:
+            status = .deadheading
         case nil where line != nil:
             // A line train gets its timetable only when dispatched, and
             // keeps the finished trip's until the next dispatch: with one

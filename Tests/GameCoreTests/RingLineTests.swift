@@ -109,6 +109,22 @@ final class RingLineTests: XCTestCase {
         TrainsInService(peak: count, offPeak: count, low: count)
     }
 
+    /// Decision 172: a ring with a train running a service is not reversed
+    /// under it (its trains' ways round are by their order); once the
+    /// service is over, or with trains that were never sent out, it is.
+    func testARingWithARunningTrainIsNotReversed() throws {
+        var world = try makeRingWorld(trains: 2, running: pairs(2))
+        try world.advance(ticks: 1)
+        let running = try XCTUnwrap(world.line(id: ring)?.trains.first { world.train(id: $0)?.execution != nil })
+        let before = world
+        XCTAssertThrowsError(try world.reverseLineStops(ring)) { XCTAssertEqual($0 as? GameError, .trainServiceActive(running)) }
+        XCTAssertEqual(world, before)
+
+        var idle = try makeRingWorld(trains: 2, running: pairs(2))
+        XCTAssertNoThrow(try idle.reverseLineStops(ring))
+        XCTAssertEqual(idle.line(id: ring)?.stops, [delta, gamma, beta, alpha])
+    }
+
     func testPassengerRouteEndsAtTheRingLapBoundary() throws {
         let world = try makeRingWorld(trains: 2, running: pairs(2))
         let routes = world.passengerRoutes(from: beta, to: delta)

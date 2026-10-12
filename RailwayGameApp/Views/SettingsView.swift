@@ -26,6 +26,8 @@ struct SettingsView: View {
     /// Decision 175: the secretary room's settings, on the device.
     @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
+    /// Whether the help guide is open (decision 177).
+    @State private var showsHelp = false
 
     var body: some View {
         NavigationStack {
@@ -54,6 +56,9 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .fullScreenCover(item: $cityViewArea) { area in
                 CityView3D(area: area)
+            }
+            .sheet(isPresented: $showsHelp) {
+                HelpView(language: .app)
             }
             .sheet(isPresented: $showsWebsite) {
                 if let url = URL(string: GameWebsite.home) {
@@ -197,6 +202,16 @@ struct SettingsView: View {
         let language = DisplayLanguage.app
         let report = problemReport
         return Section {
+            Button {
+                showsHelp = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Help", "說明"))
+                } icon: {
+                    Image(systemName: "questionmark.circle")
+                }
+            }
+            .accessibilityIdentifier("settings.help")
             LabeledContent {
                 Text(verbatim: report.versionText)
                     .textSelection(.enabled)

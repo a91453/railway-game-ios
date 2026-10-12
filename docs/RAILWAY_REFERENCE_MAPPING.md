@@ -788,7 +788,7 @@ V 實際放行 → T、U（保證不互穿）
 
 | 來源／函式 | 目標 | 狀態／差異 |
 | --- | --- | --- |
-| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`TRAIN_TYPES`、`LINE_TRAIN_TYPE_MAIN`、`LINE_TRAIN_TYPE_EXTRA` | `TrainType`、`TrainType.ratedCapacityPerCar`、`TrainType.main` | direct：九種與 `ppc` 逐值照搬。來源依城市限制可選車種（中國大陸全部、其他城市 A、B、C、L、D），本遊戲沒有城市清單，全部可選。 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`TRAIN_TYPES`、`LINE_TRAIN_TYPE_MAIN`、`LINE_TRAIN_TYPE_EXTRA` | `TrainType`、`TrainType.ratedCapacityPerCar`、`TrainType.main` | direct：九種與 `ppc` 逐值照搬。來源依城市限制可選車種（中國大陸全部、其他城市 A、B、C、L、D），本遊戲沒有城市清單，全部可選。畫面上的名稱不照搬標籤（`A型`、`APM`、`云轨` 等）：用作者取的臺灣名稱（決策 171）；代號不變。 |
 | 同檔／`normalizeLineTrainTypeForCityKey`、`_lineFormState.type` | `TrainType.referenceDefault` | direct：預設 B。App 新購列車仍是標準車（不改決策 46 平衡），記錄來源預設。 |
 | 同檔／`getTrainCap`（`round(ppc × cars)`） | `Train.ratedCapacity` | direct：整數相乘。 |
 | 同檔／`getMetroTrainOperationalCap`、`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR = 1.1` | `Train.capacity` | direct：`(額定 × 11 + 5) / 10`，與 `Math.round` 對正數相同。HSR 不超載的分支本遊戲沒有高鐵模式，gap。 |

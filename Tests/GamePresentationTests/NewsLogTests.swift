@@ -136,7 +136,7 @@ final class NewsSessionTests: XCTestCase {
         XCTAssertTrue(session.canGo(to: try XCTUnwrap(said.first)))
         session.goTo(try XCTUnwrap(said.first))
         XCTAssertEqual(session.selectedLineID, line.id)
-        XCTAssertNotNil(session.mapFocus)
+        XCTAssertNotNil(session.cameraRequest)
     }
 
     func testATyphoonWarningPausesTheGameOnlyWhenAskedTo() throws {

@@ -209,10 +209,11 @@ extension StationMasterAdvice {
     /// spell, a goal or the challenge's end have their own items).
     var newsEntry: (category: NewsCategory, key: String, target: NewsTarget?)? {
         switch self {
-        case .inDebt, .typhoonComing, .fuelSpell, .goalMet, .scenarioCompleted: nil
+        case .inDebt, .inDebtShortLine, .typhoonComing, .fuelSpell, .goalMet, .scenarioCompleted: nil
         case .stationFull(let station, _): (.advice, "full:\(station.rawValue)", .station(station.rawValue))
         case .lineWithoutTrains(let line, _): (.advice, "empty:\(line.rawValue)", .line(line.rawValue))
         case .stationCrowded(let station, _): (.advice, "crowded:\(station.rawValue)", .station(station.rawValue))
+        case .firstLineLosing: (.advice, "firstLineLosing", nil)
         case .buildTrack: (.advice, "buildTrack", nil)
         case .buildStation: (.advice, "buildStation", nil)
         case .buildSecondStation: (.advice, "buildSecondStation", nil)

@@ -97,9 +97,9 @@ final class RouteEditingSessionTests: XCTestCase {
         XCTAssertEqual(session.world.line(id: line)?.stops, stations)
     }
 
-    /// Decision 134: a line with trains is not reversed; the player is
-    /// told to take the train off first, and there is nothing to undo.
-    func testALineWithATrainIsNotReversed() throws {
+    /// Decision 172: a line with a train is reversed; the player is told
+    /// where the train goes once its trip is over, and can undo it.
+    func testALineWithATrainIsReversedAndTheTrainIsAccountedFor() throws {
         var world = try makeWorld(width: 16_384, height: 8_192, balance: 100_000)
         let stops = try [("West", 1_024), ("East", 8_192)].map { name, x in
             try world.buildStation(named: name, at: PlanPoint(x: Int64(x), y: 2_048)).id
@@ -112,9 +112,11 @@ final class RouteEditingSessionTests: XCTestCase {
 
         session.reverseSelectedLine()
 
+        XCTAssertEqual(session.world.line(id: line)?.stops, stops.reversed())
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertEqual(session.undoCount, 1)
+        session.undo()
         XCTAssertEqual(session.world, world)
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "列車 #\(train.rawValue) 正在為路線服務。請先把它從路線移除。"))
-        XCTAssertEqual(session.undoCount, 0)
     }
 
     func testACopyIsSelectedAndUndoneAsOne() throws {

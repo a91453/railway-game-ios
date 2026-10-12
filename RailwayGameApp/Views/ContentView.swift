@@ -184,6 +184,8 @@ struct ContentView: View {
         case .monthEnd:
             MonthlyReportSheet(session: session)
                 .presentationDetents([.medium, .large])
+        case .help:
+            HelpView(language: session.language)
         }
     }
 
@@ -517,6 +519,8 @@ final class GameScreenState {
         case news
         /// A closed month's report (decision 175).
         case monthEnd
+        /// The help guide (decision 177), from the game menu.
+        case help
 
         var id: Self { self }
 
@@ -525,7 +529,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .news, .monthEnd: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .news, .monthEnd, .help: false
             }
         }
     }

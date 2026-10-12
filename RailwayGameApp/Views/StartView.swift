@@ -21,6 +21,8 @@ struct StartView: View {
     @State private var choosesDemo = false
     @State private var showsDataSources = false
     @State private var showsSettings = false
+    @State private var showsHelp = false
+    @State private var showsNewGameOptions = false
     @Environment(\.openURL) private var openURL
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
@@ -68,6 +70,12 @@ struct StartView: View {
         .sheet(isPresented: $showsSettings) {
             SettingsView(audio: audio)
         }
+        .sheet(isPresented: $showsHelp) {
+            HelpView(language: launcher.language)
+        }
+        .sheet(isPresented: $showsNewGameOptions) {
+            NewGameOptionsView(launcher: launcher)
+        }
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
         }
@@ -102,6 +110,9 @@ struct StartView: View {
     /// The ways into a game.
     private var buttons: some View {
         VStack(spacing: 12) {
+            if launcher.showsFirstGameCard {
+                firstGameCard
+            }
             if let autosave = launcher.autosave {
                 StartButton(
                     title: String(localized: "Continue"),
@@ -117,7 +128,7 @@ struct StartView: View {
             }
             StartButton(
                 title: String(localized: "New Game"),
-                detail: String(localized: "An empty map and \(GameWorld.newGame().economy.balance.moneyText) to build with"),
+                detail: String(localized: "An empty map and \(launcher.newGameOptions.startingBalance.moneyText) to build with"),
                 systemImage: "plus",
                 isPrimary: launcher.autosave == nil,
                 tone: .primary
@@ -126,6 +137,24 @@ struct StartView: View {
             }
             // Stable across localizations for the UI smoke tests.
             .accessibilityIdentifier("start.newGame")
+            // Decision 177: the difficulty, the cash and the rules of the
+            // new game, kept from one game to the next.
+            Button {
+                showsNewGameOptions = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "slider.horizontal.3")
+                    Text(verbatim: launcher.language.text(
+                        "New Game Options · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)",
+                        "新遊戲選項 · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)"
+                    ))
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+            }
+            .accessibilityIdentifier("start.newGameOptions")
             // The real-world maps wait for the real-world data,
             // read in the background at launch: a game started
             // before it is would have no people on its map.
@@ -193,6 +222,50 @@ struct StartView: View {
             }
             .accessibilityIdentifier("start.challenges")
         }
+    }
+
+    /// Decision 177: to a player who has not finished the tutorial or closed
+    /// this card, the first line with the station master, at the top of the
+    /// start screen.
+    private var firstGameCard: some View {
+        let language = launcher.language
+        return HStack(alignment: .top, spacing: 12) {
+            StationMasterAvatar(size: 56, mood: .happy)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(verbatim: language.text("First time? Build your first line with the station master (about 5 minutes)", "第一次玩？跟站長蓋第一條線（約 5 分鐘）"))
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    launcher.startTutorial()
+                } label: {
+                    Text(verbatim: language.text("Start the Tutorial", "開始教學"))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.onPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Theme.primary, in: Capsule())
+                }
+                .accessibilityIdentifier("start.firstGame.start")
+            }
+            Spacer(minLength: 0)
+            Button {
+                launcher.dismissFirstGameCard()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
+            .accessibilityIdentifier("start.firstGame.dismiss")
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.accent, lineWidth: 2))
+        .accessibilityIdentifier("start.firstGame")
     }
 
     /// The last message, and Language, Data Sources and Settings.
@@ -267,6 +340,17 @@ struct StartView: View {
             chip(Label("Data Sources", systemImage: "info.circle"))
         }
         .accessibilityIdentifier("start.dataSources")
+        // Decision 177: the help guide, searchable.
+        Button {
+            showsHelp = true
+        } label: {
+            chip(Label {
+                Text(verbatim: launcher.language.text("Help", "說明"))
+            } icon: {
+                Image(systemName: "questionmark.circle")
+            })
+        }
+        .accessibilityIdentifier("start.help")
         // The music and sound effects on or off; the game
         // menu opens the same settings.
         Button {

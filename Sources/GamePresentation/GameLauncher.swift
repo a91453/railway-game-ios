@@ -80,6 +80,12 @@ public final class GameLauncher {
     }
 
     @ObservationIgnored let library: SaveLibrary
+    /// What the launcher keeps between launches (decision 177): the
+    /// options of the next new game, whether the tutorial was done.
+    public private(set) var preferences: LauncherPreferences
+    /// Whether this launch is the app's first (decision 177): no
+    /// preferences file was there to read.
+    public let isFirstLaunch: Bool
     /// The player's best result in each challenge (decision 87), kept in
     /// the saves' folder in a file that is not a save.
     public private(set) var records: ChallengeRecords
@@ -91,7 +97,50 @@ public final class GameLauncher {
         self.library = library
         self.language = language
         records = ChallengeRecords(file: library.directory.appendingPathComponent("challenge-records.data"))
+        let read = LauncherPreferences.read(from: library.directory.appendingPathComponent(Self.preferencesFileName))
+        isFirstLaunch = read == nil
+        preferences = read ?? LauncherPreferences()
         refresh()
+        if !preferences.hasLaunched {
+            preferences.hasLaunched = true
+            savePreferences()
+        }
+    }
+
+    nonisolated static let preferencesFileName = "launcher-preferences.data"
+
+    private func savePreferences() {
+        preferences.write(to: library.directory.appendingPathComponent(Self.preferencesFileName))
+    }
+
+    /// The options the next new game starts with (decision 177), kept.
+    public var newGameOptions: NewGameOptions {
+        get { preferences.newGameOptions }
+        set {
+            guard newValue != preferences.newGameOptions else { return }
+            preferences.newGameOptions = newValue
+            savePreferences()
+        }
+    }
+
+    /// Whether the start screen asks a first-time player to follow the
+    /// station master (decision 177): until the tutorial is finished or
+    /// the card closed, and not for a player who already has a game.
+    public var showsFirstGameCard: Bool {
+        !preferences.tutorialCompleted && !preferences.firstGameCardDismissed && entries.isEmpty
+    }
+
+    /// Closes the first-time card for good.
+    public func dismissFirstGameCard() {
+        guard !preferences.firstGameCardDismissed else { return }
+        preferences.firstGameCardDismissed = true
+        savePreferences()
+    }
+
+    func noteTutorialCompleted() {
+        guard !preferences.tutorialCompleted else { return }
+        preferences.tutorialCompleted = true
+        savePreferences()
     }
 
     /// The autosave, if there is one that can be loaded.
@@ -116,26 +165,35 @@ public final class GameLauncher {
     /// people, is the island bought tile by tile from the 16 km round it
     /// (decision 167, ``RealWorldExpansion``); any other place is a 16 km
     /// map.
+    ///
+    /// Decision 177: it starts with the player's ``newGameOptions``
+    /// (standard unless changed): the cash, the disruptions, the rules
+    /// the new game turns on and the seed.
     public func startNewGame(at anchor: GeoAnchor? = nil) {
+        let options = newGameOptions
+        let seed = options.eventSeed()
         if let anchor, let population, let expansion = RealWorldExpansion(around: anchor) {
             let step = expansion.ridersStep(population: population, places: places, water: water)
-            begin(
-                grounded(.newRealWorldExpansionGame(expansion, ridersStep: step, eventSeed: .random(in: .min ... .max))),
-                keepingAutosave: true
-            )
+            var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
+            options.apply(to: &world)
+            begin(grounded(world), keepingAutosave: true)
             return
         }
-        let world = GameWorld.newGame(
-            anchor: anchor, eventSeed: .random(in: .min ... .max), land: anchor.flatMap(land(at:)), water: anchor.map(water(at:)) ?? [],
-            steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil
+        var world = GameWorld.newGame(
+            anchor: anchor, balance: options.startingBalance, eventSeed: seed, land: anchor.flatMap(land(at:)),
+            water: anchor.map(water(at:)) ?? [], steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil && options.buysMap
         )
+        options.apply(to: &world)
         begin(anchor == nil ? world : grounded(world), keepingAutosave: true)
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
     /// read in round each station as it is built.
     public func startWholeTaiwan() {
-        begin(grounded(.newWholeTaiwanGame(eventSeed: .random(in: .min ... .max))), keepingAutosave: true)
+        let options = newGameOptions
+        var world = GameWorld.newWholeTaiwanGame(balance: options.startingBalance, eventSeed: options.eventSeed())
+        options.apply(to: &world)
+        begin(grounded(world), keepingAutosave: true)
     }
 
     /// `world`, a new real-world game, with ground (decision 124) when the
@@ -379,6 +437,7 @@ public final class GameLauncher {
         started.readLandRoundStations()
         started.playSound = playSound
         if let news { started.restoreNews(news) }
+        started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
         session = started
         message = nil
         playSound?(.transition)

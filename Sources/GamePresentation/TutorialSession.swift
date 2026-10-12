@@ -25,6 +25,7 @@ extension GameSession {
         guard var shown = tutorial, isTutorialStepDone else { return }
         if shown.isLastStep {
             tutorial = nil
+            onTutorialCompleted?()
         } else {
             shown.show(shown.index + 1, over: world)
             tutorial = shown

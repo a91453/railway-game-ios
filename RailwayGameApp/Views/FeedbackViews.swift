@@ -52,7 +52,8 @@ struct BuildPulseMark: View {
 }
 
 /// Shows what just came in (decision 117) under the cash in the status
-/// pill, "+$ 1,234" in the success colour, drifting down and fading; with
+/// pill, "+$ 1,234" in the success colour (decision 177: a day's loss,
+/// "−$40k", in red), drifting down and fading; with
 /// Reduce Motion on it fades where it is. Only pulses that come while it
 /// is shown. Takes no touches; VoiceOver hears the cash itself.
 struct IncomeFloat: View {
@@ -64,10 +65,10 @@ struct IncomeFloat: View {
     var body: some View {
         ZStack {
             if let shown {
-                Text(verbatim: "+\(shown.amount.moneyText)")
+                Text(verbatim: shown.text)
                     .font(.caption.weight(.bold))
                     .monospacedDigit()
-                    .foregroundStyle(Theme.success)
+                    .foregroundStyle(shown.isLoss ? Theme.error : Theme.success)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(.thinMaterial, in: Capsule())

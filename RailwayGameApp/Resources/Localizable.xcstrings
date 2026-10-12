@@ -14,6 +14,16 @@
       }
     },
 
+    "Net profit" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淨利"
+          }
+        }
+      }
+    },
     "Network passenger routes" : {
       "localizations" : {
         "zh-Hant" : {
@@ -31,6 +41,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OpenStreetMap"
+          }
+        }
+      }
+    },
+    "Series" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系列"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來源"
           }
         }
       }
@@ -299,6 +329,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每遊戲分鐘 %lld 單位"
+          }
+        }
+      }
+    },
+    "A ring cannot be reversed while one of its trains is running." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "環狀線有列車在跑時不能反轉站序，請等它跑完。"
           }
         }
       }
@@ -2263,16 +2303,6 @@
         }
       }
     },
-    "Take the line's trains off it to reverse its stops." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這條路線有列車時不能反轉站序，請先把列車從路線移除。"
-          }
-        }
-      }
-    },
     "Take Off" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2529,6 +2559,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "X 型交叉渡線"
+          }
+        }
+      }
+    },
+    "Zero" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "零"
           }
         }
       }
@@ -2898,7 +2938,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "住宅、商店與辦公樓，點哪裡蓋哪裡"
+            "value" : "住宅、商店與辦公大樓，點哪裡蓋哪裡"
           }
         }
       }

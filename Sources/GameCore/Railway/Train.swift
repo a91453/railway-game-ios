@@ -100,6 +100,14 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// ``GameWorld/setTrainPerformance(_:to:)`` while the train runs no
     /// service.
     public internal(set) var performance: TrainPerformance
+    /// Whether the service the train runs is an empty run to one end of its
+    /// line (decision 172): a train that stands where its line does not
+    /// send trains out from is driven, without passengers, to the nearer
+    /// end, and the line sends it out from there. Set exactly while a
+    /// service of a line's train runs such a trip (a train taken off its
+    /// line meanwhile finishes it, still carrying nobody); only
+    /// ``GameWorld`` changes it, with the execution.
+    public internal(set) var isDeadheading: Bool = false
 
     /// Creates an unplaced, idle train of one car without a timetable or a
     /// service, with the standard performance.
@@ -183,7 +191,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits
+        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits, deadhead
     }
 
     /// Decodes a train.
@@ -275,6 +283,13 @@ extension Train: Codable {
         trailEdges = container.contains(.trailEdges) ? try container.decode([Int].self, forKey: .trailEdges).map(TrackEdgeID.edge) : []
         reservation = container.contains(.reservation) ? try container.decode([TrackResource].self, forKey: .reservation) : []
         performance = container.contains(.performance) ? try container.decode(TrainPerformance.self, forKey: .performance) : .standard
+        isDeadheading = container.contains(.deadhead) ? try container.decode(Bool.self, forKey: .deadhead) : false
+        guard !isDeadheading || (execution != nil && timetable.count == 2) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .deadhead, in: container,
+                debugDescription: "Train \(id.rawValue) is marked as running empty to a line's end without a service of two stops."
+            )
+        }
         guard zip(reservation, reservation.dropFirst()).allSatisfy({ $0 < $1 }), position != nil || reservation.isEmpty else {
             throw DecodingError.dataCorruptedError(
                 forKey: .reservation, in: container,
@@ -376,5 +391,6 @@ extension Train: Codable {
         if performance != .standard {
             try container.encode(performance, forKey: .performance)
         }
+        if isDeadheading { try container.encode(true, forKey: .deadhead) }
     }
 }

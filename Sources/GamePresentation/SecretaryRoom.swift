@@ -6,15 +6,6 @@ import GameCore
 // with a report. Everything is derived from the world; nothing here is
 // game state, and GameCore is untouched.
 
-/// Where the map is asked to go (the news log's "Go"): the point, and a
-/// number that grows with each request so the same point can be asked
-/// again.
-public struct MapFocus: Hashable, Sendable {
-    public let x: Double
-    public let y: Double
-    public let serial: Int
-}
-
 /// What the secretary last saw of the world, to tell what is new in the
 /// next step. Not saved: a loaded game starts from what it shows.
 struct NewsWatch {
@@ -118,7 +109,7 @@ extension GameSession {
     private func focusMap(onStation id: StationID) {
         guard let station = world.station(id: id) else { return }
         if isFollowingTrain { stopFollowingTrain() }
-        mapFocus = MapFocus(x: Double(station.location.x), y: Double(station.location.y), serial: (mapFocus?.serial ?? 0) + 1)
+        lookAt(station.location)
     }
 
     // MARK: - Reading a step
