@@ -413,12 +413,12 @@
         }
       }
     },
-    "Add Pattern" : {
+    "Add" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入停站模式"
+            "value" : "加入"
           }
         }
       }
@@ -463,12 +463,12 @@
         }
       }
     },
-    "Add a short working or express" : {
+    "Add a stopping pattern" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入區間車或快車"
+            "value" : "新增停站模式"
           }
         }
       }
@@ -953,12 +953,12 @@
         }
       }
     },
-    "Express: call at the two ends only" : {
+    "Non-stop: call at the two ends only" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快車：只停靠兩端"
+            "value" : "直達車：只停靠兩端"
           }
         }
       }
@@ -2369,6 +2369,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把列車移出軌道"
+          }
+        }
+      }
+    },
+    "Sell" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出售"
+          }
+        }
+      }
+    },
+    "Opens the building tool's sale of this building, with the price it would bring." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在建築工具開啟這棟建物的出售，並顯示它能賣的價錢。"
           }
         }
       }

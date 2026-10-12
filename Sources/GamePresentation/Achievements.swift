@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-// Achievements (ARCHITECTURE decision 181): 28 marks of what the player
+// Achievements (ARCHITECTURE decision 181): 35 marks of what the player
 // has done, kept on the device across games, checked each midnight. The
 // list, its "how to get it" lines and its progress readings are the
 // reference's (`Railway/site_archive_clean/index.html`: `ACHIEVEMENTS`,
@@ -47,6 +47,23 @@ public struct AchievementFacts: Hashable, Sendable {
     /// scenario's ID.
     public var completedGold = false
     public var completedScenario: String?
+    /// Whether the world has attractions (decision 174's `tourism`).
+    public var hasTourism = false
+    /// The tourists the railway brought to an attraction yesterday, at the
+    /// busiest one.
+    public var touristsYesterday: Int64 = 0
+    /// The most tourists of a year, this one or the last, at all the
+    /// attractions together.
+    public var touristsInAYear: Int64 = 0
+    /// The highest souvenir shop level and attraction rating (hundredths
+    /// of a star).
+    public var bestSouvenirShop = 0
+    public var bestStars = 0
+    /// The company's businesses (decision 173): how many, of which kinds,
+    /// and the best one's profit since it opened.
+    public var subsidiaries = 0
+    public var subsidiaryKinds = 0
+    public var bestSubsidiaryProfit: Money = .zero
 
     public init(figures: CompanyFigures = CompanyFigures()) {
         self.figures = figures
@@ -90,6 +107,18 @@ public struct AchievementFacts: Hashable, Sendable {
         mostLinesAtAStation = linesAt.values.max() ?? 0
         hasHighSpeedTrain = world.trains.contains { $0.performance == .highSpeed || $0.type == .highSpeed }
         trains = world.trains.count
+        if let tourism = world.tourism, !tourism.attractions.isEmpty {
+            let attractions = tourism.attractions
+            hasTourism = true
+            touristsYesterday = attractions.map(\.yesterday).max() ?? 0
+            touristsInAYear = max(attractions.reduce(0) { $0 + $1.thisYear }, attractions.reduce(0) { $0 + $1.lastYear })
+            bestSouvenirShop = attractions.map(\.souvenir).max() ?? 0
+            bestStars = attractions.map(\.stars).max() ?? 0
+        }
+        let businesses = world.placedBuildings.filter(\.kind.isSubsidiary)
+        subsidiaries = businesses.count
+        subsidiaryKinds = Set(businesses.map(\.kind)).count
+        bestSubsidiaryProfit = businesses.map(\.books.totalProfit).max() ?? .zero
         if let state = world.scenario, case .completed(_, let rating)? = state.outcome {
             completedScenario = state.scenario.id
             completedGold = rating == .gold
@@ -143,6 +172,8 @@ public struct Achievement: Identifiable, Hashable, Sendable {
     /// "31,200 / 50,000", "12.4 / 50.0 km" for a length (metres).
     public func progressText(of facts: AchievementFacts) -> String? {
         guard let (now, need) = progress(of: facts) else { return nil }
+        if id == "businessProfit" { return "\(Money(now).moneyText) / \(Money(need).moneyText)" }
+        if id == "fiveStars" { return "\(now / 100).\(now % 100 / 10) / 5.0 ★" }
         guard isLength else { return "\(Money(now).displayText) / \(Money(need).displayText)" }
         func km(_ metres: Int64) -> String { WorldBounds.kilometresText(metres * WorldCoordinate.unitsPerMetre) }
         return "\(km(now)) / \(km(need)) km"
@@ -173,7 +204,15 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         Achievement(id: id, symbol: symbol, english: english, chinese: chinese, progress: { _ in nil }, test: test)
     }
 
-    /// The 28 achievements, in the order the list shows them.
+    /// Whether it can only be had on a map with attractions (decision 174):
+    /// a game without them does not list it.
+    public var needsTourism: Bool {
+        Self.tourismIDs.contains(id)
+    }
+
+    private static let tourismIDs: Set<String> = ["firstTourists", "tourists100k", "souvenirShop", "fiveStars"]
+
+    /// The 35 achievements, in the order the list shows them.
     public static let all: [Achievement] = [
         // The reference's `first`, `rider5`, `rider15`: rides followed,
         // here riders in a day.
@@ -270,6 +309,29 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         flag("liuMingchuan", "flag.checkered",
              ("Liu Mingchuan's Railway", "Complete the Liu Mingchuan challenge", "Taiwan railway history: Keelung to Hsinchu, milestone by milestone."),
              ("劉銘傳鐵路", "完成劉銘傳劇本", "台灣鐵道史：基隆到新竹，一個里程碑一個里程碑。")) { $0.completedScenario == "history.liuMingchuan" },
+        // Decision 174: the attractions, on maps that have them.
+        count("firstTourists", "camera.fill", need: 1,
+              ("Day Trippers", "Bring tourists to an attraction", "Build a station within 800 m of an attraction and run a passenger line to it."),
+              ("一日遊", "第一次把觀光客載到景點", "在景點 800 m 內蓋車站，並讓客運路線停靠。")) { $0.touristsYesterday },
+        count("tourists100k", "figure.walk.motion", need: 100_000,
+              ("Tourist Season", "100,000 tourists in a year", "Weekends and holidays bring the most; reach the attractions with more stars."),
+              ("觀光旺季", "一年 100,000 位觀光客", "週末與連假人最多；先接星等高的景點。")) { $0.touristsInAYear },
+        count("souvenirShop", "bag.fill", need: Int64(Tourism.maximumSouvenirLevel),
+              ("Local Specialties", "A souvenir shop at its highest level", "Invest in an attraction's souvenir shop from the attractions panel."),
+              ("名產名店", "一間名產店升到最高級", "在觀光景點面板投資景點的名產店。")) { Int64($0.bestSouvenirShop) },
+        count("fiveStars", "star.fill", need: 500,
+              ("Five Stars", "An attraction rated five stars", "A 4.5-star attraction with its souvenir shop raised twice."),
+              ("五星景點", "一處五星的景點", "4.5 星的景點把名產店升兩級。")) { Int64($0.bestStars) },
+        // Decision 173: the company's businesses.
+        count("firstSubsidiary", "bag.circle.fill", need: 1,
+              ("In Business", "Open a department store, hotel or amusement park", "Its takings follow the riders of the stations within 800 m."),
+              ("多角經營", "開第一間百貨公司、飯店或遊樂園", "營收跟著 800 m 內車站的旅客走。")) { Int64($0.subsidiaries) },
+        count("allBusinesses", "square.stack.3d.up.fill", need: 3,
+              ("Group", "Run a department store, a hotel and an amusement park", "One of each kind; hotels need an attraction or an intercity station nearby."),
+              ("企業集團", "百貨公司、飯店、遊樂園各一間", "三種各一間；飯店要靠景點或城際車站的旅客。")) { Int64($0.subsidiaryKinds) },
+        count("businessProfit", "chart.line.uptrend.xyaxis", need: 100_000_000,
+              ("Paying Business", "A business that has made $1,000,000 since it opened", "Build beside a busy station before the district grows."),
+              ("生意興隆", "一間事業開業以來賺進 $1,000,000", "趁地區還沒發展，在熱鬧的車站旁先蓋。")) { $0.bestSubsidiaryProfit.amount },
     ]
 
     public static func named(_ id: String) -> Achievement? {

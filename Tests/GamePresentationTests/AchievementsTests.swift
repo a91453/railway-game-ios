@@ -17,9 +17,10 @@ final class AchievementsTests: XCTestCase {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    func testThereAre28WithUniqueIDsAndBothLanguages() {
-        XCTAssertEqual(Achievement.all.count, 28)
-        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 28)
+    func testThereAre35WithUniqueIDsAndBothLanguages() {
+        XCTAssertEqual(Achievement.all.count, 35)
+        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 35)
+        XCTAssertEqual(Achievement.all.filter(\.needsTourism).count, 4)
         for achievement in Achievement.all {
             for language in [DisplayLanguage.english, .traditionalChinese] {
                 XCTAssertFalse(achievement.title(in: language).isEmpty)
@@ -131,5 +132,36 @@ extension AchievementsTests {
         XCTAssertEqual(try XCTUnwrap(Achievement.named("track50")).progressText(of: facts), "12.4 / 50.0 km")
         XCTAssertEqual(try XCTUnwrap(Achievement.named("riders100k")).progressText(of: facts), "31,200 / 100,000")
         XCTAssertNil(try XCTUnwrap(Achievement.named("tower")).progressText(of: facts))
+    }
+}
+
+extension AchievementsTests {
+    func testTheTouristsAndBusinessesMarks() throws {
+        var facts = AchievementFacts()
+        facts.hasTourism = true
+        facts.touristsInAYear = 120_000
+        facts.bestStars = 450
+        facts.bestSouvenirShop = 2
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("tourists100k")).isMet(by: facts))
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("souvenirShop")).isMet(by: facts))
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("fiveStars")).isMet(by: facts))
+        XCTAssertEqual(try XCTUnwrap(Achievement.named("fiveStars")).progressText(of: facts), "4.5 / 5.0 ★")
+        facts.subsidiaries = 2
+        facts.subsidiaryKinds = 2
+        facts.bestSubsidiaryProfit = Money(40_000_000)
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("firstSubsidiary")).isMet(by: facts))
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("allBusinesses")).isMet(by: facts))
+        XCTAssertEqual(try XCTUnwrap(Achievement.named("businessProfit")).progressText(of: facts), "$ 400,000 / $ 1,000,000")
+    }
+
+    func testAWorldWithAttractionsIsRead() throws {
+        var world = GameWorld.newGame(eventSeed: 1)
+        world.setTourism(nil)
+        XCTAssertFalse(AchievementFacts(world: world).hasTourism)
+        world.foundAttractions(seed: 1)
+        let facts = AchievementFacts(world: world)
+        XCTAssertTrue(facts.hasTourism)
+        XCTAssertGreaterThan(facts.bestStars, 0)
+        XCTAssertEqual(facts.touristsInAYear, 0)
     }
 }

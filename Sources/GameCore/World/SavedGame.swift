@@ -233,9 +233,22 @@
 ///     so has `"deadheadDistance"`. A build that reads only an earlier
 ///     version would drop them, and the empty run would carry passengers
 ///     and go uncounted, so it says the save is newer than it instead.
+/// 46. Subsidiary businesses (decision 173): a placed building can have the
+///     kind `"departmentStore"`, `"hotel"` or `"amusementPark"` and its
+///     `"books"` (the month's sales and costs, the months closed, the
+///     totals), and the ledger the rows `"dailySubsidiary"` with the items
+///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
+///     earlier version would fail on the kinds, so it says the save is newer
+///     than it instead. (Version 45 is flexible dispatch, decision 172.)
+/// 47. Tourism (decision 174): a world can have `"tourism"`, the sights
+///     with their shops and counts. A build that reads only an earlier
+///     version would drop it, and its next save would turn the sights
+///     off and lose the shops (versions 45 and 46 are flexible dispatch and
+///     the subsidiaries), so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 45
+    public static let currentVersion = 47
 
     public let world: GameWorld
 
@@ -365,6 +378,10 @@ extension SavedGame: Codable {
         // Version 44 to 45: a train without `"deadhead"` runs a passenger
         // service, and a line without `"deadheadDistance"` has driven
         // nothing empty, as every one had.
+        // Version 45 to 46: a building has no `"books"` and the ledger no
+        // subsidiary rows, as none traded.
+        // Version 46 to 47: a world without `"tourism"` has no sights, and
+        // its passengers are as they were.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

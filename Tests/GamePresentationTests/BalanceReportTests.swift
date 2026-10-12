@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import GamePresentation
 import XCTest
 
@@ -85,6 +85,113 @@ final class BalanceReportTests: XCTestCase {
             "Sold on day \(days): \(dollars((world.economy.balance - before).amount)) in, "
                 + "realized \(dollars(sold.realizedGain.amount)), the balance \(dollars(world.economy.balance.amount))."
         )
+        print(lines.joined(separator: "\n"))
+    }
+
+    /// Decision 173's subsidiaries: once the first line has paid for itself,
+    /// on day 30, a department store, a hotel and an amusement park beside
+    /// its middle station (the station's 800 m), each where the land is
+    /// free. Then each day's customers and profit of each, its year's profit
+    /// and what selling it would bring, and the days it takes to pay back
+    /// what it cost. The aim: a store well placed pays back in one and a
+    /// half to three years (540 to 1,080 days).
+    func testAFirstLineWithSubsidiaries() throws {
+        let days = try requestedDays()
+        var world = try firstLine()
+        let tile = Int64(1_024)
+        let middle = world.stations[1].location
+        let sites: [(PlacedBuildingKind, PlanPoint)] = [
+            (.departmentStore, PlanPoint(x: middle.x, y: middle.y + 3 * tile)),
+            (.hotel, PlanPoint(x: middle.x + 6 * tile, y: middle.y + 3 * tile)),
+            (.amusementPark, PlanPoint(x: middle.x - 8 * tile, y: middle.y + 5 * tile)),
+        ]
+        var bought: [PlacedBuildingID] = []
+        var lines = [
+            "### A first line with a department store, a hotel and an amusement park bought on day 30",
+            "",
+            "| Day | Balance | Store customers / profit a day | Hotel customers / profit a day | Park customers / profit a day | Store price | Store payback days |",
+            "| --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        try world.advance(ticks: 1)
+        for day in 1...days {
+            try world.advance(ticks: 1_440)
+            if day == 30 {
+                // A first line cannot yet pay $7.3 million for a store: the
+                // cash is topped up so the measure is of the trade alone.
+                world.economy.earn(Money(3_000_000_000))
+                for (kind, site) in sites {
+                    let quote = try XCTUnwrap(world.placedBuildingQuote(kind, at: site))
+                    do {
+                        bought.append(try world.placeBuilding(kind, at: site).id)
+                        lines.append("| \(day) | \(kind) bought for \(dollars(quote.total.amount)) | | | | | |")
+                    } catch {
+                        lines.append("| \(day) | \(kind) could not be placed: \(error) | | | | | |")
+                    }
+                }
+            }
+            guard !bought.isEmpty else { continue }
+            let buildings = bought.compactMap { world.placedBuilding(id: $0) }
+            let columns = buildings.map { building -> String in
+                let result = world.subsidiaryDay(of: building, onDay: Int64(day))
+                return "\(result.customers) / \(dollars((result.sales - result.cost).amount))"
+            }
+            let store = buildings.first
+            let profit = store.map { world.subsidiaryDay(of: $0, onDay: Int64(day)) }.map { ($0.sales - $0.cost).amount } ?? 0
+            let payback = (store?.cost.amount ?? 0) / max(1, profit)
+            let price = store.flatMap { world.saleQuote(of: $0.id)?.price.amount } ?? 0
+            lines.append(
+                "| \(day) | \(dollars(world.economy.balance.amount)) | " + columns.joined(separator: " | ")
+                    + " | \(dollars(price)) | \(payback) |"
+            )
+        }
+        for id in bought {
+            guard let building = world.placedBuilding(id: id) else { continue }
+            lines.append(
+                "\(building.kind): cost \(dollars(building.cost.amount)), booked \(dollars(building.books.totalProfit.amount)) since opening, "
+                    + "last 12 months \(dollars(building.books.trailingProfit.amount))"
+            )
+        }
+        print(lines.joined(separator: "\n"))
+    }
+
+    /// Decision 174: the first line with a 4-star town 47 m from its last
+    /// station, whose shop is built to level 2 on day 10, against the same
+    /// line without it: the tourists' fares, the shop's takings and what they
+    /// do to the cash (the tourists come from the map's edge and the busiest
+    /// stations, and all of them ride the line). Printed as a table.
+    func testAFirstLineWithASight() throws {
+        let days = try requestedDays()
+        var plain = try firstLine()
+        plain.setTourism(nil)
+        var sight = plain
+        let station = try XCTUnwrap(sight.stations.last)
+        sight.setTourism([Attraction(
+            id: AttractionID(rawValue: 1), name: "Sight", englishName: "Sight",
+            point: PlanPoint(x: station.point.x + 3_000, y: station.point.y), kind: .town, baseStars: 400
+        )])
+        var lines = [
+            "### A first line with a 4-star town beside its last station (shop level 2 on day 10)",
+            "",
+            "| Day | Balance without | Balance with | Difference | Tourists | Shop takings | Fares without | Fares with |",
+            "| --: | --: | --: | --: | --: | --: | --: | --: |",
+        ]
+        try plain.advance(ticks: 1)
+        try sight.advance(ticks: 1)
+        for day in 1...days {
+            try plain.advance(ticks: 1_440)
+            try sight.advance(ticks: 1_440)
+            if day == 10 {
+                try sight.investInSouvenirShop(of: AttractionID(rawValue: 1))
+                try sight.investInSouvenirShop(of: AttractionID(rawValue: 1))
+            }
+            let without = plain.financeReport(.day).previous, with = sight.financeReport(.day).previous
+            let tourists = sight.attraction(id: AttractionID(rawValue: 1))?.yesterday ?? 0
+            lines.append(
+                "| \(day) | \(dollars(plain.economy.balance.amount)) | \(dollars(sight.economy.balance.amount)) | "
+                    + "\(dollars((sight.economy.balance - plain.economy.balance).amount)) | \(tourists) | "
+                    + "\(dollars((with.propertyRevenue - with.propertyCost).amount)) | \(dollars(without.fareRevenue.amount)) | \(dollars(with.fareRevenue.amount)) |"
+            )
+        }
         print(lines.joined(separator: "\n"))
     }
 

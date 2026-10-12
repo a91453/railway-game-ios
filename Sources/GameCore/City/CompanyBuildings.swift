@@ -336,6 +336,8 @@ extension GameWorld {
     /// floor(S / 2)) × V / 10,000,000)` cents, where `S` is the station
     /// service and `V` the land value under its centre.
     public func dailyRent(of building: PlacedBuilding) -> Money {
+        // Decision 173: a subsidiary trades instead of letting.
+        guard !building.kind.isSubsidiary else { return .zero }
         let (value, service) = landTerms(of: building)
         let base = building.residents * 1_000 + building.jobs * 1_500
         return Money(base * (1_000 + service / 2) * value / 10_000_000)
@@ -432,6 +434,7 @@ extension GameWorld {
             upkeep = upkeep + costs.upkeep
             tax = tax + costs.tax
         }
+        settleSubsidiaries(day: day, time: time)
         guard rent > .zero || upkeep > .zero || tax > .zero else { return }
         write(LedgerEntry(
             kind: .dailyProperty, time: time, amount: rent - upkeep - tax,

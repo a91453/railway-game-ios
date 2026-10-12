@@ -69,7 +69,8 @@ final class WholeTaiwanTests: XCTestCase {
         XCTAssertTrue(world.landDemand && world.cityBuildings, "a new game's city, once its land comes")
         let saved = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: saved).world, world)
-        XCTAssertLessThan(saved.count, 2_000, "no land yet: a few hundred bytes")
+        // No land yet: a few hundred bytes, and the 25 sights of Taiwan (decision 174) about 3.7 KB.
+        XCTAssertLessThan(saved.count, 6_000, "no land yet: a few kilobytes at most")
     }
 
     // MARK: - Reading the land in

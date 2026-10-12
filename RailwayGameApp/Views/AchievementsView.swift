@@ -15,7 +15,9 @@ struct AchievementsView: View {
     var body: some View {
         List {
             Section {
-                ForEach(Achievement.all) { achievement in
+                // Decision 174: in a game without attractions, the
+                // tourists' marks are not listed.
+                ForEach(Achievement.all.filter { facts?.hasTourism ?? true || !$0.needsTourism }) { achievement in
                     row(achievement)
                 }
             } footer: {

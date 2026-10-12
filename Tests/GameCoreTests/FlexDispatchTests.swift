@@ -230,6 +230,19 @@ final class FlexDispatchTests: XCTestCase {
 
     // MARK: - Cost, saving
 
+    /// Decision 178, later: the key of the passenger load layer leaves out
+    /// when a line last sent a train out, as the plan's key does.
+    func testALineWithoutDispatchTimesDoesNotChangeAtADeparture() throws {
+        var world = try makeWorld(stops: [alpha, beta, gamma])
+        let before = try XCTUnwrap(world.line(id: main))
+        try world.advance(ticks: 3)
+        let after = try XCTUnwrap(world.line(id: main))
+        XCTAssertNotEqual(before.lastDispatch, after.lastDispatch, "a train went out")
+        XCTAssertNotEqual(before, after)
+        XCTAssertEqual(before.withoutDispatchTimes, after.withoutDispatchTimes)
+        XCTAssertNil(after.withoutDispatchTimes.lastDispatch)
+    }
+
     /// The empty run is in the hour's train distance like any other, and
     /// earns no fare.
     func testAnEmptyRunIsCountedForItsLine() throws {

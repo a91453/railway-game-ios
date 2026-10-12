@@ -74,6 +74,13 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// Decision 162: a fuel spell started today, the day's energy `percent`
     /// dearer (or cheaper when negative) for `days` days.
     case fuelSpell(percent: Int64, days: Int64)
+    /// Decision 174: a sight with `stars` hundredths of a star has no
+    /// station to ride to (`status`), so no tourist comes.
+    case sightUnreachable(attraction: AttractionID, english: String, chinese: String, stars: Int, status: AttractionStatus)
+    /// Decision 174: a public holiday starts in `days` days (0 on its first
+    /// day) and the sights a station serves draw about `times` as many
+    /// tourists.
+    case touristsComing(kind: HolidayKind, days: Int64, times: Int64)
 
     /// Decision 177: where the nearest town no station serves lies, from the
     /// railway's nearest station (``UnservedCluster``).
@@ -179,12 +186,16 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .createLine
         } else if let welcome = Self.welcome(in: world), (world.scenarioDay() ?? .max) <= Self.welcomeDays {
             self = welcome
+        } else if let tourists = Self.touristsComing(in: world) {
+            self = tourists
         } else if let holiday = Self.holiday(in: world) {
             self = holiday
         } else if let festival = Self.festival(in: world) {
             self = festival
         } else if let growth = Self.growth(in: world) {
             self = growth
+        } else if let sight = Self.sightUnreachable(in: world) {
+            self = sight
         } else {
             return nil
         }
@@ -303,6 +314,40 @@ public enum StationMasterAdvice: Hashable, Sendable {
         let same = coming.filter { $0.start == first.start }
         let names = same.compactMap { world.station(id: $0.station)?.name }
         return .festivalComing(days: first.start - today, stations: names, percent: first.boost / 10)
+    }
+
+    /// Decision 174: a holiday that starts today or in the next three
+    /// days, while a sight has a station to ride to.
+    private static func touristsComing(in world: GameWorld) -> StationMasterAdvice? {
+        guard let sights = world.tourism?.attractions, !world.lines.isEmpty else { return nil }
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        // Not on the game's first day, when nothing was announced before it
+        // (a new game starts on New Year's Day).
+        guard today > 0, let coming = world.holidays(from: today, through: today + 3).first,
+              sights.contains(where: { world.attractionStation(of: $0.id) != nil }) else { return nil }
+        return .touristsComing(kind: coming.holiday.kind, days: max(0, coming.start - today), times: 2)
+    }
+
+    /// Decision 174: the best-rated sight (the lowest ID of equals) with a
+    /// station of the network within 5 km but none within 800 m that a
+    /// passenger line calls at, once the first line is made.
+    private static func sightUnreachable(in world: GameWorld) -> StationMasterAdvice? {
+        guard let sights = world.tourism?.attractions, !world.lines.isEmpty else { return nil }
+        let near = 5_000 * WorldCoordinate.unitsPerMetre
+        let candidates = sights.filter { sight in
+            world.stations.contains { station in
+                let dx = station.point.x - sight.point.x, dy = station.point.y - sight.point.y
+                return dx * dx + dy * dy <= near * near
+            }
+        }
+        // Only whether a station serves it is asked: the advice is worked
+        // out at every step of the game, and whether anyone can ride there
+        // (the panel says that) builds the whole route graph.
+        for sight in candidates.sorted(by: { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id < $1.id })
+        where world.attractionStation(of: sight.id) == nil {
+            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: sight.stars, status: .noStation)
+        }
+        return nil
     }
 
     /// Decision 154: a holiday starting in one to three days, else the
@@ -464,6 +509,26 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "A typhoon is blowing over \(stations == 1 ? "one" : "\(stations)") of our stations: about \(percent)% fewer passengers there today.",
                     "颱風正在影響 \(stations) 個車站，今天那裡的旅客少約 \(percent)%。"
                 )
+        case .sightUnreachable(_, let english, let chinese, let stars, let status):
+            status == .noStation
+                ? language.text(
+                    "\(english) \(Self.starsText(stars)) has no station to reach it. Put a station within 800 m and run a line to it.",
+                    "\(chinese) \(Self.starsText(stars)) 沒有車站可到。在 800 公尺內蓋車站，再開一條線過去吧。"
+                )
+                : language.text(
+                    "\(english) \(Self.starsText(stars)) has no route from where tourists come. Join its station to a busy town or the map's edge.",
+                    "\(chinese) \(Self.starsText(stars)) 沒有客源路線。把它的車站接到大城鎮或地圖邊緣吧。"
+                )
+        case .touristsComing(let kind, let days, let times):
+            days > 0
+                ? language.text(
+                    "\(kind.title(in: language)) starts in \(days) day\(days == 1 ? "" : "s"): about ×\(times) tourists at the sights. Add trains before it.",
+                    "\(days) 天後是\(kind.title(in: language))，景點的觀光客約 ×\(times)。先加開列車吧。"
+                )
+                : language.text(
+                    "\(kind.title(in: language)) has begun: about ×\(times) tourists at the sights today.",
+                    "\(kind.title(in: language))到了，今天景點的觀光客約 ×\(times)。"
+                )
         case .fuelSpell(let percent, let days):
             percent >= 0
                 ? language.text(
@@ -482,9 +547,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
     public var isWorry: Bool {
         switch self {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
-             .typhoonComing: true
+             .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell: false
+             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing: false
         }
     }
 
