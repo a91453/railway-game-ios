@@ -534,7 +534,8 @@ struct MapView: View {
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         } else {
                             AppleMapBackground(
@@ -545,7 +546,8 @@ struct MapView: View {
                                 trackStyle: trackStyle,
                                 language: session.language,
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         }
                     }

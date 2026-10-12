@@ -33,6 +33,12 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertEqual(sources.keys.sorted(), ["openmaptiles"])
         XCTAssertEqual(sources["openmaptiles"]?["type"] as? String, "vector")
         XCTAssertEqual(sources["openmaptiles"]?["url"] as? String, "pmtiles://file:///app/BaseMap/taiwan.pmtiles")
+        // Decision 191: the bundled tiles credit OpenMapTiles and
+        // OpenStreetMap in the attribution button, with their links.
+        let attribution = try XCTUnwrap(sources["openmaptiles"]?["attribution"] as? String)
+        for part in ["© OpenMapTiles", "https://openmaptiles.org/", "© OpenStreetMap contributors", "https://www.openstreetmap.org/copyright"] {
+            XCTAssertTrue(attribution.contains(part), part)
+        }
         XCTAssertEqual(bundled["glyphs"] as? String, Self.glyphs)
         XCTAssertEqual(bundled["version"] as? Int, 8)
 

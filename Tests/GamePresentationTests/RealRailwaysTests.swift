@@ -390,12 +390,23 @@ final class RealRailwaysTests: XCTestCase {
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
-        // Decision 97: the OpenStreetMap base map's credit, in OpenFreeMap's
-        // words.
-        XCTAssertEqual(DataSourceCredits.openStreetMapBaseMap(in: .english), "OpenFreeMap © OpenMapTiles Data from OpenStreetMap")
-        // Decision 151: the bundled tiles' credit.
-        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .english), "© OpenMapTiles © OpenStreetMap contributors")
-        XCTAssertEqual(DataSourceCredits.bundledBaseMap(in: .traditionalChinese), "© OpenMapTiles © OpenStreetMap 貢獻者")
+        // Decision 191: the short credit in the map's corner, which opens
+        // the data sources page.
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: true, railways: false, in: .english), "© OpenMapTiles © OpenStreetMap")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: true, railways: false, in: .traditionalChinese), "© OpenMapTiles © OpenStreetMap")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: true, railways: true, in: .english), "© OpenMapTiles © OpenStreetMap · MOTC TDX")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: true, railways: true, in: .traditionalChinese), "© OpenMapTiles © OpenStreetMap · 交通部 TDX")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: false, railways: true, in: .english), "Railways: © OpenStreetMap · MOTC TDX")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: false, railways: true, in: .traditionalChinese), "鐵道：© OpenStreetMap · 交通部 TDX")
+        XCTAssertEqual(DataSourceCredits.mapCorner(baseMap: false, railways: false, in: .english), "")
+        // The data sources page names TDX in full and carries the
+        // attribution the Open Government Data License's annex asks for:
+        // the provider, the year and the datasets.
+        let tdx = try XCTUnwrap(DataSourceCredits.sections(in: .traditionalChinese).flatMap(\.credits).first { $0.id == "tdx" })
+        XCTAssertEqual(tdx.title, "交通部運輸資料流通服務平臺（TDX）")
+        for part in ["2026 年", "路線站序", "車站時刻表", "政府資料開放授權條款"] {
+            XCTAssertTrue(tdx.notice.contains(part), part)
+        }
         // MapLibre Native's licence and third-party notices come with the
         // app, as its BSD 2-Clause licence asks of a binary.
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

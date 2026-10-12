@@ -2497,7 +2497,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - `Railway/` 網站的 `track_lines.geojson`、`track_stations.geojson` 與 `i18n/stations.json` 原檔放在 App 的 `Resources/RealRailways/`（約 940 KB）。GamePresentation 的 `RealRailways` 讀它們（Foundation 的 `JSONDecoder`，Linux 上用 repo 裡的同一份檔案測試）；App 啟動時在背景讀一次（`GameLauncher.loadRealWorldData`，與人口、地點格一起；讀好前開始畫面的實景按鈕停用）。
 - 實景的遊戲地圖：`FollowingMapView` 把錨點 16 公里內的路線畫成 MapKit 的 overlay，照網站的寬度與疊放順序（顏色一律用官方色、不自製，也不用網站的代表色（2026-10-05 作者要求）：台鐵、高鐵與阿里山林鐵沒有路線色，整個系統統一用公司色（台鐵藍 `#005792`、高鐵橘 `#DB5009`、林鐵紅 `#C41229`）；捷運與輕軌每條線用營運機構官網宣告的路線色，官網沒有的用交通部 TDX 的 `LineColor`；找不到官方色的線不載入（`LoadError.noOfficialColor`）；深色、淡化與隱藏照網站的 `railMix` 混出），放在 `.aboveRoads`（道路之上、地圖的標籤之下，和網站在 MapLibre 的位置相同）；車站是 `StationDotsRenderer` 畫的固定大小的圓，網站的第 11 級以上才畫。地圖樣式選單多一個「真實鐵道」（自動、淡化、隱藏，App 的設定，預設淡化），以及「資料來源」。
 - 選點的畫面：地圖畫出全部路線；清單在台灣之後依系統列出 544 個車站，輸入時照網站的比對方式即時列出符合的車站。
-- 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
+- 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。（標示的字樣自決策 191 起照該決策：角落的短標示，點了打開資料來源頁。）ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
 - 都只是畫面：GameCore 不知道真實鐵道，存檔不存它，玩家的鐵路照舊自己蓋；golden、存檔版本與 property digest 都沒有改。
 
 **實景示範地圖**（2026-10-05 追加，作者要求；對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#實景示範地圖)）：
@@ -3405,7 +3405,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 參考檢查（`a91453/railway-reference-private` `a7e377b6`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「實景地圖的 OpenStreetMap 底圖（決策 97）」）：`Ci/` 的 `initOsmMapEngine`（MapLibre GL）、`osmStyleKey` 預設 `positron`（另有 `dark`、`fiord`、`liberty`）、`osmLabelLang` 預設 `local`、地圖下方的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」。
 
 1. **依賴**：`maplibre-gl-native-distribution` 6.31.0（2026-09-11，`exactVersion`；二進位 XCFramework，sha256 `de3aaa43…` 由套件清單核對），只給 App target。`project.yml` 加套件、XcodeGen 2.46.0 重新產生；CI 與 Xcode Cloud 不自動解析套件（`-disableAutomaticPackageResolution`），所以提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved`（版本 6.31.0，commit `13e41ab3`）。
-2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
+2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（字樣自決策 191 起照該決策，這句改由 (i) 提供）（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
 3. **圖磚與樣式**：OpenFreeMap 的公開服務（免費、免金鑰、可商用，沒有服務保證），淺色用 Positron、深色外觀用 Dark（`OpenStreetMapBase.styleURL`）。
 4. **相機**（`OpenStreetMapBase.camera`，GamePresentation，有測試）：MapLibre 的中心是遊戲畫面中點下的地點，縮放等級讓一個世界公尺（錨點緯度的一公尺）畫成和遊戲一樣多的點：z = log2(每公尺點數 × 赤道周長 × cos 錨點緯度 ÷ 512)，沿用 `StationLabels.zoom`。測試確認畫面兩角換到 MapLibre 的像素正好差畫面的寬與高。平面、北朝上，不接受自己的手勢，和 Apple 地圖相同（決策 50）。
 5. **標籤**：OpenFreeMap 的樣式把拉丁名稱與當地名稱疊成兩行；照 `Ci/` 的 `osmLabelLang`，改成一種語言：中文介面依序取 `name:zh-Hant`、`name:zh`、`name`，英文取 `name:en`、`name_en`、`name:latin`、`name`（`OpenStreetMapBase.labelText`）。只換顯示名稱的圖層，道路編號（`ref`）、門牌照舊（`showsName`）。
@@ -4609,7 +4609,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 3. **哪裡用哪份圖磚**（`BaseMapStyle.drawsTaiwan`）：地圖中心 2 km 內有台灣的陸地（水域格網 `WaterGrid.hasLand`，它把廈門等非台灣的陸地當海）就用打包的圖磚，否則（廈門、外國、沒有水域格網）用 OpenFreeMap 的。
 4. **字型**（`tools/basemap/fetch_glyphs.py`）：OpenFreeMap 的 Noto Sans glyph（OFL 1.1，`Resources/Licenses/NotoSans-OFL.txt`）。MapLibre Native 用裝置的字型畫中文、假名與諺文（`allowsFixedWidthGlyphGeneration`），整段都是這些字的範圍不放；地名用到的拉丁字母、標點與符號放真的 glyph（15 個範圍），其餘 179 個範圍是空的檔：MapLibre 某個範圍讀不到時（`GlyphManager::processResponse` 遇到錯誤就不再通知），整塊圖磚的文字都不排，所以要每個可能要的範圍都有檔。共 1.19 MB。打包的字型台灣以外也用。
 5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
-6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
+6. **標示**（字樣自決策 191 起照該決策）：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
 7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
 8. **山的陰影**（同日，作者問「沒有衛星好嗎」，同意不做衛星底圖、用地形陰影補上立體感；同一個 PR，不另取號）：衛星照片照舊是 Apple 地圖的「衛星」「混合」，給規劃時對照；遊戲的底圖不放衛星照片（照片裡真實的房子、道路、鐵道會和玩家的軌道、遊戲的城市疊在一起，也和遊戲的資料對不齊；授權與容量也不划算）。台灣的底圖改用遊戲自己的地面高度（`taiwan_heights.dat`，決策 124）畫山的陰影：`tools/basemap/build_terrain.py` 把它寫成 Terrarium 編碼的 512 像素 PNG（`raster-dem`），zoom 0–10（台灣約 70 m 一個像素，和高度的 1.875″ 一格相當；zoom 11 是 29 MB，只多了內插），只寫有陸地的圖磚：115 塊、10.0 MB，約 1 分鐘。樣式照 `Railway/` 網站的 `landscape-hillshade`（`rail-3d/integration/map3d.js`：陰影強度 0.42、光從 315°），顏色換成遊戲的（`docs/UI_THEME.md`），畫在森林、公園之上、水與道路之下；只有台灣的樣式有，台灣以外沒有地形資料。陰影和遊戲判斷路堤、路塹、隧道的高度是同一份資料。檢查：圖磚的高度和 `HeightGrid` 的同一點差 4–5 m 以內（像素中心與點的差），阿里山車站 2,207 m、玉山 3,881 m。
 9. **鐵道線形以 OSM 為準**（2026-10-11 作者：「既然底圖都是了就線形以 OSM 為準，只保留林鐵本線的多林一帶」）：`tools/real-railways/match_osm.py` 讀和底圖同一份整包檔，把 `Railway/` 網站原檔（TDX）的 79 條線沿 OSM 的軌道重畫，路線、站名、顏色照舊。做法照參考 `rail-3d/physical/topology.js`（軌道靠共用節點相接，`railwaySystem` 判斷系統，直接移植）：沿原線每 2 km 一個錨點，兩錨點間在該系統的軌道圖上找成本最低的路（長度 ×（1 +（離原線 ÷ 15 m）²）），每段接在上一段的終點，所以雙線只走一條；離原線超過 100 m 或附近沒有軌道的段保留原線並列出。結果：原線到新線的中位數多半 0–5 m，最多 77 m（高捷紅線草衙–機場，原本 `osm_patches.json` 手動修的那段；三段手動修正都在新線 2.5 m 內，修正檔與 `apply_osm_patches.py` 退休）。保留原線的只有：林鐵本線多林一帶約 1 km（`osm_exceptions.json`，OSM 只有已崩塌的多林隧道，way 340255673，最多差 90 m；工具也不再走任何名為已崩塌、已廢的線）；高鐵兩端畫進車輛基地的 1–1.4 km 與林鐵嘉義站頭 200 m（OSM 那裡沒有正線）。車站：同系統、同名的站一起移到新線最近的點（60 m 內，549 個站點，中位數 4 m、最多 57 m），台鐵車埕、高鐵板橋、機捷機場第一航廈超過 60 m 留在原處。
@@ -6232,6 +6232,36 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 月台的長度照原本的區間，三段中段的長度因重新取樣可能差幾個單位。
 
 **沒有驗證的**：Linux 不能建置 App；膠囊的位置與 UI 測試要在 macOS CI 上跑，實景地圖上的手感要在 TestFlight 上看。
+
+### 191. 實景地圖的署名縮成角落的短標示
+
+2026-10-12，作者在實機上覺得實景地圖底部那條很長的署名（「© OpenMapTiles © OpenStreetMap 貢獻者・鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）太擠，授權照下面的設計做（功能凍結期的玩家回報介面修正）。號碼依工作登記 #231：決策 191；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**取代**：決策 50（Apple 地圖帶子中間的「鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）、決策 97（帶子左邊 OpenFreeMap 的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」，`DataSourceCredits.openStreetMapBaseMap`）、決策 151（台灣的「© OpenMapTiles © OpenStreetMap 貢獻者」，`DataSourceCredits.bundledBaseMap`）裡地圖上標示字樣的規則。三個決策其他的部分照舊；標示的位置也照舊（OSM 底圖在左下角，Apple 地圖在標誌與法律聲明之間），帶子（`AppleMapBackground.attributionHeight`，30 點）不動（另案）。
+
+**授權依據**（派工 session 查過的結論）：
+- 不能整條拿掉：OpenMapTiles 的設計授權（CC BY 4.0，其 `LICENSE.md`）要求「visibly credit OpenMapTiles … in the corner of the map」，沒有遊戲、名單頁或收起來的例外；台灣內建的 `taiwan.pmtiles` 與台灣以外的 OpenFreeMap 都是 OpenMapTiles schema。所以不做自動縮起，標示一直顯示。
+- OSMF 的歸屬指引接受「© OpenStreetMap」，並建議讓文字連到來源與授權；不能一開始就藏起來。這裡點標示就打開資料來源頁（OpenStreetMap、ODbL 的連結都在那裡）。
+- MapLibre 說有需要標示的來源時不要隱藏 (i)：照舊顯示，而且台灣的圖磚 source 現在也有 attribution（下面第 3 點）。
+- Apple 地圖的 Apple 標誌與「法律聲明」不能遮（決策 120）：位置照舊。
+- TDX 的服務條款與政府資料開放授權條款沒有規定標示的位置，但「公開展示時應以適當方式清楚標示」，所以地圖上保留「交通部 TDX」的簡稱；條款附件的「顯名聲明」（提供機關、年份、資料名稱與授權聲明）寫在資料來源頁。
+
+**做法**：
+1. **字樣**（`DataSourceCredits.mapCorner(baseMap:railways:in:)`）：
+   - OSM 樣式、沒畫鐵道：中英文都是「© OpenMapTiles © OpenStreetMap」；
+   - OSM 樣式、畫了真實鐵道：「© OpenMapTiles © OpenStreetMap · 交通部 TDX」／「… · MOTC TDX」；
+   - Apple 樣式只在畫了鐵道時：「鐵道：© OpenStreetMap · 交通部 TDX」／「Railways: © OpenStreetMap · MOTC TDX」（Apple 地圖自己標示底圖）。
+   - 台灣以外 OpenFreeMap 的字樣改由 MapLibre 的 (i) 與資料來源頁提供（style 的 source attribution 照舊是 OpenFreeMap 要的那句）。
+   - `bundledBaseMap`、`openStreetMapBaseMap` 刪掉；`railwaysOnMap` 留給選點畫面（`RealWorldPicker`）。
+2. **短標示**（`MapCreditButton`，`AppleMapBackground.swift`）：寬度跟著文字，成為小膠囊；caption2、`minimumScaleFactor` 0.6 → 0.85、`maximumContentSizeCategory` 到 `.extraExtraExtraLarge`（大字也不把帶子撐爆）。它是一個 `UIButton`：點一下打開資料來源頁（`MapView` 傳的 `onCredit`，`screen.panel = .dataSources`，和地圖樣式選單的「資料來源」相同）。點擊範圍往上延伸到整個帶子的高度，並把這個範圍回報給 `MapView`（`onAttributionFrames`），遊戲的手勢在那裡讓路（決策 120 的 `passesThrough`）。是按鈕，所以 UIKit 讓按鈕的單擊優先於地圖 view 自己的點擊手勢（MapLibre、MapKit 的手勢本來就關了縮放與捲動）。無障礙：`.link`，提示「顯示資料來源與授權」／"Shows the data sources and their licences"，識別碼 `map.credit`。
+3. **台灣圖磚的 attribution**（`BaseMapStyle.bundledAttribution`）：內建圖磚的 vector source 加上 `<a href="https://openmaptiles.org/">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>`，(i) 列出它與連結。OpenFreeMap 那一行不動。
+4. **資料來源頁**：TDX 的名稱改成正式名稱「交通部運輸資料流通服務平臺（TDX）」；授權欄改成政府資料開放授權條款附件的顯名聲明：提供機關、年份（2026，資料檔的 `source_notes` 都是 2026 年抓取）、資料名稱（軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表）與釋出聲明。
+
+**參考庫與外部專案**：參考庫的 `Ci/` 地圖下方是 OpenFreeMap 那句長字樣（決策 97 照搬），`Railway/` 網站在 MapLibre 的 attribution 控制項裡列來源；都沒有「短標示點開來源頁」的做法，這個是本專案自己的。外部只讀了授權文件（OpenMapTiles 的 `LICENSE.md`、OSMF Attribution Guidelines、MapLibre 的 attribution 說明、政府資料開放授權條款與其附件），沒有拿程式碼。
+
+**測試**：`RealRailwaysTests.testEverySourceIsCredited` 釘住 `mapCorner` 四種情況的中英文、TDX 的正式名稱與顯名聲明；`BaseMapStyleTests.testTheStyleDrawsTheBundledTilesOrOpenFreeMaps` 斷言台灣圖磚 source 的 attribution 與兩個連結。
+
+**沒有驗證的**：Linux 不能建置 App；按鈕的點擊、與 MapLibre／MapKit 手勢不衝突、膠囊的樣子要在 macOS CI 與 TestFlight 上看。MapLibre Native 6.31.0 在 style 的 source attribution 與 PMTiles 檔 metadata 的 attribution 都有時 (i) 顯示哪一個沒有驗證。
 
 ## 目前規則摘要
 

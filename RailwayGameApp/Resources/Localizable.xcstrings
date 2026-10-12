@@ -2113,6 +2113,16 @@
         }
       }
     },
+    "Shows the data sources and their licences" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示資料來源與授權"
+          }
+        }
+      }
+    },
     "Shows the service lines and their timetables." : {
       "localizations" : {
         "zh-Hant" : {

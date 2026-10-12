@@ -15,7 +15,7 @@ import SwiftUI
 /// Like Apple's map it follows the game's camera, top-down and north up
 /// (``OpenStreetMapBase/camera(of:in:width:height:)``), takes no gestures of
 /// its own, and keeps the band at its bottom (``AppleMapBackground/attributionHeight``)
-/// for the credit OpenFreeMap asks for and MapLibre's attribution button,
+/// for the map's credit (decision 191) and MapLibre's attribution button,
 /// which the game draws round (decision 120).
 /// Its place labels are in the player's language
 /// (``OpenStreetMapBase/labelText(in:)``), and Taiwan's real railways are
@@ -40,6 +40,8 @@ struct OSMMapBackground: UIViewRepresentable {
     /// Told where the attribution button and the credit are
     /// (``AppleMapBackground/onAttributionFrames``).
     let onAttributionFrames: @MainActor ([CGRect]) -> Void
+    /// Tapping the credit opens the data sources page (decision 191).
+    let onCredit: @MainActor () -> Void
 
     func makeUIView(context: Context) -> FollowingMapLibreView {
         FollowingMapLibreView(frame: .zero)
@@ -60,10 +62,11 @@ struct OSMMapBackground: UIViewRepresentable {
             railways: railways,
             look: look,
             credits: (
-                taiwan ? DataSourceCredits.bundledBaseMap(in: language) : DataSourceCredits.openStreetMapBaseMap(in: language),
-                DataSourceCredits.railwaysOnMap(in: language)
+                DataSourceCredits.mapCorner(baseMap: true, railways: false, in: language),
+                DataSourceCredits.mapCorner(baseMap: true, railways: true, in: language)
             )
         )
+        map.credit.onTap = onCredit
         map.stations = stations
         map.screenSafeArea = safeArea
         map.onAttributionFrames = onAttributionFrames
@@ -113,6 +116,7 @@ final class FollowingMapLibreView: MLNMapView {
         }
     }
     private var clearedFor: [OSMMapBackground.StationMark]?
+    /// The credit without and with the railways.
     private var creditTexts = (map: "", railways: "")
     /// MapLibre's delegate, which the map view holds weakly.
     private var observer: StyleObserver?
@@ -126,19 +130,12 @@ final class FollowingMapLibreView: MLNMapView {
         }
     }
 
-    private lazy var credit: UILabel = {
-        let label = UILabel()
-        label.font = .preferredFont(forTextStyle: .caption2)
-        label.adjustsFontForContentSizeCategory = true
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.6
-        label.textAlignment = .left
-        label.textColor = .secondaryLabel
-        label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
-        label.layer.cornerRadius = 4
-        label.layer.masksToBounds = true
-        addSubview(label)
-        return label
+    /// The credit in the map's corner (decision 191), which opens the data
+    /// sources page.
+    private(set) lazy var credit: MapCreditButton = {
+        let credit = MapCreditButton(alignment: .left)
+        addSubview(credit)
+        return credit
     }()
 
     override init(frame: CGRect) {
@@ -209,7 +206,7 @@ final class FollowingMapLibreView: MLNMapView {
     /// when that has changed: after this layout, not during SwiftUI's.
     private func reportAttribution() {
         var frames = [attributionButton.frame]
-        if !(credit.text ?? "").isEmpty {
+        if !credit.text.isEmpty {
             frames.append(credit.frame)
         }
         guard frames != reportedAttribution, let report = onAttributionFrames else { return }
@@ -480,16 +477,20 @@ final class FollowingMapLibreView: MLNMapView {
 
     // MARK: - Credit
 
-    /// OpenFreeMap's credit, and the railways' while they are drawn, on the
-    /// left of the band at the bottom, clear of the attribution button on
-    /// the right.
+    /// The base map's credit, with the railways' while they are drawn
+    /// (decision 191), in the bottom left corner, clear of the attribution
+    /// button on the right; it can be tapped anywhere up the band.
     private func placeCredit() {
-        credit.text = railwayLayers.isEmpty ? creditTexts.map : "\(creditTexts.map) · \(creditTexts.railways)"
+        credit.text = railwayLayers.isEmpty ? creditTexts.map : creditTexts.railways
         let safe = screenSafeArea
-        let width = min(credit.intrinsicContentSize.width + 8, bounds.width - 60 - safe.leading - safe.trailing)
-        let height = credit.intrinsicContentSize.height + 2
-        credit.frame = CGRect(
-            x: 10 + safe.leading, y: bounds.height - 6 - safe.bottom - height, width: max(0, width), height: height
+        let size = credit.textSize
+        let width = min(size.width + 8, bounds.width - 60 - safe.leading - safe.trailing)
+        let height = size.height + 2
+        let bottom = bounds.height - 6 - safe.bottom
+        credit.place(
+            text: CGRect(x: 10 + safe.leading, y: bottom - height, width: max(0, width), height: height),
+            bandTop: bottom - AppleMapBackground.attributionHeight + 6,
+            bandBottom: bottom + 6
         )
         bringSubviewToFront(credit)
     }
