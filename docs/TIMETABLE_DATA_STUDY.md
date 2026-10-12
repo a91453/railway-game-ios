@@ -1,5 +1,7 @@
 # 真實時刻表研究
 
+> **狀態（2026-10-12 整理）**：2026-09 的參考研究。移植規則以 `CLAUDE.md` 為準，現況以 [OVERVIEW.md](OVERVIEW.md) 為準。文中提到的「格子」已在 F3 拿掉；行駛時間和真實的比較見 [research/NEXT_PRIORITIES_2026-10-12.md](research/NEXT_PRIORITIES_2026-10-12.md) §4.2。
+
 作者提供了台灣鐵道的真實時刻表，涵蓋台鐵、高鐵與捷運。這份文件記錄時刻表裡有哪些概念可以放進遊戲，以及它們各自屬於 [ROADMAP](ROADMAP.md) 的哪個 Stage。另一份參考是作者的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)）。
 
 ## 原則

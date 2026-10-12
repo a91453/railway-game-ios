@@ -1,5 +1,7 @@
 # Xcode Cloud 首次啟用與內部 TestFlight 操作手冊
 
+> **狀態（2026-10-12 整理）**：擱置中，發佈走 `TESTFLIGHT_GITHUB_ACTIONS.md`。技術前提已經變了：App 有 MapLibre 遠端套件與 `Package.resolved`，也用 MapKit 與網路（出口合規與隱私要重新評估）；`main` 有 branch rule。
+
 > **目前策略：Xcode Cloud 暫緩。** 優先路線是 GitHub Actions → 內部 TestFlight，不需要 Mac，見 [TESTFLIGHT_GITHUB_ACTIONS.md](TESTFLIGHT_GITHUB_ACTIONS.md)。
 >
 > 本手冊保留供日後使用，內容仍然有效：Xcode Cloud 的第一次 onboarding 仍需要一次在 Mac 上操作 Xcode。兩條路線共用同一份已提交的 Xcode 專案與 shared scheme。日後啟用 Xcode Cloud 時，再決定是否保留 GitHub macOS 的發佈 workflow。

@@ -1,5 +1,7 @@
 # Phase 7 公司經營與房地產：參考盤點與設計提案
 
+> **狀態（2026-10-12 整理）**：已被 `CITY_BUILDING_STUDY.md` §5 與決策 85、94、95、130、173 取代。文中寫的存檔版本是當時的號碼。
+
 狀態：**供作者決定，未實作**。盤點基準為 `railway-game-ios` 的 `origin/main` `8ff0929`，以及 2026-10-07 複製的 `a91453/railway-reference-private` `main` `f27339b`。本文所有「來源」數值均指實際讀到的檔案；本文新訂的價格、倍率、稅率、年限和行為一律標為**原生（gap）**。金額一律是遊戲美元的美分 `Money(Int64)`，不能把參考網站的美元、Simulator 的新台幣或真實房價混在一起。
 
 依序讀過 `AGENTS.md`、`CLAUDE.md`、`docs/ARCHITECTURE.md` 決策 36、46、67、70、72–76，`docs/ROADMAP.md` Phase 6–8 與跨階段議題、`docs/RAILWAY_REFERENCE_MAPPING.md` G1c／G1d、決策 67、Phase 6a／6b，以及 `docs/research/PHASE6C_BUILDINGS_STUDY.md` §5–§7。後者的 §5.3 曾建議「居民、就業兩項都要放下才選密度」，**已由決策 74 改為只按主要用途選級**；以已合併的程式為準。Phase 6c 的一般住宅、商業、辦公建物是城市資產，城市自動生成及升級；公司自建或買入才是 Phase 7。

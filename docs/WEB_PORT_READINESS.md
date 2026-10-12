@@ -1,5 +1,7 @@
 # 網頁版移植準備
 
+> **狀態（2026-10-12 整理）**：暫停中。W0 探針已完成，W1–W3 沒有開始。這裡的 W0–W3 是網頁版的批次，不是 Stage W（行駛曲線）。3D 引擎的方向以 `research/3D_DIRECTION_STUDY.md` 為準。
+
 目的：讓同一份 Swift GameCore 未來能在瀏覽器執行，由 Babylon.js 繪製 3D 世界。這是準備規格，已加入 [最小 Wasm 探針](../Web/WasmProbe/README.md)，驗證核心編譯與瀏覽器 Worker 執行；尚未實作可玩的 Web App、持續執行的指令 bridge 或 renderer。
 
 這份準備目前以**我們自己的 Swift GameCore** 編譯成 Wasm 為主；網站內容的直接移植或包裝仍可由後續實作採用：

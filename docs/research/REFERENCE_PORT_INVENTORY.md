@@ -1,5 +1,7 @@
 # 私有參考移植盤點：已完成、Phase 7、Phase 8 與其他待辦
 
+> **狀態（2026-10-12 整理）**：部分過時。文中的存檔 15、schema 39 是當時的號碼（現在是 50、72），很多列成待辦的項目已經在之後的決策做了。之後的移植待辦以 [NEXT_PRIORITIES_2026-10-12.md](NEXT_PRIORITIES_2026-10-12.md) 為準；2026-10-10 以後加入參考庫的 `OpenWorld/`、`Railway/train_loop_reference_clean/` 不在這份盤點裡。
+
 更新日期：**2026-10-08（UTC）**。已重新讀 `CLAUDE.md`，並 fetch 兩個 repo 的 `main`：
 
 | 基準 | 固定 commit |

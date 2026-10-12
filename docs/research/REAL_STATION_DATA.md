@@ -1,5 +1,7 @@
 ﻿# 台鐵與捷運營運資料移植研究
 
+> **狀態（2026-10-12 整理）**：參考資料（營運資料檔的格式盤點）。行駛時間的實測比較用到其中的 `trtc.json`、`krtc.json` 與 `thsr-schedule.json`。
+
 - 查閱日期：2026-10-05
 - railway-game-ios (main)：`d2de3d5f814af3a3ecc6d6cf33e7b334226acfaf`
 - railway-reference-private：`2db0c5a6963798e6b86723bb001189343a59940c`

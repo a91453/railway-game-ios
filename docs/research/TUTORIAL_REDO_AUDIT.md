@@ -1,5 +1,7 @@
 # 教學重做：逐步稽核（2026-10-12）
 
+> **狀態（2026-10-12 整理）**：重做前對舊 11 步教學的稽核紀錄。結果見 `TUTORIAL_REDO_SPEC.md` 與決策 188。
+
 I audited all 11 steps from the code at branch `claude/tutorial-card-unblock` (HEAD `a4120fe`; another session pushed this commit while I worked). I changed no repo files.
 
 - **Read from code:** every claim below, unless marked otherwise.
