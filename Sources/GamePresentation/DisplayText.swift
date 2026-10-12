@@ -667,6 +667,9 @@ extension GameSession {
         if let train = tappedTrainID, let summary = world.trainSummary(of: train, in: language) {
             return summary
         }
+        if let id = selectedBuildingID, let text = buildingInspectorText(of: id) {
+            return text
+        }
         return nil
     }
 }

@@ -233,6 +233,13 @@
 ///     so has `"deadheadDistance"`. A build that reads only an earlier
 ///     version would drop them, and the empty run would carry passengers
 ///     and go uncounted, so it says the save is newer than it instead.
+/// 46. Subsidiary businesses (decision 173): a placed building can have the
+///     kind `"departmentStore"`, `"hotel"` or `"amusementPark"` and its
+///     `"books"` (the month's sales and costs, the months closed, the
+///     totals), and the ledger the rows `"dailySubsidiary"` with the items
+///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
+///     earlier version would fail on the kinds, so it says the save is newer
+///     than it instead. (Version 45 is flexible dispatch, decision 172.)
 /// 49. Rolling-stock economics (decision 180): a world can have
 ///     `"rollingStockEconomics": true`. A build that reads only an earlier
 ///     version would drop it, and charge every train the one price and cost
@@ -369,6 +376,8 @@ extension SavedGame: Codable {
         // Version 44 to 45: a train without `"deadhead"` runs a passenger
         // service, and a line without `"deadheadDistance"` has driven
         // nothing empty, as every one had.
+        // Version 45 to 46: a building has no `"books"` and the ledger no
+        // subsidiary rows, as none traded.
         // Version 48 to 49: a world without `"rollingStockEconomics"` has it
         // off, and every train costs and weighs what it did.
         // Later versions add their steps here.
