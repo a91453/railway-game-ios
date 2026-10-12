@@ -371,7 +371,10 @@ extension GameSession {
     /// (Stage F1); a managed company gives the new station its ridership
     /// (``newStationDemand(at:)``), unless the land does (Phase 6b). All or
     /// nothing. A new station then serves the next platform, so a second
-    /// track beside it joins the same station.
+    /// track beside it joins the same station. Once built, the place picked
+    /// is forgotten (as removing forgets the edge), so the map's ✓ pill
+    /// (decision 107) goes and a second ✓ cannot ask for the same stretch
+    /// again; the next platform starts with a tap on the track.
     /// Decision 128: who a new station reaches, said when it opens, where
     /// the land sets ridership: " Within 800 m: …" (decision 108's count),
     /// or that no one lives or works there yet. Empty elsewhere.
@@ -443,6 +446,7 @@ extension GameSession {
         }
         if added {
             notePutUp(at: middle)
+            networkEdgePoint = nil
         }
         if let built {
             // The typed name went to the new station: suggest the next.
