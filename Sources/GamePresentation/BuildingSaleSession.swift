@@ -54,11 +54,15 @@ extension GameSession {
                 "Building: book value \(quote.buildingBookValue.moneyText) × \(factor)% (under half full) = \(quote.building.moneyText)",
                 "建物：帳面價值 \(quote.buildingBookValue.moneyText) × \(factor)%（入住未過半）= \(quote.building.moneyText)"
             )
+        let business = quote.businessValue > quote.propertyPrice ? [language.text(
+            "Business: \(SubsidiaryRules.saleProfitMultiple) × its profit of the last 12 months = \(quote.businessValue.moneyText)",
+            "營業價值：近 12 個月營業利益 × \(SubsidiaryRules.saleProfitMultiple) = \(quote.businessValue.moneyText)"
+        )] : []
         let price = language.text(
             "Price \(quote.price.moneyText) · on the books at \(quote.bookValue.moneyText)",
             "售價 \(quote.price.moneyText) · 帳面價值 \(quote.bookValue.moneyText)"
         )
-        return [people, land, buildingLine, price, gainText(quote.gain)]
+        return [people, land, buildingLine] + business + [price, gainText(quote.gain)]
     }
 
     /// The gain or loss selling the ``saleCandidate`` would realize, for

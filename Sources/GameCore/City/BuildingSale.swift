@@ -32,8 +32,15 @@ public struct PlacedBuildingSaleQuote: Hashable, Sendable {
     /// What is left of the whole asset record on the books, its land and
     /// buy-outs too: what the sale is measured against.
     public let bookValue: Money
+    /// What a trading subsidiary is worth as a business (decision 173):
+    /// ``SubsidiaryRules/saleProfitMultiple`` times its profit of the last
+    /// twelve months; nothing for a building that lets, or one that lost.
+    public let businessValue: Money
 
-    public init(landRight: Money, buildingBookValue: Money, occupants: Int64, capacity: Int64, bookValue: Money) {
+    public init(
+        landRight: Money, buildingBookValue: Money, occupants: Int64, capacity: Int64, bookValue: Money, businessValue: Money = .zero
+    ) {
+        self.businessValue = businessValue
         self.landRight = landRight
         self.buildingBookValue = buildingBookValue
         self.occupants = occupants
@@ -62,8 +69,15 @@ public struct PlacedBuildingSaleQuote: Hashable, Sendable {
         return min(1_000, occupants * 2_000 / capacity)
     }
 
-    public var price: Money {
+    /// What the land and the building bring, together (decision 130).
+    public var propertyPrice: Money {
         land + building
+    }
+
+    /// What it brings: ``propertyPrice``, or for a subsidiary that earns
+    /// more, ``businessValue`` (decision 173).
+    public var price: Money {
+        max(propertyPrice, businessValue)
     }
 
     /// The gain realized, or the loss when negative: the price less the
@@ -97,7 +111,9 @@ extension GameWorld {
         } ?? .zero
         return PlacedBuildingSaleQuote(
             landRight: Money(building.kind.footprintArea * value), buildingBookValue: buildingBookValue,
-            occupants: occupants, capacity: capacity.residents + capacity.jobs, bookValue: record?.bookValue ?? .zero
+            occupants: occupants, capacity: capacity.residents + capacity.jobs, bookValue: record?.bookValue ?? .zero,
+            businessValue: building.kind.isSubsidiary
+                ? Money(max(0, building.books.trailingProfit.amount) * SubsidiaryRules.saleProfitMultiple) : .zero
         )
     }
 

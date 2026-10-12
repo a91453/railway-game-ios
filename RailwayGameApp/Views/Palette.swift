@@ -44,6 +44,12 @@ enum Palette {
     /// sea teal.
     static let wharf = hex(light: 0xA0704A, dark: 0xC09070)
     static let marina = hex(light: 0x1F9E9A, dark: 0x4CC3BF)
+    /// Decision 173: the subsidiaries, a department store's purple, a
+    /// hotel's rose and an amusement park's green; each 3.5:1 or more
+    /// against the navy glyph.
+    static let departmentStore = hex(light: 0x9B6FD0, dark: 0xB799E3)
+    static let hotel = hex(light: 0xD0709A, dark: 0xE39AB9)
+    static let amusementPark = hex(light: 0x58A84A, dark: 0x82C476)
     /// Decision 121: the kind's glyph on a player's building, navy in
     /// either appearance (the buildings' hues are light on the dark map,
     /// so ``ink`` would not show): 3.11:1 or more on all ten.
@@ -182,6 +188,9 @@ enum MapGlyph: String {
     case office = "MapGlyphOffice"
     case wharf = "MapGlyphWharf"
     case marina = "MapGlyphMarina"
+    case departmentStore = "MapGlyphDepartmentStore"
+    case hotel = "MapGlyphHotel"
+    case amusementPark = "MapGlyphAmusementPark"
     case crowd = "MapGlyphCrowd"
     case full = "MapGlyphFull"
     case warning = "MapGlyphWarning"

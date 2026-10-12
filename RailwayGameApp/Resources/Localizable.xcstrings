@@ -2373,6 +2373,26 @@
         }
       }
     },
+    "Sell" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出售"
+          }
+        }
+      }
+    },
+    "Opens the building tool's sale of this building, with the price it would bring." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在建築工具開啟這棟建物的出售，並顯示它能賣的價錢。"
+          }
+        }
+      }
+    },
     "Tap a station to select it." : {
       "localizations" : {
         "zh-Hant" : {

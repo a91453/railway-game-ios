@@ -437,10 +437,11 @@ extension GameWorld {
         case .buildingDemolition: [.propertyDemolition]
         case .dailyTax: [.incomeTax]
         case .hourlyFreight: [.freightRevenue]
+        case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
         case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .tourismRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

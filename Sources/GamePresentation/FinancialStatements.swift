@@ -66,7 +66,7 @@ extension FinanceSummary {
         let out = { (amount: Money) in Money.zero - amount }
         // Decision 94: the company's buildings, only where it has some.
         let property = hasProperty(previous: previous) ? [
-            row(LedgerItem.propertyRent.displayName(in: language), \.propertyRevenue),
+            row(language.text("Rent and subsidiary sales", "租金與子公司營業收入"), \.propertyRevenue),
             row(language.text("Building upkeep, land tax and demolition", "建物維護、土地資產稅與拆除")) { out($0.propertyCost) },
         ] : []
         // Decision 155: freight, only where it brought something in.

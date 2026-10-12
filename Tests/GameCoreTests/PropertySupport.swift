@@ -484,12 +484,13 @@ enum WorldInvariants {
             case .buildingDemolition: [.propertyDemolition]
             case .dailyTax: [.incomeTax]
             case .hourlyFreight: [.freightRevenue]
+            case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
             case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {
                 sum += line.amount.amount
-                if (line.item == .fareRevenue || line.item == .propertyRent || line.item == .freightRevenue || line.item == .tourismRevenue) != (line.amount.amount >= 0) && line.amount.amount != 0 {
+                if (line.item == .fareRevenue || line.item == .propertyRent || line.item == .freightRevenue || line.item == .subsidiarySales || line.item == .tourismRevenue) != (line.amount.amount >= 0) && line.amount.amount != 0 {
                     problems.append("ledger row \(entry.kind) has \(line.item) of \(line.amount.amount)")
                 }
             }
