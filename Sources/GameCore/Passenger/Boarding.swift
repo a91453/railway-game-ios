@@ -219,7 +219,7 @@ extension GameWorld {
         // Decision 172: a trip may start at the line's last stop, or at one
         // its line has since been edited to; a leg between two stops that
         // each appear once goes the way their order along the line goes.
-        if let served = self.line(id: line), !served.isRing, !served.hasRuns,
+        if flexDispatch, let served = self.line(id: line), !served.isRing, !served.hasRuns,
            let here = served.uniqueStop(train.timetable[stop].station), let next = served.uniqueStop(train.timetable[stop + 1].station) {
             direction = here < next ? .outbound : .inbound
         }
@@ -238,7 +238,7 @@ extension GameWorld {
             guard served.isRing else { return nil }
             // Decision 172: a lap that starts elsewhere than at the first
             // stop does not tell by its second call.
-            if train.timetable.count > 1, train.timetable[0].station == served.stops[0], let next = served.stops.dropFirst().first, let last = served.stops.last {
+            if train.timetable.count > 1, !flexDispatch || train.timetable[0].station == served.stops[0], let next = served.stops.dropFirst().first, let last = served.stops.last {
                 let second = train.timetable[1].station
                 if (second == next) != (second == last) { return second == next ? .inner : .outer }
             }
