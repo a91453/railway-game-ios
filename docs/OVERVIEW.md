@@ -99,6 +99,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | `CLAUDE.md`、`AGENTS.md` | 工作規則：架構、CI、登記、合併 | 現行 |
 | `docs/OVERVIEW.md`（本檔） | 現況、文件地圖、代號、事實速查 | 現行 |
 | `docs/research/NEXT_PRIORITIES_2026-10-12.md` | **唯一的優先順序**，以及機廠、行駛時間、比例、車站商業的可行性 | 現行 |
+| `docs/research/PLAYER_FEEDBACK.md` | TestFlight 玩家意見的紀錄與處理流程（不寫個人資料） | 現行，每一版更新 |
 | `docs/ARCHITECTURE.md` | 每個決策的規則細節（逐條日誌） | 現行。開頭的分層說明與最後的「目前規則摘要」在 2026-10-12 修過一次，仍以各決策本文為準 |
 | `GoldenScenarios/README.md`、`SaveFixtures/README.md`、`ReplayFixtures/README.md` | 行為契約：golden schema、存檔版本、replay | 現行 |
 | `docs/ROADMAP.md` | 各 Stage／Phase 的歷史紀錄，以及平衡待觀察表 | 歷史為主。優先順序已移到 NEXT_PRIORITIES |
@@ -118,6 +119,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 文件 | 狀態 | 已由哪些決策實作／現在還有效的部分 |
 | --- | --- | --- |
 | NEXT_PRIORITIES_2026-10-12 | 現行 | 優先順序與四項可行性研究 |
+| PLAYER_FEEDBACK | 現行 | 玩家意見與處理狀態；設計意見累計到 2–3 位玩家才排進優先順序 |
 | GAP_RESEARCH_2026-10-12 | 部分過時 | 參考遊戲比較（§2）仍有效；優先順序已併進 NEXT_PRIORITIES；§5 教學由決策 188 取代；§4.6 CI 由決策 187 取代 |
 | CI_INCIDENT_2026-10-12 | 歷史 | 4A 已由決策 187 實作；4B、4C 待作者決定 |
 | TUTORIAL_REDO_SPEC、TUTORIAL_REDO_AUDIT | 歷史 | 決策 188；P1、P2 列在 NEXT_PRIORITIES |
