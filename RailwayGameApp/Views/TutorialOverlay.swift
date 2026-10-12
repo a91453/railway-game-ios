@@ -7,8 +7,8 @@ extension View {
     /// own attachment when C5 adds targets inside them. `panelTargets`:
     /// the targets inside a panel beside the map, on the screen (global
     /// coordinates), which report there (`tutorialPanelTarget(_:)`).
-    /// `mapSites`: where the stations the step has the player tap stand on
-    /// the screen (global coordinates), as the map reports them.
+    /// `mapSites`: where the places the step has the player tap on the map
+    /// stand on the screen (global coordinates), as the map reports them.
     func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:], mapSites: [CGRect] = []) -> some View {
         overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
             GeometryReader { proxy in
@@ -44,8 +44,8 @@ extension View {
                     let backdrops = frameOf(.detailsCard).map { [$0] } ?? []
                     // What the step asks the player to use matters most when
                     // no placement leaves every control clear.
-                    // So do the stations the step has the player tap on the
-                    // map, where the map shows them (decision 188, later
+                    // So do the places the step has the player tap on the
+                    // map (its track's ends, its stations), where the map shows them (decision 188, later
                     // fix): on a phone on its side, the card stood over both
                     // of the line's stations beside the lines panel.
                     let mapFrame = frameOf(.map)

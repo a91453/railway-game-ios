@@ -6169,13 +6169,17 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
   - 地圖本身不算 required，卡片也不知道車站在哪，所以不會自己收合。玩家要先收合卡片或拖地圖。
   - 現有的測試沒抓到：`-tutorial-step` 蓋的兩站在地圖正中央，`testTheLineStepLeavesTheLinesPanelUsable` 也不點車站。
 - **修法**：
-  - `GameSession.tutorialStationsToTap` 列出這一步要玩家在地圖上點的車站：路線的兩站（`pickLineStations`）、選一座車站（`selectStation`）。只列車站這一章開始後新蓋的，也就是玩家自己的；教學從那一章之後開始（`-tutorial-step`）時列全部車站。其他步驟是空的。
-  - 地圖（`MapView`）把每一站可點的範圍（中心加減 `NetworkBuilding.touchRadius`）換成畫面座標，經 `GameScreenState.tutorialMapSites` 交給教學層。
+  - `GameSession.tutorialPlacesToTap` 列出這一步要玩家在地圖上點的地方：
+    - 第 6、8 步（`pickPlatformSite`，點軌道靠近一端、另一端）：軌道這一章開始後蓋的那段軌道的兩個外端（只接一條新邊的節點，月台把它切開也一樣）。
+    - 第 11 步（`pickLineStations`）：路線的兩站。
+    - 第 17 步（`selectStation`）：要選的車站。
+    - 只列玩家在教學裡蓋的（軌道或車站那一章開始後）；教學從那一章之後開始（`-tutorial-step`）時列全部。
+    - 其他步驟是空的：第 3 步的起點終點點哪裡都可以，地圖的 ✓（第 4、7、9 步）本來就是 required 的控制項。
+  - 地圖（`MapView`）把每個地方可點的範圍（中心加減 `NetworkBuilding.touchRadius`）換成畫面座標，經 `GameScreenState.tutorialMapSites` 交給教學層。
   - 教學層只取在地圖可見範圍內的部分，加進 `TutorialCardPlacement` 的 `required`：卡片避開它們，避不開就照第 8 點以來的規則自己收合；收合的膠囊也照同一套擺放避開。
-  - 點軌道的步驟（第 6、8 步）不列：軌道整段都能點，卡片蓋住一部分，玩家還能點別處。
 - **測試**：
   - `TutorialCardPlacementTests` 用那支手機量到的畫面（路線面板開著）：不知道車站時卡片蓋住兩站（重現），知道時卡片（打開或收合）都不蓋住兩站、面板與「在地圖上選站」。
-  - `TutorialSessionTests` 在新遊戲與示範地圖上走完十九步，檢查只有這兩步列出車站、而且只列玩家的兩站（示範地圖自己的車站不列）；`-tutorial-step` 時列全部。
+  - `TutorialSessionTests` 在新遊戲與示範地圖上走完十九步，檢查只有第 6、8、11、17 步列出地方：第 6、8 步是剛蓋的那段軌道的兩端，第 11、17 步只列玩家的兩站（示範地圖自己的車站不列）；`-tutorial-step` 時列全部。
 - 實景地圖由同一個地圖畫面（`MapView`，同一個相機）畫，一樣適用。
 - **沒有驗證的**：Linux 不能建置 App，地圖回報的位置與收合要看 macOS 的 `TutorialJourneyUITests`。
 

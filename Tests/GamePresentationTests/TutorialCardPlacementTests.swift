@@ -151,7 +151,7 @@ final class TutorialCardPlacementTests: XCTestCase {
     }
 
     /// Decision 188, later fix: the stations the step has the player tap are
-    /// the step's own (``GameSession/tutorialStationsToTap``). The card keeps
+    /// the step's own (``GameSession/tutorialPlacesToTap``). The card keeps
     /// clear of them or, where it cannot, folds, and folded it covers
     /// neither them nor the lines panel.
     func testTheLineStationsStepKeepsThePlayersStationsFree() {

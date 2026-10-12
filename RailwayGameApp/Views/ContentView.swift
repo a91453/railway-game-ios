@@ -704,9 +704,9 @@ final class GameScreenState {
     /// their marks (``TutorialTargetBounds``) from the overlay, so they
     /// report here (`tutorialPanelTarget(_:)`).
     var tutorialPanelTargets: [TutorialTarget: CGRect] = [:]
-    /// Where the stations the tutorial's step has the player tap stand on
-    /// the screen (global coordinates), as the map measured them
-    /// (``GameSession/tutorialStationsToTap``): the card keeps clear of
+    /// Where the places the tutorial's step has the player tap on the map
+    /// stand on the screen (global coordinates), as the map measured them
+    /// (``GameSession/tutorialPlacesToTap``): the card keeps clear of
     /// them (decision 188, later fix).
     var tutorialMapSites: [CGRect] = []
     @ObservationIgnored private var popTravelPlay: Task<Void, Never>?
