@@ -18,6 +18,10 @@ struct MapBuildConfirm: View {
     let viewport: ScreenSize
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
+    /// The top of the map's clear area without the banner and other cards
+    /// under the top controls: where the pill may go when there is no room
+    /// under them.
+    let mapTop: CGFloat
     @State private var pillSize = CGSize(width: 160, height: 44)
 
     var body: some View {
@@ -74,6 +78,7 @@ struct MapBuildConfirm: View {
                 Text(verbatim: caption)
                     .font(.caption.weight(.semibold))
                     .monospacedDigit()
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.textPrimary)
                     .padding(.horizontal, 8)
                     .accessibilityIdentifier("map.build.catchment")
@@ -138,7 +143,11 @@ struct MapBuildConfirm: View {
         if y + height > bottom {
             y = point.y - clearance - height
         }
-        y = min(max(y, top), max(top, bottom - height))
+        // Under a tall banner there may be no room between it and the
+        // dock: the buttons then go over the banner's foot, whole and
+        // tappable, rather than under the dock (decision 190's report).
+        let highest = top <= bottom - height ? top : max(0, min(Double(mapTop) + margin, bottom - height))
+        y = min(max(y, highest), max(highest, bottom - height))
         return CGSize(width: x, height: y)
     }
 }
@@ -194,10 +203,14 @@ private struct BuildConfirmation {
             flaggedEnd = nil
             anchor = site
             clearance = 18
-            cost = nil
+            // Decision 190: a grade is levelled first, for what relaying
+            // the track costs; where it cannot be, ✓ says why when tapped.
+            let levelling = session.networkPlatformLevelling
+            cost = levelling?.cost
             canConfirm = true
             kind = .platform
-            caption = session.platformSiteCaption(catchment, at: site)
+            caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language)]
+                .compactMap(\.self).joined(separator: "\n")
             showsCatchment = true
             cancel = { session.clearNetworkDraft() }
             confirm = { session.addNetworkPlatform() }

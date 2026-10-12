@@ -3614,6 +3614,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫 `Simulator/` 手機版的進階選項在預設關閉的抽屜（`.mobile-sheet-handle`，控制分頁）；`Ci/` 的費用膠囊（`.metro-cost-preview-pill`）已經是決策 102 的 `MapConstructionHUD`。作者的 SimCity BuildIt 截圖在拉好的路徑與擺好的建築旁放 ✗ 與 ✓、起終點插旗；OpenTTD Android（`build_confirmation_gui.cpp`，GPL-2.0）與 Mindustry（`MobileInput.java`，GPL-3.0）在拖曳結束處確認，只看做法。程式是本專案自己寫的。
 
+**之後的修正（2026-10-12，決策 190 的回報）**：膠囊下方與上方都放不下時，原本夾在頂部欄（狀態膠囊與其下的橫幅、卡片）之下，橫幅很高時就超過 dock、伸進 dock 底下，只露出一半。現在那時改用地圖本身的上緣（不含頂部欄），膠囊蓋在橫幅的下緣，✓／✗ 完整可點（`MapBuildConfirm.placement`）。
+
 ### 108. 車站選址：涵蓋圈、800 公尺內的居民與工作、顯示人口
 
 2026-10-09，UI/UX 改版第二輪的 UX-5d：鐵道經營最好玩的決定之一是「車站蓋在哪裡」，但以前要蓋好車站、打開車站面板才看得到它服務多少人。只改 App 與 GamePresentation：GameCore、存檔、golden、replay 都不變。
@@ -5114,6 +5116,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能建置 App；卡片與訊息的文字要在 macOS CI 與 TestFlight 上看。
 
+**之後的修正（2026-10-12，決策 190）**：第 2 點的「說出坡度、請重鋪」不夠：實景地圖的地面（Copernicus DSM，含建物，取整數公尺）讓一般站距的一段多半有 2–5 m 高差，玩家照做也幾乎鋪不出水平的一段（TestFlight 54.1 的回報）。現在月台模式選到有坡的區間時，按 ✓ 會先把那一段整平（決策 190）；第 2 點的訊息只留給整平被拒絕的時候，並說出原因與另一個做法（另鋪約 100 m 的短軌道）。「限制」的第一點（有坡的軌道要拆掉重鋪）由整平取代。測試 `testTrackOnSlopingGroundClimbsAndThePlatformToolSaysWhy` 改成 `testAPlatformOnAGradeLevelsItsStretch`。
+
 ### 165. 官網截圖由 macOS 模擬器產生
 
 2026-10-11，作者要更新官網，要求「透過 GitHub Actions 的 macOS 模擬器」拿遊戲截圖。之前官網的截圖都是作者在實機上拍、再用官網的 `tools/screens.py` 轉成 WebP（私有參考庫 `Website/README.md` 的「換遊戲畫面截圖」）。號碼依工作登記 #231：決策 165；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -6179,6 +6183,35 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - App 用的是 MapLibre Native 6.31.0，這個環境只能確認 GL JS 的畫法；實機上的樣子、捏合縮放時的效能（台北一塊圖磚可能有上千個看不見的圖示）要在 TestFlight 上看。
 - Apple 地圖沒有這種接口（決策 123 第 6 點），標籤仍可能壓在線上。
 - 沒有位置可以移的地名（例如二萬平夾在之字形折返的兩段線中間）在那個縮放下不顯示。
+
+### 190. 設月台時把那一段整平
+
+2026-10-12，TestFlight 54.1 的玩家回報：「很期待玩實景地圖，但難度太高了，怎樣都沒辦法有正常坡度可以放月台。」設月台時出現決策 164 的「這段軌道有約 7‰ 的坡度……請在較平的地方重新鋪一段」，那個橫幅有五行，把地圖上的 ✕／✓ 推到 dock 底下。號碼依工作登記 #231：決策 190；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**原因**：GameCore 的月台要區間兩端一樣高（`GameWorld.addTrackPlatform` 的 `invalidPlatform`），轉轍器也只能切水平的邊（`splitTrackEdge` 的 `invalidTrackGeometry`）。決策 164 的「能平就平」只在兩端地面差 2 m 內時拉平；派工 session 從車站 3 km 內隨機取兩點量過，500 m 一段會鋪成水平的只有新竹 25%、中壢 27%、桃園 28%、台中 29%、台北 43%，800 m 一段 17–18%，100 m 一段 57–74%。照一般站距鋪，多半是 7‰ 這樣的小坡；「緩和坡度」「構造」「高度」都不能讓它變平，提示也沒說另鋪短軌道這條路。
+
+**參考庫與外部專案**：參考庫（`382b9f8`）的 `Simulator/`、`MapBuilder/`、`Ci/`、`Railway/` 都沒有玩家放月台時處理坡度的做法（`Railway/site_archive_clean/rail-3d/physical/level-profiles.json` 的車站水平只用在預先算好的線，決策 164 已查）。外部：OpenTTD（GPL-2.0）在斜坡上蓋車站時自動加基座，A 列車系列放車站時整平地面，只看做法；切曲線用的 de Casteljau 法是教科書的算法。程式是本專案自己寫的。
+
+**做法**（GamePresentation 的 `LevelPlatformTrack.swift`）：
+1. **整平**（`GameSession.platformLevelling(of:from:to:in:)`、`build(_:in:)`）：月台模式選到的區間（`networkPlatformStretch`）兩端不一樣高時，按 ✓ 在世界的副本上用 GameCore 自己的指令做完：`removeTrackEdge` 拆掉那條邊；在區間的起點、終點各 `buildTrackNode`，高度取區間中點的軌面高度；`buildTrackEdges` 一次建 A→P、P→Q、Q→B 三條，P→Q 水平，兩旁的坡照路網工具的做法緩和（`networkEasesGrade`，緩和後超過 40‰ 時用固定坡度）；然後照舊建站或加月台在 P→Q 上（整條）。全部在同一個 `performEdit`：全有或全無，一次復原退回。
+   - 區間離邊的端點不到 `GameWorld.minimumSplitPiece`（16 m）時移到端點（長度不變），用那個端點的高度，只切一刀；區間就是整條邊時沒辦法整平（不能動端點），說明要鋪長一點。
+   - 曲線用 de Casteljau 法切成三段（GameCore 的 `GameWorld.split` 是 internal、只切水平的邊）：照邊長的比例在曲線上取參數，控制點四捨五入到單位；三段沿著原本的曲線（測試：每個取樣點離舊線不到 1 m）。
+   - 構造：原本是地面（`surface`）的改成自動（`automatic`，高度一變就照地面決定路堤、路塹，決策 124），其他照舊。
+   - 新邊在兩端要接到舊邊原本接的軌道，三段要首尾相接，不然拒絕。邊上有列車、列車的路或預約經過它（`trackReserved`）、路線的指定股道經過它（`trackEdgeInLineRoute`）時先拒絕，和切邊一樣；GameCore 的其他拒絕照舊：別的月台在上面、外段超過 40‰、錢不夠、太靠近別的軌道。
+   - 費用是三條新邊的造價（`buildTrackEdges` 照常收）；舊邊照拆除的規則不退款。
+2. **先說會怎樣**（`networkPlatformLevelling`，在丟棄的副本上算，和 `networkPreview` 一樣依區間與世界版本記住）：卡片寫「坡度 N‰：按 ✓ 會把這 X 公尺整平（重鋪這段軌道 $Y）」，不能整平時「坡度 N‰，無法整平：原因」；地圖上的膠囊在涵蓋人數下多一行「坡度 N‰：整平 X 公尺」，✓ 標出整平的費用。建好的訊息多一句「已為月台整平 X 公尺軌道，花費 $Y。」
+3. **被拒絕時說出原因與另一條路**（`platformGradeText(_:problem:)`）：「這段軌道有約 N‰ 的坡度，無法整平放月台：原因。或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。」
+4. **提示**：路網工具預覽兩端不一樣高的一段時，卡片多寫「有坡度：在這裡設月台時會先整平」。從有坡的軌道接出轉轍器時，預覽直接說「轉轍器只能設在水平的軌道上……請從它端點的節點，或從水平的軌道接出」，不再是 GameCore 一般的「線形要平順」（`NetworkProblem.slopedTurnout`）。
+5. **教學**：選址那一步改看能不能整平（`networkPlatformLevelling?.problem`），不再一有坡就擋。
+
+**測試**：`TerrainPresentationTests` 的 `testAPlatformOnAGradeLevelsItsStretch`（3.75 m 的坡：三條邊、中段水平、月台在中段、扣款＝三條新邊的造價加車站、一次復原還原）、`testThePlatformToolSaysItLevelsInChinese`、`testAPlatformOnACurvedGradeLevelsAlongTheCurve`、`testAPlatformOnAGradeWithATrainOnItIsRefused`、`testATurnoutOnAGradeSaysWhy`。UI：`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`（實景地圖、手機橫放：放好月台後在同一處再要一次，GameCore 拒絕、橫幅寫著原因時，月台的 ✓／✗ 可點、在 dock 上方；完整 lane。最大的輔助字級會讓開始畫面的實景地圖按鈕點不到，所以沒用）。
+
+**限制**：
+- 整平重鋪整條邊：舊邊的 ID 不再用，列車要重新給路，帳上舊邊的資產照拆除處理。
+- 整平的高度是區間中點的軌面高度；離地面遠時照決策 124 的構造處理，太高或太低（超過 64 m）照舊拒絕。
+- 月台的長度照原本的區間，三段中段的長度因重新取樣可能差幾個單位。
+
+**沒有驗證的**：Linux 不能建置 App；膠囊的位置與 UI 測試要在 macOS CI 上跑，實景地圖上的手感要在 TestFlight 上看。
 
 ## 目前規則摘要
 

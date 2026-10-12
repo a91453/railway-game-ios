@@ -98,6 +98,107 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertFalse(app.buttons["map.style"].exists)
     }
 
+    /// Decision 190's report (TestFlight 54.1): on a real-world map, a
+    /// phone on its side, a tall banner under the top controls left no
+    /// room between it and the dock, and the platform's ✓ went half under
+    /// the dock. Here a platform is put on a stretch, then asked for again
+    /// on the same place: GameCore refuses it (the platforms would
+    /// overlap), the refusal stays in the banner for some seconds, and the
+    /// ✓ and ✕ stay whole and above the dock meanwhile. (The largest
+    /// accessibility text, which would make the banner taller still, hides
+    /// the start screen's real-world button: runs 38281750910 and
+    /// 38285956099.) Full lane only (not in the pull request gate).
+    func testThePlatformConfirmStaysAboveTheDockUnderATallBanner() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
+        tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei").tap()
+        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        // The map opens on the whole place, some 48 m a point: the stretch
+        // below would run 10 km, onto land not owned (run 38289886049).
+        // Five steps, each halving it, make it some 330 m. Before a tool is
+        // chosen, while the zoom buttons show beside the map.
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        for _ in 0..<5 where zoomIn.isEnabled {
+            zoomIn.tap()
+        }
+
+        let build = app.buttons["dock.build"]
+        tappable(app.buttons.matching(identifier: "dock.build"), name: "dock.build").tap()
+        let network = app.buttons["tool.network"]
+        network.waitUntilSettled()
+        network.tap()
+
+        // A stretch across the middle of the map between the top controls
+        // and the dock, its ends tapped and built with the map's ✓ (or, where
+        // the details card stays open, its Build Track button).
+        let hudBottom = app.buttons["hud.menu"].frame.maxY
+        let dockTop = build.frame.minY
+        let middle = (hudBottom + dockTop) / 2
+        let frame = map.frame.intersection(app.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.3).tap()
+        point(0.55).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
+        let builder = confirm.waitForExistence(timeout: 10) ? confirm : card
+        XCTAssertTrue(builder.waitForExistence(timeout: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.isHittable, "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
+        builder.tap()
+        let banner = { (text: String) in
+            app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        }
+        XCTAssertTrue(banner("Built Edge").waitForExistence(timeout: 10), "The stretch was not built: \(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch.label)")
+
+        // The platform mode, from the details card (opened if folded).
+        let platform = app.buttons["Platform"]
+        if !platform.waitForExistence(timeout: 3) || !platform.isHittable {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(platform.waitForExistence(timeout: 10), "No Platform mode")
+        platform.waitUntilSettled()
+        platform.tap()
+        // A platform on the track, levelled first where it climbs.
+        let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
+        site.tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the platform")
+        confirm.waitUntilSettled()
+        confirm.tap()
+        XCTAssertTrue(banner("Built station").waitForExistence(timeout: 10), "The platform was not built")
+        // Asked for again on the same level stretch: refused, the refusal in
+        // the banner, the pill still there. The new station's tag stands
+        // over the site (run 38291939056), so the tap moves along the
+        // platform, 16 cars and some 170 points long, until it reaches the
+        // track.
+        for offset: CGFloat in [60, -60, 90, -90] where !confirm.exists {
+            site.withOffset(CGVector(dx: offset, dy: 0)).tap()
+            _ = confirm.waitForExistence(timeout: 3)
+        }
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "No ✓ for the second platform")
+        confirm.waitUntilSettled()
+        confirm.tap()
+        XCTAssertTrue(banner("overlap").waitForExistence(timeout: 5), "No refusal in the banner")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "The pill went with the refusal")
+        let dock = app.buttons["dock.build"].frame
+        for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
+            XCTAssertTrue(button.isHittable, "The platform's \(name) cannot be tapped: \(button.frame)")
+            XCTAssertLessThanOrEqual(button.frame.maxY, dock.minY, "The platform's \(name) goes under the dock: \(button.frame), dock \(dock)")
+        }
+    }
+
     /// The copy of a button the player can touch. Existence can come before
     /// a menu or screen transition ends, and `ViewThatFits` can also expose
     /// an unplaced copy of a menu action, so `firstMatch` alone may not be
