@@ -233,6 +233,13 @@
 ///     so has `"deadheadDistance"`. A build that reads only an earlier
 ///     version would drop them, and the empty run would carry passengers
 ///     and go uncounted, so it says the save is newer than it instead.
+/// 46. Subsidiary businesses (decision 173): a placed building can have the
+///     kind `"departmentStore"`, `"hotel"` or `"amusementPark"` and its
+///     `"books"` (the month's sales and costs, the months closed, the
+///     totals), and the ledger the rows `"dailySubsidiary"` with the items
+///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
+///     earlier version would fail on the kinds, so it says the save is newer
+///     than it instead. (Version 45 is flexible dispatch, decision 172.)
 /// 48. Line accounts (decision 179): a world can have `"lineAccounts"`, each
 ///     line's records of its last 30 days and each station's flow of
 ///     yesterday. A build that reads only an earlier version would drop
@@ -370,6 +377,8 @@ extension SavedGame: Codable {
         // Version 44 to 45: a train without `"deadhead"` runs a passenger
         // service, and a line without `"deadheadDistance"` has driven
         // nothing empty, as every one had.
+        // Version 45 to 46: a building has no `"books"` and the ledger no
+        // subsidiary rows, as none traded.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
