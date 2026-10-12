@@ -5843,6 +5843,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考庫與外部專案**：重做移植 `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `past`／`future`（`sY`、`sq`、`sG`、`canRedo`）。搜尋、存檔命名、軌道檢視、新泡泡、提示音在參考庫裡沒有對應（Ci 的存檔是 `buildLocalSavePayload` 的槽位，沒有命名；MapBuilder 沒有號誌），是本專案自己的。外部專案沒有取用程式。
 
+**之後的修正（遊戲選單溢出）**：#391（觀光景點）、#403、決策 183（城市委託案的「目標」）各在遊戲選單加一列後，空白新遊戲與實景地圖的選單有八列，iPhone 橫向時「回到開始畫面」（`menu.backToStart`）落到點不到的位置；PR 閘門只跑示範地圖（沒有觀光、沒有目標）的存檔流程，所以只有 `main` 的完整 lane 紅。選單改成固定六列：儲存遊戲、另存或匯出 ▸（另存新檔…、匯出存檔）、教學、更多 ▸（目標、觀光景點、說明，依世界而有）、設定、回到開始畫面，和觀光加入前的列數相同，不再隨世界變長；UI 測試點的 `menu.saveGame`、`menu.tutorial`、`menu.settings`、`menu.backToStart` 留在第一層。閘門加上空白新遊戲與實景地圖的存檔流程（`testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing`、`testARealWorldGameStartsFromAPlaceAndIsSavedAsOne`，各約 50 秒）；劃分區的拖曳那一個照它自己的說明留在完整 lane（手勢較不穩定，選單的路徑和蓋房子那一個相同）。以後要加選單項目，放進「更多」。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
