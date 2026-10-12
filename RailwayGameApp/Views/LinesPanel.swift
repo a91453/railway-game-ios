@@ -31,6 +31,9 @@ struct LinesPanel: View {
     /// Decision 179: how the lines are ordered, or `nil` for the order
     /// they were made in.
     @State private var lineSort: LineReportSort?
+    /// Decision 184: the name typed to find a line, and which lines show.
+    @State private var lineSearch = ListSearch()
+    @State private var lineFilter: LineFilter = .all
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -201,7 +204,23 @@ struct LinesPanel: View {
                 if session.world.lineAccounts != nil, session.world.lines.count > 1 {
                     lineSortMenu
                 }
-                ForEach(sortedLines) { line in
+                // Decision 184: a long list can be searched and filtered.
+                if session.world.lines.count >= ListSearchField.minimumRows {
+                    ListSearchField(
+                        search: $lineSearch,
+                        prompt: session.language.text("Search lines or stations", "搜尋路線或車站"),
+                        identifier: "lines.search",
+                        language: session.language
+                    )
+                }
+                if session.world.lines.count > 1, session.world.lineFilters.count > 1 {
+                    lineFilterPicker
+                }
+                let shown = shownLines
+                if shown.isEmpty {
+                    ListSearchEmpty(text: session.language.text("No line matches.", "沒有符合的路線。"))
+                }
+                ForEach(shown) { line in
                     Button {
                         session.selectLine(line.id)
                     } label: {
@@ -220,6 +239,26 @@ struct LinesPanel: View {
     private var sortedLines: [ServiceLine] {
         guard let lineSort, session.world.lineAccounts != nil else { return session.world.lines }
         return session.world.lineReports(sortedBy: lineSort).compactMap { session.world.line(id: $0.line) }
+    }
+
+    /// The sorted lines the search and the filter keep (decision 184). A
+    /// filter this world no longer offers counts as all lines.
+    private var shownLines: [ServiceLine] {
+        let filter = session.world.lineFilters.contains(lineFilter) ? lineFilter : .all
+        let search = session.world.lines.count >= ListSearchField.minimumRows ? lineSearch : ListSearch()
+        return session.world.lines(sortedLines, matching: search, filter: filter)
+    }
+
+    private var lineFilterPicker: some View {
+        Picker(selection: $lineFilter) {
+            ForEach(session.world.lineFilters, id: \.self) { filter in
+                Text(verbatim: filter.displayName(in: session.language)).tag(filter)
+            }
+        } label: {
+            Text(verbatim: session.language.text("Show", "顯示"))
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("lines.filter")
     }
 
     private var lineSortMenu: some View {
