@@ -39,8 +39,8 @@ final class CompanyBuildingsTests: XCTestCase {
     func testEachKindsFloorAndCapacity() {
         // Footprints 256, 576 and 1,024 m²; 2, 2 and 6 storeys; since
         // decision 111 a wharf as a shop and a marina 1,024 m² of 2.
-        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.footprintArea), [256, 576, 1_024, 576, 1_024])
-        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.floorArea), [512, 1_152, 6_144, 1_152, 2_048])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.footprintArea), [256, 576, 1_024, 576, 1_024, 2_304, 1_024, 12_544])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.floorArea), [512, 1_152, 6_144, 1_152, 2_048, 18_432, 14_336, 12_544])
         // Decision 74: homes 7, shops 2, offices 1 eighths at 48 m² a
         // resident, the rest jobs at 32 m².
         XCTAssertEqual(PlacedBuildingKind.house.capacity, BuildingCapacity(residents: 9, jobs: 2))   // 448 / 48, 64 / 32
@@ -48,6 +48,11 @@ final class CompanyBuildingsTests: XCTestCase {
         XCTAssertEqual(PlacedBuildingKind.office.capacity, BuildingCapacity(residents: 16, jobs: 168)) // 768 / 48, 5,376 / 32
         XCTAssertEqual(PlacedBuildingKind.wharf.capacity, BuildingCapacity(residents: 6, jobs: 27))  // as a shop
         XCTAssertEqual(PlacedBuildingKind.marina.capacity, BuildingCapacity(residents: 5, jobs: 56)) // sights 1 eighth: 256 / 48, 1,792 / 32
+        // Decision 173: a department store and a hotel as shops (2 eighths),
+        // an amusement park as a sight (1 eighth).
+        XCTAssertEqual(PlacedBuildingKind.departmentStore.capacity, BuildingCapacity(residents: 96, jobs: 432))  // 4,608 / 48, 13,824 / 32
+        XCTAssertEqual(PlacedBuildingKind.hotel.capacity, BuildingCapacity(residents: 74, jobs: 336))  // 3,584 / 48, 10,752 / 32
+        XCTAssertEqual(PlacedBuildingKind.amusementPark.capacity, BuildingCapacity(residents: 32, jobs: 343))  // 1,568 / 48, 10,976 / 32
     }
 
     // MARK: - Paying for it

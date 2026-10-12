@@ -158,6 +158,49 @@ for path in README.md docs/ROADMAP.md CLAUDE.md RailwayGameApp/Views/MapView.swi
   fi
 done
 
+# The base a push to main is compared with. A small repository (A, B, then
+# HEAD; and X, which is no ancestor of HEAD) and a fake `gh` that lists the
+# successful push runs FAKE_RUNS names, or fails when FAKE_GH_FAIL is set.
+repo="$work/repo"
+git init -q "$repo"
+commit() { git -C "$repo" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "$1"; git -C "$repo" rev-parse HEAD; }
+sha_a="$(commit A)"
+sha_b="$(commit B)"
+git -C "$repo" checkout -q --orphan other
+sha_x="$(commit X)"
+git -C "$repo" checkout -q -B main "$sha_b"
+sha_head="$(commit HEAD)"
+cat >"$work/bin/gh" <<'FAKE'
+#!/usr/bin/env bash
+[[ -z "${FAKE_GH_FAIL:-}" ]] || { echo "gh: HTTP 502" >&2; exit 1; }
+# Only the query push_base must make is answered.
+[[ "$1 $2" == "api repos/owner/repo/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=20" ]] ||
+  { echo "gh: unexpected query: $*" >&2; exit 1; }
+for sha in ${FAKE_RUNS:-}; do echo "$sha"; done
+FAKE
+chmod +x "$work/bin/gh"
+# expect_base <expected base, or "" for none> <description> [VAR=value...]
+# With no base, the warning must match $WHY, as in expect.
+expect_base() {
+  local want="$1" what="$2" got
+  shift 2
+  got="$(cd "$repo" && env PATH="$work/bin:$PATH" GITHUB_REPOSITORY=owner/repo "$@" "$script" push-base 2>"$work/err.txt")" || got="exit $?"
+  if [[ "$got" == "$want" ]] && { [[ -n "$want" ]] || grep -q -E "${WHY:-.}" "$work/err.txt"; }; then
+    echo "ok   pass  push-base: $what"
+  else
+    echo "FAIL push-base: $what: got '$got', expected '$want'"
+    sed 's/^/     | /' "$work/err.txt" | tail -5
+    failures=$((failures + 1))
+  fi
+}
+expect_base "$sha_b" "the newest successful run's commit, an ancestor" FAKE_RUNS="$sha_b $sha_a"
+expect_base "$sha_b" "a successful run of HEAD itself is passed over" FAKE_RUNS="$sha_head $sha_b"
+WHY='No successful push run' expect_base "" "no successful run: test everything" FAKE_RUNS=""
+WHY='is not an ancestor' expect_base "" "a commit that is not an ancestor: test everything" FAKE_RUNS="$sha_x $sha_a"
+WHY='Cannot fetch' expect_base "" "a commit that cannot be fetched: test everything" FAKE_RUNS="0123456789abcdef0123456789abcdef01234567"
+WHY='Could not list' expect_base "" "the API failing: test everything" FAKE_RUNS="$sha_b" FAKE_GH_FAIL=1
+WHY='GITHUB_REPOSITORY is not set' expect_base "" "no repository name: test everything" FAKE_RUNS="$sha_b" GITHUB_REPOSITORY=
+
 if [[ "$failures" -ne 0 ]]; then
   echo "::error::swift-shards.sh self-test: $failures failures."
   exit 1

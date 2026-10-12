@@ -115,7 +115,12 @@ needs OSM data reads the same extract.
   by `.github/scripts/swift-shards.sh`, which also proves each shard ran
   exactly its tests; pull requests and pushes to `main` that change nothing
   the package builds or tests skip the Swift jobs, and the `Swift CI (gate)`
-  job always reports),
+  job always reports; `main`'s branch rule requires that job, so never rename
+  it. Pushes to `main` share one concurrency group: a burst of merges runs
+  the run in progress and the newest one, the replaced runs show as
+  cancelled with no result of their own, and a push is compared with the
+  head of the last successful push run so nothing goes untested; when it
+  turns red, run `ci.yml` by hand on the replaced commits to bisect),
   `ios-build.yml` (macOS: committed-project drift check, Xcode Simulator
   build, iPhone UI tests, the Traditional Chinese translation check; not run
   for changes the app cannot see: docs, the
