@@ -287,6 +287,9 @@ final class RollingStockEconomicsTests: XCTestCase {
         XCTAssertTrue(world.rollingStockEconomics)
         XCTAssertEqual(world.trains.map(\.name), ["Kept"])
         XCTAssertEqual(world.train(id: kept.id)?.type, .l)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), data)
+        // Saved again by a later build: the same bytes with its version.
+        let current = Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 49,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), current)
     }
 }
