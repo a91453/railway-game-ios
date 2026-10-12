@@ -101,12 +101,9 @@ public enum RealWorldDemo {
         // Decision 169: nor do its dwells lengthen in a crowd (its
         // challenge's targets were measured without).
         world.setDoorCrowding(false)
-<<<<<<< HEAD
+        world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
-=======
-        world.setFlexDispatch(false)
->>>>>>> origin/main
         do throws(GameError) {
             try layout.build(in: &world, language: language)
         } catch {

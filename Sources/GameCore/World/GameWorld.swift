@@ -102,17 +102,14 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the app's new games turn it on. Set by
     /// ``setDoorCrowding(_:)`` only.
     public internal(set) var doorCrowding: Bool = false
-<<<<<<< HEAD
-    /// The sights and the tourists they draw (decision 174), or `nil`: off
-    /// in a new world and in saves from before it; the app's new games turn
-    /// it on. Set by ``setTourism(_:)`` and every midnight only.
-    public internal(set) var tourism: Tourism?
-=======
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
     public internal(set) var flexDispatch: Bool = false
->>>>>>> origin/main
+    /// The sights and the tourists they draw (decision 174), or `nil`: off
+    /// in a new world and in saves from before it; the app's new games turn
+    /// it on. Set by ``setTourism(_:)`` and every midnight only.
+    public internal(set) var tourism: Tourism?
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -3765,11 +3762,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-<<<<<<< HEAD
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, tourism, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-=======
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
->>>>>>> origin/main
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, tourism, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3869,11 +3862,8 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
-<<<<<<< HEAD
-        tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
-=======
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
->>>>>>> origin/main
+        tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3991,13 +3981,10 @@ extension GameWorld: Codable {
         if doorCrowding {
             try container.encode(true, forKey: .doorCrowding)
         }
-<<<<<<< HEAD
-        try container.encodeIfPresent(tourism, forKey: .tourism)
-=======
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)
         }
->>>>>>> origin/main
+        try container.encodeIfPresent(tourism, forKey: .tourism)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
         }

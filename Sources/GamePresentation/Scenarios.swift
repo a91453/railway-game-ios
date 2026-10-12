@@ -153,12 +153,9 @@ extension GameWorld {
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
-<<<<<<< HEAD
+        world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
-=======
-        world.setFlexDispatch(false)
->>>>>>> origin/main
         do {
             try world.startScenario(challenge.scenario(seed: eventSeed, in: world.bounds))
         } catch {

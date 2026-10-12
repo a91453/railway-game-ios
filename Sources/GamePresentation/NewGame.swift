@@ -104,7 +104,9 @@ extension GameWorld {
             // Decision 169: a crowded train's doors pass fewer passengers a
             // second, so a full train dwells longer.
             world.setDoorCrowding(true)
-<<<<<<< HEAD
+            // Decision 172: trains are sent out from either end of their
+            // line, and one left elsewhere runs empty to an end.
+            world.setFlexDispatch(true)
             // Decision 174: the sights tourists come to, and what they
             // spend in the shops: Taiwan's own on a real-world map (the ones
             // in its bounds; elsewhere none), a few drawn from the seed on a
@@ -114,11 +116,6 @@ extension GameWorld {
             } else {
                 world.foundAttractions(seed: eventSeed)
             }
-=======
-            // Decision 172: trains are sent out from either end of their
-            // line, and one left elsewhere runs empty to an end.
-            world.setFlexDispatch(true)
->>>>>>> origin/main
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
@@ -230,12 +227,9 @@ public enum DemoWorld {
         // Decision 169: nor do its dwells lengthen in a crowd; the demo's
         // economy is as it was measured.
         world.setDoorCrowding(false)
-<<<<<<< HEAD
+        world.setFlexDispatch(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
-=======
-        world.setFlexDispatch(false)
->>>>>>> origin/main
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

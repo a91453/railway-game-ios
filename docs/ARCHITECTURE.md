@@ -5440,55 +5440,6 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
 
 **測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
-<<<<<<< HEAD
-### 174. 觀光景點與觀光客：第二條需求曲線
-
-2026-10-12。作者睡覺期間由派工 session 交付；作者點名要參考《A 列車：開始吧觀光開發計畫》：把鐵路接到九份、日月潭、阿里山、平溪，週末與連假就會湧進觀光客，形成跟通勤錯開的第二條需求曲線，玩家有明確目標（拉高星等、增加年觀光客）。號碼依工作登記 #231：決策 174、存檔版本 47、golden schema 69（存檔 45、46 與決策 172、173 是同批派工的彈性發車與子公司事業，這個 build 沒有）。
-
-**規則（GameCore，`Passenger/Tourism.swift`，世界開關 `tourism`）**——參考庫沒有觀光規則（OpenWorld 的 `destination-catalog.js` 只列地點），下面都是依 A 列車觀光的星等與設施加成概念自己寫的：
-- **景點** `Attraction {id, name, englishName, point, kind 海岸／山岳／溫泉／城鎮文化, baseStars, souvenir 0–2, yesterday, thisYear, lastYear}`，`GameWorld.tourism` 是它們（沒有景點就是 `nil`）。
-- **星等**以**百分之一星**記（100–500；派工建議十分之一星，但名產店每級 0.25 星要四分之一星，十分之一星表示不了）。有效星等 = 基礎星等 + 名產店每級 25，上限 500。旅館加成這一版不做（旅館只有一種，歸子公司事業；之後用一個小 PR 讓景點附近的飯店提升星等；`Attraction`、`attraction(id:)`、`attractionStation(of:)` 都能查）。
-- **每日潛在觀光客**：1★ 300、2★ 800、3★ 2,000、4★ 4,500、5★ 9,000，星等之間照線性（3.25★ = 2,625）。
-- **係數**（千分之幾）：星期（平日 600、週六 1,600、週日 1,300、國定假日 2,000，假日是決策 154 的 `holiday(onDay:)`）；季節（海岸 6–8 月 1,500、12–2 月 500；山岳 10–11 月 1,300、1–2 月 1,200、7–8 月 800；溫泉 11–2 月 1,400、6–8 月 700；城鎮 1,000；月是遊戲年 360 天的第 1–12 個 30 天）；天氣（雨與雷雨 700，晴天 1,000；決策 162）；颱風（這個景點在進行中的颱風半徑內，整天 0）。
-- **鐵路載得到的比例 200‰**（`Tourism.captureRate`）：派工的 9,000 是潛在的，不是鐵路載的；全收會讓 5★ 的名產店一天賺 $72,000、八天回本，滾雪球失控，所以只有五分之一（5★ 週六 2,880 人，平日 1,080 人）是「鐵路載得到的」。這個數字是平衡的旋鈕（下面量過）。
-- **可達性**：800 m 內（`Land.catchmentRadius` 51,200 單位）要有車站，那站要收旅客、有需求紀錄，而且有一條客運路線停靠並有列車，否則是 `noStation`（「沒有車站」）；那站還要在乘客網路上被至少一個客源連得到，否則是 `noSource`（「沒有客源路線」）；颱風是 `typhoon`。`GameWorld.attractionStatus(of:)`。
-- **客源**：外部連接站（決策 137，每站以 20 萬住宅人口的權重計）加上住宅人口最多的 5 個車站（800 m 內的居民），權重依人口；連得到的客源分當天的觀光客（最大餘數）。去程走「景點到達曲線（`StationDemandKind.scenic`）× 一天的時段形狀」，回程走「景點出發曲線 × 時段形狀」；回程人數等於去程，從景點站回各客源。
-- **接進乘客模型**：觀光客的起訖對加進既有的計畫（`makeDirectPassengerPlan`／`makeNetworkPassengerPlan`、`dailyDemand(from:)`、`hourlyDemand(of:)`）：和平常的起訖是同一對時合併（一個 flow、時段相加），景點站就算自己沒有一般需求也當目的地，也能當回程的起點。他們照付票價、轉乘、佔座位、排進車站的等候（有溢出）；乘客群沒有另外加標記（`StationPassengers` 的結構不動）。觀光客不照分鐘衰減（他們是為了去而去）。計畫鍵（`PassengerPlanKey`）多一欄 `tourism`，`demandDay` 在有觀光時也是今天（每天一個計畫）。
-- **年度計數**：每天午夜（`closeTourismDay`）數昨天「鐵路載得到、連得到客源」的觀光客數（`yesterday`），加進 `thisYear`；360 天一年，年初 `thisYear` 變成 `lastYear`（隔了不止一年就是 0）。這是**計畫的人數，不是實際下車的人數**：派工建議「釋出、往景點站、沒有溢出」，但那要在每個乘客群上加標記（改 `StationPassengers`），這一版不做；溢出與放棄仍在車站的帳裡。
-- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，同一個景點只有一筆紀錄、升級時成本加上去，30 年折舊）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
-- **名稱**：`AttractionKind`（海岸、山岳、溫泉、城鎮文化）。
-- 新命令 `setTourism(_:)`（景點；`nil` 或空是關閉，不收費）、`foundAttractions(seed:)`（空白地圖用）、`investInSouvenirShop(of:)`；錯誤 `tourismNotEnabled`、`unknownAttraction`、`attractionMaxedOut`。
-
-**資料（`AttractionCatalog`，GamePresentation）**：
-- 實景地圖：OpenWorld `destination-catalog.js` 27 列，**清理後 19 處**：離島鐵路到不了的 6 處（s03 澎湖七美、s05 馬祖、s10 蘭嶼、s13 小琉球、s14 綠島、s19 金門水頭）與虛構的 2 處（s22 淡海輕軌「未來」、s24 台北地標・303「原創未來地標」）跳過；補上溫泉 5 處（北投、烏來、礁溪、關子嶺、四重溪）與平溪天燈（十分），共 25 處。類型原本只有海岸／山岳／城鎮，補上溫泉；星等是這個專案訂的（2.5–4.5 星）。
-- 座標：`tools/tourism-spots/build_tourism_spots.py` 用 pyosmium 讀 osmtoday 的 `asia/taiwan.pbf`（2026-10-12 下載），依名稱找 `tourism`／`natural`／`historic`／`leisure`／`place` 物件，取離已知位置 12 km 內品質最高、最近的一個，結果在 `tools/tourism-spots/taiwan_attractions.json`；23 處找到（例如九份老街 `node/4786064121`、日月潭 `area/3858334`），**3 處沒找到而保留已知座標**（`source: approx`：陶朱隱園、礁溪溫泉；淡江大橋的比對只命中一段說明文字，所以也改成 approx）。`AttractionCatalog` 是同一份的 Swift 表（25 列，每個新遊戲都讀，不值得做成資源檔），`AttractionCatalogTests`（`TourismSessionTests.testTheCatalogIsTheToolsFile`）核對兩者一致。ODbL 1.0，記在 `DataSourceCredits` 的 OpenStreetMap 項下（「實景地圖上觀光景點的位置」）。
-- 空白地圖：`foundAttractions(seed:)` 依種子畫 3–5 處（景點彼此至少 3 km）：先在休閒用地（`leisure`）的格上，再在陡坡與水邊的格，不夠就在離邊緣 600 m 外的任意處；種類依所在（水邊海岸、陡坡山岳、休閒用地溫泉或城鎮），名稱從該種類的三個名字裡抽，2 到 4 星。
-- 新遊戲（空白、實景、全台灣、擴建）打開；實景地圖只放落在世界範圍內的（台灣以外沒有）。**舊存檔、教學、挑戰、示範地圖（`DemoWorld`、實景示範、高鐵示範）關閉**，和決策 154、157、169、170 一樣自己決定，它們量過的數字不變。**平溪線劇本**只放平溪天燈一處（十分）：它的運量目標算進觀光客（見下面）。
-
-**介面**：遊戲選單的「觀光景點」打開面板（`TourismPanel`）：今年的觀光客總數，每個景點的星等、種類、車站、狀態旗標、今天／昨天／今年／去年的觀光客與名產店的投資按鈕（價格與效果預覽：星等、今天的觀光客與名產店每天的收入和維護費）；地圖上用新畫的星形圖示（`MapGlyphStar`，照 art-style：單色模板、24 格、實心）畫星等標記（`MapAttractionMarks`，有車站是暖黃、沒有是灰；點了開面板；只在選取工具、地圖上看得到的範圍畫）。站長新增兩種提醒（`StationMasterAdvice` 最後加的兩個案例）：「九份 4★ 沒有車站可到」（5 km 內有車站、但 800 m 內沒有客運車站，最高星等先說）與「連假到了，觀光客約 ×2」（連假三天內開始或已開始，而且有景點有車站）。站長每個遊戲步驟都重算，所以只問便宜的 `attractionStation(of:)`，不建路網圖；「沒有客源路線」只在面板說。
-
-**存檔與 golden**：存檔版本 47（`"tourism"`）；`SaveFixtures/v47-tourism.json`。golden schema 69（`setTourism`、`investInSouvenirShop`、三個新結果、最終狀態的 `tourism`），`GoldenScenarios/tourism.json`，數字由 `tools/golden-checks/tourism.py` 照規則獨立算出。`ReplayState` 只在有景點時多寫景點的行，既有的 replay 不變。
-
-**平衡**：`BalanceReportTests.testAFirstLineWithASight`（`BALANCE_REPORT=60`，Linux debug）：決策 137 之後第一條線（三站、一列四節）旁，最後一站 47 m 外一個 4★ 的城鎮，第 10 天把名產店升到 2 級（$600,000），對照沒有景點的同一條線。有景點時：
-- 觀光客：4★ 加名產店 2 級是 4.5★，潛在 6,750，平日 810 人、週六 2,160、週日 1,755，一週平均約 1,140 人。
-- 車資多 $5,000–$28,000 一天（平日約 $5,500、週六約 $22,000，每位觀光客約 $10）；名產店每天 $6,180（平日）到 $17,000（週六）。第 60 天比沒有景點多 $718,826（第 10 天買店時少 $517,625，第 40 天追平）。
-- 結論：一個 4.5★ 的景點，大約抵得上一個好車站（新遊戲的好車站一天約 $35,000 的車資）：這條本來每天虧約 $38,000 的線（第 22 到 28 天 $1.239M → $1.012M）有了景點之後大致持平（第 40 天到第 58 天在 $0.66M 到 $0.74M 之間），每天多賺約 $22,000 到 $28,000，**不是滾雪球失控**；名產店兩級 $600,000，平均每天約 $9,000，約 65 天回本。
-- 當初的 9,000 全收（沒有 200‰）會讓 5★ 週六 14,400 人、名產店一天 $115,000、五天回本，所以才有 200‰；要調整景點的份量，調 `Tourism.captureRate`。
-- 待觀察（ROADMAP 的表）：實機上景點多、星等高時，觀光客會不會把通勤的列車擠滿（有門的擁擠與溢出會限制它）；名產店兩級是不是太快回本。
-
-**參考庫與外部專案**（CLAUDE.md 的順序）：
-- `OpenWorld/reference_snapshot/play/src/world/destination-catalog.js`：27 個景點（沒有座標、星等）。direct（資料，清理後）：上面。`world/landmark-data.js`、`game/destination-progress.js`、`Railway/city_world_reference/source/assets/sightsData-BtAFTse6.js`：地點與解鎖進度的資料，沒有觀光客的規則；沒有採用（星等與設施加成沒有來源，依 A 列車的概念自己寫）。
-- 外部專案：沒有可用的（OpenTTD、Simutrans、A/B Street 沒有「景點星等與季節」的需求模型）；「nothing usable」，程式是這個專案自己的。A 列車只讀概念（星等、設施加成），不取素材。
-
-**限制**：
-- 觀光客人數是計畫的人數，不是實際下車人數（上面）。
-- 旅館等級、其他設施（餐廳、遊樂設施）這一版沒有；景點的星等只由基礎星等與名產店決定。
-- 觀光客只從外部連接站與最大的五個城鎮來，沒有國際與離島客源。
-- 星等與數字是這個專案訂的（沒有來源），要看實機。
-- 只有景點站所在的路線之外的乘客會被觀光客佔座位，沒有專門的「觀光列車」。
-
-**測試**：`TourismTests`（星等與係數、潛在人數、名產店、直接與網路計畫都等於查詢、年度計數、颱風、存檔來回、帳目與資產）；`TourismSessionTests`（目錄與工具檔一致、新遊戲的景點、量過的世界關閉、面板的列、按鈕、站長兩句話）；golden `tourism.json`；`SaveFixtures/v47-tourism.json`。
-=======
 ### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
 
 2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。
@@ -5539,7 +5490,53 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **測試**：`FlexDispatchTests`（開關關著一切照舊、末站發車、面向相反時折返、末站連續發車、反轉、跑到一半反轉、拆首站、首站前插站、較近的一端、到不了、里程與存檔、一次推進與逐分鐘相同）；決策 134 的既有測試沒有動（預設世界關著），`LineEditingCommandTests`、`RingLineTests`、`RouteEditingSessionTests` 另加開關打開時的反轉測試；`FlexDispatchTextTests`（提示與 FollowBar）；`SavedGameTests` 與 `FlexDispatchTests.testVersionFortyFiveKeepsAnEmptyRun`。
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`、`Simulator/reference_snapshot`、`Railway/site_archive_clean`、`MapBuilder/reference_snapshot` 查過折返、回送、空車、任一端發車：沒有可用的（Ci 的地鐵車在終點彈回，不分班；`Railway/site_archive_clean/rail-3d/physical/dispatch.json` 的 `handoffs`（`matching-timetable-turnaround`）是真實時刻表裡「一班車到站後接下一班」的資料，決策 133 的回送班次用的是同一個想法）。OpenTTD 的 orders 只讀了概念（GPL，沒有複製程式碼）。程式是本專案自己的。
->>>>>>> origin/main
+### 174. 觀光景點與觀光客：第二條需求曲線
+
+2026-10-12。作者睡覺期間由派工 session 交付；作者點名要參考《A 列車：開始吧觀光開發計畫》：把鐵路接到九份、日月潭、阿里山、平溪，週末與連假就會湧進觀光客，形成跟通勤錯開的第二條需求曲線，玩家有明確目標（拉高星等、增加年觀光客）。號碼依工作登記 #231：決策 174、存檔版本 47、golden schema 69（存檔 45、46 與決策 172、173 是同批派工的彈性發車與子公司事業，這個 build 沒有）。
+
+**規則（GameCore，`Passenger/Tourism.swift`，世界開關 `tourism`）**——參考庫沒有觀光規則（OpenWorld 的 `destination-catalog.js` 只列地點），下面都是依 A 列車觀光的星等與設施加成概念自己寫的：
+- **景點** `Attraction {id, name, englishName, point, kind 海岸／山岳／溫泉／城鎮文化, baseStars, souvenir 0–2, yesterday, thisYear, lastYear}`，`GameWorld.tourism` 是它們（沒有景點就是 `nil`）。
+- **星等**以**百分之一星**記（100–500；派工建議十分之一星，但名產店每級 0.25 星要四分之一星，十分之一星表示不了）。有效星等 = 基礎星等 + 名產店每級 25，上限 500。旅館加成這一版不做（旅館只有一種，歸子公司事業；之後用一個小 PR 讓景點附近的飯店提升星等；`Attraction`、`attraction(id:)`、`attractionStation(of:)` 都能查）。
+- **每日潛在觀光客**：1★ 300、2★ 800、3★ 2,000、4★ 4,500、5★ 9,000，星等之間照線性（3.25★ = 2,625）。
+- **係數**（千分之幾）：星期（平日 600、週六 1,600、週日 1,300、國定假日 2,000，假日是決策 154 的 `holiday(onDay:)`）；季節（海岸 6–8 月 1,500、12–2 月 500；山岳 10–11 月 1,300、1–2 月 1,200、7–8 月 800；溫泉 11–2 月 1,400、6–8 月 700；城鎮 1,000；月是遊戲年 360 天的第 1–12 個 30 天）；天氣（雨與雷雨 700，晴天 1,000；決策 162）；颱風（這個景點在進行中的颱風半徑內，整天 0）。
+- **鐵路載得到的比例 200‰**（`Tourism.captureRate`）：派工的 9,000 是潛在的，不是鐵路載的；全收會讓 5★ 的名產店一天賺 $72,000、八天回本，滾雪球失控，所以只有五分之一（5★ 週六 2,880 人，平日 1,080 人）是「鐵路載得到的」。這個數字是平衡的旋鈕（下面量過）。
+- **可達性**：800 m 內（`Land.catchmentRadius` 51,200 單位）要有車站，那站要收旅客、有需求紀錄，而且有一條客運路線停靠並有列車，否則是 `noStation`（「沒有車站」）；那站還要在乘客網路上被至少一個客源連得到，否則是 `noSource`（「沒有客源路線」）；颱風是 `typhoon`。`GameWorld.attractionStatus(of:)`。
+- **客源**：外部連接站（決策 137，每站以 20 萬住宅人口的權重計）加上住宅人口最多的 5 個車站（800 m 內的居民），權重依人口；連得到的客源分當天的觀光客（最大餘數）。去程走「景點到達曲線（`StationDemandKind.scenic`）× 一天的時段形狀」，回程走「景點出發曲線 × 時段形狀」；回程人數等於去程，從景點站回各客源。
+- **接進乘客模型**：觀光客的起訖對加進既有的計畫（`makeDirectPassengerPlan`／`makeNetworkPassengerPlan`、`dailyDemand(from:)`、`hourlyDemand(of:)`）：和平常的起訖是同一對時合併（一個 flow、時段相加），景點站就算自己沒有一般需求也當目的地，也能當回程的起點。他們照付票價、轉乘、佔座位、排進車站的等候（有溢出）；乘客群沒有另外加標記（`StationPassengers` 的結構不動）。觀光客不照分鐘衰減（他們是為了去而去）。計畫鍵（`PassengerPlanKey`）多一欄 `tourism`，`demandDay` 在有觀光時也是今天（每天一個計畫）。
+- **年度計數**：每天午夜（`closeTourismDay`）數昨天「鐵路載得到、連得到客源」的觀光客數（`yesterday`），加進 `thisYear`；360 天一年，年初 `thisYear` 變成 `lastYear`（隔了不止一年就是 0）。這是**計畫的人數，不是實際下車的人數**：派工建議「釋出、往景點站、沒有溢出」，但那要在每個乘客群上加標記（改 `StationPassengers`），這一版不做；溢出與放棄仍在車站的帳裡。
+- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，同一個景點只有一筆紀錄、升級時成本加上去，30 年折舊）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
+- **名稱**：`AttractionKind`（海岸、山岳、溫泉、城鎮文化）。
+- 新命令 `setTourism(_:)`（景點；`nil` 或空是關閉，不收費）、`foundAttractions(seed:)`（空白地圖用）、`investInSouvenirShop(of:)`；錯誤 `tourismNotEnabled`、`unknownAttraction`、`attractionMaxedOut`。
+
+**資料（`AttractionCatalog`，GamePresentation）**：
+- 實景地圖：OpenWorld `destination-catalog.js` 27 列，**清理後 19 處**：離島鐵路到不了的 6 處（s03 澎湖七美、s05 馬祖、s10 蘭嶼、s13 小琉球、s14 綠島、s19 金門水頭）與虛構的 2 處（s22 淡海輕軌「未來」、s24 台北地標・303「原創未來地標」）跳過；補上溫泉 5 處（北投、烏來、礁溪、關子嶺、四重溪）與平溪天燈（十分），共 25 處。類型原本只有海岸／山岳／城鎮，補上溫泉；星等是這個專案訂的（2.5–4.5 星）。
+- 座標：`tools/tourism-spots/build_tourism_spots.py` 用 pyosmium 讀 osmtoday 的 `asia/taiwan.pbf`（2026-10-12 下載），依名稱找 `tourism`／`natural`／`historic`／`leisure`／`place` 物件，取離已知位置 12 km 內品質最高、最近的一個，結果在 `tools/tourism-spots/taiwan_attractions.json`；23 處找到（例如九份老街 `node/4786064121`、日月潭 `area/3858334`），**3 處沒找到而保留已知座標**（`source: approx`：陶朱隱園、礁溪溫泉；淡江大橋的比對只命中一段說明文字，所以也改成 approx）。`AttractionCatalog` 是同一份的 Swift 表（25 列，每個新遊戲都讀，不值得做成資源檔），`AttractionCatalogTests`（`TourismSessionTests.testTheCatalogIsTheToolsFile`）核對兩者一致。ODbL 1.0，記在 `DataSourceCredits` 的 OpenStreetMap 項下（「實景地圖上觀光景點的位置」）。
+- 空白地圖：`foundAttractions(seed:)` 依種子畫 3–5 處（景點彼此至少 3 km）：先在休閒用地（`leisure`）的格上，再在陡坡與水邊的格，不夠就在離邊緣 600 m 外的任意處；種類依所在（水邊海岸、陡坡山岳、休閒用地溫泉或城鎮），名稱從該種類的三個名字裡抽，2 到 4 星。
+- 新遊戲（空白、實景、全台灣、擴建）打開；實景地圖只放落在世界範圍內的（台灣以外沒有）。**舊存檔、教學、挑戰、示範地圖（`DemoWorld`、實景示範、高鐵示範）關閉**，和決策 154、157、169、170 一樣自己決定，它們量過的數字不變。**平溪線劇本**只放平溪天燈一處（十分）：它的運量目標算進觀光客（見下面）。
+
+**介面**：遊戲選單的「觀光景點」打開面板（`TourismPanel`）：今年的觀光客總數，每個景點的星等、種類、車站、狀態旗標、今天／昨天／今年／去年的觀光客與名產店的投資按鈕（價格與效果預覽：星等、今天的觀光客與名產店每天的收入和維護費）；地圖上用新畫的星形圖示（`MapGlyphStar`，照 art-style：單色模板、24 格、實心）畫星等標記（`MapAttractionMarks`，有車站是暖黃、沒有是灰；點了開面板；只在選取工具、地圖上看得到的範圍畫）。站長新增兩種提醒（`StationMasterAdvice` 最後加的兩個案例）：「九份 4★ 沒有車站可到」（5 km 內有車站、但 800 m 內沒有客運車站，最高星等先說）與「連假到了，觀光客約 ×2」（連假三天內開始或已開始，而且有景點有車站）。站長每個遊戲步驟都重算，所以只問便宜的 `attractionStation(of:)`，不建路網圖；「沒有客源路線」只在面板說。
+
+**存檔與 golden**：存檔版本 47（`"tourism"`）；`SaveFixtures/v47-tourism.json`。golden schema 69（`setTourism`、`investInSouvenirShop`、三個新結果、最終狀態的 `tourism`），`GoldenScenarios/tourism.json`，數字由 `tools/golden-checks/tourism.py` 照規則獨立算出。`ReplayState` 只在有景點時多寫景點的行，既有的 replay 不變。
+
+**平衡**：`BalanceReportTests.testAFirstLineWithASight`（`BALANCE_REPORT=60`，Linux debug）：決策 137 之後第一條線（三站、一列四節）旁，最後一站 47 m 外一個 4★ 的城鎮，第 10 天把名產店升到 2 級（$600,000），對照沒有景點的同一條線。有景點時：
+- 觀光客：4★ 加名產店 2 級是 4.5★，潛在 6,750，平日 810 人、週六 2,160、週日 1,755，一週平均約 1,140 人。
+- 車資多 $5,000–$28,000 一天（平日約 $5,500、週六約 $22,000，每位觀光客約 $10）；名產店每天 $6,180（平日）到 $17,000（週六）。第 60 天比沒有景點多 $718,826（第 10 天買店時少 $517,625，第 40 天追平）。
+- 結論：一個 4.5★ 的景點，大約抵得上一個好車站（新遊戲的好車站一天約 $35,000 的車資）：這條本來每天虧約 $38,000 的線（第 22 到 28 天 $1.239M → $1.012M）有了景點之後大致持平（第 40 天到第 58 天在 $0.66M 到 $0.74M 之間），每天多賺約 $22,000 到 $28,000，**不是滾雪球失控**；名產店兩級 $600,000，平均每天約 $9,000，約 65 天回本。
+- 當初的 9,000 全收（沒有 200‰）會讓 5★ 週六 14,400 人、名產店一天 $115,000、五天回本，所以才有 200‰；要調整景點的份量，調 `Tourism.captureRate`。
+- 待觀察（ROADMAP 的表）：實機上景點多、星等高時，觀光客會不會把通勤的列車擠滿（有門的擁擠與溢出會限制它）；名產店兩級是不是太快回本。
+
+**參考庫與外部專案**（CLAUDE.md 的順序）：
+- `OpenWorld/reference_snapshot/play/src/world/destination-catalog.js`：27 個景點（沒有座標、星等）。direct（資料，清理後）：上面。`world/landmark-data.js`、`game/destination-progress.js`、`Railway/city_world_reference/source/assets/sightsData-BtAFTse6.js`：地點與解鎖進度的資料，沒有觀光客的規則；沒有採用（星等與設施加成沒有來源，依 A 列車的概念自己寫）。
+- 外部專案：沒有可用的（OpenTTD、Simutrans、A/B Street 沒有「景點星等與季節」的需求模型）；「nothing usable」，程式是這個專案自己的。A 列車只讀概念（星等、設施加成），不取素材。
+
+**限制**：
+- 觀光客人數是計畫的人數，不是實際下車人數（上面）。
+- 旅館等級、其他設施（餐廳、遊樂設施）這一版沒有；景點的星等只由基礎星等與名產店決定。
+- 觀光客只從外部連接站與最大的五個城鎮來，沒有國際與離島客源。
+- 星等與數字是這個專案訂的（沒有來源），要看實機。
+- 只有景點站所在的路線之外的乘客會被觀光客佔座位，沒有專門的「觀光列車」。
+
+**測試**：`TourismTests`（星等與係數、潛在人數、名產店、直接與網路計畫都等於查詢、年度計數、颱風、存檔來回、帳目與資產）；`TourismSessionTests`（目錄與工具檔一致、新遊戲的景點、量過的世界關閉、面板的列、按鈕、站長兩句話）；golden `tourism.json`；`SaveFixtures/v47-tourism.json`。
 
 ## 目前規則摘要
 
