@@ -30,6 +30,47 @@ final class BalanceReportTests: XCTestCase {
         try play(&world, days: days, title: "A line between two towns")
     }
 
+    /// Release check before a build is shipped: a new game with every
+    /// switch on (door crowding, flexible dispatch, line accounts, rolling-
+    /// stock economics, tourism, ...) and two lines, played `BALANCE_REPORT`
+    /// days. Every day the lines' records must add up to the company's
+    /// books, the world must save and load back equal every 30 days, and
+    /// nothing may run negative; a row per 30 days is printed.
+    func testAYearWithEverySwitchOn() throws {
+        let days = try requestedDays()
+        let bounds = GameWorld.newGameBounds
+        let towns = Land.townCentres(seed: 1, in: bounds)
+        let first = towns[0], second = towns[1]
+        let edgeX = second.x > first.x ? 40_000 : bounds.width - 40_000
+        let edge = PlanPoint(x: edgeX, y: first.y + (first.y - second.y) * (edgeX - first.x) / (first.x - second.x))
+        var world = try newGameLine(through: [first, second])
+        let shifted = PlanPoint(x: first.x, y: first.y + 6_144)
+        world = try newGameLine(through: [shifted, PlanPoint(x: edge.x, y: edge.y + 6_144)], in: world)
+        XCTAssertEqual(world.lines.count, 2)
+        let encoder = JSONEncoder()
+        var rows = ["| Day | Balance | Fares | Operating profit | Tourism and shops | Lines' fares | Lines' costs | Trains | Sights |", "| --: | --: | --: | --: | --: | --: | --: | --: | --: |"]
+        try world.advance(ticks: 1)
+        var lowest = world.economy.balance.amount
+        for day in 1...days {
+            try world.advance(ticks: 1_440)
+            let report = world.financeReport(.day).previous
+            let tallies = world.lines.compactMap { world.lineYesterday($0.id) }
+            let lineFares = tallies.reduce(Int64(0)) { $0 + $1.fareRevenue.amount }
+            let lineCosts = tallies.reduce(Int64(0)) { $0 + $1.totalCost.amount }
+            XCTAssertEqual(lineFares, report.fareRevenue.amount, "day \(day): the lines' fares are the company's")
+            XCTAssertEqual(lineCosts, report.totalCost.amount, "day \(day): the lines' costs are the company's")
+            XCTAssertGreaterThanOrEqual(report.fareRevenue.amount, 0)
+            lowest = min(lowest, world.economy.balance.amount)
+            if day % 30 == 0 || day == days {
+                let data = try encoder.encode(world)
+                XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world, "day \(day): the world loads back equal")
+                rows.append("| \(day) | \(dollars(world.economy.balance.amount)) | \(dollars(report.fareRevenue.amount)) | \(dollars(report.operatingProfit.amount)) | "
+                    + "\(dollars(report.propertyRevenue.amount - report.propertyCost.amount)) | \(dollars(lineFares)) | \(dollars(lineCosts)) | \(world.trains.count) | \(world.tourism?.attractions.count ?? 0) |")
+            }
+        }
+        print("### A year with every switch on (lowest balance \(dollars(lowest)))\n" + rows.joined(separator: "\n"))
+    }
+
     /// The first line with the company's buildings (decision 130): once the
     /// line has paid for itself, on day 30, two office blocks by its middle
     /// station: A beside it, buying out the city's D4 buildings in its
