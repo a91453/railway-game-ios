@@ -6020,6 +6020,13 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：查過「讀不了的存檔整列 `.disabled` 會連帶拿掉滑動刪除」的疑慮，在 iOS 26.5 Simulator 上不成立（停用的列仍可滑動刪除，run 38262744959），不改；加了回歸測試 `StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`，用 Debug 才有的啟動參數 `-broken-save` 放一個讀不了的存檔。
 
+**之後的修正（原生選單被 tick 重建，TestFlight 54.1，2026-10-12）**：玩家回報「回主畫面點不到，只能砍掉重啟」與「多列車選單無法滑動、字有兩層殘影」。遊戲在跑時 `GameSession` 每 100 ms 換掉整個 `world`，讀 `session.world` 的 view 每個 tick 重算，打開中的原生 `Menu` 內容跟著重建：捲動位置跳回頂端、列交叉淡入淡出（殘影），點擊也可能被吃掉。UI 測試開選單前都先暫停，所以沒測到。
+- 選單改成**只看自己顯示什麼的 `Equatable` view**（和 `MapCanvas` 同一個做法，`.equatable()`），body 不讀 `session.world`，`session` 只在按鈕的動作裡用：遊戲選單 `GameMenu`（只拿「有沒有目標」「有沒有觀光」與語言）、速度選單 `SpeedMenu`（速度、是否暫停）、列車選單 `TrainPickerMenu`、路線每站的選單 `StopMenu` 與「加站」`AddStopMenu`、車站的「設為轉乘」`TransferLinkMenu`。列車與車站的選項是 GamePresentation 的 `MenuChoice`（只有 ID 與名稱；`GameSession.trainMenuChoices`、`stationMenuChoices`、`transferMenuChoices(for:)`），`MenuChoicesTests` 驗證 tick 前後相等。
+- 「匯出存檔」不再在選單的 body 裡建出整個要存的世界（以前每個 tick 一次）：`ExportedSave` 拿 session，分享時才取 `worldToSave`。
+- 「回到開始畫面」從最後一列移到第一個區塊（「儲存遊戲」「另存或匯出」之後）：矮的手機或字級較大時最後一列會被擠出畫面。仍是六列，其他項目順序不變。自動存檔失敗時照舊留在遊戲、狀態列顯示原因。
+- 其他原生選單（車種、運轉方式、車隊總覽、時刻表、路線的班次與停站方式、車站的月台軌道等）的內容較短，這次沒改，仍會隨 tick 重建；之後若有回報照同一做法處理。
+- UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`（示範地圖，600×）、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（空白新遊戲，XXXL 字級；加進 PR 閘門）、`testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns`（15 列車，選單打開 3 秒不動、選得到另一列）。XCTest 捲不動原生選單（按住拖曳是滑過選取、swipe 會關掉選單，暫停時也一樣），捲到最後一列只能在實機確認。
+
 ### 185. PR 的 Linux CI 依改動分層
 
 2026-10-12。作者同意改掉「每個 PR 都跑全部測試（campaign 不縮）」的規則（派工 session_017he2Q1QSeaBKJD1PR3XMma）。號碼依工作登記 #231：決策 185；存檔版本、golden schema 不動。

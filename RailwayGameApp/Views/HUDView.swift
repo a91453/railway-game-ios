@@ -77,126 +77,22 @@ struct HUDView: View {
         }
     }
 
-    /// Saving, exporting the game as a file, the tutorial, the settings
-    /// (music and sound effects), and going back to the start screen,
-    /// which autosaves first.
+    /// The game menu, built from what it shows rather than from the world,
+    /// so the ticks of a running game leave it alone while it is open.
     private var gameMenu: some View {
-        Menu {
-            Button {
-                UITestTrace.action("menu.saveGame")
-                launcher.saveCurrentGame()
-            } label: {
-                Label("Save Game", systemImage: "square.and.arrow.down")
+        GameMenu(
+            session: session,
+            launcher: launcher,
+            screen: screen,
+            showsGoals: session.world.scenario != nil || session.world.hasCityRequests,
+            showsTourism: session.world.hasTourism,
+            language: session.language,
+            askSaveName: {
+                saveName = ""
+                namingSave = true
             }
-            .accessibilityIdentifier("menu.saveGame")
-            // Decision 184: a save with a name of the player's, beside the
-            // export in one row, so the menu keeps its length: on a phone
-            // on its side a longer menu put Back to Start out of reach.
-            Menu {
-                Button {
-                    saveName = ""
-                    namingSave = true
-                } label: {
-                    Label {
-                        Text(verbatim: session.language.text("Save As…", "另存新檔…"))
-                    } icon: {
-                        Image(systemName: "square.and.pencil")
-                    }
-                }
-                .accessibilityIdentifier("menu.saveGameAs")
-                ShareLink(item: ExportedSave(world: session.worldToSave), preview: SharePreview(Text("Along the Line save"))) {
-                    Label("Export Save", systemImage: "square.and.arrow.up")
-                }
-            } label: {
-                Label {
-                    Text(verbatim: session.language.text("Save As or Export", "另存或匯出"))
-                } icon: {
-                    Image(systemName: "square.and.pencil")
-                }
-            }
-            .accessibilityIdentifier("menu.saveOptions")
-            Divider()
-            Button {
-                session.startTutorial()
-            } label: {
-                Label("Tutorial", systemImage: "hand.point.up.left")
-            }
-            .accessibilityIdentifier("menu.tutorial")
-            // The panels opened less often, in one row whatever the game
-            // has: on a phone on its side the menu shows about six rows,
-            // and the goals (decisions 86 and 183) and the sights (decision
-            // 174) pushed Back to Start out of reach.
-            Menu {
-                // Decision 86: a game with a challenge shows its goals;
-                // decision 183: and one with the city's requests.
-                if session.world.scenario != nil || session.world.hasCityRequests {
-                    Button {
-                        screen.panel = .goals
-                    } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Goals", "目標"))
-                        } icon: {
-                            Image(systemName: "flag.checkered")
-                        }
-                    }
-                    .accessibilityIdentifier("menu.goals")
-                }
-                // Decision 174: a game with sights shows them.
-                if session.world.hasTourism {
-                    Button {
-                        screen.panel = .tourism
-                    } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Sights", "觀光景點"))
-                        } icon: {
-                            Image(systemName: "star")
-                        }
-                    }
-                    .accessibilityIdentifier("menu.tourism")
-                }
-                Button {
-                    screen.panel = .help
-                } label: {
-                    Label {
-                        Text(verbatim: session.language.text("Help", "說明"))
-                    } icon: {
-                        Image(systemName: "questionmark.circle")
-                    }
-                }
-                .accessibilityIdentifier("menu.help")
-            } label: {
-                Label {
-                    Text(verbatim: session.language.text("More", "更多"))
-                } icon: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-            .accessibilityIdentifier("menu.more")
-            Divider()
-            Button {
-                screen.panel = .settings
-            } label: {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .accessibilityIdentifier("menu.settings")
-            Divider()
-            Button {
-                launcher.returnToStart()
-            } label: {
-                Label("Back to Start", systemImage: "house")
-            }
-            .accessibilityIdentifier("menu.backToStart")
-        } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.primary)
-                .frame(width: 38, height: 32)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel("Game menu")
-        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
-        .accessibilityIdentifier("hud.menu")
-        .tutorialTarget(.gameMenu)
+        )
+        .equatable()
     }
 
     /// The balance in dollars; it opens the economy panel.
@@ -313,6 +209,158 @@ struct HUDView: View {
     }
 }
 
+/// Saving, exporting the game as a file, going back to the start screen
+/// (which autosaves first), the tutorial, the panels opened less often and
+/// the settings.
+///
+/// The game loop replaces the world every tick, and a native menu whose
+/// contents are drawn again while it is open is rebuilt: it scrolls back
+/// to its top and can drop the tap (TestFlight 54.1: Back to Start could
+/// not be reached). So it is an equatable view of what it shows, and never
+/// reads the world: the export takes the game when it is shared.
+private struct GameMenu: View, Equatable {
+    let session: GameSession
+    let launcher: GameLauncher
+    let screen: GameScreenState
+    /// Decision 86: a game with a challenge shows its goals; decision 183:
+    /// and one with the city's requests.
+    let showsGoals: Bool
+    /// Decision 174: a game with sights shows them.
+    let showsTourism: Bool
+    let language: DisplayLanguage
+    /// Asks the name of a save (decision 184), in the HUD's alert.
+    let askSaveName: @MainActor () -> Void
+
+    nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
+        lhs.session === rhs.session
+            && lhs.launcher === rhs.launcher
+            && lhs.screen === rhs.screen
+            && lhs.showsGoals == rhs.showsGoals
+            && lhs.showsTourism == rhs.showsTourism
+            && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        Menu {
+            Button {
+                UITestTrace.action("menu.saveGame")
+                launcher.saveCurrentGame()
+            } label: {
+                Label("Save Game", systemImage: "square.and.arrow.down")
+            }
+            .accessibilityIdentifier("menu.saveGame")
+            // Decision 184: a save with a name of the player's, beside the
+            // export in one row, so the menu keeps its length: on a phone
+            // on its side a longer menu put Back to Start out of reach.
+            Menu {
+                Button {
+                    askSaveName()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Save As…", "另存新檔…"))
+                    } icon: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
+                .accessibilityIdentifier("menu.saveGameAs")
+                ShareLink(item: ExportedSave(session: session), preview: SharePreview(Text("Along the Line save"))) {
+                    Label("Export Save", systemImage: "square.and.arrow.up")
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Save As or Export", "另存或匯出"))
+                } icon: {
+                    Image(systemName: "square.and.pencil")
+                }
+            }
+            .accessibilityIdentifier("menu.saveOptions")
+            // The only way out of the game, in the first section rather
+            // than the last row (TestFlight 54.1): on a short phone, or
+            // with larger text, the last row of six was off the screen.
+            Button {
+                launcher.returnToStart()
+            } label: {
+                Label("Back to Start", systemImage: "house")
+            }
+            .accessibilityIdentifier("menu.backToStart")
+            Divider()
+            Button {
+                session.startTutorial()
+            } label: {
+                Label("Tutorial", systemImage: "hand.point.up.left")
+            }
+            .accessibilityIdentifier("menu.tutorial")
+            // The panels opened less often, in one row whatever the game
+            // has: on a phone on its side the menu shows about six rows,
+            // and the goals (decisions 86 and 183) and the sights (decision
+            // 174) pushed Back to Start out of reach.
+            Menu {
+                // Decision 86: a game with a challenge shows its goals;
+                // decision 183: and one with the city's requests.
+                if showsGoals {
+                    Button {
+                        screen.panel = .goals
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Goals", "目標"))
+                        } icon: {
+                            Image(systemName: "flag.checkered")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.goals")
+                }
+                // Decision 174: a game with sights shows them.
+                if showsTourism {
+                    Button {
+                        screen.panel = .tourism
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Sights", "觀光景點"))
+                        } icon: {
+                            Image(systemName: "star")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.tourism")
+                }
+                Button {
+                    screen.panel = .help
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Help", "說明"))
+                    } icon: {
+                        Image(systemName: "questionmark.circle")
+                    }
+                }
+                .accessibilityIdentifier("menu.help")
+            } label: {
+                Label {
+                    Text(verbatim: language.text("More", "更多"))
+                } icon: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+            .accessibilityIdentifier("menu.more")
+            Divider()
+            Button {
+                screen.panel = .settings
+            } label: {
+                Label("Settings", systemImage: "gearshape")
+            }
+            .accessibilityIdentifier("menu.settings")
+        } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.primary)
+                .frame(width: 38, height: 32)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Game menu")
+        .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
+        .accessibilityIdentifier("hud.menu")
+        .tutorialTarget(.gameMenu)
+    }
+}
+
 /// The next days' holidays, weather, typhoons and energy prices (decision
 /// 175), from GameCore's own queries.
 private struct ForecastView: View {
@@ -373,36 +421,8 @@ private struct SpeedControl: View {
             }
             .buttonStyle(ThemeSelectableButtonStyle(isActive: clock.isPaused))
             .accessibilityLabel(clock.isPaused ? "Resume" : "Pause")
-            Menu {
-                ForEach(GameSpeed.allCases.filter { $0 != .paused }, id: \.self) { speed in
-                    Button {
-                        session.setSpeed(speed)
-                    } label: {
-                        if speed == clock.speed {
-                            Label(speed.label(in: language), systemImage: "checkmark")
-                        } else {
-                            Text(speed.label(in: language))
-                        }
-                    }
-                    .accessibilityLabel(speed.accessibilityName(in: language))
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    if clock.isPaused {
-                        Circle()
-                            .fill(Theme.warning)
-                            .frame(width: 6, height: 6)
-                    }
-                    Text(clock.runningSpeed.label(in: language))
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(Theme.primary)
-                }
-                .padding(.horizontal, 8)
-                .frame(minWidth: 48, minHeight: 32)
-                .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Speed: \(clock.runningSpeed.accessibilityName(in: language))")
-            .accessibilityHint("Chooses how fast game time runs.")
+            SpeedMenu(session: session, speed: clock.speed, runningSpeed: clock.runningSpeed, isPaused: clock.isPaused, language: language)
+                .equatable()
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
@@ -410,14 +430,68 @@ private struct SpeedControl: View {
     }
 }
 
+/// The menu of the speeds, labelled with the one the game runs at. An
+/// equatable view of the speed alone: the clock moves every tick, and an
+/// open native menu drawn again is rebuilt (TestFlight 54.1).
+private struct SpeedMenu: View, Equatable {
+    let session: GameSession
+    let speed: GameSpeed
+    let runningSpeed: GameSpeed
+    let isPaused: Bool
+    let language: DisplayLanguage
+
+    nonisolated static func == (lhs: SpeedMenu, rhs: SpeedMenu) -> Bool {
+        lhs.session === rhs.session
+            && lhs.speed == rhs.speed
+            && lhs.runningSpeed == rhs.runningSpeed
+            && lhs.isPaused == rhs.isPaused
+            && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(GameSpeed.allCases.filter { $0 != .paused }, id: \.self) { candidate in
+                Button {
+                    session.setSpeed(candidate)
+                } label: {
+                    if candidate == speed {
+                        Label(candidate.label(in: language), systemImage: "checkmark")
+                    } else {
+                        Text(candidate.label(in: language))
+                    }
+                }
+                .accessibilityLabel(candidate.accessibilityName(in: language))
+            }
+        } label: {
+            HStack(spacing: 4) {
+                if isPaused {
+                    Circle()
+                        .fill(Theme.warning)
+                        .frame(width: 6, height: 6)
+                }
+                Text(runningSpeed.label(in: language))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+            }
+            .padding(.horizontal, 8)
+            .frame(minWidth: 48, minHeight: 32)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Speed: \(runningSpeed.accessibilityName(in: language))")
+        .accessibilityHint("Chooses how fast game time runs.")
+    }
+}
+
 /// The game as a save file to share (Stage C4, the reference's "导出本地存档"),
-/// written when the player shares it.
+/// written when the player shares it, from the game as it is then: the menu
+/// that offers it does not build the world to save every tick.
 private struct ExportedSave: Transferable {
-    let world: GameWorld
+    let session: GameSession
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .json) { save in
-            SentTransferredFile(try SaveLibrary.exportFile(for: save.world, at: Date()))
+            let world = await save.session.worldToSave
+            return SentTransferredFile(try SaveLibrary.exportFile(for: world, at: Date()))
         }
     }
 }

@@ -235,22 +235,10 @@ struct StationPanel: View {
                 }
                 .accessibilityIdentifier("station.transferGroup")
             }
-            Menu {
-                ForEach(session.world.transferCandidates(for: station.id)) { candidate in
-                    Button {
-                        session.linkSelectedStationForTransfer(with: candidate.id)
-                    } label: {
-                        Text(verbatim: "\(candidate.name) · \(NetworkBuilding.lengthText(session.world.distanceUnits(between: station.id, and: candidate.id) ?? 0, in: language))")
-                    }
-                }
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Link for Transfers", "設為轉乘"))
-                } icon: {
-                    Image(systemName: "link")
-                }
-            }
-            .accessibilityIdentifier("station.linkTransfer")
+            // TestFlight 54.1: built from the stations' names alone, so a
+            // running game's ticks leave the open menu alone.
+            TransferLinkMenu(session: session, choices: session.transferMenuChoices(for: station.id), language: language)
+                .equatable()
             if group != nil {
                 Button(role: .destructive) {
                     session.unlinkSelectedStationTransfer()
@@ -928,5 +916,38 @@ extension StationDemandKind {
         case .scenic: "mountain.2.fill"
         case .civic: "graduationcap.fill"
         }
+    }
+}
+
+/// The menu of the nearest stations to link a station with for transfers
+/// (decision 81), each with how far away it is. An equatable view of what
+/// it lists: the game loop replaces the world every tick, and an open
+/// native menu drawn again is rebuilt, back to its top (TestFlight 54.1).
+private struct TransferLinkMenu: View, Equatable {
+    let session: GameSession
+    let choices: [MenuChoice<StationID>]
+    let language: DisplayLanguage
+
+    nonisolated static func == (lhs: TransferLinkMenu, rhs: TransferLinkMenu) -> Bool {
+        lhs.session === rhs.session && lhs.choices == rhs.choices && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(choices) { candidate in
+                Button {
+                    session.linkSelectedStationForTransfer(with: candidate.id)
+                } label: {
+                    Text(verbatim: candidate.title)
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: language.text("Link for Transfers", "設為轉乘"))
+            } icon: {
+                Image(systemName: "link")
+            }
+        }
+        .accessibilityIdentifier("station.linkTransfer")
     }
 }

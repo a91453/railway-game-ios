@@ -203,6 +203,106 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(row.waitForNonExistence(timeout: 10), "The unreadable save is gone from the list")
     }
 
+    /// TestFlight 54.1: Back to Start could not be touched, so leaving a
+    /// game meant killing the app. The game loop replaced the world every
+    /// tick and the open menu was rebuilt each time, and Back to Start was
+    /// its last row. Here the clock runs (the demo's 600 times real time,
+    /// its trains moving) while the menu is open.
+    func testBackToStartWorksWhileTheClockRuns() {
+        checkBackToStartWhileTheClockRuns(arguments: [], demo: true)
+    }
+
+    /// The same with the largest text short of the accessibility sizes,
+    /// where the menu's rows are tallest. A blank new game, whose clock runs
+    /// too: with this text the Demo Map button is below the start screen's
+    /// fold, where XCTest could not tell whether it can be touched.
+    func testBackToStartWorksWithLargeTextWhileTheClockRuns() {
+        checkBackToStartWhileTheClockRuns(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"], demo: false)
+    }
+
+    /// TestFlight 54.1: with many trains and the clock running, the train
+    /// menu could not be scrolled (each tick took it back to its top) and
+    /// showed two layers of text. Fifteen trains, more than the menu shows
+    /// at once on a phone on its side: with the clock running the open
+    /// menu stays as it opened, and a row other than the selected train's
+    /// can be chosen. XCTest cannot scroll a native menu (a press and drag
+    /// chooses the row under the finger, a swipe closes the menu, paused or
+    /// not: runs 38285634450 and 38287892415), so scrolling to the last row
+    /// is left to a device.
+    func testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        // A blank new game: $3,000,000, enough for fifteen trains.
+        requiredButton("start.newGame", in: app).tap()
+        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
+        requiredButton("dock.build", in: app).tap()
+        requiredButton("tool.train", in: app).tap()
+        let buy = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train"))
+        for _ in 0..<15 {
+            requiredButton(buy, name: "Buy").tap()
+        }
+        let picker = app.buttons.matching(identifier: "train.picker")
+        XCTAssertTrue(picker.firstMatch.waitForExistence(timeout: 10), "Missing the train menu")
+        waitForLabel("Train: Train 15", of: picker.firstMatch)
+        XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
+
+        requiredButton("train.picker", in: app).tap()
+        // The menu's rows ("Train 3"), not the picker ("Train: …") or the
+        // train tool.
+        let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
+        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
+        Thread.sleep(forTimeInterval: 1)
+        func visibleRows() -> [String] {
+            menuRows.allElementsBoundByIndex.filter { $0.isHittable }.map { "\($0.label) \($0.frame)" }
+        }
+        let opened = visibleRows()
+        XCTAssertGreaterThan(opened.count, 1, "The train menu shows its rows")
+        // Thirty ticks: the menu must not move, close or change.
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertEqual(visibleRows(), opened, "The open train menu changed by itself while the clock ran")
+        // Choose a row in the middle of those it shows, which is not the
+        // selected train (the lowest, at the menu's faded edge, took no tap
+        // in run 38289773400).
+        let touchable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
+        let row = touchable[touchable.count / 2]
+        let name = row.label
+        XCTAssertNotEqual(name, "Train 15")
+        touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
+        waitForLabel("Train: \(name)", of: picker.firstMatch)
+    }
+
+    private func checkBackToStartWhileTheClockRuns(arguments: [String], demo: Bool) {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"] + arguments
+        app.launch()
+        defer { app.terminate() }
+
+        if demo {
+            requiredButton("start.demoMap", in: app).tap()
+            requiredButton("demo.simple", in: app).tap()
+        } else {
+            requiredButton("start.newGame", in: app).tap()
+        }
+        assertGame(in: app)
+        // Not paused: the point is the running clock.
+        XCTAssertTrue(app.buttons["Pause"].exists, "The game's clock must be running")
+
+        openGameMenu(in: app)
+        tapMenuAction("menu.backToStart", in: app)
+        _ = requiredButton("start.newGame", in: app)
+        _ = requiredButton("start.continue", in: app)
+    }
+
+    private func waitForLabel(_ label: String, of element: XCUIElement) {
+        let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
+        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: 10), .completed, "Expected \(label), found \(element.label)")
+    }
+
     private func assertEmptyStart(in app: XCUIApplication) {
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.demoMap", in: app)
@@ -231,7 +331,12 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func tapMenuAction(_ identifier: String, in app: XCUIApplication) {
-        let button = requiredButton(identifier, in: app)
+        touchMenuRow(requiredButton(identifier, in: app), closing: app.buttons.matching(identifier: identifier), in: app, name: identifier)
+    }
+
+    /// Touches the menu row `button`; `query` finds its copies, whose
+    /// staying on screen means the action did not run.
+    private func touchMenuRow(_ button: XCUIElement, closing query: XCUIElementQuery, in app: XCUIApplication, name identifier: String) {
         // XCTest can report a native SwiftUI Menu action as hittable yet
         // fail to compute its activation point when tap() refreshes the
         // tree. Touch the visible frame's center, keeping the hittable and
@@ -248,7 +353,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // (run 37196737286: the menu stayed open and the map behind it was
         // never hittable). The menu closes when the action runs, so touch
         // it once more only while it is still open.
-        if !menuCloses(app.buttons.matching(identifier: identifier), timeout: 10) {
+        if !menuCloses(query, timeout: 10) {
             point.tap()
         }
     }
