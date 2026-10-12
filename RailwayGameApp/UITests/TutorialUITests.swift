@@ -181,7 +181,8 @@ final class TutorialUITests: XCTestCase {
     /// Decision 188 (full lane and iPad, not the gate): the lines panel
     /// scrolls Create Line, and then Buy … and Start Service, into view for
     /// their steps, clear of the card; Done closes the panel and leaves the
-    /// fares to wait for.
+    /// fares to wait for. The card the player folds stays folded through the
+    /// service chapter's steps.
     func testCreateLineAndBuyAreInReach() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -207,15 +208,56 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(buy.waitForExistence(timeout: 10), "No Buy … and Start Service")
         XCTAssertTrue(waitForHittable(buy), "Buy … and Start Service was not scrolled into view")
         waitForStep(app, title: "Tap Buy … and Start Service")
+        // Folded by the player, the card stays folded for the rest of the
+        // chapter (TestFlight 54.1: it had to be folded on every step). One
+        // that folded itself, to leave the panel free, is not the player's.
+        var foldedByPlayer = false
         if card.exists {
             XCTAssertFalse(card.frame.intersects(buy.frame), "The tutorial card covers Buy … and Start Service")
+            app.buttons["tutorial.fold"].tap()
+            XCTAssertTrue(folded.waitForExistence(timeout: 10), "The card did not fold")
+            foldedByPlayer = true
         }
+        XCTAssertTrue(waitForHittable(buy), "The folded card covers Buy … and Start Service")
         buy.tap()
 
         waitForStep(app, title: "Tap Done to stop building")
+        if foldedByPlayer {
+            XCTAssertFalse(card.exists, "The card opened again within its chapter")
+        }
         XCTAssertTrue(app.buttons["line.draft.pick"].waitForNonExistence(timeout: 10), "The lines panel stayed open")
         selectTool(app, "tool.select")
         waitForStep(app, title: "Wait for your first fares")
+        if foldedByPlayer {
+            XCTAssertFalse(card.exists, "The card opened again within its chapter")
+            XCTAssertTrue(folded.exists)
+        }
+    }
+
+    /// TestFlight 55.1: a data layer left on from the last game (the
+    /// demand change, its legend at the trailing side) stood where the
+    /// tutorial's steps are. The game opens with the layer on, and starting
+    /// the tutorial from the game menu takes it away.
+    func testTheTutorialStartsWithoutADataLayer() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let legend = app.descendants(matching: .any).matching(identifier: "map.populationLegend").firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 15), "The demand change layer was not on before the tutorial")
+
+        // Pause through the real HUD, as checkNavigation, so a running clock
+        // does not rebuild the menu while XCTest targets it.
+        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))).tap()
+        app.buttons["Game menu"].tap()
+        hittableButton(app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "menu.tutorial", "Tutorial"))).tap()
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        XCTAssertTrue(waitForCard(card, or: app.buttons["tutorial.unfold"]), "The tutorial did not start")
+        XCTAssertTrue(legend.waitForNonExistence(timeout: 10), "The data layer is still on in the tutorial")
     }
 
     /// Waits up to 10 seconds for `element` to be hittable.

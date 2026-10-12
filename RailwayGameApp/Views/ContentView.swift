@@ -352,7 +352,9 @@ struct ContentView: View {
             // The tutorial outlines, and keeps free, the part of the map that
             // shows: not what the pill, the dock or the card float over.
             .overlay {
-                MapTutorialTarget()
+                MapTutorialTarget(
+                    attributionHeight: RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
+                )
             }
             // The status banner is at the top of the map view, above its
             // construction HUD and traffic key.
@@ -361,8 +363,15 @@ struct ContentView: View {
 
 /// The part of the map the screen's own controls do not float over
 /// (``EnvironmentValues/mapInsets``), nor the screen's edges hide
-/// (``EnvironmentValues/mapSafeArea``), marked as the tutorial's map.
+/// (``EnvironmentValues/mapSafeArea``), nor a real-world map's credits
+/// take (`attributionHeight`, the strip the dock stands on), marked as the
+/// tutorial's map.
 private struct MapTutorialTarget: View {
+    /// The real-world map's strip along the bottom
+    /// (``AppleMapBackground/attributionHeight``), 0 on a blank map: the map
+    /// view leaves it clear too. Without it the outline reached into the
+    /// dock's Lines and Data buttons (TestFlight 54.1).
+    let attributionHeight: CGFloat
     @Environment(\.mapInsets) private var insets
     @Environment(\.mapSafeArea) private var safeArea
 
@@ -372,7 +381,7 @@ private struct MapTutorialTarget: View {
         // the map under the details card as free (decision 106).
         Color.clear
             .tutorialTarget(.map)
-            .padding(insets.adding(safeArea))
+            .padding(insets.adding(safeArea).adding(EdgeInsets(top: 0, leading: 0, bottom: attributionHeight, trailing: 0)))
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

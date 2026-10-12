@@ -43,6 +43,21 @@ final class TutorialCardPlacementTests: XCTestCase {
     private static let zoomBesidePanel = Frame(x: 252, y: 234, width: 89, height: 43)
     private static let mapBesidePanel = Frame(x: 81, y: 59, width: 284, height: 243)
 
+    // The map steps on a phone with the details card folded (decision 188),
+    // from the accessibility tree of a UI test run (38259103200) on that
+    // phone: the map to the trailing edge, the zoom buttons down beside the
+    // dock, the Map Layers button and the dock.
+    private static let mapAlone = Frame(x: 82, y: 60, width: 668, height: 242)
+    private static let zoomAlone = Frame(x: 637.7, y: 314, width: 88.3, height: 44)
+    private static let layers = Frame(x: 94, y: 246, width: 44, height: 44)
+    private static let dock = [
+        Frame(x: 21, y: 313, width: 48, height: 48),
+        Frame(x: 83, y: 313, width: 48, height: 48),
+        Frame(x: 137, y: 313, width: 48, height: 48),
+    ]
+    /// The middle of the screen, where the map opens on the town to build in.
+    private static let screenCentre = Frame(x: 365, y: 191, width: 20, height: 20)
+
     /// The line step's card as the device laid it out: 278 points tall at
     /// 340 wide, its explanation four lines of about 20 points. Narrower,
     /// it wraps to more lines; offered less height than it needs, its
@@ -169,6 +184,30 @@ final class TutorialCardPlacementTests: XCTestCase {
                 XCTAssertFalse(shown.intersects(tool), "text \(scale)×: card \(shown) covers \(tool)")
             }
             XCTAssertTrue(placement.leavesStepFree(shown), "text \(scale)×: card \(shown)")
+        }
+    }
+
+    /// A step that has the player tap the map, on a phone with the details
+    /// card folded (TestFlight 54.1: the card covered the middle of the
+    /// map, where the town is): the card goes to the map's top trailing
+    /// corner, clear of the middle of the screen, the HUD, the dock and the
+    /// zoom buttons, at the heights the map steps' cards take (a title, a
+    /// line or two, the buttons, and a hint or "Skip this step").
+    func testAMapStepLeavesTheMiddleOfAPhonesMapFree() {
+        for height in [150.0, 190, 218] {
+            let card = { (proposal: Size) in Size(width: proposal.width, height: min(height, proposal.height)) }
+            let controls = Self.hud + Self.dock + [Self.zoomAlone, Self.layers]
+            let placement = TutorialCardPlacement(
+                target: Self.mapAlone, controls: controls, required: [], map: Self.mapAlone, maxWidth: 320
+            )
+            let shown = placement.frame(in: Self.screen, measure: card)
+            let context = "height \(height): card \(shown)"
+            XCTAssertFalse(shown.intersects(Self.screenCentre), "\(context) covers the middle of the screen")
+            for control in controls {
+                XCTAssertFalse(shown.intersects(control), "\(context) covers \(control)")
+            }
+            XCTAssertTrue(placement.leavesStepFree(shown), context)
+            XCTAssertGreaterThan(shown.midX, Self.mapAlone.midX, "\(context) is at the trailing side")
         }
     }
 
