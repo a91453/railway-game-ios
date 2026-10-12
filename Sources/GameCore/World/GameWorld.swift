@@ -106,6 +106,10 @@ public struct GameWorld: Equatable, Sendable {
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
     public internal(set) var flexDispatch: Bool = false
+    /// Each line's records of its last 30 days, and each station's flow of
+    /// yesterday (decision 179); `nil`, off, in a world from before them. A
+    /// new game turns it on. Set by ``setLineAccounts(_:)`` only.
+    public internal(set) var lineAccounts: LineAccounts?
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -1544,6 +1548,7 @@ public struct GameWorld: Equatable, Sendable {
         let index = try lineIndex(of: id)
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
+        removeLineAccounts(of: id)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -2639,6 +2644,7 @@ public struct GameWorld: Equatable, Sendable {
         guard let line = lines.firstIndex(where: { $0.assignedTrains.contains(id) }) else { return }
         let (total, overflow) = lines[line].deadheadDistance.addingReportingOverflow(distance)
         lines[line].deadheadDistance = overflow ? .max : total
+        countLineDeadhead(distance, on: lines[line].id)
     }
 
     /// `train` sent out now on `trip` (calling at the line's `stops`), as
@@ -3757,7 +3763,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, lineAccounts, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3858,6 +3864,7 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
+        lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3977,6 +3984,9 @@ extension GameWorld: Codable {
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)
+        }
+        if let lineAccounts {
+            try container.encode(lineAccounts, forKey: .lineAccounts)
         }
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
@@ -4136,6 +4146,9 @@ extension GameWorld: Codable {
         }
         guard Self.isStrictlyIncreasing(lines.map(\.id.rawValue), below: nextLineID) else {
             return "Line IDs must be unique, ascending and below nextLineID."
+        }
+        if let book = lineAccounts, !book.isValid(lines: Set(lines.map(\.id)), stations: Set(stations.map(\.id))) {
+            return "The line accounts must be well formed, for lines and stations that exist."
         }
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }

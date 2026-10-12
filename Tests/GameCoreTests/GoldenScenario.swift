@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 67
+    static let schemaVersion = 70
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -277,7 +277,7 @@ extension GoldenScenario.Step: Decodable {
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
-        case holiday
+        case holiday, lineDays
         case weather, typhoons, fuel
     }
 
@@ -462,6 +462,9 @@ extension GoldenScenario.Step: Decodable {
             case .accounts:
                 try requireOnly([.accounts], answering: "accounts")
                 self = try .observe(observation, expect: .accounts(expect.decode(AccountsSummary.self, forKey: .accounts)))
+            case .lineAccounts:
+                try requireOnly([.lineDays], answering: "lineAccounts")
+                self = try .observe(observation, expect: .lineDays(expect.decode([LineDaySummary].self, forKey: .lineDays)))
             case .financeReport:
                 try requireOnly([.report], answering: "financeReport")
                 self = try .observe(observation, expect: .report(expect.decode(ReportSummary.self, forKey: .report)))
@@ -578,6 +581,8 @@ enum ScenarioCommand: Equatable {
     case setDoorCrowding(Bool)
     /// Schema 67 (decision 172): flexible dispatch.
     case setFlexDispatch(Bool)
+    /// Schema 70 (decision 179): the line accounts.
+    case setLineAccounts(Bool)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -727,6 +732,8 @@ enum ScenarioCommand: Equatable {
                 world.setDoorCrowding(enabled)
             case .setFlexDispatch(let enabled):
                 world.setFlexDispatch(enabled)
+            case .setLineAccounts(let enabled):
+                world.setLineAccounts(enabled)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -947,6 +954,9 @@ extension ScenarioCommand: Decodable {
         // Schema 67: flexible dispatch (decision 172).
         case "setFlexDispatch":
             self = try .setFlexDispatch(container.decode(Bool.self, forKey: .enabled))
+        // Schema 70: the line accounts (decision 179).
+        case "setLineAccounts":
+            self = try .setLineAccounts(container.decode(Bool.self, forKey: .enabled))
         // Schema 67: reverse a line's stops (decision 172).
         case "reverseLineStops":
             self = try .reverseLineStops(container.decodeLine(forKey: .line))
@@ -1560,6 +1570,8 @@ enum ScenarioObservation: Equatable {
     case tripFare(from: StationID, to: StationID, highSpeed: Bool)
     case accounts
     case financeReport(FinancePeriod)
+    /// Schema 70 (decision 179): a line's days of records.
+    case lineAccounts(LineID)
     /// Schema 24 (Stage W2b): a train's service times, and its lateness.
     case serviceTimes(TrainID)
     case scheduledWaits
@@ -1711,6 +1723,8 @@ enum ScenarioObservation: Equatable {
             .accounts(AccountsSummary(world.accounts))
         case .financeReport(let period):
             .report(ReportSummary(world.financeReport(period)))
+        case .lineAccounts(let id):
+            .lineDays(world.lineDays(id).map(LineDaySummary.init))
         case .serviceTimes(let id):
             .times(world.train(id: id)?.times.map(TimesSummary.init))
         case .lateness(let id):
@@ -1885,6 +1899,8 @@ extension ScenarioObservation: Decodable {
             self = try .lateness(container.decodeTrain(forKey: .train))
         case "accounts":
             self = .accounts
+        case "lineAccounts":
+            self = try .lineAccounts(container.decodeLine(forKey: .line))
         case "financeReport":
             let period = try container.decode(String.self, forKey: .period)
             guard let value = FinancePeriod(rawValue: period) else {
@@ -1950,6 +1966,7 @@ enum ObservationAnswer: Equatable {
     case riders([RidingGroupSummary])
     case fare(Int64?)
     case accounts(AccountsSummary)
+    case lineDays([LineDaySummary])
     case report(ReportSummary)
     case times(TimesSummary?)
     case lateness(Int64?)
@@ -2051,7 +2068,7 @@ extension ObservationAnswer: Encodable {
         case times, lateness, scheduledWaits
         case landTotals, landCell, building, townGrowth, landValue, placedBuilding, zone, water, steep, groundHeight
         case buildingSale, cityDemand
-        case holiday
+        case holiday, lineDays
         case weather, typhoons, fuel
     }
 
@@ -2129,6 +2146,8 @@ extension ObservationAnswer: Encodable {
             try container.encode(false, forKey: .found)
         case .accounts(let accounts):
             try container.encode(accounts, forKey: .accounts)
+        case .lineDays(let days):
+            try container.encode(days, forKey: .lineDays)
         case .report(let report):
             try container.encode(report, forKey: .report)
         case .times(let times?):
@@ -2275,6 +2294,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while lines send trains out from either end (schema 67,
     /// decision 172); left out otherwise.
     var flexDispatch: Bool?
+    /// `true` while lines keep their accounts (schema 70, decision 179);
+    /// left out otherwise.
+    var lineAccounts: Bool?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2548,6 +2570,7 @@ struct WorldSummary: Codable, Equatable {
         distanceDemand = world.distanceDemand ? true : nil
         doorCrowding = world.doorCrowding ? true : nil
         flexDispatch = world.flexDispatch ? true : nil
+        lineAccounts = world.lineAccounts == nil ? nil : true
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil
@@ -2936,6 +2959,36 @@ struct RidingGroupSummary: Codable, Equatable {
         origin = group.origin.rawValue
         destination = group.destination.rawValue
         count = group.count
+    }
+}
+
+/// A line's day of records (schema 70, decision 179); money in cents.
+struct LineDaySummary: Codable, Equatable {
+    var day: Int64
+    var boardings: Int64
+    var departures: Int64
+    var trainDistance: Int64
+    var deadheadDistance: Int64
+    var peakLoad: Int64
+    var fareRevenue: Int64
+    var operatingCost: Int64
+    var maintenanceCost: Int64
+    var energyCost: Int64
+    var staffCost: Int64
+
+    init(_ day: LineDay) {
+        let tally = day.tally
+        self.day = day.day
+        boardings = tally.boardings
+        departures = tally.departures
+        trainDistance = tally.trainDistance
+        deadheadDistance = tally.deadheadDistance
+        peakLoad = tally.peakLoad
+        fareRevenue = tally.fareRevenue.amount
+        operatingCost = tally.operatingCost.amount
+        maintenanceCost = tally.maintenanceCost.amount
+        energyCost = tally.energyCost.amount
+        staffCost = tally.staffCost.amount
     }
 }
 

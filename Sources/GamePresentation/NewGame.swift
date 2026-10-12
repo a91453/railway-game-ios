@@ -107,6 +107,11 @@ extension GameWorld {
             // Decision 172: trains are sent out from either end of their
             // line, and one left elsewhere runs empty to an end.
             world.setFlexDispatch(true)
+            // Decision 179: each line keeps its riders, fares and costs of
+            // the last 30 days, and each station its flow of yesterday.
+            // Only a record: it changes nothing in play, so the challenges,
+            // the tutorial and the demos built on a new game keep it.
+            world.setLineAccounts(true)
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)

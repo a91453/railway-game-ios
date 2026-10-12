@@ -153,18 +153,24 @@ extension GameWorld {
     /// hour's fares and counts stop at ``maximumHourly``, the most a save
     /// holds: the largest fare the commands take, ``FareRules/maximumFare``,
     /// reaches it with about a thousand boarders, far beyond any real fare.
-    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) {
-        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return }
-        let fares = accounts.pending.fareRevenue.amount + Self.wholeDollars(count * fare.amount).amount
+    /// Returns what was added to the hour's fares (decision 179 shares it
+    /// among the lines).
+    @discardableResult
+    mutating func chargeFares(_ count: Int64, from origin: StationID, to destination: StationID, highSpeed: Bool = false) -> Money {
+        guard accounts.mode == .management, count > 0, let fare = tripFare(from: origin, to: destination, highSpeed: highSpeed) else { return .zero }
+        let before = accounts.pending.fareRevenue
+        let fares = before.amount + Self.wholeDollars(count * fare.amount).amount
         accounts.pending.fareRevenue = Money(min(fares, Self.maximumHourly / 100 * 100))
         accounts.pending.fareTrips = min(accounts.pending.fareTrips + count, Self.maximumHourly)
+        return accounts.pending.fareRevenue - before
     }
 
     /// A line's train left a stop for its next, `distance` world units
     /// away, with `passengers` on board and `seats` rated; each count stops
     /// at its bound, as the fares do.
-    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64) {
+    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64, on line: LineID? = nil) {
         guard accounts.mode == .management else { return }
+        if let line { countLineDeparture(on: line, distance: distance, passengers: passengers, seats: seats) }
         accounts.pending.departures = min(accounts.pending.departures + 1, Self.maximumDepartures)
         accounts.pending.trainDistance = min(accounts.pending.trainDistance + distance, Self.maximumHourly)
         accounts.pending.passengers = min(accounts.pending.passengers + passengers, Self.maximumHourly)
@@ -197,13 +203,25 @@ extension GameWorld {
         let stations: Int64
         let routeLength: Int64
         let trains: Int64
+        /// The same, line by line (decision 179): they add up to the totals.
+        let lines: [LineAssets]
+    }
+
+    struct LineAssets {
+        let id: LineID
+        let stations: Int64
+        let routeLength: Int64
+        let trains: Int64
     }
 
     func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
         var stations: Int64 = 0
         var length: Int64 = 0
         var trains: Int64 = 0
+        var perLine: [LineAssets] = []
         for line in lines {
+            var lineLength: Int64 = 0
+            var lineTrains: Int64 = 0
             stations += Int64(Set(line.stops).count)
             let journey: LineJourney?
             if let known = memo.journeys[line.id]?[0] {
@@ -216,14 +234,17 @@ extension GameWorld {
                 // A ring's journey is one lap (see ``LineJourney/legs``), its
                 // whole route, as the reference measures a ring closed.
                 let route = journey.isRing ? journey.legs[...] : journey.legs.prefix(journey.legs.count / 2)
-                length += route.reduce(0) { $0 + $1.path.distance }
+                lineLength = route.reduce(0) { $0 + $1.path.distance }
+                length += lineLength
             }
             for service in 0..<line.serviceCount {
                 let counts = service == 0 ? line.trainsInService : line.patterns[service - 1].trainsInService
-                trains += Int64(max(counts.peak, counts.offPeak, counts.low))
+                lineTrains += Int64(max(counts.peak, counts.offPeak, counts.low))
             }
+            trains += lineTrains
+            perLine.append(LineAssets(id: line.id, stations: Int64(Set(line.stops).count), routeLength: lineLength, trains: lineTrains))
         }
-        return FixedAssets(stations: stations, routeLength: length, trains: trains)
+        return FixedAssets(stations: stations, routeLength: length, trains: trains, lines: perLine)
     }
 
     /// World units in a kilometre.
@@ -251,6 +272,8 @@ extension GameWorld {
         )
         let maintenance = Self.roundedDollars(12 * assets.routeLength + 9 * pending.trainDistance + 8 * assets.trains * km, over: km)
         accounts.pending = .empty
+        // Decision 179: the lines' shares of the hour.
+        settleLineHour(day: dayIndex(of: GameTime(seconds: now.seconds - GameTime.secondsPerMinute)), assets: assets, operating: operating, maintenance: maintenance)
         guard pending.fareRevenue > .zero || operating > .zero || maintenance > .zero else { return }
         let breakdown = [
             LedgerLine(item: .fareRevenue, amount: pending.fareRevenue),
@@ -298,6 +321,7 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .loanInterest, amount: .zero - interest)]
             ), day: day)
         }
+        settleLineDay(day: day, assets: assets, routeEnergy: routeEnergy, trainEnergy: trainEnergy)
         let staff = Money((620 * assets.stations + 480 * assets.trains) * 100)
         if staff > .zero {
             write(LedgerEntry(

@@ -233,9 +233,14 @@
 ///     so has `"deadheadDistance"`. A build that reads only an earlier
 ///     version would drop them, and the empty run would carry passengers
 ///     and go uncounted, so it says the save is newer than it instead.
+/// 48. Line accounts (decision 179): a world can have `"lineAccounts"`, each
+///     line's records of its last 30 days and each station's flow of
+///     yesterday. A build that reads only an earlier version would drop
+///     them and the lines would lose their history, so it says the save is
+///     newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 45
+    public static let currentVersion = 48
 
     public let world: GameWorld
 

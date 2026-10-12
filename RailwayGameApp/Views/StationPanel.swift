@@ -638,6 +638,13 @@ struct StationPanel: View {
 
     private func passengersSection(_ station: Station) -> some View {
         Section {
+            // Decision 179: how many got on and off here yesterday.
+            if let flow = session.world.stationFlowText(at: station.id, in: session.language) {
+                Label(flow, systemImage: "arrow.left.arrow.right")
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("station.flow.yesterday")
+            }
             ForEach(session.world.waitingText(at: station.id, in: session.language), id: \.self) { group in
                 Label(group, systemImage: "person.2")
                     .font(.footnote)

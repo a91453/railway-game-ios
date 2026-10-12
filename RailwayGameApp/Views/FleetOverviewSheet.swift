@@ -9,6 +9,8 @@ import SwiftUI
 struct FleetOverviewSheet: View {
     @Bindable var session: GameSession
     @Environment(\.dismiss) private var dismiss
+    /// Decision 179: how the roster is ordered.
+    @State private var sort: FleetSort = .name
 
     var body: some View {
         NavigationStack {
@@ -25,7 +27,16 @@ struct FleetOverviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        ForEach(session.world.trains) { train in
+                        Picker(selection: $sort) {
+                            ForEach(FleetSort.allCases, id: \.self) { order in
+                                Text(verbatim: order.displayName(in: session.language)).tag(order)
+                            }
+                        } label: {
+                            Text(verbatim: session.language.text("Sort by", "排序"))
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("fleet.sort")
+                        ForEach(session.world.fleet(sortedBy: sort, in: session.language)) { train in
                             trainRow(train)
                         }
                     }

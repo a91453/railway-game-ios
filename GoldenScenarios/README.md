@@ -959,3 +959,13 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - Short 拿掉第一站（Beta、Gamma），紅車停在 Alpha，不再是路線的站：空車回送到較近的 Beta（兩個連結，Gamma 是四個）：Alpha 0 到 42 秒、Beta 42 + 125 = 167 秒（2048 單位：8 秒加速、106.2 秒等速、10 秒煞車，124.2，取 125 秒），不占班距槽，里程 2048 記在 Short 上。
   - 藍車在途中反轉 Main 的站序（允許），照原本那趟跑完；到 12 時兩列都在各自的第一站（藍車在 Gamma，現在是 Main 的第一站；紅車在 Beta），正常發車：藍 Gamma 762 秒、Alpha 1002 到 1122 秒、Gamma 1362 秒；紅 Beta 762 秒、Gamma 887 到 1007 秒、Beta 1132 秒。
 - 每個值都是手算的；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 179：逐線營運報表（schema 70）
+
+- 新指令 `setLineAccounts`（`enabled`）、新觀察 `lineAccounts`（`line`；答案 `{"lineDays": [...]}`，每日一列：`day`、`boardings`、`departures`、`trainDistance`、`deadheadDistance`、`peakLoad`（千分比）、`fareRevenue`、`operatingCost`、`maintenanceCost`、`energyCost`、`staffCost`，金額是分）。最終狀態的 `lineAccounts: true` 只在打開時寫。參考模型（`ReferenceWorld`）沒有逐線帳，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `LineAccountsTests` 驗證。
+- `line-accounts.json`（新）：`flex-dispatch.json` 的軌道（彈性發車關著），Main（Alpha、Gamma）與 Short（Alpha、Beta、Gamma）全天各一列、但沒有買車，所以沒有人上車、車也不跑：每條線記的就是固定成本的份額。經營模式，`setLineAccounts`，跑 1,501 分鐘（一天加上 1,500 分結算的那一小時）。Main 與 Short 的路線都是 3,584 單位（`lineJourney`），每公里 64,000 單位。
+  - 每小時公司付營運 18 × 5 站 = 90（Main 36、Short 54；兩線共站各算一次）和保養 round(12 × 7,168 / 64,000 + 8 × 2) = round(17.344) = 17，按 8.672 : 8.672 拆：每小時 Main 9、Short 8（餘數相同給編號小的）。第 0 天 24 小時：營運 864／1,296，保養 216／192；第 1 天一小時：36／54，9／8。
+  - 第 0 天結束：路線能源 round(220 × 7,168 / 64,000) = round(24.64) = 25，拆成 Main 13、Short 12，加上每列車 360，是 373 與 372；人事 620 × 車站 + 480 × 列車：Main 620 × 2 + 480 = 1,720、Short 620 × 3 + 480 = 2,340。
+  - 兩線加起來等於公司那一天（營運 216,000、保養 40,800、能源 74,500、人事 406,000 分；第 1 天 9,000 與 1,700）。最後 `removeLine` Short：它的紀錄清掉，最終狀態只剩 Main 的。
+- 每個值都是手算的；最終狀態取自 GameCore。票收、搭乘與滿載率用同一份帳，由 `LineAccountsTests` 驗（轉乘網路上各線加總等於公司的日帳）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
