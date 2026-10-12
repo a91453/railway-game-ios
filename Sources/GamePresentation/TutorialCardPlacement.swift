@@ -96,11 +96,15 @@ public struct TutorialCardPlacement: Sendable {
     /// Every control on screen but the map, which can be tapped outside the
     /// card.
     public var controls: [Frame]
-    /// The details card and a panel beside the map: covering them costs as
-    /// much as covering the step's own controls, which they may hold
-    /// unmarked (a panel's NavigationStack keeps its controls' marks from
-    /// the overlay), and a card over them folds.
+    /// A panel beside the map: covering it costs as much as covering the
+    /// step's own controls, which it may hold unmarked (its NavigationStack
+    /// keeps its controls' marks from the overlay), and a card over it folds.
     public var panels: [Frame]
+    /// The details card, whose controls are marked: the card stays off it
+    /// where there is room, but covers it rather than any control (a phone
+    /// with the largest text, decision 47's notes: covering it as a panel
+    /// pushed the card over the tool rail's Done).
+    public var backdrops: [Frame]
     /// The step's own controls (not the map), among `controls`.
     public var required: [Frame]
     /// The part of the map that shows (``TutorialTarget/map``).
@@ -123,12 +127,19 @@ public struct TutorialCardPlacement: Sendable {
     /// Above covering any ordinary control with the whole card, below
     /// covering a sliver of the step's own controls or of a panel.
     static let mapCoveredCost: Double = 400_000
+    /// What a square point of a backdrop costs: covering the whole of one
+    /// (some 300 × 270 points) costs less than covering any control.
+    static let backdropWeight = 0.01
 
     /// All in the screen's coordinates, as the app reads them.
-    public init(target: Frame?, controls: [Frame], panels: [Frame] = [], required: [Frame], map: Frame?, maxWidth: Double = 340) {
+    public init(
+        target: Frame?, controls: [Frame], panels: [Frame] = [], backdrops: [Frame] = [], required: [Frame], map: Frame?,
+        maxWidth: Double = 340
+    ) {
         self.target = target
         self.controls = controls
         self.panels = panels
+        self.backdrops = backdrops
         self.required = required
         self.map = map
         self.maxWidth = maxWidth
@@ -208,6 +219,7 @@ public struct TutorialCardPlacement: Sendable {
         guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
         let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let required = (self.required + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let backdrops = self.backdrops.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
         let gap = Self.gap
         let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
@@ -248,6 +260,7 @@ public struct TutorialCardPlacement: Sendable {
         }
         func cost(_ frame: Frame) -> Double {
             covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
+                + covered(backdrops, by: frame) * Self.backdropWeight
                 + (Self.leavesMapFree(frame, map: map) ? 0 : Self.mapCoveredCost)
         }
         // `min` keeps the first of equals, so the first placement that

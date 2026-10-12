@@ -32,11 +32,14 @@ extension View {
                     let controls = Set(anchors.keys).union(inPanels.keys)
                         .filter { $0 != .map && !tutorialPanels.contains($0) }
                         .compactMap(frameOf)
-                    // The details card and a panel beside the map, kept clear
-                    // as the step's own controls are: at the line step a card
-                    // over the lines panel left Pick on Map and Create Line out
-                    // of reach on a phone (2026-10-12).
-                    let panels = tutorialPanels.compactMap(frameOf)
+                    // A panel beside the map, kept clear as the step's own
+                    // controls are: at the line step a card over the lines
+                    // panel left Pick on Map and Create Line out of reach on a
+                    // phone (2026-10-12). The details card only where there is
+                    // room: its controls are marked, and with the largest text
+                    // covering it beats covering the tools.
+                    let panels = frameOf(.sidePanel).map { [$0] } ?? []
+                    let backdrops = frameOf(.detailsCard).map { [$0] } ?? []
                     // What the step asks the player to use matters most when
                     // no placement leaves every control clear.
                     let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
@@ -49,6 +52,7 @@ extension View {
                             target: frames.first.map { TutorialCardPlacement.Frame($0) },
                             controls: controls.map { TutorialCardPlacement.Frame($0) },
                             panels: panels.map { TutorialCardPlacement.Frame($0) },
+                            backdrops: backdrops.map { TutorialCardPlacement.Frame($0) },
                             required: required.map { TutorialCardPlacement.Frame($0) },
                             map: map.map { TutorialCardPlacement.Frame($0) }
                         )
@@ -59,8 +63,8 @@ extension View {
     }
 }
 
-/// The areas the tutorial's card keeps clear of as of the step's own
-/// controls: the details card and a panel beside the map.
+/// The areas the tutorial's card weighs on their own, not as controls: a
+/// panel beside the map and the details card.
 private let tutorialPanels: [TutorialTarget] = [.detailsCard, .sidePanel]
 
 /// The overlay's coordinates, the frames' (the GeometryReader's).
