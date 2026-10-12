@@ -50,8 +50,12 @@ extension RealWorldDemo {
             world.setOutsideConnections(false)
             // Decision 169: nor do its dwells lengthen in a crowd.
             world.setDoorCrowding(false)
+<<<<<<< HEAD
             // Decision 174: nor do tourists come to its sights.
             world.setTourism(nil)
+=======
+            world.setFlexDispatch(false)
+>>>>>>> origin/main
             try world.mapGround()
             if !ground.isEmpty { try world.setGround(ground) }
             return world

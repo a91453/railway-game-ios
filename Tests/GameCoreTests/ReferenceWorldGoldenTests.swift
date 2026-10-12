@@ -130,7 +130,11 @@ final class ReferenceWorldGoldenTests: XCTestCase {
             preconditionFailure("the reference model does not run network routing")
         case .setDisruptions:
             preconditionFailure("the reference model does not keep holidays")
+<<<<<<< HEAD
         case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setDoorCrowding, .reverseLineStops, .setTourism, .investInSouvenirShop, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+=======
+        case .foundTowns, .setLand, .setLandDemand, .setDistanceDemand, .setOutsideConnections, .setCityDemand, .setCityFootprints, .setAreaBuyOut, .enableFreight, .buildFreightFacility, .setLineFreight, .setDoorCrowding, .reverseLineStops, .setFlexDispatch, .enableBuildingMaterials, .setFreightProduct, .enableMapExpansion, .buyMapTile, .setCityBuildings, .setTownGrowth, .placeBuilding, .removePlacedBuilding, .sellPlacedBuilding, .setZone, .setWater, .setSteep, .setGround, .mapGround:
+>>>>>>> origin/main
             preconditionFailure("the reference model does not hold land")
         }
         return error.map { .rejected($0) } ?? .ok

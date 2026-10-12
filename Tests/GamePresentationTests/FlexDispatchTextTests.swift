@@ -10,6 +10,7 @@ final class FlexDispatchTextTests: XCTestCase {
 
     private func makeLineWorld() throws -> (world: GameWorld, main: LineID, train: TrainID, stops: [StationID]) {
         var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000, speed: .normal)
+        world.setFlexDispatch(true)
         try line.build(in: &world)
         let alpha = try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
         let beta = try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
@@ -35,6 +36,15 @@ final class FlexDispatchTextTests: XCTestCase {
         chinese.selectLine(main)
         chinese.removeStopFromSelectedLine(at: 0)
         XCTAssertEqual(chinese.message, StatusMessage(kind: .success, text: "Main 改停 Beta – Gamma。1 列車空車回送到 Beta。"))
+    }
+
+    func testWithoutFlexibleDispatchNothingIsAdded() throws {
+        var (world, main, _, _) = try makeLineWorld()
+        world.setFlexDispatch(false)
+        let session = GameSession(world: world, language: .english)
+        session.selectLine(main)
+        session.removeStopFromSelectedLine(at: 0)
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Main now calls at Beta – Gamma."))
     }
 
     func testAnEditThatChangesNothingSaysNothingMore() throws {

@@ -25,6 +25,7 @@ final class FlexDispatchTests: XCTestCase {
             bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 0), speed: .normal)
         )
+        world.setFlexDispatch(true)
         try line.build(in: &world)
         try line.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
         try line.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
@@ -56,6 +57,23 @@ final class FlexDispatchTests: XCTestCase {
 
     private func stations(of train: TrainID, in world: GameWorld) -> [StationID] {
         world.train(id: train)?.timetable.map(\.station) ?? []
+    }
+
+    /// Off, as in every world before decision 172, nothing changes: a train
+    /// at the last stop or off the line's stops is not sent out, and the
+    /// notice and the outlook say nothing.
+    func testWithoutFlexibleDispatchTheLineStaysAsItWas() throws {
+        var world = try makeWorld(stops: [alpha, gamma], at: line.at(5, facingEast: false))
+        world.setFlexDispatch(false)
+        let before = world
+        try world.advance(ticks: 30)
+        XCTAssertNil(world.train(id: one)?.execution)
+        XCTAssertEqual(world.train(id: one)?.timetable, [])
+        XCTAssertNil(world.line(id: main)?.lastDispatch)
+        XCTAssertEqual(world.lineDispatchOutlook(main), [])
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 30))
+        XCTAssertFalse(before.flexDispatch)
+        XCTAssertThrowsError(try world.reverseLineStops(main)) { XCTAssertEqual($0 as? GameError, .trainOnLine(one)) }
     }
 
     // MARK: - From the last stop
@@ -275,6 +293,7 @@ final class FlexDispatchTests: XCTestCase {
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 45)
+        XCTAssertEqual((object["world"] as? [String: Any])?["flexDispatch"] as? Bool, true)
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(world, made)
         XCTAssertTrue(try XCTUnwrap(world.train(id: one)).isDeadheading)

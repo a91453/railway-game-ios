@@ -185,8 +185,12 @@ public enum LiuMingchuanChallenge {
         // challenges' to keep out).
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+<<<<<<< HEAD
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
+=======
+        world.setFlexDispatch(false)
+>>>>>>> origin/main
         do {
             try world.startScenario(scenario)
         } catch {

@@ -204,7 +204,11 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
+<<<<<<< HEAD
                  .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setTourism, _), .command(.investInSouvenirShop, _),
+=======
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _),
+>>>>>>> origin/main
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -576,9 +580,14 @@ enum ScenarioCommand: Equatable {
     case setLineFreight(LineID, Bool)
     /// Schema 66 (decision 169): door crowding.
     case setDoorCrowding(Bool)
+<<<<<<< HEAD
     /// Schema 69 (decision 174): tourism.
     case setTourism([WorldSummary.AttractionSeed])
     case investInSouvenirShop(Int)
+=======
+    /// Schema 67 (decision 172): flexible dispatch.
+    case setFlexDispatch(Bool)
+>>>>>>> origin/main
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -726,10 +735,15 @@ enum ScenarioCommand: Equatable {
                 try world.setLineFreight(line, to: freight)
             case .setDoorCrowding(let enabled):
                 world.setDoorCrowding(enabled)
+<<<<<<< HEAD
             case .setTourism(let seeds):
                 world.setTourism(seeds.isEmpty ? nil : seeds.enumerated().map { $1.attraction(id: $0 + 1) })
             case .investInSouvenirShop(let id):
                 try world.investInSouvenirShop(of: AttractionID(rawValue: id))
+=======
+            case .setFlexDispatch(let enabled):
+                world.setFlexDispatch(enabled)
+>>>>>>> origin/main
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -953,6 +967,9 @@ extension ScenarioCommand: Decodable {
         case "setLineStops":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
+        // Schema 67: flexible dispatch (decision 172).
+        case "setFlexDispatch":
+            self = try .setFlexDispatch(container.decode(Bool.self, forKey: .enabled))
         // Schema 67: reverse a line's stops (decision 172).
         case "reverseLineStops":
             self = try .reverseLineStops(container.decodeLine(forKey: .line))
@@ -2293,9 +2310,15 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a crowd at the doors slows the passengers going through
     /// them (schema 66, decision 169); left out otherwise.
     var doorCrowding: Bool?
+<<<<<<< HEAD
     /// The attractions and their counts (schema 69, decision 174); left
     /// out while tourism is off.
     var tourism: [AttractionSummary]?
+=======
+    /// `true` while lines send trains out from either end (schema 67,
+    /// decision 172); left out otherwise.
+    var flexDispatch: Bool?
+>>>>>>> origin/main
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2602,7 +2625,11 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
         doorCrowding = world.doorCrowding ? true : nil
+<<<<<<< HEAD
         tourism = world.tourism.map { $0.attractions.map(AttractionSummary.init) }
+=======
+        flexDispatch = world.flexDispatch ? true : nil
+>>>>>>> origin/main
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil

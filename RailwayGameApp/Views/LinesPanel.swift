@@ -448,9 +448,10 @@ struct LinesPanel: View {
             } label: {
                 Label("Reverse Stop Order", systemImage: "arrow.left.arrow.right")
             }
-            // Decision 172: trains are sent out from either end now; only a
-            // ring with a train running cannot go the other way round.
-            .disabled(ringHasRunningTrain(line))
+            // Decision 134: without flexible dispatch its trains would stop
+            // at the new last stop. Decision 172: with it only a ring with
+            // a train running cannot go the other way round.
+            .disabled(session.world.flexDispatch ? ringHasRunningTrain(line) : !line.assignedTrains.isEmpty)
             .accessibilityIdentifier("line.reverse")
         } header: {
             Text("Stops")
@@ -460,8 +461,12 @@ struct LinesPanel: View {
             } else {
                 Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
             }
-            if ringHasRunningTrain(line) {
-                Text("A ring cannot be reversed while one of its trains is running.")
+            if session.world.flexDispatch {
+                if ringHasRunningTrain(line) {
+                    Text("A ring cannot be reversed while one of its trains is running.")
+                }
+            } else if !line.assignedTrains.isEmpty {
+                Text("Take the line's trains off it to reverse its stops.")
             }
         }
     }
