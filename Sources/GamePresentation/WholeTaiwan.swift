@@ -65,8 +65,8 @@ extension GameWorld {
     /// A new game on the whole of Taiwan (decision 88): ``newGame(anchor:bounds:balance:eventSeed:land:)``
     /// on ``WholeTaiwan/bounds`` round ``WholeTaiwan/anchor``, with its
     /// land read in as it is needed, none yet.
-    public static func newWholeTaiwanGame(eventSeed: UInt32 = 1) -> GameWorld {
-        var world = newGame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, eventSeed: eventSeed, land: [])
+    public static func newWholeTaiwanGame(balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
+        var world = newGame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds, balance: balance, eventSeed: eventSeed, land: [])
         world.setLandOnDemand()
         return world
     }

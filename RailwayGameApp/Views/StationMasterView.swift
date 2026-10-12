@@ -98,7 +98,12 @@ struct StationMasterCorner: View {
                     }
                 }
                 .frame(maxWidth: width, alignment: .leading)
-                .onTapGesture { isTalking = false }
+                .onTapGesture {
+                    // Decision 177: advice that points at a place takes
+                    // the map there.
+                    if let target = advice?.cameraTarget { session.lookAt(target) }
+                    isTalking = false
+                }
                 .accessibilityHidden(true)
                 .transition(.scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity))
             }
