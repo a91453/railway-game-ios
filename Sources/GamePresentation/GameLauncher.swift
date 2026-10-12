@@ -268,9 +268,17 @@ public final class GameLauncher {
     /// Unlocks the achievements `session`'s world meets (decision 181),
     /// unless it is a demo, and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo else { return }
-        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date)
+        guard !session.news.isDemo, session.tutorial == nil else { return }
+        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
+    }
+
+    /// What a world may unlock: everything, but for the Pingxi challenge,
+    /// which starts on the real-world demo's running lines (the track, the
+    /// trains and the hubs are not the player's work), where only the
+    /// challenge's own marks count.
+    static func achievementScope(of world: GameWorld) -> Set<String>? {
+        world.scenario?.scenario.id == "history.pingxi" ? ["challengeGold", "pingxi"] : nil
     }
 
     /// Opens ``DemoWorld``: three lines already running.

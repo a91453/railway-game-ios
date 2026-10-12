@@ -76,7 +76,7 @@ public struct AchievementFacts: Hashable, Sendable {
         companyBuildings = world.placedBuildings.count
         tilesBought = max(0, (world.mapExpansion?.owned.count ?? 1) - 1)
         typhoonSeasonOverDebtFree = today % FinancePeriod.year.days == AchievementFacts.typhoonSeasonEnd
-            && world.accounts.loan == .zero && world.economy.balance >= .zero
+            && !world.lines.isEmpty && world.accounts.loan == .zero && world.economy.balance >= .zero
         let served = CompanyFigures.servedCells(in: world)
         towerByAStation = world.buildings.all.contains { building in
             building.density == .d4 && building.cells.contains { served.contains($0) }
@@ -374,8 +374,8 @@ public struct AchievementRecords: Sendable {
 
     /// Unlocks what `facts` meet that is not unlocked yet, writes the file
     /// and returns them, in the list's order.
-    public mutating func unlock(meeting facts: AchievementFacts, at date: Date = Date()) -> [Achievement] {
-        let new = Achievement.all.filter { unlocked[$0.id] == nil && $0.isMet(by: facts) }
+    public mutating func unlock(meeting facts: AchievementFacts, at date: Date = Date(), only allowed: Set<String>? = nil) -> [Achievement] {
+        let new = Achievement.all.filter { unlocked[$0.id] == nil && allowed?.contains($0.id) != false && $0.isMet(by: facts) }
         guard !new.isEmpty else { return [] }
         for achievement in new { unlocked[achievement.id] = date }
         let encoder = JSONEncoder()
