@@ -126,4 +126,26 @@ final class GameTimeDisplayTests: XCTestCase {
             ["Paused", "Real time", "10 times real time", "60 times real time", "600 times real time", "1200 times real time", "6000 times real time, fast forward"]
         )
     }
+
+    // MARK: - The calendar (decision 175)
+
+    func testTheCalendarCountsA360DayYearOfTwelveMonthsStartingOnAMonday() {
+        XCTAssertEqual(GameTime.zero.calendarText(in: .english), "Year 1 · Jan 1 (Mon) 00:00")
+        XCTAssertEqual(GameTime.zero.calendarText(in: .traditionalChinese), "第 1 年 1 月 1 日（一）00:00")
+        // Year 2, 5 May: day 360 + 4 × 30 + 11 = 491, a Tuesday.
+        let day = GameTime(seconds: 491 * GameTime.secondsPerDay + 8 * 3_600 + 40 * 60)
+        XCTAssertEqual(day.calendarText(in: .traditionalChinese), "第 2 年 5 月 12 日（二）08:40")
+        XCTAssertEqual(day.calendarText(in: .english), "Year 2 · May 12 (Tue) 08:40")
+        XCTAssertEqual(day.date.shortText(in: .traditionalChinese), "5/12（二）")
+        // The sixth day is a Saturday; the last day of a year is its 30th of December.
+        XCTAssertEqual(GameDate(day: 5).weekdayName(in: .traditionalChinese), "六")
+        XCTAssertEqual(GameDate(day: 359).text(in: .english), "Year 1 · Dec 30 (Wed)")
+        XCTAssertEqual(GameDate(day: 360).month, 1)
+    }
+
+    func testTheCalendarAgreesWithTheDemandsWeekdays() {
+        for day in Int64(0)..<30 {
+            XCTAssertEqual(GameDate(day: day).weekday, StationDemand.weekday(ofDay: day))
+        }
+    }
 }
