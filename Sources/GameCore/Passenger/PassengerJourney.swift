@@ -25,6 +25,14 @@ public struct PassengerJourneyLeg: Hashable, Codable, Sendable {
         to = leg.to
     }
 
+    fileprivate init(_ leg: PassengerJourneyLeg, direction: LineDirection) {
+        line = leg.line
+        pattern = leg.pattern
+        self.direction = direction
+        from = leg.from
+        to = leg.to
+    }
+
     func reindexed(afterRemoving pattern: Int) -> PassengerJourneyLeg {
         guard let previous = self.pattern, previous > pattern else { return self }
         return PassengerJourneyLeg(self, pattern: previous - 1)
@@ -72,6 +80,14 @@ public struct PassengerJourney: Hashable, Codable, Sendable {
         let updated = legs.enumerated().map { index, leg in
             index >= current && leg.line == line ? leg.reindexed(afterRemoving: pattern) : leg
         }
+        return PassengerJourney(origin: origin, destination: destination, legs: updated, current: current)
+    }
+
+    /// The journey with its legs on line `id` the other way along its
+    /// stops, as it has been reversed (``GameWorld/reverseLineStops(_:)``):
+    /// the same stations, the same service.
+    func reversingDirections(on line: LineID) -> PassengerJourney {
+        let updated = legs.map { $0.line == line ? PassengerJourneyLeg($0, direction: $0.direction.opposite) : $0 }
         return PassengerJourney(origin: origin, destination: destination, legs: updated, current: current)
     }
 

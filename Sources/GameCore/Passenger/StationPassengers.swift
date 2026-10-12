@@ -9,6 +9,11 @@
 public enum LineDirection: String, CaseIterable, Codable, Sendable {
     case outbound
     case inbound
+
+    /// The other way along the line.
+    var opposite: LineDirection {
+        self == .outbound ? .inbound : .outbound
+    }
 }
 
 /// The line a trip between two stations takes, and which way along it
@@ -238,6 +243,16 @@ public struct StationPassengers: Hashable, Sendable {
         waiting.removeAll { !isServed($0) }
         waitingCount -= left.reduce(0) { $0 + $1.count }
         return left
+    }
+
+    /// The groups waiting for line `id` take it the other way along its
+    /// stops, as it has been reversed (``GameWorld/reverseLineStops(_:)``).
+    mutating func reverseDirections(on line: LineID) {
+        waiting = waiting.map { group in
+            WaitingGroup(line: group.line, direction: group.line == line ? group.direction.opposite : group.direction,
+                destination: group.destination, since: group.since, count: group.count,
+                journey: group.journey?.reversingDirections(on: line), readyAt: group.readyAt)
+        }
     }
 
     mutating func reindexJourneys(on line: LineID, removing pattern: Int) -> [WaitingGroup] {

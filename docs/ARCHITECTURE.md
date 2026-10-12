@@ -5644,6 +5644,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **測試**：`FlexDispatchTests`（開關關著一切照舊、末站發車、面向相反時折返、末站連續發車、反轉、跑到一半反轉、拆首站、首站前插站、較近的一端、到不了、里程與存檔、一次推進與逐分鐘相同）；決策 134 的既有測試沒有動（預設世界關著），`LineEditingCommandTests`、`RingLineTests`、`RouteEditingSessionTests` 另加開關打開時的反轉測試；`FlexDispatchTextTests`（提示與 FollowBar）；`SavedGameTests` 與 `FlexDispatchTests.testVersionFortyFiveKeepsAnEmptyRun`。
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`、`Simulator/reference_snapshot`、`Railway/site_archive_clean`、`MapBuilder/reference_snapshot` 查過折返、回送、空車、任一端發車：沒有可用的（Ci 的地鐵車在終點彈回，不分班；`Railway/site_archive_clean/rail-3d/physical/dispatch.json` 的 `handoffs`（`matching-timetable-turnaround`）是真實時刻表裡「一班車到站後接下一班」的資料，決策 133 的回送班次用的是同一個想法）。OpenTTD 的 orders 只讀了概念（GPL，沒有複製程式碼）。程式是本專案自己的。
+
+**之後的修正**（第三次全程式碼查 bug，2026-10-12）：
+- **反轉站序不再讓等車的乘客全部離開**：第 4 項起乘客的方向看路線站序，反轉後同一段行程的方向就換了，但等車的乘客、車上乘客之後的腿與分配路線的餘數（`passengerRouteBalances`）還記著舊方向，`abandonUnservedPassengers` 把他們全部算成 `abandoned`。決策 80 的規則是「路線不再經過他們的行程才離開」，所以 `reverseLineStops` 現在把這條線上的方向（環線是內外環）一起翻過來：同樣兩站、同樣的服務模式。`FlexDispatchTests.testReversingALineKeepsThePassengersWaitingForIt`。
+- **從末站（或環線的其他站）發出的車也照路徑偏好走**：偏好以 (from, to) 找、行程時間也照偏好算，但開車時 `routePreference(for:from:to:)` 只認從第一站起的時刻表，從末站起的那一趟一律走預設路徑（時間照一條算、實際走另一條，交通管制的預約也和計畫不同）。現在開關打開時，從末站起的往返與環線從任一站起的一圈也認得。`LineRoutePreferenceTests.testAFlexibleTripFromTheLastStopTakesThePreferredRoute`。
+
 ### 174. 觀光景點與觀光客：第二條需求曲線
 
 2026-10-12。作者睡覺期間由派工 session 交付；作者點名要參考《A 列車：開始吧觀光開發計畫》：把鐵路接到九份、日月潭、阿里山、平溪，週末與連假就會湧進觀光客，形成跟通勤錯開的第二條需求曲線，玩家有明確目標（拉高星等、增加年觀光客）。號碼依工作登記 #231：決策 174、存檔版本 47、golden schema 69（存檔 45、46 與決策 172、173 是同批派工的彈性發車與子公司事業，這個 build 沒有）。
