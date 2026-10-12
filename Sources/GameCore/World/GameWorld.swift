@@ -976,6 +976,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
+                removeLineAccounts(of: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -1000,6 +1001,7 @@ public struct GameWorld: Equatable, Sendable {
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
+        removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
 
         abandonUnservedPassengers()

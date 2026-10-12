@@ -5635,6 +5635,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureLineForDailyReport`、`flowDashboardReadLineOperatingDayFlow`、`flowDashboardGetLineBarRows`、`flowDashboardSortStationCards`、`flowDashboardFinalizeEndedSimDay`：每條線每天記運量與收支、取條列、依指定鍵排序。對照見 PR 描述。Ci 沒有票價按距離拆給各線的做法（它的票價是全公司的），所以拆分與最大餘數法是本專案自己的。外部：OpenTTD 的每車年度利潤只讀了概念（GPL，沒有複製程式碼）。
 
+**之後的修正**（查 bug，2026-10-12）：拆掉一個有人上下車的車站，`lineAccounts.flows` 還留著它，拆到只剩一站的路線也被 `removeStation` 直接移除而沒有清掉該線的紀錄，之後存的檔讀不回來（「The line accounts must be well formed」）。`removeStation` 現在一併清掉兩者（`LineAccountsTests.testRemovingAStationLeavesNoRecordsOfIt`）。
+
 ### 180. 車輛經濟：依車種的價格與營運成本、改裝、出售列車
 
 2026-10-12，作者睡覺期間派工的「車輛經濟」（ROADMAP 的 P7-3）。號碼依工作登記 #231：決策 180、存檔版本 49、golden schema 71。
