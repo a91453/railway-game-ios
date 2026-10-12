@@ -266,4 +266,11 @@ public enum GameError: Error, Hashable, Sendable {
     case unknownAttraction(AttractionID)
     /// The attraction's souvenir shop is at its top level (decision 174).
     case attractionMaxedOut
+    /// A city request command in a world without them (decision 183).
+    case cityRequestsNotEnabled
+    /// No offered or accepted city request has this ID (decision 183).
+    case unknownCityRequest(Int)
+    /// The company already has as many requests in hand as the city's
+    /// trust allows (decision 183).
+    case cityRequestLimitReached(limit: Int)
 }

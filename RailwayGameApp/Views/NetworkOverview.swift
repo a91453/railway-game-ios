@@ -7,6 +7,8 @@ import SwiftUI
 /// (iPad, and the sidebar on wide screens).
 struct NetworkOverview: View {
     let session: GameSession
+    /// Decision 184: a station's name to find it by.
+    @State private var search = ListSearch()
 
     var body: some View {
         let world = session.world
@@ -27,8 +29,23 @@ struct NetworkOverview: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
             } else {
+                if world.stations.count >= ListSearchField.minimumRows {
+                    ListSearchField(
+                        search: $search,
+                        prompt: session.language.text("Search stations", "搜尋車站"),
+                        identifier: "network.search",
+                        language: session.language
+                    )
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 36)
+                    .background(Theme.panelBorder.opacity(0.25), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                let shown = world.stations(matching: world.stations.count >= ListSearchField.minimumRows ? search : ListSearch())
+                if shown.isEmpty {
+                    ListSearchEmpty(text: session.language.text("No station matches.", "沒有符合的車站。"))
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(world.stations) { station in
+                    ForEach(shown) { station in
                         stationButton(station)
                     }
                 }

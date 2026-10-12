@@ -18,6 +18,8 @@ python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 | `whoosh.wav` | 一秒的「咻」聲 | 換工具、開始或離開遊戲 |
 | `build-done.wav` | 輕輕的「咚」加上往上的兩個撥弦音（G、高八度的 C） | 放好建物、加好月台或車站（決策 117） |
 | `coins.wav` | 兩個相隔五度的高音鈴 | 每小時結算收到車資、每日收到租金（決策 117） |
+| `refused.wav` | 兩個往下的低音撥弦（E、C#，小三度） | 遊戲拒絕玩家的操作（失敗訊息，決策 184） |
+| `warning.wav` | 兩個相隔一個全音的短鈴（A、B） | 新聞紀錄多了一則警訊：負債、期限、颱風、缺建材（決策 184） |
 
 ## 來源與授權
 

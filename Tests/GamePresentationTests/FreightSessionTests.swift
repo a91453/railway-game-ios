@@ -148,7 +148,7 @@ final class FreightSessionTests: XCTestCase {
         let short = try XCTUnwrap(world.freight?.lastShort.first, "a growing town runs short without a freight line")
         XCTAssertTrue(world.isShortOfMaterials(short))
         let alerts = world.mapAlerts().filter { $0.kind == .materialsShort }
-        XCTAssertEqual(alerts.map(\.station), world.freight?.lastShort)
+        XCTAssertEqual(alerts.compactMap(\.station), world.freight?.lastShort)
         XCTAssertEqual(alerts.first?.text(in: .traditionalChinese), "缺建材")
         XCTAssertEqual(try XCTUnwrap(world.materialsText(at: short, in: .english)).components(separatedBy: "\n").last,
                        "Short last night: the town grew at a quarter. A raise takes 31 to 169 t, a new block 16 t.")

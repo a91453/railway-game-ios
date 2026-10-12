@@ -37,7 +37,7 @@ struct MapAttractionMarks: View {
         // Whether a station serves it (the panel says more): asked at every
         // redraw, so nothing that builds the route graph.
         let open = session.world.attractionStation(of: sight.id) != nil
-        let text = "\(sight.name(in: session.language)) \(sight.starsText)"
+        let text = "\(sight.name(in: session.language)) \(session.world.starsText(of: sight))"
         return Button {
             screen.panel = .tourism
         } label: {
@@ -48,7 +48,7 @@ struct MapAttractionMarks: View {
                     .frame(width: 13, height: 13)
                     .foregroundStyle(open ? Theme.accent : Theme.textSecondary)
                     .accessibilityHidden(true)
-                Text(verbatim: sight.starsText)
+                Text(verbatim: session.world.starsText(of: sight))
                     .font(.caption2.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.textPrimary)

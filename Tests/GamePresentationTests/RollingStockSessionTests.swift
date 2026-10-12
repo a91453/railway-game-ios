@@ -97,7 +97,8 @@ final class RollingStockSessionTests: XCTestCase {
             XCTAssertNil(editing.world.train(id: id)?.type, "on a trip, left as it was")
             XCTAssertEqual(editing.world.train(id: id)?.cars, 1)
         }
-        let each = RollingStock.refitFee(to: .maglev, cars: 1).amount + TrainType.maglev.pricing.eachCar.amount
+        // Each: the maglev's price for one car less 70 % of the standard train's books, and one more car.
+        let each = (RollingStock.price(of: .maglev, cars: 1).amount - 10_500_000) + TrainType.maglev.pricing.eachCar.amount
         XCTAssertEqual(before - editing.world.economy.balance, Money(each * Int64(waiting.count)))
         XCTAssertTrue(editing.message?.text.contains("Left as they were") ?? false)
         XCTAssertEqual(editing.undoCount, 1, "one edit")
@@ -137,6 +138,18 @@ final class RollingStockSessionTests: XCTestCase {
         session.sellTrain(id)
         XCTAssertEqual(session.message?.kind, .failure)
         XCTAssertEqual(session.world, before)
+    }
+
+    func testTheMenuLineSaysWhatChangingTheTrainToATypeCosts() throws {
+        var world = try lineWorld()
+        let train = try world.purchaseTrain(named: "Blue", as: .l)
+        let cost = world.refitCost(of: train.id, to: .maglev)
+        XCTAssertGreaterThan(cost, .zero)
+        XCTAssertTrue(world.trainTypeMenuText(.maglev, for: train.id, in: .english).hasSuffix("change: \(cost.moneyText)"))
+        XCTAssertEqual(world.trainTypeMenuText(.l, for: train.id, in: .english), world.trainTypeCard(.l).text(in: .english), "its own type")
+        XCTAssertTrue(world.trainTypeMenuText(nil, for: train.id, in: .traditionalChinese).contains("改裝："))
+        let off = try lineWorld(economics: false)
+        XCTAssertEqual(off.trainTypeMenuText(.maglev, for: TrainID(rawValue: 1), in: .english), off.trainTypeCard(.maglev).text(in: .english))
     }
 
     func testTheCardsListWhatEachTypeCostsAndHowFastItRuns() throws {

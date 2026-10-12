@@ -114,6 +114,8 @@ final class TourismSessionTests: XCTestCase {
     private func world() throws -> GameWorld {
         var world = GameWorld.newGame(eventSeed: 7)
         world.setTourism(nil)
+        // Decision 183: the city's offers would be said first.
+        world.setCityRequests(seed: nil)
         world.setLandDemand(false)
         world.setPassengerRoutingMode(.direct)
         world.setDistanceDemand(false)
