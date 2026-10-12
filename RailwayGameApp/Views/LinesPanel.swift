@@ -545,7 +545,8 @@ struct LinesPanel: View {
     /// The line's stops in order, each with a menu to move it, insert a
     /// station before it or remove it, and a menu to add a stop at the end.
     private func stopsSection(_ line: ServiceLine) -> some View {
-        Section {
+        let stations = session.stationMenuChoices
+        return Section {
             // Decision 110: the line drawn as its stops, on its colour,
             // with its trains on it (decision 113).
             RouteStrip(
@@ -558,40 +559,18 @@ struct LinesPanel: View {
                     Text(verbatim: "\(index + 1). \(name(of: station))")
                         .font(.subheadline)
                     Spacer(minLength: 8)
-                    Menu {
-                        Button("Move Up") {
-                            session.moveStopOfSelectedLine(at: index, by: -1)
-                        }
-                        .disabled(index == 0)
-                        Button("Move Down") {
-                            session.moveStopOfSelectedLine(at: index, by: 1)
-                        }
-                        .disabled(index == line.stops.count - 1)
-                        Menu("Insert Before") {
-                            stationButtons { session.insertStopIntoSelectedLine($0, at: index) }
-                        }
-                        Button("Remove Stop", role: .destructive) {
-                            session.removeStopFromSelectedLine(at: index)
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .frame(minWidth: 44, minHeight: 32)
-                    }
-                    .accessibilityLabel("Edit stop \(index + 1), \(name(of: station))")
+                    // TestFlight 54.1: menus of every station, built from
+                    // their names alone, so a running game's ticks leave an
+                    // open one alone.
+                    StopMenu(session: session, index: index, count: line.stops.count, stationName: name(of: station), choices: stations)
+                        .equatable()
                 }
             }
-            Menu {
-                stationButtons { session.insertStopIntoSelectedLine($0, at: line.stops.count) }
-            } label: {
-                Label("Add Stop at the End", systemImage: "plus.circle")
-            }
+            AddStopMenu(session: session, place: .end(line.stops.count), choices: stations)
+                .equatable()
             // Decision 80: MapBuilder's add to line, where the station fits.
-            Menu {
-                stationButtons { session.addStationToSelectedLine($0) }
-            } label: {
-                Label("Add Stop Where It Fits", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-            }
-            .accessibilityIdentifier("line.addStopWhereItFits")
+            AddStopMenu(session: session, place: .whereItFits, choices: stations)
+                .equatable()
             Button {
                 session.reverseSelectedLine()
             } label: {
@@ -624,15 +603,6 @@ struct LinesPanel: View {
     /// 172), which `GameWorld.reverseLineStops(_:)` refuses.
     private func ringHasRunningTrain(_ line: ServiceLine) -> Bool {
         line.isRing && line.trains.contains { session.world.train(id: $0)?.execution != nil }
-    }
-
-    /// A button for every station, calling `choose` with its ID.
-    private func stationButtons(_ choose: @escaping @MainActor (StationID) -> Void) -> some View {
-        ForEach(session.world.stations) { station in
-            Button(station.name) {
-                choose(station.id)
-            }
-        }
     }
 
     private func serviceSection(_ summary: LineServiceSummary, of line: ServiceLine) -> some View {
@@ -1027,6 +997,96 @@ struct LinesPanel: View {
                     Text(verbatim: name(of: station))
                 }
                 .disabled(isEnd)
+            }
+        }
+    }
+}
+
+/// A stop's menu on the selected line: move it, insert a station before
+/// it, or remove it. An equatable view of the stop and the stations' names:
+/// the game loop replaces the world every tick, and an open native menu
+/// drawn again is rebuilt, back to its top (TestFlight 54.1).
+private struct StopMenu: View, Equatable {
+    let session: GameSession
+    let index: Int
+    let count: Int
+    let stationName: String
+    let choices: [MenuChoice<StationID>]
+
+    nonisolated static func == (lhs: StopMenu, rhs: StopMenu) -> Bool {
+        lhs.session === rhs.session && lhs.index == rhs.index && lhs.count == rhs.count
+            && lhs.stationName == rhs.stationName && lhs.choices == rhs.choices
+    }
+
+    var body: some View {
+        Menu {
+            Button("Move Up") {
+                session.moveStopOfSelectedLine(at: index, by: -1)
+            }
+            .disabled(index == 0)
+            Button("Move Down") {
+                session.moveStopOfSelectedLine(at: index, by: 1)
+            }
+            .disabled(index == count - 1)
+            Menu("Insert Before") {
+                ForEach(choices) { station in
+                    Button(station.title) {
+                        session.insertStopIntoSelectedLine(station.id, at: index)
+                    }
+                }
+            }
+            Button("Remove Stop", role: .destructive) {
+                session.removeStopFromSelectedLine(at: index)
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .frame(minWidth: 44, minHeight: 32)
+        }
+        .accessibilityLabel("Edit stop \(index + 1), \(stationName)")
+    }
+}
+
+/// A menu of every station to add to the selected line, at the end or
+/// where it fits (decision 80, MapBuilder's add to line). Equatable, as
+/// ``StopMenu``.
+private struct AddStopMenu: View, Equatable {
+    enum Place: Equatable {
+        /// After the last of the line's `count` stops.
+        case end(Int)
+        case whereItFits
+    }
+
+    let session: GameSession
+    let place: Place
+    let choices: [MenuChoice<StationID>]
+
+    nonisolated static func == (lhs: AddStopMenu, rhs: AddStopMenu) -> Bool {
+        lhs.session === rhs.session && lhs.place == rhs.place && lhs.choices == rhs.choices
+    }
+
+    var body: some View {
+        switch place {
+        case let .end(count):
+            Menu {
+                buttons { session.insertStopIntoSelectedLine($0, at: count) }
+            } label: {
+                Label("Add Stop at the End", systemImage: "plus.circle")
+            }
+        case .whereItFits:
+            Menu {
+                buttons { session.addStationToSelectedLine($0) }
+            } label: {
+                Label("Add Stop Where It Fits", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+            }
+            .accessibilityIdentifier("line.addStopWhereItFits")
+        }
+    }
+
+    /// A button for every station, calling `choose` with its ID.
+    private func buttons(_ choose: @escaping @MainActor (StationID) -> Void) -> some View {
+        ForEach(choices) { station in
+            Button(station.title) {
+                choose(station.id)
             }
         }
     }

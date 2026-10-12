@@ -88,33 +88,11 @@ struct TrainControls: View {
     private var header: some View {
         HStack(spacing: 8) {
             if let train = session.selectedTrain {
-                Menu {
-                    ForEach(session.world.trains) { candidate in
-                        Button(candidate.name) {
-                            session.selectTrain(candidate.id)
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "train.side.front.car")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Theme.primary)
-                        Text(train.name)
-                            .font(.subheadline.weight(.bold))
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Theme.panelBorder, lineWidth: 1)
-                    )
-                }
-                .accessibilityLabel("Train: \(train.name)")
-                .accessibilityHint("Chooses the train to control.")
+                // TestFlight 54.1: built from the trains' names alone, so
+                // the ticks of a running game leave it alone while it is
+                // open (it scrolled back and showed two layers of text).
+                TrainPickerMenu(session: session, choices: session.trainMenuChoices, selectedName: train.name)
+                    .equatable()
             }
 
             Button {
@@ -323,6 +301,51 @@ struct TrainControls: View {
                 .accessibilityLabel("Run the train's timetable")
             }
         }
+    }
+}
+
+/// The menu that chooses the train to control, labelled with the selected
+/// one. An equatable view of the trains' names: the game loop replaces the
+/// world every tick, and an open native menu drawn again is rebuilt, back
+/// to its top and with its rows cross-faded (TestFlight 54.1).
+private struct TrainPickerMenu: View, Equatable {
+    let session: GameSession
+    let choices: [MenuChoice<TrainID>]
+    let selectedName: String
+
+    nonisolated static func == (lhs: TrainPickerMenu, rhs: TrainPickerMenu) -> Bool {
+        lhs.session === rhs.session && lhs.choices == rhs.choices && lhs.selectedName == rhs.selectedName
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(choices) { candidate in
+                Button(candidate.title) {
+                    session.selectTrain(candidate.id)
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "train.side.front.car")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                Text(selectedName)
+                    .font(.subheadline.weight(.bold))
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Theme.panelBorder, lineWidth: 1)
+            )
+        }
+        .accessibilityLabel("Train: \(selectedName)")
+        .accessibilityHint("Chooses the train to control.")
+        .accessibilityIdentifier("train.picker")
     }
 }
 
