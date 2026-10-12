@@ -64,31 +64,72 @@ enum TrackClearance {
         }
         let shared: Set<TrackNodeID> = Set([a.from, a.to]).intersection([b.from, b.to])
         guard let first = stretch(of: a, sharing: shared), let second = stretch(of: b, sharing: shared) else { return true }
-        // Only pieces within the other edge's box can meet it.
-        let firstPieces = pieces(of: first.points, within: b.minimum, b.maximum)
-        let secondPieces = pieces(of: second.points, within: a.minimum, a.maximum)
-        for i in firstPieces {
-            let p = first.points[i]
-            let q = first.points[i + 1]
-            for j in secondPieces {
-                let r = second.points[j]
-                let s = second.points[j + 1]
-                guard min(p.x, q.x) <= max(r.x, s.x), min(r.x, s.x) <= max(p.x, q.x),
-                      min(p.y, q.y) <= max(r.y, s.y), min(r.y, s.y) <= max(p.y, q.y)
-                else { continue }
-                let meetings = meetingPoints(
-                    p, q, along: (first.distances[i], first.distances[i + 1]),
-                    r, s, along: (second.distances[j], second.distances[j + 1])
-                )
-                guard !meetings.isEmpty else { continue }
-                let heightsA = meetings.map { a.geometry.height(at: $0.a) }
-                let heightsB = meetings.map { b.geometry.height(at: $0.b) }
-                guard heightsA.min()! - heightsB.max()! >= TrackStructure.clearance
-                    || heightsB.min()! - heightsA.max()! >= TrackStructure.clearance
-                else { return false }
+        // Only pieces within the other edge's box can meet it, and only
+        // pieces in runs whose boxes meet: whether any two pieces meet
+        // without clearance does not depend on the order they are tried in.
+        let firstRuns = runs(of: first.points, pieces: pieces(of: first.points, within: b.minimum, b.maximum))
+        let secondRuns = runs(of: second.points, pieces: pieces(of: second.points, within: a.minimum, a.maximum))
+        for firstRun in firstRuns {
+            for secondRun in secondRuns where firstRun.meets(secondRun) {
+                for i in firstRun.pieces {
+                    let p = first.points[i]
+                    let q = first.points[i + 1]
+                    for j in secondRun.pieces {
+                        let r = second.points[j]
+                        let s = second.points[j + 1]
+                        guard min(p.x, q.x) <= max(r.x, s.x), min(r.x, s.x) <= max(p.x, q.x),
+                              min(p.y, q.y) <= max(r.y, s.y), min(r.y, s.y) <= max(p.y, q.y)
+                        else { continue }
+                        let meetings = meetingPoints(
+                            p, q, along: (first.distances[i], first.distances[i + 1]),
+                            r, s, along: (second.distances[j], second.distances[j + 1])
+                        )
+                        guard !meetings.isEmpty else { continue }
+                        let heightsA = meetings.map { a.geometry.height(at: $0.a) }
+                        let heightsB = meetings.map { b.geometry.height(at: $0.b) }
+                        guard heightsA.min()! - heightsB.max()! >= TrackStructure.clearance
+                            || heightsB.min()! - heightsA.max()! >= TrackStructure.clearance
+                        else { return false }
+                    }
+                }
             }
         }
         return true
+    }
+
+    /// How many pieces a ``Run`` holds.
+    static let runLength = 16
+
+    /// Up to ``runLength`` pieces of a centre line, one after another in a
+    /// list of pieces, and the box that holds them all: two pieces whose
+    /// boxes meet lie in runs whose boxes meet, so a pair of runs whose
+    /// boxes do not is passed over without trying its pieces.
+    struct Run {
+        let pieces: ArraySlice<Int>
+        let minimum: PlanPoint
+        let maximum: PlanPoint
+
+        /// Whether the two boxes meet, edges included, as the pieces' boxes
+        /// are tested.
+        func meets(_ other: Run) -> Bool {
+            minimum.x <= other.maximum.x && other.minimum.x <= maximum.x && minimum.y <= other.maximum.y && other.minimum.y <= maximum.y
+        }
+    }
+
+    /// The pieces `pieces` of `points` (each the index of its first point)
+    /// cut into runs of ``runLength``, in order.
+    static func runs(of points: [PlanPoint], pieces: [Int]) -> [Run] {
+        stride(from: 0, to: pieces.count, by: runLength).map { start in
+            let run = pieces[start..<min(start + runLength, pieces.count)]
+            var (low, high) = (points[run.first!], points[run.first!])
+            for i in run {
+                for point in [points[i], points[i + 1]] {
+                    low = PlanPoint(x: min(low.x, point.x), y: min(low.y, point.y))
+                    high = PlanPoint(x: max(high.x, point.x), y: max(high.y, point.y))
+                }
+            }
+            return Run(pieces: run, minimum: low, maximum: high)
+        }
     }
 
     /// The index of the first point of every piece of `points` whose box
@@ -190,15 +231,18 @@ extension RailwayNetwork {
 
     /// The first two edges, in ID order, that meet without clearance, or
     /// `nil`: what the ``GameWorld`` decoder rejects. `geometries` are the
-    /// edges' geometries in ID order, worked out once by the caller.
+    /// edges' geometries in ID order, worked out once by the caller. Only
+    /// pairs whose boxes meet are sampled.
     func firstConflictingPair(geometries: [TrackGeometry]) -> (TrackEdgeID, TrackEdgeID)? {
         let shapes = zip(edges, geometries).map { edge, geometry in
             (edge.id, ClearanceShape(from: edge.from, to: edge.to, curve: edge.curve, geometry: geometry))
         }
-        for i in shapes.indices {
-            for j in shapes.indices where j > i {
-                if !TrackClearance.isClear(shapes[i].1, shapes[j].1) { return (shapes[i].0, shapes[j].0) }
-            }
+        // Every pair whose boxes meet is among the pairs in reach, in the
+        // same order as every pair; the rest are clear (``TrackClearance/isClear(_:_:)``
+        // asks that first).
+        let boxes = shapes.map { PlanBox($0.1) }
+        for (i, j) in PlanBox.pairsInReach(boxes, margin: 0) where boxes[i].meets(boxes[j]) {
+            if !TrackClearance.isClear(shapes[i].1, shapes[j].1) { return (shapes[i].0, shapes[j].0) }
         }
         return nil
     }
