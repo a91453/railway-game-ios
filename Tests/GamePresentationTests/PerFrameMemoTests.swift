@@ -37,8 +37,12 @@ final class PerFrameMemoTests: XCTestCase {
 
         session.setSpeed(.normal)
         let commands = session.commandRevision
-        for _ in 0..<5 { try tick(session) }
-        XCTAssertEqual(session.trackInspection(of: edge), session.world.trackInspection(of: edge), "the signal as it is now")
+        for _ in 0..<30 {
+            try tick(session)
+            // The same as worked out afresh, at every tick: the signal as it is now.
+            XCTAssertEqual(session.trackInspection(of: edge), session.world.trackInspection(of: edge))
+            XCTAssertEqual(session.trackInspectionText(of: edge), session.world.trackInspectionText(of: edge, in: session.language))
+        }
         XCTAssertEqual(session.inspectionLineMap?.revision, commands, "the line map kept through the ticks")
         XCTAssertEqual(session.inspectionLineMap?.map, built.map)
 
@@ -79,5 +83,14 @@ final class PerFrameMemoTests: XCTestCase {
         for _ in 0..<10 { try tick(session) }
         _ = session.situationAlerts
         XCTAssertNotEqual(session.situationAlertsMemo?.period, memo.period, "ten game minutes: worked out again")
+        // Whenever they are worked out again, they are what the world says afresh.
+        for _ in 0..<30 {
+            let period = session.situationAlertsMemo?.period
+            try tick(session)
+            let alerts = session.situationAlerts
+            if session.situationAlertsMemo?.period != period {
+                XCTAssertEqual(alerts, session.world.situationAlerts())
+            }
+        }
     }
 }
