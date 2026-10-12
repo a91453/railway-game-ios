@@ -15,21 +15,31 @@ import GameCore
 /// A whole-Taiwan game with the Taiwan High Speed Rail built and running
 /// (decision 170).
 ///
-/// - The track is one line of cubic edges on the real alignment, flat and
-///   on the ground: the game's track, not the real viaducts and tunnels.
+/// - The track is double, as on the real line, flat and on the ground (the
+///   game's track, not the real viaducts and tunnels): the down track
+///   (southbound) is one line of cubic edges on the real alignment, the up
+///   track (northbound) runs ``trackOffset`` beside it and joins it by a
+///   turnout just short of each end's platform, where the sets turn back.
 /// - The twelve stations stand where the real ones do, each with a platform
-///   for a set of twelve cars (16 m each).
+///   on each track for a set of twelve cars (16 m each), the two ends one
+///   on the down track.
 /// - The line calls at all twelve; its two patterns are the real day's
 ///   nine-stop and five-stop expresses, every one a service of its own:
 ///   every 30, 20 and 30 minutes, with the sets that takes (see
 ///   ``services``).
+/// - Every leg names the platform it ends at: southbound the station's on
+///   the down track, northbound its on the up track, so each way keeps to
+///   its own track and the trains of the two ways never meet.
 /// - Its trains are high-speed sets (`TrainType.highSpeed`, twelve cars
 ///   rated 80 each), planned at `PERF_HSR`; the line is a high-speed line
 ///   (decision 168), so its stations draw the people round them and its
 ///   riders pay by the kilometre.
-/// - The track is one track, which the trains of both ways share: traffic
-///   control is off (the real line has two), so trains pass through one
-///   another on the way.
+/// - Traffic control is off: a set may still run into one going its own
+///   way ahead of it (an express that catches up with a stopping train),
+///   and the sets wait one behind another at Nangang's platform. Under
+///   traffic control the game's route reservation takes the thousands of
+///   spans of a 30 to 180 km leg, and a day of 24 sets would take it
+///   minutes of every game hour (decision 170).
 public enum HighSpeedDemo {
     /// Cars of every set.
     static let cars = 12
@@ -42,6 +52,13 @@ public enum HighSpeedDemo {
     /// and the fit loose.
     static let tolerance = 10.0 * RealWorldDemo.metre
     static let longestEdge = 4_000.0 * RealWorldDemo.metre
+    /// How far apart the two tracks' centre lines are: the real line's
+    /// 4.5 m and a little, clear of the game's 4 m
+    /// (``RailwayNetwork/trackSpacing``) on every curve.
+    static let trackOffset = 5.0 * RealWorldDemo.metre
+    /// How long the up track's ramps from the down track are, and how far
+    /// beyond an end's platform the first begins.
+    static let rampLength = 100.0 * RealWorldDemo.metre
 
     /// A stopping pattern of the real day, by station index (the twelve
     /// stations in order, Nangang first), and how often a train leaves.
@@ -149,11 +166,20 @@ public enum HighSpeedDemo {
 
     /// Where everything goes: worked out before anything is built, so the
     /// game can start with what it costs.
+    ///
+    /// Two tracks: ``plan``, the down track on the real alignment from
+    /// Nangang's end to Zuoying's, and ``up``, the up track beside it,
+    /// west of it as the real trains keep left, which leaves the down track
+    /// at ``junctions`` just past the two ends' platforms.
     struct Layout {
         let plan: RealWorldDemo.TrackPlan
+        let up: RealWorldDemo.TrackPlan
         let stops: [Stop]
         let platforms: [ClosedRange<Double>]
         let services: [Service]
+        /// Where the up track leaves the down track by Nangang and joins it
+        /// again by Zuoying, along the down track's path.
+        let junctions: (north: Double, south: Double)
 
         init(railways: RealRailways, services: [Service] = HighSpeedDemo.services) throws(Failure) {
             let frame = HighSpeedDemo.frame
@@ -176,8 +202,29 @@ public enum HighSpeedDemo {
             self.stops = stops
             self.platforms = platforms
             self.services = services
-            plan = RealWorldDemo.TrackPlan(
-                path, forced: [0, path.length], avoiding: platforms, tolerance: HighSpeedDemo.tolerance, longestEdge: HighSpeedDemo.longestEdge
+            // The turnouts a ramp beyond the ends' platforms, on the line's
+            // side, and the ramps a ramp long.
+            let ramp = HighSpeedDemo.rampLength, margin = RealWorldDemo.platformMargin
+            let junctions = (north: platforms[0].upperBound + margin + ramp, south: platforms[platforms.count - 1].lowerBound - margin - ramp)
+            self.junctions = junctions
+            let upEnds = (north: junctions.north + ramp, south: junctions.south - ramp)
+            let plan = RealWorldDemo.TrackPlan(
+                path, forced: [0, path.length, junctions.north, upEnds.north, upEnds.south, junctions.south], avoiding: platforms,
+                tolerance: HighSpeedDemo.tolerance, longestEdge: HighSpeedDemo.longestEdge
+            )
+            self.plan = plan
+            // Beside every node of the down track from the end of one ramp
+            // to the start of the other.
+            func index(_ distance: Double) -> Int {
+                guard let index = plan.distances.firstIndex(where: { abs($0 - distance) < 1 }) else {
+                    preconditionFailure("No node of the down track at \(distance)")
+                }
+                return index
+            }
+            let inner = Array(index(upEnds.north)...index(upEnds.south))
+            up = RealWorldDemo.TrackPlan(
+                beside: plan, at: [index(junctions.north)] + inner + [index(junctions.south)],
+                offsets: [0] + inner.map { _ in HighSpeedDemo.trackOffset } + [0]
             )
         }
 
@@ -187,24 +234,35 @@ public enum HighSpeedDemo {
         /// and ``GameWorld/setTrainCars(_:to:)``; every track is on the
         /// ground).
         func cost(at costs: ConstructionCosts) -> Money {
-            let track = plan.lengths.map { length in
+            let track = (plan.lengths + up.lengths).map { length in
                 max(1, (length + ConstructionCosts.trackPricingLength - 1) / ConstructionCosts.trackPricingLength) * TrackStructure.surface.costFactor
             }.reduce(0, +) * costs.track.amount
             let stations = Int64(stops.count) * costs.station.amount
             return Money(track + stations + HighSpeedDemo.trainsCost(of: services, at: costs))
         }
 
-        func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) {
-            let track = try plan.build(in: &world)
+        /// Builds it: the down track, the up track from turnout to turnout,
+        /// the stations and their platforms, and the line.
+        @discardableResult
+        func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) -> (down: RealWorldDemo.Track, up: RealWorldDemo.Track) {
+            let down = try plan.build(in: &world)
+            guard let north = down.node(at: junctions.north), let south = down.node(at: junctions.south) else {
+                preconditionFailure("The down track has no turnouts")
+            }
+            let upTrack = try up.build(in: &world, start: north, end: south)
             var ids: [StationID] = []
-            for (stop, zone) in zip(stops, platforms) {
+            for (index, (stop, zone)) in zip(stops, platforms).enumerated() {
                 let middle = plan.path.point(at: (zone.lowerBound + zone.upperBound) / 2)
                 let id = try world.buildStation(named: stop.station.name(in: language), at: middle.plan).id
-                let (edge, offset) = track.edge(at: zone.lowerBound, in: world)
-                try world.addTrackPlatform(id, on: edge, from: offset, to: offset + HighSpeedDemo.platformLength)
+                let ends = index == 0 || index == stops.count - 1
+                for track in ends ? [down] : [down, upTrack] {
+                    let (edge, offset) = track.edge(at: zone.lowerBound, in: world)
+                    try world.addTrackPlatform(id, on: edge, from: offset, to: offset + HighSpeedDemo.platformLength)
+                }
                 ids.append(id)
             }
-            try HighSpeedDemo.run(in: &world, language: language, services: services, stations: ids, track: track, firstPlatform: platforms[0])
+            try HighSpeedDemo.run(in: &world, language: language, services: services, stations: ids, down: down, firstPlatform: platforms[0])
+            return (down, upTrack)
         }
     }
 
@@ -234,13 +292,21 @@ public enum HighSpeedDemo {
     /// The line, its patterns and the sets of each, every set at the first
     /// platform facing the way it leaves; and the rules that make it a
     /// high-speed line's (``ServiceLine/isHighSpeed``).
+    ///
+    /// Every leg names the platform it ends at
+    /// (``GameWorld/setLineRoutePreferences(_:to:pattern:)``): a
+    /// southbound leg the station's platform on the down track, a
+    /// northbound one its platform on the up track, so each way keeps to
+    /// its own track: the shortest way would at times run on the other's,
+    /// against its trains. The legs into the two ends name none: each has
+    /// only its platform on the down track.
     static func run(
-        in world: inout GameWorld, language: DisplayLanguage, services: [Service], stations: [StationID], track: RealWorldDemo.Track,
+        in world: inout GameWorld, language: DisplayLanguage, services: [Service], stations: [StationID], down: RealWorldDemo.Track,
         firstPlatform: ClosedRange<Double>
     ) throws(GameError) {
-        // Single track: the trains of both ways share it, and the sets wait
-        // one behind another at the first platform. Under traffic control
-        // the first set would hold it and the rest could not be placed.
+        // Traffic control is off: the sets wait one behind another at the
+        // first platform, and a set may run into one ahead going its way
+        // (see ``HighSpeedDemo``).
         try world.setTrafficControl(false)
         let all = services[0]
         let line = try world.createLine(named: language.text(all.english, all.chinese), stops: all.stops.map { stations[$0] }).id
@@ -250,24 +316,67 @@ public enum HighSpeedDemo {
             let calls = service.stops.compactMap { stop in all.stops.firstIndex(of: stop) }
             patterns.append(try world.addLinePattern(line, calling: calls))
         }
+        func platform(of stop: Int, onDown: Bool) -> TrackPlatform? {
+            world.trackPlatforms(of: stations[stop]).first { down.edges.contains($0.edge) == onDown }
+        }
         var number = 0
         for (service, pattern) in zip(services, patterns) {
             try world.setLineTargetHeadways(
                 line, to: TargetHeadways(peak: service.headway, offPeak: service.headway, low: service.headway), pattern: pattern
             )
+            let calls = service.stops.compactMap { stop in all.stops.firstIndex(of: stop) }
+            var preferences: [LineRoutePreference] = []
+            for (from, to) in zip(calls, calls.dropFirst()) {
+                if to != calls[calls.count - 1], let southbound = platform(of: to, onDown: true) {
+                    preferences.append(LineRoutePreference(from: from, to: to, platform: southbound))
+                }
+                if from != calls[0], let northbound = platform(of: from, onDown: false) {
+                    preferences.append(LineRoutePreference(from: to, to: from, platform: northbound))
+                }
+            }
+            try world.setLineRoutePreferences(line, to: preferences, pattern: pattern)
             for _ in 0..<service.sets {
                 number += 1
                 let train = try world.purchaseTrain(named: language.text("THSR \(number)", "高鐵 \(number)")).id
                 try world.setTrainType(train, to: .highSpeed)
                 try world.setTrainCars(train, to: cars)
                 try world.setTrainPerformance(train, to: .highSpeed)
-                let (edge, start) = track.edge(at: firstPlatform.lowerBound, in: world)
+                let (edge, start) = down.edge(at: firstPlatform.lowerBound, in: world)
                 let offset = start + platformLength
                 try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: offset))
                 try world.setTrainContinuation(train, along: [], stoppingAt: offset)
                 try world.useTrainPerformanceForMovement(train)
                 try world.assignTrain(train, to: line, pattern: pattern)
             }
+        }
+    }
+}
+
+extension RealWorldDemo.TrackPlan {
+    /// Track beside `plan` (the high-speed demo's up track): a node at each
+    /// of `plan`'s nodes `at`, `offsets` from it to the side
+    /// (``WorldVector/normal`` of the way the track runs there), and cubic
+    /// edges that leave and reach each node along that way, as
+    /// ``init(_:forced:avoiding:looseUntil:close:start:end:rise:structure:tolerance:longestEdge:)``
+    /// lays them, flat on the ground. Where two nodes in a row stand off by
+    /// the same, the edge between runs beside `plan`'s that far off it;
+    /// where they differ, it is a ramp from the one to the other.
+    init(beside plan: RealWorldDemo.TrackPlan, at indices: [Int], offsets: [Double]) {
+        let distances = indices.map { plan.distances[$0] }
+        let nodes = zip(indices, offsets).map { index, offset in
+            let node = plan.nodes[index], direction = node.direction.unit
+            return (point: (WorldVector(node.point) + direction.normal * offset).plan, direction: direction)
+        }
+        path = plan.path
+        structure = .surface
+        self.distances = distances
+        self.nodes = nodes
+        heights = distances.map { _ in 0 }
+        curves = distances.indices.dropLast().map { index in
+            let handle = (distances[index + 1] - distances[index]) / 3
+            let c1 = WorldVector(nodes[index].point) + nodes[index].direction * handle
+            let c2 = WorldVector(nodes[index + 1].point) - nodes[index + 1].direction * handle
+            return .cubic(c1.plan, c2.plan)
         }
     }
 }
