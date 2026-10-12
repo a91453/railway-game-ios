@@ -67,6 +67,13 @@ struct RailwayGameApp: App {
         // start screen shows at once; its real-world maps wait for it.
         launcher.loadRealWorldData { RailwayGameApp.bundledRealWorldData() }
         #if DEBUG
+        // Decision 177: UI tests start from an empty save folder, where the
+        // start screen's first-time card would push the buttons they tap
+        // below the fold; they start with it closed unless a test asks for
+        // it with -show-first-game-card.
+        if DebugLaunch.isSet("-ui-testing"), !DebugLaunch.isSet("-show-first-game-card") {
+            launcher.dismissFirstGameCard()
+        }
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
         if DebugLaunch.isSet("-demo-layout") {
