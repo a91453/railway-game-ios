@@ -1407,3 +1407,21 @@ V 實際放行 → T、U（保證不互穿）
 比例：擁擠與倍數都是千分比的整數（1,000 = 1.0）；乘方每次捨去到千分位，和 `PassengerCrowding` 一樣；時間是整秒，進位。
 
 外部專案：沒有用到程式碼或資料。OpenTTD（GPL-2.0）的逐步裝卸、TCRP Report 165（出版品）、A/B Street（Apache-2.0）都只看了說明，沒有讀程式碼，也沒有取公式；形式沿用本專案已有的 BPR 函數（`PassengerCrowding`）。
+
+## 晝夜與天氣畫面、列車依路線上色與平滑移動（決策 182）
+
+參考是 `a91453/railway-reference-private`（`main` 7328c2a）。CLAUDE.md 列的來源都搜過：`night`、`dusk`、`dawn`、`daylight`、`sunElevation`、`halo`、`lamp`、`window`、`rain`、`weather`、`storm`、`typhoon`、`lerp`、`interp`、`prevPos`。只有 3D 端（`Railway/site_archive_clean/rail-3d/`）有晝夜燈光與沿路徑放車；2D 地圖的色調與天氣畫面都沒有。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `rail-3d/integration/train-path.js` `makePath` 的 `at(s)`、`locate(coord)` | `TrainMotion.Trail.point(at:)`、`locate(_:)`（`direction(at:)`、`points(from:to:)` 是同一套） | adapted：世界單位（1/64 m），不要地球上的公尺、空間格網與里程提示；平手容差 1 mm → 0.01 單位 |
+| `rail-3d/integration/train-lighting.js` `nightAmount`、`train-halo-style.js` `haloNight`（太陽仰角 −6° 到 8° 的 smoothstep） | `DayNight.lights(atMinute:)` | adapted：2D 沒有太陽，改成時鐘 05:00–06:15、17:30–18:45 的同一個 smoothstep |
+| `train-halo-style.js` `haloSprite` 的 `Math.round(night*20)` 分格 | `DayNight.step(_:)` | direct：燈的強度分 20 格，畫布跨格才重畫 |
+| `train-halo-style.js` `haloPalette` 的暖色 `[1, 198/255, 109/255]` | `Palette.station`（`#FFC86B`）當夜間的光 | 沿用：幾乎同一色，用現有色票 |
+| `train-halo-style.js` `variation` 的雜訊（`sin((n+1)·12.9898+7.2)·43758.5453` 取小數） | `MapWeather.noise(_:)`（雨絲的位置、落速，閃電的時刻） | direct |
+| `night-map.js` 的暗色地圖（重設 MapLibre 圖層顏色） | （沒有移植） | 參考：這裡用一層色調蓋整張地圖，OSM 底圖的樣式（決策 151）不變 |
+| （參考沒有）2D 地圖的時間色調 | `DayNight.tint(atMinute:)`、`tint(at:)` | gap → 原生 |
+| （參考沒有）地圖上的雨、閃電、颱風 | `MapWeather`、`MapArt.drawWeather`、`MapGlyphTyphoon` | gap → 原生（天氣本身是決策 162 的缺口） |
+| （參考沒有）兩個 tick 之間沿軌道內插 | `TrainMotion`（`covered(from:along:to:in:)` 沿 `remainingEdges`） | gap → 原生；參考的 3D 是用時刻表算任意時間的位置 |
+
+外部專案：沒有用到程式碼或資料。圖示是自己畫的氣象圖颱風記號（art-style 的預覽與檢查），不是參考庫或任何人的圖。

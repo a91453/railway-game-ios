@@ -51,6 +51,16 @@ struct MapView: View {
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// Decision 182: whether the map shows the time of day and the
+    /// weather (the settings' switches, on the device).
+    @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
+    @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    /// Decision 182: the trains' moves in the last tick, to draw them
+    /// gliding to where they are, and a number that changes with them.
+    @State private var trainMotion = TrainMotion()
+    @State private var trainMotionVersion = 0
+    /// Decision 182: today's weather on the map, worked out once a day.
+    @State private var mapWeather = MapWeather.clear
     /// The open panel, and the layer's opacity, hour and playback: kept
     /// above both layouts (``GameScreenState``).
     @Environment(GameScreenState.self) private var screen
@@ -182,6 +192,11 @@ struct MapView: View {
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
             let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
+            // Decision 182: the time of day, and how strongly the night's
+            // lights shine, in twentieths so that the canvases are redrawn
+            // twenty times as they come on, not on every tick.
+            let tint = showsDayNight ? DayNight.tint(at: session.world.clock.now) : .day
+            let lights = DayNight.step(tint.lights)
 
             VStack(spacing: 0) {
                 ZStack {
@@ -199,6 +214,8 @@ struct MapView: View {
                                 SkylineLayer(skyline: $0, growth: skylineGrowth, growthOnly: realWorld != nil, version: skylineVersion)
                             } : nil,
                         layer: popTravelLayer(realWorld: realWorld),
+                        // Decision 182: the town's windows at night.
+                        lights: realWorld == nil ? lights : 0,
                         camera: projection
                     )
                     .equatable()
@@ -218,9 +235,38 @@ struct MapView: View {
                         lines: lineMap,
                         labels: stationLabels,
                         flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
-                        flowVersion: flowStrokesVersion
+                        flowVersion: flowStrokesVersion,
+                        lights: lights
                     )
                     .equatable()
+                    // Decision 182: the time of day over the ground, the
+                    // town, the track and the stations; the trains and the
+                    // weather stay over it.
+                    if tint.strength > 0 {
+                        Palette.tint(tint)
+                            .blendMode(.multiply)
+                            .allowsHitTesting(false)
+                    }
+                    MapTrainCanvas(
+                        motion: trainMotion,
+                        version: trainMotionVersion,
+                        animating: !session.world.clock.isPaused && trainMotion.isMoving,
+                        selectedTrainID: session.selectedTrainID,
+                        lights: lights,
+                        plain: mapLayers.popTravelMode == .sectionFlow,
+                        traffic: traffic,
+                        camera: projection
+                    )
+                    .equatable()
+                    if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
+                        MapWeatherLayer(
+                            weather: mapWeather,
+                            reduceMotion: reduceMotion,
+                            typhoonStations: session.world.stations.filter { mapWeather.typhoonStations.contains($0.id) }.map(\.location),
+                            camera: projection
+                        )
+                        .equatable()
+                    }
                 }
                 .mask { attribution.fill() }
                 // The gestures take the touches, and let those on the
@@ -554,6 +600,14 @@ struct MapView: View {
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
             traffic = session.world.trafficOverlay()
+        }
+        .onChange(of: session.world.trains, initial: true) { _, _ in
+            // Decision 182: each tick's trains glide from the last tick's.
+            trainMotion = TrainMotion(world: session.world, previous: trainMotion, time: Date().timeIntervalSinceReferenceDate)
+            trainMotionVersion &+= 1
+        }
+        .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
+            mapWeather = MapWeather(world: session.world)
         }
         .task(id: LineMapKey(world: session.world)) {
             // A journey a line costs a route search a leg: on a large map
@@ -1084,11 +1138,14 @@ private struct MapCanvas: View, Equatable {
     /// them (they are compared by it, not stroke by stroke).
     let flowStrokes: [SectionFlow.Stroke]
     let flowVersion: Int
+    /// Decision 182: how strongly the stations shine at night.
+    let lights: Double
 
+    /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
+    /// so a tick that only moves them does not redraw it.
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
             && lhs.world.stations == rhs.world.stations
-            && lhs.world.trains == rhs.world.trains
             && lhs.world.network == rhs.world.network
             && lhs.world.placedBuildings == rhs.world.placedBuildings
             && lhs.selectedTrainID == rhs.selectedTrainID
@@ -1106,9 +1163,11 @@ private struct MapCanvas: View, Equatable {
             && lhs.lines == rhs.lines
             && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
+            && lhs.lights == rhs.lights
     }
 
     var body: some View {
+        let lights = lights
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
@@ -1131,6 +1190,7 @@ private struct MapCanvas: View, Equatable {
                 labels: labels,
                 flowStrokes: flowStrokes,
                 latitude: latitude,
+                lights: lights,
                 in: context
             )
         }
@@ -1197,17 +1257,19 @@ private struct MapBaseCanvas: View, Equatable {
     let drawsLand: Bool
     let skyline: SkylineLayer?
     let layer: PopTravelLayer?
+    /// Decision 182: how strongly the town's windows shine at night.
+    let lights: Double
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapBaseCanvas, rhs: MapBaseCanvas) -> Bool {
         lhs.bounds == rhs.bounds && lhs.drawsLand == rhs.drawsLand && lhs.skyline == rhs.skyline && lhs.layer == rhs.layer
-            && lhs.camera == rhs.camera
+            && lhs.lights == rhs.lights && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let shown = self.skyline
         let bounds = bounds, drawsLand = drawsLand, growth = shown?.growth, growthOnly = shown?.growthOnly ?? false
-        let skyline = shown?.skyline, layer = layer, camera = camera
+        let skyline = shown?.skyline, layer = layer, camera = camera, lights = lights
         // Decision 140: redrawn every frame only while a night's growth
         // plays; otherwise the timeline is paused and the canvas is drawn
         // as before.
@@ -1221,12 +1283,103 @@ private struct MapBaseCanvas: View, Equatable {
                     growth: growth.map { ($0.growth, elapsed: timeline.date.timeIntervalSince($0.start)) },
                     growthOnly: growthOnly,
                     layer: layer,
+                    lights: lights,
                     projection: camera,
                     in: context
                 )
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// Decision 182: the trains, over the map and the time of day's tint, each
+/// gliding from where it was at the last tick to where it is, frame by
+/// frame while the game runs (``TrainMotion``); drawn where they are while
+/// it is paused. Compared by the motion's number, not train by train.
+private struct MapTrainCanvas: View, Equatable {
+    let motion: TrainMotion
+    let version: Int
+    let animating: Bool
+    let selectedTrainID: TrainID?
+    let lights: Double
+    /// Every train in the map's train colour (the passenger load layer).
+    let plain: Bool
+    let traffic: TrafficOverlay
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
+        lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
+            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
+        let traffic = traffic, camera = camera
+        return TimelineView(.animation(paused: !animating)) { timeline in
+            Canvas { context, size in
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                MapArt.drawTrains(
+                    motion,
+                    progress: animating ? motion.progress(at: timeline.date.timeIntervalSinceReferenceDate) : 1,
+                    selectedTrainID: selectedTrainID,
+                    lights: lights,
+                    plain: plain,
+                    traffic: traffic,
+                    projection: camera,
+                    in: context
+                )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Decision 182: today's weather over the map (``MapWeather``), the rain
+/// falling frame by frame unless the player reduces motion, and the sign of
+/// a typhoon beside each station it blows over.
+private struct MapWeatherLayer: View, Equatable {
+    let weather: MapWeather
+    let reduceMotion: Bool
+    let typhoonStations: [PlanPoint]
+    let camera: PlanCamera
+
+    nonisolated static func == (lhs: MapWeatherLayer, rhs: MapWeatherLayer) -> Bool {
+        lhs.weather == rhs.weather && lhs.reduceMotion == rhs.reduceMotion && lhs.typhoonStations == rhs.typhoonStations
+            && lhs.camera == rhs.camera
+    }
+
+    var body: some View {
+        let weather = weather, reduceMotion = reduceMotion, typhoonStations = typhoonStations, camera = camera
+        return TimelineView(.animation(paused: reduceMotion || weather.sky == .clear)) { timeline in
+            Canvas { context, size in
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                MapArt.drawWeather(
+                    weather,
+                    time: timeline.date.timeIntervalSinceReferenceDate,
+                    reduceMotion: reduceMotion,
+                    typhoonStations: typhoonStations.map { camera.screenPoint(of: $0) },
+                    stationRadius: MapArt.stationRadius(camera),
+                    size: size,
+                    in: context
+                )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// What the map's weather is worked out from (decision 182): the day, the
+/// world's weather and its stations.
+private struct MapWeatherKey: Equatable {
+    let day: Int64
+    let disruptions: Disruptions?
+    let stations: [StationID: PlanPoint]
+
+    init(world: GameWorld) {
+        day = world.clock.now.seconds / GameTime.secondsPerDay
+        disruptions = world.disruptions
+        stations = world.disruptions == nil ? [:] : Dictionary(uniqueKeysWithValues: world.stations.map { ($0.id, $0.point) })
     }
 }
 
