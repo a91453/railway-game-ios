@@ -178,11 +178,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         layers.waitUntilSettled()
         layers.tap()
         // The layer is the last of the sheet's rows, below long notes: the
-        // sheet's list is swiped up, slowly, until it is there.
-        let sheet = app.collectionViews.containing(.switch, identifier: "layer.stationNames").firstMatch
-        XCTAssertTrue(sheet.waitForExistence(timeout: 10), "The layers sheet opens")
+        // sheet is dragged up, slowly, until it is there. Not by an element
+        // of it: a row that has scrolled away is not in the hierarchy.
+        XCTAssertTrue(app.switches["layer.stationNames"].waitForExistence(timeout: 10), "The layers sheet opens")
         let row = app.switches["layer.sectionFlow"]
-        XCTAssertTrue(scroll(sheet, to: row), "The passenger load row comes into view")
+        XCTAssertTrue(scrollScreen(to: row, in: app), "The passenger load row comes into view")
         let load = row.switches.firstMatch
         XCTAssertTrue(load.waitForExistence(timeout: 5))
         for _ in 0..<3 where load.value as? String != "1" {
@@ -289,6 +289,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         // For the log: what the list held when it did not show the row.
         print("The list never showed \(element) (exists: \(element.exists)):\n\(list.debugDescription)")
         return false
+    }
+
+    /// Drags up the middle of the screen, slowly so that a list does not
+    /// fling past, until `element` can be touched; whether it can. For a
+    /// sheet that fills the screen, whose list is not found by what it
+    /// holds, as a row that has scrolled away is not in the hierarchy.
+    private func scrollScreen(to element: XCUIElement, in app: XCUIApplication, drags: Int = 30) -> Bool {
+        for _ in 0..<drags {
+            if element.exists, element.isHittable { return true }
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+            let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+            settle(seconds: 0.5)
+        }
+        return element.exists && element.isHittable
     }
 
     /// Waits until the game's clock reads from `start` o'clock to before
