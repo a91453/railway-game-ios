@@ -338,6 +338,19 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// For each run, the last game day it sent a train out, or `nil` if it
     /// never has.
     public internal(set) var runDays: [Int64?]
+
+    /// The line without when it last sent trains out (``lastDispatch``, the
+    /// outer ring's, its patterns' and the run days), which change at every
+    /// departure: for a key of what a result depends on that no departure
+    /// time changes.
+    public var withoutDispatchTimes: ServiceLine {
+        var line = self
+        line.lastDispatch = nil
+        line.outerLastDispatch = nil
+        line.runDays = []
+        for index in line.patterns.indices { line.patterns[index].lastDispatch = nil }
+        return line
+    }
     /// Whether the line carries freight rather than passengers (decision
     /// 155): its trains load and unload cargo at the stations with a freight
     /// facility, and no passenger rides it. Set by
