@@ -52,6 +52,31 @@ final class MonthlyReportTests: XCTestCase {
         XCTAssertNil(session.monthEndReport)
     }
 
+    /// Decision 175, later: a demo being looked at, or a game with its pauses
+    /// off, gets the report in the news but no sheet and no pause.
+    func testADemoOrAGameWithPausesOffOnlyLogsTheReport() throws {
+        for (demo, pauses) in [(true, true), (false, false)] {
+            let session = GameSession(world: try NewsSessionTests.world(day: 29), language: .english)
+            session.news.isDemo = demo
+            session.pausesForImportantEvents = pauses
+            let tick = try XCTUnwrap(session.beginLoopTick())
+            XCTAssertTrue(session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 2 * 1_440, listening: false))))
+            XCTAssertNil(session.monthEndReport, "demo \(demo)")
+            XCTAssertFalse(session.world.clock.isPaused, "demo \(demo)")
+            XCTAssertTrue(session.news.items.contains { $0.category == .monthly }, "demo \(demo)")
+        }
+    }
+
+    /// A news file whose baseline is of a month not yet come (it belongs to
+    /// another game) would stop the reports; it starts afresh.
+    func testABaselineFromTheFutureIsReplacedWhenTheNewsIsRestored() throws {
+        let session = GameSession(world: try NewsSessionTests.world(day: 3), language: .english)
+        var log = NewsLog()
+        log.baseline = MonthlyBaseline(reportedMonth: 50, stationTrips: [:], tallBuildings: 0)
+        session.restoreNews(log)
+        XCTAssertEqual(session.news.baseline?.reportedMonth, -1)
+    }
+
     func testLogOnlyKeepsTheReportInTheNewsAndDoesNotPause() throws {
         let world = try NewsSessionTests.world(day: 29)
         let session = GameSession(world: world, language: .english)

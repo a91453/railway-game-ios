@@ -55,9 +55,6 @@ public enum RollingStock {
     /// The standard car, for a train without a type: A's prices and weight.
     public static let standard = RollingStockPricing(firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000)
 
-    /// A change of type costs this share of the new type's price for the
-    /// cars the train has.
-    public static let refitPercent: Int64 = 30
     /// A train sold brings back this share of what is left of its cost on
     /// the books.
     public static let salePercent: Int64 = 70
@@ -72,9 +69,14 @@ public enum RollingStock {
         return Money(pricing.firstCar.amount + pricing.eachCar.amount * Int64(max(0, cars - 1)))
     }
 
-    /// What changing a train of `cars` cars to `type` costs.
-    public static func refitFee(to type: TrainType?, cars: Int) -> Money {
-        Money(price(of: type, cars: cars).amount * refitPercent / 100)
+    /// What changing a train to a type whose whole train costs `price`
+    /// costs when the old train is worth `tradeIn` on the sale rule
+    /// (``salePrice(bookValue:)``): the same as selling the old train and
+    /// buying the new, at least nothing (decision 180, the owner's rule, so
+    /// that buying a cheap type, adding cars and changing the type is never
+    /// cheaper than buying the type outright).
+    public static func refitFee(price: Money, tradeIn: Money) -> Money {
+        Money(max(0, price.amount - tradeIn.amount))
     }
 
     /// What selling a train brings in: ``salePercent`` of `bookValue`,
@@ -147,5 +149,17 @@ extension GameWorld {
 
     func bookValue(_ kind: AssetRecord.Kind, owner: Int) -> Money {
         accounts.assets.reduce(Money.zero) { $1.kind == kind && $1.owner == owner ? $0 + $1.bookValue : $0 }
+    }
+}
+
+extension GameWorld {
+    /// What changing train `id` to `type` would cost now (decision 180):
+    /// the new type's price for the cars it has, less what selling it
+    /// would bring (``trainSaleQuote(_:)``), at least nothing; nothing
+    /// without ``rollingStockEconomics``, for the type it already is, and
+    /// for a train that does not exist.
+    public func refitCost(of id: TrainID, to type: TrainType?) -> Money {
+        guard rollingStockEconomics, let train = train(id: id), train.type != type else { return .zero }
+        return RollingStock.refitFee(price: RollingStock.price(of: type, cars: train.cars), tradeIn: trainSaleQuote(id))
     }
 }

@@ -49,7 +49,9 @@ final class RollingStockEconomicsTests: XCTestCase {
         // Maglev: $600,000 the first car, $150,000 each more.
         XCTAssertEqual(RollingStock.price(of: .maglev, cars: 1), Money(60_000_000))
         XCTAssertEqual(RollingStock.price(of: .maglev, cars: 4), Money(105_000_000))
-        XCTAssertEqual(RollingStock.refitFee(to: .maglev, cars: 4), Money(31_500_000))
+        // A change of type: the new train's price less the old one's sale value, at least nothing.
+        XCTAssertEqual(RollingStock.refitFee(price: Money(105_000_000), tradeIn: Money(10_500_000)), Money(94_500_000))
+        XCTAssertEqual(RollingStock.refitFee(price: Money(1_650_000), tradeIn: Money(7_350_000)), .zero)
         XCTAssertEqual(RollingStock.salePrice(bookValue: Money(33_333_333)), Money(23_333_333))
         XCTAssertEqual(RollingStock.salePrice(bookValue: Money(-5)), .zero)
         XCTAssertEqual(RollingStock.weight(of: .maglev, cars: 4), 7_200)
@@ -79,16 +81,65 @@ final class RollingStockEconomicsTests: XCTestCase {
         let train = try world.purchaseTrain(named: "Blue")
         XCTAssertEqual(paid(), 150_000 * dollar)
         try world.setTrainType(train.id, to: .maglev)
-        XCTAssertEqual(paid(), 18_000_000, "30 % of $600,000")
+        XCTAssertEqual(paid(), 60_000_000 - 10_500_000, "a $600,000 maglev less 70 % of the $150,000 train")
         try world.setTrainType(train.id, to: .maglev)
         XCTAssertEqual(paid(), 0, "the same type is no refit")
         try world.setTrainCars(train.id, to: 4)
         XCTAssertEqual(paid(), 3 * 150_000 * dollar, "three maglev cars")
         try world.setTrainType(train.id, to: .l)
-        XCTAssertEqual(paid(), (90_000 + 3 * 25_000) * dollar * 30 / 100, "a light-rail refit of four cars")
-        // What the books hold: the purchase and the refits on the train, the cars on the cars.
+        // Four light-rail cars cost $165,000; the maglev train is worth 70 % of $600,000 + $450,000 more:
+        // nothing is paid, and nothing is paid back.
+        XCTAssertEqual(paid(), 0, "a downgrade costs nothing")
+        // What the books hold: the new train at its price, the old records sold.
         let book = world.accounts.assets.filter { $0.kind == .train || $0.kind == .cars }.reduce(Money.zero) { $0 + $1.cost }
-        XCTAssertEqual(book, Money(15_000_000 + 18_000_000 + 45_000_000 + 4_950_000))
+        XCTAssertEqual(book, Money(16_500_000))
+        let capital = try XCTUnwrap(world.accounts.capitalDays.first)
+        XCTAssertEqual(capital.saleProceeds, Money(10_500_000 + 16_500_000), "the first change and the second sold at what the new cost, at most")
+    }
+
+    /// The loophole the rule closes: a cheap type, cars added, then changed
+    /// to the dear type never costs less than buying the dear type outright.
+    func testBuyingCheapAddingCarsAndChangingTypeIsNeverCheaperThanBuyingOutright() throws {
+        for cars in [1, 4, 8, 16] {
+            var direct = try makeWorld(economics: true)
+            let start = direct.economy.balance
+            let outright = try direct.purchaseTrain(named: "Direct", as: .highSpeed)
+            try direct.setTrainCars(outright.id, to: cars)
+            let directCost = start - direct.economy.balance
+
+            var roundabout = try makeWorld(economics: true)
+            let cheap = try roundabout.purchaseTrain(named: "Cheap", as: .l)
+            try roundabout.setTrainCars(cheap.id, to: cars)
+            try roundabout.setTrainType(cheap.id, to: .highSpeed)
+            let roundaboutCost = start - roundabout.economy.balance
+            XCTAssertGreaterThanOrEqual(roundaboutCost, directCost, "\(cars) cars")
+            XCTAssertEqual(roundabout.train(id: cheap.id)?.cars, cars)
+        }
+    }
+
+    func testTheChangeOfTypeCostIsTheNewPriceLessWhatTheOldWouldSellFor() throws {
+        var world = try makeWorld(economics: true)
+        let train = try world.purchaseTrain(named: "Blue", as: .l)
+        try world.setTrainCars(train.id, to: 3)
+        // The books: $90,000 + 2 × $25,000 = $140,000, 70 % is $98,000.
+        XCTAssertEqual(world.trainSaleQuote(train.id), Money(9_800_000))
+        XCTAssertEqual(world.refitCost(of: train.id, to: .maglev), Money((600_000 + 2 * 150_000) * 100 - 9_800_000))
+        XCTAssertEqual(world.refitCost(of: train.id, to: .l), .zero, "the type it is")
+        XCTAssertEqual(world.refitCost(of: TrainID(rawValue: 9), to: .maglev), .zero)
+        let before = world.economy.balance
+        try world.setTrainType(train.id, to: .maglev)
+        XCTAssertEqual(before - world.economy.balance, Money((600_000 + 2 * 150_000) * 100 - 9_800_000))
+        // What it is worth now: 70 % of the new price, whatever the old books were.
+        XCTAssertEqual(world.trainSaleQuote(train.id), Money(90_000_000 * 70 / 100))
+    }
+
+    func testWithoutTheSwitchTheChangeOfTypeStaysFree() throws {
+        var world = try makeWorld(economics: false)
+        let train = try world.purchaseTrain(named: "Blue")
+        XCTAssertEqual(world.refitCost(of: train.id, to: .maglev), .zero)
+        let before = world.economy.balance
+        try world.setTrainType(train.id, to: .maglev)
+        XCTAssertEqual(world.economy.balance, before)
     }
 
     func testARefitTooDearForTheBalanceIsRefusedAndChangesNothing() throws {
@@ -108,15 +159,16 @@ final class RollingStockEconomicsTests: XCTestCase {
         try world.setTrainCars(train.id, to: 4)
         let before = world.economy.balance
         try world.sellTrain(train.id)
-        // $150,000 + the $180,000 refit... the train record: 15,000,000 + 18,000,000; the cars: 45,000,000 + (the cars bought after the refit) 45,000,000.
-        let trainBook: Int64 = 15_000_000 + 18_000_000
+        // The train record is the maglev bought in the change, $600,000; the cars: 3 maglev cars at $150,000.
+        let trainBook: Int64 = 60_000_000
         let carsBook: Int64 = 3 * 15_000_000
         XCTAssertEqual(world.economy.balance - before, Money(trainBook * 70 / 100 + carsBook * 70 / 100))
         XCTAssertNil(world.train(id: train.id))
         XCTAssertFalse(world.accounts.assets.contains { $0.kind == .train || $0.kind == .cars })
         let capital = try XCTUnwrap(world.accounts.capitalDays.first)
-        XCTAssertEqual(capital.saleProceeds, Money(trainBook * 70 / 100 + carsBook * 70 / 100))
-        XCTAssertEqual(capital.saleBookValue, Money(trainBook + carsBook))
+        // The change of type sold the standard train for 70 % of $150,000, then the sale.
+        XCTAssertEqual(capital.saleProceeds, Money(10_500_000 + trainBook * 70 / 100 + carsBook * 70 / 100))
+        XCTAssertEqual(capital.saleBookValue, Money(15_000_000 + trainBook + carsBook))
         XCTAssertThrowsError(try world.sellTrain(train.id)) { XCTAssertEqual($0 as? GameError, .unknownTrain(train.id)) }
         // The ID is not given out again.
         XCTAssertEqual(try world.purchaseTrain(named: "Green").id, TrainID(rawValue: 2))
@@ -261,35 +313,48 @@ final class RollingStockEconomicsTests: XCTestCase {
     }
 
     /// Version 49 (decision 180): a managed world with the switch on that has
-    /// sold a train and kept another, a 2-car light-rail train that cost its
-    /// type's prices and a refit. It saves byte for byte and is the world this
-    /// build makes.
+    /// sold a train and kept another, a 2-car light-rail train. The save was
+    /// written when a change of type cost 30 % of the new type's price, so its
+    /// books hold that refit ($2,700 on the train's $150,000, `17,700,000`);
+    /// since the follow-up rule (a change of type costs the new price less the
+    /// old train's sale value) the commands that made it would make another
+    /// world, so this test does not rebuild it: an old save is read as it was
+    /// stored, and a later change of type is charged by the new rule. The
+    /// file itself is never rewritten.
     func testVersionFortyNineKeepsTheSwitchAndTheBooks() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v49-rolling-stock-economics.json")
-        var made = try makeWorld(economics: true, balance: 1_000_000_000)
-        let sold = try made.purchaseTrain(named: "Sold")
-        try made.setTrainType(sold.id, to: .maglev)
-        try made.sellTrain(sold.id)
-        let kept = try made.purchaseTrain(named: "Kept")
-        try made.setTrainType(kept.id, to: .l)
-        try made.setTrainCars(kept.id, to: 2)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["ROLLING_STOCK_SAVE_NEW"] != nil {
-            try encoder.encode(SavedGame(world: made)).write(to: url)
-        }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 49)
-        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertTrue(world.rollingStockEconomics)
         XCTAssertEqual(world.trains.map(\.name), ["Kept"])
-        XCTAssertEqual(world.train(id: kept.id)?.type, .l)
+        let kept = try XCTUnwrap(world.trains.first)
+        XCTAssertEqual(kept.type, .l)
+        XCTAssertEqual(kept.cars, 2)
+        // The books and the balance as they were stored.
+        XCTAssertEqual(world.economy.balance, Money(969_896_400))
+        let records = world.accounts.assets.filter { $0.owner == kept.id.rawValue && ($0.kind == .train || $0.kind == .cars) }
+        XCTAssertEqual(records.map(\.cost), [Money(17_700_000), Money(2_500_000)])
+        let capital = try XCTUnwrap(world.accounts.capitalDays.first)
+        XCTAssertEqual(capital.saleProceeds, Money(23_100_000))
+        XCTAssertEqual(capital.saleBookValue, Money(33_000_000))
         // Saved again by a later build: the same bytes with its version.
         let current = Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 49,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), current)
+        // It goes on to be the same world as one that never was saved.
+        var carried = try JSONDecoder().decode(SavedGame.self, from: try encoder.encode(SavedGame(world: world))).world
+        try carried.advance(ticks: 40)
+        try world.advance(ticks: 40)
+        XCTAssertEqual(carried, world)
+        // A later change of type is charged by the new rule: the new price
+        // less 70 % of the books ($177,000 + $25,000 for the two cars).
+        let quote = world.trainSaleQuote(kept.id)
+        XCTAssertEqual(quote, Money((17_700_000 + 2_500_000) * 70 / 100))
+        XCTAssertEqual(world.refitCost(of: kept.id, to: .maglev), Money((600_000 + 150_000) * 100) - quote)
     }
 }
