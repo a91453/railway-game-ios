@@ -18,12 +18,14 @@ struct EconomyPanel: View {
     @Environment(GameScreenState.self) private var screen
     @State private var period: FinancePeriod = .day
     @State private var statement: Statement = .income
+    @State private var trendRange: FinanceTrendRange = .thirtyDays
     @State private var flatFare: Int64 = 500
     @State private var confirmsFreePlay = false
 
     var body: some View {
         NavigationStack {
             Form {
+                trendSection
                 balanceSection
                 if session.world.scenario != nil {
                     goalsSection
@@ -56,6 +58,25 @@ struct EconomyPanel: View {
     }
 
     // MARK: - Sections
+
+    /// Decision 176: how the company is growing, over 30 days, 90 days, a
+    /// year or all its closed years.
+    private var trendSection: some View {
+        Section {
+            Picker(selection: $trendRange) {
+                ForEach(FinanceTrendRange.allCases, id: \.self) { range in
+                    Text(verbatim: range.displayName(in: session.language)).tag(range)
+                }
+            } label: {
+                Text(verbatim: session.language.text("Range", "範圍"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("economy.trend.range")
+            FinanceTrendCharts(history: FinanceHistory.make(trendRange, world: session.world), language: session.language)
+        } header: {
+            Text(verbatim: session.language.text("Trends", "趨勢"))
+        }
+    }
 
     private var balanceSection: some View {
         Section {
