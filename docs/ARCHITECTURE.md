@@ -5523,6 +5523,28 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`、`Simulator/reference_snapshot`、`Railway/site_archive_clean`、`MapBuilder/reference_snapshot` 查過折返、回送、空車、任一端發車：沒有可用的（Ci 的地鐵車在終點彈回，不分班；`Railway/site_archive_clean/rail-3d/physical/dispatch.json` 的 `handoffs`（`matching-timetable-turnaround`）是真實時刻表裡「一班車到站後接下一班」的資料，決策 133 的回送班次用的是同一個想法）。OpenTTD 的 orders 只讀了概念（GPL，沒有複製程式碼）。程式是本專案自己的。
 
+### 178. 載客量圖層與車站「即將進站」看板
+
+2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
+
+**唯讀存取子（GameCore 唯一的改動）**：`GameWorld.plannedPassengerLegFlows()` 讀已經快取的旅客計畫（`passengerPlan`，由 `advance` 算出並保留），回傳每條路線、每個方向、每段乘車（上車站到下車站）每小時的乘客數（24 個數）；一對 OD 每小時的旅次依各路徑選項的權重分給它們（和 `passengerRouteAllocations` 同一個最大餘數法 `apportion`），路徑上每一段乘車各得一份。沒有快取時回 `nil`（`keepsPassengerPlan` 是便宜的檢查）。它不改世界、不存檔、不在畫面端重算任何一對 OD 的路徑（全台灣的圖會太慢）。
+
+**載客量圖層（`SectionFlow`，GamePresentation）**：
+- 每一段乘車分給它走過的每個站到站區間（`metroAllocateSectionFlowOnLineLeg`：沿路線的停靠站序，方向相同）；區間對到路線自己的來回行程（`lineJourney`）在該區間駛過的軌道片段（邊、起訖、行駛方向），共用軌道的路線在同一個區間相加（和參考的邊負載相加一樣）。兩個方向各是一個區間。
+- 運能 = 該小時的服務等級下，每個服務（路線本身與各停站模式）的每小時班次（60 ÷ `lineHeadway`）× 列車容量（該服務列車 `capacity` 的平均），加起來；窗口關閉的小時為 0。
+- 顏色照參考 `metroSectionFlowColor`：載客比運能，`pow(比, 0.72)`，從 rgb(227,242,253) 到 rgb(13,71,161)；**超過 100% 改紅色**（參考是對全圖最忙的區間，遊戲有真的運能，所以改比運能）。線寬 2–10 pt 依人流開根號（對最忙的區間）。沒有運能卻有人流的區間是紅色。
+- 點一段軌道（`nearestSection`，離軌道中心線最近、在觸控半徑內）顯示「08:00–09:00 往 X：3,240 人／運能 2,800（116%）· 紅線、藍線」（`metroBuildSectionFlowTooltipRows` 的改寫）。
+- 地圖圖層：`PopTravelMode.sectionFlow`，和其他圖層一次一個，沿用旅運需求圖層的小時時間軸與播放（`followsTimeline`）；圖層面板的「營運 → 載客量」開關，圖例是藍色漸層加紅色與線寬的說明。畫在軌道上、取代線的顏色（`MapArt.drawSectionFlow`）；兩個方向各畫在行駛方向的左邊，並排不重疊。列車的箭頭車頭與高鐵站的雙圈照舊；圖層開啟時線的顏色換成人流，所以高鐵路線的藏青外框不畫。
+- 在背景算（一條路線一次行程與幾個班距），計畫還沒有時（開局第一分鐘之前）什麼都不畫，等它出現後、以及每六個遊戲小時重算一次。
+
+**車站「即將進站」看板（`DepartureBoard`）**：車站面板最上方可收合（記在 `@AppStorage`）的區塊，每個方向列出接下來的 6 班（三小時內）：路線色塊、車名、終點、幾分後到。到站時間來自列車自己的時刻表（`Train.timetable` 與 `execution`：還沒走過的停靠站，加上目前的誤點）；月台上的列車是「進站中」，一分鐘內「即將進站」。誤點（`GameWorld.lateness(of:)`）一分鐘起顯示「慢 N 分」；終點在本站的列在最後（「抵達本站」）。快車不停的車次（本站是路線的站、但在列車相鄰兩個停靠站之間）標「通過」，時間照站序在兩站之間內插。固定班次路線（`LineRun`）還沒派出的班次直接列時刻（已派出的就是列車）。每個 tick 隨世界更新（只讀時刻表，不算路徑）。
+
+**參考庫與外部專案**：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `metroComputeSectionFlowEdgeLoads`、`metroAllocateSectionFlowOnLineLeg`、`metroAllocateSectionFlowFromPathSteps`、`metroSectionFlowColor`（顏色與曲線原樣取用）、`metroBuildSectionFlowTooltipRows`、`metroPickNearestSectionFlowAtLatLng`；`Railway/site_archive_clean/index.html` 的 `schedBoardRows`（三小時內、依時間排）、`boardGroupOf`（依方向分組）、`renderBoard`（「即將」「N 分」「（終點到達）」）、`todayDelayBadge`（誤點一分鐘起顯示）。`night-board.js` 的方向分頁與倒數：這裡一個方向一組、每個 tick 更新，沒有分頁。外部專案（OpenTTD cargodist 的 link-load overlay）：只讀概念，沒有複製程式碼。
+
+**限制**：環線的兩個方向共用同一圈的軌道片段（外圈的返程沒有另外量）；停站模式（`LinePattern`）的車次只算進運能與看板，人流以路線的站序分配；看板的誤點對之後的停靠站沿用目前的誤點。
+
+**測試**：`SectionFlowTests`（沒有計畫時什麼都不畫、讀計畫不改世界、區間的負載與運能、輕重排序與紅色、顏色與線寬、區間的分配、點選與兩種語言的文字）、`DepartureBoardTests`（接下來的班次依方向排序、預定到站加誤點、月台上的列車、不在線上的站、時間與誤點的文字、尚未派出的固定班次）。App 的畫法與看板（SwiftUI）在 Linux 上只能編譯，要 macOS CI 與實機。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
@@ -5578,6 +5600,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 高鐵（決策 168）：以高鐵性能（PERF_HSR）規劃的客運路線就是高鐵路線（`ServiceLine.isHighSpeed` 算出來的，沒有開關也沒有存檔欄位，存檔版本 43 只多了腹地與車種）；搭高鐵路線的旅客第一段上車時付 `max(路網票價, 公里 × $0.45)`（起訖的直線距離，四捨五入到整美元；沒有參考的最低 $20）；高鐵車組 `TrainType.highSpeed`（每節 80 人、兩個門、不超載、自己的性能是 `PERF_HSR`）。高鐵站有腹地（`StationDemand.hinterland`：8 公里內的居民與就業，一格分給幾個高鐵站，由土地需求推導）；兩個高鐵站之間每天單向有 `K × a × b` 的城際旅次（K = 2,400，a、b 是兩邊腹地的百萬人，10 km 以內沒有、80 km 起全部，再照最快路線的分鐘衰減），只有網路路徑的遊戲有，不併進車站自己的旅次。App 的高鐵站讀 8 公里的土地。
 - 車門擁擠與臺鐵 EMU3000（決策 169）：App 的新遊戲打開 `doorCrowding`（存檔版本 44；示範地圖、挑戰與教學關掉），開門後上下車的時間乘上 `1 + 1.5 × 擁擠⁴`，擁擠是車上人數 ÷ 額定、與候車人數 ÷ 4,000 取大，最多 1.1（`DoorCrowding`）；滿載的六節單軌停站從 40 秒變 73 秒，A 型 48 秒，高鐵與 EMU3000 幾乎不變。車種多一個 `TrainType.emu3000`（每節 45 人 = 編組定員 538 ÷ 12，每側 2 門）。
 - 高鐵示範（決策 170）：開始畫面的「示範地圖 → 高鐵示範」是全台灣的新遊戲，蓋好了真實的高鐵（352 km、221 條三次曲線的邊、12 站，單線、地面、交通管制關掉）與 24 組高鐵車組（各站、九站、五站三個服務，班距 30、20、30 分鐘，每個方向一小時 7 班），07:00 開始、已經在跑；錢是新遊戲的錢加上它的費用（$52,120,000）。在背景建（`GameLauncher.openHighSpeedDemo`）。
+- 載客量圖層與即將進站看板（決策 178）：地圖圖層「載客量」把世界快取的旅客計畫（`plannedPassengerLegFlows()`）按小時分到各站到站區間的兩個方向，線寬 2–10 pt 依人流開根號、顏色依人流比運能（pow 0.72，淺藍到深藍，超過 100% 紅），點一段軌道看人流／運能；車站面板最上方可收合的「即將進站」依列車的時刻表與誤點列出每個方向接下來 6 班（`DepartureBoard`）。只讀、不存檔。
 - 彈性發車（決策 172）：App 的新遊戲打開 `flexDispatch`（存檔版本 45；示範地圖、挑戰與教學關掉）：列車從路線任一端發車（停在末站的先跑回程，環線從停靠的任一站續繞），停在別的車站的先空車回送到較近的一端（不載客、不收票、不占班距槽，里程記在路線的 `deadheadDistance`，FollowBar 說「回送中」）；已發車的列車跑完原本那趟；編輯路線後提示列車的去向；有列車也能反轉站序（決策 134 只在關著時留著，環線有列車在跑時仍不行）；乘客方向看路線站序。
 - 全島地圖（決策 88）：實景的「全台灣」是本島加澎湖、約 285.6 × 389.7 km 的世界，土地按需展開：以 1,024 m 的區塊（`LandBlock`）讀入，世界記下讀過的區塊（`landBlocks`，存檔版本 18），蓋站時讀入 2 km 內還沒讀的區塊。其他新遊戲還是 16 km、土地完整。
 - 年度節慶（決策 90）：劇本可以有每年同一天、在某站提高需求的節慶，提前公布，成為種類 festival 的需求事件；平溪線劇本的天燈節在十分與平溪。
