@@ -3577,6 +3577,11 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：地圖旁有面板（路線、數據、車站的客源）時細節卡片讓位，dock 的「顯示控制項」按了只會改面板關掉之後要不要開卡片，當下沒有任何變化，關掉面板時卡片又突然打開。現在面板開著時這個按鈕是停用的（`ControlDock.canToggle`）。UI 測試 `MapInteractionTests.testASidePanelLeavesNoDeadToggleAndCoversNoStationMaster`。
 
+**之後的修正**（2026-10-12，TestFlight 54.1 玩家回報「右上角文字顯示不完全」）：細節卡片原本整張只有一個捲動區（「高度跟著內容，再多就捲動」）。手機橫拿時卡片最高約 302 點，路網工具的月台模式加上新車站名稱就超過，要按底下的「加月台」得捲動，頂端的狀態列跟著捲走，上緣是硬切，看起來像字被切一半（844 × 390 的手機上整行狀態捲出去，玩家看不到坡度警告）；iPad 的列車工具卡片頂端也一樣。另外路網工具的狀態列寫死兩行（`lineLimit(2)`），起點提示、月台位置加坡度警告、實景地圖的海拔與線別都超過兩行而被截掉。改法（只改 App：GamePresentation、GameCore、存檔、golden、replay 都不變，`networkDraftText()` 的文案不改）：
+- 捲動的範圍改小：卡片分成頭（站名牌與路線標籤、`InspectorView`）、中間（工具的選項 `ToolOptions`，iPad 另有路網總覽）、腳（`ActionButton`）三段（`ControlPanel.Arrangement` 的 `.inspector`、`.options`、`.action` 取代 `.details`）。高度照舊跟著內容、最高到可用高度；超過時只有中間捲動，頭與腳固定，中間捲到頭腳處淡出 8 點，卡片出現與換工具時閃一下捲軸。頭加腳太高、中間剩不到 88 點（約兩列選項）時，退回整張一起捲動，免得選項被擠到看不見。所有工具都這樣：路網（狀態列／模式與選項／鋪設、加月台、拆除）、列車（選取／列車選項／放置、派往）、建築（沒有頭／選項／建造、出售）、選取（站名牌與選取／說明／沒有腳）。教學標記不變：卡片本身的 `.detailsCard`、動作按鈕的 `.actionButton` 與模式選擇的 `.networkModes` 都在原處，`tutorialClip()` 改套在捲動的中間。
+- 路網工具的狀態列最多 8 行，超過才以「…」收尾（選取工具那一行早已放寬到 3 或 7 行）。狀態列有無障礙識別碼 `inspector.status`，卡片是 `details.card`。
+- UI 測試（`MapInteractionTests`，在 full lane）：`testPlatformModeKeepsItsStatusAndActionInTheCard`（iPhone 橫拿，鋪一段軌道、月台模式、點軌道：不捲動時「加月台」按得到，狀態列整個在卡片裡，捲動選項後仍然是）、`testTrainToolCardKeepsItsHead`（示範地圖的列車工具，捲動前後狀態列都整個在卡片裡）。
+
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 
 2026-10-09，UI/UX 改版第二輪的 UX-5b（決策 106 之後）：作者的實機截圖裡，鋪軌時卡片塞滿工程選項（構造、新節點高度、平順曲線、緩和坡度、清除、吸附軌道），主要的「鋪設軌道」按鈕在選好兩點之前一直是灰的，而且在畫面的另一邊。只改 App 與 GamePresentation 的兩個小介面：GameCore、存檔、golden、replay 都不變。
