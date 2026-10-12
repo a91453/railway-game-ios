@@ -122,6 +122,15 @@ final class RealWorldMapUITests: XCTestCase {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        // The map opens on the whole place, some 48 m a point: the stretch
+        // below would run 10 km, onto land not owned (run 38289886049).
+        // Five steps, each halving it, make it some 330 m. Before a tool is
+        // chosen, while the zoom buttons show beside the map.
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        for _ in 0..<5 where zoomIn.isEnabled {
+            zoomIn.tap()
+        }
 
         let build = app.buttons["dock.build"]
         tappable(app.buttons.matching(identifier: "dock.build"), name: "dock.build").tap()
@@ -151,7 +160,7 @@ final class RealWorldMapUITests: XCTestCase {
         let banner = { (text: String) in
             app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         }
-        XCTAssertTrue(banner("Built Edge").waitForExistence(timeout: 10), "The stretch was not built")
+        XCTAssertTrue(banner("Built Edge").waitForExistence(timeout: 10), "The stretch was not built: \(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch.label)")
 
         // The platform mode, from the details card (opened if folded).
         let platform = app.buttons["Platform"]
