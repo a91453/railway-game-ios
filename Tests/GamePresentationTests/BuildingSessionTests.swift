@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -37,9 +38,25 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
     }
 
+    /// What a save, a golden scenario or a replay stores for a building is its
+    /// code, never its name: the office's Chinese name changed, its code
+    /// ("office") did not, so every saved office still reads as an office.
+    func testTheCodesTheSavesStoreDidNotMove() throws {
+        let codes = ["house", "shop", "office", "wharf", "marina"]
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.rawValue), codes)
+        for kind in PlacedBuildingKind.allCases {
+            let data = try JSONEncoder().encode([kind])
+            XCTAssertEqual(String(decoding: data, as: UTF8.self), "[\"\(kind.rawValue)\"]")
+            XCTAssertEqual(try JSONDecoder().decode([PlacedBuildingKind].self, from: data), [kind])
+        }
+        let before = Data("[\(codes.map { "\"\($0)\"" }.joined(separator: ","))]".utf8)
+        XCTAssertEqual(try JSONDecoder().decode([PlacedBuildingKind].self, from: before), PlacedBuildingKind.allCases)
+        XCTAssertEqual(PlacedBuildingKind.office.title(in: .traditionalChinese), "辦公大樓")
+    }
+
     func testTheBuildingToolReadsInChinese() throws {
         let session = GameSession(world: try makeWorld(width: 20_480, height: 20_480), language: .traditionalChinese)
-        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公樓", "漁人碼頭", "遊艇港"])
+        XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .traditionalChinese) }, ["小住宅", "商店", "辦公大樓", "漁人碼頭", "遊艇港"])
         XCTAssertEqual(PlacedBuildingKind.allCases.map { $0.title(in: .english) }, ["House", "Shop", "Office block", "Wharf", "Marina"])
         session.buildingKind = .shop
         session.placeBuilding(at: PlanPoint(x: 5_000, y: 5_000))
@@ -353,7 +370,7 @@ final class BuildingSessionTests: XCTestCase {
         session.tapBuildingTool(at: PlanPoint(x: 22_528, y: 22_528), reach: 0)
         XCTAssertEqual(session.buildingPreviewText, "拆除城市建物 1 棟")
         session.confirmBuilding()
-        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好辦公樓 #1，拆除城市建物 1 棟。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "蓋好辦公大樓 #1，拆除城市建物 1 棟。"))
         // Nothing in the way: nothing to say.
         session.buildingKind = .house
         session.tapBuildingTool(at: PlanPoint(x: 60_000, y: 60_000), reach: 0)
