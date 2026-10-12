@@ -89,21 +89,32 @@ struct HUDView: View {
                 Label("Save Game", systemImage: "square.and.arrow.down")
             }
             .accessibilityIdentifier("menu.saveGame")
-            // Decision 184: a save with a name of the player's.
-            Button {
-                saveName = ""
-                namingSave = true
+            // Decision 184: a save with a name of the player's, beside the
+            // export in one row, so the menu keeps its length: on a phone
+            // on its side a longer menu put Back to Start out of reach.
+            Menu {
+                Button {
+                    saveName = ""
+                    namingSave = true
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Save As…", "另存新檔…"))
+                    } icon: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
+                .accessibilityIdentifier("menu.saveGameAs")
+                ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
+                    Label("Export Save", systemImage: "square.and.arrow.up")
+                }
             } label: {
                 Label {
-                    Text(verbatim: session.language.text("Save As…", "另存新檔…"))
+                    Text(verbatim: session.language.text("Save As or Export", "另存或匯出"))
                 } icon: {
                     Image(systemName: "square.and.pencil")
                 }
             }
-            .accessibilityIdentifier("menu.saveGameAs")
-            ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
-                Label("Export Save", systemImage: "square.and.arrow.up")
-            }
+            .accessibilityIdentifier("menu.saveOptions")
             Divider()
             Button {
                 session.startTutorial()
