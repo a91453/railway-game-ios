@@ -323,6 +323,7 @@ final class TutorialSessionTests: XCTestCase {
             expected.setDoorCrowding(false)
             expected.setFlexDispatch(false)
             expected.setTourism(nil)
+            expected.setCityRequests(seed: nil)
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.tutorial?.index, 0)
             XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)

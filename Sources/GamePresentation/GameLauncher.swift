@@ -369,6 +369,8 @@ public final class GameLauncher {
         world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
+        // Decision 183: nor does the city ask it for anything.
+        world.setCityRequests(seed: nil)
         guard begin(world, keepingAutosave: true) else { return }
         session?.startTutorial()
     }

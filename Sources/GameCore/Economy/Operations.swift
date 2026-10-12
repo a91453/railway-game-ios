@@ -335,6 +335,10 @@ extension GameWorld {
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
+        // Decision 183: the city's requests are judged, and as a month
+        // begins its subsidies paid and its new requests drawn, before the
+        // day's tax: a subsidy is taxable profit.
+        judgeCityRequests(endingWith: day, time: time)
         // Phase 7a: the assets are written down for the day, then the day's
         // profit is taxed (decision 131), then a year's last day closes the
         // year.
@@ -463,9 +467,10 @@ extension GameWorld {
         case .hourlyFreight: [.freightRevenue]
         case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
         case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
+        case .monthlySubsidy: [.subsidy]
         }
         guard entry.breakdown.map(\.item) == items,
-              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue ? $0.amount >= .zero : $0.amount <= .zero }),
+              entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .subsidy ? $0.amount >= .zero : $0.amount <= .zero }),
               entry.breakdown.reduce(Int64(0), { $0 + $1.amount.amount }) == entry.amount.amount
         else { return false }
         guard let crowding = entry.crowding else { return entry.kind != .hourlyNet }

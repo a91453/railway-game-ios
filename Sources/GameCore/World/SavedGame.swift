@@ -251,9 +251,17 @@
 ///     yesterday. A build that reads only an earlier version would drop
 ///     them and the lines would lose their history, so it says the save is
 ///     newer than it instead.
+/// 50. City requests (decision 183): a world can have `"cityRequests"`, the
+///     city's offers, the requests in hand with their progress, its trust,
+///     the subsidies owed and paid and the last results; the ledger can
+///     have `"monthlySubsidy"` rows of the item `"subsidy"`. A build that
+///     reads only an earlier version would drop them, and the requests in
+///     hand and what is owed would be lost, so it says the save is newer
+///     than it instead. (Version 49 is rolling stock economics, decision
+///     180.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 48
+    public static let currentVersion = 50
 
     public let world: GameWorld
 
@@ -387,6 +395,8 @@ extension SavedGame: Codable {
         // subsidiary rows, as none traded.
         // Version 46 to 47: a world without `"tourism"` has no sights, and
         // its passengers are as they were.
+        // Version 48 to 50: a world without `"cityRequests"` has none, and
+        // its ledger no subsidy rows.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

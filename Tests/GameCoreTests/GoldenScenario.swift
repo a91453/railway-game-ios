@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 70
+    static let schemaVersion = 72
 
     var description: String
     var initialState: InitialState
@@ -205,6 +205,7 @@ struct GoldenScenario: Decodable {
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
                  .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _),
+                 .command(.setCityRequests, _), .command(.acceptRequest, _), .command(.declineRequest, _), .observe(.cityRequests, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -279,6 +280,7 @@ extension GoldenScenario.Step: Decodable {
         case buildingSale, cityDemand
         case holiday, lineDays
         case weather, typhoons, fuel
+        case cityRequests
     }
 
     /// Reads `{"command", "expect"}` or `{"observe", "expect"}`. The shape of
@@ -331,6 +333,9 @@ extension GoldenScenario.Step: Decodable {
             case .fuel:
                 try requireOnly([.found, .fuel], answering: "fuel")
                 self = try .observe(observation, expect: .fuel(Self.found(expect, .fuel, FuelSummary.self)))
+            case .cityRequests:
+                try requireOnly([.found, .cityRequests], answering: "cityRequests")
+                self = try .observe(observation, expect: .cityRequests(Self.found(expect, .cityRequests, CityRequestsSummary.self)))
             case .holiday:
                 try requireOnly([.found, .holiday], answering: "holiday")
                 self = try .observe(observation, expect: .holiday(Self.found(expect, .holiday, HolidaySummary.self)))
@@ -583,6 +588,10 @@ enum ScenarioCommand: Equatable {
     case setFlexDispatch(Bool)
     /// Schema 70 (decision 179): the line accounts.
     case setLineAccounts(Bool)
+    /// Schema 72 (decision 183): the city's requests.
+    case setCityRequests(UInt32?)
+    case acceptRequest(Int)
+    case declineRequest(Int)
     /// Schema 69 (decision 174): tourism.
     case setTourism([WorldSummary.AttractionSeed])
     case investInSouvenirShop(Int)
@@ -737,6 +746,12 @@ enum ScenarioCommand: Equatable {
                 world.setFlexDispatch(enabled)
             case .setLineAccounts(let enabled):
                 world.setLineAccounts(enabled)
+            case .setCityRequests(let seed):
+                world.setCityRequests(seed: seed)
+            case .acceptRequest(let id):
+                try world.acceptRequest(id)
+            case .declineRequest(let id):
+                try world.declineRequest(id)
             case .setTourism(let seeds):
                 world.setTourism(seeds.isEmpty ? nil : seeds.enumerated().map { $1.attraction(id: $0 + 1) })
             case .investInSouvenirShop(let id):
@@ -780,6 +795,7 @@ enum ScenarioCommand: Equatable {
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
         case attractions, attraction
+        case request
         case type, x, y, name, train, position, rate, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, station, cars, ring
         case z, from, to, curve, edge, node, path
@@ -970,6 +986,17 @@ extension ScenarioCommand: Decodable {
         // Schema 70: the line accounts (decision 179).
         case "setLineAccounts":
             self = try .setLineAccounts(container.decode(Bool.self, forKey: .enabled))
+        // Schema 72: the city's requests (decision 183); `"seed": null`
+        // turns them off.
+        case "setCityRequests":
+            guard container.contains(.seed) else {
+                throw DecodingError.keyNotFound(CodingKeys.seed, DecodingError.Context(codingPath: container.codingPath, debugDescription: "setCityRequests needs \"seed\"."))
+            }
+            self = try .setCityRequests(container.decodeIfPresent(UInt32.self, forKey: .seed))
+        case "acceptRequest":
+            self = try .acceptRequest(container.decode(Int.self, forKey: .request))
+        case "declineRequest":
+            self = try .declineRequest(container.decode(Int.self, forKey: .request))
         // Schema 67: reverse a line's stops (decision 172).
         case "reverseLineStops":
             self = try .reverseLineStops(container.decodeLine(forKey: .line))
@@ -1110,6 +1137,7 @@ extension StepOutcome: Codable {
         case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains, trainType, building
         case attraction
         case row, column, riders
+        case request, limit
     }
 
     init(from decoder: any Decoder) throws {
@@ -1283,6 +1311,12 @@ extension StepOutcome: Codable {
             self = try .rejected(.unknownAttraction(AttractionID(rawValue: container.decode(Int.self, forKey: .attraction))))
         case "attractionMaxedOut":
             self = .rejected(.attractionMaxedOut)
+        case "cityRequestsNotEnabled":
+            self = .rejected(.cityRequestsNotEnabled)
+        case "unknownCityRequest":
+            self = try .rejected(.unknownCityRequest(container.decode(Int.self, forKey: .request)))
+        case "cityRequestLimitReached":
+            self = try .rejected(.cityRequestLimitReached(limit: container.decode(Int.self, forKey: .limit)))
         // Schema 58 (decision 155).
         case "freightNotEnabled":
             self = .rejected(.freightNotEnabled)
@@ -1503,6 +1537,14 @@ extension StepOutcome: Codable {
             try container.encode(id.rawValue, forKey: .attraction)
         case .rejected(.attractionMaxedOut):
             try container.encode("attractionMaxedOut", forKey: .result)
+        case .rejected(.cityRequestsNotEnabled):
+            try container.encode("cityRequestsNotEnabled", forKey: .result)
+        case .rejected(.unknownCityRequest(let id)):
+            try container.encode("unknownCityRequest", forKey: .result)
+            try container.encode(id, forKey: .request)
+        case .rejected(.cityRequestLimitReached(let limit)):
+            try container.encode("cityRequestLimitReached", forKey: .result)
+            try container.encode(limit, forKey: .limit)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):
@@ -1631,6 +1673,8 @@ enum ScenarioObservation: Equatable {
     case weather(day: Int64)
     case typhoons(day: Int64)
     case fuel(day: Int64)
+    /// Schema 72 (decision 183): the city's requests.
+    case cityRequests
     /// Schema 46 (decision 115): whether a cell is steep.
     case steep(row: Int, column: Int)
     /// Schema 47 (decision 124): the ground's height at a point, in world
@@ -1665,6 +1709,8 @@ enum ScenarioObservation: Equatable {
             .typhoons(world.typhoons(onDay: day).map(TyphoonSummary.init))
         case .fuel(let day):
             .fuel(world.fuelSpell(onDay: day).map(FuelSummary.init))
+        case .cityRequests:
+            .cityRequests(world.cityRequests.map(CityRequestsSummary.init))
         case .steep(let row, let column):
             .steep(world.isSteep(row: row, column: column))
         case .groundHeight(let point):
@@ -1820,6 +1866,8 @@ extension ScenarioObservation: Decodable {
             self = try .typhoons(day: container.decode(Int64.self, forKey: .day))
         case "fuel":
             self = try .fuel(day: container.decode(Int64.self, forKey: .day))
+        case "cityRequests":
+            self = .cityRequests
         // Schema 46: steep slopes (decision 115).
         case "steep":
             self = try .steep(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column))
@@ -2015,6 +2063,72 @@ enum ObservationAnswer: Equatable {
     case weather(String)
     case typhoons([TyphoonSummary])
     case fuel(FuelSummary?)
+    case cityRequests(CityRequestsSummary?)
+}
+
+/// Schema 72 (decision 183): the city's requests, `{"trust", "owed",
+/// "paid", "bestDayTrips", "offers", "active", "results"}`, money in cents.
+struct CityRequestsSummary: Codable, Equatable {
+    /// A request: `{"id", "kind", "station"?, "x"?, "y"?, "attraction"?,
+    /// "baseline", "target", "reward", "days", "offeredDay",
+    /// "acceptedDay"?, "progress"}`.
+    struct Request: Codable, Equatable {
+        var id: Int
+        var kind: String
+        var station: Int?
+        var x: Int64?
+        var y: Int64?
+        var attraction: Int?
+        var baseline: Int64
+        var target: Int64
+        var reward: Int64
+        var days: Int64
+        var offeredDay: Int64
+        var acceptedDay: Int64?
+        var progress: Int64
+
+        init(_ request: CityRequest) {
+            id = request.id
+            kind = request.kind.rawValue
+            station = request.station?.rawValue
+            x = request.point?.x
+            y = request.point?.y
+            attraction = request.attraction?.rawValue
+            baseline = request.baseline
+            target = request.target
+            reward = request.reward.amount
+            days = request.days
+            offeredDay = request.offeredDay
+            acceptedDay = request.acceptedDay
+            progress = request.progress
+        }
+    }
+
+    /// A result: `{"id", "kind", "succeeded", "day"}`.
+    struct Result: Codable, Equatable {
+        var id: Int
+        var kind: String
+        var succeeded: Bool
+        var day: Int64
+    }
+
+    var trust: Int
+    var owed: Int64
+    var paid: Int64
+    var bestDayTrips: Int64
+    var offers: [Request]
+    var active: [Request]
+    var results: [Result]
+
+    init(_ requests: CityRequests) {
+        trust = requests.trust
+        owed = requests.owed.amount
+        paid = requests.paid.amount
+        bestDayTrips = requests.bestDayTrips
+        offers = requests.offers.map(Request.init)
+        active = requests.active.map(Request.init)
+        results = requests.results.map { Result(id: $0.request.id, kind: $0.request.kind.rawValue, succeeded: $0.succeeded, day: $0.day) }
+    }
 }
 
 /// Schema 62 (decision 162): a typhoon, `{"announced", "start", "end",
@@ -2098,6 +2212,7 @@ extension ObservationAnswer: Encodable {
         case buildingSale, cityDemand
         case holiday, lineDays
         case weather, typhoons, fuel
+        case cityRequests
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -2230,6 +2345,11 @@ extension ObservationAnswer: Encodable {
         case .fuel(let spell?):
             try container.encode(true, forKey: .found)
             try container.encode(spell, forKey: .fuel)
+        case .cityRequests(let requests?):
+            try container.encode(true, forKey: .found)
+            try container.encode(requests, forKey: .cityRequests)
+        case .cityRequests(nil):
+            try container.encode(false, forKey: .found)
         case .journey(nil), .trains(nil), .minutes(nil), .loads(nil), .edge(nil), .location(nil), .path(nil), .pose(nil), .alignment(nil), .trainPath(nil),
              .holder(nil), .trip(nil):
             try container.encode(false, forKey: .found)
@@ -2328,6 +2448,8 @@ struct WorldSummary: Codable, Equatable {
     /// The attractions and their counts (schema 69, decision 174); left
     /// out while tourism is off.
     var tourism: [AttractionSummary]?
+    /// The city's requests (schema 72, decision 183); left out while off.
+    var cityRequests: CityRequestsSummary?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2637,6 +2759,7 @@ struct WorldSummary: Codable, Equatable {
         flexDispatch = world.flexDispatch ? true : nil
         lineAccounts = world.lineAccounts == nil ? nil : true
         tourism = world.tourism.map { $0.attractions.map(AttractionSummary.init) }
+        cityRequests = world.cityRequests.map(CityRequestsSummary.init)
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil

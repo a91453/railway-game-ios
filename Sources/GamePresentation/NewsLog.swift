@@ -229,6 +229,8 @@ extension StationMasterAdvice {
         // Decision 174: the sights.
         case .sightUnreachable(let id, _, _, _, _): (.advice, "sight:\(id.rawValue)", nil)
         case .touristsComing(let kind, _, _): (.holiday, "tourists:\(kind.rawValue)", nil)
+        // Decision 183: the city's offers, once a month.
+        case .newCityRequests(let month, _, _, _): (.goal, "requests:\(month)", nil)
         }
     }
 }

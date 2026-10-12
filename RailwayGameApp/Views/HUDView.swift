@@ -76,8 +76,9 @@ struct HUDView: View {
                 Label("Tutorial", systemImage: "hand.point.up.left")
             }
             .accessibilityIdentifier("menu.tutorial")
-            // Decision 86: a game with a challenge shows its goals.
-            if session.world.scenario != nil {
+            // Decision 86: a game with a challenge shows its goals;
+            // decision 183: and one with the city's requests.
+            if session.world.scenario != nil || session.world.hasCityRequests {
                 Button {
                     screen.panel = .goals
                 } label: {

@@ -156,6 +156,8 @@ extension GameWorld {
         world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
+        // Decision 183: nor does the city ask it for anything.
+        world.setCityRequests(seed: nil)
         do {
             try world.startScenario(challenge.scenario(seed: eventSeed, in: world.bounds))
         } catch {

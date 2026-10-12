@@ -5688,6 +5688,53 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`DayNightTests`（色調各時段的顏色與強度、不跳、燈的開關、時鐘到秒；雨絲數量固定、在螢幕內、同一時間相同；閃電的週期與長度；減少動態效果；今天的天氣與颱風車站和 GameCore 一致）、`TrainMotionTests`（`Trail` 的取點與定位、滑動的時間、列車沿軌道從上一個位置滑到現在的位置並跨過邊的接點、車身跟著車頭、折返時跳、貨運線的外觀）。App 的畫法（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
 
+### 183. 城市委託案與補助金
+
+2026-10-12，作者睡覺期間派工（參考 A 列車：開始吧觀光開發計畫的「行政施策」與 OpenTTD 的 subsidies，只讀概念）：自由遊戲中期缺少節奏。給限期任務、獎勵清楚、失敗不罰錢。號碼依工作登記 #231：存檔版本 50、決策 183、golden schema 72（存檔 49、schema 71 是同批派工的車輛經濟 #395，這個 build 還沒有）。
+
+**世界開關 `cityRequests`**（`setCityRequests(seed:)`，`nil` 是關閉，免費；存檔 `"cityRequests": {...}`）：`GameWorld.newGame` 用遊戲種子打開（空白、實景、全台灣、擴建）；教學、挑戰（沙盒、平溪線、劉銘傳）、示範地圖（`DemoWorld`、實景示範、高鐵示範）關閉，和決策 154、169–174 一樣自己決定，它們量過的數字不變；舊存檔、golden、replay 沒有這個鍵就是關。只有經營模式判定與入帳：自由模式不判、不抽新的。
+
+**規則（GameCore，`Sources/GameCore/Economy/Requests.swift`，全是整數）**：
+- **抽籤**：每月 1 日（30 天一月，第 30·m 天開始的那個午夜；打開開關時立刻抽這個月的）用決策 162 的鍵控雜湊：六種依 FNV-1a(`種子|requests.月.order.種類`) 排序（同值依宣告順序），每種取第一個前提成立的，最多 3 件、種類各不相同、編號接續。不存每日抽籤狀態。上個月沒人接的在新的一批抽出時消失（所以最多 30 天）。同一種已在手上的同一個目標不再出。
+- **種類**（目標都是本專案訂的，派工的數字）：
+  1. **設站通車** `newStation`：800 m 內住戶＋員工 ≥ 3,000、800 m 內沒有任何車站的最大聚落（土地以 12 格 768 m 的方塊加總，取最滿的 12 塊，各以人口加權的中心量 800 m 內的人）。條件：800 m 內有一站、一天有 ≥ 10 班客運列車從那站開往下一站（`serve(departureOf:)` 每天計數，午夜取最多的一站後清空；回送與貨運不算；終點站折返只算出發那一次）。報酬 $300,000 + $50 × 人數（上限 $10M），90 天。
+  2. **車站運量** `stationRiders`：有客運列車停靠、每日計畫旅次（`StationDemand.dailyTrips`）≥ 500 的站，依種子抽一站；目標 ⌈目前 × 1.4⌉；報酬 $40 × 增量，至少 $200,000；60 天。
+  3. **全網旅客** `networkRiders`：歷史最佳單日付費旅客（`fareTrips`，開關打開時取帳上最多的，之後每個午夜更新）≥ 200 時；目標 ⌈最佳 × 1.25⌉，承接後任一天達到；報酬 $20 × 增量，**至少 $200,000**（派工沒有下限；最佳 1,000 人次時只有 $5,000，沒有人會接）；90 天。
+  4. **建材運送** `materials`（貨運與建材都開時）：上個午夜缺建材的站（`FreightState.lastShort`），N = 7 × 一站一天最多用的建材（新的一格 16 t + 每晚最多兩棟 D1 升 D2 的 2 × 16 t = 48 t，所以 336 t）；45 天內用貨運列車送 N 噸到那站（`exchangeCargo` 卸下的建材，在地供應與進口不算）；報酬 N × $30，**至少 $200,000**（派工沒有下限；336 t 只有 $10,080）。
+  5. **人口** `population`：有客運列車停靠、800 m 內居民 ≥ 1,000 的站；目標 ⌈× 1.2⌉；報酬 $100 × 增量，至少 $1,000,000；120 天。
+  6. **觀光** `tourism`（觀光開時，決策 174）：沒有名產店滿級、或還沒有車站的景點，依種子抽一處；目標是接下來 90 天預期觀光客（`touristsExpected`，星期、季節、天氣、颱風都算）的 1.2 倍（已有車站：要升一級名產店才達得到）或 0.6 倍（還沒有車站：要在前段蓋好）；承接後每天加上景點 `yesterday` 的人數；報酬 $10 × 目標人數，至少 $500,000；90 天。派工寫「年度觀光客或星等」，年度計數在年初歸零，所以改成承接後的累計。
+- **信賴度** 0–5 星，起始 1；同時可承接 1 + ⌊信賴度 / 2⌋ 件。每個經營模式的午夜（在當天的物業與觀光結帳之後、折舊與稅之前，`judgeCityRequests`）更新進度：達到 → 加進「欠款」、信賴度 +1；最後一天（承接日 + 天數 − 1）仍未達 → 失敗、信賴度 −1，**不罰款**。結果保留最近 20 件。
+- **入帳**：開始新月份的那個午夜把欠款寫成一列 `monthlySubsidy`（項目 `subsidy`，只往後加；記在剛結束的那天，所以在那天的稅前淨利裡，**照常課稅**），累計補助 `paid`。財報把它併入「物業與子公司收入」（`propertyRevenue`，非鐵路收入，形狀不變）；`GameFeedback.incomeItems` 含 `subsidy`。逐線報表（決策 179）不分它，各線加總等於公司的不變式只看票收與鐵路成本，不受影響。
+- **指令**：`acceptRequest(_:)`（`cityRequestsNotEnabled`、`unknownCityRequest`、`cityRequestLimitReached(limit:)`）；`declineRequest(_:)`：婉拒報價（消失、信賴度不變），或放棄手上的（記成失敗、信賴度 −1）。
+- 車站或景點不見了：委託留著，量到 0，期限到了失敗（ID 不會重用）。
+- 存檔驗證：信賴度 0–5、報價最多 3 件且種類不同、手上最多 3 件、結果最多 20 件、編號唯一且小於下一號、每件的目標 ≥ 1、天數 1–360、報酬是整元且不超過 $10M、報價沒有承接日而手上的有、種類與它的目標（點、站、景點）相符。
+
+**介面（GamePresentation／App）**：`RequestsText.swift`：`cityRequestRows`（標題、說明、報酬、進度千分比與文字、剩餘天數或還能承接幾天、地圖位置）、`cityRequestResults`、`cityTrustText`、`citySubsidyText`；目標地名在實景地圖用 `PlaceNames`（最近的聚落、村里，否則鄉鎮），空白地圖說「某站東北方 1.2 公里的聚落」。`GoalsPanel` 的「委託案」區（`CityRequestsSection`，寫在 `GoalsPanel.swift`，沒有新的 App 檔、xcodeproj 不動）：信賴度、累計補助與待入帳、手上的（進度條、剩餘天數、放棄）、報價（承接、婉拒）、「在地圖上看」（`lookAt`）、最近 5 件結果。遊戲選單的「目標」在有委託時也出現。站長（`StationMasterAdvice` 最後加 `newCityRequests`）在每月前三天、還能承接時說「城市提出 N 件新委託，最高補助 $X」，點了到最高那件的位置；新聞紀錄每月記一次（`NewsLog.swift` 的窮舉 switch 已補）。
+
+**存檔 50、golden schema 72**：存檔多 `"cityRequests"` 與帳上的 `monthlySubsidy` 列；只讀到 48 的 build 會丟掉手上的委託與欠款，所以升版。新的 `SaveFixtures/v50-city-requests.json`。golden 新指令 `setCityRequests`、`acceptRequest`、`declineRequest`，三個新結果，新觀察 `cityRequests`，最終狀態的 `cityRequests`；新的 `city-requests.json`，數字由 `tools/golden-checks/city_requests.py` 照規則獨立算出。參考模型沒有委託，不在它上面重播。既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+**平衡**（`BalanceReportTests.testAFirstLineTakingTheCitysRequests`，`BALANCE_REPORT=360`，Linux debug）：決策 137 之後的第一條線（三站、一列四節，這條線本身每天虧約 $30,000），觀光關閉，對照沒有委託的同一條線；「玩家」每天只承接運量與人口類（不蓋站、不運建材、不經營景點），最高報酬的先接：
+- 第 0 天的人口委託（第一個鎮的 800 m 內 1.2 倍）第 24 天就靠城鎮成長達成，第 30 天入帳 $1,000,000；第 60 天再一件 $200,000；之後運量類都沒達成（逾期 4 件，信賴度掉到 0）。
+- 一年累計補助 $1,200,000，課稅後現金多 $733,868（一年後兩邊都還是負的：−$8.34M 對 −$7.60M）。**補助不會讓現金滾雪球**：它是一次性的、要達成才有、照課稅；放著不管的公司一年只拿到起始資金的四成。
+- 待觀察（ROADMAP 的表）：人口委託的 $1,000,000 下限在第一條線旁太容易（城鎮初期長得快），實機上若變成每局開場的固定收入，下限改成 $500,000 或目標改成 1.3 倍。
+
+**參考庫與外部專案**（CLAUDE.md 的順序）：
+- `Railway/city_world_reference/source/assets/missions-*.js`：任務的結構（`id`、`category`、`reward`、`steps[].timeLimit`、`objective` 中英文、`fail` 訊息）→ `CityRequest` 的種類、目標、報酬、天數，`RequestsText` 的中英文標題與說明。方式：結構移植；內容是動作遊戲的跑腿，沒有採用。
+- `OpenWorld/reference_snapshot/play/src/game/mission-director.js`：`MissionDirector` 的生命週期（`stage`、`_advance(message, reward, rep)` 成功時加錢與聲望、`snapshot`／`restore` 夾住存檔的值）→ `judgeCityRequests`（達成加欠款與信賴度）、`cityRequestsProblem`（存檔驗證）。方式：概念移植。
+- 鐵道的條件（停靠班次、計畫旅次、全網最佳日、建材、人口、觀光客）參考庫沒有，是本專案自己的。抽籤沿用本專案的 `SeedDraw`（決策 162 的 FNV-1a，原本出自參考的 `aviation_disruptions`）。找聚落的方法和 GamePresentation 的 `UnservedCluster`（決策 177）相同概念，但 GameCore 不能依賴 GamePresentation，所以另寫一份整數版。
+- 外部：OpenTTD 的 subsidies（GPL-2.0，只讀概念：報價一段時間、達成後才付）；沒有複製程式碼。
+
+**限制**：
+- 設站通車只數一天的班次，不看是否真的有人搭。
+- 運量類只看計畫旅次（城鎮成長與票價決定），不看實際搭乘。
+- 建材的 N 是固定的 336 t，不看那站的實際需求量。
+- 地名只在實景地圖有真名；空白地圖用方位與距離。
+- 數值與報酬下限都是本專案訂的，要看實機。
+
+**測試**：`CityRequestsTests`（第一批報價、種類不重複最多三件、最大的無站聚落、信賴度與同時件數、達成後下月 1 日入帳並課稅、逾期只扣信賴度、停靠計數、建材計數、自由模式不判、一次推進與逐分鐘相同、存檔來回、壞存檔被拒、舊存檔沒有、v50 fixture）；`CityRequestsSessionTests`（新遊戲有、量過的世界沒有、面板的列、按鈕、站長宣布）；golden `city-requests.json`；`SaveFixtures/v50-city-requests.json`。
+
+**沒有驗證的**：Linux 不能跑 App；`GoalsPanel` 的委託案區、選單的「目標」與站長的話要在 macOS CI 與 TestFlight 上看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
