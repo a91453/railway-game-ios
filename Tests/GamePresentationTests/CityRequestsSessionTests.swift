@@ -106,3 +106,15 @@ final class CityRequestsSessionTests: XCTestCase {
         if case .newCityRequests? = StationMasterAdvice(world: full) { XCTFail("no room for another") }
     }
 }
+
+extension CityRequestsSessionTests {
+    /// A station named "…站" (or one removed, "已拆除的車站") is not
+    /// called "…站站".
+    func testAStationNamedWithItsOwnStationIsNotSaidTwice() throws {
+        var world = try world()
+        let row = try XCTUnwrap(world.cityRequestRows(in: .english).first { $0.kind == .stationRiders })
+        try world.renameStation(StationID(rawValue: 1), to: "家站")
+        let chinese = try XCTUnwrap(world.cityRequestRows(in: .traditionalChinese).first { $0.id == row.id })
+        XCTAssertEqual(chinese.title, "家站運量提升")
+    }
+}

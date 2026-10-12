@@ -184,6 +184,9 @@ struct InspectorView: View {
                 .buttonStyle(ThemeSelectableButtonStyle(isActive: screen.panel == .station))
                 .accessibilityLabel("Ridership")
                 .accessibilityHint("Shows the station's ridership: what kind of place it serves, its trips and its passengers.")
+                .accessibilityIdentifier("inspector.ridership")
+                // Decision 188: the tutorial's ridership step points at it.
+                .tutorialTarget(.ridership)
             }
         }
     }

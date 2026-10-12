@@ -44,25 +44,35 @@
 
 ### 步驟
 
-C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`：參考的內容步驟改寫成觸控與這個 App 的工具；E1 加入第三步（移動地圖），共十一步。步驟的 `id`、框出的控制項與做完的條件：
+C5（2026-10-03）把示範步驟換成 `Tutorial.standardSteps`；E1 加入移動地圖，共十一步。決策 188（2026-10-12）重做成十九步、五章（`step.chapter`，`TutorialChapter`），一步一個動作，做完的動作步驟 0.8 秒後自己前進（`session.tutorialAdvancesByItself`，App 呼叫 `showNextTutorialStep(from:)`）。步驟的 `id`、框出的控制項、做完的條件與準備：
 
-| # | `id` | 框出 | 做完的條件（`goal`） |
-| --- | --- | --- | --- |
-| 1 | `build.network` | `tool.network` | 選了路網工具（`.chooseTool(.network)`） |
-| 2 | `build.track` | `map`、`panel.action` | 這一步出現之後蓋了新的軌段（`.buildTrack`） |
-| 3 | `map.move` | `map`、`map.zoom` | 這一步顯示時玩家移動了地圖：捏合、拖曳或縮放按鈕（`.moveMap`，E1） |
-| 4 | `build.firstStation` | `network.modes`、`map`、`panel.action` | 這一步出現之後蓋了新的車站（`.buildStation`） |
-| 5 | `build.secondStation` | `network.modes`、`map`、`panel.action` | 同上（`.buildStation`） |
-| 6 | `line.create` | `hud.lines` | 這一步出現之後建了新的路線（`.createLine`） |
-| 7 | `train.place` | `tool.train`、`train.buy`、`panel.action` | 這一步出現之後有新的列車放到軌道上（`.placeTrain`） |
-| 8 | `line.service` | `hud.lines` | 新指派了列車給一條設了上線列車數的路線（`.startService`） |
-| 9 | `station.ridership` | `map` | 讀完就好（`.read`） |
-| 10 | `time.speed` | `hud.speed` | 速度（含暫停）和這一步出現時不同（`.changeSpeed`） |
-| 11 | `end` | `hud.menu` | 讀完就好（`.read`） |
+| # | `id`（章） | 框出 | 做完的條件（`goal`） | 準備（`setup`）與面板（`panel`） |
+| --- | --- | --- | --- | --- |
+| 1 | `build.network`（軌道） | `tool.network` | 選了路網工具（`.chooseTool(.network)`） | 關掉地圖旁的面板 |
+| 2 | `map.move` | `map.zoom` | 這一步顯示時移動了地圖（`.moveMap`） | — |
+| 3 | `track.draw` | `map` | 選好兩端，預覽可蓋且至少 160 公尺，或已經蓋了（`.drawTrack`） | 回到鋪設模式 |
+| 4 | `track.build` | `map.build.confirm` | 這一章蓋了至少 160 公尺（`.buildTrack`） | — |
+| 5 | `station.mode`（車站） | `network.modes` | 月台模式，或已經有新站（`.chooseNetworkMode(.platform)`） | 清掉選的端點 |
+| 6 | `station.first.site` | `map` | 選了平的、會開新站的位置，或已有 1 座新站（`.pickPlatformSite(1)`） | — |
+| 7 | `station.first.build` | `map.build.confirm` | 1 座新站（`.buildStation(1)`） | — |
+| 8 | `station.second.site` | `map` | 同上，2 座（`.pickPlatformSite(2)`） | 清掉留在第一站上的泡泡 |
+| 9 | `station.second.build` | `map.build.confirm` | 2 座新站（`.buildStation(2)`） | — |
+| 10 | `line.open`（路線） | `hud.lines` | 開始選站、選了一站或有新路線（`.startPickingStops`） | 清掉端點與路線草稿；路線面板自己開始選站 |
+| 11 | `line.stations` | `map` | 選了兩站而且有軌道相連，或有新路線（`.pickLineStations`） | 打開路線面板 |
+| 12 | `line.create` | `line.draft.create` | 新路線的列車開得了（`.createLine`） | 打開路線面板，按鈕捲進畫面 |
+| 13 | `line.staff`（營運） | `line.staff.start` | 新指派的列車、路線設了要跑車（`.startService`） | 打開路線面板，按鈕捲進畫面 |
+| 14 | `build.done` | `tool.select` | 選取工具（`.chooseTool(.select)`；決策 99 恢復時間） | 關掉地圖旁的面板 |
+| 15 | `time.play` | `hud.speed` | 時間在走（`.timeRuns`；通常直接跳過） | — |
+| 16 | `first.fare` | `hud.cash`、`hud.speed` | 這一章開始後有車資進帳；自由模式直接完成（`.earnFare`） | — |
+| 17 | `station.select`（乘客） | `map` | 用選取工具選了一座車站（`.selectStation`） | 放掉選取 |
+| 18 | `station.ridership` | `inspector.ridership`、`panel.side` | 讀完就好（`.read`） | — |
+| 19 | `end` | `hud.menu` | 讀完就好；按鈕是「完成教學」 | — |
 
-做完了沒，是由世界與 session 的**現在**推導的，不另外記錄：例如選了路網工具又換回選取，第一步就又變成沒做完。要求「蓋了什麼」的條件比較的是這一步**第一次出現時**的世界（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次。
+做完了沒，是由世界與 session 的**現在**推導的，不另外記錄。要求「蓋了什麼」的條件比較的是**這一章最早出現的那一步**的快照（回到上一步沿用第一次的快照），所以已經有軌道、車站或路線的遊戲，每一步也要做一次，而先做完的步驟會被跳過。「下一步」、自己前進與「略過這一步」（`session.skipTutorialStep()`，只用在最後一步之前的動作步驟）都跳過已經做完的動作步驟；按「上一步」回到的步驟（`tutorial.reachedByBack`）不自己前進。準備只在第一次往前出現時做。
 
-C5 與 E1 都沒有加新的 `TutorialTarget`，也沒有改既有的名稱；後來步驟 7 加了 `train.buy`，大尺寸 iPhone 直向時卡片才不會蓋住「購買」。步驟只框主畫面的控制項：路線與車站面板是 sheet，preference 不會離開 sheet（見下面），所以步驟 6、8 框「路線」按鈕，面板裡的操作用文字說明。E2 沒有加步驟（教學在空白地圖上，決策 50）。畫面是通用的（不寫死步驟數、`id` 或某個目標），所以不用跟著改。
+卡片的提示是 `session.tutorialHint`（`TutorialHint`：文字與是不是問題）。問題立刻顯示「略過這一步」，其他等 `step.skipOfferSeconds`（20 秒，等車資 90 秒）。`step.usesDetailsCard` 的步驟打開細節卡片；`step.panel` 是 App 要打開或關掉的面板；`step.picksLineStops` 時路線面板自己開始選站；`step.revealsInPanel` 是路線面板要捲進畫面的按鈕。
+
+路線與車站面板現在在地圖旁（決策 106），但面板裡的 `NavigationStack` 不讓 preference 傳出來，所以面板裡的目標用 `tutorialPanelTarget(_:)` 回報（決策 47 的之後的修正）。畫面是通用的（不寫死步驟數、`id` 或某個目標）。
 
 **移動地圖（`.moveMap`，E1）**：相機是地圖 view 的狀態，不在 session 裡，所以地圖 view 在玩家捏合、拖曳或按縮放按鈕時呼叫 `session.mapDidMove()`（`MapView.swift` 已接好）。它只在等這個動作的那一步第一次呼叫時改變 session，手勢的每一幀都呼叫也沒關係。旋轉裝置、改變大小、選到遠方的車站時自動置中不要呼叫。
 

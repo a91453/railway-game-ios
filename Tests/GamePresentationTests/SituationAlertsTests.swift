@@ -60,3 +60,59 @@ final class SituationAlertsTests: XCTestCase {
         XCTAssertEqual(session.tappedTrainID, train.id)
     }
 }
+
+extension SituationAlertsTests {
+    /// The bubble reads a sight's rating as the panel and the station
+    /// master do (``GameWorld/stars(of:)``): a 3.75-star sight with a hotel
+    /// beside it is a four-star one.
+    func testASightRaisedToFourStarsByAHotelShows() throws {
+        var world = try makeWorld(width: 40_960, height: 8_192, balance: 100_000_000)
+        for (name, x) in [("Alpha", 1), ("Beta", 3)] {
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
+        }
+        let sight = Attraction(id: AttractionID(rawValue: 1), name: "古蹟", englishName: "Sight",
+                               point: PlanPoint(x: 30_000, y: 4_096), kind: .town, baseStars: 375)
+        world.setTourism([sight])
+        try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2)])
+        XCTAssertEqual(world.situationAlerts(), [], "3.75 stars: not one worth a line")
+        try world.placeBuilding(.hotel, at: PlanPoint(x: 30_000, y: 6_000))
+        XCTAssertEqual(world.stars(of: try XCTUnwrap(world.attraction(id: sight.id))), 400)
+        XCTAssertEqual(world.situationAlerts().map(\.kind), [.sightWithoutStation(sight.id)])
+    }
+}
+
+extension SituationAlertsTests {
+    /// A tap on a stuck train's bubble shows that train alone, as a tap on
+    /// the train does: the station selected before is let go, so the
+    /// inspector does not head the train's details with the station.
+    func testATapOnAStuckTrainLetsGoOfTheStationSelected() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let world = try newGameLine(through: [towns[0], towns[1]])
+        let train = try XCTUnwrap(world.trains.first)
+        let station = try XCTUnwrap(world.stations.first)
+        let session = GameSession(world: world)
+        session.selectStation(station.id)
+        session.respond(to: MapAlert(kind: .trainStuck(train.id), station: nil, location: towns[0]))
+        XCTAssertEqual(session.tappedTrainID, train.id)
+        XCTAssertNil(session.selectedStationID)
+        XCTAssertEqual(session.selectionText(), session.world.trainSummary(of: train.id, in: session.language))
+    }
+}
+
+extension SituationAlertsTests {
+    /// The same for the news log's "Go" on a train's item.
+    func testGoingToATrainFromTheNewsLetsGoOfTheStationSelected() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        let world = try newGameLine(through: [towns[0], towns[1]])
+        let train = try XCTUnwrap(world.trains.first { $0.position != nil })
+        let session = GameSession(world: world)
+        session.selectStation(try XCTUnwrap(world.stations.first).id)
+        var log = session.news
+        let item = log.add(day: 0, .success, target: .train(train.id.rawValue)) { _ in "Train" }
+        session.restoreNews(log)
+        session.goTo(item)
+        XCTAssertEqual(session.tappedTrainID, train.id)
+        XCTAssertNil(session.selectedStationID)
+        XCTAssertEqual(session.followedTrainID, train.id)
+    }
+}

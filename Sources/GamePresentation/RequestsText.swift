@@ -143,7 +143,9 @@ extension GameWorld {
             let place = request.point.map { placeText($0, in: language, placeNames: placeNames) } ?? ""
             return language.text("A station for \(place)", "為\(place)設站通車")
         case .stationRiders:
-            return language.text("More riders at \(stationText(request.station, in: language))", "\(stationText(request.station, in: language))站運量提升")
+            // A name that already ends in 站 ("…車站") does not take another.
+            let station = stationText(request.station, in: language)
+            return language.text("More riders at \(station)", station.hasSuffix("站") ? "\(station)運量提升" : "\(station)站運量提升")
         case .networkRiders:
             return language.text("A record day for the railway", "全網旅客創新高")
         case .materials:

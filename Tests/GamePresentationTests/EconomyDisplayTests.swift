@@ -272,3 +272,13 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertNil(depot.fleetLoadInfo(), "no train on the track, no average")
     }
 }
+
+extension EconomyDisplayTests {
+    /// A loss of less than half a dollar shows as $ 0, but never with a plus.
+    func testASmallLossIsNotSignedAsAGain() {
+        func text(_ cents: Int64) -> String { LedgerTotal(item: .operatingCost, amount: Money(cents)).amountText }
+        XCTAssertEqual(text(-40), "-$ 0")
+        XCTAssertEqual(text(40), "+$ 0")
+        XCTAssertEqual(text(-150), "-$ 1")
+    }
+}

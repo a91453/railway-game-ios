@@ -117,8 +117,9 @@ needs OSM data reads the same extract.
   its tests. A pull request builds everything but runs the tier its changed
   files need (ARCHITECTURE decision 185, `swift-shards.sh plan`): every shard
   for GameCore, the package, the CI scripts or a test file other test files
-  use; all the GamePresentation tests (in three jobs) for GamePresentation,
-  its tests or the app's bundled data; the classes that read the fixtures
+  use, or two edited campaigns (or one beside GamePresentation); all the
+  GamePresentation tests (in three jobs) for GamePresentation, its tests, the
+  app's bundled data or a `tools/` file they read; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
   several apply. The label `full-ci` runs every shard (add it, then re-run

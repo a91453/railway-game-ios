@@ -44,34 +44,54 @@ struct LinesPanel: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                // Decision 100: a new line first, where the panel beside
-                // the map (decision 106) shows it while stations are
-                // picked on the map.
-                draftSection
-                // Decision 101: a line without trains offers them next.
-                if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
-                    staffSection(line)
-                }
-                trafficSection
-                serviceDaySection
-                linesSection
-                if let line = session.selectedLine {
-                    lineSection(line)
-                    operatingSection(line)
-                    stopsSection(line)
-                    ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
-                        serviceSection(summary, of: line)
+            ScrollViewReader { proxy in
+                Form {
+                    // Decision 100: a new line first, where the panel beside
+                    // the map (decision 106) shows it while stations are
+                    // picked on the map.
+                    draftSection
+                    // Decision 101: a line without trains offers them next.
+                    if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
+                        staffSection(line)
                     }
-                    // A ring has no patterns.
-                    if !line.isRing {
-                        addPatternSection(line)
+                    trafficSection
+                    serviceDaySection
+                    linesSection
+                    if let line = session.selectedLine {
+                        lineSection(line)
+                        operatingSection(line)
+                        stopsSection(line)
+                        ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
+                            serviceSection(summary, of: line)
+                        }
+                        // A ring has no patterns.
+                        if !line.isRing {
+                            addPatternSection(line)
+                        }
+                    }
+                }
+                // The tutorial's targets in the form report their place on the
+                // screen themselves (`tutorialPanelTarget(_:)`); the overlay
+                // counts them only inside the panel.
+                // Decision 188: the button a tutorial step asks for is scrolled
+                // into view, below the fold on a phone once stations are picked.
+                .onChange(of: RevealKey(session), initial: true) { _, key in
+                    guard let target = key.target else { return }
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation { proxy.scrollTo(target, anchor: .center) }
                     }
                 }
             }
-            // The tutorial's targets in the form report their place on the
-            // screen themselves (`tutorialPanelTarget(_:)`); the overlay
-            // counts them only inside the panel.
+            // On the tutorial's line steps picking starts by itself (the
+            // reference's `openUI`), without the status line's how-to, which
+            // would shrink the form: the card says it.
+            .onChange(of: session.tutorial?.index, initial: true) { _, _ in
+                guard let step = session.tutorial?.step, step.picksLineStops,
+                      !session.isPickingLineStops, session.lineDraft.count < 2
+                else { return }
+                session.startPickingLineStops(announces: false)
+            }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
             // The pattern's stops are indices into the selected line's:
@@ -110,6 +130,23 @@ struct LinesPanel: View {
             .onDisappear {
                 session.stopPickingLineStops()
             }
+        }
+    }
+
+    /// What decides whether the tutorial's step asks for a button the
+    /// panel scrolls to: the step, and what moves the button.
+    private struct RevealKey: Equatable {
+        let step: String?
+        let target: TutorialTarget?
+        let picked: Int
+        let line: LineID?
+
+        @MainActor
+        init(_ session: GameSession) {
+            step = session.tutorial?.step.id
+            target = session.tutorial?.step.revealsInPanel
+            picked = session.lineDraft.count
+            line = session.selectedLineID
         }
     }
 
@@ -824,6 +861,7 @@ struct LinesPanel: View {
                 .accessibilityIdentifier("line.staff.start")
                 // Decision 125: the tutorial's first line starts here.
                 .tutorialPanelTarget(.staffLine)
+                .id(TutorialTarget.staffLine)
                 // Decision 180: the trains already on the line, into this type and cars.
                 if !line.assignedTrains.isEmpty {
                     Button {
@@ -951,6 +989,7 @@ struct LinesPanel: View {
             .disabled(stops.count < 2)
             .accessibilityIdentifier("line.draft.create")
             .tutorialPanelTarget(.createLine)
+            .id(TutorialTarget.createLine)
             if !draft.isEmpty {
                 Button(role: .destructive) {
                     session.clearLineDraft()
