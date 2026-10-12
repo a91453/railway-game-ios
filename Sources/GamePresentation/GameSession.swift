@@ -314,6 +314,9 @@ public final class GameSession {
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
     public internal(set) var tutorial: Tutorial?
+    /// Called when the player finishes the tutorial's last step (decision
+    /// 177): the launcher notes it in its preferences. Not on Skip.
+    @ObservationIgnored public var onTutorialCompleted: (@MainActor () -> Void)?
 
     /// The world as it was before each of the latest edits, oldest first,
     /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what
@@ -342,6 +345,10 @@ public final class GameSession {
     /// (decision 117, ``noteIncome(since:)``); `nil` before any. Never
     /// saved.
     public internal(set) var incomePulse: IncomePulse?
+    /// Where the map is asked to look (decision 177): the station master's
+    /// tap on advice that points at a place. The map view moves its camera
+    /// when it changes. Never saved.
+    public internal(set) var cameraRequest: CameraRequest?
 
     /// The trains the player is looking at, whose arrivals ring at full
     /// volume (``SoundCue/arrival(watched:)``): the one the camera follows,
@@ -832,6 +839,7 @@ public final class GameSession {
         let closedBefore = world.accounts.years.last?.year
         let endedBefore = world.scenario?.outcome != nil
         let lastEntry = world.accounts.entries.last
+        let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         world = step.world
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
@@ -843,6 +851,7 @@ public final class GameSession {
         }
         // Decision 117: fares and rent settled within the step.
         noteIncome(since: lastEntry)
+        noteDayLoss(since: dayBefore)
         if let closed = world.accounts.years.last?.year, closed != closedBefore {
             yearEndYear = closed
         }

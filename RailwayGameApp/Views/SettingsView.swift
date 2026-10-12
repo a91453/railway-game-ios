@@ -23,6 +23,8 @@ struct SettingsView: View {
     /// Whether the game's website is open (decision 163), in Safari's view
     /// in the app.
     @State private var showsWebsite = false
+    /// Whether the help guide is open (decision 177).
+    @State private var showsHelp = false
 
     var body: some View {
         NavigationStack {
@@ -50,6 +52,9 @@ struct SettingsView: View {
             .listStyle(.insetGrouped)
             .fullScreenCover(item: $cityViewArea) { area in
                 CityView3D(area: area)
+            }
+            .sheet(isPresented: $showsHelp) {
+                HelpView(language: .app)
             }
             .sheet(isPresented: $showsWebsite) {
                 if let url = URL(string: GameWebsite.home) {
@@ -159,6 +164,16 @@ struct SettingsView: View {
         let language = DisplayLanguage.app
         let report = problemReport
         return Section {
+            Button {
+                showsHelp = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Help", "說明"))
+                } icon: {
+                    Image(systemName: "questionmark.circle")
+                }
+            }
+            .accessibilityIdentifier("settings.help")
             LabeledContent {
                 Text(verbatim: report.versionText)
                     .textSelection(.enabled)

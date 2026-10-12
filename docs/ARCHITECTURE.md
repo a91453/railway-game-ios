@@ -5355,6 +5355,36 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`HighSpeedDemoTests`（12 站與英文名、站離真實座標 500 m 內、軌道長度 352 km 與每條邊離中心線 10 m 內、路線停 12 站且是高鐵路線、停站模式、24 組 12 節的高鐵車組、每個服務的組數等於班距要的組數、鋪完餘額恰好是新遊戲的錢、存檔來回、07:00 開局時 7 組在線上且最前面的過了中點、站的腹地與旅客、`GameLauncher` 在背景建好並進遊戲）；UI 測試 `testTheHighSpeedDemoOpensOnTheMapAndRuns`（完整測試，不在 PR 的閘門裡）。
 
+### 177. 開局體驗：新遊戲選項、第一次玩的引導、首條線虧損教學、說明手冊
+
+2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車：開始吧觀光補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
+
+**問題**：前 15 分鐘決定玩家會不會留下來。照教學蓋出的短線一天虧約 $40,000，遊戲卻一直發金幣音效（`noteIncome` 只報收入）；站長在負債時只會叫玩家漲價；新遊戲沒有任何設定；沒有可查的說明。A 列車觀光有難度（やさしい／標準／達人）、教學劇本與依問題分類的ヒント頁。
+
+**1. 新遊戲選項**（`NewGameOptions`，`NewGameOptionsView`；開始畫面「新遊戲」下的一行「新遊戲選項 · 標準 · $ 3,000,000」）：
+- 難度輕鬆／標準／達人 = 起始資金 $5M／$3M／$1.5M，干擾事件（決策 154、162）關／輕／標準；干擾事件可以另外選，改難度時回到難度的預設。
+- 建材供應（決策 156）、外部連接（決策 137）、分區購買地圖（決策 160，只用於空白地圖）各自開或關；地圖種子（數字，最大 4294967295；空的每局隨機），同一個種子畫出同樣的城鎮與事件，方便分享。底下一段文字總結改了什麼。
+- **預設就是改版前的新遊戲**（標準、$3,000,000、輕、全開、隨機）：測試核對 `apply(to:)` 對預設選項不改世界、`GameLauncherTests` 的新遊戲仍等於 `GameWorld.newGame(eventSeed:buysMap:)`。選項記在 `launcher-preferences.data`（`LauncherPreferences`，存檔資料夾裡，副檔名 `.data` 所以不列為存檔），不寫進存檔；存檔裡有的是它們設定出來的世界（`disruptions`、`freight`、`outsideConnections`）。
+- 「新遊戲」按鈕仍然一按就開始（用上次的選項），選項頁是旁邊的一個入口，所以既有的 UI 測試不用改。選項套用到 `startNewGame(at:)`（空白、實景與全台灣擴建）與 `startWholeTaiwan()`（`newWholeTaiwanGame` 多了 `balance` 參數，預設不變）。**不套用**：教學、挑戰、每週挑戰、示範地圖（它們量過的數字不變，決策 154、157、169、170）。
+
+**2. 第一次玩**（`LauncherPreferences`）：紀錄檔記 `hasLaunched`、`tutorialCompleted`、`firstGameCardDismissed`。開始畫面最上方固定一張卡片「第一次玩？跟站長蓋第一條線（約 5 分鐘）」（站長的臉、「開始教學」、關閉的叉），直到教學做完（最後一步按完成，不是略過；`GameSession.onTutorialCompleted`）或玩家關掉；**已經有存檔的玩家不顯示**（`showsFirstGameCard`）。
+
+**3. 首條線教學**（`StationMasterAdvice`）：自由遊戲（沒有劇本）、經營模式、前 30 天（`firstLineDays`）、有路線而且車站不超過 3 座（`shortLineStations`），如果昨天營運淨額（票價、貨運、建物租金，減營運成本與建物維護）小於 0，站長說 `firstLineLosing`：「這條線昨天虧了 $ 40,474：站太近、坐的人太少。把線延伸到下一個城鎮，最近、還沒有車站的人口熱區在東北方 4.2 公里。點一下看位置。」點氣泡，鏡頭移到那個熱區（`GameSession.lookAt` → `cameraRequest`，`MapView` 接）。車站不超過 3 座而負債（不在上述情形時）說 `inDebtShortLine`：延伸路線，**不叫漲價**；較長的鐵路負債仍是 `inDebt`（漲價、減車、借款）。它排在 `inDebt` 之前、`shortSteamTrains` 之後。
+- **最大的未服務聚落**做成可重用的 helper：`UnservedCluster`（`all(in:)`、`largest(in:)`、`nearestToTheRailway(in:)`）。從世界的土地算（實景地圖的人口、空白地圖的城鎮），不需要人口檔：沒有營運中車站的 800 m 腹地（`Land.catchmentRadius`）涵蓋的格子，每 16×16 格（1,024 m）一塊，人數加總、用人數加權的中心；至少 1,500 人才算城鎮（`minimumPeople`）。教學要的是「離鐵路最近」的（`nearestToTheRailway`，回傳聚落與出發的車站，方向用八方位與 0.1 公里），委託案與公司評等要的是「最大的」（`largest`）。派工說用 `PopulationGrid`／`CoverageGrid`；世界的土地就是從它們來的，用土地則空白地圖也能用，也不必把格子座標轉回經緯度。
+- **回饋**（`GameFeedback`）：午夜時前一天營運虧損，現金下方飄紅色「−$40k」（`IncomePulse` 可以是負的，`text`：$10,000 以上取千元，否則到元；`noteDayLoss`）；金幣音效只在公司賺錢時響（昨天的營運淨額沒有小於 0，`noteIncome`），虧損的路線不再一直發金幣聲，但票價收入的「+$」浮字照舊。
+
+**4. 說明手冊**（`HelpGuide`、`HelpView`）：可搜尋（`.searchable`）的 FAQ，18 則，中英對照（問題與答案用目前語言，展開後再附另一個語言），依建設／營運／財務／城市分組；搜尋每個詞都要符合（中英文皆可）。從開始畫面（「說明」）、遊戲選單（`menu.help`，`Panel.help`）與設定都打得開。參考庫 `Ci/reference_snapshot/lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js` 的 `guide.metro.faq` 只有 6 則（建立線路、加節點或車站、移動或刪除車站、讓列車開始運行、延長線路、再看一次簡介），是 Ci 的滑鼠與鍵盤操作：這六則的主題改成本作的觸控操作並轉成台灣用語（`firstLine`、`addStation`、`moveRemoveStation`、`startTrains`、`extendLine`、`tutorialAgain`），其餘 12 則是這個專案自己寫的（為什麼路線虧錢、城市怎麼成長、建材、買地圖、借錢、票價、號誌控制、快車、年報、干擾事件、難度、存檔）。`guide.hsr.faq` 是 Ci 專用的，不用。
+
+**參考與外部專案**（CLAUDE.md 的順序）：
+- `Ci/reference_snapshot/lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`（`guide.metro.faq.0`–`.5`、`guide.metro.placeholder` 的搜尋提示）：六則 FAQ 與搜尋提示的做法，簡轉繁並換成本作的操作。direct（文字）／adapted。
+- `Simulator/`、`MapBuilder/`、`Railway/`：沒有難度設定、首次啟動引導或虧損教學可用。外部專案：A-Train 的難度與ヒント頁只當概念（沒有程式可複製）；「nothing usable」，程式是這個專案自己的。
+
+**限制**：
+- 首條線教學只看「車站數」與「前 30 天」：一座車站數很多但仍然虧的公司拿到的是 `inDebt`；全台灣地圖的土地是按需讀入的，未讀入的城鎮找不到，站長會省略方向那一句。
+- 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
+
+**測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
