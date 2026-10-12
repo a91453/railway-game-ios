@@ -30,11 +30,26 @@ import Observation
 public final class GameSession {
     /// The authoritative game state. Only the session mutates it.
     public private(set) var world: GameWorld {
-        didSet { worldRevision &+= 1 }
+        didSet {
+            worldRevision &+= 1
+            if !isApplyingTick { commandRevision &+= 1 }
+        }
     }
     /// Counts the changes to ``world``, so what is worked out from it (the
     /// track preview, ``networkPreview``) is kept until it changes.
     @ObservationIgnored private(set) var worldRevision = 0
+    /// Counts the changes to ``world`` other than game time moving on (a
+    /// command, an undo or redo, a setting), so what only those change
+    /// (the lines along the track, ``trackInspection(of:)``) is worked out
+    /// once for them, not at every tick.
+    @ObservationIgnored private(set) var commandRevision = 0
+    /// Whether ``finish(_:)`` is putting a step of game time in place.
+    @ObservationIgnored private var isApplyingTick = false
+    /// The bubbles ``situationAlerts`` last worked out, and for what.
+    @ObservationIgnored var situationAlertsMemo: SituationAlertsMemo?
+    /// The line map ``trackInspection(of:)`` last built, and for which
+    /// ``commandRevision``.
+    @ObservationIgnored var inspectionLineMap: (revision: Int, map: LineMap)?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
@@ -543,8 +558,9 @@ public final class GameSession {
     /// A tap that picked train `id`: it becomes the train the train tool
     /// acts on, and the select tool's inspector shows it. The select tool
     /// lets go of the station or point it had; the train tool keeps it, as
-    /// the place it sends the train to.
-    private func tapTrain(_ id: TrainID) {
+    /// the place it sends the train to. A stuck train's bubble and the news
+    /// log's "Go" pick a train the same way.
+    func tapTrain(_ id: TrainID) {
         guard tappedTrainID != id || selectedTrainID != id || (tool == .select && selectedPoint != nil) else { return }
         selectedTrainID = id
         tappedTrainID = id
@@ -989,6 +1005,8 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return
         }
+        isApplyingTick = true
+        defer { isApplyingTick = false }
         let closedBefore = world.accounts.years.last?.year
         let endedBefore = world.scenario?.outcome != nil
         let lastEntry = world.accounts.entries.last

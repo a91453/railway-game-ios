@@ -211,3 +211,22 @@ final class TourismSessionTests: XCTestCase {
         if case .touristsComing? = StationMasterAdvice(world: elsewhere) { XCTFail("no sights, no tourists") }
     }
 }
+
+extension TourismSessionTests {
+    /// Decision 174: tourists are announced for a holiday that starts today
+    /// or in the next three days, not every day of one already under way,
+    /// which would keep the station master from saying anything else.
+    func testTheTouristsAreNotAnnouncedAgainEachDayOfAHoliday() throws {
+        var world = try world()
+        world.setDisruptions(Disruptions(level: .light, country: "TW"))
+        let sights = world.tourism?.attractions
+        world.setTourism(nil)
+        try world.setStationDemand(StationID(rawValue: 1), to: StationDemand(kind: .residential, dailyTrips: 1))
+        world.setSpeed(.normal)
+        // The Spring Festival runs 9 days from day 43: day 46 is its fourth.
+        try world.advance(ticks: 46 * 1_440)
+        world.setTourism(sights)
+        XCTAssertEqual(world.holidays(from: 46, through: 46).first?.start, 43)
+        if case .touristsComing? = StationMasterAdvice(world: world) { XCTFail("the holiday began three days ago") }
+    }
+}

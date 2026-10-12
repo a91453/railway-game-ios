@@ -336,11 +336,36 @@ final class FollowingMapLibreView: MLNMapView {
 
     // MARK: - Taiwan's real railways
 
+    /// The image of the room the railways keep for themselves among the
+    /// map's labels (decision 189), and its size: a little wider than a
+    /// line's casing, one every as many points along the line, so the
+    /// icons touch.
+    private static let railwayRoom = "railways.room"
+    private static let railwayRoomSize = RealRailways.Widths.casing + 2.4
+    private static let railwayRoomImage: UIImage = {
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        let side = FollowingMapLibreView.railwayRoomSize
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in }
+    }()
+
     /// The railways near the anchor as `railwayLook` says, in the site's
     /// drawing order (`glTracksInstall`): for each `sortKey` from the lowest,
     /// the casing of every line, then the lines in their colours; then the
     /// stations. All under the style's first label layer, as the site puts
     /// them under its map's labels.
+    ///
+    /// Decision 189: the map's labels keep off the lines, as they keep off
+    /// the game's station names (``makeWay(for:in:)``). A name lying on a
+    /// line erased it under its halo: the road names along the Kaohsiung
+    /// Metro's Red Line (Zhongshan and Bo'ai Roads over it) cut it every
+    /// few hundred points, and village names cut the Alishan line at its
+    /// stations. An invisible icon every ``railwayRoomSize`` points along
+    /// each line, above every other label layer, is placed first; the
+    /// map's labels go around it: a road's name further along its road, a
+    /// place's name beside its place (``BaseMapStyle``'s variable anchors),
+    /// or, with no room anywhere, not at all. Railways drawn as hidden make
+    /// no room.
     private func drawRailways(in style: MLNStyle) {
         for identifier in railwayLayers {
             if let layer = style.layer(withIdentifier: identifier) {
@@ -376,13 +401,30 @@ final class FollowingMapLibreView: MLNMapView {
             style.addSource(source)
             return source
         }
-        func stroke(_ identifier: String, _ shape: MLNShape, _ color: RealRailways.RGB, _ width: Double) -> MLNLineStyleLayer {
-            let layer = MLNLineStyleLayer(identifier: identifier, source: source(identifier, shape))
+        func stroke(_ identifier: String, _ lines: MLNSource, _ color: RealRailways.RGB, _ width: Double) -> MLNLineStyleLayer {
+            let layer = MLNLineStyleLayer(identifier: identifier, source: lines)
             layer.lineColor = NSExpression(forConstantValue: UIColor(color))
             layer.lineWidth = NSExpression(forConstantValue: width)
             layer.lineCap = NSExpression(forConstantValue: "round")
             layer.lineJoin = NSExpression(forConstantValue: "round")
             return layer
+        }
+        let makesRoom = look.style != .hidden
+        if makesRoom {
+            style.setImage(Self.railwayRoomImage, forName: Self.railwayRoom)
+        }
+        // The invisible icons along `lines`, above every label.
+        func room(_ identifier: String, _ lines: MLNSource) {
+            let layer = MLNSymbolStyleLayer(identifier: identifier, source: lines)
+            layer.symbolPlacement = NSExpression(forConstantValue: "line")
+            layer.symbolSpacing = NSExpression(forConstantValue: Self.railwayRoomSize)
+            layer.iconImageName = NSExpression(forConstantValue: Self.railwayRoom)
+            layer.iconRotationAlignment = NSExpression(forConstantValue: "map")
+            layer.iconOpacity = NSExpression(forConstantValue: 0)
+            layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
+            layer.iconIgnoresPlacement = NSExpression(forConstantValue: false)
+            style.addLayer(layer)
+            railwayLayers.append(layer.identifier)
         }
 
         let lines = railways.lines(near: look.anchor, within: look.reach)
@@ -392,7 +434,11 @@ final class FollowingMapLibreView: MLNMapView {
                 let coordinates = line.points.map { CLLocationCoordinate2D($0) }
                 return MLNPolyline(coordinates: coordinates, count: UInt(coordinates.count))
             }
-            add(stroke("railways.\(sortKey).casing", MLNMultiPolyline(polylines: polylines), look.theme.casing, RealRailways.Widths.casing))
+            let casing = source("railways.\(sortKey).casing", MLNMultiPolyline(polylines: polylines))
+            add(stroke("railways.\(sortKey).casing", casing, look.theme.casing, RealRailways.Widths.casing))
+            if makesRoom {
+                room("railways.\(sortKey).room", casing)
+            }
             var colors: [RealRailways.RGB] = []
             var byColor: [RealRailways.RGB: [MLNPolyline]] = [:]
             for (line, polyline) in zip(rank, polylines) {
@@ -401,7 +447,8 @@ final class FollowingMapLibreView: MLNMapView {
                 byColor[color, default: []].append(polyline)
             }
             for (index, color) in colors.enumerated() {
-                add(stroke("railways.\(sortKey).\(index)", MLNMultiPolyline(polylines: byColor[color] ?? []), color, RealRailways.Widths.line))
+                let identifier = "railways.\(sortKey).\(index)"
+                add(stroke(identifier, source(identifier, MLNMultiPolyline(polylines: byColor[color] ?? [])), color, RealRailways.Widths.line))
             }
         }
 

@@ -261,6 +261,12 @@ public enum BaseMapStyle {
         ]
     }
 
+    /// Where a place's name may go, the first that has room: on the place,
+    /// then beside it.
+    static let placeAnchors = ["center", "top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"]
+    /// How far beside the place a moved name goes, in ems.
+    static let placeOffset = 0.8
+
     /// The labels, the least important first: MapLibre places the labels
     /// of higher layers first.
     static func labels(_ c: Colors) -> [[String: Any]] {
@@ -275,6 +281,12 @@ public enum BaseMapStyle {
                 layout["symbol-placement"] = "line"
                 layout["text-rotation-alignment"] = "map"
                 layout["symbol-spacing"] = 350
+            } else {
+                // Decision 189: a name with no room where it is, such as a
+                // village on the real railway, moves beside it rather than
+                // leaving the map.
+                layout["text-variable-anchor"] = placeAnchors
+                layout["text-radial-offset"] = placeOffset
             }
             return [
                 "id": id, "type": "symbol", "source": source, "source-layer": layer, "minzoom": minzoom,

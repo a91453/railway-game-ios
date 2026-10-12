@@ -1219,8 +1219,20 @@ public struct GameWorld: Equatable, Sendable {
             let trainShare = tradeIn > .zero ? Money(trainPart.amount * proceeds.amount / tradeIn.amount) : .zero
             sellAsset(.train, owner: owner, for: trainShare)
             sellAsset(.cars, owner: owner, for: proceeds - trainShare)
-            try economy.spend(price)
-            acquireAsset(.train, owner: owner, cost: price)
+            // The fee was checked: what is paid is the new price less the
+            // proceeds just received, so a change the old train pays for is
+            // made even in the red (a later fix: spending the whole price
+            // could throw there, with the old train already sold).
+            economy.settle(Money(-price.amount))
+            // As bought: the first car the train's record, the others a
+            // record of cars, so that cars taken off later write off their
+            // share (a later fix).
+            let pricing = RollingStock.pricing(of: type)
+            let cars = trains[index].cars
+            acquireAsset(.train, owner: owner, cost: pricing.firstCar)
+            if cars > 1 {
+                acquireAsset(.cars, owner: owner, cars: cars - 1, cost: price - pricing.firstCar)
+            }
         }
         trains[index].type = type
     }

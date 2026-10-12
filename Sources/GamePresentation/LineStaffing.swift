@@ -199,11 +199,15 @@ extension GameSession {
                         let pattern = attempt.assignedPattern(of: id)
                         try attempt.unassignTrain(id)
                         if train.position != nil { try attempt.unplaceTrain(id) }
+                        // Cars taken off go first, so the new type is paid
+                        // for the cars kept only (a later fix); cars added
+                        // come after, at the new type's car price.
+                        if cars < train.cars { try attempt.setTrainCars(id, to: cars) }
                         if train.type != type {
                             try attempt.setTrainType(id, to: type)
                             if let performance = type?.performance { try attempt.setTrainPerformance(id, to: performance) }
                         }
-                        if train.cars != cars { try attempt.setTrainCars(id, to: cars) }
+                        if cars > train.cars { try attempt.setTrainCars(id, to: cars) }
                         try Self.placeAtStart(id, of: journey, in: &attempt)
                         try attempt.assignTrain(id, to: line.id, pattern: pattern)
                         world = attempt

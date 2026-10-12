@@ -202,6 +202,25 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertNotEqual(world.economy.balance, balance)
     }
 
+    /// A request taken at the minute of midnight, before that midnight has
+    /// settled the day before, is not judged on that day: it was taken
+    /// after it (decision 183: met on any day from the day it is taken).
+    func testARequestTakenAtAnUnsettledMidnightIsNotJudgedOnTheDayBefore() throws {
+        var world = try build()
+        let id = world.cityRequests!.nextID
+        world.cityRequests!.offers.append(CityRequest(id: id, kind: .networkRiders, baseline: 0, target: 1,
+                                                      reward: Money(20_000_000), days: 90, offeredDay: 0))
+        world.cityRequests!.nextID += 1
+        try world.advance(ticks: 1_440)
+        try world.acceptRequest(id)
+        XCTAssertEqual(world.cityRequest(id: id)?.acceptedDay, 1)
+        try world.advance(ticks: 1)
+        XCTAssertGreaterThanOrEqual(world.accounts.days.first { $0.day == 0 }?.fareTrips ?? 0, 1, "day 0 carried riders")
+        XCTAssertTrue(world.cityRequests!.results.isEmpty, "day 0 was before it was taken")
+        XCTAssertEqual(world.cityRequests!.active.map(\.id), [id])
+        XCTAssertEqual(world.cityRequests!.owed, .zero)
+    }
+
     func testTrainsCallingNearASettlementCount() throws {
         var world = try build()
         // The whole little world lies within 800 m of the point.

@@ -333,7 +333,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         // Not on the game's first day, when nothing was announced before it
         // (a new game starts on New Year's Day).
-        guard today > 0, let coming = world.holidays(from: today, through: today + 3).first,
+        // `holidays(from:through:)` also gives one already under way: not that.
+        guard today > 0, let coming = world.holidays(from: today, through: today + 3).first(where: { $0.start >= today }),
               sights.contains(where: { world.attractionStation(of: $0.id) != nil }) else { return nil }
         return .touristsComing(kind: coming.holiday.kind, days: max(0, coming.start - today), times: 2)
     }

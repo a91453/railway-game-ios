@@ -153,7 +153,8 @@ extension GameWorld {
             }
         }
         if let tourism, lines.contains(where: { !$0.isFreight }) {
-            for sight in tourism.attractions where sight.stars >= Self.alertedSightStars && attractionStation(of: sight.id) == nil {
+            // The rating with its hotels (``stars(of:)``), as the panel shows it.
+            for sight in tourism.attractions where stars(of: sight) >= Self.alertedSightStars && attractionStation(of: sight.id) == nil {
                 alerts.append(MapAlert(kind: .sightWithoutStation(sight.id), station: nil, location: sight.point))
             }
         }
@@ -168,7 +169,35 @@ extension GameWorld {
     public static let alertedSightStars = 400
 }
 
+/// The bubbles ``GameSession/situationAlerts`` worked out, and for what.
+struct SituationAlertsMemo {
+    let revision: Int
+    let period: Int64
+    let alerts: [MapAlert]
+}
+
 extension GameSession {
+    /// How long ``situationAlerts`` keeps its bubbles while game time runs
+    /// and no command changes the world: ten game minutes, a second at the
+    /// normal speed.
+    static let situationAlertsPeriod: Int64 = 10 * 60
+
+    /// ``GameWorld/situationAlerts()``, as the map draws them: worked out
+    /// again after a command (``commandRevision``) and every
+    /// ``situationAlertsPeriod`` of game time, not at every tick and every
+    /// read. The deadlock search behind a stuck train's bubble asks a route
+    /// of every waiting train: tens of milliseconds a time on the
+    /// real-world demo, read twice a frame and ten frames a second.
+    public var situationAlerts: [MapAlert] {
+        let period = world.clock.now.seconds / Self.situationAlertsPeriod
+        if let memo = situationAlertsMemo, memo.revision == commandRevision, memo.period == period {
+            return memo.alerts
+        }
+        let alerts = world.situationAlerts()
+        situationAlertsMemo = SituationAlertsMemo(revision: commandRevision, period: period, alerts: alerts)
+        return alerts
+    }
+
     /// Goes to what `alert` is about: selects its station, or for a line
     /// without trains, the line, so the line panel shows how to staff it
     /// (decision 101). Returns whether the line panel should open. Never
@@ -183,7 +212,8 @@ extension GameSession {
             selectLine(line)
             return true
         case .trainStuck(let train):
-            selectTrain(train)
+            // As a tap on the train: the inspector shows it alone.
+            if world.train(id: train) != nil { tapTrain(train) }
             return false
         case .sightWithoutStation:
             lookAt(alert.location)

@@ -1,6 +1,6 @@
 # 台灣的 OSM 底圖（決策 151）
 
-實景地圖的 OpenStreetMap 底圖在台灣用遊戲自己的向量圖磚：`RailwayGameApp/Resources/BaseMap/taiwan.pmtiles`，和實景地圖的水域、分區、地點（`tools/real-world-population/`）讀同一份 osmtoday.com 的台灣整包檔，所以底圖畫的海、河、公園和遊戲的地形、分區是同一份 OSM；隨 App 打包，不用網路。樣式是遊戲自己的（`Sources/GamePresentation/BaseMapStyle.swift`），台灣以外照舊用 OpenFreeMap 的圖磚、套同一份樣式。
+實景地圖的 OpenStreetMap 底圖在台灣用遊戲自己的向量圖磚：`RailwayGameApp/Resources/BaseMap/taiwan.pmtiles`，和實景地圖的水域、分區、地點（`tools/real-world-population/`）讀同一份 osmtoday.com 的台灣整包檔，所以底圖畫的海、河、公園和遊戲的地形、分區是同一份 OSM；隨 App 打包，不用網路。樣式是遊戲自己的（`Sources/GamePresentation/BaseMapStyle.swift`），台灣以外照舊用 OpenFreeMap 的圖磚、套同一份樣式。App 把真實鐵道畫在標籤下面，並沿線放看不見的圖示讓標籤避開，地名沒有位置時移到旁邊（`text-variable-anchor`，決策 189）。
 
 ## 圖磚
 

@@ -3569,6 +3569,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **參考**：參考庫的網站（`Railway/site_archive_clean/index.html`）iPhone 上地圖約佔 85%：頂端一顆時鐘膠囊（`#clock`）、底部分頁（`.tabbar`）、點列車時左下的小卡片（`.follow-panel`）而不是半屏面板，訊息最多 3 則、5 秒（`showToast()`）；`Ci/` 的底部列（`#bottombar`）只有一排圓形圖示；`Simulator/` 手機版的進階選項收在預設關閉、有把手的抽屜（`.mobile-sheet-handle`）；`Railway/taipei_gta_reference/` 的 `notify()`（`game-vXklz4A8.js`）訊息時間 `min(9, 3.2 + 長度 × 0.09)` 秒、同樣的訊息不疊而是彈一下。外部的遊戲只看做法：TheoTown、SimCity BuildIt（作者的實機截圖）、Mindustry（GPL-3.0）、Unciv（MPL-2.0）、OpenTTD Android（GPL-2.0），沒有拿程式碼。程式是本專案自己寫的。
 
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：地圖旁有面板（路線、數據、車站的客源）時細節卡片讓位，dock 的「顯示控制項」按了只會改面板關掉之後要不要開卡片，當下沒有任何變化，關掉面板時卡片又突然打開。現在面板開著時這個按鈕是停用的（`ControlDock.canToggle`）。UI 測試 `MapInteractionTests.testASidePanelLeavesNoDeadToggleAndCoversNoStationMaster`。
+
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 
 2026-10-09，UI/UX 改版第二輪的 UX-5b（決策 106 之後）：作者的實機截圖裡，鋪軌時卡片塞滿工程選項（構造、新節點高度、平順曲線、緩和坡度、清除、吸附軌道），主要的「鋪設軌道」按鈕在選好兩點之前一直是灰的，而且在畫面的另一邊。只改 App 與 GamePresentation 的兩個小介面：GameCore、存檔、golden、replay 都不變。
@@ -3747,6 +3749,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **之後的修正**（#366 留下的項目，2026-10-11）：泡泡的寬度原本只扣掉 dock 和卡片，沒扣地圖右下角那一欄（小地圖、縮放鈕、圖例）。幾何推算 iPhone 17 Pro 橫向時泡泡蓋住「縮小」，iPhone SE 橫向時兩個縮放鈕都被蓋住約 7 秒，點下去只會關掉泡泡。現在地圖量那一欄在螢幕上的位置（`GameScreenState.mapCornerFrame`），泡泡停在它前面。不等實機確認就改：多扣一欄最壞只是泡泡窄一點、多換一行；窄到放不下（`StationMasterCorner` 的 140 點）時照舊只亮點，等有空間再說。**UNVERIFIED**：只能在 macOS 與實機上看。
 
+
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：iPhone 橫拿時地圖旁的面板從 x 365（安全區 750 寬）開始，站長在 dock 旁的 x 350–394，被面板蓋住大半，只剩約 15 pt 點得到。現在站長會被面板蓋到時什麼都不畫（`StationMasterCorner.isCovered`）；view 本身留著，所以它記得說過什麼，面板關掉不會重講。iPad 有空間，不受影響。
 
 ### 119. 點一下看、長按改
 
@@ -5660,6 +5664,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **測試**：`TourismHotelTests`（範圍內外、兩家為限與 5★ 上限、觀光客與計畫跟著飯店、一家與兩家的住宿客、週末、關掉觀光、遠處飯店沒有客人、午夜入帳）。
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
+**之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
 ### 179. 逐線營運報表：每條線的運量、票收、成本與損益
 
 2026-10-12，作者睡覺期間派工的缺口（依 A 列車 9 V5／A 列車：開始吧觀光的盤點：帳只有全公司合計，玩家看不出哪條線賺錢、該加車或砍掉；OpenTTD 有每車年度利潤，A9 的每列車「運行表示」有收支）。號碼依工作登記 #231：決策 179、存檔版本 48、golden schema 70。
@@ -5730,6 +5736,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **參考**（`a91453/railway-reference-private`）：見 PR 的對照表。
 
 **之後的修正**（查 bug，2026-10-12）：賣掉載著貨的貨運列車時，`freight.loads` 還留著它的貨，到整點的 `tickFreight` 才清；在那之前存的檔讀不回來（「Cargo is on a train… that does not exist」）。`sellTrain` 現在先 `loseCargo(of:)`，貨算損失（`FreightTests.testSellingALoadedFreightTrainLosesItsCargo`）。
+
+**之後的修正**（第三次查 bug，2026-10-12）：① 換車種時舊車賣得比新車種貴（費用 0，`refitCost` 也報 0），公司在赤字時 `setTrainType` 先把舊車的帳賣掉、再 `spend` 新車全價而拋出 `insufficientFunds`，等於一次不收錢的改裝被拒絕、而且拋出前已經改了帳。現在只檢查費用付得起，餘額只少「新價 − 賣得的錢」（`testAChangeOfTypeTheOldTrainPaysForIsMadeInTheRed`）。② 換車種後新車的價錢整筆記在列車的帳上，之後拆車廂沒有沖銷，一節車的列車帳面還是 16 節的價、照它折舊、賣出也照它算；現在和買車一樣，第一節記在列車、其餘記成車廂（`testCarsTakenOffAfterAChangeOfTypeLeaveTheBooks`）。③ 路線改編組（`reformSelectedLine`）先換車種再減車廂，玩家為馬上拆掉的車廂付了新車種的錢；現在減車廂在前、加車廂在後（`RollingStockSessionTests.testReformingIntoFewerCarsPaysOnlyForTheCarsKept`）。存檔格式、golden、replay 不動。
 
 ### 178. 載客量圖層與車站「即將進站」看板
 
@@ -5810,6 +5818,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（車輛經濟 #395 合併後，2026-10-12）：成就 35 → 38，補上決策 180 的三項：車種齊全（車隊有三種以上車種，沒有車種的列車算一種）、長編組（一列 10 節以上）、車隊投資（`balanceSheet().rollingStock.cost`，列車與車廂的購置與改裝成本達 $5,000,000，賣掉的不算）。只在 `rollingStockEconomics` 打開的世界達得到；遊戲裡的清單在關著的世界不列這三項（`Achievement.isListed(for:)`，觀光的四項同樣改用它），開始畫面全部列出。「第一次賣掉列車」沒有做：世界只留下出售的收入（和賣建物的收入記在同一欄）與少一列的車隊，從狀態分辨不出賣過列車。
 
+**之後的修正**（第三次全程式碼查 bug，2026-10-12）：上一段的「只在 `rollingStockEconomics` 打開的世界達得到」只做到清單：關著的世界（挑戰、教學、示範、舊存檔）列車照樣能免費加到 10 節或換車種，午夜就解鎖「長編組」「車種齊全」，購置紀錄也照固定價格記，所以「車隊投資」也可能。現在 `Achievement.isMet(by:)` 先問 `isListed(for:)`：遊戲不列的成就在那個遊戲裡達不到（觀光的四項本來就因為沒有景點而是 0，不受影響）。`AchievementsTests.testTheRollingStockMarksAreNotHadWhereTrainsArePricedFlat`。
+
 ### 182. 晝夜與天氣畫面、列車依路線上色與平滑移動
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：看列車跑是鐵道遊戲最大的樂趣，但地圖沒有時間感：夜裡和白天一樣、雨天和颱風看不出來，列車每個 tick（100 ms，一般速度是一遊戲分鐘）跳一大段。A9 有晝夜光影、夜間建物燈光與天候；A 列車觀光有時間色調。號碼依工作登記 #231：決策 182；**只改 presentation，GameCore 不動**，存檔版本、golden schema 不動，沒有新的 fixture，golden 與 replay 不受影響。
@@ -5888,6 +5898,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **沒有驗證的**：Linux 不能跑 App；`GoalsPanel` 的委託案區、選單的「目標」與站長的話要在 macOS CI 與 TestFlight 上看。
 
+**之後的修正**（第三次查 bug，2026-10-12）：遊戲停在午夜那一分鐘（那一天還沒結算）時接下委託，下一步結算前一天時就把前一天算進去：網路運量類拿前一天的運量、觀光類加上前一天的觀光客，可能當場達成、結果日期早於接下的那天。現在接下那天之前的結算跳過它（`CityRequestsTests.testARequestTakenAtAnUnsettledMidnightIsNotJudgedOnTheDayBefore`）。存檔格式、golden、replay 不動。
+
 ### 184. 玩家操作的小功能包：重做、清單搜尋、存檔管理、點選檢視、更多地圖泡泡、提示音與觸覺
 
 2026-10-12。第二梯 B 的派工（派工 session_017he2Q1QSeaBKJD1PR3XMma）：幾個玩家天天碰到、但一直缺的小東西。號碼依工作登記 #231：決策 184；**只改 Presentation／App**，GameCore 不動（只用既有的唯讀 API），存檔版本、golden schema 不動，沒有新的 fixture；`SavedGame` 的格式沒有改，golden 與 replay 不受影響。
@@ -5916,9 +5928,23 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
 - VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
 
+**之後的修正（第三次全程式碼查 bug，2026-10-12）**：每項先有在 Linux 上失敗的測試。
+- 景點沒有車站的泡泡（`situationAlerts()`）用景點自己的星等，沒有加旅館：3.75 星加一間旅館在面板上是 4 星，地圖卻沒有泡泡。改用 `stars(of:)`，和面板、站長一樣（`SituationAlertsTests.testASightRaisedToFourStarsByAHotelShows`）。
+- 點「卡住了」的泡泡、或新聞紀錄對列車按「前往」，原本走 `selectTrain`，選取的車站留著，檢視卡片標題是車站、下面卻是列車的路線與誤點。現在和在地圖上點列車一樣（`tapTrain`）：選取工具放掉車站、點、建物與軌道。列車面板的選單與車隊總覽仍用 `selectTrain`（列車工具要留著車站當送車的目的地）。
+- 站長的「觀光客要來了」（決策 174）說的是今天或三天內開始的假期，但 `holidays(from:through:)` 也回傳已經開始的假期，所以九天的春節每天都說「到了」，也蓋掉這段期間的其他建議；現在只取 `start >= today` 的。
+- 縮小時人口熱度圖的方塊（`PopulationHeatmap.tiles(in:blockSize:)`）在畫面邊緣只加了範圍內的列與欄，卻用整塊的格數平均：邊緣的方塊比實際淡，平移時顏色會變。現在和 `CityMap` 一樣取整塊。
+- 文字：貨運線一列車時英文說「on 1 trains」；城市委託的中文標題在站名已經以「站」結尾（含「已拆除的車站」）時變成「…站站運量提升」；帳本不到 $0.50 的支出四捨五入成 $ 0 時寫成「+$ 0」。
+
+**之後的修正（第三次全程式碼查 bug，每一幀重算的工作，2026-10-12）**：#399 之後還有兩個地方在遊戲執行時每一幀重算昂貴的東西（實景示範、debug build 量測）：
+- 地圖泡泡的 `situationAlerts()`（死結偵測要替每一列等待的列車找路）每次約 81 ms，`MapAlertBubbles` 每一幀讀兩次，每秒十幀。現在讀 `GameSession.situationAlerts`：一個指令之後（`commandRevision`：不是遊戲時間前進的 `world` 變更，包括指令、復原、重做、設定）或每 10 遊戲分鐘（正常速度約 1 秒）才重算。卡住的泡泡最多晚 10 遊戲分鐘出現或消失。
+- 點選軌道的檢視（`trackInspection(of:)`）每次重建整張 `LineMap`（每條線每一段一次找路），約 24 ms，檢視卡片與 `selectionText()` 一幀讀好幾次。現在 `GameSession.trackInspection(of:)` 每個 `commandRevision` 只建一次（只有指令會改軌道與路線），號誌照當下的世界讀。
+`PerFrameMemoTests`。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
+
+**之後的修正**（2026-10-12，第三次全程式碼查 bug，領域 D）：查過「讀不了的存檔整列 `.disabled` 會連帶拿掉滑動刪除」的疑慮，在 iOS 26.5 Simulator 上不成立（停用的列仍可滑動刪除，run 38262744959），不改；加了回歸測試 `StartSaveFlowSmokeTests.testAnUnreadableSaveCanBeDeleted`，用 Debug 才有的啟動參數 `-broken-save` 放一個讀不了的存檔。
 
 ### 185. PR 的 Linux CI 依改動分層
 
@@ -6033,6 +6059,27 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **沒有驗證的**：Linux 不能建置 App；自己前進的時機、面板的捲動、地圖 ✓ 的框（它在 `.offset` 裡）、手機上 160 公尺的距離（開局每點 0.5 公尺，縮小一級後 1 公尺）都要看 macOS CI 與實機。
 
 **之後的修正（2026-10-12，合併後手動跑的全部教學 UI 測試，run 38259103200）**：`testCreateLineAndBuyAreInReach` 在「點『完成』結束建造」那一步按不到工具列的「完成」（`tool.select`，not hittable）。失敗時的畫面與無障礙樹：工具列的捲動區在 y 292.5–472.5，按鈕卻在 y 74–246，被捲動區切掉；沒有東西蓋住它。工具列（決策 114、123）用自己量到的高度（`contentHeight`、`labelledHeight`，`@State`）決定捲動區的大小與要不要只顯示圖示；從後面的教學步驟開局（`-tutorial-step`）時，它在畫面還沒排好的第一格就出現了，量到的值過時，捲動區停在錯的位置。改成 `ViewThatFits`：放得下就有名稱、否則只有圖示、再放不下才捲動，和決策 123 的順序相同，不再保存量到的高度。沒有加測試以外的玩法改動；UI 測試沒有放寬。
+
+### 189. OSM 底圖的標籤不壓在真實鐵道上
+
+2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**查到的原因**：打包的線（`track_lines.geojson`）沒有斷。用和底圖同一份整包檔（osmtoday 2026-10-12 下載）沿高捷紅線、橘線、環狀輕軌與林鐵四條線每 10 m 量到 OSM 軌道的距離，全都在 15 m 以內，只有決策 151 刻意保留 TDX 的多林一帶（約 0.5 km）例外，而且線仍然相接。看起來斷，是因為鐵道畫在所有標籤下面（決策 97、151，照網站的 `glTracksInstall`），標籤的光暈（`text-halo`，底色、1.5 點）把底下的線擦掉一段：高捷紅線在中山路、博愛路底下，路名每隔幾百點就落在線上，zoom 13.5 一個畫面被「博愛一路／二路／三路」切成四段；台北的忠孝東路、南京東路、信義路對板南線、松山線、信義線也一樣；阿里山是站旁的地名（水社寮、二萬平）壓在線上。
+
+**做法**（照決策 123 第 6 點的 `game.stations.room`）：
+1. **鐵道留給自己的位置**（`OSMMapBackground` 的 `drawRailways`）：每一層 `sortKey` 的線多一個看不見的符號層 `railways.<sortKey>.room`，沿線（`symbol-placement: line`）每 8 點一個 8 點見方的透明圖示（比線的外框 5.6 點寬一點，間距等於大小，所以接成一條），放在所有標籤層之上：MapLibre 先排上層的符號，這層可以壓在任何東西上（`icon-allow-overlap`），別人不能壓它（`icon-ignore-placement` 為 false），底圖的標籤就繞開鐵道。圖示的透明度是 0，碰撞照算（碰撞是 layout，透明度是 paint）。鐵道選「隱藏」時不放。
+2. **地名改到旁邊而不是消失**（`BaseMapStyle`）：點狀的地名（`place-*`）有 `text-variable-anchor`，先放在原地，沒位置時依序試上、下、左、右與四個斜角，離地點 0.8 em（`text-radial-offset`）。奮起湖就移到線的下面。路名與河名是沿線排的，照舊只沿自己的路往前後找位置。
+
+**取捨**：路名剛好在捷運正上方、整段都和線重疊時（博愛路、忠孝東路），那個縮放下就不顯示，換成線是完整的；路離開線的地方照舊有名字。考慮過、沒選的：鐵道畫在路名之上（線完整，但路名被線蓋成碎字）、畫在所有標籤之上（地名、站名被蓋）、只縮小光暈（斷口變小但還在）。
+
+**參考庫與外部專案**：參考庫（`581db83`）的網站同樣把鐵道放在標籤下面（`index.html` 的 `glTracksInstall`），沒有讓標籤避開線的做法；`Ci/` 的符號層用 `allow-overlap`／`ignore-placement` 是讓自己的圖示不被擋，不是讓別人避開。沒有可移植的；用的是 MapLibre 本身的碰撞（樣式規格的 `icon-allow-overlap`、`icon-ignore-placement`、`text-variable-anchor`），沒有新的依賴。
+
+**驗證**：Linux 上用 MapLibre GL JS 4.7.1 在 Chromium 畫打包的圖磚、遊戲的樣式（由 `BaseMapStyle.json` 產生）與打包的線，照 App 的寬度與順序：高雄（zoom 12.3、13.5、14.5，淺色與深色）、阿里山（奮起湖、二萬平、獨立山）、台北車站一帶，改前改後對照。`BaseMapStyleTests` 的新測試檢查地名的錨點。
+
+**限制**：
+- App 用的是 MapLibre Native 6.31.0，這個環境只能確認 GL JS 的畫法；實機上的樣子、捏合縮放時的效能（台北一塊圖磚可能有上千個看不見的圖示）要在 TestFlight 上看。
+- Apple 地圖沒有這種接口（決策 123 第 6 點），標籤仍可能壓在線上。
+- 沒有位置可以移的地名（例如二萬平夾在之字形折返的兩段線中間）在那個縮放下不顯示。
 
 ## 目前規則摘要
 

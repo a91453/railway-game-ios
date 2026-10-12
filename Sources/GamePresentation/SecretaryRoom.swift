@@ -113,7 +113,8 @@ extension GameSession {
             if let first = world.line(id: id)?.stops.first { focusMap(onStation: first) }
         case .train(let raw)?:
             let id = TrainID(rawValue: raw)
-            selectTrain(id)
+            // As a tap on the train: the inspector shows it alone.
+            tapTrain(id)
             followTrain(id)
         case nil:
             break
