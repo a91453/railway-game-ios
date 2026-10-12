@@ -114,6 +114,7 @@ final class RingLineTests: XCTestCase {
     /// service is over, or with trains that were never sent out, it is.
     func testARingWithARunningTrainIsNotReversed() throws {
         var world = try makeRingWorld(trains: 2, running: pairs(2))
+        world.setFlexDispatch(true)
         try world.advance(ticks: 1)
         let running = try XCTUnwrap(world.line(id: ring)?.trains.first { world.train(id: $0)?.execution != nil })
         let before = world
@@ -121,6 +122,7 @@ final class RingLineTests: XCTestCase {
         XCTAssertEqual(world, before)
 
         var idle = try makeRingWorld(trains: 2, running: pairs(2))
+        idle.setFlexDispatch(true)
         XCTAssertNoThrow(try idle.reverseLineStops(ring))
         XCTAssertEqual(idle.line(id: ring)?.stops, [delta, gamma, beta, alpha])
     }

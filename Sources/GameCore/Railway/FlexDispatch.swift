@@ -31,18 +31,25 @@ public struct TrainDispatchOutlook: Hashable, Sendable {
 }
 
 extension GameWorld {
+    /// Turns flexible dispatch on or off (decision 172). Free. Trips under
+    /// way are finished as planned; the next dispatch follows the setting.
+    public mutating func setFlexDispatch(_ enabled: Bool) {
+        guard enabled != flexDispatch else { return }
+        flexDispatch = enabled
+    }
+
     /// For each train assigned to line `id`, in ascending ID order, where
     /// it is sent out from next (decision 172): where it stands, or for a
     /// train running a service where that ends. A running train that will
     /// end at neither end of the line is given the nearer end by straight
     /// line, as its place on the track at the end is not known yet. Empty
-    /// for an unknown line and for a line with runs (decision 133), which
+    /// for a world without ``flexDispatch``, an unknown line and for a line with runs (decision 133), which
     /// are sent out where each run starts; a train not placed on the track
     /// is left out.
     ///
     /// Pure.
     public func lineDispatchOutlook(_ id: LineID) -> [TrainDispatchOutlook] {
-        guard let line = line(id: id), !line.hasRuns else { return [] }
+        guard flexDispatch, let line = line(id: id), !line.hasRuns else { return [] }
         var outlook: [TrainDispatchOutlook] = []
         for trainID in line.assignedTrains {
             guard let train = train(id: trainID), let service = line.dispatchStream(of: trainID)?.service else { continue }

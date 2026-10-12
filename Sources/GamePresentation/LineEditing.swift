@@ -211,7 +211,7 @@ extension GameWorld {
     /// over; 1 train runs empty to Alpha." Trains that cannot reach an end
     /// are named too, as the line cannot send them out.
     public func dispatchNotice(of id: LineID, in language: DisplayLanguage) -> String? {
-        guard let line = line(id: id), let last = line.stops.last else { return nil }
+        guard flexDispatch, let line = line(id: id), let last = line.stops.last else { return nil }
         let outlook = lineDispatchOutlook(id)
         let fromLast = outlook.filter { $0.plan == .fromLastStop }.count
         var empty: [StationID: Int] = [:]
@@ -293,7 +293,7 @@ extension GameSession {
             try world.reverseLineStops(line.id)
             let names = (world.line(id: line.id)?.stops ?? []).map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
             return language.text("Reversed \(line.name): \(names).", "已反轉 \(line.name) 的站序：\(names)。")
-                + (world.dispatchNotice(of: line.id, in: language).map { " " + $0 } ?? "")
+                + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
         }
     }
 
@@ -328,7 +328,7 @@ extension GameSession {
                 try world.setLineStops(line.id, to: stops)
                 let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
                 return language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
-                    + (world.dispatchNotice(of: line.id, in: language).map { " " + $0 } ?? "")
+                    + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
             }
             message = StatusMessage(kind: .success, text: text)
             endFollowIfGone()
