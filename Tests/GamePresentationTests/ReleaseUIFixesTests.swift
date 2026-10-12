@@ -111,7 +111,7 @@ final class ReleaseUIFixesTests: XCTestCase {
         XCTAssertFalse(session.isPausedForEvent, "the player's speed now")
     }
 
-    func testTheAutosaveOnLeavingTheAppIsTheRunningGame() throws {
+    func testTheAutosaveOnLeavingTheAppIsTheRunningGame() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseUIFixes-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = SaveLibrary(directory: directory)
@@ -122,13 +122,14 @@ final class ReleaseUIFixesTests: XCTestCase {
         XCTAssertTrue(session.world.clock.isPaused)
         launcher.setActive(true)
         launcher.setActive(false)
+        await launcher.savesWritten()
         let autosave = try XCTUnwrap(library.entries().first { $0.kind == .autosave })
         XCTAssertFalse(try library.load(autosave).clock.isPaused, "continued, it runs as the player left it")
     }
 
     // MARK: - 5. Leaving the app
 
-    func testLeavingTheAppDoesNotReadTheSaveFolderAgain() throws {
+    func testLeavingTheAppDoesNotReadTheSaveFolderAgain() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseUIFixes-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = SaveLibrary(directory: directory)
@@ -137,6 +138,7 @@ final class ReleaseUIFixesTests: XCTestCase {
         let listed = launcher.entries
         launcher.setActive(true)
         launcher.setActive(false)
+        await launcher.savesWritten()
         XCTAssertEqual(library.entries().filter { $0.kind == .autosave }.count, 1, "saved")
         XCTAssertEqual(launcher.entries, listed, "the list is read again on the start screen, not now")
         launcher.returnToStart()

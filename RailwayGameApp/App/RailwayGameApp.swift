@@ -60,6 +60,11 @@ struct RailwayGameApp: App {
             // replayed when the app returns. The music plays only then too.
             launcher.setActive(phase == .active)
             audio.setActive(phase == .active)
+            // The autosave is written off the main thread (decision 45,
+            // later); the app asks iOS for the time to finish it.
+            if phase != .active {
+                BackgroundSave.finish(launcher)
+            }
         }
     }
 
@@ -274,6 +279,33 @@ private struct TouchTraceInstaller: UIViewRepresentable {
     func updateUIView(_ uiView: Anchor, context: Context) {}
 }
 #endif
+
+/// Keeps the app running in the background until the launcher's saves are
+/// written: an autosave queued on leaving the foreground is not cut off
+/// half way by iOS suspending the app. The file is replaced whole or not
+/// at all either way; this keeps the latest game.
+@MainActor
+private final class BackgroundSave {
+    private var task = UIBackgroundTaskIdentifier.invalid
+
+    static func finish(_ launcher: GameLauncher) {
+        let save = BackgroundSave()
+        save.task = UIApplication.shared.beginBackgroundTask(withName: "Save the game") {
+            // Out of time: iOS ends the app if the task is not ended.
+            MainActor.assumeIsolated { save.end() }
+        }
+        Task {
+            await launcher.savesWritten()
+            save.end()
+        }
+    }
+
+    private func end() {
+        guard task != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(task)
+        task = .invalid
+    }
+}
 
 /// The game being played, or the start screen when there is none.
 private struct RootView: View {

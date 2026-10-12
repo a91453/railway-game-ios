@@ -2264,6 +2264,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - （決策 46 已處理）示範地圖照當時的經濟數值，大約 1.5 個遊戲小時後現金變成負的：新遊戲只有 $ 10,000，兩條線每小時的營運成本約 $ 4,500，票價約 $ 1,400。這是 G1c 的數值與新遊戲資金的平衡問題，不在 C4 修改。
 - （已由決策 47 處理）教學。
 
+**之後的修正（2026-10-12，功能凍結期的效能，`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 第 3 項）：存檔在背景編碼與寫入**。`GameLauncher` 是 `@MainActor`，原本在主執行緒上同步編碼、寫檔：高鐵示範的存檔約 7 MB，每 15 分鐘與每次進背景畫面都會頓一下。現在：
+
+- 主執行緒只取同一刻的快照：`GameSession.worldToSave`（#425：自動暫停不存成玩家的暫停）與新聞紀錄，都是 `Sendable` 的值。編碼與寫檔交給 `GameLauncher` 的一個序列化佇列（`DispatchQueue`），一份寫完才寫下一份，不會交錯寫同一個檔；寫檔照舊是 `.atomic`（先寫暫存檔再換名）。
+- 走背景的：進背景與每 15 分鐘的自動存檔（`autosaveInBackground(at:)`，照 #425 不重讀存檔庫），手動存檔與命名存檔（`saveCurrentGame(at:named:)`，寫完才在狀態列說「已儲存遊戲」並重讀清單）。失敗一樣寫在遊戲的狀態列。
+- 仍在主執行緒、但排在佇列後面的：回到開始畫面的自動存檔（`autosaveCurrentGame`，失敗就留在遊戲裡，所以要等結果），以及讀存檔資料夾的動作（清單、繼續、讀檔、另存自動存檔、改名、刪除）：都先等已排的存檔寫完，所以讀到的是最新的一份。
+- 匯出（HUD 的 `ExportedSave`）不走這條路：系統分享要檔案時才在 `FileRepresentation` 裡編碼，不經過 `GameLauncher`。
+- App 進背景時用 `UIApplication.beginBackgroundTask` 包住，等 `GameLauncher.savesWritten()` 回來才結束（時間用完也結束）。GamePresentation 不 import UIKit，只提供這個 async API。
+- 存檔的內容不變：同一個 `SaveLibrary.save`、同一個世界與時間。`JSONEncoder` 本來就不固定物件鍵的順序（同一個世界同步編碼兩次，位元組也不同），所以 `BackgroundSaveTests` 比的是鍵排序後的 JSON；存檔版本、fixture 都不動。
+
 ### 46. 經濟平衡（G1d）
 
 2026-10-03 核對經濟的平衡（作者交給 Claude Code 決定做法）。G1c（決策 36）照 `Ci/` 經濟的**舊路徑**移植，逐項核對後公式都對；但舊路徑只在參考的經濟引擎（`window.MetroEconomy`：`economy.js`、`metro_economy_rules.js`、`MetroFarePolicy`）載入時才執行，而引擎本身不在快照裡：開局資金、建設的配額與價格、營運補貼、新版的成本公式與票價政策都在引擎裡。`Railway/` 沒有經濟；`Railway/railway_game_reference_clean/` 只有 OpenTTD 的二進位與檔名（`src/economy.cpp`），沒有可用的數值。

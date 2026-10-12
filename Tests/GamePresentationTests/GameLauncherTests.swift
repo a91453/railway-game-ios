@@ -67,12 +67,13 @@ final class GameLauncherTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testTheGameIsSavedAndASaveLoadedOrImported() async throws {
         let library = SaveLibrary(directory: directory)
-        try await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .traditionalChinese)
             launcher.openDemo()
-            launcher.saveCurrentGame(at: Date(timeIntervalSince1970: 1_790_942_400))
+            await launcher.saveCurrentGame(at: Date(timeIntervalSince1970: 1_790_942_400)).value
             XCTAssertEqual(launcher.session?.message, StatusMessage(kind: .success, text: "已儲存遊戲。"))
             XCTAssertEqual(launcher.otherSaves.map(\.id), ["save-2026-10-02 120000.json"])
             launcher.returnToStart()
@@ -112,9 +113,10 @@ final class GameLauncherTests: XCTestCase {
     }
 
     /// The game loop runs only in the foreground; leaving it autosaves.
+    @MainActor
     func testLeavingTheForegroundStopsTheGameAndAutosaves() async throws {
         let library = SaveLibrary(directory: directory)
-        await MainActor.run {
+        do {
             let launcher = GameLauncher(library: library, language: .english)
             launcher.setActive(true)
             XCTAssertFalse(launcher.autosaveCurrentGame(), "no game yet")
@@ -122,6 +124,8 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(launcher.session?.isGameLoopRunning, true, "a game started in the foreground runs")
             launcher.setActive(false)
             XCTAssertEqual(launcher.session?.isGameLoopRunning, false)
+            // Decision 45, later: written in the background.
+            await launcher.savesWritten()
             // Decision 184, later: saved, and listed when the start screen
             // reads the folder again, not on leaving the app.
             XCTAssertTrue(library.entries().contains { $0.kind == .autosave })

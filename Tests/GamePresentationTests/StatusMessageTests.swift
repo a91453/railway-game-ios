@@ -37,16 +37,16 @@ final class StatusMessageTests: XCTestCase {
     /// the first save's timer leaves the second "Saved the game.", which
     /// shows for its own 4 s.
     @MainActor
-    func testTheTimerLeavesTheSameTextPostedAgain() throws {
+    func testTheTimerLeavesTheSameTextPostedAgain() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("StatusMessageTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         launcher.startNewGame()
         let session = try XCTUnwrap(launcher.session)
-        launcher.saveCurrentGame()
+        await launcher.saveCurrentGame().value
         let first = try XCTUnwrap(session.message)
         let firstSerial = session.messageSerial
-        launcher.saveCurrentGame()
+        await launcher.saveCurrentGame().value
         XCTAssertEqual(session.message, first, "the same text")
         XCTAssertNotEqual(session.messageSerial, firstSerial, "a newer message")
         session.dismissMessage(posted: firstSerial)

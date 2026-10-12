@@ -302,7 +302,7 @@ final class UndoSessionTests: XCTestCase {
 
     /// A new game, a loaded save and the start screen leave nothing to
     /// undo: the history belongs to the session and is never saved.
-    func testANewGameOrALoadedSaveHasNothingToUndo() throws {
+    func testANewGameOrALoadedSaveHasNothingToUndo() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("UndoSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
@@ -311,7 +311,7 @@ final class UndoSessionTests: XCTestCase {
         first.togglePause()
         first.purchaseTrain()
         XCTAssertTrue(first.canUndo)
-        launcher.saveCurrentGame()
+        await launcher.saveCurrentGame().value
 
         launcher.startNewGame()
         XCTAssertEqual(launcher.session?.undoCount, 0, "a new game")
