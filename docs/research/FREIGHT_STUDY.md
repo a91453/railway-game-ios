@@ -1,5 +1,7 @@
 # 貨運研究：三個玩法方案與建議
 
+> **狀態（2026-10-12 整理）**：方案 C、A 已由決策 155–158 實作。方案 B（產業鏈）仍是提案，見 [NEXT_PRIORITIES_2026-10-12.md](NEXT_PRIORITIES_2026-10-12.md)。文中寫的存檔版本是當時的號碼（現在是 50）。
+
 狀態：**供作者選擇，未實作**。只寫文件，不改 App、GameCore、GamePresentation；存檔版本、ARCHITECTURE 決策編號、golden schema 都不動（工作登記 #231，branch `claude/freight-study`）。
 
 盤點基準：`railway-game-ios` 的 `main` `b45e95b`（存檔版本 35、決策到 147、golden schema 56；另有 148–152 已被進行中的 session 登記），以及 2026-10-11 複製的 `a91453/railway-reference-private` `581db83`。本文的數字分三種：**來源**（讀到的檔案或網頁）、**量測**（`tools/freight-study/` 的腳本在已提交的資料上算出）、**原生起始值**（本文提議，gap，未經 `BalanceReportTests` 量過，只是讓方案能手算，不是結論）。

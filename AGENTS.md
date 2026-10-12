@@ -55,8 +55,9 @@ one place only (2026-10-02, the author's decision):
   rule changes, `GoldenScenarios/` (fixtures and schema versions), the save
   format (`SavedGame`, `SaveFixtures/`), the
   differential reference model (`Tests/GameCoreTests/ReferenceWorld.swift`),
-  the decisions in `docs/ARCHITECTURE.md`, the stage status in
-  `docs/ROADMAP.md` and `docs/RAILWAY_REFERENCE_MAPPING.md`.
+  the decisions in `docs/ARCHITECTURE.md`, the status and priorities in
+  `docs/OVERVIEW.md` and `docs/research/NEXT_PRIORITIES_2026-10-12.md`, the
+  stage history in `docs/ROADMAP.md` and `docs/RAILWAY_REFERENCE_MAPPING.md`.
 - **Other agents** take tasks with their own scope (CI and tooling, UI tests,
   research notes, App work that a written specification describes). Their
   pull requests do not bump the golden schema and do not add ARCHITECTURE

@@ -1,5 +1,7 @@
 # Roadmap
 
+> **狀態（2026-10-12 整理）**：現況看 [OVERVIEW.md](OVERVIEW.md)，優先順序看 [research/NEXT_PRIORITIES_2026-10-12.md](research/NEXT_PRIORITIES_2026-10-12.md)。這份保留各 Stage／Phase 的歷史紀錄與平衡待觀察表；下面的「目前的優先順序」是 2026-10-02 到 10-10 的紀錄，不再更新。
+
 各階段只是方向，實際範圍會依前一階段的成果調整。Phase 1、Phase 2A、Phase 2B 與 Phase 3 的 Stage I、J、K、L（GameCore 路徑搜尋）、M（讓 App 操作列車的最小畫面）、N（停站、以車站為目的地）已實作；Phase 3 的列車模擬核心到此告一段落。Phase 4（時刻表）進行中：Stage O（時刻表的資料契約）、Stage P（依時刻表到達、停留、出發的一次性服務）、Stage Q1（折返與重複運行）、Stage Q2a（服務路線的資料與推導）、Stage Q2b（自動派車）、Stage Q3（區間車與停站模式）與 Stage R（服務與時刻表畫面）已實作，Phase 4 到此告一段落。Phase 4.5 的 Stage S1（軌道資源）、Stage S2（車站設施）、Stage S3（連續軌道幾何）、Stage S4（立體鐵路與結構物）與 Stage S5（路網上的營運）已實作，Phase 4.5 到此告一段落。Phase 4.6 的 Stage T（進路預約）已實作。之後依參考的對照（[RAILWAY_REFERENCE_MAPPING.md](RAILWAY_REFERENCE_MAPPING.md)）排順序：Phase 4.7 的 W1（行駛曲線的計算核心，純計算、還沒接到列車）已實作；接著是 G1（第一個能玩的經營閉環），其中 G1a（需求、釋出、排隊與守恆）、G1b（上下車與容量）與 G1c（票價、帳本與畫面）已實作，G1 到此告一段落；接著是 W2：W2a（時間改用秒）已實作；第二版內部 TestFlight 之前插入的 L1（繁體中文，見[跨階段議題](#跨階段議題)）已實作；W2b（停站、上下車與誤點）與 W2c（行駛曲線接到行程與移動）已實作。2026-10-02 作者決定，U、V 之前先做 [Stage C](#stage-c--已完成核心的操作畫面)：補上已完成的核心還沒有的操作畫面，讓所有功能都能在實機上測試；C1（任意角度的建造）、C2（營運與乘客的設定畫面）與 C3（性能）已實作。C2 合併之後，作者再決定鐵軌全部改用路網、車站與土地自由擺設，並分成空白與實景兩種遊戲模式；之後的順序見[目前的優先順序](#目前的優先順序)：F1 全面路網（已實作）→ C4 測試輔助（已實作）→ [G1d 經濟平衡](#g1d--經濟平衡-)（已實作）→ C5 最小教學（已實作）→ E1 大地圖（已實作）→ 環線（已實作，2026-10-03 作者要求）→ E2 空白／實景（已實作，實機確認）→ [F3 移除 GameCore 的方格](#stage-f--全面路網與自由擺設)（2026-10-03 作者決定提前，已實作）→ F2 線間距（已實作）→ F3d 拿掉殘留的方格語意（已實作）→ U-min（U1 通過後釋放、U2 站間跟車已實作）→ V（V1 避占用選路、V2 死結偵測與解除已實作；E3 MapLibre 視需要）。2026-10-07 起 Phase 6 的 6a（土地，決策 72）、6b（運量由土地推導，決策 73）、6c-1（城市建物、容量表與初始化，決策 74）、6c-2（容量接上成長、自動升級，決策 75）與 6c-3／6d（地價與城市圖層，決策 76）已實作。2026-10-08 補上三個編輯功能：復原（#203、#205，決策 82，移植 MapBuilder 的 `handleUndo`）、路線編輯（#208，決策 80：把車站自動排入既有路線、反轉站序、複製路線）與轉乘群組（決策 81，存檔版本 15）。同一天開始全島地圖（研究 `docs/research/WHOLE_TAIWAN_MAP.md`）：步驟 B 的第一個 PR（決策 88，存檔版本 18）放大世界的上限、在實景選點加「全台灣」（本島加澎湖），土地在蓋站時展開車站 2 公里內的部分；第二個 PR（決策 89）是全島縮小時的畫面：站名依路線等級出現、城市圖層在背景算、空的全島地圖開在整個島；之後是步驟 C 的城際需求與高鐵。目前 App 的地圖畫面是原型：連續路網的俯視投影（F1 起不畫格線；F3 起沒有方格的軌道與車站；F3d 起世界沒有格子；2026-10-08 起改用 App 圖示的畫風，並沿軌道畫出路線、共線區段與轉乘群組，決策 84），不是最終的 renderer（見 Phase 8）。
 
 2026-09 研究了作者提供的網頁版交通經營遊戲（[WEB_REFERENCE_STUDY.md](WEB_REFERENCE_STUDY.md)），依結果調整了之後的階段：
@@ -510,7 +512,7 @@ T 建立在 S3–S5 統一好的 `RailwayNetwork`、`TrainPath`、`TrackTraversa
   - 存檔 10（9→10 缺省空偏好遷移）／schema 32，新增短 golden、v10 save、實體路徑 replay，既有三種 fixture 檔案未修改。
   - traffic.lineRoutes 4 個單列車 case×4 seeds×20 步＋2 個雙列車 case×4 seeds×45 步（680 步），比完整狀態與批次＝逐秒，campaigns-19；新增實景猴硐指定月台實際停靠與 GameSession 設定／清除驗收；新 UI 測試留 full lane。
   - 已整合 main `d2de3d5`（#117／#118／#119）。WIP 的 fastPassed 失敗已按手算事件時窗修正：精確驗證 478 秒進入 edge 3、600 秒抵達終點及慢車續行；CI 與 Apple 檢查結果見 PR，未執行的不稱為通過。
-  - #120 首輪 Apple 跨模組存取失敗已修正；作者合併的是 50da302，後續新 UI test 的選項查找失敗，改明確 ID／觸控／等待並移獨立 full-lane class，修正後 full runtime 尚未驗證。Swift 全套 779 項曾通過，但 CI 時間需要重分配，完整保留 Economy 12 case 並分 campaigns-1／20，未拉 timeout 或縮減原操作；後續修正由同分支的另一 draft PR 驗證，最新狀態見 STAGE_V_HANDOFF.txt。
+  - #120 首輪 Apple 跨模組存取失敗已修正；作者合併的是 50da302，後續新 UI test 的選項查找失敗，改明確 ID／觸控／等待並移獨立 full-lane class，修正後 full runtime 尚未驗證。Swift 全套 779 項曾通過，但 CI 時間需要重分配，完整保留 Economy 12 case 並分 campaigns-1／20，未拉 timeout 或縮減原操作；後續修正由同分支的另一 draft PR 驗證，最新狀態見 archive/STAGE_V_HANDOFF.txt。
   - V4c → V4d → V4e 各一分支／draft PR，前階段由作者合併後從新 main 開工：單線容量；中途換向與倒進側線；地圖授權範圍與死結標示。
 
 - **V4c — 已實作，驗證中**（ARCHITECTURE 決策 62）：從作者合併 #123 後 main `18ff248` 開工；控制啟用時，以玩家 parallelTracks／可放最長列車的兩股交會站推導單線 block，完整名義往返占用推導最大 count／headway。本線與區間車共用每天 block 86400 秒預算，保持原服務順序與雙線／關閉控制行為。來源未有直接最大公式，保守改寫與 gap 明列。
@@ -797,7 +799,7 @@ G1 先做了 5A、5B、5D、5E、5G 的最小版；這個 Phase 在它上面深�
 
 **2026-10-06 R1（來源轉乘常數與封站）**：轉乘常數改用 `Ci/` 來源值並集中在 `PassengerTransferRules`：同站換線 12 分鐘、跨站依 ≤20／≤50／≤250 m 分級（15 分鐘 × 0.8／0.8／1.2／1.7）、步行 5 km/h、實際換車 max(120 s, 步行)；車站營運狀態 normalFlow／flowControl／closed（只在非 normalFlow 時存檔，存檔版本仍為 11）；網路計畫只在輸入改變時重算。R2（原生，來源無公式）：`.network` 的選路權重加入擁擠（BPR 0.15×負載^4，上限 2；供給 = 班次 × 列車容量，預設 6×352），OD 需求超過 30 廣義分鐘按比例遞減。城市成長沒有消費者（Phase 6），列為 gap。R3：路線面板的「跨線乘客路徑」開關（`GameSession.setPassengerRoutingMode`），golden schema 35 的 `setPassengerRoutingMode`／`setStationOperationMode` 與 `network-passengers.json`，replay `network-economy.json`；新遊戲照 #151 預設 `.network`。
 
-**2026-10-06 的 5F WIP（PR #142，已合併）**：已接上同 StationID 的完整旅程、換車、原起站守恆帳與 v11 存檔；需求可顯式選 `.network`。接手補上服務開／收班、尖峰與跨午夜的批量一致性、多路徑同分鐘存檔、pattern 移除時的索引移轉、軌道／月台失效、轉乘溢出、反向與環線跨圈測試。跨 StationID 步行、封站狀態與同月台／站內通道分級尚未接上，新遊戲仍是 `.direct`。尚未完成 5F，也未合併；驗證與下一步見 [PHASE5_TRANSFER_HANDOFF](PHASE5_TRANSFER_HANDOFF.md)。
+**2026-10-06 的 5F WIP（PR #142，已合併）**：已接上同 StationID 的完整旅程、換車、原起站守恆帳與 v11 存檔；需求可顯式選 `.network`。接手補上服務開／收班、尖峰與跨午夜的批量一致性、多路徑同分鐘存檔、pattern 移除時的索引移轉、軌道／月台失效、轉乘溢出、反向與環線跨圈測試。跨 StationID 步行、封站狀態與同月台／站內通道分級尚未接上，新遊戲仍是 `.direct`。尚未完成 5F，也未合併；驗證與下一步見 [PHASE5_TRANSFER_HANDOFF](archive/PHASE5_TRANSFER_HANDOFF.md)。
 
 - **5A — 需求來源**：在城市模擬之前，每個車站依類型（住宅、辦公、商業、景點）套用每小時的需求曲線，權重以千分比整數表示。車站等級（真實時刻表研究）決定需求與車站規模的預設值：情境轉換工具依等級決定車站的格數（Stage S2 的多格車站）。
 - **5B — OD 與時段需求**：

@@ -5,7 +5,9 @@ Instructions for Claude Code sessions in this repository.
 ## Project
 
 A native iPhone / iPad railway and city management game (long-term goal: gameplay
-depth close to the A-Train series). Current phase and plans: `docs/ROADMAP.md`.
+depth close to the A-Train series). Current status, doc map and decision
+index: `docs/OVERVIEW.md`; the one priority list:
+`docs/research/NEXT_PRIORITIES_2026-10-12.md`; stage history: `docs/ROADMAP.md`.
 Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md)
 and may also absorb implementation and data from the owner's
 `a91453/railway-reference-private` repository. Treat `Ci/`, `Railway/`,
@@ -51,10 +53,13 @@ sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
 `00_READ_ME_FIRST.md` and `source/`), `Simulator/` (start with
 `REFERENCE_REFRESH_2026-10-07.md` and `SANITIZATION_REPORT.md`, then inspect
 `reference_snapshot/` for reusable simulator runtime/UI, track geometry,
-templates/data, and 3D assets), and `MapBuilder/` (start with
+templates/data, and 3D assets), `MapBuilder/` (start with
 `REFERENCE_REFRESH_2026-10-08.md` and `SANITIZATION_REPORT.md`, then inspect
 `reference_snapshot/` for reusable route/station editor behavior, map geometry,
-map interactions, state/UI logic, styling, and related data assets).
+map interactions, state/UI logic, styling, and related data assets),
+`OpenWorld/` (start with `REFERENCE_REFRESH_2026-10-10.md` and
+`SANITIZATION_REPORT.md`) and `Railway/train_loop_reference_clean/` (start
+with its `00_READ_ME_FIRST.md`).
 
 When a problem is hard (an algorithm, a data source, a performance or
 platform limit, a design with no obvious answer), look for prior work before
@@ -159,8 +164,10 @@ needs OSM data reads the same extract.
   Release archive, the App Store distribution export, the IPA check and the
   upload to App Store Connect (archive signing `adhoc`, the default: a team
   with no registered device cannot make the development profile `automatic`
-  needs). App Store Connect processing and TestFlight installation are not
-  verified. Xcode Cloud is deferred (`docs/XCODE_CLOUD_ONBOARDING.md`).
+  needs). App Store Connect processing is verified too (run #54, VALID);
+  testers get a build only after export compliance is answered in App Store
+  Connect, and TestFlight installation is not verified. Xcode Cloud is
+  deferred (`docs/XCODE_CLOUD_ONBOARDING.md`).
 
 ## Architecture rules
 

@@ -1,5 +1,7 @@
 # F3：GameCore 方格相容層使用盤點
 
+> **狀態（2026-10-12 整理）**：歷史紀錄，已由決策 51、54 完成。
+
 查閱日期：**2026-10-03（UTC）**。基準：`main` 的 **`b20cb2861843ba1bde460bd50e36848583c98921`**。以下行號均指這個 commit；連結使用儲存庫相對路徑，後續程式變動時請以此 commit 校對。
 
 這是 Stage F3 計畫的唯讀輸入，依據 [ROADMAP 的 F3](../ROADMAP.md#stage-f--全面路網與自由擺設)、[ARCHITECTURE 決策 28](../ARCHITECTURE.md#28-topology--geometry--renderingphase-45-起的鐵路核心分層)、[決策 29](../ARCHITECTURE.md#29-連續軌道幾何phase-45-stage-s3設計決策) 與 [決策 44](../ARCHITECTURE.md#44-全面路網任意座標的車站stage-f1)。只新增本筆記；未修改 GameCore、golden、存檔、測試、差分模型、schema、ROADMAP 或架構決策。下文的「可改寫」是研究判斷，不是批准改動行為契約。

@@ -1,5 +1,7 @@
 # 教學重做規格（2026-10-12，設計工作流定案）
 
+> **狀態（2026-10-12 整理）**：已由決策 188 實作（#433、#443）。現行的步驟表在 `docs/UI_INTERFACES.md` §1；還沒做的 P1、P2 列在 [NEXT_PRIORITIES_2026-10-12.md](NEXT_PRIORITIES_2026-10-12.md)。
+
 來源：派工 session 的設計工作流（參考專案教學實作、逐步稽核、手機教學最佳做法、三個方案與兩位評審）。實作時以這份為準，遇到與程式碼不符處以程式碼為準並在 PR 說明。
 
 # Final spec: tutorial redo (tutorial only; GameCore, saves, goldens and replays unchanged)

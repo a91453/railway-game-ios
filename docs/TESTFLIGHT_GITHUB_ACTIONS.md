@@ -23,8 +23,8 @@
 | 真實 Release Archive（`adhoc`）、App Store 發佈簽章匯出、IPA 檢查、上傳到 App Store Connect、清理 | **VERIFIED**：第 2 次執行全部成功 |
 | `automatic` Archive | 在沒有已註冊裝置的新團隊**失敗**（已觀察）；仍保留為選項 |
 | 匯出與上傳失敗時自動再試 | 以假指令 **VERIFIED**（Linux 與 macOS 的 bash）；真的遇到 Apple 斷線時 **UNVERIFIED** |
-| 等 App Store Connect processing、回報結果、填 What to Test | 以假的 App Store Connect 與 GitHub **VERIFIED**；對真實 App Store Connect **UNVERIFIED**：合併後第一次真實發佈的 processing job 才能證明 |
-| App Store Connect processing、TestFlight 安裝到裝置 | **UNVERIFIED**：repository 與 workflow log 裡沒有證據；processing 的結果之後由 processing job 寫在每次執行的頁面 |
+| 等 App Store Connect processing、回報結果、填 What to Test | 以假的 App Store Connect 與 GitHub **VERIFIED**；對真實 App Store Connect 也 **VERIFIED**：2026-10-12 的 run #54（build 0.5.0 (54.1)），processing job 等了 2 分 32 秒，回報 VALID，填好繁中的 What to Test |
+| App Store Connect processing、TestFlight 安裝到裝置 | processing **VERIFIED**（run #54，VALID）。同一次 log 提醒 Missing Compliance：測試者拿到 build 之前，要先在 App Store Connect 回答出口合規。TestFlight 安裝到裝置 **UNVERIFIED** |
 
 `release-archive.yml` 的未簽章 Archive，以及 `testflight-checks.yml` 的 dry run 與合成 IPA 測試，仍然**不能**證明真實簽章；真實簽章與上傳的證據只來自〈真實執行紀錄〉的兩次執行。
 
@@ -245,9 +245,10 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | 重試：成功、失敗後再試、3 次都失敗時的 exit status、30／60 秒的等待、每次前刪掉匯出資料夾、拒絕錯誤的設定 | VERIFIED | `testflight-checks.yml`（Linux 與 macOS 的 bash）＋ 本機 Linux |
 | 處理檢查：JWT（ES256、key ID、issuer、audience、期限）每個請求都驗過簽章；查詢條件；等到 VALID；INVALID／FAILED 失敗；逾時只警告；401 立刻停止；503／429 再問；What to Test 寫入每個語系或新增主要語系、超過 4,000 字截斷、被拒只警告；不輸出 key、key ID、issuer、token | VERIFIED（假的 App Store Connect） | `testflight-checks.yml`（Linux）＋ 本機 Linux |
 | What to Test 的內容：上次成功執行以來 `main` 的合併、最新在前、PR 標題、重複執行同一 commit、找不到上次發佈、GitHub 沒回應、4,000 字上限 | VERIFIED（假的 GitHub、拋棄式 git 歷史） | 同上 |
-| 處理檢查與 What to Test 對真實 App Store Connect 與 GitHub | **UNVERIFIED** | 合併後第一次真實發佈的 processing job 才能證明 |
+| 處理檢查與 What to Test 對真實 App Store Connect 與 GitHub | **VERIFIED** | run #54（2026-10-12）：VALID，What to Test 已填 |
 | 真的遇到 Apple 斷線時重試成功 | **UNVERIFIED** | 要等下一次斷線 |
-| App Store Connect processing 完成、Missing Compliance、TestFlight 安裝到裝置 | **UNVERIFIED** | repository 沒有證據；由你在 App Store Connect 與 TestFlight App 確認。processing 的結果之後由 processing job 寫在執行頁面 |
+| App Store Connect processing 完成 | **VERIFIED** | run #54：VALID |
+| Missing Compliance 的回答、TestFlight 安裝到裝置 | **UNVERIFIED** | run #54 的 log 提醒 Missing Compliance；由你在 App Store Connect 回答，再在 TestFlight App 確認 |
 | 取消時的清理（`if: always()`） | 由 macOS dry run 的失敗步驟驗證；**尚未**在真實執行中取消過 | — |
 | `automatic` archive 在已註冊裝置的團隊上能否成功 | **UNVERIFIED** | 尚未有裝置可試 |
 
