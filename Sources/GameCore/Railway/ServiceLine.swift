@@ -343,6 +343,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// facility, and no passenger rides it. Set by
     /// ``GameWorld/setLineFreight(_:to:)`` only.
     public internal(set) var isFreight: Bool = false
+    /// How far, in all, the line's trains have driven empty to one of its
+    /// ends (decision 172), in world units (``WorldCoordinate/unitsPerMetre``
+    /// to the metre). Counted when such a train sets off; a run to the
+    /// line's end is part of what the line costs (the hour's train
+    /// distance, ``GameWorld/lineDeadheadDistance(_:)``). Saturates at
+    /// `Int64.max`.
+    public internal(set) var deadheadDistance: Int64 = 0
     /// Whether the line is a high-speed line (decision 168): a passenger
     /// line whose journeys are planned at high speed (``performance`` is
     /// ``TrainPerformance/isHighSpeed``, which the line menu's "High-speed
@@ -494,12 +501,26 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         trains.indices.filter { ($0 % 2 == 0) == (direction == .inner) }.map { trains[$0] }
     }
 
+    /// The index of `station` among the line's stops, if it is a stop of
+    /// the line exactly once.
+    func uniqueStop(_ station: StationID) -> Int? {
+        let found = stops.indices.filter { stops[$0] == station }
+        return found.count == 1 ? found[0] : nil
+    }
+
     /// The calls of a ring's lap `direction`, as indices into ``stops``:
     /// from the first stop round to it again, in order or in reverse.
     func ringCalls(_ direction: RingDirection) -> [Int] {
+        ringCalls(direction, from: 0)
+    }
+
+    /// The calls of a ring's lap `direction` that starts at stop `start`
+    /// (decision 172: a train stopped at any stop of the ring goes on from
+    /// there): `start`, round to it again.
+    func ringCalls(_ direction: RingDirection, from start: Int) -> [Int] {
         switch direction {
-        case .inner: Array(stops.indices) + [0]
-        case .outer: [0] + stops.indices.dropFirst().reversed() + [0]
+        case .inner: Array(stops.indices[start...]) + Array(stops.indices[..<start]) + [start]
+        case .outer: Array(stops.indices[...start].reversed()) + Array(stops.indices[(start + 1)...].reversed()) + [start]
         }
     }
 
@@ -907,7 +928,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight
+        case runs, runDays, freight, deadheadDistance
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -950,6 +971,11 @@ extension ServiceLine: Codable {
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
         isFreight = try container.decodeIfPresent(Bool.self, forKey: .freight) ?? false
+        // Decision 172 (save version 45): the world units driven empty.
+        deadheadDistance = try container.decodeIfPresent(Int64.self, forKey: .deadheadDistance) ?? 0
+        guard deadheadDistance >= 0, !container.contains(.deadheadDistance) || deadheadDistance > 0 else {
+            throw DecodingError.dataCorruptedError(forKey: .deadheadDistance, in: container, debugDescription: "Line \(id.rawValue)'s empty running is a positive distance, or not written.")
+        }
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -1032,6 +1058,9 @@ extension ServiceLine: Codable {
         try container.encodeIfPresent(color, forKey: .color)
         if isFreight {
             try container.encode(true, forKey: .freight)
+        }
+        if deadheadDistance > 0 {
+            try container.encode(deadheadDistance, forKey: .deadheadDistance)
         }
         if hasRuns {
             try container.encode(runs, forKey: .runs)

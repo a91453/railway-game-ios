@@ -97,6 +97,16 @@ struct HUDView: View {
                 }
                 .accessibilityIdentifier("menu.tourism")
             }
+            Button {
+                screen.panel = .help
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Help", "說明"))
+                } icon: {
+                    Image(systemName: "questionmark.circle")
+                }
+            }
+            .accessibilityIdentifier("menu.help")
             Divider()
             Button {
                 screen.panel = .settings

@@ -99,7 +99,15 @@ final class StationMasterAdviceTests: XCTestCase {
             expected = nil
         }
         XCTAssertNotNil(expected, "the line's towns grew or asked for trains")
-        XCTAssertEqual(StationMasterAdvice(world: world), expected)
+        // Decision 177: three stations in the first month that lost money
+        // yesterday are coached first; the growth is what a free-play
+        // company, with nothing to lose, is told.
+        if case .firstLineLosing? = StationMasterAdvice(world: world) {} else {
+            XCTAssertEqual(StationMasterAdvice(world: world), expected)
+        }
+        var free = world
+        free.setEconomyMode(.free)
+        XCTAssertEqual(StationMasterAdvice(world: free), expected)
     }
 
     func testWhatItSaysOfTheTownsGrowth() {

@@ -12,6 +12,14 @@ import GameCore
 public enum StationMasterAdvice: Hashable, Sendable {
     /// A managed company's cash is below zero.
     case inDebt
+    /// Decision 177: a managed company's cash is below zero and its
+    /// railway is a line or two of at most ``shortLineStations`` stations:
+    /// raising fares will not mend that, a longer line will. `hint` is the
+    /// nearest town without a station.
+    case inDebtShortLine(hint: ExtensionHint?)
+    /// Decision 177: in its first ``firstLineDays`` days a free-play company
+    /// with at most ``shortLineStations`` stations lost `loss` yesterday.
+    case firstLineLosing(loss: Money, hint: ExtensionHint?)
     /// A station's room for waiting passengers is full.
     case stationFull(station: StationID, name: String)
     /// A line has no train, so no one rides it.
@@ -74,6 +82,51 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// tourists.
     case touristsComing(kind: HolidayKind, days: Int64, times: Int64)
 
+    /// Decision 177: where the nearest town no station serves lies, from the
+    /// railway's nearest station (``UnservedCluster``).
+    public struct ExtensionHint: Hashable, Sendable {
+        public let compass: UnservedCluster.Compass
+        public let tenthsOfKm: Int64
+        /// Where the camera goes to show it.
+        public let target: PlanPoint
+
+        public init(compass: UnservedCluster.Compass, tenthsOfKm: Int64, target: PlanPoint) {
+            self.compass = compass
+            self.tenthsOfKm = tenthsOfKm
+            self.target = target
+        }
+
+        init(_ found: (cluster: UnservedCluster, from: PlanPoint)) {
+            let direction = found.cluster.direction(from: found.from)
+            compass = direction.compass
+            tenthsOfKm = direction.tenthsOfKm
+            target = found.cluster.center
+        }
+
+        func text(in language: DisplayLanguage) -> String {
+            let km = "\(tenthsOfKm / 10).\(tenthsOfKm % 10)"
+            return language.text(
+                "the nearest populated area with no station is \(km) km \(compass.title(in: language))",
+                "最近、還沒有車站的人口熱區在\(compass.title(in: language))方 \(km) 公里"
+            )
+        }
+    }
+
+    /// Where the camera goes when the advice is tapped, if it points at a
+    /// place (decision 177).
+    public var cameraTarget: PlanPoint? {
+        switch self {
+        case .inDebtShortLine(let hint), .firstLineLosing(_, let hint): hint?.target
+        default: nil
+        }
+    }
+
+    /// The most stations a railway has to count as a first line (decision
+    /// 177).
+    public static let shortLineStations = 3
+    /// The days from the start a first line is coached through.
+    public static let firstLineDays: Int64 = 30
+
     /// The advice for `world`, or `nil` when all runs well. The worries
     /// first (debt, a typhoon on its way over a station a line serves
     /// (decision 162), a full station, a line no one rides, a crowded
@@ -89,8 +142,14 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = short
             return
         }
+        // Decision 177: a short first line that loses money needs a longer
+        // line, not dearer fares.
+        if let losing = Self.firstLineLosing(in: world) {
+            self = losing
+            return
+        }
         if world.accounts.mode == .management, world.economy.balance < .zero {
-            self = .inDebt
+            self = Self.isShortRailway(world) ? .inDebtShortLine(hint: Self.extensionHint(in: world)) : .inDebt
             return
         }
         if let typhoon = Self.typhoon(in: world) {
@@ -169,13 +228,41 @@ public enum StationMasterAdvice: Hashable, Sendable {
         return nil
     }
 
+    /// A railway of a line or more and at most ``shortLineStations``
+    /// stations.
+    private static func isShortRailway(_ world: GameWorld) -> Bool {
+        !world.lines.isEmpty && world.stations.count <= shortLineStations
+    }
+
+    private static func extensionHint(in world: GameWorld) -> ExtensionHint? {
+        UnservedCluster.nearestToTheRailway(in: world).map(ExtensionHint.init)
+    }
+
+    /// The company's operating result on `day`: what ``lostMoney(on:)``
+    /// compares, as a difference (negative when it lost money).
+    static func operatingResult(on day: DayAccount) -> Money {
+        day.fareRevenue + day.freightRevenue + day.propertyRevenue - day.totalCost - day.propertyCost
+    }
+
+    /// Decision 177: a free-play managed company in its first
+    /// ``firstLineDays`` days, with a line and at most ``shortLineStations``
+    /// stations, that lost money yesterday.
+    private static func firstLineLosing(in world: GameWorld) -> StationMasterAdvice? {
+        guard world.accounts.mode == .management, world.scenario == nil, isShortRailway(world) else { return nil }
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        guard today <= firstLineDays, let day = world.accounts.days.first(where: { $0.day == today - 1 }) else { return nil }
+        let result = operatingResult(on: day)
+        guard result < .zero else { return nil }
+        return .firstLineLosing(loss: Money(-result.amount), hint: extensionHint(in: world))
+    }
+
     /// Whether the company lost money on `day`: its operating profit, as
     /// the finance report has it, below zero. The fares, the freight
     /// (decision 155) and the buildings' rent (decision 94) against the
     /// railway's running costs and the buildings' upkeep and tax: a company
     /// whose freight or rent pays for its trains is not losing money.
     static func lostMoney(on day: DayAccount) -> Bool {
-        day.fareRevenue + day.freightRevenue + day.propertyRevenue < day.totalCost + day.propertyCost
+        operatingResult(on: day) < .zero
     }
 
     /// Decision 162: the first typhoon announced or blowing over a station
@@ -314,6 +401,16 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "We're in the red. Raise fares, cut a train, or borrow from the bank.",
                 "現金是負的。調高票價、減少列車，或向銀行借款吧。"
             )
+        case .inDebtShortLine(let hint):
+            language.text(
+                "We're in the red, and a short line can't pay for itself. Extend it to a bigger town\(hint.map { ": " + $0.text(in: language) } ?? "") instead of raising fares.",
+                "現金是負的，這條線太短，光漲價也救不了。把線延伸到更大的城鎮吧\(hint.map { "：" + $0.text(in: language) } ?? "")。"
+            )
+        case .firstLineLosing(let loss, let hint):
+            language.text(
+                "This line lost \(loss.moneyText) yesterday: the stations are too close and too few ride. Extend it to the next town\(hint.map { ": " + $0.text(in: language) } ?? "").\(hint == nil ? "" : " Tap to look.")",
+                "這條線昨天虧了 \(loss.moneyText)：站太近、坐的人太少。把線延伸到下一個城鎮\(hint.map { "，" + $0.text(in: language) } ?? "")。\(hint == nil ? "" : "點一下看位置。")"
+            )
         case .stationFull(_, let name):
             language.text(
                 "\(name) is full: passengers are giving up. Send more trains.",
@@ -447,7 +544,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
+        case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
              .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing: false

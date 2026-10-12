@@ -160,6 +160,8 @@ struct ContentView: View {
         case .tourism:
             TourismPanel(session: session)
                 .presentationDetents([.medium, .large])
+        case .help:
+            HelpView(language: session.language)
         }
     }
 
@@ -490,6 +492,8 @@ final class GameScreenState {
         case goals
         /// The sights and their souvenir shops (decision 174).
         case tourism
+        /// The help guide (decision 177), from the game menu.
+        case help
 
         var id: Self { self }
 
@@ -498,7 +502,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .help: false
             }
         }
     }
