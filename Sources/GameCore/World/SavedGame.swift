@@ -227,9 +227,15 @@
 ///     reads only an earlier version would drop the first, and every dwell
 ///     would take as long however full the train, and fail on the second, so
 ///     it says the save is newer than it instead.
+/// 45. Flexible dispatch (decision 172): a train can be sent out from either
+///     end of its line and run empty to an end, so a train running such an
+///     empty run has `"deadhead": true`, and a line that has had trains do
+///     so has `"deadheadDistance"`. A build that reads only an earlier
+///     version would drop them, and the empty run would carry passengers
+///     and go uncounted, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 44
+    public static let currentVersion = 45
 
     public let world: GameWorld
 
@@ -356,6 +362,9 @@ extension SavedGame: Codable {
         // every one did.
         // Version 43 to 44: a world without `"doorCrowding"` has it off, and
         // every exchange takes as long as it did.
+        // Version 44 to 45: a train without `"deadhead"` runs a passenger
+        // service, and a line without `"deadheadDistance"` has driven
+        // nothing empty, as every one had.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

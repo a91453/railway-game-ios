@@ -89,6 +89,26 @@ public struct LineJourney: Hashable, Sendable {
 struct LineTrip: Hashable, Sendable {
     let turnsFirst: Bool
     let journey: LineJourney
+    /// Decision 172: set for an empty run to one end of the line, which
+    /// carries no passengers and is not one of the line's dispatches; then
+    /// ``journey`` has no legs.
+    let deadhead: DeadheadRun?
+
+    init(turnsFirst: Bool, journey: LineJourney, deadhead: DeadheadRun? = nil) {
+        self.turnsFirst = turnsFirst
+        self.journey = journey
+        self.deadhead = deadhead
+    }
+
+    /// An empty run from the station a train stands at to an end of its
+    /// line (decision 172).
+    struct DeadheadRun: Hashable, Sendable {
+        let from: StationID
+        let to: StationID
+        /// The least whole seconds the line's performance takes over the
+        /// path's distance (0 for no distance).
+        let seconds: Int64
+    }
 
     /// The trip's timetable, calling at the line's `stops` that the legs
     /// reach, for a train sent out at `dispatch`, or `nil` if a time would
@@ -118,6 +138,17 @@ struct LineTrip: Hashable, Sendable {
     ///
     /// - Precondition: `dispatch` is second 0 or later.
     func timetable(calling stops: [StationID], sentOutAt dispatch: GameTime) -> [ScheduledStop]? {
+        if let deadhead {
+            // Decision 172: two stops, no passenger service. The train
+            // waits out the least dwell, runs, and stops at the end.
+            let (departure, overflow) = dispatch.seconds.addingReportingOverflow(ServiceDwell.terminalMinimum)
+            let (arrival, late) = departure.addingReportingOverflow(deadhead.seconds)
+            guard !overflow, !late else { return nil }
+            return [
+                ScheduledStop(station: deadhead.from, arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst),
+                ScheduledStop(station: deadhead.to, arrival: GameTime(seconds: arrival), departure: GameTime(seconds: arrival)),
+            ]
+        }
         let legs = journey.legs
         if journey.isRing {
             let least = turnsFirst ? ServiceDwell.terminalMinimum : ServiceDwell.minimum
@@ -303,17 +334,24 @@ extension GameWorld {
     /// (``ServiceLine/ringDirection(of:)``; the ``RingDirection/inner``
     /// way for a train not on it), from where it stands as it faces or
     /// turned round first, by the same choice.
-    func trip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
+    func trip(of line: ServiceLine, service: Int, for train: Train, from start: TripStart = .first) -> LineTrip? {
         guard let placement = train.placement else { return nil }
         let calls = line.calls(ofService: service)
         let ahead: LineJourney?, turned: LineJourney?
         if line.isRing {
-            let lap = line.ringCalls(line.ringDirection(of: train.id) ?? .inner)
+            // Decision 172: a ring's train goes on round from the stop it
+            // stands at.
+            let way = line.ringDirection(of: train.id) ?? .inner
+            let lap: [Int]
+            if case .ringStop(let stop) = start { lap = line.ringCalls(way, from: stop) } else { lap = line.ringCalls(way) }
             ahead = driveLap(line, calling: lap, from: placement, routes: line.routes(ofService: service))
             turned = driveLap(line, calling: lap, from: turnedRound(placement), routes: line.routes(ofService: service))
         } else {
-            ahead = drive(line, calling: calls, from: placement, routes: line.routes(ofService: service))
-            turned = drive(line, calling: calls, from: turnedRound(placement), routes: line.routes(ofService: service))
+            // Decision 172: from the last call the trip goes the other way
+            // first, the round trip of the calls in reverse.
+            let order = start == .last ? Array(calls.reversed()) : calls
+            ahead = drive(line, calling: order, from: placement, routes: line.routes(ofService: service))
+            turned = drive(line, calling: order, from: turnedRound(placement), routes: line.routes(ofService: service))
         }
         if let turned, ahead.map({ other in
             let a = matchedRoutes(other, routes: line.routes(ofService: service), start: placement)
@@ -323,6 +361,50 @@ extension GameWorld {
             return LineTrip(turnsFirst: true, journey: turned)
         }
         return ahead.map { LineTrip(turnsFirst: false, journey: $0) }
+    }
+
+    /// Decision 172: where along its line a train stands when a trip is
+    /// made for it.
+    enum TripStart: Hashable, Sendable {
+        /// At the service's first call, as every train was sent out before.
+        case first
+        /// At its last call: the trip goes back to the first call and out
+        /// to the last again.
+        case last
+        /// At stop `n` of a ring.
+        case ringStop(Int)
+    }
+
+    /// Decision 172: the empty run that takes `train`, stopped at a
+    /// station that is neither end of `line`'s service `service`, to the
+    /// nearer of its two ends by the time the line's performance takes
+    /// over the path, as it stands or turned round (the first end, then as
+    /// it stands, among equals); `nil` on a ring (it goes on from any
+    /// stop), for a train not stopped at a station, or when no end can be
+    /// reached.
+    func deadheadTrip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
+        guard !line.isRing, let placement = train.placement,
+              let here = stationsStoppedAt(by: train.id).first else { return nil }
+        let calls = line.calls(ofService: service)
+        var best: (seconds: Int64, turns: Bool, end: StationID)?
+        for end in [line.stops[calls[0]], line.stops[calls[calls.count - 1]]] {
+            for turns in [false, true] {
+                let from = turns ? turnedRound(placement) : placement
+                guard let path = path(from: from.position, toStation: end, length: train.length) else { continue }
+                var seconds: Int64 = 0
+                if path.distance > 0 {
+                    guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { continue }
+                    seconds = least
+                }
+                if best == nil || seconds < best!.seconds { best = (seconds, turns, end) }
+            }
+        }
+        guard let best else { return nil }
+        return LineTrip(
+            turnsFirst: best.turns,
+            journey: LineJourney(start: placement.position, legs: [], roundTripSeconds: 0),
+            deadhead: LineTrip.DeadheadRun(from: here, to: best.end, seconds: best.seconds)
+        )
     }
 
     /// The round trip of `line` calling at `calls` (indices into its
