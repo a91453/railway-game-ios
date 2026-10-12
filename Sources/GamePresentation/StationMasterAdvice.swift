@@ -361,9 +361,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
         // Only whether a station serves it is asked: the advice is worked
         // out at every step of the game, and whether anyone can ride there
         // (the panel says that) builds the whole route graph.
-        for sight in candidates.sorted(by: { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id < $1.id })
+        for sight in candidates.sorted(by: { world.stars(of: $0) != world.stars(of: $1) ? world.stars(of: $0) > world.stars(of: $1) : $0.id < $1.id })
         where world.attractionStation(of: sight.id) == nil {
-            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: sight.stars, status: .noStation)
+            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: world.stars(of: sight), status: .noStation)
         }
         return nil
     }
