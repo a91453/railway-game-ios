@@ -424,13 +424,17 @@ public struct GameWorld: Equatable, Sendable {
     /// Removes edge `id` of the track network (Stage S3). Removal is free and
     /// not refunded. Its nodes stay; the edges it joined there no longer join
     /// it. A train whose path names it stops at the node before it and waits
-    /// there: IDs are never reused, so give that train a new path.
+    /// there: IDs are never reused, so give that train a new path. A train
+    /// running a service cannot be given one, so track still ahead of it on
+    /// its way to its next stop cannot be removed.
     ///
     /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
     ///   ``GameError/trackEdgeInUse(_:)`` while a placed train's head or
     ///   body is on it (unplace the train first); or
     ///   ``GameError/trackEdgeHasPlatform(_:)`` while a station has a
-    ///   platform on it (Stage S4); or, under traffic control (Stage T),
+    ///   platform on it (Stage S4); or ``GameError/trackReserved(_:)``
+    ///   while it is ahead of a train running a service, on its way to its
+    ///   next stop; or, under traffic control (Stage T),
     ///   ``GameError/trackReserved(_:)`` while a train has reserved some of
     ///   it for its route, or (Stage F2b) when without it track two trains
     ///   hold would foul (see ``RailwayNetwork/fouls(_:_:)``): the lower
@@ -445,6 +449,9 @@ public struct GameWorld: Equatable, Sendable {
             return train.trailEdges.contains(id)
         }) else { throw .trackEdgeInUse(id) }
         guard network.platforms(on: id).isEmpty else { throw .trackEdgeHasPlatform(id) }
+        if let train = trains.first(where: { $0.execution != nil && $0.movement.remainingEdges.contains(id) }) {
+            throw .trackReserved(train.id)
+        }
         if isTrafficControlEnabled, let train = trains.first(where: { $0.reservation.contains { $0.isSpan(of: id) } }) {
             throw .trackReserved(train.id)
         }
