@@ -305,8 +305,8 @@ final class TutorialSessionTests: XCTestCase {
     /// The start screen's tutorial entry starts a new game on the first
     /// step, keeping the autosave as starting a new game does; the
     /// tutorial's game keeps no holidays (decision 154), no building
-    /// materials (decision 157) and no slowing of the doors in a crowd
-    /// (decision 169) or its flexible dispatch (decision 172).
+    /// materials (decision 157), no slowing of the doors in a crowd
+    /// (decision 169) and no flexible dispatch (decision 172).
     func testTheStartScreenStartsANewGameWithTheTutorial() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
