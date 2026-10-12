@@ -448,8 +448,9 @@ struct LinesPanel: View {
             } label: {
                 Label("Reverse Stop Order", systemImage: "arrow.left.arrow.right")
             }
-            // Decision 134: its trains would stop at the new last stop.
-            .disabled(!line.assignedTrains.isEmpty)
+            // Decision 172: trains are sent out from either end now; only a
+            // ring with a train running cannot go the other way round.
+            .disabled(ringHasRunningTrain(line))
             .accessibilityIdentifier("line.reverse")
         } header: {
             Text("Stops")
@@ -459,10 +460,16 @@ struct LinesPanel: View {
             } else {
                 Text("Patterns keep calling at the same positions in the list. Passengers waiting for a trip the line no longer takes leave.")
             }
-            if !line.assignedTrains.isEmpty {
-                Text("Take the line's trains off it to reverse its stops.")
+            if ringHasRunningTrain(line) {
+                Text("A ring cannot be reversed while one of its trains is running.")
             }
         }
+    }
+
+    /// Whether `line` is a ring with a train running a service (decision
+    /// 172), which `GameWorld.reverseLineStops(_:)` refuses.
+    private func ringHasRunningTrain(_ line: ServiceLine) -> Bool {
+        line.isRing && line.trains.contains { session.world.train(id: $0)?.execution != nil }
     }
 
     /// A button for every station, calling `choose` with its ID.

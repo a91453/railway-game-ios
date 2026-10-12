@@ -303,6 +303,16 @@
         }
       }
     },
+    "A ring cannot be reversed while one of its trains is running." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "環狀線有列車在跑時不能反轉站序，請等它跑完。"
+          }
+        }
+      }
+    },
     "A managed company's city sets each station's ridership. Free play can change it." : {
       "localizations" : {
         "zh-Hant" : {
@@ -2259,16 +2269,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "台灣的宜蘭線、縱貫線、平溪線與深澳線，照真實路線與地形蓋好、已經在跑"
-          }
-        }
-      }
-    },
-    "Take the line's trains off it to reverse its stops." : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這條路線有列車時不能反轉站序，請先把列車從路線移除。"
           }
         }
       }
