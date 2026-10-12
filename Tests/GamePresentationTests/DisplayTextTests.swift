@@ -72,7 +72,7 @@ final class ErrorMessageTests: XCTestCase {
             .invalidLinePattern: "A pattern calls at two of its line's stops or more, in the line's order. A ring has no patterns.",
             .unknownLinePattern(2): "The line has no pattern #3.",
             .invalidTrainLength: "A train has 1 to 16 cars.",
-            .trackReserved(TrainID(rawValue: 3)): "Train #3 holds that track under traffic control. Wait for it to clear the route.",
+            .trackReserved(TrainID(rawValue: 3)): "Train #3's route runs over that track. Wait for it to pass.",
             .trainsShareTrack(TrainID(rawValue: 2), TrainID(rawValue: 3)):
                 "Trains #2 and #3 need the same track, so traffic control can't be turned on. Move one of them first.",
             .invalidStationDemand: "A station starts 0 to 1,000,000 trips a day.",

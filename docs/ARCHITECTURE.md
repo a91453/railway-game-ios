@@ -914,7 +914,7 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 - **指令**（都在 `GameWorld`；失敗時世界不變）
   - `buildTrackNode(at:)`：`invalidTrackGeometry`（地圖外、不在地面、已有節點）→ `idsExhausted`。免費。
   - `buildTrackEdge(from:to:curve:)`：`unknownTrackNode`（先 `from` 再 `to`）→ `invalidTrackGeometry`（同一個節點、控制點在地圖外、曲線不成立）→ `idsExhausted` → `insufficientFunds`。費用是每格鐵軌的費用乘上長度的格數（無條件進位，至少 1）；乘積放不進 `Money` 時以 `insufficientFunds(required: Int64.max)` 拒絕。
-  - `removeTrackEdge(_:)`：`unknownTrackEdge` → `trackEdgeInUse`（有列車的車頭或車身在上面）。`removeTrackNode(_:)`：`unknownTrackNode` → `trackNodeInUse`（還有邊）。免費、不退款。ID 永不重用，所以 continuation 指向已拆除的邊的列車會停在那條邊之前的節點等待，直到換上新的 continuation。
+  - `removeTrackEdge(_:)`：`unknownTrackEdge` → `trackEdgeInUse`（有列車的車頭或車身在上面）（之後加的：`trackEdgeHasPlatform`、決策 186 的 `trackReserved`，見 `removeTrackEdge` 的文件）。`removeTrackNode(_:)`：`unknownTrackNode` → `trackNodeInUse`（還有邊）。免費、不退款。ID 永不重用，所以 continuation 指向已拆除的邊的列車會停在那條邊之前的節點等待，直到換上新的 continuation。
   - `setTrainContinuation(_:along:)`：方格與路網共用的 continuation 指令，檢查順序同 `setTrainContinuation(_:to:)`。路網上的列車對 `setTrainContinuation(_:to:)` 只接受空陣列（清除）。
   - `placeTrain`、`reverseTrain`、`unplaceTrain`、`setTrainMovementRate`、`advance` 都接受路網上的列車。
 - **轉向**：`transitions(after:)` 對方格是 `exits(from:facing:)`，對路網是建造時推導的 `TrackNodeEnd.exits`，依邊的編號遞增；兩者都不讀幾何。
@@ -5883,6 +5883,33 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **代價**：PR 綠了不代表全部 campaign 都過；那些在合併後 `main` 的 push run 上跑。`main` 紅了時看那輪的失敗，需要時手動 `workflow_dispatch` 被取代的 commit 二分。對 PR 有疑慮時加 `full-ci`。
 
 **參考庫與外部專案**：參考庫沒有 CI。依變更選測試是常見做法（Bazel、Nx 的 affected、`pytest-testmon`），沒有取用程式；判斷與檢查是本專案自己的。
+
+### 186. 拆不掉班次中列車前方的軌道
+
+2026-10-12。全程式碼審查（#420）找到的問題，作者把決定交給派工 session（session_017he2Q1QSeaBKJD1PR3XMma），採「拒絕拆除」。號碼依工作登記 #231：決策 186；存檔版本、golden schema 不動，GoldenScenarios、SaveFixtures、ReplayFixtures 都沒有改。
+
+**問題**：`removeTrackEdge` 只檢查列車站在哪裡（`trackEdgeInUse`）與交通管制下的預約，沒檢查班次中列車還要走的路。拆掉之後：
+
+- 列車停在缺口前（決策 15），班次一直是「前往下一站」。
+- 路線因此永遠少一列車；交通管制下，它的車身還佔著軌道。
+- 蓋回軌道也沒用：新邊有新的 ID（ID 不重用），原路徑仍指向舊的那條。
+- 班次中的列車不能另給路徑（`setTrainContinuation` 丟 `trainServiceActive`），班次也不會重新找路。
+- 玩家要自己想到「解除路線、停止班次、收回或另給路徑」三步才救得回來，畫面上沒有任何提示。
+
+**規則**：`removeTrackEdge` 在 `trackEdgeHasPlatform` 之後多一個拒絕：有列車在跑班次（`execution != nil`），而這條邊在它往下一站的路徑上還沒走到（`movement.remainingEdges`）時，丟出 `trackReserved`（第一台這樣的列車）。有沒有交通管制都一樣。列車通過、到站之後就能拆。沒有班次的列車照決策 15 的原樣：停在缺口前，等新的 continuation。
+
+`.trackReserved` 的訊息原本寫「在交通控制下…預約中」，現在沒開交通管制時也會出現，所以改成兩種情況都對的說法：「列車 #N 的路線要經過這段軌道，請等它通過。」（en: "Train #N's route runs over that track. Wait for it to pass."）
+
+**理由**：
+
+- 蓋回軌道救不回來，所以只加警示等於留一個陷阱。
+- 和既有的拒絕一致：`trackEdgeInUse`（站在上面），`splitTrackEdge` 本來就對 `remainingEdges` 丟 `trackReserved`。
+- A 列車系列也不讓玩家拆列車正要經過的軌道。
+- 等列車通過就能拆，玩家不會被永久擋住。
+
+**刻意改掉的測試**：`TrainServiceTests.testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted` 原本斷言拆除成功、列車停在 c 等待並丟掉 run、蓋回軌道後仍不改路。它改成 `testTrackAheadOfATravellingTrainCannotBeRemoved`：拆除被拒、世界不變；列車到站後可以拆。「班次不改路徑」仍然成立，寫在註解裡。
+
+**留待以後**：讓班次在前方軌道被拆時重新規劃到下一站的路徑（B），需要動 `LineJourney` 的快取與 run 的計時，這次不做。
 
 ## 目前規則摘要
 

@@ -363,8 +363,8 @@ extension GameError {
             )
         case .trackReserved(let id):
             language.text(
-                "Train #\(id.rawValue) holds that track under traffic control. Wait for it to clear the route.",
-                "在交通控制下，這段軌道由列車 #\(id.rawValue) 預約中。請等它讓出進路。"
+                "Train #\(id.rawValue)'s route runs over that track. Wait for it to pass.",
+                "列車 #\(id.rawValue) 的路線要經過這段軌道，請等它通過。"
             )
         case .trainsShareTrack(let first, let second):
             language.text(
