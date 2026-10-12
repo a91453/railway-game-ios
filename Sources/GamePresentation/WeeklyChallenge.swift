@@ -27,6 +27,8 @@ public struct WeeklyChallenge: Hashable, Sendable {
     }
 
     static let secondsPerWeek: Int64 = 7 * 86_400
+    /// The weeks a save may name: some 19,000 years.
+    static let maximumWeek: Int64 = 1_000_000
     /// Taiwan time is UTC+8, all year.
     static let taiwanOffset: Int64 = 8 * 3_600
     /// 1970-01-05, a Monday, in seconds since the epoch.
@@ -120,7 +122,10 @@ public struct WeeklyChallenge: Hashable, Sendable {
 
     /// The weekly challenge a scenario ID names, if it names one.
     static func named(_ id: String) -> WeeklyChallenge? {
-        guard id.hasPrefix("weekly."), let week = Int64(id.dropFirst("weekly.".count)) else { return nil }
+        // A week whose dates fit in seconds since 1970 (a damaged save's
+        // larger one would trap in ``start``).
+        guard id.hasPrefix("weekly."), let week = Int64(id.dropFirst("weekly.".count)),
+              (0..<Self.maximumWeek).contains(week) else { return nil }
         return WeeklyChallenge(week: week)
     }
 }

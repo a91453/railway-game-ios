@@ -36,6 +36,10 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertEqual(first.scenarioTitle(in: .traditionalChinese), "每週挑戰 · 三鎮連線 · 10/5–10/11")
         XCTAssertEqual(Challenge.named("weekly.\(week.week)")?.id, week.scenarioID)
         XCTAssertNil(Challenge.named("weekly.x"))
+        // A damaged save's week whose dates do not fit traps nothing.
+        XCTAssertNil(Challenge.named("weekly.20000000000000"))
+        XCTAssertNil(Challenge.named("weekly.-20000000000000"))
+        XCTAssertNotNil(WeeklyChallenge.named("weekly.0")?.rangeText)
         // The week's goals are the three towns' on its own map.
         guard case .connect(let points, _)? = first.scenario?.scenario.goals.first else { return XCTFail("links the towns") }
         XCTAssertEqual(points, Land.townCentres(seed: week.seed, in: first.bounds))
