@@ -99,32 +99,26 @@ final class RealWorldMapUITests: XCTestCase {
     }
 
     /// Decision 190's report (TestFlight 54.1): on a real-world map, a
-    /// phone on its side, a tall banner under the top controls (here the
-    /// largest accessibility text, which makes every card and the pill
-    /// tall) left no room between it and the dock, and the platform's ✓
-    /// went half under the dock. The ✓ stays whole and above the dock.
-    /// Full lane only (not in the pull request gate).
+    /// phone on its side, a tall banner under the top controls left no
+    /// room between it and the dock, and the platform's ✓ went half under
+    /// the dock. Here a platform is put on a stretch, then asked for again
+    /// on the same place: GameCore refuses it (the platforms would
+    /// overlap), the refusal stays in the banner for some seconds, and the
+    /// ✓ and ✕ stay whole and above the dock meanwhile. (The largest
+    /// accessibility text, which would make the banner taller still, hides
+    /// the start screen's real-world button: runs 38281750910 and
+    /// 38285956099.) Full lane only (not in the pull request gate).
     func testThePlatformConfirmStaysAboveTheDockUnderATallBanner() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = [
-            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL",
-        ]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
 
-        // The largest text pushes the start screen's buttons below the
-        // fold: dragged into sight first.
-        for identifier in ["start.realWorld", "place.tra-taipei", "realWorld.start"] {
-            let button = app.buttons[identifier].firstMatch
-            XCTAssertTrue(button.waitForExistence(timeout: 15), "Missing button: \(identifier)")
-            if !button.isHittable {
-                XCTAssertTrue(app.dragUntilWhollyOnScreen(button), "\(identifier) cannot be brought into sight")
-            }
-            tappable(app.buttons.matching(identifier: identifier), name: identifier).tap()
-        }
+        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
+        tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei").tap()
+        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
@@ -154,8 +148,10 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(builder.waitForExistence(timeout: 10), "No way to build the stretch")
         XCTAssertTrue(builder.isHittable, "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
         builder.tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Built Edge'")).firstMatch
-            .waitForExistence(timeout: 10), "The stretch was not built")
+        let banner = { (text: String) in
+            app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        }
+        XCTAssertTrue(banner("Built Edge").waitForExistence(timeout: 10), "The stretch was not built")
 
         // The platform mode, from the details card (opened if folded).
         let platform = app.buttons["Platform"]
@@ -166,17 +162,26 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(platform.waitForExistence(timeout: 10), "No Platform mode")
         platform.waitUntilSettled()
         platform.tap()
-        // On the track: the platform's site, its pill and its ✓.
+        // A platform on the track, levelled first where it climbs.
         let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the platform")
         confirm.waitUntilSettled()
-        XCTAssertTrue(confirm.isHittable, "The platform's ✓ cannot be tapped: \(confirm.frame)")
-        XCTAssertLessThanOrEqual(confirm.frame.maxY, app.buttons["dock.build"].frame.minY,
-                                 "The platform's ✓ goes under the dock: \(confirm.frame), dock \(app.buttons["dock.build"].frame)")
-        let cancel = app.buttons["map.build.cancel"]
-        XCTAssertTrue(cancel.isHittable, "The platform's ✕ cannot be tapped: \(cancel.frame)")
-        XCTAssertLessThanOrEqual(cancel.frame.maxY, app.buttons["dock.build"].frame.minY)
+        confirm.tap()
+        XCTAssertTrue(banner("Built station").waitForExistence(timeout: 10), "The platform was not built")
+        // Asked for again on the same place: refused, the refusal in the
+        // banner, the pill still there.
+        site.tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the second platform")
+        confirm.waitUntilSettled()
+        confirm.tap()
+        XCTAssertTrue(banner("overlap").waitForExistence(timeout: 5), "No refusal in the banner")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "The pill went with the refusal")
+        let dock = app.buttons["dock.build"].frame
+        for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
+            XCTAssertTrue(button.isHittable, "The platform's \(name) cannot be tapped: \(button.frame)")
+            XCTAssertLessThanOrEqual(button.frame.maxY, dock.minY, "The platform's \(name) goes under the dock: \(button.frame), dock \(dock)")
+        }
     }
 
     /// The copy of a button the player can touch. Existence can come before

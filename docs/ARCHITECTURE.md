@@ -6155,7 +6155,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 4. **提示**：路網工具預覽兩端不一樣高的一段時，卡片多寫「有坡度：在這裡設月台時會先整平」。從有坡的軌道接出轉轍器時，預覽直接說「轉轍器只能設在水平的軌道上……請從它端點的節點，或從水平的軌道接出」，不再是 GameCore 一般的「線形要平順」（`NetworkProblem.slopedTurnout`）。
 5. **教學**：選址那一步改看能不能整平（`networkPlatformLevelling?.problem`），不再一有坡就擋。
 
-**測試**：`TerrainPresentationTests` 的 `testAPlatformOnAGradeLevelsItsStretch`（3.75 m 的坡：三條邊、中段水平、月台在中段、扣款＝三條新邊的造價加車站、一次復原還原）、`testThePlatformToolSaysItLevelsInChinese`、`testAPlatformOnACurvedGradeLevelsAlongTheCurve`、`testAPlatformOnAGradeWithATrainOnItIsRefused`、`testATurnoutOnAGradeSaysWhy`。UI：`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`（實景地圖、最大的輔助字級、手機橫放：月台的 ✓／✗ 可點、在 dock 上方；完整 lane）。
+**測試**：`TerrainPresentationTests` 的 `testAPlatformOnAGradeLevelsItsStretch`（3.75 m 的坡：三條邊、中段水平、月台在中段、扣款＝三條新邊的造價加車站、一次復原還原）、`testThePlatformToolSaysItLevelsInChinese`、`testAPlatformOnACurvedGradeLevelsAlongTheCurve`、`testAPlatformOnAGradeWithATrainOnItIsRefused`、`testATurnoutOnAGradeSaysWhy`。UI：`RealWorldMapUITests.testThePlatformConfirmStaysAboveTheDockUnderATallBanner`（實景地圖、手機橫放：放好月台後在同一處再要一次，GameCore 拒絕、橫幅寫著原因時，月台的 ✓／✗ 可點、在 dock 上方；完整 lane。最大的輔助字級會讓開始畫面的實景地圖按鈕點不到，所以沒用）。
 
 **限制**：
 - 整平重鋪整條邊：舊邊的 ID 不再用，列車要重新給路，帳上舊邊的資產照拆除處理。
