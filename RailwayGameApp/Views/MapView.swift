@@ -99,6 +99,15 @@ struct MapView: View {
     @State private var terrainMap: TerrainMap?
     @State private var terrainMapVersion = 0
     @State private var terrainTooltip: (lines: [String], at: ScreenPoint)?
+    /// Decision 178: the passenger load layer's sections (``SectionFlow``),
+    /// made only while it is shown and when the plan or the lines change;
+    /// the strokes it draws in the shown hour, and a number that changes
+    /// with them; and the tooltip of the last tapped section.
+    @State private var sectionFlow = SectionFlow()
+    @State private var flowStrokes: [SectionFlow.Stroke] = []
+    @State private var flowStrokesVersion = 0
+    @State private var sectionFlowVersion = 0
+    @State private var sectionFlowTooltip: (text: String, at: ScreenPoint)?
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
@@ -207,7 +216,9 @@ struct MapView: View {
                         layers: mapLayers,
                         waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
                         lines: lineMap,
-                        labels: stationLabels
+                        labels: stationLabels,
+                        flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
+                        flowVersion: flowStrokesVersion
                     )
                     .equatable()
                 }
@@ -221,6 +232,7 @@ struct MapView: View {
                         cellTooltip = nil
                         cityTooltip = nil
                         terrainTooltip = nil
+                        sectionFlowTooltip = nil
                         session.mapDidMove()
                     }, paintsFrom: { location in
                         // Decision 98: zoning, one finger drags out the
@@ -273,6 +285,7 @@ struct MapView: View {
                             cellTooltip = nil
                             cityTooltip = nil
                             terrainTooltip = nil
+                            sectionFlowTooltip = nil
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             screen.panel = .station
                         }
@@ -349,6 +362,7 @@ struct MapView: View {
                                 cellTooltip = nil
                                 cityTooltip = nil
                                 terrainTooltip = nil
+                                sectionFlowTooltip = nil
                                 popTravelModeName = ""
                             }
                             .transition(.scale.combined(with: .opacity))
@@ -441,6 +455,11 @@ struct MapView: View {
                     if let cityTooltip {
                         CityCellTooltip(info: cityTooltip.info, language: session.language)
                             .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
+                            .allowsHitTesting(false)
+                    }
+                    if let sectionFlowTooltip {
+                        SectionFlowTooltip(text: sectionFlowTooltip.text)
+                            .offset(x: max(clear.leading + 8, min(sectionFlowTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(sectionFlowTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
                             .allowsHitTesting(false)
                     }
                     if let terrainTooltip {
@@ -599,6 +618,27 @@ struct MapView: View {
                 cityMapVersion &+= 1
             }
         }
+        .task(id: SectionFlowKey(world: session.world, isShown: mapLayers.popTravelMode == .sectionFlow)) {
+            // Decision 178: every section's day of riders against its
+            // trains' capacity, read from the world's kept passenger plan
+            // and worked out off the main thread (a journey a line).
+            guard mapLayers.popTravelMode == .sectionFlow else {
+                sectionFlow = SectionFlow()
+                sectionFlowVersion &+= 1
+                return
+            }
+            let world = session.world
+            let flow = await Task.detached(priority: .userInitiated) { SectionFlow(world: world) }.value
+            if !Task.isCancelled {
+                sectionFlow = flow
+                sectionFlowVersion &+= 1
+            }
+        }
+        .onChange(of: FlowStrokesKey(isShown: mapLayers.popTravelMode == .sectionFlow, hour: screen.popTravelHour, flow: sectionFlowVersion), initial: true) { _, key in
+            flowStrokes = key.isShown ? sectionFlow.strokes(at: key.hour) : []
+            flowStrokesVersion &+= 1
+            sectionFlowTooltip = nil
+        }
         .task(id: TerrainMapKey(world: session.world, hasHeights: session.heights != nil, isShown: mapLayers.popTravelMode == .terrain)) {
             // Decision 124, H3: the heights at the cells' corners, sampled
             // once for the map, off the main thread.
@@ -655,6 +695,7 @@ struct MapView: View {
             cellTooltip = nil
             cityTooltip = nil
             terrainTooltip = nil
+            sectionFlowTooltip = nil
             if mode?.usesHour != true { stopPopTravelPlay() }
         }
         .onChange(of: session.world.network, initial: true) { _, network in
@@ -693,6 +734,9 @@ struct MapView: View {
         case .terrain:
             guard let terrainMap, !terrainMap.isFlat else { return nil }
             return PopTravelLayer(content: .terrain(terrainMap), key: .terrain(version: terrainMapVersion), opacity: alpha)
+        case .sectionFlow:
+            // Drawn on the lines by the map canvas, not under them.
+            return nil
         }
     }
 
@@ -737,6 +781,21 @@ struct MapView: View {
     /// layer is on (the reference's `pop-grid-tooltip`); a tap where no one
     /// lives hides it. The tap still selects as it always does.
     private func showCellTooltip(at location: ScreenPoint, projection: PlanCamera) {
+        // Decision 178: the passenger load layer's tooltip words the
+        // stretch of track tapped: its riders against its trains' capacity.
+        if mapLayers.popTravelMode == .sectionFlow {
+            cellTooltip = nil
+            cityTooltip = nil
+            terrainTooltip = nil
+            let place = projection.planPoint(at: location)
+            let reach = Double(projection.worldDistance(NetworkBuilding.touchRadius))
+            let hour = screen.popTravelHour
+            sectionFlowTooltip = sectionFlow.nearestSection(toX: place.x, y: place.y, at: hour, within: reach, in: session.world)
+                .flatMap { sectionFlow.tooltip(of: $0, at: hour, world: session.world, language: session.language) }
+                .map { ($0, location) }
+            return
+        }
+        sectionFlowTooltip = nil
         // Decision 124, H3: the height layer's tooltip says the cell's
         // height and whether it is steep.
         if mapLayers.popTravelMode == .terrain {
@@ -747,6 +806,7 @@ struct MapView: View {
             return
         }
         terrainTooltip = nil
+        sectionFlowTooltip = nil
         // Phase 6d: a city layer's tooltip says the cell's use, people and
         // land value.
         if mapLayers.popTravelMode?.isCityLayer == true {
@@ -898,7 +958,7 @@ struct MapView: View {
         let moved = projection.centered(atX: center.x, y: center.y)
         // The tooltip is pinned to a screen point: once the map moves under
         // it, it would describe another cell, as after a pan.
-        if moved != projection { cellTooltip = nil; cityTooltip = nil; terrainTooltip = nil }
+        if moved != projection { cellTooltip = nil; cityTooltip = nil; terrainTooltip = nil; sectionFlowTooltip = nil }
         camera = moved
     }
 }
@@ -1023,6 +1083,11 @@ private struct MapCanvas: View, Equatable {
     let waitingCounts: [StationID: Int64]
     let lines: LineMap
     let labels: StationLabels
+    /// Decision 178: the passenger load layer's strokes in the shown hour,
+    /// drawn in place of the lines' colours, and a number that changes with
+    /// them (they are compared by it, not stroke by stroke).
+    let flowStrokes: [SectionFlow.Stroke]
+    let flowVersion: Int
 
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
         lhs.world.bounds == rhs.world.bounds
@@ -1044,12 +1109,13 @@ private struct MapCanvas: View, Equatable {
             && lhs.waitingCounts == rhs.waitingCounts
             && lhs.lines == rhs.lines
             && lhs.labels == rhs.labels
+            && lhs.flowVersion == rhs.flowVersion
     }
 
     var body: some View {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
-        let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0
+        let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -1067,6 +1133,7 @@ private struct MapCanvas: View, Equatable {
                 waitingCounts: waitingCounts,
                 lines: lines,
                 labels: labels,
+                flowStrokes: flowStrokes,
                 latitude: latitude,
                 in: context
             )
@@ -1322,6 +1389,50 @@ private struct CityMapKey: Equatable {
 private struct HeatmapKey: Equatable {
     let total: Int?
     let realWorld: RealWorldFrame?
+}
+
+/// What the passenger load layer's sections are worked out from: the lines
+/// and trains, whether the world keeps a passenger plan yet, and the game
+/// time in six-hour steps (a day's plan changes with the day's events), and
+/// whether the layer is shown at all.
+private struct SectionFlowKey: Equatable {
+    let isShown: Bool
+    let hasPlan: Bool
+    let lines: [ServiceLine]
+    let trains: Int
+    let window: Int64
+
+    init(world: GameWorld, isShown: Bool) {
+        self.isShown = isShown
+        hasPlan = world.keepsPassengerPlan
+        lines = isShown ? world.lines : []
+        trains = isShown ? world.trains.count : 0
+        window = isShown ? world.clock.now.seconds / (6 * GameTime.secondsPerHour) : 0
+    }
+}
+
+/// What the passenger load layer's strokes depend on.
+private struct FlowStrokesKey: Equatable {
+    let isShown: Bool
+    let hour: Int
+    let flow: Int
+}
+
+/// The passenger load layer's tooltip: a tapped stretch of track.
+private struct SectionFlowTooltip: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(.caption2.monospacedDigit())
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(maxWidth: 260, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("map.sectionFlowTooltip")
+    }
 }
 
 /// What the travel layer's squares depend on.

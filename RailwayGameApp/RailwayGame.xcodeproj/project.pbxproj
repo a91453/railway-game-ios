@@ -90,6 +90,7 @@
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
 		B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */ = {isa = PBXBuildFile; fileRef = F7E81C097849391C73D31AF5 /* krtc.json */; };
 		B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */; };
+		B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */; };
 		BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */; };
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
@@ -114,6 +115,7 @@
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
 		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
+		FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -223,6 +225,7 @@
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
 		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
+		DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsLogView.swift; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
@@ -235,6 +238,7 @@
 		F655E31850005DBAC32D5142 /* OSMMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSMMapBackground.swift; sourceTree = "<group>"; };
 		F7E81C097849391C73D31AF5 /* krtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc.json; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
+		FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -346,9 +350,11 @@
 				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
+				FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */,
 				080B5EA4C72E50F138757E75 /* NetworkControls.swift */,
 				3FC137C507F9A22C91174E71 /* NetworkOverview.swift */,
 				6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */,
+				DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */,
 				F655E31850005DBAC32D5142 /* OSMMapBackground.swift */,
 				0A8A6A623CDA7792FB18C0A2 /* Palette.swift */,
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
@@ -617,9 +623,11 @@
 				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,
+				B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */,
 				622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */,
 				72BB385B24C1703F13EF0B20 /* NetworkOverview.swift in Sources */,
 				AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */,
+				FC698A6F5A2379335FC7CC65 /* NewsLogView.swift in Sources */,
 				5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */,
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,

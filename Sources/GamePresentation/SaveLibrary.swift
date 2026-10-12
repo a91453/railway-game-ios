@@ -38,6 +38,9 @@ public struct SaveLibrary: Sendable {
     /// The `"app"` every save names. Keep this identifier for save compatibility.
     public static let appName = "RailwayGame"
     static let autosaveFile = "autosave.json"
+    /// What a save's news log's file name ends with: `autosave.json`'s is
+    /// `autosave.news.json`.
+    static let newsSuffix = ".news.json"
 
     public let directory: URL
 
@@ -60,7 +63,8 @@ public struct SaveLibrary: Sendable {
     /// list when the folder does not exist yet.
     public func entries() -> [Entry] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
-        let entries = names.filter { $0.hasSuffix(".json") }.map(entry(named:))
+        // A save's news log (decision 175) lies beside it and is no save.
+        let entries = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }.map(entry(named:))
         return entries.sorted { lhs, rhs in
             if (lhs.kind == .autosave) != (rhs.kind == .autosave) { return lhs.kind == .autosave }
             switch (lhs.savedAt, rhs.savedAt) {
@@ -102,7 +106,7 @@ public struct SaveLibrary: Sendable {
     /// of the player's own, saved at `date`. The file is replaced whole or
     /// not at all.
     @discardableResult
-    public func save(_ world: GameWorld, as kind: Kind, at date: Date) throws(SaveError) -> Entry {
+    public func save(_ world: GameWorld, news: NewsLog? = nil, as kind: Kind, at date: Date) throws(SaveError) -> Entry {
         let data = try Self.encode(world, at: date)
         let name = kind == .autosave ? Self.autosaveFile : freeName(for: date)
         do {
@@ -110,6 +114,11 @@ public struct SaveLibrary: Sendable {
             try data.write(to: url(of: name), options: .atomic)
         } catch {
             throw .fileSystem
+        }
+        // The news log is a convenience: failing to keep it never fails the
+        // save.
+        if let news, let log = try? JSONEncoder().encode(news) {
+            try? log.write(to: url(of: Self.newsFile(of: name)), options: .atomic)
         }
         return Entry(id: name, kind: kind, savedAt: date, summary: SaveSummary(world: world), problem: nil)
     }
@@ -122,11 +131,27 @@ public struct SaveLibrary: Sendable {
         let autosave = url(of: Self.autosaveFile)
         guard FileManager.default.fileExists(atPath: autosave.path) else { return }
         let savedAt = (try? Data(contentsOf: autosave)).flatMap { try? Self.header(of: $0).get().savedAt } ?? Date()
+        let name = freeName(for: savedAt)
         do {
-            try FileManager.default.moveItem(at: autosave, to: url(of: freeName(for: savedAt)))
+            try FileManager.default.moveItem(at: autosave, to: url(of: name))
         } catch {
             throw .fileSystem
         }
+        // Its news log goes with it.
+        try? FileManager.default.moveItem(at: url(of: Self.newsFile(of: Self.autosaveFile)), to: url(of: Self.newsFile(of: name)))
+    }
+
+    /// The news log kept beside `entry` (decision 175), or an empty one
+    /// when there is none or it cannot be read.
+    public func news(for entry: Entry) -> NewsLog {
+        guard let data = try? Data(contentsOf: url(of: Self.newsFile(of: entry.id))),
+              let log = try? JSONDecoder().decode(NewsLog.self, from: data) else { return NewsLog() }
+        return log
+    }
+
+    /// The file name of the news log of save file `name`.
+    static func newsFile(of name: String) -> String {
+        (name.hasSuffix(".json") ? String(name.dropLast(".json".count)) : name) + newsSuffix
     }
 
     public func delete(_ entry: Entry) throws(SaveError) {
@@ -135,6 +160,7 @@ public struct SaveLibrary: Sendable {
         } catch {
             throw .fileSystem
         }
+        try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: entry.id)))
     }
 
     /// `world` saved at `date` as a file to share, named after the app and

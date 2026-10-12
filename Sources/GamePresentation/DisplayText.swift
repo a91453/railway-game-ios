@@ -532,6 +532,74 @@ extension GameTime {
     }
 }
 
+/// The game's calendar (secretary room, decision 175). GameCore has no
+/// calendar, only days; the display gives them the one the game's rules
+/// already use: a year of 360 days, twelve months of 30
+/// (``FinancePeriod``), the first day a Monday (``StationDemand/weekday(ofDay:)``).
+public struct GameDate: Hashable, Sendable {
+    /// The game day, from 0.
+    public let day: Int64
+
+    /// `value / divisor` rounded down, also for a day before the start.
+    static func floorDivide(_ value: Int64, _ divisor: Int64) -> Int64 {
+        let quotient = value / divisor
+        return value % divisor < 0 ? quotient - 1 : quotient
+    }
+
+    public init(day: Int64) {
+        self.day = day
+    }
+
+    /// The year, from 1.
+    public var year: Int64 { GameDate.floorDivide(day, FinancePeriod.year.days) + 1 }
+    /// The month, 1 to 12.
+    public var month: Int { Int(GameDate.floorDivide(day, FinancePeriod.month.days) % 12 + 12) % 12 + 1 }
+    /// The day of the month, 1 to 30.
+    public var dayOfMonth: Int { Int(((day % 30) + 30) % 30) + 1 }
+    /// 0 for Sunday to 6 for Saturday.
+    public var weekday: Int { StationDemand.weekday(ofDay: day) }
+
+    /// "Sat" or "六".
+    public func weekdayName(in language: DisplayLanguage) -> String {
+        let english = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let chinese = ["日", "一", "二", "三", "四", "五", "六"]
+        return language.text(english[weekday], chinese[weekday])
+    }
+
+    /// "Year 2 · May 12 (Sat)" or "第 2 年 5 月 12 日（六）".
+    public func text(in language: DisplayLanguage) -> String {
+        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        return language.text(
+            "Year \(year) · \(months[month - 1]) \(dayOfMonth) (\(weekdayName(in: language)))",
+            "第 \(year) 年 \(month) 月 \(dayOfMonth) 日（\(weekdayName(in: language))）"
+        )
+    }
+
+    /// "May 12 (Sat)" or "5/12（六）": the short form of a forecast row.
+    public func shortText(in language: DisplayLanguage) -> String {
+        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        return language.text(
+            "\(months[month - 1]) \(dayOfMonth) (\(weekdayName(in: language)))",
+            "\(month)/\(dayOfMonth)（\(weekdayName(in: language))）"
+        )
+    }
+}
+
+extension GameTime {
+    /// The date of the day this time is in.
+    public var date: GameDate {
+        GameDate(day: GameDate.floorDivide(seconds, Self.secondsPerDay))
+    }
+
+    /// The HUD's clock with the calendar: "Year 2 · May 12 (Sat) 08:40",
+    /// "第 2 年 5 月 12 日（六）08:40", rounded down to the minute.
+    public func calendarText(in language: DisplayLanguage) -> String {
+        let minuteOfDay = (minute % Self.minutesPerDay + Self.minutesPerDay) % Self.minutesPerDay
+        let time = "\(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+        return language.text("\(date.text(in: language)) \(time)", "\(date.text(in: language))\(time)")
+    }
+}
+
 extension GameClock {
     /// The clock as the HUD shows it: ``GameTime/displayText(in:)``, with
     /// the seconds (``GameTime/displayTextWithSeconds(in:)``) while they
@@ -540,6 +608,18 @@ extension GameClock {
     public func displayText(in language: DisplayLanguage) -> String {
         now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
             ? now.displayText(in: language) : now.displayTextWithSeconds(in: language)
+    }
+}
+
+extension GameClock {
+    /// The clock with the calendar (decision 175), as the HUD shows it:
+    /// ``GameTime/calendarText(in:)``, with the seconds while they matter
+    /// (see ``displayText(in:)``).
+    public func calendarText(in language: DisplayLanguage) -> String {
+        let text = now.calendarText(in: language)
+        guard !(now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)) else { return text }
+        let seconds = now.secondOfMinute
+        return "\(text):\(seconds < 10 ? "0" : "")\(seconds)"
     }
 }
 

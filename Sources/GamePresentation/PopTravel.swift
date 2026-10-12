@@ -32,6 +32,10 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// The ground's height and the steep slopes (decision 124, H3;
     /// ``TerrainMap``), one at a time with the others.
     case terrain
+    /// The passengers each section of track carries in the chosen hour
+    /// against its trains' capacity (decision 178, ``SectionFlow``): drawn
+    /// on the lines, one at a time with the others.
+    case sectionFlow
 
     /// The tab's title (`map.layers.population`, `map.layers.travelDemand`,
     /// `map.layers.demandChange`).
@@ -45,6 +49,7 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
         case .coverage: language.text("Catchment coverage", "腹地涵蓋")
         case .zoning: language.text("Zoning", "土地分區")
         case .terrain: language.text("Height and steep slopes", "高度與陡坡")
+        case .sectionFlow: language.text("Passenger load", "載客量")
         }
     }
 
@@ -93,6 +98,11 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
                 "The ground's height, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; the track's earthwork and structures follow the same ground.",
                 "地面的海拔，以西北方的光照出起伏；斜線是超過 30% 的陡坡，城市不能開發。軌道的土方與結構物量的是同一份地面。"
             )
+        case .sectionFlow:
+            language.text(
+                "The passengers each stretch of track carries each way in the chosen hour, against what its trains can carry: wider for more riders, darker blue for fuller trains, red when over capacity.",
+                "選定時段各區間每個方向載運的乘客對列車運能：線越寬人越多，越深藍越擠，紅色表示超過運能。"
+            )
         }
     }
 
@@ -105,6 +115,12 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
     /// Whether the layer follows the timeline's hour.
     public var usesHour: Bool {
         self == .travel || self == .movement
+    }
+
+    /// Whether the layer's legend has the hour timeline: the two hourly
+    /// demand layers and the section flow.
+    public var followsTimeline: Bool {
+        usesHour || self == .sectionFlow
     }
 }
 
@@ -120,6 +136,7 @@ public enum PopTravel {
     /// The city's layers (Phase 6d) start at 0.8.
     public static func baseOpacity(for mode: PopTravelMode, compactWidth: Bool) -> Double {
         if mode.isCityLayer || mode == .terrain { return 0.8 }
+        if mode == .sectionFlow { return 1 }
         return mode == .population ? 0.72 : (compactWidth ? 1 : 0.85)
     }
 

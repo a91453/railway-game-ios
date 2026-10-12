@@ -145,6 +145,10 @@ final class FinancialStatementsTests: XCTestCase {
         try world.advance(ticks: 359 * 1_440)
         world.setSpeed(.normal)
         let session = GameSession(world: world)
+        // The secretary room (decision 175) would pause for a debt or a
+        // month's close; this test is about the year.
+        session.pausesForImportantEvents = false
+        session.monthlyReportMode = .off
         XCTAssertNil(session.yearEndYear)
         // `normal` runs a game minute a 100 ms tick; five ticks a step.
         for _ in 0..<288 {

@@ -5399,6 +5399,38 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **驗證**：`TrainTypeNameTests`（每個車種的中英文名稱、同一種語言內不重複、字母與品牌不再當名稱、捷運與列車的寫法、通用列車、`Train.typeText`、年代訊息的句子）。名稱在選單那一行小字裡會不會被截斷（最長的是六個字，例如「線性馬達捷運 · 每節 243 人 · 3 門」），要實機（TestFlight）才看得到。
 
+### 175. 秘書室：HUD 日曆與天氣、破產倒數、新聞紀錄、重要事件自動暫停、每月報告
+
+2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 175；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
+
+**問題**：HUD 只寫「第 N 天」；連假、颱風、破產倒數、站長的提醒看過一次就沒了；年報要大約 14 小時實際時間才出現一次。A 列車觀光有「カレンダー」（行事、期限、結算日）與通知履歷，A9 有「資金低於門檻自動暫停」。
+
+**日曆**（`GameDate`、`GameTime.calendarText`、`GameClock.calendarText`，`DisplayText.swift`）：用遊戲規則已經在用的曆法，一年 360 天、十二個月各 30 天（`FinancePeriod`），第一天是星期一（`StationDemand.weekday(ofDay:)`）：「第 2 年 5 月 12 日（二）08:40」。原來的「第 N 日 · 時間」（`displayText`）沒動，存檔清單還用它。HUD 的時鐘旁是今天的天氣圖示（晴、雨、雷雨；颱風經過時是颱風）和節日標籤（`todaySymbol()`、`todayHoliday()`，讀 `Weather.swift` 與 `Holidays.swift` 既有的查詢；沒打開「連假與事件」就都不顯示）。點時鐘彈出未來 7 天預報（`GameWorld.forecast()`、`ForecastDay`）：假日、天氣、颱風來襲（只有已經預警的）、油電價格。
+
+**破產倒數**：劇本設有 `insolvencyDays`、未結束、而且餘額小於 0 時，金額旁出現紅色徽章「破產倒數 23 天」（`GameWorld.insolvencyCountdown` = `insolvencyDays − insolventDays`），`GoalsPanel` 的狀態列也寫。**`StationMasterAdvice` 的 `.inDebt` 沒有動**（歸 `claude/onboarding-newgame`）。
+
+**新聞紀錄**（`NewsLog.swift`、`SecretaryRoom.swift`、`NewsLogView.swift`）：
+- 最多 300 則、新的在前；每則有遊戲日期、分類（圖示）、中英文兩份文字（狀態訊息只有當時語言那份）與可選的目標（車站、路線、列車的 ID，不是副本）。「前往」選取目標並把地圖移過去（`GameSession.goTo`，用決策 177 的 `lookAt`；列車是跟拍）。
+- 收錄：站長說過的每一則提醒（每小時看一次，同一種擔心 10 天內只寫一次；載入舊存檔時前 30 則已有同樣的字就不重寫）、成功與失敗訊息（`message` 的 `didSet`）、目標達成、劇本結束、年度結算、可買的地圖格（有額度且錢夠的那一天）、假日開始、颱風預警與來襲、油電價格開始變動、城鎮成長、建材不足、轉為負債、挑戰剩 7 天。站長的 `.inDebt`、`.typhoonComing`、`.fuelSpell`、`.goalMet`、`.scenarioCompleted` 另有自己的條目，不重複寫。
+- **以每個存檔的旁檔 `.news.json` 保存**（`SaveLibrary.save(_:news:as:at:)`、`news(for:)`）：不進 `SavedGame`，不升存檔版本；旁檔寫不出、讀不進都不影響存檔（讀不進就是空的紀錄）。清單不把旁檔當存檔；封存自動存檔、刪除存檔時旁檔跟著走。
+- 開啟：HUD 的鈴鐺（帶未讀數）、點站長說話的泡泡，或站長在說話時再點頭像（`ContentView.Panel` 往後加 `.news`、`.monthEnd`）。
+
+**重要事件自動暫停**（設定「重要事件自動暫停」，預設開，存在裝置上，`@AppStorage`）：颱風預警（經過有路線停靠的車站才暫停；沒有路網只記）、目標達成、現金轉為負債、挑戰剩 7 天（挑戰長於 14 天才提醒）。暫停後狀態列寫「已暫停：原因」（這一句不進紀錄，原因已在紀錄裡）。
+
+**每月報告**（`MonthlyReport`、`MonthlyReportText.swift`、`MonthlyReport.swift`）：`GameSession` 仿 `yearEndYear`，每 30 天（`日 ÷ 30` 進位的那天午夜）寫一張精簡卡片：旅客（`fareTrips` 月總和）、票收、成本、淨利（`accounts.report(.month, day:)` 的 `FinanceSummary`）、現金（月底餘額，對照「月底餘額減當月淨現金流量」），各自跟上月比（▲▼ 百分比；上月沒有資料就不比）；計畫運量（`StationDemand.dailyTrips`）成長最多與減少最多各 3 站（對照上次報告時的快照，`MonthlyBaseline` 放在新聞旁檔裡，新站不算）；新出現的 D3／D4 建物數；建材不足的車站；一句頭條（轉虧為盈或轉盈為虧優先，其次票收或旅客創新高，否則三項裡變動最大的、至少 5%，再不然「平穩的一個月」）。設定「每月報告」：自動開啟並暫停（預設）、只記在新聞紀錄、關閉；自由模式（沒有帳）不做。
+
+**預設（作者睡覺，自己決定的）**：預設都開；「重要事件」不含連假開始與油電漲跌（只記錄，不打斷玩家）；月報只在經營模式；月彙整自己用 `accounts.report` 與 `accounts.days` 算（`claude/finance-trends` 的 `FinanceHistory` 若先合併，之後的 session 可以改用，不要留兩份）。
+
+**參考對照**（`a91453/railway-reference-private`）：
+| 參考 | 目標 |
+| --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` `flowDashboardBuildEconomyReport`（本期與上期的收入、成本、淨額比較） | `MonthlyReport.make`、`MonthlyFigure.percent`（本月與上月，整數百分比） |
+| 同檔的通知履歷與 `notify()` | `NewsLog`（300 則、新的在前；參考的通知只有幾秒鐘，這裡留著） |
+| 沒有可用的：日曆／行事、資金低於門檻自動暫停（A 列車的）、天氣圖示 | 自己寫：`GameDate`、`pausesForImportantEvents`、`todaySymbol()` |
+
+外部專案：沒有搜尋到可以直接用的（OpenTTD 有新聞訊息與「暫停於事件」的設定，只讀概念，沒有複製程式碼，GPL）。
+
+**限制**：App 檔案（SwiftUI）在 Linux 上只能靠 macOS CI 編譯；邏輯都放在 `GamePresentation`，由 `NewsLogTests`、`MonthlyReportTests`、`DisplayTextTests` 測。月報的站成長只比對「計畫運量」，不是實際載客。
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
@@ -5538,6 +5570,28 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`TourismTests`（星等與係數、潛在人數、名產店、直接與網路計畫都等於查詢、年度計數、颱風、存檔來回、帳目與資產）；`TourismSessionTests`（目錄與工具檔一致、新遊戲的景點、量過的世界關閉、面板的列、按鈕、站長兩句話）；golden `tourism.json`；`SaveFixtures/v47-tourism.json`。
 
+### 178. 載客量圖層與車站「即將進站」看板
+
+2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
+
+**唯讀存取子（GameCore 唯一的改動）**：`GameWorld.plannedPassengerLegFlows()` 讀已經快取的旅客計畫（`passengerPlan`，由 `advance` 算出並保留），回傳每條路線、每個方向、每段乘車（上車站到下車站）每小時的乘客數（24 個數）；一對 OD 每小時的旅次依各路徑選項的權重分給它們（和 `passengerRouteAllocations` 同一個最大餘數法 `apportion`），路徑上每一段乘車各得一份。沒有快取時回 `nil`（`keepsPassengerPlan` 是便宜的檢查）。它不改世界、不存檔、不在畫面端重算任何一對 OD 的路徑（全台灣的圖會太慢）。
+
+**載客量圖層（`SectionFlow`，GamePresentation）**：
+- 每一段乘車分給它走過的每個站到站區間（`metroAllocateSectionFlowOnLineLeg`：沿路線的停靠站序，方向相同）；區間對到路線自己的來回行程（`lineJourney`）在該區間駛過的軌道片段（邊、起訖、行駛方向），共用軌道的路線在同一個區間相加（和參考的邊負載相加一樣）。兩個方向各是一個區間。
+- 運能 = 該小時的服務等級下，每個服務（路線本身與各停站模式）的每小時班次（60 ÷ `lineHeadway`）× 列車容量（該服務列車 `capacity` 的平均），加起來；窗口關閉的小時為 0。
+- 顏色照參考 `metroSectionFlowColor`：載客比運能，`pow(比, 0.72)`，從 rgb(227,242,253) 到 rgb(13,71,161)；**超過 100% 改紅色**（參考是對全圖最忙的區間，遊戲有真的運能，所以改比運能）。線寬 2–10 pt 依人流開根號（對最忙的區間）。沒有運能卻有人流的區間是紅色。
+- 點一段軌道（`nearestSection`，離軌道中心線最近、在觸控半徑內）顯示「08:00–09:00 往 X：3,240 人／運能 2,800（116%）· 紅線、藍線」（`metroBuildSectionFlowTooltipRows` 的改寫）。
+- 地圖圖層：`PopTravelMode.sectionFlow`，和其他圖層一次一個，沿用旅運需求圖層的小時時間軸與播放（`followsTimeline`）；圖層面板的「營運 → 載客量」開關，圖例是藍色漸層加紅色與線寬的說明。畫在軌道上、取代線的顏色（`MapArt.drawSectionFlow`）；兩個方向各畫在行駛方向的左邊，並排不重疊。列車的箭頭車頭與高鐵站的雙圈照舊；圖層開啟時線的顏色換成人流，所以高鐵路線的藏青外框不畫。
+- 在背景算（一條路線一次行程與幾個班距），計畫還沒有時（開局第一分鐘之前）什麼都不畫，等它出現後、以及每六個遊戲小時重算一次。
+
+**車站「即將進站」看板（`DepartureBoard`）**：車站面板最上方可收合（記在 `@AppStorage`）的區塊，每個方向列出接下來的 6 班（三小時內）：路線色塊、車名、終點、幾分後到。到站時間來自列車自己的時刻表（`Train.timetable` 與 `execution`：還沒走過的停靠站，加上目前的誤點）；月台上的列車是「進站中」，一分鐘內「即將進站」。誤點（`GameWorld.lateness(of:)`）一分鐘起顯示「慢 N 分」；終點在本站的列在最後（「抵達本站」）。快車不停的車次（本站是路線的站、但在列車相鄰兩個停靠站之間）標「通過」，時間照站序在兩站之間內插。固定班次路線（`LineRun`）還沒派出的班次直接列時刻（已派出的就是列車）。每個 tick 隨世界更新（只讀時刻表，不算路徑）。
+
+**參考庫與外部專案**：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `metroComputeSectionFlowEdgeLoads`、`metroAllocateSectionFlowOnLineLeg`、`metroAllocateSectionFlowFromPathSteps`、`metroSectionFlowColor`（顏色與曲線原樣取用）、`metroBuildSectionFlowTooltipRows`、`metroPickNearestSectionFlowAtLatLng`；`Railway/site_archive_clean/index.html` 的 `schedBoardRows`（三小時內、依時間排）、`boardGroupOf`（依方向分組）、`renderBoard`（「即將」「N 分」「（終點到達）」）、`todayDelayBadge`（誤點一分鐘起顯示）。`night-board.js` 的方向分頁與倒數：這裡一個方向一組、每個 tick 更新，沒有分頁。外部專案（OpenTTD cargodist 的 link-load overlay）：只讀概念，沒有複製程式碼。
+
+**限制**：環線的兩個方向共用同一圈的軌道片段（外圈的返程沒有另外量）；停站模式（`LinePattern`）的車次只算進運能與看板，人流以路線的站序分配；看板的誤點對之後的停靠站沿用目前的誤點。
+
+**測試**：`SectionFlowTests`（沒有計畫時什麼都不畫、讀計畫不改世界、區間的負載與運能、輕重排序與紅色、顏色與線寬、區間的分配、點選與兩種語言的文字）、`DepartureBoardTests`（接下來的班次依方向排序、預定到站加誤點、月台上的列車、不在線上的站、時間與誤點的文字、尚未派出的固定班次）。App 的畫法與看板（SwiftUI）在 Linux 上只能編譯，要 macOS CI 與實機。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
@@ -5593,6 +5647,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 高鐵（決策 168）：以高鐵性能（PERF_HSR）規劃的客運路線就是高鐵路線（`ServiceLine.isHighSpeed` 算出來的，沒有開關也沒有存檔欄位，存檔版本 43 只多了腹地與車種）；搭高鐵路線的旅客第一段上車時付 `max(路網票價, 公里 × $0.45)`（起訖的直線距離，四捨五入到整美元；沒有參考的最低 $20）；高鐵車組 `TrainType.highSpeed`（每節 80 人、兩個門、不超載、自己的性能是 `PERF_HSR`）。高鐵站有腹地（`StationDemand.hinterland`：8 公里內的居民與就業，一格分給幾個高鐵站，由土地需求推導）；兩個高鐵站之間每天單向有 `K × a × b` 的城際旅次（K = 2,400，a、b 是兩邊腹地的百萬人，10 km 以內沒有、80 km 起全部，再照最快路線的分鐘衰減），只有網路路徑的遊戲有，不併進車站自己的旅次。App 的高鐵站讀 8 公里的土地。
 - 車門擁擠與臺鐵 EMU3000（決策 169）：App 的新遊戲打開 `doorCrowding`（存檔版本 44；示範地圖、挑戰與教學關掉），開門後上下車的時間乘上 `1 + 1.5 × 擁擠⁴`，擁擠是車上人數 ÷ 額定、與候車人數 ÷ 4,000 取大，最多 1.1（`DoorCrowding`）；滿載的六節單軌停站從 40 秒變 73 秒，A 型 48 秒，高鐵與 EMU3000 幾乎不變。車種多一個 `TrainType.emu3000`（每節 45 人 = 編組定員 538 ÷ 12，每側 2 門）。
 - 高鐵示範（決策 170）：開始畫面的「示範地圖 → 高鐵示範」是全台灣的新遊戲，蓋好了真實的高鐵（352 km、221 條三次曲線的邊、12 站，單線、地面、交通管制關掉）與 24 組高鐵車組（各站、九站、五站三個服務，班距 30、20、30 分鐘，每個方向一小時 7 班），07:00 開始、已經在跑；錢是新遊戲的錢加上它的費用（$52,120,000）。在背景建（`GameLauncher.openHighSpeedDemo`）。
+- 載客量圖層與即將進站看板（決策 178）：地圖圖層「載客量」把世界快取的旅客計畫（`plannedPassengerLegFlows()`）按小時分到各站到站區間的兩個方向，線寬 2–10 pt 依人流開根號、顏色依人流比運能（pow 0.72，淺藍到深藍，超過 100% 紅），點一段軌道看人流／運能；車站面板最上方可收合的「即將進站」依列車的時刻表與誤點列出每個方向接下來 6 班（`DepartureBoard`）。只讀、不存檔。
 - 彈性發車（決策 172）：App 的新遊戲打開 `flexDispatch`（存檔版本 45；示範地圖、挑戰與教學關掉）：列車從路線任一端發車（停在末站的先跑回程，環線從停靠的任一站續繞），停在別的車站的先空車回送到較近的一端（不載客、不收票、不占班距槽，里程記在路線的 `deadheadDistance`，FollowBar 說「回送中」）；已發車的列車跑完原本那趟；編輯路線後提示列車的去向；有列車也能反轉站序（決策 134 只在關著時留著，環線有列車在跑時仍不行）；乘客方向看路線站序。
 - 全島地圖（決策 88）：實景的「全台灣」是本島加澎湖、約 285.6 × 389.7 km 的世界，土地按需展開：以 1,024 m 的區塊（`LandBlock`）讀入，世界記下讀過的區塊（`landBlocks`，存檔版本 18），蓋站時讀入 2 km 內還沒讀的區塊。其他新遊戲還是 16 km、土地完整。
 - 年度節慶（決策 90）：劇本可以有每年同一天、在某站提高需求的節慶，提前公布，成為種類 festival 的需求事件；平溪線劇本的天燈節在十分與平溪。
@@ -5602,3 +5657,4 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
