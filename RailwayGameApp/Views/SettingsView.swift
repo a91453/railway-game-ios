@@ -23,6 +23,9 @@ struct SettingsView: View {
     /// Whether the game's website is open (decision 163), in Safari's view
     /// in the app.
     @State private var showsWebsite = false
+    /// Decision 175: the secretary room's settings, on the device.
+    @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
+    @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Whether the help guide is open (decision 177).
     @State private var showsHelp = false
 
@@ -45,6 +48,7 @@ struct SettingsView: View {
                 }
                 if let session {
                     eventsSection(session)
+                    secretarySection(session.language)
                 }
                 previewSection
                 aboutSection
@@ -119,6 +123,40 @@ struct SettingsView: View {
                     "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。設定存在這一局的存檔裡。"
                 ))
             }
+        }
+    }
+
+    /// Decision 175: when the game stops by itself, and what happens when a
+    /// month closes. Kept on the device, for every game.
+    private func secretarySection(_ language: DisplayLanguage) -> some View {
+        Section {
+            Toggle(isOn: $pausesForImportantEvents) {
+                Label {
+                    Text(verbatim: language.text("Pause for important events", "重要事件自動暫停"))
+                } icon: {
+                    Image(systemName: "pause.circle")
+                }
+            }
+            .accessibilityIdentifier("settings.autoPause")
+            Picker(selection: $monthlyReportMode) {
+                ForEach(MonthlyReportMode.allCases, id: \.rawValue) { mode in
+                    Text(verbatim: mode.title(in: language)).tag(mode.rawValue)
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Monthly report", "每月報告"))
+                } icon: {
+                    Image(systemName: "calendar")
+                }
+            }
+            .accessibilityIdentifier("settings.monthlyReport")
+        } header: {
+            Text(verbatim: language.text("Secretary", "秘書室"))
+        } footer: {
+            Text(verbatim: language.text(
+                "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log. Kept on this device.",
+                "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。設定存在這台裝置上。"
+            ))
         }
     }
 

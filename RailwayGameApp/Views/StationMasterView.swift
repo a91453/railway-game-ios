@@ -47,6 +47,7 @@ struct StationMasterCorner: View {
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(GameScreenState.self) private var screen
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
@@ -56,7 +57,10 @@ struct StationMasterCorner: View {
         HStack(alignment: .bottom, spacing: 8) {
             Button {
                 if isTalking {
+                    // Decision 175: a second tap, while it talks, opens the
+                    // news log.
                     isTalking = false
+                    screen.panel = .news
                 } else {
                     // With nothing to advise it says all is well
                     // (decision 123).
@@ -100,9 +104,14 @@ struct StationMasterCorner: View {
                 .frame(maxWidth: width, alignment: .leading)
                 .onTapGesture {
                     // Decision 177: advice that points at a place takes
-                    // the map there.
-                    if let target = advice?.cameraTarget { session.lookAt(target) }
+                    // the map there. Decision 175: any other opens the
+                    // news log.
                     isTalking = false
+                    if let target = advice?.cameraTarget {
+                        session.lookAt(target)
+                    } else {
+                        screen.panel = .news
+                    }
                 }
                 .accessibilityHidden(true)
                 .transition(.scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity))
