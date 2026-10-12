@@ -48,8 +48,8 @@ extension GameWorld {
         guard rollingStockEconomics else { return carPriceText(in: language) }
         let price = RollingStock.pricing(of: type).eachCar
         return language.text(
-            "Each car added costs \(price.moneyText); a change of type costs \(RollingStock.refitPercent) % of the new type's price; taking cars off refunds nothing.",
-            "每加一節車廂 \(price.moneyText)；改車種要付新車種價格的 \(RollingStock.refitPercent) %；減少車廂不退費。"
+            "Each car added costs \(price.moneyText); a change of type costs the new type's price less what the old train would sell for; taking cars off refunds nothing.",
+            "每加一節車廂 \(price.moneyText)；改車種要付新車種的價格減去舊列車的出售價；減少車廂不退費。"
         )
     }
 }

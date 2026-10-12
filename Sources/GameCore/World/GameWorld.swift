@@ -1189,12 +1189,24 @@ public struct GameWorld: Equatable, Sendable {
         if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
         }
-        // Decision 180: a change of type is a refit, a share of the new
-        // type's price for the cars the train has.
+        // Decision 180: a change of type is the old train sold on the sale
+        // rule and the new one bought: the new type's price for the cars it
+        // has, less what the old would bring, at least nothing.
         if rollingStockEconomics, trains[index].type != type {
-            let fee = RollingStock.refitFee(to: type, cars: trains[index].cars)
-            try economy.spend(fee)
-            capitalizeAsset(.train, owner: id.rawValue, cost: fee)
+            let price = RollingStock.price(of: type, cars: trains[index].cars)
+            let tradeIn = trainSaleQuote(id)
+            let fee = RollingStock.refitFee(price: price, tradeIn: tradeIn)
+            guard economy.canAfford(fee) else { throw .insufficientFunds(required: fee, available: economy.balance) }
+            // Dearer than the new train, the old brings no more than the
+            // new costs: nothing is paid back.
+            let owner = id.rawValue
+            let proceeds = min(tradeIn, price)
+            let trainPart = RollingStock.salePrice(bookValue: bookValue(.train, owner: owner))
+            let trainShare = tradeIn > .zero ? Money(trainPart.amount * proceeds.amount / tradeIn.amount) : .zero
+            sellAsset(.train, owner: owner, for: trainShare)
+            sellAsset(.cars, owner: owner, for: proceeds - trainShare)
+            try economy.spend(price)
+            acquireAsset(.train, owner: owner, cost: price)
         }
         trains[index].type = type
     }
