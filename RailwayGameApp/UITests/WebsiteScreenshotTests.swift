@@ -230,11 +230,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         tapButton("start.realWorld", in: app, timeout: 60)
         // The whole of Taiwan is offered below Taiwan's places, in a list
         // that builds a row as it is scrolled to, and is enabled once the
-        // population is read.
+        // population is read. The list is found by its first row, which it
+        // drops once scrolled away from, so a second swipe found no list:
+        // where the list lies is kept, and dragged there.
         let places = app.collectionViews.containing(.button, identifier: "place.tra-taipei").firstMatch
         XCTAssertTrue(places.waitForExistence(timeout: 30), "The places are listed")
+        let listColumn = places.frame
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
-        XCTAssertTrue(scroll(places, to: wholeTaiwan), "The whole of Taiwan comes into view")
+        XCTAssertTrue(scrollScreen(to: wholeTaiwan, in: app, over: listColumn), "The whole of Taiwan comes into view")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: wholeTaiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         wholeTaiwan.tap()
@@ -276,30 +279,17 @@ final class WebsiteScreenshotTests: XCTestCase {
         add(attachment)
     }
 
-    /// Swipes `list` up, slowly so that it does not fling past, until
-    /// `element` can be touched; whether it can. For a row that a list only
-    /// builds as it is scrolled to, and that lies far down it.
-    private func scroll(_ list: XCUIElement, to element: XCUIElement, swipes: Int = 30) -> Bool {
-        for _ in 0..<swipes {
-            if element.exists, element.isHittable { return true }
-            list.swipeUp(velocity: .slow)
-            settle(seconds: 0.5)
-        }
-        if element.exists, element.isHittable { return true }
-        // For the log: what the list held when it did not show the row.
-        print("The list never showed \(element) (exists: \(element.exists)):\n\(list.debugDescription)")
-        return false
-    }
-
-    /// Drags up the middle of the screen, slowly so that a list does not
-    /// fling past, until `element` can be touched; whether it can. For a
-    /// sheet that fills the screen, whose list is not found by what it
-    /// holds, as a row that has scrolled away is not in the hierarchy.
-    private func scrollScreen(to element: XCUIElement, in app: XCUIApplication, drags: Int = 30) -> Bool {
+    /// Drags up the middle of the screen, or of the `list` frame when one is
+    /// given, slowly so that a list does not fling past, until `element` can
+    /// be touched; whether it can. For a list that builds a row as it is
+    /// scrolled to and is not found by what it holds, as a row that has
+    /// scrolled away is not in the hierarchy.
+    private func scrollScreen(to element: XCUIElement, in app: XCUIApplication, over list: CGRect? = nil, drags: Int = 30) -> Bool {
+        let x = list.map { $0.midX / app.frame.width } ?? 0.5
         for _ in 0..<drags {
             if element.exists, element.isHittable { return true }
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
-            let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: 0.8))
+            let to = app.coordinate(withNormalizedOffset: CGVector(dx: x, dy: 0.3))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
             settle(seconds: 0.5)
         }
