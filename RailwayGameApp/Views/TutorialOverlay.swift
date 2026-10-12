@@ -54,7 +54,7 @@ extension View {
                         let visible = site.offsetBy(dx: -origin.x, dy: -origin.y).intersection(mapFrame)
                         return visible.isNull || visible.isEmpty ? nil : visible
                     }
-                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf) + sites
+                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
                     // The map's own frame, so the card leaves some of it
                     // free to tap even where little of it shows; a step that
                     // is only read has nothing to tap there (decision 188).
@@ -67,6 +67,7 @@ extension View {
                             panels: panels.map { TutorialCardPlacement.Frame($0) },
                             backdrops: backdrops.map { TutorialCardPlacement.Frame($0) },
                             required: required.map { TutorialCardPlacement.Frame($0) },
+                            sites: sites.map { TutorialCardPlacement.Frame($0) },
                             map: map.map { TutorialCardPlacement.Frame($0) }
                         )
                     )
@@ -197,7 +198,9 @@ private struct TutorialCardSlot: View {
     /// make one.
     @State private var folded: Bool?
     /// Folded by itself: open, it covered what the step asks for.
-    @State private var foldedItself = false
+    @State private var fold = TutorialCardFold()
+    /// Where the card is laid out, in the overlay's coordinates.
+    @State private var bounds: CGRect = .zero
     /// The step has waited long enough to offer "Skip this step".
     @State private var waitedForSkip = false
     /// Compact height: a phone, held on its side.
@@ -216,7 +219,20 @@ private struct TutorialCardSlot: View {
 
     private var isFolded: Bool {
         if session.isTutorialStepDone, waitsForNext { return folded == true }
-        return choice ?? foldedItself
+        return choice ?? fold.isFolded
+    }
+
+    /// Whether the card may fold by itself: the player has not chosen,
+    /// and the step is not done.
+    private var mayFold: Bool {
+        choice == nil && !session.isTutorialStepDone
+    }
+
+    /// Changes ``fold`` only when `change` changes it.
+    private func updateFold(_ change: (inout TutorialCardFold) -> Void) {
+        var next = fold
+        change(&next)
+        if next != fold { fold = next }
     }
 
     /// The player folds or opens the card: for this step and the rest of
@@ -255,17 +271,18 @@ private struct TutorialCardSlot: View {
                     choose(folded: true)
                 }
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                    if choice == nil, !session.isTutorialStepDone, !placement.leavesStepFree(TutorialCardPlacement.Frame(frame)) {
-                        foldedItself = true
-                    }
+                    updateFold { $0.cardPlaced(at: TutorialCardPlacement.Frame(frame), by: sized, mayFold: mayFold) }
                 }
             }
         }
-        // What is on screen changed (a panel opened or closed, the device
-        // turned, a button the step asks for came into view): open the card
-        // again and see whether it fits now.
-        .onChange(of: Fit(placement)) { _, _ in
-            foldedItself = false
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }
+        // What is on screen changed: a new screen (a panel opened or closed,
+        // the device turned, a button the step asks for came into view)
+        // opens the card again to see whether it fits now; the places to tap
+        // moving with the map fold an open card they come under, though it
+        // does not move (``TutorialCardFold``).
+        .onChange(of: sized, initial: true) { _, placement in
+            updateFold { $0.screenChanged(to: placement, in: TutorialCardPlacement.Frame(bounds), mayFold: mayFold) }
         }
         .task {
             try? await Task.sleep(for: .seconds(tutorial.step.skipOfferSeconds))
@@ -276,18 +293,6 @@ private struct TutorialCardSlot: View {
             if let text, hint?.isProblem == true {
                 AccessibilityNotification.Announcement(text).post()
             }
-        }
-    }
-
-    /// What decides whether the card fits, without the frames of controls
-    /// that scroll, which change on every frame of a scroll.
-    private struct Fit: Equatable {
-        let map: [Double]?
-        let required: Int
-
-        init(_ placement: TutorialCardPlacement) {
-            map = placement.map.map { map in [map.x, map.y, map.width, map.height].map { $0.rounded() } }
-            required = placement.required.count
         }
     }
 }

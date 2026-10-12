@@ -134,7 +134,8 @@ final class TutorialCardPlacementTests: XCTestCase {
             target: mapBesidePanel,
             controls: hud + [zoomBesidePanel, linePick],
             panels: [sidePanel],
-            required: stationsKnown ? lineStations : [],
+            required: [],
+            sites: stationsKnown ? lineStations : [],
             map: mapBesidePanel,
             maxWidth: 320
         )
@@ -162,6 +163,112 @@ final class TutorialCardPlacementTests: XCTestCase {
             XCTAssertFalse(shown.intersects(covered), "card \(shown) (open \(open)) covers \(covered)")
         }
         XCTAssertTrue(placement.leavesStepFree(shown), "card \(shown)")
+    }
+
+    /// The line's stations step with the map dragged `dx` points (the
+    /// review of #457): the stations move with it, and only what of them
+    /// shows on the map is kept free, as the app reports them.
+    private static func draggedLineStationsStep(_ dx: Double) -> TutorialCardPlacement {
+        let stations = [Frame(x: 300 + dx, y: 130, width: 48, height: 48), Frame(x: 330 + dx, y: 250, width: 48, height: 48)]
+        let shown = stations.compactMap { station -> Frame? in
+            let map = mapBesidePanel
+            let x = max(station.minX, map.minX), y = max(station.minY, map.minY)
+            let width = min(station.maxX, map.maxX) - x, height = min(station.maxY, map.maxY) - y
+            return width > 0 && height > 0 ? Frame(x: x, y: y, width: width, height: height) : nil
+        }
+        return TutorialCardPlacement(
+            target: mapBesidePanel,
+            controls: hud + [zoomBesidePanel, linePick],
+            panels: [sidePanel],
+            required: [],
+            sites: shown,
+            map: mapBesidePanel,
+            maxWidth: 320
+        )
+    }
+
+    /// The map dragged at the line's stations step: a station slides under
+    /// the card while the cheapest place for it stays where it is, so the
+    /// card's own frame does not change, which was all that made it check
+    /// whether it covered anything (the review of #457, dx −40 to −140).
+    func testDraggingTheMapSlidesAStationUnderACardThatDoesNotMove() {
+        var found = false
+        var previous: (frame: Frame, free: Bool)?
+        for dx in stride(from: 0.0, through: -140, by: -2) {
+            let placement = Self.draggedLineStationsStep(dx)
+            let frame = placement.frame(in: Self.screen, measure: Self.mapStepCard)
+            let free = placement.leavesStepFree(frame)
+            if let previous, previous.frame == frame, previous.free, !free { found = true }
+            previous = (frame, free)
+        }
+        XCTAssertTrue(found, "no drag left the card in place over a station")
+    }
+
+    /// Decision 188, later fix: the card folds itself as the app drives it
+    /// (``TutorialCardFold``), told of the screen on every frame of the drag
+    /// and of the open card's place when it changes. Wherever the drag goes,
+    /// right until a station leaves the map and back left past the card, the
+    /// card shown, open or folded, covers no station; and once folded it does
+    /// not open again while the screen stays the same, though stations go in
+    /// and out of view (a folded card opened and folded again as they did).
+    func testACardFoldsWhenTheMapIsDraggedUnderItAndStaysFolded() {
+        // Straight left from where the open card is clear of the stations
+        // (dx −10; at 0 it covers one and folds at once), the review's drag,
+        // and right until a station leaves the map, then back left.
+        let drags = [
+            Array(stride(from: -10.0, through: -140, by: -2)),
+            Array(stride(from: 0.0, through: 100, by: 2)) + Array(stride(from: 100.0, through: -140, by: -2))
+                + Array(stride(from: -140.0, through: 0, by: 2)),
+        ]
+        for drag in drags {
+            var fold = TutorialCardFold()
+            var openFrame: Frame?
+            var wasFolded = false
+            var reopened = 0
+            var everFolded = false
+            for dx in drag {
+                let placement = Self.draggedLineStationsStep(dx)
+                fold.screenChanged(to: placement, in: Self.screen, mayFold: true)
+                if fold.isFolded {
+                    // The open card is gone.
+                    openFrame = nil
+                } else {
+                    // `onGeometryChange`: the open card reports its place when
+                    // it appears or moves.
+                    let frame = placement.frame(in: Self.screen, measure: Self.mapStepCard)
+                    if frame != openFrame {
+                        fold.cardPlaced(at: frame, by: placement, mayFold: true)
+                        openFrame = frame
+                    }
+                }
+                if wasFolded, !fold.isFolded { reopened += 1 }
+                wasFolded = fold.isFolded
+                everFolded = everFolded || fold.isFolded
+                let shown = fold.isFolded ? placement.frame(in: Self.screen, measure: Self.foldedCard) : openFrame!
+                for station in placement.sites {
+                    XCTAssertFalse(shown.intersects(station), "dx \(dx): \(fold.isFolded ? "folded" : "open") card \(shown) covers \(station)")
+                }
+            }
+            XCTAssertTrue(everFolded, "the drag never needed the card folded")
+            XCTAssertEqual(reopened, 0, "the folded card opened again while the screen stayed the same")
+        }
+    }
+
+    /// A new screen (here the lines panel closing: the map widens) opens a
+    /// card that folded itself, to see whether it fits now.
+    func testANewScreenOpensAFoldedCardAgain() {
+        var fold = TutorialCardFold()
+        let narrow = Self.draggedLineStationsStep(-60)
+        fold.screenChanged(to: narrow, in: Self.screen, mayFold: true)
+        let covering = Frame(x: Self.lineStations[0].minX, y: Self.lineStations[0].minY, width: 200, height: 100)
+        fold.cardPlaced(at: covering, by: Self.lineStationsStep(stationsKnown: true), mayFold: true)
+        XCTAssertTrue(fold.isFolded)
+        let wide = TutorialCardPlacement(target: Self.mapAlone, controls: Self.hud, required: [], map: Self.mapAlone, maxWidth: 320)
+        fold.screenChanged(to: wide, in: Self.screen, mayFold: true)
+        XCTAssertFalse(fold.isFolded)
+        // A player's choice, or a done step, never folds it.
+        fold.cardPlaced(at: covering, by: Self.lineStationsStep(stationsKnown: true), mayFold: false)
+        XCTAssertFalse(fold.isFolded)
     }
 
     /// The steps before it, with the details card open: nothing the step

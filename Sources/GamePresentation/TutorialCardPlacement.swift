@@ -27,7 +27,7 @@
 ///
 /// When even then the card covers what the step asks for
 /// (``leavesStepFree(_:)``), the app folds it to its title.
-public struct TutorialCardPlacement: Sendable {
+public struct TutorialCardPlacement: Equatable, Sendable {
     /// A rectangle in the screen's points, `Frame`'s geometry for what the
     /// placement needs.
     public struct Frame: Equatable, Sendable, CustomStringConvertible {
@@ -108,6 +108,11 @@ public struct TutorialCardPlacement: Sendable {
     public var backdrops: [Frame]
     /// The step's own controls (not the map), among `controls`.
     public var required: [Frame]
+    /// The places on the map the step has the player tap
+    /// (``GameSession/tutorialPlacesToTap``): kept free as the step's own
+    /// controls are, but they move with the map, on every frame of a drag
+    /// (``TutorialCardFold``).
+    public var sites: [Frame]
     /// The part of the map that shows (``TutorialTarget/map``).
     public var map: Frame?
     /// The widest the card is laid out.
@@ -134,14 +139,15 @@ public struct TutorialCardPlacement: Sendable {
 
     /// All in the screen's coordinates, as the app reads them.
     public init(
-        target: Frame?, controls: [Frame], panels: [Frame] = [], backdrops: [Frame] = [], required: [Frame], map: Frame?,
-        maxWidth: Double = 340
+        target: Frame?, controls: [Frame], panels: [Frame] = [], backdrops: [Frame] = [], required: [Frame], sites: [Frame] = [],
+        map: Frame?, maxWidth: Double = 340
     ) {
         self.target = target
         self.controls = controls
         self.panels = panels
         self.backdrops = backdrops
         self.required = required
+        self.sites = sites
         self.map = map
         self.maxWidth = maxWidth
     }
@@ -191,10 +197,10 @@ public struct TutorialCardPlacement: Sendable {
     }
 
     /// Whether a card at `frame`, in the screen's coordinates, leaves the
-    /// step's own controls and the panels uncovered and a band of the map
-    /// free to tap.
+    /// step's own controls, the places to tap and the panels uncovered and
+    /// a band of the map free to tap.
     public func leavesStepFree(_ frame: Frame) -> Bool {
-        !(required + panels).contains { $0.intersects(frame) } && Self.leavesMapFree(frame, map: map)
+        !(required + sites + panels).contains { $0.intersects(frame) } && Self.leavesMapFree(frame, map: map)
     }
 
     /// Whether a band of `map` at least ``minimumFreeMap`` deep stays free
@@ -219,7 +225,7 @@ public struct TutorialCardPlacement: Sendable {
         // before comparing candidates.
         guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
         let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let required = (self.required + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let required = (self.required + sites + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let backdrops = self.backdrops.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
         let gap = Self.gap
@@ -282,5 +288,78 @@ public struct TutorialCardPlacement: Sendable {
             .min { cost($0) < cost($1) }
         guard let cheapest else { return (centred, .infinity) }
         return (Point(x: cheapest.x, y: cheapest.y), cost(cheapest))
+    }
+}
+
+/// Whether the tutorial's card has folded itself (decision 188): open, it
+/// covered what the step asks for (``TutorialCardPlacement/leavesStepFree(_:)``).
+/// The app keeps one for each step's card and tells it where the open card
+/// went and what is on screen.
+///
+/// The card folds when it is placed over what the step asks for, and when
+/// what the step asks for comes under the card where it would stand: the
+/// places to tap move with the map, and dragging it on a phone on its side
+/// slid the line's stations under a card whose place did not change, which
+/// then stayed open over them (the review of #457). It opens again, to see
+/// whether it fits now, only when the screen changes (a panel opening or
+/// closing, the device turning, a control the step asks for coming into
+/// view), not when the places to tap move or go in and out of view: a
+/// folded card opened and folded again as they did, on a drag.
+public struct TutorialCardFold: Equatable, Sendable {
+    /// Whether the card is folded by itself.
+    public private(set) var isFolded = false
+    /// The screen the card last opened on.
+    private var screen: Screen?
+    /// Where the open card was last placed.
+    private var openFrame: TutorialCardPlacement.Frame?
+
+    public init() {}
+
+    /// The open card was placed at `frame`: it folds when it covers what
+    /// `placement` asks for and `mayFold` (the player has not chosen, and
+    /// the step is not done).
+    public mutating func cardPlaced(at frame: TutorialCardPlacement.Frame, by placement: TutorialCardPlacement, mayFold: Bool) {
+        openFrame = frame
+        if mayFold, !placement.leavesStepFree(frame) {
+            isFolded = true
+        }
+    }
+
+    /// What is on screen is now `placement`, the card laid out in `bounds`.
+    /// A new screen opens a folded card again, and the card placed there
+    /// says whether it fits (``cardPlaced(at:by:mayFold:)``). On the same
+    /// screen, an open card folds when, where `placement` would put it now
+    /// (at the size it was last placed at), it covers what the step asks
+    /// for, and `mayFold`; where it would move clear, it is left to move.
+    public mutating func screenChanged(
+        to placement: TutorialCardPlacement, in bounds: TutorialCardPlacement.Frame, mayFold: Bool
+    ) {
+        let now = Screen(placement)
+        guard screen == now else {
+            if screen != nil, isFolded {
+                isFolded = false
+                openFrame = nil
+            }
+            screen = now
+            return
+        }
+        guard mayFold, !isFolded, let openFrame, bounds.width > 0, bounds.height > 0 else { return }
+        let size = TutorialCardPlacement.Size(width: openFrame.width, height: openFrame.height)
+        if !placement.leavesStepFree(placement.frame(in: bounds) { _ in size }) {
+            isFolded = true
+        }
+    }
+
+    /// What decides whether the card fits, without what changes on every
+    /// frame of a scroll or a drag: the map's frame, rounded, and how many
+    /// of the step's own controls are on screen.
+    private struct Screen: Equatable, Sendable {
+        let map: [Double]?
+        let required: Int
+
+        init(_ placement: TutorialCardPlacement) {
+            map = placement.map.map { map in [map.x, map.y, map.width, map.height].map { $0.rounded() } }
+            required = placement.required.count
+        }
     }
 }
