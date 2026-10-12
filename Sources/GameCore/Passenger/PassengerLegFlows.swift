@@ -61,3 +61,12 @@ extension GameWorld {
         }
     }
 }
+
+extension GameWorld {
+    /// Whether a passenger plan is kept, so ``plannedPassengerLegFlows()``
+    /// answers (a cheap check for a view deciding when to ask).
+    public var keepsPassengerPlan: Bool {
+        if case .some = passengerPlan.plan { return true }
+        return false
+    }
+}
