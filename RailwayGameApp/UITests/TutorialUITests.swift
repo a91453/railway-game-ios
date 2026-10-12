@@ -181,7 +181,8 @@ final class TutorialUITests: XCTestCase {
     /// Decision 188 (full lane and iPad, not the gate): the lines panel
     /// scrolls Create Line, and then Buy … and Start Service, into view for
     /// their steps, clear of the card; Done closes the panel and leaves the
-    /// fares to wait for.
+    /// fares to wait for. The card the player folds stays folded through the
+    /// service chapter's steps.
     func testCreateLineAndBuyAreInReach() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -207,15 +208,30 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(buy.waitForExistence(timeout: 10), "No Buy … and Start Service")
         XCTAssertTrue(waitForHittable(buy), "Buy … and Start Service was not scrolled into view")
         waitForStep(app, title: "Tap Buy … and Start Service")
+        // Folded by the player, the card stays folded for the rest of the
+        // chapter (TestFlight 54.1: it had to be folded on every step). One
+        // that folded itself, to leave the panel free, is not the player's.
+        var foldedByPlayer = false
         if card.exists {
             XCTAssertFalse(card.frame.intersects(buy.frame), "The tutorial card covers Buy … and Start Service")
+            app.buttons["tutorial.fold"].tap()
+            XCTAssertTrue(folded.waitForExistence(timeout: 10), "The card did not fold")
+            foldedByPlayer = true
         }
+        XCTAssertTrue(waitForHittable(buy), "The folded card covers Buy … and Start Service")
         buy.tap()
 
         waitForStep(app, title: "Tap Done to stop building")
+        if foldedByPlayer {
+            XCTAssertFalse(card.exists, "The card opened again within its chapter")
+        }
         XCTAssertTrue(app.buttons["line.draft.pick"].waitForNonExistence(timeout: 10), "The lines panel stayed open")
         selectTool(app, "tool.select")
         waitForStep(app, title: "Wait for your first fares")
+        if foldedByPlayer {
+            XCTAssertFalse(card.exists, "The card opened again within its chapter")
+            XCTAssertTrue(folded.exists)
+        }
     }
 
     /// Waits up to 10 seconds for `element` to be hittable.

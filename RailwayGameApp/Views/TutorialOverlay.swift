@@ -73,13 +73,19 @@ private let tutorialOverlaySpace = "tutorial.overlay"
 
 /// Only the card receives touches: outlining a tool or the map must leave
 /// it usable, because Next waits for the player to perform the step. Kept
-/// across steps, it moves a done step on by itself (decision 188).
+/// across steps, it moves a done step on by itself (decision 188) and
+/// keeps the player's choice to fold the card for the rest of its chapter.
 private struct TutorialOverlay: View {
     let session: GameSession
     let tutorial: Tutorial
     let frames: [CGRect]
     let placement: TutorialCardPlacement
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    /// The player's choice, folded or open, for each chapter they made one
+    /// in: the steps move on by themselves, and a player who folded the
+    /// card to watch the map had to fold it again on every step
+    /// (TestFlight 54.1). A new chapter opens it again.
+    @State private var foldedChapters: [TutorialChapter: Bool] = [:]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -99,8 +105,14 @@ private struct TutorialOverlay: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            TutorialCardSlot(session: session, tutorial: tutorial, placement: placement)
-                .id(tutorial.index)
+            TutorialCardSlot(
+                session: session, tutorial: tutorial, placement: placement,
+                chapterFold: Binding(
+                    get: { foldedChapters[tutorial.step.chapter] },
+                    set: { foldedChapters[tutorial.step.chapter] = $0 }
+                )
+            )
+            .id(tutorial.index)
         }
         // The frames are the overlay's; the card checks its own in them.
         .coordinateSpace(.named(tutorialOverlaySpace))
@@ -117,6 +129,10 @@ private struct TutorialOverlay: View {
             }
             session.showNextTutorialStep(from: index)
         }
+        .onChange(of: tutorial.index) { _, index in
+            // Started again (the game menu): the first step, not by Back.
+            if index == 0, !tutorial.reachedByBack { foldedChapters = [:] }
+        }
     }
 
     /// What restarts the wait before a done step moves on.
@@ -129,15 +145,19 @@ private struct TutorialOverlay: View {
 /// The step's card, or the card folded to its title: by the player, with
 /// its ⌄ button, or by itself while, open, it would cover what the step
 /// asks for (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on
-/// a phone on its side with a panel open. A done step that waits for Next
-/// (one to read, or reached by Back) opens it, so Next shows, unless the
-/// player folded it; one moving on by itself stays as it is. New for each
-/// step (`.id`).
+/// a phone on its side with a panel open. The player's choice holds for
+/// the rest of the chapter (``TutorialOverlay``), but on a step to read or
+/// one reached by Back, which wait for Next: there only a choice made on
+/// the step counts, and a done one opens, so Next shows. New for each step
+/// (`.id`).
 private struct TutorialCardSlot: View {
     let session: GameSession
     let tutorial: Tutorial
     let placement: TutorialCardPlacement
-    /// The player's choice, open or folded; `nil` until they make one.
+    /// The player's choice in the step's chapter, kept across its steps.
+    @Binding var chapterFold: Bool?
+    /// The player's choice on this step, open or folded; `nil` until they
+    /// make one.
     @State private var folded: Bool?
     /// Folded by itself: open, it covered what the step asks for.
     @State private var foldedItself = false
@@ -146,9 +166,27 @@ private struct TutorialCardSlot: View {
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    /// Whether the step waits for Next, so the chapter's choice does not
+    /// carry into it.
+    private var waitsForNext: Bool {
+        tutorial.step.goal == .read || tutorial.reachedByBack
+    }
+
+    /// The player's choice that holds on this step, if any.
+    private var choice: Bool? {
+        waitsForNext ? folded : (folded ?? chapterFold)
+    }
+
     private var isFolded: Bool {
-        if session.isTutorialStepDone, tutorial.step.goal == .read || tutorial.reachedByBack { return folded == true }
-        return folded ?? foldedItself
+        if session.isTutorialStepDone, waitsForNext { return folded == true }
+        return choice ?? foldedItself
+    }
+
+    /// The player folds or opens the card: for this step and the rest of
+    /// its chapter.
+    private func choose(folded value: Bool) {
+        folded = value
+        chapterFold = value
     }
 
     /// Whether the card offers "Skip this step" (decision 188): for an
@@ -172,15 +210,15 @@ private struct TutorialCardSlot: View {
             if isFolded {
                 FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint) {
                     UITestTrace.action("tutorial.unfold")
-                    folded = false
+                    choose(folded: false)
                 }
             } else {
                 TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
                     UITestTrace.action("tutorial.fold")
-                    folded = true
+                    choose(folded: true)
                 }
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                    if folded == nil, !session.isTutorialStepDone, !placement.leavesStepFree(TutorialCardPlacement.Frame(frame)) {
+                    if choice == nil, !session.isTutorialStepDone, !placement.leavesStepFree(TutorialCardPlacement.Frame(frame)) {
                         foldedItself = true
                     }
                 }

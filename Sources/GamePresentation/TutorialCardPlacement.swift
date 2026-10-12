@@ -10,7 +10,8 @@
 /// screen, clear of every control and panel, leaving the step's own
 /// controls and a band of the map free to tap.
 ///
-/// Tries below and above the target, then its sides, then inside a large
+/// Tries below and above the target, then its sides, then (when the
+/// target is the map) the map's top trailing corner, then inside a large
 /// target such as the map, then the free map's corners, then the centre
 /// and the edges. The first placement that covers no control wins; when
 /// every one covers something, the one that covers least, sparing the
@@ -229,6 +230,16 @@ public struct TutorialCardPlacement: Sendable {
             Point(x: x, y: target.minY - gap - size.height),
             Point(x: target.maxX + gap, y: y),
             Point(x: target.minX - gap - size.width, y: y),
+        ]
+        // A step that has the player tap the map (its target is the map):
+        // first the map's top trailing corner, below the status pill and
+        // above the zoom buttons. Along the map's bottom, as below, the card
+        // stood over the middle of a phone's map, where the camera opens on
+        // the town to build in (TestFlight 54.1).
+        if let map, target == map {
+            candidates.append(Point(x: min(map.maxX - gap - size.width, available.maxX - size.width), y: map.minY + gap))
+        }
+        candidates += [
             // Inside a target as large as the map, along its bottom or
             // top: the rest of it stays free to tap.
             Point(x: x, y: target.maxY - gap - size.height),
