@@ -71,10 +71,16 @@ extension RailwayNetwork {
             if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.foulingLength) }
             return reach[a]?[b]
         }
-        for i in edges.indices {
-            for j in edges.indices where j > i {
-                guard changed.contains(edges[i].id) || changed.contains(edges[j].id),
-                      let boxA = boxes[i], let boxB = boxes[j], boxA.mayComeClose(to: boxB),
+        // Every pair, the lower index first, with a changed edge in it, once:
+        // each changed edge with every other edge, a pair of two changed
+        // edges from the lower one only. The pairs are worked out one by one
+        // and only add to sets, so their order does not matter.
+        let changedIndices = edges.indices.filter { changed.contains(edges[$0].id) }
+        let isChanged = Set(changedIndices)
+        for c in changedIndices {
+            for k in edges.indices where k != c && !(isChanged.contains(k) && k < c) {
+                let (i, j) = c < k ? (c, k) : (k, c)
+                guard let boxA = boxes[i], let boxB = boxes[j], boxA.mayComeClose(to: boxB),
                       let shapeA = shape(edges[i]), let shapeB = shape(edges[j])
                 else { continue }
                 let a = (edges[i], shapeA)
