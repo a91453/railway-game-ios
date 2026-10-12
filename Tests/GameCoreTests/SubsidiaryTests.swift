@@ -123,6 +123,74 @@ final class SubsidiaryTests: XCTestCase {
         XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 0)
     }
 
+    /// Decision 173, a later fix: a closed station draws no one, though a
+    /// train of the line still has it on its stops.
+    func testAClosedStationDrawsNoCustomers() throws {
+        var world = try makeWorld()
+        let store = try place(.departmentStore, 0, 3_200, in: &world)
+        XCTAssertGreaterThan(world.subsidiaryCustomers(of: store, onDay: 0), 0)
+        try world.setStationOperationMode(alpha, to: .closed)
+        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 0)
+    }
+
+    /// Decision 173, a later fix: a station every train of its line passes
+    /// draws no one. Express (Alpha, Beta, Gamma) has its only train on a
+    /// pattern calling at Beta and Gamma.
+    func testAStationEveryTrainPassesDrawsNoCustomers() throws {
+        var world = try makeWorld()
+        let store = try place(.departmentStore, 0, 3_200, in: &world)
+        try world.unassignTrain(one)
+        let express = try world.createLine(named: "Express", stops: [alpha, StationID(rawValue: 2), gamma]).id
+        let pattern = try world.addLinePattern(express, calling: [1, 2])
+        try world.assignTrain(one, to: express, pattern: pattern)
+        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 0)
+    }
+
+    /// Alpha, Beta and Gamma along a 60-tile line, Gamma 57 tiles east of
+    /// Alpha (beyond ``SubsidiaryRules/reach`` of the amusement park
+    /// south-east of Alpha) with `gammaTrips` a day, and Main calling at
+    /// all three with one train; the park.
+    private func longLineWorld(gammaTrips: Int64) throws -> (GameWorld, PlacedBuilding) {
+        let long = TestLine(tiles: 60)
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 65_536, height: 32_768), economy: GameEconomy(balance: 1_000_000_000, costs: testCosts), clock: GameClock(speed: .x10)
+        )
+        world.setEconomyMode(.management)
+        try long.build(in: &world)
+        try long.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try long.buildStation(named: "Beta", beside: 30, at: 0, in: &world)
+        try long.buildStation(named: "Gamma", beside: 58, at: 0, in: &world)
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: long.at(1, facingEast: true))
+        try world.createLine(named: "Main", stops: [alpha, StationID(rawValue: 2), gamma])
+        try world.assignTrain(one, to: main)
+        try world.setStationDemand(alpha, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        try world.setStationDemand(gamma, to: StationDemand(kind: .office, dailyTrips: gammaTrips))
+        let point = try XCTUnwrap(world.station(id: alpha)?.point)
+        let park = try world.placeBuilding(.amusementPark, at: PlanPoint(x: point.x + 3_600, y: point.y + 4_800))
+        return (world, park)
+    }
+
+    /// Decision 173, a later fix: an amusement park takes its 5‰ only of
+    /// the stops along the line a train calls at that take passengers:
+    /// not of a closed one, nor of one every train passes.
+    func testAnAmusementParkTakesNothingOfAStopAlongTheLineNoTrainServes() throws {
+        let (alone, _) = try longLineWorld(gammaTrips: 0)
+        var (world, park) = try longLineWorld(gammaTrips: 10_000)
+        let base = alone.subsidiaryCustomers(of: park, onDay: 0)
+        XCTAssertGreaterThan(base, 0)
+        XCTAssertGreaterThan(world.subsidiaryCustomers(of: park, onDay: 0), base, "Gamma along the line")
+
+        var closed = world
+        try closed.setStationOperationMode(gamma, to: .closed)
+        XCTAssertEqual(closed.subsidiaryCustomers(of: park, onDay: 0), base, "a closed stop")
+
+        try world.unassignTrain(one)
+        let pattern = try world.addLinePattern(main, calling: [0, 1])
+        try world.assignTrain(one, to: main, pattern: pattern)
+        XCTAssertEqual(world.subsidiaryCustomers(of: park, onDay: 0), base, "a stop every train passes")
+    }
+
     /// Two stores within 800 m share the customers.
     func testSubsidiariesOfAKindWithinReachShareTheCustomers() throws {
         var world = try makeWorld()

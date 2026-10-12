@@ -398,6 +398,8 @@ extension SavedGame: Codable {
         // subsidiary rows, as none traded.
         // Version 46 to 47: a world without `"tourism"` has no sights, and
         // its passengers are as they were.
+        // Version 47 to 48: a world without `"lineAccounts"` has them off,
+        // and keeps no line records or station flow, as none did.
         // Version 48 to 49: a world without `"rollingStockEconomics"` has it
         // off, and every train costs and weighs what it did.
         // Version 49 to 50: a world without `"cityRequests"` has none, and
