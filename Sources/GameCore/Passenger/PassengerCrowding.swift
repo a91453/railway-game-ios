@@ -106,13 +106,17 @@ extension PassengerRouteGraph {
 
     /// The ride segments `route` uses; `nil` if a leg is not on this graph.
     /// A line may call at a station twice (A B C A D): a leg boards at its
-    /// last call there before it gets off, as the shortest ride does.
+    /// last call there before it gets off, as the shortest ride does. A
+    /// line with runs (decision 149) has a path for each stretch, and
+    /// stretches may overlap: the leg is on the first that calls at `to`
+    /// after `from`.
     func segments(of route: PassengerRoute) -> [Segment]? {
         var result: [Segment] = []
         for leg in route.legs {
             guard let path = paths.indices.first(where: {
-                paths[$0].line == leg.line && paths[$0].pattern == leg.pattern && paths[$0].direction == leg.direction
-                    && paths[$0].stations.contains(leg.from)
+                guard paths[$0].line == leg.line, paths[$0].pattern == leg.pattern, paths[$0].direction == leg.direction,
+                      let first = paths[$0].stations.firstIndex(of: leg.from) else { return false }
+                return paths[$0].stations[(first + 1)...].contains(leg.to)
             }), let first = paths[path].stations.firstIndex(of: leg.from),
                   let to = paths[path].stations[(first + 1)...].firstIndex(of: leg.to),
                   let from = paths[path].stations[first..<to].lastIndex(of: leg.from) else { return nil }
