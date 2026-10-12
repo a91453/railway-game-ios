@@ -27,15 +27,6 @@ struct FleetOverviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        Picker(selection: $sort) {
-                            ForEach(FleetSort.allCases, id: \.self) { order in
-                                Text(verbatim: order.displayName(in: session.language)).tag(order)
-                            }
-                        } label: {
-                            Text(verbatim: session.language.text("Sort by", "排序"))
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityIdentifier("fleet.sort")
                         ForEach(session.world.fleet(sortedBy: sort, in: session.language)) { train in
                             trainRow(train)
                         }
@@ -47,6 +38,26 @@ struct FleetOverviewSheet: View {
             .navigationTitle(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Decision 179: in the bar, not a row of the list, so the
+                // rows (and the UI tests that tap them) stay where they were.
+                ToolbarItem(placement: .cancellationAction) {
+                    Menu {
+                        Picker(selection: $sort) {
+                            ForEach(FleetSort.allCases, id: \.self) { order in
+                                Text(verbatim: order.displayName(in: session.language)).tag(order)
+                            }
+                        } label: {
+                            Text(verbatim: session.language.text("Sort by", "排序"))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Sort", "排序"))
+                        } icon: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                    }
+                    .accessibilityIdentifier("fleet.sort")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         dismiss()
