@@ -5440,6 +5440,56 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
 
 **測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
+### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
+
+2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。
+
+**世界開關 `flexDispatch`**（`setFlexDispatch`，存檔 `"flexDispatch": true`）：新遊戲打開；舊存檔、golden、replay、示範地圖、挑戰與教學（平溪線、劉銘傳、高鐵示範）都關著，和決策 154、157、169、170 一樣。關著時一切照舊：只從第一站發車、反轉站序有列車時拒絕（`trainOnLine`）、乘客方向看時刻表前後半、沒有提示。理由：`ReplayFixtures/line-patterns.json` 的第 110 到 120 個指令裡有 `setLineStops(2, [4, 1, 5])`，把一列車留在不再是站的地方，以前它就停擺，現在會空車回送，檢查碼就變了；CLAUDE.md 不准重錄，所以舊世界要關著。以下的規則都是開關打開時的。
+
+**問題**：派車只接受停在路線第一站的列車。列車跑完一趟後，若路線的第一站已經不是它停的那一站（延伸首站、拆首站、在首站前插站、兩站路線移站、反轉站序），它就不會再被派出，整條線無聲停擺。決策 134 因此在有列車時拒絕反轉站序。
+
+1. **從哪裡發車**（`GameWorld.readyTrip`）：一列沒有服務、放在軌道上、速率大於 0 的列車，看它停在哪裡：
+   - 停在服務的第一站：和以前一樣（`trip(of:service:for:)`，這一段的程式、時間與預期值都沒動）。
+   - 停在服務的最後一站（不是環線）：從那裡發車，走「呼叫順序反過來」的來回：先跑回程那半趟到第一站，在那裡折返，再回到最後一站（`LineTrip` 用反過來的 `calls` 呼叫 `drive`；車站停靠、終點折返、月台與路徑偏好的規則都沒變，路徑偏好以 `(from, to)` 找，所以反向的腿照常套用）。這一趟結束在最後一站，列車在那裡又是「停在最後一站」，下一趟還是從那裡發車：線不會停，也不必有「下一趟先跑回程」的旗標，從列車站在哪裡就推得出來。
+   - 環線上停在任何一個停靠站：從那一站接著繞（`ServiceLine.ringCalls(_:from:)`，從那站起繞一圈回到那站），方向仍是列車自己的（`ringDirection(of:)`）。
+   - 停在別的車站（不在路線的兩端）：空車回送（第 3 項）。
+   - 不在任何車站（路上、站外）：不派，和以前一樣；`lineDispatchOutlook` 說「到不了」。
+   - 從末站發出的車排進同一個派車槽：和從第一站發的車共用班距（`lastDispatch`）、容量（同一個服務的 `running < planned.trains`），所以一條線的班距與列車數不因發車端而變。
+
+2. **班距、容量與環線的算法沒動**：`LineJourney`、`lineMaximumTrains`、`serviceRoundTrips` 都還用從第一站開的那一趟（來回的時間一樣）。
+
+3. **空車回送**（`GameWorld.deadheadTrip(of:service:for:)`）：列車停在某個車站，卻不是服務的任一端（延伸首站後它停在原來的首站、拆掉首站、第一站前插站），派車把它送到較近的一端：
+   - **較近的一端**用行駛時間比：兩端各試「照現在的方向」與「先折返」，每個走 `path(from:toStation:length:)` 的路徑，時間是路線性能（`line.performance`）在那段距離上的最小整秒（`RunningCurve.leastSeconds`，和 `LineJourney` 同一個）；取最短的，相同時第一站勝過最後一站、不折返勝過折返。
+   - **時刻表兩站**：停靠的車站（到站是現在，開車是現在加 `ServiceDwell.terminalMinimum`，先折返的標 `reverses`）和那一端（到站＝開車＝出發加行駛秒數）。服務的其他規則（路徑、行駛曲線、交通管制進路）都是一般服務的。
+   - **不載客、不收票**：`Train.isDeadheading`（存檔 `"deadhead": true`）的列車不上人（`boardingPlan` 回 `nil`）；沒有人在車上，所以也沒有人下車。
+   - **不占班距槽**：空車回送不呼叫 `recordDispatch`，所以不影響下一班正式發車的時間；它算「在跑的列車」（`running`），所以同一個服務的列車數還是不超過計畫。開在 `isDispatchDue(…, deadhead: true)`：視窗開著、這個等級有列車、還有空位，就馬上派（不等班距）。
+   - **成本**：和一般離站一樣記一次離站（`countDeparture`：每次離站 75、每台車公里 42，保養每公里 9），不收票價；回送的里程另外記在路線上（`ServiceLine.deadheadDistance`，世界單位，存檔 `"deadheadDistance"`，`GameWorld.lineDeadheadDistance(_:)` 查），給之後的「逐線營運報表」。
+   - **到了之後**：服務結束、旗標清掉，列車停在那一端，下一個派車步驟就從那裡正式發車（第 1 項）。
+   - **閒置快轉**：有空車回送的列車等著時，`minutesUntilNextDispatch` 在有空位的那一刻醒來（視窗開、等級變的時刻也算），一次推進與逐分鐘的結果相同（`FlexDispatchTests.testLongBatchesMatchSingleTicksWithAnEmptyRun`）。
+   - **交通管制**：和正式發車一樣先拿得到第一段進路才派（`readyTrain` 的 `firstDeparture`）。
+
+4. **乘客的方向**：以前看列車在時刻表的前半還是後半；決策 133 的班次已改成看路線站序。現在所有沒有班次的非環線都看站序：這一站與下一站在路線站序裡各只出現一次時，往大的方向是 outbound、往小的是 inbound（`Boarding.boardingPlan`、`ServiceLine.uniqueStop`），否則（站名重複的路線）用以前的規則。所以從末站發出的車、編輯過的路線上還在跑的舊班次，方向都對。沒有編輯過的路線，每一站的方向和以前一樣。環線的方向判斷（時刻表第二站是路線的下一站或最後一站）只用在從第一站起繞的班次，從別站起繞的看列車自己的方向。
+
+5. **編輯路線**：
+   - **已發車的列車跑完原本那趟**：列車帶著自己的時刻表，改站序不動它（和以前一樣）；下一趟才照新站序。
+   - **解除決策 134**：`reverseLineStops` 有列車也可以反轉。唯一還拒絕的是環線有列車正在跑服務（`trainServiceActive`，指出編號最小的那一列）：環線列車的方向是它在 `trains` 裡的順序，反轉會把行駛中的列車的方向換掉。
+   - **提示**（`GameWorld.dispatchNotice(of:in:)`，GamePresentation）：改站、移站、反轉後，成功的訊息後面接上列車的去向：「2 列車跑完這趟後從終點站 X 發車，先跑回程」「1 列車空車回送到 Y」「1 列車到不了路線的任何一端」；全部都從第一站發車時不多說。依據是唯讀的 `GameWorld.lineDispatchOutlook(_:)`（每台列車的 `TrainDispatchPlan`：`fromFirstStop`、`fromLastStop`、`runsEmpty(to:)`、`stranded`；跑著的列車算它跑完後停的那一站）。
+   - **FollowBar**：空車回送的列車狀態是「回送中」（`FollowBarInfo.Status.deadheading`）。
+   - **App 的路線面板**：「反轉站序」不再因為有列車而停用，只在環線有列車在跑時停用，說明也改了。
+
+6. **存檔 45、golden schema 67**：
+   - 存檔：世界多 `"flexDispatch"`（開著才寫）、列車多 `"deadhead": true`（只在空車回送時寫；沒有服務卻有標記是壞檔，拒絕）、路線多 `"deadheadDistance"`（大於 0 才寫）。只讀到 44 的 build 會丟掉它們，空車回送的列車會載客、里程也不記，所以升版。新的 `SaveFixtures/v45-flex-dispatch.json`（在空車回送途中存的）。
+   - golden schema 67：新指令 `setFlexDispatch`、`reverseLineStops`；最終狀態的 `flexDispatch: true`、列車可省略的 `deadhead`、路線可省略的 `deadheadDistance`。新的 `flex-dispatch.json`（手算，見 `GoldenScenarios/README.md`）。參考模型沒有彈性發車，所以不在它上面重播（同決策 133）。
+   - **既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有改**：開關關著它們一個值都不變（開關打開時 `ReplayFixtures/line-patterns.json` 的檢查碼 12 會變，所以才有開關）。
+
+7. **沒有採用**：
+   - `Train` 上「下一趟先跑回程」的旗標：從列車停在哪裡就推得出來。
+   - 在任一站折返（OpenTTD 的 orders 式彈性）：中途折返已有 V4d（交通管制下遇到無法前進的路時，在月台原地折返，`intermediateTurnbacks`）；這裡只做「兩端與環線任一站」，要不要再多，等實機玩過。
+   - 不在車站的列車空車回送：沒有時刻表可掛（時刻表的第一站必須是車站），停著不動，提示會說「到不了」。
+
+**測試**：`FlexDispatchTests`（開關關著一切照舊、末站發車、面向相反時折返、末站連續發車、反轉、跑到一半反轉、拆首站、首站前插站、較近的一端、到不了、里程與存檔、一次推進與逐分鐘相同）；決策 134 的既有測試沒有動（預設世界關著），`LineEditingCommandTests`、`RingLineTests`、`RouteEditingSessionTests` 另加開關打開時的反轉測試；`FlexDispatchTextTests`（提示與 FollowBar）；`SavedGameTests` 與 `FlexDispatchTests.testVersionFortyFiveKeepsAnEmptyRun`。
+
+**參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`、`Simulator/reference_snapshot`、`Railway/site_archive_clean`、`MapBuilder/reference_snapshot` 查過折返、回送、空車、任一端發車：沒有可用的（Ci 的地鐵車在終點彈回，不分班；`Railway/site_archive_clean/rail-3d/physical/dispatch.json` 的 `handoffs`（`matching-timetable-turnaround`）是真實時刻表裡「一班車到站後接下一班」的資料，決策 133 的回送班次用的是同一個想法）。OpenTTD 的 orders 只讀了概念（GPL，沒有複製程式碼）。程式是本專案自己的。
 
 ### 178. 載客量圖層與車站「即將進站」看板
 
@@ -5519,6 +5569,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 車門擁擠與臺鐵 EMU3000（決策 169）：App 的新遊戲打開 `doorCrowding`（存檔版本 44；示範地圖、挑戰與教學關掉），開門後上下車的時間乘上 `1 + 1.5 × 擁擠⁴`，擁擠是車上人數 ÷ 額定、與候車人數 ÷ 4,000 取大，最多 1.1（`DoorCrowding`）；滿載的六節單軌停站從 40 秒變 73 秒，A 型 48 秒，高鐵與 EMU3000 幾乎不變。車種多一個 `TrainType.emu3000`（每節 45 人 = 編組定員 538 ÷ 12，每側 2 門）。
 - 高鐵示範（決策 170）：開始畫面的「示範地圖 → 高鐵示範」是全台灣的新遊戲，蓋好了真實的高鐵（352 km、221 條三次曲線的邊、12 站，單線、地面、交通管制關掉）與 24 組高鐵車組（各站、九站、五站三個服務，班距 30、20、30 分鐘，每個方向一小時 7 班），07:00 開始、已經在跑；錢是新遊戲的錢加上它的費用（$52,120,000）。在背景建（`GameLauncher.openHighSpeedDemo`）。
 - 載客量圖層與即將進站看板（決策 178）：地圖圖層「載客量」把世界快取的旅客計畫（`plannedPassengerLegFlows()`）按小時分到各站到站區間的兩個方向，線寬 2–10 pt 依人流開根號、顏色依人流比運能（pow 0.72，淺藍到深藍，超過 100% 紅），點一段軌道看人流／運能；車站面板最上方可收合的「即將進站」依列車的時刻表與誤點列出每個方向接下來 6 班（`DepartureBoard`）。只讀、不存檔。
+- 彈性發車（決策 172）：App 的新遊戲打開 `flexDispatch`（存檔版本 45；示範地圖、挑戰與教學關掉）：列車從路線任一端發車（停在末站的先跑回程，環線從停靠的任一站續繞），停在別的車站的先空車回送到較近的一端（不載客、不收票、不占班距槽，里程記在路線的 `deadheadDistance`，FollowBar 說「回送中」）；已發車的列車跑完原本那趟；編輯路線後提示列車的去向；有列車也能反轉站序（決策 134 只在關著時留著，環線有列車在跑時仍不行）；乘客方向看路線站序。
 - 全島地圖（決策 88）：實景的「全台灣」是本島加澎湖、約 285.6 × 389.7 km 的世界，土地按需展開：以 1,024 m 的區塊（`LandBlock`）讀入，世界記下讀過的區塊（`landBlocks`，存檔版本 18），蓋站時讀入 2 km 內還沒讀的區塊。其他新遊戲還是 16 km、土地完整。
 - 年度節慶（決策 90）：劇本可以有每年同一天、在某站提高需求的節慶，提前公布，成為種類 festival 的需求事件；平溪線劇本的天燈節在十分與平溪。
 - 玩家建物（決策 92、94、95）：建築工具先選建地、看預覽，再按「建造」蓋小住宅、商店或辦公大樓（自由座標的正方形，不綁土地格），不能出界、重疊或離軌道（隧道除外）與車站不到 2 m。經營模式下建物是公司的資產：付樓地板 × $40 加占地 × 地價，30 年折舊；有車站服務時每個午夜住進居民與就業、帶來運量，收租金、付維護與土地資產稅；拆除付建造費的 10%；出售（決策 130）收目前的土地使用權 × 95% 加建物帳面價值 × 入住係數（半滿以上全額），已實現損益記在資本日，建物交給城市、人留在中心那一格。擋到的城市建物（格子中央 40 m 見方；決策 142 起新遊戲依密度 20–40 m）以 120% 收購並拆除，人搬進來，城市不再在那裡長；之後蓋的軌道（隧道除外）與車站穿過公司建物時付拆除費拆掉它。自由模式免費、不記帳。

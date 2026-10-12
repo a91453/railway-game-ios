@@ -102,6 +102,10 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the app's new games turn it on. Set by
     /// ``setDoorCrowding(_:)`` only.
     public internal(set) var doorCrowding: Bool = false
+    /// Whether a line sends its trains out from either end, and runs one
+    /// that stands elsewhere empty to an end (decision 172); off, only from
+    /// the first stop, as before. A new game turns it on.
+    public internal(set) var flexDispatch: Bool = false
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -1591,8 +1595,12 @@ public struct GameWorld: Equatable, Sendable {
     /// trip the line no longer takes leave, as after
     /// ``setLineStops(_:to:)``.
     ///
-    /// A line with trains can be reversed (decision 172, which ends decision
-    /// 134's refusal): a train sent out finishes its trip, and one that then
+    /// Without ``flexDispatch`` only a line with no trains can be reversed
+    /// (decision 134): a train sent out would finish its trip at what is
+    /// then the last stop, where the line never sends a train out, so
+    /// ``GameError/trainOnLine(_:)`` names the lowest numbered train. With
+    /// it, a line with trains can be reversed (decision 172, which ends
+    /// decision 134's refusal): a train sent out finishes its trip, and one that then
     /// stands at what is now the line's last stop is sent out from there,
     /// first back along the line. Only a ring with a train running a
     /// service is refused, as its trains' ways round are by their order
@@ -1603,7 +1611,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   train of a ring that runs a service.
     public mutating func reverseLineStops(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
-        if lines[index].isRing, let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
+        if !flexDispatch {
+            if let assigned = lines[index].assignedTrains.first { throw .trainOnLine(assigned) }
+        } else if lines[index].isRing, let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
             throw .trainServiceActive(running)
         }
         var line = lines[index]
@@ -2610,6 +2620,8 @@ public struct GameWorld: Equatable, Sendable {
         let trip: LineTrip?
         if isStopped(train, at: line.stops[calls[0]]) {
             trip = self.trip(of: line, service: service, for: train)
+        } else if !flexDispatch {
+            trip = nil
         } else if line.isRing, let stop = line.stops.indices.first(where: { isStopped(train, at: line.stops[$0]) }) {
             trip = self.trip(of: line, service: service, for: train, from: .ringStop(stop))
         } else if !line.isRing, isStopped(train, at: line.stops[calls[calls.count - 1]]) {
@@ -3745,7 +3757,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3845,6 +3857,7 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
+        flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3961,6 +3974,9 @@ extension GameWorld: Codable {
         }
         if doorCrowding {
             try container.encode(true, forKey: .doorCrowding)
+        }
+        if flexDispatch {
+            try container.encode(true, forKey: .flexDispatch)
         }
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
