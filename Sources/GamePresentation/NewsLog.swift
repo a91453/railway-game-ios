@@ -12,6 +12,8 @@ import GameCore
 /// What an item of the log is about; picks its icon.
 public enum NewsCategory: String, Codable, CaseIterable, Sendable {
     case advice, success, failure, goal, scenario, yearEnd, monthly, land, holiday, typhoon, fuel, growth, materials, debt, deadline
+    /// An achievement unlocked (decision 181).
+    case achievement
 
     /// The item's SF Symbol.
     public var symbolName: String {
@@ -31,6 +33,7 @@ public enum NewsCategory: String, Codable, CaseIterable, Sendable {
         case .materials: "shippingbox.fill"
         case .debt: "banknote.fill"
         case .deadline: "hourglass"
+        case .achievement: "rosette"
         }
     }
 
@@ -116,6 +119,9 @@ public struct NewsLog: Hashable, Codable, Sendable {
     /// The newest item the player has seen, 0 for none.
     private var readThrough: Int
     public var baseline: MonthlyBaseline?
+    /// Whether the game is one of the demos (decision 181): kept with the
+    /// save, so a demo continued later still unlocks no achievements.
+    public var isDemo = false
 
     public init() {
         items = []
@@ -160,7 +166,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
-        case version, items, nextID, readThrough, baseline
+        case version, items, nextID, readThrough, baseline, isDemo
     }
 
     private static let version = 1
@@ -187,6 +193,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
         self.nextID = nextID
         self.readThrough = readThrough
         baseline = try container.decodeIfPresent(MonthlyBaseline.self, forKey: .baseline)
+        isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -196,6 +203,7 @@ public struct NewsLog: Hashable, Codable, Sendable {
         try container.encode(nextID, forKey: .nextID)
         try container.encode(readThrough, forKey: .readThrough)
         try container.encodeIfPresent(baseline, forKey: .baseline)
+        if isDemo { try container.encode(isDemo, forKey: .isDemo) }
     }
 }
 
