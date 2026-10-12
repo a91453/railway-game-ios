@@ -175,3 +175,89 @@ extension GameWorld {
         )
     }
 }
+
+// The secretary room's forecast (decision 175): the next days' holidays,
+// weather, typhoons and fuel prices, all from GameCore's own queries.
+
+extension Weather {
+    /// The SF Symbol for the weather.
+    public var symbolName: String {
+        switch self {
+        case .clear: "sun.max.fill"
+        case .rain: "cloud.rain.fill"
+        case .thunderstorm: "cloud.bolt.rain.fill"
+        }
+    }
+}
+
+/// One day of the forecast.
+public struct ForecastDay: Hashable, Sendable {
+    public let date: GameDate
+    public let weather: Weather
+    /// The holiday running that day.
+    public let holiday: HolidayKind?
+    /// A typhoon blows that day.
+    public let typhoonBlowing: Bool
+    /// An announced typhoon arrives that day.
+    public let typhoonArrives: Bool
+    /// The day's energy cost in thousandths of its own (1000 is normal).
+    public let fuelIndex: Int64
+
+}
+
+extension GameWorld {
+    /// How many days ahead the forecast looks.
+    public static let forecastDays = 7
+
+    /// Today and the next `days - 1` days, or `[]` when the world has no
+    /// holidays or weather (``GameWorld/disruptions``).
+    public func forecast(days: Int = GameWorld.forecastDays) -> [ForecastDay] {
+        guard disruptions != nil else { return [] }
+        let today = clock.now.seconds / GameTime.secondsPerDay
+        // Only the typhoons announced by now are known.
+        let known = typhoons(onDay: today)
+        return (0..<Int64(max(0, days))).map { offset in
+            let day = today + offset
+            return ForecastDay(
+                date: GameDate(day: day), weather: weather(onDay: day),
+                holiday: holiday(onDay: day)?.holiday.kind,
+                typhoonBlowing: known.contains { $0.isActive(onDay: day) },
+                typhoonArrives: known.contains { $0.start == day },
+                fuelIndex: accounts.mode == .management ? fuelSpell(onDay: day)?.index ?? 1_000 : 1_000
+            )
+        }
+    }
+
+    /// Today's weather symbol: a typhoon over the map first, else the
+    /// weather; `nil` when the world has no weather.
+    public func todaySymbol() -> String? {
+        guard disruptions != nil else { return nil }
+        let today = clock.now.seconds / GameTime.secondsPerDay
+        if typhoons(onDay: today).contains(where: { $0.isActive(onDay: today) }) { return "tropicalstorm" }
+        return weather(onDay: today).symbolName
+    }
+
+    /// Today's holiday, for the label beside the clock.
+    public func todayHoliday() -> HolidayKind? {
+        holiday(onDay: clock.now.seconds / GameTime.secondsPerDay)?.holiday.kind
+    }
+}
+
+extension ForecastDay {
+    /// What the forecast says of the day, in a line: "Rain · Lunar New Year ·
+    /// typhoon blowing · energy +12%"; "Clear" when there is nothing else.
+    public func text(in language: DisplayLanguage) -> String {
+        var parts = [weather.title(in: language)]
+        if let holiday { parts.append(holiday.title(in: language)) }
+        if typhoonArrives {
+            parts.append(language.text("Typhoon arrives", "颱風來襲"))
+        } else if typhoonBlowing {
+            parts.append(language.text("Typhoon", "颱風"))
+        }
+        if fuelIndex != 1_000 {
+            let percent = (fuelIndex - 1_000) / 10
+            parts.append(language.text("Energy \(percent > 0 ? "+" : "")\(percent)%", "油電 \(percent > 0 ? "+" : "")\(percent)%"))
+        }
+        return parts.joined(separator: " · ")
+    }
+}

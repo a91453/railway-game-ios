@@ -17,6 +17,9 @@ struct ContentView: View {
     /// Saves the game and goes back to the start screen (Stage C4).
     let launcher: GameLauncher
     @Environment(GameAudio.self) private var audio
+    /// Decision 175: the secretary room's settings, kept on the device.
+    @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
+    @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Lives above the layout: rebuilding it must not discard the camera.
     @State private var mapCamera: PlanCamera?
     /// The open panel and the map's layer settings, above the layout for
@@ -49,6 +52,15 @@ struct ContentView: View {
                 panelSheet(panel)
             }
             .environment(screen)
+            .onAppear(perform: syncSecretarySettings)
+            .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
+            .onChange(of: monthlyReportMode) { _, _ in syncSecretarySettings() }
+            // Decision 175: a month that closes opens its report.
+            .onChange(of: session.monthEndReport) { _, report in
+                if report != nil, screen.panel == nil {
+                    screen.panel = .monthEnd
+                }
+            }
             // Phase 7a: a year that closes while playing opens its year-end
             // report, at once if no panel is open, else once the panel closes.
             .onChange(of: session.yearEndYear) { _, year in
@@ -71,6 +83,7 @@ struct ContentView: View {
                 // The report or the goals that were shown have been seen.
                 if old == .yearEnd { session.dismissYearEnd() }
                 if old == .goals { session.dismissScenarioEnd() }
+                if old == .monthEnd { session.dismissMonthEnd() }
                 guard new == nil, pendingReport != nil else { return }
                 // After the closing sheet has gone.
                 Task { @MainActor in
@@ -87,6 +100,7 @@ struct ContentView: View {
                 detailsChoice = true
             }
             .onChange(of: ObjectIdentifier(session)) { _, _ in
+                syncSecretarySettings()
                 mapCamera = nil
                 detailsChoice = nil
                 screen.stopPopTravelPlay()
@@ -102,7 +116,14 @@ struct ContentView: View {
     private var pendingReport: GameScreenState.Panel? {
         if session.scenarioJustEnded { return .goals }
         if session.yearEndYear != nil { return .yearEnd }
+        if session.monthEndReport != nil { return .monthEnd }
         return nil
+    }
+
+    /// Hands the device's secretary settings to the session.
+    private func syncSecretarySettings() {
+        session.pausesForImportantEvents = pausesForImportantEvents
+        session.monthlyReportMode = MonthlyReportMode(rawValue: monthlyReportMode) ?? .openAndPause
     }
 
     /// The open panel when it is one presented as a sheet; the panels
@@ -156,6 +177,12 @@ struct ContentView: View {
                 .presentationDetents([.medium, .large])
         case .goals:
             GoalsPanel(session: session)
+                .presentationDetents([.medium, .large])
+        case .news:
+            NewsLogView(session: session)
+                .presentationDetents([.medium, .large])
+        case .monthEnd:
+            MonthlyReportSheet(session: session)
                 .presentationDetents([.medium, .large])
         case .help:
             HelpView(language: session.language)
@@ -487,6 +514,11 @@ final class GameScreenState {
         case yearEnd
         /// The scenario's goals (decision 86), opened also when it ends.
         case goals
+        /// The news log (decision 175), opened by the HUD's bell or the
+        /// station master.
+        case news
+        /// A closed month's report (decision 175).
+        case monthEnd
         /// The help guide (decision 177), from the game menu.
         case help
 
@@ -497,7 +529,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .help: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .news, .monthEnd, .help: false
             }
         }
     }
@@ -539,4 +571,11 @@ final class GameScreenState {
         popTravelPlay = nil
         isPlayingPopTravel = false
     }
+}
+
+/// The keys of the secretary room's settings (decision 175), shared by the
+/// game screen and the settings: kept on the device with `@AppStorage`.
+enum SecretarySettings {
+    static let pauseKey = "secretary.pausesForImportantEvents"
+    static let monthlyKey = "secretary.monthlyReport"
 }
