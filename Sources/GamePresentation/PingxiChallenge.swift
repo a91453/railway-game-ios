@@ -84,6 +84,7 @@ public enum PingxiChallenge {
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         // Decision 174: but the Sky Lanterns of Pingxi are a sight tourists
         // come to (the only one on this map), by the festival's days and

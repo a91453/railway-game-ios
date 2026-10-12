@@ -153,6 +153,7 @@ extension GameWorld {
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)

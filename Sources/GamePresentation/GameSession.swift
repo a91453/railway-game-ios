@@ -1079,6 +1079,20 @@ public final class GameSession {
         }
     }
 
+    /// Sells train `id` back through `GameWorld.sellTrain(_:)` (decision
+    /// 180): 70 % of its books, and only a train off the track and off its
+    /// lines. A sold train that was selected or followed is let go.
+    public func sellTrain(_ id: TrainID) {
+        guard let train = world.train(id: id) else { return }
+        let quote = world.trainSaleQuote(id)
+        guard perform({ world throws(GameError) in
+            try world.sellTrain(id)
+            return language.text("Sold \(train.name) for \(quote.moneyText).", "已出售 \(train.name)，取得 \(quote.moneyText)。")
+        }) else { return }
+        if selectedTrainID == id { selectedTrainID = world.trains.first?.id }
+        if tappedTrainID == id { tappedTrainID = nil }
+    }
+
     /// Puts the selected train on a platform of the selected station on
     /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
     public func placeSelectedTrain() {
@@ -1167,12 +1181,18 @@ public final class GameSession {
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
+            let balance = world.economy.balance
             try world.setTrainType(train.id, to: type)
             if let performance = type?.performance, train.performance == .standard {
                 try world.setTrainPerformance(train.id, to: performance)
             }
             let text = Train.typeText(type, in: language)
             var said = language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+            // Decision 180: a change of type is a refit, paid for.
+            let refit = balance - world.economy.balance
+            if refit > .zero {
+                said += language.text(" The refit cost \(refit.moneyText).", "改裝費 \(refit.moneyText)。")
+            }
             if let id = world.assignedLine(of: train.id), try world.planAtHighSpeedWhenRunByHighSpeedSets(id),
                let line = world.line(id: id) {
                 said += language.nowHighSpeedText(line.name)

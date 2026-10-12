@@ -127,7 +127,10 @@ extension GameWorld {
             refuseLeftBehind(train, at: stop)
         }
         if let distance, let line = assignedLine(of: id) {
-            countDeparture(distance: distance, passengers: riderCount(of: id), seats: train.ratedCapacity, on: line)
+            countDeparture(
+                distance: distance, passengers: riderCount(of: id), seats: train.ratedCapacity, on: line,
+                operatingPermille: rollingStockEconomics ? RollingStock.pricing(of: train.type).operatingPermille : 1_000
+            )
         }
     }
 

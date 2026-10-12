@@ -5635,6 +5635,32 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureLineForDailyReport`、`flowDashboardReadLineOperatingDayFlow`、`flowDashboardGetLineBarRows`、`flowDashboardSortStationCards`、`flowDashboardFinalizeEndedSimDay`：每條線每天記運量與收支、取條列、依指定鍵排序。對照見 PR 描述。Ci 沒有票價按距離拆給各線的做法（它的票價是全公司的），所以拆分與最大餘數法是本專案自己的。外部：OpenTTD 的每車年度利潤只讀了概念（GPL，沒有複製程式碼）。
 
+### 180. 車輛經濟：依車種的價格與營運成本、改裝、出售列車
+
+2026-10-12，作者睡覺期間派工的「車輛經濟」（ROADMAP 的 P7-3）。號碼依工作登記 #231：決策 180、存檔版本 49、golden schema 71。
+
+**問題**：`purchaseTrain` 一律收 `costs.train`，`setTrainType` 免費，沒有賣車；所有車種同價同成本，16 節磁浮與 1 節輕軌一樣便宜，買錯車不能退。
+
+**世界開關 `rollingStockEconomics`**（`setRollingStockEconomics`，存檔 `"rollingStockEconomics": true`）：新遊戲打開；舊存檔、golden、replay、示範地圖、挑戰與教學（平溪線、劉銘傳、高鐵示範）都關著，它們量過的數字一個都不變。
+
+1. **價目表**（`RollingStock.swift`，`TrainType.pricing`，單位美分，這個專案自訂，參考庫沒有車輛價目表）：首節價／每加一節價／營運係數（‰）。標準車與 A、B、C $150k／$40k／1,000；L $90k／$25k／700；D $120k／$35k／1,300；STEAM $80k／$20k／1,400；APM $110k／$30k／800；單軌 $160k／$45k／1,000；雲軌 $170k／$50k／1,000；磁浮 $600k／$150k／1,800；高鐵 $900k／$120k／2,000；EMU3000 $260k／$55k／1,200。派工建議的「高鐵性能能源 +40%」沒有另做：高鐵車種的 2,000‰ 已經涵蓋；每節每日維修費也沒有另列，併入「節數 × 係數」的權重（見第 3 項）。
+2. **買、加節、改裝、出售**：
+   - 購車收該車種首節價（`purchaseTrain(named:as:)` 直接買指定車種，不會先買標準車再付改裝費；沒有指定的是時代的第一種車種或標準車）；加一節收該車種的每節價。
+   - `setTrainType` 換車種付改裝費＝新車種「首節價＋(節數−1)×每節價」的 30 %（捨去），算進列車資產的成本（資本支出）；同車種不收。
+   - 新指令 `sellTrain`（任何世界都可用）：列車必須離開軌道、沒有配屬路線、沒有服務（`Train.execution == nil`，空車回送中的列車有服務，所以算在營運中），否則新錯誤 `trainInService`。售價＝列車紀錄與車廂紀錄各自帳面價值的 70 %（捨去），照決策 130 的 `sellAsset` 記 `saleProceeds`、`saleBookValue`，處分損益實現；自由模式沒有帳也沒有收入。ID 不再發放，列車自己帶著時刻表所以一起消失。
+3. **營運成本**：`FixedAssets.trainWeight`（千分之一標準列車）。關著時＝「各服務同時最多列車數」× 1,000，和以前逐位元相同（算式乘 1,000，舊值不變）。打開時＝路線上每一列列車（所有服務的配屬名單）的 `節數 × 營運係數`；**未配屬路線的閒置列車不付營運成本（維持舊行為）**；配屬了但目前不在服務班次內的列車照付（它是車隊）。人事 480、能源 360、保養 8（每小時）都乘這個權重；每次離站的車公里再乘該車種的係數（`countDeparture(operatingPermille:)`，不乘節數）。每日能源的列與其明細改成各自進位後相加（關著時結果與以前相同）。
+4. **介面**：配車（`LineStaffing`）可選車種（預設依路線；高鐵路線預設高鐵車組）與節數，顯示每列價格與在線上每日成本；`GameSession.reformSelectedLine` 整線改編組：對配屬、沒有服務的列車依序下線、換車種節數、重新放到起點、重新配屬到原本的服務，做不到的（正在行駛、放不回去、錢不夠）保持原樣並說明原因；`TrainControls` 的車種選單每項附每節容量、價格、每日成本、最高速度；`FleetOverviewSheet` 對可出售的列車有出售鈕（先確認）。
+5. **存檔 49、golden schema 71**：存檔只多世界的 `"rollingStockEconomics"`（開著才寫，沒有欄位的舊存檔關著）。golden 新指令 `setRollingStockEconomics`、`setTrainType`、`sellTrain`，新結果 `trainInService`，最終狀態的 `rollingStockEconomics: true`；新的 `rolling-stock-economics.json`（手算，`tools/golden-checks/rolling_stock.py` 獨立檢查）。**既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有改**。
+6. **與逐線報表（決策 179，存檔 48）接上**：`FixedAssets.LineAssets.trainWeight` 是每條線的列車權重（關著時＝車數 × 1,000）；`settleLineHour` 的保養拆分用權重（公司整元數不動），`settleLineDay` 的列車能源與列車人事（`trainStaff`）依權重拆（最大餘數法），所以各線仍然加起來等於公司的一天（`LineAccountsTests`、`RollingStockEconomicsTests.testLinesStillAddUpToTheCompanyWithWeightedTrains`）。線上的車公里維持真實距離（只有公司的車公里乘車種係數），所以營運費的線間拆分仍按真實距離；出售列車的收入不分到線。
+
+**平衡**（`BalanceReportTests`，60 天，新遊戲兩鎮之間的線，一列四節）：見 ROADMAP 的待觀察表。前期現金沒有被車價卡死：起始資金買得起 4 節標準車。
+
+**沒有採用**：每節每日維修費另列一項；配屬前的閒置列車也付營運成本（會懲罰先買後配）。
+
+**測試**：`RollingStockEconomicsTests`、`RollingStockSessionTests`、`GoldenScenarioTests`。
+
+**參考**（`a91453/railway-reference-private`）：見 PR 的對照表。
+
 ### 178. 載客量圖層與車站「即將進站」看板
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
@@ -5804,6 +5830,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 車輛經濟（決策 180）：App 的新遊戲打開 `rollingStockEconomics`（存檔版本 49；示範地圖、挑戰與教學關掉）：列車依車種與節數計價，改車種付新車種價格的 30 %，`sellTrain` 取回帳面價值的 70 %（列車必須離軌、離線、沒有服務，否則 `trainInService`），路線上列車的人事、能源、保養依 節數 × 車種係數 計，車公里依車種係數計。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；35 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。
 

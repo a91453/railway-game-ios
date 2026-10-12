@@ -50,6 +50,7 @@ extension RealWorldDemo {
             world.setOutsideConnections(false)
             // Decision 169: nor do its dwells lengthen in a crowd.
             world.setDoorCrowding(false)
+            world.setRollingStockEconomics(false)
             world.setFlexDispatch(false)
             // Decision 174: nor do tourists come to its sights.
             world.setTourism(nil)

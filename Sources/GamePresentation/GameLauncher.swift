@@ -378,6 +378,7 @@ public final class GameLauncher {
         // by a crowd at the doors.
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)

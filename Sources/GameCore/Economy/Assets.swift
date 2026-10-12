@@ -336,6 +336,20 @@ extension GameWorld {
         }
     }
 
+    /// Adds `cost` to the cost on the books of the record of `kind` owned
+    /// by `owner` (decision 180: a train's refit), or records it as a new
+    /// asset if there is none. A managed company only.
+    mutating func capitalizeAsset(_ kind: AssetRecord.Kind, owner: Int, cost: Money) {
+        guard accounts.mode == .management, cost > .zero else { return }
+        guard let index = accounts.assets.firstIndex(where: { $0.kind == kind && $0.owner == owner }) else {
+            acquireAsset(kind, owner: owner, cost: cost)
+            return
+        }
+        let room = CompanyAccounts.maximumAssetCost - accounts.totalAssetCost
+        accounts.assets[index].cost = accounts.assets[index].cost + Money(max(0, min(cost.amount, room)))
+        accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + cost }
+    }
+
     /// Removes the record of the track edge or station gone, writing off
     /// its book value for a managed company: removal refunds nothing.
     mutating func disposeAsset(_ kind: AssetRecord.Kind, owner: Int) {

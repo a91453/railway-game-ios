@@ -324,7 +324,7 @@ extension GameWorld {
             (75 * tally.departures + 18 * entry.stations) * km + 42 * tally.trainDistance
         })
         let maintenanceShares = LineAccounts.apportion(maintenance.amount / 100, by: zip(owned, pendings).map { entry, tally in
-            12 * entry.routeLength + 9 * tally.trainDistance + 8 * entry.trains * km
+            (12 * entry.routeLength + 9 * tally.trainDistance) * 1_000 + 8 * entry.trainWeight * km
         })
         for (index, entry) in owned.enumerated() {
             var tally = pendings[index]
@@ -339,15 +339,16 @@ extension GameWorld {
 
     /// The day ending is settled: each line's share of the day's energy
     /// and its own staff.
-    mutating func settleLineDay(day: Int64, assets: FixedAssets, routeEnergy: Money, trainEnergy: Money) {
+    mutating func settleLineDay(day: Int64, assets: FixedAssets, routeEnergy: Money, trainEnergy: Money, trainStaff: Money) {
         guard var book = lineAccounts else { return }
         let owned = assets.lines
         let routeShares = LineAccounts.apportion(routeEnergy.amount / 100, by: owned.map(\.routeLength))
-        let trainShares = LineAccounts.apportion(trainEnergy.amount / 100, by: owned.map(\.trains))
+        let trainShares = LineAccounts.apportion(trainEnergy.amount / 100, by: owned.map(\.trainWeight))
+        let staffShares = LineAccounts.apportion(trainStaff.amount / 100, by: owned.map(\.trainWeight))
         for (index, entry) in owned.enumerated() {
             var tally = LineTally()
             tally.energyCost = Money((routeShares[index] + trainShares[index]) * 100)
-            tally.staffCost = Money((620 * entry.stations + 480 * entry.trains) * 100)
+            tally.staffCost = Money((620 * entry.stations + staffShares[index]) * 100)
             book.lines[book.index(of: entry.id)].record(tally, day: day)
         }
         lineAccounts = book
