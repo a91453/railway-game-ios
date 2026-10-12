@@ -43,6 +43,9 @@ struct StationMasterCorner: View {
     let session: GameSession
     /// The most width the bubble may take.
     let maxBubbleWidth: CGFloat
+    /// Under a panel beside the map: shows nothing, but stays, so it
+    /// remembers what it has said.
+    var isCovered = false
     @State private var isTalking = false
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
@@ -54,8 +57,33 @@ struct StationMasterCorner: View {
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
+    /// The avatar's side.
+    static let avatarSize: CGFloat = 44
 
     var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            if !isCovered {
+                corner
+            }
+        }
+        .onChange(of: session.stationMasterRefreshKey, initial: true) {
+            advice = StationMasterAdvice(world: session.world)
+        }
+        .onChange(of: advice, initial: true) { _, advice in
+            if advice == nil { isTalking = false }
+            sayIfNew(advice)
+        }
+        // Advice that came while a side panel left no room for the bubble
+        // is said once the room is back.
+        .onChange(of: hasRoom) { _, _ in sayIfNew(advice) }
+        .task(id: talk) {
+            try? await Task.sleep(for: Self.speakingTime)
+            guard !Task.isCancelled else { return }
+            isTalking = false
+        }
+    }
+
+    private var corner: some View {
         HStack(alignment: .bottom, spacing: 8) {
             Button {
                 if isTalking {
@@ -70,7 +98,7 @@ struct StationMasterCorner: View {
                     talk &+= 1
                 }
             } label: {
-                StationMasterAvatar(size: 44, mood: mood(advice))
+                StationMasterAvatar(size: Self.avatarSize, mood: mood(advice))
                     // Decision 122: a hop each time it speaks, not with
                     // Reduce Motion.
                     .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : talk) { content, lift in
@@ -120,21 +148,6 @@ struct StationMasterCorner: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
-        .onChange(of: session.stationMasterRefreshKey, initial: true) {
-            advice = StationMasterAdvice(world: session.world)
-        }
-        .onChange(of: advice, initial: true) { _, advice in
-            if advice == nil { isTalking = false }
-            sayIfNew(advice)
-        }
-        // Advice that came while a side panel left no room for the bubble
-        // is said once the room is back.
-        .onChange(of: hasRoom) { _, _ in sayIfNew(advice) }
-        .task(id: talk) {
-            try? await Task.sleep(for: Self.speakingTime)
-            guard !Task.isCancelled else { return }
-            isTalking = false
-        }
     }
 
     /// Whether the bubble has the width it needs to show.

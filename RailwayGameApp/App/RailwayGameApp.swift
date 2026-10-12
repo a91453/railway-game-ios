@@ -134,6 +134,11 @@ struct RailwayGameApp: App {
                     try manager.removeItem(at: directory)
                 }
                 try manager.createDirectory(at: directory, withIntermediateDirectories: true)
+                // A save that cannot be read, which the list must still let
+                // the player delete.
+                if DebugLaunch.isSet("-broken-save") {
+                    try Data("not a save".utf8).write(to: directory.appendingPathComponent("save-broken.json"))
+                }
                 return SaveLibrary(directory: directory)
             } catch {
                 // Never fall back to the player's library if isolation fails.

@@ -166,6 +166,43 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         assertEmptyStart(in: app)
     }
 
+    /// A save that cannot be read is listed so that it can be deleted
+    /// (``GameLauncher/otherSaves``): its row cannot load, but its swipe
+    /// must still offer Delete (bug hunt 3, domain D).
+    func testAnUnreadableSaveCanBeDeleted() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-broken-save", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        // On a phone on its side Saved Games lies below the screen, in the
+        // start screen's column beside the title, which the shared helper
+        // did not find (run 38260619251): drag that column at the button's
+        // own x until it can be tapped.
+        let saves = app.buttons["start.savedGames"]
+        XCTAssertTrue(saves.waitForExistence(timeout: 10), "An unreadable save is still listed")
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !saves.isHittable {
+            let x = saves.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        XCTAssertTrue(saves.isHittable, "Saved Games can be brought into view: \(saves.frame)")
+        saves.tap()
+        let row = app.buttons["saves.row.save-broken.json"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "The unreadable save is listed")
+        row.swipeLeft()
+        let delete = app.buttons["Delete"].firstMatch
+        if !delete.waitForExistence(timeout: 5) { row.swipeLeft() }
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "Swiping the unreadable save must offer Delete")
+        delete.tap()
+        let confirm = app.buttons["saves.delete.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Deleting asks first")
+        confirm.tap()
+        XCTAssertTrue(row.waitForNonExistence(timeout: 10), "The unreadable save is gone from the list")
+    }
+
     private func assertEmptyStart(in app: XCUIApplication) {
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.demoMap", in: app)
