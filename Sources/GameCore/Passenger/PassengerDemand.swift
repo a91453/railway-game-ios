@@ -545,14 +545,7 @@ extension GameWorld {
     /// every departure and which no plan reads: otherwise the plan was
     /// worked out again after almost every departure.
     func passengerPlanKey() -> PassengerPlanKey {
-        let planned = lines.map { line in
-            var line = line
-            line.lastDispatch = nil
-            line.outerLastDispatch = nil
-            line.runDays = []
-            for index in line.patterns.indices { line.patterns[index].lastDispatch = nil }
-            return line
-        }
+        let planned = lines.map(\.withoutDispatchTimes)
         return PassengerPlanKey(
             lines: planned, stations: stations, network: network, trafficControl: isTrafficControlEnabled,
             trains: trains.map(\.id), trainLengths: trains.map(\.length),
