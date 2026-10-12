@@ -78,9 +78,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         liu.tap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The challenge starts")
         // The game opens at midnight, when the map is tinted for the night
-        // (decision 182), and its tiles are slow to come in: at 600 times
-        // the clock reaches the day in a minute and a half.
-        settle(seconds: 90)
+        // (decision 182), and its tiles are slow to come in: by the light of
+        // day they have.
+        waitForClock(from: 9, before: 17, in: app)
+        settle(seconds: 2)
         keep("liu-mingchuan", app)
     }
 
@@ -95,7 +96,8 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("real-world-demo", app)
 
         // The same map by day: the demo opens at midnight, its stations lit.
-        settle(seconds: 90)
+        waitForClock(from: 9, before: 17, in: app)
+        settle(seconds: 2)
         keep("real-world-demo-day", app)
     }
 
@@ -112,11 +114,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 8)
         keep("high-speed-demo", app)
 
-        // It opens on the whole line (the map opens on what is built); a
-        // closer look at the middle of it, a few steps in.
+        // It opens on what is built, but the north end of the line lies
+        // under the clock: a step out for the whole line, then three steps
+        // in from the opening view for a closer look at the middle of it.
+        let zoomOut = app.buttons["縮小"]
         let zoomIn = app.buttons["放大"]
-        if zoomIn.waitForExistence(timeout: 10), zoomIn.isHittable {
-            for _ in 0..<3 {
+        if zoomOut.waitForExistence(timeout: 10), zoomOut.isHittable, zoomIn.isHittable {
+            zoomOut.tap()
+            settle(seconds: 3)
+            keep("high-speed-demo-whole", app)
+            for _ in 0..<4 {
                 zoomIn.tap()
                 settle(seconds: 1)
             }
@@ -150,22 +157,36 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 120), "The scene opens")
         settle()
 
+        // The lines open on a form for a new one: the panel is scrolled to
+        // the lines' reports, which are in a list that builds a row as it
+        // is scrolled to (the panel's own list: `ToolbarSmokeTests`).
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        settle(seconds: 3)
+        let bar = app.navigationBars["路線"].firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The lines panel opens")
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A line's report comes into view")
+        settle(seconds: 2)
         keep("line-report", app)
 
-        // The panel out of the map's way, then the layer: the riders on
-        // each stretch of track against what its trains carry.
-        let toggle = app.buttons["controls.toggle"]
-        if toggle.exists, toggle.isHittable {
-            toggle.tap()
+        // The panel closed, then the layer: the riders on each stretch of
+        // track against what its trains carry.
+        let done = bar.buttons["完成"]
+        if done.exists, done.isHittable {
+            done.tap()
             settle()
         }
         let layers = app.buttons["map.layers"]
         layers.waitUntilSettled()
         layers.tap()
+        // The layer is the last of the sheet's rows, below long notes: out
+        // to the end of the list first.
+        for _ in 0..<4 {
+            app.swipeUp()
+            settle(seconds: 1)
+        }
         let row = app.switches["layer.sectionFlow"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(row), "The passenger load row comes into view")
         let load = row.switches.firstMatch
@@ -186,9 +207,8 @@ final class WebsiteScreenshotTests: XCTestCase {
     }
 
     /// The secretary's room (decision 175) on a blank new game: the
-    /// forecast of the next seven days under the clock, and the news log
-    /// behind the bell.
-    func testForecastAndNews() {
+    /// forecast of the next seven days under the clock.
+    func testForecast() {
         let app = launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
@@ -203,14 +223,6 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["hud.forecast"].firstMatch.waitForExistence(timeout: 10), "The forecast opens")
         settle()
         keep("forecast", app)
-        // A tap on the map, clear of the controls, closes the popover.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.3)).tap()
-        settle()
-
-        tapButton("hud.news", in: app)
-        XCTAssertTrue(app.buttons["news.done"].waitForExistence(timeout: 10), "The news log opens")
-        settle(seconds: 3)
-        keep("news-log", app)
     }
 
     /// The sights of the whole of Taiwan (decision 174): their stars on the
@@ -222,15 +234,19 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(realWorld.waitForExistence(timeout: 10))
         app.bringStartButtonIntoView(realWorld)
         tapButton("start.realWorld", in: app, timeout: 60)
-        // Below Taiwan's places, and enabled once the population is read.
+        // The whole of Taiwan is offered below Taiwan's places, in a list
+        // that builds a row as it is scrolled to, and is enabled once the
+        // population is read.
+        XCTAssertTrue(app.buttons["place.tra-taipei"].waitForExistence(timeout: 30), "The places are listed")
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
-        XCTAssertTrue(wholeTaiwan.waitForExistence(timeout: 30), "The whole of Taiwan is offered")
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(wholeTaiwan), "The button comes into view")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(wholeTaiwan), "The whole of Taiwan comes into view")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: wholeTaiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         wholeTaiwan.tap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 120), "The game starts")
-        settle(seconds: 5)
+        // By the light of day, the stars over the island.
+        waitForClock(from: 9, before: 17, in: app)
+        settle(seconds: 3)
         keep("tourism-map", app)
 
         openFromGameMenu("menu.tourism", in: app)
@@ -263,6 +279,26 @@ final class WebsiteScreenshotTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    /// Waits until the game's clock reads from `start` o'clock to before
+    /// `end`, for a screenshot by the light of day: the games open at
+    /// midnight, when the map is tinted for the night (decision 182), and
+    /// how fast the clock goes depends on the game and the runner.
+    private func waitForClock(from start: Int, before end: Int, in app: XCUIApplication, timeout: TimeInterval = 400) {
+        let clock = app.buttons["hud.time"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if clock.exists, let hour = Self.hour(in: clock.label), hour >= start, hour < end { return }
+            Thread.sleep(forTimeInterval: 3)
+        }
+        XCTFail("The clock never read \(start) to \(end) o'clock")
+    }
+
+    /// The hour in a clock's label, "… 06:26".
+    private static func hour(in label: String) -> Int? {
+        guard let time = label.range(of: "[0-9]{1,2}:[0-9]{2}", options: .regularExpression) else { return nil }
+        return Int(label[time].split(separator: ":")[0])
     }
 
     /// Opens `item` of the game menu's "More" submenu. The clock is paused
