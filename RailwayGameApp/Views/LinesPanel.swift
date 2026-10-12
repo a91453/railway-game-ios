@@ -186,15 +186,19 @@ struct LinesPanel: View {
         return Section {
             ForEach(Array(day.bands.enumerated()), id: \.offset) { index, band in
                 VStack(alignment: .leading, spacing: 4) {
-                    Picker(selection: Binding(get: { band.level }, set: { session.setServiceDayBand(index, to: $0) })) {
-                        ForEach(ServiceLevel.allCases, id: \.self) { level in
-                            Text(level.title(in: language)).tag(level)
+                    // Decision 184, later: a menu the ticks leave alone.
+                    let bandText = day.bandText(index, in: language)
+                    TickStable(StableKey(index, band.level, bandText, language)) {
+                        Picker(selection: Binding(get: { band.level }, set: { session.setServiceDayBand(index, to: $0) })) {
+                            ForEach(ServiceLevel.allCases, id: \.self) { level in
+                                Text(level.title(in: language)).tag(level)
+                            }
+                        } label: {
+                            Text(verbatim: bandText)
+                                .monospacedDigit()
                         }
-                    } label: {
-                        Text(verbatim: day.bandText(index, in: language))
-                            .monospacedDigit()
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
                     if index > 0 {
                         Stepper(
                             onIncrement: ServiceDayEditing.canMove(index, later: true, in: day)
@@ -303,35 +307,39 @@ struct LinesPanel: View {
     }
 
     private var lineSortMenu: some View {
-        Menu {
-            Button {
-                lineSort = nil
-            } label: {
-                Label {
-                    Text(verbatim: session.language.text("Made order", "建立順序"))
-                } icon: {
-                    Image(systemName: lineSort == nil ? "checkmark" : "")
-                }
-            }
-            ForEach(LineReportSort.allCases, id: \.self) { order in
+        let language = session.language
+        // Decision 184, later: a menu the ticks leave alone.
+        return TickStable(StableKey(lineSort, language)) {
+            Menu {
                 Button {
-                    lineSort = order
+                    lineSort = nil
                 } label: {
                     Label {
-                        Text(verbatim: order.displayName(in: session.language))
+                        Text(verbatim: language.text("Made order", "建立順序"))
                     } icon: {
-                        Image(systemName: lineSort == order ? "checkmark" : "")
+                        Image(systemName: lineSort == nil ? "checkmark" : "")
                     }
                 }
+                ForEach(LineReportSort.allCases, id: \.self) { order in
+                    Button {
+                        lineSort = order
+                    } label: {
+                        Label {
+                            Text(verbatim: order.displayName(in: language))
+                        } icon: {
+                            Image(systemName: lineSort == order ? "checkmark" : "")
+                        }
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Sort: \(lineSort?.displayName(in: language) ?? language.text("Made order", "建立順序"))", "排序：\(lineSort?.displayName(in: language) ?? language.text("Made order", "建立順序"))"))
+                } icon: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
             }
-        } label: {
-            Label {
-                Text(verbatim: session.language.text("Sort: \(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))", "排序：\(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))"))
-            } icon: {
-                Image(systemName: "arrow.up.arrow.down")
-            }
+            .accessibilityIdentifier("lines.sort")
         }
-        .accessibilityIdentifier("lines.sort")
     }
 
     private func lineRow(_ line: ServiceLine) -> some View {
@@ -421,34 +429,38 @@ struct LinesPanel: View {
                 }
                 .accessibilityIdentifier("line.rename")
                 Spacer()
-                Menu {
-                    Button {
-                        session.setSelectedLineColor(nil)
-                    } label: {
-                        Text(verbatim: session.language.text("Automatic", "自動"))
-                    }
-                    ForEach(LineColor.presets, id: \.self) { color in
+                // Decision 184, later: a menu the ticks leave alone.
+                let language = session.language
+                TickStable(StableKey(line.id, line.color, language)) {
+                    Menu {
                         Button {
-                            session.setSelectedLineColor(color)
+                            session.setSelectedLineColor(nil)
                         } label: {
-                            Label {
-                                Text(verbatim: color.hexText)
-                            } icon: {
-                                Image(systemName: line.color == color ? "checkmark.circle.fill" : "circle.fill")
+                            Text(verbatim: language.text("Automatic", "自動"))
+                        }
+                        ForEach(LineColor.presets, id: \.self) { color in
+                            Button {
+                                session.setSelectedLineColor(color)
+                            } label: {
+                                Label {
+                                    Text(verbatim: color.hexText)
+                                } icon: {
+                                    Image(systemName: line.color == color ? "checkmark.circle.fill" : "circle.fill")
+                                }
+                                .tint(Palette.color(color))
                             }
-                            .tint(Palette.color(color))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Colour", "顏色"))
+                        } icon: {
+                            Circle()
+                                .fill(Palette.lineColor(line.id, custom: line.color))
+                                .frame(width: 16, height: 16)
                         }
                     }
-                } label: {
-                    Label {
-                        Text(verbatim: session.language.text("Colour", "顏色"))
-                    } icon: {
-                        Circle()
-                            .fill(Palette.lineColor(line.id, custom: line.color))
-                            .frame(width: 16, height: 16)
-                    }
+                    .accessibilityIdentifier("line.color")
                 }
-                .accessibilityIdentifier("line.color")
             }
             .buttonStyle(.borderless)
             Button(line.window == .allDay ? "Run 06:00–24:00 Instead" : "Run All Day") {
@@ -488,6 +500,7 @@ struct LinesPanel: View {
             PerformanceMenu(performance: line.performance, language: session.language) { performance in
                 session.setSelectedLinePerformance(performance)
             }
+            .equatable()
             // Decision 168: planned at high speed, a line is a high-speed
             // line: what that pays and fills it with. There is no switch; a
             // high-speed set put on a line that runs nothing else does the
@@ -643,26 +656,33 @@ struct LinesPanel: View {
             let pair = pairs[index]
             let selected = preferences.first { $0.from == pair.0 && $0.to == pair.1 }
             let choices = session.world.lineRouteChoices(line.id, from: pair.0, to: pair.1, pattern: pattern)
-            Menu {
-                Button("Automatic physical path") {
-                    session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
-                }
-                ForEach(choices.indices, id: \.self) { choice in
-                    Button(routeChoiceText(choices[choice])) {
-                        session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+            // Decision 184, later: drawn from these values alone, so a
+            // running game's ticks leave the open menu alone.
+            let choiceTexts = choices.map(routeChoiceText)
+            let selectedText = selected.map(routeChoiceText)
+            let leg = "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))"
+            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg)) {
+                Menu {
+                    Button("Automatic physical path") {
+                        session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
                     }
-                    .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                    ForEach(choices.indices, id: \.self) { choice in
+                        Button(choiceTexts[choice]) {
+                            session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+                        }
+                        .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: leg)
+                        if let selectedText { Text(selectedText).font(.caption) }
+                        else { Text("Automatic physical path").font(.caption) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))")
-                    if let selected { Text(routeChoiceText(selected)).font(.caption) }
-                    else { Text("Automatic physical path").font(.caption) }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
             }
-            .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
         }
     }
 
@@ -706,32 +726,43 @@ struct LinesPanel: View {
                         .monospacedDigit()
                 }
             }
-            Menu {
-                Button("By train count") {
-                    session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
-                }
-                ForEach(Self.targets, id: \.self) { minutes in
-                    Button(headwayText(minutes: minutes, in: session.language)) {
-                        session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+            // Decision 184, later: a menu the ticks leave alone.
+            let language = session.language
+            TickStable(StableKey(level.level, pattern, target, language)) {
+                Menu {
+                    Button("By train count") {
+                        session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
                     }
+                    ForEach(Self.targets, id: \.self) { minutes in
+                        Button(headwayText(minutes: minutes, in: language)) {
+                            session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+                        }
+                    }
+                } label: {
+                    Label(targetHeadwayText(target, in: language), systemImage: "clock.arrow.circlepath")
+                        .font(.caption)
                 }
-            } label: {
-                Label(targetHeadwayText(target, in: session.language), systemImage: "clock.arrow.circlepath")
-                    .font(.caption)
             }
         }
     }
 
     private func addPatternSection(_ line: ServiceLine) -> some View {
-        Section {
-            Picker("From", selection: $patternFirst) {
-                ForEach(line.stops.indices, id: \.self) { index in
-                    Text(name(of: line.stops[index])).tag(index)
+        // Decision 184, later: menus drawn from the stops' names alone, so
+        // a running game's ticks leave an open one alone.
+        let names = line.stops.map { name(of: $0) }
+        return Section {
+            TickStable(StableKey(names, patternFirst)) {
+                Picker("From", selection: $patternFirst) {
+                    ForEach(names.indices, id: \.self) { index in
+                        Text(names[index]).tag(index)
+                    }
                 }
             }
-            Picker("To", selection: $patternLast) {
-                ForEach(line.stops.indices, id: \.self) { index in
-                    Text(name(of: line.stops[index])).tag(index)
+            TickStable(StableKey(names, patternLast)) {
+                Picker("To", selection: $patternLast) {
+                    ForEach(names.indices, id: \.self) { index in
+                        Text(names[index]).tag(index)
+                    }
                 }
             }
             Toggle("Non-stop: call at the two ends only", isOn: $patternExpress)
@@ -764,29 +795,33 @@ struct LinesPanel: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("line.staff.headway")
             // Decision 180: the type and the cars of the trains it buys.
-            Menu {
-                Button {
-                    staffType = nil
-                } label: {
-                    Text(verbatim: language.text("Line's default", "依路線預設"))
-                }
-                ForEach(session.world.offeredTrainTypes, id: \.self) { candidate in
+            // Decision 184, later: a menu the ticks leave alone.
+            let types = session.trainTypeCardChoices
+            TickStable(StableKey(types, staffType, language)) {
+                Menu {
                     Button {
-                        staffType = candidate
+                        staffType = nil
                     } label: {
-                        Text(verbatim: Train.typeText(candidate, in: language))
-                        Text(verbatim: session.world.trainTypeCard(candidate).text(in: language))
+                        Text(verbatim: language.text("Line's default", "依路線預設"))
                     }
+                    ForEach(types) { candidate in
+                        Button {
+                            staffType = candidate.id
+                        } label: {
+                            Text(verbatim: candidate.title)
+                            Text(verbatim: candidate.detail ?? "")
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: staffType.map { Train.typeText($0, in: language) } ?? language.text("Line's default", "依路線預設"))
+                    } icon: {
+                        Image(systemName: "tram")
+                    }
+                    .font(.footnote)
                 }
-            } label: {
-                Label {
-                    Text(verbatim: staffType.map { Train.typeText($0, in: language) } ?? language.text("Line's default", "依路線預設"))
-                } icon: {
-                    Image(systemName: "tram")
-                }
-                .font(.footnote)
+                .accessibilityIdentifier("line.staff.type")
             }
-            .accessibilityIdentifier("line.staff.type")
             Stepper(value: $staffCars, in: Train.minimumCars...Train.maximumCars) {
                 Text(verbatim: language.text("Cars a train: \(staffCars)", "每列節數：\(staffCars)"))
                     .monospacedDigit()

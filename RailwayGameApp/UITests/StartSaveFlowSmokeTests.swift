@@ -275,6 +275,53 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         waitForLabel("Train: \(name)", of: picker.firstMatch)
     }
 
+    /// The author's report (decision 184, later): with the clock running,
+    /// the train type menu could not be scrolled until the game was paused.
+    /// With the clock running the open menu stays as it opened for thirty
+    /// ticks, and a type other than the train's can be chosen.
+    func testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        // A blank new game; a train not yet placed shows its type menu.
+        requiredButton("start.newGame", in: app).tap()
+        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
+        requiredButton("dock.build", in: app).tap()
+        requiredButton("tool.train", in: app).tap()
+        requiredButton(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train")), name: "Buy").tap()
+        let typeMenu = requiredButton("train.type", in: app)
+        let chosen = typeMenu.label
+        XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
+
+        typeMenu.tap()
+        // The menu's rows: every type's name says what a car carries
+        // ("… · 140 a car · 4 doors"); the menu's own button is left out.
+        let menuRows = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND identifier != %@", " a car · ", "train.type"))
+        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train type menu did not open")
+        Thread.sleep(forTimeInterval: 1)
+        func visibleRows() -> [String] {
+            menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
+        }
+        let opened = visibleRows()
+        XCTAssertGreaterThan(opened.count, 1, "The train type menu shows its rows")
+        // Thirty ticks: the menu must not move, close or change.
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertEqual(visibleRows(), opened, "The open train type menu changed by itself while the clock ran")
+        // Choose a row in the middle of those it shows that is not the
+        // train's type (the lowest, at the menu's faded edge, can miss).
+        let rows = menuRows.allElementsBoundByIndex.filter(touchable).filter { !$0.label.hasPrefix(chosen) }
+        guard !rows.isEmpty else { return XCTFail("The train type menu offers no other type: \(opened)") }
+        let row = rows[(rows.count - 1) / 2]
+        let label = row.label
+        touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", label)), in: app, name: label)
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", chosen), object: typeMenu)
+        XCTAssertEqual(XCTWaiter().wait(for: [changed], timeout: 10), .completed, "Choosing \(label) did not change the train's type")
+        XCTAssertTrue(label.hasPrefix(typeMenu.label), "The train's type is \(typeMenu.label), not the row chosen: \(label)")
+    }
+
     private func checkBackToStartWhileTheClockRuns(arguments: [String], demo: Bool) {
         continueAfterFailure = false
         let app = XCUIApplication()

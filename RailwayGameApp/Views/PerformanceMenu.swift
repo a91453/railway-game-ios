@@ -8,10 +8,17 @@ import SwiftUI
 /// Keeps no performance of its own: `performance` is read from the world
 /// when the view is drawn, and a choice calls `choose`, which applies one
 /// `GameWorld` command through the session.
-struct PerformanceMenu: View {
+///
+/// Equatable on what it shows, and used with `.equatable()`, so the ticks of
+/// a running game leave it alone while it is open (decision 184, later).
+struct PerformanceMenu: View, Equatable {
     let performance: TrainPerformance
     let language: DisplayLanguage
     let choose: @MainActor (TrainPerformance) -> Void
+
+    nonisolated static func == (lhs: PerformanceMenu, rhs: PerformanceMenu) -> Bool {
+        lhs.performance == rhs.performance && lhs.language == rhs.language
+    }
 
     var body: some View {
         Menu {

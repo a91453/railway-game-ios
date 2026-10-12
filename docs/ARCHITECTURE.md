@@ -6042,6 +6042,28 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 其他原生選單（車種、運轉方式、車隊總覽、時刻表、路線的班次與停站方式、車站的月台軌道等）的內容較短，這次沒改，仍會隨 tick 重建；之後若有回報照同一做法處理。
 - UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`（示範地圖，600×）、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（空白新遊戲，XXXL 字級；加進 PR 閘門）、`testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns`（15 列車，選單打開 3 秒不動、選得到另一列）。XCTest 捲不動原生選單（按住拖曳是滑過選取、swipe 會關掉選單，暫停時也一樣），捲到最後一列只能在實機確認。
 
+**之後的修正（其餘原生選單，作者實機回報，2026-10-13）**：#449（原生選單被 tick 重建）列為另案的選單裡，作者回報「車種」選單在遊戲跑時無法往下滑，要先暫停。這次把 `RailwayGameApp` 裡其餘會隨 tick 重建的原生選單全部照同一做法處理。
+- **新增 `TickStable`**（`RailwayGameApp/Views/TickStable.swift`）：只在 `key`（`StableKey`，幾個值合成）改變時才重畫內容，用在沒有自己 view 的選單上。
+  - 內容要用事先算好的值組成，不讀 `session.world`。讀了的部分每個 tick 都會被 Observation 重畫，key 再穩也沒用。
+  - 沒放進 key 的值會變成舊的。
+  - 動作裡可以呼叫 session。
+- **車種與運轉方式**：`TrainTypeMenu`、`PerformanceMenu` 改成 `Equatable` view。車種的選項由 `GameSession.trainTypeMenuChoices(for:)` 提供，含每種車的說明與改裝費。
+- **用 `TickStable` 包起來的選單**：
+  - 時刻表的「加站」。
+  - LinesPanel：服務時段、路線排序、顏色、各段股道、目標班距、停站模式的起訖、補車的車種（`trainTypeCardChoices`）。
+  - StationPanel：月台軌道（`platformTrackMenuChoices(beside:)`）、貨運場出貨、選擇車站。
+  - 路網工具：構造、月台的車站。
+  - 設定：連假與事件、每月報告。
+  - 地圖樣式選單。
+  - 車隊總覽的排序。
+- **不處理的**：
+  - 分段控制（`.segmented`）與 `.inline` 的 Picker：不是彈出的選單。
+  - 開始畫面與新遊戲選項：沒有遊戲在跑。
+  - `confirmationDialog`：只有幾個固定按鈕，不會捲動。
+- **測試**：
+  - `MenuChoicesTests` 加「tick 不改選項」：車種、補車車種、月台軌道、各段股道。
+  - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns`：時鐘在跑時打開車種選單，3 秒不動，並選得到另一種車。
+
 ### 185. PR 的 Linux CI 依改動分層
 
 2026-10-12。作者同意改掉「每個 PR 都跑全部測試（campaign 不縮）」的規則（派工 session_017he2Q1QSeaBKJD1PR3XMma）。號碼依工作登記 #231：決策 185；存檔版本、golden schema 不動。

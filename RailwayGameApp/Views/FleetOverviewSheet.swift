@@ -71,32 +71,36 @@ struct FleetOverviewSheet: View {
                 // Decision 179: in the bar, not a row of the list, so the
                 // rows (and the UI tests that tap them) stay where they were.
                 ToolbarItem(placement: .cancellationAction) {
-                    Menu {
-                        Picker(selection: $sort) {
-                            ForEach(FleetSort.allCases, id: \.self) { order in
-                                Text(verbatim: order.displayName(in: session.language)).tag(order)
+                    // Decision 184, later: a menu the ticks leave alone.
+                    let language = session.language
+                    TickStable(StableKey(sort, language)) {
+                        Menu {
+                            Picker(selection: $sort) {
+                                ForEach(FleetSort.allCases, id: \.self) { order in
+                                    Text(verbatim: order.displayName(in: language)).tag(order)
+                                }
+                            } label: {
+                                Text(verbatim: language.text("Sort by", "排序"))
                             }
-                        } label: {
-                            Text(verbatim: session.language.text("Sort by", "排序"))
-                        }
-                        Button {
-                            sortNow()
+                            Button {
+                                sortNow()
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Sort Again Now", "立即重新排序"))
+                                } icon: {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                            }
+                            .accessibilityIdentifier("fleet.sortAgain")
                         } label: {
                             Label {
-                                Text(verbatim: session.language.text("Sort Again Now", "立即重新排序"))
+                                Text(verbatim: language.text("Sort", "排序"))
                             } icon: {
-                                Image(systemName: "arrow.clockwise")
+                                Image(systemName: "arrow.up.arrow.down")
                             }
                         }
-                        .accessibilityIdentifier("fleet.sortAgain")
-                    } label: {
-                        Label {
-                            Text(verbatim: session.language.text("Sort", "排序"))
-                        } icon: {
-                            Image(systemName: "arrow.up.arrow.down")
-                        }
+                        .accessibilityIdentifier("fleet.sort")
                     }
-                    .accessibilityIdentifier("fleet.sort")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
