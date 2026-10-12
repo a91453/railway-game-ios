@@ -157,6 +157,8 @@ struct ContentView: View {
         case .goals:
             GoalsPanel(session: session)
                 .presentationDetents([.medium, .large])
+        case .help:
+            HelpView(language: session.language)
         }
     }
 
@@ -485,6 +487,8 @@ final class GameScreenState {
         case yearEnd
         /// The scenario's goals (decision 86), opened also when it ends.
         case goals
+        /// The help guide (decision 177), from the game menu.
+        case help
 
         var id: Self { self }
 
@@ -493,7 +497,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .help: false
             }
         }
     }

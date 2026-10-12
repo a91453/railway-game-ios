@@ -94,29 +94,32 @@ final class LineEditingCommandTests: XCTestCase {
         XCTAssertTrue(world.lines[index].isRing)
     }
 
-    /// Decision 134: a line with a train, on its own service or a
-    /// pattern's, is not reversed, sent out or not: the train would end its
-    /// trip at the new last stop, where the line never sends it out again.
-    func testReversingALineWithTrainsIsRefused() throws {
+    /// Decision 172 (which ends decision 134's refusal): a line with a
+    /// train, on its own service or a pattern's, sent out or not, is
+    /// reversed; the train keeps its place on the line and finishes the
+    /// trip it is on as planned.
+    func testReversingALineWithTrainsIsAllowed() throws {
         for patterns in [false, true] {
             var (world, _, line, train) = try LineRoutePreferenceTests.setup(traffic: false, patterns: patterns)
-            let standing = world
-            XCTAssertThrowsError(try world.reverseLineStops(line)) { XCTAssertEqual($0 as? GameError, .trainOnLine(train)) }
-            XCTAssertEqual(world, standing)
+            let stops = try XCTUnwrap(world.line(id: line)?.stops)
+            XCTAssertNoThrow(try world.reverseLineStops(line))
+            XCTAssertEqual(world.line(id: line)?.stops, stops.reversed())
+            XCTAssertEqual(world.line(id: line)?.assignedTrains, [train])
+            XCTAssertNoThrow(try world.reverseLineStops(line))
+            XCTAssertEqual(world.line(id: line)?.stops, stops)
 
             try world.advance(ticks: 60)
             XCTAssertNotNil(world.train(id: train)?.execution, "sent out")
-            let running = world
-            XCTAssertThrowsError(try world.reverseLineStops(line)) { XCTAssertEqual($0 as? GameError, .trainOnLine(train)) }
-            XCTAssertEqual(world, running)
-
-            try world.unassignTrain(train)
-            XCTAssertNoThrow(try world.reverseLineStops(line), "with its train taken off")
+            let timetable = try XCTUnwrap(world.train(id: train)?.timetable)
+            XCTAssertNoThrow(try world.reverseLineStops(line), "with its train out")
+            XCTAssertEqual(world.train(id: train)?.timetable, timetable, "the trip under way is finished as planned")
         }
     }
 
-    /// The lowest numbered of the line's trains is named, wherever it is.
-    func testRefusingAReversalNamesTheLowestNumberedTrain() throws {
+    /// Decision 172: the lowest numbered train needs naming no more; a
+    /// line with a pattern's train and its own is reversed all the same,
+    /// and the trains stay where they were assigned.
+    func testReversingALineWithAPatternTrainAndItsOwn() throws {
         var (world, line, stations) = try makeLineWorld()
         let pattern = try world.addLinePattern(line, calling: [0, 3])
         let first = try world.purchaseTrain(named: "First").id
@@ -124,8 +127,10 @@ final class LineEditingCommandTests: XCTestCase {
         try world.assignTrain(second, to: line)
         try world.assignTrain(first, to: line, pattern: pattern)
         XCTAssertEqual(world.line(id: line)?.assignedTrains, [first, second])
-        XCTAssertThrowsError(try world.reverseLineStops(line)) { XCTAssertEqual($0 as? GameError, .trainOnLine(first)) }
-        XCTAssertEqual(world.line(id: line)?.stops, stations)
+        try world.reverseLineStops(line)
+        XCTAssertEqual(world.line(id: line)?.stops, stations.reversed())
+        XCTAssertEqual(world.line(id: line)?.assignedTrains, [first, second])
+        XCTAssertEqual(world.line(id: line)?.patterns.first?.calls, [0, 3].reversed().map { stations.count - 1 - $0 })
     }
 
     func testReversingAnUnknownLineIsRefused() throws {
