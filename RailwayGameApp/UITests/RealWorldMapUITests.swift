@@ -178,10 +178,16 @@ final class RealWorldMapUITests: XCTestCase {
         confirm.waitUntilSettled()
         confirm.tap()
         XCTAssertTrue(banner("Built station").waitForExistence(timeout: 10), "The platform was not built")
-        // Asked for again on the same place: refused, the refusal in the
-        // banner, the pill still there.
-        site.tap()
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the second platform")
+        // Asked for again on the same level stretch: refused, the refusal in
+        // the banner, the pill still there. The new station's tag stands
+        // over the site (run 38291939056), so the tap moves along the
+        // platform, 16 cars and some 170 points long, until it reaches the
+        // track.
+        for offset: CGFloat in [60, -60, 90, -90] where !confirm.exists {
+            site.withOffset(CGVector(dx: offset, dy: 0)).tap()
+            _ = confirm.waitForExistence(timeout: 3)
+        }
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "No ✓ for the second platform")
         confirm.waitUntilSettled()
         confirm.tap()
         XCTAssertTrue(banner("overlap").waitForExistence(timeout: 5), "No refusal in the banner")
