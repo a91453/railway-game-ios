@@ -413,7 +413,7 @@
         }
       }
     },
-    "Add Pattern" : {
+    "Add" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
@@ -463,7 +463,7 @@
         }
       }
     },
-    "Add a short working or express" : {
+    "Add a stopping pattern" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
@@ -953,7 +953,7 @@
         }
       }
     },
-    "Express: call at the two ends only" : {
+    "Non-stop: call at the two ends only" : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {

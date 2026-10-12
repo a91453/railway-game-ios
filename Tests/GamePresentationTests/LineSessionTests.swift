@@ -117,7 +117,7 @@ final class LineSessionTests: XCTestCase {
         let world = try Self.makeLineWorld()
         let summaries = world.lineServiceSummaries(Self.main, in: .english)
         XCTAssertEqual(summaries.map(\.pattern), [nil, 0, 1])
-        XCTAssertEqual(summaries.map(\.title), ["All stops Alpha–Delta", "Short working Beta–Gamma", "Express Alpha–Delta"])
+        XCTAssertEqual(summaries.map(\.title), ["All stops Alpha–Delta", "Short working Beta–Gamma", "Non-stop Alpha–Delta"])
         XCTAssertEqual(summaries.map(\.callsText), [
             "Alpha · Beta · Gamma · Delta", "Beta · Gamma", "Alpha · Delta (passes Beta, Gamma)",
         ])
@@ -297,7 +297,7 @@ final class LineSessionTests: XCTestCase {
             session.assignSelectedTrainToSelectedLine(pattern: 1)
             try expected.assignTrain(Self.first, to: Self.main, pattern: 1)
             try expected.useTrainPerformanceForMovement(Self.first)
-            XCTAssertEqual(session.message?.text, "Blue now runs for Main · Express Alpha–Delta. It leaves once it waits at the first stop.")
+            XCTAssertEqual(session.message?.text, "Blue now runs for Main · Non-stop Alpha–Delta. It leaves once it waits at the first stop.")
             session.assignSelectedTrainToSelectedLine()
             XCTAssertEqual(session.message?.text, GameError.trainOnLine(Self.first).playerMessage(in: .english))
             session.startSelectedTrainService()

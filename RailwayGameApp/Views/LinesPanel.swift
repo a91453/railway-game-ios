@@ -615,12 +615,12 @@ struct LinesPanel: View {
                     Text(name(of: line.stops[index])).tag(index)
                 }
             }
-            Toggle("Express: call at the two ends only", isOn: $patternExpress)
-            Button("Add Pattern") {
+            Toggle("Non-stop: call at the two ends only", isOn: $patternExpress)
+            Button("Add") {
                 session.addPatternToSelectedLine(from: patternFirst, to: patternLast, express: patternExpress)
             }
         } header: {
-            Text("Add a short working or express")
+            Text("Add a stopping pattern")
         } footer: {
             Text("Services share every stretch of the line: at most one train every 2 minutes each way, the line's own service first.")
         }

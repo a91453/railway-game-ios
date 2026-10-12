@@ -110,12 +110,12 @@ public struct LevelServiceSummary: Hashable, Sendable {
 /// (`pattern` is `nil`) or one of its patterns.
 public struct LineServiceSummary: Hashable, Sendable {
     public let pattern: Int?
-    /// "All stops", "Short working" or "Express", with its ends, such as
-    /// "Express Alpha–Delta"; "Ring" for a ring's.
+    /// "All stops", "Short working", "Non-stop" or "Express", with its
+    /// ends, such as "Non-stop Alpha–Delta"; "Ring" for a ring's.
     public let title: String
-    /// The stations called at, such as "Alpha · Gamma · Delta", and for an
-    /// express the ones it passes: "passes Beta"; a ring's once round, back
-    /// to the first.
+    /// The stations called at, such as "Alpha · Gamma · Delta", and for a
+    /// non-stop or an express the ones it passes: "passes Beta"; a ring's
+    /// once round, back to the first.
     public let callsText: String
     public let levels: [LevelServiceSummary]
     /// The trains assigned to it, and of them those on a trip now.
@@ -131,15 +131,17 @@ extension GameWorld {
 
     /// What kind of service calls at `calls` of `line`, with its ends:
     /// "All stops A–D" for every stop, "Short working B–C" for a run of
-    /// neighbouring stops short of the ends, "Express A–D" when it leaves
-    /// stops out. In Chinese, Taiwan's words (the author's list of
-    /// 2026-10-12): 各站停車, 短程班次, and for an express 直達車 when it
-    /// calls at its two ends only, else 快速列車; not 普通車, 區間車 or
-    /// 快車, which in Taiwan name kinds of train.
+    /// neighbouring stops short of the ends, "Non-stop A–D" when it calls
+    /// at its two ends only and "Express A–D" when it leaves out some stops
+    /// between. In Chinese, Taiwan's words (the author's list of
+    /// 2026-10-12): 各站停車, 短程班次, 直達車 and 快速列車; not 普通車,
+    /// 區間車 or 快車, which in Taiwan name kinds of train.
     func serviceTitle(of line: ServiceLine, calls: [Int], in language: DisplayLanguage) -> String {
         let ends = "\(stationName(line.stops[calls[0]]))–\(stationName(line.stops[calls[calls.count - 1]]))"
         let passes = calls.count < calls[calls.count - 1] - calls[0] + 1
-        if passes { return language.text("Express ", calls.count == 2 ? "直達車 " : "快速列車 ") + ends }
+        if passes {
+            return calls.count == 2 ? language.text("Non-stop ", "直達車 ") + ends : language.text("Express ", "快速列車 ") + ends
+        }
         return calls.count == line.stops.count
             ? language.text("All stops ", "各站停車 ") + ends
             : language.text("Short working ", "短程班次 ") + ends
