@@ -163,10 +163,14 @@ extension GameWorld {
     /// A line's train left a stop for its next, `distance` world units
     /// away, with `passengers` on board and `seats` rated; each count stops
     /// at its bound, as the fares do.
-    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64) {
+    /// With rolling-stock economics on (decision 180) the distance counts
+    /// `operatingPermille` thousandths of itself, the train type's weight,
+    /// rounded down.
+    mutating func countDeparture(distance: Int64, passengers: Int64, seats: Int64, operatingPermille: Int64 = 1_000) {
         guard accounts.mode == .management else { return }
         accounts.pending.departures = min(accounts.pending.departures + 1, Self.maximumDepartures)
-        accounts.pending.trainDistance = min(accounts.pending.trainDistance + distance, Self.maximumHourly)
+        let weighted = operatingPermille == 1_000 ? distance : distance * operatingPermille / 1_000
+        accounts.pending.trainDistance = min(accounts.pending.trainDistance + weighted, Self.maximumHourly)
         accounts.pending.passengers = min(accounts.pending.passengers + passengers, Self.maximumHourly)
         accounts.pending.seats = min(accounts.pending.seats + seats, Self.maximumHourly)
     }
@@ -197,12 +201,20 @@ extension GameWorld {
         let stations: Int64
         let routeLength: Int64
         let trains: Int64
+        /// What the trains weigh in running costs, in thousandths of a
+        /// standard train: 1,000 each in a world without rolling-stock
+        /// economics; with it (decision 180), each train that is on a line
+        /// weighs its cars by its type (``RollingStock/weight(of:cars:)``),
+        /// whether or not the line has it in service now. A train on no line
+        /// costs nothing to run, as before.
+        let trainWeight: Int64
     }
 
     func fixedAssets(memo: inout DispatchMemo) -> FixedAssets {
         var stations: Int64 = 0
         var length: Int64 = 0
         var trains: Int64 = 0
+        var weight: Int64 = 0
         for line in lines {
             stations += Int64(Set(line.stops).count)
             let journey: LineJourney?
@@ -221,9 +233,14 @@ extension GameWorld {
             for service in 0..<line.serviceCount {
                 let counts = service == 0 ? line.trainsInService : line.patterns[service - 1].trainsInService
                 trains += Int64(max(counts.peak, counts.offPeak, counts.low))
+                if rollingStockEconomics {
+                    for id in line.trains(ofService: service) {
+                        if let train = train(id: id) { weight += RollingStock.weight(of: train.type, cars: train.cars) }
+                    }
+                }
             }
         }
-        return FixedAssets(stations: stations, routeLength: length, trains: trains)
+        return FixedAssets(stations: stations, routeLength: length, trains: trains, trainWeight: rollingStockEconomics ? weight : trains * 1_000)
     }
 
     /// World units in a kilometre.
@@ -249,7 +266,10 @@ extension GameWorld {
         let operating = Self.roundedDollars(
             (75 * pending.departures + 18 * assets.stations) * km + 42 * pending.trainDistance, over: km
         )
-        let maintenance = Self.roundedDollars(12 * assets.routeLength + 9 * pending.trainDistance + 8 * assets.trains * km, over: km)
+        // The trains' weight is in thousandths, so the sum is over a
+        // thousand kilometres' worth of units; a world without rolling-stock
+        // economics weighs 1,000 a train and rounds as it always did.
+        let maintenance = Self.roundedDollars((12 * assets.routeLength + 9 * pending.trainDistance) * 1_000 + 8 * assets.trainWeight * km, over: km * 1_000)
         accounts.pending = .empty
         guard pending.fareRevenue > .zero || operating > .zero || maintenance > .zero else { return }
         let breakdown = [
@@ -273,14 +293,14 @@ extension GameWorld {
         // Each part is rounded on its own; the total is the rounded sum, as
         // in the reference, so they may differ by a dollar.
         var routeEnergy = Self.roundedDollars(220 * assets.routeLength, over: km)
-        var trainEnergy = Money(360 * assets.trains * 100)
-        var energy = Self.roundedDollars(220 * assets.routeLength + 360 * assets.trains * km, over: km)
+        var trainEnergy = Self.roundedDollars(360 * assets.trainWeight, over: 1_000)
+        var energy = routeEnergy + trainEnergy
         // Decision 162: a fuel spell makes the day's energy dearer or
         // cheaper, each part rounded to whole dollars and the row their sum
         // (a ledger row is its breakdown's sum).
         if let index = fuelSpell(onDay: day)?.index {
             routeEnergy = Self.roundedDollars(220 * assets.routeLength * index, over: km * 1_000)
-            trainEnergy = Self.roundedDollars(360 * assets.trains * index, over: 1_000)
+            trainEnergy = Self.roundedDollars(360 * assets.trainWeight * index, over: 1_000_000)
             energy = routeEnergy + trainEnergy
         }
         if energy > .zero {
@@ -298,13 +318,14 @@ extension GameWorld {
                 breakdown: [LedgerLine(item: .loanInterest, amount: .zero - interest)]
             ), day: day)
         }
-        let staff = Money((620 * assets.stations + 480 * assets.trains) * 100)
+        let trainStaff = Self.roundedDollars(480 * assets.trainWeight, over: 1_000)
+        let staff = Money(620 * assets.stations * 100) + trainStaff
         if staff > .zero {
             write(LedgerEntry(
                 kind: .dailyStaff, time: time, amount: .zero - staff,
                 breakdown: [
                     LedgerLine(item: .stationStaff, amount: Money(-620 * assets.stations * 100)),
-                    LedgerLine(item: .trainStaff, amount: Money(-480 * assets.trains * 100)),
+                    LedgerLine(item: .trainStaff, amount: .zero - trainStaff),
                 ]
             ), day: day)
         }

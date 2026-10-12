@@ -104,6 +104,9 @@ extension GameWorld {
             // Decision 169: a crowded train's doors pass fewer passengers a
             // second, so a full train dwells longer.
             world.setDoorCrowding(true)
+            // Decision 180: trains cost and weigh what their type and cars
+            // do, and are sold back at 70 % of their books.
+            world.setRollingStockEconomics(true)
             // Decision 172: trains are sent out from either end of their
             // line, and one left elsewhere runs empty to an end.
             world.setFlexDispatch(true)
@@ -218,6 +221,7 @@ public enum DemoWorld {
         // Decision 169: nor do its dwells lengthen in a crowd; the demo's
         // economy is as it was measured.
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         do throws(GameError) {
             try build(in: &world, language: language)

@@ -41,7 +41,7 @@ struct TrainControls: View {
                             .monospacedDigit()
                     }
                     .accessibilityHint("Each car is 16 m long. A train of several cars needs track behind it, and platforms as long as it.")
-                    if let price = session.world.carPriceText(in: session.language) {
+                    if let price = session.world.carPriceText(for: train.type, in: session.language) {
                         Text(price)
                             .font(.caption)
                             .foregroundStyle(Theme.textSecondary)
@@ -49,7 +49,8 @@ struct TrainControls: View {
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
-                        type: train.type, offered: session.world.offeredTrainTypes, standard: session.world.offersStandardCar, language: session.language
+                        type: train.type, offered: session.world.offeredTrainTypes, standard: session.world.offersStandardCar,
+                        card: { session.world.trainTypeCard($0) }, language: session.language
                     ) { type in
                         session.setSelectedTrainType(type)
                     }
@@ -334,6 +335,9 @@ private struct TrainTypeMenu: View {
     let type: TrainType?
     let offered: [TrainType]
     let standard: Bool
+    /// The card of a type (decision 180): its capacity, prices, daily cost
+    /// and top speed, shown under its name.
+    let card: (TrainType?) -> TrainTypeCard
     let language: DisplayLanguage
     let choose: @MainActor (TrainType?) -> Void
 
@@ -343,7 +347,7 @@ private struct TrainTypeMenu: View {
                 Button {
                     choose(nil)
                 } label: {
-                    option(Train.typeText(nil, in: language), isChosen: type == nil)
+                    option(Train.typeText(nil, in: language), detail: card(nil).text(in: language), isChosen: type == nil)
                 }
             }
             Section {
@@ -351,7 +355,7 @@ private struct TrainTypeMenu: View {
                     Button {
                         choose(candidate)
                     } label: {
-                        option(Train.typeText(candidate, in: language), isChosen: candidate == type)
+                        option(Train.typeText(candidate, in: language), detail: card(candidate).text(in: language), isChosen: candidate == type)
                     }
                 }
             }
@@ -373,15 +377,17 @@ private struct TrainTypeMenu: View {
     }
 
     @ViewBuilder
-    private func option(_ title: String, isChosen: Bool) -> some View {
+    private func option(_ title: String, detail: String, isChosen: Bool) -> some View {
         if isChosen {
             Label {
                 Text(verbatim: title)
+                Text(verbatim: detail)
             } icon: {
                 Image(systemName: "checkmark")
             }
         } else {
             Text(verbatim: title)
+            Text(verbatim: detail)
         }
     }
 }

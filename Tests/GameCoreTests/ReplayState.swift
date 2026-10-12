@@ -113,6 +113,10 @@ enum ReplayState {
         if world.doorCrowding {
             line("doorCrowding")
         }
+        // Decision 180: likewise only a world with rolling-stock economics.
+        if world.rollingStockEconomics {
+            line("rollingStockEconomics")
+        }
         for cell in world.land.cells {
             line("land \(cell.row) \(cell.column) \(cell.use.rawValue) \(cell.residents) \(cell.jobs)")
         }

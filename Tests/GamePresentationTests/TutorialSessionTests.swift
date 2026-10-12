@@ -321,6 +321,8 @@ final class TutorialSessionTests: XCTestCase {
             expected.setDisruptions(nil)
             expected.setBuildingMaterials(false)
             expected.setDoorCrowding(false)
+            expected.setRollingStockEconomics(false)
+            expected.setFlexDispatch(false)
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.tutorial?.index, 0)
             XCTAssertEqual(session.tutorial?.steps, Tutorial.standardSteps)

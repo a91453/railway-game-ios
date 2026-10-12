@@ -101,6 +101,7 @@ public enum RealWorldDemo {
         // Decision 169: nor do its dwells lengthen in a crowd (its
         // challenge's targets were measured without).
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         do throws(GameError) {
             try layout.build(in: &world, language: language)

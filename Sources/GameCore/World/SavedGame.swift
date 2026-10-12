@@ -233,9 +233,13 @@
 ///     so has `"deadheadDistance"`. A build that reads only an earlier
 ///     version would drop them, and the empty run would carry passengers
 ///     and go uncounted, so it says the save is newer than it instead.
+/// 49. Rolling-stock economics (decision 180): a world can have
+///     `"rollingStockEconomics": true`. A build that reads only an earlier
+///     version would drop it, and charge every train the one price and cost
+///     it the one weight, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 45
+    public static let currentVersion = 49
 
     public let world: GameWorld
 
@@ -365,6 +369,8 @@ extension SavedGame: Codable {
         // Version 44 to 45: a train without `"deadhead"` runs a passenger
         // service, and a line without `"deadheadDistance"` has driven
         // nothing empty, as every one had.
+        // Version 48 to 49: a world without `"rollingStockEconomics"` has it
+        // off, and every train costs and weighs what it did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

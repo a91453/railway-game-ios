@@ -366,6 +366,7 @@ public final class GameLauncher {
         // by a crowd at the doors.
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         guard begin(world, keepingAutosave: true) else { return }
         session?.startTutorial()

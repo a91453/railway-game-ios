@@ -959,3 +959,15 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - Short 拿掉第一站（Beta、Gamma），紅車停在 Alpha，不再是路線的站：空車回送到較近的 Beta（兩個連結，Gamma 是四個）：Alpha 0 到 42 秒、Beta 42 + 125 = 167 秒（2048 單位：8 秒加速、106.2 秒等速、10 秒煞車，124.2，取 125 秒），不占班距槽，里程 2048 記在 Short 上。
   - 藍車在途中反轉 Main 的站序（允許），照原本那趟跑完；到 12 時兩列都在各自的第一站（藍車在 Gamma，現在是 Main 的第一站；紅車在 Beta），正常發車：藍 Gamma 762 秒、Alpha 1002 到 1122 秒、Gamma 1362 秒；紅 Beta 762 秒、Gamma 887 到 1007 秒、Beta 1132 秒。
 - 每個值都是手算的；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 180：車輛經濟（schema 71）
+
+- 新指令 `setRollingStockEconomics`（`enabled`）、`setTrainType`（`train`，`trainType` 是車種代號，省略是標準車）、`sellTrain`（`train`）；新結果 `trainInService`（`train`）。最終狀態的 `rollingStockEconomics: true` 只在打開時寫。參考模型（`ReferenceWorld`）沒有車種價格，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `RollingStockEconomicsTests` 驗證。
+- `rolling-stock-economics.json`（新）：經營模式、單位是美分，軌道只有一條 1,024 單位的邊（花 1,000）。開關打開後列車價格是車種的、不是 `costs.train`（200,000）：
+  - 藍車（標準車）15,000,000（$150,000，A 型首節）；改成 MAGLEV 付新車種一節價 $600,000 的 30 %＝18,000,000；加到 4 節付 3 節磁浮車廂 3 × 15,000,000＝45,000,000。
+  - 綠車 15,000,000，放上軌道後賣被拒 `trainInService`；取下後改成 L 型付 $90,000 的 30 %＝2,700,000，加到 2 節付一節 $25,000＝2,500,000。
+  - 賣藍車：列車的帳面 15,000,000 + 18,000,000＝33,000,000 取回 70 %＝23,100,000，車廂的 45,000,000 取回 31,500,000；再賣一次是 `unknownTrain`。
+  - 餘額：200,000,000 − 15,000,000 − 18,000,000 − 45,000,000 − 15,000,000 − 1,000 − 2,700,000 − 2,500,000 + 54,600,000＝156,399,000。
+- 每個值都是手算的，`tools/golden-checks/rolling_stock.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+

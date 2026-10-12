@@ -50,6 +50,7 @@ extension RealWorldDemo {
             world.setOutsideConnections(false)
             // Decision 169: nor do its dwells lengthen in a crowd.
             world.setDoorCrowding(false)
+            world.setRollingStockEconomics(false)
             world.setFlexDispatch(false)
             try world.mapGround()
             if !ground.isEmpty { try world.setGround(ground) }
