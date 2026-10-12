@@ -112,6 +112,26 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertTrue(all[firstLabel...].allSatisfy { $0["type"] as? String == "symbol" })
     }
 
+    /// Decision 189: the app keeps the map's labels off the real railways,
+    /// so a place's name with no room where it is moves beside the place,
+    /// on it first; names along roads and rivers stay on their lines.
+    func testPlaceNamesMoveAsideRatherThanHide() throws {
+        let labels = try Self.layers().filter { $0["type"] as? String == "symbol" }
+        let places = labels.filter { ($0["source-layer"] as? String) == "place" }
+        XCTAssertEqual(places.count, 7)
+        for label in labels {
+            let layout = try XCTUnwrap(label["layout"] as? [String: Any])
+            let anchors = layout["text-variable-anchor"] as? [String]
+            if layout["symbol-placement"] as? String == "line" {
+                XCTAssertNil(anchors, "\(label["id"] ?? "")")
+            } else {
+                XCTAssertEqual(anchors?.first, "center", "\(label["id"] ?? "")")
+                XCTAssertEqual(anchors?.count, 9)
+                XCTAssertEqual(layout["text-radial-offset"] as? Double, 0.8)
+            }
+        }
+    }
+
     /// Taiwan's hills are shaded from the game's own heights, as the
     /// `Railway/` reference's `landscape-hillshade`: a Terrarium source of
     /// 512-pixel tiles, lit from the north-west, over the woods and parks
