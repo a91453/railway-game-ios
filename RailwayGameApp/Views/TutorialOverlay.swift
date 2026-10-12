@@ -4,36 +4,67 @@ import SwiftUI
 extension View {
     /// The reference's tour card and outlines, attached at the root of the
     /// screen whose controls report TutorialTargetBounds. Sheets need their
-    /// own attachment when C5 adds targets inside them.
-    func tutorialOverlay(session: GameSession) -> some View {
+    /// own attachment when C5 adds targets inside them. `panelTargets`:
+    /// the targets inside a panel beside the map, on the screen (global
+    /// coordinates), which report there (`tutorialPanelTarget(_:)`).
+    func tutorialOverlay(session: GameSession, panelTargets: [TutorialTarget: CGRect] = [:]) -> some View {
         overlayPreferenceValue(TutorialTargetBounds.self) { anchors in
             GeometryReader { proxy in
                 if let tutorial = session.tutorial {
                     let viewport = CGRect(origin: .zero, size: proxy.size)
-                    let frames = tutorial.step.targets.compactMap { target -> CGRect? in
-                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
+                    // A panel beside the map: what is inside it shows only
+                    // within it.
+                    let panel = anchors[.sidePanel]?.visibleFrame(in: proxy, viewport: viewport)
+                    let origin = proxy.frame(in: .global).origin
+                    let inPanels = panelTargets.compactMapValues { frame -> CGRect? in
+                        guard let panel else { return nil }
+                        let visible = frame.offsetBy(dx: -origin.x, dy: -origin.y).intersection(panel)
+                        return visible.isNull || visible.isEmpty ? nil : visible
                     }
+                    let frameOf = { (target: TutorialTarget) -> CGRect? in
+                        anchors[target]?.visibleFrame(in: proxy, viewport: viewport) ?? inPanels[target]
+                    }
+                    let frames = tutorial.step.targets.compactMap(frameOf)
                     // Every control the player may need stays clear of the card,
                     // whatever its size (a full-width Build Track button is
                     // one). The map is the exception: it fills the screen and
                     // is tapped past the card.
-                    let controls = anchors.compactMap { target, anchor -> CGRect? in
-                        target == .map ? nil : anchor.visibleFrame(in: proxy, viewport: viewport)
-                    }
+                    let controls = Set(anchors.keys).union(inPanels.keys)
+                        .filter { $0 != .map && !tutorialPanels.contains($0) }
+                        .compactMap(frameOf)
+                    // The details card and a panel beside the map, kept clear
+                    // as the step's own controls are: at the line step a card
+                    // over the lines panel left Pick on Map and Create Line out
+                    // of reach on a phone (2026-10-12).
+                    let panels = tutorialPanels.compactMap(frameOf)
                     // What the step asks the player to use matters most when
                     // no placement leaves every control clear.
-                    let required = tutorial.step.targets.compactMap { target -> CGRect? in
-                        target == .map ? nil : anchors[target]?.visibleFrame(in: proxy, viewport: viewport)
-                    }
+                    let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
                     // The map's own frame, so the card leaves some of it
                     // free to tap even where little of it shows.
-                    let map = anchors[.map]?.visibleFrame(in: proxy, viewport: viewport)
-                    TutorialOverlay(session: session, tutorial: tutorial, frames: frames, controls: controls, required: required, map: map)
+                    let map = frameOf(.map)
+                    TutorialOverlay(
+                        session: session, tutorial: tutorial, frames: frames,
+                        placement: TutorialCardPlacement(
+                            target: frames.first.map { TutorialCardPlacement.Frame($0) },
+                            controls: controls.map { TutorialCardPlacement.Frame($0) },
+                            panels: panels.map { TutorialCardPlacement.Frame($0) },
+                            required: required.map { TutorialCardPlacement.Frame($0) },
+                            map: map.map { TutorialCardPlacement.Frame($0) }
+                        )
+                    )
                 }
             }
         }
     }
 }
+
+/// The areas the tutorial's card keeps clear of as of the step's own
+/// controls: the details card and a panel beside the map.
+private let tutorialPanels: [TutorialTarget] = [.detailsCard, .sidePanel]
+
+/// The overlay's coordinates, the frames' (the GeometryReader's).
+private let tutorialOverlaySpace = "tutorial.overlay"
 
 /// Only the card receives touches: outlining a tool or the map must leave
 /// it usable, because Next waits for the player to perform the step.
@@ -41,9 +72,7 @@ private struct TutorialOverlay: View {
     let session: GameSession
     let tutorial: Tutorial
     let frames: [CGRect]
-    let controls: [CGRect]
-    let required: [CGRect]
-    let map: CGRect?
+    let placement: TutorialCardPlacement
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -63,47 +92,86 @@ private struct TutorialOverlay: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
 
-            TutorialCardLayout(target: frames.first, controls: controls, required: required, map: map) {
-                TutorialCard(session: session, tutorial: tutorial)
-                    .id(tutorial.index)
+            TutorialCardSlot(session: session, tutorial: tutorial, placement: placement)
+                .id(tutorial.index)
+        }
+        // The frames are the overlay's; the card checks its own in them.
+        .coordinateSpace(.named(tutorialOverlaySpace))
+    }
+}
+
+/// The step's card, or the card folded to its title: by the player, with
+/// its ⌄ button, or by itself while, open, it would cover what the step
+/// asks for (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on
+/// a phone on its side with a panel open. A step that is done opens it, so
+/// Next shows, unless the player folded it. New for each step (`.id`).
+private struct TutorialCardSlot: View {
+    let session: GameSession
+    let tutorial: Tutorial
+    let placement: TutorialCardPlacement
+    /// The player's choice, open or folded; `nil` until they make one.
+    @State private var folded: Bool?
+    /// Folded by itself: open, it covered what the step asks for.
+    @State private var foldedItself = false
+    /// Compact height: a phone, held on its side.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private var isFolded: Bool {
+        if session.isTutorialStepDone { return folded == true }
+        return folded ?? foldedItself
+    }
+
+    /// Narrower on a phone on its side, whose map is short and wide.
+    private var sized: TutorialCardPlacement {
+        var placement = placement
+        placement.maxWidth = verticalSizeClass == .compact ? 320 : 340
+        return placement
+    }
+
+    var body: some View {
+        TutorialCardLayout(placement: sized) {
+            if isFolded {
+                FoldedTutorialCard(session: session, tutorial: tutorial) {
+                    UITestTrace.action("tutorial.unfold")
+                    folded = false
+                }
+            } else {
+                TutorialCard(session: session, tutorial: tutorial) {
+                    UITestTrace.action("tutorial.fold")
+                    folded = true
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
+                    if folded == nil, !session.isTutorialStepDone, !placement.leavesStepFree(TutorialCardPlacement.Frame(frame)) {
+                        foldedItself = true
+                    }
+                }
             }
+        }
+        // What is on screen changed (a panel opened or closed, the device
+        // turned, a button the step asks for came into view): open the card
+        // again and see whether it fits now.
+        .onChange(of: Fit(placement)) { _, _ in
+            foldedItself = false
+        }
+    }
+
+    /// What decides whether the card fits, without the frames of controls
+    /// that scroll, which change on every frame of a scroll.
+    private struct Fit: Equatable {
+        let map: [Double]?
+        let required: Int
+
+        init(_ placement: TutorialCardPlacement) {
+            map = placement.map.map { map in [map.x, map.y, map.width, map.height].map { $0.rounded() } }
+            required = placement.required.count
         }
     }
 }
 
-/// Measures the actual card (including translated text and Dynamic Type),
-/// then tries below/above the first visible target, with sides as a fallback
-/// for wide screens, then inside a large target such as the map, then the
-/// centre and the edges. The first placement that covers no control wins;
-/// when every one covers something, the one that covers least, sparing the
-/// step's own controls first. Missing targets use the centre.
-///
-/// Covering the map costs nothing, as long as a band of it at least
-/// ``minimumFreeMap`` deep stays free beside the card: on a phone, held on
-/// its side, the map between the status pill and the dock can be barely
-/// taller than the card, and a card over all of it would leave the player
-/// nowhere to tap. Covering the HUD's controls then costs less, and
-/// a card too tall for any place (large text) is measured shorter, its
-/// explanation scrolling, so that band stays free.
+/// Measures the actual card (including translated text and Dynamic Type)
+/// and puts it where ``TutorialCardPlacement`` says.
 private struct TutorialCardLayout: Layout {
-    let target: CGRect?
-    let controls: [CGRect]
-    /// The step's own controls (not the map), among `controls`.
-    let required: [CGRect]
-    /// The part of the map that shows (``TutorialTarget/map``).
-    let map: CGRect?
-    private let margin: CGFloat = 16
-    private let gap: CGFloat = 12
-    private let minimumFreeMap: CGFloat = 96
-    /// The shortest a card is measured to leave the map free: the step's
-    /// title, a few lines of its explanation and its buttons.
-    private let minimumCardHeight: CGFloat = 200
-    /// The narrowest a card is measured to leave a band of the map free
-    /// beside it.
-    private let minimumCardWidth: CGFloat = 240
-    /// Above covering any ordinary control with the whole card, below
-    /// covering a sliver of the step's own controls.
-    private let mapCoveredCost: CGFloat = 400_000
+    let placement: TutorialCardPlacement
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
@@ -111,117 +179,43 @@ private struct TutorialCardLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard let card = subviews.first else { return }
-        let available = bounds.insetBy(dx: min(margin, bounds.width / 4), dy: min(margin, bounds.height / 4))
-        let width = min(340, available.width)
-        var size = card.sizeThatFits(ProposedViewSize(width: width, height: available.height))
-        var best = placement(of: size, in: bounds, available: available)
-        // With large text a card can be too tall to leave the map, or the
-        // step's controls, free anywhere: measure it shorter, so its
-        // explanation scrolls, and place it again if that does better.
-        if best.cost >= mapCoveredCost, let map {
-            let height = max(minimumCardHeight, map.height - minimumFreeMap - gap)
-            if height < size.height {
-                let shorter = card.sizeThatFits(ProposedViewSize(width: width, height: height))
-                let retry = placement(of: shorter, in: bounds, available: available)
-                if retry.cost < best.cost {
-                    size = shorter
-                    best = retry
-                }
-            }
+        let frame = placement.frame(in: TutorialCardPlacement.Frame(bounds)) { proposed in
+            let size = card.sizeThatFits(ProposedViewSize(width: CGFloat(proposed.width), height: CGFloat(proposed.height)))
+            return TutorialCardPlacement.Size(width: Double(size.width), height: Double(size.height))
         }
-        // A phone on its side (decision 106): the map between the status
-        // pill, the dock and the details card is wide but short, and a card
-        // of the full width can cover all of it. Narrower, 20 points at a
-        // time, until a band of the map stays free beside it; tall, or
-        // measured shorter as above.
-        if best.cost >= mapCoveredCost, let map {
-            let heights = [available.height, max(minimumCardHeight, map.height - minimumFreeMap - gap)]
-            var narrow = width - 20
-            while narrow >= minimumCardWidth, best.cost >= mapCoveredCost {
-                for height in heights {
-                    let narrower = card.sizeThatFits(ProposedViewSize(width: narrow, height: height))
-                    let retry = placement(of: narrower, in: bounds, available: available)
-                    if retry.cost < best.cost {
-                        size = narrower
-                        best = retry
-                    }
-                }
-                narrow -= 20
-            }
-        }
-        card.place(at: best.origin, anchor: .topLeading, proposal: ProposedViewSize(size))
+        card.place(
+            at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
+            proposal: ProposedViewSize(width: CGFloat(frame.width), height: CGFloat(frame.height))
+        )
     }
+}
 
-    /// Where a card of `size` goes, and what it costs there.
-    private func placement(of size: CGSize, in bounds: CGRect, available: CGRect) -> (origin: CGPoint, cost: CGFloat) {
-        let centred = CGPoint(x: available.midX - size.width / 2, y: available.midY - size.height / 2)
-        // Anchors are local to the overlay's GeometryReader. Layout's
-        // placement bounds can have a nonzero origin, so put the target
-        // in that same coordinate space before comparing candidates.
-        guard let target = target?.offsetBy(dx: bounds.minX, dy: bounds.minY) else { return (centred, 0) }
-        // Keep the other controls usable too. `controls` leaves out the
-        // map, which can be tapped outside the card.
-        let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let required = self.required.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
-        let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
-        let candidates = [
-            CGPoint(x: x, y: target.maxY + gap),
-            CGPoint(x: x, y: target.minY - gap - size.height),
-            CGPoint(x: target.maxX + gap, y: y),
-            CGPoint(x: target.minX - gap - size.width, y: y),
-            // Inside a target as large as the map, along its bottom or
-            // top: the rest of it stays free to tap.
-            CGPoint(x: x, y: target.maxY - gap - size.height),
-            CGPoint(x: x, y: target.minY + gap),
-            centred,
-            CGPoint(x: available.minX, y: centred.y),
-            CGPoint(x: available.maxX - size.width, y: centred.y),
-            CGPoint(x: centred.x, y: available.minY),
-            CGPoint(x: centred.x, y: available.maxY - size.height),
-            CGPoint(x: available.minX, y: available.minY),
-            CGPoint(x: available.maxX - size.width, y: available.minY),
-            CGPoint(x: available.minX, y: available.maxY - size.height),
-            CGPoint(x: available.maxX - size.width, y: available.maxY - size.height),
-        ]
-        func covered(_ rects: [CGRect], by frame: CGRect) -> CGFloat {
-            rects.reduce(0) { sum, rect in
-                let common = rect.intersection(frame)
-                return common.isNull ? sum : sum + common.width * common.height
-            }
-        }
-        let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
-        /// Whether a band of the map at least `minimumFreeMap` deep
-        /// stays free above, below or beside `frame`.
-        func leavesMapFree(_ frame: CGRect) -> Bool {
-            guard let map, frame.intersects(map) else { return true }
-            let bands = [frame.minY - map.minY, map.maxY - frame.maxY, frame.minX - map.minX, map.maxX - frame.maxX]
-            return (bands.max() ?? 0) >= minimumFreeMap
-        }
-        func cost(_ frame: CGRect) -> CGFloat {
-            covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
-                + (leavesMapFree(frame) ? 0 : mapCoveredCost)
-        }
-        // `min` keeps the first of equals, so the first placement that
-        // covers nothing wins, as the order above intends.
-        let cheapest = candidates
-            .map { CGRect(origin: $0, size: size) }
-            .filter { available.contains($0) }
-            .min { cost($0) < cost($1) }
-        guard let cheapest else { return (centred, .infinity) }
-        return (cheapest.origin, cost(cheapest))
+extension TutorialCardPlacement.Frame {
+    /// `rect`, in the placement's own rectangles (GamePresentation has no
+    /// CoreGraphics).
+    init(_ rect: CGRect) {
+        self.init(x: Double(rect.minX), y: Double(rect.minY), width: Double(rect.width), height: Double(rect.height))
     }
 }
 
 private struct TutorialCard: View {
     let session: GameSession
     let tutorial: Tutorial
+    /// Folds the card to its title.
+    let fold: () -> Void
     @AccessibilityFocusState private var focusesTitle: Bool
     /// The lantern beside "Complete this step", as large as its text.
     @ScaledMetric(relativeTo: .footnote) private var lanternSize = 14.0
+    /// Compact height: a phone, held on its side, where the card is
+    /// smaller so more of the screen stays free.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private var isCompact: Bool {
+        verticalSizeClass == .compact
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: isCompact ? 8 : 12) {
             // Keep the actions visible even when the explanation needs to
             // scroll on a small landscape screen or with larger text.
             ViewThatFits(in: .vertical) {
@@ -234,8 +228,8 @@ private struct TutorialCard: View {
                 VStack(alignment: .leading, spacing: 8) { navigationButtons }
             }
         }
-        .padding(16)
-        .controlSize(.large)
+        .padding(isCompact ? 12 : 16)
+        .controlSize(isCompact ? ControlSize.regular : ControlSize.large)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -254,10 +248,10 @@ private struct TutorialCard: View {
     }
 
     private var explanation: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: isCompact ? 6 : 10) {
             HStack(spacing: 8) {
                 // Decision 118: the station master gives the tutorial.
-                StationMasterAvatar(size: 28, mood: session.isTutorialStepDone ? .happy : .normal)
+                StationMasterAvatar(size: isCompact ? 24 : 28, mood: session.isTutorialStepDone ? .happy : .normal)
                 HStack(spacing: 6) {
                     Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
                         .font(.caption.weight(.bold))
@@ -269,15 +263,28 @@ private struct TutorialCard: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Theme.primary.opacity(0.14), in: Capsule())
+                // Out of the way: what the card would cover is always in
+                // reach (on a phone, the lines panel at the line step).
+                Button(action: fold) {
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.bold))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.primary)
+                .background(Theme.primary.opacity(0.14), in: Circle())
+                .accessibilityLabel(Text(verbatim: session.language.text("Minimize Tutorial", "收合教學")))
+                .accessibilityIdentifier("tutorial.fold")
             }
 
             Text(verbatim: tutorial.step.title(in: session.language))
-                .font(.headline.weight(.bold))
+                .font(isCompact ? Font.subheadline.weight(.bold) : Font.headline.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityFocused($focusesTitle)
                 .accessibilityIdentifier("tutorial.title")
             Text(verbatim: tutorial.step.body(in: session.language))
-                .font(.subheadline)
+                .font(isCompact ? Font.footnote : Font.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
             if !session.isTutorialStepDone {
                 HStack(spacing: 6) {
@@ -330,10 +337,57 @@ private struct TutorialCard: View {
                     Text("Next")
                 }
             }
-            .frame(minHeight: 44)
+            .frame(minHeight: isCompact ? 36 : 44)
         }
         .buttonStyle(ThemeProminentButtonStyle())
         .disabled(!session.isTutorialStepDone)
         .accessibilityIdentifier("tutorial.next")
+    }
+}
+
+/// The card folded to its step and title, at the card's place, so the
+/// controls it covered are in reach; a tap opens it again.
+private struct FoldedTutorialCard: View {
+    let session: GameSession
+    let tutorial: Tutorial
+    let unfold: () -> Void
+
+    var body: some View {
+        Button(action: unfold) {
+            HStack(spacing: 8) {
+                StationMasterAvatar(size: 24, mood: session.isTutorialStepDone ? .happy : .normal)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.primary)
+                        .monospacedDigit()
+                    Text(verbatim: tutorial.step.title(in: session.language))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                }
+                Image(systemName: "chevron.up")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(minHeight: 44)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .background(Theme.panel, in: Capsule())
+        .overlay {
+            Capsule()
+                .strokeBorder(Theme.panelBorder, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        .fixedSize()
+        .accessibilityLabel(Text(verbatim: session.language.text(
+            "Show Tutorial: \(tutorial.step.title(in: .english))",
+            "展開教學：\(tutorial.step.title(in: .traditionalChinese))"
+        )))
+        .accessibilityIdentifier("tutorial.unfold")
     }
 }

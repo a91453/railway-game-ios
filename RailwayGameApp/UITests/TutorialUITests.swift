@@ -126,6 +126,65 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
     }
 
+    /// The line step on a phone on its side (the owner's device, 2026-10-12):
+    /// the card stood over the lines panel and Pick on Map could not be
+    /// tapped. Started at that step over the track and stations the steps
+    /// before it build (`-tutorial-step`), the card, open or folded by
+    /// itself, leaves Pick on Map uncovered, the button starts picking, and
+    /// the card folds and opens again.
+    func testTheLineStepLeavesTheLinesPanelUsable() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.create"]
+        app.launch()
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
+
+        let lines = app.buttons["entry.lines"]
+        XCTAssertTrue(lines.waitForExistence(timeout: 5))
+        XCTAssertTrue(lines.isHittable, "The Lines button is covered")
+        lines.tap()
+        let pick = app.buttons["line.draft.pick"]
+        XCTAssertTrue(pick.waitForExistence(timeout: 5), "The lines panel did not open")
+        XCTAssertTrue(waitForCard(card, or: folded))
+        // The card settles after the panel slides in.
+        Thread.sleep(forTimeInterval: 1)
+        if card.exists {
+            XCTAssertFalse(card.frame.intersects(pick.frame), "The tutorial card covers Pick on Map: card \(card.frame), button \(pick.frame)")
+        }
+        if folded.exists {
+            XCTAssertFalse(folded.frame.intersects(pick.frame), "The folded card covers Pick on Map: \(folded.frame), button \(pick.frame)")
+        }
+        XCTAssertTrue(pick.isHittable, "Pick on Map cannot be tapped")
+        pick.tap()
+        let stop = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "line.draft.pick", "Stop Picking")).firstMatch
+        XCTAssertTrue(stop.waitForExistence(timeout: 5), "Pick on Map did not start picking")
+
+        // The player can always fold the card out of the way, and open it.
+        if card.exists {
+            app.buttons["tutorial.fold"].tap()
+            XCTAssertTrue(folded.waitForExistence(timeout: 5), "The card did not fold")
+        }
+        XCTAssertTrue(folded.isHittable)
+        folded.tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "The folded card did not open")
+        XCTAssertTrue(app.buttons["tutorial.skip"].isHittable)
+        XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The line is still to make")
+    }
+
+    /// Waits up to 15 seconds for the tutorial's card, open or folded.
+    private func waitForCard(_ card: XCUIElement, or folded: XCUIElement) -> Bool {
+        let deadline = Date().addingTimeInterval(15)
+        repeat {
+            if card.exists || folded.exists { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        return card.exists || folded.exists
+    }
+
     private func checkNavigation(language: String, locale: String, tutorialLabel: String, nextLabel: String, backLabel: String, skipLabel: String, largeText: Bool = false) {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft

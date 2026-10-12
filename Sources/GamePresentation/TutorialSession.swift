@@ -12,6 +12,18 @@ extension GameSession {
         tutorial = Tutorial(steps: Tutorial.steps(over: world), over: world)
     }
 
+    /// Shows the tutorial from step `id`, its steps before it skipped, over
+    /// the world as it is now; from the first step if there is no such
+    /// step. For the UI tests of a later step's screen (Debug builds'
+    /// `-tutorial-step`, ``GameLauncher/startTutorial(atStep:)``).
+    public func startTutorial(atStep id: String) {
+        var shown = Tutorial(steps: Tutorial.steps(over: world), over: world)
+        if let index = shown.steps.firstIndex(where: { $0.id == id }) {
+            shown.show(index, over: world)
+        }
+        tutorial = shown
+    }
+
     /// Whether the player has done what the step on screen asks (the
     /// reference's `_tutorialStepActionDone`), read from the world and the
     /// active tool; `false` without a tutorial. Next waits for it.
