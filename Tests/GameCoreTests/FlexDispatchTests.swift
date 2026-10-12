@@ -255,4 +255,36 @@ final class FlexDispatchTests: XCTestCase {
         for _ in 0..<90 { try single.advance(ticks: 1) }
         XCTAssertEqual(batch, single)
     }
+
+    /// Version 45 (decision 172): a line Main calling at Beta and Gamma
+    /// whose train stood at Alpha, the stop taken out; sent out empty to
+    /// Beta, two links, and saved on its way (the `"deadhead"` train and
+    /// the line's `"deadheadDistance"`). It saves byte for byte and is the
+    /// world this build makes.
+    func testVersionFortyFiveKeepsAnEmptyRun() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v45-flex-dispatch.json")
+        var made = try makeWorld(stops: [alpha, beta, gamma])
+        try made.setLineStops(main, to: [beta, gamma])
+        try made.advance(ticks: 2)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["FLEX_DISPATCH_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: made)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 45)
+        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(world, made)
+        XCTAssertTrue(try XCTUnwrap(world.train(id: one)).isDeadheading)
+        XCTAssertEqual(world.lineDeadheadDistance(main), 2_048)
+        // It goes on to Beta and is sent out from there, empty-handed no more.
+        var carried = world
+        try carried.advance(ticks: 5)
+        XCTAssertFalse(try XCTUnwrap(carried.train(id: one)).isDeadheading)
+        XCTAssertEqual(carried.train(id: one)?.timetable.first?.station, beta)
+        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 45,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
 }

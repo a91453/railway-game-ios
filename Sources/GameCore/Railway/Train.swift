@@ -104,8 +104,9 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// line (decision 172): a train that stands where its line does not
     /// send trains out from is driven, without passengers, to the nearer
     /// end, and the line sends it out from there. Set exactly while a
-    /// service of a line's train runs such a trip; only ``GameWorld``
-    /// changes it, with the execution.
+    /// service of a line's train runs such a trip (a train taken off its
+    /// line meanwhile finishes it, still carrying nobody); only
+    /// ``GameWorld`` changes it, with the execution.
     public internal(set) var isDeadheading: Bool = false
 
     /// Creates an unplaced, idle train of one car without a timetable or a
