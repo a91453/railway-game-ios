@@ -5431,6 +5431,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 外部專案：沒有搜尋到可以直接用的（OpenTTD 有新聞訊息與「暫停於事件」的設定，只讀概念，沒有複製程式碼，GPL）。
 
 **限制**：App 檔案（SwiftUI）在 Linux 上只能靠 macOS CI 編譯；邏輯都放在 `GamePresentation`，由 `NewsLogTests`、`MonthlyReportTests`、`DisplayTextTests` 測。月報的站成長只比對「計畫運量」，不是實際載客。
+
+**之後的修正**（查 bug，2026-10-12）：讀進剩 7 天以內的挑戰存檔時，`NewsWatch.deadlineWarned` 從 `false` 開始，第一步就再寫一則「挑戰剩 N 天」並自動暫停，每次讀檔都重來。現在 `NewsWatch(world:)` 由世界算出是否已進最後一週（`NewsSessionTests.testTheChallengeLastWeekWarningIsNotRepeatedAfterALoad`）。
+
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
