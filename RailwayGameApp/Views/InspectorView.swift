@@ -42,7 +42,7 @@ struct InspectorView: View {
                 lineButtons([line])
             }
         } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge,
-                  let inspection = session.world.trackInspection(of: edge), !inspection.lines.isEmpty {
+                  let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
             lineButtons(inspection.lines)
         }
     }

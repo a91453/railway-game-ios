@@ -5925,6 +5925,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 縮小時人口熱度圖的方塊（`PopulationHeatmap.tiles(in:blockSize:)`）在畫面邊緣只加了範圍內的列與欄，卻用整塊的格數平均：邊緣的方塊比實際淡，平移時顏色會變。現在和 `CityMap` 一樣取整塊。
 - 文字：貨運線一列車時英文說「on 1 trains」；城市委託的中文標題在站名已經以「站」結尾（含「已拆除的車站」）時變成「…站站運量提升」；帳本不到 $0.50 的支出四捨五入成 $ 0 時寫成「+$ 0」。
 
+**之後的修正（第三次全程式碼查 bug，每一幀重算的工作，2026-10-12）**：#399 之後還有兩個地方在遊戲執行時每一幀重算昂貴的東西（實景示範、debug build 量測）：
+- 地圖泡泡的 `situationAlerts()`（死結偵測要替每一列等待的列車找路）每次約 81 ms，`MapAlertBubbles` 每一幀讀兩次，每秒十幀。現在讀 `GameSession.situationAlerts`：一個指令之後（`commandRevision`：不是遊戲時間前進的 `world` 變更，包括指令、復原、重做、設定）或每 10 遊戲分鐘（正常速度約 1 秒）才重算。卡住的泡泡最多晚 10 遊戲分鐘出現或消失。
+- 點選軌道的檢視（`trackInspection(of:)`）每次重建整張 `LineMap`（每條線每一段一次找路），約 24 ms，檢視卡片與 `selectionText()` 一幀讀好幾次。現在 `GameSession.trackInspection(of:)` 每個 `commandRevision` 只建一次（只有指令會改軌道與路線），號誌照當下的世界讀。
+`PerFrameMemoTests`。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。

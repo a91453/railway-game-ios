@@ -51,7 +51,7 @@ struct MapAlertBubbles: View {
     private var placed: [PlacedAlert] {
         var perStation: [PlanPoint: Int] = [:]
         guard session.tool == .select else { return [] }
-        return (session.world.mapAlerts() + session.world.situationAlerts()).compactMap { alert in
+        return (session.world.mapAlerts() + session.situationAlerts).compactMap { alert in
             let at = camera.screenPoint(of: alert.location)
             guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                   at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom)
