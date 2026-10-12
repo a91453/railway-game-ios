@@ -17,10 +17,11 @@ final class AchievementsTests: XCTestCase {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    func testThereAre35WithUniqueIDsAndBothLanguages() {
-        XCTAssertEqual(Achievement.all.count, 35)
-        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 35)
+    func testThereAre38WithUniqueIDsAndBothLanguages() {
+        XCTAssertEqual(Achievement.all.count, 38)
+        XCTAssertEqual(Set(Achievement.all.map(\.id)).count, 38)
         XCTAssertEqual(Achievement.all.filter(\.needsTourism).count, 4)
+        XCTAssertEqual(Achievement.all.filter(\.needsRollingStockEconomics).count, 3)
         for achievement in Achievement.all {
             for language in [DisplayLanguage.english, .traditionalChinese] {
                 XCTAssertFalse(achievement.title(in: language).isEmpty)
@@ -163,5 +164,33 @@ extension AchievementsTests {
         XCTAssertTrue(facts.hasTourism)
         XCTAssertGreaterThan(facts.bestStars, 0)
         XCTAssertEqual(facts.touristsInAYear, 0)
+    }
+}
+
+extension AchievementsTests {
+    func testTheRollingStockMarksAndWhereTheyAreListed() throws {
+        var facts = AchievementFacts()
+        facts.trainTypes = 3
+        facts.longestTrainCars = 8
+        facts.rollingStockCost = Money(120_000_000)
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("mixedFleet")).isMet(by: facts))
+        XCTAssertFalse(try XCTUnwrap(Achievement.named("longTrain")).isMet(by: facts))
+        XCTAssertEqual(try XCTUnwrap(Achievement.named("fleetInvestment")).progressText(of: facts), "$ 1,200,000 / $ 5,000,000")
+        let mixed = try XCTUnwrap(Achievement.named("mixedFleet"))
+        XCTAssertTrue(mixed.isListed(for: nil), "the start screen lists every one")
+        XCTAssertFalse(mixed.isListed(for: facts))
+        facts.hasRollingStockEconomics = true
+        XCTAssertTrue(mixed.isListed(for: facts))
+        XCTAssertTrue(try XCTUnwrap(Achievement.named("firstFare")).isListed(for: facts))
+    }
+
+    func testAWorldPricingItsTrainsIsRead() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        world.setRollingStockEconomics(true)
+        let facts = AchievementFacts(world: world)
+        XCTAssertTrue(facts.hasRollingStockEconomics)
+        XCTAssertEqual(facts.trainTypes, 1)
+        XCTAssertEqual(facts.longestTrainCars, 4)
     }
 }

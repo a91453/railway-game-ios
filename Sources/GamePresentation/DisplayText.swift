@@ -676,6 +676,9 @@ extension GameSession {
         if let id = selectedBuildingID, let text = buildingInspectorText(of: id) {
             return text
         }
+        if let edge = selectedTrackEdge, let text = world.trackInspectionText(of: edge, in: language) {
+            return text
+        }
         return nil
     }
 }

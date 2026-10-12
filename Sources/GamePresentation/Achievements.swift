@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-// Achievements (ARCHITECTURE decision 181): 35 marks of what the player
+// Achievements (ARCHITECTURE decision 181): 38 marks of what the player
 // has done, kept on the device across games, checked each midnight. The
 // list, its "how to get it" lines and its progress readings are the
 // reference's (`Railway/site_archive_clean/index.html`: `ACHIEVEMENTS`,
@@ -64,6 +64,15 @@ public struct AchievementFacts: Hashable, Sendable {
     public var subsidiaries = 0
     public var subsidiaryKinds = 0
     public var bestSubsidiaryProfit: Money = .zero
+    /// Whether the world prices its trains by type (decision 180's
+    /// `rollingStockEconomics`).
+    public var hasRollingStockEconomics = false
+    /// The kinds of train in the fleet (a train without a type is a
+    /// standard one), the longest train's cars, and what the fleet cost
+    /// (the rolling stock's asset records, cents).
+    public var trainTypes = 0
+    public var longestTrainCars = 0
+    public var rollingStockCost: Money = .zero
 
     public init(figures: CompanyFigures = CompanyFigures()) {
         self.figures = figures
@@ -119,6 +128,10 @@ public struct AchievementFacts: Hashable, Sendable {
         subsidiaries = businesses.count
         subsidiaryKinds = Set(businesses.map(\.kind)).count
         bestSubsidiaryProfit = businesses.map(\.books.totalProfit).max() ?? .zero
+        hasRollingStockEconomics = world.rollingStockEconomics
+        trainTypes = Set(world.trains.map(\.type)).count
+        longestTrainCars = world.trains.map(\.cars).max() ?? 0
+        rollingStockCost = world.balanceSheet().rollingStock.cost
         if let state = world.scenario, case .completed(_, let rating)? = state.outcome {
             completedScenario = state.scenario.id
             completedGold = rating == .gold
@@ -172,7 +185,7 @@ public struct Achievement: Identifiable, Hashable, Sendable {
     /// "31,200 / 50,000", "12.4 / 50.0 km" for a length (metres).
     public func progressText(of facts: AchievementFacts) -> String? {
         guard let (now, need) = progress(of: facts) else { return nil }
-        if id == "businessProfit" { return "\(Money(now).moneyText) / \(Money(need).moneyText)" }
+        if id == "businessProfit" || id == "fleetInvestment" { return "\(Money(now).moneyText) / \(Money(need).moneyText)" }
         if id == "fiveStars" { return "\(now / 100).\(now % 100 / 10) / 5.0 ★" }
         guard isLength else { return "\(Money(now).displayText) / \(Money(need).displayText)" }
         func km(_ metres: Int64) -> String { WorldBounds.kilometresText(metres * WorldCoordinate.unitsPerMetre) }
@@ -212,7 +225,22 @@ public struct Achievement: Identifiable, Hashable, Sendable {
 
     private static let tourismIDs: Set<String> = ["firstTourists", "tourists100k", "souvenirShop", "fiveStars"]
 
-    /// The 35 achievements, in the order the list shows them.
+    /// Whether it can only be had where trains are priced by type
+    /// (decision 180): a game without that does not list it.
+    public var needsRollingStockEconomics: Bool {
+        Self.rollingStockIDs.contains(id)
+    }
+
+    private static let rollingStockIDs: Set<String> = ["mixedFleet", "longTrain", "fleetInvestment"]
+
+    /// Whether a game whose facts are `facts` lists it; every one is
+    /// listed without a game (the start screen).
+    public func isListed(for facts: AchievementFacts?) -> Bool {
+        guard let facts else { return true }
+        return (facts.hasTourism || !needsTourism) && (facts.hasRollingStockEconomics || !needsRollingStockEconomics)
+    }
+
+    /// The 38 achievements, in the order the list shows them.
     public static let all: [Achievement] = [
         // The reference's `first`, `rider5`, `rider15`: rides followed,
         // here riders in a day.
@@ -332,6 +360,16 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         count("businessProfit", "chart.line.uptrend.xyaxis", need: 100_000_000,
               ("Paying Business", "A business that has made $1,000,000 since it opened", "Build beside a busy station before the district grows."),
               ("生意興隆", "一間事業開業以來賺進 $1,000,000", "趁地區還沒發展，在熱鬧的車站旁先蓋。")) { $0.bestSubsidiaryProfit.amount },
+        // Decision 180: trains priced by type.
+        count("mixedFleet", "square.grid.2x2.fill", need: 3,
+              ("Mixed Fleet", "Trains of three types", "Choose a type for each line: light rail for short hops, faster trains between towns."),
+              ("車種齊全", "車隊有三種以上車種", "依路線選車種：短程用輕軌，城鎮之間用快的車。")) { Int64($0.trainTypes) },
+        count("longTrain", "train.side.middle.car", need: 10,
+              ("Long Train", "A train of 10 cars or more", "Add cars to the trains of a crowded line, or reform the whole line at once."),
+              ("長編組", "一列 10 節以上的列車", "擁擠的路線加長編組，或整條線一起改編組。")) { Int64($0.longestTrainCars) },
+        count("fleetInvestment", "banknote.fill", need: 500_000_000,
+              ("Rolling Stock Investor", "Spend $5,000,000 on trains", "What the fleet cost, conversions included; selling a train takes it off."),
+              ("車隊投資", "車隊的購置成本達 $5,000,000", "列車與車廂的購置與改裝成本；賣掉的列車不算。")) { $0.rollingStockCost.amount },
     ]
 
     public static func named(_ id: String) -> Achievement? {
