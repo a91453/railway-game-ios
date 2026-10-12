@@ -122,7 +122,9 @@ final class GameLauncherTests: XCTestCase {
             XCTAssertEqual(launcher.session?.isGameLoopRunning, true, "a game started in the foreground runs")
             launcher.setActive(false)
             XCTAssertEqual(launcher.session?.isGameLoopRunning, false)
-            XCTAssertNotNil(launcher.autosave)
+            // Decision 184, later: saved, and listed when the start screen
+            // reads the folder again, not on leaving the app.
+            XCTAssertTrue(library.entries().contains { $0.kind == .autosave })
             launcher.setActive(true)
             XCTAssertEqual(launcher.session?.isGameLoopRunning, true)
             launcher.returnToStart()

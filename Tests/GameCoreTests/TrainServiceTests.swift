@@ -410,17 +410,19 @@ final class TrainServiceTests: XCTestCase {
         XCTAssertEqual(try position(of: first, in: world), line.at(1, facingEast: true))
     }
 
-    /// A travelling train whose track ahead is removed waits for that track,
-    /// like any train (decision 15); the service looks up no other route.
-    /// Held up, it drops its run (Stage W2c). On the track network an edge
-    /// built again is a new edge (IDs are never reused), so the path the
-    /// service gave it stays blocked: it waits on, and is still not
-    /// rerouted. (A train that sets off again from a stand, as fast as it
-    /// can, is `testATrainWithRateZeroGetsItsRouteButDoesNotMove`.)
+    /// Track ahead of a travelling train cannot be removed (decision 186):
+    /// the service looks up no other route, and an edge built again is a
+    /// new edge (IDs are never reused), so the train would wait before the
+    /// gap for good. The removal is refused and changes nothing; once the
+    /// train is past it, at its stop, the track can go.
+    ///
+    /// Until decision 186 the removal went through and this test showed the
+    /// train waiting at c, its run dropped, still not rerouted after the
+    /// edge was built again.
     ///
     /// The service runs to Gamma, past Beta: the platform at the end of a
     /// service's path cannot be removed (Stage S5), Beta's on the way can.
-    func testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted() throws {
+    func testTrackAheadOfATravellingTrainCannotBeRemoved() throws {
         // Leaving at 0:42 on a 2 minutes' run of 4096: 18 s along by 1.
         var world = try makeServiceWorld([stop(alpha, 0, 0), stop(gamma, 2, 10)], rate: 512)
         try world.advance(ticks: 1)
@@ -429,19 +431,17 @@ final class TrainServiceTests: XCTestCase {
 
         // Edge 3, c to d, with Beta's platform before d on it.
         try world.removeTrackPlatform(beta, on: line.edge(3), from: 512)
-        try world.removeTrackEdge(line.edge(3))
-        try world.advance(ticks: 5)
-        XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), line.at(2, facingEast: true))
-        XCTAssertEqual(try movement(of: first, in: world).edges, [2, 3, 4, 5].map(line.edge))
-        XCTAssertEqual(try movement(of: first, in: world).cursor, 1)
-        XCTAssertNil(world.train(id: first)?.times?.run, "held up at c, it dropped its run")
+        let before = world
+        XCTAssertThrowsError(try world.removeTrackEdge(line.edge(3))) {
+            XCTAssertEqual($0 as? GameError, .trackReserved(first))
+        }
+        XCTAssertEqual(world, before)
 
-        try world.buildTrackEdge(from: line.node(2), to: line.node(3))
-        try world.advance(ticks: 2)
-        XCTAssertEqual(try execution(of: first, in: world), .travellingToStop(1))
-        XCTAssertEqual(try position(of: first, in: world), line.at(2, facingEast: true))
-        XCTAssertEqual(try movement(of: first, in: world).edges, [2, 3, 4, 5].map(line.edge))
+        // At Gamma at 2:42, past edge 3: now it can go.
+        try world.advance(ticks: 3)
+        XCTAssertEqual(try execution(of: first, in: world), .waitingAtStop(1))
+        try world.removeTrackEdge(line.edge(3))
+        XCTAssertNil(world.network.edge(line.edge(3)))
     }
 
     /// The last stop keeps its dwell: the service ends at the last stop's

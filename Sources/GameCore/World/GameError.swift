@@ -154,7 +154,10 @@ public enum GameError: Error, Hashable, Sendable {
     case invalidPlatform
     /// Under traffic control (Phase 4.6 Stage T), this train holds track
     /// the command needs: it stands on it, or has reserved it for its
-    /// route. The lowest numbered such train.
+    /// route. The lowest numbered such train. Also, with or without
+    /// traffic control, a train running a service whose way to its next
+    /// stop runs over the track a command would split or remove
+    /// (decision 186).
     case trackReserved(TrainID)
     /// Traffic control cannot be turned on while these two trains need the
     /// same track (Stage T): the first train, in ID order, whose track meets

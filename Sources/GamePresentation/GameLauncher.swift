@@ -268,9 +268,17 @@ public final class GameLauncher {
     /// Unlocks the achievements `session`'s world meets (decision 181),
     /// unless it is a demo, and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo else { return }
-        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date)
+        guard !session.news.isDemo, session.tutorial == nil else { return }
+        let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
+    }
+
+    /// What a world may unlock: everything, but for the Pingxi challenge,
+    /// which starts on the real-world demo's running lines (the track, the
+    /// trains and the hubs are not the player's work), where only the
+    /// challenge's own marks count.
+    static func achievementScope(of world: GameWorld) -> Set<String>? {
+        world.scenario?.scenario.id == "history.pingxi" ? ["challengeGold", "pingxi"] : nil
     }
 
     /// Opens ``DemoWorld``: three lines already running.
@@ -524,7 +532,7 @@ public final class GameLauncher {
     public func saveCurrentGame(at date: Date = Date(), named name: String? = nil) {
         guard let session else { return }
         do throws(SaveError) {
-            let entry = try library.save(session.world, news: session.news, as: .manual, at: date, named: name)
+            let entry = try library.save(session.worldToSave, news: session.news, as: .manual, at: date, named: name)
             session.message = StatusMessage(kind: .success, text: entry.name.map {
                 language.text("Saved the game as \"\($0)\".", "已儲存遊戲：「\($0)」。")
             } ?? language.text("Saved the game.", "已儲存遊戲。"))
@@ -537,13 +545,19 @@ public final class GameLauncher {
     /// Writes the game being played over the autosave. A failure is
     /// reported in the game's status line. Returns whether it was saved;
     /// `false` without a game.
+    ///
+    /// `refreshing` false leaves the list of saves as it was (decision 184,
+    /// later): the autosave on leaving the app, and the periodic one,
+    /// happen during a game, where no list of saves is on screen, and
+    /// reading the list decodes the head of every save in the folder on the
+    /// main thread. The start screen reads it again (``returnToStart()``).
     @discardableResult
-    public func autosaveCurrentGame(at date: Date = Date()) -> Bool {
+    public func autosaveCurrentGame(at date: Date = Date(), refreshing: Bool = true) -> Bool {
         guard let session else { return false }
         recordChallengeResult(at: date)
         do throws(SaveError) {
-            try library.save(session.world, news: session.news, as: .autosave, at: date)
-            refresh()
+            try library.save(session.worldToSave, news: session.news, as: .autosave, at: date)
+            if refreshing { refresh() }
             return true
         } catch {
             session.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -555,7 +569,7 @@ public final class GameLauncher {
     /// the game stays, with the failure on its status line, rather than
     /// being thrown away unsaved.
     public func returnToStart() {
-        guard session == nil || autosaveCurrentGame() else { return }
+        guard session == nil || autosaveCurrentGame(refreshing: false) else { return }
         let left = session != nil
         session?.stopGameLoop()
         session = nil
@@ -605,14 +619,14 @@ public final class GameLauncher {
                         return
                     }
                     guard !Task.isCancelled, let self else { return }
-                    self.autosaveCurrentGame()
+                    self.autosaveCurrentGame(refreshing: false)
                 }
             }
         } else {
             autosaveLoop?.cancel()
             autosaveLoop = nil
             session?.stopGameLoop()
-            autosaveCurrentGame()
+            autosaveCurrentGame(refreshing: false)
         }
     }
 }

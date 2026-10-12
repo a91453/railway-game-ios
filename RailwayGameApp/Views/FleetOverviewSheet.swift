@@ -15,6 +15,17 @@ struct FleetOverviewSheet: View {
     @State private var sort: FleetSort = .name
     /// Decision 184: a train's name, or its line's, to find it by.
     @State private var search = ListSearch()
+    /// The order the roster was sorted in when it opened, the sort key
+    /// changed or the player asked (decision 184, later): kept while the
+    /// game runs, so a list by load or lateness does not move under the
+    /// finger.
+    @State private var order: [TrainID]?
+
+    /// Sorts the roster by ``sort`` as the trains are now, and keeps that
+    /// order.
+    private func sortNow() {
+        order = session.world.fleet(sortedBy: sort, in: session.language).map(\.id)
+    }
 
     var body: some View {
         NavigationStack {
@@ -39,7 +50,8 @@ struct FleetOverviewSheet: View {
                                 language: session.language
                             )
                         }
-                        let shown = session.world.trains(session.world.fleet(sortedBy: sort, in: session.language), matching: session.world.trains.count >= ListSearchField.minimumRows ? search : ListSearch())
+                        let sorted = order.map { session.world.fleet(keeping: $0) } ?? session.world.fleet(sortedBy: sort, in: session.language)
+                        let shown = session.world.trains(sorted, matching: session.world.trains.count >= ListSearchField.minimumRows ? search : ListSearch())
                         if shown.isEmpty {
                             ListSearchEmpty(text: session.language.text("No train matches.", "沒有符合的列車。"))
                         }
@@ -51,6 +63,8 @@ struct FleetOverviewSheet: View {
                     Text(verbatim: session.language.text("Trains (\(session.world.trains.count))", "列車清單（\(session.world.trains.count)）"))
                 }
             }
+            .onAppear { sortNow() }
+            .onChange(of: sort) { sortNow() }
             .navigationTitle(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -65,6 +79,16 @@ struct FleetOverviewSheet: View {
                         } label: {
                             Text(verbatim: session.language.text("Sort by", "排序"))
                         }
+                        Button {
+                            sortNow()
+                        } label: {
+                            Label {
+                                Text(verbatim: session.language.text("Sort Again Now", "立即重新排序"))
+                            } icon: {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                        }
+                        .accessibilityIdentifier("fleet.sortAgain")
                     } label: {
                         Label {
                             Text(verbatim: session.language.text("Sort", "排序"))

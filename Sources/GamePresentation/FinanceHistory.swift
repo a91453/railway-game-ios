@@ -93,7 +93,9 @@ public struct FinanceTrendPoint: Hashable, Identifiable, Sendable {
         case .thirtyDays:
             return language.text("Day \(startDay + 1)", "第 \(startDay + 1) 天")
         case .ninetyDays, .oneYear:
-            return language.text("Days \(startDay + 1)–\(endDay + 1)", "第 \(startDay + 1)–\(endDay + 1) 天")
+            // The first bucket of a young game reaches back before day 1.
+            let from = max(startDay, 0) + 1, to = max(endDay, 0) + 1
+            return language.text("Days \(from)–\(to)", "第 \(from)–\(to) 天")
         }
     }
 

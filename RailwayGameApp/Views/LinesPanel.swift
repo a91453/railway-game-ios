@@ -104,7 +104,7 @@ struct LinesPanel: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                StatusBanner(session: session)
+                StatusBanner(session: session, announces: false)
             }
             // Taps on the map select again once the panel is closed.
             .onDisappear {

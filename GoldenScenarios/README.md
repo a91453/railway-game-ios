@@ -996,7 +996,7 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 ## 決策 183：城市委託案與補助金（schema 72）
 
 - 新指令 `setCityRequests`（`seed`；`null` 是關閉）、`acceptRequest` 與 `declineRequest`（`request`）；新結果 `cityRequestsNotEnabled`、`unknownCityRequest`（`request`）、`cityRequestLimitReached`（`limit`）；新觀察 `cityRequests`（`{"found": true, "cityRequests": {"trust", "owed", "paid", "bestDayTrips", "offers", "active", "results"}}`，委託是 `id`、`kind`、`station`／`x`、`y`／`attraction`、`baseline`、`target`、`reward`（分）、`days`、`offeredDay`、`acceptedDay`、`progress`，結果是 `id`、`kind`、`succeeded`、`day`；關著是 `{"found": false}`）；最終狀態的 `cityRequests` 只在打開時寫。參考模型沒有委託，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `CityRequestsTests` 驗證。
-- `city-requests.json`（新）：Home（1，每天 1,500 人次）、Work（2，800）、Far（3，300）在有一輛車的線 Main 上，一格 1,200 位居民（世界只有 192 m 寬，三站的 800 m 內都有）。
+- `city-requests.json`（新）：Home（1，每天 1,500 人次）、Work（2，800）、Far（3，300）在有一輛車的線 Main 上，三站都是流量管制（有停靠、算有服務，但不放出新旅客，30 天裡不會排出上千組等車的人），一格 1,200 位居民（世界只有 192 m 寬，三站的 800 m 內都有）。
   - 關著時沒有委託，`acceptRequest` 是 `cityRequestsNotEnabled`。
   - 經營模式下用種子 7 打開：第 0 月六種依 FNV-1a(`7|requests.0.order.<種類>`) 排序，成立的是人口（先）與車站運量；沒有 3,000 人的無站聚落、沒有載客的日子、沒有貨運與景點。
   - 人口抽到 Far：1,200 → ⌈×1.2⌉ 1,440 人，120 天，$100 × 240 低於 $1,000,000 的下限。車站運量抽到 Work（Home 與 Work 有 500 以上）：800 → 1,120，60 天，$40 × 320 低於 $200,000 的下限。

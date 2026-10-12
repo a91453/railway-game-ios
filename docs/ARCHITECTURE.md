@@ -914,7 +914,7 @@ PR #31 建立在 S3 之前的方格上，暫停、不合併、不 cherry-pick。
 - **指令**（都在 `GameWorld`；失敗時世界不變）
   - `buildTrackNode(at:)`：`invalidTrackGeometry`（地圖外、不在地面、已有節點）→ `idsExhausted`。免費。
   - `buildTrackEdge(from:to:curve:)`：`unknownTrackNode`（先 `from` 再 `to`）→ `invalidTrackGeometry`（同一個節點、控制點在地圖外、曲線不成立）→ `idsExhausted` → `insufficientFunds`。費用是每格鐵軌的費用乘上長度的格數（無條件進位，至少 1）；乘積放不進 `Money` 時以 `insufficientFunds(required: Int64.max)` 拒絕。
-  - `removeTrackEdge(_:)`：`unknownTrackEdge` → `trackEdgeInUse`（有列車的車頭或車身在上面）。`removeTrackNode(_:)`：`unknownTrackNode` → `trackNodeInUse`（還有邊）。免費、不退款。ID 永不重用，所以 continuation 指向已拆除的邊的列車會停在那條邊之前的節點等待，直到換上新的 continuation。
+  - `removeTrackEdge(_:)`：`unknownTrackEdge` → `trackEdgeInUse`（有列車的車頭或車身在上面）（之後加的：`trackEdgeHasPlatform`、決策 186 的 `trackReserved`，見 `removeTrackEdge` 的文件）。`removeTrackNode(_:)`：`unknownTrackNode` → `trackNodeInUse`（還有邊）。免費、不退款。ID 永不重用，所以 continuation 指向已拆除的邊的列車會停在那條邊之前的節點等待，直到換上新的 continuation。
   - `setTrainContinuation(_:along:)`：方格與路網共用的 continuation 指令，檢查順序同 `setTrainContinuation(_:to:)`。路網上的列車對 `setTrainContinuation(_:to:)` 只接受空陣列（清除）。
   - `placeTrain`、`reverseTrain`、`unplaceTrain`、`setTrainMovementRate`、`advance` 都接受路網上的列車。
 - **轉向**：`transitions(after:)` 對方格是 `exits(from:facing:)`，對路網是建造時推導的 `TrackNodeEnd.exits`，依邊的編號遞增；兩者都不讀幾何。
@@ -5473,6 +5473,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **每月報告**歸 `claude/secretary-news`（決策 175）。它要月彙整時請用 `FinanceHistory.make(.oneYear, …)` 的格子（30 天一格），不要另算一份。
 - 參考：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardFinanceTrendData`（窗口結束在現在、每格一個區段的 delta；它另外從整本帳推現金餘額，這裡不做）。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：遊戲還年輕時，90 天與一年的第一格會跨到第 1 天之前，標籤寫成「第 −18–11 天」；現在從第 1 天算起（`FinanceHistoryTests.testAYoungGamesFirstBucketIsLabelledFromDayOne`）。
+
 ### 177. 開局體驗：新遊戲選項、第一次玩的引導、首條線虧損教學、說明手冊
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車：開始吧觀光補缺口）。號碼依工作登記 #231：決策 177；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動**。
@@ -5502,6 +5504,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 說明手冊的內容是文字，沒有圖；是否夠用要玩過才知道。選項頁與手冊在 Linux 上只能編譯（SwiftUI），要 macOS CI 與實機看。
 
 **測試**：`OnboardingTests`（聚落的找法與方位、站長的各個建議與文字、虧損浮字與金幣、選項套用、種子、摘要、啟動器記住選項與首次卡片、手冊的搜尋）。既有的 `StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew`：三站的新遊戲短線在前 30 天虧錢，現在先說 `firstLineLosing`，所以成長的建議改在自由模式的複本上核對（期望值沒有改）。
+
+**之後的修正**（查 bug，2026-10-12，發佈前）：`firstLineLosing` 不再對還沒有任何列車的路線說話：車站與軌道的固定成本讓昨天的營業結果是負的，站長卻說「車站太近、客太少」，還擋住「路線沒有車」的提醒（`OnboardingTests.testAShortLineWithNoTrainIsNotCalledLosing`）。
+
 ### 172. 彈性發車與折返：列車從路線任一端發車，停在別處的先空車回送
 
 2026-10-12，作者睡覺期間派工的 Q4（`docs/ROADMAP.md` 的「Q4 — 彈性發車與折返」，作者 2026-10-10 決定做成正式的營運功能，不當 bug 修）。號碼依工作登記 #231：決策 172、存檔版本 45、golden schema 67。解除決策 134 的限制（開著這個開關的世界）。
@@ -5710,6 +5715,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`SectionFlowTests`（沒有計畫時什麼都不畫、讀計畫不改世界、區間的負載與運能、輕重排序與紅色、顏色與線寬、區間的分配、點選與兩種語言的文字）、`DepartureBoardTests`（接下來的班次依方向排序、預定到站加誤點、月台上的列車、不在線上的站、時間與誤點的文字、尚未派出的固定班次）。App 的畫法與看板（SwiftUI）在 Linux 上只能編譯，要 macOS CI 與實機。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：進站看板列出「沒有車發出去」的固定班次：一班在容許的 30 分鐘內沒有列車可發（`LineRun.latestDispatch`）就當天作廢，但下游各站仍照時刻表時間列著，像是有一班車要來。現在過了作廢時間就不列（`DepartureBoardTests.testARunNeverSentOutIsNotListedDownTheLine`）。
+
 **之後的修正**（查 bug，2026-10-12，發佈前）：`ServiceLine.withoutDispatchTimes`（乘客計畫與載客量圖層的鍵）也清掉空車回送里程 `deadheadDistance`：它每趟空車回送都增加、沒有計畫讀它，開了彈性發車後每趟回送都讓乘客計畫在下一次 `advance` 整個重算（`FlexDispatchTests.testALineKeyDoesNotChangeWithAnEmptyRun`）。
 
 ### 181. 公司評等、職稱與成就：自由遊戲的長期目標
@@ -5760,6 +5767,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **限制**：最佳單日旅客只看得到帳上保留的兩年（空白地圖分區購買時永久保留）；準點率是快照；路線長度用站間直線；成就記在裝置上，換裝置不跟著走。App 的畫面（SwiftUI）在 Linux 上只能靠 macOS CI 編譯與實機查看。
 
 **測試**：`CompanyRankTests`（七項線性給分、營業比往下、職稱門檻與鐵道大亨、總分與下一職稱、規模打折、沒有收入或列車時是「—」、里程碑的階梯與排序、世界的量測、服務人口不重複、下一個聚落的文字）、`AchievementsTests`（35 項與兩種語言、觀光與子公司的成就與讀取、空公司沒有成就、門檻與進度、劇本的成就、記錄的日期與讀回、壞檔、午夜解鎖寫新聞與狀態列並播音效、示範不算、`isDemo` 跟著新聞紀錄存讀、公里的進度文字）。
+
+**之後的修正**（查 bug，2026-10-12，發佈前）：① 平溪線劇本從實景示範已在跑的四條線開始，第一個午夜就會把軌道、車站、列車、樞紐、早班車等成就全部解鎖；現在這個劇本只認自己的兩枚（`challengeGold`、`pingxi`）（`GameLauncher.achievementScope(of:)`）。② 教學中不判成就（教學的提示不被成就訊息蓋掉）。③ 「安然度颱」要有路線才算（空公司放著到 11 月 1 日就會拿到）。示範地圖本來就不判（`news.isDemo`）；匯入沒有旁檔的示範存檔仍會被當一般遊戲，那要把旗標放進存檔（存檔版本），不在這次修。
 
 **之後的修正**（車輛經濟 #395 合併後，2026-10-12）：成就 35 → 38，補上決策 180 的三項：車種齊全（車隊有三種以上車種，沒有車種的列車算一種）、長編組（一列 10 節以上）、車隊投資（`balanceSheet().rollingStock.cost`，列車與車廂的購置與改裝成本達 $5,000,000，賣掉的不算）。只在 `rollingStockEconomics` 打開的世界達得到；遊戲裡的清單在關著的世界不列這三項（`Achievement.isListed(for:)`，觀光的四項同樣改用它），開始畫面全部列出。「第一次賣掉列車」沒有做：世界只留下出售的收入（和賣建物的收入記在同一欄）與少一列的車隊，從狀態分辨不出賣過列車。
 
@@ -5861,6 +5870,14 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正（遊戲選單溢出）**：#391（觀光景點）、#403、決策 183（城市委託案的「目標」）各在遊戲選單加一列後，空白新遊戲與實景地圖的選單有八列，iPhone 橫向時「回到開始畫面」（`menu.backToStart`）落到點不到的位置；PR 閘門只跑示範地圖（沒有觀光、沒有目標）的存檔流程，所以只有 `main` 的完整 lane 紅。選單改成固定六列：儲存遊戲、另存或匯出 ▸（另存新檔…、匯出存檔）、教學、更多 ▸（目標、觀光景點、說明，依世界而有）、設定、回到開始畫面，和觀光加入前的列數相同，不再隨世界變長；UI 測試點的 `menu.saveGame`、`menu.tutorial`、`menu.settings`、`menu.backToStart` 留在第一層。閘門加上空白新遊戲與實景地圖的存檔流程（`testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing`、`testARealWorldGameStartsFromAPlaceAndIsSavedAsOne`，各約 50 秒）；劃分區的拖曳那一個照它自己的說明留在完整 lane（手勢較不穩定，選單的路徑和蓋房子那一個相同）。以後要加選單項目，放進「更多」。
 
+**之後的修正（發佈前，#420 審查表「需要作者決定」，派工決定）**：
+- 地圖泡泡的 `MapAlert.id` 不再是整個值：改成「種類＋對象」（`MapAlert.ID`：車站候車、某條線、某列車、某景點、破產倒數，加上車站），候車人數、剩餘天數與列車車頭位置不算在內；擁擠轉成爆滿也是同一個泡泡。以前人數一變泡泡就重新彈出，高速時閃、點擊落空。
+- 站長角落不再每次繪製都算建議（可能走 `UnservedCluster` 讀整張土地）：只在 `GameSession.stationMasterRefreshKey`（session、編輯序號 `editSerial`、遊戲小時）改變時重算，和祕書室每小時記一次同一節奏（決策 175）。編輯、復原、重做都會讓序號加一。
+- 車隊總覽依載客率、誤點等排序時，順序在打開、換排序鍵或按「立即重新排序」時固定（`GameWorld.fleet(keeping:)`：新買的列車排最後、賣掉的拿掉），遊戲在跑也不會每 tick 重排、點錯列車。
+- 存檔用玩家的速度（決策 99／175 的後續）：`GameSession.worldToSave` 在 session 自己暫停（建造工具 `isPausedForBuilding`、事件 `isPausedForEvent`）時存成以暫停前的速度在跑；玩家自己按的暫停照存。手動存檔、自動存檔、匯出都用它。以前切到背景時自動存檔存成暫停，回來按「繼續」遊戲停著也沒有說明。
+- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
+- VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
@@ -5886,6 +5903,33 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **代價**：PR 綠了不代表全部 campaign 都過；那些在合併後 `main` 的 push run 上跑。`main` 紅了時看那輪的失敗，需要時手動 `workflow_dispatch` 被取代的 commit 二分。對 PR 有疑慮時加 `full-ci`。
 
 **參考庫與外部專案**：參考庫沒有 CI。依變更選測試是常見做法（Bazel、Nx 的 affected、`pytest-testmon`），沒有取用程式；判斷與檢查是本專案自己的。
+
+### 186. 拆不掉班次中列車前方的軌道
+
+2026-10-12。全程式碼審查（#420）找到的問題，作者把決定交給派工 session（session_017he2Q1QSeaBKJD1PR3XMma），採「拒絕拆除」。號碼依工作登記 #231：決策 186；存檔版本、golden schema 不動，GoldenScenarios、SaveFixtures、ReplayFixtures 都沒有改。
+
+**問題**：`removeTrackEdge` 只檢查列車站在哪裡（`trackEdgeInUse`）與交通管制下的預約，沒檢查班次中列車還要走的路。拆掉之後：
+
+- 列車停在缺口前（決策 15），班次一直是「前往下一站」。
+- 路線因此永遠少一列車；交通管制下，它的車身還佔著軌道。
+- 蓋回軌道也沒用：新邊有新的 ID（ID 不重用），原路徑仍指向舊的那條。
+- 班次中的列車不能另給路徑（`setTrainContinuation` 丟 `trainServiceActive`），班次也不會重新找路。
+- 玩家要自己想到「解除路線、停止班次、收回或另給路徑」三步才救得回來，畫面上沒有任何提示。
+
+**規則**：`removeTrackEdge` 在 `trackEdgeHasPlatform` 之後多一個拒絕：有列車在跑班次（`execution != nil`），而這條邊在它往下一站的路徑上還沒走到（`movement.remainingEdges`）時，丟出 `trackReserved`（第一台這樣的列車）。有沒有交通管制都一樣。列車通過、到站之後就能拆。沒有班次的列車照決策 15 的原樣：停在缺口前，等新的 continuation。
+
+`.trackReserved` 的訊息原本寫「在交通控制下…預約中」，現在沒開交通管制時也會出現，所以改成兩種情況都對的說法：「列車 #N 的路線要經過這段軌道，請等它通過。」（en: "Train #N's route runs over that track. Wait for it to pass."）
+
+**理由**：
+
+- 蓋回軌道救不回來，所以只加警示等於留一個陷阱。
+- 和既有的拒絕一致：`trackEdgeInUse`（站在上面），`splitTrackEdge` 本來就對 `remainingEdges` 丟 `trackReserved`。
+- A 列車系列也不讓玩家拆列車正要經過的軌道。
+- 等列車通過就能拆，玩家不會被永久擋住。
+
+**刻意改掉的測試**：`TrainServiceTests.testATravellingTrainWaitsForRemovedTrackAndIsNotRerouted` 原本斷言拆除成功、列車停在 c 等待並丟掉 run、蓋回軌道後仍不改路。它改成 `testTrackAheadOfATravellingTrainCannotBeRemoved`：拆除被拒、世界不變；列車到站後可以拆。「班次不改路徑」仍然成立，寫在註解裡。
+
+**留待以後**：讓班次在前方軌道被拆時重新規劃到下一站的路徑（B），需要動 `LineJourney` 的快取與 run 的計時，這次不做。
 
 ## 目前規則摘要
 
