@@ -60,7 +60,7 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         XCTAssertEqual(train.performance.displayText(in: .traditionalChinese), "蒸汽列車 · 40 km/h · 0.4 / 1.2 km/h/s")
         XCTAssertEqual(train.typeText(in: .traditionalChinese), "蒸汽列車 · 每節 50 人 · 2 門")
         XCTAssertThrowsError(try world.setTrainType(train.id, to: nil)) { error in
-            XCTAssertEqual((error as? GameError)?.playerMessage(in: .traditionalChinese), "這個年代還沒有標準車。")
+            XCTAssertEqual((error as? GameError)?.playerMessage(in: .traditionalChinese), "這個年代還沒有通用列車。")
         }
         // Without an era: the reference's types and the standard car.
         let free = GameWorld.newGame()

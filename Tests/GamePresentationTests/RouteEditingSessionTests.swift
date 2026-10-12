@@ -117,6 +117,29 @@ final class RouteEditingSessionTests: XCTestCase {
         XCTAssertEqual(session.undoCount, 0)
     }
 
+    /// Decision 172: with flexible dispatch a line with a train is
+    /// reversed, and the move can be undone.
+    func testALineWithATrainIsReversedWithFlexibleDispatch() throws {
+        var world = try makeWorld(width: 16_384, height: 8_192, balance: 100_000)
+        let stops = try [("West", 1_024), ("East", 8_192)].map { name, x in
+            try world.buildStation(named: name, at: PlanPoint(x: Int64(x), y: 2_048)).id
+        }
+        let line = try world.createLine(named: "Line 1", stops: stops).id
+        let train = try world.purchaseTrain(named: "T").id
+        try world.assignTrain(train, to: line)
+        world.setFlexDispatch(true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectLine(line)
+
+        session.reverseSelectedLine()
+
+        XCTAssertEqual(session.world.line(id: line)?.stops, stops.reversed())
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertEqual(session.undoCount, 1)
+        session.undo()
+        XCTAssertEqual(session.world, world)
+    }
+
     func testACopyIsSelectedAndUndoneAsOne() throws {
         let (session, stations, line) = try makeSession()
         session.duplicateSelectedLine()

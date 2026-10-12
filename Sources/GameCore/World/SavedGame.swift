@@ -227,14 +227,19 @@
 ///     reads only an earlier version would drop the first, and every dwell
 ///     would take as long however full the train, and fail on the second, so
 ///     it says the save is newer than it instead.
+/// 45. Flexible dispatch (decision 172): a train can be sent out from either
+///     end of its line and run empty to an end, so a train running such an
+///     empty run has `"deadhead": true`, and a line that has had trains do
+///     so has `"deadheadDistance"`. A build that reads only an earlier
+///     version would drop them, and the empty run would carry passengers
+///     and go uncounted, so it says the save is newer than it instead.
 /// 46. Subsidiary businesses (decision 173): a placed building can have the
 ///     kind `"departmentStore"`, `"hotel"` or `"amusementPark"` and its
 ///     `"books"` (the month's sales and costs, the months closed, the
 ///     totals), and the ledger the rows `"dailySubsidiary"` with the items
 ///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
 ///     earlier version would fail on the kinds, so it says the save is newer
-///     than it instead. (Version 45 is the work registry's for decision 172,
-///     flexible dispatch.)
+///     than it instead. (Version 45 is flexible dispatch, decision 172.)
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 46
@@ -364,6 +369,9 @@ extension SavedGame: Codable {
         // every one did.
         // Version 43 to 44: a world without `"doorCrowding"` has it off, and
         // every exchange takes as long as it did.
+        // Version 44 to 45: a train without `"deadhead"` runs a passenger
+        // service, and a line without `"deadheadDistance"` has driven
+        // nothing empty, as every one had.
         // Version 45 to 46: a building has no `"books"` and the ledger no
         // subsidiary rows, as none traded.
         // Later versions add their steps here.

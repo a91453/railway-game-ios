@@ -115,6 +115,29 @@ final class LineEditingCommandTests: XCTestCase {
         }
     }
 
+    /// Decision 172 (which ends decision 134's refusal where flexible
+    /// dispatch is on): a line with a train, on its own service or a
+    /// pattern's, sent out or not, is reversed; the train keeps its place
+    /// on the line and finishes the trip it is on as planned.
+    func testReversingALineWithTrainsIsAllowedWithFlexibleDispatch() throws {
+        for patterns in [false, true] {
+            var (world, _, line, train) = try LineRoutePreferenceTests.setup(traffic: false, patterns: patterns)
+            world.setFlexDispatch(true)
+            let stops = try XCTUnwrap(world.line(id: line)?.stops)
+            XCTAssertNoThrow(try world.reverseLineStops(line))
+            XCTAssertEqual(world.line(id: line)?.stops, stops.reversed())
+            XCTAssertEqual(world.line(id: line)?.assignedTrains, [train])
+            XCTAssertNoThrow(try world.reverseLineStops(line))
+            XCTAssertEqual(world.line(id: line)?.stops, stops)
+
+            try world.advance(ticks: 60)
+            XCTAssertNotNil(world.train(id: train)?.execution, "sent out")
+            let timetable = try XCTUnwrap(world.train(id: train)?.timetable)
+            XCTAssertNoThrow(try world.reverseLineStops(line), "with its train out")
+            XCTAssertEqual(world.train(id: train)?.timetable, timetable, "the trip under way is finished as planned")
+        }
+    }
+
     /// The lowest numbered of the line's trains is named, wherever it is.
     func testRefusingAReversalNamesTheLowestNumberedTrain() throws {
         var (world, line, stations) = try makeLineWorld()

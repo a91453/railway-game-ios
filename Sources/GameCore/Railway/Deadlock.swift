@@ -114,8 +114,8 @@ extension GameWorld {
             if line.hasRuns { return dueRunDeparture(of: train, on: line) }
             guard let stream = line.dispatchStream(of: train.id) else { return nil }
             var memo = DispatchMemo()
-            guard isDispatchDue(line, stream, at: clock.now, memo: &memo),
-                  let trip = readyTrip(of: train, on: line, stream.service, memo: &memo)
+            guard let trip = readyTrip(of: train, on: line, stream.service, memo: &memo),
+                  isDispatchDue(line, stream, at: clock.now, deadhead: trip.deadhead != nil, memo: &memo)
             else { return nil }
             return firstDeparture(of: train, on: trip, calling: line.stops)
         }

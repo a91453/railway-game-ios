@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 66
+    static let schemaVersion = 67
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -518,6 +518,8 @@ enum ScenarioCommand: Equatable {
     case createLine(name: String, stops: [StationID])
     case removeLine(LineID)
     case setLineStops(LineID, [StationID])
+    /// Schema 67 (decision 172): reverse a line's stops, with trains or not.
+    case reverseLineStops(LineID)
     /// Makes a line a ring or a line again (schema 27, decision 49).
     case setLineRing(LineID, Bool)
     case setLineRoutePreferences(LineID, [LineRoutePreference], pattern: Int?)
@@ -574,6 +576,8 @@ enum ScenarioCommand: Equatable {
     case setLineFreight(LineID, Bool)
     /// Schema 66 (decision 169): door crowding.
     case setDoorCrowding(Bool)
+    /// Schema 67 (decision 172): flexible dispatch.
+    case setFlexDispatch(Bool)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -633,6 +637,8 @@ enum ScenarioCommand: Equatable {
                 try world.removeLine(id)
             case .setLineStops(let id, let stops):
                 try world.setLineStops(id, to: stops)
+            case .reverseLineStops(let id):
+                try world.reverseLineStops(id)
             case .setLineRing(let id, let isRing):
                 try world.setLineRing(id, to: isRing)
             case .setLineRoutePreferences(let id, let routes, let pattern):
@@ -719,6 +725,8 @@ enum ScenarioCommand: Equatable {
                 try world.setLineFreight(line, to: freight)
             case .setDoorCrowding(let enabled):
                 world.setDoorCrowding(enabled)
+            case .setFlexDispatch(let enabled):
+                world.setFlexDispatch(enabled)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -936,6 +944,12 @@ extension ScenarioCommand: Decodable {
         case "setLineStops":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
+        // Schema 67: flexible dispatch (decision 172).
+        case "setFlexDispatch":
+            self = try .setFlexDispatch(container.decode(Bool.self, forKey: .enabled))
+        // Schema 67: reverse a line's stops (decision 172).
+        case "reverseLineStops":
+            self = try .reverseLineStops(container.decodeLine(forKey: .line))
         case "setLineRing":
             self = try .setLineRing(container.decodeLine(forKey: .line), container.decode(Bool.self, forKey: .ring))
         case "setLineRoutePreferences":
@@ -2258,6 +2272,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a crowd at the doors slows the passengers going through
     /// them (schema 66, decision 169); left out otherwise.
     var doorCrowding: Bool?
+    /// `true` while lines send trains out from either end (schema 67,
+    /// decision 172); left out otherwise.
+    var flexDispatch: Bool?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2368,9 +2385,12 @@ struct WorldSummary: Codable, Equatable {
         /// Its performance (schema 25, Stage W2c): absent for the standard
         /// performance, never `null`.
         var performance: PerformanceSummary
+        /// Schema 67 (decision 172): `true` while the train runs empty to
+        /// an end of its line; left out otherwise.
+        var deadhead: Bool?
 
         private enum CodingKeys: String, CodingKey {
-            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trailEdges, reservation, performance
+            case id, name, position, movement, timetable, `repeat`, execution, times, cars, trailEdges, reservation, performance, deadhead
         }
 
         init(
@@ -2410,6 +2430,12 @@ struct WorldSummary: Codable, Equatable {
             reservation = try container.decode([ResourceSummary].self, forKey: .reservation)
             performance = try container.contains(.performance)
                 ? container.decode(PerformanceSummary.self, forKey: .performance) : PerformanceSummary(.standard)
+            if container.contains(.deadhead) {
+                guard try container.decode(Bool.self, forKey: .deadhead) else {
+                    throw DecodingError.dataCorruptedError(forKey: .deadhead, in: container, debugDescription: "\"deadhead\" is written only as true.")
+                }
+                deadhead = true
+            }
         }
 
         func encode(to encoder: any Encoder) throws {
@@ -2428,6 +2454,7 @@ struct WorldSummary: Codable, Equatable {
             if performance.performance != .standard {
                 try container.encode(performance, forKey: .performance)
             }
+            if deadhead == true { try container.encode(true, forKey: .deadhead) }
         }
     }
 
@@ -2491,14 +2518,16 @@ struct WorldSummary: Codable, Equatable {
                                   operationMode: $0.operationMode == .normalFlow ? nil : $0.operationMode.rawValue) }
             .sorted { $0.id < $1.id }
         trains = world.trains
-            .map {
-                TrainSummary(
-                    id: $0.id.rawValue, name: $0.name, position: TrainPositionSummary($0.position),
-                    movement: TrainMovementSummary($0.movement), timetable: $0.timetable.map(StopSummary.init),
-                    repeat: RepeatSummary($0.timetablePeriodMinutes), execution: ExecutionSummary($0.execution),
-                    times: $0.times.map(TimesSummary.init), cars: $0.cars, trailEdges: $0.trailEdges.map(\.number),
-                    reservation: $0.reservation.map(ResourceSummary.init), performance: $0.performance
+            .map { train in
+                var summary = TrainSummary(
+                    id: train.id.rawValue, name: train.name, position: TrainPositionSummary(train.position),
+                    movement: TrainMovementSummary(train.movement), timetable: train.timetable.map(StopSummary.init),
+                    repeat: RepeatSummary(train.timetablePeriodMinutes), execution: ExecutionSummary(train.execution),
+                    times: train.times.map(TimesSummary.init), cars: train.cars, trailEdges: train.trailEdges.map(\.number),
+                    reservation: train.reservation.map(ResourceSummary.init), performance: train.performance
                 )
+                summary.deadhead = train.isDeadheading ? true : nil
+                return summary
             }
             .sorted { $0.id < $1.id }
         lines = world.lines.map(LineSummary.init).sorted { $0.id < $1.id }
@@ -2518,6 +2547,7 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
         doorCrowding = world.doorCrowding ? true : nil
+        flexDispatch = world.flexDispatch ? true : nil
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil
@@ -3018,6 +3048,9 @@ struct LineSummary: Codable, Equatable {
     var runDays: [Int64?] = []
     /// Schema 58 (decision 155): written as `true` for a freight line only.
     var isFreight = false
+    /// Schema 67 (decision 172): the world units its trains have driven
+    /// empty to its ends; written only when above 0.
+    var deadheadDistance: Int64?
 
     init(
         id: Int, name: String, stops: [Int], performance: PerformanceSummary = PerformanceSummary(.standard), window: WindowSummary,
@@ -3053,10 +3086,11 @@ struct LineSummary: Codable, Equatable {
         runs = line.runs
         runDays = line.runDays
         isFreight = line.isFreight
+        deadheadDistance = line.deadheadDistance > 0 ? line.deadheadDistance : nil
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, routePreferences
+        case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, routePreferences, deadheadDistance
         case isRing = "ring", outerLastDispatch
         case runs, runDays
         case isFreight = "freight"
@@ -3084,6 +3118,8 @@ struct LineSummary: Codable, Equatable {
             runs = try container.decode([LineRun].self, forKey: .runs)
             runDays = try container.decode([Int64?].self, forKey: .runDays)
         }
+        // Schema 67: the distance driven empty, when there is any.
+        deadheadDistance = try container.decodeIfPresent(Int64.self, forKey: .deadheadDistance)
         // Schema 58: a freight line says so, with `true`.
         if container.contains(.isFreight) {
             guard try container.decode(Bool.self, forKey: .isFreight) else {
@@ -3131,6 +3167,7 @@ struct LineSummary: Codable, Equatable {
             try container.encode(runDays, forKey: .runDays)
         }
         if isFreight { try container.encode(true, forKey: .isFreight) }
+        try container.encodeIfPresent(deadheadDistance, forKey: .deadheadDistance)
         if isRing {
             try container.encode(true, forKey: .isRing)
             if let outerLastDispatch {

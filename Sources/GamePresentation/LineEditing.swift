@@ -204,6 +204,45 @@ extension ServiceDay {
     }
 }
 
+extension GameWorld {
+    /// What an edit of line `id` does to its trains (decision 172), or
+    /// `nil` when every train is sent out from the first stop as before:
+    /// "2 trains set out from Gamma, the new last stop, once their trip is
+    /// over; 1 train runs empty to Alpha." Trains that cannot reach an end
+    /// are named too, as the line cannot send them out.
+    public func dispatchNotice(of id: LineID, in language: DisplayLanguage) -> String? {
+        guard flexDispatch, let line = line(id: id), let last = line.stops.last else { return nil }
+        let outlook = lineDispatchOutlook(id)
+        let fromLast = outlook.filter { $0.plan == .fromLastStop }.count
+        var empty: [StationID: Int] = [:]
+        for case .runsEmpty(let end) in outlook.map(\.plan) { empty[end, default: 0] += 1 }
+        let stranded = outlook.filter { $0.plan == .stranded }.count
+        func name(_ station: StationID) -> String { self.station(id: station)?.name ?? "#\(station.rawValue)" }
+        var parts: [String] = []
+        if fromLast > 0 {
+            parts.append(language.text(
+                "\(fromLast) \(fromLast == 1 ? "train sets" : "trains set") out from \(name(last)), now the last stop, once \(fromLast == 1 ? "its" : "their") trip is over, running back first",
+                "\(fromLast) 列車跑完這趟後從終點站 \(name(last)) 發車，先跑回程"
+            ))
+        }
+        for end in empty.keys.sorted() {
+            let count = empty[end]!
+            parts.append(language.text(
+                "\(count) \(count == 1 ? "train runs" : "trains run") empty to \(name(end))",
+                "\(count) 列車空車回送到 \(name(end))"
+            ))
+        }
+        if stranded > 0 {
+            parts.append(language.text(
+                "\(stranded) \(stranded == 1 ? "train cannot" : "trains cannot") reach an end of the line",
+                "\(stranded) 列車到不了路線的任何一端"
+            ))
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: language.text("; ", "；")) + language.text(".", "。")
+    }
+}
+
 extension GameSession {
     // MARK: - A line's stops
 
@@ -254,6 +293,7 @@ extension GameSession {
             try world.reverseLineStops(line.id)
             let names = (world.line(id: line.id)?.stops ?? []).map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
             return language.text("Reversed \(line.name): \(names).", "已反轉 \(line.name) 的站序：\(names)。")
+                + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
         }
     }
 
@@ -288,6 +328,7 @@ extension GameSession {
                 try world.setLineStops(line.id, to: stops)
                 let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
                 return language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
+                    + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
             }
             message = StatusMessage(kind: .success, text: text)
             endFollowIfGone()

@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 
 extension GameWorld {
@@ -103,6 +104,9 @@ extension GameWorld {
             // Decision 169: a crowded train's doors pass fewer passengers a
             // second, so a full train dwells longer.
             world.setDoorCrowding(true)
+            // Decision 172: trains are sent out from either end of their
+            // line, and one left elsewhere runs empty to an end.
+            world.setFlexDispatch(true)
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
@@ -214,6 +218,7 @@ public enum DemoWorld {
         // Decision 169: nor do its dwells lengthen in a crowd; the demo's
         // economy is as it was measured.
         world.setDoorCrowding(false)
+        world.setFlexDispatch(false)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {
@@ -394,5 +399,132 @@ public enum DemoWorld {
             guard let length = world.network.edge(edge)?.length else { continue }
             try world.assignTrain(try place(name, cars: ringCars, at: (edge, direction, length / 2 + ringPlatform / 2)), to: ringLine)
         }
+    }
+}
+
+/// What a new game is set up with (ARCHITECTURE decision 177), after A-Train's
+/// difficulty choice (やさしい／標準／達人): the starting cash, how much the
+/// holidays, weather and typhoons disturb the traffic, and the rules a new
+/// game turns on. The default is the new game as it was before the options
+/// were asked: standard, $3,000,000, light disruptions. Presentation only:
+/// the options are applied to the world with ordinary `GameWorld` commands
+/// (``GameWorld/newGame(anchor:bounds:balance:eventSeed:land:water:steep:buysMap:)``
+/// and ``apply(to:)``) and are not saved with the game, which holds what
+/// they set. The weekly challenge is not touched by them.
+public struct NewGameOptions: Hashable, Codable, Sendable {
+    /// Easy, standard or expert: the cash, and (unless ``disruption`` is set)
+    /// the disruptions.
+    public enum Difficulty: String, CaseIterable, Codable, Sendable {
+        case easy, standard, expert
+
+        /// $5,000,000, $3,000,000 or $1,500,000.
+        public var startingBalance: Money {
+            switch self {
+            case .easy: 500_000_000
+            case .standard: GameWorld.startingBalance
+            case .expert: 150_000_000
+            }
+        }
+
+        /// What it does to the disruptions unless they are chosen apart.
+        public var disruption: Disruption {
+            switch self {
+            case .easy: .off
+            case .standard: .light
+            case .expert: .standard
+            }
+        }
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .easy: language.text("Easy", "輕鬆")
+            case .standard: language.text("Standard", "標準")
+            case .expert: language.text("Expert", "達人")
+            }
+        }
+    }
+
+    /// How much the holidays, weather, typhoons and fuel price disturb the
+    /// traffic (decisions 154 and 162): not at all, gently, or in full.
+    public enum Disruption: String, CaseIterable, Codable, Sendable {
+        case off, light, standard
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .off: language.text("Off", "關閉")
+            case .light: language.text("Light", "輕")
+            case .standard: language.text("Standard", "標準")
+            }
+        }
+    }
+
+    public var difficulty: Difficulty = .standard
+    /// Disruptions apart from the difficulty's; `nil` follows it.
+    public var disruptionChoice: Disruption?
+    /// Decision 156: towns grow slowly without the building materials a
+    /// freight yard sends.
+    public var buildingMaterials = true
+    /// Decision 137: the towns beyond the map's edge send riders to the
+    /// stations by it.
+    public var outsideConnections = true
+    /// Decision 160: a blank map is bought tile by tile as the railway
+    /// grows; off, it is the usual 16 km map. Real-world maps decide for
+    /// themselves.
+    public var buysMap = true
+    /// The seed the towns and events are drawn from, so a map can be shared;
+    /// `nil` draws a new one for each game.
+    public var seed: UInt32?
+
+    public init() {}
+
+    public var startingBalance: Money { difficulty.startingBalance }
+
+    public var disruption: Disruption { disruptionChoice ?? difficulty.disruption }
+
+    /// A game's seed: ``seed``, or a random one.
+    public func eventSeed() -> UInt32 {
+        seed ?? .random(in: .min ... .max)
+    }
+
+    /// Turns `world`'s disruptions, building materials and outside
+    /// connections to these options. Free, and nothing else changes.
+    public func apply(to world: inout GameWorld) {
+        switch disruption {
+        case .off:
+            world.setDisruptions(nil)
+        case .light, .standard:
+            let level: DisruptionLevel = disruption == .light ? .light : .standard
+            if let current = world.disruptions, let changed = Disruptions(level: level, country: current.country, seed: current.seed) {
+                world.setDisruptions(changed)
+            }
+        }
+        world.setBuildingMaterials(buildingMaterials)
+        if !outsideConnections { world.setOutsideConnections(false) }
+    }
+
+    /// The seed as typed: digits only, up to ``UInt32/max``; `nil` for
+    /// empty or anything else.
+    public static func seed(from text: String) -> UInt32? {
+        UInt32(text.trimmingCharacters(in: .whitespaces))
+    }
+
+    /// One short paragraph on what these options change from the standard
+    /// game, shown under the options.
+    public func summary(in language: DisplayLanguage) -> String {
+        let cash = startingBalance.moneyText
+        let disruptions = switch disruption {
+        case .off: language.text("No holidays, weather or typhoons disturb the traffic.", "假日、天氣與颱風不影響客流。")
+        case .light: language.text("Holidays, weather and typhoons disturb the traffic gently.", "假日、天氣與颱風對客流的影響較輕。")
+        case .standard: language.text("Holidays, weather and typhoons disturb the traffic in full.", "假日、天氣與颱風對客流的影響完整。")
+        }
+        var rules: [String] = []
+        if !buildingMaterials { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
+        if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
+        if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
+        let rule = rules.isEmpty
+            ? language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。")
+            : language.text("Changed: \(rules.joined(separator: ", ")).", "已更改：\(rules.joined(separator: "、"))。")
+        let seedText = seed.map { language.text("Seed \($0).", "種子 \($0)。") } ?? language.text("A random map each game.", "每局隨機地圖。")
+        return language.text("Starts with \(cash). ", "起始資金 \(cash)。") + disruptions + " " + rule + " " + seedText
     }
 }

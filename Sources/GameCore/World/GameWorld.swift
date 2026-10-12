@@ -102,6 +102,10 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the app's new games turn it on. Set by
     /// ``setDoorCrowding(_:)`` only.
     public internal(set) var doorCrowding: Bool = false
+    /// Whether a line sends its trains out from either end, and runs one
+    /// that stands elsewhere empty to an end (decision 172); off, only from
+    /// the first stop, as before. A new game turns it on.
+    public internal(set) var flexDispatch: Bool = false
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -1487,6 +1491,7 @@ public struct GameWorld: Equatable, Sendable {
         guard trains[index].execution != nil else { throw .trainServiceNotActive(id) }
 
         trains[index].execution = nil
+        trains[index].isDeadheading = false
         trains[index].times = nil
         trains[index].trafficVisits = []
         abandonRiders(of: id)
@@ -1590,17 +1595,27 @@ public struct GameWorld: Equatable, Sendable {
     /// trip the line no longer takes leave, as after
     /// ``setLineStops(_:to:)``.
     ///
-    /// Only a line with no trains can be reversed (decision 134): a train
-    /// sent out would finish its trip at what is then the last stop, where
-    /// the line never sends a train out again, and every rider waiting for
-    /// the line would leave. Take its trains off first.
+    /// Without ``flexDispatch`` only a line with no trains can be reversed
+    /// (decision 134): a train sent out would finish its trip at what is
+    /// then the last stop, where the line never sends a train out, so
+    /// ``GameError/trainOnLine(_:)`` names the lowest numbered train. With
+    /// it, a line with trains can be reversed (decision 172, which ends
+    /// decision 134's refusal): a train sent out finishes its trip, and one that then
+    /// stands at what is now the line's last stop is sent out from there,
+    /// first back along the line. Only a ring with a train running a
+    /// service is refused, as its trains' ways round are by their order
+    /// and would be swapped under their riders.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
-    ///   ``GameError/trainOnLine(_:)`` naming the lowest numbered train
-    ///   assigned to the line or one of its patterns.
+    ///   ``GameError/trainServiceActive(_:)`` naming the lowest numbered
+    ///   train of a ring that runs a service.
     public mutating func reverseLineStops(_ id: LineID) throws(GameError) {
         let index = try lineIndex(of: id)
-        if let assigned = lines[index].assignedTrains.first { throw .trainOnLine(assigned) }
+        if !flexDispatch {
+            if let assigned = lines[index].assignedTrains.first { throw .trainOnLine(assigned) }
+        } else if lines[index].isRing, let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
+            throw .trainServiceActive(running)
+        }
         var line = lines[index]
         let last = line.stops.count - 1
         func reversed(_ routes: [LineRoutePreference]) -> [LineRoutePreference] {
@@ -2456,18 +2471,28 @@ public struct GameWorld: Equatable, Sendable {
             }
             for stream in lines[index].dispatchStreams where !lines[index].trains(of: stream).isEmpty {
                 let line = lines[index]
-                guard isDispatchDue(line, stream, at: now, memo: &memo),
-                      let (ready, trip) = readyTrain(of: line, stream, memo: &memo),
+                // Decision 172: a train that stands where the line does not
+                // send trains out from runs empty to the nearer end; it
+                // takes no headway slot.
+                var sending: (index: Int, trip: LineTrip, deadhead: Bool)?
+                if isDispatchDue(line, stream, at: now, memo: &memo), let (ready, trip) = readyTrain(of: line, stream, memo: &memo) {
+                    sending = (ready, trip, false)
+                } else if isDispatchDue(line, stream, at: now, deadhead: true, memo: &memo),
+                          let (ready, trip) = readyTrain(of: line, stream, deadhead: true, memo: &memo) {
+                    sending = (ready, trip, true)
+                }
+                guard let (ready, trip, deadhead) = sending,
                       let timetable = trip.timetable(calling: line.stops, sentOutAt: now)
                 else { continue }
                 trains[ready].trafficVisits = []
                 trains[ready].timetable = timetable
                 trains[ready].timetablePeriod = nil
                 trains[ready].execution = .waitingAtStop(0)
+                trains[ready].isDeadheading = deadhead
                 // Stage W2b: the train is sent out as if it had just
                 // arrived at the first call; it dwells there first.
                 trains[ready].times = ServiceTimes(arrival: now)
-                lines[index].recordDispatch(of: stream, at: now)
+                if !deadhead { lines[index].recordDispatch(of: stream, at: now) }
                 dispatched = true
             }
         }
@@ -2498,9 +2523,13 @@ public struct GameWorld: Equatable, Sendable {
     /// passed since the stream's last dispatch; and fewer of its trains
     /// run a service than it runs then: on a ring each way runs half the
     /// trains (decision 49), at the ring's headway, which is each way's.
-    func isDispatchDue(_ line: ServiceLine, _ stream: DispatchStream, at now: GameTime, memo: inout DispatchMemo) -> Bool {
+    ///
+    /// With `deadhead` (decision 172) it asks only whether the stream has
+    /// room for one more train now, as an empty run to an end takes no
+    /// headway slot.
+    func isDispatchDue(_ line: ServiceLine, _ stream: DispatchStream, at now: GameTime, deadhead: Bool = false, memo: inout DispatchMemo) -> Bool {
         guard now.seconds >= 0, !line.hasRuns, let planned = plannedService(of: line, stream.service, at: now, memo: &memo) else { return false }
-        if let last = line.lastDispatch(of: stream) {
+        if !deadhead, let last = line.lastDispatch(of: stream) {
             guard let due = Self.time(last, plusMinutes: planned.headway), due <= now else { return false }
         }
         let running = line.trains(of: stream).count { id in train(id: id)?.execution != nil }
@@ -2560,10 +2589,11 @@ public struct GameWorld: Equatable, Sendable {
     /// also be able to take the route of its first departure now; one whose
     /// default and alternative routes cannot be taken is not ready, and
     /// tries again at the next step.
-    private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
+    private func readyTrain(of line: ServiceLine, _ stream: DispatchStream, deadhead: Bool = false, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }),
-                  let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo)
+                  let trip = readyTrip(of: trains[index], on: line, stream.service, memo: &memo),
+                  (trip.deadhead != nil) == deadhead
             else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
@@ -2581,14 +2611,34 @@ public struct GameWorld: Equatable, Sendable {
     /// ``trip(of:service:for:)``). Each trip is looked up once per call of
     /// ``advance(ticks:)`` for where the train stands.
     func readyTrip(of train: Train, on line: ServiceLine, _ service: Int, memo: inout DispatchMemo) -> LineTrip? {
-        let first = line.stops[line.calls(ofService: service)[0]]
-        guard train.execution == nil, let placement = train.placement, train.movement.rate > 0,
-              isStopped(train, at: first)
-        else { return nil }
+        guard train.execution == nil, let placement = train.placement, train.movement.rate > 0 else { return nil }
         if let known = memo.trips[train.id], known.from == placement { return known.trip }
-        let trip = self.trip(of: line, service: service, for: train)
+        let calls = line.calls(ofService: service)
+        // Decision 172: a train goes out from either end of the service, on
+        // a ring from any of its stops; one stopped anywhere else runs
+        // empty to the nearer end first (see ``LineTrip/deadhead``).
+        let trip: LineTrip?
+        if isStopped(train, at: line.stops[calls[0]]) {
+            trip = self.trip(of: line, service: service, for: train)
+        } else if !flexDispatch {
+            trip = nil
+        } else if line.isRing, let stop = line.stops.indices.first(where: { isStopped(train, at: line.stops[$0]) }) {
+            trip = self.trip(of: line, service: service, for: train, from: .ringStop(stop))
+        } else if !line.isRing, isStopped(train, at: line.stops[calls[calls.count - 1]]) {
+            trip = self.trip(of: line, service: service, for: train, from: .last)
+        } else {
+            trip = deadheadTrip(of: line, service: service, for: train)
+        }
         memo.trips[train.id] = (placement, trip)
         return trip
+    }
+
+    /// Adds `distance` world units to the empty running of the line train
+    /// `id` is assigned to (decision 172).
+    mutating func countDeadhead(_ distance: Int64, of id: TrainID) {
+        guard let line = lines.firstIndex(where: { $0.assignedTrains.contains(id) }) else { return }
+        let (total, overflow) = lines[line].deadheadDistance.addingReportingOverflow(distance)
+        lines[line].deadheadDistance = overflow ? .max : total
     }
 
     /// `train` sent out now on `trip` (calling at the line's `stops`), as
@@ -2633,6 +2683,14 @@ public struct GameWorld: Equatable, Sendable {
                 continue
             }
             for stream in line.dispatchStreams where !line.trains(of: stream).isEmpty {
+                // Decision 172: a train that runs empty to an end goes as
+                // soon as the stream has room for it.
+                if readyTrain(of: line, stream, deadhead: true, memo: &memo) != nil {
+                    let wake = now.seconds < 0 ? GameTime.zero
+                        : isDispatchDue(line, stream, at: now, deadhead: true, memo: &memo) ? now
+                        : line.nextChange(after: now, in: serviceDay)
+                    if let wake { soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake)) }
+                }
                 guard readyTrain(of: line, stream, memo: &memo) != nil else { continue }
                 var wake: GameTime?
                 if now.seconds < 0 {
@@ -2678,7 +2736,7 @@ public struct GameWorld: Equatable, Sendable {
             for stream in line.dispatchStreams where !line.trains(of: stream).isEmpty {
                 let waits = line.trains(of: stream).contains { id in
                     guard let train = train(id: id) else { return false }
-                    return readyTrip(of: train, on: line, stream.service, memo: &memo) != nil
+                    return readyTrip(of: train, on: line, stream.service, memo: &memo).map { $0.deadhead == nil } ?? false
                 }
                 guard waits, readyTrain(of: line, stream, memo: &memo) == nil else { continue }
                 var wake: GameTime?
@@ -3097,6 +3155,7 @@ public struct GameWorld: Equatable, Sendable {
             // The last stop's departure: the service is complete.
             stand(&moved, at: start)
             moved.execution = nil
+            moved.isDeadheading = false
             moved.times = nil
             return .completes(moved)
         }
@@ -3698,7 +3757,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3798,6 +3857,7 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
+        flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3914,6 +3974,9 @@ extension GameWorld: Codable {
         }
         if doorCrowding {
             try container.encode(true, forKey: .doorCrowding)
+        }
+        if flexDispatch {
+            try container.encode(true, forKey: .flexDispatch)
         }
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)

@@ -36,7 +36,7 @@ extension PlacedBuildingKind {
         switch self {
         case .house: language.text("House", "小住宅")
         case .shop: language.text("Shop", "商店")
-        case .office: language.text("Office block", "辦公樓")
+        case .office: language.text("Office block", "辦公大樓")
         case .wharf: language.text("Wharf", "漁人碼頭")
         case .marina: language.text("Marina", "遊艇港")
         case .departmentStore: language.text("Department store", "百貨公司")

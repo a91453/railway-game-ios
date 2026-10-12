@@ -114,6 +114,10 @@ extension GameWorld {
     /// far it runs to its next call, in world units; `nil` when its service
     /// ends at this stop instead.
     mutating func serve(departureOf id: TrainID, from stop: Int, distance: Int64?) {
+        // Decision 172: an empty run to a line's end is counted for its line.
+        if let distance, trains.first(where: { $0.id == id })?.isDeadheading == true {
+            countDeadhead(distance, of: id)
+        }
         // Nothing to do without passengers or accounts: worlds without
         // demand in the free economy pay nothing.
         guard !passengers.isEmpty || !riders.isEmpty || accounts.mode == .management,
@@ -205,13 +209,20 @@ extension GameWorld {
     /// both of a ring station's queues), for a station it calls at before
     /// its lap ends back at the first stop.
     private func boardingPlan(of train: Train, at stop: Int) -> (record: Int, eligible: [Int])? {
-        guard stop < train.timetable.count - 1, let line = assignedLine(of: train.id),
+        guard stop < train.timetable.count - 1, !train.isDeadheading, let line = assignedLine(of: train.id),
               // Decision 155: nobody rides a freight line.
               !(self.line(id: line)?.isFreight ?? false),
               let record = passengers.firstIndex(where: { $0.station == train.timetable[stop].station })
         else { return nil }
         let onRing = self.line(id: line)?.isRing ?? false
         var direction: LineDirection = stop < (train.timetable.count - 1) / 2 ? .outbound : .inbound
+        // Decision 172: a trip may start at the line's last stop, or at one
+        // its line has since been edited to; a leg between two stops that
+        // each appear once goes the way their order along the line goes.
+        if flexDispatch, let served = self.line(id: line), !served.isRing, !served.hasRuns,
+           let here = served.uniqueStop(train.timetable[stop].station), let next = served.uniqueStop(train.timetable[stop + 1].station) {
+            direction = here < next ? .outbound : .inbound
+        }
         // Decision 133: a run goes one way, the way its stops go along the
         // line's.
         if let served = self.line(id: line), served.hasRuns,
@@ -225,7 +236,9 @@ extension GameWorld {
         // its place among them decides only for a lap that tells neither.
         let ringWay: RingDirection? = self.line(id: line).flatMap { served in
             guard served.isRing else { return nil }
-            if train.timetable.count > 1, let next = served.stops.dropFirst().first, let last = served.stops.last {
+            // Decision 172: a lap that starts elsewhere than at the first
+            // stop does not tell by its second call.
+            if train.timetable.count > 1, !flexDispatch || train.timetable[0].station == served.stops[0], let next = served.stops.dropFirst().first, let last = served.stops.last {
                 let second = train.timetable[1].station
                 if (second == next) != (second == last) { return second == next ? .inner : .outer }
             }

@@ -185,6 +185,7 @@ public enum LiuMingchuanChallenge {
         // challenges' to keep out).
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setFlexDispatch(false)
         do {
             try world.startScenario(scenario)
         } catch {
