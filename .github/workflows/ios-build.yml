@@ -95,9 +95,13 @@ on:
         type: boolean
         default: false
       only_testing:
-        description: "Only these UI tests, separated by spaces or commas (Class or Class/testMethod, e.g. SettingsUITests/testTheCityPreviewLoadsItsPageAndCloses); no iPad job. Empty: the full lane"
+        description: "Only these UI tests, separated by spaces or commas (Class or Class/testMethod, e.g. SettingsUITests/testTheCityPreviewLoadsItsPageAndCloses); no iPad job unless only_testing_ipad. Empty: the full lane"
         type: string
         default: ""
+      only_testing_ipad:
+        description: "With only_testing: run the same UI tests on an iPad too (the iPad job), e.g. TutorialJourneyUITests"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -146,11 +150,13 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           ONLY_TESTING: ${{ inputs.only_testing }}
+          ONLY_TESTING_IPAD: ${{ inputs.only_testing_ipad }}
         run: |
           ipad=true
           if [[ -n "$ONLY_TESTING" ]]; then
-            # The named UI tests run on the iPhone alone.
-            ipad=false
+            # The named UI tests run on the iPhone alone, unless asked for
+            # on an iPad too.
+            [[ "$ONLY_TESTING_IPAD" == true ]] || ipad=false
           elif [[ "$EVENT" == pull_request ]]; then
             if files="$(git diff --name-only HEAD^1 HEAD)"; then
               echo "Changed files:"
@@ -616,8 +622,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ipad == 'true' && needs.changes.outputs.passed != 'true'
     runs-on: macos-26
-    # Room for the step limits below (boot 14, tests 20) and the rest.
-    timeout-minutes: 45
+    # Room for the step limits below (boot 14, tests 30) and the rest.
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
 
@@ -656,9 +662,38 @@ jobs:
       - name: iPad tutorial tests (bilingual and large text)
         id: ipad-tutorial
         # This step also compiles the app and the UI tests. It took 7 to 12
-        # minutes on different runners (11m40s once), so leave room.
-        timeout-minutes: 20
+        # minutes on different runners (11m40s once), so leave room; the
+        # whole tutorial's walk (TutorialJourneyUITests, not on a pull
+        # request) adds a few minutes.
+        timeout-minutes: 30
+        env:
+          ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
+          only=(-only-testing:RailwayGameUITests/TutorialUITests)
+          # The full lane also walks the whole tutorial on the iPad; a pull
+          # request leaves it to the full lane, as the iPhone's walk.
+          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            only+=(-only-testing:RailwayGameUITests/TutorialJourneyUITests/testTheWholeTutorialOnAnIPad)
+          fi
+          # By hand (only_testing_ipad), the named tests, as on the iPhone.
+          if [[ -n "$ONLY_TESTING" ]]; then
+            only=()
+            IFS=', ' read -r -a tests <<<"$ONLY_TESTING"
+            for test in "${tests[@]}"; do
+              [[ -n "$test" ]] || continue
+              if [[ ! "$test" =~ ^[A-Za-z0-9_]+(/[A-Za-z0-9_]+){0,2}$ ]]; then
+                echo "::error::Not a UI test name: $test"
+                exit 1
+              fi
+              [[ "$test" == RailwayGameUITests/* ]] || test="RailwayGameUITests/$test"
+              only+=("-only-testing:$test")
+            done
+            if (( ${#only[@]} == 0 )); then
+              echo "::error::only_testing names no test."
+              exit 1
+            fi
+          fi
+          echo "iPad UI tests: ${only[*]}"
           xcodebuild test \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -666,7 +701,7 @@ jobs:
             -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ipad-tutorial.xcresult" \
-            -only-testing:RailwayGameUITests/TutorialUITests \
+            "${only[@]}" \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
