@@ -38,10 +38,10 @@ final class GameFeedbackTests: XCTestCase {
         XCTAssertEqual(session.buildPulse?.serial, 2)
         XCTAssertEqual(heard, [.built, .built])
 
-        // Refused: no pulse, no sound.
+        // Refused: no pulse, and since decision 184 the refusal's own sound.
         XCTAssertFalse(session.placeBuilding(at: PlanPoint(x: 10_500, y: 10_000)))
         XCTAssertEqual(session.buildPulse?.serial, 2)
-        XCTAssertEqual(heard, [.built, .built])
+        XCTAssertEqual(heard, [.built, .built, .refused])
     }
 
     func testAnHourOfFaresPulsesTheCash() throws {

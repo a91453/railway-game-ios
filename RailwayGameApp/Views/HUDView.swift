@@ -15,6 +15,9 @@ struct HUDView: View {
     @Environment(GameScreenState.self) private var screen
     /// Whether the forecast of the next days is open (decision 175).
     @State private var showsForecast = false
+    /// Decision 184: whether Save As's name is being asked, and the name.
+    @State private var namingSave = false
+    @State private var saveName = ""
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -52,6 +55,26 @@ struct HUDView: View {
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .alert(Text(verbatim: session.language.text("Save As", "另存新檔")), isPresented: $namingSave) {
+            TextField(text: $saveName) {
+                Text(verbatim: session.language.text("Name", "名稱"))
+            }
+            .accessibilityIdentifier("menu.saveGameAs.name")
+            Button(role: .cancel) {} label: {
+                Text(verbatim: session.language.text("Cancel", "取消"))
+            }
+            Button {
+                launcher.saveCurrentGame(named: saveName)
+            } label: {
+                Text(verbatim: session.language.text("Save", "儲存"))
+            }
+            .accessibilityIdentifier("menu.saveGameAs.confirm")
+        } message: {
+            Text(verbatim: session.language.text(
+                "A name for this save, to find it in Saved Games.",
+                "為這個存檔取個名字，方便在「存檔」裡找到。"
+            ))
+        }
     }
 
     /// Saving, exporting the game as a file, the tutorial, the settings
@@ -66,9 +89,32 @@ struct HUDView: View {
                 Label("Save Game", systemImage: "square.and.arrow.down")
             }
             .accessibilityIdentifier("menu.saveGame")
-            ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
-                Label("Export Save", systemImage: "square.and.arrow.up")
+            // Decision 184: a save with a name of the player's, beside the
+            // export in one row, so the menu keeps its length: on a phone
+            // on its side a longer menu put Back to Start out of reach.
+            Menu {
+                Button {
+                    saveName = ""
+                    namingSave = true
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Save As…", "另存新檔…"))
+                    } icon: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
+                .accessibilityIdentifier("menu.saveGameAs")
+                ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
+                    Label("Export Save", systemImage: "square.and.arrow.up")
+                }
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Save As or Export", "另存或匯出"))
+                } icon: {
+                    Image(systemName: "square.and.pencil")
+                }
             }
+            .accessibilityIdentifier("menu.saveOptions")
             Divider()
             Button {
                 session.startTutorial()
@@ -76,8 +122,9 @@ struct HUDView: View {
                 Label("Tutorial", systemImage: "hand.point.up.left")
             }
             .accessibilityIdentifier("menu.tutorial")
-            // Decision 86: a game with a challenge shows its goals.
-            if session.world.scenario != nil {
+            // Decision 86: a game with a challenge shows its goals;
+            // decision 183: and one with the city's requests.
+            if session.world.scenario != nil || session.world.hasCityRequests {
                 Button {
                     screen.panel = .goals
                 } label: {

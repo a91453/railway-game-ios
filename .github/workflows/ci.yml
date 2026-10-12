@@ -11,10 +11,20 @@ name: CI
 # path filter live in .github/scripts/swift-shards.sh. The matrix below comes
 # from that script, so a shard defined there always has a job.
 #
+# A pull request runs the tier its changed files need (decision 185,
+# swift-shards.sh plan): everything for a change to GameCore, the package,
+# the CI scripts or a shared test file; only the GamePresentation tests for a
+# change there (or to the app's bundled data); only the classes that read
+# the fixtures for a fixture change; only the classes a GameCore test file
+# declares when no other file uses it. The label `full-ci` makes a pull
+# request run everything (adding it starts a new run). A push to main and a
+# manual run always run every shard (swift-shards.sh decide).
+#
 # The workflow always starts, so the "Swift CI (gate)" check always reports:
 # on a pull request or a push to main that changes nothing the package builds
 # or tests (only docs, the app, the release workflows), the Swift jobs are
-# skipped and the gate passes. A push to main is compared with the head of
+# skipped and the gate passes; otherwise the gate passes only when every
+# Swift job of the tier passed. A push to main is compared with the head of
 # the last successful push run of this workflow on main (swift-shards.sh
 # push-base), not with the commit main was at before it: a commit whose run
 # was replaced (see concurrency below) is then still tested by the next run,
@@ -28,12 +38,19 @@ on:
   push:
     branches: [main]
   pull_request:
+    # labeled: adding full-ci re-runs the pull request as full. Any label
+    # starts a new run (which cancels the one in progress, see concurrency);
+    # it decides the same way, so its gate is as true as the one it replaced.
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
   contents: read
   # push-base reads the earlier runs of this workflow.
   actions: read
+  # A pull request's labels (full-ci) are read when it runs, so a re-run
+  # after the label is added sees it.
+  pull-requests: read
 
 # A newer push to a pull request cancels its older run. Pushes to main share
 # one group and never cancel a running run: at most one runs and one waits,
@@ -60,6 +77,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       swift: ${{ steps.detect.outputs.swift }}
+      tier: ${{ steps.detect.outputs.tier }}
       matrix: ${{ steps.detect.outputs.matrix }}
     steps:
       # On a pull request depth 2 is enough: the checkout is the pull request
@@ -77,9 +95,11 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          EVENT_LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
         run: |
-          swift=true
           base=""
+          listed=false
           if [[ "$EVENT" == pull_request ]]; then
             # The first parent of the merge commit is the base, so this is
             # what the pull request changes.
@@ -100,17 +120,26 @@ jobs:
             # No rename detection: it would read file contents, and a
             # renamed file then lists both its names.
             if files="$(git diff --no-renames --name-only "$base" HEAD)"; then
+              listed=true
               echo "Changed files:"
               echo "$files"
-              swift="$(.github/scripts/swift-shards.sh relevant <<<"$files")"
             else
               echo "::warning::Could not list the changed files; running the Swift jobs."
             fi
           fi
-          echo "swift=$swift" >> "$GITHUB_OUTPUT"
-          echo "matrix=$(.github/scripts/swift-shards.sh matrix)" >> "$GITHUB_OUTPUT"
+          labels=""
+          if [[ "$EVENT" == pull_request ]]; then
+            # Labels as the pull request has them now (a re-run sees a label
+            # added since), and as the event had them if that cannot be read.
+            labels="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.labels[].name' 2>/dev/null || true) $EVENT_LABELS"
+          fi
+          # Each file's tier and the tests chosen go to the log.
+          decision="$(LISTED="$listed" LABELS="$labels" .github/scripts/swift-shards.sh decide <<<"${files:-}")"
+          echo "$decision" >> "$GITHUB_OUTPUT"
+          swift="$(sed -n 's/^swift=//p' <<<"$decision")"
+          tier="$(sed -n 's/^tier=//p' <<<"$decision")"
           if [[ "$swift" == true ]]; then
-            echo "Swift jobs: run (event: $EVENT)." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "Swift jobs: run, tier $tier (event: $EVENT)." | tee -a "$GITHUB_STEP_SUMMARY"
           else
             echo "Swift jobs: skipped, no changed file can change what the package builds or tests." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
@@ -146,10 +175,14 @@ jobs:
         run: swift build --build-tests -Xswiftc -warnings-as-errors
 
       # Runs this shard's tests and fails unless exactly those tests ran.
+      # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
+      # them); a full run's are the shards.
       - name: Test (shard ${{ matrix.shard }})
         run: .github/scripts/swift-shards.sh run "$SHARD"
         env:
-          SHARD: ${{ matrix.shard }}
+          SHARD: ${{ matrix.tests && 'selected' || matrix.shard }}
+          SELECTED_TESTS: ${{ matrix.tests }}
+          SELECTED_PART: ${{ matrix.part }}
 
   gate:
     name: Swift CI (gate)
@@ -158,27 +191,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      # Only the script; the verdict is swift-shards.sh gate, which the
+      # self-test checks.
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
       - name: Check the Swift jobs
         env:
           CHANGES: ${{ needs.changes.result }}
           SWIFT_NEEDED: ${{ needs.changes.outputs.swift }}
+          TIER: ${{ needs.changes.outputs.tier }}
           CURRENT: ${{ needs.swift-current.result }}
-        run: |
-          echo "changes: $CHANGES; Swift needed: $SWIFT_NEEDED; Swift 6.4: $CURRENT"
-          if [[ "$CHANGES" != success ]]; then
-            echo "::error::The change detection did not succeed."
-            exit 1
-          fi
-          if [[ "$SWIFT_NEEDED" == true ]]; then
-            if [[ "$CURRENT" != success ]]; then
-              echo "::error::A Swift job did not succeed (Swift 6.4: $CURRENT)."
-              exit 1
-            fi
-            echo "Every Swift 6.4 shard passed."
-          else
-            if [[ "$CURRENT" != skipped ]]; then
-              echo "::error::The Swift jobs were not needed but did not skip (Swift 6.4: $CURRENT)."
-              exit 1
-            fi
-            echo "No file that can change the Swift package changed; the Swift jobs were skipped."
-          fi
+        run: .github/scripts/swift-shards.sh gate

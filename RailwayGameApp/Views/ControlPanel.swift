@@ -34,6 +34,7 @@ struct ControlPanel: View {
                 // refuses Undo then too (``GameSession/canUndo``).
                 if session.tutorial == nil {
                     UndoButton(session: session)
+                    RedoButton(session: session)
                 }
             }
         case .details:
@@ -133,6 +134,32 @@ private struct UndoButton: View {
         .accessibilityLabel("Undo")
         .accessibilityHint("Takes back the last edit, refunding what it cost. Only until game time moves on.")
         .accessibilityIdentifier("controls.undo")
+    }
+}
+
+/// Makes again the edit Undo last took back (decision 184, the
+/// simulator's redo). Enabled by the same rule as ``UndoButton``: until a
+/// new edit or game time moves on.
+private struct RedoButton: View {
+    let session: GameSession
+
+    var body: some View {
+        Button {
+            session.redo()
+        } label: {
+            Image(systemName: "arrow.uturn.forward")
+                .font(.subheadline.weight(.bold))
+                .frame(width: 40, height: 40)
+                .opacity(session.canRedo ? 1 : 0.4)
+        }
+        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+        .disabled(!session.canRedo)
+        .accessibilityLabel(Text(verbatim: session.language.text("Redo", "重做")))
+        .accessibilityHint(Text(verbatim: session.language.text(
+            "Makes again the edit Undo took back. Only until another edit or game time moves on.",
+            "重新做一次剛才復原的編輯。再做別的編輯或遊戲時間前進後就不能重做。"
+        )))
+        .accessibilityIdentifier("controls.redo")
     }
 }
 

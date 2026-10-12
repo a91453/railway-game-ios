@@ -42,6 +42,10 @@ struct GoalsSections: View {
     var body: some View {
         let language = session.language
         let world = session.world
+        // Decision 183: the city's requests, in a free game.
+        if world.hasCityRequests {
+            CityRequestsSection(session: session)
+        }
         if world.scenario == nil {
             // Decision 181: a free game's long-term goal.
             CompanyRankSection(session: session, achievements: achievements)
@@ -133,6 +137,126 @@ struct GoalsSections: View {
         case .failed?: Theme.error
         case nil: Theme.primary
         }
+    }
+}
+
+/// The city's requests (decision 183): the trust and the subsidies, the
+/// requests in hand with their progress and days left, the month's offers
+/// to take on or turn down, and the last results. "Show on map" takes the
+/// map to the place asked about.
+struct CityRequestsSection: View {
+    let session: GameSession
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let language = session.language
+        let world = session.world
+        let rows = world.cityRequestRows(in: language, placeNames: session.placeNames)
+        let room = (world.cityRequests?.active.count ?? 0) < (world.cityRequests?.capacity ?? 0)
+        Section {
+            if let trust = world.cityTrustText(in: language) {
+                Text(verbatim: trust)
+                    .fontWeight(.semibold)
+                    .accessibilityIdentifier("requests.trust")
+            }
+            if let subsidy = world.citySubsidyText(in: language) {
+                Text(verbatim: subsidy)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
+            }
+            if rows.isEmpty {
+                Text(verbatim: language.text("No requests this month. New ones come on the 1st.", "這個月沒有委託，下個月 1 日會有新的。"))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(rows) { row in
+                requestRow(row, room: room, language: language)
+            }
+            ForEach(world.cityRequestResults(in: language, placeNames: session.placeNames).prefix(5)) { result in
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: result.title)
+                        Text(verbatim: result.text)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                } icon: {
+                    Image(systemName: result.succeeded ? "checkmark.seal.fill" : "xmark.circle")
+                        .foregroundStyle(result.succeeded ? Theme.success : Theme.textSecondary)
+                }
+                .font(.footnote)
+            }
+        } header: {
+            Text(verbatim: language.text("City requests", "委託案"))
+        } footer: {
+            Text(verbatim: world.cityRequestsHelp(in: language))
+        }
+    }
+
+    private func requestRow(_ row: CityRequestRow, room: Bool, language: DisplayLanguage) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: row.isActive ? "hourglass" : "envelope.badge")
+                    .foregroundStyle(row.isActive ? Theme.primary : Theme.textSecondary)
+                Text(verbatim: row.title)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(verbatim: row.rewardText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.success)
+                    .monospacedDigit()
+            }
+            Text(verbatim: row.detail)
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+            if row.isActive {
+                ProgressView(value: Double(row.progress) / 1_000)
+                    .tint(Theme.primary)
+            }
+            HStack {
+                Text(verbatim: row.progressText + " · " + row.daysLeftText)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .monospacedDigit()
+                Spacer()
+            }
+            HStack(spacing: 12) {
+                if !row.isActive {
+                    Button {
+                        session.acceptRequest(row.id)
+                    } label: {
+                        Text(verbatim: language.text("Take on", "承接"))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!room)
+                    .accessibilityIdentifier("requests.accept.\(row.id)")
+                }
+                Button(role: row.isActive ? ButtonRole.destructive : nil) {
+                    session.declineRequest(row.id)
+                } label: {
+                    Text(verbatim: row.isActive ? language.text("Give up", "放棄") : language.text("Turn down", "婉拒"))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("requests.decline.\(row.id)")
+                if let location = row.location {
+                    Button {
+                        session.lookAt(location)
+                        dismiss()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Show on map", "在地圖上看"))
+                        } icon: {
+                            Image(systemName: "mappin.and.ellipse")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            .font(.caption)
+        }
+        .font(.footnote)
+        .padding(.vertical, 2)
     }
 }
 

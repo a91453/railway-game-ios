@@ -100,6 +100,14 @@ public struct Tourism: Hashable, Sendable {
     public internal(set) var nextID: Int
 
     public static let maximumSouvenirLevel = 2
+    /// What a hotel within ``SubsidiaryRules/reach`` of an attraction adds to
+    /// its rating, in hundredths of a star, and how many count (decision
+    /// 174, a later fix): two hotels, half a star.
+    public static let starsPerHotel = 25
+    public static let hotelsCounted = 2
+    /// The share of an attraction's tourists who stay the night in a hotel
+    /// near it, in thousandths (shared among the hotels there).
+    public static let hotelStayPermille: Int64 = 80
     public static let starsPerSouvenirLevel = 25
     /// What a level of the shop costs: $300,000, in cents.
     public static let souvenirCost: Int64 = 30_000_000
@@ -355,6 +363,38 @@ extension GameWorld {
         return best?.0
     }
 
+    /// The company's hotels within ``SubsidiaryRules/reach`` of
+    /// `attraction`.
+    public func hotelsNear(_ attraction: Attraction) -> Int {
+        let reach = SubsidiaryRules.reach
+        return placedBuildings.count { building in
+            guard building.kind == .hotel else { return false }
+            let dx = building.centre.x - attraction.point.x, dy = building.centre.y - attraction.point.y
+            return dx * dx + dy * dy <= reach * reach
+        }
+    }
+
+    /// The rating of `attraction` now, in hundredths of a star: its own
+    /// (``Attraction/stars``, with its shop) and a quarter star for each of
+    /// the first two hotels near it, five stars at most.
+    public func stars(of attraction: Attraction) -> Int {
+        min(500, attraction.stars + Tourism.starsPerHotel * min(Tourism.hotelsCounted, hotelsNear(attraction)))
+    }
+
+    /// The tourists of game day `day` who stay in hotels near `attraction`,
+    /// counted for one hotel's customers (decision 174): the day that has
+    /// just closed as the sight counted it (``Attraction/yesterday``),
+    /// any other day as expected if a station serves it.
+    func hotelGuests(of attraction: Attraction, onDay day: Int64) -> Int64 {
+        let tourists: Int64
+        if day == dayIndex(of: clock.now) - 1 {
+            tourists = attraction.yesterday
+        } else {
+            tourists = servingStation(at: attraction.point) == nil ? 0 : touristsExpected(for: attraction, onDay: day)
+        }
+        return tourists * Tourism.hotelStayPermille / 1_000 / Int64(max(1, hotelsNear(attraction)))
+    }
+
     /// The tourists attraction `id` draws on game day `day` before the
     /// railway is asked: its rating, the day, the season, the weather and
     /// any typhoon. 0 while a typhoon blows over it.
@@ -372,7 +412,7 @@ extension GameWorld {
         let month = Int(dayOfYear / 30) + 1
         let dayFactor = Tourism.dayFactor(weekday: StationDemand.weekday(ofDay: day), holiday: holiday(onDay: day) != nil)
         let weather: Int64 = self.weather(onDay: day) == .clear ? 1_000 : 700
-        return Tourism.tourists(stars: attraction.stars, day: dayFactor,
+        return Tourism.tourists(stars: stars(of: attraction), day: dayFactor,
                                 season: Tourism.seasonFactor(attraction.kind, month: month), weather: weather)
     }
 

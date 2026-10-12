@@ -81,6 +81,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// day) and the sights a station serves draw about `times` as many
     /// tourists.
     case touristsComing(kind: HolidayKind, days: Int64, times: Int64)
+    /// Decision 183: the city's new offers of month `month` (`count` of
+    /// them, the best paying `reward`), while the company can take one on;
+    /// `target` is where the best paying one is.
+    case newCityRequests(month: Int64, count: Int, reward: Money, target: PlanPoint?)
 
     /// Decision 177: where the nearest town no station serves lies, from the
     /// railway's nearest station (``UnservedCluster``).
@@ -117,6 +121,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     public var cameraTarget: PlanPoint? {
         switch self {
         case .inDebtShortLine(let hint), .firstLineLosing(_, let hint): hint?.target
+        case .newCityRequests(_, _, _, let target): target
         default: nil
         }
     }
@@ -158,8 +163,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
         let alerts = world.mapAlerts()
         let name = { (id: StationID) in world.station(id: id)?.name ?? "" }
-        if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }) {
-            self = .stationFull(station: full.station, name: name(full.station))
+        if let full = alerts.first(where: { if case .full = $0.kind { true } else { false } }), let station = full.station {
+            self = .stationFull(station: station, name: name(station))
             return
         }
         for alert in alerts {
@@ -168,8 +173,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 return
             }
         }
-        if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }) {
-            self = .stationCrowded(station: crowded.station, name: name(crowded.station))
+        if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }), let station = crowded.station {
+            self = .stationCrowded(station: station, name: name(station))
             return
         }
         if let event = Self.scenarioEvent(in: world) {
@@ -186,6 +191,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = .createLine
         } else if let welcome = Self.welcome(in: world), (world.scenarioDay() ?? .max) <= Self.welcomeDays {
             self = welcome
+        } else if let requests = Self.newCityRequests(in: world) {
+            self = requests
         } else if let tourists = Self.touristsComing(in: world) {
             self = tourists
         } else if let holiday = Self.holiday(in: world) {
@@ -328,6 +335,17 @@ public enum StationMasterAdvice: Hashable, Sendable {
         return .touristsComing(kind: coming.holiday.kind, days: max(0, coming.start - today), times: 2)
     }
 
+    /// Decision 183: the city's offers in the first three days of a month,
+    /// while one more can be taken on.
+    private static func newCityRequests(in world: GameWorld) -> StationMasterAdvice? {
+        guard let requests = world.cityRequests, world.accounts.mode == .management, requests.active.count < requests.capacity,
+              let best = requests.offers.max(by: { ($0.reward, $1.id) < ($1.reward, $0.id) }) else { return nil }
+        let today = world.clock.now.seconds / GameTime.secondsPerDay
+        guard today % CityRequests.monthDays < 3 else { return nil }
+        return .newCityRequests(month: today / CityRequests.monthDays, count: requests.offers.count, reward: best.reward,
+                                target: world.location(of: best))
+    }
+
     /// Decision 174: the best-rated sight (the lowest ID of equals) with a
     /// station of the network within 5 km but none within 800 m that a
     /// passenger line calls at, once the first line is made.
@@ -343,9 +361,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
         // Only whether a station serves it is asked: the advice is worked
         // out at every step of the game, and whether anyone can ride there
         // (the panel says that) builds the whole route graph.
-        for sight in candidates.sorted(by: { $0.stars != $1.stars ? $0.stars > $1.stars : $0.id < $1.id })
+        for sight in candidates.sorted(by: { world.stars(of: $0) != world.stars(of: $1) ? world.stars(of: $0) > world.stars(of: $1) : $0.id < $1.id })
         where world.attractionStation(of: sight.id) == nil {
-            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: sight.stars, status: .noStation)
+            return .sightUnreachable(attraction: sight.id, english: sight.englishName, chinese: sight.name, stars: world.stars(of: sight), status: .noStation)
         }
         return nil
     }
@@ -529,6 +547,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                     "\(kind.title(in: language)) has begun: about ×\(times) tourists at the sights today.",
                     "\(kind.title(in: language))到了，今天景點的觀光客約 ×\(times)。"
                 )
+        case .newCityRequests(_, let count, let reward, _):
+            language.text(
+                "The city has \(count) new request\(count == 1 ? "" : "s") for us, paying up to \(reward.moneyText). See Goals.",
+                "城市提出 \(count) 件新委託，最高補助 \(reward.moneyText)。到「目標」看看吧。"
+            )
         case .fuelSpell(let percent, let days):
             percent >= 0
                 ? language.text(
@@ -549,7 +572,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
-             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing: false
+             .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests: false
         }
     }
 
