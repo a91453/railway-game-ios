@@ -379,6 +379,25 @@ final class LineDispatchTests: XCTestCase {
         XCTAssertEqual(cut.train(id: one)?.timetable, trip(20))
     }
 
+    /// Track ahead of a train running a service cannot be removed: the
+    /// train could never be given another way to its stop, and would
+    /// stand before the gap for good, its line a train short.
+    func testTrackAheadOfAServiceCannotBeRemoved() throws {
+        var world = try makeDispatchWorld(trains: 1, running: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try advance(&world, 2)
+        XCTAssertEqual(world.train(id: one)?.execution, .travellingToStop(1))
+        XCTAssertTrue(world.train(id: one)?.movement.remainingEdges.contains(line.edge(4)) == true)
+        try world.removeTrackPlatform(beta, on: line.edge(4), from: 0)
+        let before = world
+        XCTAssertThrowsError(try world.removeTrackEdge(line.edge(4))) {
+            XCTAssertEqual($0 as? GameError, .trackReserved(one))
+        }
+        XCTAssertEqual(world, before)
+        try advance(&world, 10)
+        XCTAssertEqual(world.train(id: one)?.timetable.map(\.station), [alpha, gamma, alpha])
+        XCTAssertNotEqual(world.train(id: one)?.execution, .travellingToStop(1))
+    }
+
     /// Fewer trains at a level: the line sends none out while as many as
     /// the level runs are out, so trains coming back wait at the first
     /// stop, the lowest ID going first when one is due. More trains: the
