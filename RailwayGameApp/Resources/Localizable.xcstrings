@@ -14,6 +14,16 @@
       }
     },
 
+    "Net profit" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淨利"
+          }
+        }
+      }
+    },
     "Network passenger routes" : {
       "localizations" : {
         "zh-Hant" : {
@@ -31,6 +41,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OpenStreetMap"
+          }
+        }
+      }
+    },
+    "Series" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系列"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來源"
           }
         }
       }
@@ -2529,6 +2559,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "X 型交叉渡線"
+          }
+        }
+      }
+    },
+    "Zero" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "零"
           }
         }
       }
