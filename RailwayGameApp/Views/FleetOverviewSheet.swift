@@ -13,6 +13,8 @@ struct FleetOverviewSheet: View {
     @State private var sellingTrain: Train?
     /// Decision 179: how the roster is ordered.
     @State private var sort: FleetSort = .name
+    /// Decision 184: a train's name, or its line's, to find it by.
+    @State private var search = ListSearch()
 
     var body: some View {
         NavigationStack {
@@ -29,7 +31,19 @@ struct FleetOverviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        ForEach(session.world.fleet(sortedBy: sort, in: session.language)) { train in
+                        if session.world.trains.count >= ListSearchField.minimumRows {
+                            ListSearchField(
+                                search: $search,
+                                prompt: session.language.text("Search trains or lines", "搜尋列車或路線"),
+                                identifier: "fleet.search",
+                                language: session.language
+                            )
+                        }
+                        let shown = session.world.trains(session.world.fleet(sortedBy: sort, in: session.language), matching: session.world.trains.count >= ListSearchField.minimumRows ? search : ListSearch())
+                        if shown.isEmpty {
+                            ListSearchEmpty(text: session.language.text("No train matches.", "沒有符合的列車。"))
+                        }
+                        ForEach(shown) { train in
                             trainRow(train)
                         }
                     }

@@ -991,3 +991,16 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
 - 每個值都是手算的，`tools/golden-checks/rolling_stock.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。
 - 改裝費規則改過一次（作者決定，堵「先買便宜車、加節、再改高鐵」只付 30 % 的套利）：這份 golden 只有 `expectedFinalState.balance` 從 156,399,000 變成 146,499,000（−9,900,000：藍車改裝 18,000,000 → 49,500,000、綠車改裝 2,700,000 → 0、賣藍車取回 54,600,000 → 73,500,000），步驟的結果都沒變。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+
+## 決策 183：城市委託案與補助金（schema 72）
+
+- 新指令 `setCityRequests`（`seed`；`null` 是關閉）、`acceptRequest` 與 `declineRequest`（`request`）；新結果 `cityRequestsNotEnabled`、`unknownCityRequest`（`request`）、`cityRequestLimitReached`（`limit`）；新觀察 `cityRequests`（`{"found": true, "cityRequests": {"trust", "owed", "paid", "bestDayTrips", "offers", "active", "results"}}`，委託是 `id`、`kind`、`station`／`x`、`y`／`attraction`、`baseline`、`target`、`reward`（分）、`days`、`offeredDay`、`acceptedDay`、`progress`，結果是 `id`、`kind`、`succeeded`、`day`；關著是 `{"found": false}`）；最終狀態的 `cityRequests` 只在打開時寫。參考模型沒有委託，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `CityRequestsTests` 驗證。
+- `city-requests.json`（新）：Home（1，每天 1,500 人次）、Work（2，800）、Far（3，300）在有一輛車的線 Main 上，一格 1,200 位居民（世界只有 192 m 寬，三站的 800 m 內都有）。
+  - 關著時沒有委託，`acceptRequest` 是 `cityRequestsNotEnabled`。
+  - 經營模式下用種子 7 打開：第 0 月六種依 FNV-1a(`7|requests.0.order.<種類>`) 排序，成立的是人口（先）與車站運量；沒有 3,000 人的無站聚落、沒有載客的日子、沒有貨運與景點。
+  - 人口抽到 Far：1,200 → ⌈×1.2⌉ 1,440 人，120 天，$100 × 240 低於 $1,000,000 的下限。車站運量抽到 Work（Home 與 Work 有 500 以上）：800 → 1,120，60 天，$40 × 320 低於 $200,000 的下限。
+  - 一星信賴度只能同時承接一件：第二件是 `cityRequestLimitReached`（`limit` 1），委託 9 是 `unknownCityRequest`。
+  - 土地長到 1,440 人，下一個午夜達成：欠 $1,000,000、兩星，第 1 天可以再承接第二件。
+  - 第 30 天開始的午夜付款（`monthlySubsidy` 列在第 43,199 分，記在第 29 天）並抽第 1 月：Home 的運量與 Far 的人口（1,440 → 1,728）；Work 的運量在手上，不再出。
+- 每個值都由 `tools/golden-checks/city_requests.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

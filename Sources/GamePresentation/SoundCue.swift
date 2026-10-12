@@ -19,6 +19,12 @@ public enum SoundCue: Hashable, Sendable {
     case built
     /// Fares or rent came in (decision 117): a bright double ding.
     case income
+    /// The game refused what the player asked (a failure message,
+    /// decision 184): two soft low plucks, falling.
+    case refused
+    /// A new worry in the news log (decision 184: debt, a deadline, a
+    /// typhoon, a town short of materials): two short bells.
+    case warning
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at

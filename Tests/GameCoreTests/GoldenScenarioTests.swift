@@ -504,6 +504,14 @@ final class GoldenScenarioTests: XCTestCase {
             return [.typhoons([]), .typhoons([first] + typhoons.dropFirst())]
         case .fuel(nil):
             return []
+        case .cityRequests(nil):
+            return []
+        case .cityRequests(let requests?):
+            var trust = requests
+            trust.trust += 1
+            var owed = requests
+            owed.owed += 100
+            return [.cityRequests(nil), .cityRequests(trust), .cityRequests(owed)]
         case .fuel(let spell?):
             var index = spell
             index.index += 1
