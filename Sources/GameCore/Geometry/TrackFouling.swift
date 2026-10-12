@@ -25,9 +25,34 @@ extension RailwayNetwork {
     /// For every span of the network that fouls spans of other edges, those
     /// spans (see ``foulingSpans``): worked out from the edges, their
     /// geometry and their platforms.
+    ///
+    /// Only the pairs of edges whose boxes may come close are tried
+    /// (``PlanBox/pairsInReach(_:margin:)``), and each edge's checkpoints and
+    /// pieces are worked out once (``TrackSpacing/Prepared``): the same
+    /// fouling as trying every pair (``foulingAfterChange(to:)`` with every
+    /// edge changed).
     func workOutFouling() -> [TrackSpan: Set<TrackSpan>] {
         var fouling: [TrackSpan: Set<TrackSpan>] = [:]
-        addFouling(of: Set(edges.map(\.id)), to: &fouling)
+        let measured = edges.compactMap { edge in
+            planBox(of: edge).flatMap { box in clearanceShape(of: edge.id).map { (edge, box, $0) } }
+        }
+        let boxes = measured.map(\.1)
+        var prepared: [TrackSpacing.Prepared?] = Array(repeating: nil, count: measured.count)
+        func edge(_ i: Int) -> TrackSpacing.Prepared {
+            if let edge = prepared[i] { return edge }
+            let edge = TrackSpacing.Prepared(measured[i].2)
+            prepared[i] = edge
+            return edge
+        }
+        var reach: [TrackNodeID: [TrackNodeID: Int64]] = [:]
+        func distance(_ a: TrackNodeID, _ b: TrackNodeID) -> Int64? {
+            if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.foulingLength) }
+            return reach[a]?[b]
+        }
+        for (i, j) in PlanBox.pairsInReach(boxes, margin: Self.trackSpacing) where boxes[i].mayComeClose(to: boxes[j]) {
+            let pairs = TrackSpacing.besidePoints(edge(i), edge(j), within: Self.foulingLength, distance: distance)
+            addFouling(between: measured[i].0, measured[j].0, at: pairs, to: &fouling)
+        }
         return fouling
     }
 
@@ -86,16 +111,23 @@ extension RailwayNetwork {
                 let a = (edges[i], shapeA)
                 let b = (edges[j], shapeB)
                 let pairs = TrackSpacing.besidePoints(a.1, b.1, within: Self.foulingLength, distance: distance)
-                guard !pairs.isEmpty else { continue }
-                let spansA = spans(of: a.0.id, length: a.0.length)
-                let spansB = spans(of: b.0.id, length: b.0.length)
-                for (s, t) in pairs {
-                    for x in spansA where x.start <= s && s <= x.end {
-                        for y in spansB where y.start <= t && t <= y.end {
-                            fouling[x, default: []].insert(y)
-                            fouling[y, default: []].insert(x)
-                        }
-                    }
+                addFouling(between: a.0, b.0, at: pairs, to: &fouling)
+            }
+        }
+    }
+
+    /// Adds to `fouling` the spans of edges `a` and `b` that hold the points
+    /// beside each other `pairs` (chainages along `a` and along `b`), each
+    /// fouling the other.
+    private func addFouling(between a: TrackEdge, _ b: TrackEdge, at pairs: [(Int64, Int64)], to fouling: inout [TrackSpan: Set<TrackSpan>]) {
+        guard !pairs.isEmpty else { return }
+        let spansA = spans(of: a.id, length: a.length)
+        let spansB = spans(of: b.id, length: b.length)
+        for (s, t) in pairs {
+            for x in spansA where x.start <= s && s <= x.end {
+                for y in spansB where y.start <= t && t <= y.end {
+                    fouling[x, default: []].insert(y)
+                    fouling[y, default: []].insert(x)
                 }
             }
         }
@@ -127,6 +159,23 @@ extension RailwayNetwork {
 }
 
 extension TrackSpacing {
+    /// ``besidePoints(_:_:within:distance:)`` for two edges whose
+    /// checkpoints and pieces were worked out beforehand: the same pairs,
+    /// in another order.
+    static func besidePoints(_ a: Prepared, _ b: Prepared, within limit: Int64, distance: (TrackNodeID, TrackNodeID) -> Int64?) -> [(Int64, Int64)] {
+        guard PlanBox(a.shape).mayComeClose(to: PlanBox(b.shape)) else { return [] }
+        let ends = Ends(a.shape, b.shape, distance: distance)
+        var found: [(Int64, Int64)] = []
+        for (first, second, way, swap) in [(a, b, ends, false), (b, a, ends.swapped, true)] {
+            let (length, otherLength) = (first.shape.geometry.length, second.shape.geometry.length)
+            _ = closePoints(of: first, to: second) { s, t in
+                if !way.isWithin(limit, s, of: length, t, of: otherLength) { found.append(swap ? (t, s) : (s, t)) }
+                return true
+            }
+        }
+        return found
+    }
+
     /// The points of `a` and `b` beside each other farther apart along the
     /// track than `limit`: for each checkpoint of either close to the other
     /// (see ``closePieces(to:of:)``) at a point more than `limit` from it
