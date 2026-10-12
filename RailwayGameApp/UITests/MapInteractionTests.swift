@@ -462,7 +462,8 @@ final class MapInteractionTests: XCTestCase {
         // A tap then used to change only what showed after the panel closed.
         toggle.tap()
         if stationMaster.exists {
-            XCTAssertTrue(stationMaster.isHittable, "The station master shows only where the panel leaves it room")
+            XCTAssertTrue(stationMaster.isHittable,
+                          "The station master \(stationMaster.frame) shows only where the panel \(bar.frame) leaves it room")
             XCTAssertLessThanOrEqual(stationMaster.frame.maxX, bar.frame.minX,
                                      "The station master \(stationMaster.frame) must not lie under the panel \(bar.frame)")
         }

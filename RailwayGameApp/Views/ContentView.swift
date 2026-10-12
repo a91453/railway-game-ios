@@ -279,22 +279,20 @@ struct ContentView: View {
                     // the zoom buttons, and a tap there only closed it.
                     let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
                     let trailing = max(sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0, corner)
-                    // Hidden where a panel beside the map would cover it:
+                    // Nothing where a panel beside the map would cover it:
                     // on a landscape phone the panel's edge (x 365 of 750)
                     // lies over the station master beside the dock (x
-                    // 350-394), leaving a sliver to tap. Hidden, not
-                    // removed, so it remembers what it has said.
+                    // 350-394), leaving a sliver to tap. Kept, not removed,
+                    // so it remembers what it has said.
                     let isCovered = dockSize.width + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     if session.tutorial == nil, dockSize != .zero {
                         StationMasterCorner(
                             session: session,
-                            maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52
+                            maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52,
+                            isCovered: isCovered
                         )
                         .padding(.leading, dockSize.width + margin)
                         .padding(.bottom, strip + margin)
-                        .opacity(isCovered ? 0 : 1)
-                        .allowsHitTesting(!isCovered)
-                        .accessibilityHidden(isCovered)
                     }
                 }
                 .overlay(alignment: .trailing) {
