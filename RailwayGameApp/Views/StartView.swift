@@ -550,12 +550,24 @@ private struct CardTapButtonStyle: ButtonStyle {
 }
 
 /// The player's saves, and an autosave that cannot be loaded: tap one to
-/// load it, swipe to delete it. A save that cannot be loaded says why.
+/// load it. A save that cannot be loaded says why. Since decision 184 each
+/// row shows the game's date and funds, the list can be ordered by date or
+/// name, a save can be named (swipe, or hold it), and deleting one asks
+/// first.
 struct SaveListView: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
+    /// How the saves are ordered; kept for the next time.
+    @AppStorage("saveListOrder") private var order: SaveLibrary.Order = .newest
+    /// The save being named, and the name being typed.
+    @State private var renaming: SaveLibrary.Entry?
+    @State private var newName = ""
+    /// The save the player asked to delete, while the question is up.
+    @State private var deleting: SaveLibrary.Entry?
 
     var body: some View {
+        let language = launcher.language
+        let saves = SaveLibrary.sorted(launcher.otherSaves, by: order)
         NavigationStack {
             List {
                 if let message = launcher.message {
@@ -566,7 +578,7 @@ struct SaveListView: View {
                     }
                 }
                 Section {
-                    ForEach(launcher.otherSaves) { entry in
+                    ForEach(saves) { entry in
                         Button {
                             launcher.load(entry)
                             if launcher.session != nil {
@@ -576,12 +588,52 @@ struct SaveListView: View {
                             row(entry)
                         }
                         .disabled(entry.problem != nil)
-                    }
-                    .onDelete { offsets in
-                        let entries = offsets.map { launcher.otherSaves[$0] }
-                        for entry in entries {
-                            launcher.delete(entry)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleting = entry
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Delete", "刪除"))
+                                } icon: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                            if entry.kind == .manual {
+                                Button {
+                                    startRenaming(entry)
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                    } icon: {
+                                        Image(systemName: "pencil")
+                                    }
+                                }
+                                .tint(Theme.primary)
+                            }
                         }
+                        .contextMenu {
+                            if entry.kind == .manual {
+                                Button {
+                                    startRenaming(entry)
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Rename", "重新命名"))
+                                    } icon: {
+                                        Image(systemName: "pencil")
+                                    }
+                                }
+                            }
+                            Button(role: .destructive) {
+                                deleting = entry
+                            } label: {
+                                Label {
+                                    Text(verbatim: language.text("Delete", "刪除"))
+                                } icon: {
+                                    Image(systemName: "trash")
+                                }
+                            }
+                        }
+                        .accessibilityIdentifier("saves.row.\(entry.id)")
                     }
                 }
             }
@@ -594,7 +646,22 @@ struct SaveListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    EditButton()
+                    Menu {
+                        Picker(selection: $order) {
+                            ForEach(SaveLibrary.Order.allCases, id: \.self) { order in
+                                Text(verbatim: order.displayName(in: language)).tag(order)
+                            }
+                        } label: {
+                            Text(verbatim: language.text("Sort by", "排序"))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Sort", "排序"))
+                        } icon: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                    }
+                    .accessibilityIdentifier("saves.sort")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -602,7 +669,61 @@ struct SaveListView: View {
                     }
                 }
             }
+            .alert(
+                Text(verbatim: language.text("Name This Save", "為存檔命名")),
+                isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })
+            ) {
+                TextField(text: $newName) {
+                    Text(verbatim: language.text("Name", "名稱"))
+                }
+                .accessibilityIdentifier("saves.rename.field")
+                Button(role: .cancel) {
+                    renaming = nil
+                } label: {
+                    Text(verbatim: language.text("Cancel", "取消"))
+                }
+                Button {
+                    if let entry = renaming {
+                        launcher.rename(entry, to: newName)
+                    }
+                    renaming = nil
+                } label: {
+                    Text(verbatim: language.text("Save", "儲存"))
+                }
+                .accessibilityIdentifier("saves.rename.confirm")
+            } message: {
+                Text(verbatim: language.text(
+                    "Leave it empty to name the save by when it was saved.",
+                    "留白則以儲存時間當作名稱。"
+                ))
+            }
+            .confirmationDialog(
+                Text(verbatim: language.text("Delete this save?", "要刪除這個存檔嗎？")),
+                isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                titleVisibility: .visible,
+                presenting: deleting
+            ) { entry in
+                Button(role: .destructive) {
+                    launcher.delete(entry)
+                    deleting = nil
+                } label: {
+                    Text(verbatim: language.text("Delete \"\(title(of: entry))\"", "刪除「\(title(of: entry))」"))
+                }
+                .accessibilityIdentifier("saves.delete.confirm")
+                Button(role: .cancel) {
+                    deleting = nil
+                } label: {
+                    Text(verbatim: language.text("Cancel", "取消"))
+                }
+            } message: { _ in
+                Text(verbatim: language.text("A deleted save cannot be brought back.", "刪除後無法復原。"))
+            }
         }
+    }
+
+    private func startRenaming(_ entry: SaveLibrary.Entry) {
+        newName = entry.name ?? ""
+        renaming = entry
     }
 
     private func row(_ entry: SaveLibrary.Entry) -> some View {
@@ -621,12 +742,22 @@ struct SaveListView: View {
                 Text(verbatim: title(of: entry))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(entry.problem == nil ? Theme.textPrimary : Theme.textSecondary)
+                // A named save says when it was saved too.
+                if entry.name != nil, let savedAt = entry.savedAt {
+                    Text(verbatim: savedAt.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
                 if let problem = entry.problem {
                     Text(problem.playerMessage(in: launcher.language))
                         .font(.footnote)
                         .foregroundStyle(Theme.warning)
                 } else if let summary = entry.summary {
-                    Text(summary.text(in: launcher.language))
+                    Text(verbatim: summary.dateAndFundsText(in: launcher.language))
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.textPrimary)
+                        .monospacedDigit()
+                    Text(verbatim: summary.networkText(in: launcher.language))
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                         .monospacedDigit()
@@ -639,6 +770,9 @@ struct SaveListView: View {
     private func title(of entry: SaveLibrary.Entry) -> String {
         if entry.kind == .autosave {
             return String(localized: "Autosave")
+        }
+        if let name = entry.name {
+            return name
         }
         return entry.savedAt?.formatted(date: .abbreviated, time: .shortened) ?? entry.id
     }
