@@ -353,6 +353,9 @@ public final class GameSession {
     /// Called when the player finishes the tutorial's last step (decision
     /// 177): the launcher notes it in its preferences. Not on Skip.
     @ObservationIgnored public var onTutorialCompleted: (@MainActor () -> Void)?
+    /// Called after a step that passed midnight (decision 181): the
+    /// launcher checks the achievements.
+    @ObservationIgnored public var onMidnight: (@MainActor () -> Void)?
 
     /// The world as it was before each of the latest edits, oldest first,
     /// at most ``undoLimit`` of them (ARCHITECTURE decision 82): what
@@ -936,6 +939,9 @@ public final class GameSession {
         }
         // Decision 175: the secretary room reads what the step changed.
         observeNews(closedBefore: closedBefore)
+        if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
+            onMidnight?()
+        }
     }
 
     /// A tick of the game loop being worked out off the main actor
@@ -1073,6 +1079,20 @@ public final class GameSession {
         }
     }
 
+    /// Sells train `id` back through `GameWorld.sellTrain(_:)` (decision
+    /// 180): 70 % of its books, and only a train off the track and off its
+    /// lines. A sold train that was selected or followed is let go.
+    public func sellTrain(_ id: TrainID) {
+        guard let train = world.train(id: id) else { return }
+        let quote = world.trainSaleQuote(id)
+        guard perform({ world throws(GameError) in
+            try world.sellTrain(id)
+            return language.text("Sold \(train.name) for \(quote.moneyText).", "已出售 \(train.name)，取得 \(quote.moneyText)。")
+        }) else { return }
+        if selectedTrainID == id { selectedTrainID = world.trains.first?.id }
+        if tappedTrainID == id { tappedTrainID = nil }
+    }
+
     /// Puts the selected train on a platform of the selected station on
     /// the track network (Stage C1; see ``place(_:atPlatformOf:)``).
     public func placeSelectedTrain() {
@@ -1161,12 +1181,18 @@ public final class GameSession {
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
         perform { world throws(GameError) in
+            let balance = world.economy.balance
             try world.setTrainType(train.id, to: type)
             if let performance = type?.performance, train.performance == .standard {
                 try world.setTrainPerformance(train.id, to: performance)
             }
             let text = Train.typeText(type, in: language)
             var said = language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
+            // Decision 180: a change of type is a refit, paid for.
+            let refit = balance - world.economy.balance
+            if refit > .zero {
+                said += language.text(" The refit cost \(refit.moneyText).", "改裝費 \(refit.moneyText)。")
+            }
             if let id = world.assignedLine(of: train.id), try world.planAtHighSpeedWhenRunByHighSpeedSets(id),
                let line = world.line(id: id) {
                 said += language.nowHighSpeedText(line.name)

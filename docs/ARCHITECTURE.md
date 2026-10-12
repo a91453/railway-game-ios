@@ -5635,6 +5635,32 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureLineForDailyReport`、`flowDashboardReadLineOperatingDayFlow`、`flowDashboardGetLineBarRows`、`flowDashboardSortStationCards`、`flowDashboardFinalizeEndedSimDay`：每條線每天記運量與收支、取條列、依指定鍵排序。對照見 PR 描述。Ci 沒有票價按距離拆給各線的做法（它的票價是全公司的），所以拆分與最大餘數法是本專案自己的。外部：OpenTTD 的每車年度利潤只讀了概念（GPL，沒有複製程式碼）。
 
+### 180. 車輛經濟：依車種的價格與營運成本、改裝、出售列車
+
+2026-10-12，作者睡覺期間派工的「車輛經濟」（ROADMAP 的 P7-3）。號碼依工作登記 #231：決策 180、存檔版本 49、golden schema 71。
+
+**問題**：`purchaseTrain` 一律收 `costs.train`，`setTrainType` 免費，沒有賣車；所有車種同價同成本，16 節磁浮與 1 節輕軌一樣便宜，買錯車不能退。
+
+**世界開關 `rollingStockEconomics`**（`setRollingStockEconomics`，存檔 `"rollingStockEconomics": true`）：新遊戲打開；舊存檔、golden、replay、示範地圖、挑戰與教學（平溪線、劉銘傳、高鐵示範）都關著，它們量過的數字一個都不變。
+
+1. **價目表**（`RollingStock.swift`，`TrainType.pricing`，單位美分，這個專案自訂，參考庫沒有車輛價目表）：首節價／每加一節價／營運係數（‰）。標準車與 A、B、C $150k／$40k／1,000；L $90k／$25k／700；D $120k／$35k／1,300；STEAM $80k／$20k／1,400；APM $110k／$30k／800；單軌 $160k／$45k／1,000；雲軌 $170k／$50k／1,000；磁浮 $600k／$150k／1,800；高鐵 $900k／$120k／2,000；EMU3000 $260k／$55k／1,200。派工建議的「高鐵性能能源 +40%」沒有另做：高鐵車種的 2,000‰ 已經涵蓋；每節每日維修費也沒有另列，併入「節數 × 係數」的權重（見第 3 項）。
+2. **買、加節、改裝、出售**：
+   - 購車收該車種首節價（`purchaseTrain(named:as:)` 直接買指定車種，不會先買標準車再付改裝費；沒有指定的是時代的第一種車種或標準車）；加一節收該車種的每節價。
+   - `setTrainType` 換車種付改裝費＝新車種「首節價＋(節數−1)×每節價」的 30 %（捨去），算進列車資產的成本（資本支出）；同車種不收。
+   - 新指令 `sellTrain`（任何世界都可用）：列車必須離開軌道、沒有配屬路線、沒有服務（`Train.execution == nil`，空車回送中的列車有服務，所以算在營運中），否則新錯誤 `trainInService`。售價＝列車紀錄與車廂紀錄各自帳面價值的 70 %（捨去），照決策 130 的 `sellAsset` 記 `saleProceeds`、`saleBookValue`，處分損益實現；自由模式沒有帳也沒有收入。ID 不再發放，列車自己帶著時刻表所以一起消失。
+3. **營運成本**：`FixedAssets.trainWeight`（千分之一標準列車）。關著時＝「各服務同時最多列車數」× 1,000，和以前逐位元相同（算式乘 1,000，舊值不變）。打開時＝路線上每一列列車（所有服務的配屬名單）的 `節數 × 營運係數`；**未配屬路線的閒置列車不付營運成本（維持舊行為）**；配屬了但目前不在服務班次內的列車照付（它是車隊）。人事 480、能源 360、保養 8（每小時）都乘這個權重；每次離站的車公里再乘該車種的係數（`countDeparture(operatingPermille:)`，不乘節數）。每日能源的列與其明細改成各自進位後相加（關著時結果與以前相同）。
+4. **介面**：配車（`LineStaffing`）可選車種（預設依路線；高鐵路線預設高鐵車組）與節數，顯示每列價格與在線上每日成本；`GameSession.reformSelectedLine` 整線改編組：對配屬、沒有服務的列車依序下線、換車種節數、重新放到起點、重新配屬到原本的服務，做不到的（正在行駛、放不回去、錢不夠）保持原樣並說明原因；`TrainControls` 的車種選單每項附每節容量、價格、每日成本、最高速度；`FleetOverviewSheet` 對可出售的列車有出售鈕（先確認）。
+5. **存檔 49、golden schema 71**：存檔只多世界的 `"rollingStockEconomics"`（開著才寫，沒有欄位的舊存檔關著）。golden 新指令 `setRollingStockEconomics`、`setTrainType`、`sellTrain`，新結果 `trainInService`，最終狀態的 `rollingStockEconomics: true`；新的 `rolling-stock-economics.json`（手算，`tools/golden-checks/rolling_stock.py` 獨立檢查）。**既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有改**。
+6. **與逐線報表（決策 179，存檔 48）接上**：`FixedAssets.LineAssets.trainWeight` 是每條線的列車權重（關著時＝車數 × 1,000）；`settleLineHour` 的保養拆分用權重（公司整元數不動），`settleLineDay` 的列車能源與列車人事（`trainStaff`）依權重拆（最大餘數法），所以各線仍然加起來等於公司的一天（`LineAccountsTests`、`RollingStockEconomicsTests.testLinesStillAddUpToTheCompanyWithWeightedTrains`）。線上的車公里維持真實距離（只有公司的車公里乘車種係數），所以營運費的線間拆分仍按真實距離；出售列車的收入不分到線。
+
+**平衡**（`BalanceReportTests`，60 天，新遊戲兩鎮之間的線，一列四節）：見 ROADMAP 的待觀察表。前期現金沒有被車價卡死：起始資金買得起 4 節標準車。
+
+**沒有採用**：每節每日維修費另列一項；配屬前的閒置列車也付營運成本（會懲罰先買後配）。
+
+**測試**：`RollingStockEconomicsTests`、`RollingStockSessionTests`、`GoldenScenarioTests`。
+
+**參考**（`a91453/railway-reference-private`）：見 PR 的對照表。
+
 ### 178. 載客量圖層與車站「即將進站」看板
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
@@ -5656,6 +5682,56 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **限制**：環線的兩個方向共用同一圈的軌道片段（外圈的返程沒有另外量）；停站模式（`LinePattern`）的車次只算進運能與看板，人流以路線的站序分配；看板的誤點對之後的停靠站沿用目前的誤點。
 
 **測試**：`SectionFlowTests`（沒有計畫時什麼都不畫、讀計畫不改世界、區間的負載與運能、輕重排序與紅色、顏色與線寬、區間的分配、點選與兩種語言的文字）、`DepartureBoardTests`（接下來的班次依方向排序、預定到站加誤點、月台上的列車、不在線上的站、時間與誤點的文字、尚未派出的固定班次）。App 的畫法與看板（SwiftUI）在 Linux 上只能編譯，要 macOS CI 與實機。
+
+
+### 181. 公司評等、職稱與成就：自由遊戲的長期目標
+
+2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 181；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
+
+**問題**：自由遊戲打完挑戰之後沒有長期目標，`GoalsPanel` 寫著「這局沒有目標」。A 列車觀光有公司格付與劇本評價，A9 有依資金達標的里程碑，OpenTTD 有 performance rating 與職稱。
+
+**公司評等**（`CompanyRank.swift`：`RankMeasure`、`CompanyTitle`、`CompanyFigures`、`CompanyRank`）：0–1000 分，七項各自線性加到滿分：
+
+| 項目 | 滿分 | 滿分的值 | 怎麼量 |
+| --- | --: | --: | --- |
+| 最佳單日旅客 | 250 | 1,000,000 人次 | 帳上保留的日子（兩年）裡最多的 `fareTrips`，分區購買的地圖再加 `MapExpansion.bestDayRiders`（永久保留） |
+| 路網長度 | 100 | 300 km | 所有軌道邊的長度（複線、側線都算） |
+| 車站數 | 100 | 100 座 | |
+| 淨值 | 200 | $500,000,000 | `balanceSheet().equity`，負的算 0 |
+| 服務人口 | 150 | 2,000,000 人 | 營業中車站 800 m（`Land.catchmentRadius`）內土地格的住戶，每格只算一次 |
+| 營業比 | 100 | ≤ 60% | 昨天（營運成本＋建物維護）÷（票收＋貨運＋租金）；60% 以下滿分、100% 以上 0 分，中間線性；昨天沒有收入就是「—」、0 分 |
+| 準點率 | 100 | 100% | **現在**在軌道上的列車裡延誤 ≤ 2 分（`GameWorld.lateness(of:)` ≤ 120 秒）的比例；在終點等著發車、沒有班次的列車算準點，車庫裡的不算；軌道上沒有列車就是「—」、0 分 |
+
+- **營業比與準點率依規模打折**：車站少於 20 座（`CompanyRank.fullQualityStations`）時，這兩項的分數乘上「車站數 ÷ 20」。量出來不打折的話，一條賺錢的兩站線第一天就拿 200 分（兩項都滿分），第 30 天就是站長；這兩項是「經營得多好」，一列車的小鐵路不該因此升三級。
+- 每 100 分一個職稱：見習站務員、站務員、副站長、站長、段長、運務段長、處長、局長、總經理、董事長；960 分以上是鐵道大亨（`CompanyTitle`）。
+- **和派工建議不同的數字**：最佳單日旅客的滿分從 30 萬人次改成 100 萬；營業比與準點率加了規模打折。原因見下面的平衡量測。
+- **準點率不是「昨天到站」的比例**：GameCore 沒有記錄每一次到站的延誤，要記就得改 GameCore 和存檔（這個決策不動）。改用面板打開時、每個遊戲日重算一次的在線列車快照。之後若 GameCore 記了每天的到站延誤，換成那個數字即可。
+
+**平衡量測**（`BalanceReportTests.testTheCompanyRank`，`BALANCE_REPORT=360`，release，沒有玩家操作）：
+| 遊戲 | 第 30 天 | 第 180 天 | 第 360 天 |
+| --- | --- | --- | --- |
+| 教學那條三站短線（虧錢） | 23 見習站務員 | 25 見習站務員 | 26 見習站務員 |
+| 兩個城鎮之間的一條線（5.4 km、一列車） | 57 見習站務員 | 84 見習站務員 | 113 站務員 |
+| 示範地圖（三條線、五站） | 115 站務員 | 165 站務員 | 232 副站長 |
+
+照派工原本的數字（30 萬人次、不打折），兩城鎮那條線第 30 天就有 300 分（站長），第 360 天 384 分；示範地圖第一年會到段長。調整後，不動的一條線一年升一級，三條線升兩級；會繼續蓋線的玩家第一年大約升到二到三級。董事長要 900 分：大約百萬人次、300 km、100 座車站、淨值 5 億、近兩百萬人的服務範圍，要一張分區購買的大地圖或實景地圖玩好幾年（示範地圖的淨值一年約增加 1.5 億，空白地圖一開始只有約 8 萬到 19 萬住戶）。
+
+**公司評等區**（`GoalsPanel` 的 `CompanyRankSection`，沒有劇本的遊戲；經濟面板裡的 `GoalsSections` 也看得到）：職稱與總分、總分長條、「再 N 分升為某職稱」、七項的分數拆解長條；「下一步」：下一格地圖的購買門檻（`GameSession.mapExpansionText`，分區購買的地圖才有）、三個建議的里程碑（`CompanyRank.milestones()`：每一項的下一個整數階梯，例如「每日旅客 50,000（目前 31,200）」，依可多拿的分數排序；營業比的階梯往下走）、最大的未服務聚落（`UnservedCluster.largest(in:)` 與 `suggestionText`：「某站東北方 4.2 公里，約 12,300 人還沒有車站」，點一下地圖移過去），以及「成就 n/35」連到成就清單（含每項的進度）。分數在面板打開時與每個遊戲日算一次（`task(id: 今天)`），不是每個 tick：服務人口與聚落要讀整片土地。
+
+**成就**（`Achievements.swift`：`AchievementFacts`、`Achievement`、`AchievementRecords`；`AchievementsView`）：35 項，記在本機存檔資料夾的 `achievements.data`（和 `challenge-records.data` 放一起，副檔名 `.data` 所以不列為存檔），記下解鎖的真實日期；讀不進的檔案就是一項都沒有。每個遊戲日午夜（`GameSession.onMidnight`，`GameLauncher.checkAchievements(of:)`）檢查一次；新解鎖的每一項寫一則新聞紀錄（`NewsCategory.achievement`，決策 175），狀態列說「解鎖成就：某某」（不重複寫進紀錄），並播 coins 音效（`SoundCue.income`）。
+- **示範地圖不算**：示範、實景示範、高鐵示範與官網截圖場景開局時，新聞紀錄標上 `isDemo`（跟著存檔的 `.news.json` 旁檔走，之後「繼續」也不算）。從檔案匯入的存檔沒有旁檔，算。
+- 清單改寫自參考庫 `Railway/site_archive_clean/index.html` 的 `ACHIEVEMENTS`（21 項）、`ACH_TESTS`、`ACH_PROG`、`achContext`：原本以玩家跟車的乘車紀錄判定，這裡改成以遊戲狀態判定（`AchievementFacts` 是 `achContext`），每項保留參考的「名稱／條件／怎麼拿」三段與進度（`progress`、`progressText`，長度以公里顯示）。對照：`first`→第一筆票收、`rider5`／`rider15`→每日旅客 1,000／10,000、`km100`–`km5000`→路網 10／50／200／1,000 km、`long300`→一條 50 km 以上的路線（站間直線）、`stops50`→一條停 20 站以上的路線、`early`→05:00 前發出首班車的路線、`night`→跨午夜營運的路線、`loop`→第一條營運中的環狀線、`day3`→三條路線共用一站、`tilting`→高鐵性能的列車、`stockAll`→車隊 20 列、`stn25`／`stn100`→車站 25／100 座。**沒有改寫的參考項目**：`namedAll`、`branchAll`、`commute100`、`commute500`（只有真實乘車紀錄才有意義）。
+- 本作專屬：每日旅客 100,000／1,000,000、車站 50 座、第一棟公司建物、第一噸貨（帳上保留的日子有貨運收入）、買下第一格地圖、站前（營業中車站 800 m 內）出現 D4 大樓、颱風季結束時沒有負債（11 月 1 日，即一年第 300 天，沒有借款且現金不為負；颱風季是 `Weather.typhoonSeason` 的 180–299 天）、以金牌完成挑戰、完成平溪線與劉銘傳劇本。
+- **觀光（決策 174）與子公司（決策 173）**（兩者合併後補上）：一日遊（景點昨天有觀光客）、觀光旺季（今年或去年全部景點合計 100,000 位）、名產名店（名產店升到 2 級）、五星景點（有效星等 5.0）；多角經營（第一間百貨公司、飯店或遊樂園）、企業集團（三種各一間）、生意興隆（一間事業開業以來營業利益 $1,000,000，`SubsidiaryBooks.totalProfit`）。觀光的四項只有世界有景點（`tourism`）時才達得到；遊戲裡的成就清單在沒有景點的世界不列這四項（開始畫面全部列出），計數 n/35 不變。公司評等的七項沒有加觀光或子公司的指標：子公司的獲利已經算在淨值與營業比裡，觀光客算在旅客數裡。
+- **之後的項目**：車輛經濟（#395）相關的成就；Game Center（要作者在 App Store Connect 設定）。
+
+**參考與外部專案**：
+- `Railway/site_archive_clean/index.html` `ACHIEVEMENTS`／`ACH_TESTS`／`ACH_PROG`／`achContext`／`achHelpHtml` → `Achievement.all`、`isMet(by:)`、`progress(of:)`、`AchievementFacts(world:)`、`AchievementsView`（名稱、條件、進度長條、怎麼拿）。adapted。
+- 公司評等：參考庫沒有可用的（`Ci/`、`Simulator/`、`MapBuilder/` 沒有評分或職稱）。OpenTTD 的 performance rating（GPL）只讀概念：多項各自線性加到上限、總分對應職稱；沒有複製程式碼，數字與項目是這個專案的。
+
+**限制**：最佳單日旅客只看得到帳上保留的兩年（空白地圖分區購買時永久保留）；準點率是快照；路線長度用站間直線；成就記在裝置上，換裝置不跟著走。App 的畫面（SwiftUI）在 Linux 上只能靠 macOS CI 編譯與實機查看。
+
+**測試**：`CompanyRankTests`（七項線性給分、營業比往下、職稱門檻與鐵道大亨、總分與下一職稱、規模打折、沒有收入或列車時是「—」、里程碑的階梯與排序、世界的量測、服務人口不重複、下一個聚落的文字）、`AchievementsTests`（35 項與兩種語言、觀光與子公司的成就與讀取、空公司沒有成就、門檻與進度、劇本的成就、記錄的日期與讀回、壞檔、午夜解鎖寫新聞與狀態列並播音效、示範不算、`isDemo` 跟著新聞紀錄存讀、公里的進度文字）。
 
 ### 182. 晝夜與天氣畫面、列車依路線上色與平滑移動
 
@@ -5690,7 +5766,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 ### 183. 城市委託案與補助金
 
-2026-10-12，作者睡覺期間派工（參考 A 列車：開始吧觀光開發計畫的「行政施策」與 OpenTTD 的 subsidies，只讀概念）：自由遊戲中期缺少節奏。給限期任務、獎勵清楚、失敗不罰錢。號碼依工作登記 #231：存檔版本 50、決策 183、golden schema 72（存檔 49、schema 71 是同批派工的車輛經濟 #395，這個 build 還沒有）。
+2026-10-12，作者睡覺期間派工（參考 A 列車：開始吧觀光開發計畫的「行政施策」與 OpenTTD 的 subsidies，只讀概念）：自由遊戲中期缺少節奏。給限期任務、獎勵清楚、失敗不罰錢。號碼依工作登記 #231：存檔版本 50、決策 183、golden schema 72（存檔 49、schema 71 是同批派工的車輛經濟，決策 180）。
 
 **世界開關 `cityRequests`**（`setCityRequests(seed:)`，`nil` 是關閉，免費；存檔 `"cityRequests": {...}`）：`GameWorld.newGame` 用遊戲種子打開（空白、實景、全台灣、擴建）；教學、挑戰（沙盒、平溪線、劉銘傳）、示範地圖（`DemoWorld`、實景示範、高鐵示範）關閉，和決策 154、169–174 一樣自己決定，它們量過的數字不變；舊存檔、golden、replay 沒有這個鍵就是關。只有經營模式判定與入帳：自由模式不判、不抽新的。
 
@@ -5706,12 +5782,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **信賴度** 0–5 星，起始 1；同時可承接 1 + ⌊信賴度 / 2⌋ 件。每個經營模式的午夜（在當天的物業與觀光結帳之後、折舊與稅之前，`judgeCityRequests`）更新進度：達到 → 加進「欠款」、信賴度 +1；最後一天（承接日 + 天數 − 1）仍未達 → 失敗、信賴度 −1，**不罰款**。結果保留最近 20 件。
 - **入帳**：開始新月份的那個午夜把欠款寫成一列 `monthlySubsidy`（項目 `subsidy`，只往後加；記在剛結束的那天，所以在那天的稅前淨利裡，**照常課稅**），累計補助 `paid`。財報把它併入「物業與子公司收入」（`propertyRevenue`，非鐵路收入，形狀不變）；`GameFeedback.incomeItems` 含 `subsidy`。逐線報表（決策 179）不分它，各線加總等於公司的不變式只看票收與鐵路成本，不受影響。
 - **指令**：`acceptRequest(_:)`（`cityRequestsNotEnabled`、`unknownCityRequest`、`cityRequestLimitReached(limit:)`）；`declineRequest(_:)`：婉拒報價（消失、信賴度不變），或放棄手上的（記成失敗、信賴度 −1）。
-- 車站或景點不見了：委託留著，量到 0，期限到了失敗（ID 不會重用）。
+- 車站或景點不見了（拆站）：委託留著，量到 0，期限到了失敗；存檔照樣讀得回來（驗證不要求委託的車站還在，ID 不會重用；`CityRequestsTests.testARemovedStationsRequestStillSavesAndLapses`）。
 - 存檔驗證：信賴度 0–5、報價最多 3 件且種類不同、手上最多 3 件、結果最多 20 件、編號唯一且小於下一號、每件的目標 ≥ 1、天數 1–360、報酬是整元且不超過 $10M、報價沒有承接日而手上的有、種類與它的目標（點、站、景點）相符。
 
 **介面（GamePresentation／App）**：`RequestsText.swift`：`cityRequestRows`（標題、說明、報酬、進度千分比與文字、剩餘天數或還能承接幾天、地圖位置）、`cityRequestResults`、`cityTrustText`、`citySubsidyText`；目標地名在實景地圖用 `PlaceNames`（最近的聚落、村里，否則鄉鎮），空白地圖說「某站東北方 1.2 公里的聚落」。`GoalsPanel` 的「委託案」區（`CityRequestsSection`，寫在 `GoalsPanel.swift`，沒有新的 App 檔、xcodeproj 不動）：信賴度、累計補助與待入帳、手上的（進度條、剩餘天數、放棄）、報價（承接、婉拒）、「在地圖上看」（`lookAt`）、最近 5 件結果。遊戲選單的「目標」在有委託時也出現。站長（`StationMasterAdvice` 最後加 `newCityRequests`）在每月前三天、還能承接時說「城市提出 N 件新委託，最高補助 $X」，點了到最高那件的位置；新聞紀錄每月記一次（`NewsLog.swift` 的窮舉 switch 已補）。
 
-**存檔 50、golden schema 72**：存檔多 `"cityRequests"` 與帳上的 `monthlySubsidy` 列；只讀到 48 的 build 會丟掉手上的委託與欠款，所以升版。新的 `SaveFixtures/v50-city-requests.json`。golden 新指令 `setCityRequests`、`acceptRequest`、`declineRequest`，三個新結果，新觀察 `cityRequests`，最終狀態的 `cityRequests`；新的 `city-requests.json`，數字由 `tools/golden-checks/city_requests.py` 照規則獨立算出。參考模型沒有委託，不在它上面重播。既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+**存檔 50、golden schema 72**：存檔多 `"cityRequests"` 與帳上的 `monthlySubsidy` 列；只讀到 49 的 build 會丟掉手上的委託與欠款，所以升版。新的 `SaveFixtures/v50-city-requests.json`。golden 新指令 `setCityRequests`、`acceptRequest`、`declineRequest`，三個新結果，新觀察 `cityRequests`，最終狀態的 `cityRequests`；新的 `city-requests.json`，數字由 `tools/golden-checks/city_requests.py` 照規則獨立算出。參考模型沒有委託，不在它上面重播。既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
 **平衡**（`BalanceReportTests.testAFirstLineTakingTheCitysRequests`，`BALANCE_REPORT=360`，Linux debug）：決策 137 之後的第一條線（三站、一列四節，這條線本身每天虧約 $30,000），觀光關閉，對照沒有委託的同一條線；「玩家」每天只承接運量與人口類（不蓋站、不運建材、不經營景點），最高報酬的先接：
 - 第 0 天的人口委託（第一個鎮的 800 m 內 1.2 倍）第 24 天就靠城鎮成長達成，第 30 天入帳 $1,000,000；第 60 天再一件 $200,000；之後運量類都沒達成（逾期 4 件，信賴度掉到 0）。
@@ -5801,7 +5877,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 車輛經濟（決策 180）：App 的新遊戲打開 `rollingStockEconomics`（存檔版本 49；示範地圖、挑戰與教學關掉）：列車依車種與節數計價，改車種付新車種價格的 30 %，`sellTrain` 取回帳面價值的 70 %（列車必須離軌、離線、沒有服務，否則 `trainInService`），路線上列車的人事、能源、保養依 節數 × 車種係數 計，車公里依車種係數計。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
+- 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；35 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。
 
 **之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
 

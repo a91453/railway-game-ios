@@ -48,6 +48,7 @@
 		5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = F655E31850005DBAC32D5142 /* OSMMapBackground.swift */; };
 		5816A50B5D199B14095EB3AA /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E833A49B8766511EF574847 /* SettingsUITests.swift */; };
 		61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */; };
+		61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F88DCCA78BB699F97926C9A /* AchievementsView.swift */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
 		6361F5D3D8B97DFA6D29B6F2 /* tra_track_sections.json in Resources */ = {isa = PBXBuildFile; fileRef = 95B22F52AC2B7370C697A499 /* tra_track_sections.json */; };
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
@@ -173,6 +174,7 @@
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
+		6F88DCCA78BB699F97926C9A /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
 		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 		4BC825607E71A86B2AAEA49F /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6F88DCCA78BB699F97926C9A /* AchievementsView.swift */,
 				3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */,
 				79941FA523AF01C8B9E74433 /* BuildToolRail.swift */,
 				A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */,
@@ -597,6 +600,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */,
 				DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */,
 				3C6F0ECE58408BF72082F7C2 /* BuildToolRail.swift in Sources */,
 				31395CFF6BB9BC1ACA1A8A4B /* CityView3D.swift in Sources */,

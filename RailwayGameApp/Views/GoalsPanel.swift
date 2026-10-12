@@ -9,12 +9,14 @@ import SwiftUI
 /// from `session.world`; the words come from GamePresentation.
 struct GoalsPanel: View {
     let session: GameSession
+    /// The achievements unlocked (decision 181), for the rank's link.
+    var achievements: AchievementRecords?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                GoalsSections(session: session)
+                GoalsSections(session: session, achievements: achievements)
             }
             .navigationTitle(Text(verbatim: session.world.scenarioTitle(in: session.language) ?? session.language.text("Goals", "目標")))
             .navigationBarTitleDisplayMode(.inline)
@@ -35,6 +37,7 @@ struct GoalsPanel: View {
 /// The goals panel's sections, also shown in the economy panel.
 struct GoalsSections: View {
     let session: GameSession
+    var achievements: AchievementRecords?
 
     var body: some View {
         let language = session.language
@@ -43,12 +46,10 @@ struct GoalsSections: View {
         if world.hasCityRequests {
             CityRequestsSection(session: session)
         }
-        if world.scenario == nil, !world.hasCityRequests {
-            Section {
-                Text(verbatim: language.text("This game has no goals. Start a challenge from the start screen.", "這局沒有目標。可以從開始畫面選擇挑戰。"))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-        } else if world.scenario != nil {
+        if world.scenario == nil {
+            // Decision 181: a free game's long-term goal.
+            CompanyRankSection(session: session, achievements: achievements)
+        } else {
             Section {
                 if let status = world.scenarioStatusText(in: language) {
                     Label {
@@ -256,6 +257,126 @@ struct CityRequestsSection: View {
         }
         .font(.footnote)
         .padding(.vertical, 2)
+    }
+}
+
+/// The company's rank (decision 181): the score and title, each measure's
+/// bar, what the next title needs, the next tile of the map, three next
+/// milestones and the next town to reach. Measured when the panel opens
+/// and once a game day, not every tick: the people served and the town
+/// read the whole land.
+struct CompanyRankSection: View {
+    let session: GameSession
+    let achievements: AchievementRecords?
+    @State private var rank: CompanyRank?
+    @State private var town: UnservedCluster?
+    /// What the achievements read, measured with the rank.
+    @State private var facts: AchievementFacts?
+    @Environment(\.dismiss) private var dismiss
+
+    private var today: Int64 {
+        session.world.clock.now.seconds / GameTime.secondsPerDay
+    }
+
+    var body: some View {
+        let language = session.language
+        Section {
+            if let rank {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label {
+                        Text(verbatim: rank.headline(in: language))
+                            .fontWeight(.semibold)
+                    } icon: {
+                        Image(systemName: rank.title == .tycoon ? "crown.fill" : "person.crop.circle.badge.checkmark")
+                            .foregroundStyle(Theme.primary)
+                    }
+                    ProgressView(value: Double(rank.score), total: 1_000)
+                        .tint(Theme.primary)
+                    Text(verbatim: rank.nextTitleText(in: language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("goals.rank")
+                ForEach(rank.parts, id: \.measure) { part in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: rank.partText(part, in: language))
+                            .font(.footnote)
+                            .monospacedDigit()
+                        ProgressView(value: Double(part.points), total: Double(part.maximum))
+                            .tint(part.points == part.maximum ? Theme.success : Theme.primary)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            } else {
+                ProgressView()
+            }
+        } header: {
+            Text(verbatim: language.text("Company rank", "公司評等"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Measured on the best day's riders, track, stations, net worth, people within 800 m of a station, yesterday's operating ratio and the trains on time now.",
+                "依最佳單日旅客、路網長度、車站數、淨值、車站 800 m 內的住戶、昨天的營業比與目前列車的準點率評分。"
+            ))
+        }
+        .task(id: today) {
+            rank = CompanyRank(world: session.world)
+            town = UnservedCluster.largest(in: session.world)
+            if achievements != nil { facts = AchievementFacts(world: session.world) }
+        }
+        if let rank {
+            Section {
+                if let tiles = session.mapExpansionText {
+                    Label {
+                        Text(verbatim: tiles)
+                    } icon: {
+                        Image(systemName: "square.grid.3x3.topleft.filled")
+                    }
+                    .font(.footnote)
+                }
+                ForEach(rank.milestones(), id: \.measure) { milestone in
+                    Label {
+                        Text(verbatim: milestone.text(in: language))
+                            .monospacedDigit()
+                    } icon: {
+                        Image(systemName: "flag")
+                    }
+                    .font(.footnote)
+                }
+                if let town {
+                    Button {
+                        session.lookAt(town.center)
+                        dismiss()
+                    } label: {
+                        Label {
+                            Text(verbatim: town.suggestionText(in: session.world, language: language))
+                        } icon: {
+                            Image(systemName: "location.magnifyingglass")
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("goals.nextTown")
+                }
+                if let achievements {
+                    NavigationLink {
+                        AchievementsView(language: language, records: achievements, facts: facts)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text(
+                                "Achievements \(achievements.count)/\(Achievement.all.count)",
+                                "成就 \(achievements.count)/\(Achievement.all.count)"
+                            ))
+                        } icon: {
+                            Image(systemName: "rosette")
+                        }
+                        .font(.footnote)
+                    }
+                    .accessibilityIdentifier("goals.achievements")
+                }
+            } header: {
+                Text(verbatim: language.text("Next steps", "下一步"))
+            }
+        }
     }
 }
 

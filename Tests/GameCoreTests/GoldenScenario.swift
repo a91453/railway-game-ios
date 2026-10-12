@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _), .command(.setRollingStockEconomics, _), .command(.sellTrain, _),
                  .command(.setCityRequests, _), .command(.acceptRequest, _), .command(.declineRequest, _), .observe(.cityRequests, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
@@ -595,6 +595,10 @@ enum ScenarioCommand: Equatable {
     /// Schema 69 (decision 174): tourism.
     case setTourism([WorldSummary.AttractionSeed])
     case investInSouvenirShop(Int)
+    /// Schema 71 (decision 180): rolling-stock economics, a refit and a sale.
+    case setRollingStockEconomics(Bool)
+    case setTrainType(TrainID, TrainType?)
+    case sellTrain(TrainID)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -756,6 +760,12 @@ enum ScenarioCommand: Equatable {
                 world.setTourism(seeds.isEmpty ? nil : seeds.enumerated().map { $1.attraction(id: $0 + 1) })
             case .investInSouvenirShop(let id):
                 try world.investInSouvenirShop(of: AttractionID(rawValue: id))
+            case .setRollingStockEconomics(let enabled):
+                world.setRollingStockEconomics(enabled)
+            case .setTrainType(let id, let type):
+                try world.setTrainType(id, to: type)
+            case .sellTrain(let id):
+                try world.sellTrain(id)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -809,6 +819,7 @@ extension ScenarioCommand: Decodable {
         case zone, rows, columns
         case runs
         case blocks
+        case trainType
         case row, column
     }
 
@@ -986,6 +997,14 @@ extension ScenarioCommand: Decodable {
         // Schema 70: the line accounts (decision 179).
         case "setLineAccounts":
             self = try .setLineAccounts(container.decode(Bool.self, forKey: .enabled))
+        // Schema 71: rolling-stock economics (decision 180). `"trainType"`
+        // is the type's code, or absent for the standard car.
+        case "setRollingStockEconomics":
+            self = try .setRollingStockEconomics(container.decode(Bool.self, forKey: .enabled))
+        case "setTrainType":
+            self = try .setTrainType(container.decodeTrain(forKey: .train), container.decodeIfPresent(TrainType.self, forKey: .trainType))
+        case "sellTrain":
+            self = try .sellTrain(container.decodeTrain(forKey: .train))
         // Schema 72: the city's requests (decision 183); `"seed": null`
         // turns them off.
         case "setCityRequests":
@@ -1271,6 +1290,8 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidTransferGroup)
         case "invalidScenario":
             self = .rejected(.invalidScenario)
+        case "trainInService":
+            self = try .rejected(.trainInService(container.decodeTrain(forKey: .train)))
         case "trainTypeUnavailable":
             self = .rejected(.trainTypeUnavailable(try container.decodeIfPresent(TrainType.self, forKey: .trainType)))
         case "buildingOverlaps":
@@ -1500,6 +1521,9 @@ extension StepOutcome: Codable {
             try container.encode("invalidTransferGroup", forKey: .result)
         case .rejected(.invalidScenario):
             try container.encode("invalidScenario", forKey: .result)
+        case .rejected(.trainInService(let id)):
+            try container.encode("trainInService", forKey: .result)
+            try container.encode(id.rawValue, forKey: .train)
         case .rejected(.trainTypeUnavailable(let type)):
             try container.encode("trainTypeUnavailable", forKey: .result)
             try container.encodeIfPresent(type, forKey: .trainType)
@@ -2448,6 +2472,9 @@ struct WorldSummary: Codable, Equatable {
     /// The attractions and their counts (schema 69, decision 174); left
     /// out while tourism is off.
     var tourism: [AttractionSummary]?
+    /// `true` while trains are priced and weighed by type and cars (schema
+    /// 71, decision 180); left out otherwise.
+    var rollingStockEconomics: Bool?
     /// The city's requests (schema 72, decision 183); left out while off.
     var cityRequests: CityRequestsSummary?
     /// The mix the city keeps while its demand is on (schema 53, decision
@@ -2759,6 +2786,7 @@ struct WorldSummary: Codable, Equatable {
         flexDispatch = world.flexDispatch ? true : nil
         lineAccounts = world.lineAccounts == nil ? nil : true
         tourism = world.tourism.map { $0.attractions.map(AttractionSummary.init) }
+        rollingStockEconomics = world.rollingStockEconomics ? true : nil
         cityRequests = world.cityRequests.map(CityRequestsSummary.init)
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand

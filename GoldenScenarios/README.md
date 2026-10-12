@@ -980,9 +980,21 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 兩線加起來等於公司那一天（營運 216,000、保養 40,800、能源 74,500、人事 406,000 分；第 1 天 9,000 與 1,700）。最後 `removeLine` Short：它的紀錄清掉，最終狀態只剩 Main 的。
 - 每個值都是手算的；最終狀態取自 GameCore。票收、搭乘與滿載率用同一份帳，由 `LineAccountsTests` 驗（轉乘網路上各線加總等於公司的日帳）。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
 
+## 決策 180：車輛經濟（schema 71）
+
+- 新指令 `setRollingStockEconomics`（`enabled`）、`setTrainType`（`train`，`trainType` 是車種代號，省略是標準車）、`sellTrain`（`train`）；新結果 `trainInService`（`train`）。最終狀態的 `rollingStockEconomics: true` 只在打開時寫。參考模型（`ReferenceWorld`）沒有車種價格，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `RollingStockEconomicsTests` 驗證。
+- `rolling-stock-economics.json`（新）：經營模式、單位是美分，軌道只有一條 1,024 單位的邊（花 1,000）。開關打開後列車價格是車種的、不是 `costs.train`（200,000）：
+  - 藍車（標準車）15,000,000（$150,000，A 型首節）；改成 MAGLEV 付新車種一節價 $600,000 的 30 %＝18,000,000；加到 4 節付 3 節磁浮車廂 3 × 15,000,000＝45,000,000。
+  - 綠車 15,000,000，放上軌道後賣被拒 `trainInService`；取下後改成 L 型付 $90,000 的 30 %＝2,700,000，加到 2 節付一節 $25,000＝2,500,000。
+  - 賣藍車：列車的帳面 15,000,000 + 18,000,000＝33,000,000 取回 70 %＝23,100,000，車廂的 45,000,000 取回 31,500,000；再賣一次是 `unknownTrain`。
+  - 餘額：200,000,000 − 15,000,000 − 18,000,000 − 45,000,000 − 15,000,000 − 1,000 − 2,700,000 − 2,500,000 + 54,600,000＝156,399,000。
+- 每個值都是手算的，`tools/golden-checks/rolling_stock.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+
 ## 決策 183：城市委託案與補助金（schema 72）
 
-- 新指令 `setCityRequests`（`seed`；`null` 是關閉）、`acceptRequest` 與 `declineRequest`（`request`）；新結果 `cityRequestsNotEnabled`、`unknownCityRequest`（`request`）、`cityRequestLimitReached`（`limit`）；新觀察 `cityRequests`（`{"found": true, "cityRequests": {"trust", "owed", "paid", "bestDayTrips", "offers", "active", "results"}}`，委託是 `id`、`kind`、`station`／`x`、`y`／`attraction`、`baseline`、`target`、`reward`（分）、`days`、`offeredDay`、`acceptedDay`、`progress`，結果是 `id`、`kind`、`succeeded`、`day`；關著是 `{"found": false}`）；最終狀態的 `cityRequests` 只在打開時寫。參考模型沒有委託，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `CityRequestsTests` 驗證。schema 71 是工作登記給決策 180（車輛經濟）的。
+- 新指令 `setCityRequests`（`seed`；`null` 是關閉）、`acceptRequest` 與 `declineRequest`（`request`）；新結果 `cityRequestsNotEnabled`、`unknownCityRequest`（`request`）、`cityRequestLimitReached`（`limit`）；新觀察 `cityRequests`（`{"found": true, "cityRequests": {"trust", "owed", "paid", "bestDayTrips", "offers", "active", "results"}}`，委託是 `id`、`kind`、`station`／`x`、`y`／`attraction`、`baseline`、`target`、`reward`（分）、`days`、`offeredDay`、`acceptedDay`、`progress`，結果是 `id`、`kind`、`succeeded`、`day`；關著是 `{"found": false}`）；最終狀態的 `cityRequests` 只在打開時寫。參考模型沒有委託，這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `CityRequestsTests` 驗證。
 - `city-requests.json`（新）：Home（1，每天 1,500 人次）、Work（2，800）、Far（3，300）在有一輛車的線 Main 上，一格 1,200 位居民（世界只有 192 m 寬，三站的 800 m 內都有）。
   - 關著時沒有委託，`acceptRequest` 是 `cityRequestsNotEnabled`。
   - 經營模式下用種子 7 打開：第 0 月六種依 FNV-1a(`7|requests.0.order.<種類>`) 排序，成立的是人口（先）與車站運量；沒有 3,000 人的無站聚落、沒有載客的日子、沒有貨運與景點。

@@ -23,6 +23,7 @@ struct StartView: View {
     @State private var showsSettings = false
     @State private var showsHelp = false
     @State private var showsNewGameOptions = false
+    @State private var showsAchievements = false
     @Environment(\.openURL) private var openURL
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
@@ -75,6 +76,20 @@ struct StartView: View {
         }
         .sheet(isPresented: $showsNewGameOptions) {
             NewGameOptionsView(launcher: launcher)
+        }
+        .sheet(isPresented: $showsAchievements) {
+            NavigationStack {
+                AchievementsView(language: launcher.language, records: launcher.achievements)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button {
+                                showsAchievements = false
+                            } label: {
+                                Text(verbatim: launcher.language.text("Done", "完成"))
+                            }
+                        }
+                    }
+            }
         }
         .sheet(isPresented: $showsSaves) {
             SaveListView(launcher: launcher)
@@ -221,6 +236,22 @@ struct StartView: View {
                 choosesChallenge = true
             }
             .accessibilityIdentifier("start.challenges")
+            // Decision 181: what the player has done across games.
+            StartButton(
+                title: launcher.language.text(
+                    "Achievements \(launcher.achievements.count)/\(Achievement.all.count)",
+                    "成就 \(launcher.achievements.count)/\(Achievement.all.count)"
+                ),
+                detail: launcher.language.text(
+                    "Milestones of your own games, kept on this device",
+                    "你自己的遊戲裡達成的里程碑，記錄在這台裝置上"
+                ),
+                systemImage: "rosette",
+                tone: .plain
+            ) {
+                showsAchievements = true
+            }
+            .accessibilityIdentifier("start.achievements")
         }
     }
 

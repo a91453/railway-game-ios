@@ -225,6 +225,11 @@ extension GameError {
             )
         case .unknownStation(let id):
             language.text("There is no station #\(id.rawValue).", "沒有車站 #\(id.rawValue)。")
+        case .trainInService(let id):
+            language.text(
+                "Train #\(id.rawValue) is on the track or on a line. Take it off the line and the track first.",
+                "列車 #\(id.rawValue) 還在軌道或路線上。請先把它從路線與軌道上撤下。"
+            )
         case .trainServiceActive(let id):
             language.text(
                 "Train #\(id.rawValue) is running its timetable. Stop its service first.",

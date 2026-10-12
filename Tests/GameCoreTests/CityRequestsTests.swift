@@ -270,6 +270,27 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
     }
 
+    /// A station a request asks about is taken down: the save still reads
+    /// back, the request measures nothing and lapses at its deadline.
+    func testARemovedStationsRequestStillSavesAndLapses() throws {
+        var world = try build()
+        world.cityRequests!.offers = []
+        hand(&world, .stationRiders, station: c, target: 2_000, days: 2)
+        // C's line goes first, then C, with no one riding to or from it.
+        try world.setStationDemand(c, to: nil)
+        try world.removeLine(LineID(rawValue: 2))
+        try world.removeStation(c)
+        XCTAssertNil(world.station(id: c))
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.measure(loaded.cityRequests!.active[0]), 0)
+        world = loaded
+        try world.advance(ticks: 2 * 1_440 + 1)
+        XCTAssertTrue(world.cityRequests!.active.isEmpty)
+        XCTAssertEqual(world.cityRequests!.results.map(\.succeeded), [false])
+        XCTAssertNil(world.location(of: world.cityRequests!.results[0].request), "nowhere to show")
+    }
+
     func testAnEarlierSaveHasNoRequests() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v48-line-accounts.json")
