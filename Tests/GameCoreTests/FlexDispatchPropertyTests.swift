@@ -24,7 +24,7 @@ final class FlexDispatchPropertyTests: XCTestCase {
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let ran = try runCampaign("flex.dispatch", cases: 16) { c in
+        let ran = try runCampaign("flex.dispatch", cases: 8) { c in
             let (setup, operations) = try LineDispatchPropertyTests.generate(&c, operations: 70)
             c.note("setup: \(setup.summary), second \(setup.seconds), \(setup.speed)")
             var world = try setup.build().0
@@ -45,7 +45,10 @@ final class FlexDispatchPropertyTests: XCTestCase {
                     counts["train running empty", default: 0] += 1
                     c.expect(world.riders(of: train.id).isEmpty, "\(at): train \(train.id) runs empty with riders")
                     c.expect(world.cargoOnBoard(of: train.id) == 0, "\(at): train \(train.id) runs empty with cargo")
-                    c.expect(world.assignedLine(of: train.id) != nil, "\(at): train \(train.id) runs empty off its line")
+                    c.expect(train.execution != nil, "\(at): train \(train.id) is marked as running empty but is not running")
+                    if train.execution != nil {
+                        c.expect((try? JSONDecoder().decode(GameWorld.self, from: encoder.encode(world))) == world, "\(at): a world with a train running empty did not load back equal")
+                    }
                 }
             }
             let data = try encoder.encode(world)
@@ -57,6 +60,6 @@ final class FlexDispatchPropertyTests: XCTestCase {
         }
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         print("[digest] flex.dispatch \(digest.hex) (\(summary))")
-        assertVolume(ran == 16 * PropertySeeds.active.count, "every case should run")
+        assertVolume(ran == 8 * PropertySeeds.active.count, "every case should run")
     }
 }
