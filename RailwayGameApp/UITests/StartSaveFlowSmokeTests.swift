@@ -209,13 +209,15 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// its last row. Here the clock runs (the demo's 600 times real time,
     /// its trains moving) while the menu is open.
     func testBackToStartWorksWhileTheClockRuns() {
-        checkBackToStartWhileTheClockRuns(arguments: [])
+        checkBackToStartWhileTheClockRuns(arguments: [], demo: true)
     }
 
     /// The same with the largest text short of the accessibility sizes,
-    /// where the menu's rows are tallest.
+    /// where the menu's rows are tallest. A blank new game, whose clock runs
+    /// too: with this text the Demo Map button is below the start screen's
+    /// fold, where XCTest could not tell whether it can be touched.
     func testBackToStartWorksWithLargeTextWhileTheClockRuns() {
-        checkBackToStartWhileTheClockRuns(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"])
+        checkBackToStartWhileTheClockRuns(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"], demo: false)
     }
 
     /// TestFlight 54.1: with many trains and the clock running, the train
@@ -247,18 +249,22 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         chooseTrain("Train 15", in: app)
     }
 
-    private func checkBackToStartWhileTheClockRuns(arguments: [String]) {
+    private func checkBackToStartWhileTheClockRuns(arguments: [String], demo: Bool) {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"] + arguments
         app.launch()
         defer { app.terminate() }
 
-        requiredButton("start.demoMap", in: app).tap()
-        requiredButton("demo.simple", in: app).tap()
+        if demo {
+            requiredButton("start.demoMap", in: app).tap()
+            requiredButton("demo.simple", in: app).tap()
+        } else {
+            requiredButton("start.newGame", in: app).tap()
+        }
         assertGame(in: app)
         // Not paused: the point is the running clock.
-        XCTAssertTrue(app.buttons["Pause"].exists, "The demo's clock must be running")
+        XCTAssertTrue(app.buttons["Pause"].exists, "The game's clock must be running")
 
         openGameMenu(in: app)
         tapMenuAction("menu.backToStart", in: app)
@@ -269,17 +275,21 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// Opens the train menu, scrolls it to `name` and chooses it.
     private func chooseTrain(_ name: String, in app: XCUIApplication) {
         requiredButton("train.picker", in: app).tap()
-        let rows = app.buttons.matching(NSPredicate(format: "label == %@", name))
-        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10), "The train menu does not list \(name)")
-        // Let the menu finish opening, then drag it, slowly, up to the row:
-        // before the fix every tick took it back to its top.
-        Thread.sleep(forTimeInterval: 1)
+        // The menu's rows other than the picker's own label ("Train: …").
         let menuRows = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND NOT (label BEGINSWITH %@)", "Train ", "Train:"))
-        for _ in 0..<8 where !rows.allElementsBoundByIndex.contains(where: { $0.isHittable }) {
+        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
+        // Let the menu finish opening, then drag it, slowly, until the row
+        // shows: a row below the menu's fold is not in the accessibility
+        // tree at all. Before the fix every tick took it back to its top.
+        Thread.sleep(forTimeInterval: 1)
+        let rows = app.buttons.matching(NSPredicate(format: "label == %@", name))
+        func shown() -> Bool { rows.firstMatch.exists && rows.allElementsBoundByIndex.contains { $0.isHittable } }
+        for _ in 0..<10 where !shown() {
             guard let visible = menuRows.allElementsBoundByIndex.last(where: { $0.isHittable }) else { break }
             let from = visible.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -120)), withVelocity: .slow, thenHoldForDuration: 0.3)
         }
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name)")
         let row = requiredButton(rows, name: name)
         touchMenuRow(row, closing: rows, in: app, name: name)
         waitForLabel("Train: \(name)", of: app.buttons.matching(identifier: "train.picker").firstMatch)
