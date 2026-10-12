@@ -5664,6 +5664,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **測試**：`TourismHotelTests`（範圍內外、兩家為限與 5★ 上限、觀光客與計畫跟著飯店、一家與兩家的住宿客、週末、關掉觀光、遠處飯店沒有客人、午夜入帳）。
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
+**之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
 ### 179. 逐線營運報表：每條線的運量、票收、成本與損益
 
 2026-10-12，作者睡覺期間派工的缺口（依 A 列車 9 V5／A 列車：開始吧觀光的盤點：帳只有全公司合計，玩家看不出哪條線賺錢、該加車或砍掉；OpenTTD 有每車年度利潤，A9 的每列車「運行表示」有收支）。號碼依工作登記 #231：決策 179、存檔版本 48、golden schema 70。
@@ -5734,6 +5736,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **參考**（`a91453/railway-reference-private`）：見 PR 的對照表。
 
 **之後的修正**（查 bug，2026-10-12）：賣掉載著貨的貨運列車時，`freight.loads` 還留著它的貨，到整點的 `tickFreight` 才清；在那之前存的檔讀不回來（「Cargo is on a train… that does not exist」）。`sellTrain` 現在先 `loseCargo(of:)`，貨算損失（`FreightTests.testSellingALoadedFreightTrainLosesItsCargo`）。
+
+**之後的修正**（第三次查 bug，2026-10-12）：① 換車種時舊車賣得比新車種貴（費用 0，`refitCost` 也報 0），公司在赤字時 `setTrainType` 先把舊車的帳賣掉、再 `spend` 新車全價而拋出 `insufficientFunds`，等於一次不收錢的改裝被拒絕、而且拋出前已經改了帳。現在只檢查費用付得起，餘額只少「新價 − 賣得的錢」（`testAChangeOfTypeTheOldTrainPaysForIsMadeInTheRed`）。② 換車種後新車的價錢整筆記在列車的帳上，之後拆車廂沒有沖銷，一節車的列車帳面還是 16 節的價、照它折舊、賣出也照它算；現在和買車一樣，第一節記在列車、其餘記成車廂（`testCarsTakenOffAfterAChangeOfTypeLeaveTheBooks`）。③ 路線改編組（`reformSelectedLine`）先換車種再減車廂，玩家為馬上拆掉的車廂付了新車種的錢；現在減車廂在前、加車廂在後（`RollingStockSessionTests.testReformingIntoFewerCarsPaysOnlyForTheCarsKept`）。存檔格式、golden、replay 不動。
 
 ### 178. 載客量圖層與車站「即將進站」看板
 
@@ -5893,6 +5897,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **測試**：`CityRequestsTests`（第一批報價、種類不重複最多三件、最大的無站聚落、信賴度與同時件數、達成後下月 1 日入帳並課稅、逾期只扣信賴度、停靠計數、建材計數、自由模式不判、一次推進與逐分鐘相同、存檔來回、壞存檔被拒、舊存檔沒有、v50 fixture）；`CityRequestsSessionTests`（新遊戲有、量過的世界沒有、面板的列、按鈕、站長宣布）；golden `city-requests.json`；`SaveFixtures/v50-city-requests.json`。
 
 **沒有驗證的**：Linux 不能跑 App；`GoalsPanel` 的委託案區、選單的「目標」與站長的話要在 macOS CI 與 TestFlight 上看。
+
+**之後的修正**（第三次查 bug，2026-10-12）：遊戲停在午夜那一分鐘（那一天還沒結算）時接下委託，下一步結算前一天時就把前一天算進去：網路運量類拿前一天的運量、觀光類加上前一天的觀光客，可能當場達成、結果日期早於接下的那天。現在接下那天之前的結算跳過它（`CityRequestsTests.testARequestTakenAtAnUnsettledMidnightIsNotJudgedOnTheDayBefore`）。存檔格式、golden、replay 不動。
 
 ### 184. 玩家操作的小功能包：重做、清單搜尋、存檔管理、點選檢視、更多地圖泡泡、提示音與觸覺
 

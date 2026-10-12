@@ -254,7 +254,7 @@ extension GameWorld {
     /// Whether a passenger line with trains calls at station `id` and it
     /// takes passengers.
     func isServedStation(_ id: StationID) -> Bool {
-        allowsService(at: id) && lines.contains { !$0.isFreight && !$0.trains.isEmpty && $0.stops.contains(id) }
+        allowsService(at: id) && lines.contains { !$0.isFreight && $0.hasTrainsCalling(at: id) }
     }
 
     /// What `request` measures now; for the counted kinds, what it has
@@ -302,6 +302,12 @@ extension GameWorld {
         let trips = accounts.days.first { $0.day == day }?.fareTrips ?? 0
         var kept: [CityRequest] = []
         for var request in requests.active {
+            // Taken at the minute of midnight, before it settled the day
+            // before: judged from its own day (a later fix).
+            if let accepted = request.acceptedDay, accepted > day {
+                kept.append(request)
+                continue
+            }
             switch request.kind {
             case .newStation:
                 request.progress = request.callsToday.values.max() ?? 0

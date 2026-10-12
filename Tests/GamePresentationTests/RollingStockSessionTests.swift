@@ -104,6 +104,26 @@ final class RollingStockSessionTests: XCTestCase {
         XCTAssertEqual(editing.undoCount, 1, "one edit")
     }
 
+    /// Re-forming into fewer cars of another type takes the cars off
+    /// first: the new type is paid for the cars the train keeps, not for
+    /// the ones taken off at once (decision 180, a later fix).
+    func testReformingIntoFewerCarsPaysOnlyForTheCarsKept() throws {
+        let session = GameSession(world: try lineWorld())
+        session.staffSelectedLine(headway: 30, type: .l, cars: 4)
+        let waiting = session.world.trains.map(\.id)
+        XCTAssertFalse(waiting.isEmpty)
+        let before = session.world.economy.balance
+        session.reformSelectedLine(type: .maglev, cars: 2)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        for id in waiting {
+            XCTAssertEqual(session.world.train(id: id)?.type, .maglev)
+            XCTAssertEqual(session.world.train(id: id)?.cars, 2)
+        }
+        // Each: two maglev cars less 70 % of the two L cars kept.
+        let each = RollingStock.price(of: .maglev, cars: 2).amount - RollingStock.price(of: .l, cars: 2).amount * 70 / 100
+        XCTAssertEqual(before - session.world.economy.balance, Money(each * Int64(waiting.count)))
+    }
+
     func testReformingToTheSameFormationChangesNothing() throws {
         let session = GameSession(world: try lineWorld())
         session.staffSelectedLine(headway: 30)

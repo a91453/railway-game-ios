@@ -152,6 +152,40 @@ final class RollingStockEconomicsTests: XCTestCase {
         XCTAssertEqual(world, before)
     }
 
+    /// A change to a cheaper type the old train more than pays for costs
+    /// nothing (``refitCost(of:to:)`` quotes nothing), so it is made even in
+    /// the red; it used to sell the old train, then spend the new price
+    /// against a negative balance, and throw with the old train's records
+    /// already sold.
+    func testAChangeOfTypeTheOldTrainPaysForIsMadeInTheRed() throws {
+        var world = try makeWorld(economics: true)
+        let train = try world.purchaseTrain(named: "Fast", as: .highSpeed)
+        world.economy.settle(Money(-world.economy.balance.amount - 100))
+        XCTAssertEqual(world.refitCost(of: train.id, to: .l), .zero)
+        try world.setTrainType(train.id, to: .l)
+        XCTAssertEqual(world.train(id: train.id)?.type, .l)
+        // Sold for $630,000, the L bought for $90,000: the rest is not paid
+        // back, and the balance is where it was.
+        XCTAssertEqual(world.economy.balance, Money(-100))
+        XCTAssertEqual(world.trainSaleQuote(train.id), Money(9_000_000 * 70 / 100))
+    }
+
+    /// After a change of type, the cars taken off write off their share
+    /// of the new price, as cars bought do: a train of one car is worth on
+    /// the books what one bought as it is would be.
+    func testCarsTakenOffAfterAChangeOfTypeLeaveTheBooks() throws {
+        var world = try makeWorld(economics: true)
+        let train = try world.purchaseTrain(named: "Blue", as: .l)
+        try world.setTrainCars(train.id, to: 16)
+        try world.setTrainType(train.id, to: .highSpeed)
+        XCTAssertEqual(world.trainSaleQuote(train.id), Money((900_000 + 15 * 120_000) * 100 * 70 / 100))
+        try world.setTrainCars(train.id, to: 1)
+        XCTAssertEqual(world.trainSaleQuote(train.id), Money(900_000 * 100 * 70 / 100), "a one-car high-speed train")
+        XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, Money(15 * 120_000 * 100))
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+    }
+
     func testSellingBringsSeventyPercentOfTheBookValueAndTheTrainIsGone() throws {
         var world = try makeWorld(economics: true)
         let train = try world.purchaseTrain(named: "Blue")
