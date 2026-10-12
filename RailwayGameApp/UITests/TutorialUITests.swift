@@ -234,6 +234,32 @@ final class TutorialUITests: XCTestCase {
         }
     }
 
+    /// TestFlight 55.1: a data layer left on from the last game (the
+    /// demand change, its legend at the trailing side) stood where the
+    /// tutorial's steps are. The game opens with the layer on, and starting
+    /// the tutorial from the game menu takes it away.
+    func testTheTutorialStartsWithoutADataLayer() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-demo-layout", "-map-layer", "movement", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let legend = app.descendants(matching: .any).matching(identifier: "map.populationLegend").firstMatch
+        XCTAssertTrue(legend.waitForExistence(timeout: 15), "The demand change layer was not on before the tutorial")
+
+        // Pause through the real HUD, as checkNavigation, so a running clock
+        // does not rebuild the menu while XCTest targets it.
+        hittableButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause"))).tap()
+        app.buttons["Game menu"].tap()
+        hittableButton(app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "menu.tutorial", "Tutorial"))).tap()
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        XCTAssertTrue(waitForCard(card, or: app.buttons["tutorial.unfold"]), "The tutorial did not start")
+        XCTAssertTrue(legend.waitForNonExistence(timeout: 10), "The data layer is still on in the tutorial")
+    }
+
     /// Waits up to 10 seconds for `element` to be hittable.
     private func waitForHittable(_ element: XCUIElement) -> Bool {
         let deadline = Date().addingTimeInterval(10)

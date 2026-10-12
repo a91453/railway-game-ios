@@ -86,6 +86,14 @@ private struct TutorialOverlay: View {
     /// card to watch the map had to fold it again on every step
     /// (TestFlight 54.1). A new chapter opens it again.
     @State private var foldedChapters: [TutorialChapter: Bool] = [:]
+    /// The map's data layer (``PopTravelMode``, a device preference kept
+    /// across games, the map view's): the tutorial starts without one, as
+    /// a layer left on from the last game, its legend at the trailing side,
+    /// stood where the steps' controls are (TestFlight 55.1).
+    @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// The layer the player had on when the tutorial started, put back
+    /// when it ends unless they chose one during it.
+    @State private var layerBeforeTutorial: String?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -129,10 +137,27 @@ private struct TutorialOverlay: View {
             }
             session.showNextTutorialStep(from: index)
         }
+        .onAppear(perform: hideDataLayer)
         .onChange(of: tutorial.index) { _, index in
             // Started again (the game menu): the first step, not by Back.
-            if index == 0, !tutorial.reachedByBack { foldedChapters = [:] }
+            if index == 0, !tutorial.reachedByBack {
+                foldedChapters = [:]
+                hideDataLayer()
+            }
         }
+        .onDisappear {
+            if let layer = layerBeforeTutorial, popTravelModeName.isEmpty {
+                popTravelModeName = layer
+            }
+        }
+    }
+
+    /// Takes the map's data layer away for the tutorial, remembering the
+    /// player's.
+    private func hideDataLayer() {
+        guard !popTravelModeName.isEmpty else { return }
+        if layerBeforeTutorial == nil { layerBeforeTutorial = popTravelModeName }
+        popTravelModeName = ""
     }
 
     /// What restarts the wait before a done step moves on.

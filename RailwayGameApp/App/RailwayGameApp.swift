@@ -86,6 +86,11 @@ struct RailwayGameApp: App {
         if DebugLaunch.isSet("-ui-testing-paused") {
             launcher.session?.setSpeed(.paused)
         }
+        // A data layer left on, as a player's last game can leave it
+        // (TutorialUITests: the tutorial starts without it).
+        if let layer = DebugLaunch.value(of: "-map-layer") {
+            UserDefaults.standard.set(layer, forKey: "mapPopTravelMode")
+        }
         // The tutorial at a later step, over what the steps before it
         // build (TutorialUITests: the line step's screen on a phone).
         if let step = DebugLaunch.value(of: "-tutorial-step") {
