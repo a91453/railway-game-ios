@@ -265,9 +265,10 @@ extension XCUIApplication {
     }
 
     /// Opens one of the start screen's demos (decision 135): the Demo Map
-    /// button, then `identifier`'s row in its sheet (`demo.realWorld` or
-    /// `demo.simple`) once it is enabled: the real-world demo waits for
-    /// the real-world data, read in the background at launch.
+    /// button, then `identifier`'s row in its sheet (`demo.realWorld`,
+    /// `demo.highSpeed` or `demo.simple`) once it is enabled: the
+    /// real-world demos wait for the real-world data, read in the
+    /// background at launch.
     func openDemo(_ identifier: String, timeout: TimeInterval = 15) {
         let button = buttons["start.demoMap"]
         XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing button: start.demoMap")
