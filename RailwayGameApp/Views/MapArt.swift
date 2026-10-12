@@ -45,11 +45,10 @@ enum MapArt {
         labels: StationLabels = StationLabels(),
         flowStrokes: [SectionFlow.Stroke] = [],
         latitude: Double = 0,
+        lights: Double = 0,
         in context: GraphicsContext
     ) {
-        let referenceSize = projection.referenceSize
         let detail = projection.detail
-        let region = drawingRegion(projection)
         let bounds = WorldRegion(bounds: world.bounds)
         let land = polygon([
             screenPoint(bounds.minX, bounds.minY, projection),
@@ -90,6 +89,10 @@ enum MapArt {
         }
         drawPlacedBuildings(world, projection: projection, in: context)
         if let building { drawBuildingOverlay(building, projection: projection, in: context) }
+        // Decision 182: at night each station shines, under its badge.
+        if lights > 0 {
+            drawStationLights(world, lights: lights, projection: projection, in: context)
+        }
         // Decision 168: the stations a high-speed line calls at have a second ring.
         let fast = world.highSpeedStations
         for station in world.stations {
@@ -108,21 +111,126 @@ enum MapArt {
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
         drawWaits(traffic, projection: projection, in: context)
+        // The trains and the rings round the waiting ones are drawn over
+        // this, by ``drawTrains``, in a canvas of their own (decision 182).
+    }
 
-        for train in world.trains {
-            guard let position = train.position, let location = world.location(of: position) else { continue }
-            // A tail may still be visible when its head is offscreen. Only
-            // query its body if it could reach the view from the head.
-            if detail == .full,
-               region.expanded(by: Double(train.length)).contains(location.position) {
-                let body = polyline(world.bodyPath(of: train.id), projection: projection)
-                context.stroke(body, with: .color(Palette.train.opacity(0.75)), style: StrokeStyle(lineWidth: max(3, referenceSize * 0.3), lineCap: .round, lineJoin: .round))
+    // MARK: - Trains (decision 182)
+
+    /// The trains, each where it is `progress` of the way through its glide
+    /// from the last tick (``TrainMotion``), then the rings round the
+    /// waiting ones. A train is in its line's colour (``Palette/trainColor``),
+    /// every one in the map's train colour with `plain`; its body is cased
+    /// in ``Palette/ink`` so that it reads over its own line. At night
+    /// (`lights` above 0) each head shines in the stations' warm yellow.
+    static func drawTrains(
+        _ motion: TrainMotion,
+        progress: Double,
+        selectedTrainID: TrainID?,
+        lights: Double,
+        plain: Bool,
+        traffic: TrafficOverlay,
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
+        let region = drawingRegion(projection)
+        let referenceSize = projection.referenceSize
+        let width = max(3, referenceSize * 0.3)
+        for run in motion.runs {
+            guard let head = run.head(at: progress) else { continue }
+            let colour = Palette.trainColor(run.look, plain: plain)
+            // A tail may still be visible when its head is offscreen.
+            if projection.detail == .full, run.length > 0,
+               region.expanded(by: run.length + run.lag).contains(x: head.point.x, y: head.point.y) {
+                let body = trainPolyline(run.body(at: progress), projection: projection)
+                context.stroke(body, with: .color(Palette.ink), style: StrokeStyle(lineWidth: width + 2, lineCap: .round, lineJoin: .round))
+                context.stroke(body, with: .color(colour), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
             }
-            if region.contains(location.position) {
-                drawTrain(at: location, isSelected: train.id == selectedTrainID, isHighSpeed: train.type == .highSpeed, projection: projection, in: context)
+            guard region.contains(x: head.point.x, y: head.point.y) else { continue }
+            if lights > 0 {
+                let center = projection.screenPoint(worldX: head.point.x, worldY: head.point.y)
+                let radius = max(2.5, referenceSize * 0.26)
+                context.fill(disc(at: center, radius: radius * 3.2), with: .color(Palette.station.opacity(0.18 * lights)))
+                context.fill(disc(at: center, radius: radius * 2), with: .color(Palette.station.opacity(0.3 * lights)))
             }
+            drawTrain(
+                at: head.point, heading: head.heading, colour: colour,
+                isSelected: run.train == selectedTrainID, isHighSpeed: run.isHighSpeed, projection: projection, in: context
+            )
         }
         drawWaitMarks(traffic, projection: projection, in: context)
+    }
+
+    // MARK: - Weather (decision 182)
+
+    /// Today's weather over the map (``MapWeather``) at `time` seconds: the
+    /// map darkened by it, the rain falling and the lightning flashing
+    /// unless `reduceMotion` (then only darkened, a little more), and a
+    /// typhoon's sign beside each station it blows over (`typhoonStations`,
+    /// their places on the screen).
+    static func drawWeather(
+        _ weather: MapWeather,
+        time: Double,
+        reduceMotion: Bool,
+        typhoonStations: [ScreenPoint],
+        stationRadius: Double,
+        size: CGSize,
+        in context: GraphicsContext
+    ) {
+        let screen = Path(CGRect(origin: .zero, size: size))
+        let dimming = weather.dimming(reduceMotion: reduceMotion)
+        if dimming > 0 { context.fill(screen, with: .color(Palette.weatherShade.opacity(dimming))) }
+        if !reduceMotion {
+            var rain = Path()
+            for streak in weather.streaks(at: time, width: size.width, height: size.height) {
+                rain.move(to: CGPoint(x: streak.x0, y: streak.y0))
+                rain.addLine(to: CGPoint(x: streak.x1, y: streak.y1))
+            }
+            context.stroke(rain, with: .color(Palette.rain), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            let flash = weather.flash(at: time)
+            if flash > 0 { context.fill(screen, with: .color(Palette.lightning.opacity(0.35 * flash))) }
+        }
+        // The sign on a pale disc edged in ink, up and to the right of the
+        // station's badge, as the waiting count's pill is above it.
+        let side = max(14, stationRadius * 1.4)
+        var tinted = context.resolve(MapGlyph.typhoon.image)
+        tinted.shading = .color(Palette.ink)
+        for station in typhoonStations {
+            let center = CGPoint(x: station.x + stationRadius * 1.1, y: station.y - stationRadius * 1.1)
+            let badge = Path(ellipseIn: CGRect(x: center.x - side * 0.65, y: center.y - side * 0.65, width: side * 1.3, height: side * 1.3))
+            guard badge.boundingRect.intersects(context.clipBoundingRect) else { continue }
+            context.fill(badge, with: .color(Palette.land))
+            context.stroke(badge, with: .color(Palette.ink), lineWidth: 1.5)
+            context.draw(tinted, in: CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side))
+        }
+    }
+
+    /// The radius of a station's badge on the map (``drawPointStation``).
+    static func stationRadius(_ projection: some MapProjection) -> Double {
+        max(5, projection.referenceSize * 0.32)
+    }
+
+    private static func trainPolyline(_ points: [TrainMotion.Point], projection: some MapProjection) -> Path {
+        var path = Path()
+        for (index, point) in points.enumerated() {
+            let screen = cgPoint(projection.screenPoint(worldX: point.x, worldY: point.y))
+            if index == 0 { path.move(to: screen) } else { path.addLine(to: screen) }
+        }
+        return path
+    }
+
+    /// Decision 182: each station in view shines at night, a warm disc
+    /// under its badge as strong as the night's `lights`.
+    private static func drawStationLights(_ world: GameWorld, lights: Double, projection: some MapProjection, in context: GraphicsContext) {
+        let radius = max(5, projection.referenceSize * 0.32) * 2.4
+        var glow = Path()
+        let bounds = context.clipBoundingRect.insetBy(dx: -radius, dy: -radius)
+        for station in world.stations {
+            let center = projection.screenPoint(of: station.location)
+            guard bounds.contains(CGPoint(x: center.x, y: center.y)) else { continue }
+            glow.addPath(disc(at: center, radius: radius))
+        }
+        context.fill(glow, with: .color(Palette.station.opacity(0.35 * lights)))
     }
 
     // MARK: - Traffic control (Stage V4e, decision 64)
@@ -169,7 +277,7 @@ enum MapArt {
 
     /// A ring round each waiting train's head, over the trains: red with a
     /// warning sign for a deadlocked one.
-    private static func drawWaitMarks(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
+    static func drawWaitMarks(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let region = drawingRegion(projection)
         let radius = max(2.5, projection.referenceSize * 0.26) + 4
         for wait in traffic.waits where region.contains(wait.from) {
@@ -497,23 +605,24 @@ enum MapArt {
     /// way instead, so that it reads as another kind of train at a glance
     /// (and in grey: the shape is the difference, not the colour).
     private static func drawTrain(
-        at location: TrackLocation, isSelected: Bool, isHighSpeed: Bool, projection: some MapProjection, in context: GraphicsContext
+        at position: TrainMotion.Point, heading: TrainMotion.Point, colour: Color,
+        isSelected: Bool, isHighSpeed: Bool, projection: some MapProjection, in context: GraphicsContext
     ) {
-        let center = projection.screenPoint(of: location.position)
+        let center = projection.screenPoint(worldX: position.x, worldY: position.y)
         let radius = max(2.5, projection.referenceSize * 0.26)
-        let dx = Double(location.direction.dx), dy = Double(location.direction.dy)
+        let dx = heading.x, dy = heading.y
         let length = (dx * dx + dy * dy).squareRoot()
         // A point ahead of the train, on the screen.
         var ahead: CGPoint?
         if length > 0 {
             let distance = radius * 1.7 / projection.pointsPerUnit
-            ahead = cgPoint(projection.screenPoint(worldX: Double(location.position.x) + dx / length * distance, worldY: Double(location.position.y) + dy / length * distance))
+            ahead = cgPoint(projection.screenPoint(worldX: position.x + dx / length * distance, worldY: position.y + dy / length * distance))
         }
         if projection.detail == .full, !isHighSpeed, let ahead {
             var nose = Path()
             nose.move(to: cgPoint(center))
             nose.addLine(to: ahead)
-            context.stroke(nose, with: .color(Palette.train), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
+            context.stroke(nose, with: .color(colour), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
         }
         var head = disc(at: center, radius: radius)
         if isHighSpeed, let ahead {
@@ -529,7 +638,7 @@ enum MapArt {
                 head = polygon([tip, left, right])
             }
         }
-        context.fill(head, with: .color(Palette.train))
+        context.fill(head, with: .color(colour))
         context.stroke(
             head, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)),
             style: StrokeStyle(lineWidth: isSelected ? 3 : 1.5, lineJoin: .round)
@@ -575,6 +684,7 @@ enum MapArt {
         growth: (SkylineGrowth, elapsed: Double)?,
         growthOnly: Bool,
         layer: PopTravelLayer?,
+        lights: Double = 0,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -589,7 +699,7 @@ enum MapArt {
             context.fill(land, with: .color(Palette.land))
         }
         if let skyline, !growthOnly {
-            drawSkyline(skyline, growth: growth, growthOnly: false, projection: projection, in: context)
+            drawSkyline(skyline, growth: growth, growthOnly: false, lights: lights, projection: projection, in: context)
         } else if let skyline, let growth {
             // Decision 140: a real-world map's own houses stand under it;
             // only what grew is drawn, fading out once it has risen.
@@ -669,6 +779,7 @@ enum MapArt {
         _ skyline: CitySkyline,
         growth: (SkylineGrowth, elapsed: Double)?,
         growthOnly: Bool,
+        lights: Double = 0,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -680,6 +791,8 @@ enum MapArt {
         let lineWidth = cellPoints < 14 ? 0.6 : 1
         var ground: [LandUse: Path] = [:], walls: [LandUse: Path] = [:], roofs: [LandUse: Path] = [:], outlines = Path()
         var lit: [(roof: CGRect, light: Double)] = []
+        // Decision 182: at night two lots in three have a lit window.
+        var windows = Path()
         func drawRow() {
             for use in LandUse.allCases {
                 if let path = ground[use] { context.fill(path, with: .color(Palette.cityRoof(use))) }
@@ -692,6 +805,8 @@ enum MapArt {
                 context.fill(Path(roof), with: .color(Palette.station.opacity(0.85 * light)))
             }
             context.stroke(outlines, with: .color(Palette.cityOutline), lineWidth: lineWidth)
+            if lights > 0 { context.fill(windows, with: .color(Palette.station.opacity(lights))) }
+            windows = Path()
             ground = [:]
             walls = [:]
             roofs = [:]
@@ -739,6 +854,14 @@ enum MapArt {
             }
             roofs[lot.use, default: Path()].addPath(top)
             if let frame, frame.light > 0 { lit.append((roof: roof, light: frame.light)) }
+            if lights > 0, foot.width >= 3, (lot.column &* 73_856_093 ^ lot.row &* 19_349_663) % 3 != 0 {
+                let side = foot.width * 0.34
+                // On the wall of a building that rises, else on its roof.
+                let window = rise > side
+                    ? CGRect(x: foot.midX - side / 2, y: roof.maxY + (rise - side) / 2, width: side, height: side)
+                    : CGRect(x: foot.midX - side / 2, y: foot.midY - side / 2 - rise, width: side, height: side)
+                windows.addRect(window)
+            }
             outlines.addRect(whole)
             if rise > 0 {
                 outlines.move(to: CGPoint(x: roof.minX, y: roof.maxY))
@@ -1078,5 +1201,12 @@ enum MapArt {
 
     private static func disc(at point: ScreenPoint, radius: Double) -> Path {
         Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2))
+    }
+}
+
+private extension WorldRegion {
+    /// Whether the point (`x`, `y`) lies inside or on the edge.
+    func contains(x: Double, y: Double) -> Bool {
+        minX <= x && x <= maxX && minY <= y && y <= maxY
     }
 }
