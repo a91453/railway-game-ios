@@ -111,4 +111,21 @@ final class DepartureBoardTests: XCTestCase {
         XCTAssertEqual(row.secondsAway, 20 * 60 + Int64(line.stops.count - 1) * 300)
         XCTAssertEqual(row.line, line.id)
     }
+
+    /// A run no train took out within the half hour it may still be sent is
+    /// dropped for the day: no station down the line lists it as coming.
+    func testARunNeverSentOutIsNotListedDownTheLine() throws {
+        var world = DemoWorld.make(in: .english)
+        try world.advance(ticks: 120)
+        let line = try XCTUnwrap(world.lines.first)
+        for id in line.trains { try? world.stopTrainService(id) }
+        let now = world.clock.now.seconds
+        let start = (now % GameTime.secondsPerDay) - 40 * 60
+        let times = (0..<line.stops.count).map { LineRunTime(arrival: start + Int64($0) * 1_800, departure: start + Int64($0) * 1_800 + 30) }
+        try world.setLineRuns(line.id, to: [LineRun(from: 0, to: line.stops.count - 1, times: times)])
+        let last = line.stops[line.stops.count - 1]
+        XCTAssertGreaterThan(start + Int64(line.stops.count - 1) * 1_800, now % GameTime.secondsPerDay, "the last stop is still ahead")
+        let board = DepartureBoard(world: world, station: last)
+        XCTAssertNil(board.directions.flatMap(\.rows).first { $0.train == nil })
+    }
 }

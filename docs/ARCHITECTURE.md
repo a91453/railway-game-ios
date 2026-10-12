@@ -5715,6 +5715,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **測試**：`SectionFlowTests`（沒有計畫時什麼都不畫、讀計畫不改世界、區間的負載與運能、輕重排序與紅色、顏色與線寬、區間的分配、點選與兩種語言的文字）、`DepartureBoardTests`（接下來的班次依方向排序、預定到站加誤點、月台上的列車、不在線上的站、時間與誤點的文字、尚未派出的固定班次）。App 的畫法與看板（SwiftUI）在 Linux 上只能編譯，要 macOS CI 與實機。
 
+**之後的修正**（查 bug，2026-10-12，發佈前）：進站看板列出「沒有車發出去」的固定班次：一班在容許的 30 分鐘內沒有列車可發（`LineRun.latestDispatch`）就當天作廢，但下游各站仍照時刻表時間列著，像是有一班車要來。現在過了作廢時間就不列（`DepartureBoardTests.testARunNeverSentOutIsNotListedDownTheLine`）。
+
 **之後的修正**（查 bug，2026-10-12，發佈前）：`ServiceLine.withoutDispatchTimes`（乘客計畫與載客量圖層的鍵）也清掉空車回送里程 `deadheadDistance`：它每趟空車回送都增加、沒有計畫讀它，開了彈性發車後每趟回送都讓乘客計畫在下一次 `advance` 整個重算（`FlexDispatchTests.testALineKeyDoesNotChangeWithAnEmptyRun`）。
 
 ### 181. 公司評等、職稱與成就：自由遊戲的長期目標
