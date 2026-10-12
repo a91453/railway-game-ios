@@ -287,34 +287,30 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// Opens the train menu, scrolls it to `name` and chooses it.
     private func chooseTrain(_ name: String, in app: XCUIApplication) {
         requiredButton("train.picker", in: app).tap()
-        // The menu's rows other than the picker's own label ("Train: …").
-        let menuRows = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND NOT (label BEGINSWITH %@)", "Train ", "Train:"))
+        // The menu's rows ("Train 3"), not the picker ("Train: …") or the
+        // train tool.
+        let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
         XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
-        // Let the menu finish opening, then drag it, slowly, until the row
-        // shows: a row below the menu's fold is not in the accessibility
-        // tree at all. Before the fix every tick took it back to its top.
         Thread.sleep(forTimeInterval: 1)
         let rows = app.buttons.matching(NSPredicate(format: "label == %@", name))
         func shown() -> Bool { rows.firstMatch.exists && rows.allElementsBoundByIndex.contains { $0.isHittable } }
-        // What the menu shows, for the log and a failure message.
-        func listed() -> String {
-            menuRows.allElementsBoundByIndex.map { "\($0.label) \($0.isHittable ? "hittable" : "hidden") \($0.frame)" }.joined(separator: "; ")
+        func visibleRows() -> [String] { menuRows.allElementsBoundByIndex.filter { $0.isHittable }.map(\.label) }
+        // A row below the menu's fold is not in the accessibility tree:
+        // swipe the menu up to it. A swipe, not a press and drag: pressing
+        // a row and dragging chooses the row under the finger (run
+        // 38285634450). Each time, the menu must stay where it was
+        // scrolled; before the fix every tick took it back to its top.
+        for attempt in 0..<6 where !shown() {
+            let visible = visibleRows()
+            print("chooseTrain(\(name)) attempt \(attempt): \(visible.joined(separator: ", "))")
+            guard visible.count > 1 else { break }
+            let row = menuRows.allElementsBoundByIndex.filter { $0.isHittable }[visible.count / 2]
+            row.swipeUp()
+            let scrolled = visibleRows()
+            Thread.sleep(forTimeInterval: 3)
+            XCTAssertEqual(visibleRows(), scrolled, "The open train menu moved by itself")
         }
-        // The menu may list the trains either way round from its button
-        // (it opens up or down): swipe one way, then the other.
-        for attempt in 0..<12 where !shown() {
-            print("chooseTrain(\(name)) attempt \(attempt): \(listed())")
-            let hittable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
-            guard let first = hittable.first, let last = hittable.last else { break }
-            if attempt < 6 {
-                let from = last.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -120)), withVelocity: .slow, thenHoldForDuration: 0.3)
-            } else {
-                let from = first.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 120)), withVelocity: .slow, thenHoldForDuration: 0.3)
-            }
-        }
-        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name); it shows: \(listed())")
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name); it shows: \(visibleRows())")
         let row = requiredButton(rows, name: name)
         touchMenuRow(row, closing: rows, in: app, name: name)
         waitForLabel("Train: \(name)", of: app.buttons.matching(identifier: "train.picker").firstMatch)
