@@ -62,22 +62,18 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.switches["settings.sounds"].waitForExistence(timeout: 10), "The settings did not open")
         // A phone on its side shows only the first sections, and a List
         // makes a row only once it scrolls into view: since the Map section
-        // (decision 182) the preview starts below the fold, so scroll to it
-        // before waiting for it. Swipe the settings' list, not the app: on
-        // its side the app's own swipe starts on the navigation bar and
-        // scrolls nothing (PR #427's first run). Slowly, so the list does
-        // not fling past the row.
-        let lists = [app.collectionViews, app.tables, app.scrollViews].map {
-            $0.containing(.switch, identifier: "settings.sounds").firstMatch
-        }
-        let list = lists.first { $0.exists } ?? lists[0]
-        XCTAssertTrue(list.exists, "Missing the settings' list")
+        // (decision 182) the preview starts below the fold. On its side
+        // neither the app's own swipe (it began on the navigation bar and
+        // scrolled nothing) nor the row's own tap (it landed at the screen's
+        // left edge, beside the row) reached it (PR #427's runs), so drag
+        // the row into the middle of the screen and tap the centre of its
+        // frame, as openSettingsFromTheGameMenu taps the menu's Settings.
         let preview = app.buttons["settings.cityView"]
-        for _ in 0..<10 where !(preview.exists && preview.isHittable) {
-            list.swipeUp(velocity: .slow)
-        }
-        XCTAssertTrue(preview.waitForExistence(timeout: 10), "Missing the 3D city preview")
-        preview.tap()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(preview), "The 3D city preview never came into view")
+        let frame = preview.frame
+        app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY))
+            .tap()
         XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
         let loading = app.descendants(matching: .any)["cityView.loading"]
         let error = app.staticTexts["cityView.error"]
