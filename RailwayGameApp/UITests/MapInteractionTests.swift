@@ -432,4 +432,45 @@ final class MapInteractionTests: XCTestCase {
         // idle wait does not always cover, as the legend's (#198).
         XCTAssertTrue(hud.waitForNonExistence(timeout: 5), "MapConstructionHUD must disappear when preview is cleared")
     }
+
+    /// A panel beside the map (Lines) takes the details card's place: the
+    /// dock's toggle for the card has nothing to change then, and on a
+    /// phone the panel's edge lay over the station master beside the dock
+    /// (bug hunt 3, domain D).
+    func testASidePanelLeavesNoDeadToggleAndCoversNoStationMaster() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        let toggle = app.buttons["controls.toggle"]
+        let stationMaster = app.buttons["stationMaster"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        XCTAssertTrue(toggle.isEnabled)
+        let cardBefore = toggle.label
+
+        let lines = app.buttons["entry.lines"]
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The lines panel opens")
+        bar.waitUntilSettled()
+        XCTAssertFalse(toggle.isEnabled, "With a panel beside the map the details card's toggle has nothing to change")
+        // A tap then used to change only what showed after the panel closed.
+        toggle.tap()
+        if stationMaster.exists {
+            XCTAssertTrue(stationMaster.isHittable, "The station master shows only where the panel leaves it room")
+            XCTAssertLessThanOrEqual(stationMaster.frame.maxX, bar.frame.minX,
+                                     "The station master \(stationMaster.frame) must not lie under the panel \(bar.frame)")
+        }
+
+        bar.buttons["Done"].tap()
+        XCTAssertTrue(bar.waitForNonExistence(timeout: 10), "The lines panel closes")
+        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        XCTAssertTrue(toggle.isEnabled)
+        XCTAssertEqual(toggle.label, cardBefore, "Closing the panel must leave the details card as it was")
+    }
 }

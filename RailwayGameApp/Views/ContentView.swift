@@ -259,7 +259,10 @@ struct ContentView: View {
                     }
                 }
                 .overlay(alignment: .bottomLeading) {
-                    ControlDock(session: session, isOpen: isOpen) {
+                    // The card gives way to a panel beside the map: while
+                    // one is open the toggle could only set what shows after
+                    // it closes, with nothing to see now.
+                    ControlDock(session: session, isOpen: isOpen, canToggle: sidePanel == nil) {
                         detailsChoice = !isOpen
                     }
                     .padding([.leading, .bottom], margin)
@@ -271,18 +274,27 @@ struct ContentView: View {
                 // the dock is measured: before, it would stand on the Build
                 // button and then slide across the dock to its place.
                 .overlay(alignment: .bottomLeading) {
+                    // Short of the map's bottom-trailing column too
+                    // (#366): beside a phone's dock the bubble reached
+                    // the zoom buttons, and a tap there only closed it.
+                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
+                    let trailing = max(sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0, corner)
+                    // Hidden where a panel beside the map would cover it:
+                    // on a landscape phone the panel's edge (x 365 of 750)
+                    // lies over the station master beside the dock (x
+                    // 350-394), leaving a sliver to tap. Hidden, not
+                    // removed, so it remembers what it has said.
+                    let isCovered = dockSize.width + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     if session.tutorial == nil, dockSize != .zero {
-                        // Short of the map's bottom-trailing column too
-                        // (#366): beside a phone's dock the bubble reached
-                        // the zoom buttons, and a tap there only closed it.
-                        let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
-                        let trailing = max(sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0, corner)
                         StationMasterCorner(
                             session: session,
                             maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52
                         )
                         .padding(.leading, dockSize.width + margin)
                         .padding(.bottom, strip + margin)
+                        .opacity(isCovered ? 0 : 1)
+                        .allowsHitTesting(!isCovered)
+                        .accessibilityHidden(isCovered)
                     }
                 }
                 .overlay(alignment: .trailing) {
@@ -448,6 +460,7 @@ private struct StatusPill: View {
 private struct ControlDock: View {
     let session: GameSession
     let isOpen: Bool
+    var canToggle = true
     let toggle: () -> Void
 
     var body: some View {
@@ -455,6 +468,7 @@ private struct ControlDock: View {
             ControlPanel(session: session, arrangement: .tools)
             if session.tutorial == nil {
                 ControlDetailsToggle(isOpen: isOpen, action: toggle)
+                    .disabled(!canToggle)
             }
         }
         .fixedSize()

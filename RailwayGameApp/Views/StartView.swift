@@ -611,6 +611,10 @@ struct SaveListView: View {
                 Section {
                     ForEach(saves) { entry in
                         Button {
+                            // A save that cannot be read stays listed to be
+                            // deleted: not disabled, which on a list row also
+                            // took its swipe and its menu, and so Delete.
+                            guard entry.problem == nil else { return }
                             launcher.load(entry)
                             if launcher.session != nil {
                                 dismiss()
@@ -618,7 +622,6 @@ struct SaveListView: View {
                         } label: {
                             row(entry)
                         }
-                        .disabled(entry.problem != nil)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 deleting = entry

@@ -54,6 +54,8 @@ struct StationMasterCorner: View {
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
+    /// The avatar's side.
+    static let avatarSize: CGFloat = 44
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -70,7 +72,7 @@ struct StationMasterCorner: View {
                     talk &+= 1
                 }
             } label: {
-                StationMasterAvatar(size: 44, mood: mood(advice))
+                StationMasterAvatar(size: Self.avatarSize, mood: mood(advice))
                     // Decision 122: a hop each time it speaks, not with
                     // Reduce Motion.
                     .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : talk) { content, lift in
