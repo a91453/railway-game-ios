@@ -5399,6 +5399,38 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **驗證**：`TrainTypeNameTests`（每個車種的中英文名稱、同一種語言內不重複、字母與品牌不再當名稱、捷運與列車的寫法、通用列車、`Train.typeText`、年代訊息的句子）。名稱在選單那一行小字裡會不會被截斷（最長的是六個字，例如「線性馬達捷運 · 每節 243 人 · 3 門」），要實機（TestFlight）才看得到。
 
+### 175. 秘書室：HUD 日曆與天氣、破產倒數、新聞紀錄、重要事件自動暫停、每月報告
+
+2026-10-12（作者睡覺期間派工）。號碼依工作登記 #231：決策 175；存檔版本、golden schema 不動。**只改 presentation，GameCore 不動。**
+
+**問題**：HUD 只寫「第 N 天」；連假、颱風、破產倒數、站長的提醒看過一次就沒了；年報要大約 14 小時實際時間才出現一次。A 列車觀光有「カレンダー」（行事、期限、結算日）與通知履歷，A9 有「資金低於門檻自動暫停」。
+
+**日曆**（`GameDate`、`GameTime.calendarText`、`GameClock.calendarText`，`DisplayText.swift`）：用遊戲規則已經在用的曆法，一年 360 天、十二個月各 30 天（`FinancePeriod`），第一天是星期一（`StationDemand.weekday(ofDay:)`）：「第 2 年 5 月 12 日（二）08:40」。原來的「第 N 日 · 時間」（`displayText`）沒動，存檔清單還用它。HUD 的時鐘旁是今天的天氣圖示（晴、雨、雷雨；颱風經過時是颱風）和節日標籤（`todaySymbol()`、`todayHoliday()`，讀 `Weather.swift` 與 `Holidays.swift` 既有的查詢；沒打開「連假與事件」就都不顯示）。點時鐘彈出未來 7 天預報（`GameWorld.forecast()`、`ForecastDay`）：假日、天氣、颱風來襲（只有已經預警的）、油電價格。
+
+**破產倒數**：劇本設有 `insolvencyDays`、未結束、而且餘額小於 0 時，金額旁出現紅色徽章「破產倒數 23 天」（`GameWorld.insolvencyCountdown` = `insolvencyDays − insolventDays`），`GoalsPanel` 的狀態列也寫。**`StationMasterAdvice` 的 `.inDebt` 沒有動**（歸 `claude/onboarding-newgame`）。
+
+**新聞紀錄**（`NewsLog.swift`、`SecretaryRoom.swift`、`NewsLogView.swift`）：
+- 最多 300 則、新的在前；每則有遊戲日期、分類（圖示）、中英文兩份文字（狀態訊息只有當時語言那份）與可選的目標（車站、路線、列車的 ID，不是副本）。「前往」選取目標並把地圖移過去（`GameSession.goTo`，用決策 177 的 `lookAt`；列車是跟拍）。
+- 收錄：站長說過的每一則提醒（每小時看一次，同一種擔心 10 天內只寫一次；載入舊存檔時前 30 則已有同樣的字就不重寫）、成功與失敗訊息（`message` 的 `didSet`）、目標達成、劇本結束、年度結算、可買的地圖格（有額度且錢夠的那一天）、假日開始、颱風預警與來襲、油電價格開始變動、城鎮成長、建材不足、轉為負債、挑戰剩 7 天。站長的 `.inDebt`、`.typhoonComing`、`.fuelSpell`、`.goalMet`、`.scenarioCompleted` 另有自己的條目，不重複寫。
+- **以每個存檔的旁檔 `.news.json` 保存**（`SaveLibrary.save(_:news:as:at:)`、`news(for:)`）：不進 `SavedGame`，不升存檔版本；旁檔寫不出、讀不進都不影響存檔（讀不進就是空的紀錄）。清單不把旁檔當存檔；封存自動存檔、刪除存檔時旁檔跟著走。
+- 開啟：HUD 的鈴鐺（帶未讀數）、點站長說話的泡泡，或站長在說話時再點頭像（`ContentView.Panel` 往後加 `.news`、`.monthEnd`）。
+
+**重要事件自動暫停**（設定「重要事件自動暫停」，預設開，存在裝置上，`@AppStorage`）：颱風預警（經過有路線停靠的車站才暫停；沒有路網只記）、目標達成、現金轉為負債、挑戰剩 7 天（挑戰長於 14 天才提醒）。暫停後狀態列寫「已暫停：原因」（這一句不進紀錄，原因已在紀錄裡）。
+
+**每月報告**（`MonthlyReport`、`MonthlyReportText.swift`、`MonthlyReport.swift`）：`GameSession` 仿 `yearEndYear`，每 30 天（`日 ÷ 30` 進位的那天午夜）寫一張精簡卡片：旅客（`fareTrips` 月總和）、票收、成本、淨利（`accounts.report(.month, day:)` 的 `FinanceSummary`）、現金（月底餘額，對照「月底餘額減當月淨現金流量」），各自跟上月比（▲▼ 百分比；上月沒有資料就不比）；計畫運量（`StationDemand.dailyTrips`）成長最多與減少最多各 3 站（對照上次報告時的快照，`MonthlyBaseline` 放在新聞旁檔裡，新站不算）；新出現的 D3／D4 建物數；建材不足的車站；一句頭條（轉虧為盈或轉盈為虧優先，其次票收或旅客創新高，否則三項裡變動最大的、至少 5%，再不然「平穩的一個月」）。設定「每月報告」：自動開啟並暫停（預設）、只記在新聞紀錄、關閉；自由模式（沒有帳）不做。
+
+**預設（作者睡覺，自己決定的）**：預設都開；「重要事件」不含連假開始與油電漲跌（只記錄，不打斷玩家）；月報只在經營模式；月彙整自己用 `accounts.report` 與 `accounts.days` 算（`claude/finance-trends` 的 `FinanceHistory` 若先合併，之後的 session 可以改用，不要留兩份）。
+
+**參考對照**（`a91453/railway-reference-private`）：
+| 參考 | 目標 |
+| --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` `flowDashboardBuildEconomyReport`（本期與上期的收入、成本、淨額比較） | `MonthlyReport.make`、`MonthlyFigure.percent`（本月與上月，整數百分比） |
+| 同檔的通知履歷與 `notify()` | `NewsLog`（300 則、新的在前；參考的通知只有幾秒鐘，這裡留著） |
+| 沒有可用的：日曆／行事、資金低於門檻自動暫停（A 列車的）、天氣圖示 | 自己寫：`GameDate`、`pausesForImportantEvents`、`todaySymbol()` |
+
+外部專案：沒有搜尋到可以直接用的（OpenTTD 有新聞訊息與「暫停於事件」的設定，只讀概念，沒有複製程式碼，GPL）。
+
+**限制**：App 檔案（SwiftUI）在 Linux 上只能靠 macOS CI 編譯；邏輯都放在 `GamePresentation`，由 `NewsLogTests`、`MonthlyReportTests`、`DisplayTextTests` 測。月報的站成長只比對「計畫運量」，不是實際載客。
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
@@ -5578,3 +5610,4 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。
 - 車站目前不能拆除（未實作）。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
