@@ -115,9 +115,16 @@ final class RealWorldMapUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
-        tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei").tap()
-        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
+        // The largest text pushes the start screen's buttons below the
+        // fold: dragged into sight first.
+        for identifier in ["start.realWorld", "place.tra-taipei", "realWorld.start"] {
+            let button = app.buttons[identifier].firstMatch
+            XCTAssertTrue(button.waitForExistence(timeout: 15), "Missing button: \(identifier)")
+            if !button.isHittable {
+                XCTAssertTrue(app.dragUntilWhollyOnScreen(button), "\(identifier) cannot be brought into sight")
+            }
+            tappable(app.buttons.matching(identifier: identifier), name: identifier).tap()
+        }
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
