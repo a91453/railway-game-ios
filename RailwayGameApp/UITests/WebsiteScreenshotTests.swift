@@ -77,7 +77,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 60), .completed, "The real-world data loads")
         liu.tap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The challenge starts")
-        settle(seconds: 8)
+        // The game opens at midnight, when the map is tinted for the night
+        // (decision 182), and its tiles are slow to come in: at 600 times
+        // the clock reaches the day in a minute and a half.
+        settle(seconds: 90)
         keep("liu-mingchuan", app)
     }
 
@@ -90,6 +93,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
         settle(seconds: 8)
         keep("real-world-demo", app)
+
+        // The same map by day: the demo opens at midnight, its stations lit.
+        settle(seconds: 90)
+        keep("real-world-demo-day", app)
     }
 
     // MARK: - What the game gained after those (decisions 167 to 186)
@@ -105,15 +112,16 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 8)
         keep("high-speed-demo", app)
 
-        // The line from end to end, a few steps out.
-        let zoomOut = app.buttons["縮小"]
-        if zoomOut.waitForExistence(timeout: 10), zoomOut.isHittable {
+        // It opens on the whole line (the map opens on what is built); a
+        // closer look at the middle of it, a few steps in.
+        let zoomIn = app.buttons["放大"]
+        if zoomIn.waitForExistence(timeout: 10), zoomIn.isHittable {
             for _ in 0..<3 {
-                zoomOut.tap()
+                zoomIn.tap()
                 settle(seconds: 1)
             }
             settle(seconds: 3)
-            keep("high-speed-demo-wide", app)
+            keep("high-speed-demo-close", app)
         }
     }
 
@@ -177,11 +185,42 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("passenger-load", app)
     }
 
+    /// The secretary's room (decision 175) on a blank new game: the
+    /// forecast of the next seven days under the clock, and the news log
+    /// behind the bell.
+    func testForecastAndNews() {
+        let app = launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 30), "The game starts")
+        settle(seconds: 5)
+        pauseTheClock(in: app)
+
+        tapButton("hud.time", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["hud.forecast"].firstMatch.waitForExistence(timeout: 10), "The forecast opens")
+        settle()
+        keep("forecast", app)
+        // A tap on the map, clear of the controls, closes the popover.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.3)).tap()
+        settle()
+
+        tapButton("hud.news", in: app)
+        XCTAssertTrue(app.buttons["news.done"].waitForExistence(timeout: 10), "The news log opens")
+        settle(seconds: 3)
+        keep("news-log", app)
+    }
+
     /// The sights of the whole of Taiwan (decision 174): their stars on the
     /// map, then their panel with the stars, the season and the shops.
     func testTourism() {
         let app = launch()
         defer { app.terminate() }
+        let realWorld = app.buttons["start.realWorld"]
+        XCTAssertTrue(realWorld.waitForExistence(timeout: 10))
+        app.bringStartButtonIntoView(realWorld)
         tapButton("start.realWorld", in: app, timeout: 60)
         // Below Taiwan's places, and enabled once the population is read.
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
@@ -230,13 +269,18 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// first: its ticks would rebuild the native menu while XCTest targets
     /// an action in it (the start and save flow's rule).
     private func openFromGameMenu(_ item: String, in app: XCUIApplication) {
+        pauseTheClock(in: app)
+        tapButton("hud.menu", in: app)
+        tapButton("menu.more", in: app)
+        tapButton(item, in: app)
+    }
+
+    /// Pauses the clock, when it runs.
+    private func pauseTheClock(in app: XCUIApplication) {
         let pause = app.buttons.matching(NSPredicate(format: "label == %@", "暫停")).firstMatch
         if pause.waitForExistence(timeout: 10), pause.isHittable {
             pause.tap()
         }
-        tapButton("hud.menu", in: app)
-        tapButton("menu.more", in: app)
-        tapButton(item, in: app)
     }
 
     /// Taps the copy of the button `identifier` that the player can touch,
