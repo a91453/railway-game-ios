@@ -114,16 +114,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 8)
         keep("high-speed-demo", app)
 
-        // It opens on what is built, but the north end of the line lies
-        // under the clock: a step out for the whole line, then three steps
-        // in from the opening view for a closer look at the middle of it.
-        let zoomOut = app.buttons["縮小"]
+        // It opens on what is built: the line from end to end, as far as
+        // the island lets the map zoom out. A closer look at the middle of
+        // it, three steps in.
         let zoomIn = app.buttons["放大"]
-        if zoomOut.waitForExistence(timeout: 10), zoomOut.isHittable, zoomIn.isHittable {
-            zoomOut.tap()
-            settle(seconds: 3)
-            keep("high-speed-demo-whole", app)
-            for _ in 0..<4 {
+        if zoomIn.waitForExistence(timeout: 10), zoomIn.isHittable {
+            for _ in 0..<3 {
                 zoomIn.tap()
                 settle(seconds: 1)
             }
@@ -181,14 +177,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         let layers = app.buttons["map.layers"]
         layers.waitUntilSettled()
         layers.tap()
-        // The layer is the last of the sheet's rows, below long notes: out
-        // to the end of the list first.
-        for _ in 0..<4 {
-            app.swipeUp()
-            settle(seconds: 1)
-        }
+        // The layer is the last of the sheet's rows, below long notes: the
+        // sheet's list is swiped up, slowly, until it is there.
+        let sheet = app.collectionViews.containing(.switch, identifier: "layer.stationNames").firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 10), "The layers sheet opens")
         let row = app.switches["layer.sectionFlow"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(row), "The passenger load row comes into view")
+        XCTAssertTrue(scroll(sheet, to: row), "The passenger load row comes into view")
         let load = row.switches.firstMatch
         XCTAssertTrue(load.waitForExistence(timeout: 5))
         for _ in 0..<3 where load.value as? String != "1" {
@@ -237,9 +231,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The whole of Taiwan is offered below Taiwan's places, in a list
         // that builds a row as it is scrolled to, and is enabled once the
         // population is read.
-        XCTAssertTrue(app.buttons["place.tra-taipei"].waitForExistence(timeout: 30), "The places are listed")
+        let places = app.collectionViews.containing(.button, identifier: "place.tra-taipei").firstMatch
+        XCTAssertTrue(places.waitForExistence(timeout: 30), "The places are listed")
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(wholeTaiwan), "The whole of Taiwan comes into view")
+        XCTAssertTrue(scroll(places, to: wholeTaiwan), "The whole of Taiwan comes into view")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: wholeTaiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         wholeTaiwan.tap()
@@ -279,6 +274,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    /// Swipes `list` up, slowly so that it does not fling past, until
+    /// `element` can be touched; whether it can. For a row that a list only
+    /// builds as it is scrolled to, and that lies far down it.
+    private func scroll(_ list: XCUIElement, to element: XCUIElement, swipes: Int = 30) -> Bool {
+        for _ in 0..<swipes {
+            if element.exists, element.isHittable { return true }
+            list.swipeUp(velocity: .slow)
+            settle(seconds: 0.5)
+        }
+        if element.exists, element.isHittable { return true }
+        // For the log: what the list held when it did not show the row.
+        print("The list never showed \(element) (exists: \(element.exists)):\n\(list.debugDescription)")
+        return false
     }
 
     /// Waits until the game's clock reads from `start` o'clock to before
