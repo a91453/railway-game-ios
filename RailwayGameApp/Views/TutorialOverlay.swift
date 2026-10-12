@@ -44,8 +44,9 @@ extension View {
                     // no placement leaves every control clear.
                     let required = tutorial.step.targets.filter { $0 != .map }.compactMap(frameOf)
                     // The map's own frame, so the card leaves some of it
-                    // free to tap even where little of it shows.
-                    let map = frameOf(.map)
+                    // free to tap even where little of it shows; a step that
+                    // is only read has nothing to tap there (decision 188).
+                    let map = tutorial.step.goal == .read ? nil : frameOf(.map)
                     TutorialOverlay(
                         session: session, tutorial: tutorial, frames: frames,
                         placement: TutorialCardPlacement(
@@ -71,12 +72,14 @@ private let tutorialPanels: [TutorialTarget] = [.detailsCard, .sidePanel]
 private let tutorialOverlaySpace = "tutorial.overlay"
 
 /// Only the card receives touches: outlining a tool or the map must leave
-/// it usable, because Next waits for the player to perform the step.
+/// it usable, because Next waits for the player to perform the step. Kept
+/// across steps, it moves a done step on by itself (decision 188).
 private struct TutorialOverlay: View {
     let session: GameSession
     let tutorial: Tutorial
     let frames: [CGRect]
     let placement: TutorialCardPlacement
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -101,14 +104,35 @@ private struct TutorialOverlay: View {
         }
         // The frames are the overlay's; the card checks its own in them.
         .coordinateSpace(.named(tutorialOverlaySpace))
+        // A done step moves on by itself after a moment, longer with
+        // VoiceOver, which has the title to read; a step that comes undone
+        // meanwhile, or another step, cancels it.
+        .task(id: AutoAdvance(index: tutorial.index, ready: session.tutorialAdvancesByItself)) {
+            guard session.tutorialAdvancesByItself else { return }
+            let index = tutorial.index
+            do {
+                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Tutorial.autoAdvanceDelay)
+            } catch {
+                return
+            }
+            session.showNextTutorialStep(from: index)
+        }
+    }
+
+    /// What restarts the wait before a done step moves on.
+    private struct AutoAdvance: Equatable {
+        let index: Int
+        let ready: Bool
     }
 }
 
 /// The step's card, or the card folded to its title: by the player, with
 /// its ⌄ button, or by itself while, open, it would cover what the step
 /// asks for (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on
-/// a phone on its side with a panel open. A step that is done opens it, so
-/// Next shows, unless the player folded it. New for each step (`.id`).
+/// a phone on its side with a panel open. A done step that waits for Next
+/// (one to read, or reached by Back) opens it, so Next shows, unless the
+/// player folded it; one moving on by itself stays as it is. New for each
+/// step (`.id`).
 private struct TutorialCardSlot: View {
     let session: GameSession
     let tutorial: Tutorial
@@ -117,12 +141,21 @@ private struct TutorialCardSlot: View {
     @State private var folded: Bool?
     /// Folded by itself: open, it covered what the step asks for.
     @State private var foldedItself = false
+    /// The step has waited long enough to offer "Skip this step".
+    @State private var waitedForSkip = false
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private var isFolded: Bool {
-        if session.isTutorialStepDone { return folded == true }
+        if session.isTutorialStepDone, tutorial.step.goal == .read || tutorial.reachedByBack { return folded == true }
         return folded ?? foldedItself
+    }
+
+    /// Whether the card offers "Skip this step" (decision 188): for an
+    /// action step not done, at once when something is wrong, else after
+    /// the step's wait.
+    private func offersSkip(hint: TutorialHint?, done: Bool) -> Bool {
+        !done && tutorial.step.goal != .read && (hint?.isProblem == true || waitedForSkip)
     }
 
     /// Narrower on a phone on its side, whose map is short and wide.
@@ -133,14 +166,16 @@ private struct TutorialCardSlot: View {
     }
 
     var body: some View {
+        let hint = session.tutorialHint
+        let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
         TutorialCardLayout(placement: sized) {
             if isFolded {
-                FoldedTutorialCard(session: session, tutorial: tutorial) {
+                FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint) {
                     UITestTrace.action("tutorial.unfold")
                     folded = false
                 }
             } else {
-                TutorialCard(session: session, tutorial: tutorial) {
+                TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
                     UITestTrace.action("tutorial.fold")
                     folded = true
                 }
@@ -156,6 +191,16 @@ private struct TutorialCardSlot: View {
         // again and see whether it fits now.
         .onChange(of: Fit(placement)) { _, _ in
             foldedItself = false
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(tutorial.step.skipOfferSeconds))
+            if !Task.isCancelled { waitedForSkip = true }
+        }
+        // What is wrong is said to VoiceOver as it comes.
+        .onChange(of: hint?.text) { _, text in
+            if let text, hint?.isProblem == true {
+                AccessibilityNotification.Announcement(text).post()
+            }
         }
     }
 
@@ -205,10 +250,14 @@ extension TutorialCardPlacement.Frame {
 private struct TutorialCard: View {
     let session: GameSession
     let tutorial: Tutorial
+    /// What is wrong, or what comes next (``GameSession/tutorialHint``).
+    let hint: TutorialHint?
+    /// Whether "Skip this step" shows.
+    let offersSkip: Bool
     /// Folds the card to its title.
     let fold: () -> Void
     @AccessibilityFocusState private var focusesTitle: Bool
-    /// The lantern beside "Complete this step", as large as its text.
+    /// The lantern beside a problem, as large as its text.
     @ScaledMetric(relativeTo: .footnote) private var lanternSize = 14.0
     /// Compact height: a phone, held on its side, where the card is
     /// smaller so more of the screen stays free.
@@ -227,6 +276,8 @@ private struct TutorialCard: View {
                 ScrollView { explanation }
                     .scrollBounceBehavior(.basedOnSize)
             }
+            // Outside the scrolling: what is wrong, and the way out, always show.
+            statusRow
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { navigationButtons }
                 VStack(alignment: .leading, spacing: 8) { navigationButtons }
@@ -256,14 +307,16 @@ private struct TutorialCard: View {
             HStack(spacing: 8) {
                 // Decision 118: the station master gives the tutorial.
                 StationMasterAvatar(size: isCompact ? 24 : 28, mood: session.isTutorialStepDone ? .happy : .normal)
-                HStack(spacing: 6) {
+                HStack(spacing: 0) {
                     Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.primary)
                         .monospacedDigit()
                         .accessibilityIdentifier("tutorial.progress")
+                    Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
+                        .lineLimit(1)
                     Spacer(minLength: 0)
                 }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.primary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Theme.primary.opacity(0.14), in: Capsule())
@@ -290,28 +343,73 @@ private struct TutorialCard: View {
             Text(verbatim: tutorial.step.body(in: session.language))
                 .font(isCompact ? Font.footnote : Font.subheadline)
                 .fixedSize(horizontal: false, vertical: true)
-            if !session.isTutorialStepDone {
-                HStack(spacing: 6) {
-                    // Decision 122: the station master's lantern.
-                    Image("StationMasterLantern")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: lanternSize, height: lanternSize)
-                        .foregroundStyle(Theme.warning)
-                        .accessibilityHidden(true)
-                    Text("Complete this step to continue.")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Theme.warning)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundStyle(Theme.textPrimary)
+    }
+
+    /// What is wrong (a problem, in the lantern's colour) or what comes
+    /// next, else, where there is room, that the step waits; and "Skip
+    /// this step" when the card offers it (decision 188).
+    @ViewBuilder
+    private var statusRow: some View {
+        let waits = hint == nil && !isCompact && !session.isTutorialStepDone
+        if hint != nil || waits || offersSkip {
+            HStack(alignment: .center, spacing: 8) {
+                if let hint, hint.isProblem {
+                    HStack(spacing: 6) {
+                        lantern
+                        Text(verbatim: hint.text)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Theme.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                } else if let hint {
+                    Text(verbatim: hint.text)
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if waits {
+                    HStack(spacing: 6) {
+                        lantern
+                        Text("Complete this step to continue.")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Theme.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 0)
+                if offersSkip {
+                    Button {
+                        UITestTrace.action("tutorial.skipStep")
+                        session.skipTutorialStep()
+                    } label: {
+                        Text(verbatim: session.language.text("Skip this step", "略過這一步"))
+                            .font(.footnote.weight(.semibold))
+                            .underline()
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.primary)
+                    .accessibilityIdentifier("tutorial.skipStep")
+                }
+            }
+        }
+    }
+
+    /// Decision 122: the station master's lantern.
+    private var lantern: some View {
+        Image("StationMasterLantern")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: lanternSize, height: lanternSize)
+            .foregroundStyle(Theme.warning)
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -336,7 +434,7 @@ private struct TutorialCard: View {
         } label: {
             Group {
                 if tutorial.isLastStep {
-                    Text("Done")
+                    Text(verbatim: session.language.text("Finish", "完成教學"))
                 } else {
                     Text("Next")
                 }
@@ -354,6 +452,8 @@ private struct TutorialCard: View {
 private struct FoldedTutorialCard: View {
     let session: GameSession
     let tutorial: Tutorial
+    /// Marked when something is wrong.
+    let hint: TutorialHint?
     let unfold: () -> Void
 
     var body: some View {
@@ -361,10 +461,20 @@ private struct FoldedTutorialCard: View {
             HStack(spacing: 8) {
                 StationMasterAvatar(size: 24, mood: session.isTutorialStepDone ? .happy : .normal)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.primary)
-                        .monospacedDigit()
+                    HStack(spacing: 0) {
+                        Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                            .monospacedDigit()
+                            .accessibilityIdentifier("tutorial.progress")
+                        Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
+                        if hint?.isProblem == true {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(Theme.warning)
+                                .padding(.leading, 4)
+                        }
+                    }
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.primary)
+                    .lineLimit(1)
                     Text(verbatim: tutorial.step.title(in: session.language))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)

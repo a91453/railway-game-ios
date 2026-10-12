@@ -1,7 +1,8 @@
 import XCTest
 
-/// Exercises the CX-5 card against the tutorial's first steps (C5: the network
-/// tool, then a stretch of track). Gameplay goals are tested in
+/// Exercises the CX-5 card against the tutorial's steps (C5, redone by
+/// decision 188: the network tool, the map, a stretch of track; the line
+/// steps from `-tutorial-step`). Gameplay goals are tested in
 /// TutorialSessionTests; these checks prove the overlay passes touches
 /// through to the tool, observes completion and exposes its navigation.
 @MainActor
@@ -18,6 +19,10 @@ final class TutorialUITests: XCTestCase {
         checkNavigation(language: "en", locale: "en_US", tutorialLabel: "Tutorial", nextLabel: "Next", backLabel: "Back", skipLabel: "Skip", largeText: true)
     }
 
+    /// The tutorial's track chapter (decision 188; the name is kept for
+    /// ios-build.yml's gate list): the network tool, zooming out, the two
+    /// ends of a stretch and the map's ✓, each step moving on by itself,
+    /// then the platform step, whose control the card leaves free, and Skip.
     func testBuildingTrackEnablesNextAndSkipEnds() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -32,18 +37,26 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
         selectTool(app, "tool.network")
-        waitForEnabled(app, true)
-        next.tap()
-        waitForEnabled(app, false)
+
+        // Stage E1: zooming out moves the map; the card leaves the zoom
+        // buttons free.
+        waitForStep(app, title: "Zoom out to see the town")
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomOut.isHittable)
+        if card.exists {
+            XCTAssertFalse(card.frame.intersects(zoomOut.frame), "The tutorial card covers the zoom buttons")
+        }
+        zoomOut.tap()
+        waitForStep(app, title: "Tap the start, then the end")
 
         // Tap the map where the card leaves it free: the card may sit on
         // the map (it may cover part of it, never a control).
-        // The underlying map and the outlined Build Track action stay usable.
         let map = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 5))
-        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
         // The map runs up under the status pill, which floats over its
         // top: only the map below the pill can be tapped.
         let gameTime = app.descendants(matching: .any)
@@ -60,79 +73,116 @@ final class TutorialUITests: XCTestCase {
             .divided(atDistance: max(0, hudBottom - wholeMap.minY), from: .minYEdge).remainder
             .divided(atDistance: max(0, wholeMap.maxY - dockTop), from: .maxYEdge).remainder
             .divided(atDistance: max(0, railEnd - wholeMap.minX), from: .minXEdge).remainder
-        // Two points 60 apart on the map that no control covers: not the
-        // card (on a wide screen it can stand beside the map's middle,
-        // so a free row alone is not enough), not the Map Layers button,
-        // and not the details card at the trailing side, where the Build
-        // Track button is (decision 106).
+        // Two points far enough apart for 160 m of track once zoomed out
+        // (about 1 m a point on a phone, 220 points), clear of the card (which grows by
+        // a line of hint after the first tap), the Map Layers button, the
+        // zoom buttons and, on an iPad, the details card at the trailing
+        // side, where the Build Track button is (decision 106).
         let layers = app.buttons["map.layers"]
         let action = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
-        var covered = [card.frame]
+        var covered = [card.frame.insetBy(dx: 0, dy: -50), zoomOut.frame, app.buttons["Zoom in"].frame]
         if layers.exists { covered.append(layers.frame) }
         let free = action.exists
             ? visibleMap.divided(atDistance: max(0, visibleMap.maxX - (action.frame.minX - 20)), from: .maxXEdge).remainder
             : visibleMap
-        guard let points = freePoints(in: free, avoiding: covered) else {
+        // The widest gap that fits: the map may open closer on an iPad.
+        let gaps: [CGFloat] = [400, 300, 220]
+        guard let points = gaps.lazy.compactMap({ self.freePoints(in: free, avoiding: covered, gap: $0) }).first else {
             return XCTFail("No free place on the map: map \(visibleMap), free \(free), card \(card.frame), layers \(layers.frame), action \(action.frame)")
         }
         let (first, second) = points
         let origin = app.coordinate(withNormalizedOffset: .zero)
         origin.withOffset(CGVector(dx: first.x, dy: first.y)).tap()
         origin.withOffset(CGVector(dx: second.x, dy: second.y)).tap()
-        let tapped = "taps \(first), \(second); card \(card.frame), free \(free)"
-        waitForEnabled(app, false, "Choosing the ends only previews track (\(tapped))")
-        let build = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track")).firstMatch
-        XCTAssertTrue(build.waitForExistence(timeout: 5))
-        waitForEnabled(app, true, buttonDescription: "Build Track (label prefix)", query: {
-            $0.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Build Track"))
-        })
-        // The step asks for this button: the card must leave it usable.
-        XCTAssertTrue(build.isHittable)
-        XCTAssertFalse(card.frame.intersects(build.frame), "The tutorial card covers Build Track")
-        let label = build.label
-        build.tap()
+
+        // The map's ✓ builds it: the card leaves it free.
+        waitForStep(app, title: "Tap ✓ to build the track", "taps \(first), \(second); card \(card.frame), free \(free)")
+        let confirm = app.buttons["map.build.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirm.isHittable, "The ✓ cannot be tapped")
+        if card.exists {
+            XCTAssertFalse(card.frame.intersects(confirm.frame), "The tutorial card covers the ✓: card \(card.frame), ✓ \(confirm.frame)")
+        }
+        confirm.tap()
         // A press can be dropped on a loaded runner (run 37554617441: the
         // button highlighted, its action never ran): tap once more only
-        // while nothing was built. A built track disables the button for
-        // good (its end starts the next stretch); the "Built …" banner is
-        // no sign, as it clears itself after 4 s (#182), within one slow
-        // accessibility query.
-        let built = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: build)
-        if XCTWaiter().wait(for: [built], timeout: 10) != .completed {
-            let again = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
-            if again.exists, again.isEnabled { again.tap() }
+        // while it is still there, as nothing was built.
+        if !confirm.waitForNonExistence(timeout: 10), confirm.isEnabled {
+            confirm.tap()
         }
-        // The step's own check that track was built.
-        waitForEnabled(app, true, "Build Track did not build")
-        next.tap()
-        // Stage E1: the map step waits until the player moves the map. The
-        // zoom buttons are among its controls, so the card leaves them free.
-        waitForEnabled(app, false, "The map step waits for the map to move")
-        let zoomIn = app.buttons["Zoom in"]
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 5))
-        XCTAssertTrue(zoomIn.isHittable)
-        XCTAssertFalse(card.frame.intersects(zoomIn.frame), "The tutorial card covers the zoom buttons")
-        zoomIn.tap()
-        waitForEnabled(app, true)
-        next.tap()
-        // The next step asks for a station, so Next waits again; Done is the
-        // last of eleven steps and is checked in TutorialSessionTests.
-        XCTAssertEqual(next.label, "Next")
-        waitForEnabled(app, false, "The station step waits for a station")
+
+        // The station chapter: the details card opens for the modes.
+        waitForStep(app, title: "Tap Platform", "The ✓ did not build the track")
+        let platform = app.buttons["Platform"]
+        XCTAssertTrue(platform.waitForExistence(timeout: 10))
+        XCTAssertTrue(platform.isHittable, "The Platform mode cannot be tapped")
+        if card.exists {
+            XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
+        }
+        waitForEnabled(app, false, "The platform step waits for the mode")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         app.buttons["tutorial.skip"].tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
+        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
         XCTAssertTrue(app.buttons["tool.network"].isHittable)
     }
 
     /// The line step on a phone on its side (the owner's device, 2026-10-12):
     /// the card stood over the lines panel and Pick on Map could not be
-    /// tapped. Started at that step over the track and stations the steps
-    /// before it build (`-tutorial-step`), the card, open or folded by
-    /// itself, leaves Pick on Map uncovered, the button starts picking, and
-    /// the card folds and opens again.
+    /// tapped. Started at the line chapter over the track and stations the
+    /// steps before it build (`-tutorial-step`), opening Lines starts
+    /// picking by itself and the step moves on; the card, open or folded by
+    /// itself, leaves Pick on Map uncovered, and folds and opens again.
     func testTheLineStepLeavesTheLinesPanelUsable() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "line.open"]
+        app.launch()
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
+
+        let lines = app.buttons["entry.lines"]
+        XCTAssertTrue(lines.waitForExistence(timeout: 10))
+        XCTAssertTrue(lines.isHittable, "The Lines button is covered")
+        lines.tap()
+        let pick = app.buttons["line.draft.pick"]
+        XCTAssertTrue(pick.waitForExistence(timeout: 10), "The lines panel did not open")
+        // Picking starts by itself; Pick on Map is not tapped.
+        let stop = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "line.draft.pick", "Stop Picking")).firstMatch
+        XCTAssertTrue(stop.waitForExistence(timeout: 10), "Picking did not start by itself")
+        waitForStep(app, title: "Tap one station, then the other")
+        XCTAssertFalse(app.buttons["map.build.confirm"].exists, "A ✓ is left over")
+
+        // The card settles after the panel slides in.
+        Thread.sleep(forTimeInterval: 1)
+        if card.exists {
+            XCTAssertFalse(card.frame.intersects(pick.frame), "The tutorial card covers Pick on Map: card \(card.frame), button \(pick.frame)")
+        }
+        if folded.exists {
+            XCTAssertFalse(folded.frame.intersects(pick.frame), "The folded card covers Pick on Map: \(folded.frame), button \(pick.frame)")
+        }
+        XCTAssertTrue(pick.isHittable, "Pick on Map cannot be tapped")
+
+        // The player can always fold the card out of the way, and open it.
+        if card.exists {
+            app.buttons["tutorial.fold"].tap()
+            XCTAssertTrue(folded.waitForExistence(timeout: 10), "The card did not fold")
+        }
+        XCTAssertTrue(folded.isHittable)
+        folded.tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "The folded card did not open")
+        XCTAssertTrue(app.buttons["tutorial.skip"].isHittable)
+        XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The stations are still to pick")
+    }
+
+    /// Decision 188 (full lane and iPad, not the gate): the lines panel
+    /// scrolls Create Line, and then Buy … and Start Service, into view for
+    /// their steps, clear of the card; Done closes the panel and leaves the
+    /// fares to wait for.
+    func testCreateLineAndBuyAreInReach() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
@@ -143,36 +193,57 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
 
-        let lines = app.buttons["entry.lines"]
-        XCTAssertTrue(lines.waitForExistence(timeout: 5))
-        XCTAssertTrue(lines.isHittable, "The Lines button is covered")
-        lines.tap()
-        let pick = app.buttons["line.draft.pick"]
-        XCTAssertTrue(pick.waitForExistence(timeout: 5), "The lines panel did not open")
-        XCTAssertTrue(waitForCard(card, or: folded))
-        // The card settles after the panel slides in.
+        // The step opens the lines panel itself.
+        let create = app.buttons["line.draft.create"]
+        XCTAssertTrue(create.waitForExistence(timeout: 10), "The lines panel did not open")
+        XCTAssertTrue(waitForHittable(create), "Create Line was not scrolled into view")
         Thread.sleep(forTimeInterval: 1)
         if card.exists {
-            XCTAssertFalse(card.frame.intersects(pick.frame), "The tutorial card covers Pick on Map: card \(card.frame), button \(pick.frame)")
+            XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers Create Line")
         }
-        if folded.exists {
-            XCTAssertFalse(folded.frame.intersects(pick.frame), "The folded card covers Pick on Map: \(folded.frame), button \(pick.frame)")
-        }
-        XCTAssertTrue(pick.isHittable, "Pick on Map cannot be tapped")
-        pick.tap()
-        let stop = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "line.draft.pick", "Stop Picking")).firstMatch
-        XCTAssertTrue(stop.waitForExistence(timeout: 5), "Pick on Map did not start picking")
+        create.tap()
 
-        // The player can always fold the card out of the way, and open it.
+        let buy = app.buttons["line.staff.start"]
+        XCTAssertTrue(buy.waitForExistence(timeout: 10), "No Buy … and Start Service")
+        XCTAssertTrue(waitForHittable(buy), "Buy … and Start Service was not scrolled into view")
+        waitForStep(app, title: "Tap Buy … and Start Service")
         if card.exists {
-            app.buttons["tutorial.fold"].tap()
-            XCTAssertTrue(folded.waitForExistence(timeout: 5), "The card did not fold")
+            XCTAssertFalse(card.frame.intersects(buy.frame), "The tutorial card covers Buy … and Start Service")
         }
-        XCTAssertTrue(folded.isHittable)
-        folded.tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 5), "The folded card did not open")
-        XCTAssertTrue(app.buttons["tutorial.skip"].isHittable)
-        XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The line is still to make")
+        buy.tap()
+
+        waitForStep(app, title: "Tap Done to stop building")
+        XCTAssertTrue(app.buttons["line.draft.pick"].waitForNonExistence(timeout: 10), "The lines panel stayed open")
+        selectTool(app, "tool.select")
+        waitForStep(app, title: "Wait for your first fares")
+    }
+
+    /// Waits up to 10 seconds for `element` to be hittable.
+    private func waitForHittable(_ element: XCUIElement) -> Bool {
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            if element.exists, element.isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        return element.exists && element.isHittable
+    }
+
+    /// Waits up to 10 seconds for the step titled `title`, on the card or
+    /// its folded pill ("Show Tutorial: <title>").
+    private func waitForStep(
+        _ app: XCUIApplication, title: String, _ message: String = "",
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let heading = app.staticTexts["tutorial.title"]
+        let folded = app.buttons["tutorial.unfold"]
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            if heading.exists, heading.label == title { return }
+            if folded.exists, folded.label.hasSuffix(title) { return }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        let shown = heading.exists ? heading.label : folded.exists ? folded.label : "no card"
+        XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 
     /// Waits up to 15 seconds for the tutorial's card, open or folded.
@@ -219,27 +290,31 @@ final class TutorialUITests: XCTestCase {
         // can be lost (run 37797595561 left Next disabled after one tap on
         // an uncovered network tool, in Traditional Chinese on the iPad).
         selectTool(app, "tool.network")
+        // Decision 188: the done step moves on by itself, and the map step
+        // waits for the map to move.
+        XCTAssertTrue(back.waitForExistence(timeout: 10), "The done step did not move on by itself")
+        XCTAssertEqual(back.label, backLabel)
+        waitForEnabled(app, false)
+        back.tap()
+        XCTAssertTrue(back.waitForNonExistence(timeout: 10))
         waitForEnabled(app, true)
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
+        // Reached by Back, the done step waits for Next. A slow runner can
+        // only miss a step that moves on, not fail here wrongly.
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertFalse(back.exists, "A step reached by Back moved on by itself")
         checkToolIsUncovered(app, identifier: "tool.select")
         selectTool(app, "tool.select")
         waitForEnabled(app, false)
         selectTool(app, "tool.network")
         waitForEnabled(app, true)
-        next.tap()
-
-        XCTAssertTrue(back.waitForExistence(timeout: 5))
-        XCTAssertEqual(back.label, backLabel)
-        waitForEnabled(app, false)
-        back.tap()
-        XCTAssertFalse(back.exists)
-        waitForEnabled(app, true)
+        XCTAssertFalse(back.exists, "A step reached by Back moved on by itself")
 
         // Reflowing the card must preserve navigation and usable controls.
         // A phone turns from one side to the other (decision 106: it
         // plays only on its side); an iPad from upright to its side.
         XCUIDevice.shared.orientation = .landscapeRight
-        XCTAssertTrue(skip.waitForExistence(timeout: 5))
+        XCTAssertTrue(skip.waitForExistence(timeout: 10))
         XCTAssertTrue(skip.isHittable)
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
@@ -249,12 +324,12 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, true)
         skip.tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
+        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
         // The restarted tutorial's first step waits for Network again.
         // Decision 114: outside the tutorial the tools show only while one
         // is chosen, so Done closes them rather than staying selected.
         app.buttons["tool.select"].tap()
-        XCTAssertTrue(app.buttons["tool.select"].waitForNonExistence(timeout: 5), "Done did not close the tools")
+        XCTAssertTrue(app.buttons["tool.select"].waitForNonExistence(timeout: 10), "Done did not close the tools")
 
         // The game menu starts the tutorial again without leaving this game.
         // Pause through the real HUD so a rapidly changing game clock does
@@ -271,12 +346,12 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
-        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertFalse(back.exists)
         waitForEnabled(app, false)
         skip.tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 5), "Skip did not close the tutorial")
+        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
     }
 
     private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
@@ -292,11 +367,10 @@ final class TutorialUITests: XCTestCase {
         return query.firstMatch
     }
 
-    /// Two points of `map` 60 points apart in a row, each at least 12
+    /// Two points of `map` `gap` points apart in a row, each at least 12
     /// points inside it and clear of every frame in `covered` by 12: the
-    /// first such pair, top row first, leading first. They fit the band of
-    /// the map the tutorial's card leaves free beside it (96 points).
-    private func freePoints(in map: CGRect, avoiding covered: [CGRect]) -> (CGPoint, CGPoint)? {
+    /// first such pair, top row first, leading first.
+    private func freePoints(in map: CGRect, avoiding covered: [CGRect], gap: CGFloat) -> (CGPoint, CGPoint)? {
         let blocked = covered.map { $0.insetBy(dx: -12, dy: -12) }
         func isFree(_ point: CGPoint) -> Bool {
             map.insetBy(dx: 12, dy: 12).contains(point) && !blocked.contains { $0.contains(point) }
@@ -304,8 +378,8 @@ final class TutorialUITests: XCTestCase {
         var y = map.minY + 12
         while y <= map.maxY - 12 {
             var x = map.minX + 12
-            while x + 60 <= map.maxX - 12 {
-                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + 60, y: y)
+            while x + gap <= map.maxX - 12 {
+                let first = CGPoint(x: x, y: y), second = CGPoint(x: x + gap, y: y)
                 if isFree(first), isFree(second) { return (first, second) }
                 x += 4
             }
@@ -317,8 +391,8 @@ final class TutorialUITests: XCTestCase {
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {
         let tool = app.buttons[identifier]
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
-        XCTAssertTrue(tool.waitForExistence(timeout: 5))
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(tool.waitForExistence(timeout: 10))
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
         XCTAssertTrue(tool.isHittable)
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
@@ -350,7 +424,7 @@ final class TutorialUITests: XCTestCase {
         query: (XCUIApplication) -> XCUIElementQuery = { $0.buttons.matching(identifier: "tutorial.next") },
         file: StaticString = #filePath, line: UInt = #line
     ) {
-        let deadline = Date().addingTimeInterval(5)
+        let deadline = Date().addingTimeInterval(10)
         repeat {
             // The card is rebuilt for each step. Resolve the current buttons
             // on every poll, and never accept an absent or duplicate match.
@@ -371,7 +445,7 @@ final class TutorialUITests: XCTestCase {
         let states = buttons.enumerated().map { index, button in
             "[\(index)] isEnabled=\(button.isEnabled)"
         }.joined(separator: ", ")
-        let diagnostics = "Timed out after 5 seconds waiting for \(buttonDescription) isEnabled=\(enabled); found \(buttons.count) matching buttons: [\(states)]. \(message)"
+        let diagnostics = "Timed out after 10 seconds waiting for \(buttonDescription) isEnabled=\(enabled); found \(buttons.count) matching buttons: [\(states)]. \(message)"
         let hierarchy = XCTAttachment(string: "\(diagnostics)\n\n\(app.debugDescription)")
         hierarchy.name = "waitForEnabled-\(buttonDescription)-hierarchy"
         hierarchy.lifetime = .keepAlways
