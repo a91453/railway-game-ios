@@ -9,6 +9,8 @@
 #   swift-shards.sh matrix           print them as the JSON matrix ci.yml uses
 #   swift-shards.sh relevant         read changed file names on stdin; print
 #                                    true if any can change the package's tests
+#   swift-shards.sh push-base        print the commit a push to main is compared
+#                                    with (push_base below), or nothing
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
 #   campaigns-1 .. campaigns-15   the long property, differential and mutation
@@ -361,6 +363,46 @@ relevant_paths() {
   echo false
 }
 
+# The commit a push to main is compared with: the head of the newest
+# successful push run of ci.yml on main, when it is an ancestor of HEAD.
+# Pushes to main share one concurrency group in ci.yml, so a run that waits
+# is replaced by a newer one and its commit never gets a run of its own;
+# comparing with the commit main was at before the push would then miss what
+# the replaced commits changed. Comparing with the last success also keeps
+# testing after a red run: a later commit that changes only docs does not
+# turn main green over an untested change. Prints nothing (and a warning on
+# stderr) when no such commit can be found, so the caller tests everything.
+# Needs `gh` with a token that can read Actions (GH_TOKEN) and GITHUB_REPOSITORY.
+push_base() {
+  local head runs sha
+  head="$(git rev-parse HEAD)" || { echo "::warning::Cannot read HEAD." >&2; return 0; }
+  if [[ -z "${GITHUB_REPOSITORY:-}" ]]; then
+    echo "::warning::GITHUB_REPOSITORY is not set; cannot look up the last successful run." >&2
+    return 0
+  fi
+  if ! runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=20" \
+    --jq '.workflow_runs[].head_sha')"; then
+    echo "::warning::Could not list the successful push runs of ci.yml." >&2
+    return 0
+  fi
+  # A successful run of this very commit (a re-run) is no base for it.
+  sha="$(grep -v -x -F "$head" <<<"$runs" | head -n 1 || true)"
+  if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "::warning::No successful push run of ci.yml on main found." >&2
+    return 0
+  fi
+  if ! git cat-file -e "$sha^{commit}" 2>/dev/null &&
+    ! git fetch --no-tags --filter=blob:none origin "$sha" >&2; then
+    echo "::warning::Cannot fetch $sha, the head of the last successful push run." >&2
+    return 0
+  fi
+  if ! git merge-base --is-ancestor "$sha" "$head"; then
+    echo "::warning::$sha, the head of the last successful push run, is not an ancestor of $head." >&2
+    return 0
+  fi
+  echo "$sha"
+}
+
 case "${1:-}" in
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
@@ -389,7 +431,10 @@ case "${1:-}" in
   relevant)
     relevant_paths
     ;;
+  push-base)
+    push_base
+    ;;
   *)
-    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant"
+    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base"
     ;;
 esac
