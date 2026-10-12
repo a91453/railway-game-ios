@@ -883,8 +883,6 @@ struct MapView: View {
         cellTooltip = heatmap.cellInfo(atX: place.x, y: place.y).map { ($0, location) }
     }
 
-    /// The camera a game opens on (Stage E1): what it has built, or the
-    /// middle of its world.
     /// The touch each place the tutorial's step has the player tap takes
     /// on the screen (``GameSession/tutorialPlacesToTap``), in global
     /// coordinates: a tap within ``NetworkBuilding/touchRadius`` reaches it.
@@ -896,6 +894,8 @@ struct MapView: View {
         }
     }
 
+    /// The camera a game opens on (Stage E1): what it has built, or the
+    /// middle of its world.
     private func openingCamera(viewport: ScreenSize) -> PlanCamera {
         PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world))
     }
