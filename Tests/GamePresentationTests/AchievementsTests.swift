@@ -117,6 +117,34 @@ final class AchievementsTests: XCTestCase {
         XCTAssertEqual(AchievementRecords(file: file).count, launcher.achievements.count)
     }
 
+    /// Decision 181, later: the Pingxi challenge starts on running lines, so
+    /// only its own marks can unlock there; the tutorial unlocks nothing; and
+    /// the end of the typhoon season needs a railway.
+    @MainActor
+    func testAPrebuiltChallengeOnlyUnlocksItsOwnMarksAndTheTutorialNone() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 2 * 1_440)
+        try world.startScenario(Scenario(id: "history.pingxi", goals: [.equity(Money(1_000_000_000_000))], goldDays: 30, silverDays: 60, deadlineDays: 90))
+        let session = GameSession(world: world, language: .english)
+        launcher.checkAchievements(of: session)
+        XCTAssertEqual(launcher.achievements.count, 0, "the demo's lines are not the player's work")
+        XCTAssertEqual(GameLauncher.achievementScope(of: world), ["challengeGold", "pingxi"])
+        XCTAssertNil(GameLauncher.achievementScope(of: try newGameLine(through: [towns[0], towns[1]])))
+
+        let plain = GameSession(world: try newGameLine(through: [towns[0], towns[1]]), language: .english)
+        plain.startTutorial()
+        launcher.checkAchievements(of: plain)
+        XCTAssertEqual(launcher.achievements.count, 0, "the tutorial game unlocks nothing")
+    }
+
+    func testTheTyphoonSeasonMarkNeedsARailway() throws {
+        var empty = GameWorld.newGame()
+        try empty.advance(ticks: 300 * 1_440)
+        XCTAssertFalse(AchievementFacts(world: empty).typhoonSeasonOverDebtFree)
+    }
+
     func testTheDemoMarkIsKeptWithTheNews() throws {
         var log = NewsLog()
         log.isDemo = true
