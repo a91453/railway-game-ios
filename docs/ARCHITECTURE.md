@@ -5600,6 +5600,41 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12）：貨運線上空車回送的列車（`isDeadheading`）原本照樣在中間站裝貨、在端站卸貨並收運費，和「空車回送不載客、不收票、不賺錢」不符。`exchangeCargo` 現在對回送中的列車什麼都不做（`FreightTests.testATrainRunningEmptyToAnEndTakesNoCargo`）。開關關著時沒有回送，行為不變。
 
+### 179. 逐線營運報表：每條線的運量、票收、成本與損益
+
+2026-10-12，作者睡覺期間派工的缺口（依 A 列車 9 V5／A 列車：開始吧觀光的盤點：帳只有全公司合計，玩家看不出哪條線賺錢、該加車或砍掉；OpenTTD 有每車年度利潤，A9 的每列車「運行表示」有收支）。號碼依工作登記 #231：決策 179、存檔版本 48、golden schema 70。
+
+**世界開關 `lineAccounts`**（`setLineAccounts`，存檔 `"lineAccounts": {...}`，沒有開關就沒有這個鍵）：新遊戲打開；舊存檔、golden、replay 關著（讀到沒有這個鍵的存檔就是關）。和彈性發車（決策 172）等不同的是，這個開關**不改任何玩法**，只是記錄，所以挑戰、教學與示範地圖（都用 `GameWorld.newGame` 建）不特別關掉，玩家在那些地圖也看得到報表。只有經營模式記錄：自由模式不計票價，也不記。
+
+**記什麼**（`Sources/GameCore/Economy/LineAccounts.swift`）：每條線一個 `LineRecords`：最近 30 天（`LineAccounts.keptDays`）的 `LineDay`（升冪，超過就丟最舊的）和進行中那一小時的 `pending`；每一天是一個 `LineTally`：
+- `boardings`：搭乘人次，每段都算，轉乘的人在兩條線各算一次（`boardPassengers`）。
+- `fareRevenue`：票收。票價在旅客搭**第一段**時整趟收（和以前一樣），然後照旅程各段的直線距離（`FixedPoint.squareRoot` 的整數開根）拆給各條線；直達旅客全歸那條線。拆法是最大餘數法（`LineAccounts.apportion`，整元；餘數相同的給編號小的），所以拆出來的總和**恰好等於** `chargeFares` 實際加進公司當小時的票收（包含它被每小時上限截掉的情況）。
+- `departures`、`trainDistance`（世界單位，含空車回送）、`deadheadDistance`（其中空車回送的部分，決策 172）、`peakLoad`（發車時乘客數除以額定容量的最大值，千分比）。
+- `operatingCost`、`maintenanceCost`、`energyCost`、`staffCost`：直接成本，見下。
+另有每站「今天與昨天」的進站（上車）與出站（下車）人次（`StationFlowDay`；移植 Ci 的 `flowDashboardCaptureStationForDailyReport`）。
+
+**成本怎麼拆**：公司的帳（`Operations.swift`）仍是唯一的權威，報表只是它的拆分；每一項都拿公司當下寫的、已四捨五入的那個整元數，用最大餘數法按各線自己的項拆開，所以**每個已結算的日子，各線的票收、營運、保養、能源、人事加總都等於公司那一天的帳**（`LineAccountsTests.testLinesAddUpToTheCompanyEachDay`）：
+- 每小時營運費 `75·發車 + 42·列車公里 + 18·車站`：按每條線的 `(75·發車 + 18·車站)·公里 + 42·距離` 拆。車站數是每條線自己的停靠站數（兩線共站各算一次，和公司 `fixedAssets` 一樣：`FixedAssets.lines` 是同一個迴圈逐線的值，加總等於總數）。
+- 每小時保養費 `12·路線公里 + 9·列車公里 + 8·列車`：按 `12·路線長 + 9·距離 + 8·列車數·公里` 拆。
+- 每日能源 `220·路線公里`（路線部分）與 `360·列車`（列車部分）：兩部分各按路線長、列車數拆（公司的能源記錄本來就是這兩個分項；燃油指數時也一樣）。
+- 每日人事 `620·車站 + 480·列車`：每條線自己的值，不用拆。
+- 空車回送（決策 172）不載客不收票，但里程已在公司的 `trainDistance` 裡，所以成本自然算進該線；`deadheadDistance` 另外顯示。
+- 貨運線沒有客運票收（貨運收入不分線，仍在公司帳），只顯示成本。
+- **損益**＝票收 − 該線自己的營運成本，不含利息、建物、稅與折舊，也不是現金流。
+- **給 `claude/rolling-stock-economics`（存檔 49）的介面**：它改列車成本的權重時，只要改 `settleLineHour`／`settleLineDay` 裡的幾個權重（拆分用的 `weights`），公司的整元數不用動；兩邊的加總不變式測試會抓到不一致。
+
+**其他規則**：刪線（`removeLine`）連同它的紀錄一起清掉（公司的帳不動，所以刪線那一天之後各線加總不再等於公司）；新增的路線第一次記錄時才建紀錄；打開開關時從空紀錄開始。存檔驗證（`LineAccounts.isValid`）：紀錄屬於存在的路線與車站、升冪、不超過 30 天、數字非負且金額是整元。
+
+**介面（GamePresentation／App）**：`LineReportText.swift`：`GameWorld.lineReport(_:)`／`lineReports(sortedBy:)`（昨日、每日、營業比＝成本 ÷ 票收，只看已完成的日子，進行中的那一天不算）、`lineLosingMoney(_:)`（連續 7 個已完成日損益為負）、`stationFlowText`、`fleet(sortedBy:)`。`LinesPanel` 每列「昨日 12,340 人次 · 票收 $ 61,700 · 損益 $ -4,200 · 尖峰 87%」可依損益、運量、滿載率、名稱排序，路線細節多「營運」區（`LineOperatingCharts`：運量長條加損益折線、每日損益；放在 `FinanceTrendCharts.swift`，和財務趨勢圖共用座標軸的寫法；`FinanceHistory` 的「淨利」是付現淨利，這裡的「損益」不同，名稱分開）。`FleetOverviewSheet` 可依名稱、路線、滿載、誤點排序。`StationPanel` 的旅客區顯示昨日進站與出站。`MapAlerts` 新增 `lineLosingMoney`（連續 7 天虧損冒泡，點下去打開該路線）。站長的建議（`StationMasterAdvice`）這次不加案例。
+
+**沒有採用**：不另存「全公司逐線的年度報表」；不把貨運收入分給貨運線（貨運收入是設施到設施的，沒有逐線的依據）；損益不扣折舊（折舊是資產層級，不分線）。
+
+**存檔 48、golden schema 70**：存檔多 `"lineAccounts"`；只讀到 47 的 build 會丟掉它，各線的歷史就消失了，所以升版。新的 `SaveFixtures/v48-line-accounts.json`（兩條轉乘線跑一天又 20 分鐘）。golden 新指令 `setLineAccounts`、新觀察 `lineAccounts`（一條線的各日紀錄）、最終狀態的 `lineAccounts: true`；新的 `line-accounts.json`（手算，見 `GoldenScenarios/README.md`）；參考模型沒有逐線帳，不在它上面重播。既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+**測試**：`LineAccountsTests`（各線加總等於公司每一天、轉乘兩線都載客收票、每站昨日進出、自由模式與關著不記、一次推進與逐分鐘相同、存檔來回、刪線、只留 30 天、最大餘數法、驗證、舊存檔沒有）、`LineReportTests`（GamePresentation：昨日列、排序、連續 7 天虧損的氣泡、車站進出站文字、車隊排序）、`GoldenScenarioTests`、`SavedGameTests`。
+
+**參考**（`a91453/railway-reference-private`）：`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureLineForDailyReport`、`flowDashboardReadLineOperatingDayFlow`、`flowDashboardGetLineBarRows`、`flowDashboardSortStationCards`、`flowDashboardFinalizeEndedSimDay`：每條線每天記運量與收支、取條列、依指定鍵排序。對照見 PR 描述。Ci 沒有票價按距離拆給各線的做法（它的票價是全公司的），所以拆分與最大餘數法是本專案自己的。外部：OpenTTD 的每車年度利潤只讀了概念（GPL，沒有複製程式碼）。
+
 ### 178. 載客量圖層與車站「即將進站」看板
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
