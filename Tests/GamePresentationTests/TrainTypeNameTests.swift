@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -102,5 +103,66 @@ final class TrainTypeNameTests: XCTestCase {
             GameError.trainTypeUnavailable(nil).playerMessage(in: .english),
             "General train is not available in this era."
         )
+    }
+
+    /// What a save, a golden scenario or a replay stores for a train's type is
+    /// its code, never its name: the names changed, the codes did not. A save
+    /// written before the names changed still reads, every code to the type
+    /// it was.
+    func testTheCodesTheSavesStoreDidNotMove() throws {
+        let codes = ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "STEAM", "HSR", "EMU3000"]
+        XCTAssertEqual(TrainType.allCases.map(\.rawValue), codes)
+        for type in TrainType.allCases {
+            let data = try JSONEncoder().encode([type])
+            XCTAssertEqual(String(decoding: data, as: UTF8.self), "[\"\(type.rawValue)\"]")
+            XCTAssertEqual(try JSONDecoder().decode([TrainType].self, from: data), [type])
+        }
+        let before = Data("[\(codes.map { "\"\($0)\"" }.joined(separator: ","))]".utf8)
+        XCTAssertEqual(try JSONDecoder().decode([TrainType].self, from: before), TrainType.allCases)
+    }
+
+    /// A whole save with a train of every type the menu offers, and one of
+    /// standard cars: written and read back, each train is the type it was,
+    /// and the text the screen shows for it is built from the new name.
+    func testASaveWithEveryTypeLoadsBackAndIsShownByTheNewNames() throws {
+        var world = try makeWorld(balance: 100_000_000)
+        let types: [TrainType?] = [nil] + world.offeredTrainTypes.map { Optional($0) }
+        var trains: [(id: TrainID, type: TrainType?)] = []
+        for type in types {
+            let id = try world.purchaseTrain(named: "T\(trains.count)").id
+            try world.setTrainType(id, to: type)
+            trains.append((id, type))
+        }
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(trains.count, TrainType.offered.count + 1)
+        for entry in trains {
+            let train = try XCTUnwrap(loaded.train(id: entry.id))
+            XCTAssertEqual(train.type, entry.type)
+            for language in DisplayLanguage.allCases {
+                let name = entry.type?.title(in: language) ?? Train.standardCarName(in: language)
+                XCTAssertTrue(train.typeText(in: language).hasPrefix(name), "\(entry.type?.rawValue ?? "standard") in \(language)")
+            }
+        }
+    }
+
+    /// The type menu chooses by type, not by its text: every type it offers
+    /// can be chosen, and the status line then reads the new name.
+    @MainActor
+    func testTheMenuChoosesEveryOfferedTypeAndTheStatusLineNamesIt() throws {
+        var world = try makeWorld(balance: 100_000_000)
+        let id = try world.purchaseTrain(named: "Menu").id
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectTrain(id)
+        for type in session.world.offeredTrainTypes {
+            session.setSelectedTrainType(type)
+            XCTAssertEqual(session.world.train(id: id)?.type, type, type.rawValue)
+            XCTAssertEqual(session.message?.kind, .success, type.rawValue)
+            XCTAssertTrue(session.message?.text.contains(type.title(in: .traditionalChinese)) ?? false, type.rawValue)
+        }
+        session.setSelectedTrainType(nil)
+        XCTAssertNil(session.world.train(id: id)?.type)
+        XCTAssertTrue(session.message?.text.contains("通用列車") ?? false)
     }
 }
