@@ -906,6 +906,7 @@ struct LinesPanel: View {
                 }
             }
             .accessibilityIdentifier("line.draft.pick")
+            .tutorialTarget(.pickLineStops)
             Button("Add Selected Station") {
                 session.addSelectedStationToLineDraft()
             }
@@ -949,6 +950,7 @@ struct LinesPanel: View {
             .buttonStyle(ThemeProminentButtonStyle())
             .disabled(stops.count < 2)
             .accessibilityIdentifier("line.draft.create")
+            .tutorialTarget(.createLine)
             if !draft.isEmpty {
                 Button(role: .destructive) {
                     session.clearLineDraft()

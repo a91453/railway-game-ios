@@ -357,6 +357,9 @@ jobs:
               -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
               -only-testing:RailwayGameUITests/TutorialUITests/testBuildingTrackEnablesNextAndSkipEnds
+              # The line step's lines panel on a phone (2026-10-12: the card
+              # covered Pick on Map on a device and the step could not be done).
+              -only-testing:RailwayGameUITests/TutorialUITests/testTheLineStepLeavesTheLinesPanelUsable
             )
           else
             lane="full ($GITHUB_EVENT_NAME): all the UI tests"

@@ -242,6 +242,8 @@ struct ContentView: View {
                     if isOpen {
                         DetailsCard(session: session, maxHeight: cardHeight)
                             .frame(width: cardWidth)
+                            // The tutorial's card keeps clear of it.
+                            .tutorialTarget(.detailsCard)
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
@@ -292,6 +294,8 @@ struct ContentView: View {
                                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .strokeBorder(Theme.panelBorder, lineWidth: 1)
                             }
+                            // The tutorial's card keeps clear of it.
+                            .tutorialTarget(.sidePanel)
                             .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
                             // Under the status pill, which it would cover
                             // on a phone.
