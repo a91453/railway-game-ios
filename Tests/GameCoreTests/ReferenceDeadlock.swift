@@ -14,7 +14,12 @@ import GameCore
 ///   (`chosenRoute(from:to:)`) on the world as it is, or on a copy with the
 ///   train moved to the passing place;
 /// - a passing place's way on to the call is checked run by run against
-///   the forbidden runs, the run it stands on first.
+///   the forbidden runs, the run it stands on first;
+/// - a line's spare (a later fix) is a train of a line whose window is
+///   open and that runs no fewer trains than it plans, headway aside; it
+///   keeps its track in every round, and, failing every passing place, the
+///   first by ID holding track a train of the deadlock needs goes to the
+///   station nearest by way, by ID on a tie, where it lets one of them go.
 extension ReferenceWorld {
     // MARK: - Passing places
 
@@ -153,14 +158,28 @@ extension ReferenceWorld {
         return !foul(needs(routed(start, other)).resources, blocked)
     }
 
+    /// A later fix to decision 58: whether `train` is its line's spare: no
+    /// service, standing, moving at some rate, its line's window open, and
+    /// its line (or its way of a ring) already running as many trains as
+    /// it plans.
+    func isSpare(_ train: Train) -> Bool {
+        guard train.service == nil, train.rate > 0, isStanding(train), let (l, k) = lineService(of: train.id),
+              serviceLevel(of: LineID(rawValue: lines[l].id), at: GameTime(minutes: minutes)) != nil
+        else { return false }
+        var memo = DispatchMemo()
+        return !isDue(l, service: k, outer: Self.isOuter(train.id, on: lines[l]), headway: false, memo: &memo)
+    }
+
     /// Decision 58: the trains in a deadlock, each with what it waits for.
+    /// A line's spare keeps its track throughout (a later fix).
     mutating func deadlock() -> [Int: (candidate: Train, departs: Bool)] {
         var kept: [Int: (candidate: Train, departs: Bool)] = [:]
         for train in trains {
             if let request = waitingFor(train) { kept[train.id] = request }
         }
+        let spares = Set(trains.filter { kept[$0.id] == nil && isSpare($0) }.map(\.id))
         while true {
-            let ids = Set(kept.keys)
+            let ids = Set(kept.keys).union(spares)
             var next = kept
             for (id, request) in kept where couldGo(request, among: ids.subtracting([id])) {
                 next[id] = nil
@@ -258,6 +277,42 @@ extension ReferenceWorld {
                 countDeparture(i, distance: way.distance)
             }
             return
+        }
+        // A later fix: no service can step aside, so a spare in the way does;
+        // as the dispatcher looks only in a minute when some service is due
+        // to leave or stands at a passing place, so does this.
+        guard trains.contains(where: { train in
+            if let service = train.service, service.waiting, let closing = service.closing { return Self.capped(closing, 9) <= clockSeconds }
+            return atPassingPlace(train)
+        }) else { return }
+        for spare in trains.sorted(by: { $0.id < $1.id }) where isSpare(spare) {
+            let heldUp = stuck.keys.sorted().filter { foul(needs(stuck[$0]!.candidate).resources, held(spare)) }
+            guard !heldUp.isEmpty else { continue }
+            let blocked = blocked(for: spare.id)
+            let initial = standing(spare)
+            let starts = stationsBesideWholeTrain(TrainID(rawValue: spare.id)).isEmpty ? [initial] : [initial, turnedOnNetwork(initial)]
+            var best: (train: Train, distance: Int64)?
+            for start in starts {
+                for station in stations.sorted(by: { $0.id < $1.id }) {
+                    guard let way = networkPathToStation(from: start.position!, station: StationID(rawValue: station.id), length: Self.length(start), blocked: blocked),
+                          way.distance > 0, way.distance < best?.distance ?? .max,
+                          case .success(let granted) = admitted(routed(start, way))
+                    else { continue }
+                    var trial = self
+                    var there = standing(followed(start, along: way))
+                    there.reservation = []
+                    trial.trains[trial.trains.firstIndex { $0.id == spare.id }!] = there
+                    let frees = heldUp.contains { id in
+                        let request = stuck[id]!
+                        return request.departs ? trial.canSetOff(request.candidate) : trial.holder(of: trial.needs(request.candidate).resources, except: id) == nil
+                    }
+                    if frees { best = (granted, way.distance) }
+                }
+            }
+            if let best {
+                trains[trains.firstIndex { $0.id == spare.id }!] = best.train
+                return
+            }
         }
     }
 }
