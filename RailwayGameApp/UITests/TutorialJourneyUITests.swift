@@ -112,6 +112,11 @@ private final class TutorialJourney {
         planTrack()
         check(map: trackStart, "the track's start")
         tap(trackStart)
+        // The start is picked: the card asks for the end.
+        if card.exists {
+            let asksForEnd = card.staticTexts["Now tap where it ends."]
+            XCTAssertTrue(asksForEnd.waitForExistence(timeout: 5), failure("the tap at \(trackStart) did not pick the track's start"))
+        }
         check(map: trackEnd, "the track's end")
         tap(trackEnd)
 
@@ -346,12 +351,15 @@ private final class TutorialJourney {
 
     // MARK: - The map
 
-    /// Where the walk lays its track: one row near the map's bottom, from
-    /// beside the tool rail to short of where the lines panel opens (decision
-    /// 106: `ContentView.sidePanelWidth`, at most half the width), so that
-    /// both stations stay in view while the line's stations are picked, and
-    /// clear of the cards at the map's top. The stations stand a quarter of
-    /// the way in from each end.
+    /// Where the walk lays its track: a row across the map from beside the
+    /// tool rail to short of where the lines panel opens (decision 106:
+    /// `ContentView.sidePanelWidth`, at most half the width), so that both
+    /// stations stay in view while the line's stations are picked. The
+    /// lowest row above the dock whose ends and stations are clear of the
+    /// buttons floating over the map (Map Layers, the zoom buttons: the
+    /// first walk's start landed on Map Layers on an iPad) and of the
+    /// tutorial's card, which takes the map's top. The stations stand a
+    /// quarter of the way in from each end.
     private func planTrack() {
         let rail = app.buttons["tool.select"]
         let dock = app.buttons["dock.build"]
@@ -366,13 +374,33 @@ private final class TutorialJourney {
         let panelLeading = screen.maxX - safeSide - 10 - panelWidth
         let left = rail.frame.maxX + 28
         let right = panelLeading - 28
-        let y = dock.frame.minY - 44
         XCTAssertGreaterThan(right - left, 160, failure("No room for the track: from \(left) to \(right)"))
-        trackStart = CGPoint(x: left, y: y)
-        trackEnd = CGPoint(x: right, y: y)
         let length = right - left
-        firstStation = CGPoint(x: left + length / 4, y: y)
-        secondStation = CGPoint(x: right - length / 4, y: y)
+
+        var obstacles: [CGRect] = []
+        for identifier in ["map.layers", "Zoom out", "Zoom in", "map.style", "map.expansion", "hud.menu"] {
+            let button = app.buttons[identifier]
+            if button.exists { obstacles.append(button.frame) }
+        }
+        let pill = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Game time")).firstMatch
+        let top = max(pill.exists ? pill.frame.maxY : 0, app.buttons["hud.menu"].exists ? app.buttons["hud.menu"].frame.maxY : 0) + 24
+        if card.exists { obstacles.append(card.frame) }
+        if folded.exists { obstacles.append(folded.frame) }
+        let blocked = obstacles.map { $0.insetBy(dx: -24, dy: -24) }
+
+        var y = dock.frame.minY - 44
+        while y > top {
+            let points = [left, left + length / 4, right - length / 4, right].map { CGPoint(x: $0, y: y) }
+            if !points.contains(where: { point in blocked.contains { $0.contains(point) } }) {
+                trackStart = points[0]
+                firstStation = points[1]
+                secondStation = points[2]
+                trackEnd = points[3]
+                return
+            }
+            y -= 8
+        }
+        XCTFail(failure("No row clear of the map's buttons and the card from \(left) to \(right): \(obstacles)"))
     }
 
     private func tap(_ point: CGPoint) {
