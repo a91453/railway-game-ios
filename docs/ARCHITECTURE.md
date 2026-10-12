@@ -6062,7 +6062,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
   - `confirmationDialog`：只有幾個固定按鈕，不會捲動。
 - **測試**：
   - `MenuChoicesTests` 加「tick 不改選項」：車種、補車車種、月台軌道、各段股道。
-  - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns`：時鐘在跑時打開車種選單，3 秒不動，並選得到另一種車。
+  - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns` 與 `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（作者截圖裡其實是運轉方式選單，25 列）：時鐘在跑時打開選單，3 秒不動，並選得到另一列。
 
 ### 185. PR 的 Linux CI 依改動分層
 

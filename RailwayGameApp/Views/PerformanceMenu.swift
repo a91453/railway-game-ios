@@ -45,6 +45,7 @@ struct PerformanceMenu: View, Equatable {
                 .font(.footnote)
                 .monospacedDigit()
         }
+        .accessibilityIdentifier("performance.menu")
         .accessibilityLabel("Performance: \(performance.displayText(in: language))")
         .accessibilityHint("Chooses how it accelerates, brakes and how fast it may run.")
     }
