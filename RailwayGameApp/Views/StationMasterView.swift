@@ -46,6 +46,9 @@ struct StationMasterCorner: View {
     @State private var isTalking = false
     @State private var lastSpoken: StationMasterAdvice?
     @State private var talk = 0
+    /// The advice, worked out again only when an edit or a new game hour
+    /// can have changed it (decision 184, later): not at every tick.
+    @State private var advice: StationMasterAdvice?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(GameScreenState.self) private var screen
 
@@ -53,7 +56,6 @@ struct StationMasterCorner: View {
     private static let speakingTime = Duration.seconds(7)
 
     var body: some View {
-        let advice = StationMasterAdvice(world: session.world)
         HStack(alignment: .bottom, spacing: 8) {
             Button {
                 if isTalking {
@@ -118,6 +120,9 @@ struct StationMasterCorner: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
+        .onChange(of: session.stationMasterRefreshKey, initial: true) {
+            advice = StationMasterAdvice(world: session.world)
+        }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
             sayIfNew(advice)

@@ -45,7 +45,34 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
     /// Where it stands.
     public let location: PlanPoint
 
-    public var id: Self { self }
+    /// What the bubble is about, whatever it says now (decision 184,
+    /// later): the kind of worry and the station, line, train or sight it
+    /// is over. The waiting count, the days left and where a train's head
+    /// is are left out, so a bubble whose figure changes stays the same
+    /// bubble on the map instead of popping up again at every tick; a
+    /// crowded station that fills stays one bubble too.
+    public struct ID: Hashable, Sendable {
+        enum Subject: Hashable, Sendable {
+            case waiting, lineWithoutTrains(LineID), lineLosingMoney(LineID), materialsShort
+            case trainStuck(TrainID), sightWithoutStation(AttractionID), insolvency
+        }
+
+        let subject: Subject
+        let station: StationID?
+    }
+
+    public var id: ID {
+        let subject: ID.Subject = switch kind {
+        case .crowded, .full: .waiting
+        case .lineWithoutTrains(let line): .lineWithoutTrains(line)
+        case .lineLosingMoney(let line): .lineLosingMoney(line)
+        case .materialsShort: .materialsShort
+        case .trainStuck(let train): .trainStuck(train)
+        case .sightWithoutStation(let sight): .sightWithoutStation(sight)
+        case .insolvency: .insolvency
+        }
+        return ID(subject: subject, station: station)
+    }
 
     public init(kind: Kind, station: StationID?, location: PlanPoint) {
         self.kind = kind

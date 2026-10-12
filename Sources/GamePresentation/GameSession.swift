@@ -388,6 +388,27 @@ public final class GameSession {
     /// game time moves on; never saved.
     private(set) var redoHistory: [GameWorld] = []
 
+    /// Counts the edits, undos and redos that changed the world (decision
+    /// 184, later): with the game hour, when the station master's advice
+    /// is worked out again (``stationMasterRefreshKey``). Never saved.
+    public private(set) var editSerial = 0
+
+    /// When the station master's advice can have changed (decision 184,
+    /// later, after #420's review): an edit, or a new hour of game time,
+    /// as the secretary's log asks it once an hour (decision 175). The
+    /// advice can read the whole land (``UnservedCluster``), so the corner
+    /// works it out only when this changes, not at every tick.
+    public struct AdviceRefreshKey: Hashable, Sendable {
+        /// The session: another game is other advice.
+        let session: ObjectIdentifier
+        let edit: Int
+        let hour: Int64
+    }
+
+    public var stationMasterRefreshKey: AdviceRefreshKey {
+        AdviceRefreshKey(session: ObjectIdentifier(self), edit: editSerial, hour: world.clock.now.seconds / GameTime.secondsPerHour)
+    }
+
     /// Whether a control is being dragged (``beginEditGesture()``), so its
     /// edits make one snapshot between them.
     @ObservationIgnored private var isEditGestureOpen = false
@@ -696,6 +717,7 @@ public final class GameSession {
     /// Changes the game speed through the world's clock, the only record of it.
     public func setSpeed(_ speed: GameSpeed) {
         isPausedForBuilding = false
+        isPausedForEvent = false
         // Decision 143: any write drops the tick being worked out, so the
         // speed the game already runs at is not written again.
         var clock = world.clock
@@ -709,12 +731,30 @@ public final class GameSession {
     func pauseForEvent() {
         guard !world.clock.isPaused else { return }
         world.pause()
+        isPausedForEvent = true
+    }
+
+    /// Whether the session paused the game itself for an event (decision
+    /// 175), and the player has not touched the speed since.
+    public private(set) var isPausedForEvent = false
+
+    /// The world as a save keeps it (decision 99, 175 and 184, later): the
+    /// world, but running at the player's speed when the session paused it
+    /// by itself, for a building tool or an event. A game saved, or
+    /// autosaved on leaving the app, while a tool or the monthly report
+    /// held it then goes on when continued, as the player left it running.
+    public var worldToSave: GameWorld {
+        guard world.clock.isPaused, isPausedForBuilding || isPausedForEvent else { return world }
+        var saved = world
+        saved.resume()
+        return saved
     }
 
     /// Pauses a running game, or resumes a paused one at the speed it ran
     /// at (see `GameClock.runningSpeed`).
     public func togglePause() {
         isPausedForBuilding = false
+        isPausedForEvent = false
         if world.clock.isPaused {
             world.resume()
         } else {
@@ -1882,6 +1922,7 @@ public final class GameSession {
         // (the simulator's push clears `future`).
         redoHistory.removeAll()
         world = edited
+        editSerial &+= 1
         return result
     }
 
@@ -2016,6 +2057,7 @@ public final class GameSession {
         restored.setSpeed(world.clock.runningSpeed)
         if world.clock.isPaused { restored.pause() }
         world = restored
+        editSerial &+= 1
         dropSelectionOfMissing()
         // The building shown keeps its land read in, which the undo may
         // have taken back, so its preview counts what stands there.
