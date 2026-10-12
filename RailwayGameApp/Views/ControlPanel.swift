@@ -538,6 +538,10 @@ private struct ActionButton: View {
 /// announced to VoiceOver, since focus stays on the button that caused it.
 struct StatusBanner: View {
     let session: GameSession
+    /// Whether this banner tells VoiceOver of a new message. The map's
+    /// banner does; a panel's beside it shows the same message and stays
+    /// quiet, so VoiceOver reads it once (decision 184, later).
+    var announces = true
 
     var body: some View {
         Group {
@@ -548,7 +552,7 @@ struct StatusBanner: View {
         // By the serial, not the message: the same text posted again (a
         // second save) is announced again and waits its own while.
         .onChange(of: session.messageSerial) {
-            if let message = session.message {
+            if announces, let message = session.message {
                 AccessibilityNotification.Announcement(message.text).post()
             }
         }

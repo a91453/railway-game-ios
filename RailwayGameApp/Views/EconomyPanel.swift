@@ -48,7 +48,7 @@ struct EconomyPanel: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                StatusBanner(session: session)
+                StatusBanner(session: session, announces: false)
             }
         }
     }

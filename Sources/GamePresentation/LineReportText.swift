@@ -230,6 +230,16 @@ extension GameWorld {
         return keyed.sorted { ($0.key, $0.index) < ($1.key, $1.index) }.map(\.train)
     }
 
+    /// The trains in the order `ids` gives (the fleet list's order when
+    /// it was sorted, decision 184, later), then any train not in it in
+    /// the world's order; a train no longer in the world is left out. A
+    /// list sorted by load or lateness so keeps still while the game runs,
+    /// and a tap lands on the train it was aimed at.
+    public func fleet(keeping ids: [TrainID]) -> [Train] {
+        let listed = Set(ids)
+        return ids.compactMap { train(id: $0) } + trains.filter { !listed.contains($0.id) }
+    }
+
     /// Smaller sorts first: the later, the smaller; none the largest.
     private static func latenessKey(_ punctuality: Punctuality?) -> Int64 {
         switch punctuality {

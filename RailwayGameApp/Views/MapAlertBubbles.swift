@@ -35,14 +35,15 @@ struct MapAlertBubbles: View {
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(.spring(duration: 0.3, bounce: 0.4), value: placed.map(\.alert))
+        .animation(.spring(duration: 0.3, bounce: 0.4), value: placed.map(\.id))
     }
 
     /// An alert on screen, and where its bubble's bottom middle goes.
     private struct PlacedAlert: Identifiable {
         let alert: MapAlert
         let point: CGPoint
-        var id: MapAlert { alert }
+        // Decision 184, later: the bubble's subject, not its figures.
+        var id: MapAlert.ID { alert.id }
     }
 
     /// The alerts on screen: each over its station (or train, or sight),

@@ -92,7 +92,7 @@ struct StationPanel: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                StatusBanner(session: session)
+                StatusBanner(session: session, announces: false)
             }
         }
         .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {

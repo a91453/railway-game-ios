@@ -104,7 +104,7 @@ struct HUDView: View {
                     }
                 }
                 .accessibilityIdentifier("menu.saveGameAs")
-                ShareLink(item: ExportedSave(world: session.world), preview: SharePreview(Text("Along the Line save"))) {
+                ShareLink(item: ExportedSave(world: session.worldToSave), preview: SharePreview(Text("Along the Line save"))) {
                     Label("Export Save", systemImage: "square.and.arrow.up")
                 }
             } label: {

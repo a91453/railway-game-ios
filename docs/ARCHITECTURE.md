@@ -5868,6 +5868,14 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正（遊戲選單溢出）**：#391（觀光景點）、#403、決策 183（城市委託案的「目標」）各在遊戲選單加一列後，空白新遊戲與實景地圖的選單有八列，iPhone 橫向時「回到開始畫面」（`menu.backToStart`）落到點不到的位置；PR 閘門只跑示範地圖（沒有觀光、沒有目標）的存檔流程，所以只有 `main` 的完整 lane 紅。選單改成固定六列：儲存遊戲、另存或匯出 ▸（另存新檔…、匯出存檔）、教學、更多 ▸（目標、觀光景點、說明，依世界而有）、設定、回到開始畫面，和觀光加入前的列數相同，不再隨世界變長；UI 測試點的 `menu.saveGame`、`menu.tutorial`、`menu.settings`、`menu.backToStart` 留在第一層。閘門加上空白新遊戲與實景地圖的存檔流程（`testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing`、`testARealWorldGameStartsFromAPlaceAndIsSavedAsOne`，各約 50 秒）；劃分區的拖曳那一個照它自己的說明留在完整 lane（手勢較不穩定，選單的路徑和蓋房子那一個相同）。以後要加選單項目，放進「更多」。
 
+**之後的修正（發佈前，#420 審查表「需要作者決定」，派工決定）**：
+- 地圖泡泡的 `MapAlert.id` 不再是整個值：改成「種類＋對象」（`MapAlert.ID`：車站候車、某條線、某列車、某景點、破產倒數，加上車站），候車人數、剩餘天數與列車車頭位置不算在內；擁擠轉成爆滿也是同一個泡泡。以前人數一變泡泡就重新彈出，高速時閃、點擊落空。
+- 站長角落不再每次繪製都算建議（可能走 `UnservedCluster` 讀整張土地）：只在 `GameSession.stationMasterRefreshKey`（session、編輯序號 `editSerial`、遊戲小時）改變時重算，和祕書室每小時記一次同一節奏（決策 175）。編輯、復原、重做都會讓序號加一。
+- 車隊總覽依載客率、誤點等排序時，順序在打開、換排序鍵或按「立即重新排序」時固定（`GameWorld.fleet(keeping:)`：新買的列車排最後、賣掉的拿掉），遊戲在跑也不會每 tick 重排、點錯列車。
+- 存檔用玩家的速度（決策 99／175 的後續）：`GameSession.worldToSave` 在 session 自己暫停（建造工具 `isPausedForBuilding`、事件 `isPausedForEvent`）時存成以暫停前的速度在跑；玩家自己按的暫停照存。手動存檔、自動存檔、匯出都用它。以前切到背景時自動存檔存成暫停，回來按「繼續」遊戲停著也沒有說明。
+- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
+- VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
