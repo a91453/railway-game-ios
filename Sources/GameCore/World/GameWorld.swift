@@ -106,10 +106,25 @@ public struct GameWorld: Equatable, Sendable {
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
     public internal(set) var flexDispatch: Bool = false
+    /// Whether a train costs what its type and cars cost, is sold back at
+    /// 70 % of its book value, and runs at a cost that weighs its cars and
+    /// its type (decision 180); off, one price and one weight for every
+    /// train. Off in a new world and in saves from before it; a new game
+    /// turns it on. Set by ``setRollingStockEconomics(_:)`` only.
+    public internal(set) var rollingStockEconomics: Bool = false
+    /// Each line's records of its last 30 days, and each station's flow of
+    /// yesterday (decision 179); `nil`, off, in a world from before them. A
+    /// new game turns it on. Set by ``setLineAccounts(_:)`` only.
+    public internal(set) var lineAccounts: LineAccounts?
     /// The sights and the tourists they draw (decision 174), or `nil`: off
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. Set by ``setTourism(_:)`` and every midnight only.
     public internal(set) var tourism: Tourism?
+    /// The city's requests of the company and its trust (decision 183), or
+    /// `nil`: off in a new world and in saves from before them; the app's
+    /// new free games turn them on. Set by ``setCityRequests(seed:)``, the
+    /// request commands, the counts and every managed midnight only.
+    public internal(set) var cityRequests: CityRequests?
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -966,6 +981,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
+                removeLineAccounts(of: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -990,13 +1006,16 @@ public struct GameWorld: Equatable, Sendable {
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
+        removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()
     }
 
-    /// Buys a new train and charges ``ConstructionCosts/train``.
+    /// Buys a new train and charges ``ConstructionCosts/train``, or, with
+    /// ``rollingStockEconomics`` on, the first car's price of its type
+    /// (``RollingStock/price(of:cars:)``, decision 180).
     ///
     /// The new train is unplaced (its ``Train/position`` is `nil`); put it on
     /// the track with ``placeTrain(_:at:)``.
@@ -1009,18 +1028,40 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/insufficientFunds(required:available:)``.
     @discardableResult
     public mutating func purchaseTrain(named name: String) throws(GameError) -> Train {
+        try buyTrain(named: name, as: eraTrainType)
+    }
+
+    /// Buys a new train of `type` (decision 180) and charges its first car's
+    /// price at once, where buying one of the standard car and changing its
+    /// type would pay a refit on top: ``ConstructionCosts/train`` without
+    /// ``rollingStockEconomics``, the type's price with it. The train runs
+    /// as the type does (``TrainType/performance``), or as standard.
+    ///
+    /// - Throws: ``GameError/trainTypeUnavailable(_:)`` for a type the
+    ///   scenario's era does not have (decision 86), then as
+    ///   ``purchaseTrain(named:)``.
+    @discardableResult
+    public mutating func purchaseTrain(named name: String, as type: TrainType) throws(GameError) -> Train {
+        if let allowed = scenario?.scenario.trainTypes, !allowed.contains(type) { throw .trainTypeUnavailable(type) }
+        return try buyTrain(named: name, as: type)
+    }
+
+    private mutating func buyTrain(named name: String, as type: TrainType?) throws(GameError) -> Train {
         guard Self.isValidName(name) else { throw .invalidName }
         let (id, nextID) = try Self.allocateID(from: nextTrainID)
-        try economy.spend(economy.costs.train)
+        // Decision 180: with rolling-stock economics on, the price is the
+        // type's (the era's, or the standard car's).
+        let price = rollingStockEconomics ? RollingStock.price(of: type, cars: 1) : economy.costs.train
+        try economy.spend(price)
 
         var train = Train(id: TrainID(rawValue: id), name: name)
-        if let era = eraTrainType {
-            train.type = era
-            train.performance = era.performance ?? .standard
+        if let type {
+            train.type = type
+            train.performance = type.performance ?? .standard
         }
         nextTrainID = nextID
         trains.append(train)
-        acquireAsset(.train, owner: id, cost: economy.costs.train)
+        acquireAsset(.train, owner: id, cost: price)
         return train
     }
 
@@ -1071,7 +1112,8 @@ public struct GameWorld: Equatable, Sendable {
 
     /// Sets how many cars an unplaced train has (Phase 4.5 Stage S2),
     /// ``Train/carLength`` apart: ``Train/minimumCars`` to ``Train/maximumCars``. Each car
-    /// added costs ``ConstructionCosts/car``; taking cars off refunds
+    /// added costs ``ConstructionCosts/car`` (its type's car price with
+    /// ``rollingStockEconomics`` on, decision 180); taking cars off refunds
     /// nothing. Cars that cost nothing are added whatever the balance, even
     /// a negative one. A train of more than one car is placed with its body behind
     /// its head along the track it could have come by (see
@@ -1088,7 +1130,8 @@ public struct GameWorld: Equatable, Sendable {
 
         let added = Int64(cars - trains[index].cars)
         if added > 0 {
-            let (price, overflow) = economy.costs.car.amount.multipliedReportingOverflow(by: added)
+            let carPrice = rollingStockEconomics ? RollingStock.pricing(of: trains[index].type).eachCar : economy.costs.car
+            let (price, overflow) = carPrice.amount.multipliedReportingOverflow(by: added)
             guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
             // Free cars are added even in the red: `spend` would refuse a
             // price of 0 against a negative balance.
@@ -1153,7 +1196,37 @@ public struct GameWorld: Equatable, Sendable {
         if let allowed = scenario?.scenario.trainTypes, !(type.map(allowed.contains) ?? false) {
             throw .trainTypeUnavailable(type)
         }
+        // Decision 180: a change of type is a refit, a share of the new
+        // type's price for the cars the train has.
+        if rollingStockEconomics, trains[index].type != type {
+            let fee = RollingStock.refitFee(to: type, cars: trains[index].cars)
+            try economy.spend(fee)
+            capitalizeAsset(.train, owner: id.rawValue, cost: fee)
+        }
         trains[index].type = type
+    }
+
+    /// Sells train `id` back (decision 180): it brings
+    /// ``RollingStock/salePercent`` of what is left of its cost on the
+    /// books, its cars' too, booked as a sale with the gain or loss
+    /// realized, as a building's is (decision 130). The train is gone with
+    /// its timetable; its ID is not given out again. Free play keeps no
+    /// accounts and is paid nothing.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainInService(_:)`` for a train on the track, on a
+    ///   line, or running a service (a train going back empty to an end,
+    ///   decision 172, is running one).
+    public mutating func sellTrain(_ id: TrainID) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard canSellTrain(id) else { throw .trainInService(id) }
+        let owner = id.rawValue
+        sellAsset(.train, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.train, owner: owner)))
+        sellAsset(.cars, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.cars, owner: owner)))
+        abandonRiders(of: id)
+        loseCargo(of: id)
+        trains.remove(at: index)
+        abandonUnservedPassengers()
     }
 
     /// The type a train bought in the scenario's era has, and whose
@@ -1548,6 +1621,7 @@ public struct GameWorld: Equatable, Sendable {
         let index = try lineIndex(of: id)
         let wasHighSpeed = lines[index].isHighSpeed
         lines.remove(at: index)
+        removeLineAccounts(of: id)
         abandonUnservedPassengers()
         // Decision 168: its stations draw no intercity trips unless
         // another high-speed line calls at them.
@@ -2644,6 +2718,7 @@ public struct GameWorld: Equatable, Sendable {
         guard let line = lines.firstIndex(where: { $0.assignedTrains.contains(id) }) else { return }
         let (total, overflow) = lines[line].deadheadDistance.addingReportingOverflow(distance)
         lines[line].deadheadDistance = overflow ? .max : total
+        countLineDeadhead(distance, on: lines[line].id)
     }
 
     /// `train` sent out now on `trip` (calling at the line's `stops`), as
@@ -3762,7 +3837,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, tourism, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3863,7 +3938,10 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
+        rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
+        lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
+        cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3984,7 +4062,14 @@ extension GameWorld: Codable {
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)
         }
+        if rollingStockEconomics {
+            try container.encode(true, forKey: .rollingStockEconomics)
+        }
+        if let lineAccounts {
+            try container.encode(lineAccounts, forKey: .lineAccounts)
+        }
         try container.encodeIfPresent(tourism, forKey: .tourism)
+        try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
         }
@@ -4144,10 +4229,14 @@ extension GameWorld: Codable {
         guard Self.isStrictlyIncreasing(lines.map(\.id.rawValue), below: nextLineID) else {
             return "Line IDs must be unique, ascending and below nextLineID."
         }
+        if let book = lineAccounts, !book.isValid(lines: Set(lines.map(\.id)), stations: Set(stations.map(\.id))) {
+            return "The line accounts must be well formed, for lines and stations that exist."
+        }
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }
         if let problem = tourismProblem() { return problem }
+        if let problem = cityRequestsProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }

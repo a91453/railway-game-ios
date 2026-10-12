@@ -18,6 +18,71 @@ struct InspectorView: View {
     @ViewBuilder
     private var inspector: some View {
         if session.tool == .network {
+            networkInspector
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                selectionInspector
+                selectionDetails
+            }
+        }
+    }
+
+    /// Decision 184: what a train or the track picked by the select tool
+    /// adds: the train's line, load and lateness, the lines along the track,
+    /// and a way to each line's details.
+    @ViewBuilder
+    private var selectionDetails: some View {
+        if let train = session.tappedTrainID, let text = session.world.trainInspectionText(of: train, in: session.language) {
+            Text(verbatim: text)
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("inspector.train.details")
+            if let line = session.world.assignedLine(of: train) {
+                lineButtons([line])
+            }
+        } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge,
+                  let inspection = session.world.trackInspection(of: edge), !inspection.lines.isEmpty {
+            lineButtons(inspection.lines)
+        }
+    }
+
+    /// A chip for each of `lines` that opens the line's details.
+    private func lineButtons(_ lines: [LineID]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(lines, id: \.self) { id in
+                    if let line = session.world.line(id: id) {
+                        Button {
+                            session.selectLine(id)
+                            screen.panel = .lines
+                        } label: {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Palette.lineColor(id, custom: line.color))
+                                    .frame(width: 10, height: 10)
+                                    .accessibilityHidden(true)
+                                Text(verbatim: line.name)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2.weight(.bold))
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.horizontal, 8)
+                            .frame(height: 30)
+                        }
+                        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                        .accessibilityLabel(Text(verbatim: session.language.text("Open \(line.name)", "開啟 \(line.name)")))
+                        .accessibilityIdentifier("inspector.line.\(id.rawValue)")
+                    }
+                }
+            }
+        }
+    }
+
+    private var networkInspector: some View {
+        Group {
             HStack(alignment: .center, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -37,9 +102,13 @@ struct InspectorView: View {
                 Spacer(minLength: 0)
             }
             .accessibilityElement(children: .combine)
-        } else {
-            selectionInspector
         }
+    }
+
+    /// The selection's mark: track, or a station, train or building.
+    private var selectionGlyph: String {
+        session.selectedStationID == nil && session.tappedTrainID == nil && session.selectedBuildingID == nil
+            && session.selectedTrackEdge != nil ? "point.topleft.down.to.point.bottomright.curvepath" : "tram.fill"
     }
 
     private var selectionInspector: some View {
@@ -50,7 +119,7 @@ struct InspectorView: View {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(Theme.accent)
                             .frame(width: 30, height: 30)
-                        Image(systemName: "tram.fill")
+                        Image(systemName: selectionGlyph)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Theme.onAccent)
                     }
@@ -61,7 +130,7 @@ struct InspectorView: View {
                         .foregroundStyle(Theme.textPrimary)
                         // Three lines: in a phone's card "Station · Ruifang ·
                         // 2 platforms, 128 m" took two and lost its end.
-                        .lineLimit(session.selectedBuildingID == nil ? 3 : 7)
+                        .lineLimit(session.selectedBuildingID == nil && session.selectedTrackEdge == nil ? 3 : 7)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
@@ -75,7 +144,7 @@ struct InspectorView: View {
                     }
                     .accessibilityHidden(true)
 
-                    Text("Tap a station to select it.")
+                    Text(verbatim: session.language.text("Tap a station, a train or the track to see it.", "點車站、列車或軌道來查看。"))
                         .font(.subheadline)
                         .foregroundStyle(Theme.textSecondary)
                 }

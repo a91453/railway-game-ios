@@ -3072,6 +3072,46 @@
           }
         }
       }
+    },
+    "Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地圖"
+          }
+        }
+      }
+    },
+    "Day and Night" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晝夜變化"
+          }
+        }
+      }
+    },
+    "Weather Effects" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天氣效果"
+          }
+        }
+      }
+    },
+    "Day and night: the map darkens from dusk to dawn as the game's clock turns, and stations, trains and windows light up. Weather effects: rain and lightning on the map on a day of rain or storms, and a typhoon's sign at the stations it hits. With Reduce Motion on, the rain does not fall and nothing flashes." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晝夜變化：地圖隨遊戲時鐘從黃昏到清晨變暗，車站、列車與窗戶亮起燈光。天氣效果：下雨或雷雨的日子地圖上會下雨、打雷閃電，颱風經過的車站會標上颱風符號。開啟「減少動態效果」時，雨不會落下，也不會閃光。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

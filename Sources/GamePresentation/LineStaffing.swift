@@ -21,6 +21,12 @@ public struct LineStaffingPlan: Equatable, Sendable {
     public let trains: Int
     /// What buying them costs.
     public let cost: Money
+    /// The type and the cars of each train (decision 180), and what each
+    /// costs to buy and to keep a day on the line.
+    public let type: TrainType?
+    public let cars: Int
+    public let pricePerTrain: Money
+    public let dailyCostPerTrain: Money
     /// The minutes between trains it actually gets: the round trip shared
     /// between them, rounded up (more than `headway` when the line cannot
     /// run as many trains as the headway needs).
@@ -39,17 +45,26 @@ extension GameWorld {
     /// that does not exist, a ring (each way needs its own trains facing
     /// its own way), a headway under 2 minutes, or a line whose journey
     /// cannot be driven (no track joins its stops).
-    public func lineStaffingPlan(_ id: LineID, headway: Int64) -> LineStaffingPlan? {
+    ///
+    /// The trains are of `type` (`nil`: the standard car) with `cars` cars
+    /// each, bought at ``purchaseCost(of:cars:)`` (decision 180).
+    public func lineStaffingPlan(_ id: LineID, headway: Int64, type: TrainType? = nil, cars: Int = 1) -> LineStaffingPlan? {
         guard headway >= ServiceLine.minimumHeadwayMinutes, let line = line(id: id), !line.isRing,
               let journey = lineJourney(id)
         else { return nil }
         let roundTrip = journey.roundTripMinutes
         var trains = Int(clamping: max(1, (roundTrip + headway - 1) / headway))
         if let most = lineMaximumTrains(id) { trains = min(trains, max(1, most)) }
-        let (cost, overflow) = economy.costs.train.amount.multipliedReportingOverflow(by: Int64(trains))
+        let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
+        // Decision 168: a high-speed line gets high-speed sets where the
+        // game offers them, unless the player chose a type.
+        let type = type ?? (line.isHighSpeed && offeredTrainTypes.contains(.highSpeed) ? .highSpeed : nil)
+        let price = purchaseCost(of: type, cars: cars)
+        let (cost, overflow) = price.amount.multipliedReportingOverflow(by: Int64(trains))
         return LineStaffingPlan(
             headway: headway, roundTripMinutes: roundTrip, trains: trains,
-            cost: Money(overflow ? .max : cost)
+            cost: Money(overflow ? .max : cost), type: type, cars: cars,
+            pricePerTrain: price, dailyCostPerTrain: dailyRunningCost(of: type, cars: cars)
         )
     }
 }
@@ -67,9 +82,14 @@ extension GameSession {
     /// a train that cannot take the berth now stays off the track,
     /// assigned, and the message says so. Refused as a whole when the
     /// money does not reach.
-    public func staffSelectedLine(headway: Int64) {
+    ///
+    /// The trains are of `type` with `cars` cars each when the player chose
+    /// them (decision 180); without a choice a high-speed line gets
+    /// high-speed sets where the game offers them, and every other the
+    /// standard car of one car.
+    public func staffSelectedLine(headway: Int64, type chosen: TrainType? = nil, cars: Int = 1) {
         guard let line = requireSelectedLine() else { return }
-        guard let plan = world.lineStaffingPlan(line.id, headway: headway), let journey = world.lineJourney(line.id) else {
+        guard let plan = world.lineStaffingPlan(line.id, headway: headway, type: chosen, cars: cars), let journey = world.lineJourney(line.id) else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(line.name)'s trains cannot run yet: build track joining its stations, with a platform at each.",
                 "\(line.name) 的列車還不能行駛：請先鋪設連接各站的軌道，並在每站設置月台。"
@@ -81,21 +101,18 @@ extension GameSession {
             var waiting = 0
             // Decision 168: a high-speed line is run with high-speed sets,
             // where the game offers them (not in an era with types of its own).
-            let highSpeedSets = line.isHighSpeed && draft.offeredTrainTypes.contains(.highSpeed)
             for _ in 0..<plan.trains {
-                let train = try draft.purchaseTrain(named: Self.suggestedTrainName(for: draft, in: language))
-                if highSpeedSets {
-                    try draft.setTrainType(train.id, to: .highSpeed)
-                    try draft.setTrainPerformance(train.id, to: .highSpeed)
+                let name = Self.suggestedTrainName(for: draft, in: language)
+                let train: Train
+                if let type = plan.type {
+                    train = try draft.purchaseTrain(named: name, as: type)
+                } else {
+                    train = try draft.purchaseTrain(named: name)
                 }
+                if plan.cars > Train.minimumCars { try draft.setTrainCars(train.id, to: plan.cars) }
                 var placed = draft
                 do throws(GameError) {
-                    try placed.placeTrain(train.id, at: journey.start)
-                    if case .onEdge(let traversal, let offset) = journey.start,
-                       let edge = placed.network.edge(traversal.edge), offset < edge.length {
-                        try placed.setTrainContinuation(train.id, along: [], stoppingAt: offset)
-                    }
-                    try placed.useTrainPerformanceForMovement(train.id)
+                    try Self.placeAtStart(train.id, of: journey, in: &placed)
                     draft = placed
                 } catch {
                     waiting += 1
@@ -124,6 +141,93 @@ extension GameSession {
                 text += language.text(" It opens at \(time).", "\(time) 開始營運。")
             }
             return text
+        }
+    }
+}
+
+// Re-forming a whole line's trains (decision 180): the trains of a line that
+// stand waiting for their next trip are taken off, given another type and
+// number of cars, put back at the line's start and assigned again, in one
+// step. A train that cannot be re-formed is left as it was, with the reason.
+
+extension GameSession {
+    /// Where a line's trips start, as ``staffSelectedLine(headway:type:cars:)``
+    /// puts a new train: placed on the berth of its journey's start, held
+    /// there to be sent out. Throws what placing it throws.
+    static func placeAtStart(_ id: TrainID, of journey: LineJourney, in world: inout GameWorld) throws(GameError) {
+        try world.placeTrain(id, at: journey.start)
+        if case .onEdge(let traversal, let offset) = journey.start,
+           let edge = world.network.edge(traversal.edge), offset < edge.length {
+            try world.setTrainContinuation(id, along: [], stoppingAt: offset)
+        }
+        try world.useTrainPerformanceForMovement(id)
+    }
+
+    /// Re-forms the selected line's trains into `cars` cars of `type`
+    /// (`nil`: the standard car): each train that stands waiting for its
+    /// next trip is unassigned, taken off the track, given the type and the
+    /// cars (a refit and the cars added are paid for, decision 180), put
+    /// back at the start of the line and assigned to the service it was on.
+    /// A train on a trip, or one that cannot be put back, or whose purchase
+    /// the balance does not reach, stays as it was; the message names it and
+    /// the reason.
+    public func reformSelectedLine(type: TrainType?, cars: Int) {
+        guard let line = requireSelectedLine() else { return }
+        guard let journey = world.lineJourney(line.id) else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "\(line.name)'s trains cannot be re-formed yet: build track joining its stations, with a platform at each.",
+                "\(line.name) 的列車還不能改編組：請先鋪設連接各站的軌道，並在每站設置月台。"
+            ))
+            return
+        }
+        let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
+        var changed = 0
+        var left: [String] = []
+        var paid = Money.zero
+        do throws(GameError) {
+            let summary = try performEdit { world throws(GameError) in
+                let balance = world.economy.balance
+                for id in line.assignedTrains {
+                    guard let train = world.train(id: id) else { continue }
+                    if train.execution != nil {
+                        left.append(language.text("\(train.name) (on a trip)", "\(train.name)（正在行駛）"))
+                        continue
+                    }
+                    if train.type == type && train.cars == cars { continue }
+                    var attempt = world
+                    do throws(GameError) {
+                        let pattern = attempt.assignedPattern(of: id)
+                        try attempt.unassignTrain(id)
+                        if train.position != nil { try attempt.unplaceTrain(id) }
+                        if train.type != type {
+                            try attempt.setTrainType(id, to: type)
+                            if let performance = type?.performance { try attempt.setTrainPerformance(id, to: performance) }
+                        }
+                        if train.cars != cars { try attempt.setTrainCars(id, to: cars) }
+                        try Self.placeAtStart(id, of: journey, in: &attempt)
+                        try attempt.assignTrain(id, to: line.id, pattern: pattern)
+                        world = attempt
+                        changed += 1
+                    } catch {
+                        left.append("\(train.name) (\(error.playerMessage(in: language)))")
+                    }
+                }
+                paid = balance - world.economy.balance
+                let name = Train.typeText(type, in: language)
+                return language.text(
+                    "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)) of \(name), for \(paid.moneyText).",
+                    "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))的\(name)，花費 \(paid.moneyText)。"
+                )
+            }
+            var text = changed == 0 && left.isEmpty
+                ? language.text("\(line.name)'s trains are already so.", "\(line.name) 的列車已經是這個編組。")
+                : summary
+            if !left.isEmpty {
+                text += language.text(" Left as they were: ", " 沒有改的：") + left.joined(separator: language.text(", ", "、")) + "."
+            }
+            message = StatusMessage(kind: changed > 0 || left.isEmpty ? .success : .failure, text: text)
+        } catch {
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
     }
 }

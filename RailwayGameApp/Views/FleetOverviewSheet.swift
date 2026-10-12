@@ -9,6 +9,12 @@ import SwiftUI
 struct FleetOverviewSheet: View {
     @Bindable var session: GameSession
     @Environment(\.dismiss) private var dismiss
+    /// The train a sale is being confirmed for (decision 180).
+    @State private var sellingTrain: Train?
+    /// Decision 179: how the roster is ordered.
+    @State private var sort: FleetSort = .name
+    /// Decision 184: a train's name, or its line's, to find it by.
+    @State private var search = ListSearch()
 
     var body: some View {
         NavigationStack {
@@ -25,7 +31,19 @@ struct FleetOverviewSheet: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.textSecondary)
                     } else {
-                        ForEach(session.world.trains) { train in
+                        if session.world.trains.count >= ListSearchField.minimumRows {
+                            ListSearchField(
+                                search: $search,
+                                prompt: session.language.text("Search trains or lines", "搜尋列車或路線"),
+                                identifier: "fleet.search",
+                                language: session.language
+                            )
+                        }
+                        let shown = session.world.trains(session.world.fleet(sortedBy: sort, in: session.language), matching: session.world.trains.count >= ListSearchField.minimumRows ? search : ListSearch())
+                        if shown.isEmpty {
+                            ListSearchEmpty(text: session.language.text("No train matches.", "沒有符合的列車。"))
+                        }
+                        ForEach(shown) { train in
                             trainRow(train)
                         }
                     }
@@ -36,6 +54,26 @@ struct FleetOverviewSheet: View {
             .navigationTitle(Text(verbatim: session.language.text("Fleet Overview", "車隊總覽")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Decision 179: in the bar, not a row of the list, so the
+                // rows (and the UI tests that tap them) stay where they were.
+                ToolbarItem(placement: .cancellationAction) {
+                    Menu {
+                        Picker(selection: $sort) {
+                            ForEach(FleetSort.allCases, id: \.self) { order in
+                                Text(verbatim: order.displayName(in: session.language)).tag(order)
+                            }
+                        } label: {
+                            Text(verbatim: session.language.text("Sort by", "排序"))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Sort", "排序"))
+                        } icon: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
+                    }
+                    .accessibilityIdentifier("fleet.sort")
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         dismiss()
@@ -48,6 +86,28 @@ struct FleetOverviewSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .confirmationDialog(
+            Text(verbatim: sellingTrain.map {
+                session.language.text("Sell \($0.name)?", "出售 \($0.name)？")
+            } ?? ""),
+            isPresented: Binding(get: { sellingTrain != nil }, set: { if !$0 { sellingTrain = nil } }),
+            titleVisibility: .visible,
+            presenting: sellingTrain
+        ) { train in
+            Button(role: .destructive) {
+                session.sellTrain(train.id)
+            } label: {
+                Text(verbatim: session.language.text(
+                    "Sell for \(session.world.trainSaleQuote(train.id).moneyText)",
+                    "以 \(session.world.trainSaleQuote(train.id).moneyText) 出售"
+                ))
+            }
+        } message: { train in
+            Text(verbatim: session.language.text(
+                "Brings 70 % of what is left of its cost on the books.",
+                "可取回帳面價值的 70 %。"
+            ))
+        }
     }
 
     private var summaryCard: some View {
@@ -182,9 +242,32 @@ struct FleetOverviewSheet: View {
                     TrainLoadBar(load: load, language: language)
                 }
             } else {
-                Text(verbatim: language.text("In depot / off track", "未上軌（車庫待命中）"))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                HStack {
+                    Text(verbatim: language.text("In depot / off track", "未上軌（車庫待命中）"))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    // Decision 180: a train on no line and off the track is sold
+                    // back at 70 % of its books.
+                    if session.world.canSellTrain(train.id) {
+                        Button {
+                            sellingTrain = train
+                        } label: {
+                            Text(verbatim: language.text(
+                                "Sell \(session.world.trainSaleQuote(train.id).moneyText)",
+                                "出售 \(session.world.trainSaleQuote(train.id).moneyText)"
+                            ))
+                            .font(.caption2.weight(.bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.chip)
+                            .foregroundStyle(Theme.textPrimary)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("fleet.sell.\(train.name)")
+                    }
+                }
             }
         }
         .padding(.vertical, 4)

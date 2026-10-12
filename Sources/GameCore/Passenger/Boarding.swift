@@ -126,8 +126,18 @@ extension GameWorld {
         if stop < train.timetable.count - 1 {
             refuseLeftBehind(train, at: stop)
         }
-        if let distance, assignedLine(of: id) != nil {
-            countDeparture(distance: distance, passengers: riderCount(of: id), seats: train.ratedCapacity)
+        if let distance, let line = assignedLine(of: id) {
+            countDeparture(
+                distance: distance, passengers: riderCount(of: id), seats: train.ratedCapacity, on: line,
+                operatingPermille: rollingStockEconomics ? RollingStock.pricing(of: train.type).operatingPermille : 1_000
+            )
+        }
+        // Decision 183: a passenger train leaving a stop for its next
+        // counts a call for a settlement's request (once at a terminus:
+        // the service that ends there does not count, the next leaving it
+        // does).
+        if cityRequests != nil, distance != nil, !train.isDeadheading, let line = assignedLine(of: id), lines.first(where: { $0.id == line })?.isFreight == false {
+            countRequestCall(at: train.timetable[stop].station)
         }
     }
 
@@ -182,6 +192,7 @@ extension GameWorld {
                 riders[slot].groups = kept
             }
         }
+        countAlighting(alighted, at: entry.station)
         let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)
     }
@@ -196,6 +207,13 @@ extension GameWorld {
         static func < (lhs: Self, rhs: Self) -> Bool {
             (lhs.destination, lhs.highSpeed ? 1 : 0) < (rhs.destination, rhs.highSpeed ? 1 : 0)
         }
+    }
+
+    /// `weights` with each line's added together.
+    private static func merged(_ weights: [(line: LineID, weight: Int64)]) -> [(line: LineID, weight: Int64)] {
+        var byLine: [LineID: Int64] = [:]
+        for entry in weights { byLine[entry.line, default: 0] += entry.weight }
+        return byLine.map { (line: $0.key, weight: $0.value) }
     }
 
     /// The passengers at stop `stop` of `train`'s timetable it may take on:
@@ -290,6 +308,9 @@ extension GameWorld {
         var boarded: Int64 = 0
         var boarding = riders.first { $0.train == train.id } ?? TrainRiders(train: train.id, groups: [])
         var paying: [FarePayers: Int64] = [:]
+        // Decision 179: who pays, with the lines their journeys ride.
+        let boardingLine = assignedLine(of: train.id)
+        var shares: [FarePayers: [(line: LineID, weight: Int64)]] = [:]
         for index in eligible where room > 0 {
             let group = waiting[index]
             let count = min(group.count, room)
@@ -301,14 +322,20 @@ extension GameWorld {
             if group.journey?.current == nil || group.journey?.current == 0 {
                 // Decision 168: a journey that rides a high-speed line pays
                 // its fare.
-                paying[FarePayers(destination: group.journey?.destination ?? group.destination, highSpeed: ridesHighSpeed(group)), default: 0] += count
+                let payers = FarePayers(destination: group.journey?.destination ?? group.destination, highSpeed: ridesHighSpeed(group))
+                paying[payers, default: 0] += count
+                if lineAccounts != nil {
+                    shares[payers, default: []] += fareWeights(of: group.journey, line: boardingLine, count: count)
+                }
             }
         }
         // Each destination's boarders pay together, rounded to whole
         // dollars (G1c; the reference's fare trips of a boarding plan).
         for payers in paying.keys.sorted() {
-            chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed)
+            let fare = chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed)
+            if let weights = shares[payers] { shareFare(fare, among: Self.merged(weights)) }
         }
+        countBoarding(boarded, on: boardingLine, at: passengers[record].station)
         passengers[record].board(taken)
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             riders[slot] = boarding

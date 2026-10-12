@@ -20,27 +20,41 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
         case full(waiting: Int64)
         /// The line has no train, so no one rides it.
         case lineWithoutTrains(LineID)
+        /// The line has lost money on each of the last seven days
+        /// (decision 179).
+        case lineLosingMoney(LineID)
         /// The town round the station was short of building materials at
         /// the last midnight and grew slowly (decision 158).
         case materialsShort
+        /// The train is in a deadlock under traffic control: it waits for
+        /// track only trains waiting with it hold (decision 184; Stage V2's
+        /// ``GameWorld/deadlockedTrains()``). Over its head.
+        case trainStuck(TrainID)
+        /// A sight of four stars or more has no station within reach
+        /// (decisions 174 and 184), once the company runs a line. Over it.
+        case sightWithoutStation(AttractionID)
+        /// A challenge is lost when the cash stays below zero this many
+        /// more days (decisions 175 and 184). Over the first station.
+        case insolvency(days: Int64)
     }
 
     public let kind: Kind
-    /// The station the bubble stands over.
-    public let station: StationID
+    /// The station the bubble stands over, or `nil` for a train's or a
+    /// sight's.
+    public let station: StationID?
     /// Where it stands.
     public let location: PlanPoint
 
     public var id: Self { self }
 
-    public init(kind: Kind, station: StationID, location: PlanPoint) {
+    public init(kind: Kind, station: StationID?, location: PlanPoint) {
         self.kind = kind
         self.station = station
         self.location = location
     }
 
     /// What the bubble says, short.
-    public func text(in language: DisplayLanguage, lineName: String? = nil) -> String {
+    public func text(in language: DisplayLanguage, lineName: String? = nil, subject: String? = nil) -> String {
         switch kind {
         case .crowded(let waiting):
             language.text("Crowded · \(Money(waiting).displayText)", "擁擠 · \(Money(waiting).displayText) 人")
@@ -48,8 +62,16 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
             language.text("Full", "滿了")
         case .lineWithoutTrains:
             language.text("\(lineName ?? "Line"): no trains", "\(lineName ?? "路線")：沒有列車")
+        case .lineLosingMoney:
+            language.text("\(lineName ?? "Line"): losing money", "\(lineName ?? "路線")：連續虧損")
         case .materialsShort:
             language.text("Short of building materials", "缺建材")
+        case .trainStuck:
+            language.text("\(subject ?? "Train"): stuck", "\(subject ?? "列車")：卡住了")
+        case .sightWithoutStation:
+            language.text("\(subject ?? "Sight"): no station", "\(subject ?? "景點")：沒有車站")
+        case .insolvency(let days):
+            insolvencyCountdownText(days, in: language)
         }
     }
 }
@@ -77,6 +99,11 @@ extension GameWorld {
             guard let first = line.stops.first, let station = station(id: first) else { continue }
             alerts.append(MapAlert(kind: .lineWithoutTrains(line.id), station: first, location: station.location))
         }
+        // Decision 179: a line that has lost money a week running.
+        for line in lines where lineLosingMoney(line.id) {
+            guard let first = line.stops.first, let station = station(id: first) else { continue }
+            alerts.append(MapAlert(kind: .lineLosingMoney(line.id), station: first, location: station.location))
+        }
         // Decision 158: then the stations short of building materials.
         for id in freight?.lastShort ?? [] {
             guard let station = station(id: id) else { continue }
@@ -84,6 +111,34 @@ extension GameWorld {
         }
         return alerts
     }
+
+    /// The bubbles decision 184 adds, after ``mapAlerts()``: each train in
+    /// a deadlock, each sight of ``alertedSightStars`` or more without a
+    /// station once a passenger line runs, and a challenge's days left in
+    /// the red. Apart from ``mapAlerts()``, which the station master asks
+    /// at every step: a deadlock is worked out from every waiting train.
+    public func situationAlerts() -> [MapAlert] {
+        var alerts: [MapAlert] = []
+        if isTrafficControlEnabled {
+            for id in deadlockedTrains() {
+                guard let head = bodyPath(of: id).first else { continue }
+                alerts.append(MapAlert(kind: .trainStuck(id), station: nil, location: PlanPoint(x: head.x, y: head.y)))
+            }
+        }
+        if let tourism, lines.contains(where: { !$0.isFreight }) {
+            for sight in tourism.attractions where sight.stars >= Self.alertedSightStars && attractionStation(of: sight.id) == nil {
+                alerts.append(MapAlert(kind: .sightWithoutStation(sight.id), station: nil, location: sight.point))
+            }
+        }
+        if let days = insolvencyCountdown, let first = stations.first {
+            alerts.append(MapAlert(kind: .insolvency(days: days), station: first.id, location: first.location))
+        }
+        return alerts
+    }
+
+    /// The rating from which a sight without a station shows on the map,
+    /// in hundredths of a star: the ones worth a line, not all of them.
+    public static let alertedSightStars = 400
 }
 
 extension GameSession {
@@ -94,12 +149,18 @@ extension GameSession {
     @discardableResult
     public func respond(to alert: MapAlert) -> Bool {
         switch alert.kind {
-        case .crowded, .full, .materialsShort:
-            selectStation(alert.station)
+        case .crowded, .full, .materialsShort, .insolvency:
+            if let station = alert.station { selectStation(station) }
             return false
-        case .lineWithoutTrains(let line):
+        case .lineWithoutTrains(let line), .lineLosingMoney(let line):
             selectLine(line)
             return true
+        case .trainStuck(let train):
+            selectTrain(train)
+            return false
+        case .sightWithoutStation:
+            lookAt(alert.location)
+            return false
         }
     }
 }

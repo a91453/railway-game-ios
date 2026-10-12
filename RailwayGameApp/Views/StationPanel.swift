@@ -30,6 +30,10 @@ struct StationPanel: View {
     /// Whether the "arriving soon" board is open (decision 178); kept for
     /// the next station and the next launch.
     @AppStorage("stationBoardExpanded") private var boardExpanded = true
+    /// Decision 184: whether the searchable list of stations is up, and
+    /// what was typed in it.
+    @State private var choosingStation = false
+    @State private var stationSearch = ListSearch()
 
     var body: some View {
         NavigationStack {
@@ -414,19 +418,80 @@ struct StationPanel: View {
         }
     }
 
-    /// Chooses another station.
+    /// Chooses another station: a menu, or past ``ListSearchField/minimumRows``
+    /// stations a list that can be searched by name (decision 184).
+    @ViewBuilder
     private var stationMenu: some View {
-        Menu {
-            ForEach(session.world.stations) { station in
-                Button(station.name) {
-                    session.selectStation(station.id)
+        if session.world.stations.count < ListSearchField.minimumRows {
+            Menu {
+                ForEach(session.world.stations) { station in
+                    Button(station.name) {
+                        session.selectStation(station.id)
+                    }
+                }
+            } label: {
+                Image(systemName: "tram.fill")
+            }
+            .accessibilityLabel("Choose a station")
+            .disabled(session.world.stations.isEmpty)
+        } else {
+            Button {
+                stationSearch = ListSearch()
+                choosingStation = true
+            } label: {
+                Image(systemName: "tram.fill")
+            }
+            .accessibilityLabel("Choose a station")
+            .accessibilityIdentifier("station.choose")
+            .sheet(isPresented: $choosingStation) {
+                stationChooser
+            }
+        }
+    }
+
+    /// Every station, the ones whose name matches what was typed.
+    private var stationChooser: some View {
+        let language = session.language
+        let shown = session.world.stations(matching: stationSearch)
+        return NavigationStack {
+            List {
+                if shown.isEmpty {
+                    ListSearchEmpty(text: language.text("No station matches.", "沒有符合的車站。"))
+                }
+                ForEach(shown) { station in
+                    Button {
+                        session.selectStation(station.id)
+                        choosingStation = false
+                    } label: {
+                        HStack {
+                            Text(verbatim: station.name)
+                                .foregroundStyle(Theme.textPrimary)
+                            Spacer(minLength: 8)
+                            if station.id == session.selectedStationID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Theme.primary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    .accessibilityAddTraits(station.id == session.selectedStationID ? .isSelected : [])
                 }
             }
-        } label: {
-            Image(systemName: "tram.fill")
+            .searchable(text: $stationSearch.query, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: Text(verbatim: language.text("Search stations", "搜尋車站")))
+            .navigationTitle(Text(verbatim: language.text("Choose a Station", "選擇車站")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        choosingStation = false
+                    } label: {
+                        Text(verbatim: language.text("Cancel", "取消"))
+                    }
+                }
+            }
         }
-        .accessibilityLabel("Choose a station")
-        .disabled(session.world.stations.isEmpty)
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Real station
@@ -725,6 +790,13 @@ struct StationPanel: View {
 
     private func passengersSection(_ station: Station) -> some View {
         Section {
+            // Decision 179: how many got on and off here yesterday.
+            if let flow = session.world.stationFlowText(at: station.id, in: session.language) {
+                Label(flow, systemImage: "arrow.left.arrow.right")
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .accessibilityIdentifier("station.flow.yesterday")
+            }
             ForEach(session.world.waitingText(at: station.id, in: session.language), id: \.self) { group in
                 Label(group, systemImage: "person.2")
                     .font(.footnote)

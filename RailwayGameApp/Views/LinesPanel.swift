@@ -28,6 +28,16 @@ struct LinesPanel: View {
     /// How often a train should come, for the selected line's trains
     /// (decision 101).
     @State private var staffHeadway: Int64 = 10
+    /// The type and the cars of the trains a line is staffed with or re-formed
+    /// into (decision 180); `nil`: the line's own pick.
+    @State private var staffType: TrainType?
+    @State private var staffCars = 1
+    /// Decision 179: how the lines are ordered, or `nil` for the order
+    /// they were made in.
+    @State private var lineSort: LineReportSort?
+    /// Decision 184: the name typed to find a line, and which lines show.
+    @State private var lineSearch = ListSearch()
+    @State private var lineFilter: LineFilter = .all
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -48,6 +58,7 @@ struct LinesPanel: View {
                 linesSection
                 if let line = session.selectedLine {
                     lineSection(line)
+                    operatingSection(line)
                     stopsSection(line)
                     ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
                         serviceSection(summary, of: line)
@@ -194,7 +205,26 @@ struct LinesPanel: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
             } else {
-                ForEach(session.world.lines) { line in
+                if session.world.lineAccounts != nil, session.world.lines.count > 1 {
+                    lineSortMenu
+                }
+                // Decision 184: a long list can be searched and filtered.
+                if session.world.lines.count >= ListSearchField.minimumRows {
+                    ListSearchField(
+                        search: $lineSearch,
+                        prompt: session.language.text("Search lines or stations", "搜尋路線或車站"),
+                        identifier: "lines.search",
+                        language: session.language
+                    )
+                }
+                if session.world.lines.count > 1, session.world.lineFilters.count > 1 {
+                    lineFilterPicker
+                }
+                let shown = shownLines
+                if shown.isEmpty {
+                    ListSearchEmpty(text: session.language.text("No line matches.", "沒有符合的路線。"))
+                }
+                ForEach(shown) { line in
                     Button {
                         session.selectLine(line.id)
                     } label: {
@@ -207,6 +237,64 @@ struct LinesPanel: View {
         } header: {
             Text("Lines")
         }
+    }
+
+    /// The lines in the order chosen (decision 179).
+    private var sortedLines: [ServiceLine] {
+        guard let lineSort, session.world.lineAccounts != nil else { return session.world.lines }
+        return session.world.lineReports(sortedBy: lineSort).compactMap { session.world.line(id: $0.line) }
+    }
+
+    /// The sorted lines the search and the filter keep (decision 184). A
+    /// filter this world no longer offers counts as all lines.
+    private var shownLines: [ServiceLine] {
+        let filter = session.world.lineFilters.contains(lineFilter) ? lineFilter : .all
+        let search = session.world.lines.count >= ListSearchField.minimumRows ? lineSearch : ListSearch()
+        return session.world.lines(sortedLines, matching: search, filter: filter)
+    }
+
+    private var lineFilterPicker: some View {
+        Picker(selection: $lineFilter) {
+            ForEach(session.world.lineFilters, id: \.self) { filter in
+                Text(verbatim: filter.displayName(in: session.language)).tag(filter)
+            }
+        } label: {
+            Text(verbatim: session.language.text("Show", "顯示"))
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("lines.filter")
+    }
+
+    private var lineSortMenu: some View {
+        Menu {
+            Button {
+                lineSort = nil
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Made order", "建立順序"))
+                } icon: {
+                    Image(systemName: lineSort == nil ? "checkmark" : "")
+                }
+            }
+            ForEach(LineReportSort.allCases, id: \.self) { order in
+                Button {
+                    lineSort = order
+                } label: {
+                    Label {
+                        Text(verbatim: order.displayName(in: session.language))
+                    } icon: {
+                        Image(systemName: lineSort == order ? "checkmark" : "")
+                    }
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: session.language.text("Sort: \(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))", "排序：\(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))"))
+            } icon: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+        }
+        .accessibilityIdentifier("lines.sort")
     }
 
     private func lineRow(_ line: ServiceLine) -> some View {
@@ -245,6 +333,13 @@ struct LinesPanel: View {
                 Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
+                // Decision 179: yesterday's riders, fares, profit and peak.
+                if let report = session.world.lineReport(line.id), !line.isFreight {
+                    Text(verbatim: report.rowText(in: session.language))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(report.yesterday.map { $0.profit < .zero } == true ? Theme.error : Theme.textSecondary)
+                        .accessibilityIdentifier("line.report.\(line.id.rawValue)")
+                }
             }
             Spacer(minLength: 8)
             if line.id == session.selectedLineID {
@@ -256,6 +351,23 @@ struct LinesPanel: View {
     }
 
     // MARK: - The selected line
+
+    /// The selected line's last days (decision 179).
+    @ViewBuilder
+    private func operatingSection(_ line: ServiceLine) -> some View {
+        if let report = session.world.lineReport(line.id), !line.isFreight {
+            Section {
+                LineOperatingCharts(report: report, language: session.language)
+            } header: {
+                Text(verbatim: session.language.text("Operations", "營運"))
+            } footer: {
+                Text(verbatim: session.language.text(
+                    "Profit is fares less this line's own running costs: no interest, buildings or tax. A transfer's fare is shared among the lines it rides by distance.",
+                    "損益是票收減去這條線自己的營運成本，不含利息、建物與稅。轉乘旅客的票價依各段距離分給所搭的路線。"
+                ))
+            }
+        }
+    }
 
     private func lineSection(_ line: ServiceLine) -> some View {
         Section {
@@ -633,7 +745,7 @@ struct LinesPanel: View {
     /// places and assigns them.
     private func staffSection(_ line: ServiceLine) -> some View {
         let language = session.language
-        let plan = session.world.lineStaffingPlan(line.id, headway: staffHeadway)
+        let plan = session.world.lineStaffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars)
         return Section {
             Picker(selection: $staffHeadway) {
                 ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
@@ -644,6 +756,35 @@ struct LinesPanel: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("line.staff.headway")
+            // Decision 180: the type and the cars of the trains it buys.
+            Menu {
+                Button {
+                    staffType = nil
+                } label: {
+                    Text(verbatim: language.text("Line's default", "依路線預設"))
+                }
+                ForEach(session.world.offeredTrainTypes, id: \.self) { candidate in
+                    Button {
+                        staffType = candidate
+                    } label: {
+                        Text(verbatim: Train.typeText(candidate, in: language))
+                        Text(verbatim: session.world.trainTypeCard(candidate).text(in: language))
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: staffType.map { Train.typeText($0, in: language) } ?? language.text("Line's default", "依路線預設"))
+                } icon: {
+                    Image(systemName: "tram")
+                }
+                .font(.footnote)
+            }
+            .accessibilityIdentifier("line.staff.type")
+            Stepper(value: $staffCars, in: Train.minimumCars...Train.maximumCars) {
+                Text(verbatim: language.text("Cars a train: \(staffCars)", "每列節數：\(staffCars)"))
+                    .monospacedDigit()
+            }
+            .accessibilityIdentifier("line.staff.cars")
             if let plan {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: language.text(
@@ -654,11 +795,17 @@ struct LinesPanel: View {
                     Text(verbatim: language.text("Cost \(plan.cost.moneyText)", "費用 \(plan.cost.moneyText)"))
                         .font(.caption)
                         .foregroundStyle(session.world.economy.balance < plan.cost ? Theme.error : Theme.textSecondary)
+                    Text(verbatim: language.text(
+                        "\(plan.pricePerTrain.moneyText) a train, \(plan.dailyCostPerTrain.moneyText) a day to keep on the line",
+                        "每列 \(plan.pricePerTrain.moneyText)，在線上每列每日 \(plan.dailyCostPerTrain.moneyText)"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.staff.plan")
                 Button {
-                    session.staffSelectedLine(headway: staffHeadway)
+                    session.staffSelectedLine(headway: staffHeadway, type: staffType, cars: staffCars)
                 } label: {
                     Label {
                         Text(verbatim: language.text(
@@ -677,6 +824,25 @@ struct LinesPanel: View {
                 .accessibilityIdentifier("line.staff.start")
                 // Decision 125: the tutorial's first line starts here.
                 .tutorialTarget(.staffLine)
+                // Decision 180: the trains already on the line, into this type and cars.
+                if !line.assignedTrains.isEmpty {
+                    Button {
+                        session.reformSelectedLine(type: staffType ?? plan.type, cars: staffCars)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Re-form the line's trains", "整線改編組"))
+                        } icon: {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("line.staff.reform")
+                    .accessibilityHint(Text(verbatim: language.text(
+                        "Trains waiting for their next trip are given the chosen type and cars; trains on a trip are left as they are.",
+                        "正在等下一趟的列車換成選擇的車種與節數；正在行駛的列車維持原樣。"
+                    )))
+                }
             } else {
                 Text(verbatim: language.text(
                     "Build track joining the line's stations, with a platform at each, and its trains can run.",

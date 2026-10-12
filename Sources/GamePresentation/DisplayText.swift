@@ -225,6 +225,11 @@ extension GameError {
             )
         case .unknownStation(let id):
             language.text("There is no station #\(id.rawValue).", "沒有車站 #\(id.rawValue)。")
+        case .trainInService(let id):
+            language.text(
+                "Train #\(id.rawValue) is on the track or on a line. Take it off the line and the track first.",
+                "列車 #\(id.rawValue) 還在軌道或路線上。請先把它從路線與軌道上撤下。"
+            )
         case .trainServiceActive(let id):
             language.text(
                 "Train #\(id.rawValue) is running its timetable. Stop its service first.",
@@ -462,6 +467,15 @@ extension GameError {
             language.text("There is no such attraction.", "沒有這個景點。")
         case .attractionMaxedOut:
             language.text("The souvenir shop is at its top level.", "名產店已經是最高等級。")
+        case .cityRequestsNotEnabled:
+            language.text("This game has no city requests.", "這局遊戲沒有城市委託案。")
+        case .unknownCityRequest:
+            language.text("That request is no longer open.", "這件委託已經不在了。")
+        case .cityRequestLimitReached(let limit):
+            language.text(
+                "The city trusts you with \(limit) request\(limit == 1 ? "" : "s") at a time: finish one first.",
+                "以目前的信賴度，同時只能承接 \(limit) 件委託，先完成一件吧。"
+            )
         case .mapTileNotOwned:
             language.text("You don't own this land yet: buy the tile with Expand the Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
         case .invalidGround:
@@ -669,6 +683,9 @@ extension GameSession {
             return summary
         }
         if let id = selectedBuildingID, let text = buildingInspectorText(of: id) {
+            return text
+        }
+        if let edge = selectedTrackEdge, let text = world.trackInspectionText(of: edge, in: language) {
             return text
         }
         return nil

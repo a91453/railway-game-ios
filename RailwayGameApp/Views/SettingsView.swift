@@ -28,6 +28,9 @@ struct SettingsView: View {
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
     /// Whether the help guide is open (decision 177).
     @State private var showsHelp = false
+    /// Decision 182: the map's time of day and weather, on the device.
+    @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
+    @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
 
     var body: some View {
         NavigationStack {
@@ -46,6 +49,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
                 }
+                mapSection
                 if let session {
                     eventsSection(session)
                     secretarySection(session.language)
@@ -76,6 +80,24 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// Decision 182: whether the map shows the time of day and the weather.
+    private var mapSection: some View {
+        Section {
+            Toggle(isOn: $showsDayNight) {
+                Label("Day and Night", systemImage: "moon.stars")
+            }
+            .accessibilityIdentifier("settings.dayNight")
+            Toggle(isOn: $showsWeather) {
+                Label("Weather Effects", systemImage: "cloud.rain")
+            }
+            .accessibilityIdentifier("settings.weather")
+        } header: {
+            Text("Map")
+        } footer: {
+            Text("Day and night: the map darkens from dusk to dawn as the game's clock turns, and stations, trains and windows light up. Weather effects: rain and lightning on the map on a day of rain or storms, and a typhoon's sign at the stations it hits. With Reduce Motion on, the rain does not fall and nothing flashes.")
         }
     }
 
@@ -271,4 +293,11 @@ struct SettingsView: View {
             String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
         }
     }
+}
+
+/// The keys of the map's time of day and weather (decision 182), shared by
+/// the map and the settings: kept on the device with `@AppStorage`.
+enum MapAmbienceSettings {
+    static let dayNightKey = "map.showsDayNight"
+    static let weatherKey = "map.showsWeather"
 }

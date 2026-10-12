@@ -251,7 +251,9 @@ final class SoundCueTests: XCTestCase {
         }
     }
 
-    func testBuildingTrackSoundsARailJointAndARefusalIsSilent() async throws {
+    /// Since decision 184 a refusal has a sound of its own, not the rail
+    /// joint's.
+    func testBuildingTrackSoundsARailJointAndARefusalSoundsRefused() async throws {
         let world = try makeWorld(width: 16_384, height: 8_192, balance: 1_000_000)
         await MainActor.run {
             let session = GameSession(world: world)
@@ -261,7 +263,8 @@ final class SoundCueTests: XCTestCase {
 
             session.buildNetworkTrack()
             XCTAssertEqual(session.message?.kind, .failure, "no ends picked")
-            XCTAssertEqual(heard, [])
+            XCTAssertEqual(heard, [.refused])
+            heard.removeAll()
 
             session.tapNetwork(at: PlanPoint(x: 2_048, y: 2_048), reach: 512)
             session.tapNetwork(at: PlanPoint(x: 6_144, y: 2_048), reach: 512)

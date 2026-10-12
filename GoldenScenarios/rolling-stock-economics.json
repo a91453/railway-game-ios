@@ -1,0 +1,291 @@
+{
+ "schemaVersion": 71,
+ "description": "Rolling-stock economics (ARCHITECTURE decision 180): a managed company, money in cents, on a track of one 1,024-unit edge (nodes (512, 1536) and (1536, 1536), track 1,000 an edge of 1,024 units). With the switch on, a train costs its type's prices, not costs.train (200,000): Blue, a standard car, costs the first car of type A, $150,000 (15,000,000); refitted to MAGLEV it pays 30 percent of a one-car maglev's $600,000, 18,000,000; set to 4 cars it pays 3 maglev cars of $150,000, 45,000,000. Green (15,000,000) placed on the track cannot be sold (trainInService). Taken off, it is refitted to L (30 percent of $90,000, 2,700,000), set to 2 cars (one L car of $25,000, 2,500,000). Blue is sold at 70 percent of its books: the train's 15,000,000 + 18,000,000 = 33,000,000 brings 23,100,000, its cars' 45,000,000 brings 31,500,000; a second sale is unknownTrain. The balance: 200,000,000 - 15,000,000 - 18,000,000 - 45,000,000 - 15,000,000 - 1,000 - 2,700,000 - 2,500,000 + 54,600,000 = 156,399,000. Every expectation is from tools/golden-checks/rolling_stock.py.",
+ "initialState": {
+  "worldWidth": 8192,
+  "worldHeight": 4096,
+  "balance": 200000000,
+  "costs": {
+   "track": 1000,
+   "station": 50000,
+   "train": 200000
+  },
+  "gameMinutes": 0,
+  "speed": "normal"
+ },
+ "steps": [
+  {
+   "command": {
+    "type": "setEconomyMode",
+    "mode": "management"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setRollingStockEconomics",
+    "enabled": true
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackNode",
+    "x": 512,
+    "y": 1536,
+    "z": 0
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackNode",
+    "x": 1536,
+    "y": 1536,
+    "z": 0
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "buildTrackEdge",
+    "from": 1,
+    "to": 2,
+    "curve": {
+     "type": "straight"
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "purchaseTrain",
+    "name": "Blue"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setTrainType",
+    "train": 1,
+    "trainType": "MAGLEV"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setTrainCars",
+    "train": 1,
+    "cars": 4
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "purchaseTrain",
+    "name": "Green"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "placeTrain",
+    "train": 2,
+    "position": {
+     "type": "edge",
+     "edge": 1,
+     "direction": "forward",
+     "offset": 1024
+    }
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "sellTrain",
+    "train": 2
+   },
+   "expect": {
+    "result": "trainInService",
+    "train": 2
+   }
+  },
+  {
+   "command": {
+    "type": "unplaceTrain",
+    "train": 2
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setTrainType",
+    "train": 2,
+    "trainType": "L"
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "setTrainCars",
+    "train": 2,
+    "cars": 2
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "sellTrain",
+    "train": 1
+   },
+   "expect": {
+    "result": "ok"
+   }
+  },
+  {
+   "command": {
+    "type": "sellTrain",
+    "train": 1
+   },
+   "expect": {
+    "result": "unknownTrain",
+    "train": 1
+   }
+  }
+ ],
+ "expectedFinalState": {
+  "gameMinutes": 0,
+  "speed": "normal",
+  "balance": 156399000,
+  "rollingStockEconomics": true,
+  "stations": [],
+  "trains": [
+   {
+    "id": 2,
+    "name": "Green",
+    "position": {
+     "type": "unplaced"
+    },
+    "movement": {
+     "rate": 0,
+     "cursor": 0,
+     "edges": []
+    },
+    "timetable": [],
+    "repeat": {
+     "type": "once"
+    },
+    "execution": {
+     "type": "inactive"
+    },
+    "cars": 2,
+    "trailEdges": [],
+    "reservation": []
+   }
+  ],
+  "lines": [],
+  "serviceDay": [
+   {
+    "start": 0,
+    "level": "low"
+   },
+   {
+    "start": 420,
+    "level": "peak"
+   },
+   {
+    "start": 600,
+    "level": "offPeak"
+   },
+   {
+    "start": 960,
+    "level": "peak"
+   },
+   {
+    "start": 1200,
+    "level": "offPeak"
+   },
+   {
+    "start": 1260,
+    "level": "low"
+   }
+  ],
+  "network": {
+   "nodes": [
+    {
+     "id": 1,
+     "x": 512,
+     "y": 1536,
+     "z": 0
+    },
+    {
+     "id": 2,
+     "x": 1536,
+     "y": 1536,
+     "z": 0
+    }
+   ],
+   "edges": [
+    {
+     "id": 1,
+     "from": 1,
+     "to": 2,
+     "curve": {
+      "type": "straight"
+     },
+     "length": 1024,
+     "profile": {
+      "startTransition": 0,
+      "endTransition": 0
+     },
+     "structure": "surface"
+    }
+   ],
+   "platforms": []
+  },
+  "trafficControl": false,
+  "passengers": [],
+  "riders": [],
+  "accounts": {
+   "mode": "management",
+   "fareRules": null,
+   "openedAt": 0,
+   "pending": {
+    "fareRevenue": 0,
+    "fareTrips": 0,
+    "departures": 0,
+    "trainDistance": 0,
+    "passengers": 0,
+    "seats": 0
+   },
+   "ledger": [],
+   "days": []
+  }
+ }
+}

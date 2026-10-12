@@ -504,6 +504,14 @@ final class GoldenScenarioTests: XCTestCase {
             return [.typhoons([]), .typhoons([first] + typhoons.dropFirst())]
         case .fuel(nil):
             return []
+        case .cityRequests(nil):
+            return []
+        case .cityRequests(let requests?):
+            var trust = requests
+            trust.trust += 1
+            var owed = requests
+            owed.owed += 100
+            return [.cityRequests(nil), .cityRequests(trust), .cityRequests(owed)]
         case .fuel(let spell?):
             var index = spell
             index.index += 1
@@ -724,6 +732,14 @@ final class GoldenScenarioTests: XCTestCase {
                 wrong.append(.accounts(day))
             }
             return wrong
+        case .lineDays(let days):
+            var wrong: [ObservationAnswer] = [.lineDays([])]
+            if !days.isEmpty {
+                var cost = days
+                cost[0].staffCost += 100
+                wrong += [.lineDays(Array(days.dropFirst())), .lineDays(cost)]
+            }
+            return wrong.filter { $0 != answer }
         case .report(let report):
             var revenue = report
             revenue.current.fareRevenue += 1

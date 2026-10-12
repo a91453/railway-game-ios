@@ -104,9 +104,17 @@ extension GameWorld {
             // Decision 169: a crowded train's doors pass fewer passengers a
             // second, so a full train dwells longer.
             world.setDoorCrowding(true)
+            // Decision 180: trains cost and weigh what their type and cars
+            // do, and are sold back at 70 % of their books.
+            world.setRollingStockEconomics(true)
             // Decision 172: trains are sent out from either end of their
             // line, and one left elsewhere runs empty to an end.
             world.setFlexDispatch(true)
+            // Decision 179: each line keeps its riders, fares and costs of
+            // the last 30 days, and each station its flow of yesterday.
+            // Only a record: it changes nothing in play, so the challenges,
+            // the tutorial and the demos built on a new game keep it.
+            world.setLineAccounts(true)
             // Decision 174: the sights tourists come to, and what they
             // spend in the shops: Taiwan's own on a real-world map (the ones
             // in its bounds; elsewhere none), a few drawn from the seed on a
@@ -134,6 +142,10 @@ extension GameWorld {
             // Decision 155: freight, for a company that builds a yard;
             // decision 156: and building materials.
             world.enableBuildingMaterials()
+            // Decision 183: the city's requests, drawn from the seed once
+            // the map, its sights and its freight are set: the first offers
+            // come at once.
+            world.setCityRequests(seed: eventSeed)
             return world
         } catch {
             // An empty world has no trains to share track, and land and
@@ -227,9 +239,12 @@ public enum DemoWorld {
         // Decision 169: nor do its dwells lengthen in a crowd; the demo's
         // economy is as it was measured.
         world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
+        // Decision 183: nor the city's requests.
+        world.setCityRequests(seed: nil)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

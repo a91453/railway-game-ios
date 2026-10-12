@@ -190,6 +190,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// The scenario's era has no trains of this type (decision 86), or,
     /// `nil`, no standard cars (decision 153).
     case trainTypeUnavailable(TrainType?)
+    /// The train is on the track, on a line or running a service, so it
+    /// cannot be sold (decision 180).
+    case trainInService(TrainID)
     /// A building would share ground with this placed building (decision 92).
     case buildingOverlaps(PlacedBuildingID)
     /// A building would stand on, or too near, this edge's track (decision 92).
@@ -263,4 +266,11 @@ public enum GameError: Error, Hashable, Sendable {
     case unknownAttraction(AttractionID)
     /// The attraction's souvenir shop is at its top level (decision 174).
     case attractionMaxedOut
+    /// A city request command in a world without them (decision 183).
+    case cityRequestsNotEnabled
+    /// No offered or accepted city request has this ID (decision 183).
+    case unknownCityRequest(Int)
+    /// The company already has as many requests in hand as the city's
+    /// trust allows (decision 183).
+    case cityRequestLimitReached(limit: Int)
 }

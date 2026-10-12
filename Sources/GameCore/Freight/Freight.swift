@@ -632,6 +632,18 @@ extension GameWorld {
         freight = state
     }
 
+    /// What train `id` carries is lost, as when its line is taken from it
+    /// (``tickFreight`` at the hour): for a train sold before the hour,
+    /// whose cargo would otherwise name a train that does not exist.
+    mutating func loseCargo(of id: TrainID) {
+        guard var state = freight else { return }
+        for index in state.loads.indices.reversed() where state.loads[index].train == id {
+            state.count(state.loads[index].tons, in: \.lost)
+            state.loads.remove(at: index)
+        }
+        freight = state
+    }
+
     // MARK: - Carrying it
 
     /// Train `index`'s exchange of cargo at stop `stop` of its timetable, as
@@ -660,6 +672,7 @@ extension GameWorld {
                     if group.kind == .materials {
                         state.count(group.tons, in: \.materialsReceived)
                         state.storeMaterials(group.tons, at: here)
+                        countRequestMaterials(group.tons, at: here)
                     }
                     if accounts.mode == .management, let squared = squaredDistance(from: group.origin, to: here) {
                         let fare = Freight.fare(tons: group.tons, distance: FixedPoint.squareRoot(squared))
