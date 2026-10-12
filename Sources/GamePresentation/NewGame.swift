@@ -142,6 +142,10 @@ extension GameWorld {
             // Decision 155: freight, for a company that builds a yard;
             // decision 156: and building materials.
             world.enableBuildingMaterials()
+            // Decision 183: the city's requests, drawn from the seed once
+            // the map, its sights and its freight are set: the first offers
+            // come at once.
+            world.setCityRequests(seed: eventSeed)
             return world
         } catch {
             // An empty world has no trains to share track, and land and
@@ -239,6 +243,8 @@ public enum DemoWorld {
         world.setFlexDispatch(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
+        // Decision 183: nor the city's requests.
+        world.setCityRequests(seed: nil)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

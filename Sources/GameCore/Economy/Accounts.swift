@@ -70,6 +70,9 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// tourists spend in them, in, and their upkeep, out.
     case tourismRevenue
     case tourismUpkeep
+    /// The city's subsidies for requests met (decision 183; native), in,
+    /// paid on the first of the month after each was met.
+    case subsidy
 }
 
 /// One line of a ledger row's breakdown.
@@ -135,6 +138,9 @@ public struct LedgerEntry: Hashable, Sendable {
         case dailySubsidiary
         /// The souvenir shops: takings and upkeep (decision 174).
         case dailyTourism
+        /// The city's subsidies due for requests met (decision 183),
+        /// written as a month begins.
+        case monthlySubsidy
     }
 
     public let kind: Kind
@@ -201,7 +207,7 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .subsidiarySales: propertyRevenue = propertyRevenue + line.amount
+            case .propertyRent, .tourismRevenue, .subsidiarySales, .subsidy: propertyRevenue = propertyRevenue + line.amount
             case .propertyUpkeep, .tourismUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
