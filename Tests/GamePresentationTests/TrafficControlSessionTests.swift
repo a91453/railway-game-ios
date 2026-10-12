@@ -208,7 +208,7 @@ final class TrafficControlSessionTests: XCTestCase {
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(
-                kind: .failure, text: "Train #2 holds that track under traffic control. Wait for it to clear the route."
+                kind: .failure, text: "Train #2's route runs over that track. Wait for it to pass."
             ))
         }
     }
