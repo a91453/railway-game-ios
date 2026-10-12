@@ -1,5 +1,5 @@
 import Foundation
-import GameCore
+@testable import GameCore
 import GamePresentation
 import XCTest
 
@@ -116,6 +116,9 @@ final class BalanceReportTests: XCTestCase {
         for day in 1...days {
             try world.advance(ticks: 1_440)
             if day == 30 {
+                // A first line cannot yet pay $7.3 million for a store: the
+                // cash is topped up so the measure is of the trade alone.
+                world.economy.earn(Money(3_000_000_000))
                 for (kind, site) in sites {
                     let quote = try XCTUnwrap(world.placedBuildingQuote(kind, at: site))
                     do {

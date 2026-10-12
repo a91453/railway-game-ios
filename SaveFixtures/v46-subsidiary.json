@@ -121,21 +121,21 @@
           "fareRevenue" : 0,
           "maintenanceCost" : 0,
           "operatingCost" : 0,
-          "propertyCost" : 868491,
-          "propertyRevenue" : 1288700,
+          "propertyCost" : 701741,
+          "propertyRevenue" : 1011700,
           "staffCost" : 0
         }
       ],
       "entries" : [
         {
-          "amount" : 458046,
+          "amount" : 347796,
           "breakdown" : [
             {
-              "amount" : 1288700,
+              "amount" : 1011700,
               "item" : "subsidiarySales"
             },
             {
-              "amount" : -830654,
+              "amount" : -663904,
               "item" : "subsidiaryCost"
             }
           ],
@@ -183,7 +183,7 @@
       "speed" : "x10"
     },
     "economy" : {
-      "balance" : 803291609,
+      "balance" : 803181359,
       "costs" : {
         "station" : 1000,
         "track" : 100,
@@ -400,8 +400,8 @@
         "books" : {
           "closed" : [
             {
-              "cost" : 310043,
-              "sales" : 430200
+              "cost" : 216443,
+              "sales" : 286200
             }
           ],
           "month" : 1,
@@ -409,8 +409,8 @@
             "cost" : 400,
             "sales" : 1000
           },
-          "totalCost" : 310443,
-          "totalSales" : 431200
+          "totalCost" : 216843,
+          "totalSales" : 287200
         },
         "buildingCost" : 73728000,
         "centre" : {
@@ -450,8 +450,8 @@
         "books" : {
           "closed" : [
             {
-              "cost" : 319613,
-              "sales" : 535500
+              "cost" : 246463,
+              "sales" : 402500
             }
           ],
           "month" : 1,
@@ -459,8 +459,8 @@
             "cost" : 400,
             "sales" : 1000
           },
-          "totalCost" : 320013,
-          "totalSales" : 536500
+          "totalCost" : 246863,
+          "totalSales" : 403500
         },
         "buildingCost" : 50176000,
         "centre" : {

@@ -17,7 +17,7 @@ public enum SubsidiaryRules {
     /// What a department store takes of the trips of the stations in reach,
     /// in thousandths; a shopping station's trips count one and a half
     /// times.
-    public static let departmentStoreCapture: Int64 = 60
+    public static let departmentStoreCapture: Int64 = 40
     public static let departmentStoreShoppingTenths: Int64 = 15
     /// What a hotel takes, in thousandths, of the trips that start outside
     /// the city (an outside connection, or an intercity station: its daily
@@ -31,7 +31,7 @@ public enum SubsidiaryRules {
     /// What an amusement park takes, in thousandths, of all the trips of
     /// the stations in reach, and of the trips of the other stations on the
     /// lines that call at them.
-    public static let parkCapture: Int64 = 40
+    public static let parkCapture: Int64 = 30
     public static let parkLineCapture: Int64 = 5
     /// What a customer spends, in cents.
     public static func spend(of kind: PlacedBuildingKind) -> Int64 {

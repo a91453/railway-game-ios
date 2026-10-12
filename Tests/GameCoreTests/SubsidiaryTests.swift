@@ -70,26 +70,26 @@ final class SubsidiaryTests: XCTestCase {
 
     // MARK: - A day's trade
 
-    /// 1,000 trips at Alpha, a shopping station: 1,000 × 60‰ × 1.5 × the
-    /// weight of 3,200 units (997) = 89.7, 89 customers at $18.
+    /// 1,000 trips at Alpha, a shopping station: 1,000 × 40‰ × 1.5 × the
+    /// weight of 3,200 units (997) = 59.8, 59 customers at $18.
     func testADepartmentStoreTakesItsShareOfTheStationsTrips() throws {
         var world = try makeWorld()
         let store = try place(.departmentStore, 0, 3_200, in: &world)
         XCTAssertEqual(weight(0, 3_200), 997)
-        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 89)
+        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 59)
         let day = world.subsidiaryDay(of: store, onDay: 0)
-        XCTAssertEqual(day.sales, Money(89 * 1_800))
+        XCTAssertEqual(day.sales, Money(59 * 1_800))
         // 65 % of the sales, and 0.04 % of what it cost, rounded up.
         let staff = (store.cost.amount * 4 + 9_999) / 10_000
-        XCTAssertEqual(day.cost, Money(89 * 1_800 * 65 / 100 + staff))
+        XCTAssertEqual(day.cost, Money(59 * 1_800 * 65 / 100 + staff))
     }
 
     /// A trade that is not shopping counts one tenth less: an office
-    /// station's 1,000 trips make 1,000 × 60‰ × 997 = 59.8, 59 customers.
+    /// station's 1,000 trips make 1,000 × 40‰ × 997 = 39.9, 39 customers.
     func testAShoppingStationDrawsOneAndAHalfTimesTheTrips() throws {
         var world = try makeWorld(alphaKind: .office)
         let store = try place(.departmentStore, 0, 3_200, in: &world)
-        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 59)
+        XCTAssertEqual(world.subsidiaryCustomers(of: store, onDay: 0), 39)
     }
 
     /// A hotel takes 10‰ of a scenic station's 2,000 trips at a weight of 999: 19.98.
@@ -104,14 +104,14 @@ final class SubsidiaryTests: XCTestCase {
         XCTAssertEqual(homes.subsidiaryCustomers(of: empty, onDay: 0), 0)
     }
 
-    /// An amusement park takes 40‰ of all the trips in reach, 1,000 × 40‰ ×
-    /// 987 = 39.5, and 5‰ of the other stops of the line (Gamma has none).
+    /// An amusement park takes 30‰ of all the trips in reach, 1,000 × 30‰ ×
+    /// 987 = 29.6, and 5‰ of the other stops of the line (Gamma has none).
     func testAnAmusementParkTakesAllTheTripsInReach() throws {
         var world = try makeWorld(alphaKind: .residential)
         let park = try place(.amusementPark, 3_600, 4_800, in: &world)
         XCTAssertEqual(weight(3_600, 4_800), 987)
-        // 1,000 × 40 × 10 × 987 = 394,800,000 → 39.
-        XCTAssertEqual(world.subsidiaryCustomers(of: park, onDay: 0), 39)
+        // 1,000 × 30 × 10 × 987 = 296,100,000 → 29.
+        XCTAssertEqual(world.subsidiaryCustomers(of: park, onDay: 0), 29)
         try world.setStationDemand(gamma, to: StationDemand(kind: .office, dailyTrips: 0))
     }
 
@@ -127,15 +127,15 @@ final class SubsidiaryTests: XCTestCase {
     func testSubsidiariesOfAKindWithinReachShareTheCustomers() throws {
         var world = try makeWorld()
         let first = try place(.departmentStore, 0, 3_200, in: &world)
-        XCTAssertEqual(world.subsidiaryCustomers(of: first, onDay: 0), 89, "alone")
+        XCTAssertEqual(world.subsidiaryCustomers(of: first, onDay: 0), 59, "alone")
         let second = try place(.departmentStore, 0, 6_400, in: &world)
         let alone = world.subsidiaryCustomers(of: first, onDay: 0)
         let shared = world.subsidiaryCustomers(of: second, onDay: 0)
-        // 1,000 × 900 × 997 ÷ 10,000,000 = 89.7 and × 985 = 88.6, each
-        // halved: 44.
+        // 1,000 × 600 × 997 ÷ 10,000,000 = 59.8 and × 985 = 59.1, each
+        // halved: 29.
         XCTAssertEqual(weight(0, 6_400), 985)
-        XCTAssertEqual(alone, 44, "the first now shares with the second")
-        XCTAssertEqual(shared, 44)
+        XCTAssertEqual(alone, 29, "the first now shares with the second")
+        XCTAssertEqual(shared, 29)
     }
 
     // MARK: - The books
