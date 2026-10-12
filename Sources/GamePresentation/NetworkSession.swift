@@ -238,6 +238,14 @@ extension GameSession {
         guard let (from, to) = endPositions(from: start, to: end, in: world) else {
             return .failure(.missingNode)
         }
+        // A turnout splits the track, and GameCore splits level track only:
+        // say so, rather than its general refusal (decision 190).
+        for anchor in [start, end] {
+            if case .track(let point) = anchor, let edge = world.network.edge(point.edge), let geometry = world.trackGeometry(of: point.edge),
+               geometry.startHeight != geometry.endHeight || edge.profile != .uniform {
+                return .failure(.slopedTurnout)
+            }
+        }
         let isNewPoint: (NetworkAnchor) -> Bool = { if case .node = $0 { false } else { true } }
         if isNewPoint(start) || isNewPoint(end) {
             let dx = to.x - from.x, dy = to.y - from.y
@@ -333,12 +341,13 @@ extension GameSession {
         return max(1, (rise * 1_000 + run / 2) / run)
     }
 
-    /// Why a platform cannot stand on track that climbs `grade` per mille,
-    /// and what to do (decision 164).
-    func platformGradeText(_ grade: Int64) -> String {
+    /// Why the stretch on track that climbs `grade` per mille cannot be
+    /// levelled for a platform (decision 190), `problem` being the reason,
+    /// and what to do instead (decision 164).
+    func platformGradeText(_ grade: Int64, problem: String) -> String {
         language.text(
-            "This track climbs about \(grade)‰, and a platform needs level track. Lay a stretch on flatter ground: where the ground differs by 2 m or less, new track is laid level.",
-            "這段軌道有約 \(grade)‰ 的坡度，月台要放在水平的軌道上。請在較平的地方重新鋪一段：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
+            "This track climbs about \(grade)‰ and cannot be levelled for a platform: \(problem) Or lay a short stretch (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.",
+            "這段軌道有約 \(grade)‰ 的坡度，無法整平放月台：\(problem)或在這裡另鋪一段約 100 公尺的短軌道再放月台：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。"
         )
     }
 
@@ -403,19 +412,48 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。"))
             return
         }
-        // Decision 164: say why a platform cannot stand on a grade, and
-        // what to do, rather than GameCore's general refusal.
+        // Decision 190: on a grade, the stretch is levelled first, in the
+        // same edit; where it cannot be, say why (decision 164).
+        var levelling: PlatformLevelling?
         if let grade = networkPlatformGrade {
-            message = StatusMessage(kind: .failure, text: platformGradeText(grade))
-            return
+            switch platformLevelling(of: stretch.edge, from: stretch.start, to: stretch.end, in: world) {
+            case .success(let found): levelling = found
+            case .failure(let problem):
+                message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: problem.text(in: language)))
+                return
+            }
         }
-        let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
+        var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
+        if let levelling, let level = levelling.legs.dropFirst(levelling.levelLeg).first {
+            middle = PlanPoint(x: (level.from.x + level.to.x) / 2, y: (level.from.y + level.to.y) / 2)
+        }
         let chosen = platformStationID.flatMap { world.station(id: $0) }
         let name = stationName
         let demand = newStationDemand(at: middle)
         var built: StationID?
+        let grade = networkPlatformGrade
+        var levellingRefused: String?
         let added = perform { world throws(GameError) in
             var draft = world
+            // The platform's stretch, on the level edge once levelled.
+            var stretch = stretch
+            var levelled = ""
+            if let levelling, let grade {
+                let balance = draft.economy.balance
+                let edge: TrackEdgeID
+                do throws(GameError) { edge = try build(levelling, in: &draft) } catch {
+                    // GameCore's reason, said with the grade it was to level.
+                    levellingRefused = platformGradeText(grade, problem: error.playerMessage(in: language))
+                    throw error
+                }
+                let length = draft.network.edge(edge)?.length ?? 0
+                stretch = (edge, 0, length)
+                let cost = Money(balance.amount - draft.economy.balance.amount)
+                levelled = language.text(
+                    " Levelled \(NetworkBuilding.lengthText(length, in: language)) of track for it, for \(cost.moneyText).",
+                    "已為月台整平 \(NetworkBuilding.lengthText(length, in: language)) 軌道，花費 \(cost.moneyText)。"
+                )
+            }
             let station: Station
             if let chosen {
                 station = chosen
@@ -438,11 +476,14 @@ extension GameSession {
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                ) + openingReach(of: station, in: draft)
+                ) + levelled + openingReach(of: station, in: draft)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
-                )
+                ) + levelled
+        }
+        if let levellingRefused {
+            message = StatusMessage(kind: .failure, text: levellingRefused)
         }
         if added {
             notePutUp(at: middle)
@@ -580,6 +621,9 @@ enum NetworkProblem: Error {
     case tooClose
     /// A turn of more than 90° from the track joined to the other end.
     case tooSharp
+    /// A turnout on track that climbs or falls, which GameCore cannot
+    /// split.
+    case slopedTurnout
 
     func text(in language: DisplayLanguage) -> String {
         switch self {
@@ -594,6 +638,11 @@ enum NetworkProblem: Error {
             language.text(
                 "That turns too sharply: from the track it continues, new track may turn at most 90° toward the other end.",
                 "小於最小轉彎半徑：從相接的軌道朝另一端，新的軌道最多只能轉 90 度。"
+            )
+        case .slopedTurnout:
+            language.text(
+                "A turnout goes on level track only, and this track climbs or falls. Start from a node at its end, or from level track.",
+                "轉轍器只能設在水平的軌道上，這段軌道有坡度。請從它端點的節點，或從水平的軌道接出。"
             )
         }
     }
@@ -736,12 +785,10 @@ extension GameSession {
                 "\(length) platform on \(stretch.edge.displayText(in: language).lowercased()), \(stretch.start)–\(stretch.end) units along",
                 "\(stretch.edge.displayText(in: language)) 上 \(length) 的月台，距起點 \(stretch.start)–\(stretch.end) 單位"
             )
-            // Decision 164: a grade says so before the tap on ✓.
-            guard let grade = networkPlatformGrade else { return place }
-            return place + language.text(
-                " · climbs \(grade)‰: a platform needs level track",
-                " · 坡度 \(grade)‰：月台要放在水平的軌道上"
-            )
+            // Decision 164: a grade says so before the tap on ✓; decision
+            // 190: and that ✓ levels it, for what.
+            guard let levelling = networkPlatformLevelling else { return place }
+            return place + " · " + levelling.text(in: language)
         case .remove:
             guard let edge = networkEdgePoint?.edge else {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
@@ -778,6 +825,14 @@ extension NetworkPreview {
         }
         if let cost {
             parts.append(cost.moneyText)
+        }
+        // Decision 190: a grade takes no platform as it is; the platform
+        // tool levels it.
+        if startHeight != endHeight {
+            parts.append(language.text(
+                "on a grade: a platform here is levelled first",
+                "有坡度：在這裡設月台時會先整平"
+            ))
         }
         return parts.joined(separator: " · ")
     }

@@ -155,37 +155,182 @@ final class TerrainPresentationTests: XCTestCase {
 
     /// The ends' ground 3.75 m apart, more than the 2 m the track may stand
     /// off it level: the stretch climbs as before (11.25 m to 15 m, 720 to
-    /// 960), eased at both ends, and the platform tool says the grade and
-    /// what to do rather than GameCore's general refusal.
-    func testTrackOnSlopingGroundClimbsAndThePlatformToolSaysWhy() throws {
+    /// 960), eased at both ends. Decision 190: the platform tool says the
+    /// grade and that ✓ levels it; ✓ lays the edge again as three, the
+    /// middle one level under the platform, for the new edges' price, and
+    /// one undo takes it all back.
+    func testAPlatformOnAGradeLevelsItsStretch() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual([preview.startHeight, preview.endHeight], [720, 960])
         XCTAssertEqual(preview.profile, TrackProfile(startTransition: 4_096, endTransition: 4_096))
+        XCTAssertTrue(preview.text(in: .english).hasSuffix(" · on a grade: a platform here is levelled first"), preview.text(in: .english))
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let built = session.world
 
         session.setNetworkMode(.platform)
         // The middle half's steady grade: 4/3 of 240 over 16,384, 19.5‰.
         session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
-        let grade = try XCTUnwrap(session.networkPlatformGrade)
-        XCTAssertEqual(grade, 20)
-        XCTAssertTrue(session.networkDraftText().hasSuffix(" · climbs 20‰: a platform needs level track"), session.networkDraftText())
-        let before = session.world
-        session.addNetworkPlatform()
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: """
-            This track climbs about 20‰, and a platform needs level track. Lay a stretch on flatter ground: \
-            where the ground differs by 2 m or less, new track is laid level.
-            """))
-        XCTAssertEqual(session.world, before)
+        XCTAssertEqual(session.networkPlatformGrade, 20)
+        let stretch = try XCTUnwrap(session.networkPlatformStretch)
+        let levelling = try XCTUnwrap(session.networkPlatformLevelling)
+        XCTAssertNil(levelling.problem)
+        XCTAssertEqual(levelling.length, stretch.end - stretch.start)
+        let cost = try XCTUnwrap(levelling.cost)
+        let metres = NetworkBuilding.lengthText(levelling.length, in: .english)
+        XCTAssertTrue(
+            session.networkDraftText().hasSuffix(" · climbs 20‰: ✓ levels these \(metres) (relaying the track \(cost.moneyText))"),
+            session.networkDraftText()
+        )
+        let height = try XCTUnwrap(built.trackGeometry(of: stretch.edge)?.height(at: (stretch.start + stretch.end) / 2))
 
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertTrue(session.message?.text.contains(" Levelled \(metres) of track for it, for \(cost.moneyText).") == true,
+                      session.message?.text ?? "")
+        let world = session.world
+        XCTAssertNil(world.network.edge(stretch.edge), "the old edge is gone")
+        XCTAssertEqual(world.network.edges.count, 3)
+        let edges = world.network.edges.map(\.id)
+        let geometries = try edges.map { try XCTUnwrap(world.trackGeometry(of: $0)) }
+        // From the old start, through the stretch, to the old end.
+        XCTAssertEqual(geometries.map(\.startHeight), [720, height, height])
+        XCTAssertEqual(geometries.map(\.endHeight), [height, height, 960])
+        let station = try XCTUnwrap(world.stations.first)
+        XCTAssertEqual(world.trackPlatforms(of: station.id), [
+            TrackPlatform(station: station.id, edge: edges[1], start: 0, end: geometries[1].length),
+        ])
+        // The new edges run on through each other and join nothing else.
+        for (index, edge) in edges.enumerated() {
+            let ends = try XCTUnwrap(world.network.edge(edge))
+            let exits = [ends.from, ends.to].flatMap { world.network.node($0)?.end(of: edge)?.exits ?? [] }
+            XCTAssertEqual(Set(exits), Set([index > 0 ? edges[index - 1] : nil, index < 2 ? edges[index + 1] : nil].compactMap(\.self)))
+        }
+        // Paid: the station and the three new edges; the old one is not
+        // refunded.
+        let edgeCosts = try edges.map { try XCTUnwrap(world.longSection(of: $0)).cost.total.amount }.reduce(0, +)
+        XCTAssertEqual(edgeCosts, cost.amount)
+        XCTAssertEqual(built.economy.balance.amount - world.economy.balance.amount, cost.amount + Self.costs.station.amount)
+
+        session.undo()
+        XCTAssertEqual(session.world, built, "one undo takes back the levelling with the platform")
+    }
+
+    /// The same, in Chinese.
+    func testThePlatformToolSaysItLevelsInChinese() throws {
+        let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        session.buildNetworkTrack()
         let chinese = GameSession(world: session.world, language: .traditionalChinese)
         chinese.selectTool(.network)
         chinese.setNetworkMode(.platform)
         chinese.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
-        XCTAssertTrue(chinese.networkDraftText().hasSuffix(" · 坡度 20‰：月台要放在水平的軌道上"), chinese.networkDraftText())
+        let levelling = try XCTUnwrap(chinese.networkPlatformLevelling)
+        let cost = try XCTUnwrap(levelling.cost)
+        let metres = NetworkBuilding.lengthText(levelling.length, in: .traditionalChinese)
+        XCTAssertTrue(
+            chinese.networkDraftText().hasSuffix(" · 坡度 20‰：按 ✓ 會把這 \(metres)整平（重鋪這段軌道 \(cost.moneyText)）"),
+            chinese.networkDraftText()
+        )
+        XCTAssertEqual(levelling.caption(in: .traditionalChinese), "坡度 20‰：整平 \(metres)")
         chinese.addNetworkPlatform()
-        XCTAssertEqual(chinese.message?.text, "這段軌道有約 20‰ 的坡度，月台要放在水平的軌道上。請在較平的地方重新鋪一段：地面高低差在 2 公尺以內，新鋪的軌道會是水平的。")
+        XCTAssertEqual(chinese.message?.kind, .success, chinese.message?.text ?? "")
+        XCTAssertTrue(chinese.message?.text.contains("已為月台整平 \(metres) 軌道，花費 \(cost.moneyText)。") == true, chinese.message?.text ?? "")
+    }
+
+    /// A curve on the grade is cut by de Casteljau's rule: three curves
+    /// along the old one, joined end to end, the middle one level.
+    func testAPlatformOnACurvedGradeLevelsAlongTheCurve() throws {
+        let laid = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        laid.buildNetworkTrack()
+        var world = laid.world
+        let straight = try XCTUnwrap(world.network.edges.first)
+        try world.removeTrackEdge(straight.id)
+        let curve = TrackCurve.cubic(PlanPoint(x: 6_144, y: Self.row + 2_048), PlanPoint(x: 12_288, y: Self.row + 2_048))
+        let eased = TrackProfile(startTransition: 4_096, endTransition: 4_096)
+        let edge = try world.buildTrackEdge(from: straight.from, to: straight.to, curve: curve, profile: eased, structure: .automatic)
+        let old = try XCTUnwrap(world.trackGeometry(of: edge))
+
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.setNetworkMode(.platform)
+        let middle = old.location(at: old.length / 2).position.plan
+        session.tapNetwork(at: middle, reach: 16)
+        let stretch = try XCTUnwrap(session.networkPlatformStretch)
+        XCTAssertEqual(stretch.edge, edge)
+        XCTAssertNotNil(session.networkPlatformGrade)
+        XCTAssertNil(session.networkPlatformLevelling?.problem)
+        session.addNetworkPlatform()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+
+        let after = session.world
+        let edges = after.network.edges
+        XCTAssertEqual(edges.count, 3)
+        for part in edges {
+            guard case .cubic = part.curve else { return XCTFail("\(part.id) is not a curve") }
+        }
+        let level = try XCTUnwrap(after.trackGeometry(of: edges[1].id))
+        XCTAssertEqual(level.startHeight, level.endHeight)
+        // The cuts lie on the old curve, where the stretch began and ended.
+        for (point, distance) in [(level.points.first, stretch.start), (level.points.last, stretch.end)] {
+            let cut = try XCTUnwrap(point).plan, was = old.location(at: distance).position.plan
+            XCTAssertLessThan(Self.distance(cut, was), 64, "\(cut) vs \(was)")
+        }
+        // Each sample of the new track within a metre of the old, in plan.
+        for part in edges {
+            for point in try XCTUnwrap(after.trackGeometry(of: part.id)).points {
+                let nearest = old.points.map { Self.distance($0.plan, point.plan) }.min() ?? .infinity
+                XCTAssertLessThan(nearest, 64)
+            }
+        }
+        // Joined end to end.
+        XCTAssertEqual(after.network.node(edges[1].from)?.end(of: edges[1].id)?.exits, [edges[0].id])
+        XCTAssertEqual(after.network.node(edges[1].to)?.end(of: edges[1].id)?.exits, [edges[2].id])
+    }
+
+    private static func distance(_ a: PlanPoint, _ b: PlanPoint) -> Double {
+        let dx = Double(a.x - b.x), dy = Double(a.y - b.y)
+        return (dx * dx + dy * dy).squareRoot()
+    }
+
+    /// A turnout on track that climbs: the network tool says GameCore
+    /// splits level track only, rather than its general refusal.
+    func testATurnoutOnAGradeSaysWhy() throws {
+        let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        session.buildNetworkTrack()
+        session.clearNetworkDraft()
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row + 4_096), reach: 16)
+        XCTAssertEqual(
+            session.networkPreview?.problem,
+            "A turnout goes on level track only, and this track climbs or falls. Start from a node at its end, or from level track."
+        )
+    }
+
+    /// A train on the edge: GameCore refuses to take it up, so the stretch
+    /// is not levelled, and the tool says why with the grade, and what to
+    /// do instead.
+    func testAPlatformOnAGradeWithATrainOnItIsRefused() throws {
+        let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        session.buildNetworkTrack()
+        var world = session.world
+        let edge = try XCTUnwrap(world.network.edges.first?.id)
+        let train = try world.purchaseTrain(named: "Test").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: edge, direction: .forward), offset: 2_048))
+        let placed = GameSession(world: world)
+        placed.selectTool(.network)
+        placed.setNetworkMode(.platform)
+        placed.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
+        let levelling = try XCTUnwrap(placed.networkPlatformLevelling)
+        XCTAssertNil(levelling.cost)
+        let reason = GameError.trackReserved(train).playerMessage(in: .english)
+        XCTAssertEqual(levelling.problem, reason)
+        placed.addNetworkPlatform()
+        XCTAssertEqual(placed.message, StatusMessage(kind: .failure, text: """
+            This track climbs about 20‰ and cannot be levelled for a platform: \(reason) Or lay a short stretch \
+            (about 100 m) here and put the platform on it: where the ground differs by 2 m or less, new track is laid level.
+            """))
+        XCTAssertEqual(placed.world, world)
     }
 
     // MARK: - The height and steep slope layer

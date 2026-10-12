@@ -53,6 +53,9 @@ public final class GameSession {
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
+    /// The levelling of the platform's stretch, kept likewise (see
+    /// ``networkPlatformLevelling``).
+    @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
@@ -351,7 +354,10 @@ public final class GameSession {
     /// file. It can arrive after a game opened: a track preview worked out
     /// without it is worked out again.
     @ObservationIgnored public var heights: HeightGrid? {
-        didSet { networkPreviewMemo = nil }
+        didSet {
+            networkPreviewMemo = nil
+            platformLevellingMemo = nil
+        }
     }
 
     /// How much of the ground real buildings cover (decision 147), read in

@@ -177,7 +177,8 @@ extension GameSession {
             return mode == .platform && newStationCount(since: before) >= 1
         case .pickPlatformSite(let count):
             if newStationCount(since: before) >= count { return true }
-            return platformSitePlanPoint != nil && networkPlatformStretch != nil && platformStationID == nil && networkPlatformGrade == nil
+            return platformSitePlanPoint != nil && networkPlatformStretch != nil && platformStationID == nil
+                && networkPlatformLevelling?.problem == nil
         case .buildStation(let count):
             return newStationCount(since: before) >= count
         case .startPickingStops:
@@ -270,8 +271,9 @@ extension GameSession {
                     "這裡會併入「\(station.name)」，請點軌道上更遠的地方。"
                 ), isProblem: true)
             }
-            if let grade = networkPlatformGrade {
-                return TutorialHint(platformGradeText(grade), isProblem: true)
+            // Decision 190: ✓ levels a grade, unless it cannot.
+            if let levelling = networkPlatformLevelling, let problem = levelling.problem {
+                return TutorialHint(platformGradeText(levelling.grade, problem: problem), isProblem: true)
             }
             if !world.land.isEmpty, let catchment = platformSiteCatchment, catchment.residents + catchment.jobs == 0 {
                 return TutorialHint(language.text(

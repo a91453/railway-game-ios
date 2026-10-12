@@ -98,6 +98,80 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertFalse(app.buttons["map.style"].exists)
     }
 
+    /// Decision 190's report (TestFlight 54.1): on a real-world map, a
+    /// phone on its side, a tall banner under the top controls (here the
+    /// largest accessibility text, which makes every card and the pill
+    /// tall) left no room between it and the dock, and the platform's ✓
+    /// went half under the dock. The ✓ stays whole and above the dock.
+    /// Full lane only (not in the pull request gate).
+    func testThePlatformConfirmStaysAboveTheDockUnderATallBanner() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
+        tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei").tap()
+        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+
+        let build = app.buttons["dock.build"]
+        tappable(app.buttons.matching(identifier: "dock.build"), name: "dock.build").tap()
+        let network = app.buttons["tool.network"]
+        network.waitUntilSettled()
+        network.tap()
+
+        // A stretch across the middle of the map between the top controls
+        // and the dock, its ends tapped and built with the map's ✓ (or, where
+        // the details card stays open, its Build Track button).
+        let hudBottom = app.buttons["hud.menu"].frame.maxY
+        let dockTop = build.frame.minY
+        let middle = (hudBottom + dockTop) / 2
+        let frame = map.frame.intersection(app.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        func point(_ fraction: CGFloat) -> XCUICoordinate {
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+        }
+        point(0.3).tap()
+        point(0.55).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
+        let builder = confirm.waitForExistence(timeout: 10) ? confirm : card
+        XCTAssertTrue(builder.waitForExistence(timeout: 10), "No way to build the stretch")
+        XCTAssertTrue(builder.isHittable, "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
+        builder.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Built Edge'")).firstMatch
+            .waitForExistence(timeout: 10), "The stretch was not built")
+
+        // The platform mode, from the details card (opened if folded).
+        let platform = app.buttons["Platform"]
+        if !platform.waitForExistence(timeout: 3) || !platform.isHittable {
+            let controls = app.buttons["controls.toggle"]
+            if controls.exists { controls.tap() }
+        }
+        XCTAssertTrue(platform.waitForExistence(timeout: 10), "No Platform mode")
+        platform.waitUntilSettled()
+        platform.tap()
+        // On the track: the platform's site, its pill and its ✓.
+        let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
+        site.tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the platform")
+        confirm.waitUntilSettled()
+        XCTAssertTrue(confirm.isHittable, "The platform's ✓ cannot be tapped: \(confirm.frame)")
+        XCTAssertLessThanOrEqual(confirm.frame.maxY, app.buttons["dock.build"].frame.minY,
+                                 "The platform's ✓ goes under the dock: \(confirm.frame), dock \(app.buttons["dock.build"].frame)")
+        let cancel = app.buttons["map.build.cancel"]
+        XCTAssertTrue(cancel.isHittable, "The platform's ✕ cannot be tapped: \(cancel.frame)")
+        XCTAssertLessThanOrEqual(cancel.frame.maxY, app.buttons["dock.build"].frame.minY)
+    }
+
     /// The copy of a button the player can touch. Existence can come before
     /// a menu or screen transition ends, and `ViewThatFits` can also expose
     /// an unplaced copy of a menu action, so `firstMatch` alone may not be

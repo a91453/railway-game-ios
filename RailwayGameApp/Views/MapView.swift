@@ -465,7 +465,7 @@ struct MapView: View {
                     MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
                         top: max(clear.top, topColumnDepth), leading: clear.leading,
                         bottom: clear.bottom, trailing: clear.trailing
-                    ))
+                    ), mapTop: clear.top)
                     // Its flags and ring are where the track and the site
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
