@@ -284,12 +284,25 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         Thread.sleep(forTimeInterval: 1)
         let rows = app.buttons.matching(NSPredicate(format: "label == %@", name))
         func shown() -> Bool { rows.firstMatch.exists && rows.allElementsBoundByIndex.contains { $0.isHittable } }
-        for _ in 0..<10 where !shown() {
-            guard let visible = menuRows.allElementsBoundByIndex.last(where: { $0.isHittable }) else { break }
-            let from = visible.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -120)), withVelocity: .slow, thenHoldForDuration: 0.3)
+        // What the menu shows, for the log and a failure message.
+        func listed() -> String {
+            menuRows.allElementsBoundByIndex.map { "\($0.label) \($0.isHittable ? "hittable" : "hidden") \($0.frame)" }.joined(separator: "; ")
         }
-        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name)")
+        // The menu may list the trains either way round from its button
+        // (it opens up or down): swipe one way, then the other.
+        for attempt in 0..<12 where !shown() {
+            print("chooseTrain(\(name)) attempt \(attempt): \(listed())")
+            let hittable = menuRows.allElementsBoundByIndex.filter { $0.isHittable }
+            guard let first = hittable.first, let last = hittable.last else { break }
+            if attempt < 6 {
+                let from = last.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: -120)), withVelocity: .slow, thenHoldForDuration: 0.3)
+            } else {
+                let from = first.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                from.press(forDuration: 0.1, thenDragTo: from.withOffset(CGVector(dx: 0, dy: 120)), withVelocity: .slow, thenHoldForDuration: 0.3)
+            }
+        }
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), "The train menu does not show \(name); it shows: \(listed())")
         let row = requiredButton(rows, name: name)
         touchMenuRow(row, closing: rows, in: app, name: name)
         waitForLabel("Train: \(name)", of: app.buttons.matching(identifier: "train.picker").firstMatch)
