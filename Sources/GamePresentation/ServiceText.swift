@@ -132,14 +132,17 @@ extension GameWorld {
     /// What kind of service calls at `calls` of `line`, with its ends:
     /// "All stops A–D" for every stop, "Short working B–C" for a run of
     /// neighbouring stops short of the ends, "Express A–D" when it leaves
-    /// stops out.
+    /// stops out. In Chinese, Taiwan's words (the author's list of
+    /// 2026-10-12): 各站停車, 短程班次, and for an express 直達車 when it
+    /// calls at its two ends only, else 快速列車; not 普通車, 區間車 or
+    /// 快車, which in Taiwan name kinds of train.
     func serviceTitle(of line: ServiceLine, calls: [Int], in language: DisplayLanguage) -> String {
         let ends = "\(stationName(line.stops[calls[0]]))–\(stationName(line.stops[calls[calls.count - 1]]))"
         let passes = calls.count < calls[calls.count - 1] - calls[0] + 1
-        if passes { return language.text("Express ", "快車 ") + ends }
+        if passes { return language.text("Express ", calls.count == 2 ? "直達車 " : "快速列車 ") + ends }
         return calls.count == line.stops.count
-            ? language.text("All stops ", "普通車 ") + ends
-            : language.text("Short working ", "區間車 ") + ends
+            ? language.text("All stops ", "各站停車 ") + ends
+            : language.text("Short working ", "短程班次 ") + ends
     }
 
     /// Every service of line `id`, its own first, as the line panel shows

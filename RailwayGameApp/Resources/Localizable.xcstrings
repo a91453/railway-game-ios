@@ -418,7 +418,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入停站模式"
+            "value" : "加入"
           }
         }
       }
@@ -468,7 +468,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入區間車或快車"
+            "value" : "新增停站模式"
           }
         }
       }
@@ -958,7 +958,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "快車：只停靠兩端"
+            "value" : "直達車：只停靠兩端"
           }
         }
       }
