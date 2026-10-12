@@ -313,35 +313,48 @@ final class RollingStockEconomicsTests: XCTestCase {
     }
 
     /// Version 49 (decision 180): a managed world with the switch on that has
-    /// sold a train and kept another, a 2-car light-rail train that cost its
-    /// type's prices and a refit. It saves byte for byte and is the world this
-    /// build makes.
+    /// sold a train and kept another, a 2-car light-rail train. The save was
+    /// written when a change of type cost 30 % of the new type's price, so its
+    /// books hold that refit ($2,700 on the train's $150,000, `17,700,000`);
+    /// since the follow-up rule (a change of type costs the new price less the
+    /// old train's sale value) the commands that made it would make another
+    /// world, so this test does not rebuild it: an old save is read as it was
+    /// stored, and a later change of type is charged by the new rule. The
+    /// file itself is never rewritten.
     func testVersionFortyNineKeepsTheSwitchAndTheBooks() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("SaveFixtures/v49-rolling-stock-economics.json")
-        var made = try makeWorld(economics: true, balance: 1_000_000_000)
-        let sold = try made.purchaseTrain(named: "Sold")
-        try made.setTrainType(sold.id, to: .maglev)
-        try made.sellTrain(sold.id)
-        let kept = try made.purchaseTrain(named: "Kept")
-        try made.setTrainType(kept.id, to: .l)
-        try made.setTrainCars(kept.id, to: 2)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["ROLLING_STOCK_SAVE_NEW"] != nil {
-            try encoder.encode(SavedGame(world: made)).write(to: url)
-        }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(object["saveVersion"] as? Int, 49)
-        let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        var world = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertTrue(world.rollingStockEconomics)
         XCTAssertEqual(world.trains.map(\.name), ["Kept"])
-        XCTAssertEqual(world.train(id: kept.id)?.type, .l)
+        let kept = try XCTUnwrap(world.trains.first)
+        XCTAssertEqual(kept.type, .l)
+        XCTAssertEqual(kept.cars, 2)
+        // The books and the balance as they were stored.
+        XCTAssertEqual(world.economy.balance, Money(969_896_400))
+        let records = world.accounts.assets.filter { $0.owner == kept.id.rawValue && ($0.kind == .train || $0.kind == .cars) }
+        XCTAssertEqual(records.map(\.cost), [Money(17_700_000), Money(2_500_000)])
+        let capital = try XCTUnwrap(world.accounts.capitalDays.first)
+        XCTAssertEqual(capital.saleProceeds, Money(23_100_000))
+        XCTAssertEqual(capital.saleBookValue, Money(33_000_000))
         // Saved again by a later build: the same bytes with its version.
         let current = Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 49,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8)
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), current)
+        // It goes on to be the same world as one that never was saved.
+        var carried = try JSONDecoder().decode(SavedGame.self, from: try encoder.encode(SavedGame(world: world))).world
+        try carried.advance(ticks: 40)
+        try world.advance(ticks: 40)
+        XCTAssertEqual(carried, world)
+        // A later change of type is charged by the new rule: the new price
+        // less 70 % of the books ($177,000 + $25,000 for the two cars).
+        let quote = world.trainSaleQuote(kept.id)
+        XCTAssertEqual(quote, Money((17_700_000 + 2_500_000) * 70 / 100))
+        XCTAssertEqual(world.refitCost(of: kept.id, to: .maglev), Money((600_000 + 150_000) * 100) - quote)
     }
 }

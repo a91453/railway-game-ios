@@ -41,6 +41,17 @@ extension GameWorld {
         )
     }
 
+    /// The line under a type in the menu for train `id` (decision 180): its
+    /// card, and with ``rollingStockEconomics`` on what changing the train to
+    /// it would cost now (``refitCost(of:to:)``) unless it is the type the
+    /// train is.
+    public func trainTypeMenuText(_ type: TrainType?, for id: TrainID, in language: DisplayLanguage) -> String {
+        let card = trainTypeCard(type).text(in: language)
+        guard rollingStockEconomics, let train = train(id: id), train.type != type else { return card }
+        let cost = refitCost(of: id, to: type)
+        return card + language.text(" · change: ", " · 改裝：") + (cost > .zero ? cost.moneyText : language.text("free", "免費"))
+    }
+
     /// For a train of `type`: what each car added costs and what a change of
     /// type costs, when rolling-stock economics is on (decision 180);
     /// otherwise the plain price of a car, as ``carPriceText(in:)``.

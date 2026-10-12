@@ -5646,12 +5646,18 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 1. **價目表**（`RollingStock.swift`，`TrainType.pricing`，單位美分，這個專案自訂，參考庫沒有車輛價目表）：首節價／每加一節價／營運係數（‰）。標準車與 A、B、C $150k／$40k／1,000；L $90k／$25k／700；D $120k／$35k／1,300；STEAM $80k／$20k／1,400；APM $110k／$30k／800；單軌 $160k／$45k／1,000；雲軌 $170k／$50k／1,000；磁浮 $600k／$150k／1,800；高鐵 $900k／$120k／2,000；EMU3000 $260k／$55k／1,200。派工建議的「高鐵性能能源 +40%」沒有另做：高鐵車種的 2,000‰ 已經涵蓋；每節每日維修費也沒有另列，併入「節數 × 係數」的權重（見第 3 項）。
 2. **買、加節、改裝、出售**：
    - 購車收該車種首節價（`purchaseTrain(named:as:)` 直接買指定車種，不會先買標準車再付改裝費；沒有指定的是時代的第一種車種或標準車）；加一節收該車種的每節價。
-   - `setTrainType` 換車種付改裝費＝新車種「首節價＋(節數−1)×每節價」的 30 %（捨去），算進列車資產的成本（資本支出）；同車種不收。
+   - `setTrainType` 換車種的費用見下面「之後的修正」（原本是新車種價格的 30 %）；同車種不收。
    - 新指令 `sellTrain`（任何世界都可用）：列車必須離開軌道、沒有配屬路線、沒有服務（`Train.execution == nil`，空車回送中的列車有服務，所以算在營運中），否則新錯誤 `trainInService`。售價＝列車紀錄與車廂紀錄各自帳面價值的 70 %（捨去），照決策 130 的 `sellAsset` 記 `saleProceeds`、`saleBookValue`，處分損益實現；自由模式沒有帳也沒有收入。ID 不再發放，列車自己帶著時刻表所以一起消失。
 3. **營運成本**：`FixedAssets.trainWeight`（千分之一標準列車）。關著時＝「各服務同時最多列車數」× 1,000，和以前逐位元相同（算式乘 1,000，舊值不變）。打開時＝路線上每一列列車（所有服務的配屬名單）的 `節數 × 營運係數`；**未配屬路線的閒置列車不付營運成本（維持舊行為）**；配屬了但目前不在服務班次內的列車照付（它是車隊）。人事 480、能源 360、保養 8（每小時）都乘這個權重；每次離站的車公里再乘該車種的係數（`countDeparture(operatingPermille:)`，不乘節數）。每日能源的列與其明細改成各自進位後相加（關著時結果與以前相同）。
 4. **介面**：配車（`LineStaffing`）可選車種（預設依路線；高鐵路線預設高鐵車組）與節數，顯示每列價格與在線上每日成本；`GameSession.reformSelectedLine` 整線改編組：對配屬、沒有服務的列車依序下線、換車種節數、重新放到起點、重新配屬到原本的服務，做不到的（正在行駛、放不回去、錢不夠）保持原樣並說明原因；`TrainControls` 的車種選單每項附每節容量、價格、每日成本、最高速度；`FleetOverviewSheet` 對可出售的列車有出售鈕（先確認）。
 5. **存檔 49、golden schema 71**：存檔只多世界的 `"rollingStockEconomics"`（開著才寫，沒有欄位的舊存檔關著）。golden 新指令 `setRollingStockEconomics`、`setTrainType`、`sellTrain`，新結果 `trainInService`，最終狀態的 `rollingStockEconomics: true`；新的 `rolling-stock-economics.json`（手算，`tools/golden-checks/rolling_stock.py` 獨立檢查）。**既有的 golden、SaveFixtures 與 ReplayFixtures 都沒有改**。
 6. **與逐線報表（決策 179，存檔 48）接上**：`FixedAssets.LineAssets.trainWeight` 是每條線的列車權重（關著時＝車數 × 1,000）；`settleLineHour` 的保養拆分用權重（公司整元數不動），`settleLineDay` 的列車能源與列車人事（`trainStaff`）依權重拆（最大餘數法），所以各線仍然加起來等於公司的一天（`LineAccountsTests`、`RollingStockEconomicsTests.testLinesStillAddUpToTheCompanyWithWeightedTrains`）。線上的車公里維持真實距離（只有公司的車公里乘車種係數），所以營運費的線間拆分仍按真實距離；出售列車的收入不分到線。
+
+**之後的修正：改車種的費用（作者決定，2026-10-12）**：第二輪查 bug 發現原本的 30 % 有套利：先買便宜車種、加車廂、再改成高鐵，只付新價格的 30 %，比直接買高鐵省約 57 %。作者的決定：**改車種的費用＝新車種整列（目前節數）的價格 − 舊列車照出售規則能拿回的錢（帳面價值 × 70 %，和 `sellTrain` 同一套，`trainSaleQuote`），最少 0**，等於「賣掉舊車、買新車」，沒有套利空間。加節維持現行（按車種每節價）。
+- 實作（`GameWorld.setTrainType`，只在 `rollingStockEconomics` 開時；關著仍然免費）：先確認付得起費用（不足就 `insufficientFunds`，不動任何東西）；舊的列車與車廂資產照出售規則賣掉（記 `saleProceeds`、`saleBookValue`，處分損益實現），賣價最多等於新價格；再以新價格買進、列車資產變成新價格（車廂併進這個價格）。所以現金淨變化正好是費用，帳與現金流量表一致。
+- 降級（舊車值錢過新車）費用 0，**不退錢**：賣價以新價格為上限，多出來的帳面價值當作損失。
+- 介面：`GameWorld.refitCost(of:to:)` 給出費用；車種選單每一項附上改成它要付多少。
+- 既有資料：v49 存檔 fixture 是在 30 % 規則下存的，一個位元組沒改，照存的狀態讀（它的帳記著當時的改裝費），之後的改裝用新規則；`RollingStockEconomicsTests.testVersionFortyNineKeepsTheSwitchAndTheBooks` 不再「用指令重做等於 fixture」，改成載入、檢查帳與餘額、往返位元組相同、再前進一致。golden `rolling-stock-economics.json` 只有最終餘額從 156,399,000 變成 146,499,000（逐值見 `GoldenScenarios/README.md`），`tools/golden-checks/rolling_stock.py` 照新規則獨立算出。
 
 **平衡**（`BalanceReportTests`，60 天，新遊戲兩鎮之間的線，一列四節）：見 ROADMAP 的待觀察表。前期現金沒有被車價卡死：起始資金買得起 4 節標準車。
 

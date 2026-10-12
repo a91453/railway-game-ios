@@ -140,6 +140,18 @@ final class RollingStockSessionTests: XCTestCase {
         XCTAssertEqual(session.world, before)
     }
 
+    func testTheMenuLineSaysWhatChangingTheTrainToATypeCosts() throws {
+        var world = try lineWorld()
+        let train = try world.purchaseTrain(named: "Blue", as: .l)
+        let cost = world.refitCost(of: train.id, to: .maglev)
+        XCTAssertGreaterThan(cost, .zero)
+        XCTAssertTrue(world.trainTypeMenuText(.maglev, for: train.id, in: .english).hasSuffix("change: \(cost.moneyText)"))
+        XCTAssertEqual(world.trainTypeMenuText(.l, for: train.id, in: .english), world.trainTypeCard(.l).text(in: .english), "its own type")
+        XCTAssertTrue(world.trainTypeMenuText(nil, for: train.id, in: .traditionalChinese).contains("改裝："))
+        let off = try lineWorld(economics: false)
+        XCTAssertEqual(off.trainTypeMenuText(.maglev, for: TrainID(rawValue: 1), in: .english), off.trainTypeCard(.maglev).text(in: .english))
+    }
+
     func testTheCardsListWhatEachTypeCostsAndHowFastItRuns() throws {
         let on = try lineWorld()
         let card = on.trainTypeCard(.highSpeed)
