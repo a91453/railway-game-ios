@@ -100,8 +100,10 @@ struct MapAlertBubbles: View {
     }
 
     private func lineName(of alert: MapAlert) -> String? {
-        guard case .lineWithoutTrains(let id) = alert.kind else { return nil }
-        return session.world.line(id: id)?.name
+        switch alert.kind {
+        case .lineWithoutTrains(let id), .lineLosingMoney(let id): return session.world.line(id: id)?.name
+        default: return nil
+        }
     }
 
     private func glyph(_ alert: MapAlert) -> MapGlyph {
@@ -109,6 +111,8 @@ struct MapAlertBubbles: View {
         case .crowded: .crowd
         case .full: .full
         case .lineWithoutTrains: .train
+        // Decision 179: the warning sign, for a line in the red.
+        case .lineLosingMoney: .warning
         // Decision 158: a building, for the town that could not build.
         case .materialsShort: .office
         }
@@ -119,6 +123,7 @@ struct MapAlertBubbles: View {
         case .crowded: Theme.warning
         case .full: Theme.error
         case .lineWithoutTrains: Theme.primary
+        case .lineLosingMoney: Theme.error
         case .materialsShort: Theme.warning
         }
     }

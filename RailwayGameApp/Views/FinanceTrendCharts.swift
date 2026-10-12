@@ -204,3 +204,124 @@ private struct TrendAxes: ViewModifier {
             }
     }
 }
+
+/// A line's last days (decision 179): riders as bars with the day's profit
+/// as a line over them, and a second chart of profit against the zero rule.
+/// The numbers and sentences are ``LineReport``'s, tested in
+/// `GamePresentation`; colours are the finance charts' (blue for riders,
+/// the app's success and error colours for profit and loss).
+struct LineOperatingCharts: View {
+    let report: LineReport
+    let language: DisplayLanguage
+    @State private var selected: Int64?
+    /// Not a literal: a literal here would be a string to translate.
+    private static let dayAxis = "Day"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(verbatim: selectedDay.map { report.dayText($0, in: language) } ?? report.summaryText(in: language))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .monospacedDigit()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("line.operations.summary")
+            if !report.days.isEmpty {
+                Text(verbatim: language.text("Riders and profit", "運量與損益"))
+                    .font(.caption.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                ridersChart
+                Text(verbatim: language.text("Profit by day", "每日損益"))
+                    .font(.caption.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                profitChart
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("line.operations")
+    }
+
+    private var selectedDay: LineOperatingDay? {
+        guard let selected else { return nil }
+        return report.days.first { $0.day == selected }
+    }
+
+    private func dollars(_ money: Money) -> Double {
+        Double(money.amount) / 100
+    }
+
+    private var ridersChart: some View {
+        let ridersName = language.text("Riders", "人次")
+        let profitName = language.text("Profit", "損益")
+        return Chart {
+            ForEach(report.days) { day in
+                BarMark(x: .value(Self.dayAxis, day.day + 1), y: .value(ridersName, day.riders))
+                    .foregroundStyle(Color.accentColor.opacity(selected == nil || selected == day.day ? 0.9 : 0.4))
+            }
+            ForEach(report.days) { day in
+                LineMark(x: .value(Self.dayAxis, day.day + 1), y: .value(profitName, dollars(day.profit) / profitScale), series: .value("Series", profitName))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 3]))
+            }
+        }
+        .modifier(DayAxes(selection: $selected, offset: 1))
+        .frame(height: 130)
+        .accessibilityLabel(Text(verbatim: language.text("Riders and profit chart", "運量與損益圖")))
+        .accessibilityValue(Text(verbatim: report.summaryText(in: language)))
+        .accessibilityIdentifier("line.operations.riders")
+    }
+
+    /// The profit line shares the riders' axis: dollars scaled so the
+    /// largest profit or loss reaches the tallest bar. The legend's words
+    /// name it; the exact figures are in the sentence above.
+    private var profitScale: Double {
+        let money = report.days.map { abs(dollars($0.profit)) }.max() ?? 0
+        let riders = Double(report.days.map(\.riders).max() ?? 0)
+        return money > 0 && riders > 0 ? money / riders : 1
+    }
+
+    private var profitChart: some View {
+        let profitName = language.text("Profit", "損益")
+        return Chart {
+            ForEach(report.days) { day in
+                BarMark(x: .value(Self.dayAxis, day.day + 1), y: .value(profitName, dollars(day.profit)))
+                    .foregroundStyle(day.profit < .zero ? Theme.error : Theme.success)
+                    .opacity(selected == nil || selected == day.day ? 1 : 0.45)
+            }
+            RuleMark(y: .value("Zero", 0))
+                .foregroundStyle(Theme.textSecondary)
+                .lineStyle(StrokeStyle(lineWidth: 1))
+        }
+        .modifier(DayAxes(selection: $selected, offset: 1))
+        .frame(height: 110)
+        .accessibilityLabel(Text(verbatim: language.text("Profit by day chart", "每日損益圖")))
+        .accessibilityValue(Text(verbatim: report.summaryText(in: language)))
+        .accessibilityIdentifier("line.operations.profit")
+    }
+}
+
+/// Axes of a chart whose x is a day number: a few labels, a compact y scale
+/// and touch selection of a day (the selection is the day's index, one less
+/// than the number shown).
+private struct DayAxes: ViewModifier {
+    @Binding var selection: Int64?
+    let offset: Int64
+
+    func body(content: Content) -> some View {
+        content
+            .chartXSelection(value: Binding(
+                get: { selection.map { $0 + offset } },
+                set: { selection = $0.map { $0 - offset } }
+            ))
+            .chartYAxis {
+                AxisMarks(position: .leading) { value in
+                    AxisGridLine().foregroundStyle(Theme.panelBorder)
+                    AxisValueLabel {
+                        if let number = value.as(Double.self) {
+                            Text(verbatim: number.formatted(.number.notation(.compactName)))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                }
+            }
+    }
+}

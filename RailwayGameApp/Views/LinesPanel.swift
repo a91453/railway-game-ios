@@ -28,6 +28,9 @@ struct LinesPanel: View {
     /// How often a train should come, for the selected line's trains
     /// (decision 101).
     @State private var staffHeadway: Int64 = 10
+    /// Decision 179: how the lines are ordered, or `nil` for the order
+    /// they were made in.
+    @State private var lineSort: LineReportSort?
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -48,6 +51,7 @@ struct LinesPanel: View {
                 linesSection
                 if let line = session.selectedLine {
                     lineSection(line)
+                    operatingSection(line)
                     stopsSection(line)
                     ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
                         serviceSection(summary, of: line)
@@ -194,7 +198,10 @@ struct LinesPanel: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.textSecondary)
             } else {
-                ForEach(session.world.lines) { line in
+                if session.world.lineAccounts != nil, session.world.lines.count > 1 {
+                    lineSortMenu
+                }
+                ForEach(sortedLines) { line in
                     Button {
                         session.selectLine(line.id)
                     } label: {
@@ -207,6 +214,44 @@ struct LinesPanel: View {
         } header: {
             Text("Lines")
         }
+    }
+
+    /// The lines in the order chosen (decision 179).
+    private var sortedLines: [ServiceLine] {
+        guard let lineSort, session.world.lineAccounts != nil else { return session.world.lines }
+        return session.world.lineReports(sortedBy: lineSort).compactMap { session.world.line(id: $0.line) }
+    }
+
+    private var lineSortMenu: some View {
+        Menu {
+            Button {
+                lineSort = nil
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Made order", "建立順序"))
+                } icon: {
+                    Image(systemName: lineSort == nil ? "checkmark" : "")
+                }
+            }
+            ForEach(LineReportSort.allCases, id: \.self) { order in
+                Button {
+                    lineSort = order
+                } label: {
+                    Label {
+                        Text(verbatim: order.displayName(in: session.language))
+                    } icon: {
+                        Image(systemName: lineSort == order ? "checkmark" : "")
+                    }
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: session.language.text("Sort: \(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))", "排序：\(lineSort?.displayName(in: session.language) ?? session.language.text("Made order", "建立順序"))"))
+            } icon: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+        }
+        .accessibilityIdentifier("lines.sort")
     }
 
     private func lineRow(_ line: ServiceLine) -> some View {
@@ -245,6 +290,13 @@ struct LinesPanel: View {
                 Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
+                // Decision 179: yesterday's riders, fares, profit and peak.
+                if let report = session.world.lineReport(line.id), !line.isFreight {
+                    Text(verbatim: report.rowText(in: session.language))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(report.yesterday.map { $0.profit < .zero } == true ? Theme.error : Theme.textSecondary)
+                        .accessibilityIdentifier("line.report.\(line.id.rawValue)")
+                }
             }
             Spacer(minLength: 8)
             if line.id == session.selectedLineID {
@@ -256,6 +308,23 @@ struct LinesPanel: View {
     }
 
     // MARK: - The selected line
+
+    /// The selected line's last days (decision 179).
+    @ViewBuilder
+    private func operatingSection(_ line: ServiceLine) -> some View {
+        if let report = session.world.lineReport(line.id), !line.isFreight {
+            Section {
+                LineOperatingCharts(report: report, language: session.language)
+            } header: {
+                Text(verbatim: session.language.text("Operations", "營運"))
+            } footer: {
+                Text(verbatim: session.language.text(
+                    "Profit is fares less this line's own running costs: no interest, buildings or tax. A transfer's fare is shared among the lines it rides by distance.",
+                    "損益是票收減去這條線自己的營運成本，不含利息、建物與稅。轉乘旅客的票價依各段距離分給所搭的路線。"
+                ))
+            }
+        }
+    }
 
     private func lineSection(_ line: ServiceLine) -> some View {
         Section {

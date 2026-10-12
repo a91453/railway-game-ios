@@ -20,6 +20,9 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
         case full(waiting: Int64)
         /// The line has no train, so no one rides it.
         case lineWithoutTrains(LineID)
+        /// The line has lost money on each of the last seven days
+        /// (decision 179).
+        case lineLosingMoney(LineID)
         /// The town round the station was short of building materials at
         /// the last midnight and grew slowly (decision 158).
         case materialsShort
@@ -48,6 +51,8 @@ public struct MapAlert: Hashable, Sendable, Identifiable {
             language.text("Full", "滿了")
         case .lineWithoutTrains:
             language.text("\(lineName ?? "Line"): no trains", "\(lineName ?? "路線")：沒有列車")
+        case .lineLosingMoney:
+            language.text("\(lineName ?? "Line"): losing money", "\(lineName ?? "路線")：連續虧損")
         case .materialsShort:
             language.text("Short of building materials", "缺建材")
         }
@@ -77,6 +82,11 @@ extension GameWorld {
             guard let first = line.stops.first, let station = station(id: first) else { continue }
             alerts.append(MapAlert(kind: .lineWithoutTrains(line.id), station: first, location: station.location))
         }
+        // Decision 179: a line that has lost money a week running.
+        for line in lines where lineLosingMoney(line.id) {
+            guard let first = line.stops.first, let station = station(id: first) else { continue }
+            alerts.append(MapAlert(kind: .lineLosingMoney(line.id), station: first, location: station.location))
+        }
         // Decision 158: then the stations short of building materials.
         for id in freight?.lastShort ?? [] {
             guard let station = station(id: id) else { continue }
@@ -97,7 +107,7 @@ extension GameSession {
         case .crowded, .full, .materialsShort:
             selectStation(alert.station)
             return false
-        case .lineWithoutTrains(let line):
+        case .lineWithoutTrains(let line), .lineLosingMoney(let line):
             selectLine(line)
             return true
         }

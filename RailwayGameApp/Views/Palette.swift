@@ -1,4 +1,5 @@
 import GameCore
+import GamePresentation
 import SwiftUI
 import UIKit
 
@@ -30,6 +31,15 @@ enum Palette {
     static let station = hex(light: 0xFFC86B, dark: 0xFFC86B)
     static let stationSymbol = hex(light: 0x262C57, dark: 0x262C57)
     static let train = hex(light: 0x262C57, dark: 0xECEEF6)
+    /// Decision 182: a freight line's trains, grey (4.51:1 on the light
+    /// map, 5.74:1 on the dark), where a passenger line's are in its colour.
+    static let freightTrain = hex(light: 0x666C80, dark: 0xA4AABD)
+    /// Decision 182: a streak of rain, a blue grey, light on the dark map.
+    static let rain = hex(light: 0x4A5A80, dark: 0xC9D3EA, alpha: 0.45)
+    /// Decision 182: what darkens the map under rain and typhoons, a navy
+    /// near black, and lightning's flash.
+    static let weatherShade = hex(light: 0x10142E, dark: 0x05071A)
+    static let lightning = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
     /// The link through a transfer group's stations: MapBuilder's
     /// interchange, white with a black edge in either appearance, here
     /// white with the icon's navy.
@@ -144,6 +154,26 @@ enum Palette {
         return colors[abs(Int(id.rawValue)) % colors.count]
     }
 
+    /// Decision 182: what a train is drawn in. A line's train in its line's
+    /// colour, a freight line's in ``freightTrain``, one on no line in
+    /// ``train``; all of them in ``train`` while the passenger load layer
+    /// colours the track (decision 178), so that only its colours tell the
+    /// loads.
+    static func trainColor(_ look: TrainLook, plain: Bool = false) -> Color {
+        guard !plain else { return train }
+        switch look {
+        case .plain: return train
+        case .line(let id, let custom): return lineColor(id, custom: custom)
+        case .freight: return freightTrain
+        }
+    }
+
+    /// Decision 182: the time of day's tint, which the map is multiplied by
+    /// (``DayNight``): the colour at its strength.
+    static func tint(_ tint: DayNight.Tint) -> Color {
+        Color(red: tint.colour.red, green: tint.colour.green, blue: tint.colour.blue).opacity(tint.strength)
+    }
+
     /// A ``LineColor`` as a SwiftUI colour.
     static func color(_ line: LineColor) -> Color {
         Color(
@@ -198,6 +228,9 @@ enum MapGlyph: String {
     case warningSolid = "MapGlyphWarningSolid"
     /// A sight's rating (decision 174).
     case star = "MapGlyphStar"
+    /// Decision 182: a typhoon blows over the station, the weather map's
+    /// typhoon sign.
+    case typhoon = "MapGlyphTyphoon"
 
     var image: Image {
         Image(rawValue).renderingMode(.template)
