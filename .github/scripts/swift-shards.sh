@@ -161,6 +161,14 @@ set -euo pipefail
 #   campaigns-15  old 13                                      468
 #   rest          (unchanged)                                 488
 # 16 jobs instead of 25; the wall time is still the slowest shard's.
+# 2026-10-12: rest had grown to 13.8 minutes of job at the median and up to
+# 18.9 (ten runs between 17.8 and 18.9) against the 20-minute limit, as the
+# GamePresentation tests grew (docs/research/CI_INCIDENT_2026-10-12.md, 4A-3).
+# Two of its slowest classes, both GamePresentation demo-map tests, move to
+# the shortest campaign shards: HighSpeedDemoTests to campaigns-11 and
+# RealWorldDemoTests to campaigns-15. Estimated on a slow runner: rest about
+# 18.9 -> 15.8 minutes, campaigns-11 about 9.5 -> 11.4, campaigns-15 about
+# 10.1 -> 11.5; the slowest shard is campaigns-1 again.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
@@ -173,11 +181,11 @@ classes_of() {
     campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
     campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests" ;;
-    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests" ;;
+    campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests" ;;
-    campaigns-15) echo "TrafficFollowingPropertyTests" ;;
+    campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests" ;;
     *) return 1 ;;
   esac
 }

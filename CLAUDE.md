@@ -121,11 +121,12 @@ needs OSM data reads the same extract.
   its tests or the app's bundled data; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
-  several apply. The label `full-ci` runs every shard (adding it starts a
-  new run). Pull requests and pushes to `main` that change nothing the
-  package builds or tests skip the Swift jobs, and the `Swift CI (gate)` job
-  always reports; `main`'s branch rule requires that job, so never rename
-  it. Pushes to `main` share one concurrency group: a burst of merges runs
+  several apply. The label `full-ci` runs every shard (add it, then re-run
+  the pull request's run). Pull requests and pushes to `main` that change
+  nothing the package builds or tests skip the Swift jobs, and the `Swift CI
+  (gate)` job always reports (but on a cancelled push run of `main`, decision
+  187); `main`'s branch rule requires that job, so never rename it. Pushes
+  to `main` share one concurrency group: a burst of merges runs
   the run in progress and the newest one, the replaced runs show as
   cancelled with no result of their own, and a push is compared with the
   head of the last successful push run so nothing goes untested; when it
@@ -150,8 +151,8 @@ needs OSM data reads the same extract.
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no
   secrets), `website-screenshots.yml` (the website's screenshots from the
-  Debug app on an iPhone Simulator, `WebsiteScreenshotTests`; by hand, or on
-  a pull request that changes them; decision 165).
+  Debug app on an iPhone Simulator, `WebsiteScreenshotTests`; by hand only,
+  on the branch whose screenshots are wanted; decisions 165 and 187).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
@@ -271,6 +272,30 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Work on a task branch and open a pull request. Never commit to `main`, never
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.
+- The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
+  tier is 18 jobs (ARCHITECTURE decision 187,
+  `docs/research/CI_INCIDENT_2026-10-12.md`). So:
+  - Never cancel a push run of `main` (`ci.yml`), by hand or from a session:
+    its concurrency group already keeps a burst of merges to the run in
+    progress and the newest one, and a cancelled run leaves a commit with no
+    result. To free runners, cancel pull request runs.
+  - Merge `main` into a pull request only when it conflicts or needs
+    something on `main` (the branch rule does not require an up-to-date
+    branch), one pull request at a time, just before it is merged; never
+    into every open pull request at once.
+  - Push a change when it is ready, not piece by piece while CI runs, and do
+    not start `ios-build.yml` by hand on a commit its pull request run is
+    already testing. To check one or two UI tests by hand, give
+    `ios-build.yml`'s `only_testing` input instead of running the full lane.
+  - At most 2 pull requests that change GameCore (a full tier) run CI at
+    once.
+  - Whoever merges (a session the user authorized, or the user): merge in
+    batches of 3 to 5 green pull requests, then wait for `ci.yml` on `main`
+    to turn green before the next batch; check that `iOS App Build` is green
+    too (or skipped because the same change passed), since only `Swift CI
+    (gate)` is required.
+  - Before a TestFlight release (the user's), check that the commit's full
+    `ci.yml` run on `main` and its full lane are both green.
 - Before drawing or changing any icon, glyph, character or illustration for
   the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
   chose and how to check a drawing before showing it.
