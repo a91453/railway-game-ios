@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -35,6 +36,22 @@ final class BuildingSessionTests: XCTestCase {
         XCTAssertEqual(session.world.placedBuildings.map(\.kind), [.house])
         session.undo()
         XCTAssertTrue(session.world.placedBuildings.isEmpty)
+    }
+
+    /// What a save, a golden scenario or a replay stores for a building is its
+    /// code, never its name: the office's Chinese name changed, its code
+    /// ("office") did not, so every saved office still reads as an office.
+    func testTheCodesTheSavesStoreDidNotMove() throws {
+        let codes = ["house", "shop", "office", "wharf", "marina"]
+        XCTAssertEqual(PlacedBuildingKind.allCases.map(\.rawValue), codes)
+        for kind in PlacedBuildingKind.allCases {
+            let data = try JSONEncoder().encode([kind])
+            XCTAssertEqual(String(decoding: data, as: UTF8.self), "[\"\(kind.rawValue)\"]")
+            XCTAssertEqual(try JSONDecoder().decode([PlacedBuildingKind].self, from: data), [kind])
+        }
+        let before = Data("[\(codes.map { "\"\($0)\"" }.joined(separator: ","))]".utf8)
+        XCTAssertEqual(try JSONDecoder().decode([PlacedBuildingKind].self, from: before), PlacedBuildingKind.allCases)
+        XCTAssertEqual(PlacedBuildingKind.office.title(in: .traditionalChinese), "辦公大樓")
     }
 
     func testTheBuildingToolReadsInChinese() throws {
