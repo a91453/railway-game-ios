@@ -267,6 +267,31 @@ final class LineRoutePreferenceTests: XCTestCase {
         XCTAssertEqual(KernelDifferentialTests.differences(world, model), [])
     }
 
+    /// Decision 172: a trip sent out from the line's last stop takes its
+    /// legs the other way first, and a preference is found by its two
+    /// stops, so it is driven as it was planned: the reversed line's train
+    /// at West (now the last stop) leaves on the loop to Middle's far
+    /// platform, as the line's journey times it.
+    func testAFlexibleTripFromTheLastStopTakesThePreferredRoute() throws {
+        var (world, _, line, train) = try Self.setup(traffic: false)
+        world.setFlexDispatch(true)
+        try world.setLineRoutePreferences(line, to: [Self.loop(world)])
+        try world.reverseLineStops(line)
+        let preference = try XCTUnwrap(world.line(id: line)?.routePreferences.first)
+        XCTAssertEqual([preference.from, preference.to], [2, 1])
+        for _ in 0..<700 where world.train(id: train)?.execution == nil {
+            try world.advance(ticks: 1)
+        }
+        let sent = try XCTUnwrap(world.train(id: train))
+        XCTAssertEqual(sent.timetable.map(\.station), [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east, SingleTrackMeet.middle, SingleTrackMeet.west])
+        XCTAssertEqual(world.routePreference(for: sent, from: 0, to: 1), preference)
+        XCTAssertTrue(world.hasRoutePreferences(sent))
+        for _ in 0..<700 where world.train(id: train)?.movement.remainingEdges.isEmpty ?? false {
+            try world.advance(ticks: 1)
+        }
+        XCTAssertEqual(Array(world.train(id: train)!.movement.remainingEdges), [4, 5].map(TrackEdgeID.edge), "the loop to Middle's far platform, as planned")
+    }
+
     func testInvalidPreferencesAndExplicitNullAreRejectedAtomically() throws {
         var (world, model, line, _) = try Self.setup()
         let good = Self.loop(world)

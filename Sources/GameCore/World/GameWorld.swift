@@ -1713,7 +1713,8 @@ public struct GameWorld: Equatable, Sendable {
     /// stands at what is now the line's last stop is sent out from there,
     /// first back along the line. Only a ring with a train running a
     /// service is refused, as its trains' ways round are by their order
-    /// and would be swapped under their riders.
+    /// and would be swapped under their riders. Its passengers keep their
+    /// trips on it, the other way along its stops.
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
     ///   ``GameError/trainServiceActive(_:)`` naming the lowest numbered
@@ -1743,6 +1744,22 @@ public struct GameWorld: Equatable, Sendable {
         // along the reversed stops.
         line.runs = line.runs.map { LineRun(from: last - $0.from, to: last - $0.to, times: $0.times, days: $0.days) }
         lines[index] = line
+        // Its passengers still take it between the same stations, now the
+        // other way along its stops (decision 80: only those whose trip it
+        // no longer goes leave).
+        for record in passengers.indices {
+            passengers[record].reverseDirections(on: id)
+        }
+        for train in riders.indices {
+            riders[train].groups = riders[train].groups.map { group in
+                RidingGroup(origin: group.origin, destination: group.destination, count: group.count,
+                    journey: group.journey?.reversingDirections(on: id))
+            }
+        }
+        passengerRouteBalances = passengerRouteBalances.map { balance in
+            PassengerRouteBalance(origin: balance.origin, destination: balance.destination,
+                journeys: balance.journeys.map { $0.reversingDirections(on: id) }, weights: balance.weights, balances: balance.balances)
+        }
         abandonUnservedPassengers()
     }
 

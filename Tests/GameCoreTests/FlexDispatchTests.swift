@@ -143,6 +143,31 @@ final class FlexDispatchTests: XCTestCase {
         XCTAssertNotEqual(train.timetable, before)
     }
 
+    /// Passengers waiting for a line that is reversed still have their
+    /// trip on it (decision 80: only those whose trip the line no longer
+    /// goes leave), though its way along the stops is now the other.
+    func testReversingALineKeepsThePassengersWaitingForIt() throws {
+        for routing in [PassengerRoutingMode.direct, .network] {
+            var world = try makeWorld(stops: [alpha, beta, gamma])
+            world.setPassengerRoutingMode(routing)
+            for station in [alpha, beta, gamma] {
+                try world.setStationDemand(station, to: StationDemand(kind: .residential, dailyTrips: 20_000))
+            }
+            try world.advance(ticks: 30)
+            let waiting = [alpha, beta, gamma].map { world.waitingPassengers(at: $0).reduce(Int64(0)) { $0 + $1.count } }
+            XCTAssertGreaterThan(waiting.reduce(0, +), 0, "\(routing)")
+            let abandoned = [alpha, beta, gamma].map { world.passengerLedger(of: $0).abandoned }
+
+            try world.reverseLineStops(main)
+
+            XCTAssertEqual([alpha, beta, gamma].map { world.passengerLedger(of: $0).abandoned }, abandoned, "\(routing): nobody leaves")
+            XCTAssertEqual([alpha, beta, gamma].map { world.waitingPassengers(at: $0).reduce(Int64(0)) { $0 + $1.count } }, waiting, "\(routing)")
+            XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "\(routing): saves and loads")
+            try world.advance(ticks: 60)
+            XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "\(routing): saves and loads")
+        }
+    }
+
     /// A trip being run when the line is reversed is finished as it was
     /// planned (its own timetable); the next one follows the new order.
     func testAnEditedLineFinishesTheTripAlreadyRunning() throws {

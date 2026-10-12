@@ -168,10 +168,28 @@ extension GameWorld {
             guard let order = runOrder(of: train, on: line), order.indices.contains(from), order.indices.contains(to) else { return nil }
             return line.routePreferences.first { $0.from == order[from] && $0.to == order[to] }
         }
-        guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty else { return nil }
-        let order = line.routeOrder(service: stream.service, direction: stream.direction ?? .inner)
-        guard order.map({ line.stops[$0] }) == train.timetable.map(\.station), order.indices.contains(from), order.indices.contains(to) else { return nil }
+        guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty,
+              let order = routeOrder(of: train, on: line, stream: stream), order.indices.contains(from), order.indices.contains(to) else { return nil }
         return line.routes(ofService: stream.service).first { $0.from == order[from] && $0.to == order[to] }
+    }
+
+    /// The indices, in `line`'s stops, of the calls of `train`'s timetable
+    /// when it is a trip of `stream` as the line runs it now: the round
+    /// trip from the service's first call, or with ``flexDispatch``
+    /// (decision 172) from its last, or a ring's lap from any of its
+    /// stops; `nil` for any other timetable.
+    private func routeOrder(of train: Train, on line: ServiceLine, stream: DispatchStream) -> [Int]? {
+        let stations = train.timetable.map(\.station)
+        var orders = [line.routeOrder(service: stream.service, direction: stream.direction ?? .inner)]
+        if flexDispatch {
+            if line.isRing {
+                orders += line.stops.indices.dropFirst().map { line.ringCalls(stream.direction ?? .inner, from: $0) }
+            } else {
+                let back = Array(line.calls(ofService: stream.service).reversed())
+                orders.append(back + back.dropLast().reversed())
+            }
+        }
+        return orders.first { $0.map { line.stops[$0] } == stations }
     }
 
     /// The indices, in `line`'s stops, of the calls of `train`'s timetable
@@ -188,7 +206,7 @@ extension GameWorld {
         }
         guard let id = assignedLine(of: train.id), let line = line(id: id), let stream = line.dispatchStream(of: train.id),
               !line.routes(ofService: stream.service).isEmpty else { return false }
-        return line.routeOrder(service: stream.service, direction: stream.direction ?? .inner).map { line.stops[$0] } == train.timetable.map(\.station)
+        return routeOrder(of: train, on: line, stream: stream) != nil
     }
 
     /// Source dispatch plans describe one directed run. A shared physical
