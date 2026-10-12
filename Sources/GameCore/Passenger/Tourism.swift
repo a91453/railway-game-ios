@@ -229,6 +229,12 @@ extension GameWorld {
     /// (decision 174). Free. Each attraction is numbered from 1 in the
     /// order given and starts with no shop and no tourists.
     public mutating func setTourism(_ attractions: [Attraction]?) {
+        // The shops go with the attractions they were in: their records
+        // are written off (a later fix: a record naming a shop that no
+        // longer exists made the save unloadable).
+        for attraction in tourism?.attractions ?? [] where attraction.souvenir > 0 {
+            disposeAsset(.souvenirShop, owner: attraction.id.rawValue)
+        }
         guard let attractions, !attractions.isEmpty else {
             guard tourism != nil else { return }
             tourism = nil
@@ -356,7 +362,7 @@ extension GameWorld {
             let dx = station.point.x - point.x, dy = station.point.y - point.y
             let squared = dx * dx + dy * dy
             guard squared <= limit, allowsService(at: station.id), stationDemand(of: station.id) != nil,
-                  lines.contains(where: { !$0.isFreight && $0.stops.contains(station.id) && !$0.trains.isEmpty })
+                  lines.contains(where: { !$0.isFreight && $0.hasTrainsCalling(at: station.id) })
             else { continue }
             if best == nil || (squared, station.id) < (best!.1, best!.0) { best = (station.id, squared) }
         }

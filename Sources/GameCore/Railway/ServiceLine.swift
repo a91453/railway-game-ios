@@ -692,6 +692,15 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         (trains + patterns.flatMap(\.trains)).sorted()
     }
 
+    /// Whether a train of the line calls at station `id`: one of its own
+    /// service, or of a pattern that calls there.
+    func hasTrainsCalling(at id: StationID) -> Bool {
+        if !trains.isEmpty, stops.contains(id) { return true }
+        return patterns.contains { pattern in
+            !pattern.trains.isEmpty && pattern.calls.contains { stops.indices.contains($0) && stops[$0] == id }
+        }
+    }
+
     /// The trains assigned to service `service` (see ``serviceCount``).
     func trains(ofService service: Int) -> [TrainID] {
         service == 0 ? trains : patterns[service - 1].trains

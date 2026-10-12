@@ -93,6 +93,23 @@ final class TourismTests: XCTestCase {
         return world
     }
 
+    /// A station a line's pattern trains call at serves a sight as one its
+    /// own service calls at does (as the company's buildings count it,
+    /// decision 173): a line whose only train runs a pattern still brings
+    /// the tourists.
+    func testAStationOnlyAPatternServesStillServesTheSight() throws {
+        var world = try world()
+        let line = LineID(rawValue: 1), train = TrainID(rawValue: 1)
+        try world.unassignTrain(train)
+        let pattern = try world.addLinePattern(line, calling: [0, 1])
+        try world.assignTrain(train, to: line, pattern: pattern)
+        XCTAssertTrue(world.lines[0].trains.isEmpty)
+        let id = AttractionID(rawValue: 1)
+        XCTAssertEqual(world.attractionStation(of: id), foot)
+        XCTAssertEqual(world.attractionStatus(of: id), .ok)
+        XCTAssertEqual(world.dailyDemand(from: home, to: foot), 240)
+    }
+
     func testTouristsRideToTheStationAndBack() throws {
         let world = try world()
         let id = AttractionID(rawValue: 1)
@@ -139,6 +156,24 @@ final class TourismTests: XCTestCase {
         XCTAssertThrowsError(try world.investInSouvenirShop(of: id)) { XCTAssertEqual($0 as? GameError, .attractionMaxedOut) }
         XCTAssertThrowsError(try world.investInSouvenirShop(of: AttractionID(rawValue: 5))) {
             XCTAssertEqual($0 as? GameError, .unknownAttraction(AttractionID(rawValue: 5)))
+        }
+    }
+
+    /// Tourism turned off or set again takes the shops' records off the
+    /// books (written off, as a station's when it goes): a record naming a
+    /// shop that no longer exists would make the save unloadable.
+    func testSettingTourismAgainTakesTheShopsOffTheBooks() throws {
+        for replacement in [nil, [Attraction(id: AttractionID(rawValue: 1), name: "海", englishName: "Sea",
+                                            point: PlanPoint(x: 9_000, y: 1_536), kind: .coast, baseStars: 200)]] {
+            var world = try world()
+            world.setEconomyMode(.management)
+            try world.investInSouvenirShop(of: AttractionID(rawValue: 1))
+            XCTAssertEqual(world.accounts.assets.filter { $0.kind == .souvenirShop }.count, 1)
+            world.setTourism(replacement)
+            XCTAssertTrue(world.accounts.assets.filter { $0.kind == .souvenirShop }.isEmpty)
+            XCTAssertEqual(world.accounts.capitalDays.last?.writeOff, Money(30_000_000))
+            let data = try JSONEncoder().encode(SavedGame(world: world))
+            XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
         }
     }
 
