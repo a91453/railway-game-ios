@@ -110,6 +110,10 @@ public struct GameWorld: Equatable, Sendable {
     /// yesterday (decision 179); `nil`, off, in a world from before them. A
     /// new game turns it on. Set by ``setLineAccounts(_:)`` only.
     public internal(set) var lineAccounts: LineAccounts?
+    /// The sights and the tourists they draw (decision 174), or `nil`: off
+    /// in a new world and in saves from before it; the app's new games turn
+    /// it on. Set by ``setTourism(_:)`` and every midnight only.
+    public internal(set) var tourism: Tourism?
     /// Whether the stations by the map's edge are outside connections
     /// (decision 137). Off in a new world and in saves from before them; the
     /// app's new games but those of the whole of Taiwan turn them on. Set by
@@ -2249,10 +2253,11 @@ public struct GameWorld: Equatable, Sendable {
                 }
                 // Items 4 and 5: towns grow from the day that ended, and
                 // events start and end, at midnight.
-                let midnight = (demandEvents != nil || townGrowth != nil) && start.seconds % GameTime.secondsPerDay == 0
+                let midnight = (demandEvents != nil || townGrowth != nil || tourism != nil) && start.seconds % GameTime.secondsPerDay == 0
                 if midnight {
                     growTowns(reached: reachedStations(endingDayAt: start, release: release, workedOutAt: releasedFrom))
                     startDemandEventDay(dayIndex(of: start))
+                    closeTourismDay(dayIndex(of: start) - 1)
                 }
                 // Weekly demand and events: each day releases its own day's
                 // trips.
@@ -3763,7 +3768,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, lineAccounts, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, lineAccounts, tourism, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -3865,6 +3870,7 @@ extension GameWorld: Codable {
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
+        tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
         cityDemand = try container.decodeIfPresent(CityDemand.self, forKey: .cityDemand)
         cityFootprints = try container.decodeIfPresent(Bool.self, forKey: .cityFootprints) ?? false
@@ -3988,6 +3994,7 @@ extension GameWorld: Codable {
         if let lineAccounts {
             try container.encode(lineAccounts, forKey: .lineAccounts)
         }
+        try container.encodeIfPresent(tourism, forKey: .tourism)
         if outsideConnections {
             try container.encode(true, forKey: .outsideConnections)
         }
@@ -4153,6 +4160,7 @@ extension GameWorld: Codable {
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }
+        if let problem = tourismProblem() { return problem }
         var assigned: Set<TrainID> = []
         for line in lines {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }

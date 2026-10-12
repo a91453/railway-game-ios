@@ -131,6 +131,8 @@ public enum HighSpeedDemo {
         // levels were measured without.
         world.setDoorCrowding(false)
         world.setFlexDispatch(false)
+        // Decision 174: nor do tourists come to its sights.
+        world.setTourism(nil)
         return world
     }
 

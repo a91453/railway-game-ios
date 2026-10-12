@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -583,6 +583,9 @@ enum ScenarioCommand: Equatable {
     case setFlexDispatch(Bool)
     /// Schema 70 (decision 179): the line accounts.
     case setLineAccounts(Bool)
+    /// Schema 69 (decision 174): tourism.
+    case setTourism([WorldSummary.AttractionSeed])
+    case investInSouvenirShop(Int)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -734,6 +737,10 @@ enum ScenarioCommand: Equatable {
                 world.setFlexDispatch(enabled)
             case .setLineAccounts(let enabled):
                 world.setLineAccounts(enabled)
+            case .setTourism(let seeds):
+                world.setTourism(seeds.isEmpty ? nil : seeds.enumerated().map { $1.attraction(id: $0 + 1) })
+            case .investInSouvenirShop(let id):
+                try world.investInSouvenirShop(of: AttractionID(rawValue: id))
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -772,6 +779,7 @@ enum ScenarioCommand: Equatable {
 
 extension ScenarioCommand: Decodable {
     private enum CodingKeys: String, CodingKey {
+        case attractions, attraction
         case type, x, y, name, train, position, rate, timetable, `repeat`, speed, ticks
         case line, stops, window, trains, bands, targetHeadways, pattern, calls, station, cars, ring
         case z, from, to, curve, edge, node, path
@@ -841,6 +849,11 @@ extension ScenarioCommand: Decodable {
         // Schema 66: door crowding (decision 169).
         case "setDoorCrowding":
             self = try .setDoorCrowding(container.decode(Bool.self, forKey: .enabled))
+        // Schema 69: tourism (decision 174).
+        case "setTourism":
+            self = try .setTourism(container.decode([WorldSummary.AttractionSeed].self, forKey: .attractions))
+        case "investInSouvenirShop":
+            self = try .investInSouvenirShop(container.decode(Int.self, forKey: .attraction))
         // Schema 59: building materials (decision 156).
         case "enableBuildingMaterials":
             self = .enableBuildingMaterials
@@ -1095,6 +1108,7 @@ enum StepOutcome: Equatable {
 extension StepOutcome: Codable {
     private enum CodingKeys: String, CodingKey {
         case result, x, y, width, height, required, available, train, station, line, pattern, node, edge, edges, trains, trainType, building
+        case attraction
         case row, column, riders
     }
 
@@ -1262,6 +1276,13 @@ extension StepOutcome: Codable {
             self = .rejected(.needsShore)
         case "onWater":
             self = try .rejected(.onWater(row: container.decode(Int.self, forKey: .row), column: container.decode(Int.self, forKey: .column)))
+        // Schema 69 (decision 174).
+        case "tourismNotEnabled":
+            self = .rejected(.tourismNotEnabled)
+        case "unknownAttraction":
+            self = try .rejected(.unknownAttraction(AttractionID(rawValue: container.decode(Int.self, forKey: .attraction))))
+        case "attractionMaxedOut":
+            self = .rejected(.attractionMaxedOut)
         // Schema 58 (decision 155).
         case "freightNotEnabled":
             self = .rejected(.freightNotEnabled)
@@ -1475,6 +1496,13 @@ extension StepOutcome: Codable {
             try container.encode("onSteepSlope", forKey: .result)
             try container.encode(row, forKey: .row)
             try container.encode(column, forKey: .column)
+        case .rejected(.tourismNotEnabled):
+            try container.encode("tourismNotEnabled", forKey: .result)
+        case .rejected(.unknownAttraction(let id)):
+            try container.encode("unknownAttraction", forKey: .result)
+            try container.encode(id.rawValue, forKey: .attraction)
+        case .rejected(.attractionMaxedOut):
+            try container.encode("attractionMaxedOut", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):
@@ -2297,6 +2325,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while lines keep their accounts (schema 70, decision 179);
     /// left out otherwise.
     var lineAccounts: Bool?
+    /// The attractions and their counts (schema 69, decision 174); left
+    /// out while tourism is off.
+    var tourism: [AttractionSummary]?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2337,6 +2368,40 @@ struct WorldSummary: Codable, Equatable {
     /// "bestDayRiders", "townSeed"}`; left out while the map is not
     /// bought.
     var mapExpansion: MapExpansion?
+
+    /// An attraction a `setTourism` step lists: `{"name", "englishName",
+    /// "x", "y", "kind", "stars"}` (stars in hundredths).
+    struct AttractionSeed: Decodable, Equatable {
+        var name: String
+        var englishName: String
+        var x: Int64
+        var y: Int64
+        var kind: AttractionKind
+        var stars: Int
+
+        func attraction(id: Int) -> Attraction {
+            Attraction(id: AttractionID(rawValue: id), name: name, englishName: englishName,
+                       point: PlanPoint(x: x, y: y), kind: kind, baseStars: stars)
+        }
+    }
+
+    struct AttractionSummary: Codable, Equatable {
+        var id: Int
+        var stars: Int
+        var souvenir: Int
+        var yesterday: Int64
+        var thisYear: Int64
+        var lastYear: Int64
+
+        init(_ attraction: Attraction) {
+            id = attraction.id.rawValue
+            stars = attraction.stars
+            souvenir = attraction.souvenir
+            yesterday = attraction.yesterday
+            thisYear = attraction.thisYear
+            lastYear = attraction.lastYear
+        }
+    }
 
     struct DisruptionsSummary: Codable, Equatable {
         var country: String
@@ -2571,6 +2636,7 @@ struct WorldSummary: Codable, Equatable {
         doorCrowding = world.doorCrowding ? true : nil
         flexDispatch = world.flexDispatch ? true : nil
         lineAccounts = world.lineAccounts == nil ? nil : true
+        tourism = world.tourism.map { $0.attractions.map(AttractionSummary.init) }
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil

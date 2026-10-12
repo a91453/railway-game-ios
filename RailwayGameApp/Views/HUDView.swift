@@ -89,6 +89,19 @@ struct HUDView: View {
                 }
                 .accessibilityIdentifier("menu.goals")
             }
+            // Decision 174: a game with sights shows them.
+            if session.world.hasTourism {
+                Button {
+                    screen.panel = .tourism
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Sights", "觀光景點"))
+                    } icon: {
+                        Image(systemName: "star")
+                    }
+                }
+                .accessibilityIdentifier("menu.tourism")
+            }
             Button {
                 screen.panel = .help
             } label: {

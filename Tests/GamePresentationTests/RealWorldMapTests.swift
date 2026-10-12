@@ -99,7 +99,11 @@ final class RealWorldMapTests: XCTestCase {
         var blank = real
         blank.setGeoAnchor(nil)
         blank.setAreaBuyOut(false)
-        XCTAssertEqual(blank, .newGame())
+        // A real-world map has Taiwan's sights, a blank one its drawn ones (decision 174).
+        blank.setTourism(nil)
+        var plain = GameWorld.newGame()
+        plain.setTourism(nil)
+        XCTAssertEqual(blank, plain)
         XCTAssertNil(GameWorld.newGame().geoAnchor)
     }
 
