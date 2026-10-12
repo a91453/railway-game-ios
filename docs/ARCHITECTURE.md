@@ -5661,6 +5661,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **參考**（`a91453/railway-reference-private`）：見 PR 的對照表。
 
+**之後的修正**（查 bug，2026-10-12）：賣掉載著貨的貨運列車時，`freight.loads` 還留著它的貨，到整點的 `tickFreight` 才清；在那之前存的檔讀不回來（「Cargo is on a train… that does not exist」）。`sellTrain` 現在先 `loseCargo(of:)`，貨算損失（`FreightTests.testSellingALoadedFreightTrainLosesItsCargo`）。
+
 ### 178. 載客量圖層與車站「即將進站」看板
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：乘客模型很深（OD、轉乘、擁擠），但玩家看不到哪個區間塞爆、哪段空車，也看不到接下來進站的列車與誤點。號碼依工作登記 #231：決策 178；存檔版本、golden schema 不動，沒有新的 fixture。
