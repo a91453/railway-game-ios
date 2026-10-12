@@ -40,13 +40,24 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// A marina (decision 111): berths for pleasure boats and their club,
     /// a sight; 32 m a side, on the shore.
     case marina
+    /// A department store (decision 173): 48 m a side, 8 storeys. A
+    /// subsidiary business: it earns from the passengers of the stations
+    /// near it (see Subsidiary.swift), not rent.
+    case departmentStore
+    /// A hotel (decision 173): 32 m a side, 14 storeys. A subsidiary.
+    case hotel
+    /// An amusement park (decision 173): 112 m a side, one storey. A
+    /// subsidiary.
+    case amusementPark
 
     /// The length of a side, in world units.
     public var side: Int64 {
         switch self {
         case .house: 1_024
         case .shop, .wharf: 1_536
-        case .office, .marina: 2_048
+        case .office, .marina, .hotel: 2_048
+        case .departmentStore: 3_072
+        case .amusementPark: 7_168
         }
     }
 
@@ -54,9 +65,9 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     public var use: LandUse {
         switch self {
         case .house: .residential
-        case .shop, .wharf: .commercial
+        case .shop, .wharf, .departmentStore, .hotel: .commercial
         case .office: .office
-        case .marina: .leisure
+        case .marina, .amusementPark: .leisure
         }
     }
 
@@ -66,6 +77,9 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
         switch self {
         case .house, .shop, .wharf, .marina: 2
         case .office: 6
+        case .departmentStore: 8
+        case .hotel: 14
+        case .amusementPark: 1
         }
     }
 
@@ -73,7 +87,7 @@ public enum PlacedBuildingKind: String, CaseIterable, Codable, Sendable {
     /// water, part on land. The others stand on land only.
     public var standsOnShore: Bool {
         switch self {
-        case .house, .shop, .office: false
+        case .house, .shop, .office, .departmentStore, .hotel, .amusementPark: false
         case .wharf, .marina: true
         }
     }
@@ -119,6 +133,8 @@ public struct PlacedBuilding: Hashable, Sendable {
     /// nothing recorded for one placed before save version 22.
     public internal(set) var buildingCost: Money = .zero
     public internal(set) var landCost: Money = .zero
+    /// A subsidiary's trading books (decision 173); empty for the others.
+    public internal(set) var books: SubsidiaryBooks = SubsidiaryBooks()
 
     public init(id: PlacedBuildingID, kind: PlacedBuildingKind, centre: PlanPoint) {
         self.id = id
@@ -336,6 +352,9 @@ extension GameWorld {
             else {
                 return "Placed building \(building.id.rawValue) holds more than it may or cost out of range."
             }
+            guard building.books.isValid(for: building.kind) else {
+                return "Placed building \(building.id.rawValue) has trading books out of range."
+            }
         }
         return nil
     }
@@ -343,7 +362,7 @@ extension GameWorld {
 
 extension PlacedBuilding: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, kind, centre, residents, jobs, buildingCost, landCost
+        case id, kind, centre, residents, jobs, buildingCost, landCost, books
     }
 
     /// Decodes `{"id", "kind", "centre"}` and, since save version 22
@@ -359,6 +378,7 @@ extension PlacedBuilding: Codable {
         jobs = try container.decodeIfPresent(Int64.self, forKey: .jobs) ?? 0
         buildingCost = try container.decodeIfPresent(Money.self, forKey: .buildingCost) ?? .zero
         landCost = try container.decodeIfPresent(Money.self, forKey: .landCost) ?? .zero
+        books = try container.decodeIfPresent(SubsidiaryBooks.self, forKey: .books) ?? SubsidiaryBooks()
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -370,5 +390,6 @@ extension PlacedBuilding: Codable {
         if jobs != 0 { try container.encode(jobs, forKey: .jobs) }
         if buildingCost != .zero { try container.encode(buildingCost, forKey: .buildingCost) }
         if landCost != .zero { try container.encode(landCost, forKey: .landCost) }
+        if books != SubsidiaryBooks() { try container.encode(books, forKey: .books) }
     }
 }

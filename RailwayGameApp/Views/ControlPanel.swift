@@ -390,6 +390,9 @@ extension PlacedBuildingKind {
         case .office: .office
         case .wharf: .wharf
         case .marina: .marina
+        case .departmentStore: .departmentStore
+        case .hotel: .hotel
+        case .amusementPark: .amusementPark
         }
     }
 }
