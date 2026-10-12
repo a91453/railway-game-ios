@@ -1980,6 +1980,7 @@ W2 要接上真實車速與以秒計的停站（ROADMAP 的 Stage W；[對照文
   1. `Railway/site_archive_clean/` 的繁體中文（作者的台灣鐵道網站）：準點、誤點 {n} 分、早到 {n} 分、尖峰、離峰、已收班、班距、月台、停靠、發車、到站、終點站、時刻表、區間車、普通車、快車、倍速、暫停。
   2. 參考 `Ci/` 的簡體中文介面（`ui-locales/zh-CN`），轉成繁體與台灣用語：經濟明細、經濟流水、小時淨額、能源費用（日結）、員工費用（日結）、票價收入、營運成本、維護成本、路線供電與牽引用電、列車日用電、車站員工、司機與調度員工、本期、上期、固定票價、階梯票價、票價規則、餘額不足、服務模式、上線列車數、開班、收班、候車、載客、第 N 日。`Ci/` 的高峰／平峰、站台、运营、快速列车、普通列车、发车间隔，改用上面台灣網站的說法（尖峰／離峰、月台、營運、快車、普通車、班距）。
   3. 兩者都沒有的（gap，自訂）：交通控制、進路、軌段、轉轍器的共用端、平面交叉，以及所有錯誤訊息與建設、列車操作的說明。
+  4. 2026-10-12 作者改定（停站模式與車種分開命名）：路線的停站模式不用車種的名字，每站都停是「各站停車」、只跑一段是「短程班次」、越站而只停兩端是「直達車」、越站但停三站以上是「快速列車」（`serviceTitle`）；臺灣的「普通車」「區間車」「快車」指的是車種，容易誤會。列車性能預設 `ordinary` 顯示為臺鐵的車種名「普快車」。路線面板的停站模式區塊是「新增停站模式」，開關「直達車：只停靠兩端」，按鈕「加入」。英文跟著分開：All stops、Short working、Non-stop（直達車）、Express（快速列車），區塊是 Add a stopping pattern，開關 Non-stop: call at the two ends only，按鈕 Add；性能預設的英文仍是 Ordinary。只改顯示文字；內部名稱與存檔不變，真實機捷資料的「普通車／直達車」照原樣。
 - **不翻譯**：GameCore（沒有介面文字）；金額（兩種語言都是 `$ 1,234`，與參考相同）、時鐘、座標、倍速（`600×`）；玩家取的名稱；Debug 的示範配置；App 的顯示名稱「Railway Game」（由作者決定中文名稱）。
 - **驗證**：GamePresentation 的中文由 Linux 測試逐字固定；String Catalog 的鍵由腳本從 App 原始碼的字面字串抽出，每個鍵都有翻譯。Xcode 編譯 String Catalog 與實機上的中文排版要靠 CI 的 iOS 建置與 TestFlight。
 
@@ -2114,7 +2115,7 @@ W2c（決策 40）讓每台列車與每條路線都有自己的 `TrainPerformanc
 
 **GamePresentation**（Linux 上測試）：
 
-- `PerformancePreset`：GameCore 的 14 個預設，依參考的規則命名（區間車、普通車、莒光／復興、自強、EMU3000、推拉式自強、太魯閣、普悠瑪、柴聯自強、DR1000、阿里山林鐵、高鐵），加上標準與捷運（`Ci/` 的捷運列車）。`init?(matching:)` 找加減速與惰行相同的第一個預設（不看最高速度，因為設計時速只改它）；DR1000 與柴聯自強的數值相同，顯示為先列出的柴聯自強。
+- `PerformancePreset`：GameCore 的 14 個預設，依參考的規則命名（區間車、普通車〔顯示為普快車，見決策 38 的用語第 4 點〕、莒光／復興、自強、EMU3000、推拉式自強、太魯閣、普悠瑪、柴聯自強、DR1000、阿里山林鐵、高鐵），加上標準與捷運（`Ci/` 的捷運列車）。`init?(matching:)` 找加減速與惰行相同的第一個預設（不看最高速度，因為設計時速只改它）；DR1000 與柴聯自強的數值相同，顯示為先列出的柴聯自強。
 - `PerformancePreset.designSpeeds`：`Ci/` 的 `LINE_SPEED_ALL_NON_SG`，60 到 200 km/h。`TrainPerformance.withTopSpeed(_:)` 只換最高速度。
 - 文字：`displayText(in:)`（「區間車 · 120 km/h · 2.5 / 3 km/h/s」，對不上預設時是「自訂」）、`durationText(seconds:in:)`、路線的 `lineJourneyText(_:in:)`（以路線的性能規劃的各段與來回）、列車的 `trainRunText(of:in:)`（`ServiceTimes.run`：秒數、距離、預計到達）。
 - `GameSession.setSelectedTrainPerformance(_:)`、`setSelectedLinePerformance(_:)`：各呼叫一個 `GameWorld` 指令；行駛中的列車被拒絕（`trainServiceActive`），不合法的性能被拒絕（`invalidTrainPerformance`），世界不變。
