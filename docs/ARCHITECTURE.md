@@ -3089,7 +3089,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 6. **教學期間停用**：教學的步驟用第一次顯示時看到的 ID 判斷「新的」軌道、車站、路線與列車，而復原會把計數器也倒回去，下一個車站會拿到被復原的那個 ID；在第二個「蓋車站」步驟復原再重蓋，Next 會一直等第二座車站。所以教學在畫面上時 `canUndo` 是 `false`、`undo()` 拒絕並說明，復原按鈕也隱藏（和控制項的展開按鈕一樣，教學的聚光位置不變）。教學結束後紀錄照常可用。
 7. **畫面**：工具列（`ControlPanel` 的工具選擇器右邊）加一個復原按鈕（`arrow.uturn.backward`，`controls.undo`），`canUndo` 為 `false` 時停用。字串有 zh-Hant。
 
-**限制**：沒有重做（參考也沒有）；目前 App 沒有列車速率滑桿（只有暫停／恢復列車），`beginEditGesture()`／`endEditGesture()` 只有 GamePresentation 的測試在用；遊戲在跑的時候幾乎每 0.1 秒就有一個 tick，所以要先暫停才能復原。
+**限制**：沒有重做（參考也沒有；決策 184 依模擬器的 `past`／`future` 加上了）；目前 App 沒有列車速率滑桿（只有暫停／恢復列車），`beginEditGesture()`／`endEditGesture()` 只有 GamePresentation 的測試在用；遊戲在跑的時候幾乎每 0.1 秒就有一個 tick，所以要先暫停才能復原。
 
 ### 83. 拆除車站
 
@@ -5765,6 +5765,28 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **限制**：實景地圖上色調是一般疊色；一般速度下列車在一個 tick 內到站又出發時會跳；颱風的範圍本身不畫，只標受影響的車站。
 
 **測試**：`DayNightTests`（色調各時段的顏色與強度、不跳、燈的開關、時鐘到秒；雨絲數量固定、在螢幕內、同一時間相同；閃電的週期與長度；減少動態效果；今天的天氣與颱風車站和 GameCore 一致）、`TrainMotionTests`（`Trail` 的取點與定位、滑動的時間、列車沿軌道從上一個位置滑到現在的位置並跨過邊的接點、車身跟著車頭、折返時跳、貨運線的外觀）。App 的畫法（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
+
+### 184. 玩家操作的小功能包：重做、清單搜尋、存檔管理、點選檢視、更多地圖泡泡、提示音與觸覺
+
+2026-10-12。第二梯 B 的派工（派工 session_017he2Q1QSeaBKJD1PR3XMma）：幾個玩家天天碰到、但一直缺的小東西。號碼依工作登記 #231：決策 184；**只改 Presentation／App**，GameCore 不動（只用既有的唯讀 API），存檔版本、golden schema 不動，沒有新的 fixture；`SavedGame` 的格式沒有改，golden 與 replay 不受影響。
+
+**重做（Redo）**：`GameSession` 多一疊 `redoHistory`（參考庫 Simulator 的 `past`／`future` 兩疊：`sY` 推入時清空 `future`、`sq` 復原時把現在推進 `future`、`sG` 重做時從 `future` 取回並把現在推回 `past`）。`undo()` 把現在的世界推進重做疊；`redo()` 取回、把現在推回復原疊，兩疊都以 `undoLimit`（25）為上限；任何改變世界的新編輯（`performEdit`）與遊戲時間前進（`finish`）都清空它，和復原的規則一樣（決策 82）。時鐘的速度與暫停照玩家現在的設定（復原與重做共用 `step(to:)`）。教學進行中拒絕。`ControlPanel` 的復原旁多一顆「重做」（`arrow.uturn.forward`，`controls.redo`），啟用規則同復原。參考的上限是 80，這裡沿用復原的 25（每份是整個世界的快照，全台灣地圖很大）。
+
+**清單搜尋與篩選**（`ListSearch.swift`，本專案自己的：參考庫的清單都沒有搜尋）：名稱包含輸入的字就符合，不分大小寫、全半形、重音，**「臺」與「台」視為相同**。`GameWorld.stations(matching:)`；`lines(_:matching:filter:)` 比對路線名與**停靠站名**（打站名找得到經過的路線），`LineFilter` 有「全部路線」「只看虧損」（昨日損益為負，要有決策 179 的逐線帳）「只看貨運」，世界沒有的選項不出現（`lineFilters`）；`trains(_:matching:)` 比對車名與所屬路線名。畫面（`ListSearchField`）：路線面板（6 條以上才有搜尋框；2 條以上有篩選）、車隊總覽（6 列以上）、車站總覽（`NetworkOverview`，6 站以上）；車站面板的「選擇車站」在 6 站以上改成可搜尋的清單（`.searchable`）。排序沿用 #396（決策 179），篩選套在排序之後。清單短時不出現搜尋框，列的位置不變（UI 測試點的列不會移動）。
+
+**存檔管理**：存檔名放在**存檔旁的檔案** `save-….name`（純文字，最多 60 字、一行），不在存檔裡，也不是 `.json`，所以任何 build 都不會把它當成存檔列出；刪除存檔時一起刪。只有玩家自己的存檔能命名（自動存檔會被覆寫）。`SaveLibrary.save(…, named:)`、`rename(_:to:)`（空白就拿掉名字，改以時間命名）、`sorted(_:by:)`（最新、最舊、依名稱；自動存檔永遠在最前、讀不到的永遠在最後）；`SaveSummary.dateAndFundsText`（遊戲日曆「第 1 年 1 月 3 日（三）14:20 · 資金 $ …」，決策 175 的日曆）與 `networkText`。`GameLauncher.saveCurrentGame(named:)`、`rename(_:to:)`。畫面：遊戲選單原本的「匯出存檔」一列改成子選單「另存或匯出」，裡面是「另存新檔…」（問名字）與「匯出存檔」，選單的列數不變（多一列時橫拿手機的「回到開始畫面」被擠出可點的範圍，UI 測試抓到）；「儲存遊戲」照舊一按就存；存檔清單每列顯示名字（或時間）、遊戲日期與資金、路網規模，右上角排序選單（記在 `@AppStorage`），滑動或長按有「重新命名」「刪除」，**刪除要再確認**（原本滑動就直接刪）。
+
+**點選檢視**：選取工具點在沒有車站、列車、建物的地方時，觸控範圍內的軌道被選取（`GameSession.selectedTrackEdge`，只存 ID；其他選取、清除選取與 `dropSelectionOfMissing` 都會放掉它；其他工具不選軌道）。`GameWorld.trackInspection(of:)`／`trackInspectionText`：「軌道 · 長度 · 構造 · 路線：紅線、藍線 · 號誌：…」。經過的路線取自地圖的路線圖層（`LineMap`，決策 84）。**這個遊戲沒有號誌機**，「號誌」是軌道的閉塞狀態：有列車佔用（`occupiedResources`）是紅燈、被列車預留進路（交通控制的 `reservedResources`）是黃燈、都沒有是綠燈。列車多一行 `trainInspectionText`：所屬路線（含停站模式）、滿載率、準點／誤點／早到。檢視卡片下方的路線色標籤點了就選那條線並打開路線面板（「路線細節」）。公司建物的檢視是決策 173，不重複。
+
+**更多地圖泡泡**（`GameWorld.situationAlerts()`，和 `mapAlerts()` 分開，因為站長每一步都問 `mapAlerts()`，而死結要從每列等候的列車算）：交通控制下**死結的列車**（`deadlockedTrains()`，在車頭；點了選取那列車）、**四星以上沒有車站的景點**（`tourism` 開著、而且已經有客運路線時；在景點上；點了地圖移過去並打開觀光面板）、**挑戰破產倒數**（`insolvencyCountdown`，在第一個車站；點了打開經營資料）。「車站爆滿」原本就有（決策 109 的 `full`）。`MapAlert.station` 改成可以沒有（列車與景點的泡泡）；泡泡在同一個位置疊起來，改以位置分組。泡泡只在選取工具時計算。圖示沿用既有的 `MapGlyph`（`train`、`star`、`warningSolid`），沒有新畫圖示。
+
+**提示音與觸覺**：新的 `SoundCue.refused`（任何失敗訊息：兩個往下的低音撥弦）與 `.warning`（新聞紀錄新增一則「警訊」類：負債、期限、颱風、缺建材；讀檔還原的紀錄不響）。兩個新音檔由 `tools/audio/make_game_audio.py` 合成（本專案自己的素材；重新執行後既有的音檔位元組完全相同）。App 的 `GameAudio` 另外給觸覺回饋（SwiftUI 的 `sensoryFeedback`，掛在 App 的場景上）：拒絕 `.error`、警訊 `.warning`、放好建物／月台（`.built`）`.success`；觸覺不受「音效」開關影響（系統的觸覺設定決定），和音效共用最短間隔。**行為改變**：原本拒絕是無聲的（`SoundCueTests`、`GameFeedbackTests` 的兩個斷言），現在有拒絕音，測試跟著改。
+
+**參考庫與外部專案**：重做移植 `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-38607521e5e99afd.js` 的 `past`／`future`（`sY`、`sq`、`sG`、`canRedo`）。搜尋、存檔命名、軌道檢視、新泡泡、提示音在參考庫裡沒有對應（Ci 的存檔是 `buildLocalSavePayload` 的槽位，沒有命名；MapBuilder 沒有號誌），是本專案自己的。外部專案沒有取用程式。
+
+**限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
+
+**測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。
 
 ## 目前規則摘要
 

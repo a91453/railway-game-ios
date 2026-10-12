@@ -33,7 +33,40 @@ public struct SaveLibrary: Sendable {
         public let summary: SaveSummary?
         /// Why the file cannot be loaded, or `nil` when it can be tried.
         public let problem: SaveError?
+        /// The name the player gave it (decision 184), or `nil`: the list
+        /// then names it by when it was saved. Kept beside the file, never
+        /// in the game.
+        public let name: String?
+
+        init(id: String, kind: Kind, savedAt: Date?, summary: SaveSummary?, problem: SaveError?, name: String? = nil) {
+            self.id = id
+            self.kind = kind
+            self.savedAt = savedAt
+            self.summary = summary
+            self.problem = problem
+            self.name = name
+        }
     }
+
+    /// How a list of saves is ordered (decision 184).
+    public enum Order: String, CaseIterable, Hashable, Sendable {
+        /// The latest saved first: ``entries()``'s order.
+        case newest
+        case oldest
+        /// By the player's name, then the date's, alphabetically.
+        case name
+
+        public func displayName(in language: DisplayLanguage) -> String {
+            switch self {
+            case .newest: language.text("Newest first", "最新的在前")
+            case .oldest: language.text("Oldest first", "最舊的在前")
+            case .name: language.text("By name", "依名稱")
+            }
+        }
+    }
+
+    /// The longest name a save keeps; a longer one is cut.
+    public static let maximumNameLength = 60
 
     /// The `"app"` every save names. Keep this identifier for save compatibility.
     public static let appName = "RailwayGame"
@@ -41,6 +74,10 @@ public struct SaveLibrary: Sendable {
     /// What a save's news log's file name ends with: `autosave.json`'s is
     /// `autosave.news.json`.
     static let newsSuffix = ".news.json"
+    /// What the file holding a save's name ends with (decision 184):
+    /// `save-….json`'s is `save-….name`, plain UTF-8 text. Not `.json`, so
+    /// no build lists it as a save.
+    static let nameSuffix = ".name"
 
     public let directory: URL
 
@@ -81,12 +118,82 @@ public struct SaveLibrary: Sendable {
         guard let data = try? Data(contentsOf: url(of: name)) else {
             return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: .fileSystem)
         }
+        let given = playerName(of: name)
         switch Self.header(of: data) {
         case .success(let header):
-            return Entry(id: name, kind: kind, savedAt: header.savedAt, summary: header.summary, problem: nil)
+            return Entry(id: name, kind: kind, savedAt: header.savedAt, summary: header.summary, problem: nil, name: given)
         case .failure(let problem):
-            return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: problem)
+            return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: problem, name: given)
         }
+    }
+
+    /// `entries` in `order`: the autosave always first, unreadable files
+    /// last, as ``entries()`` puts them.
+    public static func sorted(_ entries: [Entry], by order: Order) -> [Entry] {
+        func group(_ entry: Entry) -> Int {
+            entry.kind == .autosave ? 0 : (entry.savedAt == nil ? 2 : 1)
+        }
+        return entries.enumerated().sorted { lhs, rhs in
+            let (left, right) = (lhs.element, rhs.element)
+            if group(left) != group(right) { return group(left) < group(right) }
+            switch order {
+            case .newest:
+                break
+            case .oldest:
+                if let a = left.savedAt, let b = right.savedAt, a != b { return a < b }
+            case .name:
+                let a = left.name ?? "", b = right.name ?? ""
+                // Named saves first, by name; then the rest, newest first.
+                if a.isEmpty != b.isEmpty { return !a.isEmpty }
+                let order = a.localizedStandardCompare(b)
+                if order != .orderedSame { return order == .orderedAscending }
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    // MARK: - Names
+
+    /// The name kept beside save file `file`, or `nil`.
+    private func playerName(of file: String) -> String? {
+        guard let data = try? Data(contentsOf: url(of: Self.nameFile(of: file))),
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        return Self.cleanName(text)
+    }
+
+    /// `text` as a save's name: on one line, trimmed, at most
+    /// ``maximumNameLength`` characters; `nil` when nothing is left.
+    public static func cleanName(_ text: String) -> String? {
+        let line = text.split(whereSeparator: \.isNewline).joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !line.isEmpty else { return nil }
+        return String(line.prefix(maximumNameLength))
+    }
+
+    /// Names `entry` `name` (decision 184), or takes its name away when
+    /// `name` is empty, so the list names it by its date again. Only the
+    /// player's own saves: the autosave is written over. The save itself
+    /// is not touched.
+    @discardableResult
+    public func rename(_ entry: Entry, to name: String) throws(SaveError) -> Entry {
+        guard entry.kind == .manual else { throw .fileSystem }
+        let file = url(of: Self.nameFile(of: entry.id))
+        let cleaned = Self.cleanName(name)
+        do {
+            if let cleaned {
+                try Data(cleaned.utf8).write(to: file, options: .atomic)
+            } else if FileManager.default.fileExists(atPath: file.path) {
+                try FileManager.default.removeItem(at: file)
+            }
+        } catch {
+            throw .fileSystem
+        }
+        return Entry(id: entry.id, kind: entry.kind, savedAt: entry.savedAt, summary: entry.summary, problem: entry.problem, name: cleaned)
+    }
+
+    /// The file name of the name of save file `name`.
+    static func nameFile(of name: String) -> String {
+        (name.hasSuffix(".json") ? String(name.dropLast(".json".count)) : name) + nameSuffix
     }
 
     // MARK: - Loading and saving
@@ -106,7 +213,7 @@ public struct SaveLibrary: Sendable {
     /// of the player's own, saved at `date`. The file is replaced whole or
     /// not at all.
     @discardableResult
-    public func save(_ world: GameWorld, news: NewsLog? = nil, as kind: Kind, at date: Date) throws(SaveError) -> Entry {
+    public func save(_ world: GameWorld, news: NewsLog? = nil, as kind: Kind, at date: Date, named playerName: String? = nil) throws(SaveError) -> Entry {
         let data = try Self.encode(world, at: date)
         let name = kind == .autosave ? Self.autosaveFile : freeName(for: date)
         do {
@@ -120,7 +227,10 @@ public struct SaveLibrary: Sendable {
         if let news, let log = try? JSONEncoder().encode(news) {
             try? log.write(to: url(of: Self.newsFile(of: name)), options: .atomic)
         }
-        return Entry(id: name, kind: kind, savedAt: date, summary: SaveSummary(world: world), problem: nil)
+        let entry = Entry(id: name, kind: kind, savedAt: date, summary: SaveSummary(world: world), problem: nil)
+        // So is its name (decision 184); the autosave has none.
+        guard kind == .manual, let playerName else { return entry }
+        return (try? rename(entry, to: playerName)) ?? entry
     }
 
     /// Keeps the autosave as a save of the player's own before another game
@@ -161,6 +271,7 @@ public struct SaveLibrary: Sendable {
             throw .fileSystem
         }
         try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: entry.id)))
+        try? FileManager.default.removeItem(at: url(of: Self.nameFile(of: entry.id)))
     }
 
     /// `world` saved at `date` as a file to share, named after the app and
@@ -269,6 +380,29 @@ public struct SaveSummary: Codable, Hashable, Sendable {
         lines = world.lines.count
         trains = world.trains.count
         realWorld = world.geoAnchor == nil ? nil : true
+    }
+
+    /// The game date and the funds, as a save's list shows them first
+    /// (decision 184): "Year 1 · Jan 3 (Wed) 14:20 · Funds $ 12,345",
+    /// "第 1 年 1 月 3 日（三）14:20 · 資金 $ 12,345".
+    public func dateAndFundsText(in language: DisplayLanguage) -> String {
+        let date = GameTime(seconds: seconds).calendarText(in: language)
+        let money = Money(balance).moneyText
+        return language.text("\(date) · Funds \(money)", "\(date) · 資金 \(money)")
+    }
+
+    /// What has been built: "Real-world map · 5 stations · 2 lines · 2
+    /// trains", or "實景地圖 · 5 座車站 · 2 條路線 · 2 列列車".
+    public func networkText(in language: DisplayLanguage) -> String {
+        let map = realWorld == true ? [language.text("Real-world map", "實景地圖")] : []
+        switch language {
+        case .english:
+            func count(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? "1 \(one)" : "\(n) \(many)" }
+            return (map + [count(stations, "station", "stations"), count(lines, "line", "lines"), count(trains, "train", "trains")])
+                .joined(separator: " · ")
+        case .traditionalChinese:
+            return (map + ["\(stations) 座車站", "\(lines) 條路線", "\(trains) 列列車"]).joined(separator: " · ")
+        }
     }
 
     /// "Day 3 · 14:20 · $ 12,345 · 5 stations · 2 lines · 2 trains", after
