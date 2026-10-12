@@ -127,7 +127,8 @@ public struct DepartureBoard: Equatable, Sendable {
     /// The calls of `train` still ahead at `station` (and the passes), in
     /// the next three hours.
     static func rows(of train: Train, on line: ServiceLine, at station: StationID, in world: GameWorld, now: Int64) -> [Row] {
-        guard let execution = train.execution, !train.timetable.isEmpty else { return [] }
+        // An empty run back to the line's other end (decision 172) carries no one.
+        guard let execution = train.execution, !train.timetable.isEmpty, !train.isDeadheading else { return [] }
         let timetable = train.timetable
         let late = max(0, world.lateness(of: train.id) ?? 0)
         let lateMinutes = Int(min(late, 24 * 3600) / 60)
