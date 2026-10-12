@@ -121,9 +121,11 @@ final class PopTravelTests: XCTestCase {
         let cells = heatmap.tiles(in: region, blockSize: 1)
         let blocks = heatmap.tiles(in: region, blockSize: 4)
         XCTAssertLessThan(blocks.count, cells.count)
-        XCTAssertEqual(blocks.map(\.people).reduce(0, +), cells.map(\.people).reduce(0, +), "merging keeps everyone")
+        // Everyone, and the rest of the blocks at the edges (whole blocks).
+        XCTAssertGreaterThanOrEqual(blocks.map(\.people).reduce(0, +), cells.map(\.people).reduce(0, +), "merging keeps everyone")
         XCTAssertTrue(blocks.allSatisfy { $0.cells == 16 })
         let whole = WorldRegion(minX: -1e12, minY: -1e12, maxX: 1e12, maxY: 1e12)
+        XCTAssertEqual(heatmap.tiles(in: whole, blockSize: 4).map(\.people).reduce(0, +), grid.total, "merging keeps everyone")
         XCTAssertEqual(heatmap.tiles(in: whole, blockSize: 1).map(\.people).reduce(0, +), grid.total, "all of Taiwan")
     }
 
@@ -259,5 +261,27 @@ final class PopTravelTests: XCTestCase {
         XCTAssertNil(FollowBarInfo.Status.running.text(in: .english))
         let info = FollowBarInfo(name: "T", line: nil, kind: "K", origin: "A", terminus: "B", departure: "08:00", arrival: "08:30", status: .arrived)
         XCTAssertEqual(info.detail(in: .english), "K　A→B　08:00–08:30　· Arrived")
+    }
+}
+
+extension PopTravelTests {
+    /// A block at the edge of the view counts all its cells, not only the
+    /// rows and columns in view: otherwise it is shaded lighter than it is,
+    /// and its shade changes as the map pans.
+    func testABlockAtTheEdgeOfTheViewCountsAllItsCells() throws {
+        let grid = try Self.bundled()
+        let frame = try Self.taipeiFrame()
+        let heatmap = PopulationHeatmap(grid: grid, frame: frame)
+        let northWest = frame.worldPosition(latitude: 25.10, longitude: 121.45)
+        let southEast = frame.worldPosition(latitude: 25.00, longitude: 121.55)
+        let region = WorldRegion(minX: northWest.x, minY: northWest.y, maxX: southEast.x, maxY: southEast.y)
+        let whole = WorldRegion(minX: -1e12, minY: -1e12, maxX: 1e12, maxY: 1e12)
+        let everywhere = Dictionary(heatmap.tiles(in: whole, blockSize: 8).map { ("\($0.minX),\($0.minY)", $0.people) },
+                                    uniquingKeysWith: { $1 })
+        let inView = heatmap.tiles(in: region, blockSize: 8)
+        XCTAssertFalse(inView.isEmpty)
+        for tile in inView {
+            XCTAssertEqual(tile.people, everywhere["\(tile.minX),\(tile.minY)"], "the block at \(tile.minX), \(tile.minY)")
+        }
     }
 }

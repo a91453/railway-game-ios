@@ -68,7 +68,7 @@ extension GameWorld {
         let tons = trains.reduce(Int64(0)) { $0 + cargoOnBoard(of: $1) }
         let capacity = trains.reduce(Int64(0)) { $0 + Self.freightCapacity(cars: train(id: $1)?.cars ?? 0) }
         return language.text(
-            "Carrying \(tons) t of \(capacity) t on \(trains.count) trains.",
+            "Carrying \(tons) t of \(capacity) t on \(trains.count) train\(trains.count == 1 ? "" : "s").",
             "\(trains.count) 列列車載運中：\(tons) 噸／\(capacity) 噸。"
         )
     }

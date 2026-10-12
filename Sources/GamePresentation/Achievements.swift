@@ -172,8 +172,12 @@ public struct Achievement: Identifiable, Hashable, Sendable {
         language.text(english.how, chinese.how)
     }
 
+    /// Whether `facts` meet it. One the game does not list
+    /// (``isListed(for:)``) is not met there: the rolling-stock marks need
+    /// trains priced by type (decision 180), which a challenge or an old
+    /// save does not price, though its trains still take cars and types.
     public func isMet(by facts: AchievementFacts) -> Bool {
-        test(facts)
+        isListed(for: facts) && test(facts)
     }
 
     /// How far `facts` are towards it, or `nil` for a mark that is had or

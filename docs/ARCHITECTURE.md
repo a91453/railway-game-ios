@@ -5810,6 +5810,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（車輛經濟 #395 合併後，2026-10-12）：成就 35 → 38，補上決策 180 的三項：車種齊全（車隊有三種以上車種，沒有車種的列車算一種）、長編組（一列 10 節以上）、車隊投資（`balanceSheet().rollingStock.cost`，列車與車廂的購置與改裝成本達 $5,000,000，賣掉的不算）。只在 `rollingStockEconomics` 打開的世界達得到；遊戲裡的清單在關著的世界不列這三項（`Achievement.isListed(for:)`，觀光的四項同樣改用它），開始畫面全部列出。「第一次賣掉列車」沒有做：世界只留下出售的收入（和賣建物的收入記在同一欄）與少一列的車隊，從狀態分辨不出賣過列車。
 
+**之後的修正**（第三次全程式碼查 bug，2026-10-12）：上一段的「只在 `rollingStockEconomics` 打開的世界達得到」只做到清單：關著的世界（挑戰、教學、示範、舊存檔）列車照樣能免費加到 10 節或換車種，午夜就解鎖「長編組」「車種齊全」，購置紀錄也照固定價格記，所以「車隊投資」也可能。現在 `Achievement.isMet(by:)` 先問 `isListed(for:)`：遊戲不列的成就在那個遊戲裡達不到（觀光的四項本來就因為沒有景點而是 0，不受影響）。`AchievementsTests.testTheRollingStockMarksAreNotHadWhereTrainsArePricedFlat`。
+
 ### 182. 晝夜與天氣畫面、列車依路線上色與平滑移動
 
 2026-10-12。作者睡覺期間的派工（依 A 列車 9 V5／A 列車觀光補齊缺口）：看列車跑是鐵道遊戲最大的樂趣，但地圖沒有時間感：夜裡和白天一樣、雨天和颱風看不出來，列車每個 tick（100 ms，一般速度是一遊戲分鐘）跳一大段。A9 有晝夜光影、夜間建物燈光與天候；A 列車觀光有時間色調。號碼依工作登記 #231：決策 182；**只改 presentation，GameCore 不動**，存檔版本、golden schema 不動，沒有新的 fixture，golden 與 replay 不受影響。
@@ -5915,6 +5917,13 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 存檔用玩家的速度（決策 99／175 的後續）：`GameSession.worldToSave` 在 session 自己暫停（建造工具 `isPausedForBuilding`、事件 `isPausedForEvent`）時存成以暫停前的速度在跑；玩家自己按的暫停照存。手動存檔、自動存檔、匯出都用它。以前切到背景時自動存檔存成暫停，回來按「繼續」遊戲停著也沒有說明。
 - 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
 - VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
+
+**之後的修正（第三次全程式碼查 bug，2026-10-12）**：每項先有在 Linux 上失敗的測試。
+- 景點沒有車站的泡泡（`situationAlerts()`）用景點自己的星等，沒有加旅館：3.75 星加一間旅館在面板上是 4 星，地圖卻沒有泡泡。改用 `stars(of:)`，和面板、站長一樣（`SituationAlertsTests.testASightRaisedToFourStarsByAHotelShows`）。
+- 點「卡住了」的泡泡、或新聞紀錄對列車按「前往」，原本走 `selectTrain`，選取的車站留著，檢視卡片標題是車站、下面卻是列車的路線與誤點。現在和在地圖上點列車一樣（`tapTrain`）：選取工具放掉車站、點、建物與軌道。列車面板的選單與車隊總覽仍用 `selectTrain`（列車工具要留著車站當送車的目的地）。
+- 站長的「觀光客要來了」（決策 174）說的是今天或三天內開始的假期，但 `holidays(from:through:)` 也回傳已經開始的假期，所以九天的春節每天都說「到了」，也蓋掉這段期間的其他建議；現在只取 `start >= today` 的。
+- 縮小時人口熱度圖的方塊（`PopulationHeatmap.tiles(in:blockSize:)`）在畫面邊緣只加了範圍內的列與欄，卻用整塊的格數平均：邊緣的方塊比實際淡，平移時顏色會變。現在和 `CityMap` 一樣取整塊。
+- 文字：貨運線一列車時英文說「on 1 trains」；城市委託的中文標題在站名已經以「站」結尾（含「已拆除的車站」）時變成「…站站運量提升」；帳本不到 $0.50 的支出四捨五入成 $ 0 時寫成「+$ 0」。
 
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 

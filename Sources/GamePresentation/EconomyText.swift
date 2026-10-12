@@ -117,7 +117,9 @@ extension LedgerEntry {
 
     static func signedMoneyText(_ amount: Money) -> String {
         let digits = amount.moneyText.dropFirst(2)
-        return digits.hasPrefix("-") ? "-$ \(digits.dropFirst())" : "+$ \(digits)"
+        if digits.hasPrefix("-") { return "-$ \(digits.dropFirst())" }
+        // A loss under half a dollar rounds to $ 0, still a loss.
+        return amount < .zero ? "-$ \(digits)" : "+$ \(digits)"
     }
 }
 

@@ -163,3 +163,16 @@ final class FreightSessionTests: XCTestCase {
         XCTAssertTrue(off.mapAlerts().allSatisfy { $0.kind != .materialsShort })
     }
 }
+
+extension FreightSessionTests {
+    func testAFreightLineOfOneTrainSaysTrain() throws {
+        var world = try Self.world()
+        world.enableFreight()
+        let line = try world.createLine(named: "Goods", stops: [Self.alpha, Self.beta]).id
+        try world.setLineFreight(line, to: true)
+        let train = try world.purchaseTrain(named: "F1").id
+        try world.assignTrain(train, to: line, pattern: nil)
+        let text = try XCTUnwrap(world.freightLineText(line, in: .english))
+        XCTAssertTrue(text.hasSuffix(" on 1 train."), text)
+    }
+}
