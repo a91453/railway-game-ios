@@ -166,6 +166,29 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         assertEmptyStart(in: app)
     }
 
+    /// A save that cannot be read is listed so that it can be deleted
+    /// (``GameLauncher/otherSaves``): its row cannot load, but its swipe
+    /// must still offer Delete (bug hunt 3, domain D).
+    func testAnUnreadableSaveCanBeDeleted() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-broken-save", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        requiredButton("start.savedGames", in: app).tap()
+        let row = app.buttons["saves.row.save-broken.json"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "The unreadable save is listed")
+        row.swipeLeft()
+        let delete = app.buttons["Delete"].firstMatch
+        if !delete.waitForExistence(timeout: 5) { row.swipeLeft() }
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), "Swiping the unreadable save must offer Delete")
+        delete.tap()
+        let confirm = app.buttons["saves.delete.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Deleting asks first")
+        confirm.tap()
+        XCTAssertTrue(row.waitForNonExistence(timeout: 10), "The unreadable save is gone from the list")
+    }
+
     private func assertEmptyStart(in app: XCUIApplication) {
         _ = requiredButton("start.newGame", in: app)
         _ = requiredButton("start.demoMap", in: app)
