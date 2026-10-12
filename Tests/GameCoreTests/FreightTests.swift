@@ -403,6 +403,28 @@ final class FreightTests: XCTestCase {
         XCTAssertTrue(state.isConserved)
     }
 
+    /// A train taken off its line, stopped and sold before the hour loses
+    /// its cargo with it, and the world still saves and loads.
+    func testCargoOfASoldTrainIsLost() throws {
+        var world = try world(jobs: 40_000)
+        while (world.freight?.loads.isEmpty ?? true) && world.clock.now.seconds < 6 * 3_600 {
+            try world.advance(ticks: 1)
+        }
+        let carried = try XCTUnwrap(world.freight?.onBoard)
+        XCTAssertGreaterThan(carried, 0)
+        let lostBefore = try XCTUnwrap(world.freight?.lost)
+        try world.unassignTrain(blue)
+        if world.train(id: blue)?.execution != nil { try world.stopTrainService(blue) }
+        try world.unplaceTrain(blue)
+        try world.sellTrain(blue)
+        let state = try XCTUnwrap(world.freight)
+        XCTAssertEqual(state.onBoard, 0)
+        XCTAssertEqual(state.lost, lostBefore + carried)
+        XCTAssertTrue(state.isConserved)
+        XCTAssertNil(world.freightProblem())
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     // MARK: - Saving
 
     /// A world without freight writes none of it; a world with it keeps it

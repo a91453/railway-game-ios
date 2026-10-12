@@ -135,6 +135,28 @@ final class LineAccountsTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
+    /// Removing a station that ends a line removes the line too: its
+    /// records go with it, and so do the station's flows, so the save
+    /// still loads.
+    func testRemovingAStationDropsItsFlowsAndItsLinesRecords() throws {
+        var world = try build()
+        try world.advance(ticks: 1_500)
+        let one = try XCTUnwrap(world.lines.first { $0.id == first }.flatMap { line in
+            world.trains.first { world.assignedLine(of: $0.id) == line.id }
+        }).id
+        try world.unassignTrain(one)
+        for _ in 0..<600 where world.train(id: one)?.execution != nil {
+            try world.advance(ticks: 1)
+        }
+        world.abandonRiders(of: one)
+        XCTAssertTrue(world.lineAccounts?.flows.contains { $0.station == a } == true)
+        try world.removeStation(a)
+        XCTAssertEqual(world.lines.map(\.id), [second])
+        XCTAssertEqual(world.lineAccounts?.lines.map(\.line), [second])
+        XCTAssertFalse(world.lineAccounts?.flows.contains { $0.station == a } == true)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
     func testOnlyThirtyDaysAreKept() throws {
         var world = try build()
         try world.advance(ticks: 31 * 1_440)

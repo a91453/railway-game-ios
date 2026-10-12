@@ -976,6 +976,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         for index in lines.indices.reversed() where lines[index].stops.contains(id) {
             guard let (line, dropped) = lines[index].removingStation(id) else {
+                removeLineAccounts(of: lines[index].id)
                 lines.remove(at: index)
                 continue
             }
@@ -999,6 +1000,7 @@ public struct GameWorld: Equatable, Sendable {
         }
         demandEvents?.events.removeAll { $0.station == id }
         townGrowth?.places.removeAll { $0.station == id }
+        lineAccounts?.flows.removeAll { $0.station == id }
         stations.remove(at: stationIndex)
         disposeAsset(.station, owner: id.rawValue)
 
@@ -1217,6 +1219,13 @@ public struct GameWorld: Equatable, Sendable {
         sellAsset(.train, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.train, owner: owner)))
         sellAsset(.cars, owner: owner, for: RollingStock.salePrice(bookValue: bookValue(.cars, owner: owner)))
         abandonRiders(of: id)
+        // Cargo still on board, off a freight line since the last hour, is
+        // lost with the train, as the next hour would lose it.
+        if var state = freight, let load = state.loads.firstIndex(where: { $0.train == id }) {
+            state.count(state.loads[load].tons, in: \.lost)
+            state.loads.remove(at: load)
+            freight = state
+        }
         trains.remove(at: index)
         abandonUnservedPassengers()
     }
