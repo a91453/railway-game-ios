@@ -31,7 +31,10 @@ struct NewsWatch {
         achieved = Set(world.scenario?.achieved.enumerated().compactMap { $1 == nil ? nil : $0 } ?? [])
         scenarioID = world.scenario?.scenario.id
         outcomeSeen = world.scenario?.outcome != nil
-        deadlineWarned = false
+        // A loaded challenge already in its last week has been warned.
+        deadlineWarned = world.scenario.map {
+            $0.scenario.deadlineDays > 14 && $0.outcome == nil && $0.scenario.deadlineDays - $0.elapsedDays(through: today) <= 7
+        } ?? false
         announcedTyphoons = Set(world.typhoons(onDay: today).filter { $0.announced <= today }.map(\.start))
         landUnlocked = Self.isLandUnlocked(world)
     }
