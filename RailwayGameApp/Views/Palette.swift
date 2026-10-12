@@ -196,6 +196,8 @@ enum MapGlyph: String {
     case warning = "MapGlyphWarning"
     /// ``warning``'s outline without its cut-out mark, drawn under it.
     case warningSolid = "MapGlyphWarningSolid"
+    /// A sight's rating (decision 174).
+    case star = "MapGlyphStar"
 
     var image: Image {
         Image(rawValue).renderingMode(.template)

@@ -240,9 +240,15 @@
 ///     `"subsidiarySales"` and `"subsidiaryCost"`. A build that reads only an
 ///     earlier version would fail on the kinds, so it says the save is newer
 ///     than it instead. (Version 45 is flexible dispatch, decision 172.)
+/// 47. Tourism (decision 174): a world can have `"tourism"`, the sights
+///     with their shops and counts. A build that reads only an earlier
+///     version would drop it, and its next save would turn the sights
+///     off and lose the shops (versions 45 and 46 are flexible dispatch and
+///     the subsidiaries), so it
+///     says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 46
+    public static let currentVersion = 47
 
     public let world: GameWorld
 
@@ -374,6 +380,8 @@ extension SavedGame: Codable {
         // nothing empty, as every one had.
         // Version 45 to 46: a building has no `"books"` and the ledger no
         // subsidiary rows, as none traded.
+        // Version 46 to 47: a world without `"tourism"` has no sights, and
+        // its passengers are as they were.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

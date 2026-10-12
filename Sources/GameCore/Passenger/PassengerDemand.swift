@@ -30,7 +30,7 @@ extension GameWorld {
     /// The game day demand is worked out for, with weekly demand, events
     /// or holidays: today's. `nil` without any, when every day is the same.
     var demandDay: Int64? {
-        weeklyDemand || demandEvents != nil || disruptions != nil ? dayIndex(of: clock.now) : nil
+        weeklyDemand || demandEvents != nil || disruptions != nil || tourism != nil ? dayIndex(of: clock.now) : nil
     }
 
     /// Whether today's demand follows the weekend's hours: on a weekend,
@@ -214,7 +214,12 @@ extension GameWorld {
         guard trips > 0, let from = stationDemand(of: origin), let to = stationDemand(of: destination) else {
             return Array(repeating: 0, count: 24)
         }
-        return Self.hourly(trips, from: from.kind, to: to.kind, weekend: isDemandWeekend)
+        // Decision 174: the tourists keep their own hours.
+        let tourists = currentTouristFlows()
+        let extra = tourists.trips(from: origin, to: destination)
+        guard extra > 0 else { return Self.hourly(trips, from: from.kind, to: to.kind, weekend: isDemandWeekend) }
+        let ordinary = Self.hourly(max(0, trips - extra), from: from.kind, to: to.kind, weekend: isDemandWeekend)
+        return zip(ordinary, tourists.hourly(from: origin, to: destination)).map { $0 + $1 }
     }
 
     // MARK: - Derivation
@@ -365,13 +370,17 @@ extension GameWorld {
         // Decision 168: in a network game a high-speed station with people
         // round it has intercity trips though its own catchment has none.
         let network = passengerRoutingMode == .network
-        guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 || (network && demand.hinterland > 0), allowsEntry(at: origin) else { return [] }
+        // Decision 174: the tourists' trips from here, added to its others.
+        let tourists = currentTouristFlows().pairs[origin] ?? [:]
+        guard let demand = stationDemand(of: origin), demand.dailyTrips > 0 || (network && demand.hinterland > 0) || !tourists.isEmpty,
+              allowsEntry(at: origin) else { return [] }
         var reached: [(destination: StationID, weight: Int64, trip: PassengerTrip)] = []
         let graph = network ? PassengerRouteGraph(world: self) : nil
         var fastest: [StationID: Int64] = [:]
         var destinations: [StationID: StationDemand] = [:]
         for record in passengers {
-            guard let demand = record.demand, demand.dailyTrips > 0 || (network && demand.hinterland > 0), allowsService(at: record.station) else { continue }
+            guard let demand = record.demand, demand.dailyTrips > 0 || (network && demand.hinterland > 0) || tourists[record.station] != nil,
+                  allowsService(at: record.station) else { continue }
             let weight = demand.dailyTrips > 0 ? attraction(of: demand, at: record.station) : 0
             destinations[record.station] = demand
             let trip: PassengerTrip?
@@ -402,7 +411,8 @@ extension GameWorld {
                 trips = PassengerCrowding.decayed(trips, minutes: minutes)
                 between = PassengerCrowding.decayed(between, minutes: minutes)
             }
-            return trips + between > 0 ? (reached.destination, trips + between, reached.trip) : nil
+            let extra = (tourists[reached.destination]).map { $0.outbound + $0.back } ?? 0
+            return trips + between + extra > 0 ? (reached.destination, trips + between + extra, reached.trip) : nil
         }
     }
 
@@ -537,6 +547,8 @@ extension GameWorld {
         /// ``stations``).
         let distanceDemand: Bool
         let outsideConnections: Bool
+        /// Decision 174: the sights and their shops.
+        let tourism: Tourism?
     }
 
     /// The key of the network plan ``makePassengerPlan()`` works out now.
@@ -554,7 +566,7 @@ extension GameWorld {
             records: passengers.map(\.station), demands: passengers.map(\.demand),
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
-            distanceDemand: distanceDemand, outsideConnections: outsideConnections
+            distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism
         )
     }
 
@@ -592,19 +604,29 @@ extension GameWorld {
         let drawing = passengers.filter { ($0.demand?.dailyTrips ?? 0) > 0 && allowsService(at: $0.station) }
         let pull = pulls(of: drawing)
         let typhoons = typhoonMultipliers()
+        // Decision 174: the tourists' pairs, added to the ordinary ones.
+        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { trip(from: $0, to: $1) != nil }.flows
+        let drawingStations = Set(drawing.map(\.station))
         var flows: [PassengerPlan.Flow] = []
         var hourly: [Int64] = []
         for record in passengers {
-            guard let origin = record.demand, origin.dailyTrips > 0, allowsEntry(at: record.station) else { continue }
-            let reached = drawing.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
-            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
+            guard let origin = record.demand, origin.dailyTrips > 0 || tourists.pairs[record.station] != nil, allowsEntry(at: record.station) else { continue }
+            let touristTo = tourists.pairs[record.station].map { Set($0.keys) } ?? []
+            let candidates = touristTo.isEmpty ? drawing : passengers.filter {
+                $0.demand != nil && (touristTo.contains($0.station) || drawingStations.contains($0.station))
+            }
+            let reached = candidates.compactMap { other in trip(from: record.station, to: other.station).map { (other, $0) } }
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station] ?? 0 })
             for ((destination, trip), shared) in zip(reached, shares) {
                 let trips = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
-                guard trips > 0 else { continue }
+                let extra = tourists.trips(from: record.station, to: destination.station)
+                guard trips + extra > 0 else { continue }
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
                     destination: destination.station, trip: trip, choices: []))
-                hourly += Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
+                var hours = Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
+                if extra > 0 { hours = zip(hours, tourists.hourly(from: record.station, to: destination.station)).map { $0 + $1 } }
+                hourly += hours
             }
         }
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
@@ -626,6 +648,14 @@ extension GameWorld {
         let typhoons = typhoonMultipliers()
         let graph = PassengerRouteGraph(world: self)
         memo.use(graph)
+        // Decision 174: the tourists' pairs, added to the ordinary ones.
+        let tourists = tourism == nil ? TouristFlows() : touristFlows(onDay: dayIndex(of: clock.now)) { from, to in
+            let pair = PassengerRouteMemo.Pair(origin: from, destination: to)
+            let found = memo.choices[pair] ?? passengerRouteChoices(from: from, to: to, graph: graph)
+            memo.choices[pair] = found
+            return !found.isEmpty
+        }.flows
+        let drawingStations = Set(drawing.map(\.station))
         struct Draft {
             let origin: StationID
             let record: Int
@@ -633,12 +663,19 @@ extension GameWorld {
             let kind: StationDemandKind
             let options: [PassengerRouteChoice]
             let journeys: [PassengerJourney]
+            /// The ordinary trips, and with the tourists' all of them.
+            let ordinary: Int64
             let trips: Int64
         }
         var drafts: [Draft] = []
         for (index, record) in passengers.enumerated() {
-            guard let origin = record.demand, origin.dailyTrips > 0 || origin.hinterland > 0, allowsEntry(at: record.station) else { continue }
-            let reached = drawing.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
+            guard let origin = record.demand, origin.dailyTrips > 0 || origin.hinterland > 0 || tourists.pairs[record.station] != nil,
+                  allowsEntry(at: record.station) else { continue }
+            let touristTo = tourists.pairs[record.station].map { Set($0.keys) } ?? []
+            let candidates = touristTo.isEmpty ? drawing : passengers.filter {
+                $0.demand != nil && (touristTo.contains($0.station) || drawingStations.contains($0.station))
+            }
+            let reached = candidates.compactMap { other -> (StationPassengers, [PassengerRouteChoice], [PassengerJourney])? in
                 let pair = PassengerRouteMemo.Pair(origin: record.station, destination: other.station)
                 let found = memo.choices[pair] ?? passengerRouteChoices(from: record.station, to: other.station, graph: graph)
                 memo.choices[pair] = found
@@ -655,7 +692,7 @@ extension GameWorld {
                 }
                 return options.isEmpty ? nil : (other, options, journeys)
             }
-            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station]! })
+            let shares = Self.apportion(trips(of: origin, at: record.station), by: reached.map { pull[$0.0.station] ?? 0 })
             for ((destination, options, journeys), shared) in zip(reached, shares) {
                 let fared = keptTrips(shared, from: record.station, to: destination.station, typhoons: typhoons)
                 let minutes = options.map(\.route.totalMinutes).min()!
@@ -663,9 +700,11 @@ extension GameWorld {
                 // minutes of the way like its ordinary ones.
                 let intercity = intercityTrips(from: record.station, origin, to: destination.station, destination.demand!, typhoons: typhoons)
                 let trips = PassengerCrowding.decayed(fared, minutes: minutes) + PassengerCrowding.decayed(intercity, minutes: minutes)
-                guard trips > 0 else { continue }
+                let extra = tourists.trips(from: record.station, to: destination.station)
+                guard trips + extra > 0 else { continue }
                 drafts.append(Draft(origin: record.station, record: index, destination: destination,
-                                    kind: origin.kind, options: options, journeys: journeys, trips: trips))
+                                    kind: origin.kind, options: options, journeys: journeys,
+                                    ordinary: trips, trips: trips + extra))
             }
         }
         // The plan's own daily loads, on the uncrowded weights.
@@ -687,7 +726,11 @@ extension GameWorld {
             flows.append(PassengerPlan.Flow(origin: draft.origin, record: draft.record,
                 destination: draft.destination.station,
                 trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-            hourly += Self.hourly(draft.trips, from: draft.kind, to: draft.destination.demand!.kind, weekend: isDemandWeekend)
+            var hours = Self.hourly(draft.ordinary, from: draft.kind, to: draft.destination.demand!.kind, weekend: isDemandWeekend)
+            if draft.trips > draft.ordinary {
+                hours = zip(hours, tourists.hourly(from: draft.origin, to: draft.destination.station)).map { $0 + $1 }
+            }
+            hourly += hours
         }
         return flows.isEmpty ? nil : PassengerPlan(flows: flows, hourly: hourly)
     }

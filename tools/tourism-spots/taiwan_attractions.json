@@ -1,0 +1,280 @@
+{
+ "license": "OpenStreetMap contributors, ODbL 1.0",
+ "attractions": [
+  {
+   "id": "s01",
+   "name": "墾丁・小灣",
+   "englishName": "Kenting Xiaowan",
+   "kind": "coast",
+   "stars": 400,
+   "lat": 21.94509,
+   "lon": 120.79897,
+   "source": "node/1741566804",
+   "matched": "墾丁大街 墾丁大街 Kenting Main Street"
+  },
+  {
+   "id": "s02",
+   "name": "九份",
+   "englishName": "Jiufen",
+   "kind": "town",
+   "stars": 400,
+   "lat": 25.10873,
+   "lon": 121.84357,
+   "source": "node/4786064121",
+   "matched": "九份老街 九份老街 Jiufen Old Street"
+  },
+  {
+   "id": "s04",
+   "name": "清水斷崖",
+   "englishName": "Qingshui Cliff",
+   "kind": "mountain",
+   "stars": 400,
+   "lat": 24.21887,
+   "lon": 121.68914,
+   "source": "node/5189737463",
+   "matched": "清水斷崖"
+  },
+  {
+   "id": "s06",
+   "name": "日月潭",
+   "englishName": "Sun Moon Lake",
+   "kind": "mountain",
+   "stars": 450,
+   "lat": 23.85472,
+   "lon": 120.91679,
+   "source": "area/3858334",
+   "matched": "日月潭 日月潭 Sun Moon Lake"
+  },
+  {
+   "id": "s07",
+   "name": "阿里山",
+   "englishName": "Alishan",
+   "kind": "mountain",
+   "stars": 450,
+   "lat": 23.50863,
+   "lon": 120.80127,
+   "source": "node/1976779882",
+   "matched": "阿里山觀景台"
+  },
+  {
+   "id": "s08",
+   "name": "太魯閣",
+   "englishName": "Taroko",
+   "kind": "mountain",
+   "stars": 450,
+   "lat": 24.1555,
+   "lon": 121.62163,
+   "source": "node/2288158544",
+   "matched": "太魯閣牌樓 太魯閣牌樓 Entrance Arch Gate Taroko  東西橫貫公路牌樓"
+  },
+  {
+   "id": "s09",
+   "name": "野柳",
+   "englishName": "Yehliu",
+   "kind": "coast",
+   "stars": 350,
+   "lat": 25.20535,
+   "lon": 121.69142,
+   "source": "area/239376794",
+   "matched": "野柳海洋世界 野柳海洋世界 Yehliu Ocean World"
+  },
+  {
+   "id": "s11",
+   "name": "合歡山",
+   "englishName": "Hehuanshan",
+   "kind": "mountain",
+   "stars": 350,
+   "lat": 24.13204,
+   "lon": 121.29521,
+   "source": "node/4991470021",
+   "matched": "合歡山奇萊山稜大景"
+  },
+  {
+   "id": "s12",
+   "name": "高美濕地",
+   "englishName": "Gaomei Wetlands",
+   "kind": "coast",
+   "stars": 350,
+   "lat": 24.31111,
+   "lon": 120.56278,
+   "source": "node/3504919298",
+   "matched": "高美 高美 Gaomei"
+  },
+  {
+   "id": "s15",
+   "name": "池上伯朗大道",
+   "englishName": "Chishang Brown Avenue",
+   "kind": "mountain",
+   "stars": 300,
+   "lat": 23.1243,
+   "lon": 121.2208,
+   "source": "area/1546499433",
+   "matched": "池上飯包文化故事館  Woo / Wu-Tau (good local food and cheap price)  悟"
+  },
+  {
+   "id": "s16",
+   "name": "七星潭",
+   "englishName": "Qixingtan",
+   "kind": "coast",
+   "stars": 300,
+   "lat": 24.03844,
+   "lon": 121.6242,
+   "source": "node/5999282885",
+   "matched": "七星潭風景區  Qixingtan Beach"
+  },
+  {
+   "id": "s17",
+   "name": "陽明山擎天崗",
+   "englishName": "Qingtiangang",
+   "kind": "mountain",
+   "stars": 300,
+   "lat": 25.16498,
+   "lon": 121.57558,
+   "source": "node/8568467517",
+   "matched": "擎天崗草原"
+  },
+  {
+   "id": "s18",
+   "name": "清境",
+   "englishName": "Qingjing",
+   "kind": "mountain",
+   "stars": 350,
+   "lat": 24.04585,
+   "lon": 121.15662,
+   "source": "area/450762747",
+   "matched": "清境農場小瑞士花園 清境農場小瑞士花園 Cingjing Small Swiss Garden"
+  },
+  {
+   "id": "s20",
+   "name": "玉山群峰",
+   "englishName": "Yushan",
+   "kind": "mountain",
+   "stars": 400,
+   "lat": 23.54289,
+   "lon": 120.90859,
+   "source": "node/7469352185",
+   "matched": "玉山觀峰景點"
+  },
+  {
+   "id": "s21",
+   "name": "遠雄海洋公園",
+   "englishName": "Farglory Ocean Park",
+   "kind": "town",
+   "stars": 300,
+   "lat": 23.90155,
+   "lon": 121.60149,
+   "source": "area/313210456",
+   "matched": "遠雄海洋公園 遠雄海洋公園 Farglory Ocean Park"
+  },
+  {
+   "id": "s23",
+   "name": "陶朱隱園",
+   "englishName": "Taozhu Yinyuan",
+   "kind": "town",
+   "stars": 300,
+   "lat": 25.0386,
+   "lon": 121.5462,
+   "source": "approx",
+   "matched": ""
+  },
+  {
+   "id": "s25",
+   "name": "淡江大橋",
+   "englishName": "Tamsui River Bridge",
+   "kind": "town",
+   "stars": 250,
+   "lat": 25.1744,
+   "lon": 121.431,
+   "source": "approx",
+   "matched": ""
+  },
+  {
+   "id": "s26",
+   "name": "麗寶賽車場",
+   "englishName": "Lihpao Racing Park",
+   "kind": "town",
+   "stars": 250,
+   "lat": 24.32392,
+   "lon": 120.69589,
+   "source": "area/301730802",
+   "matched": "麗寶樂園渡假村 麗寶樂園渡假村 Lihpao Resort"
+  },
+  {
+   "id": "s27",
+   "name": "Xpark・水族探索",
+   "englishName": "Xpark",
+   "kind": "town",
+   "stars": 350,
+   "lat": 25.01713,
+   "lon": 121.21404,
+   "source": "area/823329785",
+   "matched": "Xpark"
+  },
+  {
+   "id": "h01",
+   "name": "北投溫泉",
+   "englishName": "Beitou Hot Springs",
+   "kind": "hotSpring",
+   "stars": 350,
+   "lat": 25.13661,
+   "lon": 121.50713,
+   "source": "area/256190307",
+   "matched": "北投溫泉博物館 北投溫泉博物館 Beitou Hot Spring Museum"
+  },
+  {
+   "id": "h02",
+   "name": "烏來溫泉",
+   "englishName": "Wulai Hot Springs",
+   "kind": "hotSpring",
+   "stars": 350,
+   "lat": 24.86416,
+   "lon": 121.55144,
+   "source": "area/545445145",
+   "matched": "烏來泰雅博物館"
+  },
+  {
+   "id": "h03",
+   "name": "礁溪溫泉",
+   "englishName": "Jiaoxi Hot Springs",
+   "kind": "hotSpring",
+   "stars": 350,
+   "lat": 24.67,
+   "lon": 121.77,
+   "source": "approx",
+   "matched": ""
+  },
+  {
+   "id": "h04",
+   "name": "關子嶺溫泉",
+   "englishName": "Guanziling Hot Springs",
+   "kind": "hotSpring",
+   "stars": 300,
+   "lat": 23.33952,
+   "lon": 120.50412,
+   "source": "node/11238536037",
+   "matched": "關子嶺溫泉 之 寶泉"
+  },
+  {
+   "id": "h05",
+   "name": "四重溪溫泉",
+   "englishName": "Sichongxi Hot Springs",
+   "kind": "hotSpring",
+   "stars": 300,
+   "lat": 22.08335,
+   "lon": 120.73428,
+   "source": "area/306782614",
+   "matched": "四重溪溫泉遊憩區 四重溪溫泉遊憩區 Hsi Chung River Spring"
+  },
+  {
+   "id": "p01",
+   "name": "平溪天燈",
+   "englishName": "Pingxi Sky Lanterns",
+   "kind": "town",
+   "stars": 350,
+   "lat": 25.04266,
+   "lon": 121.77678,
+   "source": "node/4432792889",
+   "matched": "平溪放天燈區 平溪放天燈區 Shi Fen Old Street"
+  }
+ ]
+}
