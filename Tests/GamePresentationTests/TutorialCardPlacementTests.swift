@@ -106,9 +106,9 @@ final class TutorialCardPlacementTests: XCTestCase {
     func testTheBuildingStepsKeepTheirControlsFreeWithTheCardOpen() {
         let steps: [(name: String, target: Frame, required: [Frame], map: Bool)] = [
             ("build.network", Self.networkTool, [Self.networkTool], false),
-            ("build.track", Self.mapBesideCard, [Self.actionButton], true),
+            ("track.draw", Self.mapBesideCard, [Self.actionButton], true),
             ("map.move", Self.mapBesideCard, [Self.zoomBesideCard], true),
-            ("build.firstStation", Self.networkModes, [Self.networkModes, Self.actionButton], true),
+            ("station.mode", Self.networkModes, [Self.networkModes], true),
         ]
         for step in steps {
             let placement = TutorialCardPlacement(
@@ -123,6 +123,25 @@ final class TutorialCardPlacementTests: XCTestCase {
             for control in step.required {
                 XCTAssertFalse(card.intersects(control), "\(step.name): card \(card) covers \(control)")
             }
+        }
+    }
+
+    /// A read step beside a panel (decision 188: the ridership step, the
+    /// station's panel open beside the map), placed with no map to leave
+    /// free: the card stays open and leaves the panel in sight.
+    func testAReadStepBesideAPanelLeavesThePanelInSight() {
+        for maxWidth in [320.0, 340] {
+            let placement = TutorialCardPlacement(
+                target: Self.sidePanel,
+                controls: Self.hud + [Self.zoomBesidePanel],
+                panels: [Self.sidePanel],
+                required: [Self.sidePanel],
+                map: nil,
+                maxWidth: maxWidth
+            )
+            let card = placement.frame(in: Self.screen, measure: Self.lineStepCard)
+            XCTAssertFalse(card.intersects(Self.sidePanel), "width \(maxWidth): card \(card)")
+            XCTAssertTrue(placement.leavesStepFree(card), "width \(maxWidth): card \(card)")
         }
     }
 

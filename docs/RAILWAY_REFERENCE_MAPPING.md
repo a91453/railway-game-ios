@@ -443,6 +443,17 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci` `metrobuilder_tutorial_done`、`openUI`、`cardPosition` | 看過就不再自動開啟、步驟開面板、卡片位置 | — | 還沒有（決策 47 第 4 點） |
 | 沒有對應 | — | `train.place`（購買並放置列車）、`station.ridership`（乘客） | gap：這個遊戲的列車要自己買，運量在車站面板 |
 
+**決策 188 重做（2026-10-12，重新檢查參考 `a1faaf9`）**：
+
+| 參考 | 行為 | Swift（決策 188） | 分類 |
+| --- | --- | --- | --- |
+| `Ci` `TUTORIAL_STEPS[n].openUI`（`openCreateLine()`、`openPanel("panel-line-info")`，其餘是空函式）與 `cardBottomClearance` | 步驟替玩家打開它要用的畫面 | `TutorialStep.panel`（`TutorialPanel`：App 打開路線面板或關掉地圖旁的面板）、路線面板在選站的步驟自己開始選站、`revealsInPanel` 把按鈕捲進畫面 | 改寫：面板與按鈕是這個 App 的 |
+| `Ci` 高鐵／航線導覽的 `[data-tt-confirm-prompt]`（`renderTransportTutorial`、`transportTutorialFlightConfirmed`） | 還沒確認時卡片上多一段提示，確認後拿掉 | `GameSession.tutorialHint`（`TutorialHint`）：哪裡不對或下一步，問題時立刻出現「略過這一步」 | 改寫：提示由世界與 session 推導 |
+| `Railway/city_world_reference/` 的教學任務 `LP`（`actors-*.js`，`id:"tutorial"`，一步一個 `step`） | 一連串單一動作的小步驟，做完就到下一個 | 十九步、一步一個動作、做完 0.8 秒後自己前進（`tutorialAdvancesByItself`、`showNextTutorialStep(from:)`） | 改寫成這個遊戲的步驟 |
+| `Railway/city_world_reference/` 的說明卡 `zs`（`game-*.js` 的 `hud-help`：短標題加一行內文；`kit.short` 是矮的觸控橫向螢幕） | 精簡的說明卡 | 標題就是指示、內文一行（英文 ≤ 90、中文 ≤ 36 字）；手機橫放不顯示「做完這一步才能繼續」 | 改寫 |
+| `Ci` `transportTutorialBuildHsr` | 導覽替玩家蓋一條高鐵 | — | 沒有移植（功能凍結） |
+| 沒有對應 | — | 軌道至少 160 公尺、整章的快照、跳過做完的步驟、`TutorialSetup`、細節卡片只在需要時打開 | gap：本專案自己的 |
+
 ### Stage E1：大地圖
 
 2026-10-03 唯讀檢查三份參考（`1563ad0`）。ARCHITECTURE 決策 48；繪製（只畫畫面內、分級、雙指縮放）是 CX-4（PR #69–#71），對照見 [UI_INTERFACES](UI_INTERFACES.md#6-參考對照)。`Ci` 檔案是 `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`，虛構城市是 `lib/virtual_island_city__q_21ffa7f6ae58fc9e.js`，說明文字在 `lib/ui-locales/zh-CN__q_8e57e7fa49d074d2.js`（英文的 `en.js` 在清單上但沒有被抓下來）；`Railway/site_archive_clean/index.html`；參考包 `Railway/railway_game_reference_clean/` 只有 `web_runtime/touch_pinch_zoom.js` 與 `binary_reference/relevant_source_paths.txt` 的 `src/viewport.cpp` 檔名，沒有相機的數值。

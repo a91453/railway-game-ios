@@ -118,6 +118,8 @@ struct MapBuildConfirm: View {
             // (``BuildConfirmation/confirmName(in:)``).
             .accessibilityLabel(Text(verbatim: build.confirmName(in: session.language)))
             .accessibilityIdentifier("map.build.confirm")
+            // Decision 188: the tutorial's build steps point at it.
+            .tutorialTarget(.mapConfirm)
         }
     }
 
