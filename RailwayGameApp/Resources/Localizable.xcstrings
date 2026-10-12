@@ -14,6 +14,16 @@
       }
     },
 
+    "Net profit" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淨利"
+          }
+        }
+      }
+    },
     "Network passenger routes" : {
       "localizations" : {
         "zh-Hant" : {
@@ -31,6 +41,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "OpenStreetMap"
+          }
+        }
+      }
+    },
+    "Series" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系列"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來源"
           }
         }
       }
@@ -2533,6 +2563,16 @@
         }
       }
     },
+    "Zero" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "零"
+          }
+        }
+      }
+    },
     "Zoning" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2898,7 +2938,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "住宅、商店與辦公樓，點哪裡蓋哪裡"
+            "value" : "住宅、商店與辦公大樓，點哪裡蓋哪裡"
           }
         }
       }

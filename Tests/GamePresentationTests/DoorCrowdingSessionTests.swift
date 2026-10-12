@@ -46,10 +46,10 @@ final class DoorCrowdingSessionTests: XCTestCase {
         var world = GameWorld.newGame()
         XCTAssertTrue(world.offeredTrainTypes.contains(.emu3000))
         XCTAssertEqual(world.offeredTrainTypes.last, .emu3000, "after the high-speed set")
-        XCTAssertEqual(TrainType.emu3000.title(in: .english), "EMU3000")
-        XCTAssertEqual(TrainType.emu3000.title(in: .traditionalChinese), "EMU3000 新自強號")
-        XCTAssertEqual(Train.typeText(.emu3000, in: .english), "EMU3000 · 45 a car · 2 doors")
-        XCTAssertEqual(Train.typeText(.emu3000, in: .traditionalChinese), "EMU3000 新自強號 · 每節 45 人 · 2 門")
+        XCTAssertEqual(TrainType.emu3000.title(in: .english), "New Tze-Chiang")
+        XCTAssertEqual(TrainType.emu3000.title(in: .traditionalChinese), "新自強號")
+        XCTAssertEqual(Train.typeText(.emu3000, in: .english), "New Tze-Chiang · 45 a car · 2 doors")
+        XCTAssertEqual(Train.typeText(.emu3000, in: .traditionalChinese), "新自強號 · 每節 45 人 · 2 門")
 
         // Given to a train still running as standard, it runs as the EMU3000
         // does, in the same edit; a train the player gave a performance keeps it.
