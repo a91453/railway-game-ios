@@ -13,15 +13,6 @@ struct BuildToolRail: View {
     /// The most height the rail may take: between the status pill and the
     /// dock. Past it the rail scrolls.
     let maxHeight: CGFloat
-    @State private var contentHeight: CGFloat = 0
-    /// The column's height with names under the icons, measured while it
-    /// has them (decision 123): a phone held sideways has less room than
-    /// that between the pill and the dock, and the last button, Done, was
-    /// cut in half. The icons alone fit; the names stay the buttons'
-    /// accessibility labels.
-    @State private var labelledHeight: CGFloat = 0
-
-    private var isCompact: Bool { labelledHeight > maxHeight }
 
     /// The column's width.
     static let width: CGFloat = 72
@@ -32,32 +23,44 @@ struct BuildToolRail: View {
         session.tool != .select || session.tutorial != nil
     }
 
+    /// The column with names under the icons where it fits, else the icons
+    /// alone (decision 123: a phone held sideways has less room than the
+    /// labelled column between the pill and the dock, and the last button,
+    /// Done, was cut in half; the names stay the buttons' accessibility
+    /// labels), else the icons scrolling. Chosen by `ViewThatFits`, not by
+    /// heights the rail measured and kept: a rail on screen from the first
+    /// frame (a game opened at a later tutorial step) kept its scroll view
+    /// below its buttons once the screen settled, and Done could not be
+    /// tapped (TutorialUITests, run 38259103200).
     var body: some View {
-        let compact = isCompact
-        ScrollView {
-            VStack(spacing: compact ? 4 : 6) {
-                ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
-                    toolButton(tool, compact: compact)
-                }
-                if !compact {
-                    Divider()
-                        .padding(.horizontal, 6)
-                }
-                doneButton(compact: compact)
+        ViewThatFits(in: .vertical) {
+            column(compact: false)
+            column(compact: true)
+            ScrollView {
+                column(compact: true)
             }
-            .padding(compact ? 4 : 6)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                contentHeight = height
-                // Only the labelled column's height decides, so taking the
-                // names away cannot bring them back.
-                if !compact { labelledHeight = height }
-            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .tutorialClip()
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollIndicators(.hidden)
-        .tutorialClip()
-        .frame(width: Self.width, height: min(max(contentHeight, 1), maxHeight))
+        .frame(width: Self.width)
         .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        // Offered only the room between the pill and the dock, from the top.
+        .frame(maxHeight: maxHeight, alignment: .top)
+    }
+
+    private func column(compact: Bool) -> some View {
+        VStack(spacing: compact ? 4 : 6) {
+            ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
+                toolButton(tool, compact: compact)
+            }
+            if !compact {
+                Divider()
+                    .padding(.horizontal, 6)
+            }
+            doneButton(compact: compact)
+        }
+        .padding(compact ? 4 : 6)
     }
 
     private func toolButton(_ tool: ConstructionTool, compact: Bool) -> some View {
