@@ -187,10 +187,19 @@ final class TourismSessionTests: XCTestCase {
 
     func testTheStationMasterWarnsOfTouristsBeforeAHoliday() throws {
         var world = try world()
-        // Day 0 is New Year's Day.
+        // The Spring Festival starts on day 43; on day 41 it is two days off
+        // (and on the game's first day, New Year's Day, nothing is said).
         world.setDisruptions(Disruptions(level: .light, country: "TW"))
+        if case .touristsComing? = StationMasterAdvice(world: world) { XCTFail("not on the first day") }
+        // The days pass without the sight, so that no queue fills meanwhile.
+        let sights = world.tourism?.attractions
+        world.setTourism(nil)
+        try world.setStationDemand(StationID(rawValue: 1), to: StationDemand(kind: .residential, dailyTrips: 1))
+        world.setSpeed(.normal)
+        try world.advance(ticks: 41 * 1_440)
+        world.setTourism(sights)
         let advice = try XCTUnwrap(StationMasterAdvice(world: world))
-        XCTAssertEqual(advice, .touristsComing(kind: .newYear, days: 0, times: 2))
+        XCTAssertEqual(advice, .touristsComing(kind: .springFestival, days: 2, times: 2))
         XCTAssertTrue(advice.text(in: .english).contains("×2 tourists"), advice.text(in: .english))
         XCTAssertTrue(advice.text(in: .traditionalChinese).contains("觀光客約 ×2"), advice.text(in: .traditionalChinese))
         XCTAssertFalse(advice.isWorry)
