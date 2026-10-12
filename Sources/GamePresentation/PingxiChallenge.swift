@@ -84,6 +84,7 @@ public enum PingxiChallenge {
         world.setDisruptions(nil)
         world.setBuildingMaterials(false)
         world.setDoorCrowding(false)
+        world.setFlexDispatch(false)
         do {
             try world.startScenario(Scenario(
                 id: rules.id, goals: rules.goals, goldDays: rules.goldDays, silverDays: rules.silverDays, deadlineDays: rules.deadlineDays,

@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
                  .observe(.landCatchment, _), .observe(.landCell, _), .observe(.building, _), .observe(.townGrowth, _), .observe(.landValue, _),
@@ -576,6 +576,8 @@ enum ScenarioCommand: Equatable {
     case setLineFreight(LineID, Bool)
     /// Schema 66 (decision 169): door crowding.
     case setDoorCrowding(Bool)
+    /// Schema 67 (decision 172): flexible dispatch.
+    case setFlexDispatch(Bool)
     /// Schema 59 (decision 156): building materials.
     case enableBuildingMaterials
     case setFreightProduct(StationID, CargoKind)
@@ -723,6 +725,8 @@ enum ScenarioCommand: Equatable {
                 try world.setLineFreight(line, to: freight)
             case .setDoorCrowding(let enabled):
                 world.setDoorCrowding(enabled)
+            case .setFlexDispatch(let enabled):
+                world.setFlexDispatch(enabled)
             case .enableBuildingMaterials:
                 world.enableBuildingMaterials()
             case .setFreightProduct(let id, let kind):
@@ -940,6 +944,9 @@ extension ScenarioCommand: Decodable {
         case "setLineStops":
             let stops = try container.decode([Int].self, forKey: .stops).map(StationID.init(rawValue:))
             self = try .setLineStops(container.decodeLine(forKey: .line), stops)
+        // Schema 67: flexible dispatch (decision 172).
+        case "setFlexDispatch":
+            self = try .setFlexDispatch(container.decode(Bool.self, forKey: .enabled))
         // Schema 67: reverse a line's stops (decision 172).
         case "reverseLineStops":
             self = try .reverseLineStops(container.decodeLine(forKey: .line))
@@ -2265,6 +2272,9 @@ struct WorldSummary: Codable, Equatable {
     /// `true` while a crowd at the doors slows the passengers going through
     /// them (schema 66, decision 169); left out otherwise.
     var doorCrowding: Bool?
+    /// `true` while lines send trains out from either end (schema 67,
+    /// decision 172); left out otherwise.
+    var flexDispatch: Bool?
     /// The mix the city keeps while its demand is on (schema 53, decision
     /// 139): `{}` before it has one, `{"baseline": {"shopJobs",
     /// "workJobs"}}` after; left out while it is off.
@@ -2537,6 +2547,7 @@ struct WorldSummary: Codable, Equatable {
         landDemand = world.landDemand ? true : nil
         distanceDemand = world.distanceDemand ? true : nil
         doorCrowding = world.doorCrowding ? true : nil
+        flexDispatch = world.flexDispatch ? true : nil
         outsideConnections = world.outsideConnections ? true : nil
         cityDemand = world.cityDemand
         cityFootprints = world.cityFootprints ? true : nil

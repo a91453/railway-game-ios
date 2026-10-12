@@ -950,3 +950,12 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 482:00（28,920）：車門在 28,918 開始關（上下車結束、最短停站 28,800 + 42 − 9 = 28,833、排定發車 28,842 − 9 = 28,833 三者最晚的），還沒關完，誤點 78 秒。
 - 每個值都是手算的，`tools/golden-checks/door_crowding.py` 照規則獨立算出（`--check` 比對 fixture）；沒有依擁擠改變的值是 `boarding.json` 的。最終狀態取自 GameCore。
 - 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 172：彈性發車與折返（schema 67）
+
+- 新指令 `setFlexDispatch`（`enabled`）與 `reverseLineStops`（`line`；沒有的路線被拒 `unknownLine`；開關關著且有列車是 `trainOnLine`，環線有列車在跑是 `trainServiceActive`）。最終狀態的 `flexDispatch: true` 只在打開時寫，列車的 `deadhead: true` 只在空車回送途中寫，路線的 `deadheadDistance`（世界單位）大於 0 才寫。參考模型（`ReferenceWorld`）沒有彈性發車，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `FlexDispatchTests` 驗證。
+- `flex-dispatch.json`（新）：`line-dispatch.json` 的軌道與車站（a 到 g，Alpha、Beta、Gamma 的月台），Main（Alpha、Gamma）與 Short（Alpha、Beta、Gamma）全天各一列車，性能是 crawl。
+  - 藍車停在 Gamma 面向西：1 分鐘後從最後一站發車，來回順序反過來：Gamma 0 到 42 秒、Alpha 282 到 402 秒（折返）、Gamma 642 秒（和 `line-dispatch.json` 單程 240 秒、終點停 2 分鐘相同）。
+  - Short 拿掉第一站（Beta、Gamma），紅車停在 Alpha，不再是路線的站：空車回送到較近的 Beta（兩個連結，Gamma 是四個）：Alpha 0 到 42 秒、Beta 42 + 125 = 167 秒（2048 單位：8 秒加速、106.2 秒等速、10 秒煞車，124.2，取 125 秒），不占班距槽，里程 2048 記在 Short 上。
+  - 藍車在途中反轉 Main 的站序（允許），照原本那趟跑完；到 12 時兩列都在各自的第一站（藍車在 Gamma，現在是 Main 的第一站；紅車在 Beta），正常發車：藍 Gamma 762 秒、Alpha 1002 到 1122 秒、Gamma 1362 秒；紅 Beta 762 秒、Gamma 887 到 1007 秒、Beta 1132 秒。
+- 每個值都是手算的；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

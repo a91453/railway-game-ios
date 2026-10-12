@@ -335,17 +335,14 @@ final class LineDispatchTests: XCTestCase {
     }
 
     /// Only a ready train goes: not a train with rate 0, an unplaced one,
-    /// one that is not stopped at a station or still moving, or one that
-    /// cannot drive the trip. The line sends none out meanwhile, and its
-    /// last dispatch stays.
+    /// one elsewhere or still moving, or one that cannot drive the trip.
+    /// The line sends none out meanwhile, and its last dispatch stays.
     func testOnlyAReadyTrainIsSentOut() throws {
         var world = try makeDispatchWorld(trains: 3, running: TrainsInService(peak: 3, offPeak: 3, low: 3))
         try world.setTrainMovementRate(one, to: 0)
         try world.unplaceTrain(two)
         try world.unplaceTrain(three)
-        // Between Beta and Gamma, at no platform (decision 172: a train
-        // stopped at a station that is not an end would run empty to one).
-        try world.placeTrain(three, at: line.at(4, facingEast: true))
+        try world.placeTrain(three, at: line.at(3, facingEast: true))
         let before = world
         try advance(&world, 30)
         XCTAssertEqual(world.trains, before.trains, "no train was ready")
@@ -353,21 +350,19 @@ final class LineDispatchTests: XCTestCase {
 
         // Moving towards Alpha, it is not ready until it stops there.
         try world.reverseTrain(three)
-        try world.setTrainContinuation(three, along: line.path(from: 3, through: [2, 1]))
+        try world.setTrainContinuation(three, along: line.path(from: 2, through: [1]))
         try world.setTrainMovementRate(three, to: 1024)
         try advance(&world, 1)
         XCTAssertNil(world.train(id: three)?.execution)
-        XCTAssertEqual(world.train(id: three)?.position, line.at(3, facingEast: false))
-        try advance(&world, 1)
         XCTAssertEqual(world.train(id: three)?.position, line.at(2, facingEast: false))
-        // It reaches Alpha at 33 and is sent out in the next step, to be
+        // It reaches Alpha at 32 and is sent out in the next step, to be
         // turned round as it leaves.
         try advance(&world, 1)
         XCTAssertEqual(world.train(id: three)?.position, line.at(1, facingEast: false))
         XCTAssertNil(world.train(id: three)?.execution)
         try advance(&world, 1)
-        XCTAssertEqual(world.train(id: three)?.timetable, trip(33, reverses: true))
-        XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 33))
+        XCTAssertEqual(world.train(id: three)?.timetable, trip(32, reverses: true))
+        XCTAssertEqual(world.line(id: main)?.lastDispatch, GameTime(minutes: 32))
 
         // A train that could not drive the trip is not sent out: with e
         // gone neither way reaches Gamma.
