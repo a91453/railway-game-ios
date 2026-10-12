@@ -191,12 +191,12 @@ public enum HelpGuide {
         ),
         HelpEntry(
             "express", .running,
-            question: ("How do I run an express?", "怎麼設快車？"),
+            question: ("How do I run a non-stop or a short working?", "怎麼開直達車或短程班次？"),
             answer: (
-                "Open Lines, pick the line and use Add Pattern at the bottom. Switch on Express to call at the two ends only. The express runs beside the all-stops trains, so give the line enough trains for both.",
-                "打開「路線」，選這條路線，用最下方的「加入停站模式」。開啟「快車」就只停兩端。快車與各站停車並行，所以路線要有足夠的列車兩種都跑。"
+                "Open Lines, pick the line, and under Add a stopping pattern at the bottom choose the first and last stop and tap Add: a run over part of the line is a short working; switch on Non-stop to call at the two ends only. They run beside the all-stops trains, so give the line enough trains for all of them.",
+                "打開「路線」，選這條路線，在最下方的「新增停站模式」選起點與終點，按「加入」：只跑其中一段就是短程班次；開啟「直達車」就只停兩端。它們與各站停車並行，所以路線要有足夠的列車都跑得動。"
             ),
-            keywords: "pattern skip stop limited 快車 越站 停站模式 通過"
+            keywords: "pattern skip stop limited express non-stop short working 快車 直達車 快速列車 短程班次 越站 停站模式 通過"
         ),
         HelpEntry(
             "annualReport", .money,

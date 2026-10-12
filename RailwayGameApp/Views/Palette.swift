@@ -226,6 +226,8 @@ enum MapGlyph: String {
     case warning = "MapGlyphWarning"
     /// ``warning``'s outline without its cut-out mark, drawn under it.
     case warningSolid = "MapGlyphWarningSolid"
+    /// A sight's rating (decision 174).
+    case star = "MapGlyphStar"
     /// Decision 182: a typhoon blows over the station, the weather map's
     /// typhoon sign.
     case typhoon = "MapGlyphTyphoon"

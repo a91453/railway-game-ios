@@ -142,6 +142,33 @@ final class FreightTests: XCTestCase {
         XCTAssertNil(world.accountsProblem())
     }
 
+    /// Decision 172: a train that runs empty to an end of its line (flexible
+    /// dispatch) loads no cargo on the way, as it takes no passengers.
+    func testATrainRunningEmptyToAnEndTakesNoCargo() throws {
+        var world = try world(jobs: 40_000, trains: 0)
+        world.setFlexDispatch(true)
+        let beta = StationID(rawValue: 3)
+        try track.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try world.buildFreightFacility(at: beta)
+        try world.setLineStops(main, to: [alpha, beta, gamma])
+        let yard = try XCTUnwrap(world.freight?.facilityIndex(of: beta))
+        world.freight?.facilities[yard].stock = 40
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T")
+        try world.placeTrain(train.id, at: track.at(3, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 1_024)
+        try world.assignTrain(train.id, to: main)
+        var sawEmptyRun = false
+        for _ in 0..<6 {
+            try world.advance(ticks: 1)
+            if world.train(id: train.id)?.isDeadheading == true {
+                sawEmptyRun = true
+                XCTAssertEqual(world.cargoOnBoard(of: train.id), 0)
+            }
+        }
+        XCTAssertTrue(sawEmptyRun)
+    }
+
     /// Cargo is let off at the first yard but its origin, never carried past:
     /// a train that loaded at Gamma is paid at Alpha.
     func testCargoMovesBothWays() throws {

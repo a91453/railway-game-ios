@@ -170,6 +170,8 @@ final class OnboardingTests: XCTestCase {
     func testADayThatClosesInTheRedFloatsItsLossAndTheCoinsStayQuiet() throws {
         var world = try shortLine()
         world.setLandDemand(false)
+        // No tourists either (decision 174): nothing comes in.
+        world.setTourism(nil)
         for station in world.stations {
             try world.setStationDemand(station.id, to: StationDemand(kind: .residential, dailyTrips: 0))
         }

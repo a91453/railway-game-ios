@@ -107,6 +107,15 @@ extension GameWorld {
             // Decision 172: trains are sent out from either end of their
             // line, and one left elsewhere runs empty to an end.
             world.setFlexDispatch(true)
+            // Decision 174: the sights tourists come to, and what they
+            // spend in the shops: Taiwan's own on a real-world map (the ones
+            // in its bounds; elsewhere none), a few drawn from the seed on a
+            // blank one once its towns are founded.
+            if let anchor {
+                world.setTourism(AttractionCatalog.attractions(in: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
+            } else {
+                world.foundAttractions(seed: eventSeed)
+            }
             // Phase 6b: its stations draw their ridership from it, and it
             // grows round the well-served ones.
             world.setLandDemand(true)
@@ -219,6 +228,8 @@ public enum DemoWorld {
         // economy is as it was measured.
         world.setDoorCrowding(false)
         world.setFlexDispatch(false)
+        // Decision 174: nor are there sights.
+        world.setTourism(nil)
         do throws(GameError) {
             try build(in: &world, language: language)
         } catch {

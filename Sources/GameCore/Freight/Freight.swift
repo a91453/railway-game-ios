@@ -644,6 +644,8 @@ extension GameWorld {
         guard var state = freight, let lineID = assignedLine(of: trains[index].id),
               let line = lines.first(where: { $0.id == lineID }), line.isFreight else { return nil }
         let train = trains[index]
+        // Decision 172: a train running empty to an end of its line moves nothing.
+        if train.isDeadheading { return 0 }
         let here = train.timetable[stop].station
         guard let facility = state.facilityIndex(of: here), station(id: here)?.operationMode.allowsService == true else { return 0 }
         var letOff: Int64 = 0

@@ -959,3 +959,14 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - Short 拿掉第一站（Beta、Gamma），紅車停在 Alpha，不再是路線的站：空車回送到較近的 Beta（兩個連結，Gamma 是四個）：Alpha 0 到 42 秒、Beta 42 + 125 = 167 秒（2048 單位：8 秒加速、106.2 秒等速、10 秒煞車，124.2，取 125 秒），不占班距槽，里程 2048 記在 Short 上。
   - 藍車在途中反轉 Main 的站序（允許），照原本那趟跑完；到 12 時兩列都在各自的第一站（藍車在 Gamma，現在是 Main 的第一站；紅車在 Beta），正常發車：藍 Gamma 762 秒、Alpha 1002 到 1122 秒、Gamma 1362 秒；紅 Beta 762 秒、Gamma 887 到 1007 秒、Beta 1132 秒。
 - 每個值都是手算的；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+## 決策 174：觀光景點與觀光客（schema 69）
+
+- 新指令 `setTourism`（`attractions`：每個 `{name, englishName, x, y, kind, stars}`，`stars` 是百分之一星；空陣列是關閉）與 `investInSouvenirShop`（`attraction`）；新結果 `tourismNotEnabled`、`unknownAttraction`（`attraction`）、`attractionMaxedOut`；最終狀態的 `tourism`（每個景點的 `id`、`stars`、`souvenir`、`yesterday`、`thisYear`、`lastYear`）只在打開時寫。參考模型（`ReferenceWorld`）沒有觀光，所以這份不在 `ReferenceWorldGoldenTests` 裡重播，由 `TourismTests` 驗證。已有的 fixture 只是最終狀態沒有 `tourism`，預期值都沒有改。
+- `tourism.json`（新）：Home（1，住宅，每天 1,000 人次）與 Foot（2，景點、沒有自己的需求）在一條有一輛車的線 Main 上；世界很小，Home 是外部連接站，是觀光客唯一的客源。Foot 旁 1,000 單位（15.6 m）有一個景點「Old Street」（3 星的城鎮）。
+  - 沒有觀光時 Home 到 Foot 是 0。
+  - 第 0 天是星期一：2,000（3 星的潛在人數）× 600‰（平日）× 1,000‰（城鎮沒有季節）× 1,000‰（晴天）× 200‰（鐵路載得到的）= 240 人，去程依「景點到達曲線 × 當天時段形狀」、回程依「景點出發曲線 × 當天時段形狀」按最大餘數分到 24 小時。
+  - 名產店每級加 0.25 星：1 級 3.25 星、潛在 2,625、315 人；2 級 3.5 星、潛在 3,250、390 人；第三級是 `attractionMaxedOut`，景點 5 是 `unknownAttraction`。
+  - 打開台灣的假日：第 0 天是元旦，係數 2,000‰：3,250 × 2 × 0.2 = 1,300。
+  - 關掉觀光就沒有人，指令是 `tourismNotEnabled`。
+  - 離 Foot 51,201 單位（多 1 單位就超過 800 m）的景點沒有車站，是 0；51,200 單位時假日是 2,000 × 2 × 0.2 = 800。
+- 每個值都是手算的，`tools/golden-checks/tourism.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。
