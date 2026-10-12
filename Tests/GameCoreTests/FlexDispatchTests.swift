@@ -243,8 +243,20 @@ final class FlexDispatchTests: XCTestCase {
         XCTAssertNil(after.withoutDispatchTimes.lastDispatch)
     }
 
-    /// The empty run is in the hour's train distance like any other, and
-    /// earns no fare.
+    /// Decision 178's key leaves out the empty runs' distance too: it grows
+    /// with every empty run and no plan reads it, so the passenger plan was
+    /// worked out again after each.
+    func testALineKeyDoesNotChangeWithAnEmptyRun() throws {
+        var world = try makeWorld(stops: [beta, gamma], at: line.at(3, facingEast: true))
+        try world.setLineStops(main, to: [alpha, beta, gamma])
+        let before = try XCTUnwrap(world.line(id: main))
+        try world.advance(ticks: 2)
+        let after = try XCTUnwrap(world.line(id: main))
+        XCTAssertGreaterThan(after.deadheadDistance, 0, "the train ran empty to an end")
+        XCTAssertNotEqual(before, after)
+        XCTAssertEqual(before.withoutDispatchTimes, after.withoutDispatchTimes)
+    }
+
     func testAnEmptyRunIsCountedForItsLine() throws {
         var world = try makeWorld(stops: [alpha, beta, gamma])
         try world.setLineStops(main, to: [beta, gamma])
