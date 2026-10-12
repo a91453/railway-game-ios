@@ -213,6 +213,9 @@ public struct DepartureBoard: Equatable, Sendable {
                 guard run.days & (1 << StationDemand.weekday(ofDay: day)) != 0, (sent ?? -1) < day else { continue }
                 let time = day * GameTime.secondsPerDay + run.times[position].arrival
                 guard time >= now - 30, time - now <= horizonSeconds else { continue }
+                // A run no train took out in time is dropped for the day
+                // (``LineRun/latestDispatch``): it is no train coming.
+                guard now <= day * GameTime.secondsPerDay + run.times[0].departure + LineRun.latestDispatch else { continue }
                 let last = position == calls.count - 1
                 rows.append(Row(
                     id: "r\(line.id.rawValue)|\(index)|\(day)", train: nil, trainName: "",
