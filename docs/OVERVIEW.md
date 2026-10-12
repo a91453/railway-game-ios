@@ -23,7 +23,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
 | 測試數 | GameCoreTests 約 1,205、GamePresentationTests 約 1,010、UI 測試 42 個 | — |
-| 發佈 | GitHub Actions → TestFlight。run #54（2026-10-12）實際驗證到簽章、上傳、App Store Connect 處理（VALID）、填 What to Test。測試者拿到之前，App Store Connect 還要先回答出口合規（log 寫 Missing Compliance）。TestFlight 安裝 UNVERIFIED | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` |
+| 發佈 | GitHub Actions → TestFlight。run #54（2026-10-12）實際驗證到簽章、上傳、App Store Connect 處理（VALID）、填 What to Test。測試者拿到之前，App Store Connect 還要先回答出口合規（log 寫 Missing Compliance）。TestFlight 安裝 UNVERIFIED。最新一版：run #56（2026-10-12，`main` `bcdb2ff` → 0.5.0 (56.1)） | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` |
 
 ## 3. 遊戲已有的系統
 
