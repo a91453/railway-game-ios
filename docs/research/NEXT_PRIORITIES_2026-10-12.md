@@ -78,6 +78,7 @@
 | 7 | **量尺**：(1) 寫實度基準報告：設環境變數才跑的測試，讀內附的 `thsr-schedule.json`、`trtc.json`（`lines[].stations[].dwell`）、`tra_pingxi_runs.json`，印出遊戲對真實的比例；(2) 錄一個含土地、觀光、行車控制、彈性派車的 replay；(3) 每晚跑一次全開的平衡報告，加一個「加線加站反而少載」的情境當 bug 查 | 研究的探針已經刪掉，今天量到的 0.72–0.78 倍要能重跑；寫實運轉、機廠、車站商業都會改經濟 | M | 否 | `Tests/GamePresentationTests/`、`BalanceReportTests.swift`、`Tests/GameCoreTests/ReplayState.swift`、`.github/workflows/` | `ReplayState.swift` 是共用測試檔，跑完整一層；每晚 job 要作者同意 |
 | 8 | **裝置量測與文件地基**：(1) OSSignposter、隱藏的開發者 HUD（tick 毫秒、丟棄次數、實際速度）、MetricKit；(2) 找一個沒有 PR 在改 `ARCHITECTURE.md` 的空檔，把決策搬成一個決策一個檔案（`docs/decisions/NNN-…md`），號碼不變，索引自動產生 | 所有效能數字都是 Linux 量的；`ARCHITECTURE.md` 約 1.2 MB，是並行 session 的衝突熱點 | M | 否 | `RailwayGameApp/`、`GameSession.swift`；`docs/` | (2) 要作者同意新目錄 |
 | 9 | **發佈的設定**：在 Info.plist 寫明出口合規（`ITSAppUsesNonExemptEncryption`），需要時加 privacy manifest | run #54 的 log 提醒 Missing Compliance：不設的話，每一版都要在 App Store Connect 手動回答，測試者才拿得到 | S | 否 | `RailwayGameApp/project.yml`（重新產生 xcodeproj） | 加密的答案由作者決定 |
+| 10 | **路線面板每個 tick 重算路線選項（結果不變）**：`LinesPanel` 在父 view 每個 tick 呼叫 `session.world.lineRouteChoices`，每一段都跑一次 `trafficPath` 搜尋。在 GamePresentation 依 `commandRevision` 快取，只有玩家下指令後才重算 | 派工 session 審 #463 時發現：#463 只讓選單不重建，計算仍每 tick 跑；路線多、路網大時每 tick 都在搜路徑 | S | 否 | `LinesPanel.swift`、`Sources/GamePresentation/` | 等 #463 合併後再做（同一個檔案） |
 
 **第 2 項的三個 bug**（都是驗證可行性研究時，在 `main` 上實際跑出來的。**三個都已修**：(a)、(c) 在 #454，(b) 在 #455；下面保留原本的描述）
 
