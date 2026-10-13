@@ -67,6 +67,12 @@ public struct BaseMapFollowing: Sendable {
         return true
     }
 
+    /// The base map has settled (it drew all it shows): it may be asked
+    /// again for the same piece, as many times again.
+    public mutating func renewRetries() {
+        retries = 0
+    }
+
     /// Where the base map went when asked for the last piece.
     public mutating func answered(_ shown: Piece) {
         answer = shown
