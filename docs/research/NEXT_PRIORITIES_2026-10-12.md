@@ -161,6 +161,7 @@
 - 新線的首班被備用車擋住，又沒有到點的班次時，沒有處理。
 - HUD 的點擊範圍小於 44 pt。**已修**（#473）。
 - 西部幹線龍田附近有一段 84 m 的鋸齒。
+- 偶發的 UI 測試，重跑會綠，但「偶發」不是原因，要查：`testBackToStartWorksWhileTheClockRuns`；`MapInteractionTests` 的第一個測試在剛開機的模擬器上逾時（#462 那次）；`testSwitchingFollowTargetWhilePausedCentersTheCamera`（#473 的閘門失敗一次）。full lane 再碰到任何一個，派工 session 就派人修。
 
 另外兩項效能：
 - 背景計算不能取消（`MapView.swift:625-742`、`StationPanel.swift:96-114` 的 `Task.detached`）。和第 3 項 (4) 是同一件事。
