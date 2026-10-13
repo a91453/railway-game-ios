@@ -1,6 +1,6 @@
 {
   "schemaVersion": 57,
-  "description": "Public holidays (decision 154, schema 57). Home (1, residential, 1000 trips a day) and Office (2, office) on line Main; the clock is at day 0. Without disruptions no day is a holiday and Home's 1000 trips to Office are shared over the hours in proportion to dayShape x the morning peak x the morning peak, by largest remainder. With Taiwan's holidays at the standard level, day 0 is New Year's Day (1 January, one day, +50 per mille), the Spring Festival runs from day 43 (14 February) for nine days at +200, National Day runs from day 278 (9 October, the Friday before 10 October in 2026, decision 208) for three days at +100, so day 279 (10 October) is in it, and every year again: day 407 is in the next year's Spring Festival (403 to 412), day -81 in the previous year's National Day (-82 to -79). Today's demand is raised by today's holiday: 1000 x 1.050 = 1050, shared over the same hours. China's New Year runs three days and its National Day seven from day 270, and day 279 is no holiday there. Off, there is none again and the demand is 1000. At the light level a holiday adds half its boost, rounded down: +100 for the Spring Festival, +25 on New Year's Day, so today's demand is 1025.",
+  "description": "Public holidays (decision 154, schema 57). Home (1, residential, 1000 trips a day) and Office (2, office) on line Main; the clock is at day 0. Without disruptions no day is a holiday and Home's 1000 trips to Office are shared over the hours in proportion to dayShape x the morning peak x the morning peak, by largest remainder. With Taiwan's holidays at the standard level, day 0 is New Year's Day (1 January, one day, +50 per mille), the Spring Festival runs from day 43 (14 February) for nine days at +200, National Day is day 279 (10 October) at +100, and every year again: day 407 is in the next year's Spring Festival (403 to 412), day -81 the previous year's National Day. Today's demand is raised by today's holiday: 1000 x 1.050 = 1050, shared over the same hours. China's New Year runs three days and its National Day seven from day 270, and day 279 is no holiday there. Off, there is none again and the demand is 1000. At the light level a holiday adds half its boost, rounded down: +100 for the Spring Festival, +25 on New Year's Day, so today's demand is 1025.",
   "initialState": {
     "worldWidth": 12288,
     "worldHeight": 3072,
@@ -206,8 +206,8 @@
         "found": true,
         "holiday": {
           "kind": "nationalDay",
-          "start": 278,
-          "end": 281,
+          "start": 279,
+          "end": 280,
           "boost": 100
         }
       }
@@ -236,8 +236,8 @@
         "found": true,
         "holiday": {
           "kind": "nationalDay",
-          "start": -82,
-          "end": -79,
+          "start": -81,
+          "end": -80,
           "boost": 100
         }
       }

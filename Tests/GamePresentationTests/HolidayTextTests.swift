@@ -47,7 +47,7 @@ final class HolidayTextTests: XCTestCase {
         XCTAssertEqual(try world(day: 36).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, starts in 7 days, lasts 9 days"])
         XCTAssertEqual(try world(day: 42).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，1 天後開始，連續 9 天"])
         XCTAssertEqual(try world(day: 47).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，還有 5 天"])
-        XCTAssertEqual(try world(day: 51).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, 1 more day", "Peace Memorial Day: +5% demand on every line, starts in 5 days, lasts 3 days"])
+        XCTAssertEqual(try world(day: 51).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, 1 more day", "Peace Memorial Day: +5% demand on every line, starts in 6 days, lasts 1 day"])
         var off = try world(day: 47)
         off.setDisruptions(nil)
         XCTAssertEqual(off.holidayTexts(in: .english), [])

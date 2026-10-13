@@ -14,9 +14,7 @@
 //   `TW_DAYTYPE` has the four of Children's Day and Tomb Sweeping Day: this
 //   project's Taiwan follows `TW_DAYTYPE` (a deliberate change, decision
 //   154), with Teachers' Day, Retrocession Day and Constitution Day that
-//   it has too (the days off the 2025 law gave back), and each holiday runs
-//   over the weekend joined to it in 2026, as the Spring Festival's nine
-//   days do (decision 208).
+//   it has too (the days off the 2025 law gave back, decision 208).
 //
 // The reference draws a holiday at random among a country's; a railway's
 // calendar is known, so here each holiday comes on the same days every
@@ -49,6 +47,8 @@ public enum HolidayKind: String, CaseIterable, Codable, Sendable {
     case dragonBoat
     case midAutumn
     case nationalDay
+    /// Taiwan's Teachers' Day, 28 September (`TW_DAYTYPE`, decision 208).
+    case teachersDay
     /// Taiwan's Retrocession Day, 25 October (`TW_DAYTYPE`, decision 208).
     case retrocessionDay
     /// Taiwan's Constitution Day, 25 December (`TW_DAYTYPE`, decision 208).
@@ -103,21 +103,17 @@ public enum HolidayCalendar {
     /// The countries, by code.
     public static let countries: [String: [Holiday]] = [
         "TW": [
-            // Each run is 2026's, with the weekend joined to it (decision
-            // 208): 228 from Friday 27 February, the Mid-Autumn Festival
-            // on to Teachers' Day on Monday 28 September, National Day from
-            // Friday 9 October, Retrocession Day from Saturday 24 October
-            // to Monday 26.
             Holiday(.newYear, 1, 1, days: 1, boost: 50),
             Holiday(.springFestival, 2, 14, days: 9, boost: 200),
-            Holiday(.peaceMemorial, 2, 27, days: 3, boost: 50),
+            Holiday(.peaceMemorial, 2, 28, days: 1, boost: 50),
             Holiday(.qingming, 4, 3, days: 4, boost: 50),
-            Holiday(.labourDay, 5, 1, days: 3, boost: 80),
-            Holiday(.dragonBoat, 6, 19, days: 3, boost: 50),
-            Holiday(.midAutumn, 9, 25, days: 4, boost: 50),
-            Holiday(.nationalDay, 10, 9, days: 3, boost: 100),
-            Holiday(.retrocessionDay, 10, 24, days: 3, boost: 50),
-            Holiday(.constitutionDay, 12, 25, days: 3, boost: 50),
+            Holiday(.labourDay, 5, 1, days: 1, boost: 80),
+            Holiday(.dragonBoat, 6, 19, days: 1, boost: 50),
+            Holiday(.midAutumn, 9, 25, days: 1, boost: 50),
+            Holiday(.teachersDay, 9, 28, days: 1, boost: 50),
+            Holiday(.nationalDay, 10, 10, days: 1, boost: 100),
+            Holiday(.retrocessionDay, 10, 25, days: 1, boost: 50),
+            Holiday(.constitutionDay, 12, 25, days: 1, boost: 50),
         ],
         "CN": [
             Holiday(.newYear, 1, 1, days: 3, boost: 50),
