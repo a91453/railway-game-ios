@@ -150,10 +150,10 @@ public enum HelpGuide {
             "mapColours", .city,
             question: ("What do the colours on the map mean?", "地圖上的顏色是什麼？"),
             answer: (
-                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. Map Layers shows the same uses as a layer.",
-                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。「地圖圖層」也能用圖層看同樣的用途。"
+                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. What you build is warm yellow, like your stations, with a symbol for what it is (a house, a shop, an office tower). Map Layers shows the same uses as a layer.",
+                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。你自己蓋的建物和車站一樣是暖黃色，上面的圖示表示種類（住宅、商店、辦公大樓等）。「地圖圖層」也能用圖層看同樣的用途。"
             ),
-            keywords: "colour color legend block building land use green blue 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業"
+            keywords: "colour color legend block building land use green blue yellow 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業 黃色 自己蓋"
         ),
         HelpEntry(
             "materials", .city,
@@ -190,6 +190,15 @@ public enum HelpGuide {
                 "打開「經濟明細」，在「票價」區選固定票價或依距離計費。乘客覺得標準票價合理；調高會讓搭車的人變少，調低則搭的人變多但每人付得少。小幅調整，再看當天的收入。"
             ),
             keywords: "fare price ticket 票價 漲價 降價 收費"
+        ),
+        HelpEntry(
+            "trackNumbers", .running,
+            question: ("Where are the track numbers, and which track does a route take?", "軌段編號在哪裡？進路會走哪一條軌道？"),
+            answer: (
+                "Every stretch of track between two junctions has a number (Track #7). Tap a track with the select tool to see its number, or zoom in close: the numbers appear on the track. In Lines, each leg of a line (A → B) has a route menu: Automatic lets the trains find their own way, or pick a platform or a whole path by its track numbers. Tap the map button beside the leg to show it on the map: the path is outlined with arrows the way the trains go and the number of each track along it; inside the menu, Show on Map previews a choice before you pick it. A line's colour on the map also has arrows where it runs one way only, so on double track you can see which track each way takes.",
+                "兩個道岔或端點之間的每一段軌道都有編號（軌段 #7）。用「選取」工具點軌道就看得到它的編號，或把地圖拉近，軌道上會標出編號。在「路線」裡，路線的每一段（A → B）都有進路選單：「自動選路」讓列車自己找路，也可以指定月台或整條路徑（用軌段編號表示）。點那一段旁邊的地圖按鈕，就會在地圖上框出這條路徑，箭頭是列車行進的方向，沿途標出每個軌段的編號；選單裡的「先在地圖上看」可以在選定之前預覽每個選項。地圖上路線的顏色在只走單一方向的地方也有箭頭，蓋了雙線時就看得出每個方向走哪一條軌道。"
+            ),
+            keywords: "track number route path platform double track arrow direction 股道 軌段 編號 進路 雙線 方向 箭頭 月台"
         ),
         HelpEntry(
             "oneTrain", .running,
@@ -280,6 +289,15 @@ public enum HelpGuide {
                 "打開遊戲選單，選「教學」。開始畫面上站長的第一條線卡片也會開啟約 5 分鐘的教學遊戲。"
             ),
             keywords: "intro guide 導覽 簡介 重看"
+        ),
+        HelpEntry(
+            "reportProblem", .running,
+            question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
+            answer: (
+                "Open the game menu (the three lines at the top), choose More, then Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
+                "打開遊戲選單（頂端的三條線），選「更多」→「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+            ),
+            keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
         ),
     ]
 }

@@ -69,6 +69,15 @@ extension GameSession {
         world.mapExpansion != nil
     }
 
+    /// Whether the map shows its button to expand the map: in a game that
+    /// buys its map, while choosing a tile (the button then ends it) or
+    /// with no building tool out and no tutorial. Beside the building
+    /// tools' Done button it was tapped by mistake, and a tap on the map
+    /// and ✓ then bought a tile (TestFlight 56.1).
+    public var showsMapExpansionButton: Bool {
+        buysMap && (isChoosingMapTile || (tool == .select && tutorial == nil))
+    }
+
     /// The tiles of the map for the map to draw, or `nil` for a map that is
     /// not bought.
     public var mapExpansionOverlay: MapExpansionOverlay? {

@@ -42,6 +42,7 @@ enum MapArt {
         layers: MapLayerPreferences = .default,
         waitingCounts: [StationID: Int64] = [:],
         lines: LineMap = LineMap(),
+        routePreview: RoutePreview? = nil,
         labels: StationLabels = StationLabels(),
         flowStrokes: [SectionFlow.Stroke] = [],
         latitude: Double = 0,
@@ -83,6 +84,9 @@ enum MapArt {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
+        if let routePreview {
+            drawRoutePreview(routePreview, world: world, projection: projection, cached: edges, in: context)
+        }
         drawAuthorities(traffic, selectedTrainID: highlightedTrainID ?? selectedTrainID, projection: projection, in: context)
         if let building {
             drawCityBuildingSites(world, overlay: building, projection: projection, in: context)
@@ -110,6 +114,7 @@ enum MapArt {
             drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
+        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
         drawWaits(traffic, projection: projection, in: context)
         // The trains and the rings round the waiting ones are drawn over
         // this, by ``drawTrains``, in a canvas of their own (decision 182).
@@ -566,14 +571,20 @@ enum MapArt {
         let width = lineWidth(projection)
         var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
         var drawn: [(path: Path, color: Color, isHighSpeed: Bool, inTunnel: Bool)] = []
+        // Decision 201: where a line runs one way only, arrows that way.
+        var oneWay: [(points: [ScreenPoint], offset: Double, backward: Bool)] = []
         for stretch in lines.stretches {
             guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
             drawings[stretch.edge] = drawing
             guard region.intersects(drawing.bounds) else { continue }
             let end = min(stretch.end, drawing.geometry.length)
             guard stretch.start < end else { continue }
-            let points = drawing.geometry.points(from: stretch.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
+            let screen = drawing.geometry.points(from: stretch.start, to: end).map { projection.screenPoint(of: $0) }
+            let points = screen.map { cgPoint($0) }
             let path = offsetPolyline(points, by: stretch.offset * width)
+            if stretch.way != .both {
+                oneWay.append((screen, stretch.offset * width, stretch.way == .backward))
+            }
             let color = Palette.lineColor(stretch.line, custom: stretch.color)
             // Decision 124: in an automatic edge's tunnel too.
             let middle = (stretch.start + end) / 2
@@ -592,6 +603,139 @@ enum MapArt {
                 stretch.path, with: .color(stretch.inTunnel ? stretch.color.opacity(0.5) : stretch.color),
                 style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round)
             )
+        }
+        guard projection.detail == .full else { return }
+        let view = context.clipBoundingRect.insetBy(dx: -width * 2, dy: -width * 2)
+        let spacing = max(72, width * 16)
+        for stretch in oneWay {
+            for mark in PolylineMarks.marks(along: stretch.points, spacing: spacing, limit: 60) {
+                let shifted = PolylineMarks.shifted(mark, by: stretch.offset)
+                let point = cgPoint(shifted.point)
+                guard view.contains(point) else { continue }
+                drawArrow(at: point, angle: mark.angle + (stretch.backward ? .pi : 0), size: width * 0.75, in: context)
+            }
+        }
+    }
+
+    // MARK: - Route preview and track numbers (decision 201)
+
+    /// An arrowhead pointing at `angle` (radians from the screen's x axis):
+    /// the site's `drawArrowAt` (`Railway/site_archive_clean/index.html`),
+    /// its tip `size` ahead and its back corners 0.55 `size` behind and
+    /// 0.95 `size` either side, white with a navy edge so it reads on any
+    /// line's colour, as the transfer links do.
+    private static func drawArrow(at point: CGPoint, angle: Double, size: Double, in context: GraphicsContext) {
+        let c = cos(angle), n = sin(angle)
+        func corner(_ along: Double, _ across: Double) -> CGPoint {
+            CGPoint(x: point.x + c * along - n * across, y: point.y + n * along + c * across)
+        }
+        var arrow = Path()
+        arrow.move(to: corner(size, 0))
+        arrow.addLine(to: corner(-0.55 * size, 0.95 * size))
+        arrow.addLine(to: corner(-0.55 * size, -0.95 * size))
+        arrow.closeSubpath()
+        context.fill(arrow, with: .color(Palette.transferLink))
+        context.stroke(arrow, with: .color(Palette.transferEdge), style: StrokeStyle(lineWidth: max(1, size * 0.25), lineJoin: .round))
+    }
+
+    /// The pieces of `preview` on the screen, each in the way its trains
+    /// drive it, with its edge.
+    private static func previewPolylines(
+        _ preview: RoutePreview, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing]
+    ) -> [(edge: TrackEdgeID, points: [ScreenPoint])] {
+        preview.pieces.compactMap { piece in
+            guard let drawing = cached[piece.edge] ?? world.network.edge(piece.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { return nil }
+            let end = min(piece.end, drawing.geometry.length)
+            guard piece.start < end else { return nil }
+            let points = drawing.geometry.points(from: piece.start, to: end).map { projection.screenPoint(of: $0) }
+            return (edge: piece.edge, points: piece.isForward ? points : Array(points.reversed()))
+        }
+    }
+
+    /// Decision 201: the leg the line panel shows, as the site outlines a
+    /// followed train's route (`followLayers` in
+    /// `Railway/site_archive_clean/data/track_style_layers.json`: a pale
+    /// casing under the line's colour, 8.5 and 4.4 px), here wider than
+    /// the line's own colour so it stands out over it, with arrows the way
+    /// the trains go.
+    private static func drawRoutePreview(
+        _ preview: RoutePreview, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext
+    ) {
+        let pieces = previewPolylines(preview, world: world, projection: projection, cached: cached)
+        guard !pieces.isEmpty else { return }
+        let width = lineWidth(projection) * 1.4
+        var path = Path()
+        for piece in pieces {
+            guard let first = piece.points.first else { continue }
+            path.move(to: cgPoint(first))
+            for point in piece.points.dropFirst() { path.addLine(to: cgPoint(point)) }
+        }
+        let color = Palette.lineColor(preview.request.line, custom: preview.color)
+        context.stroke(path, with: .color(Palette.followCase), style: StrokeStyle(lineWidth: width * 8.5 / 4.4, lineCap: .round, lineJoin: .round))
+        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        let view = context.clipBoundingRect.insetBy(dx: -width * 2, dy: -width * 2)
+        let spacing = max(40, width * 9)
+        for mark in PolylineMarks.marks(along: pieces.flatMap { $0.points }, spacing: spacing, limit: 150) {
+            let point = cgPoint(mark.point)
+            guard view.contains(point) else { continue }
+            drawArrow(at: point, angle: mark.angle, size: width * 0.85, in: context)
+        }
+    }
+
+    /// From this size (points for ``MapScale/referenceLength``; the phone
+    /// opens at 32) every track in view shows its number; less close only
+    /// the previewed leg's do, so the map is not crowded.
+    static let trackNumbersFromSize = 44.0
+    /// A track shorter than this on the screen, in points, is not numbered
+    /// when every track is.
+    private static let trackNumberMinimumLength = 64.0
+    /// The most numbers drawn at once.
+    private static let trackNumberLimit = 80
+
+    /// Decision 201: each track's number ("#7"), the one the line panel's
+    /// routes and the select tool use, at its middle. The previewed leg's
+    /// tracks always, on navy plates beside the path; zoomed in from
+    /// ``trackNumbersFromSize``, every track in view, on pale plates. A
+    /// number that would cover one already drawn is left out.
+    private static func drawTrackNumbers(
+        _ world: GameWorld, preview: RoutePreview?, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext
+    ) {
+        let view = context.clipBoundingRect
+        var placed: [CGRect] = []
+        var numbered = Set<TrackEdgeID>()
+        func plate(_ edge: TrackEdgeID, at mark: PolylineMarks.Mark, beside distance: Double, strong: Bool) {
+            guard placed.count < trackNumberLimit else { return }
+            let point = cgPoint(PolylineMarks.shifted(mark, by: distance).point)
+            let text = context.resolve(
+                Text(verbatim: RoutePreview.label(of: edge))
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .foregroundStyle(strong ? Palette.land : Palette.ink)
+            )
+            let size = text.measure(in: CGSize(width: 120, height: 40))
+            let rect = CGRect(x: point.x - size.width / 2 - 4, y: point.y - size.height / 2 - 1, width: size.width + 8, height: size.height + 2)
+            guard rect.intersects(view), !placed.contains(where: { $0.intersects(rect) }) else { return }
+            placed.append(rect)
+            let shape = Path(roundedRect: rect, cornerRadius: rect.height / 2)
+            context.fill(shape, with: .color(strong ? Palette.ink : Palette.land.opacity(0.92)))
+            context.stroke(shape, with: .color(strong ? Palette.land : Palette.ink), lineWidth: 1)
+            context.draw(text, at: point, anchor: .center)
+        }
+        if let preview {
+            let beside = lineWidth(projection) * 1.4 * 8.5 / 4.4 / 2 + 10
+            for piece in previewPolylines(preview, world: world, projection: projection, cached: cached) where !numbered.contains(piece.edge) {
+                guard let middle = PolylineMarks.middle(of: piece.points) else { continue }
+                numbered.insert(piece.edge)
+                plate(piece.edge, at: middle, beside: beside, strong: true)
+            }
+        }
+        guard projection.detail == .full, projection.referenceSize >= trackNumbersFromSize else { return }
+        let region = drawingRegion(projection)
+        let beside = trackWidth(projection.referenceSize) / 2 + 9
+        for edge in world.network.edges where !numbered.contains(edge.id) {
+            guard let drawing = cached[edge.id] ?? MapEdgeDrawing(edge: edge, world: world), region.intersects(drawing.bounds) else { continue }
+            let points = drawing.geometry.points.map { projection.screenPoint(of: $0) }
+            guard PolylineMarks.length(of: points) >= trackNumberMinimumLength, let middle = PolylineMarks.middle(of: points) else { continue }
+            plate(edge.id, at: middle, beside: beside, strong: false)
         }
     }
 
@@ -950,7 +1094,7 @@ enum MapArt {
     private static let glyphMinimumSide = 14.0
 
     /// The buildings the player placed (city building P0-A, decision 92):
-    /// each a square in its kind's colour, edged in ink, always at least a
+    /// each a square in the station's yellow, edged in ink, always at least a
     /// few points across so it stays visible zoomed out, with its kind's glyph
     /// once it is large enough (decision 121).
     private static func drawPlacedBuildings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
@@ -964,18 +1108,8 @@ enum MapArt {
             if rect.width < minimum {
                 rect = rect.insetBy(dx: (rect.width - minimum) / 2, dy: (rect.height - minimum) / 2)
             }
-            let colour: Color = switch building.kind {
-            case .house: Palette.house
-            case .shop: Palette.shop
-            case .office: Palette.office
-            case .wharf: Palette.wharf
-            case .marina: Palette.marina
-            case .departmentStore: Palette.departmentStore
-            case .hotel: Palette.hotel
-            case .amusementPark: Palette.amusementPark
-            }
             let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
-            context.fill(shape, with: .color(colour))
+            context.fill(shape, with: .color(Palette.playerBuilding))
             context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
             // Decision 121: what it is, once there is room to read it.
             let side = min(rect.width, rect.height)

@@ -52,6 +52,11 @@ struct LinesPanel: View {
     /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
+    /// Decision 196, later: the player's choice for the "Advanced" switch,
+    /// or `nil` for the device's default (folded on a phone).
+    @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -66,6 +71,7 @@ struct LinesPanel: View {
                         // line's stops come first, a new line is one row,
                         // and the switches for every line go last.
                         linesSection
+                        advancedSection
                         newLineRow
                         if let line = session.selectedLine {
                             if line.trains.isEmpty, !line.isRing {
@@ -76,8 +82,10 @@ struct LinesPanel: View {
                             operatingSection(line)
                             servicesSections(line)
                         }
-                        trafficSection
-                        serviceDaySection
+                        if showsAdvanced {
+                            trafficSection
+                            serviceDaySection
+                        }
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
@@ -87,9 +95,12 @@ struct LinesPanel: View {
                         if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
                             staffSection(line)
                         }
-                        trafficSection
-                        serviceDaySection
+                        if showsAdvanced {
+                            trafficSection
+                            serviceDaySection
+                        }
                         linesSection
+                        advancedSection
                         if let line = session.selectedLine {
                             lineSection(line)
                             operatingSection(line)
@@ -158,9 +169,16 @@ struct LinesPanel: View {
             .onChange(of: session.world.lines.count) { showsNewLine = false }
             .onAppear { sortLinesNow() }
             .onChange(of: lineSort) { sortLinesNow() }
+            // Decision 201: folding the route menus away ends their preview.
+            .onChange(of: showsAdvanced) { _, shown in
+                if !shown { session.endRoutePreviews() }
+            }
             // Taps on the map select again once the panel is closed.
             .onDisappear {
                 session.stopPickingLineStops()
+                // Decision 201: the map stops showing a leg once the
+                // menu it came from is closed.
+                session.endRoutePreviews()
             }
         }
     }
@@ -211,13 +229,52 @@ struct LinesPanel: View {
         }
     }
 
+    /// Decision 196, later (TestFlight 54.1 #6): whether the panel shows
+    /// the service day, stopping patterns, the tracks each leg takes,
+    /// target headways and the network's switches. Folded, their rules run
+    /// as they were set; only the panel leaves them out.
+    private var showsAdvanced: Bool {
+        AdvancedDetails.isShown(
+            stored: storedShowsAdvanced,
+            roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
+        )
+    }
+
+    /// The "Advanced" switch, under the lines where it is seen at once;
+    /// folded, what the network has set there in one line.
+    private var advancedSection: some View {
+        Section {
+            Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
+                Label {
+                    Text(verbatim: session.language.text("Advanced", "進階"))
+                } icon: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+            }
+            .accessibilityIdentifier("lines.advanced")
+            .accessibilityHint(Text(verbatim: session.language.text(
+                "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
+                "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
+            )))
+            if !showsAdvanced {
+                Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("lines.advanced.summary")
+            }
+        }
+    }
+
     private func servicesSections(_ line: ServiceLine) -> some View {
         Group {
             ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
-                serviceSection(summary, of: line)
+                // Decision 196, later: a stopping pattern is an advanced detail.
+                if summary.pattern == nil || showsAdvanced {
+                    serviceSection(summary, of: line)
+                }
             }
             // A ring has no patterns.
-            if !line.isRing {
+            if !line.isRing, showsAdvanced {
                 addPatternSection(line)
             }
         }
@@ -500,12 +557,15 @@ struct LinesPanel: View {
                 if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
                     // Decision 194, later: a fix beside each reason.
                     let fixes = lossMemo.fixes(line.id, of: session)
-                    let balance = session.world.economy.balance
+                    // Decision 200: unlimited funds are never short.
+                    let economy = session.world.economy
                     LineLossCard(
                         diagnosis: diagnosis, language: session.language, session: session, lineName: line.name, fixes: fixes,
-                        shortOfMoney: Set(fixes.filter { !$0.value.isAffordable(with: balance) }.keys)
+                        shortOfMoney: Set(fixes.filter { !economy.canAfford($0.value.cost) }.keys)
                     )
                         .equatable()
+                        .tutorialPanelTarget(.lineLoss)
+                        .id(TutorialTarget.lineLoss)
                 }
             } header: {
                 Text(verbatim: session.language.text("Operations", "營運"))
@@ -626,11 +686,24 @@ struct LinesPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
-            // Stage C2: single or double track between its stops (Stage S1).
-            ForEach(Array(memo.trackCountTexts(line.id, of: session).enumerated()), id: \.offset) { _, text in
-                Label(text, systemImage: "road.lanes")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+            // Stage C2: single or double track between its stops (Stage S1),
+            // an advanced detail (decision 196, later); folded, what the
+            // line has set among them in one line.
+            if showsAdvanced {
+                ForEach(Array(memo.trackCountTexts(line.id, of: session).enumerated()), id: \.offset) { _, text in
+                    Label(text, systemImage: "road.lanes")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            } else if let summary = AdvancedDetails.lineSummary(line, in: session.language) {
+                Label {
+                    Text(verbatim: summary)
+                } icon: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("line.advanced.summary")
             }
             capacityWarning(line)
             ForEach(ServiceLevel.allCases, id: \.self) { level in
@@ -754,7 +827,9 @@ struct LinesPanel: View {
 
     private func serviceSection(_ summary: LineServiceSummary, of line: ServiceLine) -> some View {
         Section {
-            routeMenus(line, pattern: summary.pattern)
+            if showsAdvanced {
+                routeMenus(line, pattern: summary.pattern)
+            }
             Text(summary.callsText)
                 .font(.footnote)
             ForEach(summary.levels, id: \.level) { level in
@@ -778,58 +853,87 @@ struct LinesPanel: View {
     }
 
     /// Each ordered leg can keep its platform flexible, or bind the whole
-    /// displayed directed walk. IDs are the map's physical track numbers.
+    /// displayed directed walk. IDs are the map's physical track numbers;
+    /// decision 201: the map button beside a leg shows its path on the map
+    /// (arrows the way the trains go, the numbers along it), and the
+    /// menu's Show on Map First shows a choice before it is picked.
     private func routeMenus(_ line: ServiceLine, pattern: Int?) -> some View {
         let calls = pattern.map { line.patterns[$0].calls } ?? Array(line.stops.indices)
         let outward = line.isRing ? calls + [0] : calls
         let order = line.isRing ? outward + outward.dropLast().reversed() : calls + calls.dropLast().reversed()
         let pairs = Array(zip(order, order.dropFirst()))
         let preferences = pattern.map { line.patterns[$0].routePreferences } ?? line.routePreferences
+        let preview = session.routePreview
         return ForEach(pairs.indices, id: \.self) { index in
             let pair = pairs[index]
             let selected = preferences.first { $0.from == pair.0 && $0.to == pair.1 }
             let choices = memo.routeChoices(line.id, from: pair.0, to: pair.1, pattern: pattern, of: session)
             // Decision 184, later: drawn from these values alone, so a
             // running game's ticks leave the open menu alone.
-            let choiceTexts = choices.map(routeChoiceText)
-            let selectedText = selected.map(routeChoiceText)
+            let choiceTexts = RoutePreview.choiceTexts(choices, in: session.language)
+            let selectedText = selected.map { RoutePreview.choiceText($0, in: session.language) }
             let leg = "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))"
-            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg)) {
-                Menu {
-                    Button("Automatic physical path") {
-                        session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
-                    }
-                    ForEach(choices.indices, id: \.self) { choice in
-                        Button(choiceTexts[choice]) {
-                            session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+            let previewing = session.isPreviewingRoute(from: pair.0, to: pair.1, pattern: pattern)
+            let previewText = previewing ? preview?.text(in: session.language) : nil
+            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText)) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Menu {
+                            Button("Automatic physical path") {
+                                session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
+                            }
+                            ForEach(choices.indices, id: \.self) { choice in
+                                Button(choiceTexts[choice]) {
+                                    session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+                                }
+                                .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                            }
+                            Menu {
+                                Button("Automatic physical path") {
+                                    session.previewRoute(from: pair.0, to: pair.1, pattern: pattern, choice: .automatic)
+                                }
+                                ForEach(choices.indices, id: \.self) { choice in
+                                    Button(choiceTexts[choice]) {
+                                        session.previewRoute(from: pair.0, to: pair.1, pattern: pattern, choice: .preference(choices[choice]))
+                                    }
+                                }
+                            } label: {
+                                Label("Show on Map First", systemImage: "map")
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: leg)
+                                if let selectedText { Text(selectedText).font(.caption) }
+                                else { Text("Automatic physical path").font(.caption) }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                        .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
+                        Button {
+                            if previewing {
+                                session.endRoutePreview(from: pair.0, to: pair.1, pattern: pattern)
+                            } else {
+                                session.previewRoute(from: pair.0, to: pair.1, pattern: pattern)
+                            }
+                        } label: {
+                            Image(systemName: previewing ? "map.fill" : "map")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(previewing ? Text("Hide from Map") : Text("Show on Map"))
+                        .accessibilityIdentifier("line.route.preview.\(pattern ?? -1).\(pair.0).\(pair.1)")
                     }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: leg)
-                        if let selectedText { Text(selectedText).font(.caption) }
-                        else { Text("Automatic physical path").font(.caption) }
+                    if let previewText {
+                        Text(verbatim: previewText)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityIdentifier("line.route.preview.text")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
                 }
-                .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
             }
         }
-    }
-
-    private func trackNumber(_ edge: TrackEdgeID) -> Int {
-        switch edge { case .edge(let number): number }
-    }
-
-    private func routeChoiceText(_ route: LineRoutePreference) -> String {
-        let platform = trackNumber(route.platform.edge)
-        if route.tracks.isEmpty {
-            return session.language == .traditionalChinese ? "月台股道 #\(platform)・自動選路" : "Platform track #\(platform) · automatic route"
-        }
-        let walk = route.tracks.map { "\(trackNumber($0.edge))\($0.direction == .forward ? "→" : "←")" }.joined(separator: " · ")
-        return session.language == .traditionalChinese ? "股道 \(walk)・月台股道 #\(platform)" : "Tracks \(walk) · platform #\(platform)"
     }
 
     /// The trains a service is set to run at one level, with a stepper to
@@ -859,21 +963,24 @@ struct LinesPanel: View {
                         .monospacedDigit()
                 }
             }
-            // Decision 184, later: a menu the ticks leave alone.
+            // Decision 184, later: a menu the ticks leave alone. Decision
+            // 196, later: a target headway is an advanced detail.
             let language = session.language
-            TickStable(StableKey(level.level, pattern, target, language)) {
-                Menu {
-                    Button("By train count") {
-                        session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
-                    }
-                    ForEach(Self.targets, id: \.self) { minutes in
-                        Button(headwayText(minutes: minutes, in: language)) {
-                            session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+            if showsAdvanced {
+                TickStable(StableKey(level.level, pattern, target, language)) {
+                    Menu {
+                        Button("By train count") {
+                            session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
                         }
+                        ForEach(Self.targets, id: \.self) { minutes in
+                            Button(headwayText(minutes: minutes, in: language)) {
+                                session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+                            }
+                        }
+                    } label: {
+                        Label(targetHeadwayText(target, in: language), systemImage: "clock.arrow.circlepath")
+                            .font(.caption)
                     }
-                } label: {
-                    Label(targetHeadwayText(target, in: language), systemImage: "clock.arrow.circlepath")
-                        .font(.caption)
                 }
             }
         }
@@ -970,7 +1077,7 @@ struct LinesPanel: View {
                     .font(.subheadline)
                     Text(verbatim: language.text("Cost \(plan.cost.moneyText)", "費用 \(plan.cost.moneyText)"))
                         .font(.caption)
-                        .foregroundStyle(session.world.economy.balance < plan.cost ? Theme.error : Theme.textSecondary)
+                        .foregroundStyle(session.world.economy.canAfford(plan.cost) ? Theme.textSecondary : Theme.error)
                     Text(verbatim: language.text(
                         "\(plan.pricePerTrain.moneyText) a train, \(plan.dailyCostPerTrain.moneyText) a day to keep on the line",
                         "每列 \(plan.pricePerTrain.moneyText)，在線上每列每日 \(plan.dailyCostPerTrain.moneyText)"
@@ -996,7 +1103,7 @@ struct LinesPanel: View {
                 }
                 // Decision 110: the section's main action, as the theme draws one.
                 .buttonStyle(ThemeProminentButtonStyle())
-                .disabled(session.world.economy.balance < plan.cost)
+                .disabled(!session.world.economy.canAfford(plan.cost))
                 .accessibilityIdentifier("line.staff.start")
                 // Decision 125: the tutorial's first line starts here.
                 .tutorialPanelTarget(.staffLine)
@@ -1276,7 +1383,13 @@ private struct LineLossCard: View, Equatable {
         VStack(alignment: .leading, spacing: 4) {
             reasonLabel(reason)
             if let fix = fixes[reason.kind] {
-                fixButton(fix)
+                // The tutorial points at the first fix shown (decision 188).
+                if reason.kind == diagnosis.reasons.first(where: { fixes[$0.kind] != nil })?.kind {
+                    fixButton(fix)
+                        .tutorialPanelTarget(.lineLossFix)
+                } else {
+                    fixButton(fix)
+                }
             }
         }
     }

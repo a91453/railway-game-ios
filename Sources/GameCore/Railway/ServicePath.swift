@@ -99,7 +99,9 @@ extension GameWorld {
     /// berth; among paths of that distance, the one whose choices come first
     /// step by step, with a berth ahead on the same traversal before a turn
     /// and turns in ascending edge order at each node, as
-    /// ``route(from:to:)`` does. It never turns straight back along an edge;
+    /// ``route(from:to:)`` does. With ``keepLeft`` on, each switch where it
+    /// does not take the leftmost way on counts ``keepLeftMargin`` longer
+    /// in that choice (decision 202). It never turns straight back along an edge;
     /// it may loop. `end` is `nil` when the berth is the end of its edge.
     ///
     /// No traversals and no distance means the train is already where it
@@ -124,7 +126,8 @@ extension GameWorld {
     /// The answers of ``path(from:toStation:length:)``, and of the search
     /// to chosen berths that ``preferredPath(from:preference:length:)``
     /// makes, kept for one ``advance(ticks:)`` or one question: they read
-    /// only the network, which cannot change meanwhile.
+    /// only the network and whether trains keep left (decision 202), which
+    /// cannot change meanwhile.
     struct PathMemo {
         struct Query: Hashable {
             let start: TrackTraversal
@@ -149,14 +152,15 @@ extension GameWorld {
     }
 
     /// The shortest path to one of `eligible`, berths of station `id`, as
-    /// ``trafficPath(from:toStation:length:berthPenalty:edgePenalty:only:eligible:forbidden:)``
-    /// finds it with no penalty and nothing forbidden, kept in `memo`.
+    /// ``trafficPath(from:toStation:length:berthPenalty:edgePenalty:only:eligible:forbidden:keepingLeft:)``
+    /// finds it with no penalty, nothing forbidden and without keeping left
+    /// (a line's chosen platform, decision 202), kept in `memo`.
     func path(from start: TrainPosition, toStation id: StationID, length: Int64, eligible: Set<Berth>, memo: inout PathMemo) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
             let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: eligible)
             if let known = memo.found[query] { return known }
-            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, eligible: eligible)
+            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, eligible: eligible, keepingLeft: false)
             memo.found[query] = .some(found)
             return found
         }
@@ -177,8 +181,9 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil, keepingLeft: Bool = true) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
+        let keepsLeft = keepLeft && keepingLeft
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
         for berth in berths(of: id, length: length) where (only == nil || berth == only) && eligible?.contains(berth) != false {
@@ -203,7 +208,11 @@ extension GameWorld {
             }
             let stops = (berthsAlong[traversal] ?? []).filter { $0 >= from && allowed(to: $0) }
                 .map { (BerthSearch.berth(traversal, $0), $0 - from + (berthPenalty[Berth(traversal: traversal, offset: $0)] ?? 0) + (edgePenalty[traversal.edge] ?? 0)) }
-            return stops + (allowed(to: edgeLength) ? transitions(after: traversal).map { (.entered($0), edgeLength - from + (edgePenalty[traversal.edge] ?? 0)) } : [])
+            guard allowed(to: edgeLength) else { return stops }
+            let exits = transitions(after: traversal)
+            // Decision 202: a way on right of the leftmost counts longer.
+            let right = keepsLeft ? rightOfLeftmost(after: traversal, among: exits) : []
+            return stops + exits.map { (.entered($0), edgeLength - from + (edgePenalty[traversal.edge] ?? 0) + (right.contains($0) ? Self.keepLeftMargin : 0)) }
         }
         guard let route, case .berth(let last, let end)? = route.last else { return nil }
         let traversals = route.dropLast().map { place -> TrackTraversal in
@@ -251,13 +260,15 @@ extension GameWorld {
 
     /// V3 generalized path cost (migration map §7). The geometric length
     /// in TrainPath remains exact; penalties affect selection only.
+    /// `keepingLeft: false` leaves out keeping left (decision 202), for a
+    /// line's chosen route.
     func trafficPath(from start: TrainPosition, toStation id: StationID, length: Int64,
                      berthPenalty: [Berth: Int64], edgePenalty: [TrackEdgeID: Int64], only: Berth? = nil, eligible: Set<Berth>? = nil,
-                     forbidden: Set<TrackTraversal> = []) -> TrainPath? {
+                     forbidden: Set<TrackTraversal> = [], keepingLeft: Bool = true) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
             networkPath(from: traversal, offset: offset, toStation: id, length: length,
-                        forbidden: forbidden, berthPenalty: berthPenalty, edgePenalty: edgePenalty, only: only, eligible: eligible)
+                        forbidden: forbidden, berthPenalty: berthPenalty, edgePenalty: edgePenalty, only: only, eligible: eligible, keepingLeft: keepingLeft)
         }
     }
 

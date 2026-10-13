@@ -30,11 +30,17 @@ struct EconomyPanel: View {
                 if session.world.scenario != nil {
                     goalsSection
                 }
-                loanSection
+                // Decision 200: with unlimited funds there is nothing to
+                // borrow for, and no cash to sheet.
+                if !session.world.economy.unlimitedFunds {
+                    loanSection
+                }
                 faresSection
                 lastHourSection
                 reportSection
-                balanceSheetSection
+                if !session.world.economy.unlimitedFunds {
+                    balanceSheetSection
+                }
                 closedYearsSection
                 ledgerSection
             }
@@ -83,19 +89,20 @@ struct EconomyPanel: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill((session.world.economy.balance < .zero ? Theme.error : Theme.success).opacity(0.14))
+                        .fill((session.world.economy.showsInTheRed ? Theme.error : Theme.success).opacity(0.14))
                         .frame(width: 44, height: 44)
                     Image(systemName: "banknote.fill")
                         .font(.body.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.success)
+                        .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.success)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Balance")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                    Text(session.world.economy.balance.moneyText)
+                    // Decision 200: "∞" with unlimited funds.
+                    Text(verbatim: session.world.economy.cashText)
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.textPrimary)
+                        .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
                 }
             }
@@ -110,6 +117,16 @@ struct EconomyPanel: View {
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
+            }
+            // Decision 200: what unlimited funds mean.
+            if session.world.economy.unlimitedFunds {
+                Text(verbatim: session.language.text(
+                    "Unlimited funds: building and buying cost nothing. Fares and costs are still counted. Games with unlimited funds do not count for achievements.",
+                    "資金無限：建造與購買都不扣款，票收與成本照常計算。資金無限的局不計成就。"
+                ))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("economy.unlimitedFunds")
             }
             // Decision 162, later: the fuel price while a spell lasts, not
             // only the station master's first day.
@@ -275,7 +292,9 @@ struct EconomyPanel: View {
                     ? report.current.incomeStatementRows(previous: report.previous, in: session.language)
                     : report.current.cashFlowRows(
                         previous: report.previous,
-                        closingCash: (cash, cash - report.current.netCashFlow),
+                        // Decision 200: no cash in hand to show with
+                        // unlimited funds.
+                        closingCash: session.world.economy.unlimitedFunds ? nil : (cash, cash - report.current.netCashFlow),
                         in: session.language
                     ),
                 currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
@@ -322,7 +341,8 @@ struct EconomyPanel: View {
             }
             ForEach(years.reversed(), id: \.year) { year in
                 NavigationLink {
-                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language)
+                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language,
+                                  unlimitedFunds: session.world.economy.unlimitedFunds)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: year.titleText(in: session.language))

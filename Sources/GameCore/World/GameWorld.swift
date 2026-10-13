@@ -102,6 +102,12 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the app's new games turn it on. Set by
     /// ``setDoorCrowding(_:)`` only.
     public internal(set) var doorCrowding: Bool = false
+    /// Whether trains keep left on double track (decision 202): the route
+    /// a train finds to a station takes the leftmost way on at each switch
+    /// unless another is more than ``keepLeftMargin`` shorter. Off in a new
+    /// world and in saves from before it; the app's new games turn it on.
+    /// Set by ``setKeepLeft(_:)`` only.
+    public internal(set) var keepLeft: Bool = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -3958,7 +3964,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4058,6 +4064,7 @@ extension GameWorld: Codable {
         landDemand = container.contains(.landDemand) ? try container.decode(Bool.self, forKey: .landDemand) : false
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
+        keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4179,6 +4186,9 @@ extension GameWorld: Codable {
         }
         if doorCrowding {
             try container.encode(true, forKey: .doorCrowding)
+        }
+        if keepLeft {
+            try container.encode(true, forKey: .keepLeft)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)

@@ -254,7 +254,7 @@ extension GameWorld {
     /// below zero at midnight are taken off.
     public var insolvencyCountdown: Int64? {
         guard let state = scenario, state.outcome == nil, let limit = state.scenario.insolvencyDays,
-              economy.balance < .zero else { return nil }
+              economy.showsInTheRed else { return nil }
         return max(0, limit - state.insolventDays)
     }
 }

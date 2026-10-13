@@ -98,6 +98,9 @@ public struct MonthlyReport: Hashable, Sendable {
     /// The balance at the end of the month, and what it was a month
     /// before (this balance less the month's net cash flow).
     public let cash: MonthlyFigure
+    /// Decision 200: the company has unlimited funds, so ``cash`` says
+    /// nothing and is not shown.
+    public var unlimitedFunds = false
     /// The three stations whose planned trips grew most, and the three
     /// that fell most.
     public let grown: [StationTripChange]
@@ -199,10 +202,12 @@ public struct MonthlyReport: Hashable, Sendable {
                 headline = .quiet
             }
         }
-        return MonthlyReport(
+        var report = MonthlyReport(
             month: month, riders: riders, fares: fares, costs: costs, net: net, cash: cash, grown: grown, fallen: fallen,
             newTowers: newTowers, shortOfMaterials: short, headline: headline
         )
+        report.unlimitedFunds = world.economy.unlimitedFunds
+        return report
     }
 
     /// The news item's text: the headline with the month.

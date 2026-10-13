@@ -728,10 +728,11 @@ extension GameSession {
     /// What the network tool has picked so far and what to tap next.
     /// The ground's height at `anchors` on a real-world map (decision
     /// 124), from the app's heights file, to the metre: "ground 20 m → 35 m";
-    /// `nil` on a blank map or without the file. The track's own height
-    /// does not follow the ground yet.
+    /// `nil` on a blank map or without the file, and on a map without
+    /// ground (flat ground, decision 198), whose track is level whatever
+    /// the real heights.
     func groundText(at anchors: [NetworkAnchor]) -> String? {
-        guard let heights, let frame = RealWorldFrame(world: world) else { return nil }
+        guard world.ground.isMapped, let heights, let frame = RealWorldFrame(world: world) else { return nil }
         let metres = anchors.compactMap { planPoint(of: $0) }.map { Int(heights.height(at: $0, frame: frame).rounded()) }
         guard metres.count == anchors.count, !metres.isEmpty else { return nil }
         let joined = metres.map(String.init).joined(separator: " → ")
@@ -837,8 +838,8 @@ extension TrackEdge {
 }
 
 extension GameWorld {
-    /// What edge `id` of the track network is: "Edge #3 · 75 m · Elevated
-    /// · 8 m" when level, "Edge #3 · 300 m · Surface · 0 m → 8 m, 27‰ at
+    /// What edge `id` of the track network is: "Track #3 · 75 m · Elevated
+    /// · 8 m" when level, "Track #3 · 300 m · Surface · 0 m → 8 m, 27‰ at
     /// its steepest" when not, then its platforms' stations, if any.
     /// `nil` for an edge the network does not have.
     public func trackEdgeSummary(_ id: TrackEdgeID, in language: DisplayLanguage) -> String? {

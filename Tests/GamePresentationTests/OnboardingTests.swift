@@ -269,6 +269,28 @@ final class OnboardingTests: XCTestCase {
         XCTAssertTrue(options.summary(in: .traditionalChinese).contains("已更改：城市不需要建材就能成長"))
     }
 
+    /// Decision 200: unlimited funds are a managed game that pays for
+    /// nothing; options saved before them read as standard funds.
+    func testUnlimitedFunds() throws {
+        var options = NewGameOptions()
+        XCTAssertEqual(options.funds, .standard)
+        options.funds = .unlimited
+        var world = GameWorld.newGame(eventSeed: 3)
+        options.apply(to: &world)
+        XCTAssertTrue(world.economy.unlimitedFunds)
+        XCTAssertEqual(world.accounts.mode, .management)
+        XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with ∞."))
+        XCTAssertTrue(options.summary(in: .traditionalChinese).contains("已更改：資金無限，不計成就"))
+        XCTAssertEqual(NewGameOptions.Funds.unlimited.title(in: .traditionalChinese), "無限")
+        // Options written before decision 200 have no funds.
+        let older = Data(#"{"difficulty":"easy","buildingMaterials":false,"outsideConnections":true,"buysMap":true}"#.utf8)
+        let read = try JSONDecoder().decode(NewGameOptions.self, from: older)
+        XCTAssertEqual(read.funds, .standard)
+        XCTAssertEqual(read.difficulty, .easy)
+        XCTAssertFalse(read.buildingMaterials)
+        XCTAssertEqual(try JSONDecoder().decode(NewGameOptions.self, from: JSONEncoder().encode(options)), options)
+    }
+
     // MARK: - The launcher
 
     private func makeDirectory() -> URL {
@@ -374,6 +396,10 @@ final class OnboardingTests: XCTestCase {
         // the freight yard is built.
         XCTAssertTrue(HelpGuide.entries(matching: "顏色").contains { $0.id == "mapColours" })
         XCTAssertTrue(HelpGuide.entries(matching: "colour").contains { $0.id == "mapColours" })
+        XCTAssertTrue(HelpGuide.entries(matching: "黃色").contains { $0.id == "mapColours" }, "the legend names the player's yellow buildings")
+        // TestFlight 54.1: a player asked where to send a note.
+        XCTAssertTrue(HelpGuide.entries(matching: "意見").contains { $0.id == "reportProblem" })
+        XCTAssertTrue(HelpGuide.entries(matching: "feedback").contains { $0.id == "reportProblem" })
         XCTAssertTrue(HelpGuide.entries(matching: "會車").contains { $0.id == "oneTrain" })
         XCTAssertTrue(HelpGuide.entries(matching: "未配屬路線").contains { $0.id == "unassignedTrain" })
         XCTAssertTrue(HelpGuide.entries(matching: "No path ahead").contains { $0.id == "unassignedTrain" })

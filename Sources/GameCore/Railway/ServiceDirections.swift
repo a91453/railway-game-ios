@@ -63,7 +63,8 @@ extension GameWorld {
     }
 
     /// What a ``DirectionMemo`` works out from the network, the lines, the
-    /// stations and flexible dispatch alone: the traffic plan's parts (see
+    /// stations, flexible dispatch and keeping left (decision 202) alone:
+    /// the traffic plan's parts (see
     /// ``TrafficParts``), the paths searched for and the runs' curves. It
     /// is kept from a call of ``advance(ticks:)`` that changed none of
     /// those, and lent to the next call's memo only while all of them are
@@ -75,12 +76,14 @@ extension GameWorld {
             let lines: [ServiceLine]
             let stations: [StationID]
             let flexDispatch: Bool
+            let keepLeft: Bool
 
             init(_ world: GameWorld) {
                 network = world.network
                 lines = world.lines
                 stations = world.stations.map(\.id)
                 flexDispatch = world.flexDispatch
+                keepLeft = world.keepLeft
             }
         }
         /// The most of each it keeps: beyond it, it starts again.

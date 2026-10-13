@@ -10,7 +10,9 @@ import GameCore
 /// - On a real-world map the heights are the app's heights file
 ///   (``HeightGrid``), the same the track's ground is read from, sampled at
 ///   the 64 m cells' corners; a map larger than ``maximumCorners`` a side
-///   (the whole of Taiwan) at every second, third … corner.
+///   (the whole of Taiwan) at every second, third … corner. A real-world
+///   map on flat ground (decision 198) shows them too, the land as it is,
+///   though its track is level (``tracksLevel``).
 /// - Without the file, the ground the world has read (GameCore's
 ///   ``GameCore/GameWorld/groundHeight(at:)``) where it has read it.
 /// - A world without ground (a blank map) is flat: nothing is drawn.
@@ -43,6 +45,9 @@ public struct TerrainMap: Sendable {
     let cellColumns: Int
     /// Whether there is nothing to draw: a world without ground.
     public let isFlat: Bool
+    /// Whether the heights drawn are the real ones of a map whose track is
+    /// level all the same: a real-world map on flat ground (decision 198).
+    public let tracksLevel: Bool
 
     public init(world: GameWorld, heights grid: HeightGrid?) {
         let cellRows = Land.rows(in: world.bounds), cellColumns = Land.columns(in: world.bounds)
@@ -75,6 +80,7 @@ public struct TerrainMap: Sendable {
             }
             self.heights = heights
             isFlat = false
+            tracksLevel = !world.ground.isMapped
         } else if world.ground.isMapped {
             let metre = Float(WorldCoordinate.unitsPerMetre)
             heights = (0..<rows).flatMap { row in
@@ -88,9 +94,11 @@ public struct TerrainMap: Sendable {
                 }
             }
             isFlat = false
+            tracksLevel = false
         } else {
             heights = []
             isFlat = true
+            tracksLevel = false
         }
     }
 
