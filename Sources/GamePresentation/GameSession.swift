@@ -96,6 +96,10 @@ public final class GameSession {
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
+    /// The platform track menu's choices with their costs (each a dry run
+    /// on a copy of the world), kept for the platform and the
+    /// ``commandRevision`` they were worked out for.
+    @ObservationIgnored var platformTrackMenuMemo: [TrackPlatform: (revision: Int, choices: [MenuChoice<PlatformTrackPlacement>])] = [:]
     /// What traffic control shows (``trafficOverlay``,
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
