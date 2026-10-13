@@ -45,24 +45,16 @@ enum Palette {
     /// white with the icon's navy.
     static let transferLink = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
     static let transferEdge = hex(light: 0x262C57, dark: 0x262C57)
-    /// The player's buildings (decision 92), edged in ``ink``: homes,
-    /// shops and offices in the land use layer's hues (orange, red, blue).
-    static let house = hex(light: 0xF4A259, dark: 0xF6B47A)
-    static let shop = hex(light: 0xE05A4F, dark: 0xEC7A70)
-    static let office = hex(light: 0x4C7FD0, dark: 0x7AA2E3)
-    /// Decision 111: the shore's buildings, a weathered pier's brown and a
-    /// sea teal.
-    static let wharf = hex(light: 0xA0704A, dark: 0xC09070)
-    static let marina = hex(light: 0x1F9E9A, dark: 0x4CC3BF)
-    /// Decision 173: the subsidiaries, a department store's purple, a
-    /// hotel's rose and an amusement park's green; each 3.5:1 or more
-    /// against the navy glyph.
-    static let departmentStore = hex(light: 0x9B6FD0, dark: 0xB799E3)
-    static let hotel = hex(light: 0xD0709A, dark: 0xE39AB9)
-    static let amusementPark = hex(light: 0x58A84A, dark: 0x82C476)
+    /// The player's buildings (decision 92), edged in ``ink``: every kind
+    /// in the station's warm yellow, told apart by its glyph (decision 121).
+    /// The owner's choice of 2026-10-13: what the player built reads as the
+    /// player's, like the stations, and keeps clear of the town's use hues
+    /// (``cityRoof``), which once clashed with them (homes orange, shops
+    /// red, offices blue against the town's green, blue and amber).
+    static let playerBuilding = station
     /// Decision 121: the kind's glyph on a player's building, navy in
-    /// either appearance (the buildings' hues are light on the dark map,
-    /// so ``ink`` would not show): 3.11:1 or more on all ten.
+    /// either appearance (the buildings' yellow is light on the dark map,
+    /// so ``ink`` would not show): 8.69:1 on ``playerBuilding``.
     static let buildingGlyph = hex(light: 0x262C57, dark: 0x262C57)
 
     /// Decision 126: the city's own buildings on the plain map, a pale roof

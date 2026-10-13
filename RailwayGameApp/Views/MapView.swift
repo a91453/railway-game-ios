@@ -459,7 +459,9 @@ struct MapView: View {
                         if let realWorld {
                             mapStyleMenu(realWorld)
                         }
-                        if session.buysMap {
+                        // Not while building: beside the tools' Done
+                        // button it was tapped by mistake (TestFlight 56.1).
+                        if session.showsMapExpansionButton {
                             mapExpansionButton(viewport: viewport)
                         }
                     }
@@ -608,12 +610,18 @@ struct MapView: View {
                 // One already in view stays where it is, under the finger
                 // that tapped it.
                 // While a train is followed the camera stays on it.
-                if !session.isFollowingTrain, let station = session.selectedStation {
-                    let point = WorldCoordinate(x: station.location.x, y: station.location.y)
-                    if !projection.visibleRegion.contains(point) {
-                        camera = projection.centered(on: point)
-                    }
-                }
+                // Decision 106, later: "in view" is the map the screen's
+                // controls leave, and one under them moves to its middle.
+                keepSelectionClear(projection: projection, clear: clear, line: false)
+            }
+            // Decision 106, later: a line chosen in the lines panel, and the
+            // selection when a panel opens over it, move into the map the
+            // panel leaves.
+            .onChange(of: session.selectedLineID) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: true)
+            }
+            .onChange(of: insets.trailing) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: session.selectedStation == nil)
             }
             .onChange(of: session.cameraRequest) { _, request in
                 // Decision 177: the station master's tap on advice that
@@ -985,7 +993,9 @@ struct MapView: View {
     }
 
     /// Decision 160: starts choosing a tile of the map to buy, and shows
-    /// the land owned and the tiles for sale; again, stops.
+    /// the land owned and the tiles for sale; again, stops. While choosing
+    /// it says so in words, in the accent colour, so the mode is not taken
+    /// for building (TestFlight 56.1).
     private func mapExpansionButton(viewport: ScreenSize) -> some View {
         Button {
             if session.isChoosingMapTile {
@@ -999,10 +1009,28 @@ struct MapView: View {
                 session.mapDidMove()
             }
         } label: {
-            Image(systemName: session.isChoosingMapTile ? "xmark" : "plus.square.dashed")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+            if session.isChoosingMapTile {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.square.dashed")
+                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    Image(systemName: "xmark")
+                    Text(verbatim: session.language.text("Done", "結束"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Theme.accent, in: Capsule())
+                .contentShape(Capsule())
+            } else {
+                Image(systemName: "plus.square.dashed")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
+            }
         }
         .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
             ? session.language.text("Stop expanding the map", "結束擴建地圖")
@@ -1097,6 +1125,30 @@ struct MapView: View {
         .glassBackground(in: Capsule(), interactive: true)
         .tutorialTarget(.zoomControls)
         .padding(12)
+    }
+
+    /// Decision 106, later: moves the camera so the selected station (or,
+    /// for `line`, the selected line's stops) shows in the part of the map
+    /// the screen's controls leave (`clear`), in its middle, when it does
+    /// not show there now; a line is zoomed out to fit, never in. Not
+    /// while a train is followed, whose camera stays on it, nor during the
+    /// tutorial, whose steps point at places on the map.
+    private func keepSelectionClear(projection: PlanCamera, clear: EdgeInsets, line: Bool) {
+        guard !session.isFollowingTrain, session.tutorial == nil else { return }
+        let free = ScreenInsets(top: clear.top, leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
+        if line {
+            guard let selected = session.selectedLine else { return }
+            let stops = selected.stops.compactMap { session.world.station(id: $0) }
+                .map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
+            guard let region = WorldRegion(enclosing: stops),
+                  !stops.allSatisfy({ projection.showsClear($0, of: free) }) else { return }
+            camera = projection.showing(region, clearOf: free)
+        } else if let station = session.selectedStation {
+            let point = WorldCoordinate(x: station.location.x, y: station.location.y)
+            if !projection.showsClear(point, of: free) {
+                camera = projection.centered(on: point, clearOf: free)
+            }
+        }
     }
 
     /// One step of the camera towards the followed train (``FollowCamera``,

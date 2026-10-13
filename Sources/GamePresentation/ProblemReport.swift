@@ -1,7 +1,7 @@
 import GameCore
 
-/// What "Report a Problem" in the settings shares (ARCHITECTURE decision
-/// 127): a note for the player to fill in, with what a fix needs to know
+/// What "Report a Problem" in the settings and the game menu shares
+/// (ARCHITECTURE decision 127): a note for the player to fill in, with what a fix needs to know
 /// already written under it: the app's version and build, the system and
 /// the device, and, from a game, what is in it. The player chooses where it
 /// goes (Mail, Messages, Notes …) in the share sheet; the app names no

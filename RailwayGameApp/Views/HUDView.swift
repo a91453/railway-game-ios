@@ -22,6 +22,9 @@ struct HUDView: View {
     /// the player asks, so the ticks leave the question as it was asked.
     @State private var goBackChoices: [GoBackChoice] = []
     @State private var choosingGoBack = false
+    /// Whether the problem report is open from the game menu (decisions
+    /// 127 and 193; TestFlight 54.1).
+    @State private var reportingProblem = false
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -62,6 +65,9 @@ struct HUDView: View {
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .sheet(isPresented: $reportingProblem) {
+            ProblemReportSheet(game: session.problemReportGame, session: session)
+        }
         .alert(Text(verbatim: session.language.text("Save As", "另存新檔")), isPresented: $namingSave) {
             TextField(text: $saveName) {
                 Text(verbatim: session.language.text("Name", "名稱"))
@@ -136,7 +142,8 @@ struct HUDView: View {
                 saveName = ""
                 namingSave = true
             },
-            askGoBack: askGoBack
+            askGoBack: askGoBack,
+            reportProblem: { reportingProblem = true }
         )
         .equatable()
     }
@@ -307,6 +314,9 @@ private struct GameMenu: View, Equatable {
     /// Asks which autosave to go back to (decision 192), in the HUD's
     /// dialog.
     let askGoBack: @MainActor () -> Void
+    /// Opens the problem report (TestFlight 54.1: a player found it only in
+    /// the settings), in the HUD's sheet.
+    let reportProblem: @MainActor () -> Void
 
     nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
         lhs.session === rhs.session
@@ -455,6 +465,17 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.help")
+                // TestFlight 54.1: where to send a note, from the game.
+                Button {
+                    reportProblem()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Report a Problem", "回報問題"))
+                    } icon: {
+                        Image(systemName: "exclamationmark.bubble")
+                    }
+                }
+                .accessibilityIdentifier("menu.report")
             } label: {
                 Label {
                     Text(verbatim: language.text("More", "更多"))
