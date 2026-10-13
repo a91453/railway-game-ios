@@ -313,7 +313,7 @@ final class MapInteractionTests: XCTestCase {
         defer { app.terminate() }
         app.openDemo("demo.simple")
 
-        let pause = app.buttons["Pause"]
+        let pause = app.buttons["Pause"].firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 10))
         pause.tap()
         XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 5))
@@ -390,7 +390,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.waitForExistence(timeout: 10))
         newGame.tap()
 
-        let pause = app.buttons["Pause"]
+        let pause = app.buttons["Pause"].firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 10))
         pause.tap()
 
@@ -620,6 +620,56 @@ final class MapInteractionTests: XCTestCase {
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
             .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
         assertWhollyInside(status, card, "after scrolling the options")
+    }
+
+    /// The status pill's pause button, news bell and game menu are drawn
+    /// 32 to 40 points tall but touched over 44 by 44 (PR #440, found and
+    /// not fixed): each is tapped beyond its drawn edge, between it and the
+    /// pill's edge, where a tap used to miss it. From the touched element's
+    /// centre, so the test does not depend on the frame XCTest reports.
+    /// Full lane only (not in the pull request gate).
+    func testTheStatusPillsButtonsAreTouchedBeyondTheirIcons() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        func tap(_ element: XCUIElement, below dy: CGFloat) {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                .withOffset(CGVector(dx: 0, dy: dy))
+                .tap()
+        }
+
+        // The pause button, 40 points tall with its padding: 21 from its
+        // centre, below and then above it.
+        let resume = app.buttons["Resume"].firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: 10), "The demo opens paused")
+        resume.waitUntilSettled()
+        tap(resume, below: 21)
+        let pause = app.buttons["Pause"].firstMatch
+        XCTAssertTrue(pause.waitForExistence(timeout: 5), "A tap 1 point below the drawn pause button resumes the game")
+        tap(pause, below: -21)
+        XCTAssertTrue(resume.waitForExistence(timeout: 5), "A tap 1 point above the drawn pause button pauses the game")
+
+        // The bell, 32 points tall: 20 below its centre.
+        let bell = app.buttons["hud.news"]
+        XCTAssertTrue(bell.waitForExistence(timeout: 5))
+        tap(bell, below: 20)
+        let news = app.navigationBars["News"]
+        XCTAssertTrue(news.waitForExistence(timeout: 5), "A tap 4 points below the drawn bell opens the news")
+        let done = app.buttons["news.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        done.tap()
+        XCTAssertTrue(news.waitForNonExistence(timeout: 5))
+
+        // The menu, 32 points tall: 20 above its centre.
+        let menu = app.buttons["hud.menu"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.waitUntilSettled()
+        tap(menu, below: -20)
+        XCTAssertTrue(app.buttons["menu.backToStart"].waitForExistence(timeout: 5), "A tap 4 points above the drawn menu button opens the game menu")
     }
 
     /// The details card keeps one layout for one subject while the clock
