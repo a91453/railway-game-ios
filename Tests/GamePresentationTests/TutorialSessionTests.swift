@@ -349,6 +349,30 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
+    /// The game menu's Tutorial in a game being built in: what was picked
+    /// before (a stretch's start and end, a line's stations, a selection)
+    /// is dropped, so no step is passed as done by what the player did
+    /// before the tutorial began (NEXT_PRIORITIES §2: a step was passed
+    /// when the tutorial was started again from the menu).
+    func testStartingFromTheMenuDropsWhatWasPickedBefore() async throws {
+        await MainActor.run {
+            let session = GameSession(world: GameWorld.newGame(), language: .english)
+            session.selectTool(.network)
+            session.tapNetwork(at: Self.point(2, in: session), reach: Self.reach)
+            session.tapNetwork(at: Self.point(13, in: session), reach: Self.reach)
+            XCTAssertNotNil(session.networkPreview)
+            session.startTutorial()
+            XCTAssertNil(session.networkStart)
+            XCTAssertNil(session.networkEnd)
+            XCTAssertNil(session.networkPreview)
+            session.showNextTutorialStep()
+            session.mapDidMove()
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "track.draw", "not passed over to track.build")
+            XCTAssertFalse(session.isTutorialStepDone)
+        }
+    }
+
     /// Skip keeps the tutorial (TestFlight 54.1; decision 188, later fix):
     /// the game menu takes it up again at the same step, where what was
     /// built in the tutorial still counts, so nothing is built twice; Start

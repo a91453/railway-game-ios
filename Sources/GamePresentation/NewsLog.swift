@@ -135,6 +135,16 @@ public struct NewsLog: Hashable, Codable, Sendable {
         items.prefix { $0.id > readThrough }.count
     }
 
+    /// Where the player had read up to, kept by a view when the log opens.
+    public var readMark: Int { readThrough }
+
+    /// Whether `item` was not yet seen at `mark` (a ``readMark`` taken
+    /// earlier). Items added while the log is open push the list down, so
+    /// a view marks what is new by ID, not by position.
+    public static func isNew(_ item: NewsItem, since mark: Int) -> Bool {
+        item.id > mark
+    }
+
     /// The player has opened the log: everything in it is seen.
     public mutating func markRead() {
         readThrough = nextID - 1
