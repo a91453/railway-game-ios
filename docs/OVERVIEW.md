@@ -14,11 +14,11 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 
 | 項目 | 現在 | 在哪裡 |
 | --- | --- | --- |
-| 階段 | **功能凍結，第三輪修 bug**（2026-10-12 作者決定）。凍結解除後的順序見 NEXT_PRIORITIES | 工作登記 #231 |
+| 階段 | **波次 1**：作者 2026-10-12 宣布功能凍結（第三輪修 bug），2026-10-13 解除。順序見 NEXT_PRIORITIES | 工作登記 #231 |
 | 存檔版本 | 50；每個版本一個存檔 fixture，共 54 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 72，76 個情境 | `GoldenScenarios/` |
 | replay | 7 個指令紀錄 | `ReplayFixtures/` |
-| 決策 | 1–189。141、150 曾保留但沒有使用 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–190。141、150 曾保留但沒有使用 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
