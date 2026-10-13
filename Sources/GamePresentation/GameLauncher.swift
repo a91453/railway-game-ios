@@ -222,7 +222,8 @@ public final class GameLauncher {
     ///
     /// Decision 177: it starts with the player's ``newGameOptions``
     /// (standard unless changed): the cash, the disruptions, the rules
-    /// the new game turns on and the seed.
+    /// the new game turns on and the seed; and on a real-world map, the
+    /// ground (decision 198).
     public func startNewGame(at anchor: GeoAnchor? = nil) {
         let options = newGameOptions
         let seed = options.eventSeed()
@@ -230,7 +231,7 @@ public final class GameLauncher {
             let step = expansion.ridersStep(population: population, places: places, water: water)
             var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: step, balance: options.startingBalance, eventSeed: seed)
             options.apply(to: &world)
-            begin(grounded(world), keepingAutosave: true)
+            begin(grounded(world, options.ground), keepingAutosave: true)
             return
         }
         var world = GameWorld.newGame(
@@ -238,7 +239,7 @@ public final class GameLauncher {
             water: anchor.map(water(at:)) ?? [], steep: anchor.map(steep(at:)) ?? [], buysMap: anchor == nil && options.buysMap
         )
         options.apply(to: &world)
-        begin(anchor == nil ? world : grounded(world), keepingAutosave: true)
+        begin(anchor == nil ? world : grounded(world, options.ground), keepingAutosave: true)
     }
 
     /// Starts a new game on the whole of Taiwan (decision 88), its land
@@ -247,14 +248,16 @@ public final class GameLauncher {
         let options = newGameOptions
         var world = GameWorld.newWholeTaiwanGame(balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
-        begin(grounded(world), keepingAutosave: true)
+        begin(grounded(world, options.ground), keepingAutosave: true)
     }
 
     /// `world`, a new real-world game, with ground (decision 124) when the
-    /// app has its heights file: the network tool reads the ground in as
-    /// track comes to it. Without the file the map stays flat, as before.
-    private func grounded(_ world: GameWorld) -> GameWorld {
-        guard heights != nil else { return world }
+    /// app has its heights file and `ground` is real: the network tool
+    /// reads the ground in as track comes to it. Without the file, or on
+    /// flat ground (decision 198), the map stays flat and its track level,
+    /// in the game and in its saves.
+    private func grounded(_ world: GameWorld, _ ground: NewGameOptions.Ground) -> GameWorld {
+        guard heights != nil, ground == .real else { return world }
         var world = world
         try? world.mapGround()
         return world
@@ -297,7 +300,7 @@ public final class GameLauncher {
                 within: WholeTaiwan.landReach, of: LiuMingchuanChallenge.towns.map(\.point), in: &world, population: population, places: places,
                 water: water, coverage: coverage
             )
-            begin(grounded(world), keepingAutosave: true)
+            begin(grounded(world, .real), keepingAutosave: true)
         }
     }
 

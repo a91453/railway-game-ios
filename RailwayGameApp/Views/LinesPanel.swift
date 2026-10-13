@@ -556,6 +556,8 @@ struct LinesPanel: View {
                         shortOfMoney: Set(fixes.filter { !$0.value.isAffordable(with: balance) }.keys)
                     )
                         .equatable()
+                        .tutorialPanelTarget(.lineLoss)
+                        .id(TutorialTarget.lineLoss)
                 }
             } header: {
                 Text(verbatim: session.language.text("Operations", "營運"))
@@ -1344,7 +1346,13 @@ private struct LineLossCard: View, Equatable {
         VStack(alignment: .leading, spacing: 4) {
             reasonLabel(reason)
             if let fix = fixes[reason.kind] {
-                fixButton(fix)
+                // The tutorial points at the first fix shown (decision 188).
+                if reason.kind == diagnosis.reasons.first(where: { fixes[$0.kind] != nil })?.kind {
+                    fixButton(fix)
+                        .tutorialPanelTarget(.lineLossFix)
+                } else {
+                    fixButton(fix)
+                }
             }
         }
     }
