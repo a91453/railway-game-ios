@@ -421,15 +421,50 @@ final class StartSaveFlowSmokeTests: XCTestCase {
 
     private func openGameMenu(in app: XCUIApplication) {
         requiredButton("hud.menu", in: app).tap()
-        _ = requiredButton("menu.saveGame", in: app)
-        _ = requiredButton("menu.backToStart", in: app)
+        _ = menuRow("menu.saveGame", in: app)
+        _ = menuRow("menu.backToStart", in: app)
         // Let the menu finish opening: tapMenuAction touches an action's
         // frame as it reads it. The screenshot taken here used to pause so.
         Thread.sleep(forTimeInterval: 1)
     }
 
     private func tapMenuAction(_ identifier: String, in app: XCUIApplication) {
-        touchMenuRow(requiredButton(identifier, in: app), closing: app.buttons.matching(identifier: identifier), in: app, name: identifier)
+        touchMenuRow(menuRow(identifier, in: app), closing: app.buttons.matching(identifier: identifier), in: app, name: identifier)
+    }
+
+    /// The game menu's row `identifier`, once a copy of it lies on the
+    /// screen and stays in the same place a quarter of a second later, and
+    /// is enabled. Not asked `isHittable`: just after the menu opened, with
+    /// the row's frame on the screen, XCTest failed the test outright
+    /// asking it ("Failed to determine hittability of menu.saveGame:
+    /// Activation point invalid", the pull request gate's run 38471573204
+    /// and #532's). `touchMenuRow` touches the frame's centre for the same
+    /// reason, and checks that the menu closes.
+    private func menuRow(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+        let query = app.buttons.matching(identifier: identifier)
+        XCTAssertTrue(query.firstMatch.appears(within: 10), "Missing menu row: \(identifier)")
+        let bounds = app.frame
+        var last: CGRect?
+        let deadline = Date().addingTimeInterval(10)
+        repeat {
+            let row = query.allElementsBoundByIndex.first { copy in
+                let frame = copy.frame
+                return !frame.isEmpty && bounds.contains(CGPoint(x: frame.midX, y: frame.midY))
+            }
+            if let row {
+                let frame = row.frame
+                if frame == last {
+                    XCTAssertTrue(row.isEnabled, "Menu row is disabled: \(identifier)")
+                    return row
+                }
+                last = frame
+            } else {
+                last = nil
+            }
+            Thread.sleep(forTimeInterval: 0.25)
+        } while Date() < deadline
+        XCTFail("Menu row never came to rest on the screen: \(identifier)")
+        return query.firstMatch
     }
 
     /// Touches the menu row `button`; `query` finds its copies, whose
