@@ -214,6 +214,30 @@ final class FollowingMapLibreView: MLNMapView {
         Task { @MainActor in report(frames) }
     }
 
+    // MARK: - Accessibility
+
+    // MLNMapView is an accessibility container of its own (its annotations,
+    // compass and attribution button), so VoiceOver and the UI tests see
+    // only what it lists; the credit (decision 191) is added after them.
+
+    // UIKit asks on the main thread; the SDK may not say so.
+
+    override func accessibilityElementCount() -> Int {
+        MainActor.assumeIsolated { super.accessibilityElementCount() + (credit.text.isEmpty ? 0 : 1) }
+    }
+
+    override func accessibilityElement(at index: Int) -> Any? {
+        MainActor.assumeIsolated {
+            index == super.accessibilityElementCount() && !credit.text.isEmpty ? credit as Any? : super.accessibilityElement(at: index)
+        }
+    }
+
+    override func index(ofAccessibilityElement element: Any) -> Int {
+        MainActor.assumeIsolated {
+            (element as AnyObject) === credit ? super.accessibilityElementCount() : super.index(ofAccessibilityElement: element)
+        }
+    }
+
     override func safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()
         setNeedsLayout()
