@@ -29,12 +29,16 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     case platform
     /// A tap picks an edge to remove.
     case remove
+    /// A tap picks a place on single track for a passing loop (decision
+    /// 204).
+    case passingLoop
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
         case .build: language.text("Lay", "鋪設")
         case .platform: language.text("Platform", "月台")
         case .remove: language.text("Remove", "拆除")
+        case .passingLoop: language.text("Loop", "待避")
         }
     }
 }

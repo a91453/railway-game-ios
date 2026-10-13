@@ -7058,6 +7058,39 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **參考**：`a91453/railway-reference-private` 沒有可用的：交會的來源 `Railway/site_archive_clean/index.html` 的 `inferMeetRun`／`resolveTraTraffic` 是事先排時刻表，不處理列車在執行中走不了；分割軌道是這個專案自己的指令。外部專案沒有查：兩項都是這個專案自己的狀態判斷。程式碼是這個專案自己寫的。
 
+### 204（續）. 一鍵雙線與待避線工具
+
+決策 204 的工具部分（作者 2026-10-13「一鍵雙線／待避線工具 開工」，`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 10 項）。只改畫面與 GamePresentation，GameCore 不動；存檔版本、golden schema 不動。前面的 GameCore 修正與號誌站探針在同一個決策號（PR #519，已合併）。
+
+1. **複線**（新檔 `Sources/GamePresentation/DoubleTrack.swift`；鋪軌卡片的「複線」切換，`GameSession.networkBuildsDouble`）：打開時每鋪一段，旁邊同時鋪第二條，中心相距 `DoubleTrack.spacing` = 5 m（320 單位，同岸式月台軌道，大於 GameCore 的最小間距 4 m，彎道上的小誤差也不會太近）。
+   - 第二條的兩端在這一段兩端的法線方向上，左或右（`networkDoubleSide`，收在「進階選項」裡，預設左）；曲線照這一段的做法算（`NetworkBuilding.curve`，兩端沿同樣的方向、把手在弦的三分之一），所以彎道上也大約保持 5 m。直線段的第二條也是直線。
+   - 一端旁邊 1 m 內已有節點時接上它：接著畫下一段時，第二條從上一段的第二條接下去。
+   - 兩條一起是一個指令（`PlayerCommand.buildDoubleTrack`，記錄與重播照決策 193），全成或全不成；第二條放不下時說原因，什麼都不蓋。
+   - 兩條各走哪個方向交給 GameCore 的靠左行駛（決策 202），工具不指定。
+   - **缺口**：第二條在接上既有軌道的那一端是空著的（這一段從車站的軌道或轉轍器接出時，第二條不會自己接到車站）。要讓兩條都接到車站，還要用渡線（兩點各點一條軌道）或月台軌道。進路預覽（決策 201）讀的是路線的行程，工具蓋的軌道照樣看得懂；一次性提示卡（#510）的「平行軌」要車站到車站兩條都通才算。
+2. **待避線**（新檔 `Sources/GamePresentation/PassingLoop.swift`；路網工具多一個模式「待避」，`NetworkToolMode.passingLoop`）：點一段單線，旁邊 5 m 加一條側線，兩端各一個轉轍器，同時蓋一個號誌站（封閉車站，`StationOperationMode.closed`，名稱「號誌站 N」），兩股各有一個月台。
+   - 側線的幾何和月台軌道共用（`GameSession.sidingPlan`，從 `platformTrackPlan` 抽出；`buildSiding` 也是）：轉轍器在待避段兩端外 `PlatformTrackLayout.side.reach`（50 m），穿過直行的節點去找。
+   - 待避段長度 `passingLoopLength`：公司最長的列車，至少 6 節（96 m）；以點的位置為中心，太靠邊就往內移。
+   - 為什麼要號誌站：探針（決策 204 第 3 點）顯示時刻表停靠時才排交會、路線停靠時才算交會點。完成訊息提醒玩家把它加進路線的停靠站。
+   - 一個指令（`PlayerCommand.addPassingLoop`），全成或全不成；預覽在世界的副本上蓋一次，算費用或原因，地圖畫出側線。
+3. **手機**：「複線」切換和「進階選項」在同一列；左右側收在進階選項裡（決策 107 的收合，和 #497 的「進階」同一個原則）。模式選擇多一格「待避」（四個字以內）。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` 的 `edge(p, ux, uy)`：折線每段的法線 (-dy, dx) 往外推 | `DoubleTrack.beside`（端點沿法線推 5 m） | 改寫：參考只用在畫枕木與道床，這裡用來放第二條的端點 |
+| `Simulator/reference_snapshot/_next/static/chunks/4193-*.js` 的 `f`（`parallelSpacingMm` → 左右偏移）、雙線曲線半徑 `[radius, radius - spacing]` | 無 | 參考的數字是 N 比例模型（33 mm），曲線是同心圓弧；這裡的軌道是三次曲線，照原來的算法重算第二條 |
+| 同檔 `Kw`（兩段等切線圓弧的反向曲線）、`SX248`／`WX310` 等渡線零件 | 無 | 這裡的 S 曲線沿用月台軌道的三次曲線（`NetworkBuilding.curve`） |
+| `Ci/reference_snapshot/lib/app__q_*.js` 的 `radiusAtPoint`、`minRadiusForSegment` | 無（放大鏡與曲率讀數的 PR 再用） | 之後 |
+| `MapBuilder/`、`OpenWorld/`、`Railway/railway_game_reference_clean/`、`Railway/train_loop_reference_clean/`、`Railway/city_world_reference/source/` | 無 | 沒有可用的 |
+
+參考裡沒有「一次鋪兩條」或「插入待避線」的工具，只有上面的幾何零件；兩個工具是這個專案自己的。外部專案（2026-10-13 網路搜尋）：OpenTTD 的手冊（Railway construction、Tutorial「Two Tracks」）只有一條一條鋪的工具，複線是自己鋪兩次；Simutrans 正式版也沒有，論壇上有一個 2026 年 8 月的實驗 patch（forum.simutrans.com topic 24013）加「一次拖曳鋪兩條、先選左或右」的工具，和這裡的切換加左右選擇是同一個想法。兩者都是 GPL，只參考做法，沒有用到程式碼。
+
+**測試**：`DoubleTrackSessionTests`（直線一段：第二條在北邊 5 m，費用是兩條的；接著畫：第二條從上一段的第二條接下去、兩條都穿過節點；放不下時不蓋）、`PassingLoopSessionTests`（點單線：側線在北邊 5 m、兩個轉轍器、號誌站封閉、兩股各一個月台；路線不停靠時 1 列、停靠號誌站後 2 列；太短的軌道拒絕）、`NetworkPlanCommandTests`（兩個新指令的記錄與重播）、`NetworkBuildingSessionTests`（模式的中文名多一個「待避」）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）與實機手感；手機上模式選擇四格的寬度。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

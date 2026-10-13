@@ -117,8 +117,14 @@ extension GameSession {
     /// The compass side `side` of `platform`'s track faces, by the larger
     /// part of the way to it: "north", "south", "east" or "west".
     public func platformTrackSideText(_ side: PlatformTrackSide, of platform: TrackPlatform) -> String {
-        guard let geometry = world.trackGeometry(of: platform.edge) else { return "" }
-        let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+        edgeSideText(side, at: NetworkEdgePoint(edge: platform.edge, distance: (platform.start + platform.end) / 2))
+    }
+
+    /// The compass side `side` of the track at `point` faces (see
+    /// ``platformTrackSideText(_:of:)``).
+    public func edgeSideText(_ side: PlatformTrackSide, at point: NetworkEdgePoint) -> String {
+        guard let geometry = world.trackGeometry(of: point.edge), point.distance >= 0, point.distance <= geometry.length else { return "" }
+        let way = geometry.location(at: point.distance).direction
         // y grows south on the map.
         let normal = side == .left ? PlanVector(dx: way.dy, dy: -way.dx) : PlanVector(dx: -way.dy, dy: way.dx)
         if abs(normal.dx) >= abs(normal.dy) {
@@ -172,11 +178,23 @@ extension GameSession {
     func platformTrackPlan(beside platform: TrackPlatform, layout: PlatformTrackLayout, side: PlatformTrackSide)
         -> Result<PlatformTrackPlan, PlatformTrackProblem>
     {
-        guard world.trackPlatforms(of: platform.station).contains(platform), let edge = world.network.edge(platform.edge),
-              let geometry = world.trackGeometry(of: platform.edge) else { return .failure(.missing) }
+        guard world.trackPlatforms(of: platform.station).contains(platform) else { return .failure(.missing) }
+        return sidingPlan(on: platform.edge, from: platform.start, to: platform.end, spacing: layout.spacing, reach: layout.reach, side: side).map {
+            PlatformTrackPlan(platform: platform, near: $0.near, far: $0.far, beside: $0.beside, curves: $0.curves, structure: $0.structure)
+        }
+    }
+
+    /// A track beside `edge` from `start` to `end`, `spacing` to the `side`,
+    /// joined to it by a turnout `reach` beyond each end: a platform track's
+    /// (above) or a passing loop's (decision 204).
+    func sidingPlan(on edgeID: TrackEdgeID, from start: Int64, to end: Int64, spacing: Int64, reach: Int64, side: PlatformTrackSide)
+        -> Result<Siding, PlatformTrackProblem>
+    {
+        guard let edge = world.network.edge(edgeID), let geometry = world.trackGeometry(of: edgeID),
+              start >= 0, start < end, end <= geometry.length else { return .failure(.missing) }
         guard geometry.startHeight == geometry.endHeight, edge.profile == .uniform else { return .failure(.notLevel) }
-        guard let near = platformTrackTurnout(from: platform.edge, at: platform.start, forward: false, reach: layout.reach),
-              let far = platformTrackTurnout(from: platform.edge, at: platform.end, forward: true, reach: layout.reach)
+        guard let near = platformTrackTurnout(from: edgeID, at: start, forward: false, reach: reach),
+              let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach)
         else { return .failure(.noRoom) }
         func besides(_ distance: Int64) -> (position: WorldCoordinate, way: PlanVector) {
             let location = geometry.location(at: distance)
@@ -185,32 +203,44 @@ extension GameSession {
             let length = (dx * dx + dy * dy).squareRoot()
             // Left of the way the edge runs, y growing south: (dy, -dx).
             let sign: Double = side == .left ? 1 : -1
-            let scale = sign * Double(layout.spacing) / length
+            let scale = sign * Double(spacing) / length
             let position = location.position
             return (WorldCoordinate(x: position.x + Int64((dy * scale).rounded()), y: position.y + Int64((-dx * scale).rounded()), z: position.z), way)
         }
-        let start = besides(platform.start), end = besides(platform.end)
-        // The near turnout's track leaves toward the platform; at the far
+        let first = besides(start), last = besides(end)
+        // The near turnout's track leaves toward the stretch; at the far
         // one, the new track arrives from it, leaving back toward it.
-        guard let out = NetworkBuilding.curve(from: near.position.plan, leaving: near.leaving, to: start.position.plan, leaving: start.way.reversed),
-              let along = NetworkBuilding.curve(from: start.position.plan, leaving: start.way, to: end.position.plan, leaving: end.way.reversed),
-              let back = NetworkBuilding.curve(from: end.position.plan, leaving: end.way, to: far.position.plan, leaving: far.leaving)
+        guard let out = NetworkBuilding.curve(from: near.position.plan, leaving: near.leaving, to: first.position.plan, leaving: first.way.reversed),
+              let along = NetworkBuilding.curve(from: first.position.plan, leaving: first.way, to: last.position.plan, leaving: last.way.reversed),
+              let back = NetworkBuilding.curve(from: last.position.plan, leaving: last.way, to: far.position.plan, leaving: far.leaving)
         else { return .failure(.noRoom) }
-        return .success(PlatformTrackPlan(
-            platform: platform, near: near, far: far, beside: .init(near: start.position, far: end.position), curves: .init(out: out, along: along, back: back),
+        return .success(Siding(
+            near: near, far: far, beside: .init(near: first.position, far: last.position), curves: .init(out: out, along: along, back: back),
             structure: edge.structure
         ))
     }
 
-    /// Builds `plan` in `world`: the turnouts, the new nodes, the three
-    /// edges as one and the new platform along the middle one, for the same
-    /// station. Returns the new platform.
-    func build(_ plan: PlatformTrackPlan, in world: inout GameWorld) throws(GameError) -> TrackPlatform {
+    /// The parts of a siding (``sidingPlan(on:from:to:spacing:reach:side:)``).
+    struct Siding {
+        let near: PlatformTrackTurnout
+        let far: PlatformTrackTurnout
+        let beside: PlatformTrackPlan.Beside
+        let curves: PlatformTrackPlan.Curves
+        let structure: TrackStructure
+    }
+
+    /// Builds the siding in `world`: the turnouts (splitting the track, the
+    /// far one first), the two nodes beside, and the three edges as one.
+    /// Returns the three edges: out, along, back.
+    func buildSiding(
+        near nearTurnout: PlatformTrackTurnout, far farTurnout: PlatformTrackTurnout, beside: PlatformTrackPlan.Beside,
+        curves: PlatformTrackPlan.Curves, structure: TrackStructure, in world: inout GameWorld
+    ) throws(GameError) -> [TrackEdgeID] {
         // Decision 124: the ground under the new track read in first, as the
         // track and crossover tools do. Beside the line it may lie in a
         // block the line's own track never reached.
-        let ends = [plan.near.position, plan.beside.near, plan.beside.far, plan.far.position]
-        let legs = [(ends[0], ends[1], plan.curves.out), (ends[1], ends[2], plan.curves.along), (ends[2], ends[3], plan.curves.back)]
+        let ends = [nearTurnout.position, beside.near, beside.far, farTurnout.position]
+        let legs = [(ends[0], ends[1], curves.out), (ends[1], ends[2], curves.along), (ends[2], ends[3], curves.back)]
         let surveyed = legs.compactMap { TrackGeometry(from: $0.0, to: $0.1, curve: $0.2) }.flatMap(NetworkBuilding.surveyedPoints(of:))
         try world.readGround(under: ends.map(\.plan) + surveyed, from: heights)
         func node(_ turnout: PlatformTrackTurnout) throws(GameError) -> TrackNodeID {
@@ -222,15 +252,22 @@ extension GameSession {
             guard let now else { throw .unknownTrackEdge(point.edge) }
             return try world.splitTrackEdge(now.edge, at: now.distance)
         }
-        let far = try node(plan.far)
-        let near = try node(plan.near)
-        let start = try world.buildTrackNode(at: plan.beside.near)
-        let end = try world.buildTrackNode(at: plan.beside.far)
-        let edges = try world.buildTrackEdges([
-            TrackEdgePlan(from: near, to: start, curve: plan.curves.out, structure: plan.structure),
-            TrackEdgePlan(from: start, to: end, curve: plan.curves.along, structure: plan.structure),
-            TrackEdgePlan(from: end, to: far, curve: plan.curves.back, structure: plan.structure),
+        let far = try node(farTurnout)
+        let near = try node(nearTurnout)
+        let start = try world.buildTrackNode(at: beside.near)
+        let end = try world.buildTrackNode(at: beside.far)
+        return try world.buildTrackEdges([
+            TrackEdgePlan(from: near, to: start, curve: curves.out, structure: structure),
+            TrackEdgePlan(from: start, to: end, curve: curves.along, structure: structure),
+            TrackEdgePlan(from: end, to: far, curve: curves.back, structure: structure),
         ])
+    }
+
+    /// Builds `plan` in `world`: the turnouts, the new nodes, the three
+    /// edges as one and the new platform along the middle one, for the same
+    /// station. Returns the new platform.
+    func build(_ plan: PlatformTrackPlan, in world: inout GameWorld) throws(GameError) -> TrackPlatform {
+        let edges = try buildSiding(near: plan.near, far: plan.far, beside: plan.beside, curves: plan.curves, structure: plan.structure, in: &world)
         let length = world.network.edge(edges[1])?.length ?? 0
         try world.addTrackPlatform(plan.platform.station, on: edges[1], from: 0, to: length)
         return TrackPlatform(station: plan.platform.station, edge: edges[1], start: 0, end: length)

@@ -72,7 +72,7 @@ extension GameSession {
                 suggestStationName(at: middle)
             }
             suggestPlatformCars()
-        case .remove:
+        case .remove, .passingLoop:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
         }
     }
@@ -117,13 +117,16 @@ extension GameSession {
         _ = world
         let key = NetworkPreviewMemo.Key(
             start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
-            buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade, worldRevision: worldRevision
+            buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
+            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, worldRevision: worldRevision
         )
         if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else {
-            preview(from: start, to: end).map { ($0, []) }
+            // The double track's parallel is drawn as the crossover's
+            // middle is: a second line.
+            preview(from: start, to: end)
         }
         networkPreviewMemo = NetworkPreviewMemo(key: key, preview: found)
         return found
@@ -157,7 +160,15 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: problem.text(in: language))
             return
         }
-        let built = perform(.buildTrack(plan.stretch(structure: networkStructure))) { outcome, before, world in
+        var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure))
+        if networkBuildsDouble {
+            guard let parallel = parallelPlan(beside: plan, in: prepared) else {
+                message = StatusMessage(kind: .failure, text: Self.noParallelText(in: language))
+                return
+            }
+            command = .buildDoubleTrack(plan.stretch(structure: networkStructure), parallel: parallel.stretch(structure: networkStructure))
+        }
+        let built = perform(command) { outcome, before, world in
             guard let result = outcome.track else { return "" }
             let cleared = before.placedBuildings(clearedIn: world).count
             let cost = Money(before.economy.balance.amount - world.economy.balance.amount)
@@ -180,7 +191,7 @@ extension GameSession {
         }
     }
 
-    private func preview(from start: NetworkAnchor, to end: NetworkAnchor) -> NetworkPreview? {
+    private func preview(from start: NetworkAnchor, to end: NetworkAnchor) -> (NetworkPreview, [WorldCoordinate])? {
         // Decision 124: on a copy, the ground at both ends first, so a new
         // point stands on it; the rest of the way as it is built.
         var draft = world
@@ -196,25 +207,31 @@ extension GameSession {
                 return nil
             }
             let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
-            return NetworkPreview(
+            return (NetworkPreview(
                 curve: .straight, profile: .uniform, points: [from, to], length: Int64((dx * dx + dy * dy).squareRoot().rounded()),
                 startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)
-            )
+            ), [])
         }
+        let parallel = networkBuildsDouble ? parallelPlan(beside: plan, in: draft) : nil
         let cost: Money?
         let problem: String?
         var longSection: TrackLongSection?
         do throws(GameError) {
             let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
+            longSection = draft.longSection(of: built.edge)
+            if networkBuildsDouble {
+                guard let parallel else { throw .invalidTrackGeometry }
+                _ = try parallel.build(in: &draft, structure: networkStructure, heights: heights)
+            }
             cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
             problem = nil
-            longSection = draft.longSection(of: built.edge)
         } catch {
             cost = nil
-            problem = error.playerMessage(in: language)
+            problem = networkBuildsDouble && parallel == nil ? Self.noParallelText(in: language) : error.playerMessage(in: language)
         }
         let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
-        return NetworkPreview(
+        let besides = parallel.map { $0.geometry?.points ?? [$0.from, $0.to] } ?? []
+        return (NetworkPreview(
             curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
             length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
             joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: cost, problem: problem,
@@ -222,6 +239,14 @@ extension GameSession {
             // Decision 124, H3: what it costs, part by part.
             costParts: longSection.map { NetworkCostParts(track: $0.cost, demolition: world.clearingCost(of: cleared)) },
             longSection: longSection
+        ), besides)
+    }
+
+    /// Why a double track's parallel cannot be laid beside the stretch.
+    static func noParallelText(in language: DisplayLanguage) -> String {
+        language.text(
+            "There is no room for the second track 5 m beside this stretch. Try the other side, or turn double track off.",
+            "這段旁邊 5 公尺放不下第二條軌道。請換另一側，或關掉複線。"
         )
     }
 
@@ -804,6 +829,17 @@ extension GameSession {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
             }
             return world.trackEdgeSummary(edge, in: language) ?? edge.displayText(in: language)
+        case .passingLoop:
+            guard networkEdgePoint != nil else {
+                return language.text(
+                    "Tap a single track: a loop \(NetworkBuilding.lengthText(passingLoopLength, in: language)) long goes beside it, with a signal station.",
+                    "請點選單線軌道：旁邊會加上 \(NetworkBuilding.lengthText(passingLoopLength, in: language)) 的待避線與號誌站。"
+                )
+            }
+            return networkLoopPreview?.problem ?? language.text(
+                "A passing loop and a signal station here. Lines that stop there can pass each other.",
+                "在這裡加待避線與號誌站。停靠這裡的路線，列車可以在這裡交會。"
+            )
         }
     }
 }
@@ -944,6 +980,11 @@ extension GameSession {
             if let edge = networkEdgePoint?.edge, let geometry = world.trackGeometry(of: edge) {
                 overlay.highlight = geometry.points
             }
+        case .passingLoop:
+            if let loop = networkLoopPreview {
+                overlay.preview = loop.points
+                overlay.previewIsBuildable = loop.problem == nil
+            }
         }
         return overlay
     }
@@ -973,7 +1014,7 @@ extension GameSession {
     /// remove (56.1: track with a platform on it cannot be removed, so the
     /// remove mode lists them too).
     public var platformsOnPickedEdge: [TrackPlatform] {
-        guard networkMode != .build, let edge = networkEdgePoint?.edge else { return [] }
+        guard networkMode == .platform || networkMode == .remove, let edge = networkEdgePoint?.edge else { return [] }
         return world.network.platforms(on: edge)
     }
 
@@ -1026,6 +1067,8 @@ struct NetworkPreviewMemo {
         let followsTrack: Bool
         let buildsScissors: Bool
         let easesGrade: Bool
+        let buildsDouble: Bool
+        let doubleSide: PlatformTrackSide
         let worldRevision: Int
     }
 
