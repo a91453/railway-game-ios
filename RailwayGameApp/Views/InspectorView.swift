@@ -38,13 +38,55 @@ struct InspectorView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("inspector.train.details")
-            if let line = session.world.assignedLine(of: train) {
-                lineButtons([line])
+            // TestFlight 56.1: a train looked at with no tool had no way to
+            // follow it; the train tool's button (`train.follow`) sat behind
+            // Build since decision 114. The card's head never scrolls, so
+            // the button shows with the line beside it. The train tool has
+            // its own button among its options.
+            let line = session.world.assignedLine(of: train)
+            let followable = session.tool == .select && session.world.train(id: train)?.position != nil
+            if line != nil || followable {
+                HStack(spacing: 6) {
+                    if let line {
+                        lineButtons([line])
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+                    if followable {
+                        followButton(train)
+                    }
+                }
             }
         } else if session.tool == .select, session.selectedStationID == nil, let edge = session.selectedTrackEdge,
                   let inspection = session.trackInspection(of: edge), !inspection.lines.isEmpty {
             lineButtons(inspection.lines)
         }
+    }
+
+    /// Follows train `id` with the camera, or stops; looks and acts as the
+    /// train tool's follow button (`TrainControls`).
+    private func followButton(_ id: TrainID) -> some View {
+        let following = session.isFollowing(id)
+        let language = session.language
+        return Button {
+            session.toggleFollowTrain(id)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: following ? "location.fill" : "location")
+                    .font(.caption2.weight(.bold))
+                Text(verbatim: following ? language.text("Following", "跟隨中") : language.text("Follow", "跟隨"))
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(following ? Theme.primary.opacity(0.14) : Theme.chip)
+            .foregroundStyle(following ? Theme.primary : Theme.textPrimary)
+            .clipShape(Capsule())
+            .fixedSize()
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("inspector.train.follow")
     }
 
     /// A chip for each of `lines` that opens the line's details.
