@@ -458,6 +458,7 @@ extension GameWorld {
     func assetsProblem() -> String? {
         var owners: Set<String> = []
         var carsByTrain: [Int: Int] = [:]
+        var shopLevels: [Int: Int] = [:]
         var total: Int64 = 0
         for record in accounts.assets {
             let exists = switch record.kind {
@@ -473,6 +474,14 @@ extension GameWorld {
                 // At most a train's cars each, so their sum cannot overflow.
                 guard (1...Train.maximumCars).contains(record.cars) else { return "A record of cars must hold one to a train's most." }
                 carsByTrain[record.owner, default: 0] += record.cars
+            } else if record.kind == .souvenirShop {
+                // A record a level, or one for both from before the levels
+                // had their own (decision 174, later fix).
+                shopLevels[record.owner, default: 0] += 1
+                let level = tourism?.attractions.first { $0.id.rawValue == record.owner }?.souvenir ?? 0
+                guard record.cars == 0, shopLevels[record.owner, default: 0] <= level else {
+                    return "A souvenir shop has at most one asset record a level."
+                }
             } else {
                 guard record.cars == 0, owners.insert("\(record.kind.rawValue) \(record.owner)").inserted else {
                     return "Each track edge, station and train has at most one asset record."

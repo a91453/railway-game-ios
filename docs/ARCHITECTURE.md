@@ -2744,7 +2744,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 5. **不變的**：交通控制關閉時；沒有備用車擋路時；golden、存檔 fixture、replay 的值全部不變；存檔版本、golden schema 不變。
 6. **獨立模型**（`ReferenceDeadlock.swift`）照同樣的規則另寫一次：備用車用 `isDue(…, headway: false)` 判斷；`IdleTrainDeadlockTests.testTheReferenceModelAgreesAtEverySecond` 逐秒比較 15 分鐘。
 
-**Gap**：路線第一次派車的出發（列車還沒有服務）被備用車擋住、而且當下沒有服務到出發時間時，這一分鐘不會看；之後改 `resolveDeadlock` 的效能工作（NEXT_PRIORITIES 第 6 項）會重寫這個前提，留給那時一起考慮。參考庫與 OpenTTD 都沒有「閒置車自動讓路」可以移植（見 PR）。
+**之後的修正**（2026-10-13，原本的 Gap）：路線第一次派車的出發（列車還沒有服務，例如新線的首班）被另一條線的備用車擋住，而且當下沒有服務到出發時間時，第 3 點的前提讓這一分鐘不看，新線就永遠開不出去。現在前提多一個條件：有沒有服務的列車，路線現在可能要送它出去（`mayBeSentOut`：決策 133 的班次到點，或 `isDispatchDue(…, deadhead: true)`，和判斷備用車用的是同一個便宜的查法，所以備用車本身不會觸發）。這時才找死結，而且只有死結裡有這種列車時才讓備用車讓路，不移動服務。獨立模型照同樣的規則改（死結裡有沒有服務的列車也算），`IdleTrainDeadlockTests.testANewLinesFirstTrainHeldByASpareIsLetGo`（修正前一小時都開不出去）與 `testTheReferenceModelLetsTheNewLineGoAtTheSameSecond`（逐秒比較 10 分鐘）。golden、存檔 fixture、replay 不變；參考庫與 OpenTTD 沒有可移植的（同上）。
 
 ### 59. 排定交會、同向待避與月台成本（Stage V3）
 
@@ -5796,7 +5796,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **客源**：外部連接站（決策 137，每站以 20 萬住宅人口的權重計）加上住宅人口最多的 5 個車站（800 m 內的居民），權重依人口；連得到的客源分當天的觀光客（最大餘數）。去程走「景點到達曲線（`StationDemandKind.scenic`）× 一天的時段形狀」，回程走「景點出發曲線 × 時段形狀」；回程人數等於去程，從景點站回各客源。
 - **接進乘客模型**：觀光客的起訖對加進既有的計畫（`makeDirectPassengerPlan`／`makeNetworkPassengerPlan`、`dailyDemand(from:)`、`hourlyDemand(of:)`）：和平常的起訖是同一對時合併（一個 flow、時段相加），景點站就算自己沒有一般需求也當目的地，也能當回程的起點。他們照付票價、轉乘、佔座位、排進車站的等候（有溢出）；乘客群沒有另外加標記（`StationPassengers` 的結構不動）。觀光客不照分鐘衰減（他們是為了去而去）。計畫鍵（`PassengerPlanKey`）多一欄 `tourism`，`demandDay` 在有觀光時也是今天（每天一個計畫）。
 - **年度計數**：每天午夜（`closeTourismDay`）數昨天「鐵路載得到、連得到客源」的觀光客數（`yesterday`），加進 `thisYear`；360 天一年，年初 `thisYear` 變成 `lastYear`（隔了不止一年就是 0）。這是**計畫的人數，不是實際下車的人數**：派工建議「釋出、往景點站、沒有溢出」，但那要在每個乘客群上加標記（改 `StationPassengers`），這一版不做；溢出與放棄仍在車站的帳裡。
-- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，同一個景點只有一筆紀錄、升級時成本加上去，30 年折舊）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
+- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，每一級一筆紀錄，從買的那天起各自 30 年折舊；見下方「之後的修正」2026-10-13）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
 - **名稱**：`AttractionKind`（海岸、山岳、溫泉、城鎮文化）。
 - 新命令 `setTourism(_:)`（景點；`nil` 或空是關閉，不收費）、`foundAttractions(seed:)`（空白地圖用）、`investInSouvenirShop(of:)`；錯誤 `tourismNotEnabled`、`unknownAttraction`、`attractionMaxedOut`。
 
@@ -5848,6 +5848,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
+**之後的修正**（2026-10-13）：紀念品店升級的成本原本加在第一級的資產紀錄上，照那筆紀錄已經折舊的天數算：隔天一次補提之前所有天數的折舊，第一級折舊完之後，升級的成本就永遠不折舊。現在每一級各記一筆紀錄（`AssetRecord.Kind.souvenirShop`，同一個 `owner`），從買的那天起各自折舊；驗證改成同一個景點的紀錄最多等於它的等級。舊存檔裡合併的一筆紀錄照舊讀得回來，照舊折舊（`TourismTests.testTheSecondLevelIsWrittenDownFromWhenItWasBought`）。存檔格式、golden、replay 不動。
 
 **之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家進入建設工具時景點標記不見了，正想蓋在景點旁。現在建設工具（選取以外的工具）也畫景點標記，但半透明（0.5）、不能點（`allowsHitTesting(false)`）、VoiceOver 不讀，畫在 ✓／✕ 建造確認旗（`MapBuildConfirm`）下面，不蓋住它們（`MapAttractionMarks(isPassive: true)`，`MapView` 裡排在確認旗那一層之前）。選取工具時不變：同一個位置、可以點、打開觀光面板。只改 App；存檔、golden、replay 不動。
 

@@ -92,6 +92,75 @@ final class IdleTrainDeadlockTests: XCTestCase {
         }
     }
 
+    /// A new line's first train, not yet sent out, held at W by another
+    /// line's spare standing on the track to M, with no service due to
+    /// leave a stop anywhere (NEXT_PRIORITIES §2): the dispatcher looked
+    /// for a deadlock only in a minute when some service was due to leave
+    /// or stood at a passing place, so it never looked, and the new line
+    /// never ran. Now a line's train due to be sent out counts too, and the
+    /// spare steps aside.
+    func spareInTheWayOfANewLine() throws -> (world: GameWorld, first: TrainID, spare: TrainID) {
+        var world = try SingleTrackMeet.world()
+        let old = try world.createLine(named: "Old", stops: [SingleTrackMeet.middle, SingleTrackMeet.east]).id
+        let spare = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 6_144)
+        try world.assignTrain(spare, to: old)
+        try world.setLineServiceWindow(old, to: .allDay)
+        try world.setLineTrainsInService(old, to: TrainsInService(peak: 0, offPeak: 0, low: 0))
+        let new = try world.createLine(named: "New", stops: [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east]).id
+        let first = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        try world.assignTrain(first, to: new)
+        try world.setLineServiceWindow(new, to: .allDay)
+        try world.setLineTrainsInService(new, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.setTrafficControl(true)
+        return (world, first, spare)
+    }
+
+    func testANewLinesFirstTrainHeldByASpareIsLetGo() throws {
+        var (world, first, spare) = try spareInTheWayOfANewLine()
+        XCTAssertTrue(world.train(id: spare).map(world.isSpare) ?? false)
+        XCTAssertEqual(world.deadlockedTrains(), [first], "held at W by the spare")
+        var calledAtEast = false
+        while world.clock.now < GameTime(minutes: 60), !calledAtEast {
+            try world.advance(ticks: 1)
+            calledAtEast = world.train(id: first)?.execution != nil && world.stationsStoppedAt(by: first).contains(SingleTrackMeet.east)
+        }
+        XCTAssertTrue(calledAtEast, "the new line's train gets through to E within the hour")
+        XCTAssertNil(world.train(id: spare)?.execution, "the spare stays without a service")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    /// The reference model agrees second by second while the spare steps
+    /// aside and the new line's first train goes on to M (10 minutes).
+    func testTheReferenceModelLetsTheNewLineGoAtTheSameSecond() throws {
+        var (world, _, _) = try spareInTheWayOfANewLine()
+        var model = SingleTrackMeet.model()
+        XCTAssertNil(model.createLine(named: "Old", stops: [SingleTrackMeet.middle, SingleTrackMeet.east]))
+        XCTAssertNil(model.createLine(named: "New", stops: [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east]))
+        for (number, offset) in [(1, Int64(6_144)), (2, 3_072)] {
+            XCTAssertNil(model.purchaseTrain(named: "T"))
+            XCTAssertNil(model.setCars(TrainID(rawValue: number), 2))
+            XCTAssertNil(model.placeTrain(TrainID(rawValue: number), at: .onEdge(SingleTrackMeet.forward(1), offset: offset)))
+            XCTAssertNil(model.setContinuation(TrainID(rawValue: number), along: [], stoppingAt: offset))
+            XCTAssertNil(model.setRate(TrainID(rawValue: number), 1_024))
+        }
+        for (train, line, trains) in [(1, 1, 0), (2, 2, 1)] {
+            XCTAssertNil(model.assign(TrainID(rawValue: train), to: LineID(rawValue: line)))
+            XCTAssertNil(model.setLineWindow(LineID(rawValue: line), .allDay))
+            XCTAssertNil(model.setLineTrains(LineID(rawValue: line), TrainsInService(peak: trains, offPeak: trains, low: trains)))
+        }
+        XCTAssertNil(model.setTrafficControl(true))
+        world.setSpeed(.x1)
+        model.setSpeed(.x1)
+        for second in 0..<(10 * 60) {
+            try world.advance(ticks: 10)
+            XCTAssertNil(model.advance(ticks: 10))
+            let differences = KernelDifferentialTests.differences(world, model)
+            XCTAssertEqual(differences, [], "second \(second)")
+            XCTAssertEqual(world.deadlockedTrains(), model.deadlockedTrains(), "second \(second)")
+            guard differences.isEmpty else { return }
+        }
+    }
+
     /// The two-station shuttle of #447's experiment V3: each end has one
     /// platform, the line runs one train, and its second train stands at
     /// the other end. There is no berth either could stand aside at, so it
