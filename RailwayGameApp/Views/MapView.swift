@@ -200,7 +200,7 @@ struct MapView: View {
             let zoomGivesWay = session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
-            let zoomLimit = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
+            let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
             let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
@@ -559,10 +559,8 @@ struct MapView: View {
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources },
-                                onFollowing: Self.readsBaseMap ? { baseMapFollowing = $0 } : nil,
-                                // Never below MapKit's level 16 or so: a
-                                // limit that low would be a mistake.
-                                onZoomLimit: { baseMapZoomLimit = max($0, MapScale.largestSize / 8) }
+                                onFollowing: baseMapFollowingReport,
+                                onZoomLimit: limitZoom
                             )
                         }
                     }
@@ -579,15 +577,7 @@ struct MapView: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                // UI tests only: whether Apple's map lines up.
-                if Self.readsBaseMap, realWorld != nil, mapStyle != .openStreetMap {
-                    Color.clear
-                        .frame(width: 1, height: 1)
-                        .allowsHitTesting(false)
-                        .accessibilityElement()
-                        .accessibilityIdentifier("map.base")
-                        .accessibilityValue(Text(verbatim: baseMapFollowing))
-                }
+                baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -1027,6 +1017,39 @@ struct MapView: View {
         .accessibilityIdentifier("map.layers")
     }
 
+    /// Whether the zoom-in button zooms: not past the closest zoom, nor
+    /// past `limit` (``baseMapZoomLimit``).
+    private func canZoomIn(_ camera: PlanCamera, limit: Double?) -> Bool {
+        guard camera.canZoomIn else { return false }
+        guard let limit else { return true }
+        return camera.referenceSize < limit * 0.999
+    }
+
+    /// UI tests only: whether Apple's map lines up (`map.base`).
+    @ViewBuilder
+    private func baseMapReadout(shown: Bool) -> some View {
+        if Self.readsBaseMap, shown {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.base")
+                .accessibilityValue(Text(verbatim: baseMapFollowing))
+        }
+    }
+
+    /// Where Apple's map says how it follows, under UI tests only.
+    private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
+        guard Self.readsBaseMap else { return nil }
+        return { baseMapFollowing = $0 }
+    }
+
+    /// Apple's map would come no closer than `limit`. Never below MapKit's
+    /// level 16 or so: a limit that low would be a mistake.
+    private func limitZoom(_ limit: Double) {
+        baseMapZoomLimit = max(limit, MapScale.largestSize / 8)
+    }
+
     /// Whether the map reads out how Apple's map follows it
     /// (``FollowingMapView/followingText``): in a Debug build under UI
     /// tests only.
@@ -1061,7 +1084,7 @@ struct MapView: View {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(!camera.canZoomIn || limit.map { camera.referenceSize >= $0 * 0.999 } == true)
+            .disabled(!canZoomIn(camera, limit: limit))
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)
