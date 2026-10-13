@@ -186,7 +186,12 @@ final class MapInteractionTests: XCTestCase {
         // tried twice, like the anchor's below: a touch can be lost after
         // the pinch to the closest zoom.
         let zoomIn = app.buttons["Zoom in"]
-        let cardFolds = !zoomIn.exists
+        let zoomHidden = !zoomIn.exists
+        // Decision 136: a phone on its side (a compact height) folds the
+        // card when a track starts. Not read from the zoom buttons: beside
+        // the narrower card of decision 106's later fix they stay. A phone on
+        // its side is under 500 points tall, an iPad never.
+        let cardFolds = app.frame.height < 500
         let controls = app.buttons["controls.toggle"]
         func toggleControls(to label: String) {
             func labelled() -> Bool {
@@ -197,11 +202,11 @@ final class MapInteractionTests: XCTestCase {
             if !labelled() { controls.tap() }
             XCTAssertTrue(labelled(), "The details card did not change to \(label)")
         }
-        if cardFolds { toggleControls(to: "Show Controls") }
+        if zoomHidden { toggleControls(to: "Show Controls") }
         XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
         XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
-        if cardFolds {
+        if zoomHidden {
             toggleControls(to: "Hide Controls")
             XCTAssertTrue(clear.waitForExistence(timeout: 10))
             XCTAssertFalse(clear.isEnabled)
