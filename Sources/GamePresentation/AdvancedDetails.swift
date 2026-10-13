@@ -32,7 +32,7 @@ public enum AdvancedDetails {
         if routed > 0 {
             parts.append(language.text(
                 routed == 1 ? "1 leg on set tracks" : "\(routed) legs on set tracks",
-                "\(routed) 段指定股道"
+                "\(routed) 段指定進路"
             ))
         }
         if line.targetHeadways != .none || line.patterns.contains(where: { $0.targetHeadways != .none }) {

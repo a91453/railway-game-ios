@@ -42,7 +42,7 @@ final class AdvancedDetailsTests: XCTestCase {
             AdvancedDetails.lineSummary(line, in: .english),
             "Advanced: 1 stopping pattern, 1 leg on set tracks, target headways"
         )
-        XCTAssertEqual(AdvancedDetails.lineSummary(line, in: .traditionalChinese), "進階：1 種停靠模式、1 段指定股道、目標班距")
+        XCTAssertEqual(AdvancedDetails.lineSummary(line, in: .traditionalChinese), "進階：1 種停靠模式、1 段指定進路、目標班距")
     }
 
     func testTheNetworksFoldedSwitchesAreSaidAsTheyAre() throws {

@@ -74,6 +74,11 @@ public final class GameSession {
     /// The preview last worked out, and for which request and
     /// ``commandRevision``.
     @ObservationIgnored var routePreviewMemo: (revision: Int, request: RoutePreview.Request, preview: RoutePreview?)?
+    /// The one-time card about track numbers and routes waiting to be
+    /// shown (decision 201, later; ``RouteHint``).
+    public internal(set) var routeHint: RouteHint.Trigger?
+    /// The legs on two tracks or more when ``watchRouteHint()`` last looked.
+    @ObservationIgnored var routeHintLegs: Set<RouteHint.Leg>?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
