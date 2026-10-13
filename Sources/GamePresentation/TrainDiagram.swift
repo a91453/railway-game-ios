@@ -404,7 +404,9 @@ extension TrainDiagram {
             if let previous, abs(Double(row) - previous) > Double(rows.stops.count) / 2 { break }
             let arrival = stop.arrival.seconds + shift, departure = stop.departure.seconds + shift
             if case .waitingAtStop = execution, index == start {
-                points.append(Point(time: max(departure, here.time), place: Double(row)))
+                // Due out at `departure`: the caller adds the lateness,
+                // which for a train held past it is the time since.
+                points.append(Point(time: departure, place: Double(row)))
             } else {
                 points.append(Point(time: arrival, place: Double(row)))
                 if departure > arrival { points.append(Point(time: departure, place: Double(row))) }

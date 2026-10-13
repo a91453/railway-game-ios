@@ -166,8 +166,8 @@ extension GameWorld {
                 let terminal = !line.isRing && (call == calls.first || call == calls.last)
                 // Once at each terminal; twice at a non-passing intermediate
                 // call (or once each way on a ring).
-                let dwell = terminal ? ServiceLine.terminalDwellMinutes : 2 * ServiceLine.dwellMinutes
-                seconds = add(seconds, dwell * GameTime.secondsPerMinute)
+                let dwell = terminal ? journey.terminalDwellSeconds : 2 * journey.dwellSeconds
+                seconds = add(seconds, dwell)
             }
             let crossed = journey.legs.contains { segments(of: $0, outer: false).contains(where: set.contains) }
             guard crossed else { continue }

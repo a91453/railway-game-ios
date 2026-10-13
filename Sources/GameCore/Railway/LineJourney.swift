@@ -53,10 +53,10 @@ public struct LineJourney: Hashable, Sendable {
     /// the last from its last call back to the first.
     public let legs: [LineLeg]
     /// The seconds the whole round trip takes (Stage W2c): every leg, plus
-    /// ``ServiceLine/dwellMinutes`` at each call between the ends (once out
-    /// and once back) and ``ServiceLine/terminalDwellMinutes`` at each end.
-    /// On a ring, once round: every leg and ``ServiceLine/dwellMinutes`` at
-    /// each stop, and no terminal (decision 49).
+    /// ``dwellSeconds`` at each call between the ends (once out and once
+    /// back) and ``terminalDwellSeconds`` at each end. On a ring, once
+    /// round: every leg and ``dwellSeconds`` at each stop, and no terminal
+    /// (decision 49).
     public let roundTripSeconds: Int64
     /// Whether the journey is a ring's lap (decision 49): it never turns
     /// round, and comes back to its first call going the same way.
@@ -66,13 +66,26 @@ public struct LineJourney: Hashable, Sendable {
     /// on its platform. The usual far-terminal turn and the trip's initial
     /// facing are separate. Derived from topology, never saved on the line.
     public let intermediateTurnbacks: [Int]
+    /// Seconds a train stays at a call between the ends (decision 207,
+    /// ``GameWorld/dwellSeconds(of:)``): one minute unless the line or
+    /// realistic operation says otherwise.
+    public let dwellSeconds: Int64
+    /// Seconds a train stays at the far end, where it turns round: two
+    /// minutes, or ``dwellSeconds`` if that is longer.
+    public let terminalDwellSeconds: Int64
 
-    public init(start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64, isRing: Bool = false, intermediateTurnbacks: [Int] = []) {
+    public init(
+        start: TrainPosition, legs: [LineLeg], roundTripSeconds: Int64, isRing: Bool = false, intermediateTurnbacks: [Int] = [],
+        dwellSeconds: Int64 = GameWorld.defaultDwellSeconds,
+        terminalDwellSeconds: Int64 = ServiceLine.terminalDwellMinutes * GameTime.secondsPerMinute
+    ) {
         self.start = start
         self.legs = legs
         self.roundTripSeconds = roundTripSeconds
         self.isRing = isRing
         self.intermediateTurnbacks = intermediateTurnbacks
+        self.dwellSeconds = dwellSeconds
+        self.terminalDwellSeconds = terminalDwellSeconds
     }
 
     /// The round trip in whole minutes, rounded up: what a line plans its
@@ -119,8 +132,8 @@ struct LineTrip: Hashable, Sendable {
     /// ``ServiceDwell/terminalMinimum`` later, the least a train dwells
     /// there to take on passengers; Stage W2b), then each leg's call,
     /// arriving the leg's seconds after the call before it left. A call
-    /// between the ends stays ``ServiceLine/dwellMinutes``; the far end
-    /// stays ``ServiceLine/terminalDwellMinutes`` and turns the train
+    /// between the ends stays the journey's ``LineJourney/dwellSeconds``; the far end
+    /// stays ``LineJourney/terminalDwellSeconds`` and turns the train
     /// round; back at the first call the train arrives, turns round and the
     /// trip is over, the train waiting there for the rest of its terminal
     /// dwell, which is longer than the least it needs to let everyone off.
@@ -132,7 +145,7 @@ struct LineTrip: Hashable, Sendable {
     /// ``ServiceDwell/minimum`` after `dispatch` (or
     /// ``ServiceDwell/terminalMinimum`` when the train turns round there
     /// first, as any train that turns), every call on the way stays
-    /// ``ServiceLine/dwellMinutes``, nothing else turns round, and back at
+    /// the journey's ``LineJourney/dwellSeconds``, nothing else turns round, and back at
     /// the first call the lap is over (the reference's ring dwell,
     /// `DWELL_GAME_SEC` at every stop).
     ///
@@ -157,9 +170,9 @@ struct LineTrip: Hashable, Sendable {
             var timetable = [ScheduledStop(station: stops[legs[0].from], arrival: dispatch, departure: GameTime(seconds: departure), reverses: turnsFirst)]
             var time = departure
             for (index, leg) in legs.enumerated() {
-                let dwell = index == legs.count - 1 ? 0 : ServiceLine.dwellMinutes
+                let dwell = index == legs.count - 1 ? 0 : journey.dwellSeconds
                 let (arrival, late) = time.addingReportingOverflow(leg.seconds)
-                let (leaving, later) = arrival.addingReportingOverflow(dwell * GameTime.secondsPerMinute)
+                let (leaving, later) = arrival.addingReportingOverflow(dwell)
                 guard !late, !later else { return nil }
                 timetable.append(ScheduledStop(station: stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: leaving)))
                 time = leaving
@@ -174,9 +187,9 @@ struct LineTrip: Hashable, Sendable {
         for (index, leg) in legs.enumerated() {
             let isLast = index == legs.count - 1
             let isFarEnd = leg.to == farEnd
-            let dwell = isLast ? 0 : isFarEnd ? ServiceLine.terminalDwellMinutes : ServiceLine.dwellMinutes
+            let dwell = isLast ? 0 : isFarEnd ? journey.terminalDwellSeconds : journey.dwellSeconds
             let (arrival, late) = time.addingReportingOverflow(leg.seconds)
-            let (leaving, later) = arrival.addingReportingOverflow(dwell * GameTime.secondsPerMinute)
+            let (leaving, later) = arrival.addingReportingOverflow(dwell)
             guard !late, !later else { return nil }
             timetable.append(ScheduledStop(
                 station: stops[leg.to], arrival: GameTime(seconds: arrival), departure: GameTime(seconds: leaving),
@@ -393,7 +406,7 @@ extension GameWorld {
                 guard let path = path(from: from.position, toStation: end, length: train.length) else { continue }
                 var seconds: Int64 = 0
                 if path.distance > 0 {
-                    guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { continue }
+                    guard let least = plannedSeconds(length: path.distance, line: line) else { continue }
                     seconds = least
                 }
                 if best == nil || seconds < best!.seconds { best = (seconds, turns, end) }
@@ -425,7 +438,8 @@ extension GameWorld {
         var placement = start
         var legs: [LineLeg] = []
         var turnbacks: [Int] = []
-        var seconds = (ServiceLine.terminalDwellMinutes * 2 + ServiceLine.dwellMinutes * Int64(2 * (calls.count - 2))) * GameTime.secondsPerMinute
+        let dwell = dwellSeconds(of: line), terminalDwell = terminalDwellSeconds(of: line)
+        var seconds = terminalDwell * 2 + dwell * Int64(2 * (calls.count - 2))
         for (from, to) in zip(order, order.dropFirst()) {
             if from == farEnd {
                 // The far end: turn round before coming back.
@@ -446,7 +460,7 @@ extension GameWorld {
             guard let path = chosen else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
-                guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
+                guard let least = plannedSeconds(length: path.distance, line: line) else { return nil }
                 legSeconds = least
             }
             let (total, overflow) = seconds.addingReportingOverflow(legSeconds)
@@ -455,26 +469,30 @@ extension GameWorld {
             legs.append(LineLeg(from: from, to: to, path: path, seconds: legSeconds))
             placement = self.placement(placement, after: path)
         }
-        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds, intermediateTurnbacks: turnbacks)
+        return LineJourney(
+            start: start.position, legs: legs, roundTripSeconds: seconds, intermediateTurnbacks: turnbacks,
+            dwellSeconds: dwell, terminalDwellSeconds: terminalDwell
+        )
     }
 
     /// A ring's lap calling at `calls` (indices into its stops, from the
     /// first stop round to it again, see ``ServiceLine/ringCalls(_:)``),
     /// driven from `start`, or `nil` as for ``drive(_:calling:from:)``
     /// (decision 49). Each leg as there, never turning round; the lap's
-    /// seconds are every leg and ``ServiceLine/dwellMinutes`` at each stop
+    /// seconds are every leg and the line's dwell (``dwellSeconds(of:)``) at each stop
     /// it calls at once round (the reference's
     /// `metroHeadwayRoundTripMinutes` for a ring: one dwell a stop, no
     /// terminal).
     func driveLap(_ line: ServiceLine, calling calls: [Int], from start: TrainPlacement, routes: [LineRoutePreference]) -> LineJourney? {
         var placement = start
         var legs: [LineLeg] = []
-        var seconds = ServiceLine.dwellMinutes * Int64(calls.count - 1) * GameTime.secondsPerMinute
+        let dwell = dwellSeconds(of: line)
+        var seconds = dwell * Int64(calls.count - 1)
         for (from, to) in zip(calls, calls.dropFirst()) {
             guard let path = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes) else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
-                guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
+                guard let least = plannedSeconds(length: path.distance, line: line) else { return nil }
                 legSeconds = least
             }
             let (total, overflow) = seconds.addingReportingOverflow(legSeconds)
@@ -483,6 +501,6 @@ extension GameWorld {
             legs.append(LineLeg(from: from, to: to, path: path, seconds: legSeconds))
             placement = self.placement(placement, after: path)
         }
-        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds, isRing: true)
+        return LineJourney(start: start.position, legs: legs, roundTripSeconds: seconds, isRing: true, dwellSeconds: dwell)
     }
 }

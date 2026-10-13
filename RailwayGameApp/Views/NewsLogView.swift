@@ -10,12 +10,13 @@ import SwiftUI
 struct NewsLogView: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
-    /// How many items were new when the log opened: the first of the list.
-    @State private var newCount: Int
+    /// Where the player had read up to when the log opened: the items
+    /// after it are new, wherever items added since push them.
+    @State private var readMark: Int
 
     init(session: GameSession) {
         self.session = session
-        _newCount = State(initialValue: session.news.unread)
+        _readMark = State(initialValue: session.news.readMark)
     }
 
     var body: some View {
@@ -37,8 +38,8 @@ struct NewsLogView: View {
                     }
                 } else {
                     List {
-                        ForEach(Array(session.news.items.enumerated()), id: \.element.id) { index, item in
-                            row(item, isNew: index < newCount, language: language)
+                        ForEach(session.news.items) { item in
+                            row(item, isNew: NewsLog.isNew(item, since: readMark), language: language)
                         }
                     }
                     .listStyle(.plain)

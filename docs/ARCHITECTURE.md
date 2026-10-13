@@ -2744,7 +2744,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 5. **不變的**：交通控制關閉時；沒有備用車擋路時；golden、存檔 fixture、replay 的值全部不變；存檔版本、golden schema 不變。
 6. **獨立模型**（`ReferenceDeadlock.swift`）照同樣的規則另寫一次：備用車用 `isDue(…, headway: false)` 判斷；`IdleTrainDeadlockTests.testTheReferenceModelAgreesAtEverySecond` 逐秒比較 15 分鐘。
 
-**Gap**：路線第一次派車的出發（列車還沒有服務）被備用車擋住、而且當下沒有服務到出發時間時，這一分鐘不會看；之後改 `resolveDeadlock` 的效能工作（NEXT_PRIORITIES 第 6 項）會重寫這個前提，留給那時一起考慮。參考庫與 OpenTTD 都沒有「閒置車自動讓路」可以移植（見 PR）。
+**之後的修正**（2026-10-13，原本的 Gap）：路線第一次派車的出發（列車還沒有服務，例如新線的首班）被另一條線的備用車擋住，而且當下沒有服務到出發時間時，第 3 點的前提讓這一分鐘不看，新線就永遠開不出去。現在前提多一個條件：有沒有服務的列車，路線現在可能要送它出去（`mayBeSentOut`：決策 133 的班次到點，或 `isDispatchDue(…, deadhead: true)`，和判斷備用車用的是同一個便宜的查法，所以備用車本身不會觸發）。這時才找死結，而且只有死結裡有這種列車時才讓備用車讓路，不移動服務。獨立模型照同樣的規則改（死結裡有沒有服務的列車也算），`IdleTrainDeadlockTests.testANewLinesFirstTrainHeldByASpareIsLetGo`（修正前一小時都開不出去）與 `testTheReferenceModelLetsTheNewLineGoAtTheSameSecond`（逐秒比較 10 分鐘）。golden、存檔 fixture、replay 不變；參考庫與 OpenTTD 沒有可移植的（同上）。
 
 ### 59. 排定交會、同向待避與月台成本（Stage V3）
 
@@ -3904,6 +3904,14 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **做法的參考**：作者提供的兩個 skill，只取做法、沒有複製內容。`neonwatty/logo-designer-skill`（MIT）：先做幾種差異明顯的方案讓作者挑，每一版都在淺色與深色、從大到 28 點檢查認不認得出來，實心色塊多於細線。`supermemoryai/skills` 的 `svg-animations`（沒有授權，只讀）：光暈的呼吸、分層做動畫、照顧「減少動態效果」。
 
 **參考**：參考庫 `Railway/taipei_gta_reference/source/avatars/` 有八個 3D 人物（`.glb`，寫實的貼圖），畫風不合，沒有用；其餘的參考沒有角色。外部只看做法：SimCity BuildIt 的顧問頭像（作者的截圖）、和歌山電鐵的站長貓「小玉」（只作為「動物站長」的前例，造型沒有參考）。角色與圖是本專案自己畫的。
+
+**之後的修正（2026-10-13，美術線：空狀態的插圖）**：作者要求把 #514 的原稿（`docs/art/generated-2026-10-13/`，作者要 Codex 生的 43 張）照第 6 點的做法描成平塗 SVG，先做三張空狀態，由美術 session 照遊戲美術的判斷決定細節（作者 2026-10-13：「用你是遊戲美術的方式決定」）。
+- **圖**：`Assets.xcassets` 的 `EmptyLines`、`EmptySaves`、`EmptyTrains`，120 × 120 的多色 SVG，保留向量，淺色深色共用；原稿 `ui-empty-lines.png`、`ui-empty-saves.png`、`ui-empty-trains.png`。
+- **描法**：和站長相同（平塗色、每色模糊後取最大、0.5 等高線、一層疊自己和上面所有顏色、`fill-rule="evenodd"`），沒有用自動描圖。原稿的米白換成白（`#FFFFFF`），淡紫與月台的米色陰影換成 `#ECEEF6`（拿掉陰影），其他換成藏青 `#262C57`、綠松 `#12A08F`、暖黃 `#FFC86B`。
+- **底**：原稿是透明底，藏青外框放在深色面板（`#30376A`）上會不見，所以墊一個和站長同色的淺綠松圓（`#BDEFE7`）。
+- **改的地方**：「尚無列車」原稿的月台屋頂與月台有透視，照作者「透視的改成正面」的要求，屋頂、柱子、長椅、月台與軌道在原稿上用正面的長方形重畫（外框照原稿的粗細），右邊微斜的車票保留（和「尚無存檔」的地圖卡一樣是刻意的俏皮）；「尚無路線」原稿是細長的一條，放大到兩端碰到圓，超出的軌道沿圓切掉，28 點也看得出軌道與車站。
+- **放在哪**：路線面板沒有路線時（`LinesPanel` 的 `linesSection`）、存檔庫沒有存檔時（`StartView` 的 `ContentUnavailableView`，取代系統的 `tray`）、車隊沒有列車時（`FleetOverviewSheet`），都在原本那行字的上面，96 點，對 VoiceOver 隱藏（字已經說了）。
+- **沒有驗證的**：Asset Catalog 與面板上的樣子（CI 的 Xcode 建置）；實機。
 
 ### 123. 實機截圖的修正（TestFlight #37）
 
@@ -5788,7 +5796,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **客源**：外部連接站（決策 137，每站以 20 萬住宅人口的權重計）加上住宅人口最多的 5 個車站（800 m 內的居民），權重依人口；連得到的客源分當天的觀光客（最大餘數）。去程走「景點到達曲線（`StationDemandKind.scenic`）× 一天的時段形狀」，回程走「景點出發曲線 × 時段形狀」；回程人數等於去程，從景點站回各客源。
 - **接進乘客模型**：觀光客的起訖對加進既有的計畫（`makeDirectPassengerPlan`／`makeNetworkPassengerPlan`、`dailyDemand(from:)`、`hourlyDemand(of:)`）：和平常的起訖是同一對時合併（一個 flow、時段相加），景點站就算自己沒有一般需求也當目的地，也能當回程的起點。他們照付票價、轉乘、佔座位、排進車站的等候（有溢出）；乘客群沒有另外加標記（`StationPassengers` 的結構不動）。觀光客不照分鐘衰減（他們是為了去而去）。計畫鍵（`PassengerPlanKey`）多一欄 `tourism`，`demandDay` 在有觀光時也是今天（每天一個計畫）。
 - **年度計數**：每天午夜（`closeTourismDay`）數昨天「鐵路載得到、連得到客源」的觀光客數（`yesterday`），加進 `thisYear`；360 天一年，年初 `thisYear` 變成 `lastYear`（隔了不止一年就是 0）。這是**計畫的人數，不是實際下車的人數**：派工建議「釋出、往景點站、沒有溢出」，但那要在每個乘客群上加標記（改 `StationPassengers`），這一版不做；溢出與放棄仍在車站的帳裡。
-- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，同一個景點只有一筆紀錄、升級時成本加上去，30 年折舊）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
+- **投資**：`investInSouvenirShop(of:)`，每級 $300,000（`Tourism.souvenirCost`），2 級為止，記成建築資產（`AssetRecord.Kind.souvenirShop`，`owner` 是景點 ID，每一級一筆紀錄，從買的那天起各自 30 年折舊；見下方「之後的修正」2026-10-13）；每天一筆 `dailyTourism` 帳目：收入 = 昨天的觀光客 × $4 × 等級（`tourismRevenue`），維護費每天 0.05%（`tourismUpkeep`）。`LedgerItem` 往後加了兩個；財報裡**收入併入 `propertyRevenue`、維護費併入 `propertyCost`**（沒有新增財報欄位，存檔與財報的形狀不動），`GameFeedback.incomeItems` 含 `tourismRevenue`。
 - **名稱**：`AttractionKind`（海岸、山岳、溫泉、城鎮文化）。
 - 新命令 `setTourism(_:)`（景點；`nil` 或空是關閉，不收費）、`foundAttractions(seed:)`（空白地圖用）、`investInSouvenirShop(of:)`；錯誤 `tourismNotEnabled`、`unknownAttraction`、`attractionMaxedOut`。
 
@@ -5840,6 +5848,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
+**之後的修正**（2026-10-13）：紀念品店升級的成本原本加在第一級的資產紀錄上，照那筆紀錄已經折舊的天數算：隔天一次補提之前所有天數的折舊，第一級折舊完之後，升級的成本就永遠不折舊。現在每一級各記一筆紀錄（`AssetRecord.Kind.souvenirShop`，同一個 `owner`），從買的那天起各自折舊；驗證改成同一個景點的紀錄最多等於它的等級。舊存檔裡合併的一筆紀錄照舊讀得回來，照舊折舊（`TourismTests.testTheSecondLevelIsWrittenDownFromWhenItWasBought`）。存檔格式、golden、replay 不動。
 
 **之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家進入建設工具時景點標記不見了，正想蓋在景點旁。現在建設工具（選取以外的工具）也畫景點標記，但半透明（0.5）、不能點（`allowsHitTesting(false)`）、VoiceOver 不讀，畫在 ✓／✕ 建造確認旗（`MapBuildConfirm`）下面，不蓋住它們（`MapAttractionMarks(isPassive: true)`，`MapView` 裡排在確認旗那一層之前）。選取工具時不變：同一個位置、可以點、打開觀光面板。只改 App；存檔、golden、replay 不動。
 
@@ -7104,6 +7114,36 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、拖曳時同時畫兩張地圖的效能（實機）。
 
+### 205. 地圖的標記不靠路線色、站名底牌、拉遠的建物、列車一節一節畫
+
+2026-10-13，作者開「美術線」（玩法進步、美術沒跟上），`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 8、12 項與「三方的其他意見」美術那條。作者看過兩輪預覽（現在／方案 A／方案 B，再一版 A 修改版），選 A 修改版。號碼依工作登記 #231：決策 205；存檔版本、golden schema 不動。只改畫面（App 與 GamePresentation），GameCore 不動。
+
+1. **圖層順序表**（新檔 `docs/MAP_LAYERS.md`）：地圖上每一層畫在哪一層上面（底圖、四個 Canvas、SwiftUI 疊層）。新加疊層先決定它在表的哪一列，再寫程式，並把表一起改掉。
+2. **標記不靠顏色**：路線色是玩家選的，任何色相都可能和某條路線一樣，所以畫在路線附近的標記用形狀與藏青／白區分（`Palette.markerFill` = `Theme.panel`，外框與字 `ink`）：
+   - **候車人數**：白底膠囊、1.5 點藏青外框，前面一個人（新圖示 `MapGlyphPerson`，擁擠等級的一人那一階）、後面藏青數字。以前是 `metroBlue` 的膠囊，在藍色路線上看不到。
+   - **等待環**：藏青虛線圈（3 點、虛線 4.5／3）墊 6 點白光暈，半徑大 2 點；死結照舊實線紅圈加警告。以前是 `metroAmber`，和橘色路線同色。
+   - **被擋住的那段軌道**：藏青粗線墊白邊（死結照舊紅色）；交通圖例的「等候」改成同樣的虛線圈。
+3. **站名底牌**：拉近時的站名也放在拉遠時那種底牌上（`land` 80%、圓角 3），在路線或城鎮上都讀得到；字對底牌 11.47:1／9.64:1。
+4. **14 點以下的玩家建物**：16 m 至少 `MapArt.buildingBadgeFromSize`（6 點）時，小於 14 點的建物先畫它的地，再畫一個 14 點的徽章（暖黃、藏青外框、種類圖示 66%），看得出種類；再拉遠退回小方塊（大的建物本身夠大時照舊有圖示），免得徽章蓋滿地圖。徽章不做避讓：很密時會疊在一起，實機看了再決定。
+5. **列車**（`Sources/GamePresentation/TrainCars.swift`）：
+   - GameCore 的車廂間距 16 m（`Train.carLength`），車身從第一節的中心到最後一節的中心，所以四節車畫成 48 m 長、將近 5 m 寬，看起來短胖。拉近時改成一節一節畫，**每節 20 m**（台灣通勤電聯車約 20 m；參考庫的車隊目錄 `pitchM` 多在 20–21 m），第一節的車鼻在車頭前半節，其餘沿列車所在的軌道往後，超過車尾的部分照最後一段的方向直直延伸。只是畫法：列車停在哪、佔哪段軌道、點選都照 GameCore。
+   - 每節之間一道 1.5 點的藏青接縫，整列外框 `ink`（以前車頭外框是系統底色）；車鼻是圓的（高鐵是尖的，決策 168：形狀就是差別）。拉近時不再畫車頭的圓點，車鼻就是車頭；拉遠照舊圓點，外框改藏青。
+   - **選取**：沿車身一圈 2 點暖黃（`Palette.trainSelection` = `station`），外面 1 點藏青。以前是 `accentColor`，和軌道同為綠松色。
+6. **沒有改的**：車站的選取圈（`accentColor`）、交通管制的行車許可（`metroGreen`）、拉遠時列車的寬度；圖例以外的 Theme 保留項目照 `docs/UI_THEME.md`。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/replay.js`：車廂 1 單位＝1 公尺、不縮放，各車型真實連結器間距 `pitchM`（`fleet/catalog.json`：17.4–22.1 m，多數 20–21 m） | `TrainCars.drawnCarLength`（20 m） | 取數值與做法（逐節照真實長度）；3D 網格不搬 |
+| `Railway/site_archive_clean/rail-3d/integration/train-halo-style.js`：逐節車廂的光暈 | 無 | 只看：夜間光暈另有決策 182 |
+| `Railway/site_archive_clean/night-map.js` 等的 MapLibre `text-halo-color` | 站名底牌 | 想法相同（字墊底色），用遊戲自己的底牌 |
+
+圖照 art-style §7 一律自己畫，沒有搬參考庫的圖。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。
+
+**測試**：`TrainCarsTests`（節數從車身長度算；直線上車鼻在車頭前 10 m、往後每 20 m 一節、超過車身的部分直直延伸；接縫只在車與車之間；一節車跨在車頭兩邊；彎道上的車順著彎；沒有車身就沒有車）。
+
+**沒有驗證的**：Canvas 上的樣子（Linux 不能建置 App，交給 CI 的 iOS build）；實機上選取的細黃框夠不夠明顯、深色地圖上被擋住的那段軌道會不會太亮、建物徽章很密時會不會疊在一起，都要在下一版 TestFlight 看。
 ### 206. 運行圖（只看）
 
 2026-10-13，作者指示開工「運行圖（只看）」（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 11 項、§4 第 4 項）。只改畫面與 GamePresentation，GameCore 不動；存檔版本、golden schema 不動。號碼依工作登記 #231：main 最大 204、美術線登記 205，所以取 206。
@@ -7134,9 +7174,64 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、實機上的手勢手感與大路網（高鐵示範）每 0.5 秒重算的負擔。
 
+### 207. 寫實運轉第一階段＋準點率
+
+2026-10-13，作者定案（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 7 項、§4 波次 1 第 5 項、§9.2、§10 第 2、3 題）：新遊戲預設打開，示範、教學、挑戰、舊存檔關；和準點率一起只升一次存檔版本；在背後運作，不增加玩家要做的決定。號碼依工作登記 #231：決策 207（原登記 206，運行圖 #525 早 7 秒登記同一號並已合併，改取 207）、存檔版本 53；golden schema 不動。
+
+**為什麼**：§9.2 實測高鐵只有真實的 0.72–0.78 倍。三個原因在這裡改：(1) 排點用最短時間，高鐵還用了參考程式「時刻太趕才用」的備用加減速（`PERF_HSR` 的 `aAlt` 2.0、`bAlt` 2.7）；(2) 行駛段沒有餘裕，而且誤點的車在行駛段永遠追不回來（一段走「表定出發到表定到站」的秒數，晚開就晚到）；(3) 停站一律 1 分鐘。幾何限速與真實車款性能不在這裡做（之後，都改 `RunningCurve` 的輸入）。
+
+1. **開關**（`GameWorld.realisticOperation`，`setRealisticOperation(_:)`，免費，不是網路指令，同決策 202 的 `keepLeft`）：只在打開時存 `"realisticOperation": true`。App 的新遊戲（`GameWorld.newGame`）打開；示範地圖（`DemoWorld`、`RealWorldDemo`、`RealWorldDemoGround`、`HighSpeedDemo`）、挑戰（`newGame(challenge:)`、平溪線、劉銘傳鐵路）與教學關掉，它們的時刻表與數字是沒有這個規則量的。高鐵示範照真實時刻表跑（決策 197），本來就是真實時間。打開或關掉時清掉乘客計畫與進路的快取；`RouteMemo.Key`、`PassengerPlanKey` 也帶著它。
+2. **排點只用正常加減速**（新檔 `Sources/GameCore/Railway/RealisticOperation.swift`）：路線排一段的秒數（`plannedSeconds(length:line:)`，`drive`、`driveLap`、空車回送都用它）開著時是 `TrainPerformance.usualRates`（去掉 `alternativeAcceleration`／`alternativeBraking`）的最少整秒。是排點規則，不改性能預設值：`.highSpeed` 照舊有備用值，「是不是高鐵」照舊看性能（決策 168），行駛中的列車照舊可以用備用值。照真實班次跑的路線（決策 133，`driveRun`）照真實時刻排點，最少秒數只是下限，不改。
+3. **時刻表餘裕做成恢復時間**：排點的一段 = 正常加減速的最少秒數 + `recoveryMarginPercent` = **4 %**（無條件進位到整秒）。真實時刻表 3–8 %，參考庫沒有餘裕百分比可以搬。列車出發時（`leaving`），開著時行駛曲線配的是「離表定到站還剩幾秒」（`secondsToScheduledArrival`），不是「表定出發到表定到站」：準時的車照排點的秒數跑；晚開的車剩的時間比較短，曲線就跑快一點，最快是它性能（含備用加減速，參考的 `assignRunProfiles` 也是時刻太趕才用）的最少秒數。所以一段能追回的是 4 % 的餘裕，高鐵還加上正常與備用加減速的差。被擋下、從停止重新出發的車（`resumeRun`）開著時也照剩下的時間跑（關著時照舊全速）。交通管制下改走別的路的車照舊全速；排定的交會（決策 59）照排定的秒數。
+4. **每條路線的停站秒數**：`ServiceLine.dwellSeconds`（缺 key＝沒設定）；`setLineDwell(_:seconds:)` 設 36…600 秒（`ServiceDwell.minimum`…`ServiceLine.maximumDwellSeconds`），`nil` 改回預設，超出範圍是新的 `GameError.invalidLineDwell`（golden 的結果名 `invalidLineDwell`，還沒有 fixture 用到，schema 不動）。沒設定時 `dwellSeconds(of:)` 是 60 秒，和以前一樣；**開著時高鐵線（`isHighSpeed`）預設 110 秒**：內附 `thsr-schedule.json` 各站停 32 班的中間站平均 108.9 秒，取到 10 秒（§10 第 3 題「依路線，預設值依車種，高鐵約 110 秒」），不這樣做 §9.2 估的 129–131 分到不了，玩家也不用多做決定。端點停站是 2 分鐘，路線停站比較長時取它。停站秒數進了 `LineJourney.dwellSeconds`／`terminalDwellSeconds`，時刻表、來回時間、單線的區間容量（`LineCapacity`）與乘客選路（`PassengerRouteGraph.ServicePath.dwellSeconds`）都讀它。第一版沒有設定介面（作者：不增加玩家要做的決定）；下限 36 秒維持，捷運的 26–28 秒以後再議。
+5. **準點率**：開著時，每條載客路線的列車到達一趟的最後一站（時刻表的最後一筆；環線一圈；空車回送不算）就記一趟，晚超過 `punctualSeconds` = **5 分鐘**記一趟誤點（`LineTally.trips`、`lateTrips`，`punctualityPermille`）。門檻與「一趟算一次、看終點」照參考的 `delay-stats.json`（`final_delay ≤ 5` 分鐘算準點，每班每天算一次；也是台鐵與高鐵自己的定義）。只在經營模式、有路線帳時記（決策 179）。路線卡的虧損診斷（決策 194）在成本長條下面寫「準點率 95%：240 趟有 10 趟誤點超過 5 分鐘」（同樣的報表天數）；沒有記到趟數就不寫。公司評等的「準點率」（決策 181，`CompanyRank.onTimeSeconds` 120 秒、看現在每列車的誤點）不改。
+6. **存檔**（版本 53）：世界的 `"realisticOperation": true`、路線的 `"dwellSeconds"`、路線帳每天的 `"trips"`／`"lateTrips"` 都只在有值時寫，所以舊存檔讀進來和以前逐位元相同。只讀到 52 的 build 會丟掉它們，路線又回到最短時間與 1 分鐘停站，所以升版。新的 `SaveFixtures/v53-realistic-operation.json`（`RealisticOperationTests.testVersionFiftyThreeKeepsRealisticOperation`）。`LineTally` 從自動合成的 `Codable` 改成手寫（同樣的 key、同樣的順序），才能缺 key＝0。
+7. **不變**：golden（沒有一份打開它）、`ReplayFixtures`、舊存檔的行為。
+
+**量測**（2026-10-13，Linux 雲端容器、release；`REALISM_REPORT=1 … RunTimeRealismReportTests`、`BALANCE_REPORT=30/60 … BalanceReportTests`，關掉用新的 `BALANCE_NO_REALISTIC=1`）：
+
+| 高鐵示範的路線（照建好的路網排點） | 關 | 開 | 真實中位數 | 開／真實 |
+| --- | --: | --: | --: | --: |
+| 各站停車（12 站） | 104.1 分 | 130.3 分（行駛 112.0＋停站 18.3） | 145.0 分 | 0.90 |
+| 九站停車 | 94.6 分 | 114.0 分 | 130.0 分 | 0.88 |
+| 五站停車 | 81.8 分 | 92.2 分 | 105.0 分 | 0.88 |
+
+各站停的 130.3 分落在 §9.2 估的 129–131 分裡。
+
+| 平衡報告（新遊戲，seed 1） | 關 | 開 |
+| --- | --: | --: |
+| 兩鎮之間一條線，第 30 天餘額 | $6,826,360 | $6,922,883（+1.4 %） |
+| 同上加建材貨運線，第 30 天 | $8,931,772 | $9,123,390（+2.1 %） |
+| 每個開關都開、兩條線，第 60 天 | $6,605,001 | $6,827,531（+3.4 %）；路線成本每天 $199,937 → $193,583 |
+| 依距離：第一鎮到第二鎮，第 30 天／回本 | $6,826,360／6 天 | $6,922,883／5 天 |
+| 依距離：第二鎮－第一鎮－地圖邊，第 30 天 | $7,139,613 | $7,180,048 |
+| 依距離：448 m、1.5 km、到地圖邊的線 | 不變 | 不變 |
+
+**差別很小，而且是賺一點**：這些新遊戲的線都是普通性能，只多 4 % 餘裕（沒有備用加減速、停站照舊 60 秒）；車數照舊，來回變長，所以每天的班次少一點、營運成本少一點，票收幾乎不變（每天差 $35–$1,725），乘客數完全相同。§9.2 說的「要多買車」主要是高鐵線（來回長 25 %）；玩家自己蓋高鐵線時同樣的車數班距會拉長，這要等 TestFlight 的實際路網。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `PERF_HSR`（8152–8153）`{a:1.4, b:1.5, aAlt:2.0, bAlt:2.7, …}` | `TrainPerformance.highSpeed`（已有）、`usualRates` | 排點只用 `a`、`b`；備用值留給行駛 |
+| 同檔 `assignRunProfiles`（8437，備用鏈 8487–8489：先 a/b，再 a/bAlt，再 aAlt/bAlt） | `RunningCurve(length:duration:performance:)`（已有）、`run(of:)` | 原樣：行駛時照這個順序，時刻太趕才用備用值 |
+| 同檔 `HSR_DEP_MID_SEC = 30`（8154、9255–9258：各站發車晚 30 秒，所以行駛段變短才會用到備用值） | 無 | 只當「備用值是太趕時才用」的證據，不搬 |
+| 同檔 `DWELL_SEC = 25`（6467）、`trtcOfficialDwellAt`（7661–7668）、`data/trtc.json` 的 `dwellSec`（23–45 秒）、`data/krtc.json` 的 `dwell`（中間站 20–25 秒） | `ServiceLine.dwellSeconds` | 捷運的真實停站比 36 秒短；第一版下限維持 36 秒（§10 第 3 題） |
+| `RailwayGameApp/Resources/RealRailways/thsr-schedule.json`（和參考的 `api/thsr-schedule.json` 逐位元相同；沒有 `dwell` 欄，`depSec − arrSec`） | `GameWorld.highSpeedDwellSeconds` = 110 | 各站停 32 班的中間站平均 108.9 秒（120 秒 137 次、60 秒 121 次、180 秒 62 次） |
+| `OpenWorld/reference_snapshot/play/src/world/taiwan-hsr-data.js` `HSR_DWELL_SECONDS = 24`、`taiwan-tra-data.js` `TRA_DWELL_SECONDS = 24` | 無 | 示意值，不是真實停站，不用 |
+| `Railway/site_archive_clean/api/delay-stats.json` `_meta.note`（`final_delay ≤ 5` 分鐘算準點，每班每天一次，看最後一個回報站） | `GameWorld.punctualSeconds`、`countLineTrip` | 門檻與計法照搬：一趟在最後一站算一次 |
+| 同檔 `TRTC_OFFICIAL_CATCHUP_FACTOR = 2`（7737、7960–7963）、更新紀錄 8/14「誤點的台鐵列車行駛中追趕，最多 2 倍速、不超過車種最高速」 | `secondsToScheduledArrival` 與 `run(of:)` | 概念相同（誤點在行駛中追）；這裡用曲線配剩下的時間，上限是性能的最少秒數，不用倍速 |
+| 時刻表餘裕百分比（`Railway/`、`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Ci/` 找 slack、padding、margin、recovery、餘裕） | `recoveryMarginPercent` | 沒有可用的：4 % 是這個專案取的（真實 3–8 %） |
+
+外部專案：沒有另外找；做法是 §9.2 的研究結論，程式碼是這個專案自己寫的。
+
+**測試**：`RealisticOperationTests`（關著時一段是最少秒數、停站 60／120 秒；開著時高鐵用正常加減速＋4 %、停站 110 秒、時刻表照停；普通性能只加 4 %；路線自己的停站：範圍、`nil`、端點至少一樣長、只在有值時存檔、超出範圍讀不進來；晚 40 秒開的高鐵開著時跑得比排點快、不低於最少秒數，關著時照排點；準點率只在開著時記、一列車自己跑全部準時；舊的路線帳讀得進來；版本 53 的 fixture）；`RealisticOperationSessionTests`（新遊戲打開；示範、挑戰、教學關；路線卡的準點率文字）；`HighSpeedDemoTests`、`TutorialSessionTests` 各多一行關著。`SavedGameTests` 的目前版本 52 → 53。**刻意改的測試**：`ViewingSpeedTests.testTheFollowedTrainsSpeed` 跟隨新遊戲兩鎮之間的列車，原本期待最快 108–111 km/h（普通性能的最高速 110）；開著時準點的車照排點的秒數跑（多 4 %），曲線的巡航速度比最高速低，量到 102 km/h。測試改成兩種都量：關著時照舊 108–111，開著時 95–107。
+
+**沒有驗證的**：玩家實際的路網（交通管制下的跟車、會車等待會讓準點率低於 100 %）要等 TestFlight；路線卡的準點率那一行只在 macOS CI 編譯。
+
 ### 208. 用 Taiwan.md 查核遊戲裡的事實：台灣假日、天燈節、劉銘傳劇本、三個景點
 
-2026-10-13，作者要 Claude Code 讀 Taiwan.md（`frank890417/taiwan-md`，台灣開源知識庫，文章 CC BY-SA 4.0、程式 MIT），看哪些知識可以吸收、哪些和遊戲不一致，再修查證過的錯。號碼依工作登記 #231：決策 205 是美術線的、206 已合併，寫實運轉（#526）也寫 206、應該改成 207，所以取 208；存檔版本、golden schema 不動。
+2026-10-13，作者要 Claude Code 讀 Taiwan.md（`frank890417/taiwan-md`，台灣開源知識庫，文章 CC BY-SA 4.0、程式 MIT），看哪些知識可以吸收、哪些和遊戲不一致，再修查證過的錯。號碼依工作登記 #231：205 是美術線的、206 是運行圖的、207 是寫實運轉（#526）的，所以取 208；存檔版本、golden schema 不動。
 
 Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.md 自己也有寫錯的地方，例如把苗栗、彰化、雲林三個高鐵站寫成 2025 年新增（實際是 2015 年）、平溪線通車寫成 1929 年（實際是 1921 年，1929 年是總督府收購）。遊戲沒有搬它的任何文字，只用查證過的事實，所以不受 CC BY-SA 的相同方式分享約束。
 
@@ -7213,7 +7308,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 路線可以是環線（`setLineRing`，三站以上、第一站與最後一站不同、沒有服務模式）：列車從最後一站接著開回第一站，從不折返，依 ID 順序輪流走內環與外環；一圈是各段加上每站 1 分鐘，每個方向跑列車數的一半、各自派車、各自的班距；列車數是偶數；環線列車的第一站與最後一站最少停 36 秒；上車接走兩個方向排隊、這一圈會到的乘客（決策 49）。
 - 連續軌道（決策 29）：節點是世界範圍內的整數世界座標點（`WorldCoordinate.unitsPerMetre` = 64 單位一公尺），邊是兩個節點之間的直線或整數控制點的三次曲線，長度由固定的整數取樣規則推導，每 `ConstructionCosts.trackPricingLength`（1024 單位）收一次鐵軌的費用（決策 54）。只有共用節點的邊才相接，而且只在兩個邊端離開節點的方向相反（誤差 1/16 以內）時互通；平面上交叉但沒有共用節點的邊互不相干。路網上的列車在邊上，`0 <= offset <=` 邊長，有車身時 `offset > 0`；它沿 `edges` 移動，車身記錄在 `trailEdges`，反向時車頭移到車尾。資源身分是節點，以及邊上不超過 `RailwayNetwork.spanLength`（1024）的 span（S3A）。所有鐵軌只記在 `RailwayNetwork`。
 - 立體鐵路（決策 30）：節點的高度在地面（0）上下 4096 以內；邊的高度沿水平里程依縱斷面變化（固定坡度，或兩端的拋物線豎曲線），最陡 40‰。結構物決定高度帶（地面 ±128、高架與橋 ≥ 0、隧道 ≤ 0）與費用倍數（1、3、4、5）。兩條邊在平面上相遇（共用節點 1024 以內除外）時高度差至少 512，否則拒絕；同一高度的交叉必須共用節點。同一高度（高差不到 512）的兩條邊中心線至少相距 256（4 公尺），沿軌道 32768 以內的兩點（同一個交會點分開的軌道）除外，否則拒絕（`trackTooClose`）；會留下這種邊對的拆邊也拒絕（`tracksWouldBeTooClose`，決策 52）。交通控制下，平面上不到 4 公尺而沿軌道超過 512 的兩段軌道互相妨礙，列車不能取得妨礙別的列車持有的軌道（決策 53）。隧道口是隧道與非隧道的邊相接的節點。車站可以在路網上平坦的一段邊上有月台；月台屬於鐵路網，同一條邊上的月台不重疊，兩端切開那條邊的 span，有月台的邊不能拆。
-- 路網上的營運（決策 31）：停站、時刻表、折返與重複、路線、派車與服務模式都在路網上（F3c 之前方格另有一套找月台、找路與移動，決策 51）。以車站為目的地的路（`TrainPath`：行進方向、停在最後一條的哪裡、精確距離）在路網上停在行進方向上月台的末端（停車位置），只考慮不比列車短的月台；總距離最短，同樣短時依邊的編號逐步決定。靠左行駛（決策 202，App 的新遊戲打開）時，每個沒走最左出口的轉轍器在選路時多算 50 m，所以雙線上兩個方向各走左邊那股；路線指定的進路與月台照舊。一段的秒數是路線的性能走完距離的最少整秒（決策 40）。路網上列車的路可以停在最後一條邊的中段（`end`，只在有值時存檔）；路走完、車頭在該站月台上（車頭所在的邊）時停在該站，整列都在同一個月台上時整列停妥。服務正在使用的月台不能拆（`trainServiceActive`）。
+- 路網上的營運（決策 31）：停站、時刻表、折返與重複、路線、派車與服務模式都在路網上（F3c 之前方格另有一套找月台、找路與移動，決策 51）。以車站為目的地的路（`TrainPath`：行進方向、停在最後一條的哪裡、精確距離）在路網上停在行進方向上月台的末端（停車位置），只考慮不比列車短的月台；總距離最短，同樣短時依邊的編號逐步決定。靠左行駛（決策 202，App 的新遊戲打開）時，每個沒走最左出口的轉轍器在選路時多算 50 m，所以雙線上兩個方向各走左邊那股；路線指定的進路與月台照舊。一段的秒數是路線的性能走完距離的最少整秒（決策 40）；寫實運轉（決策 207，App 的新遊戲打開）時只用正常加減速、加 4 % 恢復時間，列車照「離表定到站還剩幾秒」跑，誤點的車追得回來；停站依路線（沒設定 60 秒，寫實運轉時高鐵 110 秒，36–600 秒），每條路線記準點率（到終點晚 5 分鐘以內）。路網上列車的路可以停在最後一條邊的中段（`end`，只在有值時存檔）；路走完、車頭在該站月台上（車頭所在的邊）時停在該站，整列都在同一個月台上時整列停妥。服務正在使用的月台不能拆（`trainServiceActive`）。
 - 交通控制與進路預約（決策 32）：`GameWorld` 的新世界關閉交通控制，行為與之前完全相同；App 的新遊戲開啟。開啟時，列車出發、被派車或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（與佔用同一條規則，落在 span 分界上時兩邊都算），以及它接近的交會點（在交會點 1024 以內、而那裡另有不相通的邊）；任何一個被其他列車持有（佔用、限界或預約）就整個不取得，指令以 `trackReserved` 拒絕，服務原地等待（不折返）、每步重試，路線不派出那台列車。預約存檔；列車每次移動之後只留下它還需要的部分，車尾離開的軌道立刻釋放，走到路的終點時全部釋放（決策 55）。服務出發時路被行駛中、一定會讓出的前車持有，就跟車出發：只預約到前車持有的軌道之前 400 m（25,600 單位）、走到那裡停下，每一秒在出發之前延長，前車離開它的路之後取得剩下的全部（決策 56）；`unplaceTrain` 與關閉交通控制也清除它。服務出發的路被持有、又不能跟車時，改走同站另一個停車位置的避占用最短路：新借用的軌道不逆向還會開的列車的方向（執行中的服務從所在位置往後、有列車的路線整個計畫），最多長 400 m（決策 57）。只互相等待的列車是死結，每個整分鐘把其中一台服務送到途中某站的待避站，讓另一台先走，解不開時告訴玩家（決策 58）。立體交叉不共用資源。預約中的鐵軌不能拆，持有的邊不能加減月台，持有的交會點不能加邊。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`）。
 - 車站需求與乘客（決策 34）：車站可以有需求（五種類型之一：住宅、辦公、商業、觀光，以及決策 91 的公共設施，每天 0 到 1,000,000 個旅次）。每天的旅次分給同一條路線能到、自己有需求的車站（依它們的旅次，最大餘數法），再依一天的形狀與兩端類型的曲線分到 24 小時。每個整分鐘一開始，每一對依這一小時與下一小時內插釋出這一分鐘的份，保留不到一人的餘數；任何連續 1440 分鐘正好釋出一天的旅次。乘客在起點依路線、方向、迄點與釋出的分鐘成組排隊，先來的在前；一站最多 4000 人，放不下的離開（`overflowed`）。路線刪除或改停靠而不再載某一組時，那一組離開（`abandoned`）。每一站 `released = 等車 + overflowed + abandoned`。沒有需求時什麼都不發生。
 - 車種（決策 66）：列車可以設定車種（來源 `TRAIN_TYPES` 的九種，之後加上蒸汽（決策 153）、高鐵（決策 168）、EMU3000（決策 169），共 12 種），容量 = 節數 × 每節額定 × 1.1 四捨五入，門數決定上下車速度；沒有車種是標準車（每節 320／352、4 門）。畫面上的名稱是作者取的臺灣名稱：地鐵系列「大型、中型、輕型、線性馬達、多門捷運」，其他「自動接駁、磁浮、單軌、通用、高鐵、蒸汽列車」、輕型單軌、新自強號；沒有車種的列車叫通用列車（決策 171；代號不變，存檔不受影響）。

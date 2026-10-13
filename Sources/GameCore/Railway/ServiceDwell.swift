@@ -209,7 +209,7 @@ extension GameWorld {
     }
 
     /// `to − from` in seconds, at most `Int64.max`.
-    private static func gap(from: GameTime, to: GameTime) -> Int64 {
+    static func gap(from: GameTime, to: GameTime) -> Int64 {
         let (gap, overflow) = to.seconds.subtractingReportingOverflow(from.seconds)
         return overflow ? (to > from ? .max : .min + 1) : gap
     }

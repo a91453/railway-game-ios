@@ -84,6 +84,9 @@ struct CommandLogReplay {
         case .setSpeed(let speed):
             session.setSpeed(speed)
         case .pause:
+            // A pause the device's session made by itself for an event
+            // (decision 175), the replay's has made at the same tick.
+            if session.world.clock.isPaused, session.isPausedForEvent { break }
             guard !session.world.clock.isPaused else { return "already paused" }
             session.togglePause()
         case .resume:

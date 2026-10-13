@@ -381,9 +381,18 @@ struct LinesPanel: View {
     private var linesSection: some View {
         Section {
             if session.world.lines.isEmpty {
-                Text("No lines yet. Pick stations under New Line to create one.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
+                // Decision 122, later: the empty state's picture over its words.
+                VStack(spacing: 8) {
+                    Image("EmptyLines")
+                        .resizable()
+                        .frame(width: 96, height: 96)
+                        .accessibilityHidden(true)
+                    Text("No lines yet. Pick stations under New Line to create one.")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
             } else {
                 if session.world.lineAccounts != nil, session.world.lines.count > 1 {
                     lineSortMenu
@@ -1444,6 +1453,14 @@ private struct LineLossCard: View, Equatable {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("line.costs")
+            // Decision 207: with realistic operation, how many trips were
+            // on time.
+            if let punctuality = diagnosis.punctualityText(in: language) {
+                Text(verbatim: punctuality)
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("line.punctuality")
+            }
             if diagnosis.isLosing {
                 Text(verbatim: language.text("Why it loses money", "為什麼虧錢"))
                     .font(.caption.weight(.semibold))

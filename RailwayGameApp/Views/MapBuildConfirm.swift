@@ -217,8 +217,13 @@ private struct BuildConfirmation {
     init?(_ session: GameSession, linesPanelOpen: Bool, openLines: @escaping @MainActor () -> Void) {
         // Decision 100, later: a new line, picked on the map, is made
         // there, beside its last station; a stretch of track being drawn
-        // keeps its own ✓.
-        if session.networkPreview == nil, let draft = session.mapLineDraft {
+        // keeps its own ✓. It is the map's ✓ only where a tap on the map
+        // picks the line's stations (MapView's tap): beside the lines
+        // panel, or with Select while no tile is being chosen; else the
+        // ✓ of the tool or the tile comes first.
+        if session.networkPreview == nil,
+           linesPanelOpen || (session.tool == .select && !session.isChoosingMapTile),
+           let draft = session.mapLineDraft {
             start = nil
             flaggedEnd = nil
             anchor = draft.anchor

@@ -92,6 +92,41 @@ final class AchievementsTests: XCTestCase {
         XCTAssertEqual(AchievementRecords(file: file).count, 0)
     }
 
+    func testAnUnlockAfterAFailedReadKeepsTheRecords() throws {
+        let file = directory.appendingPathComponent(AchievementRecords.fileName)
+        // Read at launch while the file could not be read (here: before it
+        // was written), so it starts with none unlocked.
+        var records = AchievementRecords(file: file)
+        let first = Date(timeIntervalSince1970: 1_700_000_000)
+        var earlier = AchievementRecords(file: file)
+        _ = earlier.unlock(meeting: AchievementFacts(figures: CompanyFigures(bestDayRiders: 1)), at: first)
+        XCTAssertEqual(records.count, 0)
+        let later = Date(timeIntervalSince1970: 1_800_000_000)
+        _ = records.unlock(meeting: AchievementFacts(figures: CompanyFigures(bestDayRiders: 1_500)), at: later)
+        let read = AchievementRecords(file: file)
+        XCTAssertEqual(read.unlocked["firstFare"], first, "the earlier record is kept with its date")
+        XCTAssertEqual(read.unlocked["riders1k"], later)
+    }
+
+    func testADamagedFileIsMovedAsideNotLost() throws {
+        let file = directory.appendingPathComponent(AchievementRecords.fileName)
+        try Data("not json".utf8).write(to: file)
+        var records = AchievementRecords(file: file)
+        _ = records.unlock(meeting: AchievementFacts(figures: CompanyFigures(bestDayRiders: 1)), at: Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertEqual(AchievementRecords(file: file).count, 1)
+        XCTAssertEqual(try Data(contentsOf: file.appendingPathExtension("damaged")), Data("not json".utf8))
+    }
+
+    func testANewerVersionsFileIsNotWrittenOver() throws {
+        let file = directory.appendingPathComponent(AchievementRecords.fileName)
+        let newer = Data(#"{"unlocked":{},"version":99}"#.utf8)
+        try newer.write(to: file)
+        var records = AchievementRecords(file: file)
+        XCTAssertEqual(records.unlock(meeting: AchievementFacts(figures: CompanyFigures(bestDayRiders: 1)), at: Date()).count, 1)
+        XCTAssertEqual(records.count, 1, "kept until the app quits")
+        XCTAssertEqual(try Data(contentsOf: file), newer)
+    }
+
     @MainActor
     func testMidnightUnlocksAndTellsTheNewsUnlessItIsADemo() throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
@@ -264,5 +299,33 @@ extension AchievementsTests {
         world.setRollingStockEconomics(true)
         launcher.checkAchievements(of: GameSession(world: world, language: .english))
         XCTAssertNotNil(launcher.achievements.unlocked["longTrain"])
+    }
+}
+
+extension AchievementsTests {
+    /// "Five Stars" reads a sight's rating as the game shows it, with the
+    /// quarter star of each hotel near it (decision 174).
+    func testTheBestStarsCountTheHotelsNearASight() throws {
+        var world = try makeWorld(width: 40_960, height: 8_192, balance: Money(100_000_000))
+        let sight = Attraction(id: AttractionID(rawValue: 1), name: "古蹟", englishName: "Sight",
+                               point: PlanPoint(x: 30_000, y: 4_096), kind: .town, baseStars: 375)
+        world.setTourism([sight])
+        try world.placeBuilding(.hotel, at: PlanPoint(x: 30_000, y: 6_000))
+        let rated = world.stars(of: try XCTUnwrap(world.attraction(id: sight.id)))
+        XCTAssertEqual(rated, 400)
+        XCTAssertEqual(AchievementFacts(world: world).bestStars, rated)
+    }
+
+    /// A ring's length runs back from its last stop to its first.
+    func testARingLineIsMeasuredAllTheWayRound() throws {
+        var world = try makeWorld(width: 131_072, height: 131_072, balance: Money(100_000_000))
+        var stops: [StationID] = []
+        for (index, (x, y)) in [(1_000, 1_000), (65_000, 1_000), (65_000, 65_000)].enumerated() {
+            stops.append(try world.buildStation(named: "S\(index)", at: PlanPoint(x: Int64(x), y: Int64(y))).id)
+        }
+        let line = try world.createLine(named: "Ring", stops: stops)
+        XCTAssertEqual(AchievementFacts(world: world).longestLineMetres, 2_000)
+        try world.setLineRing(line.id, to: true)
+        XCTAssertEqual(AchievementFacts(world: world).longestLineMetres, 2_000 + 1_414)
     }
 }

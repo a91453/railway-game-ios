@@ -553,6 +553,8 @@ extension GameWorld {
         /// with the hotels near it.
         let tourism: Tourism?
         let tourismStars: [Int]
+        /// Decision 207: the legs' planned seconds and the dwells.
+        let realisticOperation: Bool
     }
 
     /// Each sight's rating now, with its hotels (empty without tourism): a
@@ -577,7 +579,7 @@ extension GameWorld {
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
-            tourismStars: tourismStars
+            tourismStars: tourismStars, realisticOperation: realisticOperation
         )
     }
 

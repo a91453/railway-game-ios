@@ -82,9 +82,13 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `#8DB6EE` | 擔心時的汗滴 |
 | `#BDEFE7`、`#12A08F`／`#D4FAF4` | 底色與一段軌道（圖示的軌道） |
 
+空狀態的插圖（`EmptyLines`、`EmptySaves`、`EmptyTrains`，決策 122 之後的修正）用同一組顏色：外框藏青 `#262C57`、白 `#FFFFFF`、`#ECEEF6`、暖黃 `#FFC86B`、綠松 `#12A08F`，墊 `#BDEFE7` 的圓。
+
 決策 122 第 6 點。都是插圖裡的色塊，不是文字，不算對比；灰階下黃、藏青、藍灰分得開（art-style 的預覽檢查）。
 
 ## 地圖（決策 84）
+
+地圖上每一層畫在哪一層上面：[`MAP_LAYERS.md`](MAP_LAYERS.md)（決策 205）。拉近時的站名和拉遠時一樣墊 `land` 80% 的底牌。
 
 2026-10-08 作者決定，地圖不等 Phase 8，先改成圖示的畫風（`Palette`），並畫出路線、共線區段與轉乘群組（見 ARCHITECTURE 決策 84）。
 
@@ -100,6 +104,8 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `playerBuilding` | `#FFC86B` | `#FFC86B` | 玩家蓋的建物，八種都是（= `station`，外框用 `ink`，種類看圖示；2026-10-13 作者決定玩家的東西一律暖黃，城鎮的顏色不變） | — |
 | `train` | `#262C57` | `#ECEEF6` | 列車 | 11.47／9.64（對地面） |
 | `transferLink`／`transferEdge` | `#FFFFFF`／`#262C57` | 同左 | 轉乘群組的連線（MapBuilder 的白線黑框） | — |
+| `markerFill` | `#FFFFFF` | `#30376A` | 路線附近的標記的底：候車人數膠囊、等待環的光暈、被擋住那段軌道的白邊（= `Theme.panel`；決策 205） | 上面的 `ink` 13.29／9.64 |
+| `trainSelection` | `#FFC86B` | `#FFC86B` | 選取的列車外圈，外面再一圈 `ink`（= `station`；決策 205，以前是 `accentColor`，和軌道同為綠松） | — |
 
 圖示的淺色軌道 `#12A08F` 對地面只有 2.81:1，不到圖形的 3:1，所以淺色模式壓暗到 `#10917F`。路線用 `Palette.lineColor`（路線面板的顏色）。
 
@@ -131,15 +137,16 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | 圖示 | 用在 | 顏色 | 對比 Light／Dark |
 | --- | --- | --- | --- |
 | `train` | 車站徽章（`station` 底） | `stationSymbol` | 8.69 |
+| `person` | 候車人數膠囊（決策 205）：擁擠等級的一人那一階，和 `crowd`、`full` 同一組 | `ink`，墊 `markerFill` | 13.29／9.64 |
 | `train`、`crowd`、`full` | 狀態泡泡：在 `primary`／`warning`／`error` 的圓上；`crowd`（兩個人）與 `full`（三個人）是同一組擁擠等級 | `Theme.panel` | 最低 5.50／5.54 |
 | `warning`（墊 `warningSolid`） | 死結 | `metroRed`，墊系統底色 | — |
-| `house`、`shop`、`office`、`wharf`、`marina` | 玩家建物（14 點以上），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上 8.69（對 `playerBuilding`） |
+| `house`、`shop`、`office`、`wharf`、`marina`、`departmentStore`、`hotel`、`amusementPark` | 玩家建物（14 點以上；小一點的建物在 16 m ≥ 6 點時畫成 14 點的徽章，決策 205），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上 8.69（對 `playerBuilding`） |
 | `train` | 路線示意條的列車（路線色的圓上） | 白 | 跟路線色 |
 | `typhoon` | 颱風經過的車站（決策 182）：`land` 圓、`ink` 外框，圖示 `ink` | `ink` | 11.47／9.64 |
 
 ## 晝夜與天氣（決策 182）
 
-列車照路線上色（`Palette.trainColor`）：路線的列車是路線色（`Palette.lineColor`），貨運線的是灰色，不在路線上的照舊 `train`；載客量圖層打開時全部用 `train`。車身先畫一圈 `ink`（寬 2 pt），再畫顏色，所以畫在自己路線的同色線上也看得出來；車頭照舊有系統底色的外框（選取時 accent）。
+列車照路線上色（`Palette.trainColor`）：路線的列車是路線色（`Palette.lineColor`），貨運線的是灰色，不在路線上的照舊 `train`；載客量圖層打開時全部用 `train`。車身先畫一圈 `ink`（寬 2 pt），再畫顏色，所以畫在自己路線的同色線上也看得出來。決策 205 起，拉近時一節一節畫（每節 20 m，節與節之間一道藏青接縫，車鼻就是車頭），外框都是 `ink`，選取時外面一圈 `trainSelection` 再一圈 `ink`；拉遠時的車頭圓點外框也改成 `ink`（以前是系統底色，選取時 accent）。
 
 | 名稱 | Light | Dark | 用途 | 對比 Light／Dark |
 | --- | --- | --- | --- | --- |
@@ -191,7 +198,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 | 位置 | 保留的 | 理由 |
 | --- | --- | --- |
-| `MapView` 的交通圖例（`TrafficLegend`） | `metroGreen`／`metroAmber`／`metroRed` | 要和地圖上交通疊圖的顏色一致 |
+| `MapView` 的交通圖例（`TrafficLegend`） | `metroGreen`／`metroRed`（「等候」決策 205 起是藏青虛線圈，和地圖上的等待環一樣） | 要和地圖上交通疊圖的顏色一致 |
 | `PopulationLegendView` 的色階與色票 | `PopTravel`、`CityMap` 的顏色 | 要和地圖圖層一致；外框、文字、底已改用 Theme |
 | `MapArt` 的選取標示（鋪軌預覽線、錨點、選取外圈） | `Color.accentColor`（已跟著全域 tint 變成綠松色） | 擁有者決定維持綠松色（#187）；Phase 8 再檢討 |
 

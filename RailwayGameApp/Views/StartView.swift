@@ -708,7 +708,17 @@ struct SaveListView: View {
             }
             .overlay {
                 if launcher.otherSaves.isEmpty && launcher.olderAutosaves.isEmpty {
-                    ContentUnavailableView("No Saved Games", systemImage: "tray")
+                    // Decision 122, later: the game's own picture, not the system's tray.
+                    ContentUnavailableView {
+                        Label {
+                            Text("No Saved Games")
+                        } icon: {
+                            Image("EmptySaves")
+                                .resizable()
+                                .frame(width: 96, height: 96)
+                                .accessibilityHidden(true)
+                        }
+                    }
                 }
             }
             .navigationTitle("Saved Games")

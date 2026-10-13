@@ -75,6 +75,15 @@ final class MonthlyReportTests: XCTestCase {
         log.baseline = MonthlyBaseline(reportedMonth: 50, stationTrips: [:], tallBuildings: 0)
         session.restoreNews(log)
         XCTAssertEqual(session.news.baseline?.reportedMonth, -1)
+        // The month the game is in has not been reported either: its
+        // report at the month's end must not be lost.
+        let current = GameSession(world: try NewsSessionTests.world(day: 29), language: .english)
+        log.baseline = MonthlyBaseline(reportedMonth: 0, stationTrips: [:], tallBuildings: 0)
+        current.restoreNews(log)
+        XCTAssertEqual(current.news.baseline?.reportedMonth, -1)
+        let tick = try XCTUnwrap(current.beginLoopTick())
+        XCTAssertTrue(current.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 2 * 1_440, listening: false))))
+        XCTAssertTrue(current.news.items.contains { $0.category == .monthly })
     }
 
     func testLogOnlyKeepsTheReportInTheNewsAndDoesNotPause() throws {
