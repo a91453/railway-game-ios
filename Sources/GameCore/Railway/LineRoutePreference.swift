@@ -122,6 +122,13 @@ extension GameWorld {
     /// platform, a wrong facing or insufficient length yields no preference.
     /// No world state or reservation changes during this query.
     func preferredPath(from start: TrainPosition, preference: LineRoutePreference, length: Int64) -> TrainPath? {
+        var memo = PathMemo()
+        return preferredPath(from: start, preference: preference, length: length, memo: &memo)
+    }
+
+    /// ``preferredPath(from:preference:length:)``, with the search to the
+    /// platform's berths kept in `memo`.
+    func preferredPath(from start: TrainPosition, preference: LineRoutePreference, length: Int64, memo: inout PathMemo) -> TrainPath? {
         let platform = preference.platform
         guard network.platforms.contains(platform), platform.length >= length,
               case .onEdge(let current, let offset) = start,
@@ -130,7 +137,7 @@ extension GameWorld {
             let fitting = Set(berths(of: platform.station, length: length).filter { berth in
                 berth.traversal.edge == platform.edge && (berth.traversal.direction == .forward ? berth.offset == platform.end : berth.offset == lastEdge.length - platform.start)
             })
-            return trafficPath(from: start, toStation: platform.station, length: length, berthPenalty: [:], edgePenalty: [:], eligible: fitting, keepingLeft: false)
+            return path(from: start, toStation: platform.station, length: length, eligible: fitting, memo: &memo)
         }
         // A train returning from a passing place may rejoin later in the
         // same walk. Repeated edges retain their first reachable occurrence.

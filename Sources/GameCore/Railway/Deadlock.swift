@@ -106,9 +106,9 @@ extension GameWorld {
         switch train.execution {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }
-            if let preferred = preferredLeaving(train, stop: stop, cycle: cycle)?.train,
+            if let preferred = preferredLeaving(train, stop: stop, cycle: cycle, memo: &memo.paths)?.train,
                case .granted = reserving(preferred, memo: &memo) { return preferred }
-            return leaving(train, stop: stop, cycle: cycle).train
+            return leaving(train, stop: stop, cycle: cycle, memo: &memo.paths).train
         case .travellingToStop?:
             if let preferred = preferredGoingOn(train), case .granted = reserving(preferred, memo: &memo) { return preferred }
             return goingOn(train)

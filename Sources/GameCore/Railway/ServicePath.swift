@@ -123,6 +123,49 @@ extension GameWorld {
         }
     }
 
+    /// The answers of ``path(from:toStation:length:)``, and of the search
+    /// to chosen berths that ``preferredPath(from:preference:length:)``
+    /// makes, kept for one ``advance(ticks:)`` or one question: they read
+    /// only the network and whether trains keep left (decision 202), which
+    /// cannot change meanwhile.
+    struct PathMemo {
+        struct Query: Hashable {
+            let start: TrackTraversal
+            let offset: Int64
+            let station: StationID
+            let length: Int64
+            let eligible: Set<Berth>?
+        }
+        var found: [Query: TrainPath?] = [:]
+    }
+
+    /// ``path(from:toStation:length:)``, kept in `memo`.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, memo: inout PathMemo) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: nil)
+            if let known = memo.found[query] { return known }
+            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length)
+            memo.found[query] = .some(found)
+            return found
+        }
+    }
+
+    /// The shortest path to one of `eligible`, berths of station `id`, as
+    /// ``trafficPath(from:toStation:length:berthPenalty:edgePenalty:only:eligible:forbidden:keepingLeft:)``
+    /// finds it with no penalty, nothing forbidden and without keeping left
+    /// (a line's chosen platform, decision 202), kept in `memo`.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, eligible: Set<Berth>, memo: inout PathMemo) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: eligible)
+            if let known = memo.found[query] { return known }
+            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, eligible: eligible, keepingLeft: false)
+            memo.found[query] = .some(found)
+            return found
+        }
+    }
+
     /// A place in the search for a berth: where the train starts, the start
     /// of a traversal it has just entered, or a berth.
     private enum BerthSearch: Hashable {

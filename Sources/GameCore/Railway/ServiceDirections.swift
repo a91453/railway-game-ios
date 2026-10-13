@@ -39,6 +39,86 @@ extension GameWorld {
         /// Each train's movement authority (see ``authority(of:memo:)``),
         /// for its last values asked about.
         var authorities: [TrainID: [(train: Train, authority: (left: Int64, envelopes: AuthorityEnvelopes)?)]] = [:]
+        /// Each train's held track (see ``heldTrack(_:memo:)``), for its last
+        /// values asked about.
+        var heldTracks: [TrainID: [(train: Train, held: HeldTrack)]] = [:]
+        /// Each following train's route envelope (see
+        /// ``followingCover(of:_:memo:)``), for its last value asked about.
+        var followingCovers: [TrainID: (train: Train, cover: TrackCover)] = [:]
+        /// ``foulingSpansByEdge()``, once worked out.
+        var foulingByEdge: [TrackEdgeID: [TrackSpan]]?
+        /// The paths searched for (see ``PathMemo``).
+        var paths = PathMemo()
+        /// The runs' curves (see ``curve(of:for:memo:)``), by what they are
+        /// built from.
+        struct CurveQuery: Hashable {
+            let length: Int64
+            let seconds: Int64
+            let performance: TrainPerformance
+        }
+        var curves: [CurveQuery: RunningCurve?] = [:]
+        /// Each train's reservation in a ``ReservedTrack`` (see
+        /// ``reservedTrack(of:memo:)``), for its last reservation asked about.
+        var reserved: [TrainID: (reservation: [TrackResource], reserved: ReservedTrack)] = [:]
+    }
+
+    /// What a ``DirectionMemo`` works out from the network, the lines, the
+    /// stations, flexible dispatch and keeping left (decision 202) alone:
+    /// the traffic plan's parts (see
+    /// ``TrafficParts``), the paths searched for and the runs' curves. It
+    /// is kept from a call of ``advance(ticks:)`` that changed none of
+    /// those, and lent to the next call's memo only while all of them are
+    /// still as they were. Not game state: never saved, and equal to any
+    /// other.
+    struct RouteMemo: Equatable, Sendable {
+        struct Key: Equatable, Sendable {
+            let network: RailwayNetwork
+            let lines: [ServiceLine]
+            let stations: [StationID]
+            let flexDispatch: Bool
+            let keepLeft: Bool
+
+            init(_ world: GameWorld) {
+                network = world.network
+                lines = world.lines
+                stations = world.stations.map(\.id)
+                flexDispatch = world.flexDispatch
+                keepLeft = world.keepLeft
+            }
+        }
+        /// The most of each it keeps: beyond it, it starts again.
+        static let limit = 20_000
+        private var key: Key?
+        private var trafficParts = TrafficParts()
+        private var paths = PathMemo()
+        private var curves: [DirectionMemo.CurveQuery: RunningCurve?] = [:]
+
+        static func == (_: Self, _: Self) -> Bool {
+            true
+        }
+
+        /// Whether it keeps nothing.
+        var isEmpty: Bool {
+            key == nil
+        }
+
+        /// Gives `memo`, a new one, what it kept, when it was kept for the
+        /// same network, lines, stations and dispatch (`key`).
+        func lend(to memo: inout DirectionMemo, for key: Key) {
+            guard self.key == key else { return }
+            memo.trafficParts = trafficParts
+            memo.paths = paths
+            memo.curves = curves
+        }
+
+        /// Keeps what `memo` worked out over a call of
+        /// ``advance(ticks:)`` that left all of `key` as it was.
+        mutating func keep(_ memo: DirectionMemo, for key: Key) {
+            self.key = key
+            trafficParts = memo.trafficParts.points.count > Self.limit ? TrafficParts() : memo.trafficParts
+            paths = memo.paths.found.count > Self.limit ? PathMemo() : memo.paths
+            curves = memo.curves.count > Self.limit ? [:] : memo.curves
+        }
     }
 
     private struct DirectionState: Hashable {

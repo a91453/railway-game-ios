@@ -87,7 +87,7 @@ extension GameWorld {
         let key = TrafficMoveKey(service: s, point: j)
         if let kept = plan.sidings[key] { return kept }
         let service = plan.services[s], point = service.points[j]
-        guard trafficHasSiding(at: point, train: service.train) else { return [] }
+        guard trafficHasSiding(at: point, train: service.train, known: &plan.hasSiding) else { return [] }
         let own = trafficNominalDirections(service)
         let opposite = Set(plan.services.filter { $0.train.id != service.train.id }
             .flatMap { trafficNominalDirections($0).map(\.reversed) }).subtracting(own)

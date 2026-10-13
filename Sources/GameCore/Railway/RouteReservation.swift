@@ -440,10 +440,48 @@ extension GameWorld {
     }
 
     func heldTrack(_ train: Train) -> HeldTrack {
+        heldTrack(train, reserved: ReservedTrack(train.reservation))
+    }
+
+    /// ``heldTrack(_:)`` knowing its reservation as a ``ReservedTrack``.
+    private func heldTrack(_ train: Train, reserved: ReservedTrack) -> HeldTrack {
         let body = bodyStretches(of: train)
         var standing = Set(resources(covering: body))
         standing.formUnion(foulingNodes(covering: body))
-        return HeldTrack(body: standing, reservation: train.reservation, reserved: ReservedTrack(train.reservation))
+        return HeldTrack(body: standing, reservation: train.reservation, reserved: reserved)
+    }
+
+    /// `train`'s reservation as a ``ReservedTrack``, kept in `memo` while
+    /// the reservation stays the same: as a train moves on, it often
+    /// releases nothing.
+    func reservedTrack(of train: Train, memo: inout DirectionMemo) -> ReservedTrack {
+        if let known = memo.reserved[train.id], known.reservation == train.reservation { return known.reserved }
+        let reserved = ReservedTrack(train.reservation)
+        memo.reserved[train.id] = (train.reservation, reserved)
+        return reserved
+    }
+
+    /// The route envelope of `train`, which follows another, from the
+    /// envelopes its authority was found from (see ``authority(of:memo:)``):
+    /// `cover(of: bodyStretches(of: train) + envelopes.stretches)`, kept in
+    /// `memo` by the train as it is.
+    func followingCover(of train: Train, _ envelopes: AuthorityEnvelopes, memo: inout DirectionMemo) -> TrackCover {
+        if let known = memo.followingCovers[train.id], known.train == train { return known.cover }
+        let cover = cover(of: bodyStretches(of: train) + envelopes.stretches)
+        memo.followingCovers[train.id] = (train, cover)
+        return cover
+    }
+
+    /// ``heldTrack(_:)`` kept in `memo`, by the train as it is: it depends
+    /// on nothing else but the network (see ``authority(of:memo:)``).
+    func heldTrack(_ train: Train, memo: inout DirectionMemo) -> HeldTrack {
+        if let known = memo.heldTracks[train.id]?.first(where: { $0.train == train }) { return known.held }
+        let held = heldTrack(train, reserved: reservedTrack(of: train, memo: &memo))
+        var known = memo.heldTracks[train.id] ?? []
+        known.insert((train, held), at: 0)
+        if known.count > 4 { known.removeLast() }
+        memo.heldTracks[train.id] = known
+        return held
     }
 
     /// What following a train ahead claims (see ``claim(of:)``): its whole
@@ -471,6 +509,32 @@ extension GameWorld {
         }
     }
 
+    /// Places of trains in ``TrackHolders``, in order, the first kept
+    /// without an array: most track has one holder, and an array for each
+    /// was much of the time the holders took to work out.
+    struct Places: Sequence {
+        private var first: Int?
+        private var more: [Int] = []
+
+        mutating func append(_ place: Int) {
+            if first == nil { first = place } else { more.append(place) }
+        }
+
+        struct Iterator: IteratorProtocol {
+            fileprivate let places: Places
+            fileprivate var index = -1
+
+            mutating func next() -> Int? {
+                defer { index += 1 }
+                return index < 0 ? places.first : index < places.more.count ? places.more[index] : nil
+            }
+        }
+
+        func makeIterator() -> Iterator {
+            Iterator(places: self)
+        }
+    }
+
     /// What every train holds (see ``held(_:)``) and, following another,
     /// claims (see ``claim(of:)``), worked out once to ask
     /// ``holder(of:except:holders:)`` and
@@ -489,7 +553,7 @@ extension GameWorld {
         /// The placed trains holding each resource of their bodies, and
         /// each node, and each resource of a reservation out of order, by
         /// place, in order (perhaps twice).
-        fileprivate let owners: [TrackResource: [Int]]
+        fileprivate let owners: [TrackResource: Places]
         /// The placed trains whose reservation, in order, holds spans of
         /// each edge, by place, in order.
         fileprivate let runs: [TrackEdgeID: [Int]]
@@ -513,7 +577,7 @@ extension GameWorld {
         fileprivate func firstHolding(_ cover: TrackCover, except id: TrainID, among: Set<TrainID>?, fouling: Bool, in network: RailwayNetwork) -> Int? {
             var first = ids.count
             for node in cover.nodes {
-                for place in owners[node] ?? [] where place < first && isOther(place, id, among) {
+                for place in owners[node] ?? Places() where place < first && isOther(place, id, among) {
                     first = place
                 }
             }
@@ -549,6 +613,41 @@ extension GameWorld {
             return first < ids.count ? first : nil
         }
 
+        /// By place: whether a placed train other than `id` holds track
+        /// `cover` covers, or holds track fouling it, if `fouling`. Each is
+        /// asked as ``firstHolding(_:except:among:fouling:in:)`` asks it of
+        /// that train alone, all in one pass.
+        func holding(_ cover: TrackCover, except id: TrainID, fouling: Bool, in network: RailwayNetwork) -> [Bool] {
+            var holding = tracks.indices.map { _ in false }
+            for node in cover.nodes {
+                for place in owners[node] ?? Places() where isOther(place, id, nil) {
+                    holding[place] = true
+                }
+            }
+            for place in unordered where !holding[place] && isOther(place, id, nil) {
+                if tracks[place]!.reservation.contains(where: cover.contains) { holding[place] = true }
+            }
+            for edge in cover.edges {
+                for body in bodies[edge] ?? [] where !holding[body.place] && isOther(body.place, id, nil) && cover.contains(.span(body.span)) {
+                    holding[body.place] = true
+                }
+                guard let held = runs[edge], let bounds = cover.bounds(on: edge) else { continue }
+                for place in held where !holding[place] && isOther(place, id, nil) {
+                    if tracks[place]!.reserved.spans(of: edge, from: bounds.low, to: bounds.high)!.contains(where: cover.contains) {
+                        holding[place] = true
+                    }
+                }
+            }
+            if fouling {
+                for place in tracks.indices where !holding[place] && isOther(place, id, nil) {
+                    if self.fouling[place].contains(where: { network.foulingSpans[$0]!.contains { cover.contains(.span($0)) } }) {
+                        holding[place] = true
+                    }
+                }
+            }
+            return holding
+        }
+
         /// Whether `claim`'s train waits for track `cover` covers.
         fileprivate func waits(_ claim: Claim, forAnyIn cover: TrackCover) -> Bool {
             if cover.nodes.contains(where: { waits(claim, for: $0) }) { return true }
@@ -556,7 +655,27 @@ extension GameWorld {
                 guard let ours = cover.bounds(on: edge), let theirs = claim.cover.bounds(on: edge) else { continue }
                 // A span both cover starts by the lower of their ends and
                 // ends by the higher of their starts.
-                if cover.anySpan(of: edge, from: max(ours.low, theirs.low), to: min(ours.high, theirs.high), where: { waits(claim, for: .span($0)) }) {
+                let (low, high) = (max(ours.low, theirs.low), min(ours.high, theirs.high))
+                // ``isHeld(_:except:among:)`` of each span, in order: the
+                // other trains' reservations in order on the edge are walked
+                // beside them, rather than each span found by halving.
+                var reserved: [(spans: ArraySlice<TrackResource>, next: Int)] = []
+                for place in runs[edge] ?? [] where ids[place] != claim.train {
+                    let spans = tracks[place]!.reserved.spans(of: edge, from: low, to: high)!
+                    reserved.append((spans, spans.startIndex))
+                }
+                if cover.anySpan(of: edge, from: low, to: high, where: { span in
+                    let resource = TrackResource.span(span)
+                    guard claim.routeContains(resource) else { return false }
+                    if owners[resource]?.contains(where: { ids[$0] != claim.train }) == true { return false }
+                    for index in reserved.indices {
+                        while reserved[index].next < reserved[index].spans.endIndex, reserved[index].spans[reserved[index].next] < resource {
+                            reserved[index].next += 1
+                        }
+                        if reserved[index].next < reserved[index].spans.endIndex, reserved[index].spans[reserved[index].next] == resource { return false }
+                    }
+                    return true
+                }) {
                     return true
                 }
             }
@@ -582,7 +701,17 @@ extension GameWorld {
         /// from waiting for that claim (see ``holder(of:except:)``).
         func holdsAny(of claim: Claim, _ id: TrainID) -> Bool {
             guard let own = held[id] else { return false }
-            return own.body.contains(where: claim.routeContains) || own.reservation.contains(where: claim.routeContains)
+            if own.body.contains(where: claim.routeContains) { return true }
+            guard own.reserved.isOrdered else { return own.reservation.contains(where: claim.routeContains) }
+            // In order: its nodes, and of its spans those of the edges the
+            // route lies on that may share a point with it (the rest
+            // cannot).
+            if own.reservation[..<own.reserved.nodeCount].contains(where: claim.routeContains) { return true }
+            for edge in claim.cover.edges where own.reserved.runs[edge] != nil {
+                guard let bounds = claim.cover.bounds(on: edge) else { continue }
+                if own.reserved.spans(of: edge, from: bounds.low, to: bounds.high)!.contains(where: claim.routeContains) { return true }
+            }
+            return false
         }
 
         /// Whether `claim`'s train waits for `resource`: it is on its route
@@ -619,7 +748,7 @@ extension GameWorld {
         /// `id` holding `resource`.
         fileprivate func firstHolder(of resource: TrackResource, except id: TrainID, below limit: Int) -> Int? {
             var first: Int?
-            for place in owners[resource] ?? [] where place < (first ?? limit) && ids[place] != id {
+            for place in owners[resource] ?? Places() where place < (first ?? limit) && ids[place] != id {
                 first = place
             }
             if case .span(let span) = resource, let holding = runs[span.edge] {
@@ -650,10 +779,16 @@ extension GameWorld {
             return memo.holders[0].holders
         }
         var authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?] = []
+        var tracks: [HeldTrack] = []
+        var covers: [TrackCover?] = []
         for train in trains {
-            authorities.append(authority(of: train, memo: &memo))
+            let authority = authority(of: train, memo: &memo)
+            authorities.append(authority)
+            tracks.append(heldTrack(train, memo: &memo))
+            covers.append(authority.map { followingCover(of: train, $0.envelopes, memo: &memo) })
         }
-        let holders = trackHolders(authorities: authorities)
+        if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
+        let holders = trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!)
         memo.holders.insert((trains, holders), at: 0)
         if memo.holders.count > 2 { memo.holders.removeLast() }
         return holders
@@ -672,16 +807,31 @@ extension GameWorld {
     /// ``trackHolders()`` knowing ``authority(of:)`` of every train, in
     /// order.
     func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?]) -> TrackHolders {
+        trackHolders(authorities: authorities, tracks: trains.map(heldTrack),
+                     covers: zip(trains, authorities).map { train, authority in authority.map { cover(of: bodyStretches(of: train) + $0.envelopes.stretches) } },
+                     foulingByEdge: network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge())
+    }
+
+    /// ``trackHolders(authorities:)`` knowing ``heldTrack(_:)`` of every
+    /// train, in order, the route envelope of every train that follows
+    /// another (see ``followingCover(of:_:memo:)``), and
+    /// ``foulingSpansByEdge()``.
+    private func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?], tracks heldTracks: [HeldTrack],
+                              covers: [TrackCover?], foulingByEdge: [TrackEdgeID: [TrackSpan]]) -> TrackHolders {
         var held: [TrainID: HeldTrack] = [:]
         var tracks: [HeldTrack?] = []
         var fouling: [[TrackSpan]] = []
-        var owners: [TrackResource: [Int]] = [:]
+        var owners: [TrackResource: Places] = [:]
         var runs: [TrackEdgeID: [Int]] = [:]
         var bodies: [TrackEdgeID: [(place: Int, span: TrackSpan)]] = [:]
         var unordered: [Int] = []
-        let foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge()
+        // Room for every body's track at once: growing them was much of
+        // the time.
+        let standing = heldTracks.reduce(0) { $0 + $1.body.count }
+        owners.reserveCapacity(standing)
+        bodies.reserveCapacity(standing)
         for (place, train) in trains.enumerated() {
-            let track = heldTrack(train)
+            let track = heldTracks[place]
             held[train.id] = track
             guard train.position != nil else {
                 tracks.append(nil)
@@ -690,7 +840,7 @@ extension GameWorld {
             }
             tracks.append(track)
             for resource in track.body {
-                owners[resource, default: []].append(place)
+                owners[resource, default: Places()].append(place)
                 if case .span(let span) = resource { bodies[span.edge, default: []].append((place, span)) }
             }
             var foulingHeld = track.body.compactMap { resource -> TrackSpan? in
@@ -699,7 +849,7 @@ extension GameWorld {
             }
             if track.reserved.isOrdered {
                 for resource in track.reservation[..<track.reserved.nodeCount] {
-                    owners[resource, default: []].append(place)
+                    owners[resource, default: Places()].append(place)
                 }
                 for edge in track.reserved.runs.edges {
                     runs[edge, default: []].append(place)
@@ -710,7 +860,7 @@ extension GameWorld {
             } else {
                 unordered.append(place)
                 for resource in Set(track.reservation) {
-                    owners[resource, default: []].append(place)
+                    owners[resource, default: Places()].append(place)
                     if case .span(let span) = resource, network.foulingSpans[span] != nil { foulingHeld.append(span) }
                 }
             }
@@ -721,12 +871,12 @@ extension GameWorld {
             bodies: bodies, unordered: unordered
         )
         var claims: [TrainID: Claim] = [:]
-        for (train, authority) in zip(trains, authorities) {
+        for (train, route) in zip(trains, covers) {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
             // is the base and the track of every stretch; it waits for
             // the track of its route no other placed train holds.
-            guard let envelopes = authority?.envelopes else { continue }
-            var claim = Claim(train: train.id, cover: cover(of: bodyStretches(of: train) + envelopes.stretches))
+            guard let route else { continue }
+            var claim = Claim(train: train.id, cover: route)
             if !network.foulingSpans.isEmpty {
                 for edge in claim.cover.edges {
                     for span in foulingByEdge[edge] ?? [] where holders.waits(claim, for: .span(span)) {
@@ -991,6 +1141,52 @@ extension GameWorld {
         return resources
     }
 
+    /// `reservation`, a following train's, with its envelope to `distance`
+    /// (see ``authorityEnvelope(_:to:)``) added, in resource order without
+    /// repeats: `Set(reservation).union(authorityEnvelope(envelopes, to:
+    /// distance)).sorted()`. `held` is its authority (see
+    /// ``authority(of:)``) and `envelopes` the envelopes it was found
+    /// from: beyond 0 the reservation holds the envelope to `held` already,
+    /// and the track of stretches is the track of their parts point by
+    /// point (see ``resources(covering:)``), so only the base and the track
+    /// from `held` on are gathered, and merged in beside the reservation.
+    /// A reservation out of order is gathered whole, as before.
+    func reservation(_ reservation: [TrackResource], extending envelopes: AuthorityEnvelopes, from held: Int64, to distance: Int64) -> [TrackResource] {
+        let ordered = zip(reservation, reservation.dropFirst()).allSatisfy { $0 < $1 }
+        guard ordered, !envelopes.stretches.isEmpty, envelopes.length < .max, held >= 0, held < distance else {
+            return Set(reservation).union(authorityEnvelope(envelopes, to: distance)).sorted()
+        }
+        let first = authorityEnd(envelopes, to: held).index
+        let end = authorityEnd(envelopes, to: distance)
+        var pieces: [TrackStretch] = []
+        for index in first...end.index {
+            let stretch = index == end.index ? end.part : envelopes.stretches[index]
+            let start = index == 0 ? 0 : envelopes.ends[index - 1]
+            let from = min(stretch.from + max(0, held - start), stretch.to)
+            pieces.append(TrackStretch(traversal: stretch.traversal, from: from, to: stretch.to))
+        }
+        let added = Set(envelopes.base + resources(covering: pieces) + foulingNodes(covering: pieces)).sorted()
+        var merged: [TrackResource] = []
+        merged.reserveCapacity(reservation.count + added.count)
+        var (i, j) = (0, 0)
+        while i < reservation.count, j < added.count {
+            if reservation[i] < added[j] {
+                merged.append(reservation[i])
+                i += 1
+            } else if added[j] < reservation[i] {
+                merged.append(added[j])
+                j += 1
+            } else {
+                merged.append(reservation[i])
+                i += 1
+                j += 1
+            }
+        }
+        merged += reservation[i...]
+        merged += added[j...]
+        return merged
+    }
+
     /// Whether the envelope to `distance` (see ``authorityEnvelope(_:to:)``)
     /// is clear, as ``longestAuthority(_:from:clearBase:clear:)`` asks it.
     func isAuthority(_ envelopes: AuthorityEnvelopes, to distance: Int64, clearBase: Bool, clear: (TrackStretch) -> Bool) -> Bool {
@@ -1084,7 +1280,11 @@ extension GameWorld {
     /// for any other train.
     func authority(of train: Train) -> (left: Int64, envelopes: AuthorityEnvelopes)? {
         guard isTrafficControlEnabled, !train.reservation.isEmpty else { return nil }
-        let reservation = ReservedTrack(train.reservation)
+        return authority(of: train, reserved: ReservedTrack(train.reservation))
+    }
+
+    /// ``authority(of:)`` knowing its reservation as a ``ReservedTrack``.
+    private func authority(of train: Train, reserved reservation: ReservedTrack) -> (left: Int64, envelopes: AuthorityEnvelopes)? {
         let route = routeStretches(of: train)
         // A reservation that holds where the route ends holds all of it: a
         // following train's ends at least ``followingGap`` short of that.
@@ -1120,7 +1320,7 @@ extension GameWorld {
     func authority(of train: Train, memo: inout DirectionMemo) -> (left: Int64, envelopes: AuthorityEnvelopes)? {
         guard isTrafficControlEnabled, !train.reservation.isEmpty else { return nil }
         if let known = memo.authorities[train.id]?.first(where: { $0.train == train }) { return known.authority }
-        let authority = authority(of: train)
+        let authority = authority(of: train, reserved: reservedTrack(of: train, memo: &memo))
         var known = memo.authorities[train.id] ?? []
         known.insert((train, authority), at: 0)
         if known.count > 4 { known.removeLast() }
@@ -1168,8 +1368,9 @@ extension GameWorld {
     /// `memo` keeps the trains' holders.
     func followingAuthority(of candidate: Train, route: TrackCover, memo: inout DirectionMemo) -> Train? {
         let holders = trackHolders(memo: &memo)
-        for other in trains where other.id != candidate.id && other.position != nil {
-            guard holder(of: route, except: candidate.id, among: other, holders: holders) else { continue }
+        let holding = holders.holding(route, except: candidate.id, fouling: true, in: network)
+        for (place, other) in trains.enumerated() where other.id != candidate.id && other.position != nil {
+            guard holding[place] || holder(of: route, except: candidate.id, waitedForBy: other, holders: holders) else { continue }
             guard isLeading(other, onto: route, for: candidate) else { return nil }
         }
         // The longest distance whose track no other train holds.
@@ -1184,11 +1385,11 @@ extension GameWorld {
         return train
     }
 
-    /// Whether train `other` holds, fouls or waits for any of `resources`,
-    /// as ``holder(of:except:)`` asks of each train for train `id`.
-    private func holder(of route: TrackCover, except id: TrainID, among other: Train, holders: TrackHolders) -> Bool {
-        // What it holds, by the edges the route lies on, or that fouls it.
-        if holders.firstHolding(route, except: id, among: [other.id], fouling: true, in: network) != nil { return true }
+    /// Whether train `other`, following a train, waits for any of
+    /// `route`, as ``holder(of:except:)`` asks of each train for train
+    /// `id`; what it holds or fouls is asked of all the trains at once (see
+    /// ``TrackHolders/holding(_:except:fouling:in:)``).
+    private func holder(of route: TrackCover, except id: TrainID, waitedForBy other: Train, holders: TrackHolders) -> Bool {
         guard let claim = holders.claims[other.id], !holders.holdsAny(of: claim, id) else { return false }
         return holders.waits(claim, forAnyIn: route)
             || claim.foulingWaiting.contains { network.foulingSpans[$0]!.contains { route.contains(.span($0)) } }
@@ -1201,7 +1402,7 @@ extension GameWorld {
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-              routeEnvelope(of: train).moves, !isFollowing(train)
+              routeStretches(of: train).moves, !isFollowing(train)
         else { return false }
         let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
@@ -1281,7 +1482,12 @@ extension GameWorld {
         /// The least and most chainage of edge `edge` it covers, or `nil`.
         func bounds(on edge: TrackEdgeID) -> (low: Int64, high: Int64)? {
             guard let part = parts[edge] else { return nil }
-            return (part.windows.map(\.low).min()!, part.windows.map(\.high).max()!)
+            var (low, high) = (Int64.max, Int64.min)
+            for window in part.windows {
+                low = min(low, window.low)
+                high = max(high, window.high)
+            }
+            return (low, high)
         }
 
         /// Calls `each` with every span of edge `edge` it covers, in order,
@@ -1304,6 +1510,42 @@ extension GameWorld {
                 if part.windows.contains(where: { Self.covers($0.low, $0.high, span, length: part.length) }), each(span) { return true }
             }
             return false
+        }
+
+        /// The resources of `reservation` it covers, in their order: a
+        /// reservation in resource order (see ``ReservedTrack``) is walked
+        /// beside each edge's spans rather than each span found by halving.
+        func kept(of reservation: [TrackResource]) -> [TrackResource] {
+            var kept: [TrackResource] = []
+            kept.reserveCapacity(reservation.count)
+            var edge: TrackEdgeID?
+            var part: (length: Int64, spans: [TrackSpan], windows: [(low: Int64, high: Int64)])?
+            var next = 0
+            for index in reservation.indices {
+                let resource = reservation[index]
+                if index > 0, !(reservation[index - 1] < resource) { return reservation.filter(contains) }
+                switch resource {
+                case .node:
+                    if nodes.contains(resource) { kept.append(resource) }
+                case .span(let span):
+                    if span.edge != edge {
+                        edge = span.edge
+                        part = parts[span.edge]
+                        next = 0
+                    }
+                    guard let part, part.windows.contains(where: { Self.covers($0.low, $0.high, span, length: part.length) }) else { continue }
+                    // In order, where it would be among the edge's own
+                    // spans only moves on.
+                    while next < part.spans.count, part.spans[next] < span {
+                        next += 1
+                    }
+                    if next < part.spans.count, part.spans[next] == span { kept.append(resource) }
+                }
+            }
+            // All of it kept: the reservation itself, so that what is kept
+            // of it for being the same (see ``reservedTrack(of:memo:)``) is
+            // found the same at once.
+            return kept.count == reservation.count ? reservation : kept
         }
 
         /// Everything it covers, listed (as ``resources(covering:)`` and
