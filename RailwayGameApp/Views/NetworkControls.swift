@@ -85,8 +85,7 @@ struct NetworkControls: View {
             // an X with the mirrored one crossing it.
             if session.networkPicksCrossover {
                 Toggle("X crossover", isOn: $session.networkBuildsScissors)
-                    .toggleStyle(.button)
-                    .buttonStyle(.bordered)
+                    .toggleStyle(OnOffButtonToggleStyle())
                     .font(.footnote)
                     .accessibilityIdentifier("network.scissors")
             }
@@ -179,16 +178,23 @@ struct NetworkControls: View {
                 Toggle("Smooth curves", isOn: $session.networkFollowsTrack)
                 Toggle("Ease the grade", isOn: $session.networkEasesGrade)
             }
-            .toggleStyle(.button)
-            .buttonStyle(.bordered)
+            .toggleStyle(OnOffButtonToggleStyle())
             .font(.footnote)
             // Off: every tap is a new point, for a parallel track a few
             // metres beside another (closer than a tap reaches).
             Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
-                .toggleStyle(.button)
-                .buttonStyle(.bordered)
+                .toggleStyle(OnOffButtonToggleStyle())
                 .font(.footnote)
                 .accessibilityIdentifier("network.snap")
+            // Decision 107, later: a player did not know how to lay a
+            // second track beside the first.
+            Text(verbatim: session.language.text(
+                "Turn it off to lay a parallel track 4 m or more beside another (double track).",
+                "關掉後可以鋪相距 4 m 以上的平行軌（雙線）"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .transition(.opacity)
     }
@@ -340,6 +346,35 @@ private struct LongSectionView: View {
             .font(.system(size: 9).monospacedDigit())
             .foregroundStyle(Theme.textSecondary)
             .padding(2)
+    }
+}
+
+/// A switch drawn as a button that shows whether it is on (decision 107,
+/// later; a player's report): on, filled with the accent colour and a tick,
+/// so it does not rest on the colour alone; off, the bordered button the
+/// other buttons beside it are.
+private struct OnOffButtonToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let button = Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                if configuration.isOn {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .accessibilityHidden(true)
+                }
+                configuration.label
+            }
+        }
+        return Group {
+            if configuration.isOn {
+                button.buttonStyle(.borderedProminent).tint(Theme.primary)
+            } else {
+                button.buttonStyle(.bordered)
+            }
+        }
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
     }
 }
 

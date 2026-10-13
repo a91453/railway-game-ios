@@ -5602,6 +5602,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12，發佈前）：① 現金在零附近來回穿越，每次向下穿越都寫一則「現金低於零」並暫停；現在十天內只說一次（`NewsWatch.debtNewsDay`）。② 同一句狀態訊息（點了做不到的事重複出現）在最近 5 則內只進新聞一次。③ 月底報告在教學、示範、或「重要事件自動暫停」關著時只寫進新聞，不開表也不暫停。④ `NewsLog` 讀檔拒絕不合理的 `nextID`（0、負數、近 `Int.max`：下一次 `add` 會溢位當掉）與負的訊息 ID；`restoreNews` 遇到比現在還晚的月報基準（別局的旁檔）重新起算。測試：`MonthlyReportTests`、`NewsSessionTests`。
 
+**之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家分不清站長和鈴鐺：兩者都打開新聞紀錄。現在**新聞紀錄只從 HUD 的鈴鐺開**：站長說話時再點頭像只收起泡泡；點泡泡時，有地點的建議（`cameraTarget`）照決策 177 把地圖移過去，跟某座車站有關的建議（`stationFull`、`stationCrowded`、`underserved`、`townGrew`、`materialsShort`）把地圖移到那座車站、選取工具時並選取它（建設工具時不動選取，以免改到列車工具的目的地），其他的只收起泡泡。上面「開啟」一條的後兩種開法因此取消。`StationMasterAdvice` 不改（只讀它的案例）；`StationMasterView` 不再讀 `GameScreenState`。
+
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
@@ -5769,6 +5771,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
+**之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家進入建設工具時景點標記不見了，正想蓋在景點旁。現在建設工具（選取以外的工具）也畫景點標記，但半透明（0.5）、不能點（`allowsHitTesting(false)`）、VoiceOver 不讀，畫在 ✓／✕ 建造確認旗（`MapBuildConfirm`）下面，不蓋住它們（`MapAttractionMarks(isPassive: true)`，`MapView` 裡排在確認旗那一層之前）。選取工具時不變：同一個位置、可以點、打開觀光面板。只改 App；存檔、golden、replay 不動。
 
 ### 179. 逐線營運報表：每條線的運量、票收、成本與損益
 
