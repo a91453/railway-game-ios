@@ -362,8 +362,8 @@ extension GameError {
             )
         case .trackEdgeHasPlatform(let edge):
             language.text(
-                "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first.",
-                "\(edge.displayText(in: language)) 上有車站的月台。請先拆除月台。"
+                "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first: in Network, choose Remove, tap that track and tap “Remove platform”.",
+                "\(edge.displayText(in: language)) 上有車站的月台。請先拆除月台：在「路網」選「拆除」，點這段軌道，再按「拆除月台」。"
             )
         case .invalidPlatform:
             language.text(

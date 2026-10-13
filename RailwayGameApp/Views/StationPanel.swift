@@ -259,7 +259,8 @@ struct StationPanel: View {
 
     /// The station's platforms, each with a menu that adds a platform track
     /// beside it in one step (`GameSession.addPlatformTrack(beside:layout:side:)`):
-    /// island or side, on either side of its track.
+    /// island or side, on either side of its track; and a button that
+    /// removes it (`GameSession.removeNetworkPlatform(_:)`).
     private func platformsSection(_ station: Station) -> some View {
         let language = session.language
         let platforms = session.world.trackPlatforms(of: station.id)
@@ -290,6 +291,18 @@ struct StationPanel: View {
                     }
                     .accessibilityIdentifier("station.platformTrack.\(index)")
                 }
+                // 56.1: a platform can be removed here too (Undo brings it
+                // back); the track under it then can be.
+                Button(role: .destructive) {
+                    session.removeNetworkPlatform(platform)
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Remove platform \(index + 1)", "拆除第 \(index + 1) 月台"))
+                    } icon: {
+                        Image(systemName: "trash")
+                    }
+                }
+                .accessibilityIdentifier("station.removePlatform.\(index)")
             }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))

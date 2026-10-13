@@ -105,10 +105,19 @@ public enum HelpGuide {
             "moveRemoveStation", .building,
             question: ("How do I rename, move or remove a station?", "如何改名、移動或拆除車站？"),
             answer: (
-                "Tap a station to select it, then tap its tag (or touch and hold the station) to open the station panel. There you can rename it, change its platforms or remove it. To move one, remove it and build it again where you want it.",
-                "點選車站，再點它上方的標籤（或長按車站），打開車站面板，可以改名、調整月台或拆除。要搬移車站，就拆除後在想要的位置重新蓋一座。"
+                "Tap a station to select it, then tap its tag (or touch and hold the station) to open the station panel. There you can rename it, add a platform track beside a platform, remove one platform or demolish the whole station. To move one, remove it and build it again where you want it.",
+                "點選車站，再點它上方的標籤（或長按車站），打開車站面板，可以改名、在月台旁加月台軌道、拆除其中一座月台，或拆除整個車站。要搬移車站，就拆除後在想要的位置重新蓋一座。"
             ),
             keywords: "delete rename 刪除 移動 改名"
+        ),
+        HelpEntry(
+            "removePlatform", .building,
+            question: ("How do I remove a platform or a station?", "怎麼拆除月台或車站？"),
+            answer: (
+                "Track with a platform on it cannot be removed until the platform goes. In Build → Network, choose Remove and tap the track: the card lists its platforms, each with a “Remove platform” button; then tap Remove Track. The station panel also has a button for each platform, and Demolish Station removes the station with all its platforms. Undo brings back what you removed.",
+                "有月台的軌道要先拆掉月台才能拆。在「建設 → 路網」選「拆除」並點那段軌道，卡片會列出上面的月台，各有一個「拆除月台」按鈕，拆完再按「拆除軌道」。車站面板裡每座月台也有拆除按鈕，「拆除車站」則會連同所有月台一起拆掉。拆錯了可以按復原。"
+            ),
+            keywords: "remove delete demolish platform station track 拆除 刪除 月台 車站 軌道 拆月台"
         ),
         HelpEntry(
             "extendLine", .building,
