@@ -2681,6 +2681,12 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 對向的列車、單線兩端互等與其他循環等待（決策 32 第 15 點）照舊留給 V；跟車只在前車一定會讓出時才發生。
 - 畫面還不顯示預約或授權的範圍。
 
+**之後的修正：兩台跟車的列車路線交會時，編號小的先走**（2026-10-13，作者決定、經合併 session 轉達；號碼依工作登記 #231：存檔版本、決策編號、golden schema 都不動）。第 6 點讓跟車列車「等著的軌道」擋住除了它前車以外的每一台列車。兩台都在跟車的列車，若路線在前方交會（例如從車場兩股道、跟在同一台前車後面出發），會各自等著對方等著的軌道；決策 58 不移動跟車中的列車，於是成了永久的死結。高鐵示範較早的配置打開行車控制時，08:30 起左營有 15–31 列卡死（#511 拆出的修正）。
+
+- **規則**：第 6 點的例外多一條：若列車 `id` 自己也在跟車，而且編號比等著的那台小，它不被那台等著的軌道擋住（`TrackHolders.binds(_:_:)`；`holder(of:except:)`、`blockedTrack(except:)`、跟車出發的持有判斷都用它）。編號大的那台照舊等，等編號小的過去、讓出後再跟上。同一條路上前後跟車的鏈本來就靠「持有它路上的軌道」排除，不受影響。
+- **參考模型**：`ReferenceTrafficControl.blocking(_:for:)` 與 `ReservationShortcutTests` 的「舊做法」照同樣的規則改。
+- **驗證**：`FollowerDeadlockTests`：兩條支線在 J 併入主線，前車剛過 J，兩台跟車的列車各在一條支線上、預約停在 J 之前。改前兩台到 90 分鐘都過不了 J（測試在 main 上失敗）；改後編號小的先過 J，兩台都到站，任何一分鐘三台的持有都不相交。golden、SaveFixtures、ReplayFixtures 的每一個預期值都不變。
+
 ### 57. 避開被占用軌道的選路與月台分配（Stage V1）
 
 2026-10-04。服務出發與路線派車的就緒判斷，在交通控制下依序嘗試：預設的最近停車位置的路整條取得；在預設路上跟車（決策 56）；到同站任何合適停車位置、避開其他列車持有軌道的最短路整條取得；原地等待。只有 `GameWorld` 提交最後取得的候選列車。手動路、放置、反向與交通控制關閉時照舊。同日作者要求做 V2，並以最佳選擇定案原本待決定的兩件事（先跟車還是先改路、繞路上限），見下。
@@ -7038,6 +7044,52 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **測試**：`KeepLeftTests`（手算的小路網：一段等長的雙線、兩端的轉轍器從直線開始彎；關著時兩個方向都走北股（和以前一樣），打開時東行北股、西行南股，距離不變；最左出口的判斷；南股繞遠 2,048（約多 1,274）仍靠左、繞遠 4,096（約多 4,057）改走短的；路線的行程兩個方向；指定的進路照舊；有兩端渡線的雙線上兩列車在交通管制下一東一西各走左股，關著時都走北股；缺 key 的存檔；版本 52 的 fixture）；`KeepLeftSessionTests`（新遊戲打開；示範、挑戰、教學關）；`HighSpeedDemoTests` 多一行關著。`SavedGameTests` 的目前版本 51 → 52。
 
 **沒有驗證的**：玩家實際蓋的雙線（轉轍器的形狀各式各樣）要等 TestFlight；地圖上的進路與方向箭頭由進路預覽（決策 201）畫。
+
+### 204. 一鍵雙線／待避線工具：先修的兩個 GameCore 問題與號誌站探針
+
+2026-10-13，作者指示「一鍵雙線／待避線工具 開工」（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 10 項、§4 第 1 項）。開工前先修 §2「未排的 bug」的兩項，再用探針確認封閉車站加兩股能不能排進交會。號碼依工作登記 #231：決策 204；存檔版本、golden schema 不動。工具本身（複線切換、待避線、放大鏡）在之後的 PR 補進這一節。
+
+1. **等待會車的列車，對方永遠來不了時不再一直等**（`ScheduledTraffic.swift`，`currentTrafficWait` 與新的 `isStranded`）：排定的等候（決策 59）原本只在「對方本身在等進路」（`waitingRoute`）或互等成圈時放掉。對方停在站上、發車時間已到、卻沒有任何路到下一站（`leaving` 回 `noRoute`，例如停在終點外、車頭朝著軌道盡頭）時，它永遠不會來，等的列車就永遠停著。現在這種情況也放掉等候，等的列車照沒有計畫時的行車控制走（決策 57、58）。只看世界當下的狀態，不存東西，決定論；只有原本會永遠等下去的狀態改變行為。測試：`ScheduledTrafficTests.testAWaitForATrainThatCannotLeaveIsDropped`（修正前東行列車停在 M 不走）。
+2. **分割軌道後做乘客檢查**（`GameWorld.splitTrackEdge`）：蓋軌、拆軌都會呼叫 `abandonUnservedPassengers`，分割沒有。查證時沒有找到分割真的讓行程失效的情況：兩段照原樣相接、月台保留長度、路線指定的進路不准分割；在單線待避的路網上把每條邊每隔 211 單位分割一次（1,314 次、兩種服務模式、各 1–3 列），沒有一個服務的班距改變。仍補上呼叫，讓「軌道改變後乘客檢查」的規則沒有例外；正常情況下它什麼都不改。測試：`TrackSplitTests.testASplitKeepsTheLinesWaitingPassengers`。
+3. **探針：封閉車站加兩股**（`ClosedStationMeetTests`）：
+   - 時刻表的服務在封閉車站停靠時，交會照常排在那裡（一列在另一股等），兩列都跑完。
+   - 兩列都不停靠時不排交會，但行車控制仍讓它們在兩股上錯開，沒有死結。
+   - **缺口**：路線的單線容量（決策 61）只把「停靠站」算成交會點。路線不停靠封閉車站時，整段仍算一個單線區間，只能跑 1 列；停靠時可以跑 2 列。所以工具蓋的待避線要讓路線的車多跑，路線要把那個號誌站列為停靠站。把不停靠的待避站算進容量會改變參考模型（`ReferenceWorld`）與既有路線的班距，這次不做。
+
+**參考**：`a91453/railway-reference-private` 沒有可用的：交會的來源 `Railway/site_archive_clean/index.html` 的 `inferMeetRun`／`resolveTraTraffic` 是事先排時刻表，不處理列車在執行中走不了；分割軌道是這個專案自己的指令。外部專案沒有查：兩項都是這個專案自己的狀態判斷。程式碼是這個專案自己寫的。
+
+### 204（續）. 一鍵雙線與待避線工具
+
+決策 204 的工具部分（作者 2026-10-13「一鍵雙線／待避線工具 開工」，`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 10 項）。只改畫面與 GamePresentation，GameCore 不動；存檔版本、golden schema 不動。前面的 GameCore 修正與號誌站探針在同一個決策號（PR #519，已合併）。
+
+1. **複線**（新檔 `Sources/GamePresentation/DoubleTrack.swift`；鋪軌卡片的「複線」切換，`GameSession.networkBuildsDouble`）：打開時每鋪一段，旁邊同時鋪第二條，中心相距 `DoubleTrack.spacing` = 5 m（320 單位，同岸式月台軌道，大於 GameCore 的最小間距 4 m，彎道上的小誤差也不會太近）。
+   - 第二條的兩端在這一段兩端的法線方向上，左或右（`networkDoubleSide`，收在「進階選項」裡，預設左）；曲線照這一段的做法算（`NetworkBuilding.curve`，兩端沿同樣的方向、把手在弦的三分之一），所以彎道上也大約保持 5 m。直線段的第二條也是直線。
+   - 一端旁邊 1 m 內已有節點時接上它：接著畫下一段時，第二條從上一段的第二條接下去。
+   - 兩條一起是一個指令（`PlayerCommand.buildDoubleTrack`，記錄與重播照決策 193），全成或全不成；第二條放不下時說原因，什麼都不蓋。
+   - 兩條各走哪個方向交給 GameCore 的靠左行駛（決策 202），工具不指定。
+   - **缺口**：第二條在接上既有軌道的那一端是空著的（這一段從車站的軌道或轉轍器接出時，第二條不會自己接到車站）。要讓兩條都接到車站，還要用渡線（兩點各點一條軌道）或月台軌道。進路預覽（決策 201）讀的是路線的行程，工具蓋的軌道照樣看得懂；一次性提示卡（#510）的「平行軌」要車站到車站兩條都通才算。
+2. **待避線**（新檔 `Sources/GamePresentation/PassingLoop.swift`；路網工具多一個模式「待避」，`NetworkToolMode.passingLoop`）：點一段單線，旁邊 5 m 加一條側線，兩端各一個轉轍器，同時蓋一個號誌站（封閉車站，`StationOperationMode.closed`，名稱「號誌站 N」），兩股各有一個月台。
+   - 側線的幾何和月台軌道共用（`GameSession.sidingPlan`，從 `platformTrackPlan` 抽出；`buildSiding` 也是）：轉轍器在待避段兩端外 `PlatformTrackLayout.side.reach`（50 m），穿過直行的節點去找。
+   - 待避段長度 `passingLoopLength`：公司最長的列車，至少 6 節（96 m）；以點的位置為中心，太靠邊就往內移。
+   - 為什麼要號誌站：探針（決策 204 第 3 點）顯示時刻表停靠時才排交會、路線停靠時才算交會點。完成訊息提醒玩家把它加進路線的停靠站。
+   - 一個指令（`PlayerCommand.addPassingLoop`），全成或全不成；預覽在世界的副本上蓋一次，算費用或原因，地圖畫出側線。
+3. **手機**：「複線」切換和「進階選項」在同一列；左右側收在進階選項裡（決策 107 的收合，和 #497 的「進階」同一個原則）。模式選擇多一格「待避」（四個字以內）。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` 的 `edge(p, ux, uy)`：折線每段的法線 (-dy, dx) 往外推 | `DoubleTrack.beside`（端點沿法線推 5 m） | 改寫：參考只用在畫枕木與道床，這裡用來放第二條的端點 |
+| `Simulator/reference_snapshot/_next/static/chunks/4193-*.js` 的 `f`（`parallelSpacingMm` → 左右偏移）、雙線曲線半徑 `[radius, radius - spacing]` | 無 | 參考的數字是 N 比例模型（33 mm），曲線是同心圓弧；這裡的軌道是三次曲線，照原來的算法重算第二條 |
+| 同檔 `Kw`（兩段等切線圓弧的反向曲線）、`SX248`／`WX310` 等渡線零件 | 無 | 這裡的 S 曲線沿用月台軌道的三次曲線（`NetworkBuilding.curve`） |
+| `Ci/reference_snapshot/lib/app__q_*.js` 的 `radiusAtPoint`、`minRadiusForSegment` | 無（放大鏡與曲率讀數的 PR 再用） | 之後 |
+| `MapBuilder/`、`OpenWorld/`、`Railway/railway_game_reference_clean/`、`Railway/train_loop_reference_clean/`、`Railway/city_world_reference/source/` | 無 | 沒有可用的 |
+
+參考裡沒有「一次鋪兩條」或「插入待避線」的工具，只有上面的幾何零件；兩個工具是這個專案自己的。外部專案（2026-10-13 網路搜尋）：OpenTTD 的手冊（Railway construction、Tutorial「Two Tracks」）只有一條一條鋪的工具，複線是自己鋪兩次；Simutrans 正式版也沒有，論壇上有一個 2026 年 8 月的實驗 patch（forum.simutrans.com topic 24013）加「一次拖曳鋪兩條、先選左或右」的工具，和這裡的切換加左右選擇是同一個想法。兩者都是 GPL，只參考做法，沒有用到程式碼。
+
+**測試**：`DoubleTrackSessionTests`（直線一段：第二條在北邊 5 m，費用是兩條的；接著畫：第二條從上一段的第二條接下去、兩條都穿過節點；放不下時不蓋）、`PassingLoopSessionTests`（點單線：側線在北邊 5 m、兩個轉轍器、號誌站封閉、兩股各一個月台；路線不停靠時 1 列、停靠號誌站後 2 列；太短的軌道拒絕）、`NetworkPlanCommandTests`（兩個新指令的記錄與重播）、`NetworkBuildingSessionTests`（模式的中文名多一個「待避」）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）與實機手感；手機上模式選擇四格的寬度。
 
 ### 204（續二）. 鋪軌時的放大鏡與曲率讀數
 

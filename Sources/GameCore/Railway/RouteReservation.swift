@@ -687,7 +687,7 @@ extension GameWorld {
         func firstHolder(of cover: TrackCover, except id: TrainID, in network: RailwayNetwork) -> TrainID? {
             var first = firstHolding(cover, except: id, among: nil, fouling: true, in: network) ?? ids.count
             for place in 0..<first where isOther(place, id, nil) {
-                guard let claim = claims[ids[place]], !holdsAny(of: claim, id) else { continue }
+                guard let claim = claims[ids[place]], binds(claim, id) else { continue }
                 if waits(claim, forAnyIn: cover)
                     || claim.foulingWaiting.contains(where: { network.foulingSpans[$0]!.contains { cover.contains(.span($0)) } }) {
                     first = place
@@ -712,6 +712,16 @@ extension GameWorld {
                 if own.reserved.spans(of: edge, from: bounds.low, to: bounds.high)!.contains(where: claim.routeContains) { return true }
             }
             return false
+        }
+
+        /// Whether `claim`, the track a following train waits for, keeps
+        /// train `id` from it (decision 56, point 6): unless `id` holds any
+        /// of its route (it is the train ahead), or `id` follows a train
+        /// too and has the lower ID. Two following trains whose routes
+        /// meet would otherwise each wait for the track the other waits
+        /// for, and neither ever go on; the lower goes first.
+        func binds(_ claim: Claim, _ id: TrainID) -> Bool {
+            !holdsAny(of: claim, id) && !(claims[id] != nil && id < claim.train)
         }
 
         /// Whether `claim`'s train waits for `resource`: it is on its route
@@ -916,7 +926,7 @@ extension GameWorld {
         }
         // Track a following train waits for.
         for place in 0..<first where holders.ids[place] != id && holders.tracks[place] != nil {
-            guard let claim = holders.claims[holders.ids[place]], !holders.holdsAny(of: claim, id) else { continue }
+            guard let claim = holders.claims[holders.ids[place]], holders.binds(claim, id) else { continue }
             if holders.waits(claim, forAnyOf: resources, in: network) {
                 first = place
                 break
@@ -981,7 +991,7 @@ extension GameWorld {
     func blockedTrack(except id: TrainID, among: Set<TrainID>? = nil, holders: TrackHolders) -> BlockedTrack {
         var waiting: [Claim] = []
         for (place, other) in holders.ids.enumerated() where other != id && holders.tracks[place] != nil && among?.contains(other) != false {
-            if let claim = holders.claims[other], !holders.holdsAny(of: claim, id) {
+            if let claim = holders.claims[other], holders.binds(claim, id) {
                 waiting.append(claim)
             }
         }
@@ -1390,7 +1400,7 @@ extension GameWorld {
     /// `id`; what it holds or fouls is asked of all the trains at once (see
     /// ``TrackHolders/holding(_:except:fouling:in:)``).
     private func holder(of route: TrackCover, except id: TrainID, waitedForBy other: Train, holders: TrackHolders) -> Bool {
-        guard let claim = holders.claims[other.id], !holders.holdsAny(of: claim, id) else { return false }
+        guard let claim = holders.claims[other.id], holders.binds(claim, id) else { return false }
         return holders.waits(claim, forAnyIn: route)
             || claim.foulingWaiting.contains { network.foulingSpans[$0]!.contains { route.contains(.span($0)) } }
     }

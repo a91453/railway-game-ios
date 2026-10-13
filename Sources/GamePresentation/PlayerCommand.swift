@@ -18,6 +18,9 @@ import GameCore
 public enum PlayerCommand: Hashable, Sendable {
     /// A stretch of track from the network tool (``GameSession/buildNetworkTrack()``).
     case buildTrack(TrackStretch)
+    /// A stretch and the track beside it, as one (decision 204, the tool's
+    /// double-track option): the stretch first, then the parallel.
+    case buildDoubleTrack(TrackStretch, parallel: TrackStretch)
     /// A platform, on a new station or an existing one
     /// (``GameSession/addNetworkPlatform()`` on level track).
     case addPlatform(PlatformAddition)
@@ -32,6 +35,9 @@ public enum PlayerCommand: Hashable, Sendable {
     /// A track beside a platform, with a platform of its own
     /// (``GameSession/addPlatformTrack(beside:layout:side:)``), as planned.
     case addPlatformTrack(PlatformTrackPlan)
+    /// A passing loop with its signal station (``GameSession/addPassingLoop()``),
+    /// as planned (decision 204).
+    case addPassingLoop(PassingLoopPlan)
     /// An edit from a panel or another tool (``Edit``).
     case edit(Edit)
 
@@ -153,11 +159,13 @@ public enum PlayerCommand: Hashable, Sendable {
     public var name: String {
         switch self {
         case .buildTrack: "buildTrack"
+        case .buildDoubleTrack: "buildDoubleTrack"
         case .addPlatform: "addPlatform"
         case .removePlatform: "removePlatform"
         case .removeTrack: "removeTrack"
         case .buildCrossover: "buildCrossover"
         case .addPlatformTrack: "addPlatformTrack"
+        case .addPassingLoop: "addPassingLoop"
         case .edit(let edit): edit.name
         }
     }
@@ -173,6 +181,9 @@ extension GameSession {
         switch command {
         case .buildTrack(let stretch):
             outcome.track = try stretch.build(in: &world, heights: heights)
+        case .buildDoubleTrack(let stretch, let parallel):
+            outcome.track = try stretch.build(in: &world, heights: heights)
+            _ = try parallel.build(in: &world, heights: heights)
         case .addPlatform(let addition):
             // The platform's stretch, on the level edge once levelled.
             var stretch = (edge: addition.edge, start: addition.start, end: addition.end)
@@ -209,6 +220,8 @@ extension GameSession {
             guard try build(plan, in: &world, structure: structure) != nil else { throw .invalidTrackGeometry }
         case .addPlatformTrack(let plan):
             outcome.platform = try build(plan, in: &world)
+        case .addPassingLoop(let plan):
+            outcome.station = try build(plan, in: &world)
         case .edit(let edit):
             return try apply(edit, to: &world)
         case .removeTrack(let id):
@@ -268,7 +281,10 @@ extension PlayerCommand: Codable {
         var edit: Edit?
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
+        var passingLoop: PassingLoopPlan?
         var levelling: PlatformLevelling?
+        /// The double track's parallel, as a `buildTrack` of its own.
+        var parallel: PlayerCommand?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -299,8 +315,7 @@ extension PlayerCommand: Codable {
                 throw invalid("unknown anchor")
             }
         }
-        switch record.kind {
-        case "buildTrack":
+        func stretch() throws -> TrackStretch {
             let controls = try points(record.controls ?? [])
             let curve: TrackCurve
             switch controls.count {
@@ -310,11 +325,18 @@ extension PlayerCommand: Codable {
             }
             guard let transitions = record.transitions, transitions.count == 2 else { throw invalid("a profile has two transitions") }
             guard let structure = record.structure.flatMap(TrackStructure.init(rawValue:)) else { throw invalid("unknown structure") }
-            self = .buildTrack(TrackStretch(
+            return TrackStretch(
                 start: try anchor(record.start), end: try anchor(record.end), from: try coordinate(record.from), to: try coordinate(record.to),
                 curve: curve, profile: TrackProfile(startTransition: transitions[0], endTransition: transitions[1]),
                 structure: structure, ground: try points(record.ground)
-            ))
+            )
+        }
+        switch record.kind {
+        case "buildTrack":
+            self = .buildTrack(try stretch())
+        case "buildDoubleTrack":
+            guard case .buildTrack(let parallel)? = record.parallel else { throw invalid("a double track needs its parallel") }
+            self = .buildDoubleTrack(try stretch(), parallel: parallel)
         case "addPlatform":
             guard let edge = record.edge, let start = record.startDistance, let end = record.endDistance else {
                 throw invalid("a platform needs its edge, start and end")
@@ -343,6 +365,9 @@ extension PlayerCommand: Codable {
         case "addPlatformTrack":
             guard let plan = record.platformTrack else { throw invalid("a platform track needs its plan") }
             self = .addPlatformTrack(plan)
+        case "addPassingLoop":
+            guard let plan = record.passingLoop else { throw invalid("a passing loop needs its plan") }
+            self = .addPassingLoop(plan)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -364,8 +389,7 @@ extension PlayerCommand: Codable {
             case .track(let point): Record.Anchor(kind: "track", edge: point.edge.number, distance: point.distance)
             }
         }
-        switch self {
-        case .buildTrack(let stretch):
+        func write(_ stretch: TrackStretch) {
             record.start = anchor(stretch.start)
             record.end = anchor(stretch.end)
             record.from = [stretch.from.x, stretch.from.y, stretch.from.z]
@@ -374,6 +398,13 @@ extension PlayerCommand: Codable {
             record.transitions = [stretch.profile.startTransition, stretch.profile.endTransition]
             record.structure = stretch.structure.rawValue
             record.ground = stretch.ground.flatMap { [$0.x, $0.y] }
+        }
+        switch self {
+        case .buildTrack(let stretch):
+            write(stretch)
+        case .buildDoubleTrack(let stretch, let parallel):
+            write(stretch)
+            record.parallel = .buildTrack(parallel)
         case .addPlatform(let addition):
             record.edge = addition.edge.number
             record.startDistance = addition.start
@@ -399,6 +430,8 @@ extension PlayerCommand: Codable {
             record.structure = structure.rawValue
         case .addPlatformTrack(let plan):
             record.platformTrack = plan
+        case .addPassingLoop(let plan):
+            record.passingLoop = plan
         case .edit(let edit):
             record.edit = edit
         }

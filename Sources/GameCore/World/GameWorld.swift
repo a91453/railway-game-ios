@@ -628,6 +628,9 @@ public struct GameWorld: Equatable, Sendable {
         if let edge = id.networkNumber, let firstNumber = first.networkNumber, let secondNumber = second.networkNumber {
             splitTrackAsset(edge, into: (firstNumber, firstGeometry.length), (secondNumber, secondGeometry.length))
         }
+        // Decision 204: the lines' journeys run on the parts, as after any
+        // other change to the track.
+        abandonUnservedPassengers()
         return node
     }
 
