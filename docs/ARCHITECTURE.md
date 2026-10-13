@@ -7104,6 +7104,36 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、拖曳時同時畫兩張地圖的效能（實機）。
 
+### 206. 運行圖（只看）
+
+2026-10-13，作者指示開工「運行圖（只看）」（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 11 項、§4 第 4 項）。只改畫面與 GamePresentation，GameCore 不動；存檔版本、golden schema 不動。號碼依工作登記 #231：main 最大 204、美術線登記 205，所以取 206。
+
+1. **畫什麼**（新檔 `Sources/GamePresentation/TrainDiagram.swift`）：一條路線，橫軸時間、縱軸車站。
+   - **縱軸**是路線的停靠站，間距照車站之間的直線距離，每段至少佔全長的 4%（`TrainDiagram.minimumGap`），近的兩站也寫得下站名。環線多一列，最後一列是第一站，繞回來的那段畫到底再從頂端接下去。號誌站（封閉車站，決策 204）的站名用次要文字色。站名左邊的直條：單線（`parallelTracks` ≤ 1）粗、複線細；這要讀軌道，畫面在路線的停靠站或軌道改變時才重算（`singleTrackSections`）。
+   - **計畫線**：每列車的時刻表（`Train/timetable`），每一站畫到站與發車兩點，所以停站是一段水平線、通過不停的站直接斜過去。重複的時刻表每一輪一條，最多 96 輪（`cyclesPerTrain`）。固定時刻表（決策 133）還沒派車的班次照它的時間畫成虛線；派出去之後就是那列車的時刻表。空車回送（決策 172）畫細虛線。
+   - **實際位置**：每列車現在的位置照路線條的算法（`lineTrainDots`，決策 113），畫成路線色的圓點、藏青外框，旁邊寫車名。運行圖開著的時候每次重算就記一點（`TrainDiagramHistory`），連成藏青細線：準點時壓在計畫線中間，誤點時就看得出偏到哪裡。
+   - **誤點**：`GameWorld.lateness(of:)` 滿一分鐘的列車，車名旁寫「誤點 N 分」（警告色，5 分以上用錯誤色），並從現在的位置起，把這一趟剩下的時刻表整段延後 N 分，畫成警告色虛線（「誤點後預估」）。上方一行總結「誤點 N 列，最多 M 分」或「全部準點」。
+   - **交會、越行**：兩趟同時在一個站上。方向相反是交會（◆），同方向、先到的後走是越行（▲），都是暖黃底、藏青框。交會只標在旁邊有單線區間的站或號誌站；複線上兩列在站上錯身不算事件，不標。同一列車的前後兩趟在終點折返不算。行車控制打開時，另外讀 GameCore 排好的等候（`scheduledTrafficWaits()`，決策 59），標在等候列車可以發車的時刻；同一站、同兩列、15 分鐘內的時刻表交會就不重複標。
+2. **為什麼要記歷史**：路線的車每次派車才拿到這一趟的時刻表（`dispatchTrains`），上一趟的時刻表就被換掉了，世界裡沒有過去的班次。所以運行圖開著時自己記住看過的班次與實際位置（畫面暫存，不進存檔），往前最多 4 小時；換路線或時間倒退（讀了舊檔）就清空。剛打開時只有現在這一趟和固定時刻表的未來班次，開著越久越完整。
+3. **畫面**（新檔 `RailwayGameApp/Views/TrainDiagramView.swift`）：路線面板停靠站那一段、路線條下面多一個「運行圖」按鈕，打開全螢幕（iPad、iPhone 都是）。捏合縮放（時間 15 分鐘到 8 小時，車站縮到六分之一），拖動移動；`TrainDiagramViewport` 管這些換算與邊界。打開時兩小時寬、現在在左邊四分之一並跟著時間走；往前後拖就停止跟隨，右上「現在」回來。每 0.5 秒（真實時間）在背景重算一次，不是每個 tick。顏色全取自 `Theme` 與路線色（`Palette.lineColor`），沒有新的色碼。
+4. **寫實運轉第一階段**（存檔 53，另一個 session）合併後：恢復時間會讓 `lateness(of:)` 慢慢變小，運行圖照讀，誤點的虛線與總結就跟著變；準點率若加到 GameCore，總結那一行再加上去即可，這次不等它。
+5. **缺口**：GameCore 沒有存列車實際的到站、發車紀錄，所以運行圖打開之前的實際位置畫不出來；第一版不改 GameCore 去存它。路線的班次是每趟派車時才定，未來的班次（固定時刻表以外）畫不出來。
+
+**參考**（`a91453/railway-reference-private`，2026-10-13 搜「運行圖」「ダイヤ」「diagram」「stringline」「marey」「時刻表」）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` 的 `todayDelayBadge`（1 分起寫「誤點 N 分」，5 分起改成醒目的徽章，以下寫「準點」） | `TrainDiagram.Running.lateText`、`isLate`、`isVeryLate`；總結的「全部準點」 | 照搬門檻與字樣 |
+| 同檔 `inferMeetRun`、`planSameDirectionOvertakes`（交會、越行的分類；GameCore 已移植成 `ScheduledTraffic`，決策 59） | `TrainDiagram.marks` 讀 `scheduledTrafficWaits()`；時刻表上的交會、越行照同樣的分類（相反方向／同方向先到後走） | 讀 GameCore 的移植，不重寫 |
+| `Railway/site_archive_clean/` 的「即將進站」（已移植成 `DepartureBoard`，決策 178）：班次、固定時刻表、已派車的判斷 | `TrainDiagram.trips`、`runTrips` 照 `DepartureBoard.runRows` 的派車判斷 | 照搬規則 |
+| `Ci/`、`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Railway/railway_game_reference_clean/`、`Railway/train_loop_reference_clean/`、`Railway/island_city_reference_clean/`、`Railway/street_scene_reference_clean/` | 無 | 沒有運行圖；「ダイヤ」只出現在網站公告的翻譯文字 |
+
+參考裡沒有運行圖本身，圖是這個專案自己畫的。外部專案（2026-10-13 網路搜尋）：OpenTTD 正式版沒有運行圖，只有論壇上 Timetable Improvement Patch 的構想（「Bildfahrplan」，以路線為單位畫運行圖，tt-forums.net viewtopic p=980882）；JMRI 的 TimeTable 工具（GPL）畫時間—距離圖，車站間距照距離；兩者都只參考做法（傳統的時間—距離圖，Marey／Ibry），沒有用到程式碼。
+
+**測試**：`TrainDiagramTests`（列是路線停靠站、間距照距離、號誌站標出、待避線是單線；每一趟照時刻表畫在停靠站的列上、列車在線上；兩列在號誌站交會、沒有越行、看過的班次與實際位置記住；比時刻表慢的車寫「誤點 N 分」並畫延後的預估線；固定時刻表未派車的班次照時間畫；只用班次判斷交會、越行：單線旁或號誌站才標交會、快車通過停著的慢車是越行、跟車與同一列車折返不標；環線繞回第一站；換路線或時間倒退時歷史清空；捏合、拖動、跟隨現在的換算與邊界；時間刻度落在整數分鐘）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、實機上的手勢手感與大路網（高鐵示範）每 0.5 秒重算的負擔。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
