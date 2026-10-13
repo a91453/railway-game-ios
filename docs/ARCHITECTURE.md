@@ -2497,7 +2497,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - `Railway/` 網站的 `track_lines.geojson`、`track_stations.geojson` 與 `i18n/stations.json` 原檔放在 App 的 `Resources/RealRailways/`（約 940 KB）。GamePresentation 的 `RealRailways` 讀它們（Foundation 的 `JSONDecoder`，Linux 上用 repo 裡的同一份檔案測試）；App 啟動時在背景讀一次（`GameLauncher.loadRealWorldData`，與人口、地點格一起；讀好前開始畫面的實景按鈕停用）。
 - 實景的遊戲地圖：`FollowingMapView` 把錨點 16 公里內的路線畫成 MapKit 的 overlay，照網站的寬度與疊放順序（顏色一律用官方色、不自製，也不用網站的代表色（2026-10-05 作者要求）：台鐵、高鐵與阿里山林鐵沒有路線色，整個系統統一用公司色（台鐵藍 `#005792`、高鐵橘 `#DB5009`、林鐵紅 `#C41229`）；捷運與輕軌每條線用營運機構官網宣告的路線色，官網沒有的用交通部 TDX 的 `LineColor`；找不到官方色的線不載入（`LoadError.noOfficialColor`）；深色、淡化與隱藏照網站的 `railMix` 混出），放在 `.aboveRoads`（道路之上、地圖的標籤之下，和網站在 MapLibre 的位置相同）；車站是 `StationDotsRenderer` 畫的固定大小的圓，網站的第 11 級以上才畫。地圖樣式選單多一個「真實鐵道」（自動、淡化、隱藏，App 的設定，預設淡化），以及「資料來源」。
 - 選點的畫面：地圖畫出全部路線；清單在台灣之後依系統列出 544 個車站，輸入時照網站的比對方式即時列出符合的車站。
-- 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
+- 標示：交通部 TDX 依政府資料開放授權條款第 1 版，OpenStreetMap 依 ODbL 1.0。畫了真實鐵道的地圖在底部帶子的中間顯示短標示（Apple 的標誌在左、法律聲明在右，標示最多佔帶子寬度的 45%）；完整的來源與授權在 `DataSourcesView`（開始畫面、地圖樣式選單）。（標示的字樣自決策 191 起照該決策：角落的短標示，點了打開資料來源頁。）ODbL 的衍生資料庫（兩個 GeoJSON）在公開的 repo 依同一授權提供。
 - 都只是畫面：GameCore 不知道真實鐵道，存檔不存它，玩家的鐵路照舊自己蓋；golden、存檔版本與 property digest 都沒有改。
 
 **實景示範地圖**（2026-10-05 追加，作者要求；對照見 [RAILWAY_REFERENCE_MAPPING](RAILWAY_REFERENCE_MAPPING.md#實景示範地圖)）：
@@ -3405,7 +3405,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 參考檢查（`a91453/railway-reference-private` `a7e377b6`，對照表在 `RAILWAY_REFERENCE_MAPPING.md` 的「實景地圖的 OpenStreetMap 底圖（決策 97）」）：`Ci/` 的 `initOsmMapEngine`（MapLibre GL）、`osmStyleKey` 預設 `positron`（另有 `dark`、`fiord`、`liberty`）、`osmLabelLang` 預設 `local`、地圖下方的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」。
 
 1. **依賴**：`maplibre-gl-native-distribution` 6.31.0（2026-09-11，`exactVersion`；二進位 XCFramework，sha256 `de3aaa43…` 由套件清單核對），只給 App target。`project.yml` 加套件、XcodeGen 2.46.0 重新產生；CI 與 Xcode Cloud 不自動解析套件（`-disableAutomaticPackageResolution`），所以提交 `project.xcworkspace/xcshareddata/swiftpm/Package.resolved`（版本 6.31.0，commit `13e41ab3`）。
-2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
+2. **授權**：MapLibre Native 是 BSD 2-Clause，二進位散布要附上著作權與條款：`Resources/Licenses/MapLibre-iOS-LICENSE.md`（官方 `platform/ios/LICENSE.md`，含它包含的第三方軟體的聲明）隨 App 打包，資料來源畫面多「MapLibre Native」與「OpenFreeMap」兩項。MapLibre 的標誌不是授權要求，所以隱藏；地圖底部的帶子（沿用 `AppleMapBackground.attributionHeight`）左邊是 OpenFreeMap 要求的文字（字樣自決策 191 起照該決策，這句改由 (i) 提供）（`DataSourceCredits.openStreetMapBaseMap`），畫了真實鐵道時接著鐵道的來源，右邊是 MapLibre 的來源按鈕。
 3. **圖磚與樣式**：OpenFreeMap 的公開服務（免費、免金鑰、可商用，沒有服務保證），淺色用 Positron、深色外觀用 Dark（`OpenStreetMapBase.styleURL`）。
 4. **相機**（`OpenStreetMapBase.camera`，GamePresentation，有測試）：MapLibre 的中心是遊戲畫面中點下的地點，縮放等級讓一個世界公尺（錨點緯度的一公尺）畫成和遊戲一樣多的點：z = log2(每公尺點數 × 赤道周長 × cos 錨點緯度 ÷ 512)，沿用 `StationLabels.zoom`。測試確認畫面兩角換到 MapLibre 的像素正好差畫面的寬與高。平面、北朝上，不接受自己的手勢，和 Apple 地圖相同（決策 50）。
 5. **標籤**：OpenFreeMap 的樣式把拉丁名稱與當地名稱疊成兩行；照 `Ci/` 的 `osmLabelLang`，改成一種語言：中文介面依序取 `name:zh-Hant`、`name:zh`、`name`，英文取 `name:en`、`name_en`、`name:latin`、`name`（`OpenStreetMapBase.labelText`）。只換顯示名稱的圖層，道路編號（`ref`）、門牌照舊（`showsName`）。
@@ -4609,7 +4609,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 3. **哪裡用哪份圖磚**（`BaseMapStyle.drawsTaiwan`）：地圖中心 2 km 內有台灣的陸地（水域格網 `WaterGrid.hasLand`，它把廈門等非台灣的陸地當海）就用打包的圖磚，否則（廈門、外國、沒有水域格網）用 OpenFreeMap 的。
 4. **字型**（`tools/basemap/fetch_glyphs.py`）：OpenFreeMap 的 Noto Sans glyph（OFL 1.1，`Resources/Licenses/NotoSans-OFL.txt`）。MapLibre Native 用裝置的字型畫中文、假名與諺文（`allowsFixedWidthGlyphGeneration`），整段都是這些字的範圍不放；地名用到的拉丁字母、標點與符號放真的 glyph（15 個範圍），其餘 179 個範圍是空的檔：MapLibre 某個範圍讀不到時（`GlyphManager::processResponse` 遇到錯誤就不再通知），整塊圖磚的文字都不排，所以要每個可能要的範圍都有檔。共 1.19 MB。打包的字型台灣以外也用。
 5. **App**：`Resources/BaseMap/` 是一整個資料夾（`project.yml` 的 `type: folder`，字型的範圍檔名重複，不能攤平），XcodeGen 2.46.0 重新產生。`BaseMapFiles` 每次啟動把四種樣式（台灣／世界 × 淺／深）寫到 Caches 給 MapLibre 讀；寫不出來時退回 OpenFreeMap 的 Positron／Dark（`OpenStreetMapBase.styleURL`）。標籤換成玩家的語言、站名讓位、真實鐵道插在第一個標籤層下面，都照決策 97、123。
-6. **標示**：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
+6. **標示**（字樣自決策 191 起照該決策）：台灣的地圖底部是「© OpenMapTiles © OpenStreetMap 貢獻者」（`DataSourceCredits.bundledBaseMap`），台灣以外照舊是 OpenFreeMap 的字樣；資料來源畫面多「台灣的 OpenStreetMap 底圖」（ODbL、OpenMapTiles schema 的 CC BY 4.0、Noto Sans 的 OFL）。圖磚與產生它的工具在公開的 repo，依 ODbL 提供。
 7. **不動**：GameCore、存檔、golden、replay；Apple 地圖仍是預設；選點畫面仍是 Apple 地圖。
 8. **山的陰影**（同日，作者問「沒有衛星好嗎」，同意不做衛星底圖、用地形陰影補上立體感；同一個 PR，不另取號）：衛星照片照舊是 Apple 地圖的「衛星」「混合」，給規劃時對照；遊戲的底圖不放衛星照片（照片裡真實的房子、道路、鐵道會和玩家的軌道、遊戲的城市疊在一起，也和遊戲的資料對不齊；授權與容量也不划算）。台灣的底圖改用遊戲自己的地面高度（`taiwan_heights.dat`，決策 124）畫山的陰影：`tools/basemap/build_terrain.py` 把它寫成 Terrarium 編碼的 512 像素 PNG（`raster-dem`），zoom 0–10（台灣約 70 m 一個像素，和高度的 1.875″ 一格相當；zoom 11 是 29 MB，只多了內插），只寫有陸地的圖磚：115 塊、10.0 MB，約 1 分鐘。樣式照 `Railway/` 網站的 `landscape-hillshade`（`rail-3d/integration/map3d.js`：陰影強度 0.42、光從 315°），顏色換成遊戲的（`docs/UI_THEME.md`），畫在森林、公園之上、水與道路之下；只有台灣的樣式有，台灣以外沒有地形資料。陰影和遊戲判斷路堤、路塹、隧道的高度是同一份資料。檢查：圖磚的高度和 `HeightGrid` 的同一點差 4–5 m 以內（像素中心與點的差），阿里山車站 2,207 m、玉山 3,881 m。
 9. **鐵道線形以 OSM 為準**（2026-10-11 作者：「既然底圖都是了就線形以 OSM 為準，只保留林鐵本線的多林一帶」）：`tools/real-railways/match_osm.py` 讀和底圖同一份整包檔，把 `Railway/` 網站原檔（TDX）的 79 條線沿 OSM 的軌道重畫，路線、站名、顏色照舊。做法照參考 `rail-3d/physical/topology.js`（軌道靠共用節點相接，`railwaySystem` 判斷系統，直接移植）：沿原線每 2 km 一個錨點，兩錨點間在該系統的軌道圖上找成本最低的路（長度 ×（1 +（離原線 ÷ 15 m）²）），每段接在上一段的終點，所以雙線只走一條；離原線超過 100 m 或附近沒有軌道的段保留原線並列出。結果：原線到新線的中位數多半 0–5 m，最多 77 m（高捷紅線草衙–機場，原本 `osm_patches.json` 手動修的那段；三段手動修正都在新線 2.5 m 內，修正檔與 `apply_osm_patches.py` 退休）。保留原線的只有：林鐵本線多林一帶約 1 km（`osm_exceptions.json`，OSM 只有已崩塌的多林隧道，way 340255673，最多差 90 m；工具也不再走任何名為已崩塌、已廢的線）；高鐵兩端畫進車輛基地的 1–1.4 km 與林鐵嘉義站頭 200 m（OSM 那裡沒有正線）。車站：同系統、同名的站一起移到新線最近的點（60 m 內，549 個站點，中位數 4 m、最多 57 m），台鐵車埕、高鐵板橋、機捷機場第一航廈超過 60 m 留在原處。
@@ -6014,7 +6014,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 站長角落不再每次繪製都算建議（可能走 `UnservedCluster` 讀整張土地）：只在 `GameSession.stationMasterRefreshKey`（session、編輯序號 `editSerial`、遊戲小時）改變時重算，和祕書室每小時記一次同一節奏（決策 175）。編輯、復原、重做都會讓序號加一。
 - 車隊總覽依載客率、誤點等排序時，順序在打開、換排序鍵或按「立即重新排序」時固定（`GameWorld.fleet(keeping:)`：新買的列車排最後、賣掉的拿掉），遊戲在跑也不會每 tick 重排、點錯列車。
 - 存檔用玩家的速度（決策 99／175 的後續）：`GameSession.worldToSave` 在 session 自己暫停（建造工具 `isPausedForBuilding`、事件 `isPausedForEvent`）時存成以暫停前的速度在跑；玩家自己按的暫停照存。手動存檔、自動存檔、匯出都用它。以前切到背景時自動存檔存成暫停，回來按「繼續」遊戲停著也沒有說明。
-- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
+- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。（#452 之後：進背景與每 15 分鐘的自動存檔改由 `autosaveInBackground(at:)` 在 `GameLauncher` 的序列化佇列寫，一樣不重讀存檔庫；`autosaveCurrentGame(refreshing: false)` 只剩回到開始畫面（`returnToStart`）時用，在主執行緒等佇列寫完。見決策 45 之後的修正「存檔在背景編碼與寫入」。）
 - VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
 
 **之後的修正（第三次全程式碼查 bug，2026-10-12）**：每項先有在 Linux 上失敗的測試。
@@ -6207,6 +6207,49 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 實景地圖由同一個地圖畫面（`MapView`，同一個相機）畫，一樣適用。
 - **沒有驗證的**：Linux 不能建置 App，地圖回報的位置與收合要看 macOS 的 `TutorialJourneyUITests`。
 
+**之後的修正（2026-10-12，#457 合併後派工 session 的發版前審查）**：拖地圖時卡片蓋住車站。
+- **問題**：
+  - 打開的卡片只有在**自己的位置改變時**才檢查有沒有蓋住東西；決定要不要重新打開的鍵只看地圖外框和 required 的**數目**。
+  - #457 讓要點的地方跟著地圖相機走。第 11 步（手機橫拿、路線面板開著）玩家拖地圖時，車站可以滑到卡片底下，而最好的擺放位置沒變（例如 (16, 201, 300×164)），卡片就一直打開蓋在車站上。
+  - 另外，車站進出地圖可見範圍時 required 的數目會變，收合的卡片會打開、量測、再收合（閃一下）。
+- **修法**：
+  - 要點的地方從 `required` 分出來，成為 `TutorialCardPlacement.sites`：擺放與 `leavesStepFree` 照樣把它們當成步驟自己的東西避開。
+  - 卡片自己收合的判斷從 App 的 `@State` 搬到 GamePresentation 的 `TutorialCardFold`（Linux 可測）：
+    - `cardPlaced(at:by:mayFold:)`：打開的卡片放好時，蓋住要的東西就收合（和以前一樣）。
+    - `screenChanged(to:in:mayFold:)`：畫面每次變化都呼叫。
+      - 新的畫面（地圖外框、步驟自己的控制項數目，不含要點的地方）重新打開收合的卡片，和以前的 `Fit` 一樣。
+      - 同一個畫面時，用擺放「現在會放的位置」（卡片上次的大小）檢查；會蓋住就收合，會移開就讓它移。
+    - 要點的地方移動或進出可見範圍，不會重新打開卡片。
+- **測試**（`TutorialCardPlacementTests`，用 #457 那支手機量到的畫面，兩站 48×48）：
+  - 重現：往左拖時，有一段卡片的位置不變、卻從不蓋住變成蓋住。
+  - `TutorialCardFold` 照 App 的事件順序跑兩種拖法（從卡片開著、不蓋站的位置一路往左；先往右拖到一站離開地圖再往左拖過卡片）：每一格顯示的卡片（打開或收合）都不蓋站，收合後在同一個畫面裡不會再打開。
+  - 新的畫面會重新打開收合的卡片；`mayFold` 為否（玩家選過、步驟做完）時不收合。
+  - 拿掉「同一畫面時檢查」或把要點的地方算進重新打開的鍵，這個測試都會失敗。
+
+**之後的修正（2026-10-13，作者實機：手機橫拿、實景地圖從遊戲選單重開教學，第 5 步）**：教學卡片從第 2 步起預設收合。
+- **作者的要求**：卡片（站長）一開始就展開，擋住畫面；要預設收合。第 1 步例外：要展開，讓不想看教學的玩家直接看到「略過」。
+- **改法**（`TutorialCardFold.showsFolded(stepChoice:chapterChoice:waitsForNext:isDone:)`，依序判斷）：
+  1. 玩家在這一步自己按了收合或展開：照玩家的。
+  2. 要按「下一步」的步驟（只讀的第 18、19 步，和按「上一步」回到的步驟）：打開，這樣不展開也能按「下一步／完成教學」走完。還沒做完的「上一步」步驟，若打開會蓋住要做的事，照舊自己收合。
+  3. 第 1 步，以及這一章玩家打開過的步驟：打開。但若會蓋住這一步要的東西就自己收合；以前延續下來的「打開」不會自己收合。
+  4. 其他：收合成膠囊，顯示「第 n 步，共 19 步・章名」和步驟標題（標題就是指示）。玩家點一下就展開。
+- **記住選擇的範圍**：沿用 #448 的「每章記住」，不改成整個教學都記住。
+  - 新的一章常換畫面（面板開關、細節卡片），收合的預設讓新一章的控制項先空出來；想讀說明的玩家一章打開一次（共五章）。
+  - 整個教學都記住的話，打開一次就會一路蓋到底。
+- **收合的膠囊**照舊用同一套擺放，避開控制項、面板與要點的地方（`sites`）。
+- **HUD 的播放／速度**：
+  - `SpeedControl` 一直標成 `tutorialTarget(.speedControl)`，算在 `controls` 裡，卡片放得下時就會避開。
+  - 用手機橫拿的版面（細節卡片開著，有無實景地圖底部 30 點的版權列，卡片高 150–278 點）算第 5 步的擺放，卡片都不蓋到播放／速度。
+  - 作者截圖裡卡片在上方中間、蓋住播放鍵的情形，在 Linux 沒有重現出來。收合預設之後，打開的卡片只在玩家自己展開時出現。
+- **UI 測試**：
+  - `TutorialUITests` 在要讀「下一步／上一步／略過」的地方先展開卡片（新的 `openCard`，已打開就不動）：
+    - 第 2 步（自己前進後是收合的，打開才有「上一步」）；
+    - 軌道那一章的縮放步驟（打開後同一章後面的步驟照樣打開）；
+    - 新一章的月台步驟。
+    - 第 1 步（開始時、從遊戲選單重開後）本來就打開。
+  - 其他測試本來就同時接受打開與收合。
+  - `TutorialJourneyUITests` 不用改：它本來就接受收合的膠囊，`tapNext` 會先展開。
+
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 
 2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -6256,6 +6299,70 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 月台的長度照原本的區間，三段中段的長度因重新取樣可能差幾個單位。
 
 **沒有驗證的**：Linux 不能建置 App；膠囊的位置與 UI 測試要在 macOS CI 上跑，實景地圖上的手感要在 TestFlight 上看。
+
+### 191. 實景地圖的署名縮成角落的短標示
+
+2026-10-12，作者在實機上覺得實景地圖底部那條很長的署名（「© OpenMapTiles © OpenStreetMap 貢獻者・鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）太擠，授權照下面的設計做（功能凍結期的玩家回報介面修正）。號碼依工作登記 #231：決策 191；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**取代**：決策 50（Apple 地圖帶子中間的「鐵道：交通部 TDX、© OpenStreetMap 貢獻者」）、決策 97（帶子左邊 OpenFreeMap 的「OpenFreeMap © OpenMapTiles Data from OpenStreetMap」，`DataSourceCredits.openStreetMapBaseMap`）、決策 151（台灣的「© OpenMapTiles © OpenStreetMap 貢獻者」，`DataSourceCredits.bundledBaseMap`）裡地圖上標示字樣的規則。三個決策其他的部分照舊；標示的位置也照舊（OSM 底圖在左下角，Apple 地圖在標誌與法律聲明之間），帶子（`AppleMapBackground.attributionHeight`，30 點）不動（另案）。
+
+**授權依據**（派工 session 查過的結論）：
+- 不能整條拿掉：OpenMapTiles 的設計授權（CC BY 4.0，其 `LICENSE.md`）要求「visibly credit OpenMapTiles … in the corner of the map」，沒有遊戲、名單頁或收起來的例外；台灣內建的 `taiwan.pmtiles` 與台灣以外的 OpenFreeMap 都是 OpenMapTiles schema。所以不做自動縮起，標示一直顯示。
+- OSMF 的歸屬指引接受「© OpenStreetMap」，並建議讓文字連到來源與授權；不能一開始就藏起來。這裡點標示就打開資料來源頁（OpenStreetMap、ODbL 的連結都在那裡）。
+- MapLibre 說有需要標示的來源時不要隱藏 (i)：照舊顯示，而且台灣的圖磚 source 現在也有 attribution（下面第 3 點）。
+- Apple 地圖的 Apple 標誌與「法律聲明」不能遮（決策 120）：位置照舊。
+- TDX 的服務條款與政府資料開放授權條款沒有規定標示的位置，但「公開展示時應以適當方式清楚標示」，所以地圖上保留「交通部 TDX」的簡稱；條款附件的「顯名聲明」（提供機關、年份、資料名稱與授權聲明）寫在資料來源頁。
+
+**做法**：
+1. **字樣**（`DataSourceCredits.mapCorner(baseMap:railways:in:)`）：
+   - OSM 樣式、沒畫鐵道：中英文都是「© OpenMapTiles © OpenStreetMap」；
+   - OSM 樣式、畫了真實鐵道：「© OpenMapTiles © OpenStreetMap · 交通部 TDX」／「… · MOTC TDX」；
+   - Apple 樣式只在畫了鐵道時：「鐵道：© OpenStreetMap · 交通部 TDX」／「Railways: © OpenStreetMap · MOTC TDX」（Apple 地圖自己標示底圖）。
+   - 台灣以外 OpenFreeMap 的字樣改由 MapLibre 的 (i) 與資料來源頁提供（style 的 source attribution 照舊是 OpenFreeMap 要的那句）。
+   - `bundledBaseMap`、`openStreetMapBaseMap` 刪掉；`railwaysOnMap` 留給選點畫面（`RealWorldPicker`）。
+2. **短標示**（`MapCreditButton`，`AppleMapBackground.swift`）：寬度跟著文字，成為小膠囊；caption2、`minimumScaleFactor` 0.6 → 0.85、`maximumContentSizeCategory` 到 `.extraExtraExtraLarge`（大字也不把帶子撐爆）。它是一個 `UIButton`：點一下打開資料來源頁（`MapView` 傳的 `onCredit`，`screen.panel = .dataSources`，和地圖樣式選單的「資料來源」相同）。點擊範圍往上延伸到整個帶子的高度，並把這個範圍回報給 `MapView`（`onAttributionFrames`），遊戲的手勢在那裡讓路（決策 120 的 `passesThrough`）。是按鈕，所以 UIKit 讓按鈕的單擊優先於地圖 view 自己的點擊手勢（MapLibre、MapKit 的手勢本來就關了縮放與捲動）。無障礙：`.link`，提示「顯示資料來源與授權」／"Shows the data sources and their licences"，識別碼 `map.credit`。
+3. **台灣圖磚的 attribution**（`BaseMapStyle.bundledAttribution`）：內建圖磚的 vector source 加上 `<a href="https://openmaptiles.org/">© OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>`，(i) 列出它與連結。OpenFreeMap 那一行不動。
+4. **資料來源頁**：TDX 的名稱改成正式名稱「交通部運輸資料流通服務平臺（TDX）」；授權欄改成政府資料開放授權條款附件的顯名聲明：提供機關、年份（2026，資料檔的 `source_notes` 都是 2026 年抓取）、資料名稱（軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表、高鐵每日時刻表）與釋出聲明。
+
+**參考庫與外部專案**：參考庫的 `Ci/` 地圖下方是 OpenFreeMap 那句長字樣（決策 97 照搬），`Railway/` 網站在 MapLibre 的 attribution 控制項裡列來源；都沒有「短標示點開來源頁」的做法，這個是本專案自己的。外部只讀了授權文件（OpenMapTiles 的 `LICENSE.md`、OSMF Attribution Guidelines、MapLibre 的 attribution 說明、政府資料開放授權條款與其附件），沒有拿程式碼。
+
+**測試**：`RealRailwaysTests.testEverySourceIsCredited` 釘住 `mapCorner` 四種情況的中英文、TDX 的正式名稱與顯名聲明；`BaseMapStyleTests.testTheStyleDrawsTheBundledTilesOrOpenFreeMaps` 斷言台灣圖磚 source 的 attribution 與兩個連結。
+
+**沒有驗證的**：Linux 不能建置 App；按鈕的點擊、與 MapLibre／MapKit 手勢不衝突、膠囊的樣子要在 macOS CI 與 TestFlight 上看。MapLibre Native 6.31.0 在 style 的 source attribution 與 PMTiles 檔 metadata 的 attribution 都有時 (i) 顯示哪一個沒有驗證。
+
+### 192. 多槽輪替的自動存檔：回到幾分鐘前
+
+2026-10-13，`docs/research/NEXT_PRIORITIES_2026-10-12.md` 波次 1 第 7 項、§10 第 18 題；玩家意見 54.1 第 4 項「蓋錯了不能復原」。遊戲時間一走 Undo 就清空（決策 82），而自動存檔只有一份，每 15 分鐘與離開時都寫同一個 `autosave.json`，新手蓋錯了回不去。A 列車 9 Evolution 把多份自動存檔當主打功能。存檔的內容（`SavedGame`）不變，存檔版本不動；只改 GamePresentation 的存檔資料夾與 App 的畫面。
+
+**參考庫與外部專案**（私有 repo `382b9f8`）：
+- `Ci/reference_snapshot/` 的雲端自動存檔每 15 分鐘一次（`METRO_CLOUD_AUTOSAVE_INTERVAL_MS = 900 * 1e3`，`runMetroCloudAutosave`），但每次都寫第 1 槽（`saveCurrentCityCloudSlot(1, {automatic: true})`），沒有輪替；本機有 3 槽（`normalizeMetroAppLocalSlotNo`），存檔時間顯示成絕對時間（`formatCloudSlotTime`）；`archiveMetroAppCurrentDraftBeforeFreshStart` 把草稿放進第 2、3 槽的空位，滿了就不存。
+- `Railway/city_world_reference/source/assets/` 的備份（`engine-*.js` 的 `Dt`）是最新的在前、最多 3 份、最舊的擠掉（`[新, ...舊].slice(0, 3)`），但只在雲端覆蓋前備份，不是定時。相對時間 `dom-*.js` 的 `p(e, t)`：45 秒內「剛剛」，之後依序四捨五入成分鐘（60 分以內）、小時（24 小時以內）、天。**照搬**成 `SaveLibrary.agoText(from:to:in:)`，中英文字樣相同（英文 "just now"、"N min ago"、"N h ago"、"N d ago"）。
+- `Railway/railway_game_reference_clean/` 的 OpenTTD 只留下設定名（`gui.autosave_interval`、`gui.max_num_autosaves`、`gui.keep_all_autosave`），沒有預設值與輪替的程式。`Simulator/`、`MapBuilder/`、`OpenWorld/` 沒有可用的。
+- 外部專案沒有引用程式碼；「定時存檔輪流寫 N 份、最舊的先走」是 OpenTTD 的 `max_num_autosaves` 的想法（GPL，只取想法）。
+
+**檔案**（`SaveLibrary`）：
+- **最新的**：`autosave.json`，照舊在離開遊戲時寫（App 進背景、回到開始畫面）。舊版只有這一份，名字沒變，所以升級後照樣列出、照樣「繼續」，不需要轉換。
+- **輪替的**：`autosave-<n>.json`，遊戲中每 15 分鐘（`GameLauncher.autosaveInterval`，參考的 `AUTOSAVE_INTERVAL_MS`）寫一份，`n` 是目前最大的號碼加 1（`saveAutosaveSlot`），寫完才刪掉超過 `SaveLibrary.autosaveSlots`（5）的最小號碼與它的新聞旁檔，所以寫失敗不會少一份。用號碼而不用時間決定順序：不必為了找最舊的一份去解每個 7 MB 的檔頭，也不受裝置時鐘影響。舊版 build 會把 `autosave-<n>.json` 當成玩家的存檔列出（只有降版才會遇到）。
+- 兩者都是 `Kind.autosave`；`Entry.slot` 是號碼（最新的是 `nil`）。清單照存檔時間排，最新的在前；同一刻存的兩份，`autosave.json` 在前，再來號碼大的（回到之前時，先存離開的進度、再寫最新的，兩份同一秒）。
+- **不重複佔槽**：定時存檔時，世界和上一份輪替的（或這局剛開始時的）一樣就不寫（`GameLauncher.autosaveSlotInBackground`，`GameWorld` 的 `==`）。玩家暫停後放著不管，不會用五份一樣的存檔把可以回去的那幾份擠掉。
+
+**繼續與回到之前**（`GameLauncher`）：
+- 「繼續」讀最新的一份（所有自動存檔裡存檔時間最新、讀得到的；通常是 `autosave.json`，App 被系統關掉前最後一次定時存檔較新時就是那一份）。
+- **讀檔頭的時間**：檔頭要解整個 JSON，約 10 ms／MB（Linux release，6 份各 22.7 MB 的存檔讀 1.4 s），所以高鐵示範的 6 份約 0.4 s。主執行緒在等的地方（另開一局、在開始畫面回到之前）只讀可能是最新的兩份：`autosave.json` 與號碼最大的那份（`newestAutosave()`；每份輪替的都比前一份晚寫）。遊戲選單的清單在背景讀（`autosavesToGoBackTo()` 是 `async`）。比較世界（`==`）在沒變時約 1 ms（陣列先比儲存區是不是同一個）。
+- 讀其他的自動存檔就是「回到之前」（`load(_:at:)`），**可以反悔**：在遊戲裡回去時，先把現在的進度存成下一份輪替的；在開始畫面回去時，把最新的 `autosave.json` 搬成下一份輪替的（只換檔名，不重寫）。然後讀選的那份，並在背景把它寫成新的 `autosave.json`，所以之後「繼續」接的是回去後的這局。選的那份先讀進來才輪替，輪替刪掉它也不影響。
+- 遊戲選單：「另存或匯出」子選單改名「另存、匯出或回到之前」，多一項「回到之前的自動存檔…」（`menu.goBack`）。第一層列數不變（決策 184 的選單溢出）。按了才讀自動存檔（只讀自動存檔的檔頭，`autosavesToGoBackTo()`），列出每一份的「幾分鐘前 · 遊戲日期 · 資金」讓玩家選（`menu.goBack.<檔名>`）；選項在按下時就決定，遊戲的 tick 不會重建它（#449 的原則）。還沒有自動存檔時，狀態列說每 15 分鐘會存一份。
+- 遊戲中不重讀存檔清單（#425 的做法照舊）：`launcher.entries` 在回到開始畫面時才重讀。
+
+**讀檔畫面**（`StartView`）：「繼續」的說明多一個「幾分鐘前」。「存檔」清單最上面一段「之前的自動存檔」（`olderAutosaves`，最新的在前），每列寫「12 分鐘前 · 存檔日期時間」（`TimelineView(.everyMinute)` 讓它每分鐘更新），下面照舊是遊戲日期與資金、路網規模；可以滑動刪除，不能改名。玩家自己的存檔與讀不到的自動存檔照舊在下一段、照舊可以排序。新字串都是 `language.text` 的兩種語言（`Text(verbatim:)`），沒有改 `Localizable.xcstrings`。
+
+**清理**：
+- 自動存檔最多 6 份（最新的加 5 份輪替）：高鐵示範一份約 7.2 MB，最多約 43 MB；一般的局小得多。
+- 另開一局（新遊戲、示範、讀玩家的存檔、匯入）之前（`archiveAutosave`）：最新、讀得到的那份照舊變成玩家的存檔（`save-<時間>.json`），上一局永遠不會不見；**其他的自動存檔刪掉**，自動存檔永遠只屬於正在玩的這一局，「回到之前」不會回到別局。可能是最新的兩份裡讀不到的（例如較新的 build 寫的）也變成玩家的存檔留著，清單寫出原因，由玩家刪；較舊的輪替不讀就刪。
+- 先搬要留的、再刪：搬不動就不開新局，什麼都沒刪；刪除失敗不擋開新局（只是沒整理到）。
+
+**測試**：`AutosaveSlotsTests`（輪替與最舊的先走、新聞旁檔一起走；最新的不是槽；只認 `autosave-<數字>.json`；搬最新的進槽；相對時間逐值對照參考的四捨五入；定時存檔沒變就不佔槽；繼續讀最新的、其他列在 `olderAutosaves`；在遊戲裡回去並反悔；在開始畫面回去；新遊戲留最新、刪其他、讀不到的留著；舊版只有 `autosave.json` 照樣繼續）。既有的 `GameLauncherTests`、`SaveLibraryTests`、`BackgroundSaveTests`、`SaveNamingTests`、`ReleaseUIFixesTests` 不改。App 的畫面（SwiftUI）只能靠 macOS CI 編譯與實機確認。
+
+**還沒做**：雲端備份；輪替的份數與間隔可以在設定裡改（`SettingsView` 由 #463 佔用，之後再加）。
 
 ### 193. 指令日誌：問題回報附上存檔與指令，在 Linux 重播
 

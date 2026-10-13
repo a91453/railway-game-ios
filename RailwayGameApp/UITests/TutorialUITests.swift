@@ -33,6 +33,7 @@ final class TutorialUITests: XCTestCase {
         let start = app.buttons["start.tutorial"]
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         start.tap()
+        openCard(app)
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
@@ -41,6 +42,8 @@ final class TutorialUITests: XCTestCase {
         // Stage E1: zooming out moves the map; the card leaves the zoom
         // buttons free.
         waitForStep(app, title: "Zoom out to see the town")
+        // Folded from the second step: open it, for the rest of the chapter.
+        openCard(app)
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
@@ -119,6 +122,8 @@ final class TutorialUITests: XCTestCase {
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
+        // A new chapter: the card is folded again.
+        openCard(app)
         waitForEnabled(app, false, "The platform step waits for the mode")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         app.buttons["tutorial.skip"].tap()
@@ -276,16 +281,32 @@ final class TutorialUITests: XCTestCase {
         _ app: XCUIApplication, title: String, _ message: String = "",
         file: StaticString = #filePath, line: UInt = #line
     ) {
-        let heading = app.staticTexts["tutorial.title"]
-        let folded = app.buttons["tutorial.unfold"]
+        let heading = app.staticTexts["tutorial.title"].firstMatch
+        let folded = app.buttons["tutorial.unfold"].firstMatch
+        // Each is read from a snapshot, nil when it is gone: the second step
+        // folds the first step's card, and one that folded between `exists`
+        // and `label` failed the label's lookup.
         let deadline = Date().addingTimeInterval(10)
         repeat {
-            if heading.exists, heading.label == title { return }
-            if folded.exists, folded.label.hasSuffix(title) { return }
+            if (try? heading.snapshot())?.label == title { return }
+            if (try? folded.snapshot())?.label.hasSuffix(title) == true { return }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
-        let shown = heading.exists ? heading.label : folded.exists ? folded.label : "no card"
+        let shown = (try? heading.snapshot())?.label ?? (try? folded.snapshot())?.label ?? "no card"
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
+    }
+
+    /// Opens the tutorial's card, folded from the second step (decision
+    /// 188, later fix), as the player does to read the step and reach Back,
+    /// Next and Skip; an open card is left as it is.
+    private func openCard(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
+        if !card.exists {
+            folded.tap()
+            XCTAssertTrue(card.waitForExistence(timeout: 10), "The folded card did not open", file: file, line: line)
+        }
     }
 
     /// Waits up to 15 seconds for the tutorial's card, open or folded.
@@ -316,6 +337,7 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         XCTAssertTrue(start.label.contains(tutorialLabel))
         start.tap()
+        openCard(app)
 
         let next = app.buttons["tutorial.next"]
         let back = app.buttons["tutorial.back"]
@@ -333,8 +355,11 @@ final class TutorialUITests: XCTestCase {
         // an uncovered network tool, in Traditional Chinese on the iPad).
         selectTool(app, "tool.network")
         // Decision 188: the done step moves on by itself, and the map step
-        // waits for the map to move.
-        XCTAssertTrue(back.waitForExistence(timeout: 10), "The done step did not move on by itself")
+        // waits for the map to move. From the second step the card starts
+        // folded (decision 188, later fix): open it for Back.
+        XCTAssertTrue(app.buttons["tutorial.unfold"].waitForExistence(timeout: 10), "The done step did not move on by itself")
+        openCard(app)
+        XCTAssertTrue(back.waitForExistence(timeout: 10))
         XCTAssertEqual(back.label, backLabel)
         waitForEnabled(app, false)
         back.tap()
@@ -388,6 +413,7 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
+        openCard(app)
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertFalse(back.exists)
         waitForEnabled(app, false)
