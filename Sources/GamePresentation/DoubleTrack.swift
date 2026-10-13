@@ -40,6 +40,23 @@ public enum DoubleTrack {
 }
 
 extension GameSession {
+    /// `plan` and the track beside it (``parallelPlan(beside:in:)``). Decision
+    /// 164 eases a grade only where it fits under the steepest; the track on
+    /// the inside of a curve is shorter and so steeper, so where it would not
+    /// fit eased, both keep the steady grade, as the stretch alone would.
+    func doublePlans(_ plan: EdgePlan, in world: GameWorld) -> (main: EdgePlan, parallel: EdgePlan?) {
+        let parallel = parallelPlan(beside: plan, in: world)
+        guard plan.profile != .uniform, let geometry = parallel?.geometry,
+              !geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade)
+        else { return (plan, parallel) }
+        let steady = EdgePlan(
+            start: plan.start, end: plan.end, from: plan.from, to: plan.to, curve: plan.curve, profile: .uniform,
+            geometry: TrackGeometry(from: plan.from, to: plan.to, curve: plan.curve),
+            joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd
+        )
+        return (steady, parallelPlan(beside: steady, in: world))
+    }
+
     /// The track beside `plan`, on ``networkDoubleSide`` of the way it is
     /// drawn, ``DoubleTrack/spacing`` from it; `nil` when `plan` makes no
     /// edge or the parallel's ends would fall on each other.
