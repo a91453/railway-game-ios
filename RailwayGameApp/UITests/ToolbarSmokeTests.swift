@@ -79,6 +79,8 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(pause.appears(within: 15)); pause.tap()
         let lines = app.buttons["Lines"]
         XCTAssertTrue(lines.appears(within: 10)); lines.tap()
+        // Decision 196, later: the tracks a leg takes are an advanced detail.
+        setAdvanced(true, in: app)
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
         recordRouteUI("before opening route menu", in: app)
@@ -100,6 +102,41 @@ final class LineRoutePreferenceUITests: XCTestCase {
         tapMenuAction(automatic, in: app)
         let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Automatic physical path"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    }
+
+    /// Decision 196, later: the lines panel's "Advanced" switch folds the
+    /// tracks each leg takes and the service day on a phone, says what is
+    /// folded in one line, and shows them again when turned on.
+    func testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld")
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.appears(within: 15)); pause.tap()
+        let lines = app.buttons["Lines"]
+        XCTAssertTrue(lines.appears(within: 10)); lines.tap()
+        setAdvanced(false, in: app)
+        XCTAssertTrue(app.staticTexts["lines.advanced.summary"].appears(within: 10))
+        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
+        XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
+        setAdvanced(true, in: app)
+        XCTAssertFalse(app.staticTexts["lines.advanced.summary"].exists)
+        bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
+    }
+
+    /// Turns the lines panel's "Advanced" switch on or off: the choice is
+    /// kept between launches, so a test sets the one it needs.
+    private func setAdvanced(_ shown: Bool, in app: XCUIApplication) {
+        let toggle = app.switches["lines.advanced"]
+        bringIntoView(toggle, in: app)
+        guard (toggle.value as? String == "1") != shown else { return }
+        // The switch itself sits at the row's trailing edge.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 5), .completed)
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if

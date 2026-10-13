@@ -186,7 +186,12 @@ final class MapInteractionTests: XCTestCase {
         // tried twice, like the anchor's below: a touch can be lost after
         // the pinch to the closest zoom.
         let zoomIn = app.buttons["Zoom in"]
-        let cardFolds = !zoomIn.exists
+        let zoomHidden = !zoomIn.exists
+        // Decision 136: a phone on its side (a compact height) folds the
+        // card when a track starts. Not read from the zoom buttons: beside
+        // the narrower card of decision 106's later fix they stay. A phone on
+        // its side is under 500 points tall, an iPad never.
+        let cardFolds = app.frame.height < 500
         let controls = app.buttons["controls.toggle"]
         func toggleControls(to label: String) {
             func labelled() -> Bool {
@@ -197,11 +202,11 @@ final class MapInteractionTests: XCTestCase {
             if !labelled() { controls.tap() }
             XCTAssertTrue(labelled(), "The details card did not change to \(label)")
         }
-        if cardFolds { toggleControls(to: "Show Controls") }
+        if zoomHidden { toggleControls(to: "Show Controls") }
         XCTAssertTrue(zoomIn.appears(within: 10))
         XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
-        if cardFolds {
+        if zoomHidden {
             toggleControls(to: "Hide Controls")
             XCTAssertTrue(clear.appears(within: 10))
             XCTAssertFalse(clear.isEnabled)
@@ -267,6 +272,55 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)
+    }
+
+    /// TestFlight 56.1: the button to expand the map was tapped by mistake
+    /// beside the building tools' Done, and buying a tile then looked like
+    /// building. It is not shown while the tools are out; choosing a tile
+    /// says so on the button; the pill buys in words, not with a build's ✓.
+    func testTheMapExpansionIsNotMistakenForBuilding() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let expansion = app.buttons["map.expansion"]
+        XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
+
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.appears(within: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10))
+        network.waitUntilSettled()
+        XCTAssertTrue(expansion.disappears(within: 5), "No Expand the Map beside the building tools")
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.appears(within: 5))
+        done.tap()
+        XCTAssertTrue(expansion.appears(within: 5), "Back once the tools are put away")
+
+        expansion.tap()
+        XCTAssertEqual(expansion.label, "Stop expanding the map")
+        // The camera fits the 3 × 3 tiles around the one owned, in the
+        // middle: a quarter of the narrower side below the middle is in
+        // the tile below it, which is for sale.
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let frame = map.frame
+        let below = min(frame.width, frame.height) / 4
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5 + below / frame.height)).tap()
+        let buy = app.buttons["map.expansion.buy"]
+        XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
+        XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")
+        XCTAssertFalse(app.buttons["map.build.confirm"].exists, "Not a build's ✓")
+
+        expansion.tap()
+        XCTAssertTrue(buy.disappears(within: 5), "Done leaves the expansion")
+        XCTAssertEqual(expansion.label, "Expand the map")
     }
 
     func testRotationKeepsTheCameraZoom() {

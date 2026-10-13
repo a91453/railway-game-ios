@@ -52,6 +52,11 @@ struct LinesPanel: View {
     /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
+    /// Decision 196, later: the player's choice for the "Advanced" switch,
+    /// or `nil` for the device's default (folded on a phone).
+    @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -66,6 +71,7 @@ struct LinesPanel: View {
                         // line's stops come first, a new line is one row,
                         // and the switches for every line go last.
                         linesSection
+                        advancedSection
                         newLineRow
                         if let line = session.selectedLine {
                             if line.trains.isEmpty, !line.isRing {
@@ -76,8 +82,10 @@ struct LinesPanel: View {
                             operatingSection(line)
                             servicesSections(line)
                         }
-                        trafficSection
-                        serviceDaySection
+                        if showsAdvanced {
+                            trafficSection
+                            serviceDaySection
+                        }
                     } else {
                         // Decision 100: a new line first, where the panel beside
                         // the map (decision 106) shows it while stations are
@@ -87,9 +95,12 @@ struct LinesPanel: View {
                         if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
                             staffSection(line)
                         }
-                        trafficSection
-                        serviceDaySection
+                        if showsAdvanced {
+                            trafficSection
+                            serviceDaySection
+                        }
                         linesSection
+                        advancedSection
                         if let line = session.selectedLine {
                             lineSection(line)
                             operatingSection(line)
@@ -211,13 +222,52 @@ struct LinesPanel: View {
         }
     }
 
+    /// Decision 196, later (TestFlight 54.1 #6): whether the panel shows
+    /// the service day, stopping patterns, the tracks each leg takes,
+    /// target headways and the network's switches. Folded, their rules run
+    /// as they were set; only the panel leaves them out.
+    private var showsAdvanced: Bool {
+        AdvancedDetails.isShown(
+            stored: storedShowsAdvanced,
+            roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
+        )
+    }
+
+    /// The "Advanced" switch, under the lines where it is seen at once;
+    /// folded, what the network has set there in one line.
+    private var advancedSection: some View {
+        Section {
+            Toggle(isOn: Binding(get: { showsAdvanced }, set: { storedShowsAdvanced = $0 })) {
+                Label {
+                    Text(verbatim: session.language.text("Advanced", "進階"))
+                } icon: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+            }
+            .accessibilityIdentifier("lines.advanced")
+            .accessibilityHint(Text(verbatim: session.language.text(
+                "Shows the service day, stopping patterns, the tracks each leg takes, target headways and traffic control. Hidden, they keep working as set.",
+                "顯示時段、停靠模式、各段股道、目標班距與行車控制。收起時，這些設定照常運作。"
+            )))
+            if !showsAdvanced {
+                Text(verbatim: AdvancedDetails.networkSummary(of: session.world, in: session.language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("lines.advanced.summary")
+            }
+        }
+    }
+
     private func servicesSections(_ line: ServiceLine) -> some View {
         Group {
             ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
-                serviceSection(summary, of: line)
+                // Decision 196, later: a stopping pattern is an advanced detail.
+                if summary.pattern == nil || showsAdvanced {
+                    serviceSection(summary, of: line)
+                }
             }
             // A ring has no patterns.
-            if !line.isRing {
+            if !line.isRing, showsAdvanced {
                 addPatternSection(line)
             }
         }
@@ -629,11 +679,24 @@ struct LinesPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
-            // Stage C2: single or double track between its stops (Stage S1).
-            ForEach(Array(memo.trackCountTexts(line.id, of: session).enumerated()), id: \.offset) { _, text in
-                Label(text, systemImage: "road.lanes")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+            // Stage C2: single or double track between its stops (Stage S1),
+            // an advanced detail (decision 196, later); folded, what the
+            // line has set among them in one line.
+            if showsAdvanced {
+                ForEach(Array(memo.trackCountTexts(line.id, of: session).enumerated()), id: \.offset) { _, text in
+                    Label(text, systemImage: "road.lanes")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            } else if let summary = AdvancedDetails.lineSummary(line, in: session.language) {
+                Label {
+                    Text(verbatim: summary)
+                } icon: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("line.advanced.summary")
             }
             capacityWarning(line)
             ForEach(ServiceLevel.allCases, id: \.self) { level in
@@ -757,7 +820,9 @@ struct LinesPanel: View {
 
     private func serviceSection(_ summary: LineServiceSummary, of line: ServiceLine) -> some View {
         Section {
-            routeMenus(line, pattern: summary.pattern)
+            if showsAdvanced {
+                routeMenus(line, pattern: summary.pattern)
+            }
             Text(summary.callsText)
                 .font(.footnote)
             ForEach(summary.levels, id: \.level) { level in
@@ -862,21 +927,24 @@ struct LinesPanel: View {
                         .monospacedDigit()
                 }
             }
-            // Decision 184, later: a menu the ticks leave alone.
+            // Decision 184, later: a menu the ticks leave alone. Decision
+            // 196, later: a target headway is an advanced detail.
             let language = session.language
-            TickStable(StableKey(level.level, pattern, target, language)) {
-                Menu {
-                    Button("By train count") {
-                        session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
-                    }
-                    ForEach(Self.targets, id: \.self) { minutes in
-                        Button(headwayText(minutes: minutes, in: language)) {
-                            session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+            if showsAdvanced {
+                TickStable(StableKey(level.level, pattern, target, language)) {
+                    Menu {
+                        Button("By train count") {
+                            session.setSelectedLineTargetHeadway(nil, at: level.level, pattern: pattern)
                         }
+                        ForEach(Self.targets, id: \.self) { minutes in
+                            Button(headwayText(minutes: minutes, in: language)) {
+                                session.setSelectedLineTargetHeadway(minutes, at: level.level, pattern: pattern)
+                            }
+                        }
+                    } label: {
+                        Label(targetHeadwayText(target, in: language), systemImage: "clock.arrow.circlepath")
+                            .font(.caption)
                     }
-                } label: {
-                    Label(targetHeadwayText(target, in: language), systemImage: "clock.arrow.circlepath")
-                        .font(.caption)
                 }
             }
         }

@@ -136,6 +136,26 @@ final class MapExpansionSessionTests: XCTestCase {
         XCTAssertFalse(session.isChoosingMapTile)
     }
 
+    /// The button to expand the map is not beside the building tools'
+    /// Done button while they are out (TestFlight 56.1: tapped by mistake
+    /// while building), but stays to end the choosing it started.
+    func testTheExpansionButtonIsHiddenWhileBuilding() {
+        let session = GameSession(world: GameWorld.newGame(eventSeed: 9, buysMap: true), language: .english)
+        XCTAssertTrue(session.showsMapExpansionButton)
+        session.selectTool(.network)
+        XCTAssertFalse(session.showsMapExpansionButton)
+        session.selectTool(.building)
+        XCTAssertFalse(session.showsMapExpansionButton)
+        session.selectTool(.select)
+        XCTAssertTrue(session.showsMapExpansionButton)
+        session.startChoosingMapTile()
+        XCTAssertTrue(session.showsMapExpansionButton)
+        session.stopChoosingMapTile()
+        session.startTutorial()
+        XCTAssertFalse(session.showsMapExpansionButton)
+        XCTAssertFalse(GameSession(world: GameWorld.newGame(eventSeed: 9), language: .english).showsMapExpansionButton)
+    }
+
     func testBuildingOnLandNotOwnedSaysSo() {
         XCTAssertEqual(
             GameError.mapTileNotOwned(MapTile(row: 0, column: 0)).playerMessage(in: .traditionalChinese),

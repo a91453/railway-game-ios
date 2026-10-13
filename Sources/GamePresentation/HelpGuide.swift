@@ -150,10 +150,10 @@ public enum HelpGuide {
             "mapColours", .city,
             question: ("What do the colours on the map mean?", "地圖上的顏色是什麼？"),
             answer: (
-                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. Map Layers shows the same uses as a layer.",
-                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。「地圖圖層」也能用圖層看同樣的用途。"
+                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. What you build is warm yellow, like your stations, with a symbol for what it is (a house, a shop, an office tower). Map Layers shows the same uses as a layer.",
+                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。你自己蓋的建物和車站一樣是暖黃色，上面的圖示表示種類（住宅、商店、辦公大樓等）。「地圖圖層」也能用圖層看同樣的用途。"
             ),
-            keywords: "colour color legend block building land use green blue 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業"
+            keywords: "colour color legend block building land use green blue yellow 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業 黃色 自己蓋"
         ),
         HelpEntry(
             "materials", .city,
@@ -280,6 +280,15 @@ public enum HelpGuide {
                 "打開遊戲選單，選「教學」。開始畫面上站長的第一條線卡片也會開啟約 5 分鐘的教學遊戲。"
             ),
             keywords: "intro guide 導覽 簡介 重看"
+        ),
+        HelpEntry(
+            "reportProblem", .running,
+            question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
+            answer: (
+                "Open the game menu (the three lines at the top), choose More, then Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
+                "打開遊戲選單（頂端的三條線），選「更多」→「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+            ),
+            keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
         ),
     ]
 }

@@ -3632,6 +3632,14 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 換了主體（`ControlDetails.Subject`：工具、選的車站、點的列車、有沒有選取、是否在畫軌道）就清掉記住的版面，照原本 88 點的規則重新決定。
 - 兩種版面的捲動區有識別碼 `details.scroll.middle`、`details.scroll.whole`。UI 測試 `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts`（full lane）：iPhone 橫拿、時鐘照走，跟隨並點選 Train 1，看到列車停靠與行駛各三次（最多 60 秒），期間卡片只用一種版面。Linux 測試 `DetailsCardLayoutTests`。
 
+**之後的修正**（手機精簡面板，2026-10-13，TestFlight 54.1 #6；作者 2026-10-13 定的順序第 2 項）：iPhone 14 Pro 橫拿時路線面板佔了畫面 49 %，地圖被蓋一半。號碼依 #231 都不動；只改 App 與 GamePresentation，GameCore、存檔、golden、replay 都不變。
+- **寬度**（`SidePanelWidth`）：高度是 compact（手機橫拿）時，地圖旁的面板 300 點、最多 36 %，細節卡 300 點、最多 35 %；其他情況照舊（面板 420 點、最多一半，細節卡 340 點、最多 40 %）。iPhone 14 Pro 橫拿（安全區域內約 734 點寬）時，面板 264 點、細節卡 257 點。
+- **相機**（`PlanCamera.centered(on:clearOf:)`、`showing(_:clearOf:)`、`showsClear(_:of:)`）：「看得到」改成在畫面控制項（狀態列、面板、細節卡、底部按鈕、安全區域）留下的地圖裡。選的車站不在那裡時，移到那塊地圖的中間；在路線面板選路線時，路線的站不全在那裡就移到中間，放不下時拉遠（不會拉近）；面板或細節卡打開時也照這樣檢查選的車站或路線。地圖邊緣擋住時照舊停在邊緣。跟隨列車時、教學進行中不動（教學的步驟指著地圖上的位置）。
+
+**測試**：`MapFocusTests`（兩種寬度；面板下的車站移到旁邊地圖的中間；沒有內距時是畫面中間；路線拉遠放進去、不拉近）。
+
+**沒有驗證的**：Linux 不能建置 App；300 點寬的路線面板在實機上排得下（分段選擇器、選單）要在 macOS CI 與下一版 TestFlight 看。
+
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 
 2026-10-09，UI/UX 改版第二輪的 UX-5b（決策 106 之後）：作者的實機截圖裡，鋪軌時卡片塞滿工程選項（構造、新節點高度、平順曲線、緩和坡度、清除、吸附軌道），主要的「鋪設軌道」按鈕在選好兩點之前一直是灰的，而且在畫面的另一邊。只改 App 與 GamePresentation 的兩個小介面：GameCore、存檔、golden、replay 都不變。
@@ -4014,6 +4022,12 @@ GameCore、存檔、golden、replay 都不變。
 
 **參考**：參考庫沒有可以移植的 2D 城市畫法：`Ci/` 的土地來自它沒有附上的向量圖磚；`Railway/taipei_gta_reference/` 是 three.js 的 3D 台北（真實的建物幾何），留給 Phase 8 的 3D renderer。畫法是本專案自己的；SimCity BuildIt（作者的截圖，商業遊戲）只取「建物依密度長高、用途用顏色分」的想法。
 
+**之後的修正（2026-10-13，作者決定：玩家的東西一律暖黃）**：用途色原本有三套互相打架：城鎮建物是住宅綠、商業藍、辦公橘（`cityRoof`、`CityMap.useShades`、說明頁圖例），玩家建物卻是住宅橘、商店紅、辦公藍（`Palette.house`／`shop`／`office`），碼頭、遊艇港、子公司又各一色；TestFlight 玩家問「地圖上的藍、橘、紫、綠是什麼」（`docs/research/PLAYER_FEEDBACK.md` 54.1 第二位 #5）。現在玩家蓋的建物（決策 92、111、173 的八種）一律用車站的暖黃（`Palette.playerBuilding` = `station`，`#FFC86B`），藏青外框不變，種類只靠圖示（決策 121；14 點以下沒有圖示，只看得出是自己的）。城鎮的顏色不變。說明頁「地圖上的顏色是什麼？」多一句玩家建物是暖黃；`docs/UI_THEME.md` 跟著改。作者看過三案（一律暖黃、暖黃三深淺、暖黃加雙框）的預覽，照「一律暖黃」做。
+
+之後（這次不做）：候車徽章用 `metroBlue`、等待環用 `metroAmber`，和路線色同色；拉近時站名沒有底牌。
+
+**沒有驗證的**：實機上的顏色（下一版 TestFlight）。
+
 ### 127. 設定頁的版本與「回報問題」
 
 2026-10-09，作者的評估把「玩家問題回報入口、版本資訊」列為開放測試前必做。之前設定頁只有音樂與音效；App 裡找不到版本，測試者回報時說不出是哪一版。
@@ -4028,6 +4042,8 @@ GameCore、存檔、golden、replay 都不變。
 **沒有驗證的**：Linux 不能建置 App；分享表、版本列的樣子與 iPhone 橫拿時放不放得下，要看 CI 的 Xcode 建置與實機。
 
 **參考**：參考庫沒有對應（`Ci/` 是網站，沒有 App 的版本與回報）；做法是 iOS 的 `ShareLink`，本專案自己寫的。
+
+**之後的修正（2026-10-13，TestFlight 54.1 第二位玩家：「意見要送到哪裡」）**：回報只在設定頁，玩家沒找到。遊戲選單的「更多」多一個「回報問題」，打開只有回報的畫面（`ProblemReportSheet`：版本、附上存檔與指令紀錄的開關、回報按鈕），和設定頁「關於」用同一組列（`ProblemReportRows`，從 `SettingsView` 拆出來）。回報的內容、附件（決策 193）與送出方式（分享表）都不變。放在「更多」裡，遊戲選單維持六列（TestFlight 54.1：手機橫拿時「回到開始畫面」要搆得到）。說明頁多一條「問題或意見要送到哪裡？」。
 
 ### 128. 建站時說出腹地，站長講城市怎麼長
 
@@ -4996,6 +5012,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 買下之後**留在擴建模式**（選的區塊放開，可以再選），遊戲仍暫停，可以復原；按 ✕ 結束擴建才恢復。玩家在這期間自己按了播放或改了速度，就照玩家的。
 - 從擴建切到建造工具，暫停保留，離開工具才恢復；玩家原本就暫停的，結束擴建後仍暫停。
 - 測試：`MapExpansionSessionTests.testChoosingATilePausesTheGameSoABuyCanBeUndone`；`testChoosingAndBuyingATile` 改成買下後仍在擴建模式。
+
+**之後的修正**（TestFlight 56.1 玩家回報「建造時很容易點到購買土地」，2026-10-13）：「擴建地圖」鈕在左下那排，建造時被推到建造工具列「完成」鈕旁邊，誤點後照習慣點地圖、按 ✓ 就買了地，而買地的膠囊和建造的 ✓ 一模一樣。
+- 建造工具開著時（工具不是選取，或教學進行中，和工具列出現的條件一樣）不顯示「擴建地圖」鈕；擴建中仍顯示，用來結束（`GameSession.showsMapExpansionButton`）。選隱藏而不是停用或搬位置：停用的鈕仍在原處讓人點到，搬位置要動其他 session 正在改的版面；建造時本來就用不到擴建。
+- 擴建中，那顆鈕變成暖黃（`Theme.accent`）的膠囊，寫「正在擴建地圖 ｜ ✕ 結束」，模式與離開方式都在畫面上。
+- 買地的膠囊改成購物車圖示＋「購買地塊 $價錢」，暖黃底（`ThemeProminentButtonStyle(isPurchase:)`），識別碼 `map.expansion.buy`；建造的 ✓ 仍是主色的 `map.build.confirm`。
+- 測試：`MapExpansionSessionTests.testTheExpansionButtonIsHiddenWhileBuilding`；UI 測試 `MapInteractionTests.testTheMapExpansionIsNotMistakenForBuilding`（full lane）。
 
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 
@@ -6693,6 +6715,16 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **測試**：`LineGuidanceTests`（兩種語言的下一步提示：不在軌道上、軌道上沒有路線、有路線時沒有；路徑那一行的「未配屬路線」；單線交通管制的警告與雙線、交通管制關閉時沒有；路線選單；未配屬列車的選單排除不在軌道上的與已有路線的；`assignTrain(_:toLine:)` 配屬並寫訊息，拒絕時寫原因）。
 
 **沒有驗證的**：Linux 不能建置 App；面板的順序、選單與購買鍵在橫拿手機上的樣子要在 macOS CI 的 UI 測試與實機上看。
+
+**之後的修正**（「進階」開關，2026-10-13，TestFlight 54.1 #6「手機太擠、不想管配車股道坡度」；作者 2026-10-13 定的順序第 2 項）：路線面板在路線清單下面多一個「進階」開關（`lines.advanced`）。號碼依 #231 都不動；只改 App 與 GamePresentation，GameCore、存檔、golden、replay 都不變。
+1. **收起時不顯示**：時段表（服務日）、行車控制與網路轉乘的開關、停靠模式（各模式的段落與「新增停靠模式」）、各段指定股道的選單、目標班距的選單、路線設定段裡各段單線／雙線的列；列車卡的「時刻表」按鈕在列車沒有自己的時刻表時也不顯示。**規則照跑**，只是畫面不顯示。
+2. **一直顯示**：停靠站（編輯與加入選中的車站）、配屬列車、各時段的列車數、補車段、營運段與路線虧損卡（`LineLossCard`，含教學錨點）、單線列數警告。
+3. **舊存檔的設定看得到**：收起時開關下面一行說網路的狀態（`AdvancedDetails.networkSummary`：行車控制開關、旅客轉乘、時段是否自訂），選中路線的設定段一行說這條線收起的自訂設定（`AdvancedDetails.lineSummary`：幾種停靠模式、幾段指定股道、目標班距；都沒有就不顯示）。
+4. **預設**：iPhone（任一方向的 size class 是 compact）收起，iPad（兩個方向都是 regular）展開；玩家切過就記住（`@AppStorage("linesPanel.showsAdvanced")`，裝置的偏好，不進存檔）。不叫「簡易模式」：它只藏畫面，不改規則。
+
+**測試**：`AdvancedDetailsTests`（預設與記住的選擇；新路線沒有摘要；停靠模式、指定股道、目標班距的兩種語言摘要；網路摘要）。UI 測試 `LineRoutePreferenceUITests` 先打開「進階」再選股道，並多一個開關收起、展開的測試（full lane）。
+
+**沒有驗證的**：Linux 不能建置 App；開關在實機上的樣子要在下一版 TestFlight 看。
 
 ### 198. 實景地圖的新遊戲可以選「地形：平坦」
 

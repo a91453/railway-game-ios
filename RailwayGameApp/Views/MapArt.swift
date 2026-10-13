@@ -950,7 +950,7 @@ enum MapArt {
     private static let glyphMinimumSide = 14.0
 
     /// The buildings the player placed (city building P0-A, decision 92):
-    /// each a square in its kind's colour, edged in ink, always at least a
+    /// each a square in the station's yellow, edged in ink, always at least a
     /// few points across so it stays visible zoomed out, with its kind's glyph
     /// once it is large enough (decision 121).
     private static func drawPlacedBuildings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
@@ -964,18 +964,8 @@ enum MapArt {
             if rect.width < minimum {
                 rect = rect.insetBy(dx: (rect.width - minimum) / 2, dy: (rect.height - minimum) / 2)
             }
-            let colour: Color = switch building.kind {
-            case .house: Palette.house
-            case .shop: Palette.shop
-            case .office: Palette.office
-            case .wharf: Palette.wharf
-            case .marina: Palette.marina
-            case .departmentStore: Palette.departmentStore
-            case .hotel: Palette.hotel
-            case .amusementPark: Palette.amusementPark
-            }
             let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
-            context.fill(shape, with: .color(colour))
+            context.fill(shape, with: .color(Palette.playerBuilding))
             context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
             // Decision 121: what it is, once there is room to read it.
             let side = min(rect.width, rect.height)
