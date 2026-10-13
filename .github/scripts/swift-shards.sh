@@ -172,6 +172,16 @@ set -euo pipefail
 # 2026-10-12 (NEXT_PRIORITIES §2 item 6): ReservationShortcutTests, which
 # asks route reservation the long way it replaced on long legs (about 1.5
 # minutes locally), joins campaigns-10, the shortest shard, rather than rest.
+# 2026-10-13: rest reached the 20-minute limit on main (run 38382988433:
+# 1042 s of tests, all passing, and the job cancelled at its limit while it
+# cleaned up). Eight GamePresentation classes leave it for the shortest
+# campaign shards; a GamePresentation file runs the presentation tier
+# whichever shard runs its class, so a pull request's tier does not change.
+# Seconds on that run: NewGameSavePropertyTests 88 to campaigns-15 (259 s of
+# tests); OnboardingTests 52 and LineLossFixesTests 27 to campaigns-14
+# (272 s); ScreenshotSceneTests 22 and NewGameBalanceTests 21 to campaigns-8
+# (387 s); RealWorldDemoGroundTests 18, RealWorldDataLoadTests 15 and
+# MonthlyReportTests 14 to campaigns-12 (461 s). rest about 1042 -> 786 s.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
@@ -181,14 +191,14 @@ classes_of() {
     campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests" ;;
     campaigns-6) echo "SaveMutationSecondHalfTests EconomyPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
-    campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
+    campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
     campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests ReservationShortcutTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests" ;;
-    campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests LineLossFixesTests" ;;
+    campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
     *) return 1 ;;
   esac
 }
