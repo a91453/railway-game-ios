@@ -556,7 +556,7 @@ final class RealWorldDemoTests: XCTestCase {
         let choice = try XCTUnwrap(choices.first)
         session.setSelectedLineRoute(from: 0, to: 1, preference: choice)
         XCTAssertEqual(session.world.line(id: line.id)?.routePreferences, [choice])
-        XCTAssertTrue(session.message?.text.contains("股道") == true)
+        XCTAssertTrue(session.message?.text.contains("軌段") == true, "decision 201: the map's word for a track")
         session.setSelectedLineRoute(from: 0, to: 1, preference: nil)
         XCTAssertEqual(session.world.line(id: line.id)?.routePreferences, [])
     }
