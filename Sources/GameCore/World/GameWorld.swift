@@ -3008,11 +3008,16 @@ public struct GameWorld: Equatable, Sendable {
     /// one of them waits for moves out of the way (a later fix, see
     /// ``spareStandingAside(in:memo:)``). Returns the train's ID, or `nil`.
     private mutating func resolveDeadlock(memo: inout DispatchMemo) -> TrainID? {
-        // Only such a service is ever sent: without one, nothing to find.
-        guard isTrafficControlEnabled, trains.contains(where: { train in
+        guard isTrafficControlEnabled else { return nil }
+        // Only such a service is ever sent: without one, nothing to find
+        // but a spare in the way of a line's train due to be sent out (a
+        // later fix: a new line's first train held by another line's spare
+        // was never let go while no service was due).
+        let serviceDue = trains.contains { train in
             if case .waitingAtStop? = train.execution, let due = departureDue(of: train), due <= clock.now { return true }
             return isAtPassingPlace(train)
-        }) else { return nil }
+        }
+        guard serviceDue || trains.contains(where: { $0.execution == nil && mayBeSentOut($0, memo: &memo) }) else { return nil }
         let stuck = deadlock(memo: &memo.directions)
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
@@ -3038,12 +3043,25 @@ public struct GameWorld: Equatable, Sendable {
         }
         // A later fix: with no service to step aside, a line's spare in
         // the way steps aside instead.
+        guard serviceDue || stuck.keys.contains(where: { train(id: $0)?.execution == nil }) else { return nil }
         if let aside = spareStandingAside(in: stuck, memo: &memo.directions),
            let index = trains.firstIndex(where: { $0.id == aside.id }) {
             trains[index] = aside
             return aside.id
         }
         return nil
+    }
+
+    /// Whether `train`, without a service, may be due to be sent out by
+    /// its line now: a due run would send it (decision 133), or its stream
+    /// has room for one more train (``isDispatchDue(_:_:at:deadhead:memo:)``
+    /// asked as for an empty run, which a headway does not hold back). A
+    /// cheap first look: ``departureRequest(of:memo:)`` says for sure.
+    private func mayBeSentOut(_ train: Train, memo: inout DispatchMemo) -> Bool {
+        guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }) else { return false }
+        if line.hasRuns { return dueRunDeparture(of: train, on: line) != nil }
+        guard let stream = line.dispatchStream(of: train.id) else { return false }
+        return isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
     }
 
     /// This world with `train` in place of the train of its ID: for asking

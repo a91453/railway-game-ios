@@ -2744,7 +2744,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 5. **不變的**：交通控制關閉時；沒有備用車擋路時；golden、存檔 fixture、replay 的值全部不變；存檔版本、golden schema 不變。
 6. **獨立模型**（`ReferenceDeadlock.swift`）照同樣的規則另寫一次：備用車用 `isDue(…, headway: false)` 判斷；`IdleTrainDeadlockTests.testTheReferenceModelAgreesAtEverySecond` 逐秒比較 15 分鐘。
 
-**Gap**：路線第一次派車的出發（列車還沒有服務）被備用車擋住、而且當下沒有服務到出發時間時，這一分鐘不會看；之後改 `resolveDeadlock` 的效能工作（NEXT_PRIORITIES 第 6 項）會重寫這個前提，留給那時一起考慮。參考庫與 OpenTTD 都沒有「閒置車自動讓路」可以移植（見 PR）。
+**之後的修正**（2026-10-13，原本的 Gap）：路線第一次派車的出發（列車還沒有服務，例如新線的首班）被另一條線的備用車擋住，而且當下沒有服務到出發時間時，第 3 點的前提讓這一分鐘不看，新線就永遠開不出去。現在前提多一個條件：有沒有服務的列車，路線現在可能要送它出去（`mayBeSentOut`：決策 133 的班次到點，或 `isDispatchDue(…, deadhead: true)`，和判斷備用車用的是同一個便宜的查法，所以備用車本身不會觸發）。這時才找死結，而且只有死結裡有這種列車時才讓備用車讓路，不移動服務。獨立模型照同樣的規則改（死結裡有沒有服務的列車也算），`IdleTrainDeadlockTests.testANewLinesFirstTrainHeldByASpareIsLetGo`（修正前一小時都開不出去）與 `testTheReferenceModelLetsTheNewLineGoAtTheSameSecond`（逐秒比較 10 分鐘）。golden、存檔 fixture、replay 不變；參考庫與 OpenTTD 沒有可移植的（同上）。
 
 ### 59. 排定交會、同向待避與月台成本（Stage V3）
 
