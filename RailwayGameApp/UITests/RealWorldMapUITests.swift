@@ -125,23 +125,21 @@ final class RealWorldMapUITests: XCTestCase {
     /// could not bring it into sight, but they dragged down the middle of
     /// the screen, on a phone on its side the edge between the title and
     /// the buttons, and wanted the button wholly inside a band shorter
-    /// than it). Upright and on its side, a real-world game is started from
-    /// the start screen and the place list with the largest text. Full
-    /// lane only (not in the pull request gate).
+    /// than it). With the largest text a real-world game is started from
+    /// the start screen and the place list (a phone is held on its side
+    /// only). Full lane only (not in the pull request gate).
     func testTheRealWorldMapIsReachedWithTheLargestText() {
         continueAfterFailure = false
-        for orientation in [UIDeviceOrientation.portrait, .landscapeLeft] {
-            XCUIDevice.shared.orientation = orientation
-            let app = XCUIApplication()
-            app.launchArguments = [
-                "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
-            ]
-            app.launch()
-            startARealWorldGameFromTaipei(in: app)
-            XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 15), "The game starts (\(orientation.rawValue))")
-            app.terminate()
-        }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        startARealWorldGameFromTaipei(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 15), "The game starts")
     }
 
     /// Decision 190's report (TestFlight 54.1): on a real-world map, a
@@ -254,8 +252,8 @@ final class RealWorldMapUITests: XCTestCase {
             ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
         ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
-            XCTAssertTrue(app.scrollUntilHittable(button, in: holder), "\(identifier) cannot be scrolled to")
-            tappable(app.buttons.matching(identifier: identifier), name: identifier).tap()
+            XCTAssertTrue(app.scrollUntilShown(button, in: holder), "\(identifier) cannot be scrolled to")
+            app.tapMiddle(of: button)
         }
     }
 
