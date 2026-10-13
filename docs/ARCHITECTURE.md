@@ -2508,6 +2508,19 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 簡化：只有中心線一股，瑞芳、猴硐、三貂嶺、十分加 400 m 的待避線；真實的宜蘭線是雙線。運量是遊戲的數字，不是真實的運量。
 - 建造的時間：Linux 的 release 約 0.4 秒、debug 約 8 秒，幾乎都在 GameCore 每段軌道的間距與交叉檢查（約 200 段）；實機沒有量。
 
+**之後的修正（2026-10-13，TestFlight 56.1 兩位玩家回報）：底圖一直跟著遊戲的相機，而且一直是平的、北朝上。**
+- 回報：(A)「從 OpenStreetMap 切到衛星，路線會直接跑掉」；(B) 鋪軌時「路軌呈現 3D」、「調節角度期間離開原定的位置」。
+- 原因（Simulator 量到的，VERIFIED）：`FollowingMapView` 用 `setVisibleMapRect` 把整個 view 的範圍交給 MapKit，但 MapKit 把它放進 view 的 layout margins 裡面（決策 120 為了 Apple 的標誌與法律連結設的底部帶子，加上安全區域），不是整個 view。iPhone 橫拿時（874 × 402 點，左右各 72、下 27），地圖小了約五分之一、偏下：量到的四邊是左 −86、上 −24、右 +86、下 +55 點（run 38356653482；未修正的版本同樣錯開）。三種 Apple 底圖都一樣；預設的 OpenStreetMap 不受影響，所以玩家是在切到衛星時看到路線「跑掉」。B 的「離開原位」也是相對底圖：遊戲自己的畫（預覽、起點旗、節點）用同一個相機，彼此一致，Linux 上掃過各種角度、高度與構造（地面、高架），預覽的頭尾都在起點與終點上。另外，MapKit 自己再改範圍（載入完、套用樣式、放大不到）時沒有人拉回來。
+- 改法：
+  - `BaseMapFollowing`（GamePresentation，Linux 測試）決定要不要再要一次：新的範圍一定要；同一個範圍只在 MapKit 離開它上一次的回應時再要，最多 3 次，所以 MapKit 一直不肯也不會無限迴圈。它也量出 MapKit 拒絕放大時多顯示了幾倍（`refusal`，同一個中心、寬 2% 以上）。
+  - `FollowingMapView` 交給 MapKit 的是遊戲在 layout margins 裡面那一塊的範圍，MapKit 放進 margins 之後，整個 view 就和遊戲的相機一致。量的是 MapKit 把 view 的四個角畫在哪裡（`convert(_:toCoordinateFrom:)`），不用 `visibleMapRect`（它在 Simulator 說的不是畫出來的範圍）。
+  - 在 `mapView(_:regionDidChangeAnimated:)`、`mapViewDidFinishLoadingMap` 重新套用（設定中不重入），畫完（fully rendered）後重試的次數重新算；`cameraZoomRange` 放到最近，讓 MapKit 放大圖磚而不是停在較遠。
+  - MapKit 還是拒絕時，`MapView` 記下那個縮放（`baseMapZoomLimit`，換底圖樣式就忘記，最低不低於每 16 m 8 點），相機不再更近、「放大」按鈕停用，疊圖就對得上。OpenStreetMap（MapLibre）不受影響。
+  - 兩種底圖都有 `allowsTilt`（預設 false）：每次套用時，相機有傾斜或旋轉就設回正上方、北朝上。之後的「拉近傾斜」3D 模式（決策 97 指向 MapLibre）可以打開。
+  - 選地點的畫面（`RealWorldPicker`）：只能移動、縮放（`interactionModes: [.pan, .zoom]`），樣式平面（`.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)`），中心改取相機的中心：地圖傾斜時 region 的中心不在「+」下面，開局地點可能和「+」不同。
+- UI 測試：Debug 版在 `-ui-testing` 下，`map.base` 讀出 Apple 地圖是否顯示遊戲相機的範圍（四邊都在 1 點內是 `follows`，否則 `wider` 或 `off` 加上左、上、右、下各差幾點，傾斜時加 `tilted`）；`RealWorldMapUITests/testAppleMapLinesUpAfterChangingToSatellite` 從 OpenStreetMap 切到衛星、放大到底，等它讀出 `follows`（full lane，需要 Apple 的圖磚）。
+- 沒做：兩個底圖 view 都留著、切換時只隱藏一個（M）。
+
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
 
 2026-10-03。E2 合併、實機確認之後，作者決定**現在**做 F3，排在 F2、U-min、V 之前，並交給 Claude Code 選「對未來幫助最大、又不影響新功能」的做法。這一條記下範圍與步驟；每一步的細節在各自的 PR 補上。
@@ -6541,6 +6554,38 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **限制**：
 - 「車太多」用的是現在配屬的列車：期間中加過或撤過車，會照現在的車隊算。
 - 「班距太長」從發車次數推回班距：有停站模式（快車）的路線，每趟的發車次數比各站停少，算出來的班距會偏長；但它還要配上九成的滿載才會出現。
+
+**之後的修正（2026-10-13，一鍵修正與站長）**：決策 194 留下的前兩項。只改 GamePresentation 與 App，GameCore 不動；存檔版本、決策編號、golden schema 都不動。
+
+- **一鍵修正**（`Sources/GamePresentation/LineLossFixes.swift`，`GameWorld.lineLossFix(_:on:)`）：路線卡每個原因下面一顆按鈕，按了先確認，再經 `GameSession.applyLineLossFix(_:to:)` 的 `perform` 做，指令日誌記得到（決策 193）。識別碼 `line.loss.fix.<種類>`，按鈕至少 44×44。
+
+| 原因 | 按鈕 | 做什麼 |
+| --- | --- | --- |
+| 車太多 | 撤下一列 | 最後配屬的那一列移出路線（`unassignTrain`）。新增 `GameSession.unassignTrain(_:)`，`unassignSelectedTrain` 改用它，訊息相同。只有一列時不給按鈕 |
+| 班距太長 | 加開 N 列 · 價錢（不用買時是「班距縮短到 X 分」） | 班距取 `LineLossFix.headways`（路線面板的目標清單 5、10、15、20、30、60 分）裡比現在最長的那個時段短的下一檔；各時段的目標改成「這一檔」與「原本」中較短的。只買自己的服務缺的列數（`lineStaffingPlan` 需要的減掉現有的），型式與節數照路線的第一列。新的 `PlayerCommand.Edit.addLineTrains`，和 `staffLine` 共用買車、放到起點、配屬的程式（`GameSession.addTrains`）。錢不夠時按鈕停用，下面寫「錢不夠：需要 $X」。環線、單線交通管制下放不下更多車（`lineMaximumTrains`）、縮短也不會比現在快時，不給按鈕 |
+| 載客率低 | 班距拉長到 X 分 | 取比現在最短的那個時段長的下一檔；各時段的目標改成「這一檔」與「原本」中較長的（`setLineTargets`）。已經 60 分時不給按鈕 |
+| 空車回送太多 | 沒有按鈕，只有說明 | 沒有現成的指令能讓列車停在路線兩端（見缺口） |
+
+- 「現在的班距」：各時段 `lineHeadway`，列車數不夠跑那個班距時取「來回分鐘 ÷ 自己服務的列數」（無條件進位）。只看路線自己的服務，不看停站模式。
+- 確認對話框說會發生什麼：撤下的列車仍屬於玩家、不再算路線的開銷；加開要花多少錢、每列每天有開銷；拉長班距旅客要等比較久。
+- 修正和診斷一起放在 `LineLossMemo`（同一個鍵：指令、路線、已結算日）；錢夠不夠在畫面上每次比，卡片仍是 `Equatable` view。
+
+- **站長講虧損主因**（`StationMasterAdvice.lineLosing`）：
+  - 經營模式下，期間內虧最多、而且有原因的那條客運線（`GameWorld.worstLosingLine()`，同額取 ID 小的），講它的第一個原因與該試什麼，例如「「藍線」虧錢，主要是車太多：撤下一列試試。點一下打開路線。」
+  - 順序：排在蒸汽列車太短、第一條線虧錢（決策 177）、負債、颱風、車站滿、路線沒有列車之後，車站擁擠之前。第一條線虧錢那則已經說了「延伸路線」，同時成立時只說那則，不重複。
+  - 點泡泡：選取那條線，打開路線面板（卡片就在「營運」段）。新聞紀錄的鍵是 `losing:<線>`，「前往」也是那條線。
+  - 不每個 tick 算：`GameSession.worstLosingLine` 只在 `commandRevision` 或已結算日改變時重算（`LineLossLeaderMemo`）；站長與秘書的紀錄每個遊戲小時問一次，都讀它。
+  - 一個既有測試的預期跟著改：`StationMasterAdviceTests.testOnceALineRunsItSaysHowTheTownsGrew` 的經營模式世界，第一條線每趟幾乎是空的，現在在城鎮成長之前先說這條線虧錢（載客率低）；自由模式仍說城鎮成長。
+
+- **缺口**：
+  - 空車回送：GameCore 沒有「讓列車在路線兩端待命」的指令，要的話得加 GameCore 指令（之後另開 PR）。
+  - 教學最後的「讀路線卡」與準點率，照決策 194 原本的安排另開 PR。
+
+- **參考**：參考庫沒有一鍵修正或「虧損主因」的建議（決策 194 的參考段已查過 `Ci/` 的財務摘要與高鐵說明）。按鈕、門檻與站長的規則是本專案自己的；沒有取用外部專案的程式。
+
+- **測試**（`LineLossFixesTests`）：撤下一列、加開（只買缺的、扣對錢、目標改對）、拉長班距（一次一檔），各自照預期改變世界並記進指令日誌；重按撤下、錢不夠、路線已刪除時被拒絕，世界不變。交通管制下單線只放得下一列時不給加開。站長在虧損的線講對原因，沒有虧損線、自由模式時不講，負債時先講負債；session 的快取同一天的 tick 不重算、指令後才重算。兩種語言的按鈕、確認與站長的話。
+
+- **沒有驗證的**：Linux 不能建置 App；按鈕、確認對話框、點泡泡打開路線面板，要 macOS CI 與實機確認。
 
 ### 195. 觀看尺度：跟隨列車一鍵 1×／10×、HUD 的實際速度與時速、拉近時接近真實的線寬
 

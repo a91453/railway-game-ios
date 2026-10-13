@@ -133,6 +133,15 @@ struct MapView: View {
     /// credits. Nothing of the game is drawn there, and a touch there
     /// reaches them.
     @State private var attributionFrames: [CGRect] = []
+    /// Whether Apple's map shows what the camera shows, for the UI tests
+    /// (``FollowingMapView/followingText``).
+    @State private var baseMapFollowing = ""
+    /// How close Apple's map would come, in points per
+    /// ``MapScale/referenceLength``, when it stopped short of the game's
+    /// closest zoom (its imagery does not reach that close): the camera
+    /// comes no closer, so the railway drawn over it lines up (decision
+    /// 50's later amendment). Forgotten when the map's style changes.
+    @State private var baseMapZoomLimit: Double?
     /// What the map shows of traffic control (Stage V4e), taken from the
     /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -191,7 +200,8 @@ struct MapView: View {
             let zoomGivesWay = session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
-            let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
+            let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
+            let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
             // twenty times as they come on, not on every tick.
@@ -428,7 +438,7 @@ struct MapView: View {
                             .padding(.trailing, 12)
                         }
                         if !zoomGivesWay {
-                            zoomControls(camera: projection)
+                            zoomControls(camera: projection, limit: zoomLimit)
                         }
                     }
                     .padding(12)
@@ -554,7 +564,9 @@ struct MapView: View {
                                 language: session.language,
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
-                                onCredit: { screen.panel = .dataSources }
+                                onCredit: { screen.panel = .dataSources },
+                                onFollowing: baseMapFollowingReport,
+                                onZoomLimit: limitZoom
                             )
                         }
                     }
@@ -570,6 +582,9 @@ struct MapView: View {
                     }
                 }
             }
+            .overlay(alignment: .topLeading) {
+                baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
+            }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
                 if zoning {
@@ -579,6 +594,11 @@ struct MapView: View {
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
+            }
+            .onChange(of: mapStyle) { _, _ in
+                // Another style's map (satellite imagery or the street
+                // map) may come closer, or less close.
+                baseMapZoomLimit = nil
             }
             .onChange(of: bounds) { _, _ in
                 camera = openingCamera(viewport: viewport)
@@ -1003,7 +1023,53 @@ struct MapView: View {
         .accessibilityIdentifier("map.layers")
     }
 
-    private func zoomControls(camera: PlanCamera) -> some View {
+    /// Whether the zoom-in button zooms: not past the closest zoom, nor
+    /// past `limit` (``baseMapZoomLimit``).
+    private func canZoomIn(_ camera: PlanCamera, limit: Double?) -> Bool {
+        guard camera.canZoomIn else { return false }
+        guard let limit else { return true }
+        return camera.referenceSize < limit * 0.999
+    }
+
+    /// UI tests only: whether Apple's map lines up (`map.base`).
+    @ViewBuilder
+    private func baseMapReadout(shown: Bool) -> some View {
+        if Self.readsBaseMap, shown {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.base")
+                .accessibilityValue(Text(verbatim: baseMapFollowing))
+        }
+    }
+
+    /// Where Apple's map says how it follows, under UI tests only.
+    private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
+        guard Self.readsBaseMap else { return nil }
+        return { baseMapFollowing = $0 }
+    }
+
+    /// Apple's map would come no closer than `limit`. Never below MapKit's
+    /// level 16 or so: a limit that low would be a mistake.
+    private func limitZoom(_ limit: Double) {
+        baseMapZoomLimit = max(limit, MapScale.largestSize / 8)
+    }
+
+    /// Whether the map reads out how Apple's map follows it
+    /// (``FollowingMapView/followingText``): in a Debug build under UI
+    /// tests only.
+    private static var readsBaseMap: Bool {
+        #if DEBUG
+        UITestTrace.isOn
+        #else
+        false
+        #endif
+    }
+
+    /// `limit`: how close the base map lets the camera come
+    /// (``baseMapZoomLimit``).
+    private func zoomControls(camera: PlanCamera, limit: Double?) -> some View {
         HStack(spacing: 0) {
             Button {
                 self.camera = camera.zoomedOut()
@@ -1024,7 +1090,7 @@ struct MapView: View {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(!camera.canZoomIn)
+            .disabled(!canZoomIn(camera, limit: limit))
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)

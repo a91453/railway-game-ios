@@ -151,23 +151,39 @@ extension GameSession {
     static func staff(
         _ id: LineID, headway: Int64, type chosen: TrainType?, cars: Int, in world: inout GameWorld, language: DisplayLanguage
     ) throws(GameError) -> (held: Int, unfit: Int) {
-        guard let plan = world.lineStaffingPlan(id, headway: headway, type: chosen, cars: cars), let journey = world.lineJourney(id) else {
+        guard let plan = world.lineStaffingPlan(id, headway: headway, type: chosen, cars: cars) else {
             throw .unknownLine(id)
         }
+        let left = try addTrains(plan.trains, of: plan.type, cars: plan.cars, to: id, in: &world, language: language)
+        try world.setLineTargetHeadways(id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil)
+        return left
+    }
+
+    /// Buys `count` trains of `type` with `cars` cars, places each where
+    /// line `id`'s trips start and assigns it to the line's own service, as
+    /// ``staff(_:headway:type:cars:in:language:)`` does: a train that
+    /// cannot be placed there stays off the track and is not assigned.
+    /// Returns how many were left off because the berth was held and how
+    /// many because they were too long (decision 194, later: the line
+    /// card's "run more trains" buys only those its headway lacks).
+    static func addTrains(
+        _ count: Int, of type: TrainType?, cars: Int, to id: LineID, in world: inout GameWorld, language: DisplayLanguage
+    ) throws(GameError) -> (held: Int, unfit: Int) {
+        guard let journey = world.lineJourney(id) else { throw .unknownLine(id) }
         // Trains left off the track: the berth held under traffic
         // control, or too long to stand there.
         var held = 0, unfit = 0
         // Decision 168: a high-speed line is run with high-speed sets,
         // where the game offers them (not in an era with types of its own).
-        for _ in 0..<plan.trains {
+        for _ in 0..<max(0, count) {
             let name = Self.suggestedTrainName(for: world, in: language)
             let train: Train
-            if let type = plan.type {
+            if let type {
                 train = try world.purchaseTrain(named: name, as: type)
             } else {
                 train = try world.purchaseTrain(named: name)
             }
-            if plan.cars > Train.minimumCars { try world.setTrainCars(train.id, to: plan.cars) }
+            if cars > Train.minimumCars { try world.setTrainCars(train.id, to: cars) }
             var placed = world
             do throws(GameError) {
                 try Self.placeAtStart(train.id, of: journey, in: &placed)
@@ -178,7 +194,6 @@ extension GameSession {
             }
             try world.assignTrain(train.id, to: id, pattern: nil)
         }
-        try world.setLineTargetHeadways(id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil)
         return (held, unfit)
     }
 }
