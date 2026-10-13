@@ -121,6 +121,17 @@ enum Palette {
     static let groundLine = hex(light: 0x6B4F2E, dark: 0xD7B884)
     static let water = hex(light: 0x7FB8E0, dark: 0x3E6E99)
 
+    /// Decision 205: what a mark near the lines is drawn on, the panels'
+    /// white (``Theme/panel``), edged and lettered in ``ink`` (13.29:1 on
+    /// the light, 9.64:1 on the dark #30376A): a line may be any colour
+    /// the player picks, so these marks tell themselves apart by shape and
+    /// by navy and white, never by a hue a line could have.
+    static let markerFill = hex(light: 0xFFFFFF, dark: 0x30376A)
+    /// Decision 205: a selected train's edge, the stations' warm yellow
+    /// inside an ``ink`` line, where it was the accent's teal, the track's
+    /// colour.
+    static let trainSelection = station
+
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))
     static let metroGreen = dynamic(light: (0.13, 0.62, 0.36), dark: (0.22, 0.78, 0.48))
@@ -214,6 +225,9 @@ enum MapGlyph: String {
     case hotel = "MapGlyphHotel"
     case amusementPark = "MapGlyphAmusementPark"
     case crowd = "MapGlyphCrowd"
+    /// Decision 205: one person, the waiting passengers' count beside it;
+    /// the crowding set's one-person step (``crowd`` two, ``full`` three).
+    case person = "MapGlyphPerson"
     case full = "MapGlyphFull"
     case warning = "MapGlyphWarning"
     /// ``warning``'s outline without its cut-out mark, drawn under it.
