@@ -89,7 +89,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let platform = app.buttons["line.route.choice.-1.0.1.0"]
         tapMenuAction(platform, in: app)
         XCTAssertTrue(route.appears(within: 10))
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform track #"), object: route)
+        // "Platform on track #N · route chosen automatically" since decision
+        // 201 (RoutePreview.choiceText).
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform on track #"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
         // Choosing a path posts a status message, pinned to the bottom of
         // the sheet over the row at the bottom of the screen: the next tap
