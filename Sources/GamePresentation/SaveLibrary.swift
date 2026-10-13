@@ -561,6 +561,9 @@ public struct SaveSummary: Codable, Hashable, Sendable {
     /// `true` for a real-world map (Stage E2); absent for a blank one, and
     /// in every summary written before E2.
     public let realWorld: Bool?
+    /// `true` for a game with unlimited funds (decision 200), whose funds
+    /// read "∞"; absent otherwise, and in every summary written before it.
+    public let unlimitedFunds: Bool?
 
     public init(world: GameWorld) {
         seconds = world.clock.now.seconds
@@ -569,6 +572,12 @@ public struct SaveSummary: Codable, Hashable, Sendable {
         lines = world.lines.count
         trains = world.trains.count
         realWorld = world.geoAnchor == nil ? nil : true
+        unlimitedFunds = world.economy.unlimitedFunds ? true : nil
+    }
+
+    /// The funds: the balance, or "∞" with unlimited funds.
+    private var fundsText: String {
+        unlimitedFunds == true ? "∞" : Money(balance).moneyText
     }
 
     /// The game date and the funds, as a save's list shows them first
@@ -576,7 +585,7 @@ public struct SaveSummary: Codable, Hashable, Sendable {
     /// "第 1 年 1 月 3 日（三）14:20 · 資金 $ 12,345".
     public func dateAndFundsText(in language: DisplayLanguage) -> String {
         let date = GameTime(seconds: seconds).calendarText(in: language)
-        let money = Money(balance).moneyText
+        let money = fundsText
         return language.text("\(date) · Funds \(money)", "\(date) · 資金 \(money)")
     }
 
@@ -598,7 +607,7 @@ public struct SaveSummary: Codable, Hashable, Sendable {
     /// "Real-world map · " on one.
     public func text(in language: DisplayLanguage) -> String {
         let time = GameTime(seconds: seconds).displayText(in: language)
-        let money = Money(balance).moneyText
+        let money = fundsText
         let map = realWorld == true ? [language.text("Real-world map", "實景地圖")] : []
         switch language {
         case .english:
