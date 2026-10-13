@@ -270,24 +270,26 @@ struct StationPanel: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             ForEach(Array(platforms.enumerated()), id: \.offset) { index, platform in
-                Menu {
-                    ForEach(PlatformTrackLayout.allCases, id: \.self) { layout in
-                        ForEach(PlatformTrackSide.allCases, id: \.self) { side in
+                // Decision 184, later: a menu the ticks leave alone.
+                let choices = session.platformTrackMenuChoices(beside: platform)
+                TickStable(StableKey(index, platform, choices, language)) {
+                    Menu {
+                        ForEach(choices) { choice in
                             Button {
-                                session.addPlatformTrack(beside: platform, layout: layout, side: side)
+                                session.addPlatformTrack(beside: platform, layout: choice.id.layout, side: choice.id.side)
                             } label: {
-                                Text(verbatim: "\(layout.title(in: language)) · \(session.platformTrackSideText(side, of: platform))")
+                                Text(verbatim: choice.title)
                             }
                         }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Platform \(index + 1): add a platform track", "第 \(index + 1) 月台：加月台軌道"))
+                        } icon: {
+                            Image(systemName: "plus.rectangle.on.rectangle")
+                        }
                     }
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Platform \(index + 1): add a platform track", "第 \(index + 1) 月台：加月台軌道"))
-                    } icon: {
-                        Image(systemName: "plus.rectangle.on.rectangle")
-                    }
+                    .accessibilityIdentifier("station.platformTrack.\(index)")
                 }
-                .accessibilityIdentifier("station.platformTrack.\(index)")
             }
         } header: {
             Text(verbatim: language.text("Platforms", "月台"))
@@ -323,17 +325,21 @@ struct StationPanel: View {
                         .accessibilityIdentifier("station.freight.status")
                     // Decision 156: what the yard sends.
                     if world.hasBuildingMaterials {
-                        Picker(selection: Binding(
-                            get: { world.freightFacility(at: station.id)?.product ?? .goods },
-                            set: { session.setFreightProductAtSelectedStation($0) }
-                        )) {
-                            ForEach(CargoKind.allCases, id: \.self) { kind in
-                                Text(verbatim: kind.title(in: language)).tag(kind)
+                        // Decision 184, later: a menu the ticks leave alone.
+                        let product = world.freightFacility(at: station.id)?.product ?? .goods
+                        TickStable(StableKey(product, language)) {
+                            Picker(selection: Binding(
+                                get: { product },
+                                set: { session.setFreightProductAtSelectedStation($0) }
+                            )) {
+                                ForEach(CargoKind.allCases, id: \.self) { kind in
+                                    Text(verbatim: kind.title(in: language)).tag(kind)
+                                }
+                            } label: {
+                                Text(verbatim: language.text("Sends", "出貨"))
                             }
-                        } label: {
-                            Text(verbatim: language.text("Sends", "出貨"))
+                            .accessibilityIdentifier("station.freight.product")
                         }
-                        .accessibilityIdentifier("station.freight.product")
                     }
                     Button(role: .destructive) {
                         session.removeFreightYardAtSelectedStation()
@@ -411,17 +417,22 @@ struct StationPanel: View {
     @ViewBuilder
     private var stationMenu: some View {
         if session.world.stations.count < ListSearchField.minimumRows {
-            Menu {
-                ForEach(session.world.stations) { station in
-                    Button(station.name) {
-                        session.selectStation(station.id)
+            // Decision 184, later: drawn from the stations' names alone, so
+            // a running game's ticks leave the open menu alone.
+            let stations = session.stationMenuChoices
+            TickStable(stations) {
+                Menu {
+                    ForEach(stations) { station in
+                        Button(station.title) {
+                            session.selectStation(station.id)
+                        }
                     }
+                } label: {
+                    Image(systemName: "tram.fill")
                 }
-            } label: {
-                Image(systemName: "tram.fill")
+                .accessibilityLabel("Choose a station")
             }
-            .accessibilityLabel("Choose a station")
-            .disabled(session.world.stations.isEmpty)
+            .disabled(stations.isEmpty)
         } else {
             Button {
                 stationSearch = ListSearch()

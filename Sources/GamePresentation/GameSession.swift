@@ -663,6 +663,14 @@ public final class GameSession {
     /// a selected train nothing changes.
     public func toggleFollowTrain() {
         guard let id = selectedTrainID else { return }
+        toggleFollowTrain(id)
+    }
+
+    /// The select tool's follow button on the train it inspects
+    /// (``tappedTrainID``): stops following when `id` is the followed
+    /// train, otherwise follows it if it is on the track. Never changes the
+    /// world or the selection.
+    public func toggleFollowTrain(_ id: TrainID) {
         if isFollowing(id) {
             followedTrainID = nil
         } else {
