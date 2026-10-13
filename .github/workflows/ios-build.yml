@@ -13,11 +13,11 @@ name: iOS App Build
 # - Pull requests (the gate): the build, the project check and a short list of
 #   UI tests on an iPhone Simulator, the ones only a Simulator can answer: the
 #   start screen, the three tools, starting, saving and continuing a game
-#   (the demo map, a blank new game and a real-world map, in English; the
-#   other languages run in the full lane), and the
-#   tutorial's first steps. The iPad job runs only
+#   (a blank new game and a real-world map, in English; the demo map and the
+#   other languages run in the full lane), Back to Start with large text,
+#   and the tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's own files. Kept short and steady so
-#   a red result means something.
+#   a red result means something: about 6 minutes of tests (decision 199).
 # - The full lane: main after a merge, at most every three hours
 #   (ios-full-lane.yml starts it unless main's newest commit has had one), a
 #   nightly run and manual runs. All
@@ -348,21 +348,25 @@ jobs:
       # 2026-10-11 has no active architecture and compiled every file for
       # x86_64 too (225 files twice in run 38107355047, about 35 seconds),
       # which no test on the Apple-silicon runner runs, and the UI tests then
-      # relinked the app for arm64 alone. Code signing is disabled: Simulator
-      # builds need no certificate or Apple Developer account. Package
-      # resolution is disabled as on Xcode Cloud, which only uses a committed
-      # Package.resolved, so a missing one fails here first.
+      # relinked the app for arm64 alone. Package resolution is disabled as on
+      # Xcode Cloud, which only uses a committed Package.resolved, so a
+      # missing one fails here first.
+      # Built for testing too, signed ad hoc (`-`, no certificate or Apple
+      # Developer account) as the UI tests need, so the UI test step runs
+      # these products without building (decision 199). Until 2026-10-13 this
+      # step built the app unsigned, and the UI test step then built the test
+      # target and relinked and signed the app (12 to 25 s of that step).
       - name: Build for iOS Simulator
         id: app-build
         run: |
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -disableAutomaticPackageResolution \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY=-
 
       # release-archive.yml proves no Debug-only launch argument code is in
       # the Release binary by not finding this marker there. Prove it finds
@@ -418,6 +422,10 @@ jobs:
       # start/save flow and the Japanese fallback too: the English ones take
       # the same paths, and the translation check below checks the
       # translations.
+      # Decision 199: the gate's tests take about 6 minutes at most. A test
+      # joins it only if it is steady, only a Simulator can answer it, and
+      # it fits; otherwise it runs in the full lane, which runs after each
+      # merge and must be green before a TestFlight release.
       # Each test may run 8 minutes at most (the slowest, the line route
       # test, took 188 s; a slow runner up to 1.8 times as long). A launch
       # that hangs then fails its one test instead of the whole step: on
@@ -433,7 +441,10 @@ jobs:
         # slower runner can take 1.8 times as long: 36 minutes. The gate list
         # took at most 12.7 minutes on 2026-10-12 (8 tests; a ninth, the
         # tutorial's line step, adds about a minute), so a pull request has
-        # 25: a hung app then holds a macOS runner 15 minutes less.
+        # 25: a hung app then holds a macOS runner 15 minutes less. With 10
+        # tests it took 9m59s to 15m02s (median 12m23s) over 13 pull request
+        # runs on 2026-10-13; decision 199 then took 3 of them out and the
+        # idle second from each wait.
         timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 40 }}
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
@@ -443,11 +454,13 @@ jobs:
             lane="gate (pull request): the short list"
             only=(
               -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar
-              -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testEnglishStartSaveFlow
               # A blank new game (sights and the city's requests on) and a
               # real-world one: their game menus are the longest, and the
-              # demo map's flow above never showed that Back to Start fell
-              # out of reach on a phone on its side.
+              # demo map's flow never showed that Back to Start fell out of
+              # reach on a phone on its side. The house's saving and
+              # continuing also proves what was built is kept, which the
+              # demo map's flow did not (decision 199 left that flow, the
+              # layers sheet and the follow camera to the full lane).
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing
               -only-testing:RailwayGameUITests/RealWorldMapUITests/testARealWorldGameStartsFromAPlaceAndIsSavedAsOne
               # TestFlight 54.1: Back to Start with the clock running and
@@ -455,8 +468,6 @@ jobs:
               # menu was rebuilt every tick and its last row was out of
               # reach).
               -only-testing:RailwayGameUITests/StartSaveFlowSmokeTests/testBackToStartWorksWithLargeTextWhileTheClockRuns
-              -only-testing:RailwayGameUITests/MapInteractionTests/testSwitchingFollowTargetWhilePausedCentersTheCamera
-              -only-testing:RailwayGameUITests/MapInteractionTests/testMapLayersSheetTogglesAndDismisses
               -only-testing:RailwayGameUITests/TutorialUITests/testEnglishTutorialNavigation
               -only-testing:RailwayGameUITests/TutorialUITests/testBuildingTrackEnablesNextAndSkipEnds
               # The line step's lines panel on a phone (2026-10-12: the card
@@ -491,7 +502,8 @@ jobs:
           fi
           echo "UI test lane: $lane"
           echo "- **UI test lane:** $lane" >> "$GITHUB_STEP_SUMMARY"
-          xcodebuild test \
+          # What the build step built for testing; nothing is built here.
+          xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
             -configuration Debug \
@@ -503,8 +515,7 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution \
-            CODE_SIGN_IDENTITY=-
+            -disableAutomaticPackageResolution
 
       - name: Upload failed UI test results
         if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')

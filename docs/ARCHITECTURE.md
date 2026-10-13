@@ -6772,6 +6772,51 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；選項段、選地點畫面那一行與圖例在 iPhone／iPad 上的樣子、Dynamic Type 下的換行與 VoiceOver 的念法，要在 macOS CI 與 TestFlight 上看。
 
+### 199. PR 的 UI 測試閘門：約 6 分鐘的上限，等待不空等一秒
+
+2026-10-13，作者問 CI 的 UI smoke tests 怎麼縮短，請 Claude 以開發者的角度決定並動手。號碼依工作登記 #231：決策 199；存檔版本、golden schema 不動。App、GameCore、GamePresentation 都不動；存檔、golden、replay 都不變。
+
+**量到的**（2026-10-13 的 13 次 PR 執行，iPhone 的 job）：
+- 整個 job 的中位數 20.7 分鐘（15.7–25.1）。其中 UI 測試步驟 12.4 分鐘（10.0–15.0）、建置 1.6、開機 2.0、暖機 2.0、翻譯匯出 2.1；排隊另計，中位數 3.5 分鐘（6 秒到 36.7 分鐘）。
+- 10 個測試合計 479–632 秒。三次的中位數最慢的是：示範地圖的存檔流程 91 秒、實景地圖 76、圖層面板 74、空白地圖蓋房子 67。
+- `waitForExistence(timeout:)` 開始等之後 1.0–1.1 秒才第一次檢查，元素早已在畫面上也一樣。一次執行約 160 次，全部在第一次檢查就找到，合計約 2.7 分鐘。`waitForNonExistence(timeout:)` 也一樣。
+- UI 測試步驟在第一個測試之前，有 12–25 秒在建置測試 target、重新連結並簽署 App：建置步驟建的是沒有簽署的 App。
+
+**改動**：
+1. **等待不空等**（`ToolbarSmokeTests.swift` 的 `XCUIElement` 擴充）：
+   - `appears(within:)` 是 `exists || waitForExistence(timeout:)`，`disappears(within:)` 是 `!exists || waitForNonExistence(timeout:)`。回答和原本相同（逾時之內有沒有出現或消失），只是已經成立時不等那一秒。
+   - 所有 UI 測試檔的 229 與 26 處機械式換名。
+   - 等標籤或狀態改變的 `XCTNSPredicateExpectation` 沒有改。
+   - 那一秒原本也讓滑入、隨畫面轉動或被露出來的元素先停好。這個 PR 的第一次執行（run 38360304931）在手機轉向後立刻問教學卡的「略過」點不點得到，結果失敗。所以：
+     - 出現後立刻問點不點得到的地方，改用 `becomesHittable(within:)`：每 0.1 秒看一次，預設最多 2 秒。
+     - 判斷要不要捲動的迴圈，用 `becomesHittable(within: 1)`。
+     - 轉向之後改用既有的 `waitUntilSettled`。
+     - 共 23 處，另加轉向那一處。
+2. **只建置一次**（`ios-build.yml`）：
+   - 建置步驟改成 `build-for-testing`，以 ad hoc 簽署（`CODE_SIGN_IDENTITY=-`），和 UI 測試步驟原本自己建的一樣。
+   - UI 測試步驟改成 `test-without-building`。Debug 標記的檢查與暖機都用這份產物。
+   - iPad 的 job、缺按鈕的證明、網站截圖照舊自己建置。
+3. **閘門從 10 個減為 7 個**：
+   - 移到 full lane：示範地圖的存檔流程（英文）、圖層面板、跟隨鏡頭。這三個正是 `docs/research/CI_INCIDENT_2026-10-12.md` (C) 列的「在 PR 上失敗過」的測試；圖層面板有同一個 commit 重跑就通過的證據。
+   - 留下：工具列、空白地圖蓋房子、實景地圖、大字級的回到開始畫面、教學三個。空白地圖與實景地圖的存檔流程、大字級那一個，是決策 184 的之後的修正特意加進閘門的（選單溢出、TestFlight 54.1）。蓋房子之後的存檔與繼續，也證明蓋的東西還在，示範地圖的流程沒有驗證這一點。
+4. **規則**（CLAUDE.md、`ios-build.yml` 的註解）：
+   - 閘門的測試約 6 分鐘以內。新的 UI 測試要穩定、只有 Simulator 答得了、而且放得下，才進閘門；否則放在 full lane。
+   - UI 測試要檢查的邏輯（選單列什麼、卡片放哪裡、教學何時前進），能放進 GamePresentation 的就在 Linux 上測。UI 測試只留「有沒有出現、手指點不點得到」。
+   - UI 測試用 `appears(within:)`、`disappears(within:)` 等待。
+
+**放棄的覆蓋**：PR 不再跑示範地圖的開始畫面流程（示範地圖的面板、存檔清單的按鈕、重開 App 後回到空的開始畫面）、圖層面板與跟隨鏡頭。這些壞了，要到合併後的 full lane（最多每三小時一次，另有每晚一次）才知道，由下一個 PR 修。發 TestFlight 前 full lane 必須是綠的（決策 187），所以不會送到玩家手上。
+
+**預期**：UI 測試步驟從約 12 分鐘降到約 6 分鐘，整個 iPhone 的 job 從約 21 分鐘降到約 14–15 分鐘；排隊不受影響。實際的數字以這個 PR 的執行為準。
+
+**沒有做的**：
+- 拆成兩個 job 平行跑：帳號同時只有 5 個 macOS runner，排隊會更久。
+- 同一台 Simulator 平行測試：runner 只有 3 核心，會更慢、更不穩。
+- 暖機的 `sleep 10`、翻譯檢查的第二次編譯（決策 187 列為待作者決定）。
+
+**參考庫與外部專案**：參考庫沒有 iOS 的 UI 測試或 CI。沒有另外找外部專案：等待的第一秒是從這個 repository 的 CI log 量到的，`build-for-testing`／`test-without-building` 是 Xcode 本身的指令。沒有新的依賴。
+
+**沒有驗證的**：Linux 不能建置 UI 測試，也不能跑 Xcode。換名後能不能編譯、`test-without-building` 有沒有用到建置步驟的產物、時間省了多少，要看這個 PR 的 ios-build 執行；閘門以外的 UI 測試要看 full lane。
+
 ### 200. 無限資金
 
 2026-10-13，作者定案（研究在 `docs/research/NEXT_PRIORITIES_2026-10-12.md` §10 第 22 題；先研究的是「自由模式＋無限資金」，作者從開發、美術、玩家三方面重看之後改成這裡的做法）。號碼依工作登記 #231：決策 200、存檔版本 51；golden schema 不動。
