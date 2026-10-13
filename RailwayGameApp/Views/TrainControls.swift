@@ -15,6 +15,10 @@ import SwiftUI
 struct TrainControls: View {
     @Bindable var session: GameSession
     @Environment(GameScreenState.self) private var screen
+    /// The lines panel's "Advanced" switch (decision 196, later).
+    @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -26,15 +30,21 @@ struct TrainControls: View {
                     session.setSelectedTrainPerformance(performance)
                 }
                 .equatable()
-                // Stage C2: its own timetable.
-                Button {
-                    screen.panel = .timetable
-                } label: {
-                    Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
-                        .font(.footnote)
-                        .monospacedDigit()
+                // Stage C2: its own timetable. Decision 196, later: an
+                // advanced detail, shown folded only when the train has one.
+                if !train.timetable.isEmpty || AdvancedDetails.isShown(
+                    stored: storedShowsAdvanced,
+                    roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
+                ) {
+                    Button {
+                        screen.panel = .timetable
+                    } label: {
+                        Label(session.world.timetableSummary(of: train.id, in: session.language) ?? String(localized: "Timetable"), systemImage: "calendar.badge.clock")
+                            .font(.footnote)
+                            .monospacedDigit()
+                    }
+                    .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
                 }
-                .accessibilityHint("Shows the train's own timetable: its stops, times and whether it repeats.")
                 if train.position == nil {
                     Stepper(value: Binding(get: { train.cars }, set: { session.setSelectedTrainCars($0) }), in: Train.minimumCars...Train.maximumCars) {
                         Text(train.carsText(in: session.language))
