@@ -43,6 +43,9 @@ struct LinesPanel: View {
     /// What the selected line shows that only a command changes, kept
     /// while the game runs (decision 184, later).
     @State private var memo = LinePanelMemo()
+    /// Its fares, costs and why it loses money, kept for a command and a
+    /// game day (decision 194).
+    @State private var lossMemo = LineLossMemo()
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
@@ -427,12 +430,17 @@ struct LinesPanel: View {
 
     // MARK: - The selected line
 
-    /// The selected line's last days (decision 179).
+    /// The selected line's last days (decision 179), and its fares, costs
+    /// and why it loses money (decision 194).
     @ViewBuilder
     private func operatingSection(_ line: ServiceLine) -> some View {
         if let report = session.world.lineReport(line.id), !line.isFreight {
             Section {
                 LineOperatingCharts(report: report, language: session.language)
+                if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
+                    LineLossCard(diagnosis: diagnosis, language: session.language)
+                        .equatable()
+                }
             } header: {
                 Text(verbatim: session.language.text("Operations", "營運"))
             } footer: {
@@ -1063,6 +1071,105 @@ struct LinesPanel: View {
                 }
                 .disabled(isEnd)
             }
+        }
+    }
+}
+
+/// Decision 194: a line's fares and four running costs over its report's
+/// days, as bars, and for a line that lost money why: at most two reasons,
+/// each with the figure that shows it. An equatable view of the diagnosis,
+/// which only a command or a new game day changes: the game's ticks leave
+/// it alone.
+private struct LineLossCard: View, Equatable {
+    let diagnosis: LineLossDiagnosis
+    let language: DisplayLanguage
+
+    nonisolated static func == (lhs: LineLossCard, rhs: LineLossCard) -> Bool {
+        lhs.diagnosis == rhs.diagnosis && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(verbatim: diagnosis.spanText(in: language))
+                .font(.caption.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(diagnosis.bars(in: language)) { bar in
+                    barRow(bar)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("line.costs")
+            if diagnosis.isLosing {
+                Text(verbatim: language.text("Why it loses money", "為什麼虧錢"))
+                    .font(.caption.weight(.semibold))
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(diagnosis.reasons, id: \.self) { reason in
+                    reasonRow(reason)
+                }
+                if let text = diagnosis.noReasonText(in: language) {
+                    Text(verbatim: text)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("line.loss")
+    }
+
+    /// The item and its amount, over a bar as long as the amount next to
+    /// the largest of the five: green for the fares, red for a cost.
+    private func barRow(_ bar: LineLossDiagnosis.Bar) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(verbatim: bar.title)
+                    .font(bar.isFares ? Font.footnote.weight(.semibold) : Font.footnote)
+                Spacer(minLength: 8)
+                Text(verbatim: bar.amount.moneyText)
+                    .font(.footnote.monospacedDigit())
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Theme.chip)
+                    Capsule()
+                        .fill(bar.isFares ? Theme.success : Theme.error)
+                        .frame(width: max(CGFloat(bar.permille > 0 ? 3 : 0), proxy.size.width * CGFloat(bar.permille) / 1_000))
+                }
+            }
+            .frame(height: 6)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: bar.text))
+        .accessibilityIdentifier("line.cost.\(bar.id)")
+    }
+
+    private func reasonRow(_ reason: LineLossReason) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: reason.title(in: language))
+                    .font(.subheadline.weight(.semibold))
+                Text(verbatim: reason.detail(in: language))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } icon: {
+            Image(systemName: Self.symbol(of: reason.kind))
+                .foregroundStyle(Theme.warning)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("line.loss.reason.\(reason.kind.rawValue)")
+    }
+
+    private static func symbol(of kind: LineLossReason.Kind) -> String {
+        switch kind {
+        case .tooManyTrains: "tram.fill"
+        case .longHeadway: "clock"
+        case .emptyRuns: "arrow.uturn.left"
+        case .lowLoad: "person.2"
         }
     }
 }
