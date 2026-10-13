@@ -269,6 +269,55 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(zoomIn.isEnabled)
     }
 
+    /// TestFlight 56.1: the button to expand the map was tapped by mistake
+    /// beside the building tools' Done, and buying a tile then looked like
+    /// building. It is not shown while the tools are out; choosing a tile
+    /// says so on the button; the pill buys in words, not with a build's ✓.
+    func testTheMapExpansionIsNotMistakenForBuilding() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let expansion = app.buttons["map.expansion"]
+        XCTAssertTrue(expansion.waitForExistence(timeout: 30), "A blank map can be expanded")
+
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        network.waitUntilSettled()
+        XCTAssertTrue(expansion.waitForNonExistence(timeout: 5), "No Expand the Map beside the building tools")
+        let done = app.buttons["tool.select"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        done.tap()
+        XCTAssertTrue(expansion.waitForExistence(timeout: 5), "Back once the tools are put away")
+
+        expansion.tap()
+        XCTAssertEqual(expansion.label, "Stop expanding the map")
+        // The camera fits the 3 × 3 tiles around the one owned, in the
+        // middle: a quarter of the narrower side below the middle is in
+        // the tile below it, which is for sale.
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        let frame = map.frame
+        let below = min(frame.width, frame.height) / 4
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5 + below / frame.height)).tap()
+        let buy = app.buttons["map.expansion.buy"]
+        XCTAssertTrue(buy.waitForExistence(timeout: 5), "A pill to buy the tile chosen")
+        XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")
+        XCTAssertFalse(app.buttons["map.build.confirm"].exists, "Not a build's ✓")
+
+        expansion.tap()
+        XCTAssertTrue(buy.waitForNonExistence(timeout: 5), "Done leaves the expansion")
+        XCTAssertEqual(expansion.label, "Expand the map")
+    }
+
     func testRotationKeepsTheCameraZoom() {
         continueAfterFailure = false
         // Decision 106: a phone plays on its side, so it turns from one

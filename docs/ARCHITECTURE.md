@@ -4999,6 +4999,12 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 從擴建切到建造工具，暫停保留，離開工具才恢復；玩家原本就暫停的，結束擴建後仍暫停。
 - 測試：`MapExpansionSessionTests.testChoosingATilePausesTheGameSoABuyCanBeUndone`；`testChoosingAndBuyingATile` 改成買下後仍在擴建模式。
 
+**之後的修正**（TestFlight 56.1 玩家回報「建造時很容易點到購買土地」，2026-10-13）：「擴建地圖」鈕在左下那排，建造時被推到建造工具列「完成」鈕旁邊，誤點後照習慣點地圖、按 ✓ 就買了地，而買地的膠囊和建造的 ✓ 一模一樣。
+- 建造工具開著時（工具不是選取，或教學進行中，和工具列出現的條件一樣）不顯示「擴建地圖」鈕；擴建中仍顯示，用來結束（`GameSession.showsMapExpansionButton`）。選隱藏而不是停用或搬位置：停用的鈕仍在原處讓人點到，搬位置要動其他 session 正在改的版面；建造時本來就用不到擴建。
+- 擴建中，那顆鈕變成暖黃（`Theme.accent`）的膠囊，寫「正在擴建地圖 ｜ ✕ 結束」，模式與離開方式都在畫面上。
+- 買地的膠囊改成購物車圖示＋「購買地塊 $價錢」，暖黃底（`ThemeProminentButtonStyle(isPurchase:)`），識別碼 `map.expansion.buy`；建造的 ✓ 仍是主色的 `map.build.confirm`。
+- 測試：`MapExpansionSessionTests.testTheExpansionButtonIsHiddenWhileBuilding`；UI 測試 `MapInteractionTests.testTheMapExpansionIsNotMistakenForBuilding`（full lane）。
+
 ### 161. Meshy 的列車模型與 3D 城市的臺中車站
 
 2026-10-11，作者：「我有買 Meshy，你能接它的 API 做點東西嗎」，選了「3D 城市的列車模型」。高雄車站一帶的臺鐵與捷運都在地下（決策 152 的限制），畫面裡沒有列車，作者再選「加一個臺中車站區域」：臺鐵在臺中是高架。號碼依工作登記 #231：決策 161（160 由購買擴建地圖登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。

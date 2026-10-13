@@ -459,7 +459,9 @@ struct MapView: View {
                         if let realWorld {
                             mapStyleMenu(realWorld)
                         }
-                        if session.buysMap {
+                        // Not while building: beside the tools' Done
+                        // button it was tapped by mistake (TestFlight 56.1).
+                        if session.showsMapExpansionButton {
                             mapExpansionButton(viewport: viewport)
                         }
                     }
@@ -985,7 +987,9 @@ struct MapView: View {
     }
 
     /// Decision 160: starts choosing a tile of the map to buy, and shows
-    /// the land owned and the tiles for sale; again, stops.
+    /// the land owned and the tiles for sale; again, stops. While choosing
+    /// it says so in words, in the accent colour, so the mode is not taken
+    /// for building (TestFlight 56.1).
     private func mapExpansionButton(viewport: ScreenSize) -> some View {
         Button {
             if session.isChoosingMapTile {
@@ -999,10 +1003,28 @@ struct MapView: View {
                 session.mapDidMove()
             }
         } label: {
-            Image(systemName: session.isChoosingMapTile ? "xmark" : "plus.square.dashed")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+            if session.isChoosingMapTile {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.square.dashed")
+                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    Image(systemName: "xmark")
+                    Text(verbatim: session.language.text("Done", "結束"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Theme.accent, in: Capsule())
+                .contentShape(Capsule())
+            } else {
+                Image(systemName: "plus.square.dashed")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
+            }
         }
         .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
             ? session.language.text("Stop expanding the map", "結束擴建地圖")

@@ -106,8 +106,15 @@ struct MapBuildConfirm: View {
                 build.confirm()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "checkmark")
+                    // A tile of the map says what it buys, in another
+                    // colour, so it is not taken for a build's ✓
+                    // (TestFlight 56.1).
+                    Image(systemName: build.kind == .mapTile ? "cart.fill" : "checkmark")
                         .font(.body.weight(.bold))
+                    if build.kind == .mapTile {
+                        Text(verbatim: session.language.text("Buy tile", "購買地塊"))
+                            .font(.subheadline.weight(.bold))
+                    }
                     if let cost = build.cost {
                         Text(verbatim: cost.moneyText)
                             .font(.subheadline.weight(.bold))
@@ -116,13 +123,13 @@ struct MapBuildConfirm: View {
                 }
                 .frame(minHeight: 40)
             }
-            .buttonStyle(ThemeProminentButtonStyle())
+            .buttonStyle(ThemeProminentButtonStyle(isPurchase: build.kind == .mapTile))
             .disabled(!build.canConfirm)
             // Not "Build Track …": the details card's button has that name,
             // and the tutorial's UI test finds it, alone, by it
             // (``BuildConfirmation/confirmName(in:)``).
             .accessibilityLabel(Text(verbatim: build.confirmName(in: session.language)))
-            .accessibilityIdentifier("map.build.confirm")
+            .accessibilityIdentifier(build.kind == .mapTile ? "map.expansion.buy" : "map.build.confirm")
             // Decision 188: the tutorial's build steps point at it.
             .tutorialTarget(.mapConfirm)
         }
@@ -268,7 +275,7 @@ private struct BuildConfirmation {
         case .platform: language.text("Put a platform here", "在這裡加月台")
         case .building: language.text("Build here", "蓋在這裡")
         case .sale: language.text("Sell to the city", "賣給城市")
-        case .mapTile: language.text("Buy this tile", "買下這一塊")
+        case .mapTile: language.text("Buy tile", "購買地塊")
         }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"
