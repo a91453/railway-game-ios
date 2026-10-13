@@ -3,45 +3,28 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// How long traffic control takes on the high-speed demo's long legs
-/// (`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 item 6): the seconds
-/// of computing each game hour takes with traffic control on, printed, and
-/// only on request:
+/// How long traffic control takes on the high-speed demo
+/// (`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 items 6 and 7), and how
+/// punctual its sets are on the real day's timetable (decision 197): printed,
+/// and only on request:
 ///
 ///     swift build -c release -Xswiftc -enable-testing --build-tests
 ///     TRAFFIC_TIMING_REPORT=1 swift test -c release --skip-build --filter TrafficControlTimingReportTests
 ///
-/// `TRAFFIC_TIMING_HOURS` (default 18) is how many game hours from 06:00
+/// `TRAFFIC_TIMING_HOURS` (default 20) is how many game hours from 05:00
 /// to run, and `TRAFFIC_TIMING_CAP` (default 1200) the seconds after which
-/// an hour stops the scenario. Each hour also prints a digest of the saved
-/// world, so two builds can be shown to run the same game.
-///
-/// Two scenarios, with sets that wait off the track until they are wanted
-/// (the game has no depot yet; ordinary commands stand in for one):
-///
-/// - The demo's own services, at their fixed headways with their 24 sets
-///   (the way #436 measured): a set is put at Nangang's platform when its
-///   service is due to send one out and the platform is free, and taken off
-///   once it has stood there idle for three minutes.
-/// - The real day: one line of the twelve stations running the 169 trains
-///   of the bundled `thsr-schedule.json` as runs (decision 133), each
-///   stopping at every station between its ends (a station it passes at
-///   the times between those of its calls either side), southbound at the
-///   down track's main platforms and northbound at the up track's, the way
-///   the measurement in #231 did. A set is put at a run's first station
-///   five minutes before the run sends one out when none stands there, and
-///   taken off when no run leaves its station within half an hour.
+/// an hour stops the report. Each hour prints the seconds of computing it
+/// took, the sets running and a digest of the saved world, so two builds can
+/// be shown to run the same game; the end, the runs sent out, those dropped,
+/// how late the sets reached the end of their runs and how long the real
+/// trains that call at all of their line's stations took end to end.
 final class TrafficControlTimingReportTests: XCTestCase {
     private func say(_ text: String) {
         FileHandle.standardError.write(Data(("TIMING " + text + "\n").utf8))
     }
 
-    private var hours: Int { Int(ProcessInfo.processInfo.environment["TRAFFIC_TIMING_HOURS"] ?? "") ?? 18 }
+    private var hours: Int { Int(ProcessInfo.processInfo.environment["TRAFFIC_TIMING_HOURS"] ?? "") ?? 20 }
     private var cap: Double { Double(ProcessInfo.processInfo.environment["TRAFFIC_TIMING_CAP"] ?? "") ?? 1_200 }
-
-    private func requireReport() throws {
-        guard ProcessInfo.processInfo.environment["TRAFFIC_TIMING_REPORT"] != nil else { throw XCTSkip("Set TRAFFIC_TIMING_REPORT=1.") }
-    }
 
     /// FNV-1a of the saved world, keys sorted.
     private static func digest(_ world: GameWorld) throws -> String {
@@ -54,208 +37,164 @@ final class TrafficControlTimingReportTests: XCTestCase {
         return String(hash, radix: 16)
     }
 
-    /// The demo built at midnight of its first day, with traffic control
-    /// off and every set off the track.
-    /// `extra` is money on top, for more sets.
-    private static func builtDemo(extra: Int64 = 0) throws -> (world: GameWorld, stations: [StationID], down: Set<TrackEdgeID>, up: Set<TrackEdgeID>) {
+    /// Where each set is and what it waits for.
+    private func dump(_ world: GameWorld, layout: HighSpeedDemo.Layout, built: HighSpeedDemo.Built, tracks: HighSpeedDemoTests.Tracks) {
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        var kinds: [TrackEdgeID: String] = [:]
+        for (i, e) in built.down.edges.enumerated() { kinds[e] = "down@\(Int(layout.plan.distances[i] / m / 100) )hm" }
+        for (i, e) in built.up.edges.enumerated() { kinds[e] = "up@\(Int(built.up.plan.distances[i] / m / 100))hm" }
+        for (n, loop) in (built.loops + built.outerLoops).enumerated() {
+            for e in loop.down.edges { kinds[e] = "downloop\(n)" }
+            for e in loop.up.edges { kinds[e] = "uploop\(n)" }
+        }
+        for e in built.crossovers { kinds[e] = "crossover" }
+        for (n, yard) in built.yards.enumerated() { for e in yard.edges { kinds[e] = "yard\(n)" } }
+        let deadlocked = Set(world.deadlockedTrains())
+        let names = world.stations.map(\.name)
+        say("-- \(world.clock.now.minute / 60 % 24):\(String(format: "%02d", world.clock.now.minute % 60)) --")
+        for train in world.trains {
+            guard let line = world.lines.first(where: { $0.trains.contains(train.id) }) else { continue }
+            var place = "off"
+            if case .onEdge(let traversal, let offset)? = train.position {
+                place = "\(kinds[traversal.edge] ?? "?")\(traversal.direction == .forward ? "S" : "N")+\(offset / 64)m" + (tracks.isAgainst(traversal) ? " AGAINST" : "")
+            }
+            let state: String
+            switch train.execution {
+            case .waitingAtStop(let stop, _)?: state = "at \(names[world.stations.firstIndex { $0.id == train.timetable[stop].station }!])(\(stop))"
+            case .travellingToStop(let stop, _)?: state = "to \(names[world.stations.firstIndex { $0.id == train.timetable[stop].station }!])(\(stop))"
+            case nil: state = "idle at \(world.stationsStoppedAt(by: train.id).compactMap { id in world.stations.first { $0.id == id }?.name }.joined(separator: "/"))"
+            }
+            let holder = world.trainHoldingRoute(of: train.id).flatMap { world.train(id: $0)?.name } ?? "-"
+            func describe(_ resources: [TrackResource]) -> String {
+                var edges: [String] = [], nodes = 0
+                for resource in resources {
+                    switch resource {
+                    case .node: nodes += 1
+                    case .span(let span):
+                        let name = "\(kinds[span.edge] ?? "?")#\(span.edge.networkNumber ?? 0)"
+                        if edges.last != name { edges.append(name) }
+                    }
+                }
+                return edges.joined(separator: ",") + " +\(nodes)n"
+            }
+            var line2 = "\(train.name) [\(line.name.suffix(10))] \(place) \(state) holder \(holder)\(deadlocked.contains(train.id) ? " DEADLOCK" : "")"
+            if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_HELD"] != nil, holder != "-" || train.execution != nil {
+                line2 += "\n    held \(describe(world.heldResources(of: train.id)))\n    contested \(describe(world.contestedResources(of: train.id)))"
+            }
+            say(line2)
+        }
+    }
+
+    /// The demo as the game builds it, at midnight of its first day, run
+    /// minute by minute from there.
+    func testTheDemoOnTheRealDay() throws {
+        guard ProcessInfo.processInfo.environment["TRAFFIC_TIMING_REPORT"] != nil else { throw XCTSkip("Set TRAFFIC_TIMING_REPORT=1.") }
         let layout = try HighSpeedDemo.Layout(railways: HighSpeedDemoTests.railways())
-        var world = HighSpeedDemo.newWorld(paying: Money(layout.cost(at: ConstructionCosts.newGame).amount + extra), eventSeed: 1)
-        let built = try layout.build(in: &world, language: .traditionalChinese)
-        for train in world.trains where train.position != nil {
-            try world.unplaceTrain(train.id)
-        }
-        let stations = try XCTUnwrap(world.lines.first).stops
-        return (world, stations, Set(built.down.edges), Set(built.up.edges))
-    }
-
-    /// Puts `train` at `platform`, facing the way `forward` says, standing
-    /// at its far end; `false` when the game refuses (track held).
-    private static func place(_ train: TrainID, at platform: TrackPlatform, forward: Bool, in world: inout GameWorld) -> Bool {
-        guard let length = world.trackEdge(platform.edge)?.length else { return false }
-        let offset = forward ? platform.end : length - platform.start
-        let position = TrainPosition.onEdge(TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward), offset: offset)
-        var placed = world
-        do throws(GameError) {
-            try placed.placeTrain(train, at: position)
-            try placed.setTrainContinuation(train, along: [], stoppingAt: offset)
-            try placed.useTrainPerformanceForMovement(train)
-        } catch {
-            return false
-        }
-        world = placed
-        return true
-    }
-
-    /// Runs `world` hour by hour from 06:00, `depot` before every minute,
-    /// printing each hour's seconds of computing in `advance(ticks:)` (the
-    /// depot's commands are left out).
-    private func run(_ name: String, _ world: inout GameWorld, depot: (inout GameWorld) -> Void) throws {
+        var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
+        let built = try layout.build(in: &world, language: .english)
+        let tracks = HighSpeedDemoTests.Tracks(layout: layout, built: built)
         world.setSpeed(.normal)
-        try world.setTrafficControl(true)
-        let start = 6 * 60 - 10
-        try world.advance(ticks: Int(Int64(start) - world.clock.now.minute))
-        say("== \(name): traffic control on, from 05:50; \(world.trains.count) sets ==")
-        say("hour | seconds | running (most/mean) | digest")
+        try world.advance(ticks: 5 * 60)
+        say("== the demo on the real day: \(world.trains.count) sets, \(world.lines.map { $0.runs.count }) runs, traffic control \(world.isTrafficControlEnabled) ==")
+        say("hour | seconds | running (most) | waiting for a route | deadlocked | against its track | digest")
+
+        // Each run sent out: the set, and the second it left its first stop
+        // and reached its last.
+        struct Sent {
+            let line: Int
+            let run: Int
+            let day: Int64
+            var left: Int64?
+            var reached: Int64?
+        }
+        var sent: [TrainID: Sent] = [:]
+        var done: [Sent] = []
+        var against = 0
         var total = 0.0
-        for hour in 0..<hours {
-            var seconds = 0.0
-            var most = 0, sum = 0
-            let minutes = hour == 0 ? 70 : 60
-            for _ in 0..<minutes {
-                depot(&world)
+        // `TRAFFIC_TIMING_DUMP=06:00,07:30`: every set's state at those minutes.
+        let dumps = Set((ProcessInfo.processInfo.environment["TRAFFIC_TIMING_DUMP"] ?? "").split(separator: ",").compactMap { time -> Int64? in
+            let parts = time.split(separator: ":").compactMap { Int64($0) }
+            return parts.count == 2 ? parts[0] * 60 + parts[1] : nil
+        })
+        for _ in 0..<hours {
+            var seconds = 0.0, most = 0, waiting = 0, deadlocked = 0
+            for _ in 0..<60 {
+                let before = world.lines.map(\.runDays)
                 let began = Date()
                 try world.advance(ticks: 1)
                 seconds += Date().timeIntervalSince(began)
-                let running = world.trains.count { $0.execution != nil }
-                most = max(most, running)
-                sum += running
+                // Runs sent out this minute, matched to the set that took
+                // each: one with a service now that had none.
+                for (index, line) in world.lines.enumerated() {
+                    for (run, runDay) in line.runDays.enumerated() where before[index][run] != runDay {
+                        guard let runDay else { continue }
+                        let first = line.stops[line.runs[run].from]
+                        guard let train = line.trains.first(where: { id in
+                            sent[id] == nil && world.train(id: id)?.timetable.first?.station == first && world.train(id: id)?.execution != nil
+                        }) else { continue }
+                        sent[train] = Sent(line: index, run: run, day: runDay)
+                    }
+                }
+                for (id, entry) in sent {
+                    guard let train = world.train(id: id) else { continue }
+                    var entry = entry
+                    if entry.left == nil, let execution = train.execution, execution.stop > 0 || { if case .travellingToStop = execution { true } else { false } }() {
+                        entry.left = world.clock.now.seconds
+                    }
+                    let last = world.lines[entry.line].runs[entry.run].calls.count - 1
+                    if train.execution == nil || (train.execution.map { if case .waitingAtStop(let stop, _) = $0 { stop == last } else { false } } ?? false) {
+                        entry.reached = world.clock.now.seconds
+                        done.append(entry)
+                        sent[id] = nil
+                    } else {
+                        sent[id] = entry
+                    }
+                }
+                if dumps.contains(world.clock.now.minute % 1_440) { dump(world, layout: layout, built: built, tracks: tracks) }
+                let running = world.trains.filter { $0.execution != nil }
+                most = max(most, running.count)
+                for train in running {
+                    if case .onEdge(let traversal, _)? = train.position, tracks.isAgainst(traversal) { against += 1 }
+                }
             }
+            waiting = world.trains.count { world.trainHoldingRoute(of: $0.id) != nil }
+            deadlocked = world.deadlockedTrains().count
             total += seconds
             let clock = world.clock.now.minute % 1_440 / 60
-            say(String(format: "%02d–%02d | %.1f | %d / %.1f | %@", (clock + 23) % 24, clock, seconds, most, Double(sum) / Double(minutes), try Self.digest(world)))
+            say(String(format: "%02d–%02d | %.1f | %d | %d | %d | %d | %@", (clock + 23) % 24, clock, seconds, most, waiting, deadlocked, against, try Self.digest(world)))
             if seconds > cap {
                 say("stopped: the hour took more than \(Int(cap)) s")
                 break
             }
         }
-        say(String(format: "%@ total %.1f s", name, total))
-    }
+        say(String(format: "total %.1f s", total))
 
-    func testTheDemoAtItsHeadwaysWithTrafficControl() throws {
-        try requireReport()
-        var (world, stations, _, _) = try Self.builtDemo()
-        let line = try XCTUnwrap(world.lines.first)
-        let platform = try XCTUnwrap(world.trackPlatforms(of: stations[0]).first)
-        var idleChecks: [TrainID: Int] = [:]
-        try run("demo at its headways", &world) { world in
-            var memo = GameWorld.DispatchMemo()
-            for train in world.trains where train.position != nil && train.execution == nil {
-                guard world.stationsStoppedAt(by: train.id).contains(stations[0]) else { continue }
-                idleChecks[train.id, default: 0] += 1
-                if idleChecks[train.id]! > 3 {
-                    try? world.unplaceTrain(train.id)
-                    idleChecks[train.id] = nil
-                }
+        // The runs: sent out, dropped, and how late they ended.
+        let now = world.clock.now.seconds
+        for (index, line) in world.lines.enumerated() {
+            let planned = layout.timetable.lines[index]
+            let due = line.runs.indices.filter { line.runs[$0].start(onDay: 0) + LineRun.latestDispatch < now }
+            let dropped = due.filter { (line.runDays[$0] ?? -1) < 0 }
+            let ended = done.filter { $0.line == index }
+            let late = ended.map { entry -> Int64 in
+                let run = line.runs[entry.run]
+                return (entry.reached ?? 0) - (entry.day * GameTime.secondsPerDay + run.times[run.times.count - 1].arrival)
+            }.sorted()
+            func minutes(_ seconds: Int64) -> String { String(format: "%.1f", Double(seconds) / 60) }
+            let onTime = late.count { $0 < 60 }, within5 = late.count { $0 < 300 }
+            say("\(planned.english): \(due.count) due, \(dropped.count) dropped, \(ended.count) ended; late at the end: median \(late.isEmpty ? "–" : minutes(late[late.count / 2])) min, worst \(late.last.map(minutes) ?? "–") min, under 1 min \(onTime), under 5 min \(within5)")
+            // The real trains that call at all the line's stops, end to end.
+            let whole = ended.filter { entry in
+                let run = line.runs[entry.run]
+                return Set([run.from, run.to]) == [0, line.stops.count - 1] && entry.left != nil
             }
-            guard let current = world.line(id: line.id) else { return }
-            for pattern in [nil] + current.patterns.indices.map(Optional.some) {
-                let ids = pattern.map { current.patterns[$0].trains } ?? current.trains
-                guard let waiting = ids.first(where: { world.train(id: $0)?.position == nil }),
-                      let stream = current.dispatchStream(of: waiting),
-                      world.isDispatchDue(current, stream, at: world.clock.now, deadhead: false, memo: &memo)
-                else { continue }
-                if Self.place(waiting, at: platform, forward: true, in: &world) {
-                    idleChecks[waiting] = 0
-                    return
-                }
-            }
-        }
-    }
-
-    /// The real day's trains as runs of a line calling at all twelve
-    /// stations, north to south.
-    private static func realRuns(names: [String]) throws -> [LineRun] {
-        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("RailwayGameApp/Resources/RealRailways/thsr-schedule.json")
-        let data = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
-        let trains = try XCTUnwrap(data["trains"] as? [[String: Any]])
-        return try trains.map { train in
-            let stops = try XCTUnwrap(train["stops"] as? [[String: Any]])
-                .filter { ($0["stop"] as? Bool) ?? true }
-                .sorted { (($0["order"] as? Int) ?? 0) < (($1["order"] as? Int) ?? 0) }
-            let calls = try stops.map { stop in
-                (index: try XCTUnwrap(names.firstIndex(of: try XCTUnwrap(stop["name"] as? String))),
-                 arrival: try XCTUnwrap(stop["arrSec"] as? NSNumber).int64Value, departure: try XCTUnwrap(stop["depSec"] as? NSNumber).int64Value)
-            }
-            let from = calls[0].index, to = calls[calls.count - 1].index
-            let step = from < to ? 1 : -1
-            var times: [LineRunTime] = []
-            for (a, b) in zip(calls, calls.dropFirst()) {
-                if times.isEmpty { times.append(LineRunTime(arrival: a.arrival, departure: a.departure)) }
-                // A station passed: at the times between, as a stop of no
-                // dwell.
-                let gaps = abs(b.index - a.index)
-                for k in 1..<gaps {
-                    let t = a.departure + (b.arrival - a.departure) * Int64(k) / Int64(gaps)
-                    times.append(LineRunTime(arrival: t, departure: t))
-                }
-                times.append(LineRunTime(arrival: b.arrival, departure: b.departure))
-                _ = step
-            }
-            return LineRun(from: from, to: to, times: times)
-        }
-    }
-
-    func testTheRealDayWithTrafficControl() throws {
-        try requireReport()
-        var (world, stations, down, up) = try Self.builtDemo(extra: 10_000_000_000)
-        let old = try XCTUnwrap(world.lines.first)
-        let sets = world.trains.map(\.id)
-        for id in sets { try world.unassignTrain(id) }
-        try world.removeLine(old.id)
-        let line = try world.createLine(named: "THSR", stops: stations).id
-        try world.setLinePerformance(line, to: .highSpeed)
-        let runs = try Self.realRuns(names: HighSpeedDemo.stationNames)
-        XCTAssertEqual(runs.count, 169)
-        try world.setLineRuns(line, to: runs)
-        // Southbound at the down track's main platforms, northbound at the
-        // up track's; the ends' one platform each is on the down track.
-        let berths: [(south: TrackPlatform?, north: TrackPlatform?)] = stations.indices.map { station in
-            let platforms = world.trackPlatforms(of: stations[station])
-            if station == 0 || station == stations.count - 1 {
-                let end = platforms.first { down.contains($0.edge) }
-                return (end, end)
-            }
-            return (platforms.first { down.contains($0.edge) }, platforms.first { up.contains($0.edge) })
-        }
-        func platform(_ station: Int, southbound: Bool) -> TrackPlatform? {
-            southbound ? berths[station].south : berths[station].north
-        }
-        var preferences: [LineRoutePreference] = []
-        for from in stations.indices.dropLast() {
-            let to = from + 1
-            if to < stations.count - 1, let south = platform(to, southbound: true) {
-                preferences.append(LineRoutePreference(from: from, to: to, platform: south))
-            }
-            if from > 0, let north = platform(from, southbound: false) {
-                preferences.append(LineRoutePreference(from: to, to: from, platform: north))
-            }
-        }
-        try world.setLineRoutePreferences(line, to: preferences)
-        // 44 sets the day needs, as many again in reserve.
-        var all = sets
-        while all.count < 60 {
-            let id = try world.purchaseTrain(named: "THSR \(all.count + 1)").id
-            try world.setTrainType(id, to: .highSpeed)
-            try world.setTrainCars(id, to: HighSpeedDemo.cars)
-            try world.setTrainPerformance(id, to: .highSpeed)
-            all.append(id)
-        }
-        for id in all { try world.assignTrain(id, to: line) }
-        let day = GameTime.secondsPerDay
-        try run("the real day (169 runs)", &world) { world in
-            let now = world.clock.now.seconds % day
-            // Off the track when no run leaves its station within half an
-            // hour.
-            let wanted = Set(runs.filter { $0.times[0].departure >= now && $0.times[0].departure - now <= 30 * 60 }.map { stations[$0.from] })
-            var standing: Set<StationID> = []
-            for train in world.trains where train.position != nil && train.execution == nil {
-                guard let station = world.stationsStoppedAt(by: train.id).first else { continue }
-                if wanted.contains(station) {
-                    standing.insert(station)
-                } else {
-                    try? world.unplaceTrain(train.id)
-                }
-            }
-            // On the track five minutes before a run sends a set out, when
-            // none stands at its first station.
-            for run in runs {
-                let lead = run.times[0].departure - now
-                guard lead > LineRun.earliestDispatch, lead <= LineRun.earliestDispatch + 60, !standing.contains(stations[run.from]),
-                      let berth = platform(run.from, southbound: run.isOutbound),
-                      let spare = world.trains.first(where: { $0.position == nil })
-                else { continue }
-                if Self.place(spare.id, at: berth, forward: run.isOutbound, in: &world) { standing.insert(stations[run.from]) }
+            let times = whole.map { ($0.reached ?? 0) - ($0.left ?? 0) }.sorted()
+            let real = whole.map { entry -> Int64 in
+                let run = line.runs[entry.run]
+                return run.times[run.times.count - 1].arrival - run.times[0].departure
+            }.sorted()
+            if !times.isEmpty {
+                say("  end to end, \(times.count) runs: game median \(minutes(times[times.count / 2])) min (\(minutes(times.first!))–\(minutes(times.last!))), timetable median \(minutes(real[real.count / 2])) min")
             }
         }
     }
