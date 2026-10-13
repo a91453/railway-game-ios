@@ -280,11 +280,13 @@ extension ReferenceWorld {
         }
         // A later fix: no service can step aside, so a spare in the way does;
         // as the dispatcher looks only in a minute when some service is due
-        // to leave or stands at a passing place, so does this.
+        // to leave or stands at a passing place, or when a line's train
+        // waiting to be sent out is in the deadlock (a later fix still), so
+        // does this.
         guard trains.contains(where: { train in
             if let service = train.service, service.waiting, let closing = service.closing { return Self.capped(closing, 9) <= clockSeconds }
             return atPassingPlace(train)
-        }) else { return }
+        }) || stuck.keys.contains(where: { id in trains.first { $0.id == id }?.service == nil }) else { return }
         for spare in trains.sorted(by: { $0.id < $1.id }) where isSpare(spare) {
             let heldUp = stuck.keys.sorted().filter { foul(needs(stuck[$0]!.candidate).resources, held(spare)) }
             guard !heldUp.isEmpty else { continue }

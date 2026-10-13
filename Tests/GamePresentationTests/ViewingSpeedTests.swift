@@ -147,9 +147,11 @@ final class ViewingSpeedTests: XCTestCase {
 
     /// The line between two towns (decision 137's, 5.4 km), its one train
     /// followed.
-    private func followedTrain() throws -> (GameSession, TrainID) {
+    private func followedTrain(realisticOperation: Bool = true) throws -> (GameSession, TrainID) {
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
-        let session = GameSession(world: try newGameLine(through: [towns[0], towns[1]]))
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        world.setRealisticOperation(realisticOperation)
+        let session = GameSession(world: world)
         let train = try XCTUnwrap(session.world.trains.first?.id)
         session.followTrain(train)
         XCTAssertTrue(session.isFollowingTrain)
@@ -157,25 +159,35 @@ final class ViewingSpeedTests: XCTestCase {
     }
 
     func testTheFollowedTrainsSpeed() throws {
-        let (session, _) = try followedTrain()
-        session.setSpeed(.x60)
-        // Six game seconds a tick: the train leaves, runs up to its top speed
-        // (the line's standard 110 km/h) and runs at it between the towns.
-        var fastest: Int64 = 0
-        var sawStanding = false
-        for _ in 0..<400 {
-            session.advance(realElapsed: Self.tick)
-            guard let speed = session.viewingSpeed.trainKilometresPerHour else { continue }
-            fastest = max(fastest, speed)
-            sawStanding = sawStanding || speed == 0
+        // Without realistic operation (decision 207) a leg is planned at its
+        // least time, so the train runs up to its top speed (the line's
+        // standard 110 km/h) and runs at it between the towns. With it, the
+        // leg has a 4 % recovery margin: a train on time cruises a little
+        // below its top speed, and keeps the rest for when it is late.
+        for realistic in [false, true] {
+            let (session, _) = try followedTrain(realisticOperation: realistic)
+            session.setSpeed(.x60)
+            // Six game seconds a tick.
+            var fastest: Int64 = 0
+            var sawStanding = false
+            for _ in 0..<400 {
+                session.advance(realElapsed: Self.tick)
+                guard let speed = session.viewingSpeed.trainKilometresPerHour else { continue }
+                fastest = max(fastest, speed)
+                sawStanding = sawStanding || speed == 0
+            }
+            if realistic {
+                XCTAssertTrue((95...107).contains(fastest), "below its top speed, on time with a margin: \(fastest)")
+            } else {
+                XCTAssertTrue((108...111).contains(fastest), "its top speed, 110 km/h: \(fastest)")
+            }
+            XCTAssertTrue(sawStanding, "and 0 standing at a platform")
+            XCTAssertNotNil(session.viewingSpeed.trainSpeedText)
+            // Following none, none.
+            session.stopFollowingTrain()
+            XCTAssertNil(session.viewingSpeed.trainKilometresPerHour)
+            XCTAssertNil(session.viewingSpeed.trainSpeedText)
         }
-        XCTAssertTrue((108...111).contains(fastest), "its top speed, 110 km/h: \(fastest)")
-        XCTAssertTrue(sawStanding, "and 0 standing at a platform")
-        XCTAssertNotNil(session.viewingSpeed.trainSpeedText)
-        // Following none, none.
-        session.stopFollowingTrain()
-        XCTAssertNil(session.viewingSpeed.trainKilometresPerHour)
-        XCTAssertNil(session.viewingSpeed.trainSpeedText)
     }
 
     func testTheTrackCoveredAlongTheWay() throws {

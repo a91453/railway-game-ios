@@ -16,8 +16,9 @@ import XCTest
 /// Each table row is game / real / game ÷ real. What is measured:
 ///
 /// - The high-speed demo as it is built: its three services' journeys
-///   (``GameWorld/lineJourney(_:pattern:)``: the legs, and
-///   ``ServiceLine/dwellMinutes`` at each call between), against the median
+///   (``GameWorld/lineJourney(_:pattern:)``: the legs, and its dwell at
+///   each call between), off and with realistic operation (decision 207),
+///   against the median
 ///   Nangang → Zuoying train of the same stopping pattern in the bundled
 ///   `thsr-schedule.json`; leg by leg; and the lateness over the first two
 ///   hours of the opened demo.
@@ -116,41 +117,47 @@ final class RunTimeRealismReportTests: XCTestCase {
         try layout.build(in: &world, language: .traditionalChinese)
         let names = HighSpeedDemo.stationNames
         let ids = world.stations.map(\.id)
-
-        say("== High-speed demo: Nangang → Zuoying, as built (journey legs + \(ServiceLine.dwellMinutes) min a call between) ==")
-        say("service | calls | game run | game dwell | game | real median (trains) | game/real")
-        var legRows: [String] = []
-        for line in world.lines {
-            let calls = line.stops.compactMap { ids.firstIndex(of: $0) }
-            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil))
-            let out = Array(journey.legs.prefix(calls.count - 1))
-            for leg in out {
-                XCTAssertEqual(leg.seconds, RunningCurve.leastSeconds(length: leg.path.distance, performance: line.performance) ?? -1,
-                               "a leg takes the least seconds of its running curve")
+        let built = world
+        // Decision 207: the same lines planned with realistic operation.
+        for realistic in [false, true] {
+            world = built
+            world.setRealisticOperation(realistic)
+            say("== High-speed demo: Nangang → Zuoying, as built\(realistic ? ", realistic operation (decision 207)" : "") (journey legs + its dwell at each call between) ==")
+            say("service | calls | game run | game dwell | game | real median (trains) | game/real")
+            var legRows: [String] = []
+            for line in world.lines {
+                let calls = line.stops.compactMap { ids.firstIndex(of: $0) }
+                let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil))
+                let out = Array(journey.legs.prefix(calls.count - 1))
+                for leg in out {
+                    XCTAssertEqual(leg.seconds, world.plannedSeconds(length: leg.path.distance, line: line) ?? -1,
+                                   "a leg takes the seconds its line plans")
+                }
+                let run = out.map(\.seconds).reduce(0, +)
+                let dwell = journey.dwellSeconds * Int64(calls.count - 2)
+                let stopNames = calls.map { names[$0] }
+                let same = real.filter { $0.names == stopNames }
+                let median = Self.median(same.map { $0.arrivals.last! - $0.departures.first! })
+                XCTAssertFalse(same.isEmpty, "the real day has trains calling at \(stopNames)")
+                say("\(line.name) | \(calls.count) | \(Self.minutes(run)) | \(Self.minutes(dwell)) | \(Self.minutes(run + dwell)) | \(Self.minutes(median)) (\(same.count)) | \(Self.ratio(run + dwell, median))")
+                // Leg by leg: the real median run between the same two calls
+                // of the same pattern, and the real dwell at each call between.
+                for (index, leg) in out.enumerated() {
+                    let from = stopNames[index], to = stopNames[index + 1]
+                    let legs = same.map { $0.arrivals[index + 1] - $0.departures[index] }
+                    let dwells = index + 1 < stopNames.count - 1 ? same.map { $0.departures[index + 1] - $0.arrivals[index + 1] } : []
+                    let km = Double(leg.path.distance) / Double(WorldCoordinate.unitsPerMetre) / 1_000
+                    legRows.append("\(line.name) \(from)→\(to) | \(String(format: "%.1f", km)) | \(leg.seconds) | \(Self.median(legs).map(String.init) ?? "–") | \(Self.ratio(leg.seconds, Self.median(legs))) | \(Self.median(dwells).map { "\($0)" } ?? "–")")
+                }
             }
-            let run = out.map(\.seconds).reduce(0, +)
-            let dwell = ServiceLine.dwellMinutes * GameTime.secondsPerMinute * Int64(calls.count - 2)
-            let stopNames = calls.map { names[$0] }
-            let same = real.filter { $0.names == stopNames }
-            let median = Self.median(same.map { $0.arrivals.last! - $0.departures.first! })
-            XCTAssertFalse(same.isEmpty, "the real day has trains calling at \(stopNames)")
-            say("\(line.name) | \(calls.count) | \(Self.minutes(run)) | \(Self.minutes(dwell)) | \(Self.minutes(run + dwell)) | \(Self.minutes(median)) (\(same.count)) | \(Self.ratio(run + dwell, median))")
-            // Leg by leg: the real median run between the same two calls
-            // of the same pattern, and the real dwell at each call between.
-            for (index, leg) in out.enumerated() {
-                let from = stopNames[index], to = stopNames[index + 1]
-                let legs = same.map { $0.arrivals[index + 1] - $0.departures[index] }
-                let dwells = index + 1 < stopNames.count - 1 ? same.map { $0.departures[index + 1] - $0.arrivals[index + 1] } : []
-                let km = Double(leg.path.distance) / Double(WorldCoordinate.unitsPerMetre) / 1_000
-                legRows.append("\(line.name) \(from)→\(to) | \(String(format: "%.1f", km)) | \(leg.seconds) | \(Self.median(legs).map(String.init) ?? "–") | \(Self.ratio(leg.seconds, Self.median(legs))) | \(Self.median(dwells).map { "\($0)" } ?? "–")")
-            }
+            say("-- leg by leg: service from→to | km | game s | real median s | game/real | real dwell at the arrival s (game \(world.dwellSeconds(of: world.lines[0]))) --")
+            legRows.forEach { say($0) }
         }
-        say("-- leg by leg: service from→to | km | game s | real median s | game/real | real dwell at the arrival s (game \(ServiceLine.dwellMinutes * 60)) --")
-        legRows.forEach { say($0) }
 
         // Opened: the sets' own timetables, and lateness sampled every game
         // minute for two hours.
         var opened = try HighSpeedDemo.make(in: .traditionalChinese, railways: railways)
+        say("opened: realistic operation \(opened.realisticOperation ? "on" : "off") (the demo runs the real timetable)")
         let (nangang, zuoying) = (opened.stations[0].id, opened.stations[11].id)
         for (name, trains) in opened.lines.map({ ($0.name, $0.trains) }) {
             let journeys: [Int64] = trains.compactMap { id in

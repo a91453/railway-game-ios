@@ -384,7 +384,11 @@ public struct Achievement: Identifiable, Hashable, Sendable {
 /// The achievements the player has unlocked and when (decision 181): a
 /// small JSON file beside the saves (`achievements.data`, beside
 /// `challenge-records.data`), not a save. A file that cannot be read is
-/// none unlocked; an ID no longer in the list is kept, not shown.
+/// none unlocked; an ID no longer in the list is kept, not shown. A file
+/// that could not be read is never written over: an unlock reads it again
+/// first and adds to what it holds, leaves alone one it still cannot read
+/// or one of a newer version (the unlock is kept until the app quits), and
+/// moves a damaged one aside (`achievements.data.damaged`) before writing.
 public struct AchievementRecords: Sendable {
     public let file: URL
     /// When each was unlocked, by ID.
@@ -420,11 +424,30 @@ public struct AchievementRecords: Sendable {
         let new = Achievement.all.filter { unlocked[$0.id] == nil && allowed?.contains($0.id) != false && $0.isMet(by: facts) }
         guard !new.isEmpty else { return [] }
         for achievement in new { unlocked[achievement.id] = date }
+        save()
+        return new
+    }
+
+    /// Writes the file, after adding what it holds now (its own date where
+    /// both have one), so an unlock never writes over records that could
+    /// not be read when the app started.
+    private mutating func save() {
+        let manager = FileManager.default
+        if manager.fileExists(atPath: file.path) {
+            guard let data = try? Data(contentsOf: file) else { return }
+            if let stored = try? JSONDecoder().decode(Stored.self, from: data) {
+                guard stored.version <= Self.version else { return }
+                unlocked.merge(stored.unlocked) { mine, theirs in min(mine, theirs) }
+            } else {
+                let damaged = file.appendingPathExtension("damaged")
+                try? manager.removeItem(at: damaged)
+                guard (try? manager.moveItem(at: file, to: damaged)) != nil else { return }
+            }
+        }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? manager.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? encoder.encode(Stored(version: Self.version, unlocked: unlocked)).write(to: file, options: .atomic)
-        return new
     }
 }
 

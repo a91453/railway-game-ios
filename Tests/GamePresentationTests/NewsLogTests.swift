@@ -28,6 +28,20 @@ final class NewsLogTests: XCTestCase {
         XCTAssertEqual(log.unread, 1)
     }
 
+    func testTheItemsNewWhenTheLogOpenedStayNewWhenMoreArrive() {
+        var log = NewsLog()
+        log.add(day: 0, .advice, english: "old", chinese: nil)
+        log.markRead()
+        log.add(day: 1, .goal, english: "new", chinese: nil)
+        // The log opens (and marks everything read); then an item arrives
+        // while it is open and pushes the list down a row.
+        let mark = log.readMark
+        log.markRead()
+        log.add(day: 1, .advice, english: "arrived", chinese: nil)
+        let bold = log.items.filter { NewsLog.isNew($0, since: mark) }.map(\.english)
+        XCTAssertEqual(bold, ["arrived", "new"], "by position the first row (arrived) would be bold and \"new\" not")
+    }
+
     func testAnItemSpeaksInTheLanguageAskedForElseTheOther() {
         var log = NewsLog()
         let both = log.add(day: 0, .advice, english: "Hello", chinese: "你好")
