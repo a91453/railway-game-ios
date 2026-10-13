@@ -815,9 +815,8 @@ public final class GameSession {
     /// route before it leaves and others wait for it; turning it on is
     /// refused while two trains need the same track.
     public func setTrafficControl(_ enabled: Bool) {
-        perform { world throws(GameError) in
-            try world.setTrafficControl(enabled)
-            return enabled
+        perform(.setTrafficControl(enabled)) { _, _, _ in
+            enabled
                 ? language.text(
                     "Traffic control is on. Trains take their whole route before they leave.",
                     "交通控制已開啟。列車出發前會先預約整條進路。"
@@ -854,9 +853,8 @@ public final class GameSession {
         }
         let country = world.disruptions?.country ?? world.geoAnchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home
         let seed = world.disruptions?.seed ?? world.demandEvents?.seed ?? 1
-        perform { world throws(GameError) in
-            world.setDisruptions(level.flatMap { Disruptions(level: $0, country: country, seed: seed) })
-            return level == nil
+        perform(.setDisruptions(level.flatMap { Disruptions(level: $0, country: country, seed: seed) })) { _, _, _ in
+            level == nil
                 ? language.text("Holidays and other events off: every week's demand is the same.", "連假等事件已關閉：每週的需求都一樣。")
                 : language.text("Holidays and other events on: \(level!.title(in: language)).", "連假等事件已開啟：\(level!.title(in: language))。")
         }
@@ -871,9 +869,8 @@ public final class GameSession {
     /// waiting or riding keep their way.
     public func setPassengerRoutingMode(_ mode: PassengerRoutingMode) {
         guard mode != world.passengerRoutingMode else { return }
-        perform { world throws(GameError) in
-            world.setPassengerRoutingMode(mode)
-            return mode == .network
+        perform(.setPassengerRoutingMode(mode)) { _, _, _ in
+            mode == .network
                 ? language.text(
                     "Passengers now plan journeys across the network and change trains.",
                     "乘客現在會規劃跨路線的旅程並轉乘。"
@@ -927,7 +924,7 @@ public final class GameSession {
             ))
             return
         }
-        performEdit { world in world.setEconomyMode(mode) }
+        _ = try? performCommand(.edit(.setEconomyMode(mode)))
         message = StatusMessage(kind: .success, text: language.text(
             "Free play: no fares or running costs, and you set each station's ridership.",
             "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
@@ -952,9 +949,8 @@ public final class GameSession {
 
     /// Sets the network's fare rules through `GameWorld.setFareRules(_:)`.
     public func setFareRules(_ rules: FareRules) {
-        perform { world throws(GameError) in
-            try world.setFareRules(rules)
-            return language.text("Fares: \(rules.displayText(in: language)).", "已更新票價規則：\(rules.displayText(in: language))。")
+        perform(.setFareRules(rules)) { _, _, _ in
+            language.text("Fares: \(rules.displayText(in: language)).", "已更新票價規則：\(rules.displayText(in: language))。")
         }
     }
 
@@ -1242,13 +1238,11 @@ public final class GameSession {
     /// its cost and allocates its ID, and selects it. It is not on the track
     /// until it is placed.
     public func purchaseTrain() {
-        var purchased: TrainID?
-        perform { world throws(GameError) in
-            let train = try world.purchaseTrain(named: Self.suggestedTrainName(for: world, in: language))
-            purchased = train.id
-            return language.text("Bought \(train.name). Select a station to place it.", "已購買 \(train.name)。請選擇要放置它的車站。")
+        let bought = perform(.purchaseTrain(name: Self.suggestedTrainName(for: world, in: language))) { outcome, _, _ in
+            let name = outcome.train?.name ?? ""
+            return language.text("Bought \(name). Select a station to place it.", "已購買 \(name)。請選擇要放置它的車站。")
         }
-        if let purchased {
+        if let purchased = bought?.train?.id {
             selectedTrainID = purchased
             tappedTrainID = purchased
         }
@@ -1260,10 +1254,9 @@ public final class GameSession {
     public func sellTrain(_ id: TrainID) {
         guard let train = world.train(id: id) else { return }
         let quote = world.trainSaleQuote(id)
-        guard perform({ world throws(GameError) in
-            try world.sellTrain(id)
-            return language.text("Sold \(train.name) for \(quote.moneyText).", "已出售 \(train.name)，取得 \(quote.moneyText)。")
-        }) else { return }
+        guard perform(.sellTrain(id), message: { _, _, _ in
+            language.text("Sold \(train.name) for \(quote.moneyText).", "已出售 \(train.name)，取得 \(quote.moneyText)。")
+        }) != nil else { return }
         if selectedTrainID == id { selectedTrainID = world.trains.first?.id }
         if tappedTrainID == id { tappedTrainID = nil }
     }
@@ -1290,9 +1283,8 @@ public final class GameSession {
     /// `GameWorld.setTrainCars(_:to:)`: only while it is off the track.
     public func setSelectedTrainCars(_ cars: Int) {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            let balance = world.economy.balance
-            try world.setTrainCars(train.id, to: cars)
+        perform(.setTrainCars(train.id, cars: cars)) { _, before, world in
+            let balance = before.economy.balance
             let count = Train.carsText(cars, in: language)
             // Added cars are paid for (decision 46).
             let paid = balance - world.economy.balance
@@ -1304,18 +1296,16 @@ public final class GameSession {
     /// Renames the selected station through `GameWorld.renameStation(_:to:)`.
     public func renameSelectedStation(to name: String) {
         guard let station = selectedStation else { return }
-        perform { world throws(GameError) in
-            try world.renameStation(station.id, to: name)
-            return language.text("Renamed \(station.name) to \(name).", "已將 \(station.name) 更名為 \(name)。")
+        perform(.renameStation(station.id, name: name)) { _, _, _ in
+            language.text("Renamed \(station.name) to \(name).", "已將 \(station.name) 更名為 \(name)。")
         }
     }
 
     /// Renames the selected line through `GameWorld.renameLine(_:to:)`.
     public func renameSelectedLine(to name: String) {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            try world.renameLine(line.id, to: name)
-            return language.text("Renamed \(line.name) to \(name).", "已將 \(line.name) 更名為 \(name)。")
+        perform(.renameLine(line.id, name: name)) { _, _, _ in
+            language.text("Renamed \(line.name) to \(name).", "已將 \(line.name) 更名為 \(name)。")
         }
     }
 
@@ -1323,27 +1313,24 @@ public final class GameSession {
     /// `GameWorld.setLineColor(_:to:)`; `nil` gives back the app's pick.
     public func setSelectedLineColor(_ color: LineColor?) {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            try world.setLineColor(line.id, to: color)
-            return language.text("\(line.name) has a new colour.", "\(line.name) 換了顏色。")
+        perform(.setLineColor(line.id, color)) { _, _, _ in
+            language.text("\(line.name) has a new colour.", "\(line.name) 換了顏色。")
         }
     }
 
     /// Borrows one ``CompanyAccounts/loanStep`` through
     /// `GameWorld.borrow(_:)` (decision 67).
     public func borrowLoanStep() {
-        perform { world throws(GameError) in
-            try world.borrow(CompanyAccounts.loanStep)
-            return language.text("Borrowed \(CompanyAccounts.loanStep.moneyText).", "借入 \(CompanyAccounts.loanStep.moneyText)。")
+        perform(.borrow(CompanyAccounts.loanStep)) { _, _, _ in
+            language.text("Borrowed \(CompanyAccounts.loanStep.moneyText).", "借入 \(CompanyAccounts.loanStep.moneyText)。")
         }
     }
 
     /// Repays one ``CompanyAccounts/loanStep`` through
     /// `GameWorld.repayLoan(_:)` (decision 67).
     public func repayLoanStep() {
-        perform { world throws(GameError) in
-            try world.repayLoan(CompanyAccounts.loanStep)
-            return language.text("Repaid \(CompanyAccounts.loanStep.moneyText).", "償還 \(CompanyAccounts.loanStep.moneyText)。")
+        perform(.repayLoan(CompanyAccounts.loanStep)) { _, _, _ in
+            language.text("Repaid \(CompanyAccounts.loanStep.moneyText).", "償還 \(CompanyAccounts.loanStep.moneyText)。")
         }
     }
 
@@ -1355,12 +1342,8 @@ public final class GameSession {
     /// to, if it runs high-speed sets and nothing else.
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            let balance = world.economy.balance
-            try world.setTrainType(train.id, to: type)
-            if let performance = type?.performance, train.performance == .standard {
-                try world.setTrainPerformance(train.id, to: performance)
-            }
+        perform(.setTrainType(train.id, type)) { outcome, before, world in
+            let balance = before.economy.balance
             let text = Train.typeText(type, in: language)
             var said = language.text("\(train.name) now has \(text).", "\(train.name) 現在是 \(text)。")
             // Decision 180: a change of type is a refit, paid for.
@@ -1368,8 +1351,7 @@ public final class GameSession {
             if refit > .zero {
                 said += language.text(" The refit cost \(refit.moneyText).", "改裝費 \(refit.moneyText)。")
             }
-            if let id = world.assignedLine(of: train.id), try world.planAtHighSpeedWhenRunByHighSpeedSets(id),
-               let line = world.line(id: id) {
+            if outcome.highSpeed, let id = world.assignedLine(of: train.id), let line = world.line(id: id) {
                 said += language.nowHighSpeedText(line.name)
             }
             return said
@@ -1383,7 +1365,7 @@ public final class GameSession {
     public func setSelectedTrainRate(_ rate: Int64) {
         guard let train = requireSelectedTrain() else { return }
         do throws(GameError) {
-            try performEdit { world throws(GameError) in try world.setTrainMovementRate(train.id, to: rate) }
+            try performCommand(.edit(.setTrainRate(train.id, rate: rate)))
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -1396,9 +1378,8 @@ public final class GameSession {
 
     public func resumeSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            try world.useTrainPerformanceForMovement(train.id)
-            return language.text("Resumed \(train.name).", "已恢復 \(train.name) 運行。")
+        perform(.resumeTrain(train.id)) { _, _, _ in
+            language.text("Resumed \(train.name).", "已恢復 \(train.name) 運行。")
         }
     }
 
@@ -1433,11 +1414,7 @@ public final class GameSession {
             )
             return
         }
-        perform { world throws(GameError) in
-            var draft = world
-            try draft.setTrainContinuation(train.id, along: path.traversals, stoppingAt: path.end)
-            try draft.useTrainPerformanceForMovement(train.id)
-            world = draft
+        perform(.sendTrain(train.id, along: path.traversals.map(PlayerCommand.Edit.Step.init), stoppingAt: path.end)) { _, _, _ in
             let sent = path.distance == 0
                 ? language.text("\(train.name) stops at \(station.name).", "\(train.name) 停在 \(station.name)。")
                 : language.text(
@@ -1452,9 +1429,8 @@ public final class GameSession {
     /// `GameWorld.reverseTrain(_:)`, which also clears its continuation.
     public func reverseSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            try world.reverseTrain(train.id)
-            return language.text("Reversed \(train.name); its path was cleared.", "\(train.name) 已反向，路徑已清除。")
+        perform(.reverseTrain(train.id)) { _, _, _ in
+            language.text("Reversed \(train.name); its path was cleared.", "\(train.name) 已反向，路徑已清除。")
         }
     }
 
@@ -1464,9 +1440,8 @@ public final class GameSession {
         guard let train = requireSelectedTrain() else { return }
         // Follow ends only once the train is off the track (``perform``
         // checks): a refused command leaves it where it was, still followed.
-        perform { world throws(GameError) in
-            try world.unplaceTrain(train.id)
-            return language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")
+        perform(.unplaceTrain(train.id)) { _, _, _ in
+            language.text("Took \(train.name) off the track.", "已將 \(train.name) 移出軌道。")
         }
     }
 
@@ -1639,31 +1614,26 @@ public final class GameSession {
     /// targets (``realTargetHeadways(of:inSystem:)``), through
     /// `GameWorld.setLineTargetHeadways(_:to:pattern:)` in the same step.
     public func createLineFromDraft() {
-        var created: LineID?
         refreshLineDraftRoute()
         let stops = lineDraftStops
         let real = realLine(calling: stops).flatMap { match in
             realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
         }
-        perform { world throws(GameError) in
-            var draft = world
-            let line = try draft.createLine(named: Self.suggestedLineName(for: draft, in: language), stops: stops)
+        let made = perform(.createLine(name: Self.suggestedLineName(for: world, in: language), stops: stops, targets: real?.targets)) { outcome, _, _ in
+            let name = outcome.line?.name ?? ""
             var detail = ""
             if let real {
-                try draft.setLineTargetHeadways(line.id, to: real.targets, pattern: nil)
                 let levels = [(ServiceLevel.peak, real.targets.peak), (.offPeak, real.targets.offPeak)].compactMap { level, minutes in
                     minutes.map { "\(level.title(in: language)) \(headwayText(minutes: $0, in: language).lowercased())" }
                 }.joined(separator: language.text(", ", "、"))
                 detail = language.text(" Target headways from \(real.name): \(levels).", "目標班距依 \(real.name)：\(levels)。")
             }
-            world = draft
-            created = line.id
             return language.text(
-                "Created \(line.name) with \(stops.count) stops. Set how many trains it runs.",
-                "已建立 \(line.name)，共 \(stops.count) 站。請設定上線列車數。"
+                "Created \(name) with \(stops.count) stops. Set how many trains it runs.",
+                "已建立 \(name)，共 \(stops.count) 站。請設定上線列車數。"
             ) + detail
         }
-        if let created {
+        if let created = made?.line?.id {
             selectedLineID = created
             clearLineDraft()
         }
@@ -1674,13 +1644,12 @@ public final class GameSession {
     public func removeSelectedLine() {
         guard let line = requireSelectedLine() else { return }
         let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
-        let removed = perform { world throws(GameError) in
-            try world.removeLine(line.id)
-            return language.text("Removed \(line.name). Its trains finish the trip they are on.", "已刪除 \(line.name)。它的列車會跑完目前這一趟。")
+        let removed = perform(.removeLine(line.id)) { _, _, _ in
+            language.text("Removed \(line.name). Its trains finish the trip they are on.", "已刪除 \(line.name)。它的列車會跑完目前這一趟。")
         }
         // The reference removes a line's trains with it, which ends
         // following one of them (`trackedTrainId` of a gone train).
-        if removed && followsLineTrain {
+        if removed != nil && followsLineTrain {
             followedTrainID = nil
         }
         selectedLineID = world.lines.first?.id
@@ -1694,18 +1663,16 @@ public final class GameSession {
         routes.removeAll { $0.from == from && $0.to == to }
         if let preference { routes.append(preference) }
         let chosen = routes
-        perform { world throws(GameError) in
-            try world.setLineRoutePreferences(line.id, to: chosen, pattern: pattern)
-            return language.text("Updated the service's physical path.", "已更新停站模式的股道與月台。")
+        perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
+            language.text("Updated the service's physical path.", "已更新停站模式的股道與月台。")
         }
     }
 
     /// Runs the selected line all day, or from 06:00 to midnight.
     public func setSelectedLineAllDay(_ allDay: Bool) {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            try world.setLineServiceWindow(line.id, to: allDay ? .allDay : .standard)
-            return allDay
+        perform(.setLineWindow(line.id, allDay ? .allDay : .standard)) { _, _, _ in
+            allDay
                 ? language.text("\(line.name) runs all day.", "\(line.name) 全天營運。")
                 : language.text("\(line.name) runs from 06:00 to midnight.", "\(line.name) 從 06:00 營運到午夜。")
         }
@@ -1717,9 +1684,8 @@ public final class GameSession {
     /// in pairs: GameCore makes its counts even, down.
     public func setSelectedLineRing(_ isRing: Bool) {
         guard let line = requireSelectedLine(), line.isRing != isRing else { return }
-        perform { world throws(GameError) in
-            try world.setLineRing(line.id, to: isRing)
-            return isRing
+        perform(.setLineRing(line.id, isRing)) { _, _, _ in
+            isRing
                 ? language.text(
                     "\(line.name) is a ring: its trains go on from the last stop to the first, half of them each way round.",
                     "\(line.name) 改為環線：列車從最後一站接著開回第一站，一半依站序、一半反方向。"
@@ -1742,9 +1708,8 @@ public final class GameSession {
         case .low: counts.low = count
         }
         let changed = counts
-        perform { world throws(GameError) in
-            try world.setLineTrainsInService(line.id, to: changed, pattern: pattern)
-            return language.text(
+        perform(.setLineTrains(line.id, changed, pattern: pattern)) { _, _, _ in
+            language.text(
                 "\(line.name): \(count) \(count == 1 ? "train" : "trains") at \(level.title(in: language).lowercased()).",
                 "\(line.name)：\(level.title(in: language))上線 \(count) 列。"
             )
@@ -1763,8 +1728,7 @@ public final class GameSession {
         case .low: targets.low = minutes
         }
         let changed = targets
-        perform { world throws(GameError) in
-            try world.setLineTargetHeadways(line.id, to: changed, pattern: pattern)
+        perform(.setLineTargets(line.id, changed, pattern: pattern)) { _, _, _ in
             let levelName = level.title(in: language)
             switch language {
             case .english:
@@ -1783,8 +1747,8 @@ public final class GameSession {
     public func addPatternToSelectedLine(from first: Int, to last: Int, express: Bool) {
         guard let line = requireSelectedLine() else { return }
         let calls = express ? [first, last] : (first <= last ? Array(first...last) : [first, last])
-        perform { world throws(GameError) in
-            let index = try world.addLinePattern(line.id, calling: calls)
+        perform(.addLinePattern(line.id, calls: calls)) { outcome, _, world in
+            let index = outcome.number
             let title = world.serviceTitle(of: world.line(id: line.id)!, calls: calls, in: language)
             return language.text(
                 "Added \(title) to \(line.name) as pattern \(index + 1).",
@@ -1797,9 +1761,8 @@ public final class GameSession {
     /// the trip they are on.
     public func removePatternFromSelectedLine(_ index: Int) {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            try world.removeLinePattern(line.id, at: index)
-            return language.text("Removed pattern \(index + 1) from \(line.name).", "已從 \(line.name) 刪除停站模式 \(index + 1)。")
+        perform(.removeLinePattern(line.id, index: index)) { _, _, _ in
+            language.text("Removed pattern \(index + 1) from \(line.name).", "已從 \(line.name) 刪除停站模式 \(index + 1)。")
         }
     }
 
@@ -1813,25 +1776,8 @@ public final class GameSession {
     /// count made even, up, as each way needs one).
     public func assignSelectedTrainToSelectedLine(pattern: Int? = nil) {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            var draft = world
-            try draft.assignTrain(train.id, to: line.id, pattern: pattern)
-            if train.position != nil { try draft.useTrainPerformanceForMovement(train.id) }
-            // Decision 168: a line that runs high-speed sets and nothing else
-            // is a high-speed line, without a second step.
-            let fast = try draft.planAtHighSpeedWhenRunByHighSpeedSets(line.id)
-            var started = 0
-            if let assigned = draft.line(id: line.id) {
-                let service = pattern.map { $0 + 1 } ?? 0
-                let counts = service == 0 ? assigned.trainsInService : assigned.patterns[service - 1].trainsInService
-                let targets = service == 0 ? assigned.targetHeadways : assigned.patterns[service - 1].targetHeadways
-                if counts == .none, targets == TargetHeadways() {
-                    let trains = (service == 0 ? assigned.trains : assigned.patterns[service - 1].trains).count
-                    started = assigned.isRing ? max(2, trains + trains % 2) : max(1, trains)
-                    try draft.setLineTrainsInService(line.id, to: TrainsInService(peak: started, offPeak: started, low: started), pattern: pattern)
-                }
-            }
-            world = draft
+        perform(.assignTrain(train.id, line.id, pattern: pattern)) { outcome, _, world in
+            let fast = outcome.highSpeed, started = outcome.number
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name
             var text = language.text(
                 "\(train.name) now runs for \(service). It leaves once it waits at the first stop.",
@@ -1858,9 +1804,8 @@ public final class GameSession {
     /// Takes the selected train off its line; a trip under way is finished.
     public func unassignSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            try world.unassignTrain(train.id)
-            return language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
+        perform(.unassignTrain(train.id)) { _, _, _ in
+            language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
         }
     }
 
@@ -1868,12 +1813,8 @@ public final class GameSession {
     /// `GameWorld.startTrainService(_:)`.
     public func startSelectedTrainService() {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            var draft = world
-            try draft.startTrainService(train.id)
-            try draft.useTrainPerformanceForMovement(train.id)
-            world = draft
-            return language.text("\(train.name) is running its timetable.", "\(train.name) 開始依時刻表運行。")
+        perform(.startTrainService(train.id)) { _, _, _ in
+            language.text("\(train.name) is running its timetable.", "\(train.name) 開始依時刻表運行。")
         }
     }
 
@@ -1881,9 +1822,8 @@ public final class GameSession {
     /// `GameWorld.stopTrainService(_:)`; it keeps its timetable.
     public func stopSelectedTrainService() {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            try world.stopTrainService(train.id)
-            return language.text("Stopped \(train.name)'s service. It stays where it is.", "已停止 \(train.name) 的服務。它會停在原地。")
+        perform(.stopTrainService(train.id)) { _, _, _ in
+            language.text("Stopped \(train.name)'s service. It stays where it is.", "已停止 \(train.name) 的服務。它會停在原地。")
         }
     }
 
@@ -1957,17 +1897,38 @@ public final class GameSession {
     ) -> PlayerCommand.Outcome? {
         let before = world
         do throws(GameError) {
-            let outcome = try performEdit(logging: .command(command), whenUnchanged: true) { world throws(GameError) in
-                try apply(command, to: &world)
-            }
+            let outcome = try performCommand(command)
             message = StatusMessage(kind: .success, text: text(outcome, before, world))
             endFollowIfGone()
             return outcome
         } catch {
-            log(.command(command), refused: true)
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return nil
         }
+    }
+
+    /// Runs `command` through ``performEdit(_:caller:)`` and ``apply(_:to:)``
+    /// and logs it in its place, refused or not (decision 193), saying
+    /// nothing: for a function with messages of its own. Throws what
+    /// refused it.
+    @discardableResult
+    func performCommand(_ command: PlayerCommand) throws(GameError) -> PlayerCommand.Outcome {
+        do throws(GameError) {
+            return try performEdit(logging: .command(command), whenUnchanged: true) { world throws(GameError) in
+                try apply(command, to: &world)
+            }
+        } catch {
+            log(.command(command), refused: true)
+            throw error
+        }
+    }
+
+    /// ``perform(_:message:)`` for an ``PlayerCommand/Edit``.
+    @discardableResult
+    func perform(
+        _ edit: PlayerCommand.Edit, message text: (PlayerCommand.Outcome, _ before: GameWorld, _ after: GameWorld) -> String
+    ) -> PlayerCommand.Outcome? {
+        perform(.edit(edit), message: text)
     }
 
     /// Adds `action` to ``commandLog`` (decision 193), with the game time

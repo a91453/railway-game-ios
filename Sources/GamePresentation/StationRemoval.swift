@@ -19,7 +19,7 @@ extension GameSession {
         }
         let lines = world.lines
         do throws(GameError) {
-            try performEdit { world throws(GameError) in try world.removeStation(station.id) }
+            try performCommand(.edit(.removeStation(station.id)))
         } catch {
             if case .trainServiceActive(let train) = error, let line = world.assignedLine(of: train).flatMap(world.line(id:)) {
                 message = StatusMessage(kind: .failure, text: language.text(

@@ -92,8 +92,8 @@ extension GameSession {
     @discardableResult
     public func zone(_ rectangle: CellRectangle) -> Bool {
         let zone = zoningZone
-        return perform { world throws(GameError) in
-            let changed = try world.setZone(zone, rows: rectangle.rows, columns: rectangle.columns)
+        return perform(.setZone(.init(zone), rows: rectangle.rows, columns: rectangle.columns)) { outcome, _, _ in
+            let changed = outcome.number
             guard changed > 0 else {
                 return language.text("No cell changed.", "沒有格子改變。")
             }
@@ -106,7 +106,7 @@ extension GameSession {
                 changed == 1 ? "Zoned 1 cell: \(zone.title(in: .english))." : "Zoned \(changed) cells: \(zone.title(in: .english)).",
                 "劃設\(zone.title(in: .traditionalChinese)) \(changed) 格。"
             )
-        }
+        } != nil
     }
 
     /// How many cells are zoned, for the zoning tool.

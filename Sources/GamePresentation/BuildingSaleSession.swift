@@ -96,9 +96,8 @@ extension GameSession {
         }
         let managed = world.accounts.mode == .management
         let name = { (language: DisplayLanguage) in "\(building.kind.title(in: language)) #\(id.rawValue)" }
-        let sold = perform { world throws(GameError) in
-            let quote = try world.sellPlacedBuilding(id)
-            guard managed else {
+        let sold = perform(.sellBuilding(id)) { outcome, _, _ in
+            guard let quote = outcome.sale, managed else {
                 return language.text("Handed \(name(.english).lowercased()) to the city.", "\(name(.traditionalChinese)) 交給城市接手。")
             }
             let gain = gainText(quote.gain)
@@ -107,10 +106,10 @@ extension GameSession {
                 "\(name(.traditionalChinese)) 賣給城市，收入 \(quote.price.moneyText)。\(gain)。"
             )
         }
-        if sold {
+        if sold != nil {
             saleCandidate = nil
         }
-        return sold
+        return sold != nil
     }
 
     /// Drops the building chosen to sell, without selling it: the map's

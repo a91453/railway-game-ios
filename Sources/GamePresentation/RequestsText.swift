@@ -212,9 +212,8 @@ extension GameSession {
     public func acceptRequest(_ id: Int) {
         guard let request = world.cityRequest(id: id) else { return }
         let title = world.title(of: request, in: language, placeNames: placeNames)
-        perform { world throws(GameError) in
-            try world.acceptRequest(id)
-            return language.text("Request taken on: \(title).", "已承接委託：\(title)。")
+        perform(.acceptRequest(id)) { _, _, _ in
+            language.text("Request taken on: \(title).", "已承接委託：\(title)。")
         }
     }
 
@@ -223,9 +222,8 @@ extension GameSession {
         guard let request = world.cityRequest(id: id) else { return }
         let title = world.title(of: request, in: language, placeNames: placeNames)
         let active = request.acceptedDay != nil
-        perform { world throws(GameError) in
-            try world.declineRequest(id)
-            return active
+        perform(.declineRequest(id)) { _, _, _ in
+            active
                 ? language.text("Request given up: \(title). The city trusts you a star less.", "已放棄委託：\(title)。城市信賴度減一星。")
                 : language.text("Request turned down: \(title).", "已婉拒委託：\(title)。")
         }

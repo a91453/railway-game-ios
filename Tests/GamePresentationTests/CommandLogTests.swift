@@ -78,12 +78,12 @@ final class CommandLogTests: XCTestCase {
         var world = try blankWorld()
         _ = try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 2_048))
         let session = GameSession(world: world)
-        session.selectStation(StationID(rawValue: 1))
-        session.renameSelectedStation(to: "East")
+        func rename() throws { try session.performEdit { world throws(GameError) in try world.renameStation(StationID(rawValue: 1), to: "East") } }
+        try rename()
         XCTAssertEqual(session.world.stations.first?.name, "East")
-        XCTAssertEqual(session.commandLog.entries.map(\.action), [.unrecorded("renameSelectedStation(to:)")])
+        XCTAssertEqual(session.commandLog.entries.map(\.action), [.unrecorded("rename()")])
         // A refused or empty edit with no value changes nothing: not logged.
-        session.renameSelectedStation(to: "East")
+        try rename()
         XCTAssertEqual(session.commandLog.entries.count, 1)
     }
 
@@ -347,12 +347,11 @@ final class CommandLogTests: XCTestCase {
     func testAReplayStopsBeforeAChangeWithNoCommand() throws {
         let session = GameSession(world: try blankWorld())
         build(in: session)
-        session.selectStation(StationID(rawValue: 1))
-        session.renameSelectedStation(to: "Renamed")
+        try session.performEdit { world throws(GameError) in try world.renameStation(StationID(rawValue: 1), to: "Renamed") }
         let report = try report(of: session)
         let replay = try CommandLogReplay(report)
         XCTAssertEqual(replay.stopped?.index, 3)
-        XCTAssertEqual(replay.stopped?.reason, "renameSelectedStation(to:) changed the world with no recorded command")
+        XCTAssertEqual(replay.stopped?.reason, "testAReplayStopsBeforeAChangeWithNoCommand() changed the world with no recorded command")
         XCTAssertEqual(replay.replayed, 3)
     }
 
