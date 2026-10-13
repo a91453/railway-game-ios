@@ -150,10 +150,10 @@ public enum HelpGuide {
             "mapColours", .city,
             question: ("What do the colours on the map mean?", "地圖上的顏色是什麼？"),
             answer: (
-                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. Map Layers shows the same uses as a layer.",
-                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。「地圖圖層」也能用圖層看同樣的用途。"
+                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. What you build is warm yellow, like your stations, with a symbol for what it is (a house, a shop, an office tower). Map Layers shows the same uses as a layer.",
+                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。你自己蓋的建物和車站一樣是暖黃色，上面的圖示表示種類（住宅、商店、辦公大樓等）。「地圖圖層」也能用圖層看同樣的用途。"
             ),
-            keywords: "colour color legend block building land use green blue 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業"
+            keywords: "colour color legend block building land use green blue yellow 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業 黃色 自己蓋"
         ),
         HelpEntry(
             "materials", .city,
