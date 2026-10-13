@@ -630,8 +630,16 @@ final class MapInteractionTests: XCTestCase {
         }
         let mid = map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.4))
         mid.tap()
-        if !placed() { mid.tap() }
-        XCTAssertTrue(placed(), "A tap on the track must place a platform; status: \(status.label)")
+        // Asked once after each tap: a second wait on a status already
+        // seen placed failed when one lookup of it took four seconds of
+        // its five (full lane run 38362099969, the status then reading
+        // "… units along").
+        var isPlaced = placed()
+        if !isPlaced {
+            mid.tap()
+            isPlaced = placed()
+        }
+        XCTAssertTrue(isPlaced, "A tap on the track must place a platform; status: \(status.label)")
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 5))
