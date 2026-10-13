@@ -1,0 +1,58 @@
+{
+  "svg_count": 12,
+  "contrasts": [
+    {
+      "pair": "stationSymbol/station",
+      "ratio": 8.69
+    },
+    {
+      "pair": "ink/markerFill light",
+      "ratio": 13.29
+    },
+    {
+      "pair": "ink/markerFill dark",
+      "ratio": 9.64
+    },
+    {
+      "pair": "ink/land light",
+      "ratio": 11.47
+    },
+    {
+      "pair": "ink/land dark",
+      "ratio": 11.47
+    }
+  ],
+  "shape_differences": [
+    {
+      "pair": "S-A-out-gate/S-A-in-gate",
+      "pt": 10,
+      "blurred_difference_percent": 73.4
+    },
+    {
+      "pair": "S-A-out-gate/S-A-in-gate",
+      "pt": 13,
+      "blurred_difference_percent": 77.2
+    },
+    {
+      "pair": "S-A-out-gate/S-A-in-gate",
+      "pt": 16,
+      "blurred_difference_percent": 80.1
+    },
+    {
+      "pair": "S-B-out-tray/S-B-in-tray",
+      "pt": 10,
+      "blurred_difference_percent": 22.1
+    },
+    {
+      "pair": "S-B-out-tray/S-B-in-tray",
+      "pt": 13,
+      "blurred_difference_percent": 25.0
+    },
+    {
+      "pair": "S-B-out-tray/S-B-in-tray",
+      "pt": 16,
+      "blurred_difference_percent": 27.0
+    }
+  ],
+  "method": "Chromium, three pixels per point; grayscale ink masks; Gaussian blur 0.6 points; sum(abs(A-B))/sum(max(A,B)). Carrier excluded so the measure compares glyph meaning."
+}
