@@ -104,16 +104,25 @@ enum TrackSpacing {
         }
     }
 
-    /// ``keepsAway(_:from:ends:)`` for prepared edges: the same close
-    /// points. Only the pieces of `b` that come within the spacing of `a`'s
-    /// box are tried, those ``Pieces/init(_:near:)`` files; and only in runs
-    /// whose boxes come within the spacing of a run of checkpoints (a point
-    /// less than the spacing from a piece is less than it from the piece's
-    /// box in x and in y).
+    /// ``keepsAway(_:from:ends:)`` for prepared edges: the same answer.
     private static func keepsAway(_ a: Prepared, from b: Prepared, ends: Ends) -> Bool {
+        closePoints(of: a, to: b) { s, t in
+            ends.isWithin(RailwayNetwork.partingReach, s, of: a.shape.geometry.length, t, of: b.shape.geometry.length)
+        }
+    }
+
+    /// Goes through the checkpoints of `a` close to a piece of `b`, and the
+    /// chainage along `b` of each such piece's point nearest them, as
+    /// ``closePieces(to:of:)`` finds them, until `body` returns `false`;
+    /// whether it never did. The same pairs as ``Pieces/init(_:near:)`` and
+    /// ``closePieces(to:of:)`` find, in another order: only the pieces of
+    /// `b` that come within the spacing of `a`'s box are tried, as
+    /// ``Pieces/init(_:near:)`` files them; and only in runs whose boxes
+    /// come within the spacing of a run of checkpoints (a point less than
+    /// the spacing from a piece is less than it from the piece's box in x
+    /// and in y).
+    static func closePoints(of a: Prepared, to b: Prepared, _ body: (Int64, Int64) -> Bool) -> Bool {
         let w = RailwayNetwork.trackSpacing
-        let length = a.shape.geometry.length
-        let otherLength = b.shape.geometry.length
         let geometry = b.shape.geometry
         for checkpointRun in a.checkpointRuns {
             for pieceRun in b.pieceRuns
@@ -122,10 +131,8 @@ enum TrackSpacing {
                 for c in checkpointRun.pieces {
                     let (s, position) = a.checkpoints[c]
                     for i in pieceRun.pieces where Pieces.piece(i, of: b.shape, isNear: a.shape) {
-                        guard let t = closePoint(to: position, piece: i, of: geometry),
-                              !ends.isWithin(RailwayNetwork.partingReach, s, of: length, t, of: otherLength)
-                        else { continue }
-                        return false
+                        guard let t = closePoint(to: position, piece: i, of: geometry) else { continue }
+                        if !body(s, t) { return false }
                     }
                 }
             }
