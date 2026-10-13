@@ -14,7 +14,7 @@
 ## 0. 一頁摘要
 
 **凍結期先做的四項**（作者 2026-10-13 解除凍結；沒做完的照常做下去）：
-1. 教學全程驗收：補一個從第 1 步走到第 19 步的 UI 測試（iPhone、iPad 各一），再請作者在 TestFlight 實機走一次。**測試已加**（#457，56.1 已含），等作者實機走一次；後續的卡片收合在 #461。
+1. 教學全程驗收：補一個從第 1 步走到第 19 步的 UI 測試（iPhone、iPad 各一），再請作者在 TestFlight 實機走一次。**測試已加**（#457，56.1 已含），等作者實機走一次；後續的卡片預設收合已合併（#461）。
 2. 修今天驗證時找到的三個 bug（§2 第 2 項）。**三個都已修**：第一、三個在 #454，第二個在 #455：
    - 交通管制下多買的車放不上軌道，照付錢卻永遠不發車。
    - 單線兩端停著閒置的配屬車時，那條線整個營運日零班次。
@@ -135,6 +135,34 @@
   - #436 用固定班距、24 組量的分布不同：`resolveDeadlock` 30%、`extendAuthorities` 27%、`runServices` 22%、`secondsUntilARouteFrees` 17%。
 - 原因：一段高鐵 leg 長 30–180 km，等於幾千個 16 m 的 span。`blockedTrack`、`trackHolders` 每一步都替每一列車整個重算；`trackHolders` 算每一列的等待部分時，還要和其他每一列比一次。
 - 同一次量測看到、和示範本身有關的事，寫在波次 1 第 6 項的「依賴」。
+
+**56.1 之後的盤點**（派工 session，2026-10-13，要交給作者）。下面是上表沒有追蹤的；行號是當天 `main` 的，標 PLAUSIBLE 的還沒重現。
+
+| 代號 | 項目 | 規模 | 主要檔案 | 注意 |
+| --- | --- | --- | --- | --- |
+| A | **交通管制疊層每 tick 在主執行緒跑死結與等候搜尋**：`TrafficKey` 含 `clock.now`。平溪 08:00 每 tick 6.5–35 ms，列車工具的 `routeWaitText` 再加 14–29 ms。新遊戲預設開交通管制，每局都會碰到 | S | `MapView.swift`（約 610、1081–1094 行） | 建議和第 5 項（同一個疊層）一起做。只改 App 端的 key 與快取，不碰進路預約效能正在改的 `Deadlock.swift`、`RouteReservation.swift` |
+| B | **路線面板其他每 tick 的重算**：除了 `lineRouteChoices`（第 10 項），`lineServiceSummaries`、涵蓋範圍、股道數、journey、配車也每 tick 算；高鐵線合計每次 body 430–530 ms（Linux release） | M | `LinesPanel.swift`、`Sources/GamePresentation/` | 和第 10 項一起依 `commandRevision` 快取（#441 的做法）。GameCore 的 journey 快取另有 session 在做，不碰 `LineJourney.swift` |
+| C | **開始畫面沒有字級上限**：只有 `ContentView.swift:47` 有；最大字級時按不到「實景地圖」 | S | `StartView.swift` | #469（多槽自動存檔）也改 `StartView.swift`，等它合併 |
+| D | **路線面板依獲利、載客排序時，列每 tick 重排**：手指下的列會換掉 | S | `LinesPanel.swift`（約 284–295 行） | 車隊總覽已用「記住順序」修過，照同樣做法。和 B 同一個檔案，給同一個 session |
+| E | **細節卡片 `pinsEnds` 的 if／else 版面在行數變化時來回切換**，可能又把 #463 修好的選單關掉（PLAUSIBLE） | S | `ContentView.swift`（約 555–596 行） | 先在 Simulator 重現 |
+
+其他還沒排的 bug：
+- 新聞紀錄開著時，「新」的粗體標錯列（`NewsLogView.swift:14-18`）。
+- 子公司營收用到別天的假日、天氣倍率（`Subsidiary.swift:260`，PLAUSIBLE）。
+- `Goals.connectedStations` 把封閉車站、貨運線、沒車的線都算成連接。可能動到 golden。
+- 匯入的存檔會解鎖成就。修正要升存檔版本。
+- 成就檔讀取失敗後，下一次解鎖會蓋掉全部紀錄（`Achievements.swift:404`、`426`）。
+- `splitTrackEdge` 沒呼叫 `abandonUnservedPassengers`。
+- 紀念品店的升級成本加在已折舊的資產上。
+- 從選單重開教學，在實景地形上有步驟會被略過。
+- 等待中的會車列車永遠開不了時，會一直等。
+- 新線的首班被備用車擋住，又沒有到點的班次時，沒有處理。
+- HUD 的點擊範圍小於 44 pt。#469 也改 `HUDView.swift`，等它合併。
+- 西部幹線龍田附近有一段 84 m 的鋸齒。
+
+另外兩項效能：
+- 背景計算不能取消（`MapView.swift:625-742`、`StationPanel.swift:96-114` 的 `Task.detached`）。和第 3 項 (4) 是同一件事。
+- `PassengerPlanKey` 含了沒有需求的轉乘紀錄，所以不必要地重算。
 
 ## 3. 波次 1：解凍後第一波（變簡單、看得懂、少犯錯，最便宜地回答「跑太快」）
 
