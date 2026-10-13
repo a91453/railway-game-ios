@@ -257,22 +257,29 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
 
     // MARK: - Following, for the UI tests
 
-    /// Whether MapKit shows what the game's camera shows: "follows";
-    /// "wider" when it shows more round the same middle (it would not come
-    /// as close); "off" when it shows somewhere else; with " tilted" when
-    /// its camera is not straight down and north up. TestFlight 56.1's
-    /// "the route runs off when the map changes to satellite".
+    /// Whether MapKit shows what the game's camera shows: "follows" when
+    /// every edge of its view is within a point of the game's; "wider"
+    /// when it shows more round the same middle (it would not come as
+    /// close); "off" when it shows somewhere else. Not "follows", each
+    /// edge's offset in points follows (left, top, right, bottom), and
+    /// " tilted" when its camera is not straight down and north up.
+    /// TestFlight 56.1's "the route runs off when the map changes to
+    /// satellite".
     var followingText: String? {
         guard let placement, bounds.width > 0, bounds.height > 0 else { return nil }
         let wanted = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
+        guard wanted.size.width > 0 else { return nil }
         let shown = visibleMapRect
-        var text = if Self.isClose(shown, to: wanted) {
-            "follows"
-        } else if shown.size.width > wanted.size.width * 1.02,
-                  abs(shown.midX - wanted.midX) <= shown.size.width / 100, abs(shown.midY - wanted.midY) <= shown.size.width / 100 {
-            "wider"
+        let scale = Double(bounds.width) / wanted.size.width
+        let edges = [shown.minX - wanted.minX, shown.minY - wanted.minY, shown.maxX - wanted.maxX, shown.maxY - wanted.maxY]
+            .map { Int(($0 * scale).rounded()) }
+        var text: String
+        if edges.allSatisfy({ abs($0) <= 1 }) {
+            text = "follows"
         } else {
-            "off"
+            let wider = shown.size.width > wanted.size.width * 1.02
+                && abs(shown.midX - wanted.midX) <= shown.size.width / 100 && abs(shown.midY - wanted.midY) <= shown.size.width / 100
+            text = (wider ? "wider" : "off") + " " + edges.map { $0 >= 0 ? "+\($0)" : "\($0)" }.joined(separator: " ")
         }
         if camera.pitch != 0 || camera.heading != 0 {
             text += " tilted"
