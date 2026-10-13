@@ -28,7 +28,7 @@
 // `flowDashboardCaptureLineForDailyReport`, `...CaptureStationForDailyReport`).
 
 /// What one line did over some span: a day of it, or the hour in progress.
-public struct LineTally: Hashable, Codable, Sendable {
+public struct LineTally: Hashable, Sendable {
     /// People who got on one of its trains (a transfer counts on each line).
     public internal(set) var boardings: Int64 = 0
     /// Trains that left a stop for the next.
@@ -47,8 +47,19 @@ public struct LineTally: Hashable, Codable, Sendable {
     public internal(set) var maintenanceCost: Money = .zero
     public internal(set) var energyCost: Money = .zero
     public internal(set) var staffCost: Money = .zero
+    /// Trips that reached their last call, with realistic operation
+    /// (decision 207): what its punctuality is counted from.
+    public internal(set) var trips: Int64 = 0
+    /// Of ``trips``, those more than ``GameWorld/punctualSeconds`` late.
+    public internal(set) var lateTrips: Int64 = 0
 
     public init() {}
+
+    /// The trips on time, in thousandths of ``trips`` (decision 207), or
+    /// `nil` with none counted.
+    public var punctualityPermille: Int64? {
+        trips > 0 ? (trips - lateTrips) * 1_000 / trips : nil
+    }
 
     public var totalCost: Money {
         operatingCost + maintenanceCost + energyCost + staffCost
@@ -73,14 +84,59 @@ public struct LineTally: Hashable, Codable, Sendable {
         maintenanceCost = maintenanceCost + other.maintenanceCost
         energyCost = energyCost + other.energyCost
         staffCost = staffCost + other.staffCost
+        trips += other.trips
+        lateTrips += other.lateTrips
     }
 
     var isValid: Bool {
-        let counts = [boardings, departures, trainDistance, deadheadDistance, peakLoad]
+        let counts = [boardings, departures, trainDistance, deadheadDistance, peakLoad, trips, lateTrips]
         let money = [fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost]
         return counts.allSatisfy { $0 >= 0 && $0 <= GameWorld.maximumHourly }
-            && deadheadDistance <= trainDistance
+            && deadheadDistance <= trainDistance && lateTrips <= trips
             && money.allSatisfy { $0.amount >= 0 && $0.amount % 100 == 0 && $0.amount <= GameWorld.maximumHourly * 100 }
+    }
+}
+
+/// Saved with every figure; `"trips"` and `"lateTrips"` (decision 207)
+/// only when there are trips, which is how tallies from before them read.
+extension LineTally: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case boardings, departures, trainDistance, deadheadDistance, peakLoad
+        case fareRevenue, operatingCost, maintenanceCost, energyCost, staffCost, trips, lateTrips
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        boardings = try container.decode(Int64.self, forKey: .boardings)
+        departures = try container.decode(Int64.self, forKey: .departures)
+        trainDistance = try container.decode(Int64.self, forKey: .trainDistance)
+        deadheadDistance = try container.decode(Int64.self, forKey: .deadheadDistance)
+        peakLoad = try container.decode(Int64.self, forKey: .peakLoad)
+        fareRevenue = try container.decode(Money.self, forKey: .fareRevenue)
+        operatingCost = try container.decode(Money.self, forKey: .operatingCost)
+        maintenanceCost = try container.decode(Money.self, forKey: .maintenanceCost)
+        energyCost = try container.decode(Money.self, forKey: .energyCost)
+        staffCost = try container.decode(Money.self, forKey: .staffCost)
+        trips = try container.decodeIfPresent(Int64.self, forKey: .trips) ?? 0
+        lateTrips = try container.decodeIfPresent(Int64.self, forKey: .lateTrips) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(boardings, forKey: .boardings)
+        try container.encode(departures, forKey: .departures)
+        try container.encode(trainDistance, forKey: .trainDistance)
+        try container.encode(deadheadDistance, forKey: .deadheadDistance)
+        try container.encode(peakLoad, forKey: .peakLoad)
+        try container.encode(fareRevenue, forKey: .fareRevenue)
+        try container.encode(operatingCost, forKey: .operatingCost)
+        try container.encode(maintenanceCost, forKey: .maintenanceCost)
+        try container.encode(energyCost, forKey: .energyCost)
+        try container.encode(staffCost, forKey: .staffCost)
+        if trips > 0 {
+            try container.encode(trips, forKey: .trips)
+            try container.encode(lateTrips, forKey: .lateTrips)
+        }
     }
 }
 
@@ -269,6 +325,16 @@ extension GameWorld {
             $0.departures = min($0.departures + 1, Self.maximumDepartures)
             $0.trainDistance = min($0.trainDistance + distance, Self.maximumHourly)
             if seats > 0 { $0.peakLoad = max($0.peakLoad, min(1_000 * passengers / seats, Self.maximumHourly)) }
+        }, on: line)
+    }
+
+    /// A trip of line `line` reached its last call `late` seconds after its
+    /// scheduled arrival (decision 207; negative when early).
+    mutating func countLineTrip(on line: LineID, late: Int64) {
+        guard recordsLines else { return }
+        lineAccounts?.count({
+            $0.trips = min($0.trips + 1, Self.maximumHourly)
+            if late > Self.punctualSeconds { $0.lateTrips = min($0.lateTrips + 1, $0.trips) }
         }, on: line)
     }
 

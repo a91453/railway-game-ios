@@ -9,7 +9,17 @@ import GameCore
 extension GameSession {
     /// Shows the tutorial from its first step: the reference's
     /// `startTutorial`, and starting it again from the game menu.
+    ///
+    /// What was picked before it began (a stretch's start and end, a line's
+    /// stations, a selection) is dropped first: started from the game menu
+    /// in a game being built in, a stretch already picked had the drawing
+    /// step passed as done before the player drew anything.
     public func startTutorial() {
+        networkStart = nil
+        networkEnd = nil
+        networkEdgePoint = nil
+        clearLineDraft()
+        clearSelection()
         tutorial = Tutorial(steps: Tutorial.steps(over: world), over: world)
         skippedTutorial = nil
         setUpTutorialStep()

@@ -141,8 +141,12 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // of the row the touch fell in the margin once the panel narrowed
         // to 270 points (#499; main's full lane, run 38404565525).
         toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
+        // Twenty seconds: as a job's first test, on a cold Simulator with
+        // the real-world demo, one lookup took 10 to 20 seconds, and the
+        // switch's value was first read 17 seconds after the tap (run
+        // 38441429093); the same steps in the next test took a second.
         let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if

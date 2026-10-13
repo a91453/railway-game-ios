@@ -1460,3 +1460,10 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有）拉遠時建物的種類徽章 | `MapArt.drawPlacedBuildings`（`buildingBadgeFromSize`） | gap → 原生 |
 
 圖照 art-style §7 自己畫（`MapGlyphPerson` 照現有擁擠等級的人形），沒有搬參考庫的圖。外部專案：沒有用到程式碼或資料。
+## 空狀態的插圖（決策 122 之後的修正）
+
+圖是作者自己要求生成的原稿（`docs/art/generated-2026-10-13/`，#514）描成的平塗 SVG，不是參考庫的圖。參考庫（`a91453/railway-reference-private`）搜過 `empty`、`no-data`、`placeholder`：沒有空狀態的插圖可用；art-style §7 的規則下參考庫的圖本來也只取想法。外部專案：沒有用到程式碼或資料。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| （參考沒有）空狀態的插圖 | `EmptyLines`、`EmptySaves`、`EmptyTrains`（`LinesPanel`、`StartView`、`FleetOverviewSheet`） | gap → 原生（作者的原稿描圖） |

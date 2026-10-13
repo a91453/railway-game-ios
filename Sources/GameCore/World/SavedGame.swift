@@ -271,9 +271,15 @@
 ///     its trains taking the left of double track. A build that reads only
 ///     an earlier version would drop it, and its trains would run both ways
 ///     on one line again, so it says the save is newer than it instead.
+/// 53. Realistic operation (decision 207): a world can have
+///     `"realisticOperation": true`, a line its own `"dwellSeconds"`, and a
+///     line's tally `"trips"` and `"lateTrips"`. A build that reads only an
+///     earlier version would drop them, and its lines would plan at their
+///     least times and a minute's dwell again, so it says the save is newer
+///     than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 52
+    public static let currentVersion = 53
 
     public let world: GameWorld
 
@@ -417,6 +423,9 @@ extension SavedGame: Codable {
         // what it builds, as every one did.
         // Version 51 to 52: a world without `"keepLeft"` finds its routes
         // as before, the first of equally short ways by edge number.
+        // Version 52 to 53: a world without `"realisticOperation"` plans
+        // its legs at their least times; a line without `"dwellSeconds"`
+        // dwells a minute; a tally without `"trips"` counted none.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
