@@ -23,9 +23,9 @@ final class RealWorldMapUITests: XCTestCase {
         tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
 
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
+        XCTAssertTrue(map.appears(within: 15), "The game starts")
         let style = app.buttons["map.style"]
-        XCTAssertTrue(style.waitForExistence(timeout: 10), "Only a real-world map has a map style menu")
+        XCTAssertTrue(style.appears(within: 10), "Only a real-world map has a map style menu")
         XCTAssertTrue(app.buttons["Zoom in"].exists)
 
         // Keep the live clock from rebuilding the native menus (the map
@@ -34,7 +34,7 @@ final class RealWorldMapUITests: XCTestCase {
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
 
         tappable(app.buttons.matching(identifier: "hud.menu"), name: "hud.menu").tap()
         tappable(app.buttons.matching(identifier: "menu.backToStart"), name: "menu.backToStart").tap()
@@ -42,7 +42,7 @@ final class RealWorldMapUITests: XCTestCase {
         let continueButton = tappable(app.buttons.matching(identifier: "start.continue"), name: "start.continue")
         XCTAssertTrue(continueButton.label.contains("Real-world map"), "The autosave is a real-world map's: \(continueButton.label)")
         continueButton.tap()
-        XCTAssertTrue(app.buttons["map.style"].waitForExistence(timeout: 15), "Continuing keeps the real-world map")
+        XCTAssertTrue(app.buttons["map.style"].appears(within: 15), "Continuing keeps the real-world map")
     }
 
     /// Stage V4e: the real-world demo runs under traffic control, and the
@@ -58,10 +58,10 @@ final class RealWorldMapUITests: XCTestCase {
 
         app.openDemo("demo.realWorld")
 
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         let authority = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "Movement authority")).firstMatch
-        XCTAssertTrue(authority.waitForExistence(timeout: 60), "The demo's trains take their routes under traffic control")
+        XCTAssertTrue(authority.appears(within: 60), "The demo's trains take their routes under traffic control")
     }
 
     /// Decision 170: the High Speed Rail demo is built off the main actor (a
@@ -78,9 +78,9 @@ final class RealWorldMapUITests: XCTestCase {
 
         app.openDemo("demo.highSpeed")
 
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 600), "The demo is built and opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
         // It runs at once, like the other demos: a pause button, not a play one.
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.appears(within: 30))
     }
 
     /// Decision 191: the short credit in the real-world map's corner is
@@ -96,12 +96,12 @@ final class RealWorldMapUITests: XCTestCase {
 
         app.openDemo("demo.realWorld")
 
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         let credit = app.descendants(matching: .any)["map.credit"].firstMatch
-        XCTAssertTrue(credit.waitForExistence(timeout: 30), "The map's corner credits its sources")
+        XCTAssertTrue(credit.appears(within: 30), "The map's corner credits its sources")
         XCTAssertTrue(credit.label.contains("© OpenMapTiles © OpenStreetMap"), credit.label)
         credit.tap()
-        XCTAssertTrue(app.navigationBars["Data Sources"].waitForExistence(timeout: 10), "Tapping the credit opens the data sources")
+        XCTAssertTrue(app.navigationBars["Data Sources"].appears(within: 10), "Tapping the credit opens the data sources")
     }
 
     /// A blank new game has no Apple map and no style menu.
@@ -112,10 +112,10 @@ final class RealWorldMapUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["Zoom in"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+        XCTAssertTrue(app.buttons["Zoom in"].appears(within: 10))
         XCTAssertFalse(app.buttons["map.style"].exists)
     }
 
@@ -139,7 +139,7 @@ final class RealWorldMapUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         startARealWorldGameFromTaipei(in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 15), "The game starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 15), "The game starts")
     }
 
     /// Decision 190's report (TestFlight 54.1): on a real-world map, a
@@ -164,14 +164,14 @@ final class RealWorldMapUITests: XCTestCase {
 
         startARealWorldGameFromTaipei(in: app)
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
+        XCTAssertTrue(map.appears(within: 15), "The game starts")
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         // The map opens on the whole place, some 48 m a point: the stretch
         // below would run 10 km, onto land not owned (run 38289886049).
         // Five steps, each halving it, make it some 330 m. Before a tool is
         // chosen, while the zoom buttons show beside the map.
         let zoomIn = app.buttons["Zoom in"]
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomIn.appears(within: 10))
         for _ in 0..<5 where zoomIn.isEnabled {
             zoomIn.tap()
         }
@@ -197,31 +197,31 @@ final class RealWorldMapUITests: XCTestCase {
         point(0.55).tap()
         let confirm = app.buttons["map.build.confirm"]
         let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
-        let builder = confirm.waitForExistence(timeout: 10) ? confirm : card
-        XCTAssertTrue(builder.waitForExistence(timeout: 10), "No way to build the stretch")
+        let builder = confirm.appears(within: 10) ? confirm : card
+        XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
         XCTAssertTrue(builder.isHittable, "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
         builder.tap()
         let banner = { (text: String) in
             app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         }
-        XCTAssertTrue(banner("Built Edge").waitForExistence(timeout: 10), "The stretch was not built: \(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch.label)")
+        XCTAssertTrue(banner("Built Edge").appears(within: 10), "The stretch was not built: \(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch.label)")
 
         // The platform mode, from the details card (opened if folded).
         let platform = app.buttons["Platform"]
-        if !platform.waitForExistence(timeout: 3) || !platform.isHittable {
+        if !platform.appears(within: 3) || !platform.isHittable {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
         }
-        XCTAssertTrue(platform.waitForExistence(timeout: 10), "No Platform mode")
+        XCTAssertTrue(platform.appears(within: 10), "No Platform mode")
         platform.waitUntilSettled()
         platform.tap()
         // A platform on the track, levelled first where it climbs.
         let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
         site.tap()
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10), "No ✓ for the platform")
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         confirm.waitUntilSettled()
         confirm.tap()
-        XCTAssertTrue(banner("Built station").waitForExistence(timeout: 10), "The platform was not built")
+        XCTAssertTrue(banner("Built station").appears(within: 10), "The platform was not built")
         // Asked for again on the same level stretch: refused, the refusal in
         // the banner, the pill still there. The new station's tag stands
         // over the site (run 38291939056), so the tap moves along the
@@ -229,13 +229,13 @@ final class RealWorldMapUITests: XCTestCase {
         // track.
         for offset: CGFloat in [60, -60, 90, -90] where !confirm.exists {
             site.withOffset(CGVector(dx: offset, dy: 0)).tap()
-            _ = confirm.waitForExistence(timeout: 3)
+            _ = confirm.appears(within: 3)
         }
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "No ✓ for the second platform")
+        XCTAssertTrue(confirm.appears(within: 5), "No ✓ for the second platform")
         confirm.waitUntilSettled()
         confirm.tap()
-        XCTAssertTrue(banner("overlap").waitForExistence(timeout: 5), "No refusal in the banner")
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "The pill went with the refusal")
+        XCTAssertTrue(banner("overlap").appears(within: 5), "No refusal in the banner")
+        XCTAssertTrue(confirm.appears(within: 5), "The pill went with the refusal")
         let dock = app.buttons["dock.build"].frame
         for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
             XCTAssertTrue(button.isHittable, "The platform's \(name) cannot be tapped: \(button.frame)")
@@ -268,7 +268,7 @@ final class RealWorldMapUITests: XCTestCase {
     /// buttons are disabled until the real-world data, read in the
     /// background at launch, is there.
     private func tappable(_ query: XCUIElementQuery, name: String) -> XCUIElement {
-        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing button: \(name)")
+        XCTAssertTrue(query.firstMatch.appears(within: 10), "Missing button: \(name)")
         let deadline = Date().addingTimeInterval(10)
         var disabled: XCUIElement?
         repeat {

@@ -262,8 +262,15 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   website's screenshots are taken, by `website-screenshots.yml`); a failed
   run's uploaded result bundle holds XCTest's own failure screenshots, and
   nothing compares images. A new UI test joins the gate list in
-  `ios-build.yml` only if it is steady and only a Simulator can answer it;
-  otherwise it runs in the full lane.
+  `ios-build.yml` only if it is steady, only a Simulator can answer it, and
+  the gate's tests stay within about 6 minutes; otherwise it runs in the
+  full lane (decision 199). Logic a UI test would check (what a menu
+  lists, where a card goes, when a step advances) goes into
+  GamePresentation with a Linux test where it can, leaving the UI test what
+  only a Simulator can answer: whether it shows and a finger reaches it. UI
+  tests wait with `appears(within:)` and `disappears(within:)`, which answer
+  at once when the element already is (or is not) there;
+  `waitForExistence(timeout:)` first looks after a second.
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.

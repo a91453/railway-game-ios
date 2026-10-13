@@ -25,7 +25,7 @@ final class ToolbarSmokeTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let brand = app.staticTexts["start.brand"]
-        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        XCTAssertTrue(brand.appears(within: 10))
         XCTAssertEqual(brand.label, "沿線")
         XCTAssertTrue(app.buttons["start.newGame"].exists)
     }
@@ -38,12 +38,12 @@ final class ToolbarSmokeTests: XCTestCase {
         defer { app.terminate() }
 
         let brand = app.staticTexts["start.brand"]
-        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        XCTAssertTrue(brand.appears(within: 10))
         XCTAssertEqual(brand.label, language == "en" ? "Along the Line" : "沿線")
 
         // The app opens on the start screen; start a new game from it.
         let newGame = app.buttons["start.newGame"]
-        guard newGame.waitForExistence(timeout: 10) else {
+        guard newGame.appears(within: 10) else {
             XCTFail("Missing start screen button: New Game")
             return
         }
@@ -53,7 +53,7 @@ final class ToolbarSmokeTests: XCTestCase {
         // closes them; so each is tapped in this order.
         for query in queries {
             let button = app.buttons[query]
-            guard button.waitForExistence(timeout: 10) else {
+            guard button.appears(within: 10) else {
                 XCTFail("Missing toolbar button: \(query)")
                 return
             }
@@ -76,9 +76,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         defer { app.terminate() }
         app.openDemo("demo.realWorld")
         let pause = app.buttons["Pause"]
-        XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
+        XCTAssertTrue(pause.appears(within: 15)); pause.tap()
         let lines = app.buttons["Lines"]
-        XCTAssertTrue(lines.waitForExistence(timeout: 10)); lines.tap()
+        XCTAssertTrue(lines.appears(within: 10)); lines.tap()
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
         recordRouteUI("before opening route menu", in: app)
@@ -86,7 +86,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         recordRouteUI("after opening route menu", in: app)
         let platform = app.buttons["line.route.choice.-1.0.1.0"]
         tapMenuAction(platform, in: app)
-        XCTAssertTrue(route.waitForExistence(timeout: 10))
+        XCTAssertTrue(route.appears(within: 10))
         let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform track #"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
         // Choosing a path posts a status message, pinned to the bottom of
@@ -117,9 +117,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let buttons = app.buttons.matching(NSPredicate(format: "label == %@", "Dismiss message")).allElementsBoundByIndex
         let placed = buttons.compactMap { button in (try? button.snapshot()).map { (button: button, top: $0.frame.minY) } }
         guard let lowest = placed.max(by: { $0.top < $1.top })?.button else { return }
-        if lowest.waitForNonExistence(timeout: 8) { return }
+        if lowest.disappears(within: 8) { return }
         lowest.tap()
-        XCTAssertTrue(lowest.waitForNonExistence(timeout: 5), "The status message stayed over the list")
+        XCTAssertTrue(lowest.disappears(within: 5), "The status message stayed over the list")
     }
 
     /// Scrolls the Lines panel until `row` lies wholly on screen
@@ -144,7 +144,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
     }
 
     private func tapMenuAction(_ button: XCUIElement, in app: XCUIApplication) {
-        guard button.waitForExistence(timeout: 10) else {
+        guard button.appears(within: 10) else {
             recordRouteUI("missing menu action", in: app)
             XCTFail("Missing route menu action; see the attached accessibility hierarchy")
             return
@@ -174,13 +174,30 @@ final class LineRoutePreferenceUITests: XCTestCase {
 
 @MainActor
 extension XCUIElement {
+    /// Whether the element exists within `timeout` seconds, as
+    /// `waitForExistence(timeout:)` says, but at once when it is already
+    /// there: XCTest's wait first looks a second after it starts. In the
+    /// pull request runs of 2026-10-13 every one of a run's some 160 waits
+    /// found its element at that first look: about 2.7 of the gate's 8.5
+    /// minutes of tests (decision 199).
+    func appears(within timeout: TimeInterval) -> Bool {
+        exists || waitForExistence(timeout: timeout)
+    }
+
+    /// Whether the element is gone within `timeout` seconds, at once when
+    /// it already is: `waitForNonExistence(timeout:)` waits that first
+    /// second too.
+    func disappears(within timeout: TimeInterval) -> Bool {
+        !exists || waitForNonExistence(timeout: timeout)
+    }
+
     /// Waits until the element is hittable and in the same place twice in
     /// a row, a quarter of a second apart. Waiting for the app to idle does
     /// not wait for a turning layout or tools sliding in, and a tap found
     /// while they move lands where the element was (PR #326's runs: on the
     /// map beside the overview, and 5 pt left of the train tool).
     func waitUntilSettled(timeout: TimeInterval = 5) {
-        XCTAssertTrue(waitForExistence(timeout: timeout), "Missing \(self)")
+        XCTAssertTrue(appears(within: timeout), "Missing \(self)")
         var last = frame
         for _ in 0..<Int(timeout * 4) {
             Thread.sleep(forTimeInterval: 0.25)
@@ -252,7 +269,7 @@ extension XCUIApplication {
     /// title (decision 106): a `swipeUp()` at the middle of the screen
     /// lands on the edge between the two and may scroll the title instead.
     func bringStartButtonIntoView(_ button: XCUIElement) {
-        guard button.waitForExistence(timeout: 10), !button.isHittable else { return }
+        guard button.appears(within: 10), !button.isHittable else { return }
         let column = scrollViews.containing(.button, identifier: button.identifier).firstMatch
         for _ in 0..<6 where column.exists && !button.isHittable {
             // Slowly, so the column does not fling past the button.
@@ -283,13 +300,13 @@ extension XCUIApplication {
     /// holds before lifting and is shorter than the band, so the middle
     /// cannot jump over it.
     func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, drags: Int = 40) -> Bool {
-        if holder == nil, !button.waitForExistence(timeout: 10) { return false }
+        if holder == nil, !button.appears(within: 10) { return false }
         guard let holder = holder ?? [scrollViews, collectionViews, tables]
             .map({ $0.containing(.button, identifier: button.identifier).firstMatch })
             .first(where: \.exists) else {
             return button.exists && frame.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
         }
-        _ = holder.waitForExistence(timeout: 10)
+        _ = holder.appears(within: 10)
         let onScreen = holder.frame.intersection(frame)
         let area = onScreen.isEmpty ? holder.frame : onScreen
         // Clear of the holder's edges, where a navigation or home bar can
@@ -327,7 +344,7 @@ extension XCUIApplication {
     /// background at launch.
     func openDemo(_ identifier: String, timeout: TimeInterval = 15) {
         let button = buttons["start.demoMap"]
-        XCTAssertTrue(button.waitForExistence(timeout: 10), "Missing button: start.demoMap")
+        XCTAssertTrue(button.appears(within: 10), "Missing button: start.demoMap")
         bringStartButtonIntoView(button)
         button.tap()
         let demo = buttons[identifier]
@@ -336,10 +353,10 @@ extension XCUIApplication {
         // opened (PR run 38208781302 on 8b08998, which changed no app code
         // and passed on its re-run). Tap again while the button is still
         // there to tap and the sheet is not.
-        for _ in 0..<2 where !demo.waitForExistence(timeout: 10) && button.isHittable {
+        for _ in 0..<2 where !demo.appears(within: 10) && button.isHittable {
             button.tap()
         }
-        XCTAssertTrue(demo.waitForExistence(timeout: 10), "Missing demo: \(identifier)")
+        XCTAssertTrue(demo.appears(within: 10), "Missing demo: \(identifier)")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: demo)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: timeout), .completed, "The demo never became enabled: \(identifier)")
         demo.tap()

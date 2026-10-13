@@ -15,8 +15,8 @@ final class SettingsUITests: XCTestCase {
         tap(app.buttons["start.settings"], name: "start.settings")
         let music = app.switches["settings.music"]
         let sounds = app.switches["settings.sounds"]
-        XCTAssertTrue(music.waitForExistence(timeout: 10), "Missing the music switch")
-        XCTAssertTrue(sounds.waitForExistence(timeout: 10), "Missing the sound effects switch")
+        XCTAssertTrue(music.appears(within: 10), "Missing the music switch")
+        XCTAssertTrue(sounds.appears(within: 10), "Missing the sound effects switch")
         let before = switchValue(sounds)
 
         XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
@@ -26,8 +26,8 @@ final class SettingsUITests: XCTestCase {
         tap(app.buttons["settings.done"], name: "settings.done")
         // The start screen's buttons exist under the sheet too: what shows
         // the sheet closed is its Done button gone.
-        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not close the settings")
-        XCTAssertTrue(app.buttons["start.newGame"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["settings.done"].disappears(within: 10), "Done did not close the settings")
+        XCTAssertTrue(app.buttons["start.newGame"].appears(within: 10))
     }
 
     func testTheGameMenuOpensTheSameSettings() {
@@ -40,8 +40,8 @@ final class SettingsUITests: XCTestCase {
         openSettingsFromTheGameMenu(app)
         XCTAssertTrue(app.switches["settings.sounds"].exists, "Missing the sound effects switch")
         tap(app.buttons["settings.done"], name: "settings.done")
-        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
-        XCTAssertTrue(app.buttons["hud.menu"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["settings.done"].disappears(within: 10), "Done did not go back to the game")
+        XCTAssertTrue(app.buttons["hud.menu"].appears(within: 10))
     }
 
     /// Decision 152: the settings' 3D city preview opens full screen, its
@@ -59,7 +59,7 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
 
         tap(app.buttons["start.settings"], name: "start.settings")
-        XCTAssertTrue(app.switches["settings.sounds"].waitForExistence(timeout: 10), "The settings did not open")
+        XCTAssertTrue(app.switches["settings.sounds"].appears(within: 10), "The settings did not open")
         // A phone on its side shows only the first sections, and a List
         // makes a row only once it scrolls into view: since the Map section
         // (decision 182) the preview starts below the fold. On its side
@@ -74,17 +74,17 @@ final class SettingsUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY))
             .tap()
-        XCTAssertTrue(app.buttons["cityView.close"].waitForExistence(timeout: 10), "The 3D city preview did not open")
+        XCTAssertTrue(app.buttons["cityView.close"].appears(within: 10), "The 3D city preview did not open")
         let loading = app.descendants(matching: .any)["cityView.loading"]
         let error = app.staticTexts["cityView.error"]
-        let done = loading.waitForNonExistence(timeout: 60)
+        let done = loading.disappears(within: 60)
         if error.exists {
             XCTFail(error.label)
         }
         XCTAssertTrue(done, "The page did not load from the website, and the web view reported no error")
         tap(app.buttons["cityView.close"], name: "cityView.close")
-        XCTAssertTrue(app.buttons["cityView.close"].waitForNonExistence(timeout: 10), "Close did not close the 3D city preview")
-        XCTAssertTrue(app.buttons["settings.done"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["cityView.close"].disappears(within: 10), "Close did not close the 3D city preview")
+        XCTAssertTrue(app.buttons["settings.done"].appears(within: 10))
     }
 
     /// With the Lines panel open (a half-height sheet that leaves the HUD
@@ -100,11 +100,11 @@ final class SettingsUITests: XCTestCase {
         defer { app.terminate() }
 
         tap(app.buttons["Lines"], name: "Lines")
-        XCTAssertTrue(app.navigationBars["Lines"].waitForExistence(timeout: 10), "The Lines panel did not open")
+        XCTAssertTrue(app.navigationBars["Lines"].appears(within: 10), "The Lines panel did not open")
         openSettingsFromTheGameMenu(app)
         XCTAssertFalse(app.navigationBars["Lines"].exists, "Settings takes the Lines panel's place")
         tap(app.buttons["settings.done"], name: "settings.done")
-        XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
+        XCTAssertTrue(app.buttons["settings.done"].disappears(within: 10), "Done did not go back to the game")
     }
 
     /// Decision 193: from a game, the report can carry its save and
@@ -123,7 +123,7 @@ final class SettingsUITests: XCTestCase {
         XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
         XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
         let attached = app.staticTexts["settings.report.attached"]
-        XCTAssertTrue(attached.waitForExistence(timeout: 30), "What is attached is not said")
+        XCTAssertTrue(attached.appears(within: 30), "What is attached is not said")
         XCTAssertTrue(attached.label.contains("command-log.json"), attached.label)
         XCTAssertTrue(app.buttons["settings.report"].isEnabled, "Report a Problem shares with the file")
         XCTAssertTrue(flip(attach, from: "1"), "The attach switch did not turn off")
@@ -139,20 +139,20 @@ final class SettingsUITests: XCTestCase {
     private func openSettingsFromTheGameMenu(_ app: XCUIApplication) {
         tap(app.buttons["hud.menu"], name: "hud.menu")
         let action = app.buttons["menu.settings"]
-        XCTAssertTrue(action.waitForExistence(timeout: 30), "Missing menu.settings")
+        XCTAssertTrue(action.appears(within: 30), "Missing menu.settings")
         action.waitUntilSettled()
         let frame = action.frame, bounds = app.frame
         let point = app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: frame.midX - bounds.minX, dy: frame.midY - bounds.minY))
         point.tap()
-        if !app.switches["settings.music"].waitForExistence(timeout: 10), action.exists, action.isHittable {
+        if !app.switches["settings.music"].appears(within: 10), action.exists, action.isHittable {
             point.tap()
         }
-        XCTAssertTrue(app.switches["settings.music"].waitForExistence(timeout: 10), "Missing the music switch")
+        XCTAssertTrue(app.switches["settings.music"].appears(within: 10), "Missing the music switch")
     }
 
     private func tap(_ element: XCUIElement, name: String) {
-        XCTAssertTrue(element.waitForExistence(timeout: 30), "Missing \(name)")
+        XCTAssertTrue(element.appears(within: 30), "Missing \(name)")
         element.tap()
     }
 

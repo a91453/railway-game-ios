@@ -14,9 +14,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 120), "The scene opens")
+        XCTAssertTrue(map.appears(within: 120), "The scene opens")
         let alerts = app.buttons.matching(identifier: "map.alert")
-        XCTAssertTrue(alerts.firstMatch.waitForExistence(timeout: 30), "The stations short of materials show")
+        XCTAssertTrue(alerts.firstMatch.appears(within: 30), "The stations short of materials show")
         settle()
         keep("freight-materials", app)
 
@@ -24,7 +24,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        XCTAssertTrue(app.buttons["map.stationTag"].waitForExistence(timeout: 5), "A tap on a bubble picks its station")
+        XCTAssertTrue(app.buttons["map.stationTag"].appears(within: 5), "A tap on a bubble picks its station")
         settle()
         keep("freight-station", app)
 
@@ -34,14 +34,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         trainTool.tap()
         let fleet = app.buttons["train.fleetOverview"]
         if !fleet.isHittable { app.swipeUp() }
-        XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+        XCTAssertTrue(fleet.appears(within: 5))
         fleet.tap()
         // The freight train is the last of five: the list loads its rows
         // as they scroll in.
         let follow = app.buttons["fleet.follow.貨運列車 1"]
         XCTAssertTrue(app.dragUntilWhollyOnScreen(follow), "The freight train is in the fleet")
         follow.tap()
-        XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
         settle()
         keep("freight-train", app)
     }
@@ -52,11 +52,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
         let expansion = app.buttons["map.expansion"]
-        XCTAssertTrue(expansion.waitForExistence(timeout: 30), "A blank map can be expanded")
+        XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
         expansion.tap()
         settle(seconds: 3)
         keep("map-expansion", app)
@@ -68,15 +68,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         let challenges = app.buttons["start.challenges"]
-        XCTAssertTrue(challenges.waitForExistence(timeout: 10))
+        XCTAssertTrue(challenges.appears(within: 10))
         app.bringStartButtonIntoView(challenges)
         challenges.tap()
         let liu = app.buttons["challenge.history.liuMingchuan"]
-        XCTAssertTrue(liu.waitForExistence(timeout: 10))
+        XCTAssertTrue(liu.appears(within: 10))
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: liu)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 60), .completed, "The real-world data loads")
         liu.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The challenge starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The challenge starts")
         // The game opens at midnight, when the map is tinted for the night
         // (decision 182), and its tiles are slow to come in: by the light of
         // day they have.
@@ -91,7 +91,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         app.openDemo("demo.realWorld", timeout: 60)
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         settle(seconds: 8)
         keep("real-world-demo", app)
 
@@ -110,7 +110,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         app.openDemo("demo.highSpeed", timeout: 60)
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 600), "The demo is built and opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
         settle(seconds: 8)
         keep("high-speed-demo", app)
 
@@ -118,7 +118,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // the island lets the map zoom out. A closer look at the middle of
         // it, three steps in.
         let zoomIn = app.buttons["放大"]
-        if zoomIn.waitForExistence(timeout: 10), zoomIn.isHittable {
+        if zoomIn.appears(within: 10), zoomIn.isHittable {
             for _ in 0..<3 {
                 zoomIn.tap()
                 settle(seconds: 1)
@@ -135,10 +135,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 30), "The game starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
         openFromGameMenu("menu.goals", in: app)
         settle(seconds: 3)
         keep("goals-requests", app)
@@ -150,7 +150,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     func testLineReportAndPassengerLoad() {
         let app = launch(extra: ["-screenshot-scene", "freight"])
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 120), "The scene opens")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
         settle()
 
         // The lines open on a form for a new one: the panel is scrolled to
@@ -160,7 +160,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         lines.waitUntilSettled()
         lines.tap()
         let bar = app.navigationBars["路線"].firstMatch
-        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The lines panel opens")
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(report, in: list), "A line's report comes into view")
@@ -180,11 +180,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         // The layer is the last of the sheet's rows, below long notes: the
         // sheet is dragged up, slowly, until it is there. Not by an element
         // of it: a row that has scrolled away is not in the hierarchy.
-        XCTAssertTrue(app.switches["layer.stationNames"].waitForExistence(timeout: 10), "The layers sheet opens")
+        XCTAssertTrue(app.switches["layer.stationNames"].appears(within: 10), "The layers sheet opens")
         let row = app.switches["layer.sectionFlow"]
         XCTAssertTrue(scrollScreen(to: row, in: app), "The passenger load row comes into view")
         let load = row.switches.firstMatch
-        XCTAssertTrue(load.waitForExistence(timeout: 5))
+        XCTAssertTrue(load.appears(within: 5))
         for _ in 0..<3 where load.value as? String != "1" {
             let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: load)
             _ = XCTWaiter.wait(for: [hittable], timeout: 5)
@@ -194,7 +194,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
         XCTAssertEqual(load.value as? String, "1", "The passenger load layer is on")
         app.buttons["layer.done"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map.sectionFlowLegend"].firstMatch.waitForExistence(timeout: 10), "The layer's key shows")
+        XCTAssertTrue(app.descendants(matching: .any)["map.sectionFlowLegend"].firstMatch.appears(within: 10), "The layer's key shows")
         // The load is worked out in the background.
         settle(seconds: 5)
         keep("passenger-load", app)
@@ -206,15 +206,15 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 30), "The game starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 30), "The game starts")
         settle(seconds: 5)
         pauseTheClock(in: app)
 
         tapButton("hud.time", in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["hud.forecast"].firstMatch.waitForExistence(timeout: 10), "The forecast opens")
+        XCTAssertTrue(app.descendants(matching: .any)["hud.forecast"].firstMatch.appears(within: 10), "The forecast opens")
         settle()
         keep("forecast", app)
     }
@@ -225,7 +225,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let app = launch()
         defer { app.terminate() }
         let realWorld = app.buttons["start.realWorld"]
-        XCTAssertTrue(realWorld.waitForExistence(timeout: 10))
+        XCTAssertTrue(realWorld.appears(within: 10))
         app.bringStartButtonIntoView(realWorld)
         tapButton("start.realWorld", in: app, timeout: 60)
         // The whole of Taiwan is offered below Taiwan's places, in a list
@@ -234,21 +234,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         // drops once scrolled away from, so a second swipe found no list:
         // where the list lies is kept, and dragged there.
         let places = app.collectionViews.containing(.button, identifier: "place.tra-taipei").firstMatch
-        XCTAssertTrue(places.waitForExistence(timeout: 30), "The places are listed")
+        XCTAssertTrue(places.appears(within: 30), "The places are listed")
         let listColumn = places.frame
         let wholeTaiwan = app.buttons["realWorld.wholeTaiwan"]
         XCTAssertTrue(scrollScreen(to: wholeTaiwan, in: app, over: listColumn), "The whole of Taiwan comes into view")
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: wholeTaiwan)
         XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 90), .completed, "The population is read")
         wholeTaiwan.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 120), "The game starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game starts")
         // By the light of day, the stars over the island.
         waitForClock(from: 9, before: 17, in: app)
         settle(seconds: 3)
         keep("tourism-map", app)
 
         openFromGameMenu("menu.tourism", in: app)
-        _ = app.buttons["tourism.done"].waitForExistence(timeout: 10)
+        _ = app.buttons["tourism.done"].appears(within: 10)
         settle(seconds: 2)
         keep("tourism-panel", app)
     }
@@ -329,7 +329,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Pauses the clock, when it runs.
     private func pauseTheClock(in app: XCUIApplication) {
         let pause = app.buttons.matching(NSPredicate(format: "label == %@", "暫停")).firstMatch
-        if pause.waitForExistence(timeout: 10), pause.isHittable {
+        if pause.appears(within: 10), pause.isHittable {
             pause.tap()
         }
     }
@@ -339,7 +339,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// (`RealWorldMapUITests.tappable`).
     private func tapButton(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) {
         let buttons = app.buttons.matching(identifier: identifier)
-        XCTAssertTrue(buttons.firstMatch.waitForExistence(timeout: timeout), "Missing button: \(identifier)")
+        XCTAssertTrue(buttons.firstMatch.appears(within: timeout), "Missing button: \(identifier)")
         let deadline = Date().addingTimeInterval(timeout)
         repeat {
             if let button = buttons.allElementsBoundByIndex.first(where: { $0.isHittable && $0.isEnabled }) {

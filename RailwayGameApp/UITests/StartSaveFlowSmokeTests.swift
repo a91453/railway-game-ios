@@ -27,11 +27,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("tool.building", in: app).tap()
         requiredButton("building.kind.house", in: app).tap()
         let count = app.staticTexts["building.count"]
-        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the building count")
+        XCTAssertTrue(count.appears(within: 10), "Missing the building count")
         XCTAssertEqual(count.label, "0 buildings placed")
 
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         // Decision 95: a tap chooses the site, which enables the action
         // button; the button builds. A touch held across a slow
         // accessibility query is failed by the tap recognizer
@@ -66,7 +66,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // Decision 114: the tools show once Build is pressed.
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
-        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the building count after continuing")
+        XCTAssertTrue(count.appears(within: 10), "Missing the building count after continuing")
         XCTAssertEqual(count.label, "1 building placed", "The house did not survive saving and continuing")
     }
 
@@ -90,11 +90,11 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
         requiredButton("building.zone.commercial", in: app).tap()
         let count = app.staticTexts["building.zoneCount"]
-        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the zoned cell count")
+        XCTAssertTrue(count.appears(within: 10), "Missing the zoned cell count")
         XCTAssertEqual(count.label, "0 cells zoned")
 
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         // In the map's leading half: the details card floats over its
         // trailing side while a tool is chosen (decision 106).
         let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.25))
@@ -114,7 +114,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         requiredButton("dock.build", in: app).tap()
         requiredButton("tool.building", in: app).tap()
         requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Zone")), name: "Zone").tap()
-        XCTAssertTrue(count.waitForExistence(timeout: 10), "Missing the zoned cell count after continuing")
+        XCTAssertTrue(count.appears(within: 10), "Missing the zoned cell count after continuing")
         XCTAssertEqual(count.label, label, "The zones did not survive saving and continuing")
     }
 
@@ -152,7 +152,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // proves that Save Game wrote a manual save rather than doing nothing.
         // That it is there is the proof: on a phone on its side (decision
         // 106) it is further down the start screen's column.
-        XCTAssertTrue(app.buttons["start.savedGames"].waitForExistence(timeout: 10), "Missing UI flow button: start.savedGames")
+        XCTAssertTrue(app.buttons["start.savedGames"].appears(within: 10), "Missing UI flow button: start.savedGames")
         XCTAssertTrue(app.buttons["start.demoMap"].exists, "Missing UI flow button: start.demoMap")
 
         requiredButton("start.continue", in: app).tap()
@@ -180,7 +180,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // did not find (run 38260619251): drag that column at the button's
         // own x until it can be tapped.
         let saves = app.buttons["start.savedGames"]
-        XCTAssertTrue(saves.waitForExistence(timeout: 10), "An unreadable save is still listed")
+        XCTAssertTrue(saves.appears(within: 10), "An unreadable save is still listed")
         let origin = app.coordinate(withNormalizedOffset: .zero)
         for _ in 0..<6 where !saves.isHittable {
             let x = saves.frame.midX - app.frame.minX
@@ -191,16 +191,16 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(saves.isHittable, "Saved Games can be brought into view: \(saves.frame)")
         saves.tap()
         let row = app.buttons["saves.row.save-broken.json"]
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "The unreadable save is listed")
+        XCTAssertTrue(row.appears(within: 10), "The unreadable save is listed")
         row.swipeLeft()
         let delete = app.buttons["Delete"].firstMatch
-        if !delete.waitForExistence(timeout: 5) { row.swipeLeft() }
-        XCTAssertTrue(delete.waitForExistence(timeout: 5), "Swiping the unreadable save must offer Delete")
+        if !delete.appears(within: 5) { row.swipeLeft() }
+        XCTAssertTrue(delete.appears(within: 5), "Swiping the unreadable save must offer Delete")
         delete.tap()
         let confirm = app.buttons["saves.delete.confirm"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Deleting asks first")
+        XCTAssertTrue(confirm.appears(within: 5), "Deleting asks first")
         confirm.tap()
-        XCTAssertTrue(row.waitForNonExistence(timeout: 10), "The unreadable save is gone from the list")
+        XCTAssertTrue(row.disappears(within: 10), "The unreadable save is gone from the list")
     }
 
     /// TestFlight 54.1: Back to Start could not be touched, so leaving a
@@ -246,7 +246,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             requiredButton(buy, name: "Buy").tap()
         }
         let picker = app.buttons.matching(identifier: "train.picker")
-        XCTAssertTrue(picker.firstMatch.waitForExistence(timeout: 10), "Missing the train menu")
+        XCTAssertTrue(picker.firstMatch.appears(within: 10), "Missing the train menu")
         waitForLabel("Train: Train 15", of: picker.firstMatch)
         XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
 
@@ -254,7 +254,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // The menu's rows ("Train 3"), not the picker ("Train: …") or the
         // train tool.
         let menuRows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "Train [0-9]+"))
-        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The train menu did not open")
+        XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The train menu did not open")
         Thread.sleep(forTimeInterval: 1)
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
@@ -332,7 +332,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // (run 38323867205: train.type 476 pt down a 402 pt screen): drag
         // the panel, at the menu's own x, until the menu can be touched.
         let target = app.buttons.matching(identifier: identifier).firstMatch
-        XCTAssertTrue(target.waitForExistence(timeout: 10), "Missing the menu \(identifier)")
+        XCTAssertTrue(target.appears(within: 10), "Missing the menu \(identifier)")
         let origin = app.coordinate(withNormalizedOffset: .zero)
         for _ in 0..<6 where !touchable(target) {
             let x = target.frame.midX - app.frame.minX
@@ -345,7 +345,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
 
         menu.tap()
-        XCTAssertTrue(menuRows.firstMatch.waitForExistence(timeout: 10), "The menu \(identifier) did not open")
+        XCTAssertTrue(menuRows.firstMatch.appears(within: 10), "The menu \(identifier) did not open")
         Thread.sleep(forTimeInterval: 1)
         func visibleRows() -> [String] {
             menuRows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
@@ -408,7 +408,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // The demo map's accessibility tree is large: on a slow runner one
         // query of it took 9 s, so its waits allow longer than a button's.
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 30), "Missing game map")
+        XCTAssertTrue(map.appears(within: 30), "Missing game map")
         assertHittable(map, timeout: 30, message: "Game map is not visible")
         for identifier in ["dock.build", "entry.lines", "hud.menu"] {
             _ = requiredButton(identifier, in: app)
@@ -482,7 +482,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // A phone on its side (decision 106) shows fewer of the start
         // screen's buttons at once: scroll their column to the one wanted.
         let button = app.buttons[identifier]
-        if identifier.hasPrefix("start."), button.waitForExistence(timeout: 10), !button.isHittable {
+        if identifier.hasPrefix("start."), button.appears(within: 10), !button.isHittable {
             let column = app.scrollViews.containing(.button, identifier: identifier).firstMatch
             for _ in 0..<4 where column.exists && !button.isHittable {
                 // Slowly, so the column does not fling past the button.
@@ -511,7 +511,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     }
 
     private func requiredButton(_ query: XCUIElementQuery, name: String) -> XCUIElement {
-        XCTAssertTrue(query.firstMatch.waitForExistence(timeout: 10), "Missing UI flow button: \(name)")
+        XCTAssertTrue(query.firstMatch.appears(within: 10), "Missing UI flow button: \(name)")
         // ViewThatFits can also expose an unplaced copy of a menu action.
         // Find the button the player can touch, allowing the transition to
         // finish, and still fail if it is disabled or no copy is tappable.
