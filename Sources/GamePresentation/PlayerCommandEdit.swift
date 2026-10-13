@@ -177,9 +177,7 @@ extension GameSession {
         case .setTrainType(let id, let type):
             guard let train = world.train(id: id) else { throw .unknownTrain(id) }
             try world.setTrainType(id, to: type)
-            if let performance = type?.performance, train.performance == .standard {
-                try world.setTrainPerformance(id, to: performance)
-            }
+            try world.runAsItsType(id, ranAs: train.type)
             if let line = world.assignedLine(of: id) {
                 outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(line)
             }
@@ -221,11 +219,16 @@ extension GameSession {
         case .placeTrain(let id, let station, let heading):
             outcome.placed = try Self.place(id, atPlatformOf: station, heading: heading, in: &world)
         case .staffLine(let id, let headway, let type, let cars, let language):
+            let standard = world.line(id: id)?.performance == .standard
             (outcome.held, outcome.unfit) = try Self.staff(id, headway: headway, type: type, cars: cars, in: &world, language: language)
+            outcome.highSpeed = standard && world.line(id: id)?.performance == .highSpeed
         case .reformLine(let id, let type, let cars, let language):
             (outcome.number, outcome.left) = try Self.reform(id, type: type, cars: cars, in: &world, language: language)
+            // Decision 168 rule 7, as for a set assigned one by one.
+            outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(id)
         case .addLineTrains(let id, let count, let type, let cars, let targets, let language):
             (outcome.held, outcome.unfit) = try Self.addTrains(count, of: type, cars: cars, to: id, in: &world, language: language)
+            outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(id)
             try world.setLineTargetHeadways(id, to: targets, pattern: nil)
         case .removeLineTrains(let id, let count, let targets):
             try Self.removeTrains(count, from: id, targets: targets, in: &world)

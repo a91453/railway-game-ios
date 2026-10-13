@@ -168,6 +168,15 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertNil(session.world.attractionRows(in: .english)[0].nextShop)
     }
 
+    /// A souvenir shop raises the sight's rating and so its tourists: the
+    /// station panel and the travel layer work their day out again.
+    func testTheRidershipInputsSeeASouvenirShop() throws {
+        var world = try world()
+        let before = RidershipInputs(world: world)
+        try world.investInSouvenirShop(of: AttractionID(rawValue: 1))
+        XCTAssertNotEqual(RidershipInputs(world: world), before)
+    }
+
     // MARK: - The station master
 
     func testTheStationMasterSaysASightHasNoStation() throws {

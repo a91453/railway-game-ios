@@ -43,6 +43,7 @@ struct TrainLoadBar: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: load.titleText(in: language)))
-        .accessibilityValue(Text(verbatim: "\(load.percentage)% (\(load.passengerCount) / \(load.capacity))"))
+        // The detail line names the unit: tons for a freight train.
+        .accessibilityValue(Text(verbatim: "\(load.percentage)%, \(load.detailText(in: language))"))
     }
 }

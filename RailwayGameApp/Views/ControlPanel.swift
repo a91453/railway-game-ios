@@ -210,7 +210,7 @@ private struct ToolOptions: View {
 private struct BuildingControls: View {
     @Bindable var session: GameSession
     /// A kind's glyph, as large as the subheadline it sits beside.
-    @ScaledMetric(relativeTo: .subheadline) private var glyphSize = 18.0
+    @ScaledMetric(relativeTo: .subheadline) private var cardArtSize = 44.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -258,17 +258,17 @@ private struct BuildingControls: View {
                     session.buildingKind = kind
                 } label: {
                     VStack(spacing: 2) {
-                        HStack(spacing: 4) {
-                            kind.mapGlyph.image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: glyphSize, height: glyphSize)
-                                .accessibilityHidden(true)
-                            Text(kind.title(in: session.language))
-                                .font(.subheadline.weight(isActive ? .bold : .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                        }
+                        // Decision 122, later: the kind's picture over its
+                        // name, as a building card.
+                        Image(kind.cardArt)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: cardArtSize, height: cardArtSize)
+                            .accessibilityHidden(true)
+                        Text(kind.title(in: session.language))
+                            .font(.subheadline.weight(isActive ? .bold : .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                         // Decision 103: what each costs before its land.
                         if let cost = session.buildingStartingCost(kind) {
                             Text(verbatim: cost.moneyText)
@@ -435,6 +435,21 @@ extension PlacedBuildingKind {
         case .departmentStore: .departmentStore
         case .hotel: .hotel
         case .amusementPark: .amusementPark
+        }
+    }
+
+    /// The kind's picture on its building card (decision 122, later): a
+    /// many-coloured illustration, where the map keeps ``mapGlyph``.
+    var cardArt: String {
+        switch self {
+        case .house: "BuildingHouse"
+        case .shop: "BuildingShop"
+        case .office: "BuildingOffice"
+        case .wharf: "BuildingWharf"
+        case .marina: "BuildingMarina"
+        case .departmentStore: "BuildingDepartmentStore"
+        case .hotel: "BuildingHotel"
+        case .amusementPark: "BuildingAmusementPark"
         }
     }
 }

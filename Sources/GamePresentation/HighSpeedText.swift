@@ -56,6 +56,18 @@ extension GameWorld {
         try setLinePerformance(id, to: .highSpeed)
         return true
     }
+
+    /// Lets train `id`, just given another type, run as that type does
+    /// (``TrainType/performance``, or the standard performance) where it ran
+    /// as its old type `old` did: an EMU3000 made a high-speed set runs at
+    /// the set's 300 km/h, a set made a type A at 110 (decisions 168, 169).
+    /// A performance the player set otherwise is kept.
+    mutating func runAsItsType(_ id: TrainID, ranAs old: TrainType?) throws(GameError) {
+        guard let train = train(id: id) else { throw .unknownTrain(id) }
+        let next = train.type?.performance ?? .standard
+        guard train.performance == (old?.performance ?? .standard), train.performance != next else { return }
+        try setTrainPerformance(id, to: next)
+    }
 }
 
 extension DisplayLanguage {
