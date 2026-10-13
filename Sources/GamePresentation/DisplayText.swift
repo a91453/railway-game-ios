@@ -95,7 +95,7 @@ extension GameWorld {
 }
 
 extension TrainPosition {
-    /// Where a train is, exactly as GameCore records it: "Edge #3 forward,
+    /// Where a train is, exactly as GameCore records it: "Track #3 forward,
     /// 256 units along".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
@@ -118,10 +118,10 @@ extension TrackNodeID {
 }
 
 extension TrackEdgeID {
-    /// "Edge #3".
+    /// "Track #3".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
-        case .edge(let number): language.text("Edge #\(number)", "軌段 #\(number)")
+        case .edge(let number): language.text("Track #\(number)", "軌段 #\(number)")
         }
     }
 }
@@ -152,8 +152,8 @@ extension Train {
     }
 
     /// The path the train has left on the track network: "No path ahead",
-    /// "Path: 1 more edge, Edge #4",
-    /// "Path: 3 more edges, ending on Edge #9", with ", stopping 3000 units
+    /// "Path: 1 more edge, Track #4",
+    /// "Path: 3 more edges, ending on Track #9", with ", stopping 3000 units
     /// along it" when it stops part of the way along the last (Stage S5),
     /// or "Path: stops 1024 units ahead" on the edge it is on.
     public func pathText(in language: DisplayLanguage) -> String {
@@ -287,7 +287,7 @@ extension GameError {
         case .trainNotOnLine(let id):
             language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
         case .invalidLineRoutePreference:
-            language.text("Choose a physical path for a leg of this service.", "請為這個停站模式的路段選擇股道與月台。")
+            language.text("Choose a physical path for a leg of this service.", "請為這個停站模式的路段選擇進路（軌段與月台）。")
         case .invalidLineRuns:
             language.text(
                 "A timetable's trains each run between two of the line's stops at times that never go back. A ring, a line with patterns or one calling at a station twice has no timetable.",
@@ -358,7 +358,7 @@ extension GameError {
         case .trackEdgeInLineRoute(let line):
             language.text(
                 "Line #\(line.rawValue)'s chosen path runs along that track. Clear the line's path first.",
-                "路線 #\(line.rawValue) 指定的股道經過這段軌道。請先清除該路線的指定股道。"
+                "路線 #\(line.rawValue) 指定的進路經過這段軌道。請先清除該路線指定的進路。"
             )
         case .trackEdgeHasPlatform(let edge):
             language.text(

@@ -24,6 +24,9 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case stationFull(station: StationID, name: String)
     /// A line has no train, so no one rides it.
     case lineWithoutTrains(line: LineID, name: String)
+    /// Decision 194, later: the line that lost most over its report's
+    /// days, and the first reason why (``GameWorld/worstLosingLine()``).
+    case lineLosing(line: LineID, name: String, reason: LineLossReason.Kind)
     /// Half a station's room is taken.
     case stationCrowded(station: StationID, name: String)
     /// No track yet.
@@ -126,6 +129,13 @@ public enum StationMasterAdvice: Hashable, Sendable {
         }
     }
 
+    /// The line a tap on the bubble opens in the line panel, or `nil`
+    /// (decision 194, later).
+    public var line: LineID? {
+        if case .lineLosing(let line, _, _) = self { return line }
+        return nil
+    }
+
     /// The most stations a railway has to count as a first line (decision
     /// 177).
     public static let shortLineStations = 3
@@ -141,6 +151,14 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// that served too few to grow taller (the lowest ID), else the town
     /// that grew most.
     public init?(world: GameWorld) {
+        self.init(world: world, worstLosingLine: { world.worstLosingLine() })
+    }
+
+    /// The advice for `world`, asking `worstLosingLine` for the line that
+    /// loses most (decision 194, later) only when nothing more urgent comes
+    /// first: the session passes what it keeps between commands and days
+    /// (``GameSession/worstLosingLine``).
+    public init?(world: GameWorld, worstLosingLine: () -> LineLossLeader?) {
         // Decision 153: a steam era's short trains lose money; say why
         // before the debt they lead to.
         if let short = Self.shortSteamTrains(in: world) {
@@ -153,7 +171,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
             self = losing
             return
         }
-        if world.accounts.mode == .management, world.economy.balance < .zero {
+        if world.accounts.mode == .management, world.economy.showsInTheRed {
             self = Self.isShortRailway(world) ? .inDebtShortLine(hint: Self.extensionHint(in: world)) : .inDebt
             return
         }
@@ -172,6 +190,13 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 self = .lineWithoutTrains(line: line, name: world.line(id: line)?.name ?? "")
                 return
             }
+        }
+        // Decision 194, later: after the urgent worries, the line that
+        // loses most and why. A short first line losing money has been told
+        // to extend (``firstLineLosing``) above.
+        if let losing = worstLosingLine() {
+            self = .lineLosing(line: losing.line, name: losing.name, reason: losing.reason)
+            return
         }
         if let crowded = alerts.first(where: { if case .crowded = $0.kind { true } else { false } }), let station = crowded.station {
             self = .stationCrowded(station: station, name: name(station))
@@ -224,7 +249,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
         guard world.accounts.mode == .management, world.scenario?.scenario.trainTypes?.contains(.steam) == true else { return nil }
         let yesterday = world.clock.now.seconds / GameTime.secondsPerDay - 1
         let day = world.accounts.days.first { $0.day == yesterday }
-        let losing = world.economy.balance < .zero || day.map(lostMoney(on:)) ?? false
+        let losing = world.economy.showsInTheRed || day.map(lostMoney(on:)) ?? false
         guard losing else { return nil }
         for line in world.lines where !line.isFreight {
             let short = line.assignedTrains.contains { id in
@@ -413,6 +438,22 @@ public enum StationMasterAdvice: Hashable, Sendable {
 
     /// What the station master says when tapped with no advice to give
     /// (decision 123): before, a tap then did nothing, as if it were broken.
+    /// "<line> loses money, mostly from too many trains: try taking one
+    /// off." (decision 194, later).
+    static func lineLosingText(_ name: String, _ reason: LineLossReason.Kind, in language: DisplayLanguage) -> String {
+        let why = reason.title(in: language)
+        let tryThis = switch reason {
+        case .tooManyTrains: language.text("try taking one off", "撤下一列試試")
+        case .longHeadway: language.text("try running more trains", "加開列車試試")
+        case .emptyRuns: language.text("try stopping trains at the line's ends", "讓列車停在路線兩端試試")
+        case .lowLoad: language.text("try running trains less often", "拉長班距試試")
+        }
+        return language.text(
+            "\(name) loses money, mostly: \(why.lowercased()). \(tryThis.prefix(1).uppercased() + tryThis.dropFirst()). Tap to open it.",
+            "「\(name)」虧錢，主要是\(why)：\(tryThis)。點一下打開路線。"
+        )
+    }
+
     public static func allWellText(in language: DisplayLanguage) -> String {
         language.text("All running well. Keep it up!", "一切順利，繼續保持！")
     }
@@ -445,6 +486,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(name) has no trains yet. Open Lines and give it one.",
                 "「\(name)」還沒有列車。打開路線幫它配車。"
             )
+        case .lineLosing(_, let name, let reason):
+            Self.lineLosingText(name, reason, in: language)
         case .stationCrowded(_, let name):
             language.text(
                 "\(name) is getting crowded. A train more would help.",
@@ -573,7 +616,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
+        case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
              .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests: false

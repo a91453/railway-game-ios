@@ -117,6 +117,25 @@ final class AchievementsTests: XCTestCase {
         XCTAssertEqual(AchievementRecords(file: file).count, launcher.achievements.count)
     }
 
+    /// Decision 200: a game with unlimited funds unlocks nothing, read from
+    /// the world, so its save opened again counts nothing either; the same
+    /// world paying its way does.
+    @MainActor
+    func testUnlimitedFundsUnlockNothing() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 2 * 1_440)
+        var unlimited = world
+        unlimited.setUnlimitedFunds(true)
+        let reopened = try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: unlimited))).world
+        launcher.checkAchievements(of: GameSession(world: unlimited, language: .english))
+        launcher.checkAchievements(of: GameSession(world: reopened, language: .english))
+        XCTAssertEqual(launcher.achievements.count, 0, "unlimited funds")
+        launcher.checkAchievements(of: GameSession(world: world, language: .english))
+        XCTAssertTrue(launcher.achievements.unlocked.keys.contains("firstFare"), "paying its way")
+    }
+
     /// Decision 181, later: the Pingxi challenge starts on running lines, so
     /// only its own marks can unlock there; the tutorial unlocks nothing; and
     /// the end of the typhoon season needs a railway.

@@ -29,7 +29,7 @@ final class TutorialJourneyUITests: XCTestCase {
     }
 }
 
-/// One walk through the tutorial's 19 steps, in English.
+/// One walk through the tutorial's 21 steps, in English.
 @MainActor
 private final class TutorialJourney {
     /// The steps' titles in English, in order (`Tutorial.standardSteps`):
@@ -46,11 +46,13 @@ private final class TutorialJourney {
         "Tap ✓ for the second station",
         "Tap Lines",
         "Tap one station, then the other",
-        "Tap Create Line",
+        "Tap ✓ to create the line",
         "Tap Buy … and Start Service",
         "Tap Done to stop building",
         "Tap \u{25B6}\u{FE0E} to run time",
         "Wait for your first fares",
+        "Tap Lines to check your line",
+        "Read your line's card",
         "Tap one of your stations",
         "Tap Ridership to see who rides",
         "That's the tour",
@@ -158,10 +160,9 @@ private final class TutorialJourney {
         check(map: secondStation, "the second station")
         tap(secondStation)
 
+        // Decision 100, later: the line is made by the ✓ on the map.
         arrive(at: 12)
-        let create = app.buttons["line.draft.create"]
-        check(create, "Create Line")
-        create.tap()
+        tapConfirm("the ✓ that creates the line")
 
         // Service
         arrive(at: 13)
@@ -196,22 +197,33 @@ private final class TutorialJourney {
             }
         }
 
-        // Passengers
+        // The line's card (decision 194): the lines panel, then a step to
+        // read over it. Its card comes after the line's first full day, so
+        // the panel may show none yet.
         arrive(at: 17, timeout: 180)
+        let linesAgain = app.buttons["entry.lines"]
+        check(linesAgain, "the Lines button")
+        linesAgain.tap()
+
+        arrive(at: 18)
+        tapNext(finishing: false)
+
+        // Passengers: the step closes the lines panel.
+        arrive(at: 19)
         // Stopped, so the trains stand still while a station is tapped.
         let pause = app.buttons["Pause"]
         if pause.exists, pause.isHittable { pause.tap() }
         check(map: firstStation, "the first station")
         tap(firstStation)
 
-        arrive(at: 18)
+        arrive(at: 20)
         let ridership = app.buttons["inspector.ridership"]
         check(ridership, "the Ridership button")
         ridership.tap()
         // A step to read: Next, once the station's panel is open.
         tapNext(finishing: false)
 
-        arrive(at: 19)
+        arrive(at: 21)
         check(app.buttons["hud.menu"], "the game menu")
         tapNext(finishing: true)
         XCTAssertTrue(card.waitForNonExistence(timeout: 10), failure("Finish did not end the tutorial"))

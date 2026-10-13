@@ -22,6 +22,9 @@ struct HUDView: View {
     /// the player asks, so the ticks leave the question as it was asked.
     @State private var goBackChoices: [GoBackChoice] = []
     @State private var choosingGoBack = false
+    /// Whether the problem report is open from the game menu (decisions
+    /// 127 and 193; TestFlight 54.1).
+    @State private var reportingProblem = false
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -33,6 +36,7 @@ struct HUDView: View {
                 cash
                 time
                 SpeedControl(session: session)
+                ViewingReadout(session: session)
                 newsBell
                 gameMenu
             }
@@ -42,6 +46,7 @@ struct HUDView: View {
                     time
                 }
                 SpeedControl(session: session)
+                ViewingReadout(session: session)
                 newsBell
                 gameMenu
             }
@@ -54,11 +59,15 @@ struct HUDView: View {
                 }
                 time
                     .minimumScaleFactor(0.75)
+                ViewingReadout(session: session)
             }
         }
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .sheet(isPresented: $reportingProblem) {
+            ProblemReportSheet(game: session.problemReportGame, session: session)
+        }
         .alert(Text(verbatim: session.language.text("Save As", "另存新檔")), isPresented: $namingSave) {
             TextField(text: $saveName) {
                 Text(verbatim: session.language.text("Name", "名稱"))
@@ -133,13 +142,42 @@ struct HUDView: View {
                 saveName = ""
                 namingSave = true
             },
-            askGoBack: askGoBack
+            askGoBack: askGoBack,
+            reportProblem: { reportingProblem = true }
         )
         .equatable()
     }
 
-    /// The balance in dollars; it opens the economy panel.
+    /// The balance in dollars; it opens the economy panel. Decision 200:
+    /// with unlimited funds an "∞" capsule instead, in the text colour (not
+    /// the green of money coming in), without the income float.
+    @ViewBuilder
     private var cash: some View {
+        if session.world.economy.unlimitedFunds {
+            Button {
+                screen.panel = .economy
+            } label: {
+                Text(verbatim: "∞")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 2)
+                    .background(Capsule().stroke(Theme.textSecondary, lineWidth: 1))
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: session.language.text("Unlimited funds", "資金無限")))
+            .accessibilityHint(Text(verbatim: session.language.text("Shows fares, running costs and the ledger.", "顯示票收、營運成本與帳本。")))
+            .accessibilityIdentifier("hud.unlimitedFunds")
+            .tutorialTarget(.cash)
+        } else {
+            balance
+        }
+    }
+
+    /// The balance in dollars, as before decision 200.
+    private var balance: some View {
         let text = session.world.economy.balance.moneyText
         let isNegative = session.world.economy.balance < .zero
         return Button {
@@ -276,6 +314,9 @@ private struct GameMenu: View, Equatable {
     /// Asks which autosave to go back to (decision 192), in the HUD's
     /// dialog.
     let askGoBack: @MainActor () -> Void
+    /// Opens the problem report (TestFlight 54.1: a player found it only in
+    /// the settings), in the HUD's sheet.
+    let reportProblem: @MainActor () -> Void
 
     nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
         lhs.session === rhs.session
@@ -424,6 +465,17 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.help")
+                // TestFlight 54.1: where to send a note, from the game.
+                Button {
+                    reportProblem()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Report a Problem", "回報問題"))
+                    } icon: {
+                        Image(systemName: "exclamationmark.bubble")
+                    }
+                }
+                .accessibilityIdentifier("menu.report")
             } label: {
                 Label {
                     Text(verbatim: language.text("More", "更多"))
@@ -527,6 +579,40 @@ private struct SpeedControl: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
         .tutorialTarget(.speedControl)
+    }
+}
+
+/// Decision 195: beside the speed, the followed train's speed and how fast
+/// the game really runs ("actual ×600", or "actual ×290 (falling behind)"
+/// when the device cannot keep up), read from the session's measure; the
+/// speed menu's label says the speed the game is set to. Nothing while
+/// paused and following no train.
+private struct ViewingReadout: View {
+    let session: GameSession
+
+    var body: some View {
+        let viewing = session.viewingSpeed
+        let language = session.language
+        let actual = viewing.actualText(in: language)
+        let train = viewing.trainSpeedText
+        if actual != nil || train != nil {
+            VStack(alignment: .leading, spacing: 0) {
+                if let train {
+                    Text(verbatim: train)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                if let actual {
+                    Text(verbatim: actual)
+                        .font(viewing.isBehind ? Font.caption2.weight(.bold) : Font.caption2)
+                        .foregroundStyle(viewing.isBehind ? Theme.warning : Theme.textSecondary)
+                }
+            }
+            .monospacedDigit()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
+            .accessibilityIdentifier("hud.viewing")
+        }
     }
 }
 

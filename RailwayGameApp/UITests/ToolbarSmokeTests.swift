@@ -79,6 +79,8 @@ final class LineRoutePreferenceUITests: XCTestCase {
         XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
         let lines = app.buttons["Lines"]
         XCTAssertTrue(lines.waitForExistence(timeout: 10)); lines.tap()
+        // Decision 196, later: the tracks a leg takes are an advanced detail.
+        setAdvanced(true, in: app)
         let route = app.buttons["line.route.-1.0.1"]
         bringIntoView(route, in: app)
         recordRouteUI("before opening route menu", in: app)
@@ -100,6 +102,41 @@ final class LineRoutePreferenceUITests: XCTestCase {
         tapMenuAction(automatic, in: app)
         let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Automatic physical path"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    }
+
+    /// Decision 196, later: the lines panel's "Advanced" switch folds the
+    /// tracks each leg takes and the service day on a phone, says what is
+    /// folded in one line, and shows them again when turned on.
+    func testTheAdvancedSwitchFoldsTheTracksAndTheServiceDay() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.realWorld")
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 15)); pause.tap()
+        let lines = app.buttons["Lines"]
+        XCTAssertTrue(lines.waitForExistence(timeout: 10)); lines.tap()
+        setAdvanced(false, in: app)
+        XCTAssertTrue(app.staticTexts["lines.advanced.summary"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["line.route.-1.0.1"].exists)
+        XCTAssertFalse(app.buttons["Split the Longest Band"].exists)
+        setAdvanced(true, in: app)
+        XCTAssertFalse(app.staticTexts["lines.advanced.summary"].exists)
+        bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
+    }
+
+    /// Turns the lines panel's "Advanced" switch on or off: the choice is
+    /// kept between launches, so a test sets the one it needs.
+    private func setAdvanced(_ shown: Bool, in app: XCUIApplication) {
+        let toggle = app.switches["lines.advanced"]
+        bringIntoView(toggle, in: app)
+        guard (toggle.value as? String == "1") != shown else { return }
+        // The switch itself sits at the row's trailing edge.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 5), .completed)
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
@@ -266,18 +303,23 @@ extension XCUIApplication {
 
     /// Scrolls `holder`, or whatever holds `button` (a scroll view, or a
     /// `List`'s collection view), until the middle of `button` shows in
-    /// it; whether it does. Slow swipes on the holder itself, not at the
+    /// it; whether it does. Drags on the holder itself, not at the
     /// middle of the screen, which on a phone on its side is the edge
     /// between the start screen's title and its buttons, or the map beside
     /// a sheet's list. With the largest accessibility text one start
     /// screen button is taller than the band
     /// ``dragUntilWhollyOnScreen(_:in:)`` wants it wholly inside. A `List`
-    /// makes its rows only as they come near, so a `holder` is swiped up
-    /// until the row is there. Nothing here asks XCTest whether the button
-    /// can be touched: of a start screen button scrolled partly into
-    /// sight it failed the test, its middle on screen or not (runs
-    /// 38335812150 and 38339333769), so ``tapMiddle(of:)`` touches it.
-    func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, swipes: Int = 20) -> Bool {
+    /// makes its rows only as they come near, so a `holder` is dragged up
+    /// with long drags until the row is there. Nothing here asks XCTest
+    /// whether the button can be touched: of a start screen button
+    /// scrolled partly into sight it failed the test, its middle on screen
+    /// or not (runs 38335812150 and 38339333769), so ``tapMiddle(of:)``
+    /// touches it. Slow swipes flung the start screen's column past the
+    /// band every time, the button's middle below it and then above it
+    /// for 20 swipes (main's full lane, run 38345123226): each drag here
+    /// holds before lifting and is shorter than the band, so the middle
+    /// cannot jump over it.
+    func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, drags: Int = 40) -> Bool {
         if holder == nil, !button.waitForExistence(timeout: 10) { return false }
         guard let holder = holder ?? [scrollViews, collectionViews, tables]
             .map({ $0.containing(.button, identifier: button.identifier).firstMatch })
@@ -285,17 +327,21 @@ extension XCUIApplication {
             return button.exists && frame.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
         }
         _ = holder.waitForExistence(timeout: 10)
+        let onScreen = holder.frame.intersection(frame)
+        let area = onScreen.isEmpty ? holder.frame : onScreen
+        // Clear of the holder's edges, where a navigation or home bar can
+        // lie over it.
+        let band = area.insetBy(dx: 0, dy: 24)
         func shown() -> Bool {
-            // Clear of the holder's edges, where a navigation or home bar
-            // can lie over it.
-            let area = holder.frame.intersection(frame).insetBy(dx: 0, dy: 24)
-            return button.exists && area.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
+            button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
         }
-        for _ in 0..<swipes where !shown() {
-            if button.exists, button.frame.midY < holder.frame.midY {
-                holder.swipeDown(velocity: .slow)
+        for _ in 0..<drags where !shown() {
+            if !button.exists {
+                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
+            } else if button.frame.midY < band.minY {
+                drag(in: area, at: area.midX, from: 0.35, to: 0.65)
             } else {
-                holder.swipeUp(velocity: .slow)
+                drag(in: area, at: area.midX, from: 0.65, to: 0.35)
             }
         }
         return shown()

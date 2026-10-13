@@ -51,7 +51,10 @@ private struct MonthlyReportCard: View {
                 figure(language.text("Fare revenue", "票收"), report.fares) { Money($0).moneyText }
                 figure(language.text("Running costs", "成本"), report.costs, upIsGood: false) { Money($0).moneyText }
                 figure(language.text("Net profit", "淨利"), report.net) { Money($0).moneyText }
-                figure(language.text("Cash", "現金"), report.cash) { Money($0).moneyText }
+                // Decision 200: no cash to compare with unlimited funds.
+                if !report.unlimitedFunds {
+                    figure(language.text("Cash", "現金"), report.cash) { Money($0).moneyText }
+                }
             } header: {
                 Text(verbatim: language.text("Month \(report.month + 1) against the month before", "第 \(report.month + 1) 個月，與上月相比"))
             }

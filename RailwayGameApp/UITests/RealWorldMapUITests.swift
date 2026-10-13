@@ -104,6 +104,49 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Data Sources"].waitForExistence(timeout: 10), "Tapping the credit opens the data sources")
     }
 
+    /// TestFlight 56.1: changing from OpenStreetMap to satellite imagery,
+    /// the player's route no longer lay on the map. After the change, and
+    /// zoomed in as far as the map goes, Apple's map shows what the game's
+    /// camera shows, straight down and north up (decision 50); the map
+    /// reads this out under UI tests (`map.base`). Full lane only (not in
+    /// the pull request gate): it needs Apple's tiles over the network.
+    func testAppleMapLinesUpAfterChangingToSatellite() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.realWorld")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        // Paused, so the live clock does not rebuild the style menu.
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
+        tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
+
+        let base = app.descendants(matching: .any)["map.base"].firstMatch
+        XCTAssertTrue(base.waitForExistence(timeout: 30), "Apple's map is under the game's")
+        assertLinesUp(base, "after changing to satellite")
+
+        let zoomIn = app.buttons["Zoom in"]
+        for _ in 0..<12 where zoomIn.isEnabled {
+            zoomIn.tap()
+        }
+        assertLinesUp(base, "zoomed in as far as it goes")
+    }
+
+    /// Waits for Apple's map to show what the game's camera shows: MapKit
+    /// settles a few seconds after it loads.
+    private func assertLinesUp(_ base: XCUIElement, _ when: String, file: StaticString = #filePath, line: UInt = #line) {
+        let follows = NSPredicate(format: "value == %@", "follows")
+        let found = XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: follows, object: base)], timeout: 30)
+        // Still so a few seconds on: MapKit did not move it again.
+        Thread.sleep(forTimeInterval: 5)
+        XCTAssertTrue(found == .completed && (base.value as? String) == "follows",
+                      "Apple's map does not line up \(when): \(String(describing: base.value))", file: file, line: line)
+    }
+
     /// A blank new game has no Apple map and no style menu.
     func testABlankGameHasNoMapStyle() {
         continueAfterFailure = false
@@ -252,7 +295,10 @@ final class RealWorldMapUITests: XCTestCase {
             ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
         ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
-            XCTAssertTrue(app.scrollUntilShown(button, in: holder), "\(identifier) cannot be scrolled to")
+            XCTAssertTrue(
+                app.scrollUntilShown(button, in: holder),
+                "\(identifier) cannot be scrolled to: \(button.exists ? "\(button.frame)" : "missing"), app \(app.frame)"
+            )
             app.tapMiddle(of: button)
         }
     }

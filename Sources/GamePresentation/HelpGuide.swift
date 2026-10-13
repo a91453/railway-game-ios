@@ -150,10 +150,10 @@ public enum HelpGuide {
             "mapColours", .city,
             question: ("What do the colours on the map mean?", "地圖上的顏色是什麼？"),
             answer: (
-                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. Map Layers shows the same uses as a layer.",
-                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。「地圖圖層」也能用圖層看同樣的用途。"
+                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. What you build is warm yellow, like your stations, with a symbol for what it is (a house, a shop, an office tower). Map Layers shows the same uses as a layer.",
+                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。你自己蓋的建物和車站一樣是暖黃色，上面的圖示表示種類（住宅、商店、辦公大樓等）。「地圖圖層」也能用圖層看同樣的用途。"
             ),
-            keywords: "colour color legend block building land use green blue 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業"
+            keywords: "colour color legend block building land use green blue yellow 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業 黃色 自己蓋"
         ),
         HelpEntry(
             "materials", .city,
@@ -192,6 +192,15 @@ public enum HelpGuide {
             keywords: "fare price ticket 票價 漲價 降價 收費"
         ),
         HelpEntry(
+            "trackNumbers", .running,
+            question: ("Where are the track numbers, and which track does a route take?", "軌段編號在哪裡？進路會走哪一條軌道？"),
+            answer: (
+                "Every stretch of track between two junctions has a number (Track #7). Tap a track with the select tool to see its number, or zoom in close: the numbers appear on the track. In Lines, each leg of a line (A → B) has a route menu: Automatic lets the trains find their own way, or pick a platform or a whole path by its track numbers. Tap the map button beside the leg to show it on the map: the path is outlined with arrows the way the trains go and the number of each track along it; inside the menu, Show on Map previews a choice before you pick it. A line's colour on the map also has arrows where it runs one way only, so on double track you can see which track each way takes.",
+                "兩個道岔或端點之間的每一段軌道都有編號（軌段 #7）。用「選取」工具點軌道就看得到它的編號，或把地圖拉近，軌道上會標出編號。在「路線」裡，路線的每一段（A → B）都有進路選單：「自動選路」讓列車自己找路，也可以指定月台或整條路徑（用軌段編號表示）。點那一段旁邊的地圖按鈕，就會在地圖上框出這條路徑，箭頭是列車行進的方向，沿途標出每個軌段的編號；選單裡的「先在地圖上看」可以在選定之前預覽每個選項。地圖上路線的顏色在只走單一方向的地方也有箭頭，蓋了雙線時就看得出每個方向走哪一條軌道。"
+            ),
+            keywords: "track number route path platform double track arrow direction 股道 軌段 編號 進路 雙線 方向 箭頭 月台"
+        ),
+        HelpEntry(
             "oneTrain", .running,
             question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
             answer: (
@@ -217,6 +226,15 @@ public enum HelpGuide {
                 "開啟「交通控制」後，列車要先取得整段路線才會發車，所以兩列車不會同時佔用同一段軌道。列車可能會等前方路線淨空，繁忙的路線能容納的列車也比較少。開關在「路線」面板的最上方。"
             ),
             keywords: "signal signalling block 號誌 閉塞 交通控制 等待"
+        ),
+        HelpEntry(
+            "timeScale", .running,
+            question: ("Why do trains look so fast? What does 600× mean?", "列車怎麼跑這麼快？600× 是什麼意思？"),
+            answer: (
+                "A new game runs at 600 times real time: a second on your screen is ten minutes in the game, so a high-speed train at 300 km/h crosses 50 km of map in a second. The map and the track are true to scale. To watch a train at its real speed, tap it and follow it, then tap 1× (real time) or 10× on the follow bar at the top of the map; the status bar shows the train's speed in km/h. You can also choose any speed from the speed menu beside the pause button. The game keeps the speed you chose when you stop following. If the status bar says \"falling behind\", the device cannot run the game that fast: choose a slower speed.",
+                "新遊戲以真實時間的 600 倍進行：畫面上的 1 秒是遊戲裡的 10 分鐘，所以時速 300 公里的高鐵，畫面上每秒跑過 50 公里。地圖和軌道的比例是真實的。想看列車用真實的速度跑，點列車並跟隨它，再點地圖上方跟隨列的「1×」（真實時間）或「10×」；頂端的狀態列會顯示列車的時速。也可以從暫停鈕旁的速度選單選任何速度。停止跟隨後，遊戲會維持你選的速度。如果狀態列顯示「跟不上」，表示裝置跑不動這個速度，請改選慢一點的速度。"
+            ),
+            keywords: "speed fast slow real time 1x 10x 600x follow km/h falling behind 速度 太快 真實時間 倍速 跟隨 時速 跟不上"
         ),
         HelpEntry(
             "express", .running,
@@ -271,6 +289,15 @@ public enum HelpGuide {
                 "打開遊戲選單，選「教學」。開始畫面上站長的第一條線卡片也會開啟約 5 分鐘的教學遊戲。"
             ),
             keywords: "intro guide 導覽 簡介 重看"
+        ),
+        HelpEntry(
+            "reportProblem", .running,
+            question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
+            answer: (
+                "Open the game menu (the three lines at the top), choose More, then Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
+                "打開遊戲選單（頂端的三條線），選「更多」→「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+            ),
+            keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
         ),
     ]
 }

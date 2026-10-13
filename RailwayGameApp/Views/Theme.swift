@@ -102,16 +102,20 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
 }
 
 /// A screen's main action, flat and filled: ``Theme/primary``, or
-/// ``Theme/error`` for one that removes something; a quiet fill while it
+/// ``Theme/error`` for one that removes something, or ``Theme/accent``
+/// for a purchase that is not building; a quiet fill while it
 /// cannot be used.
 struct ThemeProminentButtonStyle: ButtonStyle {
     var isDestructive = false
+    /// In ``Theme/accent``: a purchase that is not building, such as a
+    /// tile of the map, so it is not taken for a build's ✓.
+    var isPurchase = false
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
-        let fill = isDestructive ? Theme.error : Theme.primary
-        let text = isDestructive ? Theme.onError : Theme.onPrimary
+        let fill = isDestructive ? Theme.error : isPurchase ? Theme.accent : Theme.primary
+        let text = isDestructive ? Theme.onError : isPurchase ? Theme.onAccent : Theme.onPrimary
         configuration.label
             .padding(.horizontal, 14)
             .foregroundStyle(isEnabled ? text : Theme.textSecondary)

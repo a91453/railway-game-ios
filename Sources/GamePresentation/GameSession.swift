@@ -49,6 +49,19 @@ public final class GameSession {
     /// (the lines along the track, ``trackInspection(of:)``) is worked out
     /// once for them, not at every tick.
     @ObservationIgnored private(set) var commandRevision = 0
+    /// The losing line the station master names, kept between commands and
+    /// days (decision 194, later; ``worstLosingLine``).
+    @ObservationIgnored private let lineLossLeaderMemo = LineLossLeaderMemo()
+
+    /// ``GameWorld/worstLosingLine()``, worked out again only after a
+    /// command or once a day has settled (decision 194, later): the station
+    /// master asks every hour of game time.
+    public var worstLosingLine: LineLossLeader? {
+        lineLossLeaderMemo.leader(of: self)
+    }
+
+    /// How many times ``worstLosingLine`` was worked out (for the tests).
+    var worstLosingLineWorkedOut: Int { lineLossLeaderMemo.workedOut }
     /// Whether ``finish(_:)`` is putting a step of game time in place.
     @ObservationIgnored private var isApplyingTick = false
     /// The bubbles ``situationAlerts`` last worked out, and for what.
@@ -56,6 +69,11 @@ public final class GameSession {
     /// The line map ``trackInspection(of:)`` last built, and for which
     /// ``commandRevision``.
     @ObservationIgnored var inspectionLineMap: (revision: Int, map: LineMap)?
+    /// The leg of a line the map shows (decision 201; ``routePreview``).
+    public internal(set) var routePreviewRequest: RoutePreview.Request?
+    /// The preview last worked out, and for which request and
+    /// ``commandRevision``.
+    @ObservationIgnored var routePreviewMemo: (revision: Int, request: RoutePreview.Request, preview: RoutePreview?)?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
@@ -411,6 +429,10 @@ public final class GameSession {
     public internal(set) var skippedTutorial: Tutorial? {
         didSet { noteTutorialStepToResume() }
     }
+    /// Whether the lines panel is on screen, as the app tells it
+    /// (``linesPanelDidChange(isShown:)``), for the tutorial's
+    /// ``TutorialGoal/openLines``. Only UI state, never saved.
+    public internal(set) var isLinesPanelShown = false
     /// Called with the step a tutorial left now would be taken up again
     /// at, the one on screen or skipped (`nil` when there is none, as once
     /// it is finished), whenever it changes: the launcher keeps it, so the
@@ -506,6 +528,48 @@ public final class GameSession {
         maximumElapsed: GameSession.maximumStepDuration
     )
     @ObservationIgnored private var gameLoop: Task<Void, Never>?
+
+    // MARK: - Watching speed (decision 195)
+
+    /// How fast the game really runs and the followed train goes, as the
+    /// status pill shows them: a new speed reads afresh, and not following
+    /// a train shows no train's speed.
+    public var viewingSpeed: ViewingSpeed {
+        let shown = shownViewingSpeed
+        let same = shown.speed == world.clock.speed
+        return ViewingSpeed(
+            speed: world.clock.speed, actualTenths: same ? shown.actualTenths : nil, isBehind: same && shown.isBehind,
+            trainKilometresPerHour: followedTrainID == nil ? nil : shown.trainKilometresPerHour
+        )
+    }
+
+    /// What ``viewingSpeed`` last read, as it is shown: set only when what
+    /// is shown changes, so a tick that changes nothing shown changes
+    /// nothing observed.
+    private var shownViewingSpeed = ViewingSpeed(speed: .paused, permille: nil, trainKilometresPerHour: nil)
+    @ObservationIgnored private var speedMeter = GameSpeedMeter()
+    @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
+    /// The real time the game has run, and the ticks put in place in it,
+    /// for ``speedMeter``.
+    @ObservationIgnored private var realTimeRun: Duration = .zero
+    @ObservationIgnored private var ticksRun: Int64 = 0
+
+    /// Notes that `elapsed` real time went by in a step of the game, after
+    /// its ticks were put in place: how fast it really ran (none while
+    /// paused), and what the pill shows of it.
+    private func noteRealTime(_ elapsed: Duration) {
+        if world.clock.isPaused {
+            speedMeter.reset()
+        } else {
+            realTimeRun += max(elapsed, .zero)
+            speedMeter.record(real: realTimeRun, ticks: ticksRun, speed: world.clock.speed)
+        }
+        let shown = ViewingSpeed(
+            speed: world.clock.speed, permille: speedMeter.permilleOfSpeed,
+            trainKilometresPerHour: followedTrainID == nil ? nil : trainSpeedometer.kilometresPerHour
+        )
+        if shown != shownViewingSpeed { shownViewingSpeed = shown }
+    }
 
     /// A managed company's stations without ridership get the city's
     /// (``StationDemand/cityDefault``), as stations built since do; saves
@@ -984,9 +1048,11 @@ public final class GameSession {
     /// time, worked out off the main actor (``startGameLoop()``).
     public func advance(realElapsed elapsed: Duration) {
         let ticks = dueTicks(realElapsed: elapsed)
-        guard ticks > 0 else { return }
-        let listening = playSound != nil
-        finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
+        if ticks > 0 {
+            let listening = playSound != nil
+            finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
+        }
+        noteRealTime(elapsed)
     }
 
     /// Puts `ticks` of game time in place at once, as the game loop does a
@@ -1059,16 +1125,20 @@ public final class GameSession {
         let lastEntry = world.accounts.entries.last
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         let timeBefore = world.clock.now
+        let worldBefore = world
         isLogging = true
         world = step.world
         isLogging = false
         log(.advance(ticks: step.ticks), at: timeBefore)
+        // Decision 195: the ticks that ran, and the followed train's way.
+        ticksRun += Int64(step.ticks)
         if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
         redoHistory.removeAll()
         editGestureHasSnapshot = false
         endFollowIfGone()
+        trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
         if let playSound, !step.arrived.isEmpty {
             let watched = watchedTrainIDs
             playSound(.arrival(watched: step.arrived.contains { watched.contains($0) }))
@@ -1200,7 +1270,8 @@ public final class GameSession {
                 // not let one more step through.
                 guard !Task.isCancelled, let self else { return }
                 let now = clock.now
-                let ticks = self.dueTicks(realElapsed: now - last)
+                let elapsed = now - last
+                let ticks = self.dueTicks(realElapsed: elapsed)
                 last = now
                 for index in 0..<ticks {
                     guard var tick = self.beginLoopTick() else { break }
@@ -1211,6 +1282,8 @@ public final class GameSession {
                     self.finish(tick, with: outcome)
                     if case .failure = outcome { break }
                 }
+                // Decision 195: how fast the game really ran.
+                self.noteRealTime(elapsed)
             }
         }
     }
@@ -1222,6 +1295,8 @@ public final class GameSession {
         gameLoop?.cancel()
         gameLoop = nil
         tickAccumulator.reset()
+        // The time away is not time the game failed to run.
+        speedMeter.reset()
     }
 
     // MARK: - Trains
@@ -1678,9 +1753,11 @@ public final class GameSession {
         routes.removeAll { $0.from == from && $0.to == to }
         if let preference { routes.append(preference) }
         let chosen = routes
-        perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
-            language.text("Updated the service's physical path.", "已更新停站模式的股道與月台。")
+        let done = perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
+            language.text("Updated the service's physical path.", "已更新停站模式的軌段與月台。")
         }
+        // Decision 201: the map shows the leg as the trains now take it.
+        if done != nil { previewRoute(from: from, to: to, pattern: pattern) }
     }
 
     /// Runs the selected line all day, or from 06:00 to midnight.
@@ -1840,6 +1917,16 @@ public final class GameSession {
     /// Takes the selected train off its line; a trip under way is finished.
     public func unassignSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
+        unassignTrain(train.id)
+    }
+
+    /// Takes train `trainID` off its line, as ``unassignSelectedTrain()``
+    /// does: the line card's "take off a train" (decision 194, later).
+    public func unassignTrain(_ trainID: TrainID) {
+        guard let train = world.train(id: trainID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(trainID).playerMessage(in: language))
+            return
+        }
         perform(.unassignTrain(train.id)) { _, _, _ in
             language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
         }

@@ -203,6 +203,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(layout.timetable.lines.map(\.positioning), [7, 4, 11])
         XCTAssertFalse(world.isTrafficControlEnabled, "decision 197: under traffic control the real day cannot be run")
         XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
+        XCTAssertFalse(world.keepLeft, "its routes are as they were measured; its up line is laid west of the down line already (decision 202)")
     }
 
     /// Each line runs the same day again and again: the day's runs and

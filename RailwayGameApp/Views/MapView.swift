@@ -133,6 +133,15 @@ struct MapView: View {
     /// credits. Nothing of the game is drawn there, and a touch there
     /// reaches them.
     @State private var attributionFrames: [CGRect] = []
+    /// Whether Apple's map shows what the camera shows, for the UI tests
+    /// (``FollowingMapView/followingText``).
+    @State private var baseMapFollowing = ""
+    /// How close Apple's map would come, in points per
+    /// ``MapScale/referenceLength``, when it stopped short of the game's
+    /// closest zoom (its imagery does not reach that close): the camera
+    /// comes no closer, so the railway drawn over it lines up (decision
+    /// 50's later amendment). Forgotten when the map's style changes.
+    @State private var baseMapZoomLimit: Double?
     /// What the map shows of traffic control (Stage V4e), taken from the
     /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -191,7 +200,8 @@ struct MapView: View {
             let zoomGivesWay = session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
-            let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
+            let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
+            let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
             // twenty times as they come on, not on every tick.
@@ -233,6 +243,7 @@ struct MapView: View {
                         layers: mapLayers,
                         waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
                         lines: lineMap,
+                        routePreview: session.routePreview,
                         labels: stationLabels,
                         flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
                         flowVersion: flowStrokesVersion,
@@ -403,7 +414,8 @@ struct MapView: View {
                                 isPlaying: screen.isPlayingPopTravel,
                                 onTogglePlay: togglePopTravelPlay,
                                 nothingZoned: session.world.zones.isEmpty,
-                                isFlat: terrainMap?.isFlat ?? false
+                                isFlat: terrainMap?.isFlat ?? false,
+                                tracksLevel: terrainMap?.tracksLevel ?? false
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
@@ -427,7 +439,7 @@ struct MapView: View {
                             .padding(.trailing, 12)
                         }
                         if !zoomGivesWay {
-                            zoomControls(camera: projection)
+                            zoomControls(camera: projection, limit: zoomLimit)
                         }
                     }
                     .padding(12)
@@ -448,7 +460,9 @@ struct MapView: View {
                         if let realWorld {
                             mapStyleMenu(realWorld)
                         }
-                        if session.buysMap {
+                        // Not while building: beside the tools' Done
+                        // button it was tapped by mistake (TestFlight 56.1).
+                        if session.showsMapExpansionButton {
                             mapExpansionButton(viewport: viewport)
                         }
                     }
@@ -553,7 +567,9 @@ struct MapView: View {
                                 language: session.language,
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
-                                onCredit: { screen.panel = .dataSources }
+                                onCredit: { screen.panel = .dataSources },
+                                onFollowing: baseMapFollowingReport,
+                                onZoomLimit: limitZoom
                             )
                         }
                     }
@@ -569,6 +585,9 @@ struct MapView: View {
                     }
                 }
             }
+            .overlay(alignment: .topLeading) {
+                baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
+            }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
                 if zoning {
@@ -579,6 +598,11 @@ struct MapView: View {
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
             }
+            .onChange(of: mapStyle) { _, _ in
+                // Another style's map (satellite imagery or the street
+                // map) may come closer, or less close.
+                baseMapZoomLimit = nil
+            }
             .onChange(of: bounds) { _, _ in
                 camera = openingCamera(viewport: viewport)
             }
@@ -587,11 +611,25 @@ struct MapView: View {
                 // One already in view stays where it is, under the finger
                 // that tapped it.
                 // While a train is followed the camera stays on it.
-                if !session.isFollowingTrain, let station = session.selectedStation {
-                    let point = WorldCoordinate(x: station.location.x, y: station.location.y)
-                    if !projection.visibleRegion.contains(point) {
-                        camera = projection.centered(on: point)
-                    }
+                // Decision 106, later: "in view" is the map the screen's
+                // controls leave, and one under them moves to its middle.
+                keepSelectionClear(projection: projection, clear: clear, line: false)
+            }
+            // Decision 106, later: a line chosen in the lines panel, and the
+            // selection when a panel opens over it, move into the map the
+            // panel leaves.
+            .onChange(of: session.selectedLineID) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: true)
+            }
+            .onChange(of: insets.trailing) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: session.selectedStation == nil)
+            }
+            .onChange(of: session.routePreview?.request) { _, _ in
+                // Decision 201: a leg shown from the line panel is brought
+                // into view when its middle is out of view.
+                if !session.isFollowingTrain, let preview = session.routePreview, let focus = preview.focus,
+                   !projection.visibleRegion.contains(focus) {
+                    camera = projection.centered(on: focus)
                 }
             }
             .onChange(of: session.cameraRequest) { _, request in
@@ -964,7 +1002,9 @@ struct MapView: View {
     }
 
     /// Decision 160: starts choosing a tile of the map to buy, and shows
-    /// the land owned and the tiles for sale; again, stops.
+    /// the land owned and the tiles for sale; again, stops. While choosing
+    /// it says so in words, in the accent colour, so the mode is not taken
+    /// for building (TestFlight 56.1).
     private func mapExpansionButton(viewport: ScreenSize) -> some View {
         Button {
             if session.isChoosingMapTile {
@@ -978,10 +1018,28 @@ struct MapView: View {
                 session.mapDidMove()
             }
         } label: {
-            Image(systemName: session.isChoosingMapTile ? "xmark" : "plus.square.dashed")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+            if session.isChoosingMapTile {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.square.dashed")
+                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    Image(systemName: "xmark")
+                    Text(verbatim: session.language.text("Done", "結束"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Theme.accent, in: Capsule())
+                .contentShape(Capsule())
+            } else {
+                Image(systemName: "plus.square.dashed")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
+            }
         }
         .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
             ? session.language.text("Stop expanding the map", "結束擴建地圖")
@@ -1002,7 +1060,53 @@ struct MapView: View {
         .accessibilityIdentifier("map.layers")
     }
 
-    private func zoomControls(camera: PlanCamera) -> some View {
+    /// Whether the zoom-in button zooms: not past the closest zoom, nor
+    /// past `limit` (``baseMapZoomLimit``).
+    private func canZoomIn(_ camera: PlanCamera, limit: Double?) -> Bool {
+        guard camera.canZoomIn else { return false }
+        guard let limit else { return true }
+        return camera.referenceSize < limit * 0.999
+    }
+
+    /// UI tests only: whether Apple's map lines up (`map.base`).
+    @ViewBuilder
+    private func baseMapReadout(shown: Bool) -> some View {
+        if Self.readsBaseMap, shown {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.base")
+                .accessibilityValue(Text(verbatim: baseMapFollowing))
+        }
+    }
+
+    /// Where Apple's map says how it follows, under UI tests only.
+    private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
+        guard Self.readsBaseMap else { return nil }
+        return { baseMapFollowing = $0 }
+    }
+
+    /// Apple's map would come no closer than `limit`. Never below MapKit's
+    /// level 16 or so: a limit that low would be a mistake.
+    private func limitZoom(_ limit: Double) {
+        baseMapZoomLimit = max(limit, MapScale.largestSize / 8)
+    }
+
+    /// Whether the map reads out how Apple's map follows it
+    /// (``FollowingMapView/followingText``): in a Debug build under UI
+    /// tests only.
+    private static var readsBaseMap: Bool {
+        #if DEBUG
+        UITestTrace.isOn
+        #else
+        false
+        #endif
+    }
+
+    /// `limit`: how close the base map lets the camera come
+    /// (``baseMapZoomLimit``).
+    private func zoomControls(camera: PlanCamera, limit: Double?) -> some View {
         HStack(spacing: 0) {
             Button {
                 self.camera = camera.zoomedOut()
@@ -1023,13 +1127,37 @@ struct MapView: View {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(!camera.canZoomIn)
+            .disabled(!canZoomIn(camera, limit: limit))
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)
         .glassBackground(in: Capsule(), interactive: true)
         .tutorialTarget(.zoomControls)
         .padding(12)
+    }
+
+    /// Decision 106, later: moves the camera so the selected station (or,
+    /// for `line`, the selected line's stops) shows in the part of the map
+    /// the screen's controls leave (`clear`), in its middle, when it does
+    /// not show there now; a line is zoomed out to fit, never in. Not
+    /// while a train is followed, whose camera stays on it, nor during the
+    /// tutorial, whose steps point at places on the map.
+    private func keepSelectionClear(projection: PlanCamera, clear: EdgeInsets, line: Bool) {
+        guard !session.isFollowingTrain, session.tutorial == nil else { return }
+        let free = ScreenInsets(top: clear.top, leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
+        if line {
+            guard let selected = session.selectedLine else { return }
+            let stops = selected.stops.compactMap { session.world.station(id: $0) }
+                .map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
+            guard let region = WorldRegion(enclosing: stops),
+                  !stops.allSatisfy({ projection.showsClear($0, of: free) }) else { return }
+            camera = projection.showing(region, clearOf: free)
+        } else if let station = session.selectedStation {
+            let point = WorldCoordinate(x: station.location.x, y: station.location.y)
+            if !projection.showsClear(point, of: free) {
+                camera = projection.centered(on: point, clearOf: free)
+            }
+        }
     }
 
     /// One step of the camera towards the followed train (``FollowCamera``,
@@ -1060,6 +1188,9 @@ private struct LineMapKey: Equatable {
         let id: LineID
         let stops: [StationID]
         let routes: [LineRoutePreference]
+        /// Decision 201: the patterns' calls and routes are drawn too.
+        let patterns: [[Int]]
+        let patternRoutes: [[LineRoutePreference]]
         let isRing: Bool
         let color: LineColor?
         /// Decision 168: a high-speed line is drawn differently.
@@ -1075,7 +1206,10 @@ private struct LineMapKey: Equatable {
     init(world: GameWorld) {
         network = world.network
         lines = world.lines.map {
-            Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color, isHighSpeed: $0.isHighSpeed)
+            Line(
+                id: $0.id, stops: $0.stops, routes: $0.routePreferences, patterns: $0.patterns.map(\.calls),
+                patternRoutes: $0.patterns.map(\.routePreferences), isRing: $0.isRing, color: $0.color, isHighSpeed: $0.isHighSpeed
+            )
         }
         stations = world.stations.map(\.location)
         groups = world.transferGroups
@@ -1168,6 +1302,8 @@ private struct MapCanvas: View, Equatable {
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
     let lines: LineMap
+    /// Decision 201: the leg of a line the line panel shows on the map.
+    let routePreview: RoutePreview?
     let labels: StationLabels
     /// Decision 178: the passenger load layer's strokes in the shown hour,
     /// drawn in place of the lines' colours, and a number that changes with
@@ -1197,6 +1333,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
             && lhs.lines == rhs.lines
+            && lhs.routePreview == rhs.routePreview
             && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
             && lhs.lights == rhs.lights
@@ -1207,6 +1344,7 @@ private struct MapCanvas: View, Equatable {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
+        let routePreview = routePreview
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -1223,6 +1361,7 @@ private struct MapCanvas: View, Equatable {
                 layers: layers,
                 waitingCounts: waitingCounts,
                 lines: lines,
+                routePreview: routePreview,
                 labels: labels,
                 flowStrokes: flowStrokes,
                 latitude: latitude,

@@ -30,7 +30,7 @@ struct NewsWatch {
         day = today
         hour = nil
         month = today / FinancePeriod.month.days
-        inDebt = world.accounts.mode == .management && world.economy.balance < .zero
+        inDebt = world.accounts.mode == .management && world.economy.showsInTheRed
         achieved = Set(world.scenario?.achieved.enumerated().compactMap { $1 == nil ? nil : $0 } ?? [])
         scenarioID = world.scenario?.scenario.id
         outcomeSeen = world.scenario?.outcome != nil
@@ -46,7 +46,7 @@ struct NewsWatch {
     /// and it has the money for it.
     static func isLandUnlocked(_ world: GameWorld) -> Bool {
         guard let expansion = world.mapExpansion, world.accounts.mode == .management else { return false }
-        return expansion.allowance > expansion.owned.count && world.economy.balance >= expansion.nextPrice
+        return expansion.allowance > expansion.owned.count && world.economy.canAfford(expansion.nextPrice)
             && !world.mapTilesForSale().isEmpty
     }
 }
@@ -194,7 +194,7 @@ extension GameSession {
         }
 
         // Cash going below zero.
-        let inDebt = managed && world.economy.balance < .zero
+        let inDebt = managed && world.economy.showsInTheRed
         if inDebt != newsWatch.inDebt {
             newsWatch.inDebt = inDebt
             if inDebt, today - newsWatch.debtNewsDay >= 10 {
@@ -317,7 +317,7 @@ extension GameSession {
     /// What the station master says now, written once while it stays the
     /// same worry.
     private func observeAdvice(_ today: Int64) {
-        guard let advice = StationMasterAdvice(world: world), let entry = advice.newsEntry else { return }
+        guard let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine }), let entry = advice.newsEntry else { return }
         if let last = newsWatch.adviceDays[entry.key], today - last < 10 { return }
         newsWatch.adviceDays[entry.key] = today
         let english = advice.text(in: .english), chinese = advice.text(in: .traditionalChinese)

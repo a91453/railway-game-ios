@@ -240,7 +240,37 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動選擇股道與月台"
+            "value": "自動選路（軌段與月台）"
+          }
+        }
+      }
+    },
+    "Show on Map First" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先在地圖上看"
+          }
+        }
+      }
+    },
+    "Show on Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在地圖上看"
+          }
+        }
+      }
+    },
+    "Hide from Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不在地圖上顯示"
           }
         }
       }

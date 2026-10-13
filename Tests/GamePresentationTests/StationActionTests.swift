@@ -48,7 +48,7 @@ final class StationActionTests: XCTestCase {
             XCTAssertEqual(station?.name, "Central")
             XCTAssertEqual(session.world.economy.balance, 9_000)
             XCTAssertEqual(session.world.stationSummary(StationID(rawValue: 1), in: .english), "Station · Central · 1 platform, 64 m")
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built station “Central” with a 64 m platform on edge #1."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built station “Central” with a 64 m platform on track #1."))
             XCTAssertEqual(session.stationName, "Station 2", "the next suggestion is ready")
         }
     }

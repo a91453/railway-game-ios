@@ -37,7 +37,10 @@ struct MapStationTagView: View {
     }
 
     private var tag: StationTag? {
+        // Decision 100, later: a new line being picked has its own ✓
+        // under the station.
         guard session.tool == .select, session.tutorial == nil, !detailsOpen, screen.panel == nil,
+              session.mapLineDraft == nil,
               let id = session.selectedStationID
         else { return nil }
         return StationTag(world: session.world, station: id)

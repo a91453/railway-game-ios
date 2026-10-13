@@ -110,7 +110,7 @@ final class TrackInfoTextTests: XCTestCase {
             let train = try world.purchaseTrain(named: name)
             try world.placeTrain(train.id, at: .onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 512))
         }
-        XCTAssertEqual(world.occupancyConflictTexts(in: .english), ["T1 and T2 on edge #3, 0–1024"])
+        XCTAssertEqual(world.occupancyConflictTexts(in: .english), ["T1 and T2 on track #3, 0–1024"])
         XCTAssertEqual(world.occupancyConflictTexts(in: .traditionalChinese), ["T1、T2 都在軌段 #3, 0–1024"])
         // At a node, the node.
         try world.unplaceTrain(TrainID(rawValue: 1))
@@ -120,7 +120,7 @@ final class TrackInfoTextTests: XCTestCase {
         }
         XCTAssertEqual(world.occupancyConflictTexts(in: .english), ["T1 and T2 on node #4"])
         XCTAssertEqual(world.occupancyConflictTexts(in: .traditionalChinese), ["T1、T2 都在節點 #4"])
-        XCTAssertEqual(TrackResource.span(TrackSpan(edge: .edge(4), start: 1_024, end: 2_048)).displayText(in: .english), "Edge #4, 1024–2048")
+        XCTAssertEqual(TrackResource.span(TrackSpan(edge: .edge(4), start: 1_024, end: 2_048)).displayText(in: .english), "Track #4, 1024–2048")
         XCTAssertEqual(TrackResource.node(.node(2)).displayText(in: .traditionalChinese), "節點 #2")
     }
 }

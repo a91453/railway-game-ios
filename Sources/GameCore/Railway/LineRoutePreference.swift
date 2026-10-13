@@ -108,7 +108,7 @@ extension GameWorld {
                 for destination in berths(of: platform.station, length: 0) where destination.traversal.edge == platform.edge {
                     guard let edge = network.edge(platform.edge),
                           destination.offset == (destination.traversal.direction == .forward ? platform.end : edge.length - platform.start),
-                          let path = trafficPath(from: position, toStation: platform.station, length: 0, berthPenalty: [:], edgePenalty: [:], only: destination) else { continue }
+                          let path = trafficPath(from: position, toStation: platform.station, length: 0, berthPenalty: [:], edgePenalty: [:], only: destination, keepingLeft: false) else { continue }
                     let choice = LineRoutePreference(from: from, to: to, tracks: [start.traversal] + path.traversals, platform: platform)
                     if !choices.contains(choice) { choices.append(choice) }
                 }
@@ -130,7 +130,7 @@ extension GameWorld {
             let fitting = Set(berths(of: platform.station, length: length).filter { berth in
                 berth.traversal.edge == platform.edge && (berth.traversal.direction == .forward ? berth.offset == platform.end : berth.offset == lastEdge.length - platform.start)
             })
-            return trafficPath(from: start, toStation: platform.station, length: length, berthPenalty: [:], edgePenalty: [:], eligible: fitting)
+            return trafficPath(from: start, toStation: platform.station, length: length, berthPenalty: [:], edgePenalty: [:], eligible: fitting, keepingLeft: false)
         }
         // A train returning from a passing place may rejoin later in the
         // same walk. Repeated edges retain their first reachable occurrence.
