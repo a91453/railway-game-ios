@@ -6161,7 +6161,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 「匯出存檔」不再在選單的 body 裡建出整個要存的世界（以前每個 tick 一次）：`ExportedSave` 拿 session，分享時才取 `worldToSave`。
 - 「回到開始畫面」從最後一列移到第一個區塊（「儲存遊戲」「另存或匯出」之後）：矮的手機或字級較大時最後一列會被擠出畫面。仍是六列，其他項目順序不變。自動存檔失敗時照舊留在遊戲、狀態列顯示原因。
 - 其他原生選單（車種、運轉方式、車隊總覽、時刻表、路線的班次與停站方式、車站的月台軌道等）的內容較短，這次沒改，仍會隨 tick 重建；之後若有回報照同一做法處理。
-- UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`（示範地圖，600×）、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（空白新遊戲，XXXL 字級；加進 PR 閘門）、`testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns`（15 列車，選單打開 3 秒不動、選得到另一列；2026-10-13 起與下面兩個合成 `testTheTrainMenusStayStillAndChooseWhileTheClockRuns`，同一次啟動）。XCTest 捲不動原生選單（按住拖曳是滑過選取、swipe 會關掉選單，暫停時也一樣），捲到最後一列只能在實機確認。
+- UI 測試（不暫停）：`StartSaveFlowSmokeTests.testBackToStartWorksWhileTheClockRuns`（示範地圖，600×）、`testBackToStartWorksWithLargeTextWhileTheClockRuns`（空白新遊戲，XXXL 字級；加進 PR 閘門）、`testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns`（15 列車，選單打開 3 秒不動、選得到另一列；2026-10-13 起與下面的車型選單合成 `testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns`，同一次啟動）。XCTest 捲不動原生選單（按住拖曳是滑過選取、swipe 會關掉選單，暫停時也一樣），捲到最後一列只能在實機確認。
 
 **之後的修正（其餘原生選單，作者實機回報，2026-10-13）**：#449（原生選單被 tick 重建）列為另案的選單裡，作者回報「車種」選單在遊戲跑時無法往下滑，要先暫停。這次把 `RailwayGameApp` 裡其餘會隨 tick 重建的原生選單全部照同一做法處理。
 - **新增 `TickStable`**（`RailwayGameApp/Views/TickStable.swift`）：只在 `key`（`StableKey`，幾個值合成）改變時才重畫內容，用在沒有自己 view 的選單上。
@@ -6183,7 +6183,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
   - `confirmationDialog`：只有幾個固定按鈕，不會捲動。
 - **測試**：
   - `MenuChoicesTests` 加「tick 不改選項」：車種、補車車種、月台軌道、各段股道。
-  - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns` 與 `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（作者截圖裡其實是運轉方式選單，25 列）：時鐘在跑時打開選單，3 秒不動，並選得到另一列。2026-10-13 起這兩個與列車選單合成一個測試 `testTheTrainMenusStayStillAndChooseWhileTheClockRuns`，同一次啟動、檢查不變。
+  - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns` 與 `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（作者截圖裡其實是運轉方式選單，25 列）：時鐘在跑時打開選單，3 秒不動，並選得到另一列。2026-10-13 起車型選單與列車選單合成一個測試 `testTheTrainAndTypeMenusStayStillAndChooseWhileTheClockRuns`，同一次啟動、檢查不變；運轉方式選單仍是自己的測試（選過車型後它在列車卡最上方、點不到）。
 
 **之後的修正（路線面板每 tick 的主執行緒成本與排序跳動，TestFlight 56.1 之後，2026-10-13）**：#463 讓路線面板的選單不再被 tick 重建，但面板的 body 仍每 100 ms 重算一次選取路線的全部資料。
 - **快取**：新的 `LinePanelMemo`（GamePresentation，面板用 `@State` 持有一個）把只有指令會改的部分依 `commandRevision`、session、選取路線與語言保存，tick 時直接讀回：
