@@ -127,11 +127,11 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertNil(world.carPriceText(in: .english), "free cars: nothing to say")
     }
 
-    /// Decision 200: free play has unlimited funds, so a company in the red
-    /// may switch too (before, building still cost money there and it could
-    /// never have built again): it builds for nothing, its balance stays as
-    /// it was, and the cash reads "∞".
-    func testACompanyInTheRedSwitchesToFreePlayWithUnlimitedFunds() async throws {
+    /// Building still costs money in free play and nothing earns any, so a
+    /// company in the red that switched could never build again (and the
+    /// switch cannot be undone): the session refuses until the balance is
+    /// back above zero.
+    func testACompanyInTheRedCannotSwitchToFreePlay() async throws {
         var world = try makeLine()
         world.setEconomyMode(.management)
         for _ in 0..<60 where world.economy.balance >= .zero {
@@ -140,21 +140,17 @@ final class EconomyDisplayTests: XCTestCase {
         XCTAssertLessThan(world.economy.balance, .zero, "the setup is a company in the red")
         await MainActor.run { [world] in
             let session = GameSession(world: world)
-            let balance = session.world.economy.balance
-            XCTAssertTrue(session.world.economy.showsInTheRed)
+            // A managed world is given its stations' ridership as it opens,
+            // so compare with the session's own world, not the one passed in.
+            let opened = session.world
             session.setEconomyMode(.free)
-            XCTAssertEqual(session.world.accounts.mode, .free)
-            XCTAssertTrue(session.world.economy.unlimitedFunds)
-            XCTAssertEqual(session.message?.kind, .success)
+            XCTAssertEqual(session.world.accounts.mode, .management, "refused")
+            XCTAssertEqual(session.message?.kind, .failure)
             XCTAssertEqual(
                 session.message?.text,
-                "Free play: unlimited funds, no fares or running costs, and you can change each station's ridership."
+                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game."
             )
-            XCTAssertEqual(session.world.economy.cashText, "∞")
-            XCTAssertFalse(session.world.economy.showsInTheRed)
-            var bought = session.world
-            XCTAssertNoThrow(try bought.purchaseTrain(named: "Spare"))
-            XCTAssertEqual(bought.economy.balance, balance, "nothing paid")
+            XCTAssertEqual(session.world, opened, "nothing else changed")
         }
     }
 

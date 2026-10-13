@@ -70,11 +70,11 @@ extension ConstructionCosts {
 public struct GameEconomy: Hashable, Sendable {
     public private(set) var balance: Money
     public let costs: ConstructionCosts
-    /// Free play with unlimited funds (decision 200, the reference's
-    /// creative mode, `创意模式`, "no funding limit"): nothing is charged,
-    /// so nothing is refused for want of money, and the balance stays as it
-    /// was. Set through ``GameWorld/setUnlimitedFunds(_:)``, in free play
-    /// only; off in every world before it.
+    /// Unlimited funds (decision 200, after the reference's creative mode,
+    /// `创意模式`, "no funding limit"): nothing is charged, so nothing is
+    /// refused for want of money, and the balance stays as it was; the
+    /// accounts still record what was earned and spent. Set through
+    /// ``GameWorld/setUnlimitedFunds(_:)``; off in every world before it.
     public internal(set) var unlimitedFunds: Bool
 
     public init(balance: Money, costs: ConstructionCosts = .standard) {
@@ -104,8 +104,10 @@ public struct GameEconomy: Hashable, Sendable {
         balance = balance - amount
     }
 
+    /// Adds `amount`; with ``unlimitedFunds`` the balance stays as it was.
     public mutating func earn(_ amount: Money) {
         precondition(amount >= .zero, "earn(_:) requires a non-negative amount")
+        guard !unlimitedFunds else { return }
         balance = balance + amount
     }
 

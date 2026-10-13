@@ -316,11 +316,11 @@ public final class GameLauncher {
     }
 
     /// Unlocks the achievements `session`'s world meets (decision 181),
-    /// unless it is a demo, and says so in the game.
+    /// unless it is a demo or a game with unlimited funds (decision 200,
+    /// read from the world, so a save opened again still counts nothing),
+    /// and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
-        // Decision 200: free play unlocks nothing, as the reference's
-        // creative mode keeps no score.
-        guard !session.news.isDemo, session.tutorial == nil, session.world.accounts.mode == .management else { return }
+        guard !session.news.isDemo, session.tutorial == nil, !session.world.economy.unlimitedFunds else { return }
         let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
     }

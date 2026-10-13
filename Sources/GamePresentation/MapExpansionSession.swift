@@ -184,8 +184,6 @@ extension GameSession {
         let total = world.mapTileRows * world.mapTileColumns
         let owned = language.text("Map: \(expansion.owned.count) of \(total) tiles", "地圖：已擁有 \(expansion.owned.count) / \(total) 塊")
         guard expansion.owned.count < total else { return owned }
-        // Decision 200: with unlimited funds a tile costs nothing.
-        guard !world.economy.unlimitedFunds else { return owned }
         let price = expansion.nextPrice.moneyText
         guard world.accounts.mode == .management else {
             return language.text("\(owned) · the next \(price)", "\(owned) · 下一塊 \(price)")
@@ -210,8 +208,7 @@ extension GameSession {
         }
         let towns = world.mapExpansion?.townSeed != nil
         let bought = perform(.buyMapTile(tile)) { _, before, _ in
-            // Decision 200: with unlimited funds nothing was paid.
-            let price = before.economy.unlimitedFunds ? .zero : before.mapExpansion?.nextPrice ?? .zero
+            let price = before.mapExpansion?.nextPrice ?? .zero
             return towns
                 ? language.text("Bought the tile for \(price.moneyText). Its towns wait for your railway.", "以 \(price.moneyText) 買下這一塊，那裡的城鎮正等著你的鐵路。")
                 : language.text("Bought the tile for \(price.moneyText).", "以 \(price.moneyText) 買下這一塊。")
@@ -220,32 +217,5 @@ extension GameSession {
             chosenMapTile = nil
         }
         return bought != nil
-    }
-
-    /// Whether the whole of a blank map can be opened at once (decision
-    /// 200): free play with unlimited funds, a map bought tile by tile with
-    /// tiles still for sale. A real-world map is not: a whole island's
-    /// tiles wait for a limit on the land and a measure of memory on a
-    /// device.
-    public var canOpenWholeMap: Bool {
-        world.economy.unlimitedFunds && world.geoAnchor == nil && !world.mapTilesForSale().isEmpty
-    }
-
-    /// Buys every tile of the map still for sale (``canOpenWholeMap``), as
-    /// one edit that undo takes back, and says so in ``message``.
-    @discardableResult
-    public func openWholeMap() -> Bool {
-        guard canOpenWholeMap else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "Only free play with unlimited funds opens a blank map at once.", "只有無限資金的自由模式可以一次開放整張空白地圖。"
-            ))
-            return false
-        }
-        chosenMapTile = nil
-        let opened = perform(.openWholeMap) { _, before, after in
-            let count = (after.mapExpansion?.owned.count ?? 0) - (before.mapExpansion?.owned.count ?? 0)
-            return language.text("Opened the whole map: \(count) more tiles.", "已開放整張地圖：多了 \(count) 塊。")
-        }
-        return opened != nil
     }
 }

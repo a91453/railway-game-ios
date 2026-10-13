@@ -52,6 +52,11 @@ extension GameEconomy {
     public var showsInTheRed: Bool {
         !unlimitedFunds && balance < .zero
     }
+
+    /// Why a game with unlimited funds has no achievements or rank.
+    public static func uncountedText(in language: DisplayLanguage) -> String {
+        language.text("Games with unlimited funds do not count for achievements or the company rank.", "資金無限的局不計成就與公司評等。")
+    }
 }
 
 extension EconomyMode {

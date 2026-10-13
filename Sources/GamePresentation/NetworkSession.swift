@@ -371,9 +371,8 @@ extension GameSession {
     /// `GameWorld.addTrackPlatform(_:on:from:to:)` for the station
     /// ``platformStationID``, or for a new station built first through
     /// `GameWorld.buildStation(named:at:)` at the middle of the platform
-    /// (Stage F1); the new station gets its ridership
-    /// (``newStationDemand(at:)``), unless a managed company's land gives it
-    /// (Phase 6b; in free play too since decision 200). All or
+    /// (Stage F1); a managed company gives the new station its ridership
+    /// (``newStationDemand(at:)``), unless the land does (Phase 6b). All or
     /// nothing. A new station then serves the next platform, so a second
     /// track beside it joins the same station. Once built, the place picked
     /// is forgotten (as removing forgets the edge), so the map's ✓ pill

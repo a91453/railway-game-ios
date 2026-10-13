@@ -28,13 +28,9 @@ extension GameWorld {
     /// the accounts now: the first hour is settled at the next full hour.
     /// Switching to `free` keeps the accounts as they are; nothing is
     /// accrued or settled until the mode is `management` again. Free.
-    /// Becoming managed also ends unlimited funds (decision 200).
     public mutating func setEconomyMode(_ mode: EconomyMode) {
         if mode == .management, accounts.mode != .management {
             accounts.openedAt = clock.now
-        }
-        if mode == .management {
-            economy.unlimitedFunds = false
         }
         accounts.mode = mode
         passengerPlan = PassengerPlanCache()
@@ -42,16 +38,12 @@ extension GameWorld {
         refreshLandDemand()
     }
 
-    /// Turns unlimited funds on or off (decision 200, the reference's
-    /// creative mode, `创意模式`): while on, building and buying cost
-    /// nothing and are never refused for want of money, and the balance
-    /// stays as it was. Free play only, which has no income or running
-    /// costs to pay. Free.
-    ///
-    /// - Throws: ``GameError/unlimitedFundsNeedFreePlay`` for a managed
-    ///   company turning them on.
-    public mutating func setUnlimitedFunds(_ on: Bool) throws(GameError) {
-        guard !on || accounts.mode == .free else { throw .unlimitedFundsNeedFreePlay }
+    /// Turns unlimited funds on or off (decision 200, after the
+    /// reference's creative mode, `创意模式`): while on, building and buying
+    /// cost nothing and are never refused for want of money, and nothing
+    /// settled moves the balance; fares, costs and the rest of the rules
+    /// run and are recorded as ever. Free.
+    public mutating func setUnlimitedFunds(_ on: Bool) {
         economy.unlimitedFunds = on
     }
 
@@ -457,7 +449,6 @@ extension GameWorld {
             return "The hour's accrued counts are out of range."
         }
         guard (-Self.maximumBalance...Self.maximumBalance).contains(economy.balance.amount) else { return "The balance is out of range." }
-        guard !economy.unlimitedFunds || accounts.mode == .free else { return "Only free play has unlimited funds." }
         guard pending.fareRevenue.amount % 100 == 0 else { return "The hour's fares must be whole dollars." }
         guard (Money(1)...FareRules.maximumFare).contains(accounts.fareBaseline) else { return "The fare baseline is out of range." }
         guard (.zero...CompanyAccounts.maximumLoan).contains(accounts.loan),

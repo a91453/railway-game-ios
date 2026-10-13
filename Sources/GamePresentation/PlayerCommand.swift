@@ -190,10 +190,8 @@ extension GameSession {
             case .new(let name, let point, let demand):
                 station = try world.buildStation(named: name, at: point)
                 // With demand from land (Phase 6b) GameCore gives it the
-                // ridership of the land round it. Decision 200: in free
-                // play, where the land sets none, it gets the same
-                // ridership, which the player may then change.
-                if world.accounts.mode == .free || !world.landDemand {
+                // ridership of the land round it.
+                if world.accounts.mode == .management, !world.landDemand {
                     try world.setStationDemand(station.id, to: demand)
                 }
             }

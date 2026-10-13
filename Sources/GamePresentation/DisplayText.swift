@@ -398,8 +398,6 @@ extension GameError {
             )
         case .loanNeedsManagement:
             language.text("Only a managed company can borrow.", "只有經營模式的公司可以貸款。")
-        case .unlimitedFundsNeedFreePlay:
-            language.text("Only free play has unlimited funds.", "只有自由模式可以無限資金。")
         case .stationDemandFromLand:
             language.text(
                 "A managed company's ridership comes from the land round its stations.",

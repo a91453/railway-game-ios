@@ -500,10 +500,11 @@ struct LinesPanel: View {
                 if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
                     // Decision 194, later: a fix beside each reason.
                     let fixes = lossMemo.fixes(line.id, of: session)
-                    let balance = session.world.economy.balance
+                    // Decision 200: unlimited funds are never short.
+                    let economy = session.world.economy
                     LineLossCard(
                         diagnosis: diagnosis, language: session.language, session: session, lineName: line.name, fixes: fixes,
-                        shortOfMoney: Set(fixes.filter { !$0.value.isAffordable(with: balance) }.keys)
+                        shortOfMoney: Set(fixes.filter { !economy.canAfford($0.value.cost) }.keys)
                     )
                         .equatable()
                 }

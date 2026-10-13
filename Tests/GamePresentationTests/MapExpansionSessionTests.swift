@@ -129,33 +129,6 @@ final class MapExpansionSessionTests: XCTestCase {
         XCTAssertNil(GameSession(world: GameWorld.newGame(eventSeed: 9), language: .english).mapExpansionText)
     }
 
-    /// Decision 200: free play with unlimited funds opens the whole of a
-    /// blank map at once, as one edit undo takes back; a managed game, a
-    /// free one that pays, and a real-world map cannot.
-    func testUnlimitedFundsOpenTheWholeBlankMap() throws {
-        var world = GameWorld.newGame(balance: 0, eventSeed: 9, buysMap: true)
-        XCTAssertFalse(GameSession(world: world, language: .english).canOpenWholeMap, "managed")
-        world.setEconomyMode(.free)
-        let paying = GameSession(world: world, language: .english)
-        XCTAssertFalse(paying.canOpenWholeMap, "free play that pays")
-        XCTAssertFalse(paying.openWholeMap())
-        XCTAssertEqual(paying.message?.text, "Only free play with unlimited funds opens a blank map at once.")
-        try world.setUnlimitedFunds(true)
-        let session = GameSession(world: world, language: .traditionalChinese)
-        let towns = world.land.cells.count
-        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 1 / 25 塊")
-        XCTAssertTrue(session.canOpenWholeMap)
-        XCTAssertTrue(session.openWholeMap())
-        XCTAssertEqual(session.message?.text, "已開放整張地圖：多了 24 塊。")
-        XCTAssertEqual(session.world.mapExpansion?.owned.count, 25)
-        XCTAssertEqual(session.world.economy.balance, .zero)
-        XCTAssertGreaterThan(session.world.land.cells.count, towns, "each tile grew its towns")
-        XCTAssertFalse(session.canOpenWholeMap, "nothing left")
-        XCTAssertEqual(session.mapExpansionText, "地圖：已擁有 25 / 25 塊")
-        session.undo()
-        XCTAssertEqual(session.world.mapExpansion?.owned.count, 1)
-    }
-
     func testChoosingAToolStopsChoosingATile() {
         let session = GameSession(world: GameWorld.newGame(eventSeed: 9, buysMap: true), language: .english)
         session.startChoosingMapTile()

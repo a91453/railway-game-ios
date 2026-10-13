@@ -263,10 +263,10 @@
 ///     hand and what is owed would be lost, so it says the save is newer
 ///     than it instead.
 /// 51. Unlimited funds (decision 200): a world's `"economy"` can have
-///     `"unlimitedFunds": true`, free play that pays for nothing. A build
+///     `"unlimitedFunds": true`, a company that pays for nothing. A build
 ///     that reads only an earlier version would drop it, and the company
-///     would pay for everything from a balance free play never earns, so it
-///     says the save is newer than it instead.
+///     would start paying from a balance it never had to keep, so it says
+///     the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
     public static let currentVersion = 51

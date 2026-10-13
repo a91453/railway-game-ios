@@ -1,6 +1,65 @@
 {
   "saveVersion" : 51,
   "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 800,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 5000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "train",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cars" : 5,
+          "cost" : 10000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "cars",
+          "owner" : 1
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 16800,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
     "bounds" : {
       "height" : 4096,
       "width" : 16384

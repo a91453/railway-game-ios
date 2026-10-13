@@ -141,11 +141,38 @@ struct HUDView: View {
         .equatable()
     }
 
-    /// The balance in dollars, or "∞" with free play's unlimited funds
-    /// (decision 200); it opens the economy panel.
+    /// The balance in dollars; it opens the economy panel. Decision 200:
+    /// with unlimited funds an "∞" capsule instead, in the text colour (not
+    /// the green of money coming in), without the income float.
+    @ViewBuilder
     private var cash: some View {
-        let text = session.world.economy.cashText
-        let isNegative = session.world.economy.showsInTheRed
+        if session.world.economy.unlimitedFunds {
+            Button {
+                screen.panel = .economy
+            } label: {
+                Text(verbatim: "∞")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 2)
+                    .background(Capsule().stroke(Theme.textSecondary, lineWidth: 1))
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: session.language.text("Unlimited funds", "資金無限")))
+            .accessibilityHint(Text(verbatim: session.language.text("Shows fares, running costs and the ledger.", "顯示票收、營運成本與帳本。")))
+            .accessibilityIdentifier("hud.unlimitedFunds")
+            .tutorialTarget(.cash)
+        } else {
+            balance
+        }
+    }
+
+    /// The balance in dollars, as before decision 200.
+    private var balance: some View {
+        let text = session.world.economy.balance.moneyText
+        let isNegative = session.world.economy.balance < .zero
         return Button {
             screen.panel = .economy
         } label: {

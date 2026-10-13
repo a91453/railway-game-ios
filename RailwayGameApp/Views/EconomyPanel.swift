@@ -30,11 +30,17 @@ struct EconomyPanel: View {
                 if session.world.scenario != nil {
                     goalsSection
                 }
-                loanSection
+                // Decision 200: with unlimited funds there is nothing to
+                // borrow for, and no cash to sheet.
+                if !session.world.economy.unlimitedFunds {
+                    loanSection
+                }
                 faresSection
                 lastHourSection
                 reportSection
-                balanceSheetSection
+                if !session.world.economy.unlimitedFunds {
+                    balanceSheetSection
+                }
                 closedYearsSection
                 ledgerSection
             }
@@ -93,7 +99,7 @@ struct EconomyPanel: View {
                     Text("Balance")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                    // Decision 200: "∞" with free play's unlimited funds.
+                    // Decision 200: "∞" with unlimited funds.
                     Text(verbatim: session.world.economy.cashText)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
@@ -112,24 +118,15 @@ struct EconomyPanel: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
             }
-            // Decision 200: free play's unlimited funds, and a blank map
-            // opened at once.
+            // Decision 200: what unlimited funds mean.
             if session.world.economy.unlimitedFunds {
                 Text(verbatim: session.language.text(
-                    "Unlimited funds: building and buying cost nothing. Achievements are off in free play.",
-                    "資金無限：建造與購買都不花錢。自由模式不解鎖成就。"
+                    "Unlimited funds: building and buying cost nothing. Fares and costs are still counted. Games with unlimited funds do not count for achievements.",
+                    "資金無限：建造與購買都不扣款，票收與成本照常計算。資金無限的局不計成就。"
                 ))
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityIdentifier("economy.unlimitedFunds")
-            }
-            if session.canOpenWholeMap {
-                Button {
-                    session.openWholeMap()
-                } label: {
-                    Text(verbatim: session.language.text("Open the Whole Map", "開放整張地圖"))
-                }
-                .accessibilityIdentifier("economy.openWholeMap")
             }
             // Decision 162, later: the fuel price while a spell lasts, not
             // only the station master's first day.
@@ -153,12 +150,7 @@ struct EconomyPanel: View {
                         session.setEconomyMode(.free)
                     }
                 } message: {
-                    // Decision 200: free play has unlimited funds and no
-                    // achievements.
-                    Text(verbatim: session.language.text(
-                        "Free play has unlimited funds, no fares or running costs, and no achievements; you can change each station's ridership. It cannot become a managed company again.",
-                        "自由模式資金無限，不收票價、沒有營運成本，也不解鎖成就；各站的運量可以自己改。切換後無法再改回經營模式。"
-                    ))
+                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
                 }
                 if session.isFreePlayLocked {
                     Text(verbatim: GameSession.freePlayLockedText(in: session.language))
@@ -300,7 +292,9 @@ struct EconomyPanel: View {
                     ? report.current.incomeStatementRows(previous: report.previous, in: session.language)
                     : report.current.cashFlowRows(
                         previous: report.previous,
-                        closingCash: (cash, cash - report.current.netCashFlow),
+                        // Decision 200: no cash in hand to show with
+                        // unlimited funds.
+                        closingCash: session.world.economy.unlimitedFunds ? nil : (cash, cash - report.current.netCashFlow),
                         in: session.language
                     ),
                 currentTitle: session.language.text("This", "本期"), previousTitle: session.language.text("Last", "上期")
@@ -347,7 +341,8 @@ struct EconomyPanel: View {
             }
             ForEach(years.reversed(), id: \.year) { year in
                 NavigationLink {
-                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language)
+                    YearEndReport(statement: year, previous: years.last { $0.year == year.year - 1 }, language: session.language,
+                                  unlimitedFunds: session.world.economy.unlimitedFunds)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: year.titleText(in: session.language))

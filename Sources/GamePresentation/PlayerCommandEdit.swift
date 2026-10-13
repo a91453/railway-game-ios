@@ -17,8 +17,6 @@ extension PlayerCommand {
         case setDisruptions(Disruptions?)
         case setPassengerRoutingMode(PassengerRoutingMode)
         case setEconomyMode(EconomyMode)
-        /// Decision 200: free play's unlimited funds.
-        case setUnlimitedFunds(Bool)
         case setFareRules(FareRules)
         case borrow(Money)
         case repayLoan(Money)
@@ -101,9 +99,6 @@ extension PlayerCommand {
         /// A zone, or `nil` to clear.
         case setZone(ZoneChoice, rows: ClosedRange<Int>, columns: ClosedRange<Int>)
         case buyMapTile(MapTile)
-        /// Decision 200: every tile still for sale, bought one after
-        /// another until none is left.
-        case openWholeMap
         case acceptRequest(Int)
         case declineRequest(Int)
         case investInSouvenirShop(AttractionID)
@@ -167,7 +162,6 @@ extension GameSession {
         case .setDisruptions(let disruptions): world.setDisruptions(disruptions)
         case .setPassengerRoutingMode(let mode): world.setPassengerRoutingMode(mode)
         case .setEconomyMode(let mode): world.setEconomyMode(mode)
-        case .setUnlimitedFunds(let on): try world.setUnlimitedFunds(on)
         case .setFareRules(let rules): try world.setFareRules(rules)
         case .borrow(let amount): try world.borrow(amount)
         case .repayLoan(let amount): try world.repayLoan(amount)
@@ -274,10 +268,6 @@ extension GameSession {
         case .demolishBuilding(let id): try world.removePlacedBuilding(id)
         case .setZone(let choice, let rows, let columns): outcome.number = try world.setZone(choice.zone, rows: rows, columns: columns)
         case .buyMapTile(let tile): try world.buyMapTile(tile)
-        case .openWholeMap:
-            while let tile = world.mapTilesForSale().first {
-                try world.buyMapTile(tile)
-            }
         case .acceptRequest(let id): try world.acceptRequest(id)
         case .declineRequest(let id): try world.declineRequest(id)
         case .investInSouvenirShop(let id): try world.investInSouvenirShop(of: id)
