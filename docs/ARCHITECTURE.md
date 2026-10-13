@@ -6274,7 +6274,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
    - 保險：`world` 的 `didSet` 看到不是上面這些路徑造成的改變（不是 tick，也不是記錄中的路徑），就記一筆「沒有記錄」。所以日誌不會漏掉任何改變而沒人知道。
 3. **上限**：5,000 筆（`CommandLog.limit`）。記到 2,500 筆時留下那時的世界；到 5,000 筆時，那個世界成為新的起點，前 2,500 筆丟掉，再從現在留下下一個。所以日誌一直有 2,500 到 5,000 筆，記憶體多兩個世界（起點與下一個起點），沒改的部分和遊戲中的世界共用。遊戲時間合成一筆，所以 5,000 筆是 5,000 次操作，不是 5,000 個 tick。tick 每次只做一次陣列尾端的加法，不拖慢 tick。
 4. **回報的檔案**（`CommandLogReport.swift`，`command-log.json`）：只有存檔（`SavedGame`，起點的世界）、起點時有哪些資料、指令、App 的版本與 build、內附資料檔的雜湊（FNV-1a 64 位元，`dataFiles` 的五個檔：人口、地點、水域、高度、涵蓋），以及結束時的世界摘要（時間、現金、節點、邊、車站、路線、列車數）。不帶裝置識別碼、帳號、位置。存檔裡可能有玩家自己打的名稱：`typedNames` 列出存檔與指令裡的車站、路線、列車名稱，讓玩家看過再決定。
-5. **畫面**：設定頁「回報問題」多一個玩家自己選的開關「附上存檔與指令紀錄」，打開時列出會附上的東西與 `typedNames`，經 `ShareLink` 一起分享（決策 127 的分享表，不自動上傳）。**這一段等 #463（`SettingsView`）合併後再做**，在同一個 PR 裡補上。
+5. **畫面**（`SettingsView` 的「關於」）：從遊戲打開設定時，「回報問題」上面多一個開關「附上存檔與指令紀錄」（`settings.report.attach`），預設關，由玩家自己打開。打開時在背景寫出 `command-log.json`（存檔可能有幾 MB，還要讀內附資料檔算雜湊），寫好後列出會附上什麼（`CommandLogReport.attachmentText`：檔名、這局開始時的存檔、之後做的幾件事、版本、「不含你或裝置的任何資料」，以及存檔裡的名稱，最多 20 個），寫好前「回報問題」按不下去。「回報問題」再把檔案和原本的訊息一起交給分享表（`ShareLink(item:subject:message:)`，決策 127：App 不寫收件者，玩家按下傳送前什麼都不送）。從開始畫面打開時沒有遊戲，沒有這個開關。新的字照決策 127 第 4 點用 `DisplayLanguage.app` 與 `Text(verbatim:)`，不進字串目錄。
 6. **在 Linux 重播**：
    - **用 session 重播**（`Tests/GamePresentationTests/CommandLogReplay.swift`）：從起點的存檔開一個沒有畫面的 `GameSession`，照記錄的時機給它 App 內附的資料（`RailwayGameApp/Resources/RealWorld/`），每一筆從記下它的同一條路徑重播：指令走 `perform`、時間走 `advance(ticks:)`、復原走 `undo()`。所以每次編輯後 `performEdit` 讀入的土地（決策 88）與鋪軌讀的地面（決策 124）和實機相同，實景地圖、高鐵示範的回報也能重播，檔案也不會變大。每一筆先比遊戲時間，不同就停；遇到「沒有記錄」也停，說出是哪個函式。資料檔的雜湊和這個 checkout 不同時警告。實機的回報寫成像 `HighSpeedDemoTests` 那樣的 GamePresentationTests。
    - **轉成 GameCore 的 replay fixture**（`Tests/GameCoreTests/ProblemReportFixtureTests.swift`）：不讀實景資料的世界（空白地圖、挑戰），而且指令都能用 fixture 現有的指令說出來時，轉成 `ReplayFixtures/` 的格式，checksum 用現有的 `ReplayFixture.checksums`，只新增檔案，不改共用的測試檔。鋪軌只轉得了地面（`surface`）、沒有豎曲線、端點不是切開的邊；復原與重做轉不了。轉不了的會說出原因，改用 session 重播。轉完比對結束的摘要。指令：`PROBLEM_REPORT=<report.json> REPLAY_RECORD="$PWD/ReplayFixtures" swift test --filter ProblemReportFixtureTests/testConvertingAReport`。
@@ -6289,7 +6289,9 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 用 session 重播需要和實機同一版的內附資料；不同時只能警告。
 - 摘要只比數量與現金，不是整個世界的雜湊：裝置與 Linux 的 JSON 編碼可能不同，所以不用存檔的位元組比。
 
-**沒有驗證的**：Linux 不能建置 App；設定頁的開關與分享表（第 5 點）要在 macOS CI 與實機上看。
+**UI 測試**：`SettingsUITests.testTheGameMenusReportCanAttachTheSaveAndCommands`（從遊戲選單打開設定、開關預設關、打開後說出附了什麼、「回報問題」按得下去；完整 lane）。
+
+**沒有驗證的**：Linux 不能建置 App；開關、說明的樣子與分享表（郵件裡的附件）要在 macOS CI 與實機上看。
 
 ## 目前規則摘要
 

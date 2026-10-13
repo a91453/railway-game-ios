@@ -276,6 +276,14 @@ final class CommandLogTests: XCTestCase {
         for key in ["\"schemaVersion\"", "\"version\"", "\"build\"", "\"data\"", "\"start\"", "\"startData\"", "\"entries\"", "\"end\""] {
             XCTAssertTrue(file.contains(key), key)
         }
+        XCTAssertEqual(
+            report.attachmentText(in: .english),
+            "Attached: command-log.json, with the save this game started from, the 3 things done since (commands, game time, Undo and Redo) and the version 0.5.0 (56.1). Nothing about you or your device. Names in it: Home, Grandma's."
+        )
+        XCTAssertEqual(
+            report.attachmentText(in: .traditionalChinese, shown: 1),
+            "會附上 command-log.json：這局開始時的存檔、之後做的 3 件事（指令、遊戲時間、復原與重做），以及版本 0.5.0 (56.1)。不含你或裝置的任何資料。裡面的名稱：Home 等 2 個。"
+        )
         XCTAssertEqual(CommandLogReport.digest(of: Data()), "cbf29ce484222325", "FNV-1a's offset")
         XCTAssertEqual(CommandLogReport.digest(of: Data("a".utf8)), "af63dc4c8601ec8c")
     }
@@ -380,10 +388,11 @@ final class CommandLogTests: XCTestCase {
 
         let report = try JSONDecoder().decode(CommandLogReport.self, from: session.commandLogReport(
             version: "0.5.0", build: "56.1",
-            data: Dictionary(uniqueKeysWithValues: try CommandLogReport.dataFiles.map { ($0, CommandLogReport.digest(of: try CommandLogReplay.bundled($0))) })
+            data: CommandLogReport.digests(reading: CommandLogReplay.bundled)
         ).encoded())
         let replay = try CommandLogReplay(report)
         XCTAssertNil(replay.stopped?.reason)
+        XCTAssertEqual(report.data.count, CommandLogReport.dataFiles.count)
         XCTAssertEqual(replay.warnings, [])
         XCTAssertEqual(replay.session.world, session.world)
 

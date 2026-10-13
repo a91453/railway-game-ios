@@ -59,6 +59,16 @@ public struct CommandLogReport: Codable, Sendable {
         return String(repeating: "0", count: 16 - hex.count) + hex
     }
 
+    /// The digest of each of ``dataFiles`` `file` reads (by its name), and
+    /// none of one it cannot.
+    public static func digests(reading file: (String) throws -> Data) -> [String: String] {
+        var digests: [String: String] = [:]
+        for name in dataFiles {
+            if let data = try? file(name) { digests[name] = digest(of: data) }
+        }
+        return digests
+    }
+
     /// The report as a file: JSON, its keys sorted.
     public func encoded() throws -> Data {
         let encoder = JSONEncoder()
@@ -79,6 +89,25 @@ public struct CommandLogReport: Codable, Sendable {
         }
         var seen = Set<String>()
         return names.filter { seen.insert($0).inserted }
+    }
+
+    /// What the player is told is attached, before they choose to send it:
+    /// the save, how many entries, the version, and the names they may have
+    /// typed (at most `shown` of them, then how many more).
+    public func attachmentText(in language: DisplayLanguage, shown: Int = 20) -> String {
+        var text = language.text(
+            "Attached: \(Self.fileName), with the save this game started from, the \(entries.count) things done since (commands, game time, Undo and Redo) and the version \(version) (\(build)). Nothing about you or your device.",
+            "會附上 \(Self.fileName)：這局開始時的存檔、之後做的 \(entries.count) 件事（指令、遊戲時間、復原與重做），以及版本 \(version) (\(build))。不含你或裝置的任何資料。"
+        )
+        let names = typedNames
+        if !names.isEmpty {
+            let listed = names.prefix(shown).joined(separator: language.text(", ", "、"))
+            let more = names.count > shown
+                ? language.text(" and \(names.count - shown) more", " 等 \(names.count) 個")
+                : ""
+            text += language.text(" Names in it: \(listed)\(more).", "裡面的名稱：\(listed)\(more)。")
+        }
+        return text
     }
 
     /// What a world came to: the time, the money and how much is built.

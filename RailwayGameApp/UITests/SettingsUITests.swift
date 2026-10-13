@@ -107,6 +107,29 @@ final class SettingsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["settings.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
     }
 
+    /// Decision 193: from a game, the report can carry its save and
+    /// commands, off until the player turns it on; turned on, it says what
+    /// it holds, and Report a Problem still shares.
+    func testTheGameMenusReportCanAttachTheSaveAndCommands() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        openSettingsFromTheGameMenu(app)
+        let attach = app.switches["settings.report.attach"]
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(attach), "The attach switch never came into view")
+        XCTAssertEqual(switchValue(attach), "0", "off until the player turns it on")
+        XCTAssertTrue(flip(attach, from: "0"), "The attach switch did not turn on")
+        let attached = app.staticTexts["settings.report.attached"]
+        XCTAssertTrue(attached.waitForExistence(timeout: 30), "What is attached is not said")
+        XCTAssertTrue(attached.label.contains("command-log.json"), attached.label)
+        XCTAssertTrue(app.buttons["settings.report"].isEnabled, "Report a Problem shares with the file")
+        XCTAssertTrue(flip(attach, from: "1"), "The attach switch did not turn off")
+        XCTAssertFalse(attached.exists)
+    }
+
     /// Opens the game menu and chooses Settings, and waits for its music
     /// switch. A native menu's action can report hittable and still fail
     /// to compute its activation point (as in StartSaveFlowSmokeTests):
