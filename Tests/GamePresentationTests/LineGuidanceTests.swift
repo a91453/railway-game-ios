@@ -2,7 +2,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// ARCHITECTURE decision 195 (TestFlight 54.1): what the train card says to
+/// ARCHITECTURE decision 196 (TestFlight 54.1): what the train card says to
 /// do next, the menus that give a train a line, and the warning for single
 /// track that holds a line to fewer trains under traffic control.
 @MainActor

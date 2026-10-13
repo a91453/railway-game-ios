@@ -49,7 +49,7 @@ struct LinesPanel: View {
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
-    /// Decision 195: whether the new line's form shows while the lines
+    /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
 
@@ -61,7 +61,7 @@ struct LinesPanel: View {
             ScrollViewReader { proxy in
                 Form {
                     if listsLinesFirst {
-                        // Decision 195 (TestFlight 54.1): with lines made and
+                        // Decision 196 (TestFlight 54.1): with lines made and
                         // none being picked, the lines and the selected
                         // line's stops come first, a new line is one row,
                         // and the switches for every line go last.
@@ -154,7 +154,7 @@ struct LinesPanel: View {
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
             }
-            // Decision 195: a line made from the unfolded form folds it again.
+            // Decision 196: a line made from the unfolded form folds it again.
             .onChange(of: session.world.lines.count) { showsNewLine = false }
             .onAppear { sortLinesNow() }
             .onChange(of: lineSort) { sortLinesNow() }
@@ -182,7 +182,7 @@ struct LinesPanel: View {
         }
     }
 
-    /// Decision 195: the lines come first once there are some, unless a
+    /// Decision 196: the lines come first once there are some, unless a
     /// new line is being picked or the tutorial leads (its steps point at
     /// the form for a new line at the top).
     private var listsLinesFirst: Bool {
@@ -190,7 +190,7 @@ struct LinesPanel: View {
     }
 
     /// The new line's form folded into one row while the lines come first
-    /// (decision 195); picking a station puts it back at the top.
+    /// (decision 196); picking a station puts it back at the top.
     @ViewBuilder
     private var newLineRow: some View {
         Section {
@@ -678,7 +678,7 @@ struct LinesPanel: View {
                         .equatable()
                 }
             }
-            // Decision 195: the station selected on the map, where it fits.
+            // Decision 196: the station selected on the map, where it fits.
             if let station = session.selectedStation, !line.stops.contains(station.id) {
                 Button {
                     session.addStationToSelectedLine(station.id)
@@ -724,7 +724,7 @@ struct LinesPanel: View {
         }
     }
 
-    /// Decision 195: single track that holds the line to fewer trains
+    /// Decision 196: single track that holds the line to fewer trains
     /// under traffic control, and what to build.
     @ViewBuilder
     private func capacityWarning(_ line: ServiceLine) -> some View {
@@ -757,7 +757,7 @@ struct LinesPanel: View {
             Text("\(summary.assigned) assigned · \(summary.running) on a trip")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
-            // Decision 195: the trains on the track without a line, not
+            // Decision 196: the trains on the track without a line, not
             // only the one selected last (which may run for another line).
             AssignTrainMenu(session: session, line: line.id, pattern: summary.pattern, choices: session.unassignedTrainMenuChoices, language: session.language)
                 .equatable()
@@ -1309,7 +1309,7 @@ private struct StopMenu: View, Equatable {
 }
 
 /// The trains on the track without a line, to give one to a service of
-/// line `line` (decision 195). Equatable, as ``StopMenu``; with none, it
+/// line `line` (decision 196). Equatable, as ``StopMenu``; with none, it
 /// says how to get one.
 private struct AssignTrainMenu: View, Equatable {
     let session: GameSession

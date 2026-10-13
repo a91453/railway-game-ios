@@ -117,7 +117,7 @@ struct TrainControls: View {
             Button {
                 session.purchaseTrain()
             } label: {
-                // Decision 195: on one line; where the price does not fit
+                // Decision 196: on one line; where the price does not fit
                 // (a phone held on its side) the plus alone, named by the
                 // accessibility label below.
                 ViewThatFits(in: .horizontal) {
@@ -205,7 +205,7 @@ struct TrainControls: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.warning)
             }
-            // Decision 195: what to do with a train that stands still.
+            // Decision 196: what to do with a train that stands still.
             if let next = session.world.trainNextStepText(of: train.id, in: language) {
                 Label(next, systemImage: "arrow.forward.circle")
                     .font(.footnote)
@@ -277,7 +277,7 @@ struct TrainControls: View {
         .buttonStyle(.bordered)
     }
 
-    /// Decision 195: a train on the track without a line or a service of
+    /// Decision 196: a train on the track without a line or a service of
     /// its own is given a line here, not only from the Lines panel.
     @ViewBuilder
     private var lineMenu: some View {
@@ -387,7 +387,7 @@ private struct TrainPickerMenu: View, Equatable {
     }
 }
 
-/// The lines to give the selected train (decision 195), as the Lines
+/// The lines to give the selected train (decision 196), as the Lines
 /// panel's own assign menu does. Equatable on the lines' names, as
 /// ``TrainPickerMenu``.
 private struct LineAssignMenu: View, Equatable {
