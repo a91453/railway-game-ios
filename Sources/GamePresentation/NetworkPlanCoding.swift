@@ -151,3 +151,50 @@ extension PlatformLevelling: Codable {
         try container.encode(levelLeg, forKey: .levelLeg)
     }
 }
+
+extension PassingLoopPlan: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case edge, start, end, stretch, near, far, beside, curves, structure, name, station
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        edge = .edge(try container.decode(Int.self, forKey: .edge))
+        start = try container.decode(Int64.self, forKey: .start)
+        end = try container.decode(Int64.self, forKey: .end)
+        let stretch = try container.decode([WorldCoordinate].self, forKey: .stretch)
+        near = try container.decode(PlatformTrackTurnout.self, forKey: .near)
+        far = try container.decode(PlatformTrackTurnout.self, forKey: .far)
+        let beside = try container.decode([WorldCoordinate].self, forKey: .beside)
+        let curves = try container.decode([TrackCurve].self, forKey: .curves)
+        guard stretch.count == 2, beside.count == 2, curves.count == 3 else {
+            throw DecodingError.dataCorruptedError(forKey: .curves, in: container, debugDescription: "Two ends of the stretch, two nodes beside and three curves.")
+        }
+        stretchStart = stretch[0]
+        stretchEnd = stretch[1]
+        self.beside = PlatformTrackPlan.Beside(near: beside[0], far: beside[1])
+        self.curves = PlatformTrackPlan.Curves(out: curves[0], along: curves[1], back: curves[2])
+        structure = try container.decode(TrackStructure.self, forKey: .structure)
+        name = try container.decode(String.self, forKey: .name)
+        let station = try container.decode([Int64].self, forKey: .station)
+        guard station.count == 2 else {
+            throw DecodingError.dataCorruptedError(forKey: .station, in: container, debugDescription: "A point is x and y.")
+        }
+        self.station = PlanPoint(x: station[0], y: station[1])
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(edge.number, forKey: .edge)
+        try container.encode(start, forKey: .start)
+        try container.encode(end, forKey: .end)
+        try container.encode([stretchStart, stretchEnd], forKey: .stretch)
+        try container.encode(near, forKey: .near)
+        try container.encode(far, forKey: .far)
+        try container.encode([beside.near, beside.far], forKey: .beside)
+        try container.encode([curves.out, curves.along, curves.back], forKey: .curves)
+        try container.encode(structure, forKey: .structure)
+        try container.encode(name, forKey: .name)
+        try container.encode([station.x, station.y], forKey: .station)
+    }
+}

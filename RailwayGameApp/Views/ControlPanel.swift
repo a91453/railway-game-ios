@@ -482,6 +482,7 @@ private struct ActionButton: View {
         switch session.networkMode {
         case .build: return session.networkPreview != nil
         case .platform, .remove: return session.networkEdgePoint != nil
+        case .passingLoop: return session.networkLoopPreview.map { $0.problem == nil } ?? false
         }
     }
 
@@ -502,6 +503,7 @@ private struct ActionButton: View {
         case .build: session.buildNetworkTrack()
         case .platform: session.addNetworkPlatform()
         case .remove: session.removeNetworkEdge()
+        case .passingLoop: session.addPassingLoop()
         }
     }
 
@@ -540,6 +542,10 @@ private struct ActionButton: View {
                 return String(localized: "Build Track · \(cost.moneyText)")
             case .platform: return String(localized: "Add Platform")
             case .remove: return String(localized: "Remove Track")
+            case .passingLoop:
+                // Decision 204: the loop and its signal station, for what.
+                guard let cost = session.networkLoopPreview?.cost else { return session.language.text("Add Passing Loop", "加待避線") }
+                return session.language.text("Add Passing Loop · \(cost.moneyText)", "加待避線 · \(cost.moneyText)")
             }
         case .train:
             // Placing and sending both act on the selected train.
