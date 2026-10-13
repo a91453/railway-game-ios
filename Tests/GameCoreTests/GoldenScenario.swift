@@ -1573,6 +1573,23 @@ extension StepOutcome: Codable {
         case .rejected(.cityRequestLimitReached(let limit)):
             try container.encode("cityRequestLimitReached", forKey: .result)
             try container.encode(limit, forKey: .limit)
+        // Decision 209: named for the exhaustive switch only; no golden
+        // scenario sets a depot, and the schema does not read them.
+        case .rejected(.depotIsLineStop(let id)):
+            try container.encode("depotIsLineStop", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.notADepot(let id)):
+            try container.encode("notADepot", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.depotInUse(let id)):
+            try container.encode("depotInUse", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
+        case .rejected(.depotWithRuns(let id)):
+            try container.encode("depotWithRuns", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
+        case .rejected(.depotBlocksLine(let id)):
+            try container.encode("depotBlocksLine", forKey: .result)
+            try container.encode(id.rawValue, forKey: .line)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):

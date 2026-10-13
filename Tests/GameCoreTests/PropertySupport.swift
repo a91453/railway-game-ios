@@ -487,6 +487,7 @@ enum WorldInvariants {
             case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
             case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
             case .monthlySubsidy: [.subsidy]
+            case .dailyDepot: [.depotUpkeep]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {

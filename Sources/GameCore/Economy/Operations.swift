@@ -308,6 +308,7 @@ extension GameWorld {
         // economics weighs 1,000 a train and rounds as it always did.
         let maintenance = Self.roundedDollars((12 * assets.routeLength + 9 * pending.trainDistance) * 1_000 + 8 * assets.trainWeight * km, over: km * 1_000)
         accounts.pending = .empty
+        countDepotHour(assets: assets)
         // Decision 179: the lines' shares of the hour.
         settleLineHour(day: dayIndex(of: GameTime(seconds: now.seconds - GameTime.secondsPerMinute)), assets: assets, operating: operating, maintenance: maintenance)
         guard pending.fareRevenue > .zero || operating > .zero || maintenance > .zero else { return }
@@ -324,8 +325,11 @@ extension GameWorld {
         accounts.addTrips(pending.fareTrips, day: day)
     }
 
-    private mutating func settleDay(endingBefore now: GameTime, assets: FixedAssets) {
+    private mutating func settleDay(endingBefore now: GameTime, assets counted: FixedAssets) {
         let km = Self.unitsPerKilometre
+        // Decision 209: the trains' hours in their depots pay no energy or
+        // crew.
+        let assets = restingInDepots(counted)
         // The day's last minute.
         let time = GameTime(seconds: now.seconds - GameTime.secondsPerMinute)
         let day = dayIndex(of: time)
@@ -369,6 +373,14 @@ extension GameWorld {
                 ]
             ), day: day)
         }
+        // Decision 209: the depots' sidings.
+        let depotFee = Money(Self.depotSidingDailyFee.amount * depotSidingCount())
+        if depotFee > .zero {
+            write(LedgerEntry(
+                kind: .dailyDepot, time: time, amount: .zero - depotFee,
+                breakdown: [LedgerLine(item: .depotUpkeep, amount: .zero - depotFee)]
+            ), day: day)
+        }
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
@@ -392,6 +404,54 @@ extension GameWorld {
         judgeScenario(endingWith: day)
         // Decision 160: the best day, for the tiles of the map it opens.
         recordBestDay(endingWith: day)
+    }
+
+    /// Decision 209: adds the hour that ended to each line's hours in its
+    /// depot (``CompanyAccounts/depotHours``): with rolling-stock
+    /// economics, the weight of its trains standing in the depot; without,
+    /// a standard train for each train it plans to run (see
+    /// ``FixedAssets``) that its trains out of the depot fall short of.
+    private mutating func countDepotHour(assets: FixedAssets) {
+        for (line, counted) in zip(lines, assets.lines) where line.depot != nil {
+            var parked = 0, resting: Int64 = 0
+            for id in line.assignedTrains {
+                guard let train = train(id: id), isInDepot(train, of: line) else { continue }
+                parked += 1
+                resting += RollingStock.weight(of: train.type, cars: train.cars)
+            }
+            guard parked > 0 else { continue }
+            if !rollingStockEconomics {
+                let out = Int64(line.assignedTrains.count - parked)
+                resting = max(0, counted.trains - out) * 1_000
+            }
+            resting = min(resting, counted.trainWeight)
+            guard resting > 0 else { continue }
+            if let index = accounts.depotHours.firstIndex(where: { $0.line == line.id }) {
+                accounts.depotHours[index].weightHours += resting
+            } else {
+                accounts.depotHours.append(DepotHours(line: line.id, weightHours: resting))
+                accounts.depotHours.sort { $0.line < $1.line }
+            }
+        }
+    }
+
+    /// `assets` with each line's trains weighing less by its day's hours
+    /// in its depot (decision 209), a day's weight for 24 of them, never
+    /// below nothing; the hours are cleared. `assets` itself when no train
+    /// stood in a depot.
+    private mutating func restingInDepots(_ assets: FixedAssets) -> FixedAssets {
+        guard !accounts.depotHours.isEmpty else { return assets }
+        let hours = accounts.depotHours
+        accounts.depotHours = []
+        let lines = assets.lines.map { line -> LineAssets in
+            guard let resting = hours.first(where: { $0.line == line.id })?.weightHours else { return line }
+            let weight = max(0, line.trainWeight - resting / 24)
+            return LineAssets(id: line.id, stations: line.stations, routeLength: line.routeLength, trains: line.trains, trainWeight: weight)
+        }
+        return FixedAssets(
+            stations: assets.stations, routeLength: assets.routeLength, trains: assets.trains,
+            trainWeight: lines.reduce(0) { $0 + $1.trainWeight }, lines: lines
+        )
     }
 
     /// A day's interest on `loan`: `loan × 5 % ÷ 360`, rounded half up to
@@ -505,6 +565,7 @@ extension GameWorld {
         case .dailySubsidiary: [.subsidiarySales, .subsidiaryCost]
         case .dailyTourism: [.tourismRevenue, .tourismUpkeep]
         case .monthlySubsidy: [.subsidy]
+        case .dailyDepot: [.depotUpkeep]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .subsidy ? $0.amount >= .zero : $0.amount <= .zero }),

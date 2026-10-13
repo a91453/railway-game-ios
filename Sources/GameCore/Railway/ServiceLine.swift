@@ -371,6 +371,14 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// realistic operation a high-speed line's real dwell. Set by
     /// ``GameWorld/setLineDwell(_:seconds:)`` only.
     public internal(set) var dwellSeconds: Int64?
+    /// The depot the line keeps its trains at out of service (decision
+    /// 209): a station that is a depot (``Station/isDepot``). Its trains
+    /// run there empty when the line no longer needs them (after its
+    /// window closes, or when it runs fewer at a quieter time of day), and
+    /// out to the line again in time for their trips. `nil`, as for every
+    /// line before it, keeps them where their trips end. Set by
+    /// ``GameWorld/setLineDepot(_:to:)`` only; never on a line with runs.
+    public internal(set) var depot: StationID?
     /// Whether the line is a high-speed line (decision 168): a passenger
     /// line whose journeys are planned at high speed (``performance`` is
     /// ``TrainPerformance/isHighSpeed``, which the line menu's "High-speed
@@ -961,7 +969,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight, deadheadDistance, dwellSeconds
+        case runs, runDays, freight, deadheadDistance, dwellSeconds, depot
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1014,6 +1022,9 @@ extension ServiceLine: Codable {
         if let dwellSeconds, !Self.dwellRange.contains(dwellSeconds) {
             throw DecodingError.dataCorruptedError(forKey: .dwellSeconds, in: container, debugDescription: "Line \(id.rawValue)'s dwell must be \(Self.dwellRange.lowerBound) to \(Self.dwellRange.upperBound) seconds.")
         }
+        // Decision 209 (save version 54): the line's depot, which the
+        // ``GameWorld`` decoder checks is one.
+        depot = try container.decodeIfPresent(StationID.self, forKey: .depot)
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -1101,6 +1112,7 @@ extension ServiceLine: Codable {
             try container.encode(deadheadDistance, forKey: .deadheadDistance)
         }
         try container.encodeIfPresent(dwellSeconds, forKey: .dwellSeconds)
+        try container.encodeIfPresent(depot, forKey: .depot)
         if hasRuns {
             try container.encode(runs, forKey: .runs)
             if runDays.contains(where: { $0 != nil }) {

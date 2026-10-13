@@ -191,6 +191,10 @@ extension GameWorld {
         }
         guard !berthsAlong.isEmpty else { return nil }
         berthsAlong = berthsAlong.mapValues { $0.sorted() }
+        // Decision 209: a way to any other station keeps off the depots'
+        // sidings, but for those of the depot the train starts in
+        // (`topology.js`'s `shortestPath` with `allowYard=false`).
+        let yard = station(id: id)?.isDepot == true ? [] : sidings(except: start.edge)
         let route = TrainRoute.shortest(from: BerthSearch.start, isDestination: { place in
             if case .berth = place { true } else { false }
         }) { place -> [(BerthSearch, Int64)] in
@@ -202,7 +206,7 @@ extension GameWorld {
             }
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
-                if end > from, forbidden.contains(traversal) { return false }
+                if end > from, forbidden.contains(traversal) || yard.contains(traversal.edge) { return false }
                 guard let clear else { return true }
                 return clear(TrackStretch(traversal: traversal, from: from, to: end))
             }
