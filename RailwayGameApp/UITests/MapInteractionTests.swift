@@ -266,9 +266,17 @@ final class MapInteractionTests: XCTestCase {
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
-        // maximum zoom.
+        // maximum zoom. The tap is tried twice, like the anchor's in the
+        // test above: on a slow Simulator a touch was lost and the map never
+        // moved (full lane run 38458089903, its screen recording); a second
+        // tap at the maximum does nothing.
+        func atMaximum() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
+                             timeout: 10) == .completed
+        }
         zoomIn.tap()
-        XCTAssertFalse(zoomIn.isEnabled, "64 points per 16 m is the maximum zoom")
+        if !atMaximum() { zoomIn.tap() }
+        XCTAssertTrue(atMaximum(), "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)
