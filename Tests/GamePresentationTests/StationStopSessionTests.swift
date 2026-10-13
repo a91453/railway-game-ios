@@ -160,7 +160,7 @@ final class StationStopSessionTests: XCTestCase {
             session.advance(realElapsed: .milliseconds(100))
             XCTAssertEqual(session.world, arrived)
             XCTAssertEqual(session.world.stationStopText(of: Self.first, in: .english), "Stopped at Market")
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #4 forward, 1024 units along")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #4 forward, 1024 units along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
         }
     }

@@ -838,8 +838,8 @@ extension TrackEdge {
 }
 
 extension GameWorld {
-    /// What edge `id` of the track network is: "Edge #3 · 75 m · Elevated
-    /// · 8 m" when level, "Edge #3 · 300 m · Surface · 0 m → 8 m, 27‰ at
+    /// What edge `id` of the track network is: "Track #3 · 75 m · Elevated
+    /// · 8 m" when level, "Track #3 · 300 m · Surface · 0 m → 8 m, 27‰ at
     /// its steepest" when not, then its platforms' stations, if any.
     /// `nil` for an edge the network does not have.
     public func trackEdgeSummary(_ id: TrackEdgeID, in language: DisplayLanguage) -> String? {

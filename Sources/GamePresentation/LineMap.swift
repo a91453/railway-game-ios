@@ -33,8 +33,15 @@ public struct LineMap: Equatable, Sendable {
         /// `to` node: 0 on the track, and a negative number to the right
         /// (MapBuilder's `offsets`, in its 8 px line widths).
         public let offset: Double
+        /// Which way the line's trains run along it (decision 201): the map
+        /// draws arrows on a stretch ridden one way only, so a double line
+        /// shows which track each way takes.
+        public let way: Way
 
-        public init(line: LineID, color: LineColor?, isHighSpeed: Bool = false, edge: TrackEdgeID, start: Int64, end: Int64, offset: Double) {
+        public init(
+            line: LineID, color: LineColor?, isHighSpeed: Bool = false, edge: TrackEdgeID, start: Int64, end: Int64, offset: Double,
+            way: Way = .both
+        ) {
             self.line = line
             self.color = color
             self.isHighSpeed = isHighSpeed
@@ -42,7 +49,19 @@ public struct LineMap: Equatable, Sendable {
             self.start = start
             self.end = end
             self.offset = offset
+            self.way = way
         }
+    }
+
+    /// Which way a line's trains run along a stretch of an edge (decision
+    /// 201), as the edge goes from its `from` node to its `to` node.
+    public enum Way: Hashable, Sendable {
+        /// From the edge's `from` node towards its `to` node only.
+        case forward
+        /// From its `to` node towards its `from` node only.
+        case backward
+        /// Both ways: out and back on the same track.
+        case both
     }
 
     /// Every line's stretches, by edge, then line, then start.
@@ -60,44 +79,75 @@ public struct LineMap: Equatable, Sendable {
     ///
     /// A line runs along the track its own service's round trip takes
     /// (``GameWorld/lineJourney(_:pattern:)``; a ring's lap), from its
-    /// first call's berth to where it comes back. Where lines share a stretch
+    /// first call's berth to where it comes back, and since decision 201
+    /// along its patterns' round trips too, each with its own physical
+    /// paths. A stretch ridden one way only says which way
+    /// (``Stretch/way``), except in a platform of a station the line calls
+    /// at, where a train turns round. Where lines share a stretch
     /// of track, the lines over it are ordered by ID and drawn side by side,
     /// as MapBuilder offsets the lines of an interline segment. A line whose
     /// journey cannot be driven is not drawn.
     ///
-    /// Costs one ``GameWorld/lineJourney(_:pattern:)`` a line.
+    /// Costs one ``GameWorld/lineJourney(_:pattern:)`` a service.
     public init(world: GameWorld) {
         var ranges: [TrackEdgeID: [LineID: [ClosedRange<Int64>]]] = [:]
+        // The same, each way the edge is driven: `true` forward.
+        var driven: [TrackEdgeID: [LineID: [Bool: [ClosedRange<Int64>]]]] = [:]
+        // Where the line's trains turn round: its stations' platforms.
+        var turns: [LineID: Set<StationID>] = [:]
         var colors: [LineID: LineColor?] = [:]
         var fast = Set<LineID>()
         for line in world.lines {
             guard let journey = world.lineJourney(line.id) else { continue }
             colors[line.id] = line.color
+            turns[line.id] = Set(line.stops)
             if line.isHighSpeed { fast.insert(line.id) }
-            for (edge, range) in Self.ranges(of: journey, in: world.network) {
-                ranges[edge, default: [:]][line.id, default: []].append(range)
+            let patterns = line.patterns.indices.compactMap { world.lineJourney(line.id, pattern: $0) }
+            for journey in [journey] + patterns {
+                for (traversal, a, b) in Self.pieces(of: journey, in: world.network) {
+                    let length = world.network.edge(traversal.edge)?.length ?? 0
+                    let forward = traversal.direction == .forward
+                    let range = forward ? a...b : (length - b)...(length - a)
+                    ranges[traversal.edge, default: [:]][line.id, default: []].append(range)
+                    driven[traversal.edge, default: [:]][line.id, default: [:]][forward, default: []].append(range)
+                }
             }
         }
+        let platforms = Dictionary(grouping: world.network.platforms, by: \.edge)
         var stretches: [Stretch] = []
         for edge in ranges.keys.sorted() {
             guard let lines = ranges[edge] else { continue }
             let merged = lines.mapValues(Self.merged)
-            // Where the lines over the edge change, the offsets do.
-            let cuts = Set(merged.values.flatMap { $0.flatMap { [$0.lowerBound, $0.upperBound] } }).sorted()
+            let ways = (driven[edge] ?? [:]).mapValues { $0.mapValues(Self.merged) }
+            // Where the lines over the edge change, the offsets do; where
+            // the way a line runs changes, its arrows do.
+            let cuts = Set(
+                merged.values.flatMap { $0.flatMap { [$0.lowerBound, $0.upperBound] } }
+                    + ways.values.flatMap { $0.values.flatMap { $0.flatMap { [$0.lowerBound, $0.upperBound] } } }
+            ).sorted()
             var open: [LineID: Stretch] = [:]
             var done: [Stretch] = []
             for (start, end) in zip(cuts, cuts.dropFirst()) {
                 let over = merged.filter { $0.value.contains { $0.lowerBound <= start && end <= $0.upperBound } }.keys.sorted()
                 let offsets = Self.offsets(count: over.count)
                 for (line, offset) in zip(over, offsets) {
-                    if let last = open[line], last.end == start, last.offset == offset {
+                    func runs(_ forward: Bool) -> Bool {
+                        ways[line]?[forward]?.contains { $0.lowerBound <= start && end <= $0.upperBound } ?? false
+                    }
+                    let turning = platforms[edge]?.contains {
+                        turns[line]?.contains($0.station) == true && $0.start <= start && end <= $0.end
+                    } ?? false
+                    let way: Way = turning || runs(true) == runs(false) ? .both : runs(true) ? .forward : .backward
+                    if let last = open[line], last.end == start, last.offset == offset, last.way == way {
                         open[line] = Stretch(
-                            line: line, color: last.color, isHighSpeed: last.isHighSpeed, edge: edge, start: last.start, end: end, offset: offset
+                            line: line, color: last.color, isHighSpeed: last.isHighSpeed, edge: edge, start: last.start, end: end, offset: offset,
+                            way: way
                         )
                     } else {
                         if let last = open[line] { done.append(last) }
                         open[line] = Stretch(
-                            line: line, color: colors[line] ?? nil, isHighSpeed: fast.contains(line), edge: edge, start: start, end: end, offset: offset
+                            line: line, color: colors[line] ?? nil, isHighSpeed: fast.contains(line), edge: edge, start: start, end: end, offset: offset,
+                            way: way
                         )
                     }
                 }
@@ -123,22 +173,19 @@ public struct LineMap: Equatable, Sendable {
         }
     }
 
-    /// The stretches of each edge `journey` runs along, from the edge's
-    /// `from` node, in the order it drives them.
-    static func ranges(of journey: LineJourney, in network: RailwayNetwork) -> [(TrackEdgeID, ClosedRange<Int64>)] {
-        pieces(of: journey, in: network).map { traversal, a, b in
-            let length = network.edge(traversal.edge)?.length ?? 0
-            let (from, to) = traversal.direction == .forward ? (a, b) : (length - a, length - b)
-            return (traversal.edge, min(from, to)...max(from, to))
-        }
-    }
-
     /// The pieces of track `journey` drives, in order: each the way it is
     /// driven along an edge, and where on it the piece starts and ends,
     /// measured along that way (`a < b`). A leg that leaves from the other
     /// end of the edge it reached turned round there.
     static func pieces(of journey: LineJourney, in network: RailwayNetwork) -> [(TrackTraversal, Int64, Int64)] {
+        legPieces(of: journey, in: network).flatMap(\.self)
+    }
+
+    /// ``pieces(of:in:)`` leg by leg: element `i` is what leg `i` of
+    /// `journey` drives (decision 201's preview of one leg).
+    static func legPieces(of journey: LineJourney, in network: RailwayNetwork) -> [[(TrackTraversal, Int64, Int64)]] {
         guard case .onEdge(var traversal, var offset) = journey.start else { return [] }
+        var legs: [[(TrackTraversal, Int64, Int64)]] = []
         var pieces: [(TrackTraversal, Int64, Int64)] = []
         func length(_ traversal: TrackTraversal) -> Int64 { network.edge(traversal.edge)?.length ?? 0 }
         func add(_ traversal: TrackTraversal, _ a: Int64, _ b: Int64) {
@@ -148,7 +195,11 @@ public struct LineMap: Equatable, Sendable {
             guard let edge = network.edge(traversal.edge) else { return nil }
             return (traversal.direction == .forward) == atEnd ? edge.to : edge.from
         }
-        for leg in journey.legs {
+        for (index, leg) in journey.legs.enumerated() {
+            if index > 0 {
+                legs.append(pieces)
+                pieces = []
+            }
             // A leg that leaves from the other end of the edge turned round
             // where the last one stopped.
             if let first = leg.path.traversals.first, node(first, atEnd: false) != node(traversal, atEnd: true) {
@@ -170,7 +221,8 @@ public struct LineMap: Equatable, Sendable {
             traversal = last
             offset = end
         }
-        return pieces
+        if !journey.legs.isEmpty { legs.append(pieces) }
+        return legs
     }
 
     /// `ranges` joined where they meet or overlap, in order.

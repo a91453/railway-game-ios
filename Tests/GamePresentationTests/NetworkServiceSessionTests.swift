@@ -73,7 +73,7 @@ final class NetworkServiceSessionTests: XCTestCase {
                 session.message,
                 StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track.")
             )
-            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Edge #2, stopping 5120 units along it")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Track #2, stopping 5120 units along it")
             XCTAssertNil(session.world.stationStopText(of: Self.tram, in: .english), "a train with a path left is not stopped")
         }
     }
@@ -89,11 +89,11 @@ final class NetworkServiceSessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Sent Tram to East, 8192 units along the track."))
             // At 110 km/h it travels 5866 units in three game seconds.
             for _ in 0..<6 { session.advance(realElapsed: .milliseconds(500)) }
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 2794 units along")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #2 forward, 2794 units along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: stops 2326 units ahead")
             XCTAssertEqual(session.world.trainSpeedText(of: Self.tram), "110.0 km/h")
             for _ in 0..<4 { session.advance(realElapsed: .milliseconds(500)) }
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 5120 units along")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #2 forward, 5120 units along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
             XCTAssertEqual(session.world.stationStopText(of: Self.tram, in: .english), "Stopped at East")
             XCTAssertEqual(session.world.trainSpeedText(of: Self.tram), "0.0 km/h")

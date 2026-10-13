@@ -69,6 +69,11 @@ public final class GameSession {
     /// The line map ``trackInspection(of:)`` last built, and for which
     /// ``commandRevision``.
     @ObservationIgnored var inspectionLineMap: (revision: Int, map: LineMap)?
+    /// The leg of a line the map shows (decision 201; ``routePreview``).
+    public internal(set) var routePreviewRequest: RoutePreview.Request?
+    /// The preview last worked out, and for which request and
+    /// ``commandRevision``.
+    @ObservationIgnored var routePreviewMemo: (revision: Int, request: RoutePreview.Request, preview: RoutePreview?)?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
@@ -1744,9 +1749,11 @@ public final class GameSession {
         routes.removeAll { $0.from == from && $0.to == to }
         if let preference { routes.append(preference) }
         let chosen = routes
-        perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
-            language.text("Updated the service's physical path.", "已更新停站模式的股道與月台。")
+        let done = perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
+            language.text("Updated the service's physical path.", "已更新停站模式的軌段與月台。")
         }
+        // Decision 201: the map shows the leg as the trains now take it.
+        if done != nil { previewRoute(from: from, to: to, pattern: pattern) }
     }
 
     /// Runs the selected line all day, or from 06:00 to midnight.

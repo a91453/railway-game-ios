@@ -96,14 +96,14 @@ final class FreeStationSessionTests: XCTestCase {
             session.addNetworkPlatform()
             let station = try XCTUnwrap(session.world.station(id: StationID(rawValue: 1)))
             XCTAssertEqual(station.point, PlanPoint(x: 4_024, y: 3_072))
-            XCTAssertEqual(session.message?.text, "Built station “Station 1” with a 64 m platform on edge #1.")
+            XCTAssertEqual(session.message?.text, "Built station “Station 1” with a 64 m platform on track #1.")
 
             // 512 south, within 2048 (32 m).
             session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_600), reach: 256)
             XCTAssertEqual(session.networkEdgePoint?.edge, .edge(2))
             XCTAssertEqual(session.platformStationID, station.id)
             session.addNetworkPlatform()
-            XCTAssertEqual(session.message?.text, "Added a 64 m platform to Station 1 on edge #2.")
+            XCTAssertEqual(session.message?.text, "Added a 64 m platform to Station 1 on track #2.")
             XCTAssertEqual(session.world.trackPlatforms(of: station.id).count, 2)
             XCTAssertEqual(session.world.stations.count, 1)
 
@@ -159,7 +159,7 @@ final class FreeStationSessionTests: XCTestCase {
 
             session.selectStation(west)
             session.applyTool()
-            XCTAssertEqual(session.message?.text, "Placed Train 1 at West, on edge #1 going forward.")
+            XCTAssertEqual(session.message?.text, "Placed Train 1 at West, on track #1 going forward.")
             XCTAssertEqual(session.world.train(id: train)?.position, .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 3_072))
 
             session.selectStation(east)

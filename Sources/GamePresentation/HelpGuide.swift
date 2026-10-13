@@ -192,6 +192,15 @@ public enum HelpGuide {
             keywords: "fare price ticket 票價 漲價 降價 收費"
         ),
         HelpEntry(
+            "trackNumbers", .running,
+            question: ("Where are the track numbers, and which track does a route take?", "軌段編號在哪裡？進路會走哪一條軌道？"),
+            answer: (
+                "Every stretch of track between two junctions has a number (Track #7). Tap a track with the select tool to see its number, or zoom in close: the numbers appear on the track. In Lines, each leg of a line (A → B) has a route menu: Automatic lets the trains find their own way, or pick a platform or a whole path by its track numbers. Tap the map button beside the leg to show it on the map: the path is outlined with arrows the way the trains go and the number of each track along it; inside the menu, Show on Map previews a choice before you pick it. A line's colour on the map also has arrows where it runs one way only, so on double track you can see which track each way takes.",
+                "兩個道岔或端點之間的每一段軌道都有編號（軌段 #7）。用「選取」工具點軌道就看得到它的編號，或把地圖拉近，軌道上會標出編號。在「路線」裡，路線的每一段（A → B）都有進路選單：「自動選路」讓列車自己找路，也可以指定月台或整條路徑（用軌段編號表示）。點那一段旁邊的地圖按鈕，就會在地圖上框出這條路徑，箭頭是列車行進的方向，沿途標出每個軌段的編號；選單裡的「先在地圖上看」可以在選定之前預覽每個選項。地圖上路線的顏色在只走單一方向的地方也有箭頭，蓋了雙線時就看得出每個方向走哪一條軌道。"
+            ),
+            keywords: "track number route path platform double track arrow direction 股道 軌段 編號 進路 雙線 方向 箭頭 月台"
+        ),
+        HelpEntry(
             "oneTrain", .running,
             question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
             answer: (

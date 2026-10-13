@@ -78,7 +78,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
         session.tapNetwork(at: PlanPoint(x: 8_192, y: 4_200), reach: Self.reach)
         XCTAssertEqual(session.networkStart, .track(NetworkEdgePoint(edge: line, distance: 6_144)))
-        XCTAssertEqual(session.networkDraftText(), "From a turnout on edge #1. Tap where it ends, or drag there from the start.")
+        XCTAssertEqual(session.networkDraftText(), "From a turnout on track #1. Tap where it ends, or drag there from the start.")
         session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: Self.reach)
         XCTAssertEqual(session.networkPreview?.joinsStart, true, "it leaves along the line")
         XCTAssertNil(session.networkPreview?.problem)
@@ -298,7 +298,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Edge #1: 64 m, automatic: surface 64 m, for $ 4."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Track #1: 64 m, automatic: surface 64 m, for $ 4."))
             XCTAssertEqual(session.networkStart, .node(.node(2)), "the next stretch starts where this one ended")
             XCTAssertNil(session.networkEnd)
             XCTAssertEqual(session.networkDraftText(), "From Node #2. Tap where it ends, or drag there from the start.")
@@ -443,13 +443,13 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.world.trackEdgeSummary(.edge(2), in: .english),
-                "Edge #2 · 208 m · Elevated · 0 m → 8 m, 38‰ at its steepest"
+                "Track #2 · 208 m · Elevated · 0 m → 8 m, 38‰ at its steepest"
             )
             XCTAssertEqual(
                 session.world.trackEdgeSummary(.edge(2), in: .traditionalChinese),
                 "軌段 #2 · 208 公尺 · 高架 · 0 公尺 → 8 公尺，最陡 38‰"
             )
-            XCTAssertEqual(session.world.trackEdgeSummary(.edge(1), in: .english), "Edge #1 · 16 m · Surface · 0 m")
+            XCTAssertEqual(session.world.trackEdgeSummary(.edge(1), in: .english), "Track #1 · 16 m · Surface · 0 m")
         }
     }
 
@@ -505,18 +505,18 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
             XCTAssertEqual(session.networkEdgePoint, NetworkEdgePoint(edge: .edge(1), distance: 3_000))
             XCTAssertNil(session.platformStationID, "no station within two tiles")
-            XCTAssertEqual(session.networkDraftText(), "64 m platform on edge #1, 952–5048 units along")
+            XCTAssertEqual(session.networkDraftText(), "64 m platform on track #1, 952–5048 units along")
 
             session.addNetworkPlatform()
 
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Built station “Station 1” with a 64 m platform on edge #1.")
+                StatusMessage(kind: .success, text: "Built station “Station 1” with a 64 m platform on track #1.")
             )
             XCTAssertEqual(session.platformStationID, station.id)
             XCTAssertEqual(session.stationName, "Station 2")
-            XCTAssertEqual(session.world.trackEdgeSummary(.edge(1), in: .english), "Edge #1 · 128 m · Surface · 0 m · platforms: Station 1")
+            XCTAssertEqual(session.world.trackEdgeSummary(.edge(1), in: .english), "Track #1 · 128 m · Surface · 0 m · platforms: Station 1")
             XCTAssertNil(session.networkEdgePoint, "the place picked is forgotten once built")
 
             // Another platform over the same stretch, tapped again, overlaps it.
@@ -589,7 +589,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.addNetworkPlatform()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Added a 32 m platform to East on edge #1."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Added a 32 m platform to East on track #1."))
             session.removeNetworkPlatform(TrackPlatform(station: station.id, edge: .edge(1), start: 6_144, end: 8_192))
             XCTAssertEqual(session.world, world)
         }
@@ -619,7 +619,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
                 XCTAssertEqual(session.world.stationStopText(of: train.id, in: .english), "Stopped at Mid")
                 XCTAssertEqual(
                     session.message?.text,
-                    "Placed Tram at Mid, on edge #1 going \(direction == .forward ? "forward" : "backward")."
+                    "Placed Tram at Mid, on track #1 going \(direction == .forward ? "forward" : "backward")."
                 )
             }
         }
@@ -644,12 +644,12 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.setNetworkMode(.remove)
             session.tapNetwork(at: PlanPoint(x: 8_000, y: 2_300), reach: Self.reach)
             XCTAssertEqual(session.networkEdgePoint?.edge, .edge(2))
-            XCTAssertEqual(session.networkDraftText(), "Edge #2 · 64 m · Surface · 0 m")
+            XCTAssertEqual(session.networkDraftText(), "Track #2 · 64 m · Surface · 0 m")
 
             session.removeNetworkEdge()
 
             XCTAssertEqual(session.world, expected)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Removed edge #2."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Removed track #2."))
             XCTAssertNil(session.networkEdgePoint)
             session.removeNetworkEdge()
             XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tap the track to remove."))

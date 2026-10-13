@@ -56,23 +56,23 @@ final class NetworkDisplayTests: XCTestCase {
 
     func testNetworkPositionsAndRefusalsReadInWords() throws {
         let (world, _, id) = try makeNetworkWorld()
-        XCTAssertEqual(world.train(id: id)?.positionText(in: .english), "Edge #2 forward, 1024 units along")
+        XCTAssertEqual(world.train(id: id)?.positionText(in: .english), "Track #2 forward, 1024 units along")
         XCTAssertEqual(GameError.unknownTrackNode(.node(7)).playerMessage(in: .english), "Node #7 is not a node of the track network.")
-        XCTAssertEqual(GameError.unknownTrackEdge(.edge(3)).playerMessage(in: .english), "Edge #3 is not an edge of the track network.")
+        XCTAssertEqual(GameError.unknownTrackEdge(.edge(3)).playerMessage(in: .english), "Track #3 is not an edge of the track network.")
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .english), "Track still ends at node #2. Remove that track first.")
-        XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .english), "A train is on edge #2. Take the train off the track first.")
+        XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .english), "A train is on track #2. Take the train off the track first.")
         XCTAssertFalse(GameError.invalidTrackGeometry.playerMessage(in: .english).isEmpty)
         // Stage S4: grades, structures, clearance and platforms.
-        XCTAssertEqual(GameError.trackConflict(.edge(4)).playerMessage(in: .english), "That track would cross edge #4 without 8 m between them. Pass over or under it, or cross at a shared node.")
-        XCTAssertEqual(GameError.trackEdgeHasPlatform(.edge(5)).playerMessage(in: .english), "A station has a platform on edge #5. Remove the platform first.")
+        XCTAssertEqual(GameError.trackConflict(.edge(4)).playerMessage(in: .english), "That track would cross track #4 without 8 m between them. Pass over or under it, or cross at a shared node.")
+        XCTAssertEqual(GameError.trackEdgeHasPlatform(.edge(5)).playerMessage(in: .english), "A station has a platform on track #5. Remove the platform first.")
         // Stage F2: the track spacing.
-        XCTAssertEqual(GameError.trackTooClose(.edge(6)).playerMessage(in: .english), "That track would run less than 4 m beside edge #6. Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.")
+        XCTAssertEqual(GameError.trackTooClose(.edge(6)).playerMessage(in: .english), "That track would run less than 4 m beside track #6. Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.")
         XCTAssertEqual(GameError.trackTooClose(.edge(6)).playerMessage(in: .traditionalChinese), "這段軌道與軌段 #6並行時距離不到 4 公尺。平行的軌道中心之間至少要 4 公尺，或上下相差 8 公尺。")
-        XCTAssertEqual(GameError.tracksWouldBeTooClose(.edge(6), .edge(7)).playerMessage(in: .english), "Without that track, edge #6 and edge #7 would run less than 4 m apart with no junction near. Remove one of them first.")
+        XCTAssertEqual(GameError.tracksWouldBeTooClose(.edge(6), .edge(7)).playerMessage(in: .english), "Without that track, track #6 and track #7 would run less than 4 m apart with no junction near. Remove one of them first.")
         for error in [GameError.trackTooSteep, .invalidTrackStructure, .invalidPlatform] {
             XCTAssertFalse(error.playerMessage(in: .english).isEmpty)
         }
         XCTAssertEqual(TrackNodeID.node(1).displayText(in: .english), "Node #1")
-        XCTAssertEqual(TrackEdgeID.edge(2).displayText(in: .english), "Edge #2")
+        XCTAssertEqual(TrackEdgeID.edge(2).displayText(in: .english), "Track #2")
     }
 }

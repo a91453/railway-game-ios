@@ -161,6 +161,9 @@ struct LinesPanel: View {
             // Taps on the map select again once the panel is closed.
             .onDisappear {
                 session.stopPickingLineStops()
+                // Decision 201: the map stops showing a leg once the
+                // menu it came from is closed.
+                session.endRoutePreviews()
             }
         }
     }
@@ -778,58 +781,87 @@ struct LinesPanel: View {
     }
 
     /// Each ordered leg can keep its platform flexible, or bind the whole
-    /// displayed directed walk. IDs are the map's physical track numbers.
+    /// displayed directed walk. IDs are the map's physical track numbers;
+    /// decision 201: the map button beside a leg shows its path on the map
+    /// (arrows the way the trains go, the numbers along it), and the
+    /// menu's Show on Map First shows a choice before it is picked.
     private func routeMenus(_ line: ServiceLine, pattern: Int?) -> some View {
         let calls = pattern.map { line.patterns[$0].calls } ?? Array(line.stops.indices)
         let outward = line.isRing ? calls + [0] : calls
         let order = line.isRing ? outward + outward.dropLast().reversed() : calls + calls.dropLast().reversed()
         let pairs = Array(zip(order, order.dropFirst()))
         let preferences = pattern.map { line.patterns[$0].routePreferences } ?? line.routePreferences
+        let preview = session.routePreview
         return ForEach(pairs.indices, id: \.self) { index in
             let pair = pairs[index]
             let selected = preferences.first { $0.from == pair.0 && $0.to == pair.1 }
             let choices = memo.routeChoices(line.id, from: pair.0, to: pair.1, pattern: pattern, of: session)
             // Decision 184, later: drawn from these values alone, so a
             // running game's ticks leave the open menu alone.
-            let choiceTexts = choices.map(routeChoiceText)
-            let selectedText = selected.map(routeChoiceText)
+            let choiceTexts = RoutePreview.choiceTexts(choices, in: session.language)
+            let selectedText = selected.map { RoutePreview.choiceText($0, in: session.language) }
             let leg = "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))"
-            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg)) {
-                Menu {
-                    Button("Automatic physical path") {
-                        session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
-                    }
-                    ForEach(choices.indices, id: \.self) { choice in
-                        Button(choiceTexts[choice]) {
-                            session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+            let previewing = session.isPreviewingRoute(from: pair.0, to: pair.1, pattern: pattern)
+            let previewText = previewing ? preview?.text(in: session.language) : nil
+            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText)) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Menu {
+                            Button("Automatic physical path") {
+                                session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
+                            }
+                            ForEach(choices.indices, id: \.self) { choice in
+                                Button(choiceTexts[choice]) {
+                                    session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: choices[choice], pattern: pattern)
+                                }
+                                .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                            }
+                            Menu {
+                                Button("Automatic physical path") {
+                                    session.previewRoute(from: pair.0, to: pair.1, pattern: pattern, choice: .automatic)
+                                }
+                                ForEach(choices.indices, id: \.self) { choice in
+                                    Button(choiceTexts[choice]) {
+                                        session.previewRoute(from: pair.0, to: pair.1, pattern: pattern, choice: .preference(choices[choice]))
+                                    }
+                                }
+                            } label: {
+                                Label("Show on Map First", systemImage: "map")
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: leg)
+                                if let selectedText { Text(selectedText).font(.caption) }
+                                else { Text("Automatic physical path").font(.caption) }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
+                        .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
+                        Button {
+                            if previewing {
+                                session.endRoutePreview(from: pair.0, to: pair.1, pattern: pattern)
+                            } else {
+                                session.previewRoute(from: pair.0, to: pair.1, pattern: pattern)
+                            }
+                        } label: {
+                            Image(systemName: previewing ? "map.fill" : "map")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(previewing ? Text("Hide from Map") : Text("Show on Map"))
+                        .accessibilityIdentifier("line.route.preview.\(pattern ?? -1).\(pair.0).\(pair.1)")
                     }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: leg)
-                        if let selectedText { Text(selectedText).font(.caption) }
-                        else { Text("Automatic physical path").font(.caption) }
+                    if let previewText {
+                        Text(verbatim: previewText)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                            .accessibilityIdentifier("line.route.preview.text")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
                 }
-                .accessibilityIdentifier("line.route.\(pattern ?? -1).\(pair.0).\(pair.1)")
             }
         }
-    }
-
-    private func trackNumber(_ edge: TrackEdgeID) -> Int {
-        switch edge { case .edge(let number): number }
-    }
-
-    private func routeChoiceText(_ route: LineRoutePreference) -> String {
-        let platform = trackNumber(route.platform.edge)
-        if route.tracks.isEmpty {
-            return session.language == .traditionalChinese ? "月台股道 #\(platform)・自動選路" : "Platform track #\(platform) · automatic route"
-        }
-        let walk = route.tracks.map { "\(trackNumber($0.edge))\($0.direction == .forward ? "→" : "←")" }.joined(separator: " · ")
-        return session.language == .traditionalChinese ? "股道 \(walk)・月台股道 #\(platform)" : "Tracks \(walk) · platform #\(platform)"
     }
 
     /// The trains a service is set to run at one level, with a stepper to

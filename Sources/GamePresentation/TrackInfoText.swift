@@ -9,7 +9,7 @@ import GameCore
 
 extension TrackResource {
     /// "Node #2", or for part of an edge of the track network
-    /// "Edge #4, 1024–2048".
+    /// "Track #4, 1024–2048".
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .node(let node):
