@@ -500,12 +500,15 @@ struct LinesPanel: View {
                 if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
                     // Decision 194, later: a fix beside each reason.
                     let fixes = lossMemo.fixes(line.id, of: session)
-                    let balance = session.world.economy.balance
+                    // Decision 200: unlimited funds are never short.
+                    let economy = session.world.economy
                     LineLossCard(
                         diagnosis: diagnosis, language: session.language, session: session, lineName: line.name, fixes: fixes,
-                        shortOfMoney: Set(fixes.filter { !$0.value.isAffordable(with: balance) }.keys)
+                        shortOfMoney: Set(fixes.filter { !economy.canAfford($0.value.cost) }.keys)
                     )
                         .equatable()
+                        .tutorialPanelTarget(.lineLoss)
+                        .id(TutorialTarget.lineLoss)
                 }
             } header: {
                 Text(verbatim: session.language.text("Operations", "營運"))
@@ -970,7 +973,7 @@ struct LinesPanel: View {
                     .font(.subheadline)
                     Text(verbatim: language.text("Cost \(plan.cost.moneyText)", "費用 \(plan.cost.moneyText)"))
                         .font(.caption)
-                        .foregroundStyle(session.world.economy.balance < plan.cost ? Theme.error : Theme.textSecondary)
+                        .foregroundStyle(session.world.economy.canAfford(plan.cost) ? Theme.textSecondary : Theme.error)
                     Text(verbatim: language.text(
                         "\(plan.pricePerTrain.moneyText) a train, \(plan.dailyCostPerTrain.moneyText) a day to keep on the line",
                         "每列 \(plan.pricePerTrain.moneyText)，在線上每列每日 \(plan.dailyCostPerTrain.moneyText)"
@@ -996,7 +999,7 @@ struct LinesPanel: View {
                 }
                 // Decision 110: the section's main action, as the theme draws one.
                 .buttonStyle(ThemeProminentButtonStyle())
-                .disabled(session.world.economy.balance < plan.cost)
+                .disabled(!session.world.economy.canAfford(plan.cost))
                 .accessibilityIdentifier("line.staff.start")
                 // Decision 125: the tutorial's first line starts here.
                 .tutorialPanelTarget(.staffLine)
@@ -1276,7 +1279,13 @@ private struct LineLossCard: View, Equatable {
         VStack(alignment: .leading, spacing: 4) {
             reasonLabel(reason)
             if let fix = fixes[reason.kind] {
-                fixButton(fix)
+                // The tutorial points at the first fix shown (decision 188).
+                if reason.kind == diagnosis.reasons.first(where: { fixes[$0.kind] != nil })?.kind {
+                    fixButton(fix)
+                        .tutorialPanelTarget(.lineLossFix)
+                } else {
+                    fixButton(fix)
+                }
             }
         }
     }

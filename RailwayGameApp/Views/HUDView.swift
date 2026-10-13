@@ -22,6 +22,9 @@ struct HUDView: View {
     /// the player asks, so the ticks leave the question as it was asked.
     @State private var goBackChoices: [GoBackChoice] = []
     @State private var choosingGoBack = false
+    /// Whether the problem report is open from the game menu (decisions
+    /// 127 and 193; TestFlight 54.1).
+    @State private var reportingProblem = false
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -62,6 +65,9 @@ struct HUDView: View {
         .font(.subheadline.weight(.semibold))
         .monospacedDigit()
         .lineLimit(1)
+        .sheet(isPresented: $reportingProblem) {
+            ProblemReportSheet(game: session.problemReportGame, session: session)
+        }
         .alert(Text(verbatim: session.language.text("Save As", "另存新檔")), isPresented: $namingSave) {
             TextField(text: $saveName) {
                 Text(verbatim: session.language.text("Name", "名稱"))
@@ -136,13 +142,42 @@ struct HUDView: View {
                 saveName = ""
                 namingSave = true
             },
-            askGoBack: askGoBack
+            askGoBack: askGoBack,
+            reportProblem: { reportingProblem = true }
         )
         .equatable()
     }
 
-    /// The balance in dollars; it opens the economy panel.
+    /// The balance in dollars; it opens the economy panel. Decision 200:
+    /// with unlimited funds an "∞" capsule instead, in the text colour (not
+    /// the green of money coming in), without the income float.
+    @ViewBuilder
     private var cash: some View {
+        if session.world.economy.unlimitedFunds {
+            Button {
+                screen.panel = .economy
+            } label: {
+                Text(verbatim: "∞")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 2)
+                    .background(Capsule().stroke(Theme.textSecondary, lineWidth: 1))
+                    .padding(.vertical, 3)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: session.language.text("Unlimited funds", "資金無限")))
+            .accessibilityHint(Text(verbatim: session.language.text("Shows fares, running costs and the ledger.", "顯示票收、營運成本與帳本。")))
+            .accessibilityIdentifier("hud.unlimitedFunds")
+            .tutorialTarget(.cash)
+        } else {
+            balance
+        }
+    }
+
+    /// The balance in dollars, as before decision 200.
+    private var balance: some View {
         let text = session.world.economy.balance.moneyText
         let isNegative = session.world.economy.balance < .zero
         return Button {
@@ -279,6 +314,9 @@ private struct GameMenu: View, Equatable {
     /// Asks which autosave to go back to (decision 192), in the HUD's
     /// dialog.
     let askGoBack: @MainActor () -> Void
+    /// Opens the problem report (TestFlight 54.1: a player found it only in
+    /// the settings), in the HUD's sheet.
+    let reportProblem: @MainActor () -> Void
 
     nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
         lhs.session === rhs.session
@@ -427,6 +465,17 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.help")
+                // TestFlight 54.1: where to send a note, from the game.
+                Button {
+                    reportProblem()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Report a Problem", "回報問題"))
+                    } icon: {
+                        Image(systemName: "exclamationmark.bubble")
+                    }
+                }
+                .accessibilityIdentifier("menu.report")
             } label: {
                 Label {
                     Text(verbatim: language.text("More", "更多"))

@@ -75,6 +75,12 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case mapConfirm = "map.build.confirm"
     /// The details card's Ridership button, for a selected station.
     case ridership = "inspector.ridership"
+    /// The selected line's fares, costs and why it loses money in the lines
+    /// panel (decision 194), there from its first full day.
+    case lineLoss = "line.loss"
+    /// The fix beside the first reason the line loses money (decision 194,
+    /// later fix), there while it loses money for a reason with a fix.
+    case lineLossFix = "line.loss.fix"
 
     /// Whether the control is in the details card, which a step pointing
     /// at it opens (``TutorialStep/usesDetailsCard``).
@@ -166,11 +172,15 @@ public enum TutorialGoal: Hashable, Sendable {
     /// the session (``GameSession/mapDidMove()``); a turned device or a
     /// station centred for the player does not count.
     case moveMap
+    /// Open the lines panel. The panel is the app's, so the app tells the
+    /// session (``GameSession/linesPanelDidChange(isShown:)``).
+    case openLines
 }
 
 /// What the session does when a step is first shown, going forward
 /// (decision 188), so the step starts from what it needs. None of them
-/// changes the world or the message on screen (but `clearSelection`).
+/// changes the world or the message on screen (but `clearSelection` and
+/// `selectNewestLine`).
 enum TutorialSetup: Hashable, Sendable {
     /// The network tool's Lay mode, the ends picked in another mode
     /// forgotten (a start tapped while the map was moved is kept).
@@ -183,6 +193,9 @@ enum TutorialSetup: Hashable, Sendable {
     case clearLineDraft
     /// Let go of the selection.
     case clearSelection
+    /// Select the newest line for the lines panel when none is (the `Ci/`
+    /// line steps' `openUI` picks the first line with stations).
+    case selectNewestLine
 }
 
 /// The panel beside the map a step needs, which the app opens or closes
@@ -299,7 +312,7 @@ public struct TutorialStep: Hashable, Sendable, Identifiable {
     /// The lines panel's button the step asks for, which the panel scrolls
     /// into view.
     public var revealsInPanel: TutorialTarget? {
-        targets.first { $0 == .createLine || $0 == .staffLine }
+        targets.first { $0 == .createLine || $0 == .staffLine || $0 == .lineLoss }
     }
 
     /// How long the card waits before it offers to skip a step that is not
@@ -662,6 +675,34 @@ extension Tutorial {
                 "列車早上 6 點開始跑，車資每小時進帳，調快倍速更快。"
             )
         ),
+        // Reference steps 7–9 open the line's panel at its first line
+        // (`openUI`) and outline the panel and one row. Its panel has no
+        // takings to read; decision 194's card does (decision 188, later
+        // fix: the lines panel's card was not taught).
+        TutorialStep(
+            id: "line.card.open", chapter: .service,
+            targets: [.linesButton],
+            goal: .openLines,
+            setup: [.selectNewestLine],
+            title: ("Tap Lines to check your line", "點「路線」看營運收支"),
+            body: (
+                "See what your line earns and what it costs to run.",
+                "看看這條線賺多少、營運要花多少。"
+            )
+        ),
+        // The card is there from the line's first full day; before that
+        // the panel is outlined, and the body says when it comes.
+        TutorialStep(
+            id: "line.card.read", chapter: .service,
+            targets: [.lineLoss, .lineLossFix, .sidePanel],
+            goal: .read,
+            panel: .lines,
+            title: ("Read your line's card", "看懂路線卡"),
+            body: (
+                "Each day: fares against costs. A losing line says why, with a fix beside each reason.",
+                "每天結算車資和成本；虧錢時寫出原因，原因旁的按鈕一鍵修正。"
+            )
+        ),
         // No reference step: its stations carry their ridership in the line
         // builder. Read-only because a managed company's city sets it.
         TutorialStep(
@@ -669,6 +710,7 @@ extension Tutorial {
             targets: [.map],
             goal: .selectStation,
             setup: [.clearSelection],
+            panel: .closed,
             title: ("Tap one of your stations", "點你的一座車站"),
             body: (
                 "See who rides from it.",

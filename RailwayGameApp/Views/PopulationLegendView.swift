@@ -31,6 +31,9 @@ struct PopulationLegendView: View {
     /// Whether the map has no ground to show (decision 124, H3): the height
     /// layer then shows nothing, and says so.
     var isFlat = false
+    /// Whether the map's track is level whatever the heights shown: a
+    /// real-world map on flat ground (decision 198), which the layer says.
+    var tracksLevel = false
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -320,6 +323,14 @@ struct PopulationLegendView: View {
                     Text(verbatim: language.text(
                         "This map is flat: only real-world maps have hills.",
                         "這張地圖是平地：實景地圖才有起伏。"
+                    ))
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                } else if tracksLevel {
+                    Text(verbatim: language.text(
+                        "Flat ground: track stays level whatever the heights here.",
+                        "地形平坦：不論這裡的高度，軌道一律水平。"
                     ))
                     .font(.caption2)
                     .foregroundStyle(Theme.textSecondary)
