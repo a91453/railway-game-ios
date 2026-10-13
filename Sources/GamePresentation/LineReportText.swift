@@ -240,6 +240,16 @@ extension GameWorld {
         return ids.compactMap { train(id: $0) } + trains.filter { !listed.contains($0.id) }
     }
 
+    /// The lines in the order `ids` gives (the line panel's order when it
+    /// was sorted, decision 184, later), then any line not in it in the
+    /// world's order; a line no longer in the world is left out. As
+    /// ``fleet(keeping:)``: a list sorted by profit, riders or load keeps
+    /// still while the game runs.
+    public func lines(keeping ids: [LineID]) -> [ServiceLine] {
+        let listed = Set(ids)
+        return ids.compactMap { line(id: $0) } + lines.filter { !listed.contains($0.id) }
+    }
+
     /// Smaller sorts first: the later, the smaller; none the largest.
     private static func latenessKey(_ punctuality: Punctuality?) -> Int64 {
         switch punctuality {

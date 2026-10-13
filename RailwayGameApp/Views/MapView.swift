@@ -133,8 +133,8 @@ struct MapView: View {
     /// credits. Nothing of the game is drawn there, and a touch there
     /// reaches them.
     @State private var attributionFrames: [CGRect] = []
-    /// What the map shows of traffic control (Stage V4e), worked out when
-    /// the world changes, not on every pan or zoom.
+    /// What the map shows of traffic control (Stage V4e), taken from the
+    /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
     /// The lines along their track and the transfer groups' links
     /// (decision 84), worked out off the main actor when the track, the
@@ -255,6 +255,7 @@ struct MapView: View {
                         lights: lights,
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
+                        reduceMotion: reduceMotion,
                         camera: projection
                     )
                     .equatable()
@@ -610,7 +611,8 @@ struct MapView: View {
             }
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
-            traffic = session.world.trafficOverlay()
+            // Decision 64, later fix: read with the tick, off the main actor.
+            traffic = session.trafficOverlay
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
@@ -1041,10 +1043,6 @@ struct MapView: View {
     }
 }
 
-/// What the traffic overlay is worked out from (Stage V4e): the time
-/// (a due departure starts a wait), the trains with their routes and
-/// reservations, the lines that send them out, the track and whether
-/// traffic control is on.
 /// What the lines' map (``LineMap``, decision 84) is worked out from: the
 /// track and its platforms, the lines' stops, ways, colours and whether they
 /// are high-speed lines (decision 168), the
@@ -1080,6 +1078,11 @@ private struct LineMapKey: Equatable {
     }
 }
 
+/// What the traffic overlay is worked out from (Stage V4e): the time
+/// (a due departure starts a wait), the trains with their routes and
+/// reservations, the lines that send them out, the track and whether
+/// traffic control is on. The session reads the overlay with each tick
+/// (``GameSession/trafficOverlay``); this says when to take it again.
 private struct TrafficKey: Equatable {
     let now: GameTime
     let isEnabled: Bool
@@ -1334,17 +1337,22 @@ private struct MapTrainCanvas: View, Equatable {
     /// Every train in the map's train colour (the passenger load layer).
     let plain: Bool
     let traffic: TrafficOverlay
+    /// A deadlocked train's mark beats (decision 64, later fix) unless the
+    /// player reduces motion.
+    let reduceMotion: Bool
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic && lhs.camera == rhs.camera
+            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
+            && lhs.reduceMotion == rhs.reduceMotion && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, camera = camera
-        return TimelineView(.animation(paused: !animating)) { timeline in
+        let traffic = traffic, reduceMotion = reduceMotion, camera = camera
+        let beats = !reduceMotion && traffic.waits.contains(where: \.isDeadlocked)
+        return TimelineView(.animation(paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 MapArt.drawTrains(
@@ -1354,6 +1362,7 @@ private struct MapTrainCanvas: View, Equatable {
                     lights: lights,
                     plain: plain,
                     traffic: traffic,
+                    deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
                     projection: camera,
                     in: context
                 )

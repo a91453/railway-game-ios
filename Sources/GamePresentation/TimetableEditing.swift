@@ -316,9 +316,8 @@ extension GameSession {
     /// Sets `stops` as `train`'s timetable, repeating every `period`
     /// seconds or running once for `nil`.
     private func setTimetable(of train: Train, to stops: [ScheduledStop], repeatingEvery period: Int64?, message: (GameWorld) -> String) {
-        perform { world throws(GameError) in
-            try world.setTrainTimetable(train.id, to: stops, repeatingEvery: period)
-            return message(world)
+        perform(.setTrainTimetable(train.id, stops, period: period)) { _, _, world in
+            message(world)
         }
     }
 

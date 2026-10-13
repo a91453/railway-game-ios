@@ -99,9 +99,8 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: language.text("Select a station on the map first.", "請先在地圖上選擇車站。"))
             return
         }
-        perform { world throws(GameError) in
-            try world.buildFreightFacility(at: station.id)
-            return language.text(
+        perform(.buildFreightYard(station.id)) { _, _, _ in
+            language.text(
                 "\(station.name) has a freight yard for \(Freight.facilityCost.moneyText).",
                 "\(station.name) 蓋了貨運場，花費 \(Freight.facilityCost.moneyText)。"
             )
@@ -115,18 +114,16 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: language.text("Select a station on the map first.", "請先在地圖上選擇車站。"))
             return
         }
-        perform { world throws(GameError) in
-            try world.removeFreightFacility(at: station.id)
-            return language.text("\(station.name)'s freight yard is gone.", "\(station.name) 的貨運場已拆除。")
+        perform(.removeFreightYard(station.id)) { _, _, _ in
+            language.text("\(station.name)'s freight yard is gone.", "\(station.name) 的貨運場已拆除。")
         }
     }
 
     /// Sets what the selected station's freight yard sends (decision 156).
     public func setFreightProductAtSelectedStation(_ kind: CargoKind) {
         guard let station = selectedStation, world.freightFacility(at: station.id)?.product != kind else { return }
-        perform { world throws(GameError) in
-            try world.setFreightProduct(at: station.id, to: kind)
-            return language.text(
+        perform(.setFreightProduct(station.id, kind)) { _, _, _ in
+            language.text(
                 "\(station.name)'s yard sends \(kind.title(in: .english).lowercased()).",
                 "\(station.name) 的貨運場改出\(kind.title(in: .traditionalChinese))。"
             )
@@ -137,9 +134,8 @@ extension GameSession {
     /// (decision 155).
     public func setSelectedLineFreight(_ isFreight: Bool) {
         guard let line = requireSelectedLine(), line.isFreight != isFreight else { return }
-        perform { world throws(GameError) in
-            try world.setLineFreight(line.id, to: isFreight)
-            return isFreight
+        perform(.setLineFreight(line.id, isFreight)) { _, _, _ in
+            isFreight
                 ? language.text("\(line.name) now carries freight.", "\(line.name) 改為貨運路線。")
                 : language.text("\(line.name) carries passengers again.", "\(line.name) 改回客運路線。")
         }

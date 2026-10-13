@@ -191,7 +191,7 @@ struct TrainControls: View {
                     .monospacedDigit()
             }
             // Under traffic control: which train holds the route it waits for.
-            if let wait = session.world.routeWaitText(of: train.id, in: language) {
+            if let wait = session.routeWaitText(of: train.id) {
                 Label(wait, systemImage: "hourglass")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.warning)

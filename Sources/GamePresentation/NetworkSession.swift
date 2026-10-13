@@ -157,16 +157,10 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: problem.text(in: language))
             return
         }
-        var built: (edge: TrackEdgeID, to: TrackNodeID)?
-        let balance = world.economy.balance
-        let heights = heights
-        perform { world throws(GameError) in
-            var draft = world
-            let result = try plan.build(in: &draft, structure: networkStructure, heights: heights)
-            let cleared = world.placedBuildings(clearedIn: draft).count
-            world = draft
-            built = result
-            let cost = Money(balance.amount - world.economy.balance.amount)
+        let built = perform(.buildTrack(plan.stretch(structure: networkStructure))) { outcome, before, world in
+            guard let result = outcome.track else { return "" }
+            let cleared = before.placedBuildings(clearedIn: world).count
+            let cost = Money(before.economy.balance.amount - world.economy.balance.amount)
             let length = NetworkBuilding.lengthText(plan.length, in: language)
             let structure = world.network.edge(result.edge)?.structureText(in: language) ?? networkStructure.name(in: language)
             // Decision 95: the company's buildings in the way come down.
@@ -179,7 +173,7 @@ extension GameSession {
                 "已建造\(result.edge.displayText(in: language))：\(length)，\(structure)，花費 \(cost.moneyText)\(demolished.1)。"
             )
         }
-        if let built {
+        if let built = built?.track {
             networkStart = .node(built.to)
             networkEnd = nil
             playSound?(.track)
@@ -433,54 +427,72 @@ extension GameSession {
         var built: StationID?
         let grade = networkPlatformGrade
         var levellingRefused: String?
-        let added = perform { world throws(GameError) in
-            var draft = world
-            // The platform's stretch, on the level edge once levelled.
-            var stretch = stretch
-            var levelled = ""
-            if let levelling, let grade {
-                let balance = draft.economy.balance
-                let edge: TrackEdgeID
-                do throws(GameError) { edge = try build(levelling, in: &draft) } catch {
-                    // GameCore's reason, said with the grade it was to level.
-                    levellingRefused = platformGradeText(grade, problem: error.playerMessage(in: language))
-                    throw error
-                }
-                let length = draft.network.edge(edge)?.length ?? 0
-                stretch = (edge, 0, length)
-                let cost = Money(balance.amount - draft.economy.balance.amount)
-                levelled = language.text(
-                    " Levelled \(NetworkBuilding.lengthText(length, in: language)) of track for it, for \(cost.moneyText).",
-                    "已為月台整平 \(NetworkBuilding.lengthText(length, in: language)) 軌道，花費 \(cost.moneyText)。"
-                )
-            }
-            let station: Station
-            if let chosen {
-                station = chosen
-            } else {
-                station = try draft.buildStation(named: name, at: middle)
-                // With demand from land (Phase 6b) GameCore gives it the
-                // ridership of the land round it.
-                if draft.accounts.mode == .management, !draft.landDemand {
-                    try draft.setStationDemand(station.id, to: demand)
-                }
-            }
-            try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
-            // Decision 88: the land round a new station is read in after the
-            // edit; read it now, so the opening message counts who it reaches.
-            Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water, coverage: coverage)
-            world = draft
-            built = chosen == nil ? station.id : nil
+        /// What the tool says it did.
+        func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
             return chosen == nil
                 ? language.text(
                     "Built station “\(station.name)” with a \(length) platform on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已建造車站「\(station.name)」，月台 \(length)，位於\(stretch.edge.displayText(in: language))。"
-                ) + levelled + openingReach(of: station, in: draft)
+                ) + levelled + openingReach(of: station, in: world)
                 : language.text(
                     "Added a \(length) platform to \(station.name) on \(stretch.edge.displayText(in: language).lowercased()).",
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
                 ) + levelled
+        }
+        let added: Bool
+        if levelling == nil {
+            // Decision 193: on level track, a command the log keeps.
+            let addition = PlayerCommand.PlatformAddition(
+                edge: stretch.edge, start: stretch.start, end: stretch.end,
+                station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand)
+            )
+            let outcome = perform(.addPlatform(addition)) { outcome, _, world in
+                outcome.station.map { text($0, on: stretch, levelled: "", in: world) } ?? ""
+            }
+            added = outcome != nil
+            if chosen == nil { built = outcome?.station?.id }
+        } else {
+            added = perform { world throws(GameError) in
+                var draft = world
+                // The platform's stretch, on the level edge once levelled.
+                var stretch = stretch
+                var levelled = ""
+                if let levelling, let grade {
+                    let balance = draft.economy.balance
+                    let edge: TrackEdgeID
+                    do throws(GameError) { edge = try build(levelling, in: &draft) } catch {
+                        // GameCore's reason, said with the grade it was to level.
+                        levellingRefused = platformGradeText(grade, problem: error.playerMessage(in: language))
+                        throw error
+                    }
+                    let length = draft.network.edge(edge)?.length ?? 0
+                    stretch = (edge, 0, length)
+                    let cost = Money(balance.amount - draft.economy.balance.amount)
+                    levelled = language.text(
+                        " Levelled \(NetworkBuilding.lengthText(length, in: language)) of track for it, for \(cost.moneyText).",
+                        "已為月台整平 \(NetworkBuilding.lengthText(length, in: language)) 軌道，花費 \(cost.moneyText)。"
+                    )
+                }
+                let station: Station
+                if let chosen {
+                    station = chosen
+                } else {
+                    station = try draft.buildStation(named: name, at: middle)
+                    // With demand from land (Phase 6b) GameCore gives it the
+                    // ridership of the land round it.
+                    if draft.accounts.mode == .management, !draft.landDemand {
+                        try draft.setStationDemand(station.id, to: demand)
+                    }
+                }
+                try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
+                // Decision 88: the land round a new station is read in after the
+                // edit; read it now, so the opening message counts who it reaches.
+                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water, coverage: coverage)
+                world = draft
+                built = chosen == nil ? station.id : nil
+                return text(station, on: stretch, levelled: levelled, in: draft)
+            }
         }
         if let levellingRefused {
             message = StatusMessage(kind: .failure, text: levellingRefused)
@@ -501,8 +513,7 @@ extension GameSession {
     /// Removes `platform` through
     /// `GameWorld.removeTrackPlatform(_:on:from:)`.
     public func removeNetworkPlatform(_ platform: TrackPlatform) {
-        perform { world throws(GameError) in
-            try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
+        perform(.removePlatform(platform)) { _, _, world in
             let name = world.station(id: platform.station)?.name ?? "#\(platform.station.rawValue)"
             return language.text("Removed a platform of \(name).", "已拆除 \(name) 的一座月台。")
         }
@@ -542,48 +553,62 @@ extension GameSession {
     /// with no traversals. All or nothing; GameCore decides whether the
     /// track behind the platform takes the rest of the train.
     func place(_ train: Train, atPlatformOf station: Station) {
-        let platforms = world.trackPlatforms(of: station.id)
-        // Those as long as the train in track order, then the rest, longest
-        // first.
-        let ordered = platforms.filter { $0.length >= train.length }
-            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
-        guard !ordered.isEmpty else { return }
-        let heading = placementHeading
-        perform { world throws(GameError) in
-            var refusal: GameError?
-            for platform in ordered {
-                guard let edge = world.network.edge(platform.edge),
-                      let geometry = world.trackGeometry(of: platform.edge) else { continue }
-                let way = geometry.location(at: (platform.start + platform.end) / 2).direction
-                let forward: Bool
-                switch heading {
-                case .north: forward = way.dy <= 0
-                case .east: forward = way.dx >= 0
-                case .south: forward = way.dy >= 0
-                case .west: forward = way.dx <= 0
-                }
-                let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
-                // The offset is measured the way the train faces.
-                let offset = forward ? platform.end : edge.length - platform.start
-                var draft = world
-                do throws(GameError) {
-                    try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
-                    if offset < edge.length {
-                        try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
-                    }
-                    try draft.useTrainPerformanceForMovement(train.id)
-                } catch {
-                    refusal = refusal ?? error
-                    continue
-                }
-                world = draft
-                return language.text(
-                    "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
-                    "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
-                )
-            }
-            throw refusal ?? .unknownStation(station.id)
+        guard !Self.platforms(for: train, at: station.id, in: world).isEmpty else { return }
+        perform(.placeTrain(train.id, at: station.id, heading: placementHeading)) { outcome, _, _ in
+            guard let placed = outcome.placed else { return "" }
+            return language.text(
+                "Placed \(train.name) at \(station.name), on \(placed.edge.displayText(in: language).lowercased()) going \(placed.forward ? "forward" : "backward").",
+                "已將 \(train.name) 放在 \(station.name)，位於\(placed.edge.displayText(in: language))\(placed.forward ? "正向" : "反向")。"
+            )
         }
+    }
+
+    /// The platforms of `station` in the order a train is tried on them:
+    /// those as long as it in track order, then the rest, longest first.
+    static func platforms(for train: Train, at station: StationID, in world: GameWorld) -> [TrackPlatform] {
+        let platforms = world.trackPlatforms(of: station)
+        return platforms.filter { $0.length >= train.length }
+            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
+    }
+
+    /// Places train `id` on the first of ``platforms(for:at:in:)`` GameCore
+    /// takes it on, facing the way nearer `heading` (decision 193: the
+    /// command ``PlayerCommand/Edit/placeTrain(_:at:heading:)``). Returns
+    /// the edge and whether it faces along it; throws the first refusal.
+    static func place(
+        _ id: TrainID, atPlatformOf station: StationID, heading: CompassHeading, in world: inout GameWorld
+    ) throws(GameError) -> (edge: TrackEdgeID, forward: Bool) {
+        guard let train = world.train(id: id) else { throw .unknownTrain(id) }
+        var refusal: GameError?
+        for platform in platforms(for: train, at: station, in: world) {
+            guard let edge = world.network.edge(platform.edge),
+                  let geometry = world.trackGeometry(of: platform.edge) else { continue }
+            let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+            let forward: Bool
+            switch heading {
+            case .north: forward = way.dy <= 0
+            case .east: forward = way.dx >= 0
+            case .south: forward = way.dy >= 0
+            case .west: forward = way.dx <= 0
+            }
+            let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
+            // The offset is measured the way the train faces.
+            let offset = forward ? platform.end : edge.length - platform.start
+            var draft = world
+            do throws(GameError) {
+                try draft.placeTrain(id, at: .onEdge(traversal, offset: offset))
+                if offset < edge.length {
+                    try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
+                }
+                try draft.useTrainPerformanceForMovement(id)
+            } catch {
+                refusal = refusal ?? error
+                continue
+            }
+            world = draft
+            return (platform.edge, forward)
+        }
+        throw refusal ?? .unknownStation(station)
     }
 
     // MARK: - Removing
@@ -593,20 +618,14 @@ extension GameSession {
     /// other edge ends at through `GameWorld.removeTrackNode(_:)`, all or
     /// nothing.
     public func removeNetworkEdge() {
-        guard let id = networkEdgePoint?.edge, let edge = world.network.edge(id) else {
+        guard let id = networkEdgePoint?.edge, world.network.edge(id) != nil else {
             message = StatusMessage(kind: .failure, text: language.text("Tap the track to remove.", "請點選要拆除的軌道。"))
             return
         }
-        let removed = perform { world throws(GameError) in
-            var draft = world
-            try draft.removeTrackEdge(id)
-            for node in Set([edge.from, edge.to]).sorted() where draft.network.node(node)?.ends.isEmpty == true {
-                try draft.removeTrackNode(node)
-            }
-            world = draft
-            return language.text("Removed \(id.displayText(in: language).lowercased()).", "已拆除\(id.displayText(in: language))。")
+        let removed = perform(.removeTrack(id)) { _, _, _ in
+            language.text("Removed \(id.displayText(in: language).lowercased()).", "已拆除\(id.displayText(in: language))。")
         }
-        if removed {
+        if removed != nil {
             networkEdgePoint = nil
         }
     }
@@ -667,11 +686,15 @@ struct EdgePlan {
     /// Builds it in `world`: a node for each new end, then the edge, with
     /// the ground under its way read in first from `heights` (decision 124).
     func build(in world: inout GameWorld, structure: TrackStructure, heights: HeightGrid?) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
-        try world.readGround(under: [from.plan, to.plan] + surveyedPoints, from: heights)
-        let first = try node(for: start, at: from, in: &world)
-        let last = try node(for: end, at: to, in: &world)
-        let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure)
-        return (edge, last)
+        try stretch(structure: structure).build(in: &world, heights: heights)
+    }
+
+    /// It as a command's value (decision 193), built with `structure`.
+    func stretch(structure: TrackStructure) -> PlayerCommand.TrackStretch {
+        PlayerCommand.TrackStretch(
+            start: start, end: end, from: from, to: to, curve: curve, profile: profile, structure: structure,
+            ground: [from.plan, to.plan] + surveyedPoints
+        )
     }
 
     /// Where GameCore surveys the ground under the edge (see
@@ -680,18 +703,6 @@ struct EdgePlan {
         geometry.map(NetworkBuilding.surveyedPoints(of:)) ?? []
     }
 
-    private func node(for anchor: NetworkAnchor, at position: WorldCoordinate, in world: inout GameWorld) throws(GameError) -> TrackNodeID {
-        switch anchor {
-        case .node(let id): return id
-        case .point: return try world.buildTrackNode(at: position)
-        case .track(let point):
-            // The other end may have split the same edge: find the place
-            // again where it lies now.
-            let now = world.network.edge(point.edge) != nil ? point : world.trackEdgePoint(near: position.plan, within: 16)
-            guard let now else { throw .unknownTrackEdge(point.edge) }
-            return try world.splitTrackEdge(now.edge, at: now.distance)
-        }
-    }
 }
 
 extension NetworkBuilding {

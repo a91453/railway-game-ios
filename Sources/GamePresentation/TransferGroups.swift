@@ -57,8 +57,7 @@ extension GameSession {
             return
         }
         let otherName = world.station(id: other)?.name ?? "#\(other.rawValue)"
-        perform { world throws(GameError) in
-            try world.linkTransfer(station.id, other)
+        perform(.linkTransfer(station.id, other)) { _, _, world in
             let group = world.transferGroupText(of: station.id) ?? ""
             return language.text(
                 "Passengers can change between \(station.name) and \(otherName): \(group).",
@@ -80,9 +79,8 @@ extension GameSession {
             ))
             return
         }
-        perform { world throws(GameError) in
-            try world.unlinkTransfer(station.id)
-            return language.text(
+        perform(.unlinkTransfer(station.id)) { _, _, _ in
+            language.text(
                 "\(station.name) left its transfer group. Passengers who needed the walk leave.",
                 "\(station.name) 已離開轉乘群組。需要這段步行的乘客會離開。"
             )

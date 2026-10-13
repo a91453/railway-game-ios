@@ -2871,7 +2871,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 7. **手算**：W–M–E（邊 1、2、3 直線，起點 x=1024、9216、25600，y=4096）。0:42 互等：東行車頭在邊 1 的 3072（x=4096），等西行車占用的邊 3 4096–7168（x=29696–32768）；西行車頭在邊 3 的 8192−3072=5120（x=30720），等東行車的邊 1 1024–4096（x=2048–5120）；各自等的位置是最近端 29696、5120，contested 恰為對方 held。1:00 東行在 M 正線（邊 2 的 9216，x=18432）待避，等 M 東端 junction 附近（邊 2 自 14336 起，最近點 x=23552，節點 3 在 x=25600），西行的授權含整條邊 1（x=1024–9216）。
 8. **獨立驗證**：ReferenceWorld 另做 `contestedResources`（對擋住者的 `blocking` 集合逐資源 `foul`），在 DeadlockTests 逐秒、`traffic.deadlock` 與 `traffic.turnbacks` campaign 每步比 production；兩個 campaign 也每步比 `routeWaits()` 與逐一查詢。實景 demo 首小時每分鐘檢查授權折線、等候與死結一致，每列車都有授權；新 UI 測試（實景 demo 出現 `map.traffic` 且含 Movement authority）只在 full lane。
 
-**限制**：只顯示目前狀態，沒有預測未來授權或號誌；畫面延遲式 block hold、平行同軌標籤錯位（`blockSideShift`）與死結閃爍仍是 gap。Canvas 繪圖本身不在 Linux 驗證，只由 macOS CI 編譯與 UI 測試。
+**限制**：只顯示目前狀態，沒有預測未來授權或號誌；畫面延遲式 block hold、平行同軌標籤錯位（`blockSideShift`）與死結閃爍仍是 gap（之後的修正：後兩項已補，見下）。Canvas 繪圖本身不在 Linux 驗證，只由 macOS CI 編譯與 UI 測試。
+
+**之後的修正（2026-10-13，TestFlight 56.1 之後的 patch；`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 第 5 項，§10 第 1 題作者同意當 bug 修）**：
+
+1. **疊層不再每個 tick 在主執行緒找死結**。新遊戲預設開行車控制，地圖的 `TrafficKey` 含時間，所以每 100 ms 的 tick 都在主執行緒跑一次 `trafficOverlay()` → `routeWaits()` → 死結搜尋，列車工具的 `routeWaitText` 每次又重建一次交通計畫。現在 GamePresentation 的 `TrafficReading` 用一次 `routeWaits()` 同時給出疊層與等候文字；遊戲迴圈在背景算 tick 時（決策 143），對一步裡最後一個 tick 的結果世界順便讀一次（含選取列車的等候文字），`GameSession.trafficMemo` 依 `worldRevision` 保存。地圖取 `session.trafficOverlay`、列車工具取 `session.routeWaitText(of:)`；指令改了世界後（memo 的版本不符）才在主執行緒重讀一次。結果與每次問世界相同：在軌道上、行車控制開著、`routeWaits()` 沒列出的列車，`routeWaitText` 一定是 `nil`（它的文字來自排定等待或擋住進路的列車，兩者 `routeWaits()` 都會列出）；其他情況照舊呼叫 `routeWaitText`。測試逐 tick 比對 W–M–E 交會線（死結、待避、跟車、關掉控制、未放置的車、不存在的 ID，兩種語言）與排定交會的存檔，拿掉那個判斷時測試會紅。量測（Linux release，平溪示範 600 個 tick，選一輛車）：主執行緒每 tick 26.4 ms（p90 39.9、最大 70.1）→ 0.005 ms；背景的 tick 28.9 → 43.5 ms（p90 43.2 → 71.2），仍在 100 ms 的 tick 間隔內，超過時遊戲照決策 143 變慢而不是堆積。疊層結果改成在 tick 完成時與世界一起出現，不再晚一個畫面重算。
+2. **死結標記閃爍**：查過來源，這一項原本是 UI 移植計畫（`docs/archive/UI_GAP_AND_PORT_PLAN.md`「死結標示：地圖紅色驚嘆號閃爍標記」）留給 V4e 的功能，不是標記錯誤地閃；探針確認 `isDeadlocked` 在 x1／x10／x60／normal 每個 tick 都不會來回跳。參考 repo 全文沒有 deadlock 的畫法可移植，所以這是本專案自己的：死結列車的紅圈與警示符號每 1.2 秒在不透明度 1 與 0.35 之間脈動一次（`TrafficOverlay.deadlockStrength`），等候（黃）不閃；「減少動態效果」開著時維持不透明。有死結時列車圖層的 `TimelineView` 在遊戲暫停時也會繼續畫。
+3. **平行同軌標籤錯位**：移植 `Railway/site_archive_clean/index.html` 的 `blockSideShift`，用在等候列車的圈（`WaitMarkSides`）：兩個圈在畫面上近於圈的寬度（圈直徑加 5 點的底色）就是一組，依列車 ID 交替移到軌道兩側（來源的 `nat` 交替），各沿車頭方向的法線移 `(|nx|·near + |ny|·BLOCK_TAG_H)/2 + BLOCK_SIDE_GAP/2`；圓圈寬高相同，`near` 與 `BLOCK_TAG_H` 都是圈的寬度，`BLOCK_SIDE_GAP` 2 點照搬。`TrafficOverlay.Wait` 多了 `heading`（車頭的 `TrackLocation.direction`）。沒有移植的：來源的分組依同一路線的里程（`BLOCK_SIDE_KM`），這裡依畫面距離（遊戲的複線是兩條不同的邊）；停站車與行進車一組時停站車移兩倍（`solo`）不需要，等候車都停著；`_blockSideSign`／`_blockSideRole` 的跨幀記憶與 `_blockSideLatch` 的遲滯不需要，分組與次序只由列車 ID 與停著的位置決定，不會跳；每幀 0.18 的緩動沒有移植（Canvas 每次重畫不保存狀態），圈在縮放跨過門檻時直接移開。虛線仍從車頭畫起。
+
+存檔版本、golden schema、fixture 都不變；GameCore 沒有改。
 
 ### 65. 跨站步行轉乘與新遊戲啟用全網路徑（Phase 5F）
 
@@ -3603,6 +3611,11 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 捲動的範圍改小：卡片分成頭（站名牌與路線標籤、`InspectorView`）、中間（工具的選項 `ToolOptions`，iPad 另有路網總覽）、腳（`ActionButton`）三段（`ControlPanel.Arrangement` 的 `.inspector`、`.options`、`.action` 取代 `.details`）。高度照舊跟著內容、最高到可用高度；超過時只有中間捲動，頭與腳固定，中間捲到頭腳處淡出 8 點，卡片出現與換工具時閃一下捲軸。頭加腳太高、中間剩不到 88 點（約兩列選項）時，退回整張一起捲動，免得選項被擠到看不見。所有工具都這樣：路網（狀態列／模式與選項／鋪設、加月台、拆除）、列車（選取／列車選項／放置、派往）、建築（沒有頭／選項／建造、出售）、選取（站名牌與選取／說明／沒有腳）。教學標記不變：卡片本身的 `.detailsCard`、動作按鈕的 `.actionButton` 與模式選擇的 `.networkModes` 都在原處，`tutorialClip()` 改套在捲動的中間。
 - 路網工具的狀態列最多 8 行，超過才以「…」收尾（選取工具那一行早已放寬到 3 或 7 行）。狀態列有無障礙識別碼 `inspector.status`，卡片是 `details.card`。
 - UI 測試（`MapInteractionTests`，在 full lane）：`testPlatformModeKeepsItsStatusAndActionInTheCard`（iPhone 橫拿，鋪一段軌道、月台模式、點軌道：不捲動時「加月台」按得到，狀態列整個在卡片裡，捲動選項後仍然是）、`testTrainToolCardKeepsItsHead`（示範地圖的列車工具，捲動前後狀態列都整個在卡片裡）。
+
+**之後的修正**（2026-10-13，TestFlight 56.1 回報 #1「選單在時間走時滑不動」的可能原因）：細節卡片每次排版都重新判斷要「頭腳固定、中間捲動」還是「整張捲動」（頭加腳的高度再加 88 點放不放得下）。在地圖上點了列車後，卡片頭是列車摘要；列車停靠時多一行「Stopped at …」，開出後少一行。iPhone 橫拿時這一行剛好跨過門檻，示範地圖 600 倍速下卡片幾秒就換一次結構。SwiftUI 換掉 view 身分，選項捲回頂端，打開的原生選單也被關掉（手動 run 38330628216 重現：15 秒內兩種版面都出現）。改法（只改 App 與 GamePresentation 的判斷，GameCore、存檔、golden、replay 都不變）：
+- 判斷移到 `DetailsCardLayout.pinsEnds(ends:maxHeight:pinned:)`，加遲滯：固定中的卡片要等選項剩不到 44 點（約一列）才改成整張捲動；整張捲動的卡片要等選項有 88 點（約兩列）才固定。兩者差 44 點，大於頭部一兩行字的變化。
+- 換了主體（`ControlDetails.Subject`：工具、選的車站、點的列車、有沒有選取、是否在畫軌道）就清掉記住的版面，照原本 88 點的規則重新決定。
+- 兩種版面的捲動區有識別碼 `details.scroll.middle`、`details.scroll.whole`。UI 測試 `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts`（full lane）：iPhone 橫拿、時鐘照走，跟隨並點選 Train 1，看到列車停靠與行駛各三次（最多 60 秒），期間卡片只用一種版面。Linux 測試 `DetailsCardLayoutTests`。
 
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 
@@ -6066,6 +6079,19 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
   - `MenuChoicesTests` 加「tick 不改選項」：車種、補車車種、月台軌道、各段股道。
   - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns` 與 `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（作者截圖裡其實是運轉方式選單，25 列）：時鐘在跑時打開選單，3 秒不動，並選得到另一列。
 
+**之後的修正（路線面板每 tick 的主執行緒成本與排序跳動，TestFlight 56.1 之後，2026-10-13）**：#463 讓路線面板的選單不再被 tick 重建，但面板的 body 仍每 100 ms 重算一次選取路線的全部資料。
+- **快取**：新的 `LinePanelMemo`（GamePresentation，面板用 `@State` 持有一個）把只有指令會改的部分依 `commandRevision`、session、選取路線與語言保存，tick 時直接讀回：
+  - 各段的股道選擇 `lineRouteChoices`（找路，最貴）；
+  - 服務摘要 `lineServiceSummaries`；
+  - 行程 `lineJourneyText`；
+  - 軌道數 `lineTrackCountTexts`；
+  - 未涵蓋區段 `lineCoverageText`；
+  - 補車計畫 `lineStaffingPlan`（另依班距、車種、節數）。
+- **每 tick 照算的**：服務摘要裡「行駛中」的列車數（從當下的世界重數）、路線狀態、示意條上的列車、營運報告、高鐵的腹地人口（午夜城鎮成長會改）。
+- **量測**（Linux release，高鐵示範選高鐵線、時間在走，5 次中位數）：每次 body 約 377 ms → 約 0.02 ms；指令後的第一次照舊約 0.4 s，一個指令一次。
+- **排序**：依獲利、載客、載客率排序時，順序在打開面板、換排序或按「立即重新排序」（`lines.sortAgain`）時固定（`GameWorld.lines(keeping:)`：新路線排最後、刪掉的拿掉），和車隊總覽一樣，午夜時列不會在手指下換位置。
+- **測試**：`LinePanelMemoTests`（兩個遊戲小時的 tick 中快取和世界當下算的逐值相等、指令與復原後重算、別的 session 或路線各算各的、`lines(keeping:)`）。
+
 ### 185. PR 的 Linux CI 依改動分層
 
 2026-10-12。作者同意改掉「每個 PR 都跑全部測試（campaign 不縮）」的規則（派工 session_017he2Q1QSeaBKJD1PR3XMma）。號碼依工作登記 #231：決策 185；存檔版本、golden schema 不動。
@@ -6155,6 +6181,18 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **參考庫與外部專案**：參考庫沒有 CI。用 patch-id 判斷「同一份改動」是 git 本身的做法（`git cherry`、`git rebase` 用它找已套用的 commit）；cache 是 GitHub 官方的 `actions/cache`，沒有新的依賴。
 
 **沒有驗證的**：Linux 上驗證了 YAML、actionlint（含 shellcheck）、分片自測、key 的計算（同一份改動加文件 commit 時相同，空白改動與上下文改動時不同）與 `only_testing` 的解析；跳過與存 key、`run-name`、gate 在取消時的顯示，要等 GitHub 上真的跑過。
+
+**之後的修正**（2026-10-13）：新增 `.github/workflows/claude.yml`。作者想讓 Claude 用 Claude API 的額度改程式。claude.ai/code 的雲端 session 一律用訂閱，在環境裡設 `ANTHROPIC_API_KEY` 也不會改變計費，所以作者選了官方的 Claude Code GitHub Action，並用 API 金鑰認證。Console 的身分聯合（WIF）也能用，但步驟較多，之後可以換過去。號碼依工作登記 #231：決策、存檔版本、golden schema 都不動。
+- 內容照官方範例：`anthropics/claude-code-action` 的 `examples/claude.yml`（`@v1`，MIT）。issue／PR 的留言、review 或新的 issue 裡出現 `@claude` 時執行。金鑰放在 repo secret `ANTHROPIC_API_KEY`。
+- 省 runner 與花費：
+  - `if:` 只讓 OWNER、MEMBER、COLLABORATOR 的留言啟動 runner。公開 repo 裡陌生人的留言不佔 runner，也不花 token；action 自己也會拒絕沒有寫入權限的人與 bot。
+  - 同一個 issue／PR 一次只跑一個 run（job 的 `concurrency`）：後來的排隊，不會取消前面的。GitHub 每組只留一個排隊的，所以第三次提及會取代排隊中的那個。放在 job 上而不是整個 workflow：沒有提及的留言（包括 Claude 自己的留言）會跳過 job，不佔這一組。
+  - `timeout-minutes: 60`。
+  - 模型固定用 Claude Opus 5.5（`claude_args` 的 `--model claude-opus-5-5`），這是作者選的；不跟著 Claude Code 的預設值變動。
+- `ios-build.yml`（`paths-ignore` 與 key 的排除清單）和 `ios-full-lane.yml` 的清單補上 `claude.yml`。`ci.yml` 原本就把其他 workflow 的改動當成不必跑 Swift。
+- 規則（CLAUDE.md 的 Workflow）：session 是用作者的帳號留言，所以除非要啟動它，否則不寫 `@claude`。每提及一次就是一次用 API 計費的執行。
+- 沒有做的：runner 上沒有裝 Swift 6.4，action 預設也不讓 Claude 執行 `swift build`／`swift test`，所以它的改動由 PR 的 CI 檢查。要讓它在 runner 上建置，必須另外加安裝步驟與 `--allowedTools`，每次執行會多幾分鐘。
+- 沒有驗證的：issue 與留言事件只會用預設分支上的這個檔案，action 也會拒絕和預設分支內容不同的版本，所以合併前沒辦法在 PR 上試。合併後要留一則提及它的留言來測試。
 
 ### 188. 教學重做：一步一個動作、做完自己前進
 
@@ -6364,6 +6402,58 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **還沒做**：雲端備份；輪替的份數與間隔可以在設定裡改（`SettingsView` 由 #463 佔用，之後再加）。
 
+### 193. 指令日誌：問題回報附上存檔與指令，在 Linux 重播
+
+2026-10-13，NEXT_PRIORITIES 波次 1 第 8 項：作者在 iPhone 上碰到的 bug，要能直接變成 Linux 上的回歸測試。號碼依工作登記 #231：決策 193；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、既有的 replay 都不變（只新增一個 replay fixture）。
+
+**做法的選擇**（優先順序 session 決定，選 B）：GamePresentation 唯一的入口是 `GameSession.performEdit(_:)`，但它收的是 closure，73 個呼叫點在 closure 裡直接呼叫約 80 種 `GameWorld` 方法，在入口記不到「指令本身」。所以指令要先變成值。不在 GameCore 加可 Codable 的指令型別：連線對戰不在優先清單上，那是預先設計，還要跑完整一層 CI、改共用的測試檔。改在 GamePresentation 加 `PlayerCommand`。
+
+1. **指令的值**（`PlayerCommand.swift`）：一個 case 是一個工具的一次編輯，帶著算出它的一切值（端點、曲線、縱斷面、構造、要讀地面的點、月台的區間、新車站的名稱、位置與運量）。`GameSession.apply(_:to:)` 做的是原本 closure 做的事（`EdgePlan.build` 改成呼叫它），`GameSession.perform(_:message:)` 經過 `performEdit` 套用並記下。寫成檔案時用純數字與字串（`kind` 加欄位，和 `ReplayCommand` 一樣），因為被拒絕的指令也要記，而 GameCore 自己的解碼會拒絕世界放不下的值。
+   - 第一個 PR 只有路網工具的四個：鋪一段軌道（`buildNetworkTrack`，交叉渡線不算）、在水平的軌道上設月台（`addNetworkPlatform`；要整平的照舊用 closure）、拆月台、拆軌道。其他編輯照舊用 closure，記成「沒有記錄的指令」，記下呼叫的函式名稱（`performEdit` 的 `caller: #function`）。其餘的種類下一個 PR 再補。
+2. **記錄**（`CommandLog.swift`，`GameSession.commandLog`）：從 session 開始（開新局或讀檔都會建新的 session）時的世界起，依序記每一個改變世界的事，和它的遊戲時間（秒）：
+   - 指令（`.command`），被拒絕的也照順序記（`refused`，被拒絕的什麼都沒改）；沒有改變任何東西的也記。
+   - 套用到世界的遊戲時間（`.advance(ticks:)`）。連續的 tick 合成一筆，下一個 tick 加到上一筆。背景算好、但因為玩家先下了指令而丟掉的 tick（決策 143）不記，因為它沒有套用。
+   - 速度、暫停、繼續（`setSpeed`、`togglePause`、建造時與事件的自動暫停）。
+   - 復原與重做（`.undo`、`.redo`）：它們直接換掉世界，不經過 `GameWorld` 的方法，用 session 重播才能經過同樣的快照。
+   - 讀入土地（`.readLandRoundStations(data)`、`.readLand(reach:at:)`），以及那時 session 有哪些實景資料。資料晚到時（`GameLauncher.install`），就算這一次沒讀到任何土地也記，重播才知道從哪裡起有資料。
+   - 保險：`world` 的 `didSet` 看到不是上面這些路徑造成的改變（不是 tick，也不是記錄中的路徑），就記一筆「沒有記錄」。所以日誌不會漏掉任何改變而沒人知道。
+3. **上限**：5,000 筆（`CommandLog.limit`）。記到 2,500 筆時留下那時的世界；到 5,000 筆時，那個世界成為新的起點，前 2,500 筆丟掉，再從現在留下下一個。所以日誌一直有 2,500 到 5,000 筆，記憶體多兩個世界（起點與下一個起點），沒改的部分和遊戲中的世界共用。遊戲時間合成一筆，所以 5,000 筆是 5,000 次操作，不是 5,000 個 tick。tick 每次只做一次陣列尾端的加法，不拖慢 tick。
+4. **回報的檔案**（`CommandLogReport.swift`，`command-log.json`）：只有存檔（`SavedGame`，起點的世界）、起點時有哪些資料、指令、App 的版本與 build、內附資料檔的雜湊（FNV-1a 64 位元，`dataFiles` 的五個檔：人口、地點、水域、高度、涵蓋），以及結束時的世界摘要（時間、現金、節點、邊、車站、路線、列車數）。不帶裝置識別碼、帳號、位置。存檔裡可能有玩家自己打的名稱：`typedNames` 列出存檔與指令裡的車站、路線、列車名稱，讓玩家看過再決定。
+5. **畫面**（`SettingsView` 的「關於」）：從遊戲打開設定時，「回報問題」上面多一個開關「附上存檔與指令紀錄」（`settings.report.attach`），預設關，由玩家自己打開。打開時在背景寫出 `command-log.json`（存檔可能有幾 MB，還要讀內附資料檔算雜湊），寫好後列出會附上什麼（`CommandLogReport.attachmentText`：檔名、這局開始時的存檔、之後做的幾件事、版本、「不含你或裝置的任何資料」，以及存檔裡的名稱，最多 20 個），寫好前「回報問題」按不下去。「回報問題」再把檔案和原本的訊息一起交給分享表（`ShareLink(item:subject:message:)`，決策 127：App 不寫收件者，玩家按下傳送前什麼都不送）。從開始畫面打開時沒有遊戲，沒有這個開關。新的字照決策 127 第 4 點用 `DisplayLanguage.app` 與 `Text(verbatim:)`，不進字串目錄。
+6. **在 Linux 重播**：
+   - **用 session 重播**（`Tests/GamePresentationTests/CommandLogReplay.swift`）：從起點的存檔開一個沒有畫面的 `GameSession`，照記錄的時機給它 App 內附的資料（`RailwayGameApp/Resources/RealWorld/`），每一筆從記下它的同一條路徑重播：指令走 `perform`、時間走 `advance(ticks:)`、復原走 `undo()`。所以每次編輯後 `performEdit` 讀入的土地（決策 88）與鋪軌讀的地面（決策 124）和實機相同，實景地圖、高鐵示範的回報也能重播，檔案也不會變大。每一筆先比遊戲時間，不同就停；遇到「沒有記錄」也停，說出是哪個函式。資料檔的雜湊和這個 checkout 不同時警告。實機的回報寫成像 `HighSpeedDemoTests` 那樣的 GamePresentationTests。
+   - **轉成 GameCore 的 replay fixture**（`Tests/GameCoreTests/ProblemReportFixtureTests.swift`）：不讀實景資料的世界（空白地圖、挑戰），而且指令都能用 fixture 現有的指令說出來時，轉成 `ReplayFixtures/` 的格式，checksum 用現有的 `ReplayFixture.checksums`，只新增檔案，不改共用的測試檔。鋪軌只轉得了地面（`surface`）、沒有豎曲線、端點不是切開的邊；復原與重做轉不了。轉不了的會說出原因，改用 session 重播。轉完比對結束的摘要。指令：`PROBLEM_REPORT=<report.json> REPLAY_RECORD="$PWD/ReplayFixtures" swift test --filter ProblemReportFixtureTests/testConvertingAReport`。
+   - **例子**：`ReplayFixtures/Reports/blank-map.json` 是 `CommandLogTests` 錄的回報（空白地圖、路網工具的軌道、車站、月台、一個被拒絕的月台、速度與時間），轉成 `ReplayFixtures/problem-report-blank-map.json`，`ReplayFixtureTests` 和其他 fixture 一起重播它。
+
+**測試**：`CommandLogTests`（每一種改變照順序記下、時間、被拒絕的也記；沒有記錄的改變；丟掉的 tick 不記；上限與新的起點；每一種指令和原本的 closure 得到同一個世界或同一個錯誤，經過 session 時全有或全無；每一筆存成檔案再讀回不變；回報列出玩家打的名稱；空白地圖、實景地圖（全台灣、內附的五個資料檔）與列車行駛的回報重播到同一個世界；遇到沒有記錄的改變時停下；例子的回報重播）、`ProblemReportFixtureTests`（例子轉成的 fixture 和提交的一樣；轉不了的說出原因）、`ReplayFixtureTests`（重播新的 fixture）。
+
+**參考**：參考庫（`382b9f8`）`Railway/railway_game_reference_clean/docs/debugging_desyncs.md` 與 `docs/desync.md` §3.1–3.2：每個指令經過唯一的入口（`DoCommandP`），以 ID 和值寫進 `commands-out.log`，配上開局時的存檔，用來重播整局；這裡照做（起點的存檔、依序的指令與日期、從起點重播）。`ReplayFixtures/` 本來就是從那裡來的（決策 51）。參考的做法沒有上限（重開時覆寫），這裡加上 5,000 筆的上限。`Ci/`、`Simulator/`、`MapBuilder/` 沒有指令紀錄或重播可以搬。參考庫已經有做法，沒有另外找外部專案。程式是本專案自己寫的。
+
+**限制**：
+- 這個 PR 只把路網工具的四種編輯變成值；其他編輯（路線、列車、建物、分區、買地…）記成「沒有記錄」，重播停在那裡。下一個 PR 補。
+- 用 session 重播需要和實機同一版的內附資料；不同時只能警告。
+- 摘要只比數量與現金，不是整個世界的雜湊：裝置與 Linux 的 JSON 編碼可能不同，所以不用存檔的位元組比。
+
+**UI 測試**：`SettingsUITests.testTheGameMenusReportCanAttachTheSaveAndCommands`（從遊戲選單打開設定、開關預設關、打開後說出附了什麼、「回報問題」按得下去；完整 lane）。
+
+**沒有驗證的**：Linux 不能建置 App；開關、說明的樣子與分享表（郵件裡的附件）要在 macOS CI 與實機上看。
+
+**之後的修正（其餘的編輯變成值，2026-10-13）**：第 1 點的「其餘的種類下一個 PR 再補」。
+- **`PlayerCommand.Edit`**（`PlayerCommandEdit.swift`）：面板和其他工具的編輯，一種 `GameWorld` 指令一個 case，帶著面板算好的值：
+  - 公司：交通控制、事件、乘客選路、經營模式、票價、貸款、服務日。
+  - 列車：買、賣、節數、車種、速率、恢復、派往車站、反向、移出、性能、時刻表、服務、配屬、放到月台（`placeTrain`，依方向試各月台）。
+  - 路線：建立（真實路線的目標班距一起設）、複製、刪除、改名、顏色、停靠、反轉、股道、營運時間、環線、列車數、目標班距、停站模式、性能、貨運；補車（`staffLine`）與改編組（`reformLine`）。
+  - 車站：改名、拆除、客源（含套用到它的路線）、運轉方式、轉乘、貨運場。
+  - 土地：建物（先讀入基地的土地）、出售、拆除、分區、買地、委託、名產店。
+- **怎麼套用**：`GameSession.apply(_:to:)` 做的是原本 closure 做的事，有多個步驟的照原本的順序，全有或全無。訊息改由 `perform(_:message:)` 從結果、編輯前與編輯後的世界寫出；需要自己的失敗訊息的（改停靠、拆車站、速率、經營模式）用 `performCommand(_:)`，它會丟出拒絕的原因。
+- **名稱與語言**：補車與改編組給列車的名稱、說明沒有改的列車，都看 session 的語言，所以指令也記下語言（`DisplayLanguage` 改成 `Codable`）。買車、建立路線的名稱在面板就決定，直接記名稱。
+- **寫成檔案**：`Edit` 用 Swift 合成的 `Codable`，值用 GameCore 自己的編碼（性能、時刻表、票價、服務日…）。GameCore 的解碼會拒絕世界放不下的值，被拒絕的編輯可能讀不回來，這時那一筆讀成「沒有記錄」，重播停在那裡，整份回報還是讀得出來（`CommandLog.Entry`）。列車的路照 `ReplayCommand` 寫成邊號加方向（`Edit.Step`）；分區照原始值（`Edit.ZoneChoice`）。
+- **還沒有值的**：路網工具的三種，交叉渡線、月台旁加股道、要整平的月台。它們的計畫依工具在畫面上的選擇算出，下一個 PR 再補。在那之前，它們仍記成「沒有記錄」。
+- **測試**：`CommandEditTests`：
+  - 經過面板玩的一局：畫路線、補車、停站模式、買車、改節數、放到月台、配屬、時間走、改編組、改名後復原再重做、貸款、選路、票價、一個被拒絕的時刻表、刪停站模式。沒有任何一筆「沒有記錄」，存成檔案再讀回不變，重播到同一個世界。
+  - 每一種 `Edit` 存成檔案再讀回不變；不認得的分區讀成「沒有記錄」。
+  - 只有一個指令的編輯，和那個 `GameWorld` 指令得到同一個世界、同一個錯誤，經過 session 時全有或全無，被拒絕的也記。
+  - 其餘的行為由既有的 session 測試釘住（GamePresentation 1,065 個測試都通過）。
 
 ## 目前規則摘要
 

@@ -119,7 +119,8 @@ enum MapArt {
 
     /// The trains, each where it is `progress` of the way through its glide
     /// from the last tick (``TrainMotion``), then the rings round the
-    /// waiting ones. A train is in its line's colour (``Palette/trainColor``),
+    /// waiting ones, a deadlocked one's as strong as `deadlock`
+    /// (``TrafficOverlay/deadlockStrength(at:reduceMotion:)``). A train is in its line's colour (``Palette/trainColor``),
     /// every one in the map's train colour with `plain`; its body is cased
     /// in ``Palette/ink`` so that it reads over its own line. At night
     /// (`lights` above 0) each head shines in the stations' warm yellow.
@@ -130,6 +131,7 @@ enum MapArt {
         lights: Double,
         plain: Bool,
         traffic: TrafficOverlay,
+        deadlock: Double = 1,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -158,7 +160,7 @@ enum MapArt {
                 isSelected: run.train == selectedTrainID, isHighSpeed: run.isHighSpeed, projection: projection, in: context
             )
         }
-        drawWaitMarks(traffic, projection: projection, in: context)
+        drawWaitMarks(traffic, deadlock: deadlock, projection: projection, in: context)
     }
 
     // MARK: - Weather (decision 182)
@@ -276,12 +278,34 @@ enum MapArt {
     }
 
     /// A ring round each waiting train's head, over the trains: red with a
-    /// warning sign for a deadlocked one.
-    static func drawWaitMarks(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
+    /// warning sign for a deadlocked one, beating as strong as `deadlock`.
+    /// Rings that would overlap move apart across their track
+    /// (``WaitMarkSides``, the `Railway/` site's `blockSideShift`).
+    static func drawWaitMarks(_ traffic: TrafficOverlay, deadlock: Double = 1, projection: some MapProjection, in context: GraphicsContext) {
         let region = drawingRegion(projection)
         let radius = max(2.5, projection.referenceSize * 0.26) + 4
-        for wait in traffic.waits where region.contains(wait.from) {
+        let shown = traffic.waits.filter { region.contains($0.from) }
+        let marks = shown.map { wait in
             let center = projection.screenPoint(of: wait.from)
+            // A step of a metre (64 units) the way the train faces.
+            let length = (Double(wait.heading.dx) * Double(wait.heading.dx) + Double(wait.heading.dy) * Double(wait.heading.dy)).squareRoot()
+            let scale = length > 0 ? 64 / length : 0
+            let ahead = projection.screenPoint(
+                worldX: Double(wait.from.x) + Double(wait.heading.dx) * scale,
+                worldY: Double(wait.from.y) + Double(wait.heading.dy) * scale
+            )
+            return WaitMarkSides.Mark(train: wait.train, center: center, along: ScreenPoint(x: ahead.x - center.x, y: ahead.y - center.y))
+        }
+        // The ring's width and its 5-point halo.
+        let offsets = WaitMarkSides.offsets(marks, size: radius * 2 + 5)
+        for (wait, placed) in zip(shown, marks) {
+            var center = placed.center
+            if let offset = offsets[wait.train] {
+                center.x += offset.x
+                center.y += offset.y
+            }
+            var context = context
+            if wait.isDeadlocked { context.opacity = deadlock }
             let ring = disc(at: center, radius: radius)
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
             context.stroke(ring, with: .color(wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber), lineWidth: 3)

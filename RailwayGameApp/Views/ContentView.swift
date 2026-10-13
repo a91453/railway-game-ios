@@ -523,13 +523,13 @@ private struct DetailsCard: View {
     @State private var headHeight: CGFloat = 0
     @State private var middleHeight: CGFloat = 0
     @State private var footHeight: CGFloat = 0
+    /// The layout the card keeps for what it shows (``pinsEnds``); `nil`
+    /// until its heights have changed since it began to show it.
+    @State private var pinned: Bool?
 
     /// The card's inner margin, and the gap between its parts.
     private static let padding: CGFloat = 14
     private static let spacing: CGFloat = 12
-    /// The least the middle keeps of its own while the head and foot stay
-    /// put: about two rows of options.
-    private static let leastMiddle: CGFloat = 88
     /// How far the middle fades into the head and foot when it scrolls.
     private static let fade: CGFloat = 8
 
@@ -552,8 +552,13 @@ private struct DetailsCard: View {
     }
 
     /// Whether the head and foot stay put, the middle scrolling between.
+    /// Something new to show decides afresh; the same thing keeps its
+    /// layout until the other is needed (``DetailsCardLayout``), so a head
+    /// a line longer or shorter, as a train's when it stops and starts,
+    /// does not rebuild the middle, putting it back at its top and closing
+    /// a menu open in it (TestFlight 56.1).
     private var pinsEnds: Bool {
-        ends + Self.leastMiddle <= maxHeight
+        pinned ?? DetailsCardLayout.pinsEnds(ends: ends, maxHeight: maxHeight, pinned: nil)
     }
 
     var body: some View {
@@ -579,6 +584,8 @@ private struct DetailsCard: View {
                         }
                     }
                     .tutorialClip()
+                    // Which of the two layouts shows, for the UI tests.
+                    .accessibilityIdentifier("details.scroll.middle")
                     if hasFoot { foot }
                 }
             } else {
@@ -592,9 +599,16 @@ private struct DetailsCard: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicatorsFlash(onAppear: true)
                 .tutorialClip()
+                .accessibilityIdentifier("details.scroll.whole")
             }
         }
         .frame(height: min(max(ends + middleHeight, 1), maxHeight), alignment: .top)
+        .onChange(of: [ends, maxHeight]) {
+            pinned = DetailsCardLayout.pinsEnds(ends: ends, maxHeight: maxHeight, pinned: pinned)
+        }
+        .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) {
+            pinned = nil
+        }
         .glassBackground(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("details.card")

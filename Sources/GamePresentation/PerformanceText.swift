@@ -221,11 +221,7 @@ extension GameSession {
     /// `GameWorld.setTrainPerformance(_:to:)`: not while it runs a service.
     public func setSelectedTrainPerformance(_ performance: TrainPerformance) {
         guard let train = requireSelectedTrain() else { return }
-        perform { world throws(GameError) in
-            var draft = world
-            try draft.setTrainPerformance(train.id, to: performance)
-            if train.position != nil, train.movement.rate > 0 { try draft.useTrainPerformanceForMovement(train.id) }
-            world = draft
+        perform(.setTrainPerformance(train.id, performance)) { _, _, _ in
             let text = performance.displayText(in: language)
             return language.text("\(train.name) now runs as \(text).", "\(train.name) 的性能改為 \(text)。")
         }
@@ -239,8 +235,7 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: language.text("Create or choose a line first.", "請先建立或選擇一條路線。"))
             return
         }
-        perform { world throws(GameError) in
-            try world.setLinePerformance(line.id, to: performance)
+        perform(.setLinePerformance(line.id, performance)) { _, _, _ in
             let text = performance.displayText(in: language)
             return language.text("\(line.name) plans its journeys as \(text).", "\(line.name) 以 \(text) 規劃行程。")
         }

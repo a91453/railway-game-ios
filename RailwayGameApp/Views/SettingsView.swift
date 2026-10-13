@@ -31,6 +31,12 @@ struct SettingsView: View {
     /// Decision 182: the map's time of day and weather, on the device.
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    /// Decision 193: whether the game's save and commands go with a
+    /// problem report: the player's choice, off until they turn it on.
+    @State private var attachesCommandLog = false
+    /// The file written for it, and what the player is told it holds;
+    /// `nil` while it is being written.
+    @State private var commandLog: (file: URL?, text: String)?
 
     var body: some View {
         NavigationStack {
@@ -251,11 +257,40 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.version")
-            ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
-                Label {
-                    Text(verbatim: language.text("Report a Problem", "回報問題"))
-                } icon: {
-                    Image(systemName: "exclamationmark.bubble")
+            if let session {
+                Toggle(isOn: $attachesCommandLog) {
+                    Label {
+                        Text(verbatim: language.text("Attach the Save and Commands", "附上存檔與指令紀錄"))
+                    } icon: {
+                        Image(systemName: "paperclip")
+                    }
+                }
+                .accessibilityIdentifier("settings.report.attach")
+                .onChange(of: attachesCommandLog) { _, attaches in
+                    commandLog = nil
+                    if attaches { prepareCommandLog(of: session, version: report.version, build: report.build) }
+                }
+                if attachesCommandLog {
+                    if let commandLog {
+                        Text(verbatim: commandLog.text)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("settings.report.attached")
+                    } else {
+                        ProgressView()
+                    }
+                }
+            }
+            Group {
+                if attachesCommandLog, let file = commandLog?.file {
+                    ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: report.text(in: language))) {
+                        reportLabel(language)
+                    }
+                } else {
+                    ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
+                        reportLabel(language)
+                    }
+                    .disabled(attachesCommandLog)
                 }
             }
             .accessibilityIdentifier("settings.report")
@@ -273,9 +308,44 @@ struct SettingsView: View {
             Text(verbatim: language.text("About", "關於"))
         } footer: {
             Text(verbatim: language.text(
-                "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there. Website opens alongthelinegame.com in the game.",
-                "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送；你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。「官網」在遊戲裡打開 alongthelinegame.com。"
+                "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there. Website opens alongthelinegame.com in the game.",
+                "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。「官網」在遊戲裡打開 alongthelinegame.com。"
             ))
+        }
+    }
+
+    private func reportLabel(_ language: DisplayLanguage) -> some View {
+        Label {
+            Text(verbatim: language.text("Report a Problem", "回報問題"))
+        } icon: {
+            Image(systemName: "exclamationmark.bubble")
+        }
+    }
+
+    /// Writes the game's command log (decision 193) to a file for the share
+    /// sheet, off the main actor: the save it starts from may be megabytes,
+    /// and the digests read the bundled data files.
+    private func prepareCommandLog(of session: GameSession, version: String, build: String) {
+        let log = session.commandLog
+        let world = session.world
+        let language = DisplayLanguage.app
+        Task {
+            let prepared = await Task.detached(priority: .userInitiated) { () -> (file: URL?, text: String) in
+                let data = CommandLogReport.digests { name in
+                    let url = Bundle.main.url(forResource: (name as NSString).deletingPathExtension, withExtension: (name as NSString).pathExtension)
+                    guard let url else { throw CocoaError(.fileNoSuchFile) }
+                    return try Data(contentsOf: url)
+                }
+                let report = CommandLogReport(log: log, world: world, version: version, build: build, data: data)
+                let file = FileManager.default.temporaryDirectory.appendingPathComponent(CommandLogReport.fileName)
+                do {
+                    try report.encoded().write(to: file, options: .atomic)
+                    return (file, report.attachmentText(in: language))
+                } catch {
+                    return (nil, language.text("The file could not be written: \(error.localizedDescription)", "無法寫出檔案：\(error.localizedDescription)"))
+                }
+            }.value
+            if attachesCommandLog { commandLog = prepared }
         }
     }
 
