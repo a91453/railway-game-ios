@@ -2508,6 +2508,19 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 簡化：只有中心線一股，瑞芳、猴硐、三貂嶺、十分加 400 m 的待避線；真實的宜蘭線是雙線。運量是遊戲的數字，不是真實的運量。
 - 建造的時間：Linux 的 release 約 0.4 秒、debug 約 8 秒，幾乎都在 GameCore 每段軌道的間距與交叉檢查（約 200 段）；實機沒有量。
 
+**之後的修正（2026-10-13，TestFlight 56.1 兩位玩家回報）：底圖一直跟著遊戲的相機，而且一直是平的、北朝上。**
+- 回報：(A)「從 OpenStreetMap 切到衛星，路線會直接跑掉」；(B) 鋪軌時「路軌呈現 3D」、「調節角度期間離開原定的位置」。
+- 原因（Simulator 量到的，VERIFIED）：`FollowingMapView` 用 `setVisibleMapRect` 把整個 view 的範圍交給 MapKit，但 MapKit 把它放進 view 的 layout margins 裡面（決策 120 為了 Apple 的標誌與法律連結設的底部帶子，加上安全區域），不是整個 view。iPhone 橫拿時（874 × 402 點，左右各 72、下 27），地圖小了約五分之一、偏下：量到的四邊是左 −86、上 −24、右 +86、下 +55 點（run 38356653482；未修正的版本同樣錯開）。三種 Apple 底圖都一樣；預設的 OpenStreetMap 不受影響，所以玩家是在切到衛星時看到路線「跑掉」。B 的「離開原位」也是相對底圖：遊戲自己的畫（預覽、起點旗、節點）用同一個相機，彼此一致，Linux 上掃過各種角度、高度與構造（地面、高架），預覽的頭尾都在起點與終點上。另外，MapKit 自己再改範圍（載入完、套用樣式、放大不到）時沒有人拉回來。
+- 改法：
+  - `BaseMapFollowing`（GamePresentation，Linux 測試）決定要不要再要一次：新的範圍一定要；同一個範圍只在 MapKit 離開它上一次的回應時再要，最多 3 次，所以 MapKit 一直不肯也不會無限迴圈。它也量出 MapKit 拒絕放大時多顯示了幾倍（`refusal`，同一個中心、寬 2% 以上）。
+  - `FollowingMapView` 交給 MapKit 的是遊戲在 layout margins 裡面那一塊的範圍，MapKit 放進 margins 之後，整個 view 就和遊戲的相機一致。量的是 MapKit 把 view 的四個角畫在哪裡（`convert(_:toCoordinateFrom:)`），不用 `visibleMapRect`（它在 Simulator 說的不是畫出來的範圍）。
+  - 在 `mapView(_:regionDidChangeAnimated:)`、`mapViewDidFinishLoadingMap` 重新套用（設定中不重入），畫完（fully rendered）後重試的次數重新算；`cameraZoomRange` 放到最近，讓 MapKit 放大圖磚而不是停在較遠。
+  - MapKit 還是拒絕時，`MapView` 記下那個縮放（`baseMapZoomLimit`，換底圖樣式就忘記，最低不低於每 16 m 8 點），相機不再更近、「放大」按鈕停用，疊圖就對得上。OpenStreetMap（MapLibre）不受影響。
+  - 兩種底圖都有 `allowsTilt`（預設 false）：每次套用時，相機有傾斜或旋轉就設回正上方、北朝上。之後的「拉近傾斜」3D 模式（決策 97 指向 MapLibre）可以打開。
+  - 選地點的畫面（`RealWorldPicker`）：只能移動、縮放（`interactionModes: [.pan, .zoom]`），樣式平面（`.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)`），中心改取相機的中心：地圖傾斜時 region 的中心不在「+」下面，開局地點可能和「+」不同。
+- UI 測試：Debug 版在 `-ui-testing` 下，`map.base` 讀出 Apple 地圖是否顯示遊戲相機的範圍（四邊都在 1 點內是 `follows`，否則 `wider` 或 `off` 加上左、上、右、下各差幾點，傾斜時加 `tilted`）；`RealWorldMapUITests/testAppleMapLinesUpAfterChangingToSatellite` 從 OpenStreetMap 切到衛星、放大到底，等它讀出 `follows`（full lane，需要 Apple 的圖磚）。
+- 沒做：兩個底圖 view 都留著、切換時只隱藏一個（M）。
+
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
 
 2026-10-03。E2 合併、實機確認之後，作者決定**現在**做 F3，排在 F2、U-min、V 之前，並交給 Claude Code 選「對未來幫助最大、又不影響新功能」的做法。這一條記下範圍與步驟；每一步的細節在各自的 PR 補上。
@@ -6304,6 +6317,17 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
   - 代價：在別的遊戲接續時，那局原本就有的軌道或車站也會算。
 - **「略過」不加確認**：可以接續就夠了。
 
+**之後的修正（2026-10-13，#491 留下的缺口：教學沒有教玩家讀路線卡）**：「營運」章在第一筆車資之後多兩步，教學從 19 步變 21 步。
+- **第 17 步 `line.card.open`「點『路線』看營運收支」**：圈出「路線」入口（`hud.lines`）。新的目標 `TutorialGoal.openLines`：路線面板在畫面上就算做完。面板是 App 的狀態，所以 `ContentView` 在面板開關時呼叫 `GameSession.linesPanelDidChange(isShown:)`，和 `mapDidMove()` 同一種做法。新的準備 `TutorialSetup.selectNewestLine`：沒有選路線時選最新那條（教學蓋的線），玩家選了別條就照玩家的。
+- **第 18 步 `line.card.read`「看懂路線卡」**：要讀的步驟，打開路線面板（`panel: .lines`）並捲到路線卡（`revealsInPanel`）。圈出兩個新目標：
+  - `TutorialTarget.lineLoss`（`line.loss`）：決策 194 的收支長條與虧錢原因。
+  - `TutorialTarget.lineLossFix`（`line.loss.fix`）：第一個原因旁的一鍵修正。
+  - 路線卡要等路線跑完第一個整天才有。還沒有時只圈出路線面板（`sidePanel`），卡片的內文說每天結算，玩家知道之後去哪裡看。
+- **第 19 步 `station.select`** 加 `panel: .closed`：點車站前先關掉路線面板，地圖讓出來。
+- `LinesPanel.swift` 只加錨點：路線卡掛 `tutorialPanelTarget(.lineLoss)` 與 `.id`，第一個修正按鈕掛 `tutorialPanelTarget(.lineLossFix)`。段落順序與內容沒動。
+- **參考**：`Ci/` 的 `TUTORIAL_STEPS` 第 7–9 步打開路線資訊面板（`openUI` 選第一條有車站的線），圈出面板與其中一列（`#panel-line-info`、`#line-info-capacity-row`），這兩步照這個做法。參考沒有讀收支或虧損的步驟，內文是本專案寫的。外部專案沒有搜尋：參考的做法已經夠用。
+- `TutorialJourneyUITests` 一起改：第 17 步點 `entry.lines`，第 18 步按「下一步」，之後的步驟號碼加 2。
+
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 
 2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -6670,6 +6694,41 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；面板的順序、選單與購買鍵在橫拿手機上的樣子要在 macOS CI 的 UI 測試與實機上看。
 
+### 198. 實景地圖的新遊戲可以選「地形：平坦」
+
+2026-10-13，作者要求：實景地圖的新遊戲多一個「地形：真實／平坦」選項，平坦時軌道一律水平，不用考慮坡度與隧道。號碼依工作登記 #231：決策 198；存檔版本、golden schema 不動。只改 GamePresentation 與 App：GameCore、存檔格式、golden、replay 都不變。
+
+玩家看到的：想在台灣的真實地圖上專心排路線、經營，不想處理山線坡度、隧道與高架造價的玩家，可以在「新遊戲選項」把地形改成平坦，之後開的實景地圖新遊戲，軌道一律蓋在水平面上。預設仍是真實，沒改選項的玩家什麼都不變。
+
+1. **選項**（`NewGameOptions.Ground`：`real`、`flat`；`NewGameOptions.ground`，預設 `real`）：
+   - 和其他新遊戲選項一樣記在裝置上（`LauncherPreferences`）。`NewGameOptions` 改成自己讀檔（`init(from:)`）：檔案缺哪個選項就用預設。原本自動產生的 `Decodable` 少一個鍵就整個失敗，舊版寫的偏好檔（沒有 `ground`）會被當成第一次開 App（引導卡重來、選項全部回到預設）。
+   - 只影響實景地圖的新遊戲：選地點的 16 km 地圖、台灣一塊一塊買的地圖（決策 167）、全台灣（決策 88）。空白地圖本來就平坦；示範地圖、每週挑戰、平溪與劉銘傳挑戰照舊（劉銘傳挑戰固定是真實地形）。
+   - 選項下面的摘要（`summary(in:)`）在平坦時多「實景地圖地形平坦」，真實時不提。
+2. **怎麼做到平坦**：決策 124 的實景新遊戲在開局時 `mapGround()`，之後軌道蓋到哪裡才讀那一塊的高度。平坦就是**不呼叫** `mapGround()`（`GameLauncher.grounded(_:_:)`）：世界沒有地面，`groundHeight(at:)` 處處 0、`missingGroundBlocks` 是空的，網路工具什麼都不讀，和空白地圖、存檔版本 27 以前的實景存檔一樣。所以：
+   - 軌道照網路工具的高度（`networkHeight`，預設 0）水平地蓋，「自動」結構全是地面段，不需要隧道、高架或挖填方，也沒有土方與墩高費；坡度只來自玩家自己選的高度差。
+   - 存檔裡本來就沒有地面，讀回來仍然平坦；之後也不會因為 App 有高度檔而補讀（`mapGround()` 只給沒有軌道的世界，而且只在開局呼叫）。
+   - 不需要新的 GameCore 規則、存檔欄位或指令。
+3. **不變的**：水、河、湖（決策 105）與陡坡（決策 115）照舊。陡坡限制的是**城市**（山坡地不開發），不是軌道；山區的觀光景點、人口、土地、底圖的山影也都不變。
+4. **畫面的回饋**：
+   - 新遊戲選項多一段「地形（實景地圖）」，分段選擇「真實／平坦」（`newGameOptions.ground`），說明：「真實：軌道隨山勢起伏，太陡的地方要用隧道或高架。平坦：軌道一律水平，不用考慮坡度與隧道。空白地圖一律平坦。」
+   - 選地點的畫面在平坦時多一行「地形平坦：這張地圖的軌道一律水平。可在『新遊戲選項』更改。」，按「在這裡建造」之前看得到。
+   - 網路工具的「地面海拔 … 公尺」（決策 124）只在世界有地面時顯示（`groundText(at:)`）：平坦時軌道不看這些高度，顯示出來會讓玩家以為要爬坡。沒有地面的舊實景存檔與平溪挑戰也不再顯示（它們的軌道本來就是水平的）。
+   - 高度圖層（決策 124 H3）在平坦的實景地圖上照樣畫真實的起伏與陡坡（和底圖的山影一致），圖例多一行「地形平坦：不論這裡的高度，軌道一律水平。」（`TerrainMap.tracksLevel`）。
+
+**參考**（`a91453/railway-reference-private` `382b9f8`；`Ci/`、`Railway/`、`Simulator/`、`MapBuilder/`、`OpenWorld/` 都搜過 terrain、flat、flatten、3D地形）：
+
+| 參考 | 行為 | Swift（決策 198） | 分類 |
+| --- | --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_*.js` `toggleHongKongMapTerrain3dMode`（「3D地形」勾選，存在 `localStorage`） | 地圖顯示的 3D 地形開關，不影響路線 | `NewGameOptions.ground`，記在 `LauncherPreferences` | 只取「選擇記在裝置上」的做法；規則是 gap → 原生 |
+| `Railway/site_archive_clean/rail-3d/integration/map3d.js` `setTerrain({source:'terrain',exaggeration:1})` | 顯示用的 DEM 地形 | （沒有移植） | 參考：沒有「軌道不看地形」的規則 |
+| （參考沒有）開局選平坦地形 | `GameLauncher.grounded(_:_:)` 平坦時不 `mapGround()` | gap → 原生 |
+
+參考庫沒有遊戲規則上的對應，程式是本專案自己寫的；外部專案沒有用到程式碼或資料。
+
+**測試**：`FlatGroundTests`（預設真實、兩種語言的名稱與摘要；舊偏好檔照讀、不當成第一次開 App，平坦記到下次啟動；平坦的實景新遊戲沒有地面、處處 0 m、沒有要讀的區塊，真實時有地面，全台灣也一樣；南投山坡上 512 m、地面落差超過 20 m 的軌道在平坦時節點都在 0 m、沒有隧道與其他結構，存檔後繼續玩仍然平坦、再蓋也是；高度圖層的 `tracksLevel`）。`HeightGridTests.testTheNetworkToolShowsTheGroundAtItsEnds` 的實景世界改成有地面（`mapGround()`，新遊戲本來就是這樣），並多驗沒有地面時不顯示海拔。
+
+**沒有驗證的**：Linux 不能建置 App；選項段、選地點畫面那一行與圖例在 iPhone／iPad 上的樣子、Dynamic Type 下的換行與 VoiceOver 的念法，要在 macOS CI 與 TestFlight 上看。
+
 ### 199. PR 的 UI 測試閘門：約 6 分鐘的上限，等待不空等一秒
 
 2026-10-13，作者問 CI 的 UI smoke tests 怎麼縮短，請 Claude 以開發者的角度決定並動手。號碼依工作登記 #231：決策 199；存檔版本、golden schema 不動。App、GameCore、GamePresentation 都不動；存檔、golden、replay 都不變。
@@ -6714,6 +6773,41 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **參考庫與外部專案**：參考庫沒有 iOS 的 UI 測試或 CI。沒有另外找外部專案：等待的第一秒是從這個 repository 的 CI log 量到的，`build-for-testing`／`test-without-building` 是 Xcode 本身的指令。沒有新的依賴。
 
 **沒有驗證的**：Linux 不能建置 UI 測試，也不能跑 Xcode。換名後能不能編譯、`test-without-building` 有沒有用到建置步驟的產物、時間省了多少，要看這個 PR 的 ios-build 執行；閘門以外的 UI 測試要看 full lane。
+
+### 200. 無限資金
+
+2026-10-13，作者定案（研究在 `docs/research/NEXT_PRIORITIES_2026-10-12.md` §10 第 22 題；先研究的是「自由模式＋無限資金」，作者從開發、美術、玩家三方面重看之後改成這裡的做法）。號碼依工作登記 #231：決策 200、存檔版本 51；golden schema 不動。
+
+**不是新的自由模式**：新遊戲（經營模式）多一個選項「資金：一般／無限」。乘客、土地、城鎮成長、觀光、票價與成本都照經營模式的一般規則，只是不扣錢。舊的 `EconomyMode.free`（決策 36、46）原樣保留給舊存檔與遊戲內的切換，規則不變（52 份 golden 用它，一個值都沒動）。介面不叫「簡易模式」「輕鬆模式」（和難度「輕鬆」、車站等級「簡易站」撞名），也不再叫一個「自由模式」。
+
+0. **新遊戲選項**（`NewGameOptions.funds`：`standard`／`unlimited`，畫面「資金：一般／無限」，`newGameOptions.funds`）：`apply(to:)` 用 `setUnlimitedFunds(_:)` 設定，所以空白、實景與全台灣的新遊戲都套用；教學、挑戰與示範不套用新遊戲選項，所以永遠付錢。起始資金寫「∞」，說明那一段多「資金無限，不計成就」。選項存在裝置上，缺欄位時讀成預設值（之前存的選項照樣讀得到）。
+1. **扣錢的關口**（GameCore，`GameEconomy.unlimitedFunds`，`GameWorld.setUnlimitedFunds(_:)`，免費）：`GameEconomy` 是唯一動餘額的地方。開著時 `canAfford` 一律為真，`spend`、`earn`、`settle` 都不動餘額，所以建造、買車、加車廂、改車種、買地圖格、收購、觀光商店、貨運場都不扣錢，也不會因為沒錢被拒絕；結算（營運、能源、人事、利息、稅、建物）照常算、照常寫進帳本，只是不從餘額出入。沒有用很大的金額代表 ∞：`settle`、`earn` 是 Int64 的加法，會溢位。資產紀錄照常記每樣東西的價格。
+2. **存檔**：`"economy"` 只在開著時寫 `"unlimitedFunds": true`，所以其他世界存起來和之前一樣；讀檔缺 key 是關，每個版本 51 以前的存檔照舊付錢。存檔版本 51：只讀到 50 的 build 會丟掉它，讓公司開始從一個從來不用顧的餘額付錢，所以說存檔比它新。fixture `SaveFixtures/v51-unlimited-funds.json`。
+3. **畫面**（GamePresentation `GameEconomy.cashText`、`showsInTheRed`）：
+   - HUD 的現金換成一顆「∞」膠囊（`hud.unlimitedFunds`，文字色 `textPrimary`，不用收入的綠色），沒有收入飄字，VoiceOver 唸「資金無限」。
+   - 經濟面板的餘額寫「∞」、不顯示紅字，多一行「資金無限：建造與購買都不扣款，票收與成本照常計算。資金無限的局不計成就。」（`economy.unlimitedFunds`）；不顯示貸款（借了也不會進帳）與資產負債表；報表與年度決算的現金流量表不寫期末現金。
+   - 月報不列現金（`MonthlyReport.unlimitedFunds`）。
+   - 讀檔清單的存檔卡寫「∞」（`SaveSummary.unlimitedFunds`，只在開著時寫）。
+   - 站長的赤字、秘書室的負債、挑戰的破產倒數都看 `showsInTheRed`（永遠不在紅字）；秘書室「可以買下一塊地」與路線面板補車的價錢紅字改用 `canAfford`。
+   - 地圖不換色。建造與購買的價錢照樣顯示（是原價），完成時的訊息寫實際付的 $0。
+4. **成就與公司評等**：資金無限的局不解鎖成就（`GameLauncher.checkAchievements` 讀世界上的開關，所以存檔再打開也不會解鎖），目標面板的公司評等換成「資金無限的局不計成就與公司評等。」，成就入口變灰並寫「資金無限的局不計成就」；其他存檔已經拿到的成就不受影響。挑戰的獎牌不用另外處理：挑戰不套新遊戲選項。
+5. **運量**：照經營模式，由土地決定，第一版不能手動改。
+6. **不做的**：空白地圖一鍵全開（另開 PR）、匯入存檔會解鎖成就的問題（另案）。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Ci/` 的 `access.mode.creative`「创意模式：无资金限制，自由设计交通网络。」，進城時的模式選擇（`access.mode.choiceTitle`） | 新遊戲選項「資金：無限」；`GameEconomy.unlimitedFunds` | 機制 faithful（無資金限制）；作者決定掛在經營模式上，不另立模式 |
+| `isMetroEconomyEnabled()` 只在 `management` 為真：額度、收費、結算都只在經營模式 | `canAfford`／`spend`／`earn`／`settle` 在無限資金時不動餘額，結算照記 | 部分 faithful：參考的創意模式不計財務，這裡照記帳只不扣錢 |
+| `notice.audit.130`「创意模式不计算财务」、`flow.dashboard.creativeNotice`「创意模式不显示经营数据」 | 不解鎖成就、不計公司評等，不顯示現金相關的數字 | 依作者的決定 |
+| `updateMetroEconomyHud`：創意模式把金額藏起來 | HUD 寫「∞」膠囊 | 作者的決定（不藏，寫 ∞） |
+
+外部專案：參考已經有這個機制，沒有另外找。
+
+**測試**：`UnlimitedFundsTests`（GameCore：經濟本身、零餘額照樣建造與買車且資產照記、沒有開關時被拒絕、關掉之後照付、地圖格不扣錢、結算照記但不動餘額、缺 key 的存檔、版本 51 的 fixture）；`UnlimitedFundsTextTests`（∞ 與紅字、存檔清單）；`AchievementsTests.testUnlimitedFundsUnlockNothing`（含存檔再打開）。`SavedGameTests` 的目前版本 50 → 51。
+
+**沒有驗證的**：Linux 不能建置 App；HUD 的 ∞ 膠囊、經濟面板、目標面板、存檔卡與新遊戲選項的樣子要等 macOS CI 與實機。
 
 ## 目前規則摘要
 
@@ -6776,11 +6870,11 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 全島地圖（決策 88）：實景的「全台灣」是本島加澎湖、約 285.6 × 389.7 km 的世界，土地按需展開：以 1,024 m 的區塊（`LandBlock`）讀入，世界記下讀過的區塊（`landBlocks`，存檔版本 18），蓋站時讀入 2 km 內還沒讀的區塊。其他新遊戲還是 16 km、土地完整。
 - 年度節慶（決策 90）：劇本可以有每年同一天、在某站提高需求的節慶，提前公布，成為種類 festival 的需求事件；平溪線劇本的天燈節在十分與平溪。
 - 玩家建物（決策 92、94、95）：建築工具先選建地、看預覽，再按「建造」蓋小住宅、商店或辦公大樓（自由座標的正方形，不綁土地格），不能出界、重疊或離軌道（隧道除外）與車站不到 2 m。經營模式下建物是公司的資產：付樓地板 × $40 加占地 × 地價，30 年折舊；有車站服務時每個午夜住進居民與就業、帶來運量，收租金、付維護與土地資產稅；拆除付建造費的 10%；出售（決策 130）收目前的土地使用權 × 95% 加建物帳面價值 × 入住係數（半滿以上全額），已實現損益記在資本日，建物交給城市、人留在中心那一格。擋到的城市建物（格子中央 40 m 見方；決策 142 起新遊戲依密度 20–40 m）以 120% 收購並拆除，人搬進來，城市不再在那裡長；之後蓋的軌道（隧道除外）與車站穿過公司建物時付拆除費拆掉它。自由模式免費、不記帳。
-- 水域（決策 105）：地形是土地用途以外的另一層，實景地圖的海、河、湖是水（OSM 的海岸線與水域，魚塭除外）。水上沒有土地：城市不往水上擴張，玩家建物碰到水就拒絕（`onWater`），水格不劃分區（整個矩形都是水時拒絕）；鐵路與車站暫時照樣能蓋。空白地圖沒有水。決策 111：漁人碼頭與遊艇港一定要蓋在岸邊（一部分在水上，否則 `needsShore`）；水邊 160 m 內地價加 $6／m²。決策 115：坡度超過 30% 的乾格是陡坡，城市不在上面擴張或升級，玩家建物與分區都不行（`onSteepSlope`）；已有的土地照舊，鐵路照舊能蓋。決策 124：世界可以讀入地面高度（1 km 區塊、17 × 17 個 64 m 角點的整數公尺，`setGround`），任一點的高度是格四角的整數雙線性內插；沒有地面的世界處處是 0 m。H2：新實景遊戲有地面，軌道量地面、每 16 m 分成地面、路堤、路塹、高架、橋、隧道（結構物「自動」），過水要橋或隧道，加土方與墩高費，車站不在水上；沒有地面的世界照舊。
+- 水域（決策 105）：地形是土地用途以外的另一層，實景地圖的海、河、湖是水（OSM 的海岸線與水域，魚塭除外）。水上沒有土地：城市不往水上擴張，玩家建物碰到水就拒絕（`onWater`），水格不劃分區（整個矩形都是水時拒絕）；鐵路與車站暫時照樣能蓋。空白地圖沒有水。決策 111：漁人碼頭與遊艇港一定要蓋在岸邊（一部分在水上，否則 `needsShore`）；水邊 160 m 內地價加 $6／m²。決策 115：坡度超過 30% 的乾格是陡坡，城市不在上面擴張或升級，玩家建物與分區都不行（`onSteepSlope`）；已有的土地照舊，鐵路照舊能蓋。決策 124：世界可以讀入地面高度（1 km 區塊、17 × 17 個 64 m 角點的整數公尺，`setGround`），任一點的高度是格四角的整數雙線性內插；沒有地面的世界處處是 0 m。H2：新實景遊戲有地面，軌道量地面、每 16 m 分成地面、路堤、路塹、高架、橋、隧道（結構物「自動」），過水要橋或隧道，加土方與墩高費，車站不在水上；沒有地面的世界照舊。決策 198：新遊戲選項的「地形：平坦」讓實景新遊戲不讀地面（不 `mapGround()`），軌道一律水平；預設真實。
 - 車站建在世界座標的一點（`buildStation(named:at: PlanPoint)`）：只在路網的邊上有月台；點必須在世界範圍內（否則 `outOfBounds(點)`），收一座車站的費用（決策 44、54）。F3c 起這是唯一的車站（決策 51）。
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。 版本 13 以後每一版的內容與 fixture 見 `SaveFixtures/README.md`（目前是 50）。
 - 車站可以拆除（決策 83，`removeStation`）：免費、不退款；有服務需要它的月台、或車上有從它出發、到它或在它換車的乘客時拒絕；等車的乘客放棄，路線拿掉這站，月台一起拆。
-- 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。無限資金（決策 200，存檔版本 51）：什麼都不扣、不會因為沒錢被拒絕，結算照記但不動餘額。
 - 車輛經濟（決策 180）：App 的新遊戲打開 `rollingStockEconomics`（存檔版本 49；示範地圖、挑戰與教學關掉）：列車依車種與節數計價，改車種付新車種價格減舊車的賣價、最少 0（決策 180 之後的修正，`RollingStock.refitFee`），`sellTrain` 取回帳面價值的 70 %（列車必須離軌、離線、沒有服務，否則 `trainInService`），路線上列車的人事、能源、保養依 節數 × 車種係數 計，車公里依車種係數計。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。

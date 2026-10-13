@@ -5,7 +5,9 @@ import SwiftUI
 /// The new game's options (decision 177), after A-Train's difficulty choice:
 /// easy, standard or expert, with the cash each starts with; how much the
 /// holidays and weather disturb the traffic; whether building materials,
-/// the towns beyond the map's edge and buying the map are on; and the map's
+/// the towns beyond the map's edge and buying the map are on; a real-world
+/// map's ground, real or flat (decision 198); the funds, standard or
+/// unlimited (decision 200); and the map's
 /// seed, to share a map. The choices are kept on the device
 /// (``GameLauncher/newGameOptions``) and used by every new game until
 /// changed; a line at the bottom says what they change.
@@ -33,9 +35,31 @@ struct NewGameOptionsView: View {
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("newGameOptions.difficulty")
-                    LabeledContent(language.text("Starting cash", "起始資金"), value: launcher.newGameOptions.startingBalance.moneyText)
+                    LabeledContent(
+                        language.text("Starting cash", "起始資金"),
+                        value: launcher.newGameOptions.funds == .unlimited ? "∞" : launcher.newGameOptions.startingBalance.moneyText
+                    )
                 } header: {
                     Text(verbatim: language.text("Difficulty", "難度"))
+                }
+                // Decision 200: a managed game that pays for nothing.
+                Section {
+                    Picker(selection: options.funds) {
+                        ForEach(NewGameOptions.Funds.allCases, id: \.self) { funds in
+                            Text(verbatim: funds.title(in: language)).tag(funds)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Funds", "資金"))
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("newGameOptions.funds")
+                } header: {
+                    Text(verbatim: language.text("Funds", "資金"))
+                } footer: {
+                    Text(verbatim: language.text(
+                        "Unlimited: building and buying cost nothing, and fares, costs, passengers and towns follow the usual rules. Games with unlimited funds do not count for achievements.",
+                        "無限：建造與購買都不扣款，票收、成本、乘客與城鎮照一般規則。資金無限的局不計成就。"
+                    ))
                 }
                 Section {
                     Picker(selection: disruption) {
@@ -65,6 +89,25 @@ struct NewGameOptionsView: View {
                     Text(verbatim: language.text(
                         "Materials: towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Buying the map applies to a blank map; real-world maps decide for themselves.",
                         "建材：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。分區購買只適用於空白地圖，實景地圖有自己的規則。"
+                    ))
+                }
+                Section {
+                    // Decision 198: real-world maps only; a blank map is flat.
+                    Picker(selection: options.ground) {
+                        ForEach(NewGameOptions.Ground.allCases, id: \.self) { ground in
+                            Text(verbatim: ground.title(in: language)).tag(ground)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Terrain", "地形"))
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("newGameOptions.ground")
+                } header: {
+                    Text(verbatim: language.text("Terrain (real-world maps)", "地形（實景地圖）"))
+                } footer: {
+                    Text(verbatim: language.text(
+                        "Real: track rises and falls with the hills, with tunnels and viaducts where they are steep. Flat: track is always level, with no grades or tunnels to think about. Blank maps are always flat.",
+                        "真實：軌道隨山勢起伏，太陡的地方要用隧道或高架。平坦：軌道一律水平，不用考慮坡度與隧道。空白地圖一律平坦。"
                     ))
                 }
                 Section {

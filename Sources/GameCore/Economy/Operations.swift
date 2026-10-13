@@ -38,6 +38,15 @@ extension GameWorld {
         refreshLandDemand()
     }
 
+    /// Turns unlimited funds on or off (decision 200, after the
+    /// reference's creative mode, `创意模式`): while on, building and buying
+    /// cost nothing and are never refused for want of money, and nothing
+    /// settled moves the balance; fares, costs and the rest of the rules
+    /// run and are recorded as ever. Free.
+    public mutating func setUnlimitedFunds(_ on: Bool) {
+        economy.unlimitedFunds = on
+    }
+
     /// Sets the network's fare rules. From then on fares change demand
     /// (see ``FareRules/demandFactor(fare:)``) while the company is managed.
     /// Free.

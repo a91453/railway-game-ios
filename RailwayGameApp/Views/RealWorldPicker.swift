@@ -87,8 +87,12 @@ struct RealWorldPicker: View {
     }
 
     /// Apple's map with the game's map drawn as a square round its middle.
+    /// Moved and zoomed only, flat and north up, as the game's map is
+    /// (decision 50): tilted, the "+" in the middle of the view was not
+    /// over the middle of the region MapKit reported, so a game could
+    /// start somewhere else than under it.
     private var preview: some View {
-        Map(position: $position) {
+        Map(position: $position, interactionModes: [.pan, .zoom]) {
             ForEach(railwayLines) { line in
                 MapPolyline(coordinates: line.coordinates)
                     .stroke(Color(line.color(colorScheme == .dark ? .dark : .light)), lineWidth: 2)
@@ -101,14 +105,15 @@ struct RealWorldPicker: View {
                 .foregroundStyle(Palette.station.opacity(0.15))
                 .stroke(Palette.ink, lineWidth: 2)
         }
-        .mapStyle(.standard(emphasis: .muted))
+        .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll))
         .onAppear {
             if railwayLines.isEmpty {
                 railwayLines = (launcher.railways?.lines ?? []).map(RailwayLineDrawing.init)
             }
         }
         .onMapCameraChange(frequency: .continuous) { context in
-            middle = context.region.center
+            // Where the camera looks: under the "+".
+            middle = context.camera.centerCoordinate
         }
         .overlay {
             Image(systemName: "plus")
@@ -164,6 +169,13 @@ struct RealWorldPicker: View {
                         ))
                     } else {
                         Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
+                    }
+                    // Decision 198: the ground chosen in the new game's options.
+                    if launcher.newGameOptions.ground == .flat {
+                        Text(verbatim: launcher.language.text(
+                            "Flat ground: track on this map is always level. Change it in New Game Options.",
+                            "地形平坦：這張地圖的軌道一律水平。可在「新遊戲選項」更改。"
+                        ))
                     }
                 }
                 .font(.footnote)
