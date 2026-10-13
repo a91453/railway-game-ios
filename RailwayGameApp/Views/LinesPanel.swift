@@ -35,6 +35,14 @@ struct LinesPanel: View {
     /// Decision 179: how the lines are ordered, or `nil` for the order
     /// they were made in.
     @State private var lineSort: LineReportSort?
+    /// The order the lines were sorted in when the panel opened, the sort
+    /// changed or the player asked (decision 184, later): kept while the
+    /// game runs, so a list by profit, riders or load does not move under
+    /// the finger at midnight.
+    @State private var lineOrder: [LineID]?
+    /// What the selected line shows that only a command changes, kept
+    /// while the game runs (decision 184, later).
+    @State private var memo = LinePanelMemo()
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
@@ -61,7 +69,7 @@ struct LinesPanel: View {
                         lineSection(line)
                         operatingSection(line)
                         stopsSection(line)
-                        ForEach(session.world.lineServiceSummaries(line.id, in: session.language), id: \.pattern) { summary in
+                        ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
                             serviceSection(summary, of: line)
                         }
                         // A ring has no patterns.
@@ -126,6 +134,8 @@ struct LinesPanel: View {
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
             }
+            .onAppear { sortLinesNow() }
+            .onChange(of: lineSort) { sortLinesNow() }
             // Taps on the map select again once the panel is closed.
             .onDisappear {
                 session.stopPickingLineStops()
@@ -280,10 +290,18 @@ struct LinesPanel: View {
         }
     }
 
-    /// The lines in the order chosen (decision 179).
+    /// The lines in the order chosen (decision 179), as they were sorted
+    /// last (``lineOrder``); a line made since goes last.
     private var sortedLines: [ServiceLine] {
         guard let lineSort, session.world.lineAccounts != nil else { return session.world.lines }
+        if let lineOrder { return session.world.lines(keeping: lineOrder) }
         return session.world.lineReports(sortedBy: lineSort).compactMap { session.world.line(id: $0.line) }
+    }
+
+    /// Sorts the lines by ``lineSort`` as their reports are now, and keeps
+    /// that order.
+    private func sortLinesNow() {
+        lineOrder = lineSort.map { session.world.lineReports(sortedBy: $0).map(\.line) }
     }
 
     /// The sorted lines the search and the filter keep (decision 184). A
@@ -330,6 +348,18 @@ struct LinesPanel: View {
                             Image(systemName: lineSort == order ? "checkmark" : "")
                         }
                     }
+                }
+                if lineSort != nil {
+                    Button {
+                        sortLinesNow()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Sort Again Now", "立即重新排序"))
+                        } icon: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                    }
+                    .accessibilityIdentifier("lines.sortAgain")
                 }
             } label: {
                 Label {
@@ -516,20 +546,20 @@ struct LinesPanel: View {
                 .foregroundStyle(Theme.textSecondary)
                 .accessibilityIdentifier("line.highSpeedText")
             }
-            if let journey = session.world.lineJourneyText(line.id, in: session.language) {
+            if let journey = memo.journeyText(line.id, of: session) {
                 Text(journey)
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
                     .monospacedDigit()
             }
             // Stage C2: single or double track between its stops (Stage S1).
-            ForEach(Array(session.world.lineTrackCountTexts(line.id, in: session.language).enumerated()), id: \.offset) { _, text in
+            ForEach(Array(memo.trackCountTexts(line.id, of: session).enumerated()), id: \.offset) { _, text in
                 Label(text, systemImage: "road.lanes")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
             ForEach(ServiceLevel.allCases, id: \.self) { level in
-                if let gap = session.world.lineCoverageText(line.id, at: level, in: session.language) {
+                if let gap = memo.coverageText(line.id, at: level, of: session) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
                         .font(.footnote)
                         .foregroundStyle(Theme.warning)
@@ -655,7 +685,7 @@ struct LinesPanel: View {
         return ForEach(pairs.indices, id: \.self) { index in
             let pair = pairs[index]
             let selected = preferences.first { $0.from == pair.0 && $0.to == pair.1 }
-            let choices = session.world.lineRouteChoices(line.id, from: pair.0, to: pair.1, pattern: pattern)
+            let choices = memo.routeChoices(line.id, from: pair.0, to: pair.1, pattern: pattern, of: session)
             // Decision 184, later: drawn from these values alone, so a
             // running game's ticks leave the open menu alone.
             let choiceTexts = choices.map(routeChoiceText)
@@ -783,7 +813,7 @@ struct LinesPanel: View {
     /// places and assigns them.
     private func staffSection(_ line: ServiceLine) -> some View {
         let language = session.language
-        let plan = session.world.lineStaffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars)
+        let plan = memo.staffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars, of: session)
         return Section {
             Picker(selection: $staffHeadway) {
                 ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in

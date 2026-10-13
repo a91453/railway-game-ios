@@ -6066,6 +6066,19 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
   - `MenuChoicesTests` 加「tick 不改選項」：車種、補車車種、月台軌道、各段股道。
   - UI 測試 `testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns` 與 `testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns`（作者截圖裡其實是運轉方式選單，25 列）：時鐘在跑時打開選單，3 秒不動，並選得到另一列。
 
+**之後的修正（路線面板每 tick 的主執行緒成本與排序跳動，TestFlight 56.1 之後，2026-10-13）**：#463 讓路線面板的選單不再被 tick 重建，但面板的 body 仍每 100 ms 重算一次選取路線的全部資料。
+- **快取**：新的 `LinePanelMemo`（GamePresentation，面板用 `@State` 持有一個）把只有指令會改的部分依 `commandRevision`、session、選取路線與語言保存，tick 時直接讀回：
+  - 各段的股道選擇 `lineRouteChoices`（找路，最貴）；
+  - 服務摘要 `lineServiceSummaries`；
+  - 行程 `lineJourneyText`；
+  - 軌道數 `lineTrackCountTexts`；
+  - 未涵蓋區段 `lineCoverageText`；
+  - 補車計畫 `lineStaffingPlan`（另依班距、車種、節數）。
+- **每 tick 照算的**：服務摘要裡「行駛中」的列車數（從當下的世界重數）、路線狀態、示意條上的列車、營運報告、高鐵的腹地人口（午夜城鎮成長會改）。
+- **量測**（Linux release，高鐵示範選高鐵線、時間在走，5 次中位數）：每次 body 約 377 ms → 約 0.02 ms；指令後的第一次照舊約 0.4 s，一個指令一次。
+- **排序**：依獲利、載客、載客率排序時，順序在打開面板、換排序或按「立即重新排序」（`lines.sortAgain`）時固定（`GameWorld.lines(keeping:)`：新路線排最後、刪掉的拿掉），和車隊總覽一樣，午夜時列不會在手指下換位置。
+- **測試**：`LinePanelMemoTests`（兩個遊戲小時的 tick 中快取和世界當下算的逐值相等、指令與復原後重算、別的 session 或路線各算各的、`lines(keeping:)`）。
+
 ### 185. PR 的 Linux CI 依改動分層
 
 2026-10-12。作者同意改掉「每個 PR 都跑全部測試（campaign 不縮）」的規則（派工 session_017he2Q1QSeaBKJD1PR3XMma）。號碼依工作登記 #231：決策 185；存檔版本、golden schema 不動。
