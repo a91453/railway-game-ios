@@ -142,6 +142,15 @@ extension Train {
         language.text(cars == 1 ? "1 car" : "\(cars) cars", "\(cars) 節車廂")
     }
 
+    /// Whether the train has a path left on the track network: an edge
+    /// beyond the one it is on, or a stop ahead on this one.
+    var hasPathAhead: Bool {
+        guard case .onEdge(_, let offset)? = position else { return false }
+        if !movement.remainingEdges.isEmpty { return true }
+        guard let end = movement.end else { return false }
+        return end > offset
+    }
+
     /// The path the train has left on the track network: "No path ahead",
     /// "Path: 1 more edge, Edge #4",
     /// "Path: 3 more edges, ending on Edge #9", with ", stopping 3000 units

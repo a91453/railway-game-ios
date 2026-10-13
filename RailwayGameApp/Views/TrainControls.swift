@@ -117,11 +117,20 @@ struct TrainControls: View {
             Button {
                 session.purchaseTrain()
             } label: {
-                HStack(spacing: 4) {
+                // Decision 196: on one line; where the price does not fit
+                // (a phone held on its side) the plus alone, named by the
+                // accessibility label below.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.caption.weight(.bold))
+                        Text("Buy · \(session.world.economy.costs.train.moneyText)")
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .fixedSize()
                     Image(systemName: "plus")
-                        .font(.caption.weight(.bold))
-                    Text("Buy · \(session.world.economy.costs.train.moneyText)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -196,6 +205,13 @@ struct TrainControls: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.warning)
             }
+            // Decision 196: what to do with a train that stands still.
+            if let next = session.world.trainNextStepText(of: train.id, in: language) {
+                Label(next, systemImage: "arrow.forward.circle")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.primary)
+                    .accessibilityIdentifier("train.nextStep")
+            }
         }
         .themeCard(padding: 8, cornerRadius: 10)
         .accessibilityElement(children: .combine)
@@ -252,23 +268,42 @@ struct TrainControls: View {
     }
 
     private var commands: some View {
-        HStack(spacing: 8) {
-            Button {
-                session.reverseSelectedTrain()
-            } label: {
-                Label("Reverse", systemImage: "arrow.uturn.backward")
-                    .font(.subheadline)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                commandButtons
             }
-            Button {
-                session.unplaceSelectedTrain()
-            } label: {
-                Label("Take Off", systemImage: "xmark.circle")
-                    .font(.subheadline)
-            }
-            .accessibilityLabel("Take the train off the track")
-            serviceCommand
+            lineMenu
         }
         .buttonStyle(.bordered)
+    }
+
+    /// Decision 196: a train on the track without a line or a service of
+    /// its own is given a line here, not only from the Lines panel.
+    @ViewBuilder
+    private var lineMenu: some View {
+        if let train = session.selectedTrain, train.execution == nil,
+           session.world.assignedLine(of: train.id) == nil, !session.world.lines.isEmpty {
+            LineAssignMenu(session: session, train: train.id, choices: session.lineMenuChoices, language: session.language)
+                .equatable()
+        }
+    }
+
+    @ViewBuilder
+    private var commandButtons: some View {
+        Button {
+            session.reverseSelectedTrain()
+        } label: {
+            Label("Reverse", systemImage: "arrow.uturn.backward")
+                .font(.subheadline)
+        }
+        Button {
+            session.unplaceSelectedTrain()
+        } label: {
+            Label("Take Off", systemImage: "xmark.circle")
+                .font(.subheadline)
+        }
+        .accessibilityLabel("Take the train off the track")
+        serviceCommand
     }
 
     /// Takes a line's train off its line, or starts or stops a train's own
@@ -332,6 +367,8 @@ private struct TrainPickerMenu: View, Equatable {
                     .foregroundStyle(Theme.primary)
                 Text(selectedName)
                     .font(.subheadline.weight(.bold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
@@ -347,6 +384,38 @@ private struct TrainPickerMenu: View, Equatable {
         .accessibilityLabel("Train: \(selectedName)")
         .accessibilityHint("Chooses the train to control.")
         .accessibilityIdentifier("train.picker")
+    }
+}
+
+/// The lines to give the selected train (decision 196), as the Lines
+/// panel's own assign menu does. Equatable on the lines' names, as
+/// ``TrainPickerMenu``.
+private struct LineAssignMenu: View, Equatable {
+    let session: GameSession
+    let train: TrainID
+    let choices: [MenuChoice<LineID>]
+    let language: DisplayLanguage
+
+    nonisolated static func == (lhs: LineAssignMenu, rhs: LineAssignMenu) -> Bool {
+        lhs.session === rhs.session && lhs.train == rhs.train && lhs.choices == rhs.choices && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(choices) { line in
+                Button(line.title) {
+                    session.assignTrain(train, toLine: line.id)
+                }
+            }
+        } label: {
+            Label {
+                Text(verbatim: language.text("Assign to a Line", "配屬路線"))
+            } icon: {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+            }
+            .font(.subheadline)
+        }
+        .accessibilityIdentifier("train.assignLine")
     }
 }
 

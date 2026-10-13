@@ -1791,6 +1791,27 @@ public final class GameSession {
     /// count made even, up, as each way needs one).
     public func assignSelectedTrainToSelectedLine(pattern: Int? = nil) {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
+        assign(train, to: line, pattern: pattern)
+    }
+
+    /// Assigns train `trainID` to a service of line `lineID` (its own for
+    /// `pattern` `nil`), as ``assignSelectedTrainToSelectedLine(pattern:)``
+    /// does: the train
+    /// card's line menu and the line panel's menu of trains without a
+    /// line (TestFlight 54.1).
+    public func assignTrain(_ trainID: TrainID, toLine lineID: LineID, pattern: Int? = nil) {
+        guard let train = world.train(id: trainID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(trainID).playerMessage(in: language))
+            return
+        }
+        guard let line = world.line(id: lineID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownLine(lineID).playerMessage(in: language))
+            return
+        }
+        assign(train, to: line, pattern: pattern)
+    }
+
+    private func assign(_ train: Train, to line: ServiceLine, pattern: Int?) {
         perform(.assignTrain(train.id, line.id, pattern: pattern)) { outcome, _, world in
             let fast = outcome.highSpeed, started = outcome.number
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name

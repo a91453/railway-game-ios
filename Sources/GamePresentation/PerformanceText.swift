@@ -178,6 +178,12 @@ extension GameWorld {
             }
             return language.text("Waiting for service dispatch", "等候派車")
         }
+        // TestFlight 54.1: a placed train standing with no line says so,
+        // not only that it has no path (``trainNextStepText(of:in:)``
+        // says what to do).
+        if train.execution == nil, train.position != nil, !train.hasPathAhead, assignedLine(of: id) == nil {
+            return language.text("Not assigned to a line", "未配屬路線")
+        }
         return train.pathText(in: language)
     }
 
