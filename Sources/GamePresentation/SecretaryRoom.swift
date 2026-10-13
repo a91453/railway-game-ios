@@ -317,7 +317,7 @@ extension GameSession {
     /// What the station master says now, written once while it stays the
     /// same worry.
     private func observeAdvice(_ today: Int64) {
-        guard let advice = StationMasterAdvice(world: world), let entry = advice.newsEntry else { return }
+        guard let advice = StationMasterAdvice(world: world, worstLosingLine: { worstLosingLine }), let entry = advice.newsEntry else { return }
         if let last = newsWatch.adviceDays[entry.key], today - last < 10 { return }
         newsWatch.adviceDays[entry.key] = today
         let english = advice.text(in: .english), chinese = advice.text(in: .traditionalChinese)

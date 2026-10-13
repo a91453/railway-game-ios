@@ -67,7 +67,7 @@ struct StationMasterCorner: View {
             }
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
-            advice = StationMasterAdvice(world: session.world)
+            advice = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -137,7 +137,12 @@ struct StationMasterCorner: View {
                     // the map there. Decision 175: any other opens the
                     // news log.
                     isTalking = false
-                    if let target = advice?.cameraTarget {
+                    if let line = advice?.line {
+                        // Decision 194, later: a losing line opens in the
+                        // line panel, its card saying why.
+                        session.selectLine(line)
+                        screen.panel = .lines
+                    } else if let target = advice?.cameraTarget {
                         session.lookAt(target)
                     } else {
                         screen.panel = .news

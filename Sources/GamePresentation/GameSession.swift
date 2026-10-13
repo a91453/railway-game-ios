@@ -49,6 +49,19 @@ public final class GameSession {
     /// (the lines along the track, ``trackInspection(of:)``) is worked out
     /// once for them, not at every tick.
     @ObservationIgnored private(set) var commandRevision = 0
+    /// The losing line the station master names, kept between commands and
+    /// days (decision 194, later; ``worstLosingLine``).
+    @ObservationIgnored private let lineLossLeaderMemo = LineLossLeaderMemo()
+
+    /// ``GameWorld/worstLosingLine()``, worked out again only after a
+    /// command or once a day has settled (decision 194, later): the station
+    /// master asks every hour of game time.
+    public var worstLosingLine: LineLossLeader? {
+        lineLossLeaderMemo.leader(of: self)
+    }
+
+    /// How many times ``worstLosingLine`` was worked out (for the tests).
+    var worstLosingLineWorkedOut: Int { lineLossLeaderMemo.workedOut }
     /// Whether ``finish(_:)`` is putting a step of game time in place.
     @ObservationIgnored private var isApplyingTick = false
     /// The bubbles ``situationAlerts`` last worked out, and for what.
@@ -1819,9 +1832,7 @@ public final class GameSession {
     /// Takes the selected train off its line; a trip under way is finished.
     public func unassignSelectedTrain() {
         guard let train = requireSelectedTrain() else { return }
-        perform(.unassignTrain(train.id)) { _, _, _ in
-            language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
-        }
+        unassignTrain(train.id)
     }
 
     /// Starts the selected train's own timetable through

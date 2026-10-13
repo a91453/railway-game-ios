@@ -438,7 +438,13 @@ struct LinesPanel: View {
             Section {
                 LineOperatingCharts(report: report, language: session.language)
                 if let diagnosis = lossMemo.diagnosis(line.id, of: session) {
-                    LineLossCard(diagnosis: diagnosis, language: session.language)
+                    // Decision 194, later: a fix beside each reason.
+                    let fixes = lossMemo.fixes(line.id, of: session)
+                    let balance = session.world.economy.balance
+                    LineLossCard(
+                        diagnosis: diagnosis, language: session.language, session: session, lineName: line.name, fixes: fixes,
+                        shortOfMoney: Set(fixes.filter { !$0.value.isAffordable(with: balance) }.keys)
+                    )
                         .equatable()
                 }
             } header: {
@@ -1080,12 +1086,24 @@ struct LinesPanel: View {
 /// each with the figure that shows it. An equatable view of the diagnosis,
 /// which only a command or a new game day changes: the game's ticks leave
 /// it alone.
+///
+/// Decision 194, later: beside each reason the change that answers it
+/// (``LineLossFix``), asked before it is made; one the balance does not
+/// pay for is off, and says so.
 private struct LineLossCard: View, Equatable {
     let diagnosis: LineLossDiagnosis
     let language: DisplayLanguage
+    let session: GameSession
+    let lineName: String
+    let fixes: [LineLossReason.Kind: LineLossFix]
+    /// The reasons whose fix the balance does not pay for.
+    let shortOfMoney: Set<LineLossReason.Kind>
+    /// The fix whose confirmation is open.
+    @State private var asking: LineLossFix?
 
     nonisolated static func == (lhs: LineLossCard, rhs: LineLossCard) -> Bool {
-        lhs.diagnosis == rhs.diagnosis && lhs.language == rhs.language
+        lhs.diagnosis == rhs.diagnosis && lhs.language == rhs.language && lhs.session === rhs.session
+            && lhs.lineName == rhs.lineName && lhs.fixes == rhs.fixes && lhs.shortOfMoney == rhs.shortOfMoney
     }
 
     var body: some View {
@@ -1117,6 +1135,24 @@ private struct LineLossCard: View, Equatable {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("line.loss")
+        .confirmationDialog(
+            Text(verbatim: asking.map { $0.kind.title(in: language) } ?? ""),
+            isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
+            titleVisibility: .visible,
+            presenting: asking
+        ) { fix in
+            Button {
+                session.applyLineLossFix(fix, to: diagnosis.line)
+            } label: {
+                Text(verbatim: fix.title(in: language))
+            }
+            Button(role: .cancel) {
+            } label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        } message: { fix in
+            Text(verbatim: fix.question(on: lineName, in: language))
+        }
     }
 
     /// The item and its amount, over a bar as long as the amount next to
@@ -1147,6 +1183,41 @@ private struct LineLossCard: View, Equatable {
     }
 
     private func reasonRow(_ reason: LineLossReason) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            reasonLabel(reason)
+            if let fix = fixes[reason.kind] {
+                fixButton(fix)
+            }
+        }
+    }
+
+    /// The fix's button, at least 44 points each way; off, with the
+    /// reason under it, when the money does not reach.
+    private func fixButton(_ fix: LineLossFix) -> some View {
+        let short = shortOfMoney.contains(fix.kind)
+        return VStack(alignment: .leading, spacing: 2) {
+            Button {
+                asking = fix
+            } label: {
+                Text(verbatim: fix.title(in: language))
+                    .font(.footnote.weight(.semibold))
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .disabled(short)
+            .accessibilityHint(Text(verbatim: short ? fix.shortOfMoneyText(in: language) : ""))
+            .accessibilityIdentifier("line.loss.fix.\(fix.kind.rawValue)")
+            if short {
+                Text(verbatim: fix.shortOfMoneyText(in: language))
+                    .font(.caption)
+                    .foregroundStyle(Theme.error)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.leading, 28)
+    }
+
+    private func reasonLabel(_ reason: LineLossReason) -> some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: reason.title(in: language))
