@@ -58,8 +58,15 @@ templates/data, and 3D assets), `MapBuilder/` (start with
 `reference_snapshot/` for reusable route/station editor behavior, map geometry,
 map interactions, state/UI logic, styling, and related data assets),
 `OpenWorld/` (start with `REFERENCE_REFRESH_2026-10-10.md` and
-`SANITIZATION_REPORT.md`) and `Railway/train_loop_reference_clean/` (start
-with its `00_READ_ME_FIRST.md`).
+`SANITIZATION_REPORT.md`), `Railway/train_loop_reference_clean/` (start
+with its `00_READ_ME_FIRST.md`), `Railway/island_city_reference_clean/`
+(start with its `00_READ_ME_FIRST.md` and `MODULE_MAP.json`; a grid city
+simulation: residents, jobs, land value, procedural models; it uses
+`Math.random()` and grid state, so port its rules and values, not its
+state) and `Railway/street_scene_reference_clean/` (start with its
+`00_READ_ME_FIRST.md`; a Three.js street scene with LOD building models,
+pedestrians and vehicles, day and night; its OSM data keeps its ODbL
+attribution).
 
 When a problem is hard (an algorithm, a data source, a performance or
 platform limit, a design with no obvious answer), look for prior work before
