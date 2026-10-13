@@ -68,6 +68,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// within what a running curve is built for, and a coast slower than
     /// its braking (see ``TrainPerformance/isValid``; Stage W2c).
     case invalidTrainPerformance
+    /// A line's dwell is ``ServiceDwell/minimum`` to
+    /// ``ServiceLine/maximumDwellSeconds`` seconds (decision 206).
+    case invalidLineDwell
     /// A line's service window opens at a minute of the day (`0...1439`) and
     /// closes after it, no later than 06:00 the next morning (`1800`).
     case invalidServiceWindow

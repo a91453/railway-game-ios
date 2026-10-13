@@ -7,6 +7,10 @@ import GameCore
 // line accounts (``LineTally``) and the line as it is now; nothing is kept
 // in the world.
 //
+// Decision 206 adds the line's punctuality over the same days, with
+// realistic operation: the share of its trips that reached their last call
+// no more than five minutes late (the reference's `delay-stats.json` rule).
+//
 // The reference's finance summary (`Ci/` `summarizeFinanceForTransport`)
 // splits a span's books the same way: fares against operating,
 // maintenance, energy and crew costs. It names no reasons; its high-speed
@@ -129,11 +133,15 @@ public struct LineLossMeasures: Hashable, Sendable {
     public var legsPerTrip: Int64
     /// The minutes a day the line runs.
     public var serviceMinutes: Int64
+    /// Trips that reached their last call, with realistic operation
+    /// (decision 206), and of them the late ones.
+    public var trips: Int64
+    public var lateTrips: Int64
 
     public init(
         days: Int64, fareRevenue: Money, boardings: Int64, departures: Int64, trainDistance: Int64,
         deadheadDistance: Int64, peakLoadSum: Int64, trains: Int64, seatsPerTrain: Int64,
-        trainKeepPerDay: Money, legsPerTrip: Int64, serviceMinutes: Int64
+        trainKeepPerDay: Money, legsPerTrip: Int64, serviceMinutes: Int64, trips: Int64 = 0, lateTrips: Int64 = 0
     ) {
         self.days = days
         self.fareRevenue = fareRevenue
@@ -147,6 +155,14 @@ public struct LineLossMeasures: Hashable, Sendable {
         self.trainKeepPerDay = trainKeepPerDay
         self.legsPerTrip = legsPerTrip
         self.serviceMinutes = serviceMinutes
+        self.trips = trips
+        self.lateTrips = lateTrips
+    }
+
+    /// The trips on time, in thousandths, or `nil` with none counted
+    /// (decision 206).
+    public var punctualityPermille: Int64? {
+        trips > 0 ? (trips - lateTrips) * 1_000 / trips : nil
     }
 
     /// Riders a train a day, or `nil` without trains.
@@ -311,6 +327,18 @@ public struct LineLossDiagnosis: Hashable, Sendable {
         )
     }
 
+    /// "On time 96%: 10 of 240 trips over 5 min late", or `nil` without
+    /// trips counted (decision 206: a world with realistic operation).
+    public func punctualityText(in language: DisplayLanguage) -> String? {
+        guard let permille = measures.punctualityPermille else { return nil }
+        let percent = "\(permille / 10)%"
+        let minutes = GameWorld.punctualSeconds / 60
+        return language.text(
+            "On time \(percent): \(measures.lateTrips) of \(measures.trips) trips over \(minutes) min late",
+            "準點率 \(percent)：\(measures.trips) 趟有 \(measures.lateTrips) 趟誤點超過 \(minutes) 分鐘"
+        )
+    }
+
     /// "12%", "under 1%" or "over 100%" of `permille` thousandths.
     public static func percentText(_ permille: Int64, in language: DisplayLanguage) -> String {
         if permille < 10 { return language.text("under 1%", "不到 1%") }
@@ -378,7 +406,8 @@ extension GameWorld {
             days: Int64(days.count), fareRevenue: fares, boardings: sum(\.boardings),
             departures: sum(\.departures), trainDistance: sum(\.trainDistance), deadheadDistance: sum(\.deadheadDistance),
             peakLoadSum: sum(\.peakLoad), trains: Int64(trains.count), seatsPerTrain: seats, trainKeepPerDay: keep,
-            legsPerTrip: Int64(line.isRing ? line.stops.count : max(1, line.stops.count - 1)), serviceMinutes: minutes
+            legsPerTrip: Int64(line.isRing ? line.stops.count : max(1, line.stops.count - 1)), serviceMinutes: minutes,
+            trips: sum(\.trips), lateTrips: sum(\.lateTrips)
         )
         return LineLossDiagnosis(
             line: id, days: days.count, fareRevenue: fares, operatingCost: sum(\.operatingCost),

@@ -107,6 +107,9 @@ extension GameWorld {
             // Decision 202: trains keep left on double track, as Taiwan's
             // railways and its high-speed line do.
             world.setKeepLeft(true)
+            // Decision 206: legs planned at the usual rates with a recovery
+            // margin, a high-speed line's real dwell, and punctuality.
+            world.setRealisticOperation(true)
             // Decision 180: trains cost and weigh what their type and cars
             // do, and are sold back at 70 % of their books.
             world.setRollingStockEconomics(true)
@@ -246,6 +249,8 @@ public enum DemoWorld {
         world.setFlexDispatch(false)
         // Decision 202: its routes are as they were measured.
         world.setKeepLeft(false)
+        // Decision 206: its timetables are as they were measured.
+        world.setRealisticOperation(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
         // Decision 183: nor the city's requests.

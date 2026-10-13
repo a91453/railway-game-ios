@@ -139,6 +139,9 @@ struct PassengerRouteGraph: Equatable {
         /// Passengers its trains carry a day each way (see
         /// ``PassengerCrowding``); 0 for a hand-built graph.
         var dailyCapacity: Int64 = 0
+        /// Seconds its trains stay at a call between its ends (decision
+        /// 206, ``LineJourney/dwellSeconds``).
+        var dwellSeconds: Int64 = GameWorld.defaultDwellSeconds
     }
 
     typealias Walk = PassengerWalk
@@ -200,7 +203,7 @@ struct PassengerRouteGraph: Equatable {
                         let path = ServicePath(line: line.id, pattern: nil,
                                                direction: direction == .inner ? .outbound : .inbound,
                                                stations: stationIDs, runSeconds: lap.legs.map(\.seconds),
-                                               headway: headway, isRing: true, dailyCapacity: capacity)
+                                               headway: headway, isRing: true, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds)
                         Self.add(path, to: &included, calls: &calls)
                     }
                 } else if line.hasRuns {
@@ -216,7 +219,7 @@ struct PassengerRouteGraph: Equatable {
                         Self.add(ServicePath(line: line.id, pattern: nil, direction: .outbound,
                                              stations: stretch.map { line.stops[$0] },
                                              runSeconds: Array(out[stretch.lowerBound..<stretch.upperBound]),
-                                             headway: headway, isRing: false, dailyCapacity: capacity),
+                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds),
                                  to: &included, calls: &calls)
                     }
                     for stretch in line.runStretches(outbound: false) {
@@ -225,7 +228,7 @@ struct PassengerRouteGraph: Equatable {
                         Self.add(ServicePath(line: line.id, pattern: nil, direction: .inbound,
                                              stations: stretch.reversed().map { line.stops[$0] },
                                              runSeconds: Array(back[(count - 1 - stretch.upperBound)..<(count - 1 - stretch.lowerBound)]),
-                                             headway: headway, isRing: false, dailyCapacity: capacity),
+                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds),
                                  to: &included, calls: &calls)
                     }
                 } else {
@@ -234,11 +237,11 @@ struct PassengerRouteGraph: Equatable {
                     let forward = ServicePath(line: line.id, pattern: pattern, direction: .outbound,
                                               stations: callIndices.map { line.stops[$0] },
                                               runSeconds: Array(journey.legs.prefix(half).map(\.seconds)),
-                                              headway: headway, isRing: false, dailyCapacity: capacity)
+                                              headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
                     let backward = ServicePath(line: line.id, pattern: pattern, direction: .inbound,
                                                stations: callIndices.reversed().map { line.stops[$0] },
                                                runSeconds: Array(journey.legs.suffix(half).map(\.seconds)),
-                                               headway: headway, isRing: false, dailyCapacity: capacity)
+                                               headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
                     Self.add(forward, to: &included, calls: &calls)
                     Self.add(backward, to: &included, calls: &calls)
                 }
@@ -385,7 +388,7 @@ struct PassengerRouteGraph: Equatable {
             if let (next, edge, run) = nextRide(node), !forbidden.contains(edge) {
                 // A passenger already aboard stays through this stop's
                 // dwell. One boarding here has waited for departure already.
-                let dwell = label.state.onboard ? ServiceLine.dwellMinutes * GameTime.secondsPerMinute : 0
+                let dwell = label.state.onboard ? paths[edge.line].dwellSeconds : 0
                 let seconds = run + dwell
                 let ridePath = paths[edge.line]
                 let to = ridePath.stations[edge.to]

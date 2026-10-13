@@ -88,6 +88,8 @@ public enum PingxiChallenge {
         world.setFlexDispatch(false)
         // Decision 202: its routes are as they were measured.
         world.setKeepLeft(false)
+        // Decision 206: its timetables are as they were measured.
+        world.setRealisticOperation(false)
         // Decision 174: but the Sky Lanterns of Pingxi are a sight tourists
         // come to (the only one on this map), by the festival's days and
         // all year; its riders' target counts them.

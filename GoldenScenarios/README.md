@@ -308,6 +308,7 @@ schema 62（決策 162）：
 | `unknownLine` | `line` | 沒有這個 ID 的路線 |
 | `invalidLineStops` | — | 路線少於兩站，或同一個車站連續出現兩次 |
 | `invalidTrainPerformance`（schema 25，取代 `invalidLineRate`） | — | 列車或路線的性能不合法（見下面「行駛曲線」） |
+| `invalidLineDwell`（決策 206；還沒有 fixture 用到，schema 不動） | — | 路線的停站秒數不在 36…600 |
 | `invalidServiceWindow` | — | 營運時間不合法：`open` 不在 0…1439，`close` 不晚於 `open`，或晚於 1800（隔天 06:00） |
 | `invalidTrainsInService` | — | 某個服務等級的列車數是負數 |
 | `invalidServiceDay` | — | 服務日不從分鐘 0 開始，或各段的開始時間沒有在一天內嚴格遞增 |

@@ -364,6 +364,13 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// distance, ``GameWorld/lineDeadheadDistance(_:)``). Saturates at
     /// `Int64.max`.
     public internal(set) var deadheadDistance: Int64 = 0
+    /// Seconds a train stays at a stop between the ends of the line, as the
+    /// player set it (decision 206): ``ServiceDwell/minimum`` to
+    /// ``maximumDwellSeconds``. `nil`, as for every line before it, is the
+    /// world's default (see ``GameWorld/dwellSeconds(of:)``): 60 s, or with
+    /// realistic operation a high-speed line's real dwell. Set by
+    /// ``GameWorld/setLineDwell(_:seconds:)`` only.
+    public internal(set) var dwellSeconds: Int64?
     /// Whether the line is a high-speed line (decision 168): a passenger
     /// line whose journeys are planned at high speed (``performance`` is
     /// ``TrainPerformance/isHighSpeed``, which the line menu's "High-speed
@@ -377,8 +384,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
         !isFreight && performance.isHighSpeed
     }
 
-    /// Minutes a train stays at a stop between the ends of the line.
+    /// Minutes a train stays at a stop between the ends of the line, unless
+    /// it has its own dwell (``dwellSeconds``, decision 206).
     public static let dwellMinutes: Int64 = 1
+    /// The longest dwell a line may set (decision 206): 10 minutes.
+    public static let maximumDwellSeconds: Int64 = 600
     /// Minutes a train stays at either end of the line, where it turns round.
     public static let terminalDwellMinutes: Int64 = 2
     /// The shortest time between two trains of a line: it never runs more
@@ -951,7 +961,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight, deadheadDistance
+        case runs, runDays, freight, deadheadDistance, dwellSeconds
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -998,6 +1008,11 @@ extension ServiceLine: Codable {
         deadheadDistance = try container.decodeIfPresent(Int64.self, forKey: .deadheadDistance) ?? 0
         guard deadheadDistance >= 0, !container.contains(.deadheadDistance) || deadheadDistance > 0 else {
             throw DecodingError.dataCorruptedError(forKey: .deadheadDistance, in: container, debugDescription: "Line \(id.rawValue)'s empty running is a positive distance, or not written.")
+        }
+        // Decision 206 (save version 53): a dwell the player set.
+        dwellSeconds = try container.decodeIfPresent(Int64.self, forKey: .dwellSeconds)
+        if let dwellSeconds, !Self.dwellRange.contains(dwellSeconds) {
+            throw DecodingError.dataCorruptedError(forKey: .dwellSeconds, in: container, debugDescription: "Line \(id.rawValue)'s dwell must be \(Self.dwellRange.lowerBound) to \(Self.dwellRange.upperBound) seconds.")
         }
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
@@ -1085,6 +1100,7 @@ extension ServiceLine: Codable {
         if deadheadDistance > 0 {
             try container.encode(deadheadDistance, forKey: .deadheadDistance)
         }
+        try container.encodeIfPresent(dwellSeconds, forKey: .dwellSeconds)
         if hasRuns {
             try container.encode(runs, forKey: .runs)
             if runDays.contains(where: { $0 != nil }) {

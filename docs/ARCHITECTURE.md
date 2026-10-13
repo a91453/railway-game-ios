@@ -7104,6 +7104,42 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、拖曳時同時畫兩張地圖的效能（實機）。
 
+### 206. 寫實運轉第一階段＋準點率
+
+2026-10-13，作者定案（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 7 項、§4 波次 1 第 5 項、§9.2、§10 第 2、3 題）：新遊戲預設打開，示範、教學、挑戰、舊存檔關；和準點率一起只升一次存檔版本；在背後運作，不增加玩家要做的決定。號碼依工作登記 #231：決策 206（203 已釋出不用，205 是美術線的）、存檔版本 53；golden schema 不動。
+
+**為什麼**：§9.2 實測高鐵只有真實的 0.72–0.78 倍。三個原因在這裡改：(1) 排點用最短時間，高鐵還用了參考程式「時刻太趕才用」的備用加減速（`PERF_HSR` 的 `aAlt` 2.0、`bAlt` 2.7）；(2) 行駛段沒有餘裕，而且誤點的車在行駛段永遠追不回來（一段走「表定出發到表定到站」的秒數，晚開就晚到）；(3) 停站一律 1 分鐘。幾何限速與真實車款性能不在這裡做（之後，都改 `RunningCurve` 的輸入）。
+
+1. **開關**（`GameWorld.realisticOperation`，`setRealisticOperation(_:)`，免費，不是網路指令，同決策 202 的 `keepLeft`）：只在打開時存 `"realisticOperation": true`。App 的新遊戲（`GameWorld.newGame`）打開；示範地圖（`DemoWorld`、`RealWorldDemo`、`RealWorldDemoGround`、`HighSpeedDemo`）、挑戰（`newGame(challenge:)`、平溪線、劉銘傳鐵路）與教學關掉，它們的時刻表與數字是沒有這個規則量的。高鐵示範照真實時刻表跑（決策 197），本來就是真實時間。打開或關掉時清掉乘客計畫與進路的快取；`RouteMemo.Key`、`PassengerPlanKey` 也帶著它。
+2. **排點只用正常加減速**（新檔 `Sources/GameCore/Railway/RealisticOperation.swift`）：路線排一段的秒數（`plannedSeconds(length:line:)`，`drive`、`driveLap`、空車回送都用它）開著時是 `TrainPerformance.usualRates`（去掉 `alternativeAcceleration`／`alternativeBraking`）的最少整秒。是排點規則，不改性能預設值：`.highSpeed` 照舊有備用值，「是不是高鐵」照舊看性能（決策 168），行駛中的列車照舊可以用備用值。照真實班次跑的路線（決策 133，`driveRun`）照真實時刻排點，最少秒數只是下限，不改。
+3. **時刻表餘裕做成恢復時間**：排點的一段 = 正常加減速的最少秒數 + `recoveryMarginPercent` = **4 %**（無條件進位到整秒）。真實時刻表 3–8 %，參考庫沒有餘裕百分比可以搬。列車出發時（`leaving`），開著時行駛曲線配的是「離表定到站還剩幾秒」（`secondsToScheduledArrival`），不是「表定出發到表定到站」：準時的車照排點的秒數跑；晚開的車剩的時間比較短，曲線就跑快一點，最快是它性能（含備用加減速，參考的 `assignRunProfiles` 也是時刻太趕才用）的最少秒數。所以一段能追回的是 4 % 的餘裕，高鐵還加上正常與備用加減速的差。被擋下、從停止重新出發的車（`resumeRun`）開著時也照剩下的時間跑（關著時照舊全速）。交通管制下改走別的路的車照舊全速；排定的交會（決策 59）照排定的秒數。
+4. **每條路線的停站秒數**：`ServiceLine.dwellSeconds`（缺 key＝沒設定）；`setLineDwell(_:seconds:)` 設 36…600 秒（`ServiceDwell.minimum`…`ServiceLine.maximumDwellSeconds`），`nil` 改回預設，超出範圍是新的 `GameError.invalidLineDwell`（golden 的結果名 `invalidLineDwell`，還沒有 fixture 用到，schema 不動）。沒設定時 `dwellSeconds(of:)` 是 60 秒，和以前一樣；**開著時高鐵線（`isHighSpeed`）預設 110 秒**：內附 `thsr-schedule.json` 各站停 32 班的中間站平均 108.9 秒，取到 10 秒（§10 第 3 題「依路線，預設值依車種，高鐵約 110 秒」），不這樣做 §9.2 估的 129–131 分到不了，玩家也不用多做決定。端點停站是 2 分鐘，路線停站比較長時取它。停站秒數進了 `LineJourney.dwellSeconds`／`terminalDwellSeconds`，時刻表、來回時間、單線的區間容量（`LineCapacity`）與乘客選路（`PassengerRouteGraph.ServicePath.dwellSeconds`）都讀它。第一版沒有設定介面（作者：不增加玩家要做的決定）；下限 36 秒維持，捷運的 26–28 秒以後再議。
+5. **準點率**：開著時，每條載客路線的列車到達一趟的最後一站（時刻表的最後一筆；環線一圈；空車回送不算）就記一趟，晚超過 `punctualSeconds` = **5 分鐘**記一趟誤點（`LineTally.trips`、`lateTrips`，`punctualityPermille`）。門檻與「一趟算一次、看終點」照參考的 `delay-stats.json`（`final_delay ≤ 5` 分鐘算準點，每班每天算一次；也是台鐵與高鐵自己的定義）。只在經營模式、有路線帳時記（決策 179）。路線卡的虧損診斷（決策 194）在成本長條下面寫「準點率 95%：240 趟有 10 趟誤點超過 5 分鐘」（同樣的報表天數）；沒有記到趟數就不寫。公司評等的「準點率」（決策 181，`CompanyRank.onTimeSeconds` 120 秒、看現在每列車的誤點）不改。
+6. **存檔**（版本 53）：世界的 `"realisticOperation": true`、路線的 `"dwellSeconds"`、路線帳每天的 `"trips"`／`"lateTrips"` 都只在有值時寫，所以舊存檔讀進來和以前逐位元相同。只讀到 52 的 build 會丟掉它們，路線又回到最短時間與 1 分鐘停站，所以升版。新的 `SaveFixtures/v53-realistic-operation.json`（`RealisticOperationTests.testVersionFiftyThreeKeepsRealisticOperation`）。`LineTally` 從自動合成的 `Codable` 改成手寫（同樣的 key、同樣的順序），才能缺 key＝0。
+7. **不變**：golden（沒有一份打開它）、`ReplayFixtures`、舊存檔的行為。
+
+**量測**（`RunTimeRealismReportTests`、`BalanceReportTests`，見下）：REALISM_PLACEHOLDER
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `PERF_HSR`（8152–8153）`{a:1.4, b:1.5, aAlt:2.0, bAlt:2.7, …}` | `TrainPerformance.highSpeed`（已有）、`usualRates` | 排點只用 `a`、`b`；備用值留給行駛 |
+| 同檔 `assignRunProfiles`（8437，備用鏈 8487–8489：先 a/b，再 a/bAlt，再 aAlt/bAlt） | `RunningCurve(length:duration:performance:)`（已有）、`run(of:)` | 原樣：行駛時照這個順序，時刻太趕才用備用值 |
+| 同檔 `HSR_DEP_MID_SEC = 30`（8154、9255–9258：各站發車晚 30 秒，所以行駛段變短才會用到備用值） | 無 | 只當「備用值是太趕時才用」的證據，不搬 |
+| 同檔 `DWELL_SEC = 25`（6467）、`trtcOfficialDwellAt`（7661–7668）、`data/trtc.json` 的 `dwellSec`（23–45 秒）、`data/krtc.json` 的 `dwell`（中間站 20–25 秒） | `ServiceLine.dwellSeconds` | 捷運的真實停站比 36 秒短；第一版下限維持 36 秒（§10 第 3 題） |
+| `RailwayGameApp/Resources/RealRailways/thsr-schedule.json`（和參考的 `api/thsr-schedule.json` 逐位元相同；沒有 `dwell` 欄，`depSec − arrSec`） | `GameWorld.highSpeedDwellSeconds` = 110 | 各站停 32 班的中間站平均 108.9 秒（120 秒 137 次、60 秒 121 次、180 秒 62 次） |
+| `OpenWorld/reference_snapshot/play/src/world/taiwan-hsr-data.js` `HSR_DWELL_SECONDS = 24`、`taiwan-tra-data.js` `TRA_DWELL_SECONDS = 24` | 無 | 示意值，不是真實停站，不用 |
+| `Railway/site_archive_clean/api/delay-stats.json` `_meta.note`（`final_delay ≤ 5` 分鐘算準點，每班每天一次，看最後一個回報站） | `GameWorld.punctualSeconds`、`countLineTrip` | 門檻與計法照搬：一趟在最後一站算一次 |
+| 同檔 `TRTC_OFFICIAL_CATCHUP_FACTOR = 2`（7737、7960–7963）、更新紀錄 8/14「誤點的台鐵列車行駛中追趕，最多 2 倍速、不超過車種最高速」 | `secondsToScheduledArrival` 與 `run(of:)` | 概念相同（誤點在行駛中追）；這裡用曲線配剩下的時間，上限是性能的最少秒數，不用倍速 |
+| 時刻表餘裕百分比（`Railway/`、`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Ci/` 找 slack、padding、margin、recovery、餘裕） | `recoveryMarginPercent` | 沒有可用的：4 % 是這個專案取的（真實 3–8 %） |
+
+外部專案：沒有另外找；做法是 §9.2 的研究結論，程式碼是這個專案自己寫的。
+
+**測試**：`RealisticOperationTests`（關著時一段是最少秒數、停站 60／120 秒；開著時高鐵用正常加減速＋4 %、停站 110 秒、時刻表照停；普通性能只加 4 %；路線自己的停站：範圍、`nil`、端點至少一樣長、只在有值時存檔、超出範圍讀不進來；晚 40 秒開的高鐵開著時跑得比排點快、不低於最少秒數，關著時照排點；準點率只在開著時記、一列車自己跑全部準時；舊的路線帳讀得進來；版本 53 的 fixture）；`RealisticOperationSessionTests`（新遊戲打開；示範、挑戰、教學關；路線卡的準點率文字）；`HighSpeedDemoTests`、`TutorialSessionTests` 各多一行關著。`SavedGameTests` 的目前版本 52 → 53。
+
+**沒有驗證的**：玩家實際的路網（交通管制下的跟車、會車等待會讓準點率低於 100 %）要等 TestFlight；路線卡的準點率那一行只在 macOS CI 編譯。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

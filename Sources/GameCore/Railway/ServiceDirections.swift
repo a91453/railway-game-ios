@@ -77,6 +77,8 @@ extension GameWorld {
             let stations: [StationID]
             let flexDispatch: Bool
             let keepLeft: Bool
+            /// Decision 206: the legs' planned seconds.
+            let realisticOperation: Bool
 
             init(_ world: GameWorld) {
                 network = world.network
@@ -84,6 +86,7 @@ extension GameWorld {
                 stations = world.stations.map(\.id)
                 flexDispatch = world.flexDispatch
                 keepLeft = world.keepLeft
+                realisticOperation = world.realisticOperation
             }
         }
         /// The most of each it keeps: beyond it, it starts again.

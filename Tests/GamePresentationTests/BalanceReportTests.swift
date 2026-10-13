@@ -47,6 +47,7 @@ final class BalanceReportTests: XCTestCase {
         let shifted = PlanPoint(x: first.x, y: first.y + 6_144)
         world = try newGameLine(through: [shifted, PlanPoint(x: edge.x, y: edge.y + 6_144)], in: world)
         XCTAssertEqual(world.lines.count, 2)
+        Self.applyRealisticOperationSwitch(&world)
         let encoder = JSONEncoder()
         var rows = ["| Day | Balance | Fares | Operating profit | Tourism and shops | Lines' fares | Lines' costs | Trains | Sights |", "| --: | --: | --: | --: | --: | --: | --: | --: | --: |"]
         try world.advance(ticks: 1)
@@ -398,6 +399,7 @@ final class BalanceReportTests: XCTestCase {
         }
         for (name, start) in worlds {
             var world = start
+            Self.applyRealisticOperationSwitch(&world)
             let cost = GameWorld.startingBalance - world.economy.balance
             try world.advance(ticks: 1 + 2 * 1_440)
             let report = world.financeReport(.day).previous
@@ -602,6 +604,14 @@ final class BalanceReportTests: XCTestCase {
         }
     }
 
+    /// Decision 206: `BALANCE_NO_REALISTIC=1` measures a new game without
+    /// realistic operation, as before it.
+    private static func applyRealisticOperationSwitch(_ world: inout GameWorld) {
+        if ProcessInfo.processInfo.environment["BALANCE_NO_REALISTIC"] != nil {
+            world.setRealisticOperation(false)
+        }
+    }
+
     private func requestedDays() throws -> Int {
         guard let value = ProcessInfo.processInfo.environment["BALANCE_REPORT"] else {
             throw XCTSkip("set BALANCE_REPORT=<days> to print the balance report")
@@ -623,6 +633,7 @@ final class BalanceReportTests: XCTestCase {
         if ProcessInfo.processInfo.environment["BALANCE_NO_MATERIALS"] != nil {
             world.setBuildingMaterials(false)
         }
+        Self.applyRealisticOperationSwitch(&world)
         let stops = world.stations.map(\.id)
         let cost = GameWorld.startingBalance - world.economy.balance
         var lines = [
