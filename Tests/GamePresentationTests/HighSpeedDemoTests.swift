@@ -163,6 +163,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(line.window, .standard, "the real day's first train is at 06:00 and the last at midnight")
         XCTAssertFalse(world.isTrafficControlEnabled, "route reservation over 30 to 180 km legs would take the game minutes an hour")
         XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
+        XCTAssertFalse(world.keepLeft, "its routes are as they were measured; its up line is laid west of the down line already (decision 202)")
     }
 
     func testItsSetsAreTwelveCarHighSpeedSets() throws {
