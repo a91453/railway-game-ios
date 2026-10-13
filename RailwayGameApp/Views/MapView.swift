@@ -611,12 +611,18 @@ struct MapView: View {
                 // One already in view stays where it is, under the finger
                 // that tapped it.
                 // While a train is followed the camera stays on it.
-                if !session.isFollowingTrain, let station = session.selectedStation {
-                    let point = WorldCoordinate(x: station.location.x, y: station.location.y)
-                    if !projection.visibleRegion.contains(point) {
-                        camera = projection.centered(on: point)
-                    }
-                }
+                // Decision 106, later: "in view" is the map the screen's
+                // controls leave, and one under them moves to its middle.
+                keepSelectionClear(projection: projection, clear: clear, line: false)
+            }
+            // Decision 106, later: a line chosen in the lines panel, and the
+            // selection when a panel opens over it, move into the map the
+            // panel leaves.
+            .onChange(of: session.selectedLineID) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: true)
+            }
+            .onChange(of: insets.trailing) { _, _ in
+                keepSelectionClear(projection: projection, clear: clear, line: session.selectedStation == nil)
             }
             .onChange(of: session.routePreview?.request) { _, _ in
                 // Decision 201: a leg shown from the line panel is brought
@@ -1128,6 +1134,30 @@ struct MapView: View {
         .glassBackground(in: Capsule(), interactive: true)
         .tutorialTarget(.zoomControls)
         .padding(12)
+    }
+
+    /// Decision 106, later: moves the camera so the selected station (or,
+    /// for `line`, the selected line's stops) shows in the part of the map
+    /// the screen's controls leave (`clear`), in its middle, when it does
+    /// not show there now; a line is zoomed out to fit, never in. Not
+    /// while a train is followed, whose camera stays on it, nor during the
+    /// tutorial, whose steps point at places on the map.
+    private func keepSelectionClear(projection: PlanCamera, clear: EdgeInsets, line: Bool) {
+        guard !session.isFollowingTrain, session.tutorial == nil else { return }
+        let free = ScreenInsets(top: clear.top, leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
+        if line {
+            guard let selected = session.selectedLine else { return }
+            let stops = selected.stops.compactMap { session.world.station(id: $0) }
+                .map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
+            guard let region = WorldRegion(enclosing: stops),
+                  !stops.allSatisfy({ projection.showsClear($0, of: free) }) else { return }
+            camera = projection.showing(region, clearOf: free)
+        } else if let station = session.selectedStation {
+            let point = WorldCoordinate(x: station.location.x, y: station.location.y)
+            if !projection.showsClear(point, of: free) {
+                camera = projection.centered(on: point, clearOf: free)
+            }
+        }
     }
 
     /// One step of the camera towards the followed train (``FollowCamera``,

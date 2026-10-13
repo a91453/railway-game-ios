@@ -221,9 +221,12 @@ struct ContentView: View {
         GeometryReader { proxy in
             let strip = RealWorldFrame(world: session.world) == nil ? 0 : AppleMapBackground.attributionHeight
             let margin = Self.margin
-            let cardWidth = min(Self.cardWidth, (proxy.size.width * Self.cardMaxShare).rounded())
+            // Decision 106, later: narrower on a phone on its side, so the
+            // map keeps about two thirds of the screen.
+            let compactHeight = verticalSizeClass == .compact
+            let cardWidth: CGFloat = SidePanelWidth.card(screenWidth: proxy.size.width, compactHeight: compactHeight)
             let sidePanel = screen.panel.flatMap { $0.isBesideMap ? $0 : nil }
-            let sideWidth = min(Self.sidePanelWidth, (proxy.size.width * Self.sidePanelMaxShare).rounded())
+            let sideWidth: CGFloat = SidePanelWidth.panel(screenWidth: proxy.size.width, compactHeight: compactHeight)
             // The details card gives way to a panel beside the map.
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
@@ -341,14 +344,6 @@ struct ContentView: View {
         }
     }
 
-    /// The details card's width, as the sidebar it replaces, and the most
-    /// of the screen's width it takes on a phone.
-    private static let cardWidth: CGFloat = 340
-    private static let cardMaxShare: CGFloat = 0.4
-    /// A panel beside the map's width, and the most of the screen's width
-    /// it takes on a phone.
-    private static let sidePanelWidth: CGFloat = 420
-    private static let sidePanelMaxShare: CGFloat = 0.5
     private static let margin: CGFloat = 10
 
     private var map: some View {

@@ -97,6 +97,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `ink` | `#262C57` | `#ECEEF6` | 站名、節點、隧道、車站外框、高架外框 | 11.47／9.64 |
 | `station` | `#FFC86B` | `#FFC86B` | 車站、月台（外框用 `ink`） | — |
 | `stationSymbol` | `#262C57` | `#262C57` | 車站裡的符號 | 8.69 |
+| `playerBuilding` | `#FFC86B` | `#FFC86B` | 玩家蓋的建物，八種都是（= `station`，外框用 `ink`，種類看圖示；2026-10-13 作者決定玩家的東西一律暖黃，城鎮的顏色不變） | — |
 | `train` | `#262C57` | `#ECEEF6` | 列車 | 11.47／9.64（對地面） |
 | `transferLink`／`transferEdge` | `#FFFFFF`／`#262C57` | 同左 | 轉乘群組的連線（MapBuilder 的白線黑框） | — |
 
@@ -132,7 +133,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `train` | 車站徽章（`station` 底） | `stationSymbol` | 8.69 |
 | `train`、`crowd`、`full` | 狀態泡泡：在 `primary`／`warning`／`error` 的圓上；`crowd`（兩個人）與 `full`（三個人）是同一組擁擠等級 | `Theme.panel` | 最低 5.50／5.54 |
 | `warning`（墊 `warningSolid`） | 死結 | `metroRed`，墊系統底色 | — |
-| `house`、`shop`、`office`、`wharf`、`marina` | 玩家建物（14 點以上），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上最低 3.11／4.72 |
+| `house`、`shop`、`office`、`wharf`、`marina` | 玩家建物（14 點以上），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上 8.69（對 `playerBuilding`） |
 | `train` | 路線示意條的列車（路線色的圓上） | 白 | 跟路線色 |
 | `typhoon` | 颱風經過的車站（決策 182）：`land` 圓、`ink` 外框，圖示 `ink` | `ink` | 11.47／9.64 |
 

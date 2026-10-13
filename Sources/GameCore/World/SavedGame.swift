@@ -267,9 +267,13 @@
 ///     that reads only an earlier version would drop it, and the company
 ///     would start paying from a balance it never had to keep, so it says
 ///     the save is newer than it instead.
+/// 52. Keeping left (decision 202): a world can have `"keepLeft": true`,
+///     its trains taking the left of double track. A build that reads only
+///     an earlier version would drop it, and its trains would run both ways
+///     on one line again, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 51
+    public static let currentVersion = 52
 
     public let world: GameWorld
 
@@ -411,6 +415,8 @@ extension SavedGame: Codable {
         // its ledger no subsidy rows.
         // Version 50 to 51: an economy without `"unlimitedFunds"` pays for
         // what it builds, as every one did.
+        // Version 51 to 52: a world without `"keepLeft"` finds its routes
+        // as before, the first of equally short ways by edge number.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

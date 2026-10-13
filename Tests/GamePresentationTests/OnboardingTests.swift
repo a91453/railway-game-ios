@@ -396,6 +396,7 @@ final class OnboardingTests: XCTestCase {
         // the freight yard is built.
         XCTAssertTrue(HelpGuide.entries(matching: "顏色").contains { $0.id == "mapColours" })
         XCTAssertTrue(HelpGuide.entries(matching: "colour").contains { $0.id == "mapColours" })
+        XCTAssertTrue(HelpGuide.entries(matching: "黃色").contains { $0.id == "mapColours" }, "the legend names the player's yellow buildings")
         // TestFlight 54.1: a player asked where to send a note.
         XCTAssertTrue(HelpGuide.entries(matching: "意見").contains { $0.id == "reportProblem" })
         XCTAssertTrue(HelpGuide.entries(matching: "feedback").contains { $0.id == "reportProblem" })
