@@ -328,6 +328,18 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// stay as they opened for thirty ticks, and one other than the chosen
     /// one (which the menu's label begins with) must be chosen when touched.
     private func checkMenuStaysStillAndChooses(_ identifier: String, rows menuRows: XCUIElementQuery, in app: XCUIApplication) {
+        // On a phone on its side the train panel shows its first rows only
+        // (run 38323867205: train.type 476 pt down a 402 pt screen): drag
+        // the panel, at the menu's own x, until the menu can be touched.
+        let target = app.buttons.matching(identifier: identifier).firstMatch
+        XCTAssertTrue(target.waitForExistence(timeout: 10), "Missing the menu \(identifier)")
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        for _ in 0..<6 where !touchable(target) {
+            let x = target.frame.midX - app.frame.minX
+            origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.75))
+                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * 0.35)),
+                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
         let menu = requiredButton(identifier, in: app)
         let chosen = menu.label
         XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
