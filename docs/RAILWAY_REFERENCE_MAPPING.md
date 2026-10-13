@@ -1475,3 +1475,25 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | （參考沒有）建造卡的建物插圖 | `Building*` imageset、`PlacedBuildingKind.cardArt`、`ControlPanel` 的 `buildOptions` | gap → 原生（作者的原稿描圖） |
+## 複線自動接渡線、號誌站加進路線、待避線提示卡（決策 204（續三））
+
+參考庫（`a91453/railway-reference-private`）搜過 `MapBuilder/`、`Simulator/` 的 `crossover`、`渡線`、`複線`、`doubleTrack`、`parallel`：只有讓玩家手動放的渡線零件與複線道床的畫法，沒有自動接渡線、把待避站加進停靠站或交會提示。外部專案：沒有用到程式碼或資料。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Simulator/.../app/simulator/page-*.js` 的零件搜尋詞 `crossover`（「渡線」「橫渡」） | `GameSession.doubleTrackCrossovers`（`DoubleTrackCrossover.swift`） | gap → 原生：參考的渡線是手動放的零件；這裡照本專案手動渡線的幾何自動加 |
+| （參考沒有）把待避站加進經過的路線 | `GameWorld.passingLoopOffer(for:)`、`GameSession.acceptPassingLoopOffer()` | gap → 原生 |
+| （參考沒有）第一次單線等車的提示 | `PassingLoopHint`、`GameSession.watchPassingLoopHint()`、App 的 `PassingLoopCards` | gap → 原生（照 #510 的 `RouteHint`） |
+
+## 地圖上看得見問題（決策 210）
+
+參考是 `a91453/railway-reference-private`（`main` d3ebdf1）。照派工讀了 `Railway/island_city_reference_clean/`（`00_READ_ME_FIRST.md`、`MODULE_MAP.json`、`source/js/g23.js`）；另外搜過 `crowd`、`overflow`、`擁擠`、`waitReason`、`blockedBy`、`waitingFor`：`Ci/` 的擁擠通知（`emitCrowdAndFullTrainNotices`）已在決策 109 移植成狀態泡泡，`Railway/site_archive_clean/` 的擁擠度是真實列車的車廂資料，都沒有地圖上候車人數、擁擠環或等待原因的畫法。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/island_city_reference_clean/source/js/g23.js` `landValueAt`（分數 `v` 加各來源的加分 `why`）、`lvZone`（95／58 分成蛋黃、蛋白、蛋殼區）、建物面板「每坪 N 萬 · 蛋黃區」與加分最多的三個原因 | `StationWaitReason`（`GameWorld.stationWaitReason(of:)`）、`MapAlertBubbles` 的第二行、`MapProblems.Crowding` | adapted：取「數字＋等級＋一句原因」的呈現；等級門檻用遊戲自己的容量 4,000 的一半與全部，地價數值不搬（遊戲的地價另有決策） |
+| 同檔 `lvAll`（天數與建物數不變就用快取） | `ScheduledWaitKinds`（`TrafficReading` 把照表等待的種類留給下一個 tick） | 想法：結果不變就留著 |
+| `Railway/` 網站 `index.html` 的 `blockSideShift` | `WaitMarkSides`（決策 64 之後的修正已移植） | 沿用 |
+| （參考沒有）中等縮放的候車膠囊、擁擠的量表環、等待環的擴散與原因小牌、數量上限 | `MapArt.drawStationProblems`、`drawCrowdedRing`、`drawWaitMarks`、`drawWaitTag`；`MapProblems` | gap → 原生 |
+
+沒有新的圖示，人形三階是現有的 `MapGlyphPerson`、`MapGlyphCrowd`、`MapGlyphFull`。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。

@@ -42,6 +42,10 @@ struct RailwayGameApp: App {
             if !DebugLaunch.isSet("-show-route-hint") {
                 UserDefaults.standard.set(true, forKey: RouteHint.seenKey)
             }
+            // Likewise the one-time card about passing loops (decision 204,
+            // later), which comes up when a line's train first waits on
+            // single track.
+            UserDefaults.standard.set(true, forKey: PassingLoopHint.seenKey)
         }
         // And silently: the music and sounds only take the runner's CPU
         // (``GameAudio/init(defaults:plays:)``); no test listens to them.

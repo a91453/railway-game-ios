@@ -130,6 +130,7 @@ struct ContentView: View {
             // Decision 201, later: the one-time card about track numbers
             // and routes.
             .modifier(RouteHintCard(session: session, screen: screen))
+            .modifier(PassingLoopCards(session: session, screen: screen))
     }
 
     /// What a closing left to show: how the scenario ended first, then the
@@ -828,5 +829,83 @@ private struct RouteHintCard: ViewModifier {
     private func finish() {
         seen = true
         session.dismissRouteHint()
+    }
+}
+
+/// Decision 204, later: after a passing loop is built, the offer to add its
+/// signal station to the lines it lies on (``PassingLoopOffer``); and the
+/// one-time card the first time a line's train waits on single track
+/// (``PassingLoopHint``), seen once per device.
+private struct PassingLoopCards: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    @AppStorage(PassingLoopHint.seenKey) private var seen = false
+
+    func body(content: Content) -> some View {
+        content
+            // The waiting trains, read with each tick (the map reads them
+            // too); looked at only until the card has been seen.
+            .onChange(of: seen ? nil : session.trafficOverlay.waits.map(\.train)) { _, waiting in
+                if let waiting, !waiting.isEmpty { session.watchPassingLoopHint() }
+            }
+            .alert(
+                Text(verbatim: PassingLoopOffer.title(in: session.language)),
+                isPresented: offerShown,
+                presenting: session.passingLoopOffer
+            ) { _ in
+                Button {
+                    session.acceptPassingLoopOffer()
+                } label: {
+                    Text(verbatim: PassingLoopOffer.addButton(in: session.language))
+                }
+                Button(role: .cancel) {
+                    session.dismissPassingLoopOffer()
+                } label: {
+                    Text(verbatim: PassingLoopOffer.skipButton(in: session.language))
+                }
+            } message: { offer in
+                Text(verbatim: offer.message(in: session.world, language: session.language))
+            }
+            .alert(
+                Text(verbatim: PassingLoopHint.title(in: session.language)),
+                isPresented: hintShown,
+                presenting: session.passingLoopHint
+            ) { _ in
+                Button {
+                    seen = true
+                    screen.panel = nil
+                    session.showPassingLoopTool()
+                } label: {
+                    Text(verbatim: PassingLoopHint.showButton(in: session.language))
+                }
+                Button(role: .cancel) {
+                    finishHint()
+                } label: {
+                    Text(verbatim: PassingLoopHint.dismissButton(in: session.language))
+                }
+            } message: { line in
+                Text(verbatim: PassingLoopHint.message(line: line, in: session.world, language: session.language))
+            }
+    }
+
+    private var offerShown: Binding<Bool> {
+        Binding {
+            session.passingLoopOffer != nil && screen.panel == nil
+        } set: { shown in
+            if !shown { session.dismissPassingLoopOffer() }
+        }
+    }
+
+    private var hintShown: Binding<Bool> {
+        Binding {
+            !seen && session.passingLoopHint != nil && screen.panel == nil
+        } set: { shown in
+            if !shown { finishHint() }
+        }
+    }
+
+    private func finishHint() {
+        seen = true
+        session.dismissPassingLoopHint()
     }
 }
