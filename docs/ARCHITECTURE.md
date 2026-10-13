@@ -2746,6 +2746,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **之後的修正**（2026-10-13，原本的 Gap）：路線第一次派車的出發（列車還沒有服務，例如新線的首班）被另一條線的備用車擋住，而且當下沒有服務到出發時間時，第 3 點的前提讓這一分鐘不看，新線就永遠開不出去。現在前提多一個條件：有沒有服務的列車，路線現在可能要送它出去（`mayBeSentOut`：決策 133 的班次到點，或 `isDispatchDue(…, deadhead: true)`，和判斷備用車用的是同一個便宜的查法，所以備用車本身不會觸發）。這時才找死結，而且只有死結裡有這種列車時才讓備用車讓路，不移動服務。獨立模型照同樣的規則改（死結裡有沒有服務的列車也算），`IdleTrainDeadlockTests.testANewLinesFirstTrainHeldByASpareIsLetGo`（修正前一小時都開不出去）與 `testTheReferenceModelLetsTheNewLineGoAtTheSameSecond`（逐秒比較 10 分鐘）。golden、存檔 fixture、replay 不變；參考庫與 OpenTTD 沒有可移植的（同上）。
 
+**之後的修正**（2026-10-13，`docs/archive/PR401_525_REVIEW_HANDOFF.md` 第五節第一項，作者選 (a)）：關閉彈性發車（決策 172）的世界（舊存檔、示範、挑戰、教學）只從第一站發車、沒有空車回送，所以讓路的備用車被移到別站（例如 W–M–E 單線，W 只有一個月台，備用車讓到 M）之後，路線把服務列車數調高也再也發不出去。現在交通控制打開、彈性發車關著時，沒有服務、停在某站、卻不在路線第一站的列車，照決策 172 第 3 點的空車回送開回**第一站**（`deadheadTrip(…, toFirstCallOnly: true)`，環線也是回第一站）：只在路線有空位時（`isDispatchDue(…, deadhead: true)`），而且照一般派車先取得到第一站股道的進路（股道被佔就等）。只有交通控制會把列車移開，所以交通控制關著時一切照舊。`IdleTrainDeadlockTests.testASpareMovedAsideGoesBackToTheFirstStopWhenTheLineWantsIt`（修正前三小時都沒有回送）。golden、存檔 fixture、replay 不變（已跑 `GoldenScenarioTests`、`ReplayFixtureTests`、`FlexDispatchTests`）；存檔格式不動（`"deadhead"` 從版本 45 就有）。獨立模型（`ReferenceDeadlock.swift`）沒有空車回送，沒有改；逐秒比較的兩個情境都不經過這條規則。
+
 ### 59. 排定交會、同向待避與月台成本（Stage V3）
 
 2026-10-05。作者授權本任務修改核心、獨立模型、schema 與存檔版本。從 PR #105 之後的 `origin/main`（`0158d52`）開工；唯讀檢查四份參考 repo main `ddff2be4b4daeee8de3ab31a0a9a6873ad71b79e`。V1／V2 是執行時後備；`ScheduledStop`、`Station` 與決策 22 的路線容量公式沒有改。

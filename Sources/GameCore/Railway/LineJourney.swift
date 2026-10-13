@@ -395,12 +395,17 @@ extension GameWorld {
     /// it stands, among equals); `nil` on a ring (it goes on from any
     /// stop), for a train not stopped at a station, or when no end can be
     /// reached.
-    func deadheadTrip(of line: ServiceLine, service: Int, for train: Train) -> LineTrip? {
-        guard !line.isRing, let placement = train.placement,
+    ///
+    /// With `toFirstCallOnly` (decision 58, a later fix: a train moved aside without
+    /// flexible dispatch, which sends trains out only from the first call)
+    /// the run goes to the first call, on a ring too.
+    func deadheadTrip(of line: ServiceLine, service: Int, for train: Train, toFirstCallOnly: Bool = false) -> LineTrip? {
+        guard !line.isRing || toFirstCallOnly, let placement = train.placement,
               let here = stationsStoppedAt(by: train.id).first else { return nil }
         let calls = line.calls(ofService: service)
+        let ends = toFirstCallOnly ? [line.stops[calls[0]]] : [line.stops[calls[0]], line.stops[calls[calls.count - 1]]]
         var best: (seconds: Int64, turns: Bool, end: StationID)?
-        for end in [line.stops[calls[0]], line.stops[calls[calls.count - 1]]] {
+        for end in ends {
             for turns in [false, true] {
                 let from = turns ? turnedRound(placement) : placement
                 guard let path = path(from: from.position, toStation: end, length: train.length) else { continue }

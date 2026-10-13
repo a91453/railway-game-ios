@@ -2796,7 +2796,12 @@ public struct GameWorld: Equatable, Sendable {
         if isStopped(train, at: line.stops[calls[0]]) {
             trip = self.trip(of: line, service: service, for: train)
         } else if !flexDispatch {
-            trip = nil
+            // Decision 58, a later fix: without flexible dispatch, a train
+            // moved out of the way of a deadlock
+            // (``spareStandingAside(in:memo:)``) runs empty back to the
+            // first call once the line has room for it; only traffic
+            // control moves a train aside.
+            trip = isTrafficControlEnabled ? deadheadTrip(of: line, service: service, for: train, toFirstCallOnly: true) : nil
         } else if line.isRing, let stop = line.stops.indices.first(where: { isStopped(train, at: line.stops[$0]) }) {
             trip = self.trip(of: line, service: service, for: train, from: .ringStop(stop))
         } else if !line.isRing, isStopped(train, at: line.stops[calls[calls.count - 1]]) {
