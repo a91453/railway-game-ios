@@ -172,7 +172,45 @@ final class ReservationShortcutTests: XCTestCase {
             XCTAssertEqual(kept?.envelopes.stretches, authority?.envelopes.stretches, "\(label): envelopes of \(train.id)")
             XCTAssertEqual(kept?.left, world.longAuthorityLeft(of: train), "\(label): authority of \(train.id), the long way")
             XCTAssertEqual(world.isFollowing(train, memo: &memo), world.isFollowing(train), "\(label): following \(train.id)")
+            let held = world.heldTrack(train), keptHeld = world.heldTrack(train, memo: &memo)
+            XCTAssertEqual(keptHeld.body, held.body, "\(label): body of \(train.id), kept")
+            XCTAssertEqual(keptHeld.reservation, held.reservation, "\(label): reservation of \(train.id), kept")
             compared += 1
+        }
+        compared += compareReservationShortcuts(world, memo: &memo, label)
+        return compared
+    }
+
+    /// The second round's shortcuts (NEXT_PRIORITIES 2026-10-12 §0 item 4)
+    /// against what they replaced: what a train's envelope keeps of a
+    /// reservation as it moves on, a following train's reservation as it
+    /// takes more of its route, and the paths kept in a memo.
+    private func compareReservationShortcuts(_ world: GameWorld, memo: inout GameWorld.DirectionMemo, _ label: String) -> Int {
+        var compared = 0
+        let placed = world.trains.filter { $0.position != nil }
+        for train in placed {
+            let cover = world.envelopeCover(of: train)
+            // Its own reservation, every other's, and one out of order.
+            for other in placed {
+                for reservation in [other.reservation, other.reservation.reversed()] {
+                    XCTAssertEqual(cover.kept(of: reservation), reservation.filter(cover.contains), "\(label): \(train.id) keeps of \(other.id)'s")
+                    compared += 1
+                }
+            }
+            if let (held, envelopes) = world.authority(of: train) {
+                let length = envelopes.length
+                for distance in Set([held + 1, held + 1_024, held + GameWorld.followingGap, (held + length) / 2, length - 1, length]) where distance > held && distance <= length {
+                    XCTAssertEqual(world.reservation(train.reservation, extending: envelopes, from: held, to: distance),
+                                   Set(train.reservation).union(world.authorityEnvelope(envelopes, to: distance)).sorted(),
+                                   "\(label): \(train.id) extended to \(distance) from \(held)")
+                    compared += 1
+                }
+            }
+            for station in world.stations {
+                XCTAssertEqual(world.path(from: train.position!, toStation: station.id, length: train.length, memo: &memo.paths),
+                               world.path(from: train.position!, toStation: station.id, length: train.length), "\(label): way of \(train.id) to \(station.id), kept")
+                compared += 1
+            }
         }
         return compared
     }
@@ -297,6 +335,45 @@ final class ReservationShortcutTests: XCTestCase {
 }
 
 extension ReservationShortcutTests {
+    /// The memo kept from one call of `advance(ticks:)` to the next
+    /// (`GameWorld.RouteMemo`) changes nothing: the long-leg replay a tick
+    /// at a time, and the traffic-control and following campaigns'
+    /// operations (whose commands change the network, the lines and the
+    /// trains between the calls), each run beside a world whose kept memo is
+    /// dropped before every operation, leave the two the same after each.
+    func testTheMemoKeptBetweenAdvancesChangesNothing() throws {
+        var kept = try LongLegReplayTests.world()
+        var fresh = kept
+        var lent = 0
+        for operation in LongLegReplayTests.operations() {
+            var parts = [operation]
+            if case .advance(let ticks) = operation { parts = Array(repeating: .advance(1), count: ticks) }
+            for part in parts {
+                if !kept.routeMemo.isEmpty, case .advance = part { lent += 1 }
+                fresh.routeMemo = GameWorld.RouteMemo()
+                XCTAssertEqual(KernelDifferentialTests.apply(part, to: &kept), KernelDifferentialTests.apply(part, to: &fresh), "long leg: \(part)")
+            }
+            XCTAssertTrue(kept == fresh && SavedGame(world: kept) == SavedGame(world: fresh), "long leg after \(operation)")
+        }
+        XCTAssertGreaterThan(lent, 100, "advances lent a kept memo")
+        for index in 0..<12 {
+            var testCase = PropertyCase(suite: "traffic.routeMemo", seed: 0x5EED_A001, index: index)
+            var kept = try index % 2 == 0
+                ? TrafficControlPropertyTests.generateWorld(&testCase, operations: 0)
+                : TrafficControlPropertyTests.beginFollowing(&testCase).world
+            var fresh = kept
+            for step in 0..<40 {
+                let operation = index % 2 == 0
+                    ? TrafficControlPropertyTests.operation(in: kept, using: &testCase.random)
+                    : TrafficControlPropertyTests.followingOperation(in: kept, using: &testCase.random)
+                fresh.routeMemo = GameWorld.RouteMemo()
+                XCTAssertEqual(TrafficControlPropertyTests.apply(operation, to: &kept), TrafficControlPropertyTests.apply(operation, to: &fresh),
+                               "case \(index) step \(step): \(operation)")
+                XCTAssertTrue(SavedGame(world: kept) == SavedGame(world: fresh), "case \(index) step \(step) after \(operation)")
+            }
+        }
+    }
+
     /// A ``GameWorld/TrackCover`` answers as the resources its stretches
     /// list (`resources(covering:)` and `foulingNodes(covering:)`), and so
     /// does whether a reservation holds all of a stretch: for
@@ -342,6 +419,7 @@ extension ReservationShortcutTests {
                     let ordered = held.sorted()
                     for reservation in [ordered, ordered.reversed()] {
                         XCTAssertEqual(world.reserves(GameWorld.ReservedTrack(reservation), all: stretch), track.allSatisfy(held.contains), "\(stretch) of \(reservation)")
+                        XCTAssertEqual(cover.kept(of: reservation), reservation.filter(cover.contains), "\(stretches) keeps of \(reservation)")
                         checked += 1
                     }
                 }

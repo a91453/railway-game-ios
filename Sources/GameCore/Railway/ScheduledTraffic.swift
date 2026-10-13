@@ -55,6 +55,17 @@ extension GameWorld {
         var tracks: [TrafficSection: Int] = [:]
         var moves: [TrafficMoveKey: [TrafficTrack]] = [:]
         var sidings: [TrafficMoveKey: [TrafficTrack]] = [:]
+        /// What ``trafficHasSiding(at:train:known:)`` asks of the network,
+        /// kept as the plan is worked out.
+        var hasSiding: [TrafficSidingQuery: Bool] = [:]
+    }
+    /// A berth of a station, the next call's station and a train's length:
+    /// what ``trafficHasSiding(at:train:known:)`` reads of the network.
+    struct TrafficSidingQuery: Hashable {
+        var station: StationID
+        var main: Berth
+        var next: StationID
+        var length: Int64
     }
     struct TrafficSection: Hashable {
         var from: StationID
@@ -74,6 +85,7 @@ extension GameWorld {
         }
         var points: [Run: [TrafficPoint]?] = [:]
         var tracks: [TrafficSection: Int] = [:]
+        var hasSiding: [TrafficSidingQuery: Bool] = [:]
     }
 
     /// Scheduled meets and overtakes, including future visits, in train,
@@ -151,7 +163,11 @@ extension GameWorld {
         }
         guard plan.services.count >= 2 else { return plan }
         plan.tracks = parts.tracks
-        defer { parts.tracks = plan.tracks }
+        plan.hasSiding = parts.hasSiding
+        defer {
+            parts.tracks = plan.tracks
+            parts.hasSiding = plan.hasSiding
+        }
         inferTrafficMeets(&plan)
         // resolveTraTraffic: one meet pass, up to eight overtaking passes;
         // each accepted overtake rebuilds that train's meets immediately.
@@ -281,7 +297,7 @@ extension GameWorld {
                             let near = min(Self.trafficDifference(p.arrival, q.arrival), Self.trafficDifference(p.arrival, q.departure))
                             let previousCall = (0..<k).reversed().first { y.points[$0].calls }
                             guard let previousCall, near <= 1800 else { continue }
-                            if sidings[j] == nil { sidings[j] = trafficHasSiding(at: p, train: x.train) }
+                            if sidings[j] == nil { sidings[j] = trafficHasSiding(at: p, train: x.train, known: &plan.hasSiding) }
                             guard sidings[j] == true else { continue }
                             let end = ((j + 1)..<x.points.count).first { x.points[$0].station == y.points[previousCall].station }
                             guard p.arrival < Self.saturating(GameTime(seconds: q.arrival), plus: margin).seconds,
@@ -331,7 +347,7 @@ extension GameWorld {
                         let q = peer.points[k], next = peer.points[k + 1]
                         let dwell = q.departure - q.arrival
                         guard q.calls, q.station == p.station, next.station == previous.station, dwell >= 30,
-                              trafficHasSiding(at: q, train: peer.train),
+                              trafficHasSiding(at: q, train: peer.train, known: &plan.hasSiding),
                               min(Self.trafficDifference(p.arrival, q.arrival), Self.trafficDifference(p.arrival, q.departure)) <= 1800 else { continue }
                         let margin = min(30, dwell / 3)
                         let nextCall = ((k + 1)..<peer.points.count).first { peer.points[$0].calls }
@@ -468,7 +484,7 @@ extension GameWorld {
                             let st = l.points[lc], fst = f.points[fc]
                             let dep = Self.saturating(GameTime(seconds: fst.departure), plus: 30).seconds
                             guard fst.arrival - st.arrival >= need, dep - st.arrival <= 600,
-                                  dep > st.departure, trafficHasSiding(at: st, train: l.train),
+                                  dep > st.departure, trafficHasSiding(at: st, train: l.train, known: &plan.hasSiding),
                                   !plan.waits.contains(where: { $0.train == l.train.id && $0.station == st.station && $0.stop == st.stop && $0.cycle == st.cycle && $0.departure.seconds >= dep })
                             else { continue }
                             guard overtakeTrackFree(&plan, service: slow, at: lc, departure: dep) else { continue }
@@ -504,7 +520,7 @@ extension GameWorld {
         return changed
     }
 
-    func trafficHasSiding(at point: TrafficPoint, train: Train) -> Bool {
+    func trafficHasSiding(at point: TrafficPoint, train: Train, known: inout [TrafficSidingQuery: Bool]) -> Bool {
         let next = point.calls ? point.stop + 1 : point.stop
         guard train.timetable.indices.contains(next) else { return false }
         let main = point.berth
@@ -514,16 +530,21 @@ extension GameWorld {
         if point.calls, point.stop == 0, train.execution?.stop == 0,
            isStopped(train, at: point.station),
            case .onEdge(let actual, _)? = train.position, actual.edge == main.traversal.edge { return false }
+        // The rest reads the network alone.
+        let query = TrafficSidingQuery(station: point.station, main: main, next: train.timetable[next].station, length: train.length)
+        if let answer = known[query] { return answer }
         let direction = network.edge(main.traversal.edge)!
         let outgoing = main.traversal.direction == .forward ? direction.to : direction.from
-        return berths(of: point.station, length: train.length).contains { berth in
+        let answer = berths(of: point.station, length: train.length).contains { berth in
             guard berth.traversal.edge != main.traversal.edge, let edge = network.edge(berth.traversal.edge),
                   (berth.traversal.direction == .forward ? edge.to : edge.from) != (main.traversal.direction == .forward ? direction.from : direction.to)
             else { return false }
             let position = TrainPosition.onEdge(berth.traversal, offset: berth.offset)
-            return path(from: position, toStation: train.timetable[next].station, length: train.length) != nil
+            return path(from: position, toStation: query.next, length: train.length) != nil
                 || transitions(after: berth.traversal).contains(where: { network.edge($0.edge)?.to == outgoing })
         }
+        known[query] = answer
+        return answer
     }
 
     func trafficReleased(_ wait: ScheduledTrafficWait) -> GameTime? {
@@ -587,11 +608,11 @@ extension GameWorld {
     static let trafficStationPenalty: Int64 = 25_600
     static let trafficMismatchPenalty: Int64 = 51_200
 
-    func scheduledPath(for train: Train, from start: TrainPosition, to call: StationID, plan: TrafficPlan) -> (path: TrainPath, seconds: Int64?)? {
+    func scheduledPath(for train: Train, from start: TrainPosition, to call: StationID, plan: TrafficPlan, memo: inout PathMemo) -> (path: TrainPath, seconds: Int64?)? {
         // Without a wait nothing is costed or retimed, so there is no
         // scheduled way to work out.
         guard !plan.waits.isEmpty, let execution = train.execution, let service = plan.services.first(where: { $0.train.id == train.id }),
-              let normal = path(from: start, toStation: call, length: train.length) else { return nil }
+              let normal = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
         let stop: Int
         if case .waitingAtStop = execution { stop = train.call(after: execution.stop, cycle: execution.cycle)?.stop ?? execution.stop }
         else { stop = execution.stop }
@@ -601,7 +622,7 @@ extension GameWorld {
         var bestDistance: Int64 = .max
         for wait in waits {
             if train.trafficVisits.contains(where: { $0.station == wait.station && $0.stop == stop && $0.cycle == wait.cycle && $0.departure != nil }) { continue }
-            guard let to = path(from: start, toStation: wait.station, length: train.length), to.distance > 0,
+            guard let to = path(from: start, toStation: wait.station, length: train.length, memo: &memo), to.distance > 0,
                   to.distance < normal.distance, to.distance < bestDistance else { continue }
             bestDistance = to.distance
             target = wait.station
@@ -609,6 +630,7 @@ extension GameWorld {
         }
         var berthPenalty: [Berth: Int64] = [:]
         var edgePenalty: [TrackEdgeID: Int64] = [:]
+        var known = plan.hasSiding
         // Only stations with a scheduled conflict activate these costs.
         for station in Set(plan.waits.map(\.station)).sorted() {
             guard let point = service.points.first(where: { $0.station == station && ($0.stop == stop || $0.station == target) }) else { continue }
@@ -620,7 +642,7 @@ extension GameWorld {
                     edgePenalty[platform.edge] = Self.trafficStationPenalty + (stopsHere ? 0 : Self.trafficMismatchPenalty)
                 }
             }
-            if station == target, stopsHere, trafficHasSiding(at: point, train: train) {
+            if station == target, stopsHere, trafficHasSiding(at: point, train: train, known: &known) {
                 for berth in berths(of: station, length: train.length) where berth.traversal.edge == point.berth.traversal.edge {
                     berthPenalty[berth] = Self.trafficMismatchPenalty
                 }
@@ -633,7 +655,7 @@ extension GameWorld {
               let chosen = scheduledBerthPath(train, from: start, target: target, stop: stop, normal: normal, plan: plan, berthPenalty: berthPenalty, edgePenalty: edgePenalty)
         else { return nil }
         let there = placement(TrainPlacement(position: start, trailEdges: train.trailEdges, length: train.length), after: chosen)
-        let onward = target == call ? 0 : path(from: there.position, toStation: call, length: train.length)?.distance
+        let onward = target == call ? 0 : path(from: there.position, toStation: call, length: train.length, memo: &memo)?.distance
         guard let onward, chosen.distance <= normal.distance + Self.detourAllowance - onward else { return nil }
         let seconds: Int64?
         if let point = targetPoint {

@@ -193,6 +193,10 @@ public struct GameWorld: Equatable, Sendable {
     /// route graph stays the same; not game state (see
     /// ``PassengerRouteMemo``).
     var passengerRouteMemo = PassengerRouteMemo()
+    /// What traffic control works out from the network, the lines and the
+    /// stations alone, kept between calls of ``advance(ticks:)`` while they
+    /// stay the same; not game state (see ``RouteMemo``).
+    var routeMemo = RouteMemo()
 
     /// The next ID to hand out to a station, a train or a line (see
     /// `allocateID(from:)`).
@@ -2194,7 +2198,7 @@ public struct GameWorld: Equatable, Sendable {
     ///    `t + 1` less at `t`; otherwise its share of its rate (see
     ///    ``TrainMovement``). A travelling train that could not keep to its
     ///    run (a rate of 0, or track ahead removed) drops it (see
-    ///    ``dropRunsHeldUp(endingAt:)``).
+    ///    ``dropRunsHeldUp(endingAt:memo:)``).
     /// 3. The clock moves on to `t + 1`.
     /// 4. **Arrivals.** Every train whose service is travelling to a stop
     ///    and that is now stopped at that stop's station (see
@@ -2332,6 +2336,12 @@ public struct GameWorld: Equatable, Sendable {
         // looking again would give the same answer.
         var unroutable: Set<TrainID> = []
         var memo = DispatchMemo()
+        // What the memo is lent and keeps is for the world as the call
+        // finds it.
+        let routeKey = remaining > 0 ? RouteMemo.Key(self) : nil
+        if let routeKey {
+            routeMemo.lend(to: &memo.directions, for: routeKey)
+        }
         // Departures due now whose routes other trains hold (Stage T), each
         // with the track it waits for: tried again at the next step.
         var held: [HeldRoute] = []
@@ -2422,7 +2432,7 @@ public struct GameWorld: Equatable, Sendable {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
             }
-            if let end = secondsUntilARouteEnds(from: start, within: span) {
+            if let end = secondsUntilARouteEnds(from: start, within: span, memo: &memo.directions) {
                 span = end
             }
             // Stage U: or to the second at which trains moving on have
@@ -2440,10 +2450,10 @@ public struct GameWorld: Equatable, Sendable {
                 // again at the next second when this step changed what it
                 // is derived from, and otherwise holds until a wait may let
                 // its train go or a visit it needs is made (see
-                // ``secondsUntilTrafficChanges(_:from:within:)``).
+                // ``secondsUntilTrafficChanges(_:from:within:memo:)``).
                 if trafficPlanKey() != trafficKey {
                     span = 1
-                } else if span > 1, let changes = secondsUntilTrafficChanges(traffic, from: start, within: span) {
+                } else if span > 1, let changes = secondsUntilTrafficChanges(traffic, from: start, within: span, memo: &memo.directions) {
                     span = changes
                 }
             } else if span > 1, trafficPlanKey() != trafficKey {
@@ -2465,7 +2475,7 @@ public struct GameWorld: Equatable, Sendable {
             } else if moveTrains(from: start, for: span, memo: &memo.directions) {
                 changed = true
             }
-            if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span)) {
+            if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span), memo: &memo.directions) {
                 changed = true
             }
             clock.advance(basicSteps: span)
@@ -2522,6 +2532,14 @@ public struct GameWorld: Equatable, Sendable {
         }
         if let release {
             keepRemainders(of: release)
+        }
+        if let routeKey {
+            // Kept only when the call changed none of what it is for.
+            if RouteMemo.Key(self) == routeKey {
+                routeMemo.keep(memo.directions, for: routeKey)
+            } else {
+                routeMemo = RouteMemo()
+            }
         }
     }
 
@@ -2920,7 +2938,7 @@ public struct GameWorld: Equatable, Sendable {
     /// control it always can. Returns whether the service changed.
     ///
     /// Stage V3 (decision 59): a train held by a scheduled wait stays; one
-    /// whose scheduled way on (see ``scheduledPath(for:from:to:plan:)``)
+    /// whose scheduled way on (see ``scheduledPath(for:from:to:plan:memo:)``)
     /// it can take whole now takes it, on the scheduled run. Otherwise it
     /// goes on exactly as above.
     private mutating func goOn(_ index: Int, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
@@ -2930,7 +2948,7 @@ public struct GameWorld: Equatable, Sendable {
         // The whole routes tried before the default one and held: a step
         // ends when one frees, as for the default one (decision 55).
         var whole: [Train] = []
-        if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan) {
+        if let chosen = scheduledPath(for: trains[index], from: trains[index].position!, to: trains[index].timetable[trains[index].execution!.stop].station, plan: plan, memo: &memo.directions.paths) {
             var scheduled = going
             follow(chosen.path, &scheduled)
             let plannedRun = run(of: scheduled, length: chosen.path.distance, scheduled: chosen.seconds)
@@ -3077,7 +3095,7 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     /// Train `index`'s service, travelling to a stop, after it was held up
-    /// on its run (Stage W2c; see ``dropRunsHeldUp(endingAt:)``): a train
+    /// on its run (Stage W2c; see ``dropRunsHeldUp(endingAt:memo:)``): a train
     /// without a run sets off on a new one (see
     /// ``run(of:length:scheduled:)``), in the least whole second its
     /// performance builds a curve for, over the way left to the end of its
@@ -3175,7 +3193,7 @@ public struct GameWorld: Equatable, Sendable {
         // Stage V3 (decision 59): a scheduled wait keeps it here.
         let plan = trafficPlan(memo: &memo.directions)
         guard currentTrafficWait(trains[index], plan: plan, memo: &memo.directions) == nil else { return false }
-        let departure = leaving(trains[index], stop: stop, cycle: cycle)
+        let departure = leaving(trains[index], stop: stop, cycle: cycle, memo: &memo.directions.paths)
         guard let moved = departure.train else {
             // Nothing changes: the train is not turned round either.
             unroutable.insert(trains[index].id)
@@ -3189,10 +3207,10 @@ public struct GameWorld: Equatable, Sendable {
         var granted: Train?
         var whole: [Train] = []
         if case .setsOff = departure,
-           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan) {
+           case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(scheduled, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
         }
-        if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle) {
+        if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle, memo: &memo.directions.paths) {
             if case .granted(let train) = reserving(preferred, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
         }
         let train: Train
@@ -3257,27 +3275,34 @@ public struct GameWorld: Equatable, Sendable {
     /// ends where its head is.
     /// Without a path, the train is not turned round either.
     func leaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving {
+        var memo = PathMemo()
+        return leaving(train, stop: stop, cycle: cycle, memo: &memo)
+    }
+
+    /// ``leaving(_:stop:cycle:)``, with the path kept in `memo`.
+    func leaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving {
         leaving(train, stop: stop, cycle: cycle) { start, call in
-            path(from: start, toStation: call, length: train.length).map { ($0, nil) }
+            path(from: start, toStation: call, length: train.length, memo: &memo).map { ($0, nil) }
         } ?? .noRoute
     }
 
-    /// Decision 61: a physical preference is taken only as a whole.
-    func preferredLeaving(_ train: Train, stop: Int, cycle: Int64) -> Leaving? {
+    /// Decision 61: a physical preference is taken only as a whole. The
+    /// paths it searches for are kept in `memo`.
+    func preferredLeaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving? {
         guard let next = train.call(after: stop, cycle: cycle),
               let preference = routePreference(for: train, from: stop, to: next.stop) else { return nil }
         return leaving(train, stop: stop, cycle: cycle) { start, _ in
-            preferredPath(from: start, preference: preference, length: train.length).map { ($0, nil) }
+            preferredPath(from: start, preference: preference, length: train.length, memo: &memo).map { ($0, nil) }
         }
     }
 
     /// Stage V3 (decision 59): `train` leaving stop `stop` along its
     /// scheduled path, on the scheduled run (see
-    /// ``scheduledPath(for:from:to:plan:)``); `nil` when the plan gives it
-    /// none.
-    func scheduledLeaving(_ train: Train, stop: Int, cycle: Int64, plan: TrafficPlan) -> Leaving? {
+    /// ``scheduledPath(for:from:to:plan:memo:)``); `nil` when the plan
+    /// gives it none.
+    func scheduledLeaving(_ train: Train, stop: Int, cycle: Int64, plan: TrafficPlan, memo: inout PathMemo) -> Leaving? {
         leaving(train, stop: stop, cycle: cycle) { start, call in
-            scheduledPath(for: train, from: start, to: call, plan: plan)
+            scheduledPath(for: train, from: start, to: call, plan: plan, memo: &memo)
         }
     }
 
@@ -3445,7 +3470,7 @@ public struct GameWorld: Equatable, Sendable {
     /// that ends when it has. A slow run can leave its train where it is for
     /// whole minutes, and then take it on: that is a change an idle minute
     /// does not foresee (or, when the train cannot go on, its run is dropped
-    /// then; see ``dropRunsHeldUp(endingAt:)``). Never after the run's last
+    /// then; see ``dropRunsHeldUp(endingAt:memo:)``). Never after the run's last
     /// second. Only the shortcut over idle minutes needs it: a step that
     /// moves a train is not idle.
     private func nextRunMove(from now: GameTime) -> GameTime? {
@@ -3482,7 +3507,7 @@ public struct GameWorld: Equatable, Sendable {
     /// step ends there.
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
-    private func secondsUntilARouteEnds(from start: GameTime, within span: Int64) -> Int64? {
+    private func secondsUntilARouteEnds(from start: GameTime, within span: Int64, memo: inout DirectionMemo) -> Int64? {
         var soonest: Int64?
         for train in trains where train.movement.rate > 0 && train.position != nil {
             let route = routeStretches(of: train)
@@ -3493,7 +3518,7 @@ public struct GameWorld: Equatable, Sendable {
                 left = overflow ? .max : sum
             }
             let limit = soonest.map { $0 - 1 } ?? span
-            let share = travelShare(of: train, from: start)
+            let share = travelShare(of: train, from: start, memo: &memo)
             guard limit >= 1, share(limit) >= left else { continue }
             // Where the travel ends decides: a train held up on the way never
             // comes to its end, however far it may go.
@@ -3519,7 +3544,7 @@ public struct GameWorld: Equatable, Sendable {
 
     /// The travel of `span` basic steps from `start`, for every placed train
     /// with a rate, in ascending ID order: each train's share for those
-    /// seconds (see ``travelShare(of:from:)``), in one move. The moves of
+    /// seconds (see ``travelShare(of:from:memo:)``), in one move. The moves of
     /// the seconds one at a time add up to it, since a move depends on the
     /// map alone. Returns whether any train changed.
     /// `memo` keeps the trains' movement authorities (see
@@ -3529,7 +3554,7 @@ public struct GameWorld: Equatable, Sendable {
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
-            let distance = travelShare(of: trains[index], from: start)(span)
+            let distance = travelShare(of: trains[index], from: start, memo: &memo)(span)
             guard distance > 0 else { continue }
             let travel = travelling(trains[index], distance: distance, memo: &memo)
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
@@ -3564,11 +3589,11 @@ public struct GameWorld: Equatable, Sendable {
     /// ``resumeRun(_:at:)``). Within a step the map and the rates cannot
     /// change, so a train held up at one second of it is held up at its
     /// end. Returns whether any run was dropped.
-    private mutating func dropRunsHeldUp(endingAt end: GameTime) -> Bool {
+    private mutating func dropRunsHeldUp(endingAt end: GameTime, memo: inout DirectionMemo) -> Bool {
         var dropped = false
         for index in trains.indices {
             guard case .travellingToStop? = trains[index].execution, let run = trains[index].times?.run,
-                  let curve = run.curve(for: trains[index].performance)
+                  let curve = curve(of: run, for: trains[index].performance, memo: &memo)
             else { continue }
             var left: Int64 = 0
             for stretch in routeStretches(of: trains[index]).stretches {
@@ -3589,14 +3614,24 @@ public struct GameWorld: Equatable, Sendable {
     /// its rate (see ``TrainMovement/distance(at:fromSecond:toSecond:)``).
     /// Never less for a larger `k`. The curve is built once, for all of
     /// them.
-    func travelShare(of train: Train, from start: GameTime) -> (Int64) -> Int64 {
+    func travelShare(of train: Train, from start: GameTime, memo: inout DirectionMemo) -> (Int64) -> Int64 {
         if case .travellingToStop? = train.execution, let run = train.times?.run {
-            guard let curve = run.curve(for: train.performance) else { return { _ in 0 } }
+            guard let curve = curve(of: run, for: train.performance, memo: &memo) else { return { _ in 0 } }
             return { k in run.distance(on: curve, from: start, to: Self.saturating(start, plus: k)) }
         }
         let rate = train.movement.rate
         let second = start.secondOfMinute
         return { k in TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + k) }
+    }
+
+    /// `run`'s curve for `performance` (see ``ServiceRun/curve(for:)``),
+    /// kept in `memo`: a run's curve is asked of at every second it runs.
+    func curve(of run: ServiceRun, for performance: TrainPerformance, memo: inout DirectionMemo) -> RunningCurve? {
+        let query = DirectionMemo.CurveQuery(length: run.length, seconds: run.seconds, performance: performance)
+        if let known = memo.curves[query] { return known }
+        let curve = run.curve(for: performance)
+        memo.curves[query] = .some(curve)
+        return curve
     }
 
     /// Where placed train `train` ends up after travelling up to `distance`
@@ -3644,7 +3679,7 @@ public struct GameWorld: Equatable, Sendable {
             return
         }
         let envelope = cover(of: bodyStretches(of: trains[index]) + route.stretches)
-        trains[index].reservation = trains[index].reservation.filter(envelope.contains)
+        trains[index].reservation = envelope.kept(of: trains[index].reservation)
     }
 
     /// Stage U2: every train that follows another, in ascending ID order,
@@ -3669,7 +3704,7 @@ public struct GameWorld: Equatable, Sendable {
             guard let (held, envelopes) = authority(of: trains[index], memo: &memo) else { continue }
             // Its route envelope (see ``routeEnvelope(of:)``): the base and
             // the track of every stretch, asked a resource at a time.
-            let route = cover(of: bodyStretches(of: trains[index]) + envelopes.stretches)
+            let route = followingCover(of: trains[index], envelopes, memo: &memo)
             if holders == nil { holders = trackHolders(memo: &memo) }
             if holder(of: route, except: trains[index].id, holders: holders!) == nil {
                 trains[index].reservation = Set(route.resources).sorted()
@@ -3681,7 +3716,7 @@ public struct GameWorld: Equatable, Sendable {
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
             let authority = free - Self.followingGap
             guard authority > held else { continue }
-            trains[index].reservation = Set(trains[index].reservation).union(authorityEnvelope(envelopes, to: authority)).sorted()
+            trains[index].reservation = reservation(trains[index].reservation, extending: envelopes, from: held, to: authority)
             extended = true
             holders = nil
         }
@@ -3727,7 +3762,7 @@ public struct GameWorld: Equatable, Sendable {
     /// train only moves on in the step, and what it holds only shrinks as it
     /// does, so once free the track stays free, up to the step's last
     /// second: `span` ends where a train comes to the end of its route
-    /// (``secondsUntilARouteEnds(from:within:)``), and there it no longer
+    /// (``secondsUntilARouteEnds(from:within:memo:)``), and there it no longer
     /// leads a train that would follow it, so only the seconds before
     /// `span` are asked.
     ///
@@ -3761,7 +3796,7 @@ public struct GameWorld: Equatable, Sendable {
         if trains.contains(where: { isFollowing($0, memo: &memo.directions) }), frees(after: 1) { return 1 }
         // The step ends after `span` anyway, so only the seconds before it
         // are asked. After `span` a train may have come to the end of its
-        // route (see ``secondsUntilARouteEnds(from:within:)``), and one
+        // route (see ``secondsUntilARouteEnds(from:within:memo:)``), and one
         // that has no longer leads the way (see
         // ``isLeading(_:onto:for:)``): a departure that could follow it a
         // second earlier may not then.
@@ -3792,7 +3827,7 @@ public struct GameWorld: Equatable, Sendable {
     /// else a wait reads changes within it.
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
-    private func secondsUntilTrafficChanges(_ plan: TrafficPlan, from start: GameTime, within span: Int64) -> Int64? {
+    private func secondsUntilTrafficChanges(_ plan: TrafficPlan, from start: GameTime, within span: Int64, memo: inout DirectionMemo) -> Int64? {
         var soonest: Int64?
         func note(_ seconds: Int64) {
             if seconds >= 1, seconds < (soonest ?? span) { soonest = seconds }
@@ -3813,7 +3848,7 @@ public struct GameWorld: Equatable, Sendable {
                     }
             }
             guard !needed.isEmpty else { continue }
-            let share = travelShare(of: train, from: start)
+            let share = travelShare(of: train, from: start, memo: &memo)
             var distance: Int64 = 0
             for stretch in routeStretches(of: train).stretches {
                 for point in needed {

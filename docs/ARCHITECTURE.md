@@ -2048,8 +2048,8 @@ W1 翻譯了跑段曲線（決策 33），W2a、W2b 讓服務在秒上運作（�
   3. 否則走最少的秒數（排得太緊：盡快跑、晚到）；
   4. 連最少的也沒有時沒有行駛，列車照 rate 移動（gap：參考建不出曲線時等速）。
   因為從實際出發的那一刻開始，晚出發的列車整段往後移、晚到同樣多（參考的 `liveDelaySec`）；準時出發就準時到達，不會早到。
-- **移動**：跟著行駛的列車每一秒走曲線在這一秒結束與開始的距離差（`travelShare(of:from:)`）；rate 只決定動或不動（0 不動）。一段的結束（`run.end`）是一個服務事件。
-- **被擋住**（gap：參考只依時間取樣，沒有被擋住的列車）：這一步結束時剩下的路比曲線剩下的長（rate 為 0，或前方鐵軌被拆）就丟掉這段行駛（`dropRunsHeldUp(endingAt:)`）；之後 rate 大於 0、還有路、而且能往前走 1 單位時，從停止狀態以最少的秒數走剩下的路（`resumeRun(_:at:)`）。不這樣做的話，放行的列車會以被擋住時曲線的速度瞬間起跑。
+- **移動**：跟著行駛的列車每一秒走曲線在這一秒結束與開始的距離差（`travelShare(of:from:memo:)`）；rate 只決定動或不動（0 不動）。一段的結束（`run.end`）是一個服務事件。
+- **被擋住**（gap：參考只依時間取樣，沒有被擋住的列車）：這一步結束時剩下的路比曲線剩下的長（rate 為 0，或前方鐵軌被拆）就丟掉這段行駛（`dropRunsHeldUp(endingAt:memo:)`）；之後 rate 大於 0、還有路、而且能往前走 1 單位時，從停止狀態以最少的秒數走剩下的路（`resumeRun(_:at:)`）。不這樣做的話，放行的列車會以被擋住時曲線的速度瞬間起跑。
 - **閒置分鐘的捷徑**：很慢的一段可能整分鐘都不動，之後才往前一個單位；`nextRunMove(from:)` 找出下一個會讓某台列車往前的秒，閒置的分鐘不跳過它。
 - **存檔**：`run` 只在行駛中有，`start` 不早於實際出發；列車的性能必須建得出它的曲線（`Train` 的解碼器檢查），長度至少 1、秒數在 1 到最多秒數。
 - **決定性**：全部是整數；曲線是 W1 的整數實作。
@@ -4326,9 +4326,9 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 2. **排定交會的計畫**（決策 59，`trafficPlan`）：每次推導都把每列車的通過點（每段一次路徑搜尋）與站間軌道數（最大流）重算。改成同一次 `advance` 裡沿用（`DirectionMemo.trafficParts`）：通過點以列車、輪次、時刻表、週期、長度與性能為鍵，軌道數以站對為鍵。
 3. **軌道方向的雜湊**：`TrackEdgeDirection` 原本用原始值字串雜湊，所有軌段、行進方向的集合都付這個成本；改成依 case 雜湊。相等不變；Swift 每次執行的雜湊種子本來就不同，遊戲結果不能、也沒有依賴集合的順序。
 4. **路線放行的二分搜尋**（`secondsUntilARouteFrees`）：先問便宜的「有沒有跟車的列車能多拿路線」，再問出發；兩者任一成立就成立，順序不影響答案。這一步若有排定等待，原本最後一定只走一秒，這時就不再算更短的步長。
-5. **有排定等待時的步長**（決策 59 第 9 點「批次不跨過實際解除秒」的精確化）：原本計畫裡只要有排定等待，每一步就只走一秒；實景示範的單線上幾乎一直有等待，84% 的步都是一秒。改成走到下列最早的一秒為止（`secondsUntilTrafficChanges(_:from:within:)`），其餘照沒有等待時的步長規則（整分、停站事件、路線走完、路線放行）：
+5. **有排定等待時的步長**（決策 59 第 9 點「批次不跨過實際解除秒」的精確化）：原本計畫裡只要有排定等待，每一步就只走一秒；實景示範的單線上幾乎一直有等待，84% 的步都是一秒。改成走到下列最早的一秒為止（`secondsUntilTrafficChanges(_:from:within:memo:)`），其餘照沒有等待時的步長規則（整分、停站事件、路線走完、路線放行）：
    - 任何等待的計畫出發時刻或解除時刻（`trafficReleased(_:)`）；
-   - 任何列車的車頭到達計畫要見證的點的 berth（`recordTrafficVisits(_:before:)` 在那一秒記下見證）：用 `travelShare(of:from:)` 二分出第一個到達的秒。
+   - 任何列車的車頭到達計畫要見證的點的 berth（`recordTrafficVisits(_:before:)` 在那一秒記下見證）：用 `travelShare(of:from:memo:)` 二分出第一個到達的秒。
    
    一步裡推導依據改變（出發或見證）時照舊只走一秒。理由：等待只在列車停在等待站、出發到期時起作用；停下只發生在路線走完（已是步長的界限），解除只看計畫時刻與對方的見證，見證只在車頭越過 berth 的那一秒記下。所以在這一秒之前結束的每一步都和逐秒一樣。
 6. **沒有採用**：把跟車的放行範圍改成只在查詢時合併（`AuthorityEnvelopes` 不存累積集合）：二分搜尋查很多次，反而變慢，撤回。
@@ -4355,6 +4355,21 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **驗證**：同上：改前（`main` 5110684）改後各跑 6000× 2 天與 600× 1 天，每 1/8 段把 `SavedGame` 的 JSON（排序鍵）做 SHA-256，16 個檢查點全部逐位元相同（改前跑兩次也相同）；golden、SaveFixtures、ReplayFixtures 一個都不改。
 
 **參考**：私有參考 repo 的 `Railway/site_archive_clean/index.html` 的跟車是同一條線上一維的間距（`BLOCK_GAP_KM`，已是 `followingGap`），沒有以資源集合表示的保留可以移植；`Simulator/reference_snapshot` 的模擬器沒有閉塞邏輯。OpenTTD 的路徑保留（PBS）把保留記在地圖格上（GPL-2.0，只看想法、沒有複製）；本專案的保留是列車上依序存放的資源列表，二分搜尋與逐段檢查是本專案自己的。
+
+**補充：長區段進路預約，第二輪**（2026-10-13，NEXT_PRIORITIES §0 第 4 項；號碼依工作登記 #231：沿用決策 138，存檔版本、golden schema 都不動）。第一輪（#480）之後，高鐵示範照真實時刻表、行車控制打開，一整天仍要 856 秒（Linux 雲端容器、release，`TrafficControlTimingReportTests` 的 real day）。gdb 取樣與暫時的計數器量到：08–09 一小時做了 11.5 萬次路徑搜尋，不同的輸入只有 179 種；「這一站有沒有待避線」問了 3.5 萬次，只有 24 種；其餘是跟車的列車每一秒對數千個 16 m 區段重做的事。改法如下，**每一項都不改任何結果**：
+
+1. **只依路網的答案記住**：`path(from:toStation:length:)` 與路線偏好走到指定月台的搜尋（`PathMemo`）、`trafficHasSiding` 只讀路網的那一半（`TrafficSidingQuery`，列車自己的狀態仍每次先問）、一段行駛的曲線（`curve(of:for:memo:)`）、`foulingSpansByEdge()`，記在 `DirectionMemo`。
+2. **跨 advance 沿用**：交通計畫的 `TrafficParts`、上面的路徑與曲線，在一次 `advance(ticks:)` 結束時，若這一次沒有改到路網、路線、車站與彈性派車（`RouteMemo.Key`），就留給下一次；下一次開始時四者都和留下時相同才借用。不是遊戲狀態：不存檔，相等比較永遠相等（和 `PassengerRouteMemo` 相同的作法）。每種最多留 2 萬筆，超過就重來。
+3. **跟車多拿一段**：`extendAuthorities` 原本把整條保留轉成集合、和到新放行點的整個範圍合併再排序。放行點 `held` 以內的範圍保留已經全有（`authority(of:)` 的二分搜尋只停在成立的距離），軌道又是逐點成立，所以只算底與 `held` 之後的那幾段，和依序的保留合併（`reservation(_:extending:from:to:)`）；保留順序不對時照舊。
+4. **釋放走過的軌道**：`releasePassedTrack` 依序走過保留，和每條邊自己的 span 並排比對（`TrackCover.kept(of:)`），不再每個資源二分搜尋一次；什麼都沒放掉時傳回原本的陣列。
+5. **持有表**：每列車的 `HeldTrack`、保留的 `ReservedTrack`（保留沒變就沿用，陣列相同時比較是常數時間）、跟車列車的路線範圍（`followingCover`）依列車記住；`owners` 一開始就留足空間，一個資源只有一列車時不另建陣列（`Places`）。
+6. **一次問完**：`followingAuthority` 原本為每一列別的車各問一次「它有沒有持有這條路線」，現在一次算出所有列車（`TrackHolders.holding`）。`holdsAny` 與 `waits(_:forAnyIn:)` 只看路線所在的邊上、可能碰到的那一段保留，依序並排比對。`isLeading` 只要 `routeStretches(of:).moves`，不再建出整條路線的資源集合。
+
+**效果**（同一台 Linux 雲端容器、release，高鐵 169 班真實時刻表、行車控制打開）：一整天 856 → 285 秒；08–09 48.2 → 15.3 秒。18 個小時每小時的 `SavedGame` 雜湊（`TrafficControlTimingReportTests` 印出的 digest）全部和改前相同。實機上的秒數未驗證。
+
+**驗證**：`ReservationShortcutTests` 加上新舊兩種做法的對照（`kept(of:)` 對 `filter`、合併對集合聯集排序、記住的路徑對重新搜尋、記住的 `HeldTrack`），以及跨 advance 沿用的對照：長區段 replay 逐 tick、交通管制與跟車兩個 campaign 的操作（中間有改路網、路線的指令），一邊每次都丟掉留下的記憶，每一步之後兩個世界相同。golden、SaveFixtures、ReplayFixtures 一個都不改。
+
+**參考**：私有參考 repo 沒有以資源表示的保留或路徑快取可以移植（理由同上）；OpenTTD 的 YAPF 有路段快取（GPL-2.0，只看想法，沒有複製）。這些作法是本專案自己的。
 
 ### 139. 城市的住商工需求（RCI）
 
