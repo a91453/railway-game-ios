@@ -39,6 +39,7 @@
 | 50 | 列車（車身、車頭、夜燈） | `MapArt.drawTrains` → `drawTrain` | `MapTrainCanvas`：每一幀重畫 |
 | 51 | 等待環、死結的警告 | `drawWaitMarks` | |
 | 60 | 天氣：壓暗、雨、閃電、颱風標記 | `MapWeatherLayer` → `drawWeather` | |
+| 61 | 鋪軌的放大鏡：同一個 `MapCanvas` 換成 3 倍近的相機，拖曳鋪軌時在一角（#522，一鍵雙線工具） | `MapView` 的 ZStack | 照這張表的 20–34 畫，配色跟著 `MapArt` |
 
 ## 3. SwiftUI 的疊層（`MapView` 的 `.overlay`，由下往上）
 
