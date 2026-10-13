@@ -18,7 +18,8 @@
 //
 // The reference draws a holiday at random among a country's; a railway's
 // calendar is known, so here each holiday comes on the same days every
-// year. The game's year is 360 days of twelve 30-day months, with no real
+// year (Taiwan's are worked out for each year instead, decision 211:
+// `TaiwanHolidays.swift`; its row here gives their names and boosts). The game's year is 360 days of twelve 30-day months, with no real
 // date (decision 90), so each holiday is set on the month and day it has in
 // 2026 (a lunar or moving holiday where it fell that year): those dates
 // are this project's (gap: the reference has none).
@@ -102,6 +103,9 @@ public enum HolidayCalendar {
 
     /// The countries, by code.
     public static let countries: [String: [Holiday]] = [
+        // Taiwan's days as in 2026; each year's are worked out instead
+        // (`TaiwanHolidays`, decision 211), which take the names and the
+        // boosts from here.
         "TW": [
             Holiday(.newYear, 1, 1, days: 1, boost: 50),
             Holiday(.springFestival, 2, 14, days: 9, boost: 200),
@@ -364,6 +368,10 @@ extension GameWorld {
     /// through `last`, by start, then by the country's order.
     public func holidays(from first: Int64, through last: Int64) -> [HolidayRun] {
         guard let disruptions, first <= last else { return [] }
+        // Taiwan's move from year to year (decision 211).
+        if disruptions.country == TaiwanHolidays.country {
+            return TaiwanHolidays.runs(from: first, through: last, level: disruptions.level)
+        }
         let year = FinancePeriod.year.days
         var runs: [HolidayRun] = []
         for holiday in disruptions.holidays {

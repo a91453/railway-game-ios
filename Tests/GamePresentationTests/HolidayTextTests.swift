@@ -43,30 +43,32 @@ final class HolidayTextTests: XCTestCase {
     }
 
     func testThePanelAnnouncesAHolidayAWeekAheadAndCountsItDown() throws {
-        XCTAssertEqual(try world(day: 35).holidayTexts(in: .english), [])
-        XCTAssertEqual(try world(day: 36).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, starts in 7 days, lasts 9 days"])
-        XCTAssertEqual(try world(day: 42).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，1 天後開始，連續 9 天"])
-        XCTAssertEqual(try world(day: 47).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，還有 5 天"])
-        XCTAssertEqual(try world(day: 51).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, 1 more day", "Peace Memorial Day: +5% demand on every line, starts in 6 days, lasts 1 day"])
+        // Taiwan's Lunar New Year of game year 0 runs from day 44 to day 50
+        // (decision 211), 28 February is day 57.
+        XCTAssertEqual(try world(day: 36).holidayTexts(in: .english), [])
+        XCTAssertEqual(try world(day: 37).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, starts in 7 days, lasts 7 days"])
+        XCTAssertEqual(try world(day: 43).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，1 天後開始，連續 7 天"])
+        XCTAssertEqual(try world(day: 47).holidayTexts(in: .traditionalChinese), ["春節：全線需求 +20%，還有 4 天"])
+        XCTAssertEqual(try world(day: 50).holidayTexts(in: .english), ["Lunar New Year: +20% demand on every line, 1 more day", "Peace Memorial Day: +5% demand on every line, starts in 7 days, lasts 1 day"])
         var off = try world(day: 47)
         off.setDisruptions(nil)
         XCTAssertEqual(off.holidayTexts(in: .english), [])
     }
 
     func testTheStationMasterWarnsThreeDaysAhead() throws {
-        XCTAssertNil(StationMasterAdvice(world: try world(day: 39)), "four days ahead, all runs well")
-        let advice = try XCTUnwrap(StationMasterAdvice(world: try world(day: 40)))
+        XCTAssertNil(StationMasterAdvice(world: try world(day: 40)), "four days ahead, all runs well")
+        let advice = try XCTUnwrap(StationMasterAdvice(world: try world(day: 41)))
         XCTAssertEqual(advice, .holidayComing(kind: .springFestival, days: 3, percent: 20))
         XCTAssertFalse(advice.isWorry)
         XCTAssertEqual(advice.text(in: .traditionalChinese), "3 天後是春節，各線旅客約多 20%。先加開列車或加掛車廂吧。")
-        XCTAssertEqual(StationMasterAdvice(world: try world(day: 42)), .holidayComing(kind: .springFestival, days: 1, percent: 20))
-        XCTAssertNil(StationMasterAdvice(world: try world(day: 43)), "once it has begun, the panel says it")
+        XCTAssertEqual(StationMasterAdvice(world: try world(day: 43)), .holidayComing(kind: .springFestival, days: 1, percent: 20))
+        XCTAssertNil(StationMasterAdvice(world: try world(day: 44)), "once it has begun, the panel says it")
     }
 
     func testTheDayAfterAHolidayTheStationMasterReviewsIt() throws {
         var world = try world(day: 34, managed: true)
-        try world.advance(ticks: 1_440 * 18)
-        XCTAssertEqual(world.clock.now.seconds / GameTime.secondsPerDay, 52)
+        try world.advance(ticks: 1_440 * 17)
+        XCTAssertEqual(world.clock.now.seconds / GameTime.secondsPerDay, 51)
         let review = try XCTUnwrap(world.holidayReview())
         XCTAssertEqual(review.kind, .springFestival)
         XCTAssertGreaterThan(review.riders, 0)
@@ -82,7 +84,7 @@ final class HolidayTextTests: XCTestCase {
         // A day later there is nothing to review; free play keeps no days.
         try world.advance(ticks: 1_440)
         XCTAssertNil(world.holidayReview())
-        XCTAssertNil(try self.world(day: 52).holidayReview())
+        XCTAssertNil(try self.world(day: 51).holidayReview())
     }
 
     @MainActor

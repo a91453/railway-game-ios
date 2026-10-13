@@ -198,7 +198,7 @@ final class TourismSessionTests: XCTestCase {
 
     func testTheStationMasterWarnsOfTouristsBeforeAHoliday() throws {
         var world = try world()
-        // The Spring Festival starts on day 43; on day 41 it is two days off
+        // The Spring Festival starts on day 44; on day 42 it is two days off
         // (and on the game's first day, New Year's Day, nothing is said).
         world.setDisruptions(Disruptions(level: .light, country: "TW"))
         if case .touristsComing? = StationMasterAdvice(world: world) { XCTFail("not on the first day") }
@@ -207,7 +207,7 @@ final class TourismSessionTests: XCTestCase {
         world.setTourism(nil)
         try world.setStationDemand(StationID(rawValue: 1), to: StationDemand(kind: .residential, dailyTrips: 1))
         world.setSpeed(.normal)
-        try world.advance(ticks: 41 * 1_440)
+        try world.advance(ticks: 42 * 1_440)
         world.setTourism(sights)
         let advice = try XCTUnwrap(StationMasterAdvice(world: world))
         XCTAssertEqual(advice, .touristsComing(kind: .springFestival, days: 2, times: 2))
@@ -232,10 +232,10 @@ extension TourismSessionTests {
         world.setTourism(nil)
         try world.setStationDemand(StationID(rawValue: 1), to: StationDemand(kind: .residential, dailyTrips: 1))
         world.setSpeed(.normal)
-        // The Spring Festival runs 9 days from day 43: day 46 is its fourth.
-        try world.advance(ticks: 46 * 1_440)
+        // The Spring Festival runs 7 days from day 44: day 47 is its fourth.
+        try world.advance(ticks: 47 * 1_440)
         world.setTourism(sights)
-        XCTAssertEqual(world.holidays(from: 46, through: 46).first?.start, 43)
+        XCTAssertEqual(world.holidays(from: 47, through: 47).first?.start, 44)
         if case .touristsComing? = StationMasterAdvice(world: world) { XCTFail("the holiday began three days ago") }
     }
 }
