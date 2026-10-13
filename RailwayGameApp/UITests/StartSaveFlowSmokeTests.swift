@@ -330,21 +330,19 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     private func checkMenuStaysStillAndChooses(_ identifier: String, rows menuRows: XCUIElementQuery, in app: XCUIApplication) {
         // On a phone on its side the train panel shows its first rows only
         // (run 38323867205: train.type 476 pt down a 402 pt screen): drag
-        // the panel, at the menu's own x, until the menu can be touched.
+        // the panel until the menu can be touched.
         let target = app.buttons.matching(identifier: identifier).firstMatch
         XCTAssertTrue(target.waitForExistence(timeout: 10), "Missing the menu \(identifier)")
-        // Each drag moves a fifth of the screen, so the menu cannot jump
-        // past the panel's visible rows: drags of 40% carried
-        // train.performance from below them to y 81, under the panel's
-        // head, once the train card grew a line (full lane run
-        // 38362099969). A menu above the middle is dragged back down.
-        let origin = app.coordinate(withNormalizedOffset: .zero)
-        for _ in 0..<12 where !touchable(target) {
-            let x = target.frame.midX - app.frame.minX
-            let (from, to): (CGFloat, CGFloat) = target.frame.midY < app.frame.midY ? (0.4, 0.6) : (0.65, 0.45)
-            origin.withOffset(CGVector(dx: x, dy: app.frame.height * from))
-                .press(forDuration: 0.1, thenDragTo: origin.withOffset(CGVector(dx: x, dy: app.frame.height * to)),
-                       withVelocity: .slow, thenHoldForDuration: 0.3)
+        // The panel is dragged down its leading margin, beside the rows,
+        // in drags shorter than its visible rows: drags of 40% of the
+        // screen at the menu's own x carried train.performance past them
+        // to y 81 once the train card grew a line (full lane run
+        // 38362099969), and shorter ones begun on the menus above were
+        // taken by those menus and moved nothing (run 38369790160).
+        if !touchable(target) {
+            let panel = app.scrollViews.containing(.button, identifier: identifier).firstMatch
+            XCTAssertTrue(panel.exists, "No panel holds the menu \(identifier)")
+            _ = app.dragUntilWhollyOnScreen(target, in: panel)
         }
         let menu = requiredButton(identifier, in: app)
         let chosen = menu.label
