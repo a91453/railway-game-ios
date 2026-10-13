@@ -298,14 +298,14 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertFalse(fold.showsFolded(stepChoice: false, chapterChoice: nil, waitsForNext: false, isDone: false))
     }
 
-    /// The steps to read (the ridership and the end) wait for Next, which is
+    /// The steps to read (the line's card, the ridership and the end) wait for Next, which is
     /// on the open card: they open by themselves, so the tutorial can be
     /// walked to its end without opening the card; and so does a step
     /// reached by Back. Folded on the step, they stay folded.
     func testAStepToReadOpensSoNextShows() {
         let fold = TutorialCardFold()
         let toRead = Tutorial.standardSteps.filter { $0.goal == .read }.map(\.id)
-        XCTAssertEqual(toRead, ["station.ridership", "end"])
+        XCTAssertEqual(toRead, ["line.card.read", "station.ridership", "end"])
         // A step to read is always done.
         XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: true, isDone: true))
         XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: true, waitsForNext: true, isDone: true))
