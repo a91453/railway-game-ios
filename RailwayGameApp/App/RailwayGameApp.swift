@@ -32,6 +32,16 @@ struct RailwayGameApp: App {
         // reads them.
         if DebugLaunch.isSet("-ui-testing"), let domain = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: domain)
+            // The one-time card about track numbers and routes (decision
+            // 201, later) starts seen, as the start screen's first-time
+            // card starts closed: on settings emptied at every launch it came
+            // up in every test whose line has double track or whose lines
+            // panel shows the route menus, an alert over the switch or map
+            // the test went on to touch (main's full lane, run 38404565525).
+            // A test of the card itself asks for it with -show-route-hint.
+            if !DebugLaunch.isSet("-show-route-hint") {
+                UserDefaults.standard.set(true, forKey: RouteHint.seenKey)
+            }
         }
         // And silently: the music and sounds only take the runner's CPU
         // (``GameAudio/init(defaults:plays:)``); no test listens to them.
