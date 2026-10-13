@@ -2,50 +2,72 @@
 import XCTest
 
 /// The passing-loop tool's probe (NEXT_PRIORITIES §0 item 10): a station
-/// closed to passengers, with two tracks, between the two ends of a single
-/// line works as a signal station (號誌站). A line that does not call
-/// there still has its trains meet on its two tracks.
+/// closed to passengers with two tracks between the ends of a single line,
+/// a signal station (號誌站). SingleTrackMeet with M closed.
 final class ClosedStationMeetTests: XCTestCase {
-    /// SingleTrackMeet with M closed and a line from W to E that does not
-    /// call at M, two trains, one at each end.
-    static func world() throws -> (world: GameWorld, line: LineID, trains: [TrainID]) {
+    /// Timetabled services east and west, the westbound calling at M or
+    /// running through it.
+    static func services(westCallsAtMiddle: Bool) throws -> (world: GameWorld, east: TrainID, west: TrainID) {
         var world = try SingleTrackMeet.world()
         try world.setStationOperationMode(SingleTrackMeet.middle, to: .closed)
-        let line = try world.createLine(named: "Single", stops: [SingleTrackMeet.west, SingleTrackMeet.east]).id
-        try world.setLineServiceWindow(line, to: .allDay)
-        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
-        let first = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
-        let second = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.backward(3), offset: 3_072)
-        try world.assignTrain(first, to: line)
-        try world.assignTrain(second, to: line)
+        let east = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let west = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.backward(3), offset: 3_072)
+        try world.setTrainTimetable(east, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 660), departure: .init(seconds: 720)),
+        ])
+        let middle: [ScheduledStop] = westCallsAtMiddle
+            ? [.init(station: SingleTrackMeet.middle, arrival: .init(seconds: 400), departure: .init(seconds: 460))] : []
+        try world.setTrainTimetable(west, to: [
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 0), departure: .init(seconds: 120)),
+        ] + middle + [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 760), departure: .init(seconds: 820)),
+        ])
+        try world.startTrainService(east)
+        try world.startTrainService(west)
         try world.setTrafficControl(true)
-        world.setSpeed(.x1)
-        return (world, line, [first, second])
+        return (world, east, west)
     }
 
-    func testTheClosedStationsTwoTracksLetTwoTrainsRun() throws {
-        let (world, line, _) = try Self.world()
-        let layout = world.capacityLayout(of: try XCTUnwrap(world.line(id: line)))
-        XCTAssertEqual(world.lineTrainsInService(line, at: .peak), 2, "layout: \(layout.blocks), passing \(layout.passing)")
-    }
-
-    func testTrainsMeetAtTheClosedStation() throws {
-        var (world, _, trains) = try Self.world()
-        var metAtMiddle = false
-        var calls: [TrainID: Int] = [:]
-        var last: [TrainID: TimetableExecution?] = [:]
-        for _ in 0..<(3 * 3_600) {
-            try world.advance(ticks: 10)
-            if world.scheduledTrafficWaits().contains(where: { $0.station == SingleTrackMeet.middle && $0.kind == .meet }) { metAtMiddle = true }
-            for id in trains {
-                let execution = world.train(id: id)?.execution
-                if execution != last[id] ?? nil, case .waitingAtStop? = execution { calls[id, default: 0] += 1 }
-                last[id] = execution
-            }
-        }
-        XCTAssertTrue(metAtMiddle, "a meet is planned at the closed station")
-        XCTAssertEqual(world.deadlockedTrains(), [], "no deadlock")
-        for id in trains { XCTAssertGreaterThan(calls[id] ?? 0, 10, "train \(id) keeps running: \(calls)") }
+    /// A service calling at the closed station has the meet planned there
+    /// (the eastbound train waits on its other track), and both run through.
+    func testAMeetIsPlannedAtAClosedStationCalledAt() throws {
+        var (world, east, west) = try Self.services(westCallsAtMiddle: true)
+        let wait = try XCTUnwrap(world.scheduledTrafficWaits().first)
+        XCTAssertEqual(wait.station, SingleTrackMeet.middle)
+        XCTAssertEqual(wait.kind, .meet)
+        try world.advance(ticks: 20_000)
+        XCTAssertNil(world.train(id: east)?.execution)
+        XCTAssertNil(world.train(id: west)?.execution)
+        XCTAssertEqual(world.stationsStoppedAt(by: east), [SingleTrackMeet.east])
+        XCTAssertEqual(world.stationsStoppedAt(by: west), [SingleTrackMeet.west])
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    /// Through a closed station neither calls at, no meet is planned, but
+    /// traffic control still passes the trains on its two tracks.
+    func testTrainsPassAtAClosedStationNeitherCallsAt() throws {
+        var (world, east, west) = try Self.services(westCallsAtMiddle: false)
+        XCTAssertEqual(world.scheduledTrafficWaits(), [])
+        try world.advance(ticks: 20_000)
+        XCTAssertNil(world.train(id: east)?.execution)
+        XCTAssertNil(world.train(id: west)?.execution)
+        XCTAssertEqual(world.deadlockedTrains(), [])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    /// A line's capacity (decision 61) counts a passing place only at a
+    /// stop: a line that runs through the closed station keeps one train on
+    /// the single track; one that calls there can run two.
+    func testALineCountsTheClosedStationOnlyWhenItCallsThere() throws {
+        for calls in [false, true] {
+            var world = try SingleTrackMeet.world()
+            try world.setStationOperationMode(SingleTrackMeet.middle, to: .closed)
+            let stops = calls ? [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east] : [SingleTrackMeet.west, SingleTrackMeet.east]
+            let line = try world.createLine(named: "Single", stops: stops).id
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+            try world.setTrafficControl(true)
+            XCTAssertEqual(world.lineTrainsInService(line, at: .peak), calls ? 2 : 1, "calls at M: \(calls)")
+        }
     }
 }

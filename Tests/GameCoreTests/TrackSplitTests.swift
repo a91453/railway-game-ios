@@ -172,4 +172,21 @@ final class TrackSplitTests: XCTestCase {
         XCTAssertEqual(world, before)
         XCTAssertNoThrow(try world.splitTrackEdge(.edge(3), at: 4_096), "other track splits")
     }
+
+    /// Decision 204: a split runs the passengers' check as building or
+    /// removing track does. The parts join as the edge did, so the line
+    /// still runs the same way and its waiting passengers stay.
+    func testASplitKeepsTheLinesWaitingPassengers() throws {
+        var (world, _, line, _) = try LineRoutePreferenceTests.setup(traffic: false)
+        for station in [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east] {
+            try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 0))
+        }
+        let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == SingleTrackMeet.west })
+        world.passengers[record].release(5, to: SingleTrackMeet.east, along: PassengerTrip(line: line, direction: .outbound), at: .zero)
+        let journey = world.lineJourney(line)
+        try world.splitTrackEdge(.edge(2), at: 4_096)
+        XCTAssertEqual(world.lineJourney(line)?.roundTripSeconds, journey?.roundTripSeconds)
+        XCTAssertEqual(world.waitingPassengers(at: SingleTrackMeet.west).map(\.count).reduce(0, +), 5)
+        XCTAssertEqual(world.passengerLedger(of: SingleTrackMeet.west).abandoned, 0)
+    }
 }
