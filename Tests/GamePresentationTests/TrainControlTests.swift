@@ -388,7 +388,7 @@ final class TrainControlTests: XCTestCase {
 
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(session.selectedTrain?.position, position)
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at Mid, on edge #3 going backward."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at Mid, on track #3 going backward."))
         }
     }
 
@@ -754,8 +754,8 @@ final class TrainControlTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             // Two minutes at 1 km/h: 2132 units, 84 along edge 4.
             XCTAssertEqual(session.selectedTrain?.position, Self.line.between(3, 4, offset: 84))
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #4 forward, 84 units along")
-            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Edge #5")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #4 forward, 84 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 1 more edge, Track #5")
 
             // It reaches the berth and stays there, even while time continues.
             for _ in 0..<4 {
@@ -763,7 +763,7 @@ final class TrainControlTests: XCTestCase {
             }
             XCTAssertEqual(session.selectedTrain?.position, Self.line.at(5, facingEast: true))
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #5 forward, 1024 units along")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #5 forward, 1024 units along")
         }
     }
 
@@ -796,8 +796,8 @@ final class TrainControlTests: XCTestCase {
                 }
             }
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Edge #2 forward, 600 units along")
-            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 3 more edges, ending on Edge #5")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #2 forward, 600 units along")
+            XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "Path: 3 more edges, ending on Track #5")
             XCTAssertEqual(session.selectedTrain?.movement.rateText(in: .english), "Rate 300 / min")
         }
     }
@@ -807,11 +807,11 @@ final class TrainDisplayTests: XCTestCase {
     func testPositionsReadAsGameCoreStoresThem() {
         XCTAssertEqual(
             TrainPosition.onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 256).displayText(in: .english),
-            "Edge #3 forward, 256 units along"
+            "Track #3 forward, 256 units along"
         )
         XCTAssertEqual(
             TrainPosition.onEdge(TrackTraversal(edge: .edge(3), direction: .backward), offset: 0).displayText(in: .english),
-            "Edge #3 backward, 0 units along"
+            "Track #3 backward, 0 units along"
         )
         XCTAssertEqual(Train(id: TrainID(rawValue: 1), name: "Train 1").positionText(in: .english), "Not on the track")
         XCTAssertEqual(Train(id: TrainID(rawValue: 1), name: "Train 1").pathText(in: .english), "No path ahead")
@@ -828,14 +828,14 @@ final class TrainDisplayTests: XCTestCase {
         XCTAssertEqual(world.train(id: id)?.movement.rateText(in: .english), "Rate 0 / min")
 
         try world.setTrainContinuation(id, along: line.path(from: 1, through: [2]), stoppingAt: nil)
-        XCTAssertEqual(world.train(id: id)?.pathText(in: .english), "Path: 1 more edge, Edge #2")
+        XCTAssertEqual(world.train(id: id)?.pathText(in: .english), "Path: 1 more edge, Track #2")
 
         try world.setTrainContinuation(id, along: line.path(from: 1, through: [2, 3, 4]), stoppingAt: 512)
         try world.setTrainMovementRate(id, to: 1_536)
         try world.advance(ticks: 1)
         // Edge 2 and half of edge 3 behind it: edge 4 left, stopping half
         // way along it.
-        XCTAssertEqual(world.train(id: id)?.pathText(in: .english), "Path: 1 more edge, Edge #4, stopping 512 units along it")
+        XCTAssertEqual(world.train(id: id)?.pathText(in: .english), "Path: 1 more edge, Track #4, stopping 512 units along it")
         XCTAssertEqual(world.train(id: id)?.movement.rateText(in: .english), "Rate 1536 / min")
     }
 }

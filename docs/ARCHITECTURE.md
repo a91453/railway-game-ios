@@ -6807,6 +6807,41 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；HUD 的 ∞ 膠囊、經濟面板、目標面板、存檔卡與新遊戲選項的樣子要等 macOS CI 與實機。
 
+### 201. 進路看得到：地圖上預覽一段進路、單向路線的箭頭、軌段編號
+
+2026-10-13，TestFlight 56.1 的玩家回報：「股道的編號在哪裡？怎麼看？」「要蓋雙線就要選列車進路，但進路上的編號是數字，地圖上卻看不出列車預計走哪一條軌道，只能等列車跑一兩趟才知道。」玩家建議在路線上畫箭頭表示方向，或把選進路的方式寫得更明白。號碼依工作登記 #231：決策 201；存檔版本、golden schema 不動。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。
+
+1. **進路預覽**（`RoutePreview`）：路線面板每一段（A → B）的進路選單旁多一個地圖按鈕（`line.route.preview.<停站模式>.<from>.<to>`），按了地圖就框出這一段列車實際會走的路徑，沿路畫箭頭（列車行進的方向）並標出每個軌段的編號，**只標這一段**，不是整張圖。選單裡多一個「先在地圖上看」子選單，可以在選定之前預覽「自動選路」或任何一個選項。選定一個選項後，地圖自動改成顯示這一段（照新的設定）。
+   - 路徑怎麼來：在世界的副本上把這一段的偏好換成要預覽的選項（`setLineRoutePreferences`），再取 `lineJourney` 的那一段（`LineMap.legPieces`）。所以預覽的是列車真的會開的路，不是選項「希望」的路；選項接不上列車來的軌道時（GameCore 會改找路），預覽照實畫，面板的說明寫「這個選擇接不上列車來的軌道，列車會改走：…」（`followsChoice`）。
+   - 預覽是 `GameSession.routePreviewRequest`（只是畫面狀態，不存檔、不經過指令），每個指令版本算一次（`routePreviewMemo`）；選了另一條路線就不畫，關掉路線面板就清掉。路徑的中間不在畫面內時，鏡頭移過去。
+   - 環線只預覽它的 journey 方向（內環）；只有外環才走的那幾段沒有預覽（`lineJourney` 只給一個方向）。
+2. **路線色帶的方向**（`LineMap.Stretch.way`）：路線色帶原本兩個方向畫成同一條。現在一段軌道只有一個方向的列車走時，色帶上畫箭頭（全細節時），所以雙線上看得出每個方向走哪一條；來回都走的單線不畫。終點站的月台（列車在那裡折返）一律當作兩個方向，不畫箭頭。
+3. **停站模式（pattern）的進路也畫**：`LineMap` 原本只畫路線本身服務的路徑，現在也畫各停站模式的路徑（每個停站模式多一次 `lineJourney`，在背景算），`LineMapKey` 也含停站模式的停靠站與偏好，所以只改停站模式的進路，地圖也會重畫。
+4. **編號看得到、用語一致**：
+   - 選取工具點軌道，檢視卡第一項從「軌道」改成編號「軌段 #3」／「Track #3」（`trackInspectionText`）。
+   - 拉近到 `MapArt.trackNumbersFromSize`（44 pt / 16 m；手機開局 32，最大 64）以上，畫面裡每一段夠長（螢幕上 64 pt 以上）的軌道在中間標編號（淺底），互相蓋住的略過，最多 80 個；預覽中的軌段一律標（深底），不受縮放限制。
+   - 用語：中文統一為「軌段 #N」（核心訊息本來就是），路線面板原本的「股道 16← · 15←・月台股道 #7」改成「軌段 #16 → #15 → #7（月台）」、「月台在軌段 #7・自動選路」（`RoutePreview.choiceText`）；英文的「Edge #N」統一改成「Track #N」。←／→（軌段的建造方向）不再寫在文字裡，方向看地圖上的箭頭；兩個選項文字相同時加「(2)」區分。「待避股道」是車站的專有名詞，不改。
+5. **說明手冊**：多一則「軌段編號在哪裡？進路會走哪一條軌道？」（`trackNumbers`，營運）。教學不加（作者 2026-10-13 決定暫不加進階教學，NEXT_PRIORITIES Q21）。
+
+**畫法**：預覽照網站跟隨列車時的路線（`followLayers`：淺色外框 8.5 px 加路線色 4.4 px），這裡比路線色帶寬 1.4 倍，蓋在上面才看得出來；箭頭照網站的 `drawArrowAt`（尖端在前 1 倍、後兩角在後 0.55 倍與左右 0.95 倍），白底藏青邊，和轉乘連結同一組色票（`Palette.transferLink`／`transferEdge`），在任何路線色上都看得到。箭頭與編號的位置（`PolylineMarks`）是純幾何，在 GamePresentation 測。
+
+**參考**（`a91453/railway-reference-private`；`Ci/`、`Railway/`、`Simulator/`、`MapBuilder/`、`OpenWorld/` 都搜過 arrow、chevron、direction、symbol-placement、route、label、minzoom）：
+
+| 參考 | 行為 | Swift（決策 201） | 分類 |
+| --- | --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `buildFollowRoute`、`data/track_style_layers.json` `followLayers` | 跟隨列車時把它的路線框出來：外框 8.5 px＋路線色 4.4 px | `MapArt.drawRoutePreview`（外框 `Palette.followCase`，比例 8.5:4.4） | 移植畫法；路徑來自 `lineJourney` |
+| `Railway/site_archive_clean/index.html` `drawArrowAt` | 列車標籤旁的方向三角形（尖端 s、後角 −0.55s、±0.95s，外框） | `MapArt.drawArrow`，沿路徑與單向色帶每隔一段畫一個 | 移植形狀；沿線重複是本專案的 |
+| `Ci/reference_snapshot/lib/virtual_island_city__q_*.js` 道路名稱（`minzoom` 12.5／15.5） | 拉近到某個縮放才標名稱 | `MapArt.trackNumbersFromSize`、`drawTrackNumbers` | 只取「拉近才標」的做法 |
+| `Simulator/reference_snapshot/_next/static/chunks/5758-*.js` 道岔路線的高亮與標籤 | 道岔走的那一邊高亮，旁邊一個編號牌 | 編號牌（深底淺字）的樣子 | 參考 |
+| `MapBuilder/reference_snapshot/` `js-Map-segments--icon` | 色帶上的重複圖案（圓、菱形…，沒有箭頭） | （沒有移植） | 參考 |
+| （參考沒有）軌段編號標籤、選定前預覽進路、沿線重複的箭頭 | — | `RoutePreview`、`PolylineMarks`、`LineMap.Way` | gap → 原生 |
+
+外部專案：OpenTTD（GPL-2.0）的路徑訊號會把列車預約的路徑在地圖上標出來，只取「把路徑畫出來」的想法，沒有用到程式碼。
+
+**測試**：`RoutePreviewTests`（一段的路徑照列車開的方向、軌段順序與兩種語言的說明；選定前預覽一個選項不改世界、選定後照新的設定、自動選路回到原本的路；別段的選項沒有預覽；雙線上去程與回程的色帶方向、來回同一條與終點月台不畫箭頭；停站模式的進路畫進色帶也能預覽；選單文字、重複時加編號、`Track #N`／`軌段 #N`；`GameSession` 選定後顯示剛選的那一段、只顯示選中路線的、清掉；`PolylineMarks` 的間距、轉角、左移；說明手冊找得到）。`MapInspectionTests` 與用到「Edge #」的文字測試改成新的用語。
+
+**沒有驗證的**：Linux 不能建置 App；地圖按鈕、子選單、預覽的外框與箭頭、拉近時的編號在 iPhone 橫拿與 iPad 上的樣子要在 macOS CI 與 TestFlight 上看。
+
 ### 202. 雙線預設靠左行駛
 
 2026-10-13，作者請開發、美術、玩家三方討論後定案（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §10 第 23 題）：做，現在做，台鐵、高鐵都靠左行駛。起因是 TestFlight 56.1 玩家回報（`docs/research/PLAYER_FEEDBACK.md` 56.1 #11）：蓋了雙線，兩個方向的列車還是在同一條軌道上來回跑。號碼依工作登記 #231：決策 202、存檔版本 52；golden schema 不動。
