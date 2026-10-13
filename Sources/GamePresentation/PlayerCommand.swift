@@ -19,8 +19,10 @@ public enum PlayerCommand: Hashable, Sendable {
     /// A stretch of track from the network tool (``GameSession/buildNetworkTrack()``).
     case buildTrack(TrackStretch)
     /// A stretch and the track beside it, as one (decision 204, the tool's
-    /// double-track option): the stretch first, then the parallel.
-    case buildDoubleTrack(TrackStretch, parallel: TrackStretch)
+    /// double-track option): the stretch first, then the parallel, then
+    /// the crossovers joining the parallel to the track the stretch joins
+    /// (``GameSession/doubleTrackCrossovers(main:parallel:mainEdge:parallelEdge:before:in:)``).
+    case buildDoubleTrack(TrackStretch, parallel: TrackStretch, crossovers: [TrackStretch] = [])
     /// A platform, on a new station or an existing one
     /// (``GameSession/addNetworkPlatform()`` on level track).
     case addPlatform(PlatformAddition)
@@ -181,9 +183,12 @@ extension GameSession {
         switch command {
         case .buildTrack(let stretch):
             outcome.track = try stretch.build(in: &world, heights: heights)
-        case .buildDoubleTrack(let stretch, let parallel):
+        case .buildDoubleTrack(let stretch, let parallel, let crossovers):
             outcome.track = try stretch.build(in: &world, heights: heights)
             _ = try parallel.build(in: &world, heights: heights)
+            for crossover in crossovers {
+                _ = try crossover.build(in: &world, heights: heights)
+            }
         case .addPlatform(let addition):
             // The platform's stretch, on the level edge once levelled.
             var stretch = (edge: addition.edge, start: addition.start, end: addition.end)
@@ -285,6 +290,9 @@ extension PlayerCommand: Codable {
         var levelling: PlatformLevelling?
         /// The double track's parallel, as a `buildTrack` of its own.
         var parallel: PlayerCommand?
+        /// The double track's crossovers, each a `buildTrack`; absent for
+        /// none (and in logs from before them).
+        var crossovers: [PlayerCommand]?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -336,7 +344,11 @@ extension PlayerCommand: Codable {
             self = .buildTrack(try stretch())
         case "buildDoubleTrack":
             guard case .buildTrack(let parallel)? = record.parallel else { throw invalid("a double track needs its parallel") }
-            self = .buildDoubleTrack(try stretch(), parallel: parallel)
+            let crossovers = try (record.crossovers ?? []).map { command in
+                guard case .buildTrack(let crossover) = command else { throw invalid("a crossover is a stretch") }
+                return crossover
+            }
+            self = .buildDoubleTrack(try stretch(), parallel: parallel, crossovers: crossovers)
         case "addPlatform":
             guard let edge = record.edge, let start = record.startDistance, let end = record.endDistance else {
                 throw invalid("a platform needs its edge, start and end")
@@ -402,9 +414,10 @@ extension PlayerCommand: Codable {
         switch self {
         case .buildTrack(let stretch):
             write(stretch)
-        case .buildDoubleTrack(let stretch, let parallel):
+        case .buildDoubleTrack(let stretch, let parallel, let crossovers):
             write(stretch)
             record.parallel = .buildTrack(parallel)
+            record.crossovers = crossovers.isEmpty ? nil : crossovers.map(PlayerCommand.buildTrack)
         case .addPlatform(let addition):
             record.edge = addition.edge.number
             record.startDistance = addition.start

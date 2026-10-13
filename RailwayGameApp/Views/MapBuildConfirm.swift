@@ -306,7 +306,7 @@ private struct BuildConfirmation {
             cost = preview.cost
             canConfirm = preview.problem == nil && preview.cost != nil
             kind = .track
-            caption = nil
+            caption = preview.crossoverNote
             showsCatchment = false
             cancel = { session.clearNetworkDraft() }
             confirm = { session.buildNetworkTrack() }
