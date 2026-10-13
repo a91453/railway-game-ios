@@ -59,6 +59,10 @@ public final class GameSession {
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
+    /// What traffic control shows (``trafficOverlay``,
+    /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
+    /// for; the game loop reads it off the main actor with each tick.
+    @ObservationIgnored var trafficMemo: (revision: Int, reading: TrafficReading)?
 
     /// The language of the session's messages and suggested names, and of
     /// the text the app derives from the world (Stage L1). Set once: iOS
@@ -981,6 +985,8 @@ public final class GameSession {
     struct TickStep: Sendable {
         var world: GameWorld
         var arrived: [TrainID]
+        /// What traffic control shows of ``world``, when the step read it.
+        var traffic: TrafficReading?
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -1026,6 +1032,7 @@ public final class GameSession {
         let lastEntry = world.accounts.entries.last
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         world = step.world
+        if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
         redoHistory.removeAll()
@@ -1061,15 +1068,29 @@ public final class GameSession {
         let revision: Int
         /// Whether sounds are played (see ``advanced(_:by:listening:)``).
         let listening: Bool
+        /// Whether to read what traffic control shows of the world after
+        /// the tick (``TrafficReading``), with the words of ``train``'s
+        /// wait: the last tick of a step is the one shown.
+        var readsTraffic = true
+        /// The selected train when the tick began.
+        let train: TrainID?
+        let language: DisplayLanguage
 
-        /// Advances ``world`` by one tick off the main actor. The world
+        /// Advances ``world`` by one tick off the main actor, and reads
+        /// what traffic control shows of it there too (decision 64's later
+        /// fix: a deadlock search takes longer than a frame). The world
         /// is a copy: the session's stays as it is, and commands still
         /// apply to it, while this runs.
         func work() async -> Result<TickStep, GameError> {
-            let world = world
-            let listening = listening
+            let tick = self
             return await Task.detached(priority: .userInitiated) {
-                Result { () throws(GameError) in try GameSession.advanced(world, by: 1, listening: listening) }
+                Result { () throws(GameError) in
+                    var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
+                    if tick.readsTraffic {
+                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language)
+                    }
+                    return step
+                }
             }.value
         }
     }
@@ -1078,7 +1099,33 @@ public final class GameSession {
     /// `nil` while paused.
     func beginLoopTick() -> LoopTick? {
         guard !world.clock.isPaused else { return nil }
-        return LoopTick(world: world, revision: worldRevision, listening: playSound != nil)
+        return LoopTick(world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language)
+    }
+
+    // MARK: - Traffic control on the map (decision 64)
+
+    /// What the map draws of traffic control (``GameCore/GameWorld/trafficOverlay()``)
+    /// for the world as it is now: read with the tick that made it, off
+    /// the main actor, or else (after a command) here, once.
+    public var trafficOverlay: TrafficOverlay {
+        trafficReading().overlay
+    }
+
+    /// ``GameCore/GameWorld/routeWaitText(of:in:)`` of the world as it is
+    /// now, in ``language``: the selected train's read with the tick, and
+    /// none searched for a train the tick's reading shows waits for nothing.
+    public func routeWaitText(of id: TrainID) -> String? {
+        var reading = trafficReading()
+        let text = reading.waitText(of: id, in: world, language: language)
+        trafficMemo = (worldRevision, reading)
+        return text
+    }
+
+    private func trafficReading() -> TrafficReading {
+        if let memo = trafficMemo, memo.revision == worldRevision { return memo.reading }
+        let reading = TrafficReading(world: world, in: language)
+        trafficMemo = (worldRevision, reading)
+        return reading
     }
 
     /// Ends `tick` with what ``LoopTick/work()`` made of it: the world
@@ -1124,8 +1171,9 @@ public final class GameSession {
                 let now = clock.now
                 let ticks = self.dueTicks(realElapsed: now - last)
                 last = now
-                for _ in 0..<ticks {
-                    guard let tick = self.beginLoopTick() else { break }
+                for index in 0..<ticks {
+                    guard var tick = self.beginLoopTick() else { break }
+                    tick.readsTraffic = index == ticks - 1
                     let outcome = await tick.work()
                     // Nor may a stop while the tick was worked out.
                     guard !Task.isCancelled else { return }

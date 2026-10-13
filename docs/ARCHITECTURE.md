@@ -2871,7 +2871,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 7. **手算**：W–M–E（邊 1、2、3 直線，起點 x=1024、9216、25600，y=4096）。0:42 互等：東行車頭在邊 1 的 3072（x=4096），等西行車占用的邊 3 4096–7168（x=29696–32768）；西行車頭在邊 3 的 8192−3072=5120（x=30720），等東行車的邊 1 1024–4096（x=2048–5120）；各自等的位置是最近端 29696、5120，contested 恰為對方 held。1:00 東行在 M 正線（邊 2 的 9216，x=18432）待避，等 M 東端 junction 附近（邊 2 自 14336 起，最近點 x=23552，節點 3 在 x=25600），西行的授權含整條邊 1（x=1024–9216）。
 8. **獨立驗證**：ReferenceWorld 另做 `contestedResources`（對擋住者的 `blocking` 集合逐資源 `foul`），在 DeadlockTests 逐秒、`traffic.deadlock` 與 `traffic.turnbacks` campaign 每步比 production；兩個 campaign 也每步比 `routeWaits()` 與逐一查詢。實景 demo 首小時每分鐘檢查授權折線、等候與死結一致，每列車都有授權；新 UI 測試（實景 demo 出現 `map.traffic` 且含 Movement authority）只在 full lane。
 
-**限制**：只顯示目前狀態，沒有預測未來授權或號誌；畫面延遲式 block hold、平行同軌標籤錯位（`blockSideShift`）與死結閃爍仍是 gap。Canvas 繪圖本身不在 Linux 驗證，只由 macOS CI 編譯與 UI 測試。
+**限制**：只顯示目前狀態，沒有預測未來授權或號誌；畫面延遲式 block hold、平行同軌標籤錯位（`blockSideShift`）與死結閃爍仍是 gap（之後的修正：後兩項已補，見下）。Canvas 繪圖本身不在 Linux 驗證，只由 macOS CI 編譯與 UI 測試。
+
+**之後的修正（2026-10-13，TestFlight 56.1 之後的 patch；`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 第 5 項，§10 第 1 題作者同意當 bug 修）**：
+
+1. **疊層不再每個 tick 在主執行緒找死結**。新遊戲預設開行車控制，地圖的 `TrafficKey` 含時間，所以每 100 ms 的 tick 都在主執行緒跑一次 `trafficOverlay()` → `routeWaits()` → 死結搜尋，列車工具的 `routeWaitText` 每次又重建一次交通計畫。現在 GamePresentation 的 `TrafficReading` 用一次 `routeWaits()` 同時給出疊層與等候文字；遊戲迴圈在背景算 tick 時（決策 143），對一步裡最後一個 tick 的結果世界順便讀一次（含選取列車的等候文字），`GameSession.trafficMemo` 依 `worldRevision` 保存。地圖取 `session.trafficOverlay`、列車工具取 `session.routeWaitText(of:)`；指令改了世界後（memo 的版本不符）才在主執行緒重讀一次。結果與每次問世界相同：在軌道上、行車控制開著、`routeWaits()` 沒列出的列車，`routeWaitText` 一定是 `nil`（它的文字來自排定等待或擋住進路的列車，兩者 `routeWaits()` 都會列出）；其他情況照舊呼叫 `routeWaitText`。測試逐 tick 比對 W–M–E 交會線（死結、待避、跟車、關掉控制、未放置的車、不存在的 ID，兩種語言）與排定交會的存檔，拿掉那個判斷時測試會紅。量測（Linux release，平溪示範 600 個 tick，選一輛車）：主執行緒每 tick 26.4 ms（p90 39.9、最大 70.1）→ 0.005 ms；背景的 tick 28.9 → 43.5 ms（p90 43.2 → 71.2），仍在 100 ms 的 tick 間隔內，超過時遊戲照決策 143 變慢而不是堆積。疊層結果改成在 tick 完成時與世界一起出現，不再晚一個畫面重算。
+2. **死結標記閃爍**：查過來源，這一項原本是 UI 移植計畫（`docs/archive/UI_GAP_AND_PORT_PLAN.md`「死結標示：地圖紅色驚嘆號閃爍標記」）留給 V4e 的功能，不是標記錯誤地閃；探針確認 `isDeadlocked` 在 x1／x10／x60／normal 每個 tick 都不會來回跳。參考 repo 全文沒有 deadlock 的畫法可移植，所以這是本專案自己的：死結列車的紅圈與警示符號每 1.2 秒在不透明度 1 與 0.35 之間脈動一次（`TrafficOverlay.deadlockStrength`），等候（黃）不閃；「減少動態效果」開著時維持不透明。有死結時列車圖層的 `TimelineView` 在遊戲暫停時也會繼續畫。
+3. **平行同軌標籤錯位**：移植 `Railway/site_archive_clean/index.html` 的 `blockSideShift`，用在等候列車的圈（`WaitMarkSides`）：兩個圈在畫面上近於圈的寬度（圈直徑加 5 點的底色）就是一組，依列車 ID 交替移到軌道兩側（來源的 `nat` 交替），各沿車頭方向的法線移 `(|nx|·near + |ny|·BLOCK_TAG_H)/2 + BLOCK_SIDE_GAP/2`；圓圈寬高相同，`near` 與 `BLOCK_TAG_H` 都是圈的寬度，`BLOCK_SIDE_GAP` 2 點照搬。`TrafficOverlay.Wait` 多了 `heading`（車頭的 `TrackLocation.direction`）。沒有移植的：來源的分組依同一路線的里程（`BLOCK_SIDE_KM`），這裡依畫面距離（遊戲的複線是兩條不同的邊）；停站車與行進車一組時停站車移兩倍（`solo`）不需要，等候車都停著；`_blockSideSign`／`_blockSideRole` 的跨幀記憶與 `_blockSideLatch` 的遲滯不需要，分組與次序只由列車 ID 與停著的位置決定，不會跳；每幀 0.18 的緩動沒有移植（Canvas 每次重畫不保存狀態），圈在縮放跨過門檻時直接移開。虛線仍從車頭畫起。
+
+存檔版本、golden schema、fixture 都不變；GameCore 沒有改。
 
 ### 65. 跨站步行轉乘與新遊戲啟用全網路徑（Phase 5F）
 
