@@ -1467,3 +1467,13 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | （參考沒有）空狀態的插圖 | `EmptyLines`、`EmptySaves`、`EmptyTrains`（`LinesPanel`、`StartView`、`FleetOverviewSheet`） | gap → 原生（作者的原稿描圖） |
+
+## 複線自動接渡線、號誌站加進路線、待避線提示卡（決策 204（續三））
+
+參考庫（`a91453/railway-reference-private`）搜過 `MapBuilder/`、`Simulator/` 的 `crossover`、`渡線`、`複線`、`doubleTrack`、`parallel`：只有讓玩家手動放的渡線零件與複線道床的畫法，沒有自動接渡線、把待避站加進停靠站或交會提示。外部專案：沒有用到程式碼或資料。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Simulator/.../app/simulator/page-*.js` 的零件搜尋詞 `crossover`（「渡線」「橫渡」） | `GameSession.doubleTrackCrossovers`（`DoubleTrackCrossover.swift`） | gap → 原生：參考的渡線是手動放的零件；這裡照本專案手動渡線的幾何自動加 |
+| （參考沒有）把待避站加進經過的路線 | `GameWorld.passingLoopOffer(for:)`、`GameSession.acceptPassingLoopOffer()` | gap → 原生 |
+| （參考沒有）第一次單線等車的提示 | `PassingLoopHint`、`GameSession.watchPassingLoopHint()`、App 的 `PassingLoopCards` | gap → 原生（照 #510 的 `RouteHint`） |
