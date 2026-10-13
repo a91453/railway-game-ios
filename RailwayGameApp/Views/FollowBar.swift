@@ -38,6 +38,25 @@ struct FollowBar: View {
 
             Spacer(minLength: 4)
 
+            // Decision 195: real time or ten times it, one tap each, through
+            // the speed the speed menu sets; following stops without
+            // changing it back.
+            let clock = session.world.clock
+            ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
+                let isCurrent = !clock.isPaused && clock.speed == speed
+                Button {
+                    session.setSpeed(speed)
+                } label: {
+                    Text(verbatim: speed.label(in: language))
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                }
+                .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
+                .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
+                .accessibilityAddTraits(isCurrent ? .isSelected : [])
+                .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+            }
+
             Button {
                 onUnfollow()
             } label: {
@@ -66,5 +85,28 @@ struct FollowBar: View {
     /// The site's `取消跟隨` ("Stop following" in its translations).
     private var unfollowText: String {
         session.language.text("Stop following", "取消跟隨")
+    }
+}
+
+/// A follow bar speed shortcut (decision 195): a chip of at least 38 by 26 points,
+/// filled while the game runs at its speed, touched over at least 44 by 44 points.
+/// The touch area belongs to the style's body, as the status pill's
+/// buttons have it (a touch area set inside a button's label is not used).
+private struct FollowSpeedButtonStyle: ButtonStyle {
+    let isCurrent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 4)
+            .frame(minWidth: 38, minHeight: 26)
+            .background(isCurrent ? Theme.primary : Theme.chip, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .foregroundStyle(isCurrent ? Theme.onPrimary : Theme.textPrimary)
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            // 3 points out each side and 9 up and down: 44 by 44.
+            .padding(.horizontal, 3)
+            .padding(.vertical, 9)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -3)
+            .padding(.vertical, -9)
     }
 }

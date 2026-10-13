@@ -33,6 +33,7 @@ struct HUDView: View {
                 cash
                 time
                 SpeedControl(session: session)
+                ViewingReadout(session: session)
                 newsBell
                 gameMenu
             }
@@ -42,6 +43,7 @@ struct HUDView: View {
                     time
                 }
                 SpeedControl(session: session)
+                ViewingReadout(session: session)
                 newsBell
                 gameMenu
             }
@@ -54,6 +56,7 @@ struct HUDView: View {
                 }
                 time
                     .minimumScaleFactor(0.75)
+                ViewingReadout(session: session)
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -493,6 +496,40 @@ private struct SpeedControl: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
         .tutorialTarget(.speedControl)
+    }
+}
+
+/// Decision 195: beside the speed, the followed train's speed and how fast
+/// the game really runs ("actual ×600", or "actual ×290 (falling behind)"
+/// when the device cannot keep up), read from the session's measure; the
+/// speed menu's label says the speed the game is set to. Nothing while
+/// paused and following no train.
+private struct ViewingReadout: View {
+    let session: GameSession
+
+    var body: some View {
+        let viewing = session.viewingSpeed
+        let language = session.language
+        let actual = viewing.actualText(in: language)
+        let train = viewing.trainSpeedText
+        if actual != nil || train != nil {
+            VStack(alignment: .leading, spacing: 0) {
+                if let train {
+                    Text(verbatim: train)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                if let actual {
+                    Text(verbatim: actual)
+                        .font(viewing.isBehind ? Font.caption2.weight(.bold) : Font.caption2)
+                        .foregroundStyle(viewing.isBehind ? Theme.warning : Theme.textSecondary)
+                }
+            }
+            .monospacedDigit()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
+            .accessibilityIdentifier("hud.viewing")
+        }
     }
 }
 
