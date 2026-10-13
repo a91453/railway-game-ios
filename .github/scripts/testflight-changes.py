@@ -31,6 +31,8 @@ import urllib.error
 import urllib.request
 
 
+# testflight.yml's job that numbers, signs and uploads the build.
+UPLOAD_JOB = "Archive, sign, export, check and upload"
 WORKFLOW = "testflight.yml"
 LIMIT = 4000
 RECENT = 20
@@ -65,8 +67,21 @@ def previous_release(repository, run_id):
         return None
     for run in answer.get("workflow_runs") or []:
         if str(run.get("id")) != run_id and run.get("head_sha"):
-            return run["head_sha"], int(run.get("run_number") or 0), int(run.get("run_attempt") or 1)
+            attempt = upload_attempt(repository, run["id"]) or int(run.get("run_attempt") or 1)
+            return run["head_sha"], int(run.get("run_number") or 0), attempt
     return None
+
+
+def upload_attempt(repository, run_id):
+    """The attempt whose upload job succeeded, which is the build's number after the dot.
+
+    The run's own run_attempt is its latest attempt: after only the processing
+    job is run again it reads 2, while the build that was uploaded is still .1.
+    None when GitHub does not list the jobs."""
+    answer = github(f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=all&per_page=100")
+    attempts = [int(job.get("run_attempt") or 0) for job in (answer or {}).get("jobs") or []
+                if job.get("name") == UPLOAD_JOB and job.get("conclusion") == "success"]
+    return max(attempts, default=0) or None
 
 
 def git(repo, *args, check=True):
