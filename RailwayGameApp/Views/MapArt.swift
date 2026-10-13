@@ -494,8 +494,9 @@ enum MapArt {
         for rect in overlay.cleared {
             drawMarked(rect, colour: Color.red, projection: projection, in: context)
         }
-        // The next stretch, and an X crossover's mirrored diagonal.
-        for points in [overlay.preview, overlay.crossing] where points.count > 1 {
+        // The next stretch, and an X crossover's mirrored diagonal (or a
+        // double track's parallel) and the double track's crossovers.
+        for points in [overlay.preview, overlay.crossing] + overlay.crossovers where points.count > 1 {
             let line = polyline(points, projection: projection)
             let width = max(2, referenceSize * 0.12)
             if overlay.previewIsBuildable {

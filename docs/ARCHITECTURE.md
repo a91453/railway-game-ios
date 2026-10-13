@@ -7098,7 +7098,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
    - 一端旁邊 1 m 內已有節點時接上它：接著畫下一段時，第二條從上一段的第二條接下去。
    - 兩條一起是一個指令（`PlayerCommand.buildDoubleTrack`，記錄與重播照決策 193），全成或全不成；第二條放不下時說原因，什麼都不蓋。
    - 兩條各走哪個方向交給 GameCore 的靠左行駛（決策 202），工具不指定。
-   - **缺口**：第二條在接上既有軌道的那一端是空著的（這一段從車站的軌道或轉轍器接出時，第二條不會自己接到車站）。要讓兩條都接到車站，還要用渡線（兩點各點一條軌道）或月台軌道。進路預覽（決策 201）讀的是路線的行程，工具蓋的軌道照樣看得懂；一次性提示卡（#510）的「平行軌」要車站到車站兩條都通才算。
+   - **缺口**（已由決策 204（續三）第 1 點補上：自動加單渡線）：第二條在接上既有軌道的那一端是空著的（這一段從車站的軌道或轉轍器接出時，第二條不會自己接到車站）。要讓兩條都接到車站，還要用渡線（兩點各點一條軌道）或月台軌道。進路預覽（決策 201）讀的是路線的行程，工具蓋的軌道照樣看得懂；一次性提示卡（#510）的「平行軌」要車站到車站兩條都通才算。
 2. **待避線**（新檔 `Sources/GamePresentation/PassingLoop.swift`；路網工具多一個模式「待避」，`NetworkToolMode.passingLoop`）：點一段單線，旁邊 5 m 加一條側線，兩端各一個轉轍器，同時蓋一個號誌站（封閉車站，`StationOperationMode.closed`，名稱「號誌站 N」），兩股各有一個月台。
    - 側線的幾何和月台軌道共用（`GameSession.sidingPlan`，從 `platformTrackPlan` 抽出；`buildSiding` 也是）：轉轍器在待避段兩端外 `PlatformTrackLayout.side.reach`（50 m），穿過直行的節點去找。
    - 待避段長度 `passingLoopLength`：公司最長的列車，至少 6 節（96 m）；以點的位置為中心，太靠邊就往內移。
@@ -7134,6 +7134,35 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **測試**：`DragLoupeTests`（四分之一圓的三次曲線讀出半徑 320 m，誤差 1% 內；直線與把手沿弦的三次曲線都是直線；100 m 以下寫到公尺；放大鏡的相機在地圖最近時再近 3 倍、手指在圓的中間；拖曳時有手指的位置，放開後清掉）。
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、拖曳時同時畫兩張地圖的效能（實機）。
+
+### 204（續三）. 複線自動接渡線、號誌站加進路線、待避線提示卡
+
+決策 204 的缺口（NEXT_PRIORITIES §0 第 10 項的後續，派工 2026-10-13）。只改畫面與 GamePresentation，GameCore 不動；存檔版本、golden schema 不動。
+
+1. **複線自動接渡線**（新檔 `Sources/GamePresentation/DoubleTrackCrossover.swift`）：複線的一段從既有軌道接出（起點或終點是有軌道的節點，或點在軌道上的轉轍器），而第二條那一端沒有接上任何節點時，同一個指令在那一端加一條單渡線：主線上離端點 `DoubleTrack.crossoverMargin`（22 m，`NetworkBuilding.minimumSpacing`，分割要留的長度），第二條上再往外 `crossoverReach`（50 m，岸式月台的轉轍器距離），兩邊各一個轉轍器、中間 S 曲線，做法和手動渡線（兩點各點一條軌道）相同，費用照 GameCore。
+   - 兩端都接既有軌道時兩端都加。接著畫下一段、第二條接上上一段的第二條時不加。
+   - 指令：`PlayerCommand.buildDoubleTrack` 多一個 `crossovers`（每條是一段 `TrackStretch`，記錄裡是 `crossovers` 陣列，沒有時不寫，舊的指令日誌照讀）。主線、第二條、渡線依序蓋，任何一段被拒絕，整個指令都不蓋（`perform` 在副本上做）。
+   - 預覽在世界的副本上連渡線一起蓋：費用含渡線，地圖多畫渡線（`NetworkPreview.crossovers`），鋪軌卡片與確認卡寫一行說明（`crossoverNote`）。
+   - 放不下（這段太短：要 22 + 50 m 再加 22 m；有坡度：GameCore 只能分割平的軌道；或 GameCore 拒絕渡線的路徑）時照舊只蓋兩條，說明與完成訊息都寫「第二條沒有接上既有軌道……請手動加渡線」。錢不夠蓋渡線時整段不蓋（說錢不夠），不會悄悄少蓋。
+2. **號誌站加進路線**（新檔 `Sources/GamePresentation/PassingLoopHints.swift`）：待避線蓋好後，找出基本班次的行程（`lineJourney`）經過號誌站月台軌道、但沒有停靠它的路線（`GameWorld.passingLoopOffer(for:)`），跳一張卡問要不要「加進路線」。按了才加：每條路線插在它前後兩站之間（`setLineStops`，記錄成 `setLineStops` 編輯），不按就什麼都不改。
+   - **為什麼不自動加**：停靠號誌站每班車多停一次（停站秒數），會改變那條路線的運轉時間；把不停靠的待避站算進容量會改參考模型與既有路線的班距（決策 204 第 3 點）。所以讓玩家決定，其他路線的停法不變（測試：旁邊另一條路線不在名單裡）。
+   - 有停車模式（`patterns`）或進路設定（`routePreferences`）的路線用站的序號記每一段，插一站會讓序號錯開，所以只列出名字請玩家手動加。
+3. **「加待避線」一次性提示卡**（同一個新檔，`PassingLoopHint`）：作者決定不加主線教學步驟（§10 第 21 題），照 #510 的進路提示卡（決策 201 之後的修正）做成第一次遇到時的卡片。條件：有列車在等另一列車的進路（`TrafficOverlay.waits`，不含死結，死結另有警告），而它的路線有一段是單線（`lineTrackCounts` 有 1）。卡片說明一段單線一次只能走一列、怎麼用「待避」加待避線、還要把號誌站加進停靠站；按「加待避線」會切到路網工具的待避模式。看過一次就不再出現，記在裝置（`@AppStorage("hints.passingLoop.seen")`），不進存檔；教學進行中、別的卡片在等、或面板打開時不跳；UI 測試（`-ui-testing`）一開始就當成看過，和進路提示卡一樣。
+4. **App**：`ContentView.swift` 新的 `PassingLoopCards`（兩個 alert，和 `RouteHintCard` 同一個寫法，同一個檔案，不用重新產生 xcodeproj）；`NetworkControls.swift` 的鋪軌卡片與 `MapBuildConfirm.swift` 的確認卡顯示 `crossoverNote`；`MapArt.swift` 把渡線和預覽畫成同一種線。
+
+**參考**（`a91453/railway-reference-private`，2026-10-13 再查）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Simulator/reference_snapshot/_next/static/chunks/app/simulator/page-*.js` 的零件搜尋詞（`crossover`：「渡線」「橫渡」）與 `8423-*.js`、`7688-*.js` 的 `doubleTrackDeck`、`parallelSpacingMm` | 無 | 參考只有讓玩家手動放的渡線零件與複線道床的畫法，沒有自動接渡線 |
+| `MapBuilder/reference_snapshot/` | 無 | 沒有渡線、複線或待避的工具 |
+| `Railway/site_archive_clean/index.html` 的 `inferMeetRun`／`resolveTraTraffic` | 無 | 事先排時刻表的交會，不是建造工具，也沒有「把待避站加進停靠站」的提示 |
+
+參考沒有自動渡線、號誌站加進路線或交會提示；三項都是這個專案自己的。外部專案：OpenTTD 與 Simutrans 都沒有自動加渡線（決策 204（續）已查過它們的複線工具），這次沒有另外找到可用的。
+
+**測試**：`DoubleTrackCrossoverTests`（從既有軌道接出：一條渡線、費用照預覽、第二條的列車到得了既有軌道；同一段不加渡線時到不了；兩端都接時兩條；太短時照蓋並說明；從空地畫不需要；錢只夠兩條時整段不蓋）、`NetworkPlanCommandTests.testADoubleTrackIsLoggedWithItsCrossover`（記錄與重播）、`PassingLoopHintTests`（只問經過的路線、按了才加並記成停靠站編輯、可以不加、沒有路線時不問、有進路設定的路線請玩家手動加；提示卡的條件、死結與沒有路線的列車不算、按鈕切到待避模式、文字）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、兩張 alert 在實機上的時機（列車開始等車的那一刻）。
 
 ### 205. 地圖的標記不靠路線色、站名底牌、拉遠的建物、列車一節一節畫
 

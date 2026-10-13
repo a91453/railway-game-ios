@@ -102,13 +102,14 @@ public struct TrafficOverlay: Hashable, Sendable {
         public let heading: PlanVector
 
         public init(
-            train: TrainID, holder: TrainID, holderName: String = "", reason: WaitReason, isDeadlocked: Bool,
+            train: TrainID, holder: TrainID, holderName: String = "", reason: WaitReason? = nil, isDeadlocked: Bool,
             contested: Track, from: WorldCoordinate, to: WorldCoordinate, heading: PlanVector
         ) {
             self.train = train
             self.holder = holder
             self.holderName = holderName
-            self.reason = reason
+            // Without one (a test's wait), a deadlock or a wait for a route.
+            self.reason = reason ?? (isDeadlocked ? .deadlock : .route)
             self.isDeadlocked = isDeadlocked
             self.contested = contested
             self.from = from

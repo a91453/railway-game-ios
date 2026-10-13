@@ -122,6 +122,15 @@ struct NetworkControls: View {
                         .padding(.vertical, 4)
                         .background(Theme.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
+                    // Decision 204: the double track's crossovers where it
+                    // joins the track there, or why there are none.
+                    if let note = preview.crossoverNote {
+                        Text(verbatim: note)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("network.crossoverNote")
+                    }
                     // Decision 124, H3: the stretch over the ground, and
                     // what it costs part by part. Only where the world has
                     // ground: without it the ground is flat at 0 m and the

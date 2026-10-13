@@ -79,6 +79,12 @@ public final class GameSession {
     public internal(set) var routeHint: RouteHint.Trigger?
     /// The legs on two tracks or more when ``watchRouteHint()`` last looked.
     @ObservationIgnored var routeHintLegs: Set<RouteHint.Leg>?
+    /// The lines a passing loop just built lies on, offered its signal
+    /// station as a stop (decision 204, later; ``PassingLoopOffer``).
+    public internal(set) var passingLoopOffer: PassingLoopOffer?
+    /// The line whose train waits on single track, for the one-time card
+    /// about passing loops (``PassingLoopHint``).
+    public internal(set) var passingLoopHint: LineID?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
