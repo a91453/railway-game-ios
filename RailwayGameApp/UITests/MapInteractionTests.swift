@@ -657,10 +657,12 @@ final class MapInteractionTests: XCTestCase {
         let bell = app.buttons["hud.news"]
         XCTAssertTrue(bell.waitForExistence(timeout: 5))
         tap(bell, below: 20)
+        let news = app.navigationBars["News"]
+        XCTAssertTrue(news.waitForExistence(timeout: 5), "A tap 4 points below the drawn bell opens the news")
         let done = app.buttons["news.done"]
-        XCTAssertTrue(done.waitForExistence(timeout: 5), "A tap 4 points below the drawn bell opens the news")
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
         done.tap()
-        XCTAssertTrue(done.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(news.waitForNonExistence(timeout: 5))
 
         // The menu, 32 points tall: 20 above its centre.
         let menu = app.buttons["hud.menu"]

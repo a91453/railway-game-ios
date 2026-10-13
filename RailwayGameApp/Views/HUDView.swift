@@ -244,8 +244,8 @@ struct HUDView: View {
                             .offset(x: 4, y: -2)
                     }
                 }
-                .touchTarget(around: CGSize(width: 34, height: 32))
         }
+        .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 34, height: 32)))
         .accessibilityLabel(Text(verbatim: language.text("News", "新聞紀錄")))
         .accessibilityValue(Text(verbatim: unread > 0 ? language.text("\(unread) unread", "\(unread) 則未讀") : ""))
         .accessibilityIdentifier("hud.news")
@@ -410,8 +410,11 @@ private struct GameMenu: View, Equatable {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Theme.primary)
                 .frame(width: 38, height: 32)
-                .touchTarget(around: CGSize(width: 38, height: 32))
         }
+        // The menu's label as a button in the style below, which owns the
+        // touch area (one set inside a label is not used: run 38333522943).
+        .menuStyle(.button)
+        .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 38, height: 32)))
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
         .accessibilityIdentifier("hud.menu")
@@ -485,6 +488,20 @@ private struct SpeedControl: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Game speed")
         .tutorialTarget(.speedControl)
+    }
+}
+
+/// A plain icon button, dimmed while pressed, touched over at least 44
+/// by 44 points while drawn at `size`. The touch area belongs to the
+/// style's body: one set inside a button's label was not used (run
+/// 38333522943: a tap 4 points under the drawn bell missed it).
+private struct TouchTargetButtonStyle: ButtonStyle {
+    let size: CGSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.5 : 1)
+            .touchTarget(around: size)
     }
 }
 

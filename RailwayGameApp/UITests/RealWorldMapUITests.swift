@@ -248,9 +248,13 @@ final class RealWorldMapUITests: XCTestCase {
     /// Start screen, Real-World Map, Taipei, Build Here: each scrolled
     /// to first, as the largest text needs.
     private func startARealWorldGameFromTaipei(in app: XCUIApplication) {
-        for identifier in ["start.realWorld", "place.tra-taipei", "realWorld.start"] {
+        // The place list (the sheet's only collection view) makes its rows
+        // as they come near: with this text Taipei's is not made at first.
+        for (identifier, holder) in [
+            ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
+        ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
-            XCTAssertTrue(app.scrollUntilHittable(button), "\(identifier) cannot be scrolled to")
+            XCTAssertTrue(app.scrollUntilHittable(button, in: holder), "\(identifier) cannot be scrolled to")
             tappable(app.buttons.matching(identifier: identifier), name: identifier).tap()
         }
     }

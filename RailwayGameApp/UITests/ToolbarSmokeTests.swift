@@ -264,27 +264,35 @@ extension XCUIApplication {
         }
     }
 
-    /// Scrolls whatever holds `button` (a scroll view, or a `List`'s
-    /// collection view) until it can be tapped; whether it can. Slow
-    /// swipes on the holder itself, not at the middle of the screen, which
-    /// on a phone on its side is the edge between the start screen's title
-    /// and its buttons, or the map beside a sheet's list. With the largest
-    /// accessibility text one start screen button is taller than the band
-    /// ``dragUntilWhollyOnScreen(_:in:)`` wants it wholly inside, so it is
-    /// enough here that it can be touched.
-    func scrollUntilHittable(_ button: XCUIElement, swipes: Int = 16) -> Bool {
-        guard button.waitForExistence(timeout: 10) else { return false }
-        let holders = [scrollViews, collectionViews, tables]
+    /// Scrolls `holder`, or whatever holds `button` (a scroll view, or a
+    /// `List`'s collection view), until `button` can be tapped; whether
+    /// it can. Slow swipes on the holder itself, not at the middle of the
+    /// screen, which on a phone on its side is the edge between the start
+    /// screen's title and its buttons, or the map beside a sheet's list.
+    /// With the largest accessibility text one start screen button is
+    /// taller than the band ``dragUntilWhollyOnScreen(_:in:)`` wants it
+    /// wholly inside, so it is enough here that it can be touched. A
+    /// `List` makes its rows only as they come near, so a `holder` is
+    /// swiped up until the row is there; and XCTest cannot ask whether a
+    /// button wholly off screen can be touched (it fails the test), so
+    /// that is asked only of one on screen.
+    func scrollUntilHittable(_ button: XCUIElement, in holder: XCUIElement? = nil, swipes: Int = 20) -> Bool {
+        func touchable() -> Bool {
+            button.exists && frame.intersects(button.frame) && button.isHittable
+        }
+        if holder == nil, !button.waitForExistence(timeout: 10) { return false }
+        let holder = holder ?? [scrollViews, collectionViews, tables]
             .map { $0.containing(.button, identifier: button.identifier).firstMatch }
-        guard let holder = holders.first(where: \.exists) else { return button.isHittable }
-        for _ in 0..<swipes where !button.isHittable {
-            if button.frame.midY < holder.frame.midY {
+            .first(where: \.exists)
+        guard let holder, holder.waitForExistence(timeout: 10) else { return touchable() }
+        for _ in 0..<swipes where !touchable() {
+            if button.exists, button.frame.midY < holder.frame.midY {
                 holder.swipeDown(velocity: .slow)
             } else {
                 holder.swipeUp(velocity: .slow)
             }
         }
-        return button.isHittable
+        return touchable()
     }
 
     /// Opens one of the start screen's demos (decision 135): the Demo Map
