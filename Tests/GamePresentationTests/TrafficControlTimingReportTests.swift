@@ -112,7 +112,7 @@ final class TrafficControlTimingReportTests: XCTestCase {
             }
             total += seconds
             let clock = world.clock.now.minute % 1_440 / 60
-            say(String(format: "%02d–%02d | %.1f | %d / %.1f | %@", clock - 1, clock, seconds, most, Double(sum) / Double(minutes), try Self.digest(world)))
+            say(String(format: "%02d–%02d | %.1f | %d / %.1f | %@", (clock + 23) % 24, clock, seconds, most, Double(sum) / Double(minutes), try Self.digest(world)))
             if seconds > cap {
                 say("stopped: the hour took more than \(Int(cap)) s")
                 break
@@ -200,10 +200,16 @@ final class TrafficControlTimingReportTests: XCTestCase {
         try world.setLineRuns(line, to: runs)
         // Southbound at the down track's main platforms, northbound at the
         // up track's; the ends' one platform each is on the down track.
-        func platform(_ station: Int, southbound: Bool) -> TrackPlatform? {
+        let berths: [(south: TrackPlatform?, north: TrackPlatform?)] = stations.indices.map { station in
             let platforms = world.trackPlatforms(of: stations[station])
-            if station == 0 || station == stations.count - 1 { return platforms.first { down.contains($0.edge) } }
-            return platforms.first { (southbound ? down : up).contains($0.edge) }
+            if station == 0 || station == stations.count - 1 {
+                let end = platforms.first { down.contains($0.edge) }
+                return (end, end)
+            }
+            return (platforms.first { down.contains($0.edge) }, platforms.first { up.contains($0.edge) })
+        }
+        func platform(_ station: Int, southbound: Bool) -> TrackPlatform? {
+            southbound ? berths[station].south : berths[station].north
         }
         var preferences: [LineRoutePreference] = []
         for from in stations.indices.dropLast() {
@@ -229,24 +235,27 @@ final class TrafficControlTimingReportTests: XCTestCase {
         let day = GameTime.secondsPerDay
         try run("the real day (169 runs)", &world) { world in
             let now = world.clock.now.seconds % day
-            let idle = world.trains.filter { $0.position != nil && $0.execution == nil }
             // Off the track when no run leaves its station within half an
             // hour.
-            for train in idle {
-                guard let station = world.stationsStoppedAt(by: train.id).first, let index = stations.firstIndex(of: station) else { continue }
-                let wanted = runs.contains { $0.from == index && $0.times[0].departure >= now && $0.times[0].departure - now <= 30 * 60 }
-                if !wanted { try? world.unplaceTrain(train.id) }
+            let wanted = Set(runs.filter { $0.times[0].departure >= now && $0.times[0].departure - now <= 30 * 60 }.map { stations[$0.from] })
+            var standing: Set<StationID> = []
+            for train in world.trains where train.position != nil && train.execution == nil {
+                guard let station = world.stationsStoppedAt(by: train.id).first else { continue }
+                if wanted.contains(station) {
+                    standing.insert(station)
+                } else {
+                    try? world.unplaceTrain(train.id)
+                }
             }
             // On the track five minutes before a run sends a set out, when
             // none stands at its first station.
             for run in runs {
                 let lead = run.times[0].departure - now
-                guard lead > LineRun.earliestDispatch, lead <= LineRun.earliestDispatch + 60 else { continue }
-                let standing = world.trains.contains { $0.position != nil && $0.execution == nil && world.stationsStoppedAt(by: $0.id).contains(stations[run.from]) }
-                guard !standing, let berth = platform(run.from, southbound: run.isOutbound),
+                guard lead > LineRun.earliestDispatch, lead <= LineRun.earliestDispatch + 60, !standing.contains(stations[run.from]),
+                      let berth = platform(run.from, southbound: run.isOutbound),
                       let spare = world.trains.first(where: { $0.position == nil })
                 else { continue }
-                _ = Self.place(spare.id, at: berth, forward: run.isOutbound, in: &world)
+                if Self.place(spare.id, at: berth, forward: run.isOutbound, in: &world) { standing.insert(stations[run.from]) }
             }
         }
     }
