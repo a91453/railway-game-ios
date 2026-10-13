@@ -38,9 +38,18 @@ struct FleetOverviewSheet: View {
 
                 Section {
                     if session.world.trains.isEmpty {
-                        Text(verbatim: session.language.text("No trains in fleet yet. Purchase a train to begin operations.", "車隊中尚無列車。購買列車後即可開始營運。"))
-                            .font(.footnote)
-                            .foregroundStyle(Theme.textSecondary)
+                        // Decision 122, later: the empty state's picture over its words.
+                        VStack(spacing: 8) {
+                            Image("EmptyTrains")
+                                .resizable()
+                                .frame(width: 96, height: 96)
+                                .accessibilityHidden(true)
+                            Text(verbatim: session.language.text("No trains in fleet yet. Purchase a train to begin operations.", "車隊中尚無列車。購買列車後即可開始營運。"))
+                                .font(.footnote)
+                                .foregroundStyle(Theme.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
                     } else {
                         if session.world.trains.count >= ListSearchField.minimumRows {
                             ListSearchField(
