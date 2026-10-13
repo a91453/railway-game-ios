@@ -381,9 +381,18 @@ struct LinesPanel: View {
     private var linesSection: some View {
         Section {
             if session.world.lines.isEmpty {
-                Text("No lines yet. Pick stations under New Line to create one.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textSecondary)
+                // Decision 122, later: the empty state's picture over its words.
+                VStack(spacing: 8) {
+                    Image("EmptyLines")
+                        .resizable()
+                        .frame(width: 96, height: 96)
+                        .accessibilityHidden(true)
+                    Text("No lines yet. Pick stations under New Line to create one.")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
             } else {
                 if session.world.lineAccounts != nil, session.world.lines.count > 1 {
                     lineSortMenu
