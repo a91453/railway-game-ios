@@ -175,18 +175,24 @@ final class TrackSplitTests: XCTestCase {
 
     /// Decision 204: a split runs the passengers' check as building or
     /// removing track does. The parts join as the edge did, so the line
-    /// still runs the same way and its waiting passengers stay.
+    /// still runs the same way, its waiting passengers stay and the save
+    /// loads.
     func testASplitKeepsTheLinesWaitingPassengers() throws {
         var (world, _, line, _) = try LineRoutePreferenceTests.setup(traffic: false)
         for station in [SingleTrackMeet.west, SingleTrackMeet.middle, SingleTrackMeet.east] {
             try world.setStationDemand(station, to: StationDemand(kind: .office, dailyTrips: 0))
         }
+        // Released at minute 0 once the clock is past it, as a save needs.
+        try world.advance(ticks: 120)
         let record = try XCTUnwrap(world.passengers.firstIndex { $0.station == SingleTrackMeet.west })
         world.passengers[record].release(5, to: SingleTrackMeet.east, along: PassengerTrip(line: line, direction: .outbound), at: .zero)
         let journey = world.lineJourney(line)
-        try world.splitTrackEdge(.edge(2), at: 4_096)
+        // The loop's exit curve: the line's train does not run on it.
+        let exit = try XCTUnwrap(world.network.edge(.edge(6)))
+        try world.splitTrackEdge(.edge(6), at: exit.length / 2)
         XCTAssertEqual(world.lineJourney(line)?.roundTripSeconds, journey?.roundTripSeconds)
         XCTAssertEqual(world.waitingPassengers(at: SingleTrackMeet.west).map(\.count).reduce(0, +), 5)
         XCTAssertEqual(world.passengerLedger(of: SingleTrackMeet.west).abandoned, 0)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world, "the save loads")
     }
 }
