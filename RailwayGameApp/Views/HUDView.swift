@@ -141,10 +141,11 @@ struct HUDView: View {
         .equatable()
     }
 
-    /// The balance in dollars; it opens the economy panel.
+    /// The balance in dollars, or "∞" with free play's unlimited funds
+    /// (decision 200); it opens the economy panel.
     private var cash: some View {
-        let text = session.world.economy.balance.moneyText
-        let isNegative = session.world.economy.balance < .zero
+        let text = session.world.economy.cashText
+        let isNegative = session.world.economy.showsInTheRed
         return Button {
             screen.panel = .economy
         } label: {

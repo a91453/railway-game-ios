@@ -6670,6 +6670,36 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；面板的順序、選單與購買鍵在橫拿手機上的樣子要在 macOS CI 的 UI 測試與實機上看。
 
+### 200. 自由模式＋無限資金
+
+2026-10-13，作者決定（研究在 `docs/research/NEXT_PRIORITIES_2026-10-12.md` §10 第 22 題）。號碼依工作登記 #231：決策 200、存檔版本 51；golden schema 不動。之前自由模式（決策 36、46）沒有收入，蓋東西仍要花餘額，而且只能從經營面板切過去；作者照研究建議決定了 5 個細節：新遊戲畫面可以直接選自由模式、金額顯示「∞」、成就關掉、現在做（不等規則集）、新車站照一般規則帶運量。
+
+1. **無限資金**（GameCore，`GameEconomy.unlimitedFunds`，`GameWorld.setUnlimitedFunds(_:)`）：開著時 `canAfford` 一律為真，`spend` 與 `settle` 不動餘額，所以建造、買車、加車廂、改車種、買地圖格、收購、觀光商店、貨運場都不扣錢，也不會因為沒錢被拒絕；餘額停在切換時的數字。只有自由模式能開（經營模式開啟時 `unlimitedFundsNeedFreePlay`，失敗不改任何東西）；`setEconomyMode(.management)` 會關掉它。關閉一律允許。
+2. **存檔**：`"economy"` 只在開著時寫 `"unlimitedFunds": true`，所以其他世界存起來和之前一樣；讀檔缺 key 是關（每個版本 51 以前的存檔照舊付錢）。經營模式卻開著無限資金的世界是壞的存檔（`accountsProblem`：「Only free play has unlimited funds.」）。存檔版本 51：只讀到 50 的 build 會丟掉它，讓自由模式的公司從永遠不會增加的餘額付錢，所以說存檔比它新。fixture `SaveFixtures/v51-unlimited-funds.json`。
+3. **既有的自由模式存檔**：沒有無限資金，照舊付錢（舊行為不變）。從 App 的經營面板切到自由模式時，同時打開無限資金（兩個指令 `setEconomyMode(.free)`、`setUnlimitedFunds(true)`，指令日誌都記）。因為建造不再花錢，「虧損時不能切」的限制拿掉；有貸款仍不能切（自由模式不付利息），挑戰進行中仍不能切（決策 86 之後的修正）。
+4. **錢怎麼顯示**（GamePresentation `GameEconomy.cashText`、`showsInTheRed`）：HUD 的現金與經濟面板的餘額寫「∞」，不顯示紅字。經濟面板多一行「資金無限：建造與購買都不花錢。自由模式不解鎖成就。」（`economy.unlimitedFunds`）。補車按鈕（路線面板）改用 `canAfford` 判斷。
+5. **成就**：自由模式（不論有沒有無限資金）不解鎖成就（`GameLauncher.checkAchievements` 只看經營模式），和參考的創意模式「不計算財務」、不顯示經營數據一樣。挑戰的獎牌本來就只在經營模式判定，挑戰中也不能切到自由模式，所以不用另外處理。
+6. **新車站的運量**：自由模式下路網工具建的新車站，在同一個操作裡拿到一般規則的運量（`newStationDemand(at:)`：空白地圖是 `StationDemand.cityDefault`，實景地圖是周邊的人口），和沒有土地需求的經營模式一樣有乘客；玩家仍可以在車站面板改（`canEditStationDemand` 不變）。土地不在自由模式決定運量（決策 73），所以這是建站那一刻的值，之後不隨土地變。
+7. **地圖格**：空白地圖分區購買時，無限資金的自由模式可以一鍵全開（經濟面板「開放整張地圖」，`GameSession.openWholeMap()`，一個指令 `openWholeMap`，復原一次全部拿回）：一格接一格買下所有還能買的格子，每格照常長出城鎮。實景地圖不做：整座島的格子要等土地上限與實機記憶體測試。經濟面板的地圖那一行不寫下一塊的價格。
+8. **新遊戲**：新遊戲選項可以直接選「自由模式」（`NewGameOptions`），開局就是自由模式加無限資金（見「之後的修正」若有）。介面不叫「簡易模式」「輕鬆模式」，避免和難度「輕鬆」、車站等級「簡易站」撞名。
+
+**參考**（`a91453/railway-reference-private`）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Ci/` 的 `access.mode.creative`「创意模式：无资金限制，自由设计交通网络。」與 `access.mode.choiceTitle` 進城時的模式選擇 | 新遊戲選項的「自由模式」；`GameEconomy.unlimitedFunds` | faithful（機制）；名稱沿用本專案的「自由模式」 |
+| `isMetroEconomyEnabled()` 只在 `management` 為真：額度、收費、結算都只在經營模式 | `canAfford`／`spend`／`settle` 在無限資金時不扣；自由模式本來就不結算（決策 36） | faithful |
+| `notice.audit.130`「创意模式不计算财务」、`flow.dashboard.creativeNotice`「创意模式不显示经营数据」 | 自由模式不解鎖成就 | 依作者的決定延伸 |
+| `updateMetroEconomyHud`：創意模式把金額藏起來 | HUD 寫「∞」 | 作者的決定（不藏，寫 ∞） |
+| `menu.settings.mode_help`「切换为创意模式后，不能再转回经营模式」、`MetroSaveModePolicy` | `GameSession.setEconomyMode` 仍只能從經營切到自由 | faithful（不變） |
+| 地圖格 | 參考沒有，本專案自己寫 | gap |
+
+外部專案：參考已經有這個機制，沒有另外找；地圖格一鍵全開是本專案自己的程式。
+
+**測試**：`UnlimitedFundsTests`（GameCore：經濟本身、零餘額照樣建造與買車、沒有無限資金時被拒絕、只有自由模式能開與切回經營時關掉、一鍵買完 25 格、缺 key 的存檔與經營模式開著的壞存檔、版本 51 的 fixture）；GamePresentation：`EconomyDisplayTests.testACompanyInTheRedSwitchesToFreePlayWithUnlimitedFunds`（取代原本「虧損不能切」的測試：切換時打開無限資金、∞ 的文字、不扣錢）、`MapExpansionSessionTests.testUnlimitedFundsOpenTheWholeBlankMap`（一鍵全開與復原、經營或付錢的自由模式不行）、`FreeStationSessionTests.testANewStationHasTheCitysRidershipManagedOrFree`（自由模式的新車站也帶 `cityDefault`，原本是沒有）、`AchievementsTests.testFreePlayUnlocksNothing`。`SavedGameTests` 的目前版本 50 → 51。
+
+**沒有驗證的**：Linux 不能建置 App；HUD 的 ∞、經濟面板與新遊戲選項的樣子要等 macOS CI 與實機。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
@@ -6735,7 +6765,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - 車站建在世界座標的一點（`buildStation(named:at: PlanPoint)`）：只在路網的邊上有月台；點必須在世界範圍內（否則 `outOfBounds(點)`），收一座車站的費用（決策 44、54）。F3c 起這是唯一的車站（決策 51）。
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。 版本 13 以後每一版的內容與 fixture 見 `SaveFixtures/README.md`（目前是 50）。
 - 車站可以拆除（決策 83，`removeStation`）：免費、不退款；有服務需要它的月台、或車上有從它出發、到它或在它換車的乘客時拒絕；等車的乘客放棄，路線拿掉這站，月台一起拆。
-- 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。
+- 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。自由模式的無限資金（決策 200，存檔版本 51）：什麼都不扣、不會因為沒錢被拒絕，餘額不動；只有自由模式能開，切回經營模式時關掉。
 - 車輛經濟（決策 180）：App 的新遊戲打開 `rollingStockEconomics`（存檔版本 49；示範地圖、挑戰與教學關掉）：列車依車種與節數計價，改車種付新車種價格減舊車的賣價、最少 0（決策 180 之後的修正，`RollingStock.refitFee`），`sellTrain` 取回帳面價值的 70 %（列車必須離軌、離線、沒有服務，否則 `trainInService`），路線上列車的人事、能源、保養依 節數 × 車種係數 計，車公里依車種係數計。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。

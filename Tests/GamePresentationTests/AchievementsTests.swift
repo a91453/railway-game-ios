@@ -117,6 +117,23 @@ final class AchievementsTests: XCTestCase {
         XCTAssertEqual(AchievementRecords(file: file).count, launcher.achievements.count)
     }
 
+    /// Decision 200: free play unlocks nothing, as the reference's creative
+    /// mode keeps no score; the same world managed does.
+    @MainActor
+    func testFreePlayUnlocksNothing() throws {
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var world = try newGameLine(through: [towns[0], towns[1]])
+        try world.advance(ticks: 2 * 1_440)
+        var free = world
+        free.setEconomyMode(.free)
+        try free.setUnlimitedFunds(true)
+        launcher.checkAchievements(of: GameSession(world: free, language: .english))
+        XCTAssertEqual(launcher.achievements.count, 0, "free play")
+        launcher.checkAchievements(of: GameSession(world: world, language: .english))
+        XCTAssertTrue(launcher.achievements.unlocked.keys.contains("firstFare"), "managed")
+    }
+
     /// Decision 181, later: the Pingxi challenge starts on running lines, so
     /// only its own marks can unlock there; the tutorial unlocks nothing; and
     /// the end of the typhoon season needs a railway.

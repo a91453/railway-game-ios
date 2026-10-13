@@ -961,11 +961,13 @@ public final class GameSession {
     /// (`MetroSaveModePolicy`): its ridership would be the player's, not
     /// the city's.
     ///
-    /// A company in the red cannot switch: building still costs money in
-    /// free play, which has no income, so a negative balance could never be
-    /// built out of and the switch cannot be undone. Nor can a company with
-    /// a loan: interest is paid only by a managed company (decision 67), so
-    /// the loan would become money it never pays for. Nor can a challenge
+    /// Since decision 200 free play has unlimited funds
+    /// (`GameWorld.setUnlimitedFunds(_:)`, the reference's creative mode,
+    /// "no funding limit"): building costs nothing, so a company in the red
+    /// may switch too (before, building still cost money and a negative
+    /// balance could never be built out of). A company with a loan cannot:
+    /// interest is paid only by a managed company (decision 67), so the
+    /// loan would become money it never pays for. Nor can a challenge
     /// being played (``isFreePlayLocked``).
     public func setEconomyMode(_ mode: EconomyMode) {
         guard mode != world.accounts.mode else { return }
@@ -980,13 +982,6 @@ public final class GameSession {
             message = StatusMessage(kind: .failure, text: Self.freePlayLockedText(in: language))
             return
         }
-        guard world.economy.balance >= .zero else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "The company is in the red. Free play has no income and building still costs money, so you could not build anything. Bring the balance back above zero first, or start a new game.",
-                "公司目前虧損。自由模式沒有收入，蓋東西仍要花錢，切過去就什麼都蓋不了。請先讓餘額回到零以上，或開新遊戲。"
-            ))
-            return
-        }
         guard world.accounts.loan == .zero else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "The company still owes \(world.accounts.loan.moneyText). Free play pays no interest, so repay the loan before switching.",
@@ -995,9 +990,10 @@ public final class GameSession {
             return
         }
         _ = try? performCommand(.edit(.setEconomyMode(mode)))
+        _ = try? performCommand(.edit(.setUnlimitedFunds(true)))
         message = StatusMessage(kind: .success, text: language.text(
-            "Free play: no fares or running costs, and you set each station's ridership.",
-            "自由模式：不收票價，也沒有營運成本；各站的客源由你設定。"
+            "Free play: unlimited funds, no fares or running costs, and you can change each station's ridership.",
+            "自由模式：資金無限，不收票價，也沒有營運成本；各站的運量可以自己改。"
         ))
     }
 

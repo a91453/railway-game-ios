@@ -67,23 +67,31 @@ extension ConstructionCosts {
 }
 
 /// The player's finances.
-public struct GameEconomy: Hashable, Codable, Sendable {
+public struct GameEconomy: Hashable, Sendable {
     public private(set) var balance: Money
     public let costs: ConstructionCosts
+    /// Free play with unlimited funds (decision 200, the reference's
+    /// creative mode, `创意模式`, "no funding limit"): nothing is charged,
+    /// so nothing is refused for want of money, and the balance stays as it
+    /// was. Set through ``GameWorld/setUnlimitedFunds(_:)``, in free play
+    /// only; off in every world before it.
+    public internal(set) var unlimitedFunds: Bool
 
     public init(balance: Money, costs: ConstructionCosts = .standard) {
         self.balance = balance
         self.costs = costs
+        self.unlimitedFunds = false
     }
 
     /// Whether the balance covers `amount`. Nothing always can be paid,
     /// in the red too, so a free command is never refused for want of
-    /// money.
+    /// money; with ``unlimitedFunds`` anything can.
     public func canAfford(_ amount: Money) -> Bool {
-        amount <= .zero || amount <= balance
+        unlimitedFunds || amount <= .zero || amount <= balance
     }
 
-    /// Deducts `amount`, leaving the balance untouched on failure.
+    /// Deducts `amount`, leaving the balance untouched on failure; with
+    /// ``unlimitedFunds`` it is not deducted.
     ///
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` if the
     ///   balance is lower than `amount`, unless that is nothing.
@@ -92,6 +100,7 @@ public struct GameEconomy: Hashable, Codable, Sendable {
         guard canAfford(amount) else {
             throw .insufficientFunds(required: amount, available: balance)
         }
+        guard !unlimitedFunds else { return }
         balance = balance - amount
     }
 
@@ -102,8 +111,36 @@ public struct GameEconomy: Hashable, Codable, Sendable {
 
     /// Moves the balance by a settlement's `amount`, either way; it may go
     /// below zero (the reference settles running costs with
-    /// `allowNegativeBalance`; G1c, ARCHITECTURE decision 36).
+    /// `allowNegativeBalance`; G1c, ARCHITECTURE decision 36). With
+    /// ``unlimitedFunds`` the balance stays as it was.
     mutating func settle(_ amount: Money) {
+        guard !unlimitedFunds else { return }
         balance = balance + amount
+    }
+}
+
+extension GameEconomy: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case balance, costs, unlimitedFunds
+    }
+
+    /// A save without `"unlimitedFunds"` (every save before version 51)
+    /// pays for what it builds.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        balance = try container.decode(Money.self, forKey: .balance)
+        costs = try container.decode(ConstructionCosts.self, forKey: .costs)
+        unlimitedFunds = try container.decodeIfPresent(Bool.self, forKey: .unlimitedFunds) ?? false
+    }
+
+    /// Writes `"unlimitedFunds"` only when it is on, so every other world
+    /// saves as before.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(balance, forKey: .balance)
+        try container.encode(costs, forKey: .costs)
+        if unlimitedFunds {
+            try container.encode(true, forKey: .unlimitedFunds)
+        }
     }
 }

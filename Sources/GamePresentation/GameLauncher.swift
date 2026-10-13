@@ -318,7 +318,9 @@ public final class GameLauncher {
     /// Unlocks the achievements `session`'s world meets (decision 181),
     /// unless it is a demo, and says so in the game.
     func checkAchievements(of session: GameSession, at date: Date = Date()) {
-        guard !session.news.isDemo, session.tutorial == nil else { return }
+        // Decision 200: free play unlocks nothing, as the reference's
+        // creative mode keeps no score.
+        guard !session.news.isDemo, session.tutorial == nil, session.world.accounts.mode == .management else { return }
         let unlocked = achievements.unlock(meeting: AchievementFacts(world: session.world), at: date, only: Self.achievementScope(of: session.world))
         session.noteAchievements(unlocked)
     }

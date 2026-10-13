@@ -1,0 +1,81 @@
+{
+  "saveVersion" : 51,
+  "world" : {
+    "bounds" : {
+      "height" : 4096,
+      "width" : 16384
+    },
+    "clock" : {
+      "now" : 600,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 0,
+      "costs" : {
+        "car" : 2000,
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      },
+      "unlimitedFunds" : true
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 1024,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 9216,
+          "y" : 2048,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1536,
+          "start" : 512,
+          "station" : 1
+        }
+      ]
+    },
+    "nextStationID" : 2,
+    "nextTrainID" : 2,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Alpha",
+        "point" : {
+          "x" : 2048,
+          "y" : 2048
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "cars" : 6,
+        "id" : 1,
+        "name" : "Blue"
+      }
+    ]
+  }
+}

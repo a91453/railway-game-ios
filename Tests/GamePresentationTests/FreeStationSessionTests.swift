@@ -120,8 +120,10 @@ final class FreeStationSessionTests: XCTestCase {
     }
 
     /// Decision 46: a managed company's city gives a new station its
-    /// ridership; in free play the player sets it.
-    func testAManagedCompanysNewStationHasTheCitysRidership() async throws {
+    /// ridership; since decision 200 a free one's new station gets the same
+    /// (before, it had none until the player set it), which the player may
+    /// then change.
+    func testANewStationHasTheCitysRidershipManagedOrFree() async throws {
         var world = try makeLineWorld()
         world.setEconomyMode(.management)
         try await MainActor.run { [world] in
@@ -133,7 +135,8 @@ final class FreeStationSessionTests: XCTestCase {
                 session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_000), reach: 256)
                 session.addNetworkPlatform()
                 let station = try XCTUnwrap(session.world.stations.first)
-                XCTAssertEqual(session.world.stationDemand(of: station.id), managed ? .cityDefault : nil)
+                XCTAssertEqual(session.world.stationDemand(of: station.id), .cityDefault)
+                XCTAssertEqual(session.canEditStationDemand, !managed)
             }
         }
     }

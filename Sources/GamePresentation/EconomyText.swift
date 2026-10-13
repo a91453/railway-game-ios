@@ -41,6 +41,19 @@ extension GameWorld {
     }
 }
 
+extension GameEconomy {
+    /// The cash as the HUD and the economy panel show it: the balance, or
+    /// "∞" with free play's unlimited funds (decision 200).
+    public var cashText: String {
+        unlimitedFunds ? "∞" : balance.moneyText
+    }
+
+    /// Whether the cash is shown as in the red: never with unlimited funds.
+    public var showsInTheRed: Bool {
+        !unlimitedFunds && balance < .zero
+    }
+}
+
 extension EconomyMode {
     public func displayName(in language: DisplayLanguage) -> String {
         switch self {

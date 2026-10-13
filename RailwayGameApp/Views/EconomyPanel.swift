@@ -83,19 +83,20 @@ struct EconomyPanel: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill((session.world.economy.balance < .zero ? Theme.error : Theme.success).opacity(0.14))
+                        .fill((session.world.economy.showsInTheRed ? Theme.error : Theme.success).opacity(0.14))
                         .frame(width: 44, height: 44)
                     Image(systemName: "banknote.fill")
                         .font(.body.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.success)
+                        .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.success)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Balance")
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
-                    Text(session.world.economy.balance.moneyText)
+                    // Decision 200: "∞" with free play's unlimited funds.
+                    Text(verbatim: session.world.economy.cashText)
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(session.world.economy.balance < .zero ? Theme.error : Theme.textPrimary)
+                        .foregroundStyle(session.world.economy.showsInTheRed ? Theme.error : Theme.textPrimary)
                         .monospacedDigit()
                 }
             }
@@ -110,6 +111,25 @@ struct EconomyPanel: View {
                     .monospacedDigit()
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("economy.mapExpansion")
+            }
+            // Decision 200: free play's unlimited funds, and a blank map
+            // opened at once.
+            if session.world.economy.unlimitedFunds {
+                Text(verbatim: session.language.text(
+                    "Unlimited funds: building and buying cost nothing. Achievements are off in free play.",
+                    "資金無限：建造與購買都不花錢。自由模式不解鎖成就。"
+                ))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityIdentifier("economy.unlimitedFunds")
+            }
+            if session.canOpenWholeMap {
+                Button {
+                    session.openWholeMap()
+                } label: {
+                    Text(verbatim: session.language.text("Open the Whole Map", "開放整張地圖"))
+                }
+                .accessibilityIdentifier("economy.openWholeMap")
             }
             // Decision 162, later: the fuel price while a spell lasts, not
             // only the station master's first day.
@@ -133,7 +153,12 @@ struct EconomyPanel: View {
                         session.setEconomyMode(.free)
                     }
                 } message: {
-                    Text("Free play has no fares or running costs, and you set each station's ridership. It cannot become a managed company again.")
+                    // Decision 200: free play has unlimited funds and no
+                    // achievements.
+                    Text(verbatim: session.language.text(
+                        "Free play has unlimited funds, no fares or running costs, and no achievements; you can change each station's ridership. It cannot become a managed company again.",
+                        "自由模式資金無限，不收票價、沒有營運成本，也不解鎖成就；各站的運量可以自己改。切換後無法再改回經營模式。"
+                    ))
                 }
                 if session.isFreePlayLocked {
                     Text(verbatim: GameSession.freePlayLockedText(in: session.language))
