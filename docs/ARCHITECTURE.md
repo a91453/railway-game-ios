@@ -3913,6 +3913,16 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - **放在哪**：路線面板沒有路線時（`LinesPanel` 的 `linesSection`）、存檔庫沒有存檔時（`StartView` 的 `ContentUnavailableView`，取代系統的 `tray`）、車隊沒有列車時（`FleetOverviewSheet`），都在原本那行字的上面，96 點，對 VoiceOver 隱藏（字已經說了）。
 - **沒有驗證的**：Asset Catalog 與面板上的樣子（CI 的 Xcode 建置）；實機。
 
+**之後的修正（2026-10-13，美術線：建造卡的插圖）**：建造工具的種類按鈕原本是 18 點的地圖圖示加名字，改成**建造卡**：上面 44 點的多色插圖（隨動態字級放大），下面名字與價錢。版面是作者看過兩種之後選的（「用你推薦的版面」）；地圖上照舊用單色的 `MapGlyph`（決策 121）。
+- **圖**：`Assets.xcassets` 的 `BuildingHouse`、`BuildingShop`、`BuildingOffice`、`BuildingHotel`、`BuildingDepartmentStore`、`BuildingWharf`、`BuildingMarina`、`BuildingAmusementPark`（`PlacedBuildingKind.cardArt`），120 × 120 的多色 SVG，淺色深色共用。來源是 #514 的原稿，描法和空狀態一樣。底是淺綠松 `#BDEFE7` 的圓角方塊（`rx` 22）：建物有高有寬，放進圓會擠。
+- **作者看過之後改的**：
+  - 住宅用原稿的正面簡單版。透視的細節版改成正面重畫後，作者說不好看，就不用了。
+  - 遊樂園只留摩天輪。原稿上挖掉售票亭、旋轉木馬和雲霄飛車會留下破口與殘片（作者指出），所以整座摩天輪照原稿的配色與外框重畫，車廂用圓形（作者在兩種車廂中選了這種）。
+  - 百貨每邊的橫條窗 7 條減為 4 條；旅館 13 層窗減為 7 層；遊艇港陽台的細欄杆併成一條。
+  - 碼頭照原稿：拿掉吊桿和木箱都會切出斷口（作者指出右下破圖），所以不挖補。
+- **檢查**：64／44／28 點，淺色與深色面板，模糊與灰階；放大和原稿並排看外框都連著。
+- **沒有驗證的**：Asset Catalog 與按鈕上的樣子（CI 的 Xcode 建置）；手機上建造面板變高之後好不好捲（實機）。
+
 ### 123. 實機截圖的修正（TestFlight #37）
 
 2026-10-09，作者在 iPhone 上用 TestFlight #37（含決策 106–122）拍了 22 張橫拿的截圖：空白地圖、實景示範（瑞芳一帶，OSM 底圖）、台北車站（Apple 地圖）、各圖層、車站卡片、路線面板、經營明細與開始畫面。這裡是從截圖找到的問題與修法，一點一個 commit。GameCore、存檔、golden、replay 都不變。

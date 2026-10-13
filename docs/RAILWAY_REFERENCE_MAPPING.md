@@ -1467,3 +1467,11 @@ V 實際放行 → T、U（保證不互穿）
 | 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
 | --- | --- | --- |
 | （參考沒有）空狀態的插圖 | `EmptyLines`、`EmptySaves`、`EmptyTrains`（`LinesPanel`、`StartView`、`FleetOverviewSheet`） | gap → 原生（作者的原稿描圖） |
+
+## 建造卡的插圖（決策 122 之後的修正）
+
+圖是作者要求生成的原稿（`docs/art/generated-2026-10-13/`，#514）描成的平塗 SVG，遊樂園的摩天輪是照原稿自己重畫的；都不是參考庫的圖。參考庫（`a91453/railway-reference-private`）的建物圖照 art-style §7 只取想法，這次沒有用到。外部專案：沒有用到程式碼或資料。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| （參考沒有）建造卡的建物插圖 | `Building*` imageset、`PlacedBuildingKind.cardArt`、`ControlPanel` 的 `buildOptions` | gap → 原生（作者的原稿描圖） |
