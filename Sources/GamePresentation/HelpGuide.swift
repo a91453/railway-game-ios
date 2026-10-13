@@ -219,6 +219,15 @@ public enum HelpGuide {
             keywords: "signal signalling block 號誌 閉塞 交通控制 等待"
         ),
         HelpEntry(
+            "timeScale", .running,
+            question: ("Why do trains look so fast? What does 600× mean?", "列車怎麼跑這麼快？600× 是什麼意思？"),
+            answer: (
+                "A new game runs at 600 times real time: a second on your screen is ten minutes in the game, so a high-speed train at 300 km/h crosses 50 km of map in a second. The map and the track are true to scale. To watch a train at its real speed, tap it and follow it, then tap 1× (real time) or 10× on the follow bar at the top of the map; the status bar shows the train's speed in km/h. You can also choose any speed from the speed menu beside the pause button. The game keeps the speed you chose when you stop following. If the status bar says \"falling behind\", the device cannot run the game that fast: choose a slower speed.",
+                "新遊戲以真實時間的 600 倍進行：畫面上的 1 秒是遊戲裡的 10 分鐘，所以時速 300 公里的高鐵，畫面上每秒跑過 50 公里。地圖和軌道的比例是真實的。想看列車用真實的速度跑，點列車並跟隨它，再點地圖上方跟隨列的「1×」（真實時間）或「10×」；頂端的狀態列會顯示列車的時速。也可以從暫停鈕旁的速度選單選任何速度。停止跟隨後，遊戲會維持你選的速度。如果狀態列顯示「跟不上」，表示裝置跑不動這個速度，請改選慢一點的速度。"
+            ),
+            keywords: "speed fast slow real time 1x 10x 600x follow km/h falling behind 速度 太快 真實時間 倍速 跟隨 時速 跟不上"
+        ),
+        HelpEntry(
             "express", .running,
             question: ("How do I run a non-stop or a short working?", "怎麼開直達車或短程班次？"),
             answer: (

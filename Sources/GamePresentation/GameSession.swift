@@ -507,6 +507,48 @@ public final class GameSession {
     )
     @ObservationIgnored private var gameLoop: Task<Void, Never>?
 
+    // MARK: - Watching speed (decision 195)
+
+    /// How fast the game really runs and the followed train goes, as the
+    /// status pill shows them: a new speed reads afresh, and not following
+    /// a train shows no train's speed.
+    public var viewingSpeed: ViewingSpeed {
+        let shown = shownViewingSpeed
+        let same = shown.speed == world.clock.speed
+        return ViewingSpeed(
+            speed: world.clock.speed, actualTenths: same ? shown.actualTenths : nil, isBehind: same && shown.isBehind,
+            trainKilometresPerHour: followedTrainID == nil ? nil : shown.trainKilometresPerHour
+        )
+    }
+
+    /// What ``viewingSpeed`` last read, as it is shown: set only when what
+    /// is shown changes, so a tick that changes nothing shown changes
+    /// nothing observed.
+    private var shownViewingSpeed = ViewingSpeed(speed: .paused, permille: nil, trainKilometresPerHour: nil)
+    @ObservationIgnored private var speedMeter = GameSpeedMeter()
+    @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
+    /// The real time the game has run, and the ticks put in place in it,
+    /// for ``speedMeter``.
+    @ObservationIgnored private var realTimeRun: Duration = .zero
+    @ObservationIgnored private var ticksRun: Int64 = 0
+
+    /// Notes that `elapsed` real time went by in a step of the game, after
+    /// its ticks were put in place: how fast it really ran (none while
+    /// paused), and what the pill shows of it.
+    private func noteRealTime(_ elapsed: Duration) {
+        if world.clock.isPaused {
+            speedMeter.reset()
+        } else {
+            realTimeRun += max(elapsed, .zero)
+            speedMeter.record(real: realTimeRun, ticks: ticksRun, speed: world.clock.speed)
+        }
+        let shown = ViewingSpeed(
+            speed: world.clock.speed, permille: speedMeter.permilleOfSpeed,
+            trainKilometresPerHour: followedTrainID == nil ? nil : trainSpeedometer.kilometresPerHour
+        )
+        if shown != shownViewingSpeed { shownViewingSpeed = shown }
+    }
+
     /// A managed company's stations without ridership get the city's
     /// (``StationDemand/cityDefault``), as stations built since do; saves
     /// from before ARCHITECTURE decision 46 may have such stations.
@@ -984,9 +1026,11 @@ public final class GameSession {
     /// time, worked out off the main actor (``startGameLoop()``).
     public func advance(realElapsed elapsed: Duration) {
         let ticks = dueTicks(realElapsed: elapsed)
-        guard ticks > 0 else { return }
-        let listening = playSound != nil
-        finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
+        if ticks > 0 {
+            let listening = playSound != nil
+            finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
+        }
+        noteRealTime(elapsed)
     }
 
     /// Puts `ticks` of game time in place at once, as the game loop does a
@@ -1059,16 +1103,20 @@ public final class GameSession {
         let lastEntry = world.accounts.entries.last
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
         let timeBefore = world.clock.now
+        let worldBefore = world
         isLogging = true
         world = step.world
         isLogging = false
         log(.advance(ticks: step.ticks), at: timeBefore)
+        // Decision 195: the ticks that ran, and the followed train's way.
+        ticksRun += Int64(step.ticks)
         if let traffic = step.traffic { trafficMemo = (worldRevision, traffic) }
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
         redoHistory.removeAll()
         editGestureHasSnapshot = false
         endFollowIfGone()
+        trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
         if let playSound, !step.arrived.isEmpty {
             let watched = watchedTrainIDs
             playSound(.arrival(watched: step.arrived.contains { watched.contains($0) }))
@@ -1200,7 +1248,8 @@ public final class GameSession {
                 // not let one more step through.
                 guard !Task.isCancelled, let self else { return }
                 let now = clock.now
-                let ticks = self.dueTicks(realElapsed: now - last)
+                let elapsed = now - last
+                let ticks = self.dueTicks(realElapsed: elapsed)
                 last = now
                 for index in 0..<ticks {
                     guard var tick = self.beginLoopTick() else { break }
@@ -1211,6 +1260,8 @@ public final class GameSession {
                     self.finish(tick, with: outcome)
                     if case .failure = outcome { break }
                 }
+                // Decision 195: how fast the game really ran.
+                self.noteRealTime(elapsed)
             }
         }
     }
@@ -1222,6 +1273,8 @@ public final class GameSession {
         gameLoop?.cancel()
         gameLoop = nil
         tickAccumulator.reset()
+        // The time away is not time the game failed to run.
+        speedMeter.reset()
     }
 
     // MARK: - Trains
