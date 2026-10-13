@@ -6029,6 +6029,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 點選軌道的檢視（`trackInspection(of:)`）每次重建整張 `LineMap`（每條線每一段一次找路），約 24 ms，檢視卡片與 `selectionText()` 一幀讀好幾次。現在 `GameSession.trackInspection(of:)` 每個 `commandRevision` 只建一次（只有指令會改軌道與路線），號誌照當下的世界讀。
 `PerFrameMemoTests`。
 
+**之後的修正（選取工具的列車可以跟隨，TestFlight 56.1，2026-10-13）**：作者在實景高鐵示範沒有選工具時點列車，細節卡片有路線、滿載與路線晶片，卻沒有「跟隨」。跟隨鈕從來只在列車工具（`TrainControls`，ed0646f4）與車隊總覽；決策 114 把列車工具收進「建設」後，沒有工具時點列車就沒有路可以跟隨，這個決策加的列車細節也沒有。現在細節卡片的列車（只在選取工具、列車在軌道上時）在路線晶片旁多一顆「跟隨／跟隨中」（`inspector.train.follow`，外觀同列車工具），呼叫新的 `GameSession.toggleFollowTrain(_:)`（跟隨卡片上的列車，不看 `selectedTrainID`）；跟隨中照舊出現 `FollowBar`。按鈕在卡片固定的標頭裡，不用捲動。`TrainControlTests.testTheSelectToolFollowsTheTappedTrain`、`MapInteractionTests.testTheDetailsCardFollowsATappedTrain`（full lane）。
+
 **限制**：重做疊與復原疊一樣只在 session 裡；搜尋只比對名稱（不比對車站代碼）；存檔名不隨匯出的檔案帶走；死結泡泡只在交通控制打開時；觸覺與畫面要 macOS CI 與實機。
 
 **測試**：`RedoSessionTests`（復原後重做、新編輯清空、沒改變的編輯不清空、時間前進清空、保留時鐘、兩種語言）、`ListSearchTests`（大小寫、全形、臺／台、站名找路線、篩選、列車依路線名）、`SaveNamingTests`（命名、改名、拿掉名字、旁檔隨存檔刪除、自動存檔不能命名、名字截斷、三種排序、日期與資金文字、launcher）、`MapInspectionTests`（軌道的路線與佔用、空軌道是綠燈、點軌道選取與放掉、其他工具不選、列車的路線滿載誤點）、`SituationAlertsTests`、`FeedbackCueTests`。App 的畫面（SwiftUI）在 Linux 上不能編譯，要 macOS CI 與實機。

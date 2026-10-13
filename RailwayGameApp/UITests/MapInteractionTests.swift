@@ -49,6 +49,53 @@ final class MapInteractionTests: XCTestCase {
         }
     }
 
+    /// TestFlight 56.1: a train tapped with no tool chosen can be followed
+    /// from the details card, as from the train tool.
+    func testTheDetailsCardFollowsATappedTrain() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Resume"].exists, "The demo must stay paused throughout this test")
+
+        // Bring Train 1 under the camera: follow it from the fleet list,
+        // then let go; paused, it stays in the middle of the map.
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let fleet = app.buttons["train.fleetOverview"]
+        if !fleet.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+        fleet.tap()
+        let fleetFollow = app.buttons["fleet.follow.Train 1"]
+        XCTAssertTrue(fleetFollow.waitForExistence(timeout: 5))
+        for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
+        fleetFollow.tap()
+        let unfollow = app.buttons["train.unfollow"]
+        XCTAssertTrue(unfollow.waitForExistence(timeout: 5))
+        unfollow.tap()
+        XCTAssertTrue(unfollow.waitForNonExistence(timeout: 5))
+        app.buttons["tool.select"].tap()
+
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue((map.value as? String)?.hasPrefix("Train · Train 1 ·") == true,
+                      "The tap must pick Train 1; value: \(String(describing: map.value))")
+        let follow = app.buttons["inspector.train.follow"]
+        XCTAssertTrue(follow.waitForExistence(timeout: 5))
+        XCTAssertTrue(follow.isHittable, "The follow button shows without scrolling the card")
+        follow.tap()
+        XCTAssertTrue(unfollow.waitForExistence(timeout: 5), "Following shows the follow bar")
+        XCTAssertTrue(follow.label.contains("Following"), "label: \(follow.label)")
+        follow.tap()
+        XCTAssertTrue(unfollow.waitForNonExistence(timeout: 5), "A second tap stops following")
+        XCTAssertTrue(app.buttons["Resume"].exists)
+    }
+
     func testDemoMapOpensOnItsNetwork() {
         continueAfterFailure = false
         let app = XCUIApplication()
