@@ -6317,6 +6317,17 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
   - 代價：在別的遊戲接續時，那局原本就有的軌道或車站也會算。
 - **「略過」不加確認**：可以接續就夠了。
 
+**之後的修正（2026-10-13，#491 留下的缺口：教學沒有教玩家讀路線卡）**：「營運」章在第一筆車資之後多兩步，教學從 19 步變 21 步。
+- **第 17 步 `line.card.open`「點『路線』看營運收支」**：圈出「路線」入口（`hud.lines`）。新的目標 `TutorialGoal.openLines`：路線面板在畫面上就算做完。面板是 App 的狀態，所以 `ContentView` 在面板開關時呼叫 `GameSession.linesPanelDidChange(isShown:)`，和 `mapDidMove()` 同一種做法。新的準備 `TutorialSetup.selectNewestLine`：沒有選路線時選最新那條（教學蓋的線），玩家選了別條就照玩家的。
+- **第 18 步 `line.card.read`「看懂路線卡」**：要讀的步驟，打開路線面板（`panel: .lines`）並捲到路線卡（`revealsInPanel`）。圈出兩個新目標：
+  - `TutorialTarget.lineLoss`（`line.loss`）：決策 194 的收支長條與虧錢原因。
+  - `TutorialTarget.lineLossFix`（`line.loss.fix`）：第一個原因旁的一鍵修正。
+  - 路線卡要等路線跑完第一個整天才有。還沒有時只圈出路線面板（`sidePanel`），卡片的內文說每天結算，玩家知道之後去哪裡看。
+- **第 19 步 `station.select`** 加 `panel: .closed`：點車站前先關掉路線面板，地圖讓出來。
+- `LinesPanel.swift` 只加錨點：路線卡掛 `tutorialPanelTarget(.lineLoss)` 與 `.id`，第一個修正按鈕掛 `tutorialPanelTarget(.lineLossFix)`。段落順序與內容沒動。
+- **參考**：`Ci/` 的 `TUTORIAL_STEPS` 第 7–9 步打開路線資訊面板（`openUI` 選第一條有車站的線），圈出面板與其中一列（`#panel-line-info`、`#line-info-capacity-row`），這兩步照這個做法。參考沒有讀收支或虧損的步驟，內文是本專案寫的。外部專案沒有搜尋：參考的做法已經夠用。
+- `TutorialJourneyUITests` 一起改：第 17 步點 `entry.lines`，第 18 步按「下一步」，之後的步驟號碼加 2。
+
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 
 2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
