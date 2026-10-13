@@ -123,10 +123,19 @@ public enum HelpGuide {
             "startTrains", .running,
             question: ("How do I get trains running?", "如何讓列車開始運行？"),
             answer: (
-                "Open Lines, pick the line and give it a train. A line with no train carries no one, and the station master says so. More trains mean shorter waits but higher running costs; add cars when stations are crowded and trains when they are full.",
-                "打開「路線」，選這條路線，幫它配車。沒有列車的路線沒人搭，站長也會提醒你。列車越多等車越短，但營運成本越高；車站擠就加掛車廂，車站滿就加開列車。"
+                "Open Lines, pick the line, choose how often a train comes and tap Buy … and Start Service: the trains are bought, wait at the first station and leave in turn. A line with no train carries no one, and the station master says so. More trains mean shorter waits but higher running costs; add cars when stations are crowded and trains when they are full.",
+                "打開「路線」，選這條路線，選多久來一班，按「購買…列並開始營運」：列車會買好、在第一站等候、依序發車。沒有列車的路線沒人搭，站長也會提醒你。列車越多等車越短，但營運成本越高；車站擠就加掛車廂，車站滿就加開列車。"
             ),
             keywords: "train assign 配車 發車 上線 開車"
+        ),
+        HelpEntry(
+            "moreTrains", .running,
+            question: ("How do I run more trains on a line?", "一條路線怎麼多跑幾列車？"),
+            answer: (
+                "Open Lines and pick the line. Under Headway and trains, choose how often a train should come, then tap the button once. The trains the line lacks are bought and set off evenly apart; if it has more than it needs, the extra ones go to no line after their trip. If a time of day is set to more trains than the line has, a warning says so, with a button that buys the rest. On single track trains can only pass at stations, so a line holds just a few trains: to run more, build double track or passing loops (see \"Why does my line run only one train at a time?\").",
+                "打開「路線」，選這條路線。在「班距與列車數」選多久來一班，再按一下按鈕。不夠的列車會自動買好，保持等間隔發車；車太多時，多的車跑完這一趟後回到未配屬。某個時段設定的列車比路線實際有的多時，會出現警告，按一下就補齊。單線只能在車站會車，能跑的列車有上限：要再多跑，就蓋雙線或待避線（見「為什麼我的路線一次只跑一列車？」）。"
+            ),
+            keywords: "more trains headway frequency add train how many dispatch 加開 多跑 班距 列車數 調度 配車 發車 補齊 上限"
         ),
         HelpEntry(
             "whyLosing", .money,
@@ -204,8 +213,8 @@ public enum HelpGuide {
             "oneTrain", .running,
             question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
             answer: (
-                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off at the top of Lines lets trains run regardless.",
-                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。在「路線」最上方關掉「交通控制」，列車也能照開。"
+                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off lets trains run regardless: in Lines, switch on Advanced, and the switch is at the bottom.",
+                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。關掉「交通控制」，列車也能照開：在「路線」打開「進階」，開關在最下面。"
             ),
             keywords: "single track passing loop double one train capacity signal 單線 會車 待避 雙線 一列 列車數 上限"
         ),
@@ -222,8 +231,8 @@ public enum HelpGuide {
             "trafficControl", .running,
             question: ("What is traffic control (signalling)?", "什麼是號誌控制？"),
             answer: (
-                "With Traffic control on, a train takes its whole route before it leaves, so two trains never share a track at once. Trains may wait for the route ahead to clear, and a busy line carries fewer trains. Turn it on or off with the switch at the top of the Lines panel.",
-                "開啟「交通控制」後，列車要先取得整段路線才會發車，所以兩列車不會同時佔用同一段軌道。列車可能會等前方路線淨空，繁忙的路線能容納的列車也比較少。開關在「路線」面板的最上方。"
+                "With Traffic control on, a train takes its whole route before it leaves, so two trains never share a track at once. Trains may wait for the route ahead to clear, and a busy line carries fewer trains. Turn it on or off in the Lines panel: switch on Advanced, and the switch is at the bottom.",
+                "開啟「交通控制」後，列車要先取得整段路線才會發車，所以兩列車不會同時佔用同一段軌道。列車可能會等前方路線淨空，繁忙的路線能容納的列車也比較少。開關在「路線」面板：打開「進階」，在最下面。"
             ),
             keywords: "signal signalling block 號誌 閉塞 交通控制 等待"
         ),

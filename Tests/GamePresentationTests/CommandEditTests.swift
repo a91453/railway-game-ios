@@ -115,6 +115,7 @@ final class CommandEditTests: XCTestCase {
             .staffLine(line, headway: 10, type: .highSpeed, cars: 4, language: .traditionalChinese),
             .reformLine(line, type: nil, cars: 2, language: .english),
             .addLineTrains(line, count: 2, type: nil, cars: 1, targets: TargetHeadways(peak: 10, low: 30), language: .english),
+            .removeLineTrains(line, count: 1, targets: TargetHeadways(peak: 20, offPeak: 20, low: 20)),
             .renameStation(station, name: "北門"), .removeStation(station), .setStationDemand(station, demand), .setStationDemand(station, nil),
             .applyStationDemand(demand, to: [station, StationID(rawValue: 5)]), .setStationOperationMode(station, StationOperationMode.allCases[0]),
             .linkTransfer(station, StationID(rawValue: 5)), .unlinkTransfer(station), .buildFreightYard(station), .removeFreightYard(station),

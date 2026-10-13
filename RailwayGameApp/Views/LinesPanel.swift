@@ -77,9 +77,7 @@ struct LinesPanel: View {
                         advancedSection
                         newLineRow
                         if let line = session.selectedLine {
-                            if line.trains.isEmpty, !line.isRing {
-                                staffSection(line)
-                            }
+                            trainsSection(line)
                             stopsSection(line)
                             lineSection(line)
                             operatingSection(line)
@@ -95,8 +93,8 @@ struct LinesPanel: View {
                         // picked on the map.
                         draftSection
                         // Decision 101: a line without trains offers them next.
-                        if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
-                            staffSection(line)
+                        if let line = session.selectedLine {
+                            trainsSection(line)
                         }
                         if showsAdvanced {
                             trafficSection
@@ -531,6 +529,11 @@ struct LinesPanel: View {
                 Text(verbatim: "\(line.stops.map { name(of: $0) }.joined(separator: " – ")) · \(status)")
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
+                // TestFlight 56.1: how many trains run it, and how often.
+                Text(verbatim: memo.trainsRowText(line.id, of: session))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("line.trainsRow.\(line.id.rawValue)")
                 // Decision 179: yesterday's riders, fares, profit and peak.
                 if let report = session.world.lineReport(line.id), !line.isFreight {
                     Text(verbatim: report.rowText(in: session.language))
@@ -1025,6 +1028,105 @@ struct LinesPanel: View {
     }
 
     // MARK: - Trains for a line (decision 101)
+
+    /// A line's trains: decision 101's staffing while it has none, then its
+    /// headway and trains (TestFlight 56.1). A ring runs each way's trains
+    /// and has neither.
+    @ViewBuilder
+    private func trainsSection(_ line: ServiceLine) -> some View {
+        if !line.isRing {
+            if line.trains.isEmpty {
+                staffSection(line)
+            } else {
+                headwaySection(line)
+            }
+        }
+    }
+
+    /// The headway of a line that runs and its trains (TestFlight 54.1 and
+    /// 56.1): choose how often a train comes and tap once; the trains it
+    /// lacks are bought and placed where its trips start, those it no
+    /// longer needs go to no line after their trip, and its targets keep
+    /// them evenly apart. Shown with Advanced folded too: it is the main
+    /// way to run more trains, not a detail.
+    private func headwaySection(_ line: ServiceLine) -> some View {
+        let language = session.language
+        let change = memo.headwayChange(line.id, headway: staffHeadway, of: session)
+        let shortfall = memo.trainShortfall(line.id, of: session)
+        return Section {
+            Text(verbatim: language.text("Now: ", "目前：") + memo.trainsRowText(line.id, of: session))
+                .font(.subheadline.monospacedDigit())
+                .accessibilityIdentifier("line.headway.now")
+            if let shortfall {
+                Label {
+                    Text(verbatim: shortfall.warning(in: language))
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.warning)
+                .accessibilityIdentifier("line.trains.shortfall")
+                Button {
+                    session.fillSelectedLineTrains(shortfall)
+                } label: {
+                    Label {
+                        Text(verbatim: shortfall.title(in: language))
+                    } icon: {
+                        Image(systemName: "plus.circle")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!session.world.economy.canAfford(shortfall.cost))
+                .accessibilityIdentifier("line.trains.fill")
+            }
+            Picker(selection: $staffHeadway) {
+                ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
+                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A train every", "班距"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("line.staff.headway")
+            capacityWarning(line)
+            if let change {
+                if let limit = change.limitText(in: language) {
+                    Text(verbatim: limit)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                        .accessibilityIdentifier("line.headway.limit")
+                }
+                Button {
+                    session.changeSelectedLineHeadway(change)
+                } label: {
+                    Label {
+                        Text(verbatim: change.title(in: language))
+                    } icon: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .disabled(change.isUnchanged || !session.world.economy.canAfford(change.cost))
+                .accessibilityIdentifier("line.headway.change")
+            }
+        } header: {
+            Text(verbatim: language.text("Headway and trains", "班距與列車數"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Pick how often a train comes and tap once: trains it lacks are bought and wait at the first station, extra trains go to no line after their trip, and the rest keep evenly apart.",
+                "選班距後按一下：不夠的車會買好在第一站等候，多的車跑完這一趟後回到未配屬，其餘的保持等間隔。"
+            ))
+        }
+        // The line's own headway, nearest of the choices, when it is
+        // selected.
+        .task(id: line.id) {
+            guard let now = memo.runningHeadway(line.id, of: session) else { return }
+            staffHeadway = GameWorld.staffingHeadways.min { abs($0 - now) < abs($1 - now) } ?? staffHeadway
+        }
+    }
 
     /// How often a train should come on `line`, and what that takes: the
     /// trains its round trip needs, their price, and one button that buys,
