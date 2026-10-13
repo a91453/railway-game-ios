@@ -266,18 +266,23 @@ extension XCUIApplication {
 
     /// Scrolls `holder`, or whatever holds `button` (a scroll view, or a
     /// `List`'s collection view), until the middle of `button` shows in
-    /// it; whether it does. Slow swipes on the holder itself, not at the
+    /// it; whether it does. Drags on the holder itself, not at the
     /// middle of the screen, which on a phone on its side is the edge
     /// between the start screen's title and its buttons, or the map beside
     /// a sheet's list. With the largest accessibility text one start
     /// screen button is taller than the band
     /// ``dragUntilWhollyOnScreen(_:in:)`` wants it wholly inside. A `List`
-    /// makes its rows only as they come near, so a `holder` is swiped up
-    /// until the row is there. Nothing here asks XCTest whether the button
-    /// can be touched: of a start screen button scrolled partly into
-    /// sight it failed the test, its middle on screen or not (runs
-    /// 38335812150 and 38339333769), so ``tapMiddle(of:)`` touches it.
-    func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, swipes: Int = 20) -> Bool {
+    /// makes its rows only as they come near, so a `holder` is dragged up
+    /// with long drags until the row is there. Nothing here asks XCTest
+    /// whether the button can be touched: of a start screen button
+    /// scrolled partly into sight it failed the test, its middle on screen
+    /// or not (runs 38335812150 and 38339333769), so ``tapMiddle(of:)``
+    /// touches it. Slow swipes flung the start screen's column past the
+    /// band every time, the button's middle below it and then above it
+    /// for 20 swipes (main's full lane, run 38345123226): each drag here
+    /// holds before lifting and is shorter than the band, so the middle
+    /// cannot jump over it.
+    func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, drags: Int = 40) -> Bool {
         if holder == nil, !button.waitForExistence(timeout: 10) { return false }
         guard let holder = holder ?? [scrollViews, collectionViews, tables]
             .map({ $0.containing(.button, identifier: button.identifier).firstMatch })
@@ -285,17 +290,21 @@ extension XCUIApplication {
             return button.exists && frame.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
         }
         _ = holder.waitForExistence(timeout: 10)
+        let onScreen = holder.frame.intersection(frame)
+        let area = onScreen.isEmpty ? holder.frame : onScreen
+        // Clear of the holder's edges, where a navigation or home bar can
+        // lie over it.
+        let band = area.insetBy(dx: 0, dy: 24)
         func shown() -> Bool {
-            // Clear of the holder's edges, where a navigation or home bar
-            // can lie over it.
-            let area = holder.frame.intersection(frame).insetBy(dx: 0, dy: 24)
-            return button.exists && area.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
+            button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
         }
-        for _ in 0..<swipes where !shown() {
-            if button.exists, button.frame.midY < holder.frame.midY {
-                holder.swipeDown(velocity: .slow)
+        for _ in 0..<drags where !shown() {
+            if !button.exists {
+                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
+            } else if button.frame.midY < band.minY {
+                drag(in: area, at: area.midX, from: 0.35, to: 0.65)
             } else {
-                holder.swipeUp(velocity: .slow)
+                drag(in: area, at: area.midX, from: 0.65, to: 0.35)
             }
         }
         return shown()

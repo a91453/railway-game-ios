@@ -252,7 +252,10 @@ final class RealWorldMapUITests: XCTestCase {
             ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
         ] as [(String, XCUIElement?)] {
             let button = app.buttons.matching(identifier: identifier).firstMatch
-            XCTAssertTrue(app.scrollUntilShown(button, in: holder), "\(identifier) cannot be scrolled to")
+            XCTAssertTrue(
+                app.scrollUntilShown(button, in: holder),
+                "\(identifier) cannot be scrolled to: \(button.exists ? "\(button.frame)" : "missing"), app \(app.frame)"
+            )
             app.tapMiddle(of: button)
         }
     }

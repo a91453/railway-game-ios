@@ -57,6 +57,12 @@ public struct FollowBarInfo: Hashable, Sendable {
         self.status = status
     }
 
+    /// The follow bar's speeds, one tap each (decision 195): real time and
+    /// ten times it, to watch the train run as it would. They set the
+    /// game's speed as the speed menu does, and leave it as it is when the
+    /// following stops.
+    public static let speedShortcuts: [GameSpeed] = [.x1, .x10]
+
     /// The text after the name: "Main　Alpha→Gamma　08:00–08:24　· Not
     /// departed", or as much of it as the train has.
     public func detail(in language: DisplayLanguage) -> String {

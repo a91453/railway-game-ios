@@ -137,7 +137,7 @@ enum MapArt {
     ) {
         let region = drawingRegion(projection)
         let referenceSize = projection.referenceSize
-        let width = max(3, referenceSize * 0.3)
+        let width = max(3, trainWidth(referenceSize))
         for run in motion.runs {
             guard let head = run.head(at: progress) else { continue }
             let colour = Palette.trainColor(run.look, plain: plain)
@@ -151,7 +151,7 @@ enum MapArt {
             guard region.contains(x: head.point.x, y: head.point.y) else { continue }
             if lights > 0 {
                 let center = projection.screenPoint(worldX: head.point.x, worldY: head.point.y)
-                let radius = max(2.5, referenceSize * 0.26)
+                let radius = trainHeadRadius(referenceSize)
                 context.fill(disc(at: center, radius: radius * 3.2), with: .color(Palette.station.opacity(0.18 * lights)))
                 context.fill(disc(at: center, radius: radius * 2), with: .color(Palette.station.opacity(0.3 * lights)))
             }
@@ -283,7 +283,7 @@ enum MapArt {
     /// (``WaitMarkSides``, the `Railway/` site's `blockSideShift`).
     static func drawWaitMarks(_ traffic: TrafficOverlay, deadlock: Double = 1, projection: some MapProjection, in context: GraphicsContext) {
         let region = drawingRegion(projection)
-        let radius = max(2.5, projection.referenceSize * 0.26) + 4
+        let radius = trainHeadRadius(projection.referenceSize) + 4
         let shown = traffic.waits.filter { region.contains($0.from) }
         let marks = shown.map { wait in
             let center = projection.screenPoint(of: wait.from)
@@ -486,11 +486,12 @@ enum MapArt {
         case (_, .overview):
             context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: max(1.5, referenceSize * 0.16), lineCap: .round, lineJoin: .round))
         case (.surface, .full), (.automatic, .full):
-            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .round, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: trackWidth(referenceSize), lineCap: .round, lineJoin: .round))
             context.stroke(line, with: .color(Palette.trackCentre), style: centre)
         case (.elevated, .full), (.bridge, .full):
-            context.stroke(line, with: .color(Palette.ink.opacity(0.35)), style: StrokeStyle(lineWidth: referenceSize * 0.58, lineCap: .butt, lineJoin: .round))
-            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: referenceSize * 0.42, lineCap: .butt, lineJoin: .round))
+            // The casing stays as much wider than the bed as it was.
+            context.stroke(line, with: .color(Palette.ink.opacity(0.35)), style: StrokeStyle(lineWidth: trackWidth(referenceSize) * 0.58 / 0.42, lineCap: .butt, lineJoin: .round))
+            context.stroke(line, with: .color(Palette.track), style: StrokeStyle(lineWidth: trackWidth(referenceSize), lineCap: .butt, lineJoin: .round))
             context.stroke(line, with: .color(Palette.trackCentre), style: centre)
         }
     }
@@ -500,7 +501,56 @@ enum MapArt {
     /// The width of a line drawn on the track; lines sharing track sit
     /// this far apart, touching, as MapBuilder's 8 px lines do.
     private static func lineWidth(_ projection: some MapProjection) -> Double {
-        projection.detail == .full ? max(2.5, projection.referenceSize * 0.22) : max(2, projection.referenceSize * 0.16)
+        // Decision 195: as much narrower than the bed as it was, so the
+        // bed still shows either side of the line near true width.
+        projection.detail == .full ? max(2.5, trackWidth(projection.referenceSize) * 0.22 / 0.42) : max(2, projection.referenceSize * 0.16)
+    }
+
+    // MARK: - Near true widths (decision 195)
+
+    /// Zoomed in from this size (points for ``MapScale/referenceLength``,
+    /// 16 m; the phone's default is 32, the most 64), the track and the
+    /// trains narrow towards their true widths, so the two tracks of a
+    /// double line (4–5 m apart) stand apart...
+    static let trueWidthFromSize = 32.0
+    /// ...and from this size on they are drawn at them; in between they
+    /// narrow in a straight line, so no zoom makes them jump.
+    static let trueWidthAtSize = 48.0
+    /// The track's bed, in shares of 16 m: 6.72 m as drawn below
+    /// ``trueWidthFromSize``, 3.52 m (a standard-gauge track's sleepers
+    /// and ballast shoulder, about 3.5 m) from ``trueWidthAtSize``.
+    static let trackWidthShare = (drawn: 0.42, near: 0.22)
+    /// A train's body: 4.8 m, then 3.2 m (a Taiwanese car is 2.9–3.4 m
+    /// wide).
+    static let trainWidthShare = (drawn: 0.30, near: 0.20)
+
+    /// How far towards true widths the map is drawn at `referenceSize`: 0
+    /// up to ``trueWidthFromSize``, 1 from ``trueWidthAtSize``.
+    static func nearTrue(_ referenceSize: Double) -> Double {
+        min(max((referenceSize - trueWidthFromSize) / (trueWidthAtSize - trueWidthFromSize), 0), 1)
+    }
+
+    /// The track's bed in full detail, in points.
+    static func trackWidth(_ referenceSize: Double) -> Double {
+        let share = trackWidthShare.drawn + (trackWidthShare.near - trackWidthShare.drawn) * nearTrue(referenceSize)
+        return referenceSize * share
+    }
+
+    /// A train's body in full detail, in points.
+    static func trainWidth(_ referenceSize: Double) -> Double {
+        let share = trainWidthShare.drawn + (trainWidthShare.near - trainWidthShare.drawn) * nearTrue(referenceSize)
+        return referenceSize * share
+    }
+
+    /// How much narrower a train is drawn than below ``trueWidthFromSize``:
+    /// its head and nose narrow with its body.
+    static func trainNearTrueScale(_ referenceSize: Double) -> Double {
+        referenceSize > 0 ? trainWidth(referenceSize) / (referenceSize * trainWidthShare.drawn) : 1
+    }
+
+    /// The radius of a train's head (and of its light and wait ring).
+    static func trainHeadRadius(_ referenceSize: Double) -> Double {
+        max(2.5, referenceSize * 0.26 * trainNearTrueScale(referenceSize))
     }
 
     /// Each line in its colour along the track its trains take, side by
@@ -633,7 +683,7 @@ enum MapArt {
         isSelected: Bool, isHighSpeed: Bool, projection: some MapProjection, in context: GraphicsContext
     ) {
         let center = projection.screenPoint(worldX: position.x, worldY: position.y)
-        let radius = max(2.5, projection.referenceSize * 0.26)
+        let radius = trainHeadRadius(projection.referenceSize)
         let dx = heading.x, dy = heading.y
         let length = (dx * dx + dy * dy).squareRoot()
         // A point ahead of the train, on the screen.
@@ -646,7 +696,7 @@ enum MapArt {
             var nose = Path()
             nose.move(to: cgPoint(center))
             nose.addLine(to: ahead)
-            context.stroke(nose, with: .color(colour), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12), lineCap: .round))
+            context.stroke(nose, with: .color(colour), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12 * trainNearTrueScale(projection.referenceSize)), lineCap: .round))
         }
         var head = disc(at: center, radius: radius)
         if isHighSpeed, let ahead {
