@@ -36,7 +36,7 @@ final class LiuMingchuanChallengeTests: XCTestCase {
         XCTAssertEqual(state.scenario.goals.last, .dailyRiders(LiuMingchuanChallenge.ridersTarget))
         XCTAssertEqual(
             world.goalProgress(in: .traditionalChinese).map(\.title),
-            ["獅球嶺：基隆—八堵", "基隆—大稻埕通車（1891）", "淡水河鐵橋：大稻埕—桃仔園", "延伸到新竹（1893）", "每日運量（人次）"]
+            ["獅球嶺：基隆—八堵", "基隆—大稻埕通車（1891）", "淡水河木橋：大稻埕—桃仔園", "延伸到新竹（1893）", "每日運量（人次）"]
         )
         XCTAssertEqual(Challenge.liuMingchuan.goalsText(in: .english).first, "Shiqiuling: Keelung to Badu")
         XCTAssertEqual(Challenge.named("history.liuMingchuan")?.map, .liuMingchuan)
