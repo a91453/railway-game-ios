@@ -75,6 +75,8 @@ extension PlayerCommand {
         case buildFreightYard(StationID)
         case removeFreightYard(StationID)
         case setFreightProduct(StationID, CargoKind)
+        /// A depot, or an ordinary station again (decision 209).
+        case setStationDepot(StationID, Bool)
 
         // MARK: Lines
         /// A line, and the real line's target headways where it is one.
@@ -94,6 +96,8 @@ extension PlayerCommand {
         case removeLinePattern(LineID, index: Int)
         case setLinePerformance(LineID, TrainPerformance)
         case setLineFreight(LineID, Bool)
+        /// The depot a line keeps its trains at, or none (decision 209).
+        case setLineDepot(LineID, StationID?)
 
         // MARK: Land and the city
         /// The site's land read in (decision 95), then the building.
@@ -246,6 +250,7 @@ extension GameSession {
         case .buildFreightYard(let id): try world.buildFreightFacility(at: id)
         case .removeFreightYard(let id): try world.removeFreightFacility(at: id)
         case .setFreightProduct(let id, let kind): try world.setFreightProduct(at: id, to: kind)
+        case .setStationDepot(let id, let isDepot): try world.setStationDepot(id, to: isDepot)
 
         case .createLine(let name, let stops, let targets):
             let line = try world.createLine(named: name, stops: stops)
@@ -266,6 +271,7 @@ extension GameSession {
         case .removeLinePattern(let id, let index): try world.removeLinePattern(id, at: index)
         case .setLinePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)
         case .setLineFreight(let id, let freight): try world.setLineFreight(id, to: freight)
+        case .setLineDepot(let id, let depot): try world.setLineDepot(id, to: depot)
 
         case .placeBuilding(let kind, let point):
             // The site's land, read when it was picked, may have gone with an

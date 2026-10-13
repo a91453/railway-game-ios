@@ -131,11 +131,12 @@ final class CommandEditTests: XCTestCase {
             .demolishBuilding(PlacedBuildingID(rawValue: 2)), .setZone(.init(Zone.allCases[0]), rows: 2...4, columns: 0...0),
             .setZone(.init(nil), rows: 0...1, columns: 3...5), .buyMapTile(MapTile(row: 1, column: 2)),
             .acceptRequest(4), .declineRequest(5), .investInSouvenirShop(AttractionID(rawValue: 6)),
+            .setStationDepot(station, true), .setLineDepot(line, station), .setLineDepot(line, nil),
         ]
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)
         XCTAssertEqual(try JSONDecoder().decode([CommandLog.Entry].self, from: data), entries)
-        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 6, "each kind, six of them twice")
+        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 7, "each kind, seven of them twice")
         XCTAssertEqual(PlayerCommand.edit(.reverseTrain(train)).name, "reverseTrain")
 
         // A zone this build does not know: read back as not recorded.

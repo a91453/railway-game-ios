@@ -490,6 +490,25 @@ extension GameError {
                 "The city trusts you with \(limit) request\(limit == 1 ? "" : "s") at a time: finish one first.",
                 "以目前的信賴度，同時只能承接 \(limit) 件委託，先完成一件吧。"
             )
+        case .depotIsLineStop:
+            language.text(
+                "A depot cannot be a line's stop: trains only wait there out of service.",
+                "機廠不能當路線的停靠站：列車只在那裡停放，不載客。"
+            )
+        case .notADepot:
+            language.text("That station is not a depot.", "這個車站不是機廠。")
+        case .depotInUse:
+            language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
+        case .depotWithRuns:
+            language.text(
+                "A line that runs to a timetable sends its trains out at the timetable's times and has no depot.",
+                "照時刻表跑的路線依班次發車，不能指定機廠。"
+            )
+        case .depotBlocksLine:
+            language.text(
+                "No line runs over a depot's sidings, and a line would then have no way along its stops.",
+                "路線不能走機廠的停車線，設成機廠會讓一條路線走不通。"
+            )
         case .mapTileNotOwned:
             language.text("You don't own this land yet: buy the tile with Expand the Map first.", "這塊地還不是你的，請先用「擴建地圖」買下這一塊。")
         case .invalidGround:

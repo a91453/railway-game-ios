@@ -277,9 +277,15 @@
 ///     earlier version would drop them, and its lines would plan at their
 ///     least times and a minute's dwell again, so it says the save is newer
 ///     than it instead.
+/// 54. Depots (decision 209): a station can have `"depot": true`, a line
+///     its `"depot"`, and the accounts the day's `"depotHours"`; the ledger
+///     can have `"dailyDepot"` rows of the item `"depotUpkeep"`. A build
+///     that reads only an earlier version would drop the flags, and the
+///     line would send its trains out of the depot and run passengers over
+///     its sidings, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 53
+    public static let currentVersion = 54
 
     public let world: GameWorld
 
@@ -426,6 +432,8 @@ extension SavedGame: Codable {
         // Version 52 to 53: a world without `"realisticOperation"` plans
         // its legs at their least times; a line without `"dwellSeconds"`
         // dwells a minute; a tally without `"trips"` counted none.
+        // Version 53 to 54: a world without `"depot"` flags has no depot,
+        // and its lines keep their trains where their trips end.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

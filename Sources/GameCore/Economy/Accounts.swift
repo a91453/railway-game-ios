@@ -73,6 +73,8 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// The city's subsidies for requests met (decision 183; native), in,
     /// paid on the first of the month after each was met.
     case subsidy
+    /// The depots' sidings, a fee each a day (decision 209; native), out.
+    case depotUpkeep
 }
 
 /// One line of a ledger row's breakdown.
@@ -141,6 +143,8 @@ public struct LedgerEntry: Hashable, Sendable {
         /// The city's subsidies due for requests met (decision 183),
         /// written as a month begins.
         case monthlySubsidy
+        /// A day's fee for the depots' sidings (decision 209).
+        case dailyDepot
     }
 
     public let kind: Kind
@@ -203,7 +207,7 @@ public struct DayAccount: Hashable, Sendable {
             switch line.item {
             case .fareRevenue: fareRevenue = fareRevenue + line.amount
             case .operatingCost: operatingCost = operatingCost + cost
-            case .maintenanceCost: maintenanceCost = maintenanceCost + cost
+            case .maintenanceCost, .depotUpkeep: maintenanceCost = maintenanceCost + cost
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
@@ -358,6 +362,11 @@ public struct CompanyAccounts: Hashable, Sendable {
     public internal(set) var capitalDays: [CapitalDay] = []
     /// The closed years, by ascending year: at most ``keptYears``.
     public internal(set) var years: [AnnualStatement] = []
+    /// Decision 209: the day's hours that the trains of each line with a
+    /// depot stood in it, out of service, weighed as its running costs
+    /// weigh them, in line ID order; a day's energy and crew are not paid
+    /// for them. Counted each hour and cleared as the day is settled.
+    public internal(set) var depotHours: [DepotHours] = []
 
     /// Loans are taken and repaid $100,000 at a time.
     public static let loanStep: Money = 10_000_000
@@ -604,7 +613,7 @@ extension LedgerEntry: Codable {
 
 extension CompanyAccounts: Codable {
     private enum CodingKeys: String, CodingKey {
-        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years
+        case mode, fareRules, fareBaseline, pending, openedAt, entries, days, loan, assets, capitalDays, years, depotHours
     }
 
     /// Decodes the accounts; rules the player never set have no
@@ -625,6 +634,11 @@ extension CompanyAccounts: Codable {
         assets = container.contains(.assets) ? try container.decode([AssetRecord].self, forKey: .assets) : []
         capitalDays = container.contains(.capitalDays) ? try container.decode([CapitalDay].self, forKey: .capitalDays) : []
         years = container.contains(.years) ? try container.decode([AnnualStatement].self, forKey: .years) : []
+        // Decision 209 (save version 54).
+        depotHours = try container.decodeIfPresent([DepotHours].self, forKey: .depotHours) ?? []
+        guard zip(depotHours, depotHours.dropFirst()).allSatisfy({ $0.line < $1.line }), depotHours.allSatisfy({ $0.weightHours > 0 }) else {
+            throw DecodingError.dataCorruptedError(forKey: .depotHours, in: container, debugDescription: "Depot hours are positive, once a line, in line order.")
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -654,5 +668,16 @@ extension CompanyAccounts: Codable {
         if !years.isEmpty {
             try container.encode(years, forKey: .years)
         }
+        if !depotHours.isEmpty {
+            try container.encode(depotHours, forKey: .depotHours)
+        }
     }
+}
+
+/// The hours a line's trains stood in its depot on a day (decision 209),
+/// weighed as their running costs weigh them: thousandths of a standard
+/// train for each hour.
+public struct DepotHours: Hashable, Sendable, Codable {
+    public let line: LineID
+    public internal(set) var weightHours: Int64
 }

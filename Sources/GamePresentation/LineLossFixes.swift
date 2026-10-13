@@ -5,9 +5,12 @@ import GameCore
 // card gets the change that answers it, made through a `GameWorld` command
 // the command log keeps (decision 193). Too many trains takes one off,
 // trains too far apart buys what a shorter headway lacks, nearly empty
-// trains run less often. Empty running has no command that would stop the
-// trains at the line's ends, so it keeps its words alone. The reference has
-// nothing to port: its finance summary names no reasons (decision 194).
+// trains run less often, and empty running to and from a depot (decision
+// 209) moves to a nearer depot or keeps the trains at the line's ends
+// overnight. Empty running on a line without a depot only follows an edit
+// of its stops and stops by itself, so it keeps its words alone. The
+// reference has nothing to port: its finance summary names no reasons
+// (decision 194).
 
 /// The change that answers a reason a line loses money (decision 194,
 /// later).
@@ -23,6 +26,13 @@ public enum LineLossFix: Hashable, Sendable {
     /// Trains run nearly empty: a train only every `headway` minutes, the
     /// line's targets set to `targets`.
     case runLessOften(headway: Int64, targets: TargetHeadways)
+    /// Too much empty running to and from the line's depot (decision 209):
+    /// the depot `depot`, named `name`, nearer the line's ends.
+    case useNearerDepot(StationID, name: String)
+    /// Too much empty running to and from the line's depot `depot`
+    /// (decision 209), with none nearer: no depot, the trains staying
+    /// overnight at the line's ends.
+    case keepTrainsAtEnds(depot: String)
 
     /// The headways the fixes step through, in minutes: the line panel's
     /// target headways.
@@ -34,6 +44,7 @@ public enum LineLossFix: Hashable, Sendable {
         case .takeOffTrain: .tooManyTrains
         case .runMoreTrains: .longHeadway
         case .runLessOften: .lowLoad
+        case .useNearerDepot, .keepTrainsAtEnds: .emptyRuns
         }
     }
 
@@ -61,6 +72,10 @@ public enum LineLossFix: Hashable, Sendable {
             )
         case let .runLessOften(headway, _):
             return language.text("A train every \(headway) min", "班距拉長到 \(headway) 分")
+        case let .useNearerDepot(_, name):
+            return language.text("Use the depot \(name)", "改用機廠「\(name)」")
+        case .keepTrainsAtEnds:
+            return language.text("Keep trains at the ends", "列車改停路線兩端")
         }
     }
 
@@ -88,6 +103,16 @@ public enum LineLossFix: Hashable, Sendable {
                 "Run \(line) only every \(headway) min? Fewer departures cost less, but riders wait longer.",
                 "要把「\(line)」改成每 \(headway) 分才一班嗎？發車少了比較省，但旅客要等比較久。"
             )
+        case let .useNearerDepot(_, name):
+            return language.text(
+                "Keep \(line)'s trains at the depot \(name), nearer its ends? Its trains run there empty when they are not needed, a shorter way.",
+                "要讓「\(line)」的列車改停機廠「\(name)」嗎？它離路線兩端比較近，列車不用時空車開過去的路比較短。"
+            )
+        case let .keepTrainsAtEnds(depot):
+            return language.text(
+                "Stop sending \(line)'s trains to the depot \(depot)? They stay at the line's ends overnight and run no empty trips there and back, but pay their energy and crew all day.",
+                "要讓「\(line)」的列車不再進出機廠「\(depot)」嗎？列車改在路線兩端過夜，不用空車來回，但整天都要付能源與人事費。"
+            )
         }
     }
 
@@ -99,8 +124,8 @@ public enum LineLossFix: Hashable, Sendable {
 
 extension GameWorld {
     /// The change that answers reason `kind` on line `id` (decision 194,
-    /// later), or `nil` when there is none to make: empty running (no
-    /// command stops trains at a line's ends), a line of one train, a ring
+    /// later), or `nil` when there is none to make: empty running on a line
+    /// without a depot (decision 209), a line of one train, a ring
     /// (each way runs its own trains), a line whose own service runs no
     /// trains, or a headway already at the end of ``LineLossFix/headways``.
     public func lineLossFix(_ kind: LineLossReason.Kind, on id: LineID) -> LineLossFix? {
@@ -111,7 +136,21 @@ extension GameWorld {
             guard line.assignedTrains.count >= 2, let last = line.assignedTrains.last, let train = train(id: last) else { return nil }
             return .takeOffTrain(last, name: train.name)
         case .emptyRuns:
-            return nil
+            // Decision 209: the depot nearest the line's ends, by straight
+            // line, if nearer than its own; else none.
+            guard let own = line.depot, let ownStation = station(id: own) else { return nil }
+            func distance(_ depot: Station) -> Int64 {
+                [line.stops.first, line.stops.last].compactMap { $0.flatMap { station(id: $0) } }.map { end in
+                    let dx = depot.point.x - end.point.x, dy = depot.point.y - end.point.y
+                    return dx * dx + dy * dy
+                }.min() ?? .max
+            }
+            let mine = distance(ownStation)
+            if let nearer = stations.filter({ $0.isDepot && $0.id != own }).min(by: { (distance($0), $0.id) < (distance($1), $1.id) }),
+               distance(nearer) < mine {
+                return .useNearerDepot(nearer.id, name: nearer.name)
+            }
+            return .keepTrainsAtEnds(depot: ownStation.name)
         case .longHeadway:
             let now = runningHeadways(of: line)
             guard let longest = now.values.max(), let headway = LineLossFix.headways.last(where: { $0 < longest }) else { return nil }
@@ -213,6 +252,14 @@ extension GameSession {
         case let .runLessOften(headway, targets):
             perform(.setLineTargets(id, targets, pattern: nil)) { _, _, _ in
                 language.text("\(name) now runs a train only every \(headway) min.", "「\(name)」現在每 \(headway) 分才一班。")
+            }
+        case let .useNearerDepot(depot, depotName):
+            perform(.setLineDepot(id, depot)) { _, _, _ in
+                language.text("\(name) now keeps its trains at the depot \(depotName).", "「\(name)」的列車現在停機廠「\(depotName)」。")
+            }
+        case .keepTrainsAtEnds:
+            perform(.setLineDepot(id, nil)) { _, _, _ in
+                language.text("\(name)'s trains now stay at its ends.", "「\(name)」的列車現在停在路線兩端。")
             }
         }
     }

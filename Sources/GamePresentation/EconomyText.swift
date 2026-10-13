@@ -84,6 +84,7 @@ extension LedgerEntry.Kind {
         case .dailySubsidiary: language.text("Subsidiaries (daily)", "子公司營業（日結）")
         case .dailyTourism: language.text("Souvenir shops (daily)", "名產店收支（日結）")
         case .monthlySubsidy: language.text("City subsidies (monthly)", "城市補助金（月初）")
+        case .dailyDepot: language.text("Depots (daily)", "機廠維護（日結）")
         }
     }
 }
@@ -112,6 +113,7 @@ extension LedgerItem {
         case .tourismRevenue: language.text("Souvenir sales", "名產店收入")
         case .tourismUpkeep: language.text("Souvenir shop upkeep", "名產店維護")
         case .subsidy: language.text("City subsidies", "城市補助金")
+        case .depotUpkeep: language.text("Depot sidings", "機廠停車線維護")
         }
     }
 }

@@ -108,6 +108,11 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// line meanwhile finishes it, still carrying nobody); only
     /// ``GameWorld`` changes it, with the execution.
     public internal(set) var isDeadheading: Bool = false
+    /// Whether the train, a line's spare without a service, was moved out
+    /// of the way of a deadlock (decision 58, a later fix; decision 209):
+    /// without flexible dispatch it runs empty back to its line's first
+    /// stop once the line wants it again. Cleared when it is sent out.
+    public internal(set) var isStandingAside: Bool = false
 
     /// Creates an unplaced, idle train of one car without a timetable or a
     /// service, with the standard performance.
@@ -191,7 +196,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits, deadhead
+        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits, deadhead, standingAside
     }
 
     /// Decodes a train.
@@ -288,6 +293,15 @@ extension Train: Codable {
             throw DecodingError.dataCorruptedError(
                 forKey: .deadhead, in: container,
                 debugDescription: "Train \(id.rawValue) is marked as running empty to a line's end without a service of two stops."
+            )
+        }
+        // Decision 209 (save version 54): written only when true, for a
+        // train without a service.
+        isStandingAside = try container.decodeIfPresent(Bool.self, forKey: .standingAside) ?? false
+        guard !container.contains(.standingAside) || isStandingAside && execution == nil else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .standingAside, in: container,
+                debugDescription: "Train \(id.rawValue) is written as standing aside with a service, or with false."
             )
         }
         guard zip(reservation, reservation.dropFirst()).allSatisfy({ $0 < $1 }), position != nil || reservation.isEmpty else {
@@ -392,5 +406,6 @@ extension Train: Codable {
             try container.encode(performance, forKey: .performance)
         }
         if isDeadheading { try container.encode(true, forKey: .deadhead) }
+        if isStandingAside { try container.encode(true, forKey: .standingAside) }
     }
 }

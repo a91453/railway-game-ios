@@ -279,4 +279,19 @@ public enum GameError: Error, Hashable, Sendable {
     /// The company already has as many requests in hand as the city's
     /// trust allows (decision 183).
     case cityRequestLimitReached(limit: Int)
+    /// A depot cannot be a line's stop, and a line's stop cannot become a
+    /// depot (decision 209): the station a line calls at.
+    case depotIsLineStop(StationID)
+    /// The station is not a depot (decision 209).
+    case notADepot(StationID)
+    /// The depot is a line's depot, which must be changed first (decision
+    /// 209): the line.
+    case depotInUse(LineID)
+    /// A line with runs sends its trains out at the runs' times and has no
+    /// depot (decision 209).
+    case depotWithRuns(LineID)
+    /// Making the station a depot would leave a line with no way along its
+    /// stops, as no line's service runs over a depot's sidings (decision
+    /// 209): the line.
+    case depotBlocksLine(LineID)
 }

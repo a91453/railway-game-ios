@@ -34,6 +34,12 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// ``StationOperationMode``). Set by
     /// ``GameWorld/setStationOperationMode(_:to:)`` only.
     public internal(set) var operationMode: StationOperationMode = .normalFlow
+    /// Whether the station is a depot (decision 209): where lines keep
+    /// their trains out of service. No line calls at it, and its platforms
+    /// are sidings no line's service runs over. Set by
+    /// ``GameWorld/setStationDepot(_:to:)`` only; not one of the
+    /// ``StationOperationMode``s, which the player switches on the panel.
+    public internal(set) var isDepot: Bool = false
 
     /// A station standing at `point`.
     ///
@@ -53,7 +59,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode
+        case id, name, position, annexes, point, operationMode, depot
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -92,6 +98,13 @@ extension Station: Codable {
                 debugDescription: "Station \(id.rawValue) is written with \"normalFlow\", which a save leaves out."
             )
         }
+        // Decision 209: only a depot is written with `"depot": true`.
+        isDepot = try container.decodeIfPresent(Bool.self, forKey: .depot) ?? false
+        if container.contains(.depot), !isDepot {
+            throw DecodingError.dataCorruptedError(
+                forKey: .depot, in: container, debugDescription: "Station \(id.rawValue) is written with \"depot\": false, which a save leaves out."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -102,6 +115,9 @@ extension Station: Codable {
         // Written only when not open, so a save keeps its earlier form.
         if operationMode != .normalFlow {
             try container.encode(operationMode, forKey: .operationMode)
+        }
+        if isDepot {
+            try container.encode(true, forKey: .depot)
         }
     }
 }

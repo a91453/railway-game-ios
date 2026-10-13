@@ -75,6 +75,8 @@ extension GameWorld {
             let network: RailwayNetwork
             let lines: [ServiceLine]
             let stations: [StationID]
+            /// Decision 209: no line's path runs over a depot's sidings.
+            let depots: [StationID]
             let flexDispatch: Bool
             let keepLeft: Bool
             /// Decision 207: the legs' planned seconds.
@@ -84,6 +86,7 @@ extension GameWorld {
                 network = world.network
                 lines = world.lines
                 stations = world.stations.map(\.id)
+                depots = world.stations.filter(\.isDepot).map(\.id)
                 flexDispatch = world.flexDispatch
                 keepLeft = world.keepLeft
                 realisticOperation = world.realisticOperation

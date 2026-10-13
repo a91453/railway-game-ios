@@ -902,6 +902,57 @@ public struct GameWorld: Equatable, Sendable {
         return station
     }
 
+    /// Makes station `id` a depot, or an ordinary station again (decision
+    /// 209). Free. A depot is a station no line calls at, whose platforms
+    /// are sidings no line's service runs over; lines keep their trains
+    /// there (``setLineDepot(_:to:)``).
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownStation(_:)``;
+    ///   making it a depot, ``GameError/depotIsLineStop(_:)`` while a line
+    ///   calls at it and ``GameError/depotBlocksLine(_:)`` naming the first
+    ///   line, in ID order, with a service that could be driven and no
+    ///   longer could be without its sidings; making it an ordinary
+    ///   station, ``GameError/depotInUse(_:)`` naming the first line whose
+    ///   depot it is.
+    public mutating func setStationDepot(_ id: StationID, to isDepot: Bool) throws(GameError) {
+        guard let index = stations.firstIndex(where: { $0.id == id }) else { throw .unknownStation(id) }
+        guard stations[index].isDepot != isDepot else { return }
+        if isDepot {
+            guard !lines.contains(where: { $0.stops.contains(id) }) else { throw .depotIsLineStop(id) }
+            var changed = self
+            changed.stations[index].isDepot = true
+            for line in lines {
+                for service in 0..<line.serviceCount where journey(of: line, service: service) != nil {
+                    guard changed.journey(of: line, service: service) != nil else { throw .depotBlocksLine(line.id) }
+                }
+            }
+        } else if let line = lines.first(where: { $0.depot == id }) {
+            throw .depotInUse(line.id)
+        }
+        stations[index].isDepot = isDepot
+    }
+
+    /// Gives line `id` the depot `depot`, or with `nil` none (decision
+    /// 209). Free. From then on the line sends its trains to the depot
+    /// empty when it no longer needs them, and out of it in time for their
+    /// trips; a train on its way to another depot gets there first. Without
+    /// one, trains stay where their trips end, as before.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
+    ///   for a depot, ``GameError/unknownStation(_:)``,
+    ///   ``GameError/notADepot(_:)`` or ``GameError/depotWithRuns(_:)`` for a
+    ///   line with runs (decision 133), which sends its trains out at the
+    ///   runs' times from where each run starts.
+    public mutating func setLineDepot(_ id: LineID, to depot: StationID?) throws(GameError) {
+        let index = try lineIndex(of: id)
+        if let depot {
+            guard let station = station(id: depot) else { throw .unknownStation(depot) }
+            guard station.isDepot else { throw .notADepot(depot) }
+            guard !lines[index].hasRuns else { throw .depotWithRuns(id) }
+        }
+        lines[index].depot = depot
+    }
+
     /// Sets station `id`'s operation mode (Phase 5F, see
     /// ``StationOperationMode``; the reference's
     /// `applyStationOperationToStation`). Free.
@@ -1016,6 +1067,10 @@ public struct GameWorld: Equatable, Sendable {
             for pattern in dropped.reversed() {
                 reindexPassengerJourneys(on: line.id, removing: pattern)
             }
+        }
+        // Decision 209: a line whose depot it was has none.
+        for index in lines.indices where lines[index].depot == id {
+            lines[index].depot = nil
         }
         for index in trains.indices {
             if trains[index].execution == nil, trains[index].timetable.contains(where: { $0.station == id }) {
@@ -1597,6 +1652,7 @@ public struct GameWorld: Equatable, Sendable {
         guard isStopped(train, at: first.station) else { throw .trainNotAtFirstStop(id) }
 
         trains[index].trafficVisits = []
+        trains[index].isStandingAside = false
         trains[index].execution = .waitingAtStop(0, cycle: train.startingCycle(at: clock.now))
         // Stage W2b: starting counts as arriving at the first stop now, so
         // the train dwells there before it leaves.
@@ -1798,6 +1854,8 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func setLineRuns(_ id: LineID, to runs: [LineRun]) throws(GameError) {
         let index = try lineIndex(of: id)
         guard lines[index].canHave(runs) else { throw .invalidLineRuns }
+        // Decision 209: a line with runs has no depot.
+        guard runs.isEmpty || lines[index].depot == nil else { throw .depotWithRuns(id) }
         if let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
             throw .trainServiceActive(running)
         }
@@ -1828,6 +1886,7 @@ public struct GameWorld: Equatable, Sendable {
         copy.window = original.window
         copy.trainsInService = original.trainsInService
         copy.targetHeadways = original.targetHeadways
+        copy.depot = original.depot
         copy.patterns = original.patterns.map { pattern in
             var copied = pattern
             copied.trains = []
@@ -2608,6 +2667,9 @@ public struct GameWorld: Equatable, Sendable {
         /// and body) when it was looked up, or
         /// `nil` if it had none.
         var trips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
+        /// Decision 209: each train's empty run out of its line's depot from
+        /// where it stood when it was looked up, or `nil` if it had none.
+        var depotTrips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
         /// Whether each line's service, by line and pattern, has a journey
         /// and runs trains at some level of its window (see
         /// ``GameWorld/isServed(_:memo:)``), once worked out.
@@ -2655,6 +2717,10 @@ public struct GameWorld: Equatable, Sendable {
                 } else if isDispatchDue(line, stream, at: now, deadhead: true, memo: &memo),
                           let (ready, trip) = readyTrain(of: line, stream, deadhead: true, memo: &memo) {
                     sending = (ready, trip, true)
+                } else if let (ready, trip) = trainLeavingDepot(of: line, stream, memo: &memo) ?? trainEnteringDepot(of: line, stream, memo: &memo) {
+                    // Decision 209: out of the depot in time for a trip, or
+                    // into it when the line no longer needs the train.
+                    sending = (ready, trip, true)
                 }
                 guard let (ready, trip, deadhead) = sending,
                       let timetable = trip.timetable(calling: line.stops, sentOutAt: now)
@@ -2664,6 +2730,7 @@ public struct GameWorld: Equatable, Sendable {
                 trains[ready].timetablePeriod = nil
                 trains[ready].execution = .waitingAtStop(0)
                 trains[ready].isDeadheading = deadhead
+                trains[ready].isStandingAside = false
                 // Stage W2b: the train is sent out as if it had just
                 // arrived at the first call; it dwells there first.
                 trains[ready].times = ServiceTimes(arrival: now)
@@ -2684,6 +2751,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[ready].timetable = timetable
             trains[ready].timetablePeriod = nil
             trains[ready].execution = .waitingAtStop(0)
+            trains[ready].isStandingAside = false
             trains[ready].times = ServiceTimes(arrival: clock.now)
             lines[index].runDays[run] = day
             dispatched = true
@@ -2707,8 +2775,9 @@ public struct GameWorld: Equatable, Sendable {
         if !deadhead, let last = line.lastDispatch(of: stream) {
             guard let due = Self.time(last, plusMinutes: planned.headway), due <= now else { return false }
         }
-        let running = line.trains(of: stream).count { id in train(id: id)?.execution != nil }
-        return running < (stream.direction == nil ? planned.trains : planned.trains / 2)
+        // Decision 209: a train running empty to the depot is out of
+        // service.
+        return runningTrains(of: line, stream) < (stream.direction == nil ? planned.trains : planned.trains / 2)
     }
 
     /// The trains `line`'s service `service` runs at `now` and the headway
@@ -2716,7 +2785,7 @@ public struct GameWorld: Equatable, Sendable {
     /// ``ServiceLine/services(at:roundTrips:)``), or `nil` when the line's
     /// window is closed, or the service runs none then or its journey
     /// cannot be driven.
-    private func plannedService(of line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> (trains: Int, headway: Int64)? {
+    func plannedService(of line: ServiceLine, _ service: Int, at now: GameTime, memo: inout DispatchMemo) -> (trains: Int, headway: Int64)? {
         guard line.window.contains(minuteOfDay: now.minuteOfDay) else { return nil }
         var roundTrips: [Int64?] = []
         var capacities: [ServiceCapacityProfile?] = []
@@ -2793,10 +2862,19 @@ public struct GameWorld: Equatable, Sendable {
         // a ring from any of its stops; one stopped anywhere else runs
         // empty to the nearer end first (see ``LineTrip/deadhead``).
         let trip: LineTrip?
-        if isStopped(train, at: line.stops[calls[0]]) {
+        if isInDepot(train, of: line) {
+            // Decision 209: the line sends it out of its depot in time for
+            // a trip (``trainLeavingDepot(of:_:memo:)``).
+            trip = nil
+        } else if isStopped(train, at: line.stops[calls[0]]) {
             trip = self.trip(of: line, service: service, for: train)
         } else if !flexDispatch {
-            trip = nil
+            // Decision 58, a later fix (decision 209): without flexible
+            // dispatch, a train moved out of the way of a deadlock
+            // (``spareStandingAside(in:memo:)``) runs empty back to the
+            // first call once the line has room for it.
+            // Decision 209: so does a train left in a depot not its line's.
+            trip = train.isStandingAside || standsInADepot(train) ? deadheadTrip(of: line, service: service, for: train, toFirstCallOnly: true) : nil
         } else if line.isRing, let stop = line.stops.indices.first(where: { isStopped(train, at: line.stops[$0]) }) {
             trip = self.trip(of: line, service: service, for: train, from: .ringStop(stop))
         } else if !line.isRing, isStopped(train, at: line.stops[calls[calls.count - 1]]) {
@@ -2859,6 +2937,10 @@ public struct GameWorld: Equatable, Sendable {
                 continue
             }
             for stream in line.dispatchStreams where !line.trains(of: stream).isEmpty {
+                // Decision 209: a train into or out of the depot.
+                if let minutes = minutesUntilDepotMove(of: line, stream, memo: &memo) {
+                    soonest = min(soonest ?? .max, minutes)
+                }
                 // Decision 172: a train that runs empty to an end goes as
                 // soon as the stream has room for it.
                 if readyTrain(of: line, stream, deadhead: true, memo: &memo) != nil {
@@ -3068,6 +3150,7 @@ public struct GameWorld: Equatable, Sendable {
         if let aside = spareStandingAside(in: stuck, memo: &memo.directions),
            let index = trains.firstIndex(where: { $0.id == aside.id }) {
             trains[index] = aside
+            trains[index].isStandingAside = true
             return aside.id
         }
         return nil
@@ -3956,7 +4039,7 @@ public struct GameWorld: Equatable, Sendable {
         return (index, service)
     }
 
-    private func lineIndex(of id: LineID) throws(GameError) -> Int {
+    func lineIndex(of id: LineID) throws(GameError) -> Int {
         guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
         return index
     }
@@ -3965,6 +4048,10 @@ public struct GameWorld: Equatable, Sendable {
         guard ring ? ServiceLine.isRingStopList(stops) : ServiceLine.isStopList(stops) else { throw .invalidLineStops }
         if let missing = stops.first(where: { station(id: $0) == nil }) {
             throw .unknownStation(missing)
+        }
+        // Decision 209: no line calls at a depot.
+        if let depot = stops.first(where: { station(id: $0)?.isDepot == true }) {
+            throw .depotIsLineStop(depot)
         }
     }
 
@@ -4436,6 +4523,14 @@ extension GameWorld: Codable {
             guard Self.isValidName(line.name) else { return "Line \(line.id.rawValue) has an invalid name." }
             if let missing = line.stops.first(where: { station(id: $0) == nil }) {
                 return "Line \(line.id.rawValue) calls at station \(missing.rawValue), which does not exist."
+            }
+            // Decision 209: no line calls at a depot; a line's depot is
+            // one, and a line with runs has none.
+            if let depot = line.stops.first(where: { station(id: $0)?.isDepot == true }) {
+                return "Line \(line.id.rawValue) calls at station \(depot.rawValue), which is a depot."
+            }
+            if let depot = line.depot, station(id: depot)?.isDepot != true || line.hasRuns {
+                return "Line \(line.id.rawValue)'s depot \(depot.rawValue) must be a depot station, on a line without runs."
             }
             for service in 0..<line.serviceCount {
                 for id in line.trains(ofService: service) {

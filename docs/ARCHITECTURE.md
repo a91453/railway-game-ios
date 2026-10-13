@@ -2746,6 +2746,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **之後的修正**（2026-10-13，原本的 Gap）：路線第一次派車的出發（列車還沒有服務，例如新線的首班）被另一條線的備用車擋住，而且當下沒有服務到出發時間時，第 3 點的前提讓這一分鐘不看，新線就永遠開不出去。現在前提多一個條件：有沒有服務的列車，路線現在可能要送它出去（`mayBeSentOut`：決策 133 的班次到點，或 `isDispatchDue(…, deadhead: true)`，和判斷備用車用的是同一個便宜的查法，所以備用車本身不會觸發）。這時才找死結，而且只有死結裡有這種列車時才讓備用車讓路，不移動服務。獨立模型照同樣的規則改（死結裡有沒有服務的列車也算），`IdleTrainDeadlockTests.testANewLinesFirstTrainHeldByASpareIsLetGo`（修正前一小時都開不出去）與 `testTheReferenceModelLetsTheNewLineGoAtTheSameSecond`（逐秒比較 10 分鐘）。golden、存檔 fixture、replay 不變；參考庫與 OpenTTD 沒有可移植的（同上）。
 
+**之後的修正**（2026-10-13，`docs/archive/PR401_525_REVIEW_HANDOFF.md` 第五節第一項，作者選 (a)；和決策 209 同一個 PR、同一次升版）：關閉彈性發車（決策 172）的世界（舊存檔、示範、挑戰、教學）只從第一站發車、沒有空車回送，所以讓路的備用車被移到別站（例如 W–M–E 單線，W 只有一個月台，備用車讓到 M）之後，路線把服務列車數調高也再也發不出去。現在第 3 點移開備用車時記一個旗標（`Train.isStandingAside`，存檔 `"standingAside": true`，只寫 true、只在沒有服務時；送出時清掉）；彈性發車關著時，有這個旗標的列車照決策 172 第 3 點的空車回送開回**第一站**（`deadheadTrip(…, toFirstCallOnly: true)`，環線也是回第一站）：只在路線有空位時（`isDispatchDue(…, deadhead: true)`），而且照一般派車先取得到第一站股道的進路（股道被佔就等）。只看旗標、不看「停在第一站以外」：最早的版本對所有停在別站的列車都回送，`SingleTrackCapacityPropertyTests` 的獨立模型（停在末站的列車不派）就對不上，所以收窄。`IdleTrainDeadlockTests.testASpareMovedAsideGoesBackToTheFirstStopWhenTheLineWantsIt`（修正前三小時都沒有回送）。golden、存檔 fixture、replay 不變。獨立模型（`ReferenceDeadlock.swift`）沒有空車回送，沒有改；逐秒比較的兩個情境都不經過這條規則。
+
 ### 59. 排定交會、同向待避與月台成本（Stage V3）
 
 2026-10-05。作者授權本任務修改核心、獨立模型、schema 與存檔版本。從 PR #105 之後的 `origin/main`（`0158d52`）開工；唯讀檢查四份參考 repo main `ddff2be4b4daeee8de3ab31a0a9a6873ad71b79e`。V1／V2 是執行時後備；`ScheduledStop`、`Station` 與決策 22 的路線容量公式沒有改。
@@ -7322,6 +7324,48 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 3D 城市畫的高鐵是 N700ST，要 2027 年才上線。
 - 清水斷崖歸在「山」，海岸比較貼切。
 - 用字「臺／台」混用（成就「千里鐵道」寫臺北、臺中）。
+
+### 209. 機廠 L1：車站旗標、路線的所屬機廠、自動入出庫與成本
+
+2026-10-13，作者同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §0 第 13 項、§4 波次 2 第 2 項、§9.1、§10 第 6 題照建議）。號碼依 #231：決策 209、存檔版本 54；golden schema 不動。同一個 PR 也做了決策 58 的「之後的修正」（讓路的備用車）和決策 194 的「空車回送」一鍵修正。
+
+1. **機廠是車站的旗標**（`Station.isDepot`，存檔 `"depot": true`，只寫 true）：不在 `StationOperationMode` 加值（那是玩家在面板切換的三值列舉）。`setStationDepot(_:to:)`，免費：
+   - 有路線停靠的車站不能設成機廠，機廠也不能加進路線的停靠站（`requireLineStops`；`depotIsLineStop`）。所以機廠不載客、不轉乘，也沒有乘客會以它為目的地。
+   - 設成機廠會讓某條路線原本開得通的服務開不通時拒絕（`depotBlocksLine`，見第 2 點）。
+   - 還是某條路線的機廠時不能取消（`depotInUse`）；拆掉機廠車站時，以它為機廠的路線改成沒有機廠。
+2. **停車線不給路線走**：機廠的月台所在的邊就是它的停車線。往其他車站的路徑搜尋（`networkPath`，所有路線、服務、回送都經過它）跳過停車線，只有列車所在的那個機廠的停車線例外（從機廠開出來）。往機廠本身的路可以走。來源是參考 `topology.js` 的 `shortestPath`（`allowYard=false` 時跳過 `service=yard`／`spur` 的邊）；遊戲沒有 OSM 標籤，所以用「機廠的月台邊」當 yard。同一條邊上同時有機廠與一般車站的月台時，那個一般月台也走不到（少見，玩家換一條邊即可）。`RouteMemo.Key` 多記機廠清單。
+3. **路線的所屬機廠**（`ServiceLine.depot`，存檔 `"depot"`）：`setLineDepot(_:to:)`，免費，`nil` 是沒有機廠（舊存檔、新路線都是）。照班次跑的路線（決策 133）不支援：設機廠或在有機廠的路線上設班次都拒絕（`depotWithRuns`）。複製路線時一併複製。
+4. **出庫**（`trainLeavingDepot`，派車階段在正式發車與決策 172 的回送之後）：路線的列車停在自己的機廠、沒有服務時，派車不把它當成「在端點待發」（`readyTrip` 回 `nil`），改由出庫規則送出。每個派車流（服務、環線的方向）一次只出一台：沒有別的列車在端點待發、也沒有別的列車正空車開往端點時，依 ID 第一台「該出庫了」的列車空車開往路線的端點（彈性發車關著：第一站；開著：兩端較近的，環線任一站）。「該出庫了」＝ 從現在起「出庫時間」分鐘後：路線的營運時段開著、那時要跑的列車數多於現在在跑的（開往機廠的不算），而且離上次發車已過一個班距。出庫時間 = 端點的最少停站（`ServiceDwell.terminalMinimum`）＋回送秒數，進位到分鐘，再加一分鐘，所以列車在班次到點時已經停好。不依賴彈性發車。交通管制下照一般派車先取得進路。
+5. **入庫**（`trainEnteringDepot`）：路線的列車沒有服務、停在機廠以外的某站時：
+   - 現在發不出去的（停在路線以外的站、彈性發車關著時停在非第一站）一律入庫；
+   - 路線現在要跑的列車數（營運時段外是 0，離峰的列數較少）少於「在跑的 + 在端點待發的」時，依 ID 最後一台待發的入庫。
+   入庫是決策 172 的空車回送（`isDeadheading`，不載客、不收票，里程記進 `deadheadDistance`），終點是機廠。開往機廠的列車不算路線「在跑的」列車（`runningTrains`，`isDispatchDue` 也用它）。所以收班後列車跑完最後一趟就回機廠，不會留在單線區段的終點月台（§2 的 bug (b)）。
+   - 沒有機廠的路線、停在別的機廠的列車：彈性發車關著時也空車開回第一站（開著時本來就會回送到較近的一端）。
+6. **閒置快轉**（`minutesUntilDepotMove`）：現在能入出庫就是現在；否則有列車在站上等時，下一次營運時段或等級改變的分鐘；機廠裡的每台車，「出庫時間」之後營運時段或等級改變、或上次發車加班距的那一分鐘往前推出庫時間。其餘條件只在列車改變時才變，所以一次推進與逐分鐘相同（`DepotTests.testLongBatchesMatchSingleMinutes`）。
+7. **成本**（只在經營模式）：
+   - 停在機廠的配屬車只付保養：每小時結算時記一次各路線停在自己機廠的列車（`CompanyAccounts.depotHours`，存檔 `"depotHours"`，依路線 ID，千分之一標準車 × 小時）：有車輛經濟時是那些車的重量；沒有時是「路線計畫的列車數比機廠外的列車少幾台」。一天結算時，能源與人事的列車重量（總額與逐線帳）扣掉「機廠小時 ÷ 24」，然後清零。每小時的保養照舊（停在機廠也要保養）。
+   - 機廠另收每股每日維護費：每個機廠月台（股）每天 $400（`depotSidingDailyFee`，約一列車每天能源加人事 $840 的一半），帳目 `dailyDepot`／`depotUpkeep`，財報併入維護成本。這筆不分到逐線帳。
+   - `BalanceReportTests` 的新遊戲沒有機廠，數字不變。
+8. **空車回送的一鍵修正**（決策 194 之後的修正留下的缺口，GamePresentation `LineLossFix`）：「空車回送太多」在有機廠的路線上給按鈕：有離路線兩端（直線距離）更近的機廠時「改用機廠 X」（`setLineDepot`），沒有時「列車改停路線兩端」（`setLineDepot(nil)`，不再進出機廠，但整天付能源與人事）。沒有機廠的路線，空車回送只發生在改站之後，會自己停，所以照舊只有說明。指令日誌記得到（新的 `PlayerCommand.Edit.setStationDepot`、`setLineDepot`）。
+9. **不支援、寫明的**：照班次跑的路線（第 3 點）；機廠建造工具與畫面（車站面板的機廠開關、路線面板選機廠、FollowBar 的「出庫中／入庫中」、地圖圖示）是 §4 波次 2 第 3 項，另開 PR，這個 PR 只有 GameCore 與一鍵修正；檢修、老化（L2）與調車（L3）不做。**隱形車庫保留**：買了不放上軌道的列車照舊在庫，給新手用。
+10. **存檔 54**：車站 `"depot"`、路線 `"depot"`、列車 `"standingAside"`、帳 `"depotHours"`、帳目 `dailyDepot`／`depotUpkeep`。只讀到 53 的 build 會丟掉旗標，路線就會走停車線、機廠的車照一般規則派出，所以升版。新 fixture `SaveFixtures/v54-depot.json`（05:58 一列車正從機廠開往第一站）。檢查：路線的機廠必須是機廠、沒有班次；路線不停靠機廠；`depotHours` 依路線遞增且為正。
+11. **不變**：舊存檔、示範、挑戰、教學、golden、`ReplayFixtures` 都沒有機廠，行為一個值都不變（缺 key＝關）。golden 的 `GoldenScenario.swift` 只為了窮舉多了五個錯誤名稱，schema 不讀它們。
+
+**參考**（`a91453/railway-reference-private`，`d3ebdf1`）：
+
+| 參考 | 遊戲 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` `shortestPath`（102、113 行：`allowYard=false` 時 `['yard','spur'].includes(edge.tags.service)` 的邊跳過） | `GameWorld.networkPath` 的 `sidings(except:)` | 照規則移植；yard 由 OSM 標籤改成「機廠的月台邊」 |
+| 同目錄 `dispatch.json`（`plans`、`conflictPolicy`） | 無 | 沒有入出庫或回送，沒用 |
+| 同目錄 `overtake-sidings.js`、`turnbacks.js` | 無 | 是待避與阿里山折返，不是停放 |
+| `Railway/railway_game_reference_clean/01_MIGRATION_MAP.md` 的 `rail_depot_reverse_penalty`、`binary_reference/relevant_symbols_and_settings.txt` 的 `CmdBuildTrainDepot` | 無 | 只有名稱，沒有數值或規則 |
+| `Ci/`、`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Railway/` 其他目錄（找 depot、yard、garage、siding、回送、入庫、出庫、車庫、機廠） | 無 | 沒有可用的（`train-garage.js` 是車輛收藏頁，不是車庫） |
+
+外部專案：沒有另外搜尋；入出庫的時機、成本與一次一台的規則是這個專案自己的（《A列車》只讀概念，§9.1）。
+
+**測試**：`DepotTests`（指令與錯誤、停車線不給路線走、06:00 前出庫且首班準點、收班後入庫並留到早上、只出路線要跑的列數、多的列車入庫、留在別的機廠的車回路線、彈性發車到較近的一端、一次推進＝逐分鐘、只付保養與停車線費、存檔來回與 v54 fixture）；`LineLossFixesTests.testEmptyRunningToADepotMovesItOrKeepsTheTrainsAtTheEnds`；`CommandEditTests` 多兩個指令；`IdleTrainDeadlockTests` 的備用車測試。
+
+**沒有驗證的**：App 的畫面（一鍵修正的按鈕是既有的通用按鈕，沒有改 App 程式），要 macOS CI 與實機。實際路網上交通管制下機廠出入口的會車，要等建造工具做好後在實機玩。
 
 ### 210. 地圖上看得見問題：中等縮放的候車膠囊、擁擠的量表環、為何在等的小牌
 

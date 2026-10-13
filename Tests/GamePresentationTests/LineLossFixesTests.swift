@@ -167,6 +167,33 @@ final class LineLossFixesTests: XCTestCase {
         XCTAssertNil(try lineBetweenTwoTowns().lineLossFix(.emptyRuns, on: Self.line))
     }
 
+    /// Decision 209: empty running on a line with a depot moves it to a
+    /// depot nearer the line's ends, and with none nearer keeps the trains
+    /// at the ends; each is the command the log keeps.
+    func testEmptyRunningToADepotMovesItOrKeepsTheTrainsAtTheEnds() throws {
+        var world = try lineBetweenTwoTowns()
+        let first = try XCTUnwrap(world.line(id: Self.line)?.stops.first.flatMap { world.station(id: $0) })
+        let far = try world.buildStation(named: "Far Depot", at: PlanPoint(x: first.point.x + 40_000, y: first.point.y)).id
+        try world.setStationDepot(far, to: true)
+        try world.setLineDepot(Self.line, to: far)
+        XCTAssertEqual(world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depot: "Far Depot"))
+        let near = try world.buildStation(named: "Near Depot", at: PlanPoint(x: first.point.x + 2_000, y: first.point.y)).id
+        try world.setStationDepot(near, to: true)
+        let fix = try XCTUnwrap(world.lineLossFix(.emptyRuns, on: Self.line))
+        XCTAssertEqual(fix, .useNearerDepot(near, name: "Near Depot"))
+        XCTAssertEqual(fix.kind, .emptyRuns)
+        XCTAssertEqual(fix.title(in: .traditionalChinese), "改用機廠「Near Depot」")
+        let session = GameSession(world: world)
+        session.applyLineLossFix(fix, to: Self.line)
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertEqual(session.world.line(id: Self.line)?.depot, near)
+        XCTAssertEqual(session.world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depot: "Near Depot"))
+        session.applyLineLossFix(.keepTrainsAtEnds(depot: "Near Depot"), to: Self.line)
+        XCTAssertNil(session.world.line(id: Self.line)?.depot)
+        XCTAssertEqual(editNames(session), ["setLineDepot", "setLineDepot"])
+        XCTAssertNil(session.world.lineLossFix(.emptyRuns, on: Self.line))
+    }
+
     func testTheMemoKeepsAFixForEachReason() throws {
         let session = GameSession(world: try tooManyTrains())
         let memo = LineLossMemo()

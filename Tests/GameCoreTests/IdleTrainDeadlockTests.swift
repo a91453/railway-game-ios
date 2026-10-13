@@ -61,6 +61,38 @@ final class IdleTrainDeadlockTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// Without flexible dispatch (decision 172 off, as in old saves, the
+    /// demos and the challenges) a spare moved aside used to stand at M
+    /// for good once the line wanted it again: only a train at the first
+    /// stop is sent out (`PR401_525_REVIEW_HANDOFF.md` §5, the owner's
+    /// choice (a)). Now, when the line has room for it and the way to the
+    /// first stop's berth is free, it runs empty back to W and the line
+    /// runs both trains (decision 209).
+    func testASpareMovedAsideGoesBackToTheFirstStopWhenTheLineWantsIt() throws {
+        var (world, running, spare) = try spareAtTheFarEnd()
+        XCTAssertFalse(world.flexDispatch)
+        while world.stationsStoppedAt(by: spare) != [SingleTrackMeet.middle] || world.train(id: spare)?.execution != nil {
+            try world.advance(ticks: 1)
+            XCTAssertLessThan(world.clock.now, GameTime(minutes: 120))
+        }
+        let line = try XCTUnwrap(world.lines.first?.id)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        let deadline = GameTime(seconds: world.clock.now.seconds + 3 * GameTime.secondsPerHour)
+        var ranEmpty = false, servedFromWest = false
+        while world.clock.now < deadline, !servedFromWest {
+            try world.advance(ticks: 1)
+            if world.train(id: spare)?.isDeadheading == true { ranEmpty = true }
+            if let train = world.train(id: spare), train.execution != nil, !train.isDeadheading,
+               train.timetable.first?.station == SingleTrackMeet.west {
+                servedFromWest = true
+            }
+        }
+        XCTAssertTrue(ranEmpty, "the spare runs empty back to W")
+        XCTAssertTrue(servedFromWest, "the spare is sent out from W again")
+        XCTAssertNotNil(world.train(id: running))
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     /// The reference model (written from the rules) agrees second by
     /// second, through the spare's move and the running train going on
     /// from M to E (15 minutes).
