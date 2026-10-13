@@ -136,6 +136,12 @@ struct MapView: View {
     /// Whether Apple's map shows what the camera shows, for the UI tests
     /// (``FollowingMapView/followingText``).
     @State private var baseMapFollowing = ""
+    /// How close Apple's map would come, in points per
+    /// ``MapScale/referenceLength``, when it stopped short of the game's
+    /// closest zoom (its imagery does not reach that close): the camera
+    /// comes no closer, so the railway drawn over it lines up (decision
+    /// 50's later amendment). Forgotten when the map's style changes.
+    @State private var baseMapZoomLimit: Double?
     /// What the map shows of traffic control (Stage V4e), taken from the
     /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -194,7 +200,8 @@ struct MapView: View {
             let zoomGivesWay = session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
-            let projection = camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)
+            let zoomLimit = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
+            let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
             // twenty times as they come on, not on every tick.
@@ -430,7 +437,7 @@ struct MapView: View {
                             .padding(.trailing, 12)
                         }
                         if !zoomGivesWay {
-                            zoomControls(camera: projection)
+                            zoomControls(camera: projection, limit: zoomLimit)
                         }
                     }
                     .padding(12)
@@ -552,7 +559,10 @@ struct MapView: View {
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources },
-                                onFollowing: Self.readsBaseMap ? { baseMapFollowing = $0 } : nil
+                                onFollowing: Self.readsBaseMap ? { baseMapFollowing = $0 } : nil,
+                                // Never below MapKit's level 16 or so: a
+                                // limit that low would be a mistake.
+                                onZoomLimit: { baseMapZoomLimit = max($0, MapScale.largestSize / 8) }
                             )
                         }
                     }
@@ -588,6 +598,11 @@ struct MapView: View {
             }
             .onChange(of: viewport, initial: true) { _, size in
                 camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
+            }
+            .onChange(of: mapStyle) { _, _ in
+                // Another style's map (satellite imagery or the street
+                // map) may come closer, or less close.
+                baseMapZoomLimit = nil
             }
             .onChange(of: bounds) { _, _ in
                 camera = openingCamera(viewport: viewport)
@@ -1023,7 +1038,9 @@ struct MapView: View {
         #endif
     }
 
-    private func zoomControls(camera: PlanCamera) -> some View {
+    /// `limit`: how close the base map lets the camera come
+    /// (``baseMapZoomLimit``).
+    private func zoomControls(camera: PlanCamera, limit: Double?) -> some View {
         HStack(spacing: 0) {
             Button {
                 self.camera = camera.zoomedOut()
@@ -1044,7 +1061,7 @@ struct MapView: View {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 44, height: 44)
             }
-            .disabled(!camera.canZoomIn)
+            .disabled(!camera.canZoomIn || limit.map { camera.referenceSize >= $0 * 0.999 } == true)
             .accessibilityLabel("Zoom in")
         }
         .font(.title3)

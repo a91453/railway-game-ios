@@ -88,6 +88,16 @@ struct AppleMapBackground: UIViewRepresentable {
     /// UI tests only (``FollowingMapView/followingText``): whether MapKit
     /// shows what the game's camera shows.
     var onFollowing: (@MainActor (String) -> Void)?
+    /// Told how close the game's camera may come, in points per
+    /// ``MapScale/referenceLength``, when MapKit would not come as close
+    /// (``BaseMapFollowing/refusal``): the map then stops zooming there,
+    /// so the railway drawn over it still lines up.
+    var onZoomLimit: (@MainActor (Double) -> Void)?
+    /// Whether the map may be tilted or turned. Not while the game is
+    /// played (decision 50: the plan is drawn top-down, north up, so
+    /// MapKit's camera is set back level and north up whenever it is
+    /// not); a later close-up 3D mode may allow it.
+    var allowsTilt = false
 
     /// The band along the bottom of the map view, above the home
     /// indicator, where Apple's logo and legal link and the credit are:
@@ -100,6 +110,10 @@ struct AppleMapBackground: UIViewRepresentable {
         map.isScrollEnabled = false
         map.isRotateEnabled = false
         map.isPitchEnabled = false
+        // As close as MapKit will draw: its imagery is enlarged past its
+        // last level rather than the map stopping short of the game's
+        // closest zoom (4 points a metre, about MapKit's level 19).
+        map.cameraZoomRange = MKMapView.CameraZoomRange(minCenterCoordinateDistance: 1)
         map.showsCompass = false
         map.showsScale = false
         // The logo and legal link go in the band at the bottom, and only
@@ -121,6 +135,8 @@ struct AppleMapBackground: UIViewRepresentable {
         }
         map.onAttributionFrames = onAttributionFrames
         map.onFollowing = onFollowing
+        map.onZoomLimit = onZoomLimit
+        map.allowsTilt = allowsTilt
         map.credit.onTap = onCredit
         if map.appliedStyle != style {
             map.appliedStyle = style
@@ -149,6 +165,17 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// The style last set, so a redraw of the game does not set it again.
     var appliedStyle: AppleMapStyle?
     private var placement: (realWorld: RealWorldFrame, camera: PlanCamera)?
+    /// Whether the map may be tilted or turned (``AppleMapBackground/allowsTilt``).
+    var allowsTilt = false
+    /// Whether to ask MapKit again for the game's view when it moved on its
+    /// own, and how close it would not come.
+    private var following = BaseMapFollowing()
+    /// Told how close the camera may come (``AppleMapBackground/onZoomLimit``).
+    var onZoomLimit: (@MainActor (Double) -> Void)?
+    private var reportedZoomLimit: Double?
+    /// While the view is being set: MapKit may say the region changed
+    /// from inside `setVisibleMapRect`.
+    private var isApplying = false
     /// Told ``followingText`` when it changes (UI tests only).
     var onFollowing: (@MainActor (String) -> Void)?
     private var reportedFollowing: String?
@@ -251,8 +278,17 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         reportFollowing()
     }
 
+    /// MapKit moves its map on its own too: when it has loaded, when a
+    /// new style comes (OpenStreetMap to satellite, TestFlight 56.1), or
+    /// to show less close than asked. Each time it is set back on the
+    /// game's view, unless that is where it went when last asked.
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        apply()
         reportFollowing()
+    }
+
+    func mapViewDidFinishLoadingMap(_ mapView: MKMapView) {
+        apply()
     }
 
     // MARK: - Following, for the UI tests
@@ -287,11 +323,45 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     }
 
     private func apply() {
-        guard let placement, bounds.width > 0, bounds.height > 0 else { return }
+        guard !isApplying, let placement, bounds.width > 0, bounds.height > 0 else { return }
+        isApplying = true
+        defer {
+            isApplying = false
+            reportFollowing()
+        }
+        if !allowsTilt {
+            level()
+        }
         let rect = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
-        defer { reportFollowing() }
-        guard !Self.isClose(visibleMapRect, to: rect) else { return }
+        guard following.shouldAsk(for: Self.piece(rect), shown: Self.piece(visibleMapRect)) else { return }
         setVisibleMapRect(rect, animated: false)
+        following.answered(Self.piece(visibleMapRect))
+        reportZoomLimit(camera: placement.camera)
+    }
+
+    /// MapKit's camera straight down and north up, if it is not (decision
+    /// 50): the game's drawing is a plan, and over a tilted or turned map
+    /// it would not lie where it should.
+    private func level() {
+        guard camera.pitch != 0 || camera.heading != 0 else { return }
+        setCamera(MKMapCamera(
+            lookingAtCenter: camera.centerCoordinate, fromDistance: camera.centerCoordinateDistance, pitch: 0, heading: 0
+        ), animated: false)
+    }
+
+    /// Tells the game how close its camera may come when MapKit showed
+    /// more than it was asked round the same middle: the size at which
+    /// what it shows is what the camera shows.
+    private func reportZoomLimit(camera: PlanCamera) {
+        guard let refusal = following.refusal, let report = onZoomLimit else { return }
+        let limit = camera.referenceSize / refusal
+        guard reportedZoomLimit.map({ abs($0 - limit) > limit / 100 }) ?? true else { return }
+        reportedZoomLimit = limit
+        Task { @MainActor in report(limit) }
+    }
+
+    private static func piece(_ rect: MKMapRect) -> BaseMapFollowing.Piece {
+        BaseMapFollowing.Piece(x: rect.origin.x, y: rect.origin.y, width: rect.size.width, height: rect.size.height)
     }
 
     // MARK: - Taiwan's real railways
@@ -424,8 +494,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         )
     }
 
-    /// Within a thousandth of the width: setting the same piece again would
-    /// only make MapKit redraw.
+    /// Within a thousandth of the width.
     private static func isClose(_ a: MKMapRect, to b: MKMapRect) -> Bool {
         let tolerance = b.size.width / 1_000
         return abs(a.origin.x - b.origin.x) <= tolerance

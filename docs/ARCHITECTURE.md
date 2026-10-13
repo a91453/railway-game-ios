@@ -2508,6 +2508,18 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 簡化：只有中心線一股，瑞芳、猴硐、三貂嶺、十分加 400 m 的待避線；真實的宜蘭線是雙線。運量是遊戲的數字，不是真實的運量。
 - 建造的時間：Linux 的 release 約 0.4 秒、debug 約 8 秒，幾乎都在 GameCore 每段軌道的間距與交叉檢查（約 200 段）；實機沒有量。
 
+**之後的修正（2026-10-13，TestFlight 56.1 兩位玩家回報）：底圖一直跟著遊戲的相機，而且一直是平的、北朝上。**
+- 回報：(A)「從 OpenStreetMap 切到衛星，路線會直接跑掉」；(B) 鋪軌時「路軌呈現 3D」、「調節角度期間離開原定的位置」。
+- 原因（程式碼）：切換底圖時 `MapView` 丟掉 MapLibre 的 view、重建 `MKMapView`，`FollowingMapView` 只在遊戲的相機改變與 layout 時設定一次範圍。MapKit 自己再改範圍（載入完、套用樣式、或放大不到要的程度而保留中心、顯示更大的範圍）時，沒有人拉回來；遊戲的相機沒動，`updateUIView` 也不會再設。遊戲自己的畫（預覽、起點旗、節點）用同一個相機，彼此一致：Linux 上掃過各種角度、高度與構造（地面、高架），預覽的頭尾都在起點與終點上（B 的「離開原位」是相對底圖）。
+- 改法：
+  - `BaseMapFollowing`（GamePresentation，Linux 測試）決定要不要再要一次：新的範圍一定要；同一個範圍只在 MapKit 離開它上一次的回應時再要，最多 3 次，所以 MapKit 一直不肯也不會無限迴圈。它也量出 MapKit 拒絕放大時多顯示了幾倍（`refusal`，同一個中心、寬 2% 以上）。
+  - `FollowingMapView` 在 `mapView(_:regionDidChangeAnimated:)`、`mapViewDidFinishLoadingMap` 重新套用（設定中不重入）；`cameraZoomRange` 放到最近，讓 MapKit 放大圖磚而不是停在較遠。
+  - MapKit 還是拒絕時，`MapView` 記下那個縮放（`baseMapZoomLimit`，換底圖樣式就忘記，最低不低於每 16 m 8 點），相機不再更近、「放大」按鈕停用，疊圖就對得上。OpenStreetMap（MapLibre）不受影響。
+  - 兩種底圖都有 `allowsTilt`（預設 false）：每次套用時，相機有傾斜或旋轉就設回正上方、北朝上。之後的「拉近傾斜」3D 模式（決策 97 指向 MapLibre）可以打開。
+  - 選地點的畫面（`RealWorldPicker`）：只能移動、縮放（`interactionModes: [.pan, .zoom]`），樣式平面（`.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)`），中心改取相機的中心：地圖傾斜時 region 的中心不在「+」下面，開局地點可能和「+」不同。
+- UI 測試：Debug 版在 `-ui-testing` 下，`map.base` 讀出 Apple 地圖是否顯示遊戲相機的範圍（`follows`、`wider`、`off`，傾斜時加 `tilted`）；`RealWorldMapUITests/testAppleMapLinesUpAfterChangingToSatellite` 從 OpenStreetMap 切到衛星、放大到底，等它讀出 `follows`（full lane，需要 Apple 的圖磚）。
+- 沒做：兩個底圖 view 都留著、切換時只隱藏一個（M）。
+
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定
 
 2026-10-03。E2 合併、實機確認之後，作者決定**現在**做 F3，排在 F2、U-min、V 之前，並交給 Claude Code 選「對未來幫助最大、又不影響新功能」的做法。這一條記下範圍與步驟；每一步的細節在各自的 PR 補上。
