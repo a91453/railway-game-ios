@@ -7185,7 +7185,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 外部專案：沒有另外找；做法是 §9.2 的研究結論，程式碼是這個專案自己寫的。
 
-**測試**：`RealisticOperationTests`（關著時一段是最少秒數、停站 60／120 秒；開著時高鐵用正常加減速＋4 %、停站 110 秒、時刻表照停；普通性能只加 4 %；路線自己的停站：範圍、`nil`、端點至少一樣長、只在有值時存檔、超出範圍讀不進來；晚 40 秒開的高鐵開著時跑得比排點快、不低於最少秒數，關著時照排點；準點率只在開著時記、一列車自己跑全部準時；舊的路線帳讀得進來；版本 53 的 fixture）；`RealisticOperationSessionTests`（新遊戲打開；示範、挑戰、教學關；路線卡的準點率文字）；`HighSpeedDemoTests`、`TutorialSessionTests` 各多一行關著。`SavedGameTests` 的目前版本 52 → 53。
+**測試**：`RealisticOperationTests`（關著時一段是最少秒數、停站 60／120 秒；開著時高鐵用正常加減速＋4 %、停站 110 秒、時刻表照停；普通性能只加 4 %；路線自己的停站：範圍、`nil`、端點至少一樣長、只在有值時存檔、超出範圍讀不進來；晚 40 秒開的高鐵開著時跑得比排點快、不低於最少秒數，關著時照排點；準點率只在開著時記、一列車自己跑全部準時；舊的路線帳讀得進來；版本 53 的 fixture）；`RealisticOperationSessionTests`（新遊戲打開；示範、挑戰、教學關；路線卡的準點率文字）；`HighSpeedDemoTests`、`TutorialSessionTests` 各多一行關著。`SavedGameTests` 的目前版本 52 → 53。**刻意改的測試**：`ViewingSpeedTests.testTheFollowedTrainsSpeed` 跟隨新遊戲兩鎮之間的列車，原本期待最快 108–111 km/h（普通性能的最高速 110）；開著時準點的車照排點的秒數跑（多 4 %），曲線的巡航速度比最高速低，量到 102 km/h。測試改成兩種都量：關著時照舊 108–111，開著時 95–107。
 
 **沒有驗證的**：玩家實際的路網（交通管制下的跟車、會車等待會讓準點率低於 100 %）要等 TestFlight；路線卡的準點率那一行只在 macOS CI 編譯。
 
