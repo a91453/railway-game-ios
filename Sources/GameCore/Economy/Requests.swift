@@ -498,7 +498,7 @@ extension GameWorld {
                   request.callsToday.values.allSatisfy({ $0 >= 0 }), request.acceptedDay.map({ $0 >= request.offeredDay && $0 <= today }) ?? true
             else { return "A city request's target, reward, days or progress are out of range." }
             let subject = switch request.kind {
-            case .newStation: request.point != nil && request.station == nil && request.attraction == nil
+            case .newStation: request.point.map(bounds.contains) == true && request.station == nil && request.attraction == nil
             case .networkRiders: request.point == nil && request.station == nil && request.attraction == nil
             case .tourism: request.point == nil && request.station == nil && request.attraction != nil
             case .stationRiders, .materials, .population: request.point == nil && request.station != nil && request.attraction == nil

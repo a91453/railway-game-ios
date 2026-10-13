@@ -289,6 +289,14 @@ final class CityRequestsTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
     }
 
+    /// A settlement asked for lies on the map: one far off it is refused
+    /// on load, not measured into an overflow by the next train calling.
+    func testASettlementOffTheMapIsRefused() throws {
+        var world = try build()
+        hand(&world, .newStation, point: PlanPoint(x: 1 << 62, y: 1_536), target: 10)
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: JSONEncoder().encode(SavedGame(world: world))))
+    }
+
     /// A station a request asks about is taken down: the save still reads
     /// back, the request measures nothing and lapses at its deadline.
     func testARemovedStationsRequestStillSavesAndLapses() throws {
