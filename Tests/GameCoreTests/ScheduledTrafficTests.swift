@@ -433,6 +433,42 @@ final class ScheduledTrafficTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// Decision 204: the westbound train stands at F, beyond E, facing the
+    /// end of the track, so it has no way to M and never leaves. The
+    /// eastbound train waits at M to meet it only until its departure is
+    /// due, then goes on to E instead of waiting there for ever.
+    func testAWaitForATrainThatCannotLeaveIsDropped() throws {
+        var world = try SingleTrackMeet.world()
+        let beyond = try world.buildTrackNode(at: WorldCoordinate(x: 35_840, y: 4_096))
+        let edge = try world.buildTrackEdge(from: .node(4), to: beyond)
+        let terminus = try world.buildStation(named: "F", at: PlanPoint(x: 35_840, y: 8_192)).id
+        try world.addTrackPlatform(terminus, on: edge, from: 512, to: 1_536)
+        let east = try SingleTrackMeet.stand(&world, edge: SingleTrackMeet.forward(1), offset: 3_072)
+        let west = try SingleTrackMeet.stand(&world, edge: .init(edge: edge, direction: .forward), offset: 1_536, cars: 1)
+        try world.setTrainTimetable(east, to: [
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 0), departure: .init(seconds: 60)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 180), departure: .init(seconds: 180)),
+            .init(station: SingleTrackMeet.east, arrival: .init(seconds: 660), departure: .init(seconds: 720)),
+        ])
+        try world.setTrainTimetable(west, to: [
+            .init(station: terminus, arrival: .init(seconds: 0), departure: .init(seconds: 120)),
+            .init(station: SingleTrackMeet.middle, arrival: .init(seconds: 400), departure: .init(seconds: 460)),
+            .init(station: SingleTrackMeet.west, arrival: .init(seconds: 760), departure: .init(seconds: 820)),
+        ])
+        try world.startTrainService(east)
+        try world.startTrainService(west)
+        try world.setTrafficControl(true)
+        let wait = try XCTUnwrap(world.scheduledTrafficWaits().first)
+        XCTAssertEqual(wait.train, east)
+        XCTAssertEqual(wait.other, west)
+        XCTAssertEqual(wait.station, SingleTrackMeet.middle)
+        try world.advance(ticks: 20_000)
+        XCTAssertEqual(world.train(id: west)?.execution, .waitingAtStop(0, cycle: 0), "the westbound train never leaves F")
+        XCTAssertNil(world.train(id: east)?.execution, "the eastbound train's service ends at E")
+        XCTAssertEqual(world.stationsStoppedAt(by: east), [SingleTrackMeet.east])
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     /// A service that has ended without visiting the station waited at
     /// (here it saw only its first stop) will not come: the wait ends.
     func testAWaitForAServiceThatHasEndedEnds() throws {
