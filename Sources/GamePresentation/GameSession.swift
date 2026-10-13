@@ -1194,6 +1194,9 @@ public final class GameSession {
         /// The selected train when the tick began.
         let train: TrainID?
         let language: DisplayLanguage
+        /// The last reading, whose kinds of scheduled waits the tick's
+        /// reading keeps (decision 210).
+        var previousTraffic: TrafficReading?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1206,7 +1209,7 @@ public final class GameSession {
                 Result { () throws(GameError) in
                     var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
                     if tick.readsTraffic {
-                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language)
+                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                     }
                     return step
                 }
@@ -1218,7 +1221,10 @@ public final class GameSession {
     /// `nil` while paused.
     func beginLoopTick() -> LoopTick? {
         guard !world.clock.isPaused else { return nil }
-        return LoopTick(world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language)
+        return LoopTick(
+            world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
+            previousTraffic: trafficMemo?.reading
+        )
     }
 
     // MARK: - Traffic control on the map (decision 64)

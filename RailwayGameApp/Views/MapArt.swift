@@ -105,13 +105,17 @@ enum MapArt {
                 isSelected: station.id == selectedStationID,
                 isHighSpeed: fast.contains(station.id),
                 layers: layers,
-                waitingCount: waitingCounts[station.id] ?? 0,
                 projection: projection,
                 in: context
             )
         }
         if detail != .full && layers.showsStationNames {
             drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
+        }
+        // Decision 210: the waiting counts and crowded rings, over every
+        // station and name, at a middle zoom too.
+        if layers.showsWaitingCounts {
+            drawStationProblems(world, waitingCounts: waitingCounts, projection: projection, in: context)
         }
         if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
         drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
@@ -137,6 +141,8 @@ enum MapArt {
         plain: Bool,
         traffic: TrafficOverlay,
         deadlock: Double = 1,
+        pulse: Double? = nil,
+        language: DisplayLanguage = .english,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -171,7 +177,7 @@ enum MapArt {
                 isSelected: isSelected, isHighSpeed: run.isHighSpeed, projection: projection, in: context
             )
         }
-        drawWaitMarks(traffic, deadlock: deadlock, projection: projection, in: context)
+        drawWaitMarks(traffic, deadlock: deadlock, pulse: pulse, language: language, projection: projection, in: context)
     }
 
     // MARK: - Weather (decision 182)
@@ -299,10 +305,19 @@ enum MapArt {
     /// strong as `deadlock`.
     /// Rings that would overlap move apart across their track
     /// (``WaitMarkSides``, the `Railway/` site's `blockSideShift`).
-    static func drawWaitMarks(_ traffic: TrafficOverlay, deadlock: Double = 1, projection: some MapProjection, in context: GraphicsContext) {
+    /// Decision 210: at most ``MapProblems/waitMarkLimit`` of them, the
+    /// deadlocked first (``MapProblems/shownWaits(_:inView:)``); while the
+    /// game runs a second ring grows out of each other one and fades as
+    /// `pulse` goes from 0 to 1; and from a middle zoom in, the first
+    /// ``MapProblems/waitTagLimit`` carry a tag beside them with why they
+    /// wait and for which train, one that would cover another left out.
+    static func drawWaitMarks(
+        _ traffic: TrafficOverlay, deadlock: Double = 1, pulse: Double? = nil, language: DisplayLanguage = .english,
+        projection: some MapProjection, in context: GraphicsContext
+    ) {
         let region = drawingRegion(projection)
         let radius = trainHeadRadius(projection.referenceSize) + 6
-        let shown = traffic.waits.filter { region.contains($0.from) }
+        let shown = MapProblems.shownWaits(traffic.waits) { region.contains($0.from) }
         let marks = shown.map { wait in
             let center = projection.screenPoint(of: wait.from)
             // A step of a metre (64 units) the way the train faces.
@@ -316,6 +331,8 @@ enum MapArt {
         }
         // The ring and its 6-point halo.
         let offsets = WaitMarkSides.offsets(marks, size: radius * 2 + 6)
+        let tags = MapProblems.level(referenceSize: projection.referenceSize) != .hidden
+        var placement = MapProblems.Placement(limit: MapProblems.waitTagLimit)
         for (wait, placed) in zip(shown, marks) {
             var center = placed.center
             if let offset = offsets[wait.train] {
@@ -324,7 +341,13 @@ enum MapArt {
             }
             var context = context
             if wait.isDeadlocked { context.opacity = deadlock }
+            if tags, !placement.isFull {
+                drawWaitTag(wait, at: center, radius: radius, language: language, placement: &placement, in: context)
+            }
             let ring = disc(at: center, radius: radius)
+            if !wait.isDeadlocked, let pulse {
+                context.stroke(disc(at: center, radius: radius + 9 * pulse), with: .color(Palette.ink.opacity(0.7 * (1 - pulse))), lineWidth: 1.5)
+            }
             context.stroke(ring, with: .color(Palette.markerFill), lineWidth: 6)
             guard wait.isDeadlocked else {
                 context.stroke(ring, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 3, dash: [4.5, 3]))
@@ -342,6 +365,27 @@ enum MapArt {
             mark.shading = .color(Palette.metroRed)
             context.draw(mark, in: sign)
         }
+    }
+
+    /// Decision 210: why a waiting train waits, on a white plate edged in
+    /// navy (red for a deadlock) to the right of its ring: "等交會 · 莒光 3".
+    private static func drawWaitTag(
+        _ wait: TrafficOverlay.Wait, at center: ScreenPoint, radius: Double, language: DisplayLanguage,
+        placement: inout MapProblems.Placement, in context: GraphicsContext
+    ) {
+        let text = context.resolve(
+            Text(verbatim: wait.reason.tag(holder: wait.holderName, in: language))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Palette.ink)
+        )
+        let size = text.measure(in: CGSize(width: 240, height: 40))
+        let plate = CGRect(x: center.x + radius + 5, y: center.y - size.height / 2 - 1.5, width: size.width + 8, height: size.height + 3)
+        guard plate.intersects(context.clipBoundingRect),
+              placement.place(.init(x: plate.minX, y: plate.minY, width: plate.width, height: plate.height)) else { return }
+        let path = Path(roundedRect: plate, cornerRadius: 3)
+        context.fill(path, with: .color(Palette.markerFill))
+        context.stroke(path, with: .color(wait.isDeadlocked ? Palette.metroRed : Palette.ink), lineWidth: 1.2)
+        context.draw(text, at: CGPoint(x: plate.minX + 4, y: center.y), anchor: .leading)
     }
 
     private static func drawTrafficTrack(
@@ -1378,7 +1422,6 @@ enum MapArt {
         isSelected: Bool,
         isHighSpeed: Bool,
         layers: MapLayerPreferences,
-        waitingCount: Int64,
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -1421,14 +1464,51 @@ enum MapArt {
             context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
             context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
         }
+    }
 
-        // The passengers waiting: decision 205, a white pill edged in navy
-        // with a person and the count, where it was a blue one that a blue
-        // line hid.
-        if layers.showsWaitingCounts && projection.detail == .full && waitingCount > 0 {
-            let fontSize = max(8, min(11, radius * 0.7))
+    // MARK: - Problems at the stations (decision 210)
+
+    /// The waiting counts over the stations in view, at a middle zoom too
+    /// (``MapProblems/level(referenceSize:)``): decision 205's white pill
+    /// edged in navy, its people glyph one, two or three people as the
+    /// station is quiet, crowded or full (art-style §2). Placed full first,
+    /// then crowded, then the most waiting (``MapProblems/stationOrder(_:)``);
+    /// a pill that would cover one already drawn is left out, and none
+    /// after ``MapProblems/pillLimit(_:)``. Round a crowded station a ring
+    /// that goes as far round as its room is taken, navy on a white halo,
+    /// a whole red ring when full: its shape, not only its colour, says so.
+    private static func drawStationProblems(
+        _ world: GameWorld, waitingCounts: [StationID: Int64], projection: some MapProjection, in context: GraphicsContext
+    ) {
+        let level = MapProblems.level(referenceSize: projection.referenceSize)
+        guard level != .hidden else { return }
+        let radius = stationRadius(projection)
+        let near = context.clipBoundingRect.insetBy(dx: -60, dy: -40)
+        var centers: [StationID: ScreenPoint] = [:]
+        var visible: [StationID: Int64] = [:]
+        for station in world.stations {
+            guard let waiting = waitingCounts[station.id], waiting > 0 else { continue }
+            let center = projection.screenPoint(of: station.location)
+            guard near.contains(CGPoint(x: center.x, y: center.y)) else { continue }
+            centers[station.id] = center
+            visible[station.id] = waiting
+        }
+        let limit = MapProblems.pillLimit(level)
+        var placement = MapProblems.Placement(limit: limit)
+        var rings = 0
+        let fontSize = level == .full ? max(8, min(11, radius * 0.7)) : 8
+        for entry in MapProblems.stationOrder(visible) {
+            guard !placement.isFull || rings < limit else { break }
+            guard let center = centers[entry.station] else { continue }
+            let crowding = MapProblems.Crowding(waiting: entry.waiting)
+            let ringRadius = radius + max(4.5, radius * 0.35)
+            if crowding != .normal, rings < limit {
+                rings += 1
+                drawCrowdedRing(at: center, radius: ringRadius, fill: MapProblems.fill(waiting: entry.waiting), isFull: crowding == .full, in: context)
+            }
+            guard !placement.isFull else { continue }
             let countText = context.resolve(
-                Text(verbatim: "\(waitingCount)")
+                Text(verbatim: Money(entry.waiting).displayText)
                     .font(.system(size: fontSize, weight: .bold))
                     .foregroundStyle(Palette.ink)
             )
@@ -1436,16 +1516,42 @@ enum MapArt {
             let icon = fontSize + 1
             let pillHeight = max(countSize.height + 3, icon + 4)
             let pillWidth = 3 + icon + 1.5 + countSize.width + 4
-            let pillY = center.y - radius - pillHeight / 2 - 3
+            let top = crowding == .normal ? radius : ringRadius + 1.5
+            let pillY = center.y - top - pillHeight / 2 - 3
             let pillRect = CGRect(x: center.x - pillWidth / 2, y: pillY - pillHeight / 2, width: pillWidth, height: pillHeight)
+            guard placement.place(.init(x: pillRect.minX, y: pillRect.minY, width: pillRect.width, height: pillRect.height)) else { continue }
             let pillPath = Path(roundedRect: pillRect, cornerRadius: pillHeight / 2)
             context.fill(pillPath, with: .color(Palette.markerFill))
             context.stroke(pillPath, with: .color(Palette.ink), lineWidth: 1.5)
-            var person = context.resolve(MapGlyph.person.image)
-            person.shading = .color(Palette.ink)
-            context.draw(person, in: CGRect(x: pillRect.minX + 3, y: pillY - icon / 2, width: icon, height: icon))
+            let glyph: MapGlyph = switch crowding {
+            case .normal: .person
+            case .crowded: .crowd
+            case .full: .full
+            }
+            var people = context.resolve(glyph.image)
+            people.shading = .color(Palette.ink)
+            context.draw(people, in: CGRect(x: pillRect.minX + 3, y: pillY - icon / 2, width: icon, height: icon))
             context.draw(countText, at: CGPoint(x: pillRect.minX + 3 + icon + 1.5, y: pillY), anchor: .leading)
         }
+    }
+
+    /// A crowded station's ring (decision 210): a white halo, a faint navy
+    /// track, and from the top clockwise a navy arc `fill` of the way
+    /// round; a whole red ring when the station is full.
+    private static func drawCrowdedRing(at center: ScreenPoint, radius: Double, fill: Double, isFull: Bool, in context: GraphicsContext) {
+        let ring = disc(at: center, radius: radius)
+        context.stroke(ring, with: .color(Palette.markerFill), lineWidth: 5)
+        context.stroke(ring, with: .color(Palette.ink.opacity(0.35)), lineWidth: 0.8)
+        guard !isFull else {
+            context.stroke(ring, with: .color(Palette.metroRed), lineWidth: 3)
+            return
+        }
+        var arc = Path()
+        arc.addArc(
+            center: CGPoint(x: center.x, y: center.y), radius: radius,
+            startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * fill), clockwise: false
+        )
+        context.stroke(arc, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 3, lineCap: .round))
     }
 
     /// The most stations named on a zoomed-out map at once, and the most

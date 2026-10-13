@@ -51,6 +51,9 @@ struct MapAlertBubbles: View {
     private var placed: [PlacedAlert] {
         var perStation: [PlanPoint: Int] = [:]
         guard session.tool == .select else { return [] }
+        // Decision 210: over the waiting count's pill (and a crowded
+        // station's ring) where the map draws them, not on it.
+        let lift = MapProblems.level(referenceSize: camera.referenceSize) == .hidden ? 14 : MapArt.stationRadius(camera) + 30
         return (session.world.mapAlerts() + session.situationAlerts).compactMap { alert in
             let at = camera.screenPoint(of: alert.location)
             guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
@@ -58,12 +61,13 @@ struct MapAlertBubbles: View {
             else { return nil }
             let index = perStation[alert.location, default: 0]
             perStation[alert.location] = index + 1
-            return PlacedAlert(alert: alert, point: CGPoint(x: at.x, y: at.y - 14 - Double(index) * 34))
+            return PlacedAlert(alert: alert, point: CGPoint(x: at.x, y: at.y - lift - Double(index) * 46))
         }
     }
 
     private func bubble(_ alert: MapAlert) -> some View {
         let text = alert.text(in: session.language, lineName: lineName(of: alert), subject: subject(of: alert))
+        let why = reason(of: alert)
         return Button {
             if session.respond(to: alert) {
                 screen.panel = .lines
@@ -89,11 +93,22 @@ struct MapAlertBubbles: View {
                     .frame(width: 20, height: 20)
                     .background(tint(alert), in: Circle())
                     .accessibilityHidden(true)
-                Text(verbatim: text)
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(verbatim: text)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    // Decision 210: and why, as the reference's land
+                    // value gives its figure and its reasons.
+                    if let why {
+                        Text(verbatim: why)
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
             }
             .padding(.leading, 4)
             .padding(.trailing, 8)
@@ -105,9 +120,18 @@ struct MapAlertBubbles: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: text))
+        .accessibilityLabel(Text(verbatim: why.map { "\(text), \($0)" } ?? text))
         .accessibilityHint(Text(verbatim: session.language.text("Goes to it.", "前往處理。")))
         .accessibilityIdentifier("map.alert")
+    }
+
+    /// Why a crowded or full station's passengers wait (decision 210).
+    private func reason(of alert: MapAlert) -> String? {
+        switch alert.kind {
+        case .crowded, .full:
+            return alert.station.flatMap { session.world.stationWaitReason(of: $0) }?.text(in: session.language)
+        default: return nil
+        }
     }
 
     private func lineName(of alert: MapAlert) -> String? {
