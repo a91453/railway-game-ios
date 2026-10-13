@@ -34,14 +34,35 @@ struct PopulationLegendView: View {
     /// Whether the map's track is level whatever the heights shown: a
     /// real-world map on flat ground (decision 198), which the layer says.
     var tracksLevel = false
+    /// Folded to its title and colour bar (TestFlight 59.1, ``LegendFold``):
+    /// the opacity, the timeline and the rest show when it opens.
+    @Binding var isFolded: Bool
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(verbatim: title)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { isFolded.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isFolded ? "chevron.up" : "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: title)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                    // The whole title a finger can hit.
+                    .frame(minHeight: 28)
+                    .contentShape(Rectangle())
+                    .padding(.vertical, -8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: isFolded
+                        ? language.text("Show the whole legend", "展開圖例")
+                        : language.text("Fold the legend", "收合圖例")))
+                .accessibilityIdentifier("map.legend.fold")
                 Spacer(minLength: 4)
                 if let onDismiss {
                     Button {
@@ -61,45 +82,10 @@ struct PopulationLegendView: View {
                 }
             }
 
-            scale
-
-            if mode != .coverage, mode != .zoning, mode != .terrain {
-                HStack {
-                    Text(verbatim: lowText)
-                    Spacer()
-                    Text(verbatim: highText)
-                }
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(Theme.textSecondary)
-            }
-
-            if mode == .movement {
-                Text(verbatim: language.text("Darker means a bigger change", "顏色越深表示變化越大"))
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            if mode == .landValue {
-                Text(verbatim: language.text("Dollars a square metre; tap a cell for its parts", "單位：每平方公尺美元；點一格看分項"))
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
-            if mode != .sectionFlow {
-                HStack {
-                    Text(verbatim: language.text("Opacity", "透明度"))
-                    Spacer()
-                    Text(verbatim: "\(Int((opacity * 100).rounded()))%")
-                        .monospacedDigit()
-                }
-                .font(.caption2)
-                .foregroundStyle(Theme.textPrimary)
-                Slider(value: $opacity, in: PopTravel.opacityRange, step: 0.01)
-                    .accessibilityLabel(Text(verbatim: language.text("\(title) opacity", "\(title)透明度")))
-                    .accessibilityIdentifier("map.popTravel.opacity")
-            }
-
-            if mode.followsTimeline {
-                timeline
+            if isFolded {
+                foldedBar
+            } else {
+                details
             }
         }
         .padding(.horizontal, 10)
@@ -109,11 +95,87 @@ struct PopulationLegendView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
-        .frame(maxWidth: 260)
+        .frame(maxWidth: isFolded ? 180 : 260)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: title))
         .accessibilityValue(Text(verbatim: "\(lowText), \(highText)"))
         .accessibilityIdentifier("map.populationLegend")
+    }
+
+    /// The colour bar alone, for a folded legend: the layers whose key is
+    /// one bar (with the open key's identifier, for the UI tests); the
+    /// others fold to their title.
+    @ViewBuilder
+    private var foldedBar: some View {
+        switch mode {
+        case .population, .travel, .movement:
+            scale
+        case .landValue:
+            HStack(spacing: 0) {
+                ForEach(Array(CityMap.valueColors.enumerated()), id: \.offset) { _, color in
+                    Color(color)
+                }
+            }
+            .frame(height: 12)
+            .clipShape(Capsule())
+            .accessibilityIdentifier("map.landValueLegend")
+        case .sectionFlow:
+            LinearGradient(
+                colors: stride(from: 0.0, through: 1.0, by: 0.25).map { Color(SectionFlow.color(ratio: $0)) } + [Color(SectionFlow.overloadedColor)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 12)
+            .clipShape(Capsule())
+            .accessibilityIdentifier("map.sectionFlowLegend")
+        case .landUse, .coverage, .zoning, .terrain:
+            EmptyView()
+        }
+    }
+
+    /// Everything under the title of an open legend.
+    @ViewBuilder
+    private var details: some View {
+        scale
+
+        if mode != .coverage, mode != .zoning, mode != .terrain {
+            HStack {
+                Text(verbatim: lowText)
+                Spacer()
+                Text(verbatim: highText)
+            }
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(Theme.textSecondary)
+        }
+
+        if mode == .movement {
+            Text(verbatim: language.text("Darker means a bigger change", "顏色越深表示變化越大"))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+        }
+        if mode == .landValue {
+            Text(verbatim: language.text("Dollars a square metre; tap a cell for its parts", "單位：每平方公尺美元；點一格看分項"))
+                .font(.caption2)
+                .foregroundStyle(Theme.textSecondary)
+        }
+
+        if mode != .sectionFlow {
+            HStack {
+                Text(verbatim: language.text("Opacity", "透明度"))
+                Spacer()
+                Text(verbatim: "\(Int((opacity * 100).rounded()))%")
+                    .monospacedDigit()
+            }
+            .font(.caption2)
+            .foregroundStyle(Theme.textPrimary)
+            Slider(value: $opacity, in: PopTravel.opacityRange, step: 0.01)
+                .accessibilityLabel(Text(verbatim: language.text("\(title) opacity", "\(title)透明度")))
+                .accessibilityIdentifier("map.popTravel.opacity")
+        }
+
+        if mode.followsTimeline {
+            timeline
+        }
     }
 
     /// The reference's `map.layers.populationGrid`, `travelDemand` and

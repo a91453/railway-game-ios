@@ -51,6 +51,10 @@ struct MapView: View {
     /// Which population and travel layer is shown (``PopTravelMode``'s raw
     /// value, empty for none); a view preference, as the other layers.
     @AppStorage("mapPopTravelMode") private var popTravelModeName = ""
+    /// Whether the player folded the layer's legend (TestFlight 59.1,
+    /// ``LegendFold``): a device preference, not in the save.
+    @AppStorage(LegendFold.key) private var legendFold = 0
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// Decision 182: whether the map shows the time of day and the
     /// weather (the settings' switches, on the device).
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
@@ -475,7 +479,11 @@ struct MapView: View {
                                 onTogglePlay: togglePopTravelPlay,
                                 nothingZoned: session.world.zones.isEmpty,
                                 isFlat: terrainMap?.isFlat ?? false,
-                                tracksLevel: terrainMap?.tracksLevel ?? false
+                                tracksLevel: terrainMap?.tracksLevel ?? false,
+                                isFolded: Binding(
+                                    get: { LegendFold.isFolded(stored: legendFold, compactHeight: verticalSizeClass == .compact) },
+                                    set: { legendFold = LegendFold.stored(folded: $0) }
+                                )
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil
