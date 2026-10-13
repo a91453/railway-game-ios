@@ -3607,7 +3607,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **之後的修正**（2026-10-13，TestFlight 56.1 回報 #1「選單在時間走時滑不動」的可能原因）：細節卡片每次排版都重新判斷要「頭腳固定、中間捲動」還是「整張捲動」（頭加腳的高度再加 88 點放不放得下）。在地圖上點了列車後，卡片頭是列車摘要；列車停靠時多一行「Stopped at …」，開出後少一行。iPhone 橫拿時這一行剛好跨過門檻，示範地圖 600 倍速下卡片幾秒就換一次結構。SwiftUI 換掉 view 身分，選項捲回頂端，打開的原生選單也被關掉（手動 run 38330628216 重現：15 秒內兩種版面都出現）。改法（只改 App 與 GamePresentation 的判斷，GameCore、存檔、golden、replay 都不變）：
 - 判斷移到 `DetailsCardLayout.pinsEnds(ends:maxHeight:pinned:)`，加遲滯：固定中的卡片要等選項剩不到 44 點（約一列）才改成整張捲動；整張捲動的卡片要等選項有 88 點（約兩列）才固定。兩者差 44 點，大於頭部一兩行字的變化。
 - 換了主體（`ControlDetails.Subject`：工具、選的車站、點的列車、有沒有選取、是否在畫軌道）就清掉記住的版面，照原本 88 點的規則重新決定。
-- 兩種版面的捲動區有識別碼 `details.scroll.middle`、`details.scroll.whole`。UI 測試 `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts`（full lane）：iPhone 橫拿、時鐘照走，跟隨並點選 Train 1，20 秒內列車停靠與行駛都看到，卡片只用一種版面。Linux 測試 `DetailsCardLayoutTests`。
+- 兩種版面的捲動區有識別碼 `details.scroll.middle`、`details.scroll.whole`。UI 測試 `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts`（full lane）：iPhone 橫拿、時鐘照走，跟隨並點選 Train 1，看到列車停靠與行駛各三次（最多 60 秒），期間卡片只用一種版面。Linux 測試 `DetailsCardLayoutTests`。
 
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 

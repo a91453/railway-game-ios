@@ -647,13 +647,15 @@ final class MapInteractionTests: XCTestCase {
         // it there: the card's head shows its summary.
         let fleet = app.buttons["train.fleetOverview"]
         if !fleet.isHittable { app.swipeUp() }
-        XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+        XCTAssertTrue(fleet.waitForExistence(timeout: 15))
         fleet.tap()
+        // The demo's tree is large and its clock runs: the list can take
+        // longer than a paused demo's (run 38332921819).
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
-        XCTAssertTrue(fleetFollow.waitForExistence(timeout: 5))
+        XCTAssertTrue(fleetFollow.waitForExistence(timeout: 20), "The fleet list must offer to follow Train 1")
         for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
         fleetFollow.tap()
-        XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 15))
         let map = app.descendants(matching: .any)["map"].firstMatch
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
         XCTAssertTrue(status.waitForExistence(timeout: 5))
@@ -671,8 +673,12 @@ final class MapInteractionTests: XCTestCase {
         var layouts: [String: Int] = [:]
         var summaries = Set<String>()
         var samples: [String] = []
-        let deadline = Date().addingTimeInterval(20)
-        while Date() < deadline {
+        // Until the train has been seen stopped and running three times
+        // each: a snapshot of the demo's card takes a second or two, and in
+        // one run 20 seconds held no stop (run 38332921819).
+        var stopped = 0, running = 0
+        let deadline = Date().addingTimeInterval(60)
+        while Date() < deadline, stopped < 3 || running < 3 {
             guard let snapshot = try? card.snapshot() else { continue }
             var layout = "none", summary = "", marks: [String] = []
             var queue = [snapshot]
@@ -685,6 +691,8 @@ final class MapInteractionTests: XCTestCase {
             if layout == "none" { layout = "none(\(snapshot.elementType.rawValue) \(marks.prefix(8).joined(separator: ",")))" }
             layouts[layout, default: 0] += 1
             let kind = summary.contains("Stopped at") ? "stopped" : summary.contains("running") ? "running" : "other"
+            if kind == "stopped" { stopped += 1 }
+            if kind == "running" { running += 1 }
             samples.append("\(layout.prefix(24))/\(kind)/\(Int(snapshot.frame.height))")
             summaries.insert(summary.replacingOccurrences(of: "[0-9]+", with: "#", options: .regularExpression))
             Thread.sleep(forTimeInterval: 0.1)
