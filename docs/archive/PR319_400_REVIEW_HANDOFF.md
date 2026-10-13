@@ -222,7 +222,7 @@ CI（Linux）在這段期間有 9 次 push run 失敗，Wasm Probe 沒有紅燈�
 | 項目 | 定案 | 實作 |
 |---|---|---|
 | 1. 改到 `.github/scripts/` 的 PR 跑完整 18 個 job | 維持不改。這種 PR 少，腳本決定要測哪些，判斷錯了代價大。 | 不改程式，只記在這裡。 |
-| 2. 開著事件的挑戰，中途把事件關掉 | 這一局不記成績，記錄頁顯示「已關閉事件，不計紀錄」。 | 待定：照定案做要在 GameCore 的 `ScenarioState` 記「曾開過事件」，要升存檔版本。已請派工 session 在「升存檔 54」與「挑戰中不能關事件」之間選一個。 |
+| 2. 開著事件的挑戰，中途把事件關掉 | 這一局不記成績，記錄頁顯示「已關閉事件，不計紀錄」。 | 照定案原文做要升存檔版本：GameCore 的 `ScenarioState` 要記「曾開過事件」，而存檔 54 已被機廠 L1 登記。派工 session 改選「挑戰中不能關事件」：<br>- 舊存檔的事件一直開著，成績一直不記，結果相同，不改存檔。<br>- 挑戰結束後也不能關：關了之後，下一次自動存檔就會把成績記下來。<br>- 設定頁選單停用，寫「這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。」<br>- 決策 154 加了之後的修正。<br>- 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`（修之前可以關掉）。 |
 | 3. 沒有列車的路線冒兩個泡泡 | 只留「沒有列車」，沒有列車時不出「連續虧損」。 | `lineLosingMoney` 對沒有列車的路線回傳 false，地圖泡泡與路線列的紅字都跟著改。決策 179 加了之後的修正。測試：`LineReportTests.testALineLosingMoneyForAWeekShowsOnTheMap`（先改成會失敗的版本，再修）。 |
 | 4. 改編組選「依路線預設」 | 路線有自己的車型時套用路線的；沒有時保留每列車原本的車型，不降回標準車。 | `GameSession.reform` 收到 `nil` 時保留各車車型，訊息寫「車型不變」。決策 180 加了之後的修正。測試：`RollingStockSessionTests.testReformingWithTheLinesDefaultKeepsEachTrainsType`（修之前改回標準車，還收了改裝費）。 |
 

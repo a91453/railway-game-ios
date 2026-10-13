@@ -4879,6 +4879,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - `ChallengeRecords.record` 在 `world.disruptions != nil` 時不記錄（舊存檔的保險）。
 - 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`、`testAResultWithEventsOnIsNotKept`。GameCore、存檔、golden、replay 都不變。
 
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：開著事件存檔的挑戰（決策 154 之前的舊存檔），也不能把事件關掉。挑戰中、挑戰結束後都一樣。
+- 原因：存檔裡沒有任何東西記得「這一局開過事件」。關掉之後，靠連假尖峰提早達成的成績，下一次自動存檔就會被記下來。要記住這件事得升存檔版本，所以改成不能關：事件一直開著，成績一直不記，規則一致。
+- 設定頁的選單在挑戰中一律停用；開著事件時，footer 與拒絕的訊息都寫「這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。」
+- 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`。GameCore、存檔、golden、replay 都不變。
+
 ### 155. 貨運：貨運場、貨運路線與噸公里運費
 
 2026-10-11，作者要求依 `docs/research/FREIGHT_STUDY.md` 先做方案 C（最小貨運迴圈），一個 PR。號碼依工作登記 #231：決策 155、存檔版本 38、golden schema 58。
