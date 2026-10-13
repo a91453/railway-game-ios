@@ -6448,12 +6448,21 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - **怎麼套用**：`GameSession.apply(_:to:)` 做的是原本 closure 做的事，有多個步驟的照原本的順序，全有或全無。訊息改由 `perform(_:message:)` 從結果、編輯前與編輯後的世界寫出；需要自己的失敗訊息的（改停靠、拆車站、速率、經營模式）用 `performCommand(_:)`，它會丟出拒絕的原因。
 - **名稱與語言**：補車與改編組給列車的名稱、說明沒有改的列車，都看 session 的語言，所以指令也記下語言（`DisplayLanguage` 改成 `Codable`）。買車、建立路線的名稱在面板就決定，直接記名稱。
 - **寫成檔案**：`Edit` 用 Swift 合成的 `Codable`，值用 GameCore 自己的編碼（性能、時刻表、票價、服務日…）。GameCore 的解碼會拒絕世界放不下的值，被拒絕的編輯可能讀不回來，這時那一筆讀成「沒有記錄」，重播停在那裡，整份回報還是讀得出來（`CommandLog.Entry`）。列車的路照 `ReplayCommand` 寫成邊號加方向（`Edit.Step`）；分區照原始值（`Edit.ZoneChoice`）。
-- **還沒有值的**：路網工具的三種，交叉渡線、月台旁加股道、要整平的月台。它們的計畫依工具在畫面上的選擇算出，下一個 PR 再補。在那之前，它們仍記成「沒有記錄」。
+- **路網工具的計畫**（第三個 PR）：交叉渡線、月台旁加股道、要整平的月台，三種的計畫都依工具在畫面上的選擇算出，所以指令帶著計畫本身：
+  - 交叉渡線：`buildCrossover(ScissorsPlan, structure:)`。
+  - 月台旁加股道：`addPlatformTrack(PlatformTrackPlan)`。
+  - 要整平的月台：`PlatformAddition.levelling`（`PlatformLevelling`）。
+  - 重播時在同一個世界照計畫再建一次，結果相同。
+  - 計畫寫成檔案時，節點與邊寫成號碼，邊上的位置寫成邊號加距離；曲線、縱斷面、構造、月台用 GameCore 自己的編碼（`NetworkPlanCoding.swift`）。
+  - 原本的 tuple 欄位改成同名的小 struct，計畫才能比較與寫成檔案。
+  - 月台的兩條路（水平、要整平）合成一個指令。整平被拒絕時，照舊說出坡度與 GameCore 的原因：拒絕後在副本上再整平一次，看是不是整平被拒絕。
+  - 現在 GamePresentation 裡沒有用 closure 的編輯了。`perform { world in ... }` 仍然可以用，記成「沒有記錄」。
 - **測試**：`CommandEditTests`：
   - 經過面板玩的一局：畫路線、補車、停站模式、買車、改節數、放到月台、配屬、時間走、改編組、改名後復原再重做、貸款、選路、票價、一個被拒絕的時刻表、刪停站模式。沒有任何一筆「沒有記錄」，存成檔案再讀回不變，重播到同一個世界。
   - 每一種 `Edit` 存成檔案再讀回不變；不認得的分區讀成「沒有記錄」。
   - 只有一個指令的編輯，和那個 `GameWorld` 指令得到同一個世界、同一個錯誤，經過 session 時全有或全無，被拒絕的也記。
   - 其餘的行為由既有的 session 測試釘住（GamePresentation 1,065 個測試都通過）。
+  - `NetworkPlanCommandTests`：交叉渡線、月台旁加股道、要整平的月台各一局。都記成指令、沒有「沒有記錄」，存成檔案再讀回不變，重播到同一個世界。
 
 ## 目前規則摘要
 

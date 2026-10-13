@@ -21,7 +21,7 @@ import GameCore
 
 /// A stretch of an edge a platform would take, levelled: the edge laid again
 /// in up to three edges, the middle one level.
-struct PlatformLevelling {
+public struct PlatformLevelling: Hashable, Sendable {
     /// The edge as it is, and the stretch the platform would take, moved
     /// to an end of the edge where it came within a split's least piece of
     /// it.
@@ -40,7 +40,7 @@ struct PlatformLevelling {
     /// Which of ``legs`` is the level one.
     let levelLeg: Int
 
-    struct Leg {
+    struct Leg: Hashable, Sendable {
         let from: WorldCoordinate
         let to: WorldCoordinate
         let curve: TrackCurve
