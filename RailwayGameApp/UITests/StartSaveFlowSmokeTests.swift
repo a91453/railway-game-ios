@@ -220,6 +220,10 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         checkBackToStartWhileTheClockRuns(arguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"], demo: false)
     }
 
+    /// The train panel's three native menus with the clock running, in one
+    /// launch: each relaunch of the app costs 10 to 15 s of the full lane
+    /// (#545). Every check is the one its own test made before.
+    ///
     /// TestFlight 54.1: with many trains and the clock running, the train
     /// menu could not be scrolled (each tick took it back to its top) and
     /// showed two layers of text. Fifteen trains, more than the menu shows
@@ -229,7 +233,15 @@ final class StartSaveFlowSmokeTests: XCTestCase {
     /// chooses the row under the finger, a swipe closes the menu, paused or
     /// not: runs 38285634450 and 38287892415), so scrolling to the last row
     /// is left to a device.
-    func testTheTrainMenuStaysStillAndChoosesWhileTheClockRuns() {
+    ///
+    /// The author's report (decision 184, later): with the clock running,
+    /// the train type menu could not be scrolled until the game was paused.
+    /// With the clock running the open menu stays as it opened for thirty
+    /// ticks, and a type other than the train's can be chosen. Then the
+    /// menu in the author's screenshot: how a train runs, 25 rows
+    /// (Standard, Metro, Local EMU … and the design speeds). The chosen
+    /// train is still one not yet placed, whose panel shows both menus.
+    func testTheTrainMenusStayStillAndChooseWhileTheClockRuns() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -273,15 +285,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         XCTAssertNotEqual(name, "Train 15")
         touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
         waitForLabel("Train: \(name)", of: picker.firstMatch)
-    }
 
-    /// The author's report (decision 184, later): with the clock running,
-    /// the train type menu could not be scrolled until the game was paused.
-    /// With the clock running the open menu stays as it opened for thirty
-    /// ticks, and a type other than the train's can be chosen.
-    func testTheTrainTypeMenuStaysStillAndChoosesWhileTheClockRuns() {
-        let app = launchWithAnUnplacedTrain()
-        defer { app.terminate() }
         // Every type's name says what a car carries ("… · 140 a car · 4
         // doors"); the menu's own button is left out.
         checkMenuStaysStillAndChooses(
@@ -289,14 +293,6 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             rows: app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND identifier != %@", " a car · ", "train.type")),
             in: app
         )
-    }
-
-    /// The menu in the author's screenshot (decision 184, later): how a
-    /// train runs, 25 rows (Standard, Metro, Local EMU … and the design
-    /// speeds). The same with the clock running.
-    func testThePerformanceMenuStaysStillAndChoosesWhileTheClockRuns() {
-        let app = launchWithAnUnplacedTrain()
-        defer { app.terminate() }
         let presets = [
             "Standard", "Metro", "Local EMU", "Ordinary", "Chu-Kuang / Fu-Hsing", "Tze-Chiang", "EMU3000",
             "Push-pull Tze-Chiang", "Taroko", "Puyuma", "Diesel Tze-Chiang", "DR1000 railcar",
@@ -307,21 +303,6 @@ final class StartSaveFlowSmokeTests: XCTestCase {
             rows: app.buttons.matching(NSPredicate(format: "label IN %@", presets)),
             in: app
         )
-    }
-
-    /// A blank new game, its clock running, with one train bought and not
-    /// yet placed: the train panel shows its type and performance menus.
-    private func launchWithAnUnplacedTrain() -> XCUIApplication {
-        continueAfterFailure = false
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        requiredButton("start.newGame", in: app).tap()
-        _ = requiredButton(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause")
-        requiredButton("dock.build", in: app).tap()
-        requiredButton("tool.train", in: app).tap()
-        requiredButton(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Buy a train")), name: "Buy").tap()
-        return app
     }
 
     /// Opens the menu `identifier` with the clock running: its `rows` must
