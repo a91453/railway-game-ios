@@ -344,6 +344,19 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
         return camera
     }
 
+    /// The camera of a magnifier `size` big (decision 204, drawing track)
+    /// showing the map round `point` `magnification` times as close as this
+    /// camera: past the zoom range and the map's edges, as a magnifier
+    /// held over a map is.
+    public func loupe(at point: PlanPoint, size: ScreenSize, magnification: Double) -> PlanCamera {
+        var camera = self
+        camera.viewport = Self.usable(size)
+        if magnification.isFinite, magnification > 0 { camera.pointsPerUnit *= magnification }
+        camera.centerX = Double(point.x)
+        camera.centerY = Double(point.y)
+        return camera
+    }
+
     // MARK: - The view
 
     /// The camera for a map view now `viewport` in size (a rotation, a

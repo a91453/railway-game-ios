@@ -82,6 +82,8 @@ public final class GameSession {
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
+    /// The passing loop at the picked place, kept as the track preview is.
+    @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
@@ -335,6 +337,9 @@ public final class GameSession {
     /// Whether the drag under way picked a new start (it began on other
     /// track): cancelled, it keeps that start but not the old end.
     @ObservationIgnored var networkDragMovedStart = false
+    /// Where the finger drawing track is, for the magnifier (decision 204);
+    /// `nil` when no drag draws track.
+    public internal(set) var networkDragFinger: PlanPoint?
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic
@@ -354,6 +359,13 @@ public final class GameSession {
     /// crossover, with the mirrored diagonal crossing it at a diamond in
     /// the middle (see ``networkPicksCrossover``), rather than one.
     public var networkBuildsScissors = false
+    /// Whether each stretch gets a second track beside it, 5 m apart
+    /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
+    /// way it is drawn.
+    public var networkBuildsDouble = false
+    public var networkDoubleSide: PlatformTrackSide = .left
+    /// Which side of the picked track a passing loop goes (decision 204).
+    public var networkLoopSide: PlatformTrackSide = .left
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
     /// where it fits under the steepest grade.
@@ -390,6 +402,7 @@ public final class GameSession {
         didSet {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
+            passingLoopMemo = nil
         }
     }
 

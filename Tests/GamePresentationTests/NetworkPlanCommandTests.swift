@@ -46,6 +46,34 @@ final class NetworkPlanCommandTests: XCTestCase {
         try assertLoggedAndReplayed(session) { if case .buildCrossover = $0 { true } else { false } }
     }
 
+    func testADoubleTrackIsLoggedWithItsParallel() throws {
+        let world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.networkBuildsDouble = true
+        session.tapNetwork(at: PlanPoint(x: 2_048, y: 8_192), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 18_432, y: 8_192), reach: 16)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.edges.count, 2)
+        try assertLoggedAndReplayed(session) { if case .buildDoubleTrack = $0 { true } else { false } }
+    }
+
+    func testAPassingLoopIsLoggedWithItsPlan() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 31_744, y: 8_192))
+        try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.setNetworkMode(.passingLoop)
+        session.networkLoopSide = .right
+        session.tapNetwork(at: PlanPoint(x: 16_384, y: 8_192), reach: 64)
+        session.addPassingLoop()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        try assertLoggedAndReplayed(session) { if case .addPassingLoop = $0 { true } else { false } }
+    }
+
     func testAPlatformTrackIsLoggedWithItsPlan() throws {
         var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))

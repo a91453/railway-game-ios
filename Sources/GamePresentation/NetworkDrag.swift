@@ -69,6 +69,7 @@ extension GameSession {
             message = nil
         }
         guard world.bounds.contains(end) else { return }
+        networkDragFinger = end
         // Back within reach of the start: no stretch, as tapping the start.
         if let at = networkStart.flatMap({ planPoint(of: $0) }), Self.distance(at, end) <= Double(reach) {
             networkEnd = nil
@@ -84,12 +85,14 @@ extension GameSession {
     public func endNetworkDrag(from start: PlanPoint, to end: PlanPoint, reach: Int64) {
         dragNetwork(from: start, to: end, reach: reach)
         networkDragEndBefore = nil
+        networkDragFinger = nil
     }
 
     /// A second finger or the system took the drag: the end picked before
     /// it comes back. A start the drag picked stays, as a tap there would,
     /// with no end: the old end was picked for the old start.
     public func cancelNetworkDrag() {
+        networkDragFinger = nil
         guard let before = networkDragEndBefore else { return }
         networkEnd = networkDragMovedStart ? nil : before
         networkDragEndBefore = nil

@@ -41,6 +41,8 @@ struct NetworkControls: View {
                 platformOptions
             case .remove:
                 platformRemovals(showsPlace: false)
+            case .passingLoop:
+                passingLoopOptions
             }
         }
     }
@@ -64,6 +66,13 @@ struct NetworkControls: View {
                 }
                 .accessibilityValue(Text(verbatim: advancedSummary))
                 .accessibilityIdentifier("network.advanced")
+                // Decision 204: a second track 5 m beside each stretch, in
+                // one step; which side is among the folded options.
+                Toggle(isOn: $session.networkBuildsDouble) {
+                    Text(verbatim: session.language.text("Double", "複線"))
+                }
+                .toggleStyle(OnOffButtonToggleStyle())
+                .accessibilityIdentifier("network.double")
                 Spacer(minLength: 0)
                 Button("Clear") {
                     session.clearNetworkDraft()
@@ -180,6 +189,17 @@ struct NetworkControls: View {
             }
             .toggleStyle(OnOffButtonToggleStyle())
             .font(.footnote)
+            if session.networkBuildsDouble {
+                Picker(selection: $session.networkDoubleSide) {
+                    Text(verbatim: session.language.text("Second track on the left", "第二條在左側")).tag(PlatformTrackSide.left)
+                    Text(verbatim: session.language.text("Second track on the right", "第二條在右側")).tag(PlatformTrackSide.right)
+                } label: {
+                    Text(verbatim: session.language.text("Second track", "第二條軌道"))
+                }
+                .pickerStyle(.segmented)
+                .font(.footnote)
+                .accessibilityIdentifier("network.doubleSide")
+            }
             // Off: every tap is a new point, for a parallel track a few
             // metres beside another (closer than a tap reaches).
             Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
@@ -189,8 +209,8 @@ struct NetworkControls: View {
             // Decision 107, later: a player did not know how to lay a
             // second track beside the first.
             Text(verbatim: session.language.text(
-                "Turn it off to lay a parallel track 4 m or more beside another (double track).",
-                "關掉後可以鋪相距 4 m 以上的平行軌（雙線）"
+                "Turn it off to lay a parallel track 4 m or more beside another by hand; \"Double\" lays both at once.",
+                "關掉後可以自己鋪相距 4 m 以上的平行軌；「複線」會一次鋪好兩條"
             ))
             .font(.caption)
             .foregroundStyle(Theme.textSecondary)
@@ -207,7 +227,33 @@ struct NetworkControls: View {
         if !session.networkFollowsTrack { parts.append(language.text("sharp curves", "不平順曲線")) }
         if !session.networkEasesGrade { parts.append(language.text("steep grade", "不緩和坡度")) }
         if !session.networkSnapsToTrack { parts.append(language.text("no snapping", "不吸附軌道")) }
+        if session.networkBuildsDouble {
+            parts.append(session.networkDoubleSide == .left
+                ? language.text("second track left", "第二條在左") : language.text("second track right", "第二條在右"))
+        }
         return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Passing loop
+
+    /// Decision 204: which side of the picked single track the loop goes,
+    /// by compass, and why it cannot go there (the inspector says what the
+    /// tap picked).
+    private var passingLoopOptions: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let point = session.networkEdgePoint {
+                Picker(selection: $session.networkLoopSide) {
+                    ForEach(PlatformTrackSide.allCases, id: \.self) { side in
+                        Text(verbatim: session.edgeSideText(side, at: point)).tag(side)
+                    }
+                } label: {
+                    Text(verbatim: session.language.text("Side", "側"))
+                }
+                .pickerStyle(.segmented)
+                .font(.footnote)
+                .accessibilityIdentifier("network.loopSide")
+            }
+        }
     }
 
     // MARK: - Platforms

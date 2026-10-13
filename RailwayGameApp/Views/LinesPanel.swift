@@ -52,6 +52,8 @@ struct LinesPanel: View {
     /// Decision 196: whether the new line's form shows while the lines
     /// come first.
     @State private var showsNewLine = false
+    /// Decision 206: whether the selected line's train diagram is open.
+    @State private var showsDiagram = false
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
@@ -134,6 +136,12 @@ struct LinesPanel: View {
             }
             .navigationTitle("Lines")
             .navigationBarTitleDisplayMode(.inline)
+            // Decision 206: the train diagram over the whole screen.
+            .fullScreenCover(isPresented: $showsDiagram) {
+                if let id = session.selectedLineID {
+                    TrainDiagramView(session: session, line: id)
+                }
+            }
             // The pattern's stops are indices into the selected line's:
             // another line starts from its own first two.
             .onChange(of: session.selectedLineID) {
@@ -751,6 +759,17 @@ struct LinesPanel: View {
                 color: Palette.lineColor(line.id, custom: line.color),
                 trains: session.world.lineTrainDots(line.id)
             )
+            // Decision 206: the line's train diagram, view only.
+            Button {
+                showsDiagram = true
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("Train diagram", "運行圖"))
+                } icon: {
+                    Image(systemName: "chart.xyaxis.line")
+                }
+            }
+            .accessibilityIdentifier("line.trainDiagram")
             ForEach(Array(line.stops.enumerated()), id: \.offset) { index, station in
                 HStack {
                     Text(verbatim: "\(index + 1). \(name(of: station))")

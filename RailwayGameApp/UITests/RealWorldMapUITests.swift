@@ -247,7 +247,12 @@ final class RealWorldMapUITests: XCTestCase {
         let banner = { (text: String) in
             app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         }
-        XCTAssertTrue(banner("Built Edge").appears(within: 10), "The stretch was not built: \(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch.label)")
+        // "Built Track #N: …" since decision 201 named a stretch a track.
+        if !banner("Built Track").appears(within: 10) {
+            let problem = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Problem'")).firstMatch
+            XCTFail("The stretch was not built: \(problem.exists ? problem.label : "no banner")")
+            return
+        }
 
         // The platform mode, from the details card (opened if folded).
         let platform = app.buttons["Platform"]
