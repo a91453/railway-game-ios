@@ -62,8 +62,8 @@ struct StationPanel: View {
                     eventsSection(station)
                     ridershipSections(station)
                     passengersSection(station)
-                    removalSection(station)
                     freightSection(station)
+                    removalSection(station)
                 } else {
                     Section {
                         Text("Select a station on the map, or choose one above.")

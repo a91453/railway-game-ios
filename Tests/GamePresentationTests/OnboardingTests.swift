@@ -369,5 +369,16 @@ final class OnboardingTests: XCTestCase {
         for id in ["extendLine", "whyLosing", "cityGrowth", "materials", "buyMap", "loan", "fares", "trafficControl", "express", "annualReport"] {
             XCTAssertTrue(HelpGuide.entries.contains { $0.id == id }, id)
         }
+        // A TestFlight player could not tell what the map's colours were,
+        // why a line ran one train, what an idle train's text meant or where
+        // the freight yard is built.
+        XCTAssertTrue(HelpGuide.entries(matching: "顏色").contains { $0.id == "mapColours" })
+        XCTAssertTrue(HelpGuide.entries(matching: "colour").contains { $0.id == "mapColours" })
+        XCTAssertTrue(HelpGuide.entries(matching: "會車").contains { $0.id == "oneTrain" })
+        XCTAssertTrue(HelpGuide.entries(matching: "未配屬路線").contains { $0.id == "unassignedTrain" })
+        XCTAssertTrue(HelpGuide.entries(matching: "No path ahead").contains { $0.id == "unassignedTrain" })
+        let materials = HelpGuide.entries.first { $0.id == "materials" }
+        XCTAssertTrue(materials?.answer(in: .traditionalChinese).contains("在車站面板的「貨運」") == true)
+        XCTAssertTrue(materials?.answer(in: .english).contains("\(Freight.tonsPerCar) t a car") == true)
     }
 }

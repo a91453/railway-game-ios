@@ -155,6 +155,8 @@ final class FreightSessionTests: XCTestCase {
         let name = try XCTUnwrap(world.station(id: short)?.name)
         XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).isWorry)
         XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).text(in: .traditionalChinese).contains("缺建材"))
+        XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).text(in: .traditionalChinese).contains("在車站面板的「貨運」"))
+        XCTAssertTrue(StationMasterAdvice.materialsShort(station: short, name: name).text(in: .english).contains("station panel's Freight section"))
 
         // Without building materials no station is ever short.
         var off = try newGameLine(through: [towns[0], towns[1]])
