@@ -45,6 +45,7 @@ CI（Linux）在這段期間有 9 次 push run 失敗，Wasm Probe 沒有紅燈�
 
 ### PR A：CI（`claude/pr319-400-review-ci`）
 
+0. **`swift-shards.sh` 過不了 shellcheck**：見第六節最後一段。修好之前，任何改到 TestFlight 腳本的 PR，TestFlight Checks 都會紅。
 1. **TestFlight 的 What to Test 寫錯上一版的編號**（#377，`testflight-changes.py`）
    - **原因**：讀的是上一次 run 的 `run_attempt`，那是 run 最新一次的 attempt。workflow 本身建議處理逾時時只重跑 processing job；這樣 attempt 變成 2，上傳的卻是 N.1，下一版就會寫「Changes since build N.2」。
    - **修正**：改讀成功的上傳 job（「Archive, sign, export, check and upload」）的 attempt；GitHub 沒列出 job 時退回 run 的 attempt。
@@ -160,11 +161,41 @@ CI（Linux）在這段期間有 9 次 push run 失敗，Wasm Probe 沒有紅燈�
 | #391 | 觀光：沒有新發現（名產店折舊另一條線在修） |
 | #396 | 第四節第 3 項 |
 | #397 | 第三節第 9 項 |
-| #338、#347、#350、#351、#363、#365、#367、#368、#369、#371 | 3D 城市試作與車輛模型工具，見第六節 |
+| #338、#347、#350、#351、#363、#365、#367、#368、#369、#371 | 3D 城市試作與車輛模型工具，見第六節（兩項只回報） |
 
-## 六、3D 城市試作與工具
+## 六、3D 城市試作、工具與文件 PR
 
-（審查中，結果待補）
+這些 PR 都沒有在 GameCore、存檔、決定性或失敗原子性留下問題。只有 #336、#337 改到 3D 頁面以外的 Swift，兩者都沒問題。
+
+只回報、沒有修的兩項：
+
+1. **重跑列車工具會蓋掉作者烤好的 N700ST 模型**（#365 的 `bake_model.py`，疊在 #363 的 `build_train.py` 與 #347／#350 的 `meshy.mjs pack` 上）
+   - `index.json` 裡烤好的 `n700st-cab` 項目有 `colour`、`aoChannel: 0`、`fit: false`。
+   - 照 `tools/trains/README.md` 跑 `build_train.py`（不帶參數）時：
+     - 同名的 GLB 與 AO 會被改寫成程式畫的外殼。
+     - `index.update` 會整項換掉，`colour` 與 `aoChannel` 就不見了。
+   - 跑 `meshy.mjs pack n700st-cab` 會蓋掉 GLB，項目重設成 `{file, front}`。少了 `fit: false`，車就被重新縮放。
+   - 只在有人重跑工具時發生。建議：
+     - `meshy.mjs` 改成合併項目：`{ ...index[id], file, front }`。
+     - 程式畫的版本另取名字，或在項目有 `colour` 時拒絕覆寫。
+2. **官網 3D 頁：瀏覽器語言改變後，保存的設定會遺失**（#369，`Web/CityView/src/main.js` 約 382–415 行）
+   - 原因：控制項先依 `GUI_ZH` 改名，再 `gui.save()`，所以 localStorage 的鍵是中文名。
+   - 換成英文瀏覽器時，`gui.load()` 認不得這些名字，設定變回預設；離開頁面時還會把預設值寫回去，蓋掉原本的中文設定。
+   - App 帶參數開頁（`explicit`），不讀也不存，所以不受影響。
+   - 建議：用 DOM 改顯示的文字，內部名稱保持英文。
+
+逐 PR：
+
+- #320、#321、#323、#328：量測工具與研究，沒有發現。
+- #329：只有文件。
+- #367、#368、#370、#371：沒有發現。
+- #338、#347、#350、#351、#363、#365：只有第 1 項。
+- #369：第 2 項。
+
+另外，**PR #534 的 TestFlight Checks 抓到 `main` 的 `swift-shards.sh` 過不了 shellcheck**：
+- 決策 185（1a85d0b6，#401 之後）的程式重用了 `names`、`parts` 兩個名稱，在不同函式裡一下是陣列、一下是字串。
+- `testflight-checks.yml` 只在 TestFlight 檔案改動時跑，所以 `main` 一直沒有跑到。
+- 修正在 #534（f90ed9ed）。
 
 ## 七、建議下一步
 
@@ -181,4 +212,5 @@ CI（Linux）在這段期間有 9 次 push run 失敗，Wasm Probe 沒有紅燈�
   - `testflight-selftest-processing.py`：23 項全過。
   - `ios-full-lane.yml`：YAML 能解析，`bash -n` 通過。
 - **UNVERIFIED LOCALLY — requires macOS/Xcode CI**：`FinanceTrendCharts.swift`、`TrainLoadBar.swift`，本機只做了 `swiftc -parse`。
+- PR #534 改到 `.github/scripts/`，照決策 185 會跑完整 Swift tier（第四節第 1 項）。第一次的 run 已取消、讓出 runner，等合併 session 放行再推。
 - 審查方法：8 個唯讀的審查 agent，各讀一組 PR 的 diff 並對照 `main` 現況。每個發現都由我自己讀程式確認，能寫測試的先寫失敗的測試。
