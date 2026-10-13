@@ -203,10 +203,11 @@ struct StartView: View {
                 choosesDemo = true
             }
             .accessibilityIdentifier("start.demoMap")
-            if !launcher.otherSaves.isEmpty {
+            // Decision 192: the older autosaves are listed there too.
+            if !launcher.otherSaves.isEmpty || !launcher.olderAutosaves.isEmpty {
                 StartButton(
                     title: String(localized: "Saved Games"),
-                    detail: String(localized: "\(launcher.otherSaves.count) saves"),
+                    detail: String(localized: "\(launcher.otherSaves.count + launcher.olderAutosaves.count) saves"),
                     systemImage: "tray.full",
                     tone: .plain
                 ) {
@@ -403,11 +404,13 @@ struct StartView: View {
             .overlay(Capsule().strokeBorder(Theme.panelBorder, lineWidth: 1))
     }
 
-    /// The save's game time, cash and size, and when it was saved.
+    /// The save's game time, cash and size, and when it was saved, and
+    /// how long ago (decision 192).
     private func detail(of entry: SaveLibrary.Entry) -> String {
         let summary = entry.summary?.text(in: launcher.language) ?? ""
         guard let savedAt = entry.savedAt else { return summary }
-        return "\(summary)\n\(String(localized: "Saved \(savedAt.formatted(date: .abbreviated, time: .shortened))"))"
+        let ago = SaveLibrary.agoText(from: savedAt, to: Date(), in: launcher.language)
+        return "\(summary)\n\(String(localized: "Saved \(savedAt.formatted(date: .abbreviated, time: .shortened))")) · \(ago)"
     }
 }
 
@@ -580,11 +583,13 @@ private struct CardTapButtonStyle: ButtonStyle {
     }
 }
 
-/// The player's saves, and an autosave that cannot be loaded: tap one to
+/// The player's saves, and autosaves that cannot be loaded: tap one to
 /// load it. A save that cannot be loaded says why. Since decision 184 each
 /// row shows the game's date and funds, the list can be ordered by date or
 /// name, a save can be named (swipe, or hold it), and deleting one asks
-/// first.
+/// first. Since decision 192 the older autosaves come first, the newest
+/// first, each saying how long ago it was saved: loading one goes back to
+/// the game as it was then.
 struct SaveListView: View {
     let launcher: GameLauncher
     @Environment(\.dismiss) private var dismiss
@@ -606,6 +611,39 @@ struct SaveListView: View {
                         Label(message.text, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(Theme.warning)
+                    }
+                }
+                if !launcher.olderAutosaves.isEmpty {
+                    Section {
+                        ForEach(launcher.olderAutosaves) { entry in
+                            Button {
+                                launcher.load(entry)
+                                if launcher.session != nil {
+                                    dismiss()
+                                }
+                            } label: {
+                                row(entry)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleting = entry
+                                } label: {
+                                    Label {
+                                        Text(verbatim: language.text("Delete", "刪除"))
+                                    } icon: {
+                                        Image(systemName: "trash")
+                                    }
+                                }
+                            }
+                            .accessibilityIdentifier("saves.row.\(entry.id)")
+                        }
+                    } header: {
+                        Text(verbatim: language.text("Earlier Autosaves", "之前的自動存檔"))
+                    } footer: {
+                        Text(verbatim: language.text(
+                            "One every 15 minutes of play, the last \(SaveLibrary.autosaveSlots) kept. Going back keeps the game you leave as an autosave too.",
+                            "遊戲中每 15 分鐘存一份，保留最近 \(SaveLibrary.autosaveSlots) 份。回到之前時，離開的進度也會存成一份自動存檔。"
+                        ))
                     }
                 }
                 Section {
@@ -669,7 +707,7 @@ struct SaveListView: View {
                 }
             }
             .overlay {
-                if launcher.otherSaves.isEmpty {
+                if launcher.otherSaves.isEmpty && launcher.olderAutosaves.isEmpty {
                     ContentUnavailableView("No Saved Games", systemImage: "tray")
                 }
             }
@@ -773,6 +811,15 @@ struct SaveListView: View {
                 Text(verbatim: title(of: entry))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(entry.problem == nil ? Theme.textPrimary : Theme.textSecondary)
+                // Decision 192: an autosave says how long ago it was saved,
+                // by the clock on the wall, kept current while it shows.
+                if entry.kind == .autosave, let savedAt = entry.savedAt {
+                    TimelineView(.everyMinute) { context in
+                        Text(verbatim: "\(SaveLibrary.agoText(from: savedAt, to: context.date, in: launcher.language)) · \(savedAt.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
                 // A named save says when it was saved too.
                 if entry.name != nil, let savedAt = entry.savedAt {
                     Text(verbatim: savedAt.formatted(date: .abbreviated, time: .shortened))

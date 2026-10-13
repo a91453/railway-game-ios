@@ -6330,6 +6330,41 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；按鈕的點擊、與 MapLibre／MapKit 手勢不衝突、膠囊的樣子要在 macOS CI 與 TestFlight 上看。MapLibre Native 6.31.0 在 style 的 source attribution 與 PMTiles 檔 metadata 的 attribution 都有時 (i) 顯示哪一個沒有驗證。
 
+### 192. 多槽輪替的自動存檔：回到幾分鐘前
+
+2026-10-13，`docs/research/NEXT_PRIORITIES_2026-10-12.md` 波次 1 第 7 項、§10 第 18 題；玩家意見 54.1 第 4 項「蓋錯了不能復原」。遊戲時間一走 Undo 就清空（決策 82），而自動存檔只有一份，每 15 分鐘與離開時都寫同一個 `autosave.json`，新手蓋錯了回不去。A 列車 9 Evolution 把多份自動存檔當主打功能。存檔的內容（`SavedGame`）不變，存檔版本不動；只改 GamePresentation 的存檔資料夾與 App 的畫面。
+
+**參考庫與外部專案**（私有 repo `382b9f8`）：
+- `Ci/reference_snapshot/` 的雲端自動存檔每 15 分鐘一次（`METRO_CLOUD_AUTOSAVE_INTERVAL_MS = 900 * 1e3`，`runMetroCloudAutosave`），但每次都寫第 1 槽（`saveCurrentCityCloudSlot(1, {automatic: true})`），沒有輪替；本機有 3 槽（`normalizeMetroAppLocalSlotNo`），存檔時間顯示成絕對時間（`formatCloudSlotTime`）；`archiveMetroAppCurrentDraftBeforeFreshStart` 把草稿放進第 2、3 槽的空位，滿了就不存。
+- `Railway/city_world_reference/source/assets/` 的備份（`engine-*.js` 的 `Dt`）是最新的在前、最多 3 份、最舊的擠掉（`[新, ...舊].slice(0, 3)`），但只在雲端覆蓋前備份，不是定時。相對時間 `dom-*.js` 的 `p(e, t)`：45 秒內「剛剛」，之後依序四捨五入成分鐘（60 分以內）、小時（24 小時以內）、天。**照搬**成 `SaveLibrary.agoText(from:to:in:)`，中英文字樣相同（英文 "just now"、"N min ago"、"N h ago"、"N d ago"）。
+- `Railway/railway_game_reference_clean/` 的 OpenTTD 只留下設定名（`gui.autosave_interval`、`gui.max_num_autosaves`、`gui.keep_all_autosave`），沒有預設值與輪替的程式。`Simulator/`、`MapBuilder/`、`OpenWorld/` 沒有可用的。
+- 外部專案沒有引用程式碼；「定時存檔輪流寫 N 份、最舊的先走」是 OpenTTD 的 `max_num_autosaves` 的想法（GPL，只取想法）。
+
+**檔案**（`SaveLibrary`）：
+- **最新的**：`autosave.json`，照舊在離開遊戲時寫（App 進背景、回到開始畫面）。舊版只有這一份，名字沒變，所以升級後照樣列出、照樣「繼續」，不需要轉換。
+- **輪替的**：`autosave-<n>.json`，遊戲中每 15 分鐘（`GameLauncher.autosaveInterval`，參考的 `AUTOSAVE_INTERVAL_MS`）寫一份，`n` 是目前最大的號碼加 1（`saveAutosaveSlot`），寫完才刪掉超過 `SaveLibrary.autosaveSlots`（5）的最小號碼與它的新聞旁檔，所以寫失敗不會少一份。用號碼而不用時間決定順序：不必為了找最舊的一份去解每個 7 MB 的檔頭，也不受裝置時鐘影響。舊版 build 會把 `autosave-<n>.json` 當成玩家的存檔列出（只有降版才會遇到）。
+- 兩者都是 `Kind.autosave`；`Entry.slot` 是號碼（最新的是 `nil`）。清單照存檔時間排，最新的在前；同一刻存的兩份，`autosave.json` 在前，再來號碼大的（回到之前時，先存離開的進度、再寫最新的，兩份同一秒）。
+- **不重複佔槽**：定時存檔時，世界和上一份輪替的（或這局剛開始時的）一樣就不寫（`GameLauncher.autosaveSlotInBackground`，`GameWorld` 的 `==`）。玩家暫停後放著不管，不會用五份一樣的存檔把可以回去的那幾份擠掉。
+
+**繼續與回到之前**（`GameLauncher`）：
+- 「繼續」讀最新的一份（所有自動存檔裡存檔時間最新、讀得到的；通常是 `autosave.json`，App 被系統關掉前最後一次定時存檔較新時就是那一份）。
+- **讀檔頭的時間**：檔頭要解整個 JSON，約 10 ms／MB（Linux release，6 份各 22.7 MB 的存檔讀 1.4 s），所以高鐵示範的 6 份約 0.4 s。主執行緒在等的地方（另開一局、在開始畫面回到之前）只讀可能是最新的兩份：`autosave.json` 與號碼最大的那份（`newestAutosave()`；每份輪替的都比前一份晚寫）。遊戲選單的清單在背景讀（`autosavesToGoBackTo()` 是 `async`）。比較世界（`==`）在沒變時約 1 ms（陣列先比儲存區是不是同一個）。
+- 讀其他的自動存檔就是「回到之前」（`load(_:at:)`），**可以反悔**：在遊戲裡回去時，先把現在的進度存成下一份輪替的；在開始畫面回去時，把最新的 `autosave.json` 搬成下一份輪替的（只換檔名，不重寫）。然後讀選的那份，並在背景把它寫成新的 `autosave.json`，所以之後「繼續」接的是回去後的這局。選的那份先讀進來才輪替，輪替刪掉它也不影響。
+- 遊戲選單：「另存或匯出」子選單改名「另存、匯出或回到之前」，多一項「回到之前的自動存檔…」（`menu.goBack`）。第一層列數不變（決策 184 的選單溢出）。按了才讀自動存檔（只讀自動存檔的檔頭，`autosavesToGoBackTo()`），列出每一份的「幾分鐘前 · 遊戲日期 · 資金」讓玩家選（`menu.goBack.<檔名>`）；選項在按下時就決定，遊戲的 tick 不會重建它（#449 的原則）。還沒有自動存檔時，狀態列說每 15 分鐘會存一份。
+- 遊戲中不重讀存檔清單（#425 的做法照舊）：`launcher.entries` 在回到開始畫面時才重讀。
+
+**讀檔畫面**（`StartView`）：「繼續」的說明多一個「幾分鐘前」。「存檔」清單最上面一段「之前的自動存檔」（`olderAutosaves`，最新的在前），每列寫「12 分鐘前 · 存檔日期時間」（`TimelineView(.everyMinute)` 讓它每分鐘更新），下面照舊是遊戲日期與資金、路網規模；可以滑動刪除，不能改名。玩家自己的存檔與讀不到的自動存檔照舊在下一段、照舊可以排序。新字串都是 `language.text` 的兩種語言（`Text(verbatim:)`），沒有改 `Localizable.xcstrings`。
+
+**清理**：
+- 自動存檔最多 6 份（最新的加 5 份輪替）：高鐵示範一份約 7.2 MB，最多約 43 MB；一般的局小得多。
+- 另開一局（新遊戲、示範、讀玩家的存檔、匯入）之前（`archiveAutosave`）：最新、讀得到的那份照舊變成玩家的存檔（`save-<時間>.json`），上一局永遠不會不見；**其他的自動存檔刪掉**，自動存檔永遠只屬於正在玩的這一局，「回到之前」不會回到別局。可能是最新的兩份裡讀不到的（例如較新的 build 寫的）也變成玩家的存檔留著，清單寫出原因，由玩家刪；較舊的輪替不讀就刪。
+- 先搬要留的、再刪：搬不動就不開新局，什麼都沒刪；刪除失敗不擋開新局（只是沒整理到）。
+
+**測試**：`AutosaveSlotsTests`（輪替與最舊的先走、新聞旁檔一起走；最新的不是槽；只認 `autosave-<數字>.json`；搬最新的進槽；相對時間逐值對照參考的四捨五入；定時存檔沒變就不佔槽；繼續讀最新的、其他列在 `olderAutosaves`；在遊戲裡回去並反悔；在開始畫面回去；新遊戲留最新、刪其他、讀不到的留著；舊版只有 `autosave.json` 照樣繼續）。既有的 `GameLauncherTests`、`SaveLibraryTests`、`BackgroundSaveTests`、`SaveNamingTests`、`ReleaseUIFixesTests` 不改。App 的畫面（SwiftUI）只能靠 macOS CI 編譯與實機確認。
+
+**還沒做**：雲端備份；輪替的份數與間隔可以在設定裡改（`SettingsView` 由 #463 佔用，之後再加）。
+
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
