@@ -582,9 +582,11 @@ extension GameWorld {
     /// who waits for whom from `train`, and drop the wait when that comes
     /// back to a train already met (they would wait for each other for
     /// ever), or ends at a train that itself waits for a route (see
-    /// ``waitingRoute(of:memo:)``). Traffic control then works as it does
-    /// without a plan (decisions 57 and 58), and a deadlock among them is
-    /// found and reported as any other.
+    /// ``waitingRoute(of:memo:)``) or, since decision 204, is due to leave
+    /// a stop with no way to its next call (see ``isStranded(_:memo:)``).
+    /// Traffic control then works as it does without a plan (decisions 57
+    /// and 58), and a deadlock among them is found and reported as any
+    /// other.
     func currentTrafficWait(_ train: Train, plan: TrafficPlan, memo: inout DirectionMemo) -> ScheduledTrafficWait? {
         guard let wait = pendingTrafficWait(train, plan: plan) else { return nil }
         var met: Set<TrainID> = [train.id]
@@ -595,9 +597,19 @@ extension GameWorld {
                 other = further.other
                 continue
             }
-            return waitingRoute(of: next, memo: &memo) == nil ? wait : nil
+            return waitingRoute(of: next, memo: &memo) == nil && !isStranded(next, memo: &memo) ? wait : nil
         }
         return wait
+    }
+
+    /// Decision 204: `train` is due to leave the stop it waits at and has
+    /// no path to its next call, so it does not come until the track
+    /// changes; a train waiting to meet it would wait for ever.
+    func isStranded(_ train: Train, memo: inout DirectionMemo) -> Bool {
+        guard case .waitingAtStop(let stop, let cycle)? = train.execution,
+              let due = departureDue(of: train), due <= clock.now,
+              case .noRoute = leaving(train, stop: stop, cycle: cycle, memo: &memo.paths) else { return false }
+        return true
     }
 }
 
