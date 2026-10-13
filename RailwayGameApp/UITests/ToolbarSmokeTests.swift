@@ -274,11 +274,15 @@ extension XCUIApplication {
     /// wholly inside, so it is enough here that it can be touched. A
     /// `List` makes its rows only as they come near, so a `holder` is
     /// swiped up until the row is there; and XCTest cannot ask whether a
-    /// button wholly off screen can be touched (it fails the test), so
-    /// that is asked only of one on screen.
+    /// button off screen can be touched (it fails the test), so that is
+    /// asked only of one whose middle is on screen.
     func scrollUntilHittable(_ button: XCUIElement, in holder: XCUIElement? = nil, swipes: Int = 20) -> Bool {
         func touchable() -> Bool {
-            button.exists && frame.intersects(button.frame) && button.isHittable
+            // Its middle on screen: XCTest could not tell whether a button
+            // whose top edge alone showed can be touched (run 38335812150).
+            guard button.exists else { return false }
+            let place = button.frame
+            return frame.contains(CGPoint(x: place.midX, y: place.midY)) && button.isHittable
         }
         if holder == nil, !button.waitForExistence(timeout: 10) { return false }
         let holder = holder ?? [scrollViews, collectionViews, tables]

@@ -410,11 +410,16 @@ private struct GameMenu: View, Equatable {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Theme.primary)
                 .frame(width: 38, height: 32)
+                // Touched over 44 by 44 points: a menu is touched over its
+                // label's own frame, not a larger content shape (run
+                // 38335812150), so the label is that large and the
+                // negative padding below keeps the 38 by 32 the pill lays
+                // out (``touchTarget(around:)``).
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
-        // The menu's label as a button in the style below, which owns the
-        // touch area (one set inside a label is not used: run 38333522943).
-        .menuStyle(.button)
-        .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 38, height: 32)))
+        .padding(.horizontal, -3)
+        .padding(.vertical, -6)
         .accessibilityLabel("Game menu")
         .accessibilityHint("Saves the game, exports it as a file, opens the tutorial or the settings, or goes back to the start screen.")
         .accessibilityIdentifier("hud.menu")
