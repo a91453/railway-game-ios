@@ -119,14 +119,14 @@ final class RealWorldMapUITests: XCTestCase {
         defer { app.terminate() }
 
         app.openDemo("demo.realWorld")
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         // Paused, so the live clock does not rebuild the style menu.
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
 
         let base = app.descendants(matching: .any)["map.base"].firstMatch
-        XCTAssertTrue(base.waitForExistence(timeout: 30), "Apple's map is under the game's")
+        XCTAssertTrue(base.appears(within: 30), "Apple's map is under the game's")
         assertLinesUp(base, "after changing to satellite")
 
         let zoomIn = app.buttons["Zoom in"]
