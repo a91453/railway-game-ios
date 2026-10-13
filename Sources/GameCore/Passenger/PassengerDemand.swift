@@ -310,7 +310,7 @@ extension GameWorld {
 
     /// A planned ride can wait across the nightly closure, but must still
     /// have a physical journey and a service planned at some level.
-    private func isServed(_ leg: PassengerJourneyLeg, onFreightLines: Bool = false) -> Bool {
+    func isServed(_ leg: PassengerJourneyLeg, onFreightLines: Bool = false) -> Bool {
         isServed(leg, scheduled: isScheduled(leg.line, pattern: leg.pattern), onFreightLines: onFreightLines)
     }
 
@@ -905,11 +905,20 @@ extension GameWorld {
 
     /// Validate each distinct planned leg once, even with a full station's
     /// thousands of minute groups. Legacy direct queues need no graph work.
-    private func servedWaitingLegs(onFreightLines: Bool = false) -> Set<PassengerJourneyLeg> {
+    /// Whether a leg's service runs (``isScheduled(_:pattern:)``, which works
+    /// out the service's journey) is worked out once per service, not once
+    /// per leg: many legs share one.
+    func servedWaitingLegs(onFreightLines: Bool = false) -> Set<PassengerJourneyLeg> {
         let pending = Set(passengers.flatMap(\.waiting).flatMap { group in
             group.journey.map { Array($0.legs.dropFirst($0.current)) } ?? []
         })
-        return Set(pending.filter { isServed($0, onFreightLines: onFreightLines) })
+        var scheduled: [ScheduledService: Bool] = [:]
+        return Set(pending.filter { leg in
+            let key = ScheduledService(line: leg.line, pattern: leg.pattern)
+            let runs = scheduled[key] ?? isScheduled(leg.line, pattern: leg.pattern)
+            scheduled[key] = runs
+            return isServed(leg, scheduled: runs, onFreightLines: onFreightLines)
+        })
     }
 
     mutating func reindexPassengerJourneys(on line: LineID, removing pattern: Int) {
