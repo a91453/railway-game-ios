@@ -154,6 +154,26 @@ final class TrainDiagramTests: XCTestCase {
         XCTAssertTrue(seen, "a forest railway's train cannot keep an express's times")
     }
 
+    /// A late train held at a stop leaves it now at the soonest: its
+    /// lateness is counted once, from its departure due.
+    func testALateTrainWaitingAtAStopIsExpectedToLeaveNow() throws {
+        var (world, line, _) = try singleTrackWithLoop(slowTrains: true)
+        var seen = false
+        let single = TrainDiagram.singleTrackSections(of: line, in: world)
+        for _ in 0..<720 where !seen {
+            try world.advance(ticks: 5)
+            let diagram = try XCTUnwrap(TrainDiagram(world: world, line: line, singleTrack: single))
+            for train in diagram.running where train.isLate {
+                guard case .waitingAtStop? = world.train(id: train.train)?.execution else { continue }
+                seen = true
+                XCTAssertEqual(train.expected.first, train.now)
+                XCTAssertEqual(train.expected.dropFirst().first?.time, diagram.now, "leaves now, not \(train.lateSeconds) s after")
+                XCTAssertEqual(train.expected.map(\.time), train.expected.map(\.time).sorted(), "never back in time")
+            }
+        }
+        XCTAssertTrue(seen, "a late train held at a stop")
+    }
+
     func testAFixedTimetablesRunNotYetSentOutIsDrawnAtItsTimes() throws {
         var (world, line, _) = try singleTrackWithLoop()
         try world.setLineRuns(line, to: [LineRun(from: 0, to: 2, times: [

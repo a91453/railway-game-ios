@@ -169,6 +169,28 @@ final class OnboardingTests: XCTestCase {
         }
     }
 
+    /// A line whose trains all run a pattern of it has trains: losing
+    /// money, it is told so.
+    func testAShortLineRunningItsTrainOnAPatternIsCalledLosing() throws {
+        var world = try shortLine()
+        world.setLandDemand(false)
+        for station in world.stations {
+            try world.setStationDemand(station.id, to: StationDemand(kind: .residential, dailyTrips: 0))
+        }
+        let line = try XCTUnwrap(world.lines.first)
+        let pattern = try world.addLinePattern(line.id, calling: [0, 1])
+        for train in world.trains.map(\.id) {
+            try world.unassignTrain(train)
+            try world.assignTrain(train, to: line.id, pattern: pattern)
+        }
+        XCTAssertTrue(try XCTUnwrap(world.lines.first).trains.isEmpty)
+        world.setSpeed(.normal)
+        try world.advance(ticks: 3 * 1_440)
+        guard case .firstLineLosing? = StationMasterAdvice(world: world) else {
+            return XCTFail("a losing first line: \(String(describing: StationMasterAdvice(world: world)))")
+        }
+    }
+
     // MARK: - Feedback
 
     func testALossFloatsRedAndShort() {

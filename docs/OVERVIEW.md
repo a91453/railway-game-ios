@@ -146,6 +146,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | `PHASE5_TRANSFER_HANDOFF.md` | 5F 已由決策 65 完成 |
 | `STAGE_V_HANDOFF.txt` | Stage V 已由決策 57–64 完成 |
 | `PR200_290_REVIEW_HANDOFF.md` | #200–#365 的審查交接；決策 134 等引用它 |
+| `PR401_525_REVIEW_HANDOFF.md` | #401–#525 的審查交接：`main` 的 CI 紅燈、修的 bug、待作者決定的項目 |
 | `UI_GAP_AND_PORT_PLAN.md` | 由 UX_REDESIGN_STUDY 與決策 106–122 取代 |
 | `MAPKIT_E2.md` | 由決策 50、97、151 取代 |
 
