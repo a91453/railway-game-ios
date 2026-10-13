@@ -26,6 +26,12 @@ public enum PlayerCommand: Hashable, Sendable {
     /// An edge and each of its end nodes no other edge ends at
     /// (``GameSession/removeNetworkEdge()``).
     case removeTrack(TrackEdgeID)
+    /// An X crossover between two tracks (``GameSession/buildNetworkScissors()``),
+    /// as the tool planned it.
+    case buildCrossover(ScissorsPlan, structure: TrackStructure)
+    /// A track beside a platform, with a platform of its own
+    /// (``GameSession/addPlatformTrack(beside:layout:side:)``), as planned.
+    case addPlatformTrack(PlatformTrackPlan)
     /// An edit from a panel or another tool (``Edit``).
     case edit(Edit)
 
@@ -83,18 +89,21 @@ public enum PlayerCommand: Hashable, Sendable {
     }
 
     /// A platform on `edge` from `start` to `end`, for `station`, or for a
-    /// new station.
+    /// new station; on a grade, on the level edge `levelling` builds first
+    /// (decision 190).
     public struct PlatformAddition: Hashable, Sendable {
         public let edge: TrackEdgeID
         public let start: Int64
         public let end: Int64
         public let station: PlatformStation
+        public let levelling: PlatformLevelling?
 
-        public init(edge: TrackEdgeID, start: Int64, end: Int64, station: PlatformStation) {
+        public init(edge: TrackEdgeID, start: Int64, end: Int64, station: PlatformStation, levelling: PlatformLevelling? = nil) {
             self.edge = edge
             self.start = start
             self.end = end
             self.station = station
+            self.levelling = levelling
         }
     }
 
@@ -112,6 +121,12 @@ public enum PlayerCommand: Hashable, Sendable {
         public var track: (edge: TrackEdgeID, to: TrackNodeID)?
         /// The station the platform went to.
         public var station: Station?
+        /// The platform's stretch, on the level edge once levelled, and
+        /// what levelling it cost.
+        public var stretch: (edge: TrackEdgeID, start: Int64, end: Int64)?
+        public var levellingCost: Money?
+        /// The platform track built beside a platform.
+        public var platform: TrackPlatform?
         /// The train bought.
         public var train: Train?
         /// The line made.
@@ -141,6 +156,8 @@ public enum PlayerCommand: Hashable, Sendable {
         case .addPlatform: "addPlatform"
         case .removePlatform: "removePlatform"
         case .removeTrack: "removeTrack"
+        case .buildCrossover: "buildCrossover"
+        case .addPlatformTrack: "addPlatformTrack"
         case .edit(let edit): edit.name
         }
     }
@@ -157,6 +174,14 @@ extension GameSession {
         case .buildTrack(let stretch):
             outcome.track = try stretch.build(in: &world, heights: heights)
         case .addPlatform(let addition):
+            // The platform's stretch, on the level edge once levelled.
+            var stretch = (edge: addition.edge, start: addition.start, end: addition.end)
+            if let levelling = addition.levelling {
+                let balance = world.economy.balance
+                let edge = try build(levelling, in: &world)
+                stretch = (edge, 0, world.network.edge(edge)?.length ?? 0)
+                outcome.levellingCost = Money(balance.amount - world.economy.balance.amount)
+            }
             let station: Station
             switch addition.station {
             case .existing(let id):
@@ -170,13 +195,20 @@ extension GameSession {
                     try world.setStationDemand(station.id, to: demand)
                 }
             }
-            try world.addTrackPlatform(station.id, on: addition.edge, from: addition.start, to: addition.end)
+            try world.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
+            outcome.stretch = stretch
             // Decision 88: the land round a new station is read in after the
             // edit; read it now, so the opening message counts who it reaches.
             Self.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
             outcome.station = station
         case .removePlatform(let platform):
             try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
+        case .buildCrossover(let plan, let structure):
+            // The diagonals joined at the middle: the tool says so before it
+            // asks, so on the world it planned on this never happens.
+            guard try build(plan, in: &world, structure: structure) != nil else { throw .invalidTrackGeometry }
+        case .addPlatformTrack(let plan):
+            outcome.platform = try build(plan, in: &world)
         case .edit(let edit):
             return try apply(edit, to: &world)
         case .removeTrack(let id):
@@ -234,6 +266,9 @@ extension PlayerCommand: Codable {
         var startDistance: Int64?
         var endDistance: Int64?
         var edit: Edit?
+        var crossover: ScissorsPlan?
+        var platformTrack: PlatformTrackPlan?
+        var levelling: PlatformLevelling?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -294,12 +329,20 @@ extension PlayerCommand: Codable {
                 }
                 station = .new(name: name, at: point, demand: StationDemand(kind: kind, dailyTrips: demand.dailyTrips, hinterland: demand.hinterland))
             }
-            self = .addPlatform(PlatformAddition(edge: .edge(edge), start: start, end: end, station: station))
+            self = .addPlatform(PlatformAddition(edge: .edge(edge), start: start, end: end, station: station, levelling: record.levelling))
         case "removePlatform":
             guard let station = record.station, let edge = record.edge, let start = record.startDistance, let end = record.endDistance else {
                 throw invalid("a platform needs its station, edge, start and end")
             }
             self = .removePlatform(TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end))
+        case "buildCrossover":
+            guard let plan = record.crossover, let structure = record.structure.flatMap(TrackStructure.init(rawValue:)) else {
+                throw invalid("a crossover needs its plan and structure")
+            }
+            self = .buildCrossover(plan, structure: structure)
+        case "addPlatformTrack":
+            guard let plan = record.platformTrack else { throw invalid("a platform track needs its plan") }
+            self = .addPlatformTrack(plan)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -335,6 +378,7 @@ extension PlayerCommand: Codable {
             record.edge = addition.edge.number
             record.startDistance = addition.start
             record.endDistance = addition.end
+            record.levelling = addition.levelling
             switch addition.station {
             case .existing(let id):
                 record.station = id.rawValue
@@ -350,6 +394,11 @@ extension PlayerCommand: Codable {
             record.endDistance = platform.end
         case .removeTrack(let edge):
             record.edge = edge.number
+        case .buildCrossover(let plan, let structure):
+            record.crossover = plan
+            record.structure = structure.rawValue
+        case .addPlatformTrack(let plan):
+            record.platformTrack = plan
         case .edit(let edit):
             record.edit = edit
         }

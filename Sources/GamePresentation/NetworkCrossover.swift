@@ -13,14 +13,25 @@ import GameCore
 /// The four places and the middle of an X crossover, and the curves of its
 /// four halves: from the first track's place out to the middle and on to
 /// the second track's, then the mirrored diagonal.
-struct ScissorsPlan {
+public struct ScissorsPlan: Hashable, Sendable {
     /// The places on the tracks: the picked ones, then each projected
     /// across onto the other track.
-    let places: [(point: NetworkEdgePoint, position: WorldCoordinate)]
+    let places: [Place]
     let middle: WorldCoordinate
-    /// The halves, as (from place, curve, to place), with the middle as
+    /// The halves, from place, curve and to place, with the middle as
     /// place 4.
-    let halves: [(from: Int, curve: TrackCurve, to: Int)]
+    let halves: [Half]
+
+    struct Place: Hashable, Sendable {
+        let point: NetworkEdgePoint
+        let position: WorldCoordinate
+    }
+
+    struct Half: Hashable, Sendable {
+        let from: Int
+        let curve: TrackCurve
+        let to: Int
+    }
 }
 
 extension GameSession {
@@ -61,19 +72,19 @@ extension GameSession {
         let places = [(start, p1), (end, p2), (q1, q1Position), (q2, q2Position)]
         // Each diagonal runs straight through the middle: its halves leave
         // the middle back toward their own track.
-        func half(_ from: Int, to place: Int, through way: PlanVector) -> (from: Int, curve: TrackCurve, to: Int)? {
+        func half(_ from: Int, to place: Int, through way: PlanVector) -> ScissorsPlan.Half? {
             let point = places[place]
             guard let leaving = world.joiningDirection(at: point.0, toward: middle.plan),
                   let curve = NetworkBuilding.curve(from: point.1.plan, leaving: leaving, to: middle.plan, leaving: way)
             else { return nil }
-            return (from, curve, 4)
+            return ScissorsPlan.Half(from: from, curve: curve, to: 4)
         }
         let first = PlanVector(dx: p2.x - p1.x, dy: p2.y - p1.y)
         let second = PlanVector(dx: q1Position.x - q2Position.x, dy: q1Position.y - q2Position.y)
         guard let a = half(0, to: 0, through: first.reversed), let b = half(1, to: 1, through: first),
               let c = half(3, to: 3, through: second.reversed), let d = half(2, to: 2, through: second)
         else { return .failure(.tooSharp) }
-        return .success(ScissorsPlan(places: places.map { ($0.0, $0.1) }, middle: middle, halves: [a, b, c, d]))
+        return .success(ScissorsPlan(places: places.map { ScissorsPlan.Place(point: $0.0, position: $0.1) }, middle: middle, halves: [a, b, c, d]))
     }
 
     /// Builds `plan` in `world`: the four splits, the middle and the four
@@ -173,13 +184,13 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return
         }
-        let built = draft
-        let done = perform { world throws(GameError) in
-            world = built
+        // Decision 193: the plan is the command; building it again on the
+        // world it was planned on makes the same.
+        let done = perform(.buildCrossover(plan, structure: networkStructure)) { _, _, world in
             let cost = Money(balance.amount - world.economy.balance.amount)
             return language.text("Built an X crossover for \(cost.moneyText).", "已建造 X 型交叉渡線，花費 \(cost.moneyText)。")
         }
-        if done {
+        if done != nil {
             networkStart = nil
             networkEnd = nil
             playSound?(.track)

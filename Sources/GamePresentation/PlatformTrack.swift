@@ -79,7 +79,7 @@ enum PlatformTrackProblem: Error {
 /// Where a turnout of a platform track goes: an existing node, or a place
 /// on an edge to split; with its position and the way the new track leaves
 /// it along the line.
-struct PlatformTrackTurnout {
+public struct PlatformTrackTurnout: Hashable, Sendable {
     let node: TrackNodeID?
     let point: NetworkEdgePoint?
     let position: WorldCoordinate
@@ -89,12 +89,26 @@ struct PlatformTrackTurnout {
 /// A platform track worked out from the world: its two turnouts, the new
 /// nodes' positions beside the platform's ends and the three new edges'
 /// curves.
-struct PlatformTrackPlan {
+public struct PlatformTrackPlan: Hashable, Sendable {
     let platform: TrackPlatform
     let near: PlatformTrackTurnout
     let far: PlatformTrackTurnout
-    let beside: (near: WorldCoordinate, far: WorldCoordinate)
-    let curves: (out: TrackCurve, along: TrackCurve, back: TrackCurve)
+    let beside: Beside
+    let curves: Curves
+
+    /// The new nodes' positions beside the platform's ends.
+    struct Beside: Hashable, Sendable {
+        let near: WorldCoordinate
+        let far: WorldCoordinate
+    }
+
+    /// The new edges' curves: out from the near turnout, along the
+    /// platform, back to the far one.
+    struct Curves: Hashable, Sendable {
+        let out: TrackCurve
+        let along: TrackCurve
+        let back: TrackCurve
+    }
     /// What carries the platform's track, and so the new one.
     let structure: TrackStructure
 }
@@ -183,7 +197,7 @@ extension GameSession {
               let back = NetworkBuilding.curve(from: end.position.plan, leaving: end.way, to: far.position.plan, leaving: far.leaving)
         else { return .failure(.noRoom) }
         return .success(PlatformTrackPlan(
-            platform: platform, near: near, far: far, beside: (start.position, end.position), curves: (out, along, back),
+            platform: platform, near: near, far: far, beside: .init(near: start.position, far: end.position), curves: .init(out: out, along: along, back: back),
             structure: edge.structure
         ))
     }
@@ -254,10 +268,7 @@ extension GameSession {
         let balance = world.economy.balance
         let station = world.station(id: platform.station)?.name ?? ""
         let sideText = platformTrackSideText(side, of: platform)
-        perform { world throws(GameError) in
-            var draft = world
-            _ = try build(plan, in: &draft)
-            world = draft
+        perform(.addPlatformTrack(plan)) { _, _, world in
             let cost = Money(balance.amount - world.economy.balance.amount)
             return language.text(
                 "\(station): \(layout.title(in: language).lowercased()) track on the \(sideText), for \(cost.moneyText).",

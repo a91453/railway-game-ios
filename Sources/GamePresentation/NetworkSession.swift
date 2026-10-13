@@ -426,7 +426,6 @@ extension GameSession {
         let demand = newStationDemand(at: middle)
         var built: StationID?
         let grade = networkPlatformGrade
-        var levellingRefused: String?
         /// What the tool says it did.
         func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), levelled: String, in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
@@ -440,62 +439,39 @@ extension GameSession {
                     "已在\(stretch.edge.displayText(in: language))為 \(station.name) 加上 \(length) 的月台。"
                 ) + levelled
         }
+        // Decision 193: a command the log keeps, levelling and all.
+        let addition = PlayerCommand.PlatformAddition(
+            edge: stretch.edge, start: stretch.start, end: stretch.end,
+            station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand),
+            levelling: levelling
+        )
         let added: Bool
-        if levelling == nil {
-            // Decision 193: on level track, a command the log keeps.
-            let addition = PlayerCommand.PlatformAddition(
-                edge: stretch.edge, start: stretch.start, end: stretch.end,
-                station: chosen.map { .existing($0.id) } ?? .new(name: name, at: middle, demand: demand)
-            )
-            let outcome = perform(.addPlatform(addition)) { outcome, _, world in
-                outcome.station.map { text($0, on: stretch, levelled: "", in: world) } ?? ""
+        do throws(GameError) {
+            let outcome = try performCommand(.addPlatform(addition))
+            let done = outcome.stretch ?? stretch
+            var levelled = ""
+            if let cost = outcome.levellingCost {
+                let length = NetworkBuilding.lengthText(done.end - done.start, in: language)
+                levelled = language.text(
+                    " Levelled \(length) of track for it, for \(cost.moneyText).",
+                    "已為月台整平 \(length) 軌道，花費 \(cost.moneyText)。"
+                )
             }
-            added = outcome != nil
-            if chosen == nil { built = outcome?.station?.id }
-        } else {
-            added = perform { world throws(GameError) in
-                var draft = world
-                // The platform's stretch, on the level edge once levelled.
-                var stretch = stretch
-                var levelled = ""
-                if let levelling, let grade {
-                    let balance = draft.economy.balance
-                    let edge: TrackEdgeID
-                    do throws(GameError) { edge = try build(levelling, in: &draft) } catch {
-                        // GameCore's reason, said with the grade it was to level.
-                        levellingRefused = platformGradeText(grade, problem: error.playerMessage(in: language))
-                        throw error
-                    }
-                    let length = draft.network.edge(edge)?.length ?? 0
-                    stretch = (edge, 0, length)
-                    let cost = Money(balance.amount - draft.economy.balance.amount)
-                    levelled = language.text(
-                        " Levelled \(NetworkBuilding.lengthText(length, in: language)) of track for it, for \(cost.moneyText).",
-                        "已為月台整平 \(NetworkBuilding.lengthText(length, in: language)) 軌道，花費 \(cost.moneyText)。"
-                    )
+            message = StatusMessage(kind: .success, text: outcome.station.map { text($0, on: done, levelled: levelled, in: world) } ?? "")
+            endFollowIfGone()
+            added = true
+            if chosen == nil { built = outcome.station?.id }
+        } catch {
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            // GameCore's reason the levelling was refused, said with the
+            // grade it was to level.
+            if let levelling, let grade {
+                var probe = world
+                do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
+                    message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: error.playerMessage(in: language)))
                 }
-                let station: Station
-                if let chosen {
-                    station = chosen
-                } else {
-                    station = try draft.buildStation(named: name, at: middle)
-                    // With demand from land (Phase 6b) GameCore gives it the
-                    // ridership of the land round it.
-                    if draft.accounts.mode == .management, !draft.landDemand {
-                        try draft.setStationDemand(station.id, to: demand)
-                    }
-                }
-                try draft.addTrackPlatform(station.id, on: stretch.edge, from: stretch.start, to: stretch.end)
-                // Decision 88: the land round a new station is read in after the
-                // edit; read it now, so the opening message counts who it reaches.
-                Self.readLand(roundStationsOf: &draft, population: population, places: places, water: water, coverage: coverage)
-                world = draft
-                built = chosen == nil ? station.id : nil
-                return text(station, on: stretch, levelled: levelled, in: draft)
             }
-        }
-        if let levellingRefused {
-            message = StatusMessage(kind: .failure, text: levellingRefused)
+            added = false
         }
         if added {
             notePutUp(at: middle)
