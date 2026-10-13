@@ -40,7 +40,7 @@ struct NetworkControls: View {
             case .platform:
                 platformOptions
             case .remove:
-                EmptyView()
+                platformRemovals(showsPlace: false)
             }
         }
     }
@@ -253,19 +253,37 @@ struct NetworkControls: View {
                     .autocorrectionDisabled()
                     .submitLabel(.done)
             }
-            ForEach(session.platformsOnPickedEdge, id: \.self) { platform in
-                HStack(spacing: 8) {
-                    Text(session.platformText(platform))
+            platformRemovals(showsPlace: true)
+        }
+    }
+
+    // MARK: - Removing platforms
+
+    /// A button for each platform on the picked track, which removes it
+    /// (56.1: track with a platform on it cannot be removed, and players
+    /// found no way to remove the platform). The platform mode also says
+    /// where along the track each lies.
+    private func platformRemovals(showsPlace: Bool) -> some View {
+        ForEach(Array(session.platformsOnPickedEdge.enumerated()), id: \.element) { index, platform in
+            HStack(spacing: 8) {
+                if showsPlace {
+                    Text(verbatim: session.platformText(platform))
                         .font(.footnote)
                         .monospacedDigit()
                     Spacer(minLength: 0)
-                    Button(role: .destructive) {
-                        session.removeNetworkPlatform(platform)
-                    } label: {
+                }
+                Button(role: .destructive) {
+                    session.removeNetworkPlatform(platform)
+                } label: {
+                    Label {
+                        Text(verbatim: session.removePlatformTitle(platform))
+                    } icon: {
                         Image(systemName: "trash")
                     }
-                    .accessibilityLabel("Remove this platform")
                 }
+                .buttonStyle(.bordered)
+                .font(.footnote)
+                .accessibilityIdentifier("network.removePlatform.\(index)")
             }
         }
     }

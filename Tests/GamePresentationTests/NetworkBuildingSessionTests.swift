@@ -665,10 +665,55 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.selectTool(.network)
             session.setNetworkMode(.remove)
             session.tapNetwork(at: PlanPoint(x: 6_000, y: 3_072), reach: Self.reach)
+            // 56.1: the remove mode lists the platforms in the way.
+            let platform = world.network.platforms(on: .edge(1))[0]
+            XCTAssertEqual(session.platformsOnPickedEdge, [platform])
+            XCTAssertEqual(session.removePlatformTitle(platform), "Remove platform (Mid)")
             session.removeNetworkEdge()
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: GameError.trackEdgeHasPlatform(.edge(1)).playerMessage(in: .english)))
+            XCTAssertEqual(session.message, StatusMessage(
+                kind: .failure,
+                text: "Track #1 has a platform of Mid station. Tap “Remove platform” below, or remove the whole station in its station panel."
+            ))
+
+            session.removeNetworkPlatform(platform)
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Removed a platform of Mid."))
+            XCTAssertEqual(session.platformsOnPickedEdge, [])
+            session.removeNetworkEdge()
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Removed track #1."))
+            XCTAssertNil(session.world.network.edge(.edge(1)))
         }
+    }
+
+    func testTheRemoveModeNamesThePlatformsStationsInChinese() async throws {
+        var world = try makeLineWorld()
+        let station = try world.buildStation(named: "赤土崎", at: PlanPoint(x: 4_608, y: 3_584))
+        try world.addTrackPlatform(station.id, on: .edge(1), from: 952, to: 5_048)
+        await MainActor.run { [world] in
+            let session = GameSession(world: world, language: .traditionalChinese)
+            session.selectTool(.network)
+            session.setNetworkMode(.build)
+            session.tapNetwork(at: PlanPoint(x: 6_000, y: 3_072), reach: Self.reach)
+            XCTAssertEqual(session.platformsOnPickedEdge, [], "the lay mode lists none")
+            session.setNetworkMode(.remove)
+            session.tapNetwork(at: PlanPoint(x: 6_000, y: 3_072), reach: Self.reach)
+            let platform = world.network.platforms(on: .edge(1))[0]
+            XCTAssertEqual(session.platformsOnPickedEdge, [platform])
+            XCTAssertEqual(session.removePlatformTitle(platform), "拆除月台（赤土崎）")
+            session.removeNetworkEdge()
+            XCTAssertEqual(session.message?.text, "軌段 #1 上有赤土崎站的月台。請先在下方按「拆除月台」，或在車站面板拆除整個車站。")
+            session.removeNetworkPlatform(platform)
+            XCTAssertEqual(session.message?.text, "已拆除 赤土崎 的一座月台。")
+            XCTAssertTrue(session.world.network.platforms(on: .edge(1)).isEmpty)
+            session.undo()
+            XCTAssertEqual(session.world.network.platforms(on: .edge(1)), [platform], "removing a platform can be undone")
+        }
+    }
+
+    func testTheHelpSaysHowToRemoveAPlatform() throws {
+        let entry = try XCTUnwrap(HelpGuide.entries.first { $0.id == "removePlatform" })
+        XCTAssertTrue(HelpGuide.entries(matching: "拆月台").contains(entry))
+        XCTAssertTrue(HelpGuide.entries(matching: "remove platform").contains(entry))
     }
 
     // MARK: - Text
