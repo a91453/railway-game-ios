@@ -57,6 +57,26 @@ jobs:
           if raw != raw.strip():
               ask(raw.strip(), "claude-opus-5-5")
           EOF
+      - name: Check Claude Code itself with the key
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s 2.1.296 >/dev/null 2>&1
+          export PATH="$HOME/.local/bin:$PATH"
+          claude --version
+          for model in claude-opus-5-5 default; do
+            args=(-p "Reply with the single word: pong" --output-format json --max-turns 1)
+            [ "$model" = default ] || args+=(--model "$model")
+            claude "${args[@]}" > out.json 2> err.txt || true
+            python3 - "$model" <<'EOF'
+          import json, sys
+          try:
+              d = json.load(open("out.json"))
+              print(sys.argv[1], "->", {k: d.get(k) for k in ("is_error", "result", "total_cost_usd", "duration_ms")})
+          except Exception as e:
+              print(sys.argv[1], "-> no JSON:", e, open("out.json").read()[:500], open("err.txt").read()[:500])
+          EOF
+          done
 
   claude:
     if: |
