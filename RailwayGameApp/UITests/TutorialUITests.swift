@@ -281,15 +281,18 @@ final class TutorialUITests: XCTestCase {
         _ app: XCUIApplication, title: String, _ message: String = "",
         file: StaticString = #filePath, line: UInt = #line
     ) {
-        let heading = app.staticTexts["tutorial.title"]
-        let folded = app.buttons["tutorial.unfold"]
+        let heading = app.staticTexts["tutorial.title"].firstMatch
+        let folded = app.buttons["tutorial.unfold"].firstMatch
+        // Each is read from a snapshot, nil when it is gone: the second step
+        // folds the first step's card, and one that folded between `exists`
+        // and `label` failed the label's lookup.
         let deadline = Date().addingTimeInterval(10)
         repeat {
-            if heading.exists, heading.label == title { return }
-            if folded.exists, folded.label.hasSuffix(title) { return }
+            if (try? heading.snapshot())?.label == title { return }
+            if (try? folded.snapshot())?.label.hasSuffix(title) == true { return }
             Thread.sleep(forTimeInterval: 0.25)
         } while Date() < deadline
-        let shown = heading.exists ? heading.label : folded.exists ? folded.label : "no card"
+        let shown = (try? heading.snapshot())?.label ?? (try? folded.snapshot())?.label ?? "no card"
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 
