@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 @MainActor
@@ -266,9 +267,17 @@ final class MapInteractionTests: XCTestCase {
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
-        // maximum zoom.
+        // maximum zoom. The tap is tried twice, like the anchor's in the
+        // test above: on a slow Simulator a touch was lost and the map never
+        // moved (full lane run 38458089903, its screen recording); a second
+        // tap at the maximum does nothing.
+        func atMaximum() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
+                             timeout: 10) == .completed
+        }
         zoomIn.tap()
-        XCTAssertFalse(zoomIn.isEnabled, "64 points per 16 m is the maximum zoom")
+        if !atMaximum() { zoomIn.tap() }
+        XCTAssertTrue(atMaximum(), "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
         XCTAssertTrue(zoomIn.isEnabled)
@@ -357,6 +366,72 @@ final class MapInteractionTests: XCTestCase {
         zoomOut.tap()
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: zoomIn)
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Zoom out did not leave room to zoom in")
+    }
+
+    /// TestFlight 59.1: building on a phone on its side opens and folds the
+    /// details card again and again (the tool, a start tapped, Clear, done);
+    /// each change zoomed the map out to the whole selected line. Building
+    /// leaves the camera where the player zoomed it.
+    func testBuildingKeepsTheCameraZoom() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        newGame.tap()
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.appears(within: 10))
+        // A slow Simulator can lose the tap (main 81f3d4f's full lane):
+        // tap once more if the camera has not reached its closest zoom.
+        func closest() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
+                             timeout: 10) == .completed
+        }
+        zoomIn.tap()
+        if !closest() { zoomIn.tap() }
+        XCTAssertTrue(closest(), "Zoom in must reach the camera's closest zoom")
+        let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(zoom.appears(within: 5))
+        let zoomed = zoom.value as? String
+        XCTAssertNotNil(zoomed)
+        // The card moves in and out with a transition: read the zoom once
+        // it has had time to move the camera, as the bug did at once.
+        func keepsZoom(_ step: String) {
+            let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", zoomed ?? ""), object: zoom)
+            XCTAssertNotEqual(XCTWaiter().wait(for: [moved], timeout: 2), .completed,
+                              "\(step) must keep the camera's zoom; was \(zoomed ?? "nil"), now \(String(describing: zoom.value))")
+        }
+
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.appears(within: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10))
+        network.waitUntilSettled()
+        keepsZoom("Opening the network tool")
+
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let hud = app.otherElements["map.constructionHUD"]
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
+        keepsZoom("Tapping a track start")
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        XCTAssertTrue(hud.appears(within: 5), "Two taps must preview a stretch")
+        keepsZoom("Previewing a stretch")
+
+        let cancel = app.buttons["map.build.cancel"]
+        XCTAssertTrue(cancel.appears(within: 5))
+        cancel.tap()
+        XCTAssertTrue(hud.disappears(within: 5))
+        keepsZoom("Clearing the stretch")
+
+        buildEntry.waitUntilSettled()
+        buildEntry.tap()
+        XCTAssertTrue(network.disappears(within: 5), "Build pressed again must close the tools")
+        keepsZoom("Closing the tools")
     }
 
     func testMapLayersSheetTogglesAndDismisses() {
@@ -745,6 +820,31 @@ final class MapInteractionTests: XCTestCase {
     /// pill's edge, where a tap used to miss it. From the touched element's
     /// centre, so the test does not depend on the frame XCTest reports.
     /// Full lane only (not in the pull request gate).
+    /// TestFlight 59.1: on a phone held sideways the layer's legend starts
+    /// folded to its title and colour bar; the title opens it with its
+    /// opacity and timeline, and it stays as the player left it.
+    func testTheLegendFoldsOnAPhoneOnItsSide() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone's short screen")
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-map-layer", "travel", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
+        XCTAssertTrue(legend.appears(within: 15), "The travel layer's legend must show")
+        let fold = app.buttons["map.legend.fold"]
+        let opacity = app.descendants(matching: .any)["map.popTravel.opacity"].firstMatch
+        XCTAssertTrue(fold.appears(within: 5))
+        XCTAssertFalse(opacity.exists, "Folded, the legend hides its opacity")
+        XCTAssertTrue(fold.becomesHittable(within: 5))
+        fold.tap()
+        XCTAssertTrue(opacity.appears(within: 5), "Opened, the legend shows its opacity")
+        XCTAssertTrue(app.descendants(matching: .any)["map.popTravel.hour"].firstMatch.exists, "and its timeline")
+        fold.tap()
+        XCTAssertTrue(opacity.disappears(within: 5), "Folded again")
+    }
+
     func testTheStatusPillsButtonsAreTouchedBeyondTheirIcons() {
         continueAfterFailure = false
         let app = XCUIApplication()

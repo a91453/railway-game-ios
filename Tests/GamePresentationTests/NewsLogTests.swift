@@ -132,6 +132,19 @@ final class NewsSessionTests: XCTestCase {
         XCTAssertEqual(warnings(loaded), 1, "no second warning after the load")
     }
 
+    /// A challenge stopped by free play (a save from before decision 175's
+    /// lock) is never judged: no "ends in N days", and no pause for it.
+    func testAChallengeStoppedByFreePlayIsNotCountedDown() throws {
+        var world = try Self.world(day: 0)
+        try world.startScenario(Scenario(id: "test", goals: [.equity(Money(1_000_000_000_000))], goldDays: 30, silverDays: 30, deadlineDays: 30))
+        world.setEconomyMode(.free)
+        let session = GameSession(world: world, language: .english)
+        session.pausesForImportantEvents = true
+        try run(session, ticks: 23 * 1_440)
+        XCTAssertEqual(session.news.items.filter { $0.category == .deadline }.count, 0)
+        XCTAssertFalse(session.world.clock.isPaused)
+    }
+
     func testAHolidayBeginningIsWrittenOnceInBothLanguages() throws {
         let session = GameSession(world: try Self.world(day: 42), language: .english)
         try run(session, ticks: 1_440)
@@ -189,8 +202,33 @@ final class NewsSessionTests: XCTestCase {
             try run(session, ticks: 1_440)
             let warning = try XCTUnwrap(session.news.items.first { $0.category == .typhoon })
             XCTAssertTrue(warning.text(in: .english).hasPrefix("Typhoon warning"), warning.text(in: .english))
+            XCTAssertTrue(warning.text(in: .english).contains(" of our stations,"), warning.text(in: .english))
             XCTAssertEqual(session.world.clock.isPaused, pauses)
         }
+    }
+
+    /// A typhoon over none of the company's stations is said so, not "over
+    /// 0 of our stations", and does not pause the game.
+    func testATyphoonOverNoStationSaysItMissesThem() throws {
+        var found: (seed: UInt32, typhoon: Typhoon)?
+        let probe = try Self.world(day: 0)
+        let points = probe.stations.map(\.point)
+        for seed in UInt32(1)...400 {
+            let disruptions = try XCTUnwrap(Disruptions(level: .standard, country: "TW", seed: seed))
+            if let typhoon = disruptions.typhoons(ofYear: 0, in: probe.bounds).first,
+               typhoon.announced >= 1, !points.contains(where: typhoon.covers) {
+                found = (seed, typhoon)
+                break
+            }
+        }
+        let (seed, typhoon) = try XCTUnwrap(found, "no seed in 1...400 has a first typhoon away from both stations")
+        let session = GameSession(world: try Self.world(day: typhoon.announced - 1, seed: seed), language: .english)
+        session.pausesForImportantEvents = true
+        try run(session, ticks: 1_440)
+        let warning = try XCTUnwrap(session.news.items.first { $0.category == .typhoon })
+        XCTAssertTrue(warning.text(in: .english).contains("misses our stations"), warning.text(in: .english))
+        XCTAssertTrue(warning.text(in: .traditionalChinese).contains("不經過我們的車站"), warning.text(in: .traditionalChinese))
+        XCTAssertFalse(session.world.clock.isPaused)
     }
 
     func testCashGoingBelowZeroIsWrittenAndPauses() throws {

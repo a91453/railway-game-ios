@@ -153,7 +153,7 @@ extension GameSession {
         // on it.
         var prepared = world
         try? prepared.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
-        let plan: EdgePlan
+        var plan: EdgePlan
         switch edgePlan(from: start, to: end, in: prepared) {
         case .success(let found): plan = found
         case .failure(let problem):
@@ -161,12 +161,28 @@ extension GameSession {
             return
         }
         var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure))
+        var crossovers = DoubleTrack.CrossoverOutcome.none
         if networkBuildsDouble {
-            guard let parallel = parallelPlan(beside: plan, in: prepared) else {
+            let pair = doublePlans(plan, in: prepared)
+            plan = pair.main
+            command = .buildTrack(plan.stretch(structure: networkStructure))
+            guard let parallel = pair.parallel else {
                 message = StatusMessage(kind: .failure, text: Self.noParallelText(in: language))
                 return
             }
-            command = .buildDoubleTrack(plan.stretch(structure: networkStructure), parallel: parallel.stretch(structure: networkStructure))
+            // The crossovers where it joins the track there, planned on a
+            // copy with both built.
+            var draft = prepared
+            var stretches: [PlayerCommand.TrackStretch] = []
+            if let main = try? plan.build(in: &draft, structure: networkStructure, heights: heights),
+               let beside = try? parallel.build(in: &draft, structure: networkStructure, heights: heights) {
+                (stretches, crossovers) = doubleTrackCrossovers(
+                    main: plan, parallel: parallel, mainEdge: main.edge, parallelEdge: beside.edge, before: prepared, in: &draft
+                )
+            }
+            command = .buildDoubleTrack(
+                plan.stretch(structure: networkStructure), parallel: parallel.stretch(structure: networkStructure), crossovers: stretches
+            )
         }
         let built = perform(command) { outcome, before, world in
             guard let result = outcome.track else { return "" }
@@ -182,7 +198,7 @@ extension GameSession {
             return language.text(
                 "Built \(result.edge.displayText(in: language)): \(length), \(structure.lowercased()), for \(cost.moneyText)\(demolished.0).",
                 "已建造\(result.edge.displayText(in: language))：\(length)，\(structure)，花費 \(cost.moneyText)\(demolished.1)。"
-            )
+            ) + Self.crossoverText(crossovers, in: language)
         }
         if let built = built?.track {
             networkStart = .node(built.to)
@@ -196,7 +212,7 @@ extension GameSession {
         // point stands on it; the rest of the way as it is built.
         var draft = world
         try? draft.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
-        let plan: EdgePlan
+        var plan: EdgePlan
         switch edgePlan(from: start, to: end, in: draft) {
         case .success(let found): plan = found
         case .failure(let problem):
@@ -212,16 +228,27 @@ extension GameSession {
                 startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)
             ), [])
         }
-        let parallel = networkBuildsDouble ? parallelPlan(beside: plan, in: draft) : nil
+        var parallel: EdgePlan?
+        if networkBuildsDouble { (plan, parallel) = doublePlans(plan, in: draft) }
         let cost: Money?
         let problem: String?
         var longSection: TrackLongSection?
+        var crossovers: [[WorldCoordinate]] = []
+        var crossoverOutcome = DoubleTrack.CrossoverOutcome.none
+        let unbuilt = draft
         do throws(GameError) {
             let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
             longSection = draft.longSection(of: built.edge)
             if networkBuildsDouble {
                 guard let parallel else { throw .invalidTrackGeometry }
-                _ = try parallel.build(in: &draft, structure: networkStructure, heights: heights)
+                let beside = try parallel.build(in: &draft, structure: networkStructure, heights: heights)
+                // The crossovers where it joins the track there.
+                let found = doubleTrackCrossovers(
+                    main: plan, parallel: parallel, mainEdge: built.edge, parallelEdge: beside.edge, before: unbuilt, in: &draft
+                )
+                crossovers = found.stretches.map { $0.geometryPoints }
+                crossoverOutcome = found.outcome
+                if case .refused(let error) = found.outcome { throw error }
             }
             cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
             problem = nil
@@ -238,7 +265,10 @@ extension GameSession {
             cleared: cleared,
             // Decision 124, H3: what it costs, part by part.
             costParts: longSection.map { NetworkCostParts(track: $0.cost, demolition: world.clearingCost(of: cleared)) },
-            longSection: longSection
+            longSection: longSection,
+            crossovers: crossovers,
+            crossoverNote: problem == nil && crossoverOutcome != .none
+                ? String(Self.crossoverText(crossoverOutcome, in: language).drop { $0 == " " }) : nil
         ), besides)
     }
 
@@ -941,6 +971,9 @@ public struct NetworkOverlay: Hashable, Sendable {
     /// The mirrored diagonal of an X crossover (see
     /// ``GameSession/networkBuildsScissors``), drawn like ``preview``.
     public var crossing: [WorldCoordinate] = []
+    /// A double track's crossovers where it joins the track there
+    /// (decision 204), drawn like ``preview``.
+    public var crossovers: [[WorldCoordinate]] = []
     /// Whether GameCore would build it.
     public var previewIsBuildable = false
     /// The centre line of what the platform or remove mode picked.
@@ -968,6 +1001,7 @@ extension GameSession {
             if let draft = networkDraftPreview {
                 overlay.preview = draft.preview.points
                 overlay.crossing = draft.crossing
+                overlay.crossovers = draft.preview.crossovers
                 overlay.previewIsBuildable = draft.preview.problem == nil
                 overlay.cleared = draft.preview.cleared.map(PlanRect.init)
             }

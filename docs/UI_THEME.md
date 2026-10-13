@@ -82,7 +82,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `#8DB6EE` | 擔心時的汗滴 |
 | `#BDEFE7`、`#12A08F`／`#D4FAF4` | 底色與一段軌道（圖示的軌道） |
 
-空狀態的插圖（`EmptyLines`、`EmptySaves`、`EmptyTrains`，決策 122 之後的修正）用同一組顏色：外框藏青 `#262C57`、白 `#FFFFFF`、`#ECEEF6`、暖黃 `#FFC86B`、綠松 `#12A08F`，墊 `#BDEFE7` 的圓。
+空狀態與建造卡的插圖（`EmptyLines`、`EmptySaves`、`EmptyTrains`；`Building*`，決策 122 之後的修正）用同一組顏色：外框藏青 `#262C57`、白 `#FFFFFF`、`#ECEEF6`、暖黃 `#FFC86B`、綠松 `#12A08F`，墊 `#BDEFE7` 的圓（建造卡是圓角方塊）。
 
 決策 122 第 6 點。都是插圖裡的色塊，不是文字，不算對比；灰階下黃、藏青、藍灰分得開（art-style 的預覽檢查）。
 
@@ -137,12 +137,24 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | 圖示 | 用在 | 顏色 | 對比 Light／Dark |
 | --- | --- | --- | --- |
 | `train` | 車站徽章（`station` 底） | `stationSymbol` | 8.69 |
-| `person` | 候車人數膠囊（決策 205）：擁擠等級的一人那一階，和 `crowd`、`full` 同一組 | `ink`，墊 `markerFill` | 13.29／9.64 |
+| `person`、`crowd`、`full` | 候車人數膠囊（決策 205）：一人是一般；決策 210 起擁擠（過半）換兩人、滿了換三人，同一組擁擠等級 | `ink`，墊 `markerFill` | 13.29／9.64 |
 | `train`、`crowd`、`full` | 狀態泡泡：在 `primary`／`warning`／`error` 的圓上；`crowd`（兩個人）與 `full`（三個人）是同一組擁擠等級 | `Theme.panel` | 最低 5.50／5.54 |
 | `warning`（墊 `warningSolid`） | 死結 | `metroRed`，墊系統底色 | — |
 | `house`、`shop`、`office`、`wharf`、`marina`、`departmentStore`、`hotel`、`amusementPark` | 玩家建物（14 點以上；小一點的建物在 16 m ≥ 6 點時畫成 14 點的徽章，決策 205），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上 8.69（對 `playerBuilding`） |
 | `train` | 路線示意條的列車（路線色的圓上） | 白 | 跟路線色 |
 | `typhoon` | 颱風經過的車站（決策 182）：`land` 圓、`ink` 外框，圖示 `ink` | `ink` | 11.47／9.64 |
+
+### 看得見問題的標記（決策 210）
+
+都照決策 205：不用路線色，用形狀與藏青／白區分；只有「滿」與「死結」用 `metroRed`，而且各有自己的形狀（整圈、實線圈加警告）。
+
+| 標記 | 畫法 | 對比 Light／Dark |
+| --- | --- | --- |
+| 擁擠站的量表環 | 5 點 `markerFill` 光暈、0.8 點 `ink` 35% 的底圈，從正上方順時針一段 3 點 `ink` 弧，長度＝候車人數／站的容量（過半才畫） | `ink` 對 `markerFill` 13.29／9.64 |
+| 滿站的環 | 同上的光暈，整圈 3 點 `metroRed` | 4.48／3.54（圖形 3:1） |
+| 等待環的擴散 | 遊戲在跑時每 1.6 秒從環往外 9 點、1.5 點 `ink`，透明度 70% 漸到 0；暫停或「減少動態效果」不畫 | — |
+| 為何在等的小牌 | `markerFill` 底、1.2 點 `ink` 外框（死結 `metroRed`）、圓角 3，字 `caption2` 半粗 `ink` | 字 13.29／9.64 |
+| 擁擠泡泡的第二行原因 | `caption2`、`Theme.textSecondary`，墊 `Theme.panel` | 5.97／5.79 |
 
 ## 晝夜與天氣（決策 182）
 

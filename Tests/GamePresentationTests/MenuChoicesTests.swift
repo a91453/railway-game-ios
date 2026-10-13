@@ -83,6 +83,23 @@ final class MenuChoicesTests: XCTestCase {
         }
     }
 
+    /// TestFlight 59.1: each platform track entry shows its cost, or why
+    /// it cannot be built, from the session's dry run.
+    func testThePlatformTrackEntriesShowTheirCost() async throws {
+        let world = DemoWorld.make(in: .english)
+        await MainActor.run {
+            let session = GameSession(world: world)
+            guard let platform = session.world.stations.flatMap({ session.world.trackPlatforms(of: $0.id) }).first
+            else { return XCTFail("the demo has platforms") }
+            for choice in session.platformTrackMenuChoices(beside: platform) {
+                let preview = session.platformTrackPreview(beside: platform, layout: choice.id.layout, side: choice.id.side)
+                let expected = preview.cost.map { "Costs \($0.moneyText)" } ?? preview.problem
+                XCTAssertNotNil(expected)
+                XCTAssertEqual(choice.detail, expected)
+            }
+        }
+    }
+
     func testTheTypeEntriesFollowTheWorld() async throws {
         let world = DemoWorld.make(in: .english)
         await MainActor.run {

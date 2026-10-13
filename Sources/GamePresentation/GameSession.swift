@@ -79,6 +79,12 @@ public final class GameSession {
     public internal(set) var routeHint: RouteHint.Trigger?
     /// The legs on two tracks or more when ``watchRouteHint()`` last looked.
     @ObservationIgnored var routeHintLegs: Set<RouteHint.Leg>?
+    /// The lines a passing loop just built lies on, offered its signal
+    /// station as a stop (decision 204, later; ``PassingLoopOffer``).
+    public internal(set) var passingLoopOffer: PassingLoopOffer?
+    /// The line whose train waits on single track, for the one-time card
+    /// about passing loops (``PassingLoopHint``).
+    public internal(set) var passingLoopHint: LineID?
     /// The track preview of the picked ends, kept for the draft and world it
     /// was worked out for (see ``networkPreview``).
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
@@ -90,6 +96,10 @@ public final class GameSession {
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
+    /// The platform track menu's choices with their costs (each a dry run
+    /// on a copy of the world), kept for the platform and the
+    /// ``commandRevision`` they were worked out for.
+    @ObservationIgnored var platformTrackMenuMemo: [TrackPlatform: (revision: Int, choices: [MenuChoice<PlatformTrackPlacement>])] = [:]
     /// What traffic control shows (``trafficOverlay``,
     /// ``routeWaitText(of:)``), kept for the ``worldRevision`` it was read
     /// for; the game loop reads it off the main actor with each tick.
@@ -926,8 +936,10 @@ public final class GameSession {
 
     /// Whether this game's holidays and events stay as they are because it
     /// has a scenario's goals (decision 154, later): a challenge is the
-    /// same for everyone (decision 145), so they cannot be turned on, only
-    /// off in an older save that has them on.
+    /// same for everyone (decision 145), so they cannot be turned on. An
+    /// older save that has them on keeps them too (the owner's decision on
+    /// the #319–#400 review): turned off, a result reached on holiday peaks
+    /// would be kept, and nothing in the save remembers they were on.
     public var eventsAreFixed: Bool {
         world.scenario != nil
     }
@@ -938,14 +950,16 @@ public final class GameSession {
     /// the map's (``CountryLookup``), or Taiwan's on a blank map. Decision
     /// 162: the weather's seed stays too; turned on, it is the demand
     /// events' (1 without them). In a game with a scenario's goals they
-    /// can only be turned off (``eventsAreFixed``).
+    /// stay as they are (``eventsAreFixed``).
     public func setDisruptionLevel(_ level: DisruptionLevel?) {
         guard level != world.disruptions?.level else { return }
-        guard level == nil || !eventsAreFixed else {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "A challenge's rules are fixed: it has no holidays, weather or other events.",
-                "挑戰的規則固定，不含連假、天氣與其他事件。"
-            ))
+        guard !eventsAreFixed else {
+            message = StatusMessage(kind: .failure, text: world.disruptions == nil
+                ? language.text(
+                    "A challenge's rules are fixed: it has no holidays, weather or other events.",
+                    "挑戰的規則固定，不含連假、天氣與其他事件。"
+                )
+                : Self.challengeSavedWithEventsText(in: language))
             return
         }
         let country = world.disruptions?.country ?? world.geoAnchor.map(CountryLookup.country(at:)) ?? HolidayCalendar.home
@@ -955,6 +969,15 @@ public final class GameSession {
                 ? language.text("Holidays and other events off: every week's demand is the same.", "連假等事件已關閉：每週的需求都一樣。")
                 : language.text("Holidays and other events on: \(level!.title(in: language)).", "連假等事件已開啟：\(level!.title(in: language))。")
         }
+    }
+
+    /// What a challenge saved with holidays and events on says of them
+    /// (decision 154, later): they stay, and its result is not kept.
+    public static func challengeSavedWithEventsText(in language: DisplayLanguage) -> String {
+        language.text(
+            "This challenge was saved with holidays and events on: they stay as they are, and its result is not kept.",
+            "這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。"
+        )
     }
 
     // MARK: - Passenger routing
@@ -1194,6 +1217,9 @@ public final class GameSession {
         /// The selected train when the tick began.
         let train: TrainID?
         let language: DisplayLanguage
+        /// The last reading, whose kinds of scheduled waits the tick's
+        /// reading keeps (decision 210).
+        var previousTraffic: TrafficReading?
 
         /// Advances ``world`` by one tick off the main actor, and reads
         /// what traffic control shows of it there too (decision 64's later
@@ -1206,7 +1232,7 @@ public final class GameSession {
                 Result { () throws(GameError) in
                     var step = try GameSession.advanced(tick.world, by: 1, listening: tick.listening)
                     if tick.readsTraffic {
-                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language)
+                        step.traffic = TrafficReading(world: step.world, train: tick.train, in: tick.language, previous: tick.previousTraffic)
                     }
                     return step
                 }
@@ -1218,7 +1244,10 @@ public final class GameSession {
     /// `nil` while paused.
     func beginLoopTick() -> LoopTick? {
         guard !world.clock.isPaused else { return nil }
-        return LoopTick(world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language)
+        return LoopTick(
+            world: world, revision: worldRevision, listening: playSound != nil, train: selectedTrainID, language: language,
+            previousTraffic: trafficMemo?.reading
+        )
     }
 
     // MARK: - Traffic control on the map (decision 64)

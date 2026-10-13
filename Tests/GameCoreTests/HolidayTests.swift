@@ -56,11 +56,14 @@ final class HolidayTests: XCTestCase {
         }
         // Taiwan's are TW_DAYTYPE's: New Year, nine days of the Spring
         // Festival, 228, four days of Children's Day and Qingming, Labour
-        // Day, the Dragon Boat and Mid-Autumn festivals and National Day.
+        // Day, the Dragon Boat and Mid-Autumn festivals, Teachers' Day,
+        // National Day, Retrocession Day and Constitution Day (decision 208).
         XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.kind), [
-            .newYear, .springFestival, .peaceMemorial, .qingming, .labourDay, .dragonBoat, .midAutumn, .nationalDay,
+            .newYear, .springFestival, .peaceMemorial, .qingming, .labourDay, .dragonBoat, .midAutumn, .teachersDay,
+            .nationalDay, .retrocessionDay, .constitutionDay,
         ])
-        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.days), [1, 9, 1, 4, 1, 1, 1, 1])
+        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.days), [1, 9, 1, 4, 1, 1, 1, 1, 1, 1, 1])
+        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.dayOfYear), [0, 43, 57, 92, 120, 168, 264, 267, 279, 294, 354])
     }
 
     func testAHolidayComesOnTheSameDaysEveryYear() throws {

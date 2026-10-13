@@ -125,7 +125,14 @@ jobs:
                 echo "A full run is still going ($url); a later merge or the schedule starts the next." | tee -a "$GITHUB_STEP_SUMMARY"
                 exit 0
               fi
-              if (( age < 3 * 3600 )); then
+              # The schedule's slots are three hours apart and each fires
+              # some minutes late, by a different amount each time: a slot
+              # that fires a minute less late than the last one would find
+              # the run it started under three hours old and skip, leaving
+              # six hours. So a scheduled run allows 15 minutes.
+              window=$(( 3 * 3600 ))
+              if [[ "$EVENT" == schedule ]]; then window=$(( window - 15 * 60 )); fi
+              if (( age < window )); then
                 echo "The last full run started $(( age / 60 )) minutes ago ($url); the next starts 3 hours after it." | tee -a "$GITHUB_STEP_SUMMARY"
                 exit 0
               fi

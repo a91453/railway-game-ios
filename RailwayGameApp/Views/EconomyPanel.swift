@@ -20,6 +20,9 @@ struct EconomyPanel: View {
     @State private var statement: Statement = .income
     @State private var trendRange: FinanceTrendRange = .thirtyDays
     @State private var flatFare: Int64 = 500
+    /// The distance steps' first fare, in cents; `nil` until the panel
+    /// takes the world's (``FareRules/bandStart(baseline:)``).
+    @State private var bandStart: Int64?
     @State private var confirmsFreePlay = false
 
     var body: some View {
@@ -234,9 +237,34 @@ struct EconomyPanel: View {
             Button("Charge a flat fare of \(Money(flatFare).centsText)") {
                 session.setFareRules(.flat(Money(flatFare)))
             }
-            Button("Charge by distance (standard steps)") {
-                session.setFareRules(.distance(FareRules.standardBands(for: accounts.fareBaseline)))
+            // TestFlight 59.1: the distance steps from a fare of the
+            // player's, the standard five scaled to it.
+            let language = session.language
+            let start = Binding(
+                get: { bandStart ?? accounts.effectiveFareRules.bandStart(baseline: accounts.fareBaseline) },
+                set: { bandStart = $0 }
+            )
+            let bands = FareRules.distanceBands(startingAt: Money(start.wrappedValue), baseline: accounts.fareBaseline)
+            Stepper(value: start, in: FareRules.bandStartRange, step: Int(FareRules.bandStartStep)) {
+                Text(verbatim: language.text("Distance fares from \(Money(start.wrappedValue).centsText)", "階梯票價起價 \(Money(start.wrappedValue).centsText)"))
+                    .monospacedDigit()
             }
+            .accessibilityIdentifier("economy.bandStart")
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(FareRules.bandsText(bands, in: language), id: \.self) { band in
+                    Text(verbatim: band)
+                }
+            }
+            .font(.caption)
+            .monospacedDigit()
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityIdentifier("economy.bandPreview")
+            Button {
+                session.setFareRules(.distance(bands))
+            } label: {
+                Text(verbatim: language.text("Charge by distance from \(bands[0].fare.centsText)", "改收階梯票價（\(bands[0].fare.centsText) 起）"))
+            }
+            .accessibilityIdentifier("economy.chargeByDistance")
         }
     }
 

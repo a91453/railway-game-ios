@@ -120,6 +120,15 @@ public enum HelpGuide {
             keywords: "remove delete demolish platform station track 拆除 刪除 月台 車站 軌道 拆月台"
         ),
         HelpEntry(
+            "islandOrSide", .building,
+            question: ("What is the difference between an island and a side platform?", "島式和岸式月台差在哪？"),
+            answer: (
+                "For now only the track layout: an island platform stands between the two tracks, so the new track lies 11 m out and needs 88 m of straight, level track past each end of the platform for its turnouts; side platforms stand outside each track, 5 m apart, with 50 m. Trains and passengers use both the same way: the same room, the same boarding and the same walk. Each choice in the station panel's platform track menu shows its cost.",
+                "目前只差在軌道配置：島式月台在兩條軌道中間，新軌道離原軌道 11 公尺，月台兩端外各要 88 公尺平直的軌道放轉轍器；岸式月台在兩條軌道外側，軌道相距 5 公尺，只要 50 公尺。營運上兩者完全相同：容量、上下車和步行都一樣。車站面板的「加月台軌道」選單會列出每個選項的費用。"
+            ),
+            keywords: "island side platform track turnout cost 島式 岸式 月台 月台軌道 差別 費用"
+        ),
+        HelpEntry(
             "extendLine", .building,
             question: ("How do I extend a line?", "如何延長路線？"),
             answer: (
@@ -141,10 +150,19 @@ public enum HelpGuide {
             "moreTrains", .running,
             question: ("How do I run more trains on a line?", "一條路線怎麼多跑幾列車？"),
             answer: (
-                "Open Lines and pick the line. Under Headway and trains, choose how often a train should come, then tap the button once. The trains the line lacks are bought and set off evenly apart; if it has more than it needs, the extra ones go to no line after their trip. If a time of day is set to more trains than the line has, a warning says so, with a button that buys the rest. On single track trains can only pass at stations, so a line holds just a few trains: to run more, build double track or passing loops (see \"Why does my line run only one train at a time?\").",
-                "打開「路線」，選這條路線。在「班距與列車數」選多久來一班，再按一下按鈕。不夠的列車會自動買好，保持等間隔發車；車太多時，多的車跑完這一趟後回到未配屬。某個時段設定的列車比路線實際有的多時，會出現警告，按一下就補齊。單線只能在車站會車，能跑的列車有上限：要再多跑，就蓋雙線或待避線（見「為什麼我的路線一次只跑一列車？」）。"
+                "Open Lines and pick the line. Under Headway and trains, choose how often a train should come, then tap the button once. The trains the line lacks are bought and set off evenly apart; if it has more than it needs, the extra ones go to no line: those waiting back to the depot, the others after their trip. If a time of day is set to more trains than the line has, a warning says so, with a button that buys the rest. On single track trains can only pass at stations, so a line holds just a few trains: to run more, build double track or passing loops (see \"Why does my line run only one train at a time?\").",
+                "打開「路線」，選這條路線。在「班距與列車數」選多久來一班，再按一下按鈕。不夠的列車會自動買好，保持等間隔發車；車太多時，多的車回到未配屬：等車的收回車庫，正在跑的跑完這一趟。某個時段設定的列車比路線實際有的多時，會出現警告，按一下就補齊。單線只能在車站會車，能跑的列車有上限：要再多跑，就蓋雙線或待避線（見「為什麼我的路線一次只跑一列車？」）。"
             ),
             keywords: "more trains headway frequency add train how many dispatch 加開 多跑 班距 列車數 調度 配車 發車 補齊 上限"
+        ),
+        HelpEntry(
+            "crowdedButLowLoad", .running,
+            question: ("Why is my station full while the peak load is low?", "車站客滿，尖峰載客率卻不高，為什麼？"),
+            answer: (
+                "A station is full at 4,000 waiting. Each of them waits for one line and one way and boards only a train that stops where they are going; people changing trains wait there too. So one way of one line can fill the station while the other trains leave part empty. The peak load is the fullest departure of the day, not the average. When a line has closed for the night its passengers wait for the first train, so a station can be full overnight. Open the station panel: it lists who waits for each line and way. Run more trains on the busiest one, lengthen its service hours, or build a line to where they are going.",
+                "候車達 4,000 人時車站就客滿。每位乘客只等一條路線的一個方向，只上會停他目的地的車；轉乘的乘客也在站內等。所以可能某條路線的某個方向就把車站擠滿，其他列車卻沒坐滿。尖峰載客率是當天最滿的那一班，不是平均。路線收班後，乘客會留在站內等首班車，所以半夜車站也可能是滿的。打開車站面板，會依路線和方向列出候車人數；在最多人等的那條加開列車、延長營運時間，或開一條到他們目的地的路線。"
+            ),
+            keywords: "full crowded station waiting peak load transfer closed overnight 客滿 擁擠 滿了 候車 載客率 尖峰 轉乘 收班"
         ),
         HelpEntry(
             "whyLosing", .money,

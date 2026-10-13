@@ -28,6 +28,11 @@ final class FinanceHistoryTests: XCTestCase {
         XCTAssertFalse(first.label(for: .oneYear, in: .english).contains("-"), first.label(for: .oneYear, in: .english))
         XCTAssertTrue(first.label(for: .oneYear, in: .english).hasPrefix("Days 1–"))
         XCTAssertTrue(first.label(for: .ninetyDays, in: .traditionalChinese).hasPrefix("第 1–"))
+        // The chart's axis says the same, and each bucket keeps its own key.
+        XCTAssertEqual(first.axisKey(for: .oneYear), "1")
+        let keys = history.points.map { $0.axisKey(for: .oneYear) }
+        XCTAssertEqual(Set(keys).count, keys.count)
+        XCTAssertFalse(keys.contains { $0.hasPrefix("-") }, "\(keys)")
     }
 
     func testThirtyDaysAreOneBucketPerDayEndingToday() {
@@ -69,6 +74,21 @@ final class FinanceHistoryTests: XCTestCase {
         XCTAssertEqual(history.tripsChangePercent, -10)
         XCTAssertEqual(history.summaryText(in: .english), "Last 30 days: fares up 12%, passengers down 10%")
         XCTAssertEqual(history.summaryText(in: .traditionalChinese), "過去 30 天：票收成長 12%、旅客下降 10%")
+    }
+
+    /// A window before mostly before the company's first day is not an
+    /// earlier period: day 34 of a game earning the same each day is not
+    /// "fares up 500%" (decision 176).
+    func testAWindowBeforeTheCompanyBeganIsNotCompared() {
+        var days: [Int64: (fare: Int64, trips: Int64)] = [:]
+        for day in 0...34 { days[Int64(day)] = (100, 1) }
+        let history = FinanceHistory.make(.thirtyDays, accounts: accounts(days: days), today: 34)
+        XCTAssertNil(history.fareChangePercent)
+        XCTAssertNil(history.tripsChangePercent)
+        XCTAssertTrue(history.summaryText(in: .english).contains("no earlier period"), history.summaryText(in: .english))
+        // From day 59 the window before is whole: unchanged.
+        for day in 35...59 { days[Int64(day)] = (100, 1) }
+        XCTAssertEqual(FinanceHistory.make(.thirtyDays, accounts: accounts(days: days), today: 59).fareChangePercent, 0)
     }
 
     func testNothingEarlierToCompareWith() {

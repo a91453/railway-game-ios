@@ -1291,7 +1291,7 @@ public struct GameWorld: Equatable, Sendable {
             let owner = id.rawValue
             let proceeds = min(tradeIn, price)
             let trainPart = RollingStock.salePrice(bookValue: bookValue(.train, owner: owner))
-            let trainShare = tradeIn > .zero ? Money(trainPart.amount * proceeds.amount / tradeIn.amount) : .zero
+            let trainShare = tradeIn > .zero ? AssetRecord.share(of: trainPart, numerator: proceeds.amount, denominator: tradeIn.amount) : .zero
             sellAsset(.train, owner: owner, for: trainShare)
             sellAsset(.cars, owner: owner, for: proceeds - trainShare)
             // The fee was checked: what is paid is the new price less the

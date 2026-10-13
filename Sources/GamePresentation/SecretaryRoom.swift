@@ -36,7 +36,8 @@ struct NewsWatch {
         outcomeSeen = world.scenario?.outcome != nil
         // A loaded challenge already in its last week has been warned.
         deadlineWarned = world.scenario.map {
-            $0.scenario.deadlineDays > 14 && $0.outcome == nil && $0.scenario.deadlineDays - $0.elapsedDays(through: today) <= 7
+            $0.scenario.deadlineDays > 14 && $0.outcome == nil && world.accounts.mode == .management
+                && $0.scenario.deadlineDays - $0.elapsedDays(through: today) <= 7
         } ?? false
         announcedTyphoons = Set(world.typhoons(onDay: today).filter { $0.announced <= today }.map(\.start))
         landUnlocked = Self.isLandUnlocked(world)
@@ -177,7 +178,9 @@ extension GameSession {
                     english: world.scenarioStatusText(in: .english), chinese: world.scenarioStatusText(in: .traditionalChinese)
                 )
             }
-            if state.outcome == nil, !newsWatch.deadlineWarned, state.scenario.deadlineDays > 14 {
+            // A challenge stopped by free play is never judged (an old save
+            // switched before the lock): nothing to count down.
+            if state.outcome == nil, world.accounts.mode == .management, !newsWatch.deadlineWarned, state.scenario.deadlineDays > 14 {
                 let left = state.scenario.deadlineDays - state.elapsedDays(through: today)
                 if left <= 7 {
                     newsWatch.deadlineWarned = true
@@ -254,13 +257,23 @@ extension GameSession {
             if newsWatch.announcedTyphoons.insert(typhoon.start).inserted {
                 let wait = max(0, typhoon.start - today), percent = typhoon.drop / 10
                 news.add(day: today, .typhoon) { language in
-                    wait > 0
+                    if hit == 0 {
+                        return wait > 0
+                            ? language.text(
+                                "Typhoon warning: it arrives in \(wait) day\(wait == 1 ? "" : "s"); it misses our stations.",
+                                "颱風預警：\(wait) 天後來襲，不經過我們的車站。"
+                            )
+                            : language.text("A typhoon is blowing; it misses our stations.", "颱風正在吹，不經過我們的車站。")
+                    }
+                    // As the station master's typhoon advice says it.
+                    let over = hit == 1 ? "one" : "\(hit)"
+                    return wait > 0
                         ? language.text(
-                            "Typhoon warning: it arrives in \(wait) day\(wait == 1 ? "" : "s"), over \(hit) of our station\(hit == 1 ? "" : "s"), about \(percent)% fewer passengers there.",
+                            "Typhoon warning: it arrives in \(wait) day\(wait == 1 ? "" : "s"), over \(over) of our stations, about \(percent)% fewer passengers there.",
                             "颱風預警：\(wait) 天後來襲，影響 \(hit) 個車站，那裡旅客約少 \(percent)%。"
                         )
                         : language.text(
-                            "A typhoon is blowing over \(hit) of our station\(hit == 1 ? "" : "s"), about \(percent)% fewer passengers there.",
+                            "A typhoon is blowing over \(over) of our stations, about \(percent)% fewer passengers there.",
                             "颱風正在影響 \(hit) 個車站，那裡旅客約少 \(percent)%。"
                         )
                 }

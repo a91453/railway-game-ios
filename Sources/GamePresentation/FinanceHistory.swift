@@ -85,6 +85,14 @@ public struct FinanceTrendPoint: Hashable, Identifiable, Sendable {
         self.trips = trips
     }
 
+    /// The bucket's x value on a chart's axis: the day it starts on (from
+    /// day 1, as ``label(for:in:)``: a young game's first bucket reaches back
+    /// before it), or the closed year. Unique within a history, since only
+    /// the first bucket can start before day 0.
+    public func axisKey(for range: FinanceTrendRange) -> String {
+        range == .allYears ? "\(startDay / 360 + 1)" : "\(max(startDay, 0) + 1)"
+    }
+
     /// "Day 12", "Days 8–14" or, for a closed year, "Year 2".
     public func label(for range: FinanceTrendRange, in language: DisplayLanguage) -> String {
         switch range {
@@ -184,10 +192,17 @@ public struct FinanceHistory: Hashable, Sendable {
         // Nothing before the company's first day: no points at all until it
         // has earned or spent something.
         let kept = points.drop { $0.revenue == .zero && $0.cost == .zero && $0.trips == 0 }
+        // The window before is an earlier period only when the company was
+        // there for all of it: one mostly before its first day would read
+        // as growth (decision 176, "nothing earlier to compare with"). Books
+        // full to ``CompanyAccounts/keptDays`` have let older days go.
+        let comparable = accounts.days.count >= CompanyAccounts.keptDays
+            || accounts.days.first.map { first - size * count >= $0.day } ?? false
         return FinanceHistory(
             range: range, points: Array(kept), fareRevenue: points.reduce(.zero) { $0 + $1.fareRevenue },
-            previousFareRevenue: before.reduce(.zero) { $0 + $1.fareRevenue },
-            trips: points.reduce(0) { $0 + ($1.trips ?? 0) }, previousTrips: before.reduce(0) { $0 + ($1.trips ?? 0) }
+            previousFareRevenue: comparable ? before.reduce(.zero) { $0 + $1.fareRevenue } : .zero,
+            trips: points.reduce(0) { $0 + ($1.trips ?? 0) },
+            previousTrips: comparable ? before.reduce(0) { $0 + ($1.trips ?? 0) } : nil
         )
     }
 

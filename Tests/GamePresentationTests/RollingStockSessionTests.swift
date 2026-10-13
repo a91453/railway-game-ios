@@ -136,6 +136,100 @@ final class RollingStockSessionTests: XCTestCase {
         XCTAssertEqual(session.message?.kind, .success)
     }
 
+    /// In an era the line's default is the era's type, for re-forming as for
+    /// buying: changing only the cars does not ask for the standard car,
+    /// which the era does not have (decisions 153 and 180).
+    func testReformingInAnEraKeepsTheErasType() throws {
+        var world = try lineWorld(economics: false)
+        try world.startScenario(Scenario(
+            id: "test", goals: [.dailyRiders(1)], goldDays: 10, silverDays: 20, deadlineDays: 30, trainTypes: [.steam]
+        ))
+        let session = GameSession(world: world)
+        session.staffSelectedLine(headway: 30)
+        let waiting = session.world.trains.map(\.id)
+        XCTAssertFalse(waiting.isEmpty)
+        XCTAssertTrue(session.world.trains.allSatisfy { $0.type == .steam })
+        // The line panel re-forms with the plan's type when the player
+        // leaves the type at "Line's default".
+        let plan = try XCTUnwrap(session.world.lineStaffingPlan(Self.main, headway: 30, cars: 2))
+        XCTAssertEqual(plan.type, .steam)
+        session.reformSelectedLine(type: plan.type, cars: 2)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        for id in waiting {
+            XCTAssertEqual(session.world.train(id: id)?.type, .steam)
+            XCTAssertEqual(session.world.train(id: id)?.cars, 2)
+        }
+    }
+
+    /// "Line's default" names no type on a line that has none of its own:
+    /// re-forming then changes the cars and keeps each train's type, rather
+    /// than trading the type the player paid for for the standard car
+    /// (decision 180, later).
+    func testReformingWithTheLinesDefaultKeepsEachTrainsType() throws {
+        let session = GameSession(world: try lineWorld())
+        session.staffSelectedLine(headway: 30, type: .l, cars: 1)
+        let waiting = session.world.trains.map(\.id)
+        XCTAssertFalse(waiting.isEmpty)
+        let plan = try XCTUnwrap(session.world.lineStaffingPlan(Self.main, headway: 30, cars: 2))
+        XCTAssertNil(plan.type, "a standard line names no type")
+        let before = session.world.economy.balance
+        session.reformSelectedLine(type: plan.type, cars: 2)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        for id in waiting {
+            XCTAssertEqual(session.world.train(id: id)?.type, .l)
+            XCTAssertEqual(session.world.train(id: id)?.cars, 2)
+        }
+        XCTAssertTrue(session.message?.text.contains("each keeping its type") ?? false, session.message?.text ?? "")
+        // Only the car added is paid for: no refit.
+        let each = TrainType.l.pricing.eachCar.amount
+        XCTAssertEqual(before - session.world.economy.balance, Money(each * Int64(waiting.count)))
+    }
+
+    /// Decision 168 rule 7: a line run by high-speed sets and nothing else
+    /// is planned at high speed in the same edit, whether the sets were
+    /// put on one by one, bought by "Start Service" or re-formed.
+    func testStaffingOrReformingWithHighSpeedSetsMakesAHighSpeedLine() throws {
+        let staffed = GameSession(world: try lineWorld())
+        staffed.staffSelectedLine(headway: 10, type: .highSpeed)
+        XCTAssertEqual(staffed.message?.kind, .success, staffed.message?.text ?? "")
+        XCTAssertTrue(staffed.world.trains.allSatisfy { $0.type == .highSpeed })
+        XCTAssertEqual(staffed.world.line(id: Self.main)?.isHighSpeed, true)
+        XCTAssertTrue(staffed.message?.text.contains("a high-speed line") ?? false, staffed.message?.text ?? "")
+        staffed.undo()
+        XCTAssertEqual(staffed.world.line(id: Self.main)?.performance, .standard, "one edit")
+
+        let reformed = GameSession(world: try lineWorld())
+        reformed.staffSelectedLine(headway: 30)
+        XCTAssertEqual(reformed.world.line(id: Self.main)?.isHighSpeed, false)
+        reformed.reformSelectedLine(type: .highSpeed, cars: 1)
+        XCTAssertEqual(reformed.message?.kind, .success, reformed.message?.text ?? "")
+        XCTAssertEqual(reformed.world.line(id: Self.main)?.isHighSpeed, true)
+        XCTAssertTrue(reformed.message?.text.contains("a high-speed line") ?? false, reformed.message?.text ?? "")
+    }
+
+    /// A train given another type runs as the new type does, where it ran
+    /// as the old one did: an EMU3000 made a high-speed set runs at the
+    /// set's 300 km/h, a set made a type A at the standard 110 (decisions
+    /// 168 and 169). Re-forming does the same.
+    func testATrainGivenAnotherTypeRunsAsThatType() throws {
+        var world = try lineWorld(economics: false)
+        let train = try world.purchaseTrain(named: "One").id
+        let session = GameSession(world: world)
+        session.selectTrain(train)
+        session.setSelectedTrainType(.emu3000)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .emu3000)
+        session.setSelectedTrainType(.highSpeed)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .highSpeed)
+        session.setSelectedTrainType(.a)
+        XCTAssertEqual(session.world.train(id: train)?.performance, .standard)
+
+        let line = GameSession(world: try lineWorld(economics: false))
+        line.staffSelectedLine(headway: 30, type: .emu3000)
+        line.reformSelectedLine(type: .a, cars: 1)
+        XCTAssertEqual(line.message?.kind, .success, line.message?.text ?? "")
+        XCTAssertTrue(line.world.trains.allSatisfy { $0.type == .a && $0.performance == .standard })
+    }
+
     func testSellingATrainThroughTheSession() throws {
         let session = GameSession(world: try lineWorld())
         session.purchaseTrain()
