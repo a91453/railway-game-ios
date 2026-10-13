@@ -375,8 +375,15 @@ final class MapInteractionTests: XCTestCase {
         newGame.tap()
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
+        // A slow Simulator can lose the tap (main 81f3d4f's full lane):
+        // tap once more if the camera has not reached its closest zoom.
+        func closest() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
+                             timeout: 10) == .completed
+        }
         zoomIn.tap()
-        XCTAssertFalse(zoomIn.isEnabled)
+        if !closest() { zoomIn.tap() }
+        XCTAssertTrue(closest(), "Zoom in must reach the camera's closest zoom")
         let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
         XCTAssertTrue(zoom.appears(within: 5))
         let zoomed = zoom.value as? String
