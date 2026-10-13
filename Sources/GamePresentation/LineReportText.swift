@@ -168,9 +168,14 @@ extension GameWorld {
     }
 
     /// Whether line `id` lost money on each of the last
-    /// ``losingDays`` completed days (decision 179): the map's bubble.
+    /// ``losingDays`` completed days (decision 179): the map's bubble. Not
+    /// for a line with no trains (decision 179, later): it says that, the
+    /// cause the player can act on, and its stations cost what they cost.
     public func lineLosingMoney(_ id: LineID) -> Bool {
-        guard let report = lineReport(id), !(line(id: id)?.isFreight ?? true) else { return false }
+        guard let line = line(id: id), !line.isFreight,
+              !(line.trains.isEmpty && line.patterns.allSatisfy({ $0.trains.isEmpty })),
+              let report = lineReport(id)
+        else { return false }
         let today = FinanceHistory.floorDay(clock.now)
         let last = (1...Self.losingDays).map { today - Int64($0) }
         return last.allSatisfy { day in

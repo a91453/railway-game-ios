@@ -214,3 +214,15 @@ CI（Linux）在這段期間有 9 次 push run 失敗，Wasm Probe 沒有紅燈�
 - **UNVERIFIED LOCALLY — requires macOS/Xcode CI**：`FinanceTrendCharts.swift`、`TrainLoadBar.swift`，本機只做了 `swiftc -parse`。
 - PR #534 改到 `.github/scripts/`，照決策 185 會跑完整 Swift tier（第四節第 1 項）。第一次的 run 已取消、讓出 runner，等合併 session 放行再推。
 - 審查方法：8 個唯讀的審查 agent，各讀一組 PR 的 diff 並對照 `main` 現況。每個發現都由我自己讀程式確認，能寫測試的先寫失敗的測試。
+
+## 九、第四節第 1–4 項：作者的決定與實作（2026-10-13）
+
+作者請派工 session 從玩家、開發者、美術三方面替這 4 項做選擇。定案與實作如下，分支 `claude/pr319-400-decisions`：
+
+| 項目 | 定案 | 實作 |
+|---|---|---|
+| 1. 改到 `.github/scripts/` 的 PR 跑完整 18 個 job | 維持不改。這種 PR 少，腳本決定要測哪些，判斷錯了代價大。 | 不改程式，只記在這裡。 |
+| 2. 開著事件的挑戰，中途把事件關掉 | 這一局不記成績，記錄頁顯示「已關閉事件，不計紀錄」。 | 照定案原文做要升存檔版本：GameCore 的 `ScenarioState` 要記「曾開過事件」，而存檔 54 已被機廠 L1 登記。派工 session 改選「挑戰中不能關事件」：<br>- 舊存檔的事件一直開著，成績一直不記，結果相同，不改存檔。<br>- 挑戰結束後也不能關：關了之後，下一次自動存檔就會把成績記下來。<br>- 設定頁選單停用，寫「這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。」<br>- 決策 154 加了之後的修正。<br>- 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`（修之前可以關掉）。 |
+| 3. 沒有列車的路線冒兩個泡泡 | 只留「沒有列車」，沒有列車時不出「連續虧損」。 | `lineLosingMoney` 對沒有列車的路線回傳 false，地圖泡泡與路線列的紅字都跟著改。決策 179 加了之後的修正。測試：`LineReportTests.testALineLosingMoneyForAWeekShowsOnTheMap`（先改成會失敗的版本，再修）。 |
+| 4. 改編組選「依路線預設」 | 路線有自己的車型時套用路線的；沒有時保留每列車原本的車型，不降回標準車。 | `GameSession.reform` 收到 `nil` 時保留各車車型，訊息寫「車型不變」。決策 180 加了之後的修正。測試：`RollingStockSessionTests.testReformingWithTheLinesDefaultKeepsEachTrainsType`（修之前改回標準車，還收了改裝費）。 |
+

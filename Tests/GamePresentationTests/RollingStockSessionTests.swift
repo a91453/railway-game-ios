@@ -161,6 +161,30 @@ final class RollingStockSessionTests: XCTestCase {
         }
     }
 
+    /// "Line's default" names no type on a line that has none of its own:
+    /// re-forming then changes the cars and keeps each train's type, rather
+    /// than trading the type the player paid for for the standard car
+    /// (decision 180, later).
+    func testReformingWithTheLinesDefaultKeepsEachTrainsType() throws {
+        let session = GameSession(world: try lineWorld())
+        session.staffSelectedLine(headway: 30, type: .l, cars: 1)
+        let waiting = session.world.trains.map(\.id)
+        XCTAssertFalse(waiting.isEmpty)
+        let plan = try XCTUnwrap(session.world.lineStaffingPlan(Self.main, headway: 30, cars: 2))
+        XCTAssertNil(plan.type, "a standard line names no type")
+        let before = session.world.economy.balance
+        session.reformSelectedLine(type: plan.type, cars: 2)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        for id in waiting {
+            XCTAssertEqual(session.world.train(id: id)?.type, .l)
+            XCTAssertEqual(session.world.train(id: id)?.cars, 2)
+        }
+        XCTAssertTrue(session.message?.text.contains("each keeping its type") ?? false, session.message?.text ?? "")
+        // Only the car added is paid for: no refit.
+        let each = TrainType.l.pricing.eachCar.amount
+        XCTAssertEqual(before - session.world.economy.balance, Money(each * Int64(waiting.count)))
+    }
+
     /// Decision 168 rule 7: a line run by high-speed sets and nothing else
     /// is planned at high speed in the same edit, whether the sets were
     /// put on one by one, bought by "Start Service" or re-formed.
