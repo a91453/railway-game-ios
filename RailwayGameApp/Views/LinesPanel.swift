@@ -46,6 +46,9 @@ struct LinesPanel: View {
     /// Decision 184: the name typed to find a line, and which lines show.
     @State private var lineSearch = ListSearch()
     @State private var lineFilter: LineFilter = .all
+    /// Decision 195: whether the new line's form shows while the lines
+    /// come first.
+    @State private var showsNewLine = false
 
     /// Target headways offered in the menu, in minutes.
     private static let targets: [Int64] = [5, 10, 15, 20, 30, 60]
@@ -54,27 +57,41 @@ struct LinesPanel: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
-                    // Decision 100: a new line first, where the panel beside
-                    // the map (decision 106) shows it while stations are
-                    // picked on the map.
-                    draftSection
-                    // Decision 101: a line without trains offers them next.
-                    if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
-                        staffSection(line)
-                    }
-                    trafficSection
-                    serviceDaySection
-                    linesSection
-                    if let line = session.selectedLine {
-                        lineSection(line)
-                        operatingSection(line)
-                        stopsSection(line)
-                        ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
-                            serviceSection(summary, of: line)
+                    if listsLinesFirst {
+                        // Decision 195 (TestFlight 54.1): with lines made and
+                        // none being picked, the lines and the selected
+                        // line's stops come first, a new line is one row,
+                        // and the switches for every line go last.
+                        linesSection
+                        newLineRow
+                        if let line = session.selectedLine {
+                            if line.trains.isEmpty, !line.isRing {
+                                staffSection(line)
+                            }
+                            stopsSection(line)
+                            lineSection(line)
+                            operatingSection(line)
+                            servicesSections(line)
                         }
-                        // A ring has no patterns.
-                        if !line.isRing {
-                            addPatternSection(line)
+                        trafficSection
+                        serviceDaySection
+                    } else {
+                        // Decision 100: a new line first, where the panel beside
+                        // the map (decision 106) shows it while stations are
+                        // picked on the map.
+                        draftSection
+                        // Decision 101: a line without trains offers them next.
+                        if let line = session.selectedLine, line.trains.isEmpty, !line.isRing {
+                            staffSection(line)
+                        }
+                        trafficSection
+                        serviceDaySection
+                        linesSection
+                        if let line = session.selectedLine {
+                            lineSection(line)
+                            operatingSection(line)
+                            stopsSection(line)
+                            servicesSections(line)
                         }
                     }
                 }
@@ -134,6 +151,8 @@ struct LinesPanel: View {
             .safeAreaInset(edge: .bottom) {
                 StatusBanner(session: session, announces: false)
             }
+            // Decision 195: a line made from the unfolded form folds it again.
+            .onChange(of: session.world.lines.count) { showsNewLine = false }
             .onAppear { sortLinesNow() }
             .onChange(of: lineSort) { sortLinesNow() }
             // Taps on the map select again once the panel is closed.
@@ -157,6 +176,47 @@ struct LinesPanel: View {
             target = session.tutorial?.step.revealsInPanel
             picked = session.lineDraft.count
             line = session.selectedLineID
+        }
+    }
+
+    /// Decision 195: the lines come first once there are some, unless a
+    /// new line is being picked or the tutorial leads (its steps point at
+    /// the form for a new line at the top).
+    private var listsLinesFirst: Bool {
+        !session.world.lines.isEmpty && !session.isPickingLineStops && session.lineDraft.isEmpty && session.tutorial == nil
+    }
+
+    /// The new line's form folded into one row while the lines come first
+    /// (decision 195); picking a station puts it back at the top.
+    @ViewBuilder
+    private var newLineRow: some View {
+        Section {
+            Button {
+                withAnimation { showsNewLine.toggle() }
+            } label: {
+                Label {
+                    Text(verbatim: session.language.text("New Line…", "新路線…"))
+                } icon: {
+                    Image(systemName: showsNewLine ? "chevron.down" : "plus.circle")
+                }
+            }
+            .accessibilityIdentifier("line.new")
+            .accessibilityAddTraits(showsNewLine ? .isSelected : [])
+        }
+        if showsNewLine {
+            draftSection
+        }
+    }
+
+    private func servicesSections(_ line: ServiceLine) -> some View {
+        Group {
+            ForEach(memo.serviceSummaries(line.id, of: session), id: \.pattern) { summary in
+                serviceSection(summary, of: line)
+            }
+            // A ring has no patterns.
+            if !line.isRing {
+                addPatternSection(line)
+            }
         }
     }
 
@@ -558,6 +618,7 @@ struct LinesPanel: View {
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
             }
+            capacityWarning(line)
             ForEach(ServiceLevel.allCases, id: \.self) { level in
                 if let gap = memo.coverageText(line.id, at: level, of: session) {
                     Label("\(level.title(in: session.language)): \(gap)", systemImage: "exclamationmark.triangle")
@@ -609,6 +670,19 @@ struct LinesPanel: View {
                         .equatable()
                 }
             }
+            // Decision 195: the station selected on the map, where it fits.
+            if let station = session.selectedStation, !line.stops.contains(station.id) {
+                Button {
+                    session.addStationToSelectedLine(station.id)
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Add \(station.name) to \(line.name)", "把 \(station.name) 加入 \(line.name)"))
+                    } icon: {
+                        Image(systemName: "mappin.and.ellipse")
+                    }
+                }
+                .accessibilityIdentifier("line.addSelectedStation")
+            }
             AddStopMenu(session: session, place: .end(line.stops.count), choices: stations)
                 .equatable()
             // Decision 80: MapBuilder's add to line, where the station fits.
@@ -642,6 +716,22 @@ struct LinesPanel: View {
         }
     }
 
+    /// Decision 195: single track that holds the line to fewer trains
+    /// under traffic control, and what to build.
+    @ViewBuilder
+    private func capacityWarning(_ line: ServiceLine) -> some View {
+        if let warning = memo.capacityWarning(line.id, of: session) {
+            Label {
+                Text(verbatim: warning)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.warning)
+            .accessibilityIdentifier("line.capacityWarning")
+        }
+    }
+
     /// Whether `line` is a ring with a train running a service (decision
     /// 172), which `GameWorld.reverseLineStops(_:)` refuses.
     private func ringHasRunningTrain(_ line: ServiceLine) -> Bool {
@@ -659,11 +749,10 @@ struct LinesPanel: View {
             Text("\(summary.assigned) assigned · \(summary.running) on a trip")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
-            if let train = session.selectedTrain {
-                Button("Assign \(train.name) Here") {
-                    session.assignSelectedTrainToSelectedLine(pattern: summary.pattern)
-                }
-            }
+            // Decision 195: the trains on the track without a line, not
+            // only the one selected last (which may run for another line).
+            AssignTrainMenu(session: session, line: line.id, pattern: summary.pattern, choices: session.unassignedTrainMenuChoices, language: session.language)
+                .equatable()
             if let pattern = summary.pattern {
                 Button("Remove This Pattern", role: .destructive) {
                     session.removePatternFromSelectedLine(pattern)
@@ -852,6 +941,7 @@ struct LinesPanel: View {
                 }
                 .accessibilityIdentifier("line.staff.type")
             }
+            capacityWarning(line)
             Stepper(value: $staffCars, in: Train.minimumCars...Train.maximumCars) {
                 Text(verbatim: language.text("Cars a train: \(staffCars)", "每列節數：\(staffCars)"))
                     .monospacedDigit()
@@ -1108,6 +1198,48 @@ private struct StopMenu: View, Equatable {
                 .frame(minWidth: 44, minHeight: 32)
         }
         .accessibilityLabel("Edit stop \(index + 1), \(stationName)")
+    }
+}
+
+/// The trains on the track without a line, to give one to a service of
+/// line `line` (decision 195). Equatable, as ``StopMenu``; with none, it
+/// says how to get one.
+private struct AssignTrainMenu: View, Equatable {
+    let session: GameSession
+    let line: LineID
+    let pattern: Int?
+    let choices: [MenuChoice<TrainID>]
+    let language: DisplayLanguage
+
+    nonisolated static func == (lhs: AssignTrainMenu, rhs: AssignTrainMenu) -> Bool {
+        lhs.session === rhs.session && lhs.line == rhs.line && lhs.pattern == rhs.pattern
+            && lhs.choices == rhs.choices && lhs.language == rhs.language
+    }
+
+    var body: some View {
+        if choices.isEmpty {
+            Text(verbatim: language.text(
+                "Every train on the track has a line. Buy one and place it at a station, or take one off its line, to assign it here.",
+                "軌道上的列車都已有路線。買一列放到車站，或把一列移出原路線，就能配屬到這裡。"
+            ))
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+        } else {
+            Menu {
+                ForEach(choices) { train in
+                    Button(train.title) {
+                        session.assignTrain(train.id, toLine: line, pattern: pattern)
+                    }
+                }
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Assign a Train…", "配屬列車…"))
+                } icon: {
+                    Image(systemName: "tram.fill")
+                }
+            }
+            .accessibilityIdentifier("line.assignTrain.\(pattern ?? -1)")
+        }
     }
 }
 
