@@ -227,9 +227,11 @@ final class FollowingMapLibreView: MLNMapView {
     }
 
     override func accessibilityElement(at index: Int) -> Any? {
-        MainActor.assumeIsolated {
-            index == super.accessibilityElementCount() && !credit.text.isEmpty ? credit as Any? : super.accessibilityElement(at: index)
+        let credit: MapCreditButton? = MainActor.assumeIsolated {
+            index == super.accessibilityElementCount() && !self.credit.text.isEmpty ? self.credit : nil
         }
+        if let credit { return credit }
+        return super.accessibilityElement(at: index)
     }
 
     override func index(ofAccessibilityElement element: Any) -> Int {
