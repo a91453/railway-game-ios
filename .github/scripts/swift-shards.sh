@@ -169,6 +169,9 @@ set -euo pipefail
 # RealWorldDemoTests to campaigns-15. Estimated on a slow runner: rest about
 # 18.9 -> 15.8 minutes, campaigns-11 about 9.5 -> 11.4, campaigns-15 about
 # 10.1 -> 11.5; the slowest shard is campaigns-1 again.
+# 2026-10-12 (NEXT_PRIORITIES §2 item 6): ReservationShortcutTests, which
+# asks route reservation the long way it replaced on long legs (about 1.5
+# minutes locally), joins campaigns-10, the shortest shard, rather than rest.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
@@ -180,7 +183,7 @@ classes_of() {
     campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
     campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
-    campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests" ;;
+    campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests ReservationShortcutTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;

@@ -84,10 +84,10 @@ extension GameWorld {
     /// changes what it holds.
     func waitingRoute(of train: Train, memo: inout DirectionMemo) -> (candidate: Train, departs: Bool)? {
         guard isTrafficControlEnabled, train.position != nil else { return nil }
-        if isFollowing(train) {
-            let step = travelling(train, distance: 1)
+        if isFollowing(train, memo: &memo) {
+            let step = travelling(train, distance: 1, memo: &memo)
             guard step.position == train.position, step.cursor == train.movement.cursor,
-                  holder(of: routeEnvelope(of: train).resources, except: train.id) != nil
+                  holder(of: envelopeCover(of: train), except: train.id, holders: trackHolders(memo: &memo)) != nil
             else { return nil }
             return (train, false)
         }
@@ -107,10 +107,10 @@ extension GameWorld {
         case .waitingAtStop(let stop, let cycle)?:
             guard let due = departureDue(of: train), due <= clock.now else { return nil }
             if let preferred = preferredLeaving(train, stop: stop, cycle: cycle)?.train,
-               case .granted = reserving(preferred) { return preferred }
+               case .granted = reserving(preferred, memo: &memo) { return preferred }
             return leaving(train, stop: stop, cycle: cycle).train
         case .travellingToStop?:
-            if let preferred = preferredGoingOn(train), case .granted = reserving(preferred) { return preferred }
+            if let preferred = preferredGoingOn(train), case .granted = reserving(preferred, memo: &memo) { return preferred }
             return goingOn(train)
         case nil:
             guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }) else { return nil }
@@ -147,15 +147,14 @@ extension GameWorld {
     /// Everything the trains `among` (other than `id`) keep train `id`
     /// from, as ``blockedTrack(except:)`` does for all of them.
     func blockedTrack(except id: TrainID, among ids: Set<TrainID>) -> Set<TrackResource> {
-        let own = train(id: id).map(held) ?? []
-        var blocked: Set<TrackResource> = []
-        for other in trains where other.id != id && other.position != nil && ids.contains(other.id) {
-            blocked.formUnion(held(other))
-            if let claim = claim(of: other), own.isDisjoint(with: claim.route) {
-                blocked.formUnion(claim.waiting)
-            }
-        }
-        return blocked
+        var memo = DirectionMemo()
+        return blockedTrack(except: id, among: ids, memo: &memo)
+    }
+
+    /// ``blockedTrack(except:among:)`` from the trains' holders kept in
+    /// `memo` (see ``trackHolders(memo:)``).
+    func blockedTrack(except id: TrainID, among ids: Set<TrainID>, memo: inout DirectionMemo) -> Set<TrackResource> {
+        blockedTrack(except: id, among: ids, holders: trackHolders(memo: &memo)).resources
     }
 
     /// Whether `request` (see ``waitingRoute(of:memo:)``) could go if, of all
@@ -164,14 +163,14 @@ extension GameWorld {
     /// is. Following them is never possible: they all wait.
     private func couldGo(_ request: (candidate: Train, departs: Bool), among ids: Set<TrainID>, memo: inout DirectionMemo) -> Bool {
         let candidate = request.candidate
-        let blocked = blockedTrack(except: candidate.id, among: ids)
-        if !network.fouls(routeEnvelope(of: candidate).resources, blocked) { return true }
+        let blocked = blockedTrack(except: candidate.id, among: ids, holders: trackHolders(memo: &memo))
+        if !blocked.blocks(envelopeCover(of: candidate), in: network) { return true }
         guard request.departs, case .travellingToStop(let stop, _)? = candidate.execution,
               let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: blocked, memo: &memo)
         else { return false }
         var rerouted = candidate
         follow(alternative, &rerouted)
-        return !network.fouls(routeEnvelope(of: rerouted).resources, blocked)
+        return !blocked.blocks(envelopeCover(of: rerouted), in: network)
     }
 
     /// The trains in a deadlock under traffic control (Stage V2), with the
@@ -255,7 +254,7 @@ extension GameWorld {
     private func passingPlace(for candidate: Train, in stuck: [TrainID: (candidate: Train, departs: Bool)], forbidden: Set<TrackTraversal>, defaultLength: Int64, allBerths: Bool = false, memo: inout DirectionMemo) -> (path: TrainPath, distance: Int64)? {
         guard case .travellingToStop(let stop, _)? = candidate.execution, let start = candidate.placement else { return nil }
         let call = candidate.timetable[stop].station
-        let blocked = blockedTrack(except: candidate.id)
+        let blocked = blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo))
         let (limit, overflow) = defaultLength.addingReportingOverflow(Self.detourAllowance)
         var best: (path: TrainPath, distance: Int64)?
         for station in stations where station.id != call {
@@ -280,7 +279,7 @@ extension GameWorld {
                 guard !long, overflow || distance <= limit, distance < best?.distance ?? .max else { continue }
                 var routed = candidate
                 follow(way, &routed)
-                guard case .granted = reserving(routed) else { continue }
+                guard case .granted = reserving(routed, memo: &memo) else { continue }
                 // Standing there, it must let another train of the deadlock go.
                 var standing = candidate
                 standing.position = there.position
@@ -294,7 +293,7 @@ extension GameWorld {
                 for (id, request) in stuck where id != candidate.id {
                     if request.departs {
                         if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { freed = true }
-                    } else if aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil {
+                    } else if aside.holder(of: aside.envelopeCover(of: request.candidate), except: id, holders: aside.trackHolders(memo: &memo)) == nil {
                         freed = true
                     }
                     if freed { break }
@@ -326,7 +325,7 @@ extension GameWorld {
             let own = held(spare)
             let waiting = stuck.keys.sorted().filter { network.fouls(own, routeEnvelope(of: stuck[$0]!.candidate).resources) }
             guard !waiting.isEmpty else { continue }
-            let blocked = blockedTrack(except: spare.id)
+            let blocked = blockedTrack(except: spare.id, holders: trackHolders(memo: &memo))
             let starts = stationsBesideWholeTrain(spare.id).isEmpty ? [place] : [place, turnedRound(place)]
             var best: (train: Train, distance: Int64)?
             for start in starts {
@@ -338,7 +337,7 @@ extension GameWorld {
                     moving.position = start.position
                     moving.trailEdges = start.trailEdges
                     follow(way, &moving)
-                    guard case .granted(let granted) = reserving(moving) else { continue }
+                    guard case .granted(let granted) = reserving(moving, memo: &memo) else { continue }
                     // Standing there, it must let a train it held up go.
                     let there = placement(start, after: way)
                     var standing = spare
@@ -352,7 +351,7 @@ extension GameWorld {
                     let frees = waiting.contains { id in
                         let request = stuck[id]!
                         guard request.departs else {
-                            return aside.holder(of: aside.routeEnvelope(of: request.candidate).resources, except: id) == nil
+                            return aside.holder(of: aside.envelopeCover(of: request.candidate), except: id, holders: aside.trackHolders(memo: &memo)) == nil
                         }
                         if case .granted = aside.reservingDeparture(request.candidate, memo: &memo) { return true }
                         return false

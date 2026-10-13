@@ -33,6 +33,12 @@ extension GameWorld {
         /// What working out a traffic plan reads that changes only by a
         /// command, kept from one plan to the next.
         var trafficParts = TrafficParts()
+        /// The track the trains hold (see ``trackHolders(memo:)``), for the
+        /// last sets of trains asked about.
+        var holders: [(trains: [Train], holders: TrackHolders)] = []
+        /// Each train's movement authority (see ``authority(of:memo:)``),
+        /// for its last values asked about.
+        var authorities: [TrainID: [(train: Train, authority: (left: Int64, envelopes: AuthorityEnvelopes)?)]] = [:]
     }
 
     private struct DirectionState: Hashable {
