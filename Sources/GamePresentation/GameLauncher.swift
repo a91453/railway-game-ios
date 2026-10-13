@@ -17,6 +17,12 @@ import Observation
 /// starts, the autosave is kept as a save of the player's own, so starting
 /// a new game never loses the last one (the reference archives the current
 /// draft before a fresh start).
+///
+/// Decision 192: the periodic autosave is taken in turn into one of
+/// ``SaveLibrary/autosaveSlots`` (``autosaveSlotInBackground(at:)``), and
+/// the autosave on leaving the game stays the latest, so the player can go
+/// back to the game of some minutes before (``load(_:at:)`` of an older
+/// autosave, ``autosavesToGoBackTo()``).
 @MainActor
 @Observable
 public final class GameLauncher {
@@ -100,6 +106,10 @@ public final class GameLauncher {
     public private(set) var achievements: AchievementRecords
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
+    /// The world of the last autosave taken in turn, or of the game when
+    /// it began (decision 192): a game left as it was, paused, takes no
+    /// slot, so it never pushes out the ones the player may go back to.
+    @ObservationIgnored private var lastSlotWorld: GameWorld?
     @ObservationIgnored private var realWorldLoad: Task<Void, Never>?
 
     public init(library: SaveLibrary, language: DisplayLanguage) {
@@ -153,14 +163,41 @@ public final class GameLauncher {
         savePreferences()
     }
 
-    /// The autosave, if there is one that can be loaded.
+    /// The newest autosave that can be loaded, if there is one: the game
+    /// Continue goes on with.
     public var autosave: SaveLibrary.Entry? {
         entries.first { $0.kind == .autosave && $0.problem == nil }
     }
 
-    /// The player's own saves, and an autosave that cannot be loaded.
+    /// The other autosaves that can be loaded (decision 192), the newest
+    /// first: the game as it was some minutes before.
+    public var olderAutosaves: [SaveLibrary.Entry] {
+        entries.filter { $0.kind == .autosave && $0.problem == nil && $0 != autosave }
+    }
+
+    /// The player's own saves, and autosaves that cannot be loaded.
     public var otherSaves: [SaveLibrary.Entry] {
-        entries.filter { $0 != autosave }
+        entries.filter { $0.kind == .manual || $0.problem != nil }
+    }
+
+    /// The autosaves of the game being played that can be loaded, the
+    /// newest first, read now (decision 192): what the game menu offers to
+    /// go back to. Reads the autosaves alone, after the saves queued, off
+    /// the main thread: six saves of the high-speed demo take some 0.4 s.
+    /// With none, the game's status line says when there will be one.
+    public func autosavesToGoBackTo() async -> [SaveLibrary.Entry] {
+        let library = library
+        let read = await withCheckedContinuation { (read: CheckedContinuation<[SaveLibrary.Entry], Never>) in
+            saveQueue.async { read.resume(returning: library.autosaves()) }
+        }
+        let autosaves = read.filter { $0.problem == nil }
+        if autosaves.isEmpty {
+            session?.message = StatusMessage(kind: .failure, text: language.text(
+                "There is no autosave to go back to yet: one is taken every 15 minutes of play.",
+                "還沒有可以回去的自動存檔：遊戲中每 15 分鐘會存一份。"
+            ))
+        }
+        return autosaves
     }
 
     public func refresh() {
@@ -458,15 +495,58 @@ public final class GameLauncher {
         load(autosave)
     }
 
-    /// Loads `entry`. The autosave is kept first, unless `entry` is the
+    /// Loads `entry`. The autosave is kept first, unless `entry` is an
     /// autosave.
-    public func load(_ entry: SaveLibrary.Entry) {
+    ///
+    /// Decision 192: an autosave other than the newest is going back, and
+    /// can be undone. In a game, the game as it is is first kept as the
+    /// next autosave taken in turn; on the start screen, the latest
+    /// autosave is kept that way. The game gone back to is then the latest
+    /// autosave, so Continue goes on with it.
+    public func load(_ entry: SaveLibrary.Entry, at date: Date = Date()) {
+        if entry.kind == .autosave {
+            loadAutosave(entry, at: date)
+            return
+        }
         do throws(SaveError) {
             let library = library
             let (world, news) = try afterSaves { () throws(SaveError) in (try library.load(entry), library.news(for: entry)) }
             begin(world, keepingAutosave: entry.kind != .autosave, news: news)
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+    }
+
+    private func loadAutosave(_ entry: SaveLibrary.Entry, at date: Date) {
+        let playing = session
+        if playing != nil { recordChallengeResult(at: date) }
+        let current = playing.map { ($0.worldToSave, $0.news) }
+        do throws(SaveError) {
+            let library = library
+            let (world, news, wentBack) = try afterSaves { () throws(SaveError) in
+                // Read first: keeping a game in turn may delete the oldest.
+                let (world, news) = (try library.load(entry), library.news(for: entry))
+                if let (now, log) = current {
+                    try library.saveAutosaveSlot(now, news: log, at: date)
+                    return (world, news, true)
+                }
+                guard library.newestAutosave()?.id != entry.id else {
+                    return (world, news, false)
+                }
+                try library.keepLatestAutosaveInSlot()
+                return (world, news, true)
+            }
+            begin(world, keepingAutosave: false, news: news)
+            if wentBack {
+                autosaveInBackground(at: date)
+            }
+        } catch {
+            let failure = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            if let playing {
+                playing.message = failure
+            } else {
+                message = failure
+            }
         }
     }
 
@@ -527,6 +607,7 @@ public final class GameLauncher {
             self.checkAchievements(of: started)
         }
         session = started
+        lastSlotWorld = started.worldToSave
         message = nil
         playSound?(.transition)
         if isActive {
@@ -616,7 +697,8 @@ public final class GameLauncher {
     /// (``returnToStart()``).
     ///
     /// The autosave on leaving the app and the periodic one are written in
-    /// the background instead (``autosaveInBackground(at:)``).
+    /// the background instead (``autosaveInBackground(at:)``,
+    /// ``autosaveSlotInBackground(at:)``).
     @discardableResult
     public func autosaveCurrentGame(at date: Date = Date(), refreshing: Bool = true) -> Bool {
         guard let session else { return false }
@@ -632,9 +714,10 @@ public final class GameLauncher {
         }
     }
 
-    /// Writes the game being played over the autosave in the background
-    /// (decision 45, later): the autosave on leaving the app and the
-    /// periodic one. The world is copied now, the moment it is saved; it
+    /// Writes the game being played over the latest autosave in the
+    /// background (decision 45, later): the autosave on leaving the app
+    /// (the periodic one is taken in turn since decision 192,
+    /// ``autosaveSlotInBackground(at:)``). The world is copied now, the moment it is saved; it
     /// is encoded and written off the main thread, so the game does not
     /// stop while it is. A failure is reported in the game's status line
     /// when the task ends. The list of saves is left as it was, as
@@ -646,6 +729,26 @@ public final class GameLauncher {
         recordChallengeResult(at: date)
         let language = language
         return write(session.worldToSave, news: session.news, as: .autosave, at: date) { [weak session] result in
+            guard case .failure(let error) = result else { return }
+            session?.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+    }
+
+    /// Takes the game being played as the next autosave in turn (decision
+    /// 192), in the background as ``autosaveInBackground(at:)``: the
+    /// periodic autosave. Nothing is written, and `nil` returned, when
+    /// the game is as the last one taken (or as it began): a paused game
+    /// left alone would otherwise push out the autosaves worth going back
+    /// to. `nil` without a game.
+    @discardableResult
+    public func autosaveSlotInBackground(at date: Date = Date()) -> Task<Void, Never>? {
+        guard let session else { return nil }
+        let world = session.worldToSave
+        guard world != lastSlotWorld else { return nil }
+        lastSlotWorld = world
+        recordChallengeResult(at: date)
+        let language = language
+        return write(world, news: session.news, as: .autosave, inTurn: true, at: date) { [weak session] result in
             guard case .failure(let error) = result else { return }
             session?.message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
@@ -663,13 +766,17 @@ public final class GameLauncher {
     /// Queues `world` to be written after the saves already queued, at
     /// once, and calls `done` on the main actor with how it went.
     private func write(
-        _ world: GameWorld, news: NewsLog, as kind: SaveLibrary.Kind, at date: Date, named name: String? = nil,
+        _ world: GameWorld, news: NewsLog, as kind: SaveLibrary.Kind, inTurn: Bool = false, at date: Date, named name: String? = nil,
         then done: @escaping @MainActor (Result<SaveLibrary.Entry, SaveError>) -> Void
     ) -> Task<Void, Never> {
         let library = library
         let (written, report) = AsyncStream.makeStream(of: Result<SaveLibrary.Entry, SaveError>.self)
         saveQueue.async {
-            report.yield(Result { () throws(SaveError) in try library.save(world, news: news, as: kind, at: date, named: name) })
+            report.yield(Result { () throws(SaveError) in
+                inTurn
+                    ? try library.saveAutosaveSlot(world, news: news, at: date).entry
+                    : try library.save(world, news: news, as: kind, at: date, named: name)
+            })
             report.finish()
         }
         return Task {
@@ -743,7 +850,7 @@ public final class GameLauncher {
                         return
                     }
                     guard !Task.isCancelled, let self else { return }
-                    self.autosaveInBackground()
+                    self.autosaveSlotInBackground()
                 }
             }
         } else {
