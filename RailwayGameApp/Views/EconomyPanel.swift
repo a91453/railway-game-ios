@@ -245,7 +245,7 @@ struct EconomyPanel: View {
                 set: { bandStart = $0 }
             )
             let bands = FareRules.distanceBands(startingAt: Money(start.wrappedValue), baseline: accounts.fareBaseline)
-            Stepper(value: start, in: FareRules.bandStartRange, step: FareRules.bandStartStep) {
+            Stepper(value: start, in: FareRules.bandStartRange, step: Int(FareRules.bandStartStep)) {
                 Text(verbatim: language.text("Distance fares from \(Money(start.wrappedValue).centsText)", "階梯票價起價 \(Money(start.wrappedValue).centsText)"))
                     .monospacedDigit()
             }
