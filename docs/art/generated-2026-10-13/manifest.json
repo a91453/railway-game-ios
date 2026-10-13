@@ -1,0 +1,1432 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-10-13",
+  "repository": "a91453/railway-game-ios",
+  "base_commit": "c89c72478c6c2c0c5fa9301b4b13d535c4ab84eb",
+  "generator": "image_gen",
+  "quota_remaining": null,
+  "quota_note": "工具與使用者皆看不到剩餘額度；不推算未回報的額度。",
+  "asset_count": 43,
+  "total_bytes": 28614143,
+  "assets": [
+    {
+      "id": "amusement-park",
+      "name": "遊樂園",
+      "category": "player-building",
+      "usage": "遊樂園建造卡／子公司觀光面板",
+      "subject": "A compact amusement park made from a large warm-yellow Ferris wheel with six simple navy-outlined cream gondolas, one small warm-yellow entry kiosk, one turquoise striped canopy and a short looping turquoise rollercoaster. Single flat balanced emblem, no words, no landscape.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A compact amusement park made from a large warm-yellow Ferris wheel with six simple navy-outlined cream gondolas, one small warm-yellow entry kiosk, one turquoise striped canopy and a short looping turquoise rollercoaster. Single flat balanced emblem, no words, no landscape.",
+      "file": "png/amusement-park.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 869887,
+      "sha256": "4dd11ad1fd573e067e503039af08332f197427947d501beca3b4997dfb482684",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        41,
+        23,
+        1222,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        101,
+        164,
+        1211,
+        1084
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "department-store",
+      "name": "百貨公司",
+      "category": "player-building",
+      "usage": "百貨建造卡／子公司營業面板",
+      "subject": "An EIGHT-storey department store, broad warm-yellow rectangular building, exactly eight navy horizontal window bands, a big covered central shopping entrance and one simple shopping-bag shape on a blank sign panel. Front-facing, no words, no brand.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: An EIGHT-storey department store, broad warm-yellow rectangular building, exactly eight navy horizontal window bands, a big covered central shopping entrance and one simple shopping-bag shape on a blank sign panel. Front-facing, no words, no brand.",
+      "file": "png/department-store.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 920572,
+      "sha256": "5bb73d88a2f89db48ea7114e3e82a291d2615ebd3a9ca8bc7d7431bc3d19c2cb",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        98,
+        45,
+        1164,
+        1236
+      ],
+      "visible_alpha_bbox": [
+        102,
+        139,
+        1153,
+        1089
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿仍含色階；正式採用前依 art-style 平塗化、核對輪廓與層數。"
+    },
+    {
+      "id": "hotel",
+      "name": "飯店",
+      "category": "player-building",
+      "usage": "飯店建造卡／子公司損益面板",
+      "subject": "A tall FOURTEEN-storey hotel tower, a slim warm-yellow facade with fourteen simple evenly spaced navy window bands, a small cream entrance canopy, one understated turquoise planter. Front-facing, no letters or HOTEL sign.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A tall FOURTEEN-storey hotel tower, a slim warm-yellow facade with fourteen simple evenly spaced navy window bands, a small cream entrance canopy, one understated turquoise planter. Front-facing, no letters or HOTEL sign.",
+      "file": "png/hotel.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 523430,
+      "sha256": "6b4caec52df94fdf3929678a32876abf08dddabfb521b9a6b2c886b722a6fd3a",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        79,
+        62,
+        1214,
+        1188
+      ],
+      "visible_alpha_bbox": [
+        388,
+        65,
+        867,
+        1181
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿仍含色階；正式採用前依 art-style 平塗化、核對輪廓與層數。"
+    },
+    {
+      "id": "house",
+      "name": "住宅",
+      "category": "player-building",
+      "usage": "住宅建造卡／建物詳細面板",
+      "subject": "A small TWO-storey Taiwanese family house. Single compact symmetric building, simple triangular navy roof, exactly two large square windows upstairs, a central navy door and one broad window downstairs, one small turquoise shrub beside it. Main house walls warm yellow.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A small TWO-storey Taiwanese family house. Single compact symmetric building, simple triangular navy roof, exactly two large square windows upstairs, a central navy door and one broad window downstairs, one small turquoise shrub beside it. Main house walls warm yellow.",
+      "file": "png/house.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 645585,
+      "sha256": "f61f0a3435fd5b4a36f12176cfe3e4b50134415d4243487905249578b3d26e60",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        65,
+        32,
+        1232,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        224,
+        191,
+        1039,
+        1063
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "生成候選，需完成視覺檢查。"
+    },
+    {
+      "id": "house-detailed",
+      "name": "暖黃住宅（細節版）",
+      "category": "player-building",
+      "subject": "Small two-storey company house",
+      "usage": "住宅建造卡／建物詳細面板",
+      "prompt": "Create one original production-ready illustration asset for Along the Line, a Taiwan railway and city management game. Square 1024x1024 canvas, isolated subject centered with generous transparent padding (about 12% all sides). Flat 2D vector-like style, solid matte color blocks, thick smooth navy #262C57 outer contours, rounded joins and corners, simple friendly geometric architecture. Strict palette: navy #262C57, warm yellow #FFC86B, white #FFFFFF, pale cream #FFE9BC, turquoise #12A08F, pale turquoise #BDEFE7, light background #ECEEF6. No gradients, no cast shadows, no textures, no photorealism, no 3D rendering, no letters, no text, no numbers, no logos, no watermark. Three-quarter flat diagrammatic building view with subtle orthographic angled roof, consistent same viewpoint for all buildings. Major player-owned building surfaces MUST be warm yellow #FFC86B, large navy windows and contours. This is a full-color card illustration, not a small toolbar glyph. Keep windows few and broad enough to read at 64 pixels. Everything outside subject transparent. SUBJECT: a small two-storey Taiwanese family house, compact square footprint, simple navy gabled roof with one warm-yellow fascia, two broad windows upstairs, one door and window downstairs, small porch, one small turquoise shrub. Friendly clean recognizable HOUSE silhouette. One building only.",
+      "file": "png/house-detailed.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 908245,
+      "sha256": "cca8ee200de089754e346ddfa39fee1c1dd200bad70a9bcdcd9b34d557d4aaba",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        65,
+        14,
+        1224,
+        1214
+      ],
+      "visible_alpha_bbox": [
+        180,
+        133,
+        1074,
+        1127
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：含高光與明暗，需要依 art-style 重新平塗後才可放入正式 App。"
+    },
+    {
+      "id": "marina",
+      "name": "遊艇港",
+      "category": "player-building",
+      "usage": "遊艇港建造卡／水岸觀光面板",
+      "subject": "A marina illustration: a warm-yellow small two-storey clubhouse, a simple navy-and-cream floating dock, two white sailboats with large warm-yellow triangular sails, three broad turquoise water bands contained around the dock. Compact balanced shape, no landscape background.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A marina illustration: a warm-yellow small two-storey clubhouse, a simple navy-and-cream floating dock, two white sailboats with large warm-yellow triangular sails, three broad turquoise water bands contained around the dock. Compact balanced shape, no landscape background.",
+      "file": "png/marina.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 791858,
+      "sha256": "f2e41efedcb9abb9bafe307d2a1bdc1106c09157c285191767b01b80d6f31da5",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        115,
+        1216,
+        1150
+      ],
+      "visible_alpha_bbox": [
+        64,
+        226,
+        1190,
+        1020
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿仍含色階；正式採用前依 art-style 平塗化、核對輪廓與層數。"
+    },
+    {
+      "id": "office",
+      "name": "辦公大樓",
+      "category": "player-building",
+      "usage": "辦公樓建造卡／入住與就業面板",
+      "subject": "A SIX-storey office block with a broad rectangular warm-yellow body and six clear horizontal rows of two navy windows, flat cream parapet, central entrance and a single small turquoise accent at base. One building only. Plain flat diagrammatic geometry.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A SIX-storey office block with a broad rectangular warm-yellow body and six clear horizontal rows of two navy windows, flat cream parapet, central entrance and a single small turquoise accent at base. One building only. Plain flat diagrammatic geometry.",
+      "file": "png/office.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 642816,
+      "sha256": "5508bf288c46d23147288a1cae8ca23890358d717c861b013163100293c664c9",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        273,
+        19,
+        982,
+        1125
+      ],
+      "visible_alpha_bbox": [
+        276,
+        134,
+        979,
+        1119
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "生成候選，需完成視覺檢查。"
+    },
+    {
+      "id": "shop",
+      "name": "商店",
+      "category": "player-building",
+      "usage": "商店建造卡／租金面板",
+      "subject": "A small TWO-storey Taiwanese neighborhood shop. A chunky flat cream roofline, two navy upstairs windows, bold warm-yellow shop front, a broad turquoise awning alternating only two solid strips, a wide navy storefront window and doorway. One building only, no merchandise details, no sign lettering.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A small TWO-storey Taiwanese neighborhood shop. A chunky flat cream roofline, two navy upstairs windows, bold warm-yellow shop front, a broad turquoise awning alternating only two solid strips, a wide navy storefront window and doorway. One building only, no merchandise details, no sign lettering.",
+      "file": "png/shop.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 875659,
+      "sha256": "e87e3a2b9a02c60f50770c28132764a487f31db5db68665ea5ddee51b327b6d9",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        126,
+        1214,
+        1134
+      ],
+      "visible_alpha_bbox": [
+        146,
+        131,
+        1108,
+        1115
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "生成候選，需完成視覺檢查。"
+    },
+    {
+      "id": "wharf",
+      "name": "漁人碼頭",
+      "category": "player-building",
+      "usage": "碼頭建造卡／水岸建設說明",
+      "subject": "A compact fisherman's wharf illustration: a small warm-yellow two-storey waterfront restaurant, navy roof, a short wooden-colored navy and cream pier, one warm-yellow fishing boat, three broad turquoise water bands contained under the pier. No seascape background. Transparent outside the object.",
+      "prompt": "Generate a single original 2D flat vector-style illustration for Along the Line (沿線), a Taiwanese railway and city simulation game. TRANSPARENT square canvas. A friendly minimal flat infographic pictogram, like a cut-paper geometric diagram. Use ONLY SOLID UNIFORM FILLS: navy #262C57 outlines and windows, warm yellow #FFC86B main walls, cream #ECEEF6 roof trim, turquoise #12A08F accent. NO gradients whatsoever. NO shading, bevels, 3D highlights, glossy shine, cast shadows, reflections, photographic textures, typography, logos, text, letters, numbers. FRONT-FACING orthographic elevation, no perspective. Thick consistent navy outer line, perfectly smooth rounded corners, a few broad navy window rectangles. Center the complete subject, 14% transparent padding on every side. Highly legible at small size. This is full-color illustration for a building detail card, not a replacement for SF Symbols or MapGlyph. SUBJECT: A compact fisherman's wharf illustration: a small warm-yellow two-storey waterfront restaurant, navy roof, a short wooden-colored navy and cream pier, one warm-yellow fishing boat, three broad turquoise water bands contained under the pier. No seascape background. Transparent outside the object.",
+      "file": "png/wharf.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 985999,
+      "sha256": "47e2c1f1d8d378b79dc222f3d0a6c038ded3734b6e26ed90d38e6735840b72fb",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        54,
+        23,
+        1204,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        61,
+        175,
+        1199,
+        1078
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿仍含色階；正式採用前依 art-style 平塗化、核對輪廓與層數。"
+    },
+    {
+      "id": "city-apartment",
+      "name": "城市公寓",
+      "category": "city-building",
+      "usage": "中密度住宅／密度成長說明",
+      "subject": "A compact six-storey residential apartment block, exterior solid green #63B06F, roof and balcony bands pale green #A8DCA8, navy outlines and broad windows, cream door. City-owned use-color convention. No warm-yellow walls.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A compact six-storey residential apartment block, exterior solid green #63B06F, roof and balcony bands pale green #A8DCA8, navy outlines and broad windows, cream door. City-owned use-color convention. No warm-yellow walls.",
+      "file": "png/city-apartment.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 724498,
+      "sha256": "9251664ff665c3b68ee2c78a9449f869253e9a855bf411c9ac0409927b562135",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        130,
+        65,
+        1208,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        254,
+        157,
+        1000,
+        1098
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-commercial",
+      "name": "城市商業樓",
+      "category": "city-building",
+      "usage": "商業用地／城市用途圖例插圖",
+      "subject": "A city-owned commercial shopping block, broad blue #5F95CB main walls with pale blue #A9CBEB roof, navy outlines and big shop windows, cream door. Three-storey front-facing geometry, no text, original store.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A city-owned commercial shopping block, broad blue #5F95CB main walls with pale blue #A9CBEB roof, navy outlines and big shop windows, cream door. Three-storey front-facing geometry, no text, original store.",
+      "file": "png/city-commercial.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 995319,
+      "sha256": "d2ab41a5f95e2c8182f8119514b6f64902bf69a3ac5607617468e48b9c267ac2",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        22,
+        1206,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        148,
+        91,
+        1106,
+        1146
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-factory",
+      "name": "工業廠房",
+      "category": "city-building",
+      "usage": "工業用地／貨運與就業說明",
+      "subject": "A city-owned industrial factory: solid violet #9088C2 walls, pale violet #CFC9E6 sawtooth roof, navy outline, two broad windows and one large loading doorway, one squat chimney without smoke, cream details. Flat original factory icon, no company marks.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A city-owned industrial factory: solid violet #9088C2 walls, pale violet #CFC9E6 sawtooth roof, navy outline, two broad windows and one large loading doorway, one squat chimney without smoke, cream details. Flat original factory icon, no company marks.",
+      "file": "png/city-factory.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 581777,
+      "sha256": "c34267be16b264b9945d0536a7e2f4ed57fe72cfabb95ed209e57d930ca4e6e3",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        76,
+        1240,
+        1149
+      ],
+      "visible_alpha_bbox": [
+        148,
+        249,
+        1106,
+        1000
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-farm",
+      "name": "農地",
+      "category": "city-building",
+      "usage": "農業用地／分區圖卡",
+      "subject": "A compact farmland patch: solid pale cream #F1E6C8 ground, three chunky rows of green #63B06F crops, navy #262C57 outlines, a small green-roof shed, minimal bold geometry, no soil texture or gradients.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A compact farmland patch: solid pale cream #F1E6C8 ground, three chunky rows of green #63B06F crops, navy #262C57 outlines, a small green-roof shed, minimal bold geometry, no soil texture or gradients.",
+      "file": "png/city-farm.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1082563,
+      "sha256": "becc705c7532d2085252f849f97b79c8b7d14273c36fa6a46319172cd35bac51",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        30,
+        1187,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        76,
+        163,
+        1179,
+        1085
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-house",
+      "name": "城市住宅",
+      "category": "city-building",
+      "usage": "住宅用地說明／城市成長圖卡",
+      "subject": "A small city-owned residential house. Main exterior solid green #63B06F, roof solid pale green #A8DCA8, thick navy outline #262C57, cream window shapes, compact front elevation. Two-storey friendly house. No warm-yellow main walls because this is city-owned, not company-owned.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A small city-owned residential house. Main exterior solid green #63B06F, roof solid pale green #A8DCA8, thick navy outline #262C57, cream window shapes, compact front elevation. Two-storey friendly house. No warm-yellow main walls because this is city-owned, not company-owned.",
+      "file": "png/city-house.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 741597,
+      "sha256": "00440ebcdfbd9de4aba151c259ba505d6aee2d9892a2c68f113bb6e7da190467",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        47,
+        105,
+        1214,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        160,
+        238,
+        1095,
+        1023
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-leisure",
+      "name": "觀光休閒館",
+      "category": "city-building",
+      "usage": "觀光用地／休閒需求說明",
+      "subject": "An original small visitor and leisure pavilion, solid teal #4CA597 facade, pale teal #AEE0D8 rounded roof, navy outlines, cream doorway, two simple turquoise trees and a bench. City-owned use-color convention. No typography.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original small visitor and leisure pavilion, solid teal #4CA597 facade, pale teal #AEE0D8 rounded roof, navy outlines, cream doorway, two simple turquoise trees and a bench. City-owned use-color convention. No typography.",
+      "file": "png/city-leisure.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 641642,
+      "sha256": "5d054d4b308bff7220ebc796c5db2bcd9f1e5f3e103097e5c9a458c45194b71a",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        41,
+        32,
+        1218,
+        1226
+      ],
+      "visible_alpha_bbox": [
+        104,
+        247,
+        1150,
+        1016
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-office",
+      "name": "城市辦公樓",
+      "category": "city-building",
+      "usage": "辦公用地／就業說明",
+      "subject": "A city-owned office tower: solid orange #D99649 walls, pale orange #F5CD95 flat roof and trim, navy outlines and six rows of broad windows, cream entry. Front elevation, no letters or branding.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A city-owned office tower: solid orange #D99649 walls, pale orange #F5CD95 flat roof and trim, navy outlines and six rows of broad windows, cream entry. Front elevation, no letters or branding.",
+      "file": "png/city-office.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 660439,
+      "sha256": "6e1546cc2e3960655371085763f60b09ab575721981dd50102f617de6710f530",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        41,
+        85,
+        1226,
+        1166
+      ],
+      "visible_alpha_bbox": [
+        244,
+        169,
+        1010,
+        1093
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-park",
+      "name": "公園",
+      "category": "city-building",
+      "usage": "公園用地／土地價值說明",
+      "subject": "A compact park: pale green #CDE8B5 rounded ground patch with navy outline, two simple trees with #63B06F trunks-canopies and #A8DCA8 accents, one cream-and-navy park bench, a short cream path. Flat overhead/elevation pictogram, no shadows.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A compact park: pale green #CDE8B5 rounded ground patch with navy outline, two simple trees with #63B06F trunks-canopies and #A8DCA8 accents, one cream-and-navy park bench, a short cream path. Flat overhead/elevation pictogram, no shadows.",
+      "file": "png/city-park.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 661308,
+      "sha256": "445e665be8aaea01f3bd22f2ea741e0c345b15dc5af814f5e83f51d995c532fc",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        39,
+        1224,
+        1216
+      ],
+      "visible_alpha_bbox": [
+        148,
+        231,
+        1106,
+        1026
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-residential-tower",
+      "name": "城市住宅高樓",
+      "category": "city-building",
+      "usage": "高密度住宅／城市成長說明",
+      "subject": "A single slim residential high-rise with twelve simple broad window bands, solid green #63B06F exterior, pale green #A8DCA8 roof and trim, navy #262C57 outlines, cream door. Symbolic height only, not exact floor-count data. City-owned, no warm-yellow walls.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A single slim residential high-rise with twelve simple broad window bands, solid green #63B06F exterior, pale green #A8DCA8 roof and trim, navy #262C57 outlines, cream door. Symbolic height only, not exact floor-count data. City-owned, no warm-yellow walls.",
+      "file": "png/city-residential-tower.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 443076,
+      "sha256": "dcd05910dbaf4d4510c97045459635f5573bd44004ef3606aaf9ca74bb74f8d2",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        24,
+        1097,
+        1151
+      ],
+      "visible_alpha_bbox": [
+        420,
+        113,
+        834,
+        1145
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "city-school",
+      "name": "學校與公共設施",
+      "category": "city-building",
+      "usage": "公共用地／通學需求說明",
+      "subject": "An original city school building with broad coral-red #DB7C6E facade and pale coral #F6BCAE flat roof, navy outline, two classroom window rows, a central cream entrance and tiny navy-outline blank flag. No logos, text, letters or numbers.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original city school building with broad coral-red #DB7C6E facade and pale coral #F6BCAE flat roof, navy outline, two classroom window rows, a central cream entrance and tiny navy-outline blank flag. No logos, text, letters or numbers.",
+      "file": "png/city-school.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 670215,
+      "sha256": "0f723cbbfbb624ac02ab23df2d64a9f783e42f2e621b7a315458df4ef07d6b19",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        21,
+        71,
+        1224,
+        1206
+      ],
+      "visible_alpha_bbox": [
+        99,
+        199,
+        1155,
+        1026
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-achievement",
+      "name": "成就達成",
+      "category": "ui",
+      "usage": "成就通知／挑戰完成圖卡",
+      "subject": "A warm-yellow trophy with thick navy outline, a turquoise ribbon with cream center, a single navy train silhouette embossed on the trophy as a simple shape, two small four-point sparkles. Symmetric clear success emblem, no text.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A warm-yellow trophy with thick navy outline, a turquoise ribbon with cream center, a single navy train silhouette embossed on the trophy as a simple shape, two small four-point sparkles. Symmetric clear success emblem, no text.",
+      "file": "png/ui-achievement.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 702651,
+      "sha256": "abc093cac076e2dadb5d4f93cf3a0f49a083745d86c8fb389d36da493096117b",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        136,
+        119,
+        1230,
+        1166
+      ],
+      "visible_alpha_bbox": [
+        152,
+        167,
+        1100,
+        1108
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-challenge",
+      "name": "城市委託",
+      "category": "ui",
+      "usage": "城市委託／挑戰面板",
+      "subject": "A cream clipboard with navy border and a warm-yellow top clip, the board contains a single turquoise railway line joining two warm-yellow stations and a large navy checkmark, one tiny city house beside it. No handwriting, no letters.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A cream clipboard with navy border and a warm-yellow top clip, the board contains a single turquoise railway line joining two warm-yellow stations and a large navy checkmark, one tiny city house beside it. No handwriting, no letters.",
+      "file": "png/ui-challenge.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 527724,
+      "sha256": "73ad7247f05011a94b2e922569edcfa76d6660cbc89f5b476cc48859d0cc6190",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        39,
+        1152,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        293,
+        212,
+        1057,
+        1043
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-city-growth",
+      "name": "城市成長",
+      "category": "ui",
+      "usage": "城市成長教學／新聞插圖",
+      "subject": "Three simple city-owned buildings growing from left to right: green #63B06F house with pale green #A8DCA8 roof, blue #5F95CB mid-rise with #A9CBEB trim, orange #D99649 office tower with #F5CD95 trim. A single turquoise rail runs along their base; thick navy outlines, no text.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: Three simple city-owned buildings growing from left to right: green #63B06F house with pale green #A8DCA8 roof, blue #5F95CB mid-rise with #A9CBEB trim, orange #D99649 office tower with #F5CD95 trim. A single turquoise rail runs along their base; thick navy outlines, no text.",
+      "file": "png/ui-city-growth.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 644029,
+      "sha256": "58d1212bb65f9d8fedf17ce5d7e520bf5c08afbe24d77df3088815cc1aa31863",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        29,
+        133,
+        1240,
+        1190
+      ],
+      "visible_alpha_bbox": [
+        93,
+        213,
+        1161,
+        1058
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-curved-track",
+      "name": "曲線鋪軌",
+      "category": "ui",
+      "usage": "自由曲線軌道教學",
+      "subject": "One broad turquoise smooth quarter-turn railway on a small cream map tile, navy rounded start and end anchor dots, four simple cream cross ties, one warm-yellow curved arrow following the bend. A flat clear construction diagram, no measurement marks or numbers.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: One broad turquoise smooth quarter-turn railway on a small cream map tile, navy rounded start and end anchor dots, four simple cream cross ties, one warm-yellow curved arrow following the bend. A flat clear construction diagram, no measurement marks or numbers.",
+      "file": "png/ui-curved-track.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 596542,
+      "sha256": "5a3e93677c6f396e794f4303d038d0168170490af3c7d2aa0f264037c92dabac",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        257,
+        164,
+        1200,
+        995
+      ],
+      "visible_alpha_bbox": [
+        260,
+        273,
+        996,
+        992
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-empty-lines",
+      "name": "尚無路線",
+      "category": "ui",
+      "usage": "路線面板空狀態",
+      "subject": "Two simple warm-yellow station dots on a broad turquoise gently curving railway line with a central small open gap, a single navy rounded train silhouette parked beside it. Express 'connect your first route' clearly with geometric objects, no text.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: Two simple warm-yellow station dots on a broad turquoise gently curving railway line with a central small open gap, a single navy rounded train silhouette parked beside it. Express 'connect your first route' clearly with geometric objects, no text.",
+      "file": "png/ui-empty-lines.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 284096,
+      "sha256": "a360f5b7e2a3b29e8b3fca6fcc30a42217eb2b175cf85cdda6311dd911521d72",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        31,
+        95,
+        1234,
+        1166
+      ],
+      "visible_alpha_bbox": [
+        46,
+        497,
+        1207,
+        788
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-empty-saves",
+      "name": "尚無存檔",
+      "category": "ui",
+      "usage": "存檔庫空狀態",
+      "subject": "A large simple navy-outlined cream archive folder holding one warm-yellow map tile, the tile has a single turquoise rail line and a tiny navy station silhouette, one small warm-yellow star. Friendly flat empty-save illustration, no lettering.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A large simple navy-outlined cream archive folder holding one warm-yellow map tile, the tile has a single turquoise rail line and a tiny navy station silhouette, one small warm-yellow star. Friendly flat empty-save illustration, no lettering.",
+      "file": "png/ui-empty-saves.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 693731,
+      "sha256": "7e055b07d2075243a8a1ad8e18173de31fced9e194639fec338d2aa538354d90",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        41,
+        1218,
+        1115
+      ],
+      "visible_alpha_bbox": [
+        176,
+        196,
+        1083,
+        1042
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-empty-trains",
+      "name": "尚無列車",
+      "category": "ui",
+      "usage": "車輛清單空狀態／購車引導",
+      "subject": "An empty simple navy-and-cream train platform beside a short turquoise rail, a navy-outline rounded train-shaped ticket card leaning beside it with a simple warm-yellow plus symbol. One clear compact composition, no text.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An empty simple navy-and-cream train platform beside a short turquoise rail, a navy-outline rounded train-shaped ticket card leaning beside it with a simple warm-yellow plus symbol. One clear compact composition, no text.",
+      "file": "png/ui-empty-trains.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 630116,
+      "sha256": "c55419d1fc4783891d7d7855ede334ba2ea4969bdb3dc472c835457e603117a7",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        33,
+        126,
+        1160,
+        1228
+      ],
+      "visible_alpha_bbox": [
+        115,
+        283,
+        1157,
+        1019
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-finance",
+      "name": "公司財務",
+      "category": "ui",
+      "usage": "財務面板／貸款與現金說明",
+      "subject": "A short stack of three warm-yellow coins with simple navy outlines and NO writing on coin faces, a cream ledger book with two simple navy horizontal marks and one rising turquoise stepped chart, compact composition. Not a screenshot, no digits.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A short stack of three warm-yellow coins with simple navy outlines and NO writing on coin faces, a cream ledger book with two simple navy horizontal marks and one rising turquoise stepped chart, compact composition. Not a screenshot, no digits.",
+      "file": "png/ui-finance.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 604698,
+      "sha256": "6deab791edc6b765fdd441a3594eece1b396f550b568123a0b80d419a5ceae5d",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        257,
+        1222,
+        1156
+      ],
+      "visible_alpha_bbox": [
+        165,
+        260,
+        1097,
+        1013
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-first-station",
+      "name": "第一座車站",
+      "category": "ui",
+      "usage": "初次設站教學／教學完成插圖",
+      "subject": "A warm-yellow small station on a short turquoise rail, one broad navy-outlined cream map pin behind it, two tiny warm-yellow four-point sparkles. Compact success illustration, no words or numbers.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A warm-yellow small station on a short turquoise rail, one broad navy-outlined cream map pin behind it, two tiny warm-yellow four-point sparkles. Compact success illustration, no words or numbers.",
+      "file": "png/ui-first-station.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 641069,
+      "sha256": "9efa17a92e99c502dce5b8988bc2d3560d7d01c926a34e276378656bebe0efd9",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        41,
+        0,
+        1222,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        190,
+        157,
+        1065,
+        1075
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-freight",
+      "name": "建材貨運",
+      "category": "ui",
+      "usage": "貨運與建材教學",
+      "subject": "Two warm-yellow shipping containers and three simple cream construction blocks beside a short turquoise rail segment, a simple navy outlined delivery arrow formed from one broad geometric shape. Flat balanced composition, no text or markings.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: Two warm-yellow shipping containers and three simple cream construction blocks beside a short turquoise rail segment, a simple navy outlined delivery arrow formed from one broad geometric shape. Flat balanced composition, no text or markings.",
+      "file": "png/ui-freight.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 624675,
+      "sha256": "9610209d034a21df3874ded2b9fd1e7e96d754566c26049775728a12309c2809",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        115,
+        1224,
+        1204
+      ],
+      "visible_alpha_bbox": [
+        145,
+        325,
+        1110,
+        1056
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-map-expansion",
+      "name": "擴張土地",
+      "category": "ui",
+      "usage": "買地面板／地圖擴張教學",
+      "subject": "Three adjacent cream map tiles with thick navy contours, the center tile shows a warm-yellow small building and short turquoise railway; one tile is slightly raised symbolically with a navy plus shape. Compact geometric diagram, no text or grid coordinate labels.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: Three adjacent cream map tiles with thick navy contours, the center tile shows a warm-yellow small building and short turquoise railway; one tile is slightly raised symbolically with a navy plus shape. Compact geometric diagram, no text or grid coordinate labels.",
+      "file": "png/ui-map-expansion.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 540979,
+      "sha256": "5c55e064e5acb93837abd221fb427c4aa79e714c49d9714b7b75de049bc4f90c",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        31,
+        148,
+        1232,
+        1204
+      ],
+      "visible_alpha_bbox": [
+        77,
+        294,
+        1177,
+        978
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-new-game",
+      "name": "新遊戲",
+      "category": "ui",
+      "usage": "新遊戲選擇／空白地圖入口",
+      "subject": "A playful compact scene: one warm-yellow small station and two simple navy buildings connected by one broad looping turquoise railway, cream map tile beneath them, one simple navy outline plus symbol as a construction cue. No screen UI, no wording.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A playful compact scene: one warm-yellow small station and two simple navy buildings connected by one broad looping turquoise railway, cream map tile beneath them, one simple navy outline plus symbol as a construction cue. No screen UI, no wording.",
+      "file": "png/ui-new-game.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 799190,
+      "sha256": "9dc72a9ec8768a16a0921268834084a52096c984b9dd004df54e891dc9f49329",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        30,
+        1224,
+        1232
+      ],
+      "visible_alpha_bbox": [
+        60,
+        177,
+        1195,
+        981
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-route-planning",
+      "name": "路線規劃",
+      "category": "ui",
+      "usage": "路線建立教學／進路選擇說明",
+      "subject": "A compact cream map board with three warm-yellow station dots connected by two broad turquoise routes, one navy-outline magnifying glass focusing on the middle station, simple navy corners and no tiny map labels. Flat infographic.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A compact cream map board with three warm-yellow station dots connected by two broad turquoise routes, one navy-outline magnifying glass focusing on the middle station, simple navy corners and no tiny map labels. Flat infographic.",
+      "file": "png/ui-route-planning.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 764351,
+      "sha256": "f5d78a24360960cc3d3ce97e46d86c44faa0e5d247573f8cdd56a6530568d2c3",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        110,
+        220,
+        1210,
+        1007
+      ],
+      "visible_alpha_bbox": [
+        113,
+        252,
+        1142,
+        1003
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-timetable",
+      "name": "時刻與班距",
+      "category": "ui",
+      "usage": "班距設定／時刻表教學",
+      "subject": "A large cream clock with thick navy outer circle, two chunky navy hands, no numerals or tick detail, a small turquoise train silhouette across the lower edge and one small warm-yellow calendar tile with simple navy lines. No numbers or text.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A large cream clock with thick navy outer circle, two chunky navy hands, no numerals or tick detail, a small turquoise train silhouette across the lower edge and one small warm-yellow calendar tile with simple navy lines. No numbers or text.",
+      "file": "png/ui-timetable.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 746858,
+      "sha256": "22bfdb7f277f6ffb4f597b18fce1a3c4f3961542ded9710dc8967e25a8ad9fc4",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        113,
+        1166,
+        1238
+      ],
+      "visible_alpha_bbox": [
+        186,
+        175,
+        1131,
+        1081
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-tourism",
+      "name": "觀光旅行",
+      "category": "ui",
+      "usage": "觀光面板／景點需求說明",
+      "subject": "A small warm-yellow suitcase with navy handle beside a cream ticket containing only a turquoise rail curve, one simple turquoise mountain and a small warm-yellow sun contained behind. Compact travel emblem, no text or real destination branding.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A small warm-yellow suitcase with navy handle beside a cream ticket containing only a turquoise rail curve, one simple turquoise mountain and a small warm-yellow sun contained behind. Compact travel emblem, no text or real destination branding.",
+      "file": "png/ui-tourism.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 577799,
+      "sha256": "020bb9971b7421e728b050897a091d7a97f0ec15c8bd77e82cf7deed3c863259",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        21,
+        1216,
+        1214
+      ],
+      "visible_alpha_bbox": [
+        139,
+        320,
+        1155,
+        921
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "ui-weather",
+      "name": "天氣與營運",
+      "category": "ui",
+      "usage": "天氣教學／颱風提醒插圖",
+      "subject": "A navy-outlined cream cloud with three simple turquoise rain drops above a small warm-yellow station and short turquoise rail, a small navy umbrella beside it. Friendly restrained weather illustration, no lightning flashes, no words.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A navy-outlined cream cloud with three simple turquoise rain drops above a small warm-yellow station and short turquoise rail, a small navy umbrella beside it. Friendly restrained weather illustration, no lightning flashes, no words.",
+      "file": "png/ui-weather.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 549066,
+      "sha256": "b02823700672326e56132da6c6fc7c6e732a2f4af703936fa99b43ec1606c773",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        36,
+        1214,
+        1218
+      ],
+      "visible_alpha_bbox": [
+        205,
+        159,
+        1063,
+        1119
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "depot",
+      "name": "機廠",
+      "category": "railway",
+      "usage": "車輛管理說明／未來機廠插圖",
+      "subject": "An original railway maintenance depot: warm-yellow wide shed with three open navy rectangular bay doors, one simple turquoise and cream train nose in the middle bay, short turquoise rails extending toward foreground, one simple navy roof. No text or logos.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original railway maintenance depot: warm-yellow wide shed with three open navy rectangular bay doors, one simple turquoise and cream train nose in the middle bay, short turquoise rails extending toward foreground, one simple navy roof. No text or logos.",
+      "file": "png/depot.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 628547,
+      "sha256": "ece067587ce83b3842673781c0a0691484382369eb90e94169089c7767708bd0",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        80,
+        33,
+        1173,
+        1214
+      ],
+      "visible_alpha_bbox": [
+        83,
+        277,
+        1171,
+        977
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "freight-train",
+      "name": "貨運列車",
+      "category": "railway",
+      "usage": "貨運線路面板／建材運輸說明",
+      "subject": "An original fictional short freight train in side elevation: a compact turquoise locomotive pulling two broad warm-yellow rectangular container wagons, navy windows and wheels, small cream rails. No writing, company marks, numbers, or container corrugation detail.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original fictional short freight train in side elevation: a compact turquoise locomotive pulling two broad warm-yellow rectangular container wagons, navy windows and wheels, small cream rails. No writing, company marks, numbers, or container corrugation detail.",
+      "file": "png/freight-train.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 416211,
+      "sha256": "64ead1c50e74d2a59d4cf0bbd3f8030420df151464dac1d6e41f5da31d02b4fe",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        25,
+        30,
+        1222,
+        1198
+      ],
+      "visible_alpha_bbox": [
+        36,
+        497,
+        1218,
+        831
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "passenger-train",
+      "name": "通用客運列車",
+      "category": "railway",
+      "usage": "列車購買面板／客運教學",
+      "subject": "An original fictional two-car passenger train in clean side elevation, cream car bodies with a wide turquoise horizontal belt, navy broad windows and wheels, warm-yellow small headlights, short navy track. Simple rounded modern shape, no operator logos.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original fictional two-car passenger train in clean side elevation, cream car bodies with a wide turquoise horizontal belt, navy broad windows and wheels, warm-yellow small headlights, short navy track. Simple rounded modern shape, no operator logos.",
+      "file": "png/passenger-train.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 442833,
+      "sha256": "fd59bf2e7fe5c0a74611ba4043650df6443ee5fb37395e44b102c7a7d01f270e",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        0,
+        1231,
+        1222
+      ],
+      "visible_alpha_bbox": [
+        26,
+        487,
+        1228,
+        803
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "rail-bridge",
+      "name": "鐵路橋",
+      "category": "railway",
+      "usage": "橋梁建設教學／結構類型說明",
+      "subject": "A side elevation of a short railway viaduct: two warm-yellow simple rounded arches, navy outer contours, a turquoise railway deck, three simple cream piers, small contained turquoise river wave underneath. One minimal structure only.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A side elevation of a short railway viaduct: two warm-yellow simple rounded arches, navy outer contours, a turquoise railway deck, three simple cream piers, small contained turquoise river wave underneath. One minimal structure only.",
+      "file": "png/rail-bridge.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 435439,
+      "sha256": "e879ffb4296e6c45a2606efe4145d77d59b9a53d04f1fabad362abdaeb886228",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        84,
+        166,
+        1172,
+        1204
+      ],
+      "visible_alpha_bbox": [
+        87,
+        439,
+        1167,
+        894
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "rail-signal",
+      "name": "鐵路號誌",
+      "category": "railway",
+      "usage": "行車控制教學／進路預約說明",
+      "subject": "A simple original railway signal mast, broad navy rounded rectangular signal head with exactly three circular windows: two cream and one warm-yellow, navy stem, turquoise short rail and one simple turnout beside it. Use shapes as well as colors; no red or green stop/go instructions.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A simple original railway signal mast, broad navy rounded rectangular signal head with exactly three circular windows: two cream and one warm-yellow, navy stem, turquoise short rail and one simple turnout beside it. Use shapes as well as colors; no red or green stop/go instructions.",
+      "file": "png/rail-signal.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 406323,
+      "sha256": "ced5effef6da8912ad8623f7960c65372297c5feb74da8a9930308a81d964e0d",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        73,
+        117,
+        1148,
+        1214
+      ],
+      "visible_alpha_bbox": [
+        403,
+        127,
+        1113,
+        1143
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "station-interchange",
+      "name": "轉乘車站",
+      "category": "railway",
+      "usage": "轉乘教學／車站連接說明",
+      "subject": "An original compact interchange station diagram: warm-yellow station hall, two parallel turquoise rail corridors, navy-outlined platforms, a cream pedestrian overbridge joining the two platforms. Front-on flat illustration, no writing or route numbers.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: An original compact interchange station diagram: warm-yellow station hall, two parallel turquoise rail corridors, navy-outlined platforms, a cream pedestrian overbridge joining the two platforms. Front-on flat illustration, no writing or route numbers.",
+      "file": "png/station-interchange.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 744197,
+      "sha256": "c3159cb27d10e2dc8e13cc87d4a147697d1fa37b6b0aaa08b95df3ad46dbaac1",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        34,
+        1234,
+        1228
+      ],
+      "visible_alpha_bbox": [
+        86,
+        278,
+        1168,
+        973
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "station-small",
+      "name": "小型車站",
+      "category": "railway",
+      "usage": "車站設置教學／車站面板",
+      "subject": "A small Taiwan local railway station: warm-yellow low station building, navy pitched roof, two simple windows, a blank navy nameboard, one navy-and-cream platform with a short turquoise track in front. No writing, original fictional station.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A small Taiwan local railway station: warm-yellow low station building, navy pitched roof, two simple windows, a blank navy nameboard, one navy-and-cream platform with a short turquoise track in front. No writing, original fictional station.",
+      "file": "png/station-small.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 657989,
+      "sha256": "9d8200daf874af14e65d06f905b5cfbe3db3bd839d4d67f5da51dfc4941b4384",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        78,
+        200,
+        1176,
+        1131
+      ],
+      "visible_alpha_bbox": [
+        81,
+        309,
+        1173,
+        993
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    },
+    {
+      "id": "tunnel-portal",
+      "name": "隧道口",
+      "category": "railway",
+      "usage": "隧道建設教學／高程說明",
+      "subject": "A bold warm-yellow rounded arch tunnel portal surrounding a navy dark opening, a short turquoise double railway line entering it, two simple cream geometric hillside shapes behind portal. Compact isolated illustration, no writing.",
+      "prompt": "Create one original illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. Square canvas with truly TRANSPARENT background. Minimal flat 2D vector-like cut-paper geometric art, all areas solid uniformly filled, thick smooth navy #262C57 contour, round corners and round line joins. Main accent warm yellow #FFC86B, turquoise #12A08F, cream #ECEEF6, white #FFFFFF. Additional colors only when the subject explicitly specifies an existing city palette color. NO gradient, shading, bevels, lighting effects, reflections, textures, shadows, 3D render, text, writing, letters, digits, logos, branding or watermark. Center a single balanced compact composition with at least 14 percent clear transparent padding on all sides. Use few large shapes recognizable at 64 px. Front-facing flat infographic view with no perspective. This is full-color illustration concept art for panels and tutorials. Not a screen mockup. SUBJECT: A bold warm-yellow rounded arch tunnel portal surrounding a navy dark opening, a short turquoise double railway line entering it, two simple cream geometric hillside shapes behind portal. Compact isolated illustration, no writing.",
+      "file": "png/tunnel-portal.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 588545,
+      "sha256": "17c68644fc2fb33119d423d22b05fbf6b42cbff3fc6d8a7b1827ceb42ea5de88",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        81,
+        262,
+        1218,
+        1198
+      ],
+      "visible_alpha_bbox": [
+        92,
+        268,
+        1179,
+        1002
+      ],
+      "visible_edges_clear": true,
+      "status": "candidate",
+      "review": "候選：原稿可能含色階與輪廓誤差；正式採用前依 art-style 平塗化並確認小尺寸。"
+    }
+  ]
+}
