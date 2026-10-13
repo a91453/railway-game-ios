@@ -6676,6 +6676,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **不是新的自由模式**：新遊戲（經營模式）多一個選項「資金：一般／無限」。乘客、土地、城鎮成長、觀光、票價與成本都照經營模式的一般規則，只是不扣錢。舊的 `EconomyMode.free`（決策 36、46）原樣保留給舊存檔與遊戲內的切換，規則不變（52 份 golden 用它，一個值都沒動）。介面不叫「簡易模式」「輕鬆模式」（和難度「輕鬆」、車站等級「簡易站」撞名），也不再叫一個「自由模式」。
 
+0. **新遊戲選項**（`NewGameOptions.funds`：`standard`／`unlimited`，畫面「資金：一般／無限」，`newGameOptions.funds`）：`apply(to:)` 用 `setUnlimitedFunds(_:)` 設定，所以空白、實景與全台灣的新遊戲都套用；教學、挑戰與示範不套用新遊戲選項，所以永遠付錢。起始資金寫「∞」，說明那一段多「資金無限，不計成就」。選項存在裝置上，缺欄位時讀成預設值（之前存的選項照樣讀得到）。
 1. **扣錢的關口**（GameCore，`GameEconomy.unlimitedFunds`，`GameWorld.setUnlimitedFunds(_:)`，免費）：`GameEconomy` 是唯一動餘額的地方。開著時 `canAfford` 一律為真，`spend`、`earn`、`settle` 都不動餘額，所以建造、買車、加車廂、改車種、買地圖格、收購、觀光商店、貨運場都不扣錢，也不會因為沒錢被拒絕；結算（營運、能源、人事、利息、稅、建物）照常算、照常寫進帳本，只是不從餘額出入。沒有用很大的金額代表 ∞：`settle`、`earn` 是 Int64 的加法，會溢位。資產紀錄照常記每樣東西的價格。
 2. **存檔**：`"economy"` 只在開著時寫 `"unlimitedFunds": true`，所以其他世界存起來和之前一樣；讀檔缺 key 是關，每個版本 51 以前的存檔照舊付錢。存檔版本 51：只讀到 50 的 build 會丟掉它，讓公司開始從一個從來不用顧的餘額付錢，所以說存檔比它新。fixture `SaveFixtures/v51-unlimited-funds.json`。
 3. **畫面**（GamePresentation `GameEconomy.cashText`、`showsInTheRed`）：
