@@ -185,14 +185,6 @@ extension GameWorld {
 }
 
 extension GameSession {
-    /// Takes train `id` off its line; a trip under way is finished.
-    public func unassignTrain(_ id: TrainID) {
-        let name = world.train(id: id)?.name ?? ""
-        perform(.unassignTrain(id)) { _, _, _ in
-            language.text("Took \(name) off its line. A trip under way is finished.", "已將 \(name) 移出路線。進行中的這一趟會跑完。")
-        }
-    }
-
     /// Makes `fix` on line `id` (decision 194, later), through the command
     /// it is, and says what it did.
     public func applyLineLossFix(_ fix: LineLossFix, to id: LineID) {

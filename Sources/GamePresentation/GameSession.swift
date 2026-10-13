@@ -1856,6 +1856,18 @@ public final class GameSession {
         unassignTrain(train.id)
     }
 
+    /// Takes train `trainID` off its line, as ``unassignSelectedTrain()``
+    /// does: the line card's "take off a train" (decision 194, later).
+    public func unassignTrain(_ trainID: TrainID) {
+        guard let train = world.train(id: trainID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(trainID).playerMessage(in: language))
+            return
+        }
+        perform(.unassignTrain(train.id)) { _, _, _ in
+            language.text("Took \(train.name) off its line. A trip under way is finished.", "已將 \(train.name) 移出路線。進行中的這一趟會跑完。")
+        }
+    }
+
     /// Starts the selected train's own timetable through
     /// `GameWorld.startTrainService(_:)`.
     public func startSelectedTrainService() {
