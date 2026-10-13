@@ -1255,7 +1255,8 @@ private struct TrafficLegend: View {
             // meant nothing to a player.
             HStack(spacing: 8) {
                 count(traffic.authorities.count, Palette.metroGreen, language.text("cleared", "可行駛"))
-                count(traffic.waits.count - deadlocked, Palette.metroAmber, language.text("waiting", "等候"))
+                // Decision 205: as the waiting trains' dashed navy rings.
+                count(traffic.waits.count - deadlocked, Palette.ink, language.text("waiting", "等候"), dashed: true)
                 count(deadlocked, Palette.metroRed, language.text("deadlocked", "死結"))
             }
             .font(.caption2.monospacedDigit().weight(.semibold))
@@ -1271,10 +1272,14 @@ private struct TrafficLegend: View {
     }
 
     @ViewBuilder
-    private func count(_ value: Int, _ color: Color, _ name: String) -> some View {
+    private func count(_ value: Int, _ color: Color, _ name: String, dashed: Bool = false) -> some View {
         if value > 0 {
             HStack(spacing: 3) {
-                Circle().fill(color).frame(width: 8, height: 8)
+                if dashed {
+                    Circle().strokeBorder(color, style: StrokeStyle(lineWidth: 2, dash: [2.5, 1.5])).frame(width: 9, height: 9)
+                } else {
+                    Circle().fill(color).frame(width: 8, height: 8)
+                }
                 Text(verbatim: "\(value) \(name)")
             }
         }
