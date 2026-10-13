@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 @MainActor
@@ -745,6 +746,31 @@ final class MapInteractionTests: XCTestCase {
     /// pill's edge, where a tap used to miss it. From the touched element's
     /// centre, so the test does not depend on the frame XCTest reports.
     /// Full lane only (not in the pull request gate).
+    /// TestFlight 59.1: on a phone held sideways the layer's legend starts
+    /// folded to its title and colour bar; the title opens it with its
+    /// opacity and timeline, and it stays as the player left it.
+    func testTheLegendFoldsOnAPhoneOnItsSide() throws {
+        try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone's short screen")
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-map-layer", "travel", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
+        XCTAssertTrue(legend.appears(within: 15), "The travel layer's legend must show")
+        let fold = app.buttons["map.legend.fold"]
+        let opacity = app.descendants(matching: .any)["map.popTravel.opacity"].firstMatch
+        XCTAssertTrue(fold.appears(within: 5))
+        XCTAssertFalse(opacity.exists, "Folded, the legend hides its opacity")
+        XCTAssertTrue(fold.becomesHittable(within: 5))
+        fold.tap()
+        XCTAssertTrue(opacity.appears(within: 5), "Opened, the legend shows its opacity")
+        XCTAssertTrue(app.descendants(matching: .any)["map.popTravel.hour"].firstMatch.exists, "and its timeline")
+        fold.tap()
+        XCTAssertTrue(opacity.disappears(within: 5), "Folded again")
+    }
+
     func testTheStatusPillsButtonsAreTouchedBeyondTheirIcons() {
         continueAfterFailure = false
         let app = XCUIApplication()
