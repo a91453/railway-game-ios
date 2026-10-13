@@ -67,10 +67,11 @@ extension GameSession {
     public func restoreNews(_ log: NewsLog) {
         isRestoringNews = true
         news = log
-        // A baseline of a month not yet come (a file from another game) would
-        // stop the reports until the clock caught up.
+        // A baseline of a month not yet reported (a file from another game),
+        // the one the game is in too, would stop the reports until the
+        // clock caught up.
         let month = world.clock.now.seconds / GameTime.secondsPerDay / FinancePeriod.month.days
-        if let reported = news.baseline?.reportedMonth, reported > month { news.baseline = nil }
+        if let reported = news.baseline?.reportedMonth, reported >= month { news.baseline = nil }
         isRestoringNews = false
         if news.baseline == nil { news.baseline = MonthlyBaseline(world: world) }
         newsWatch = NewsWatch(world: world)
