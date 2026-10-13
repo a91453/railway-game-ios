@@ -1447,3 +1447,16 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有）兩個 tick 之間沿軌道內插 | `TrainMotion`（`covered(from:along:to:in:)` 沿 `remainingEdges`） | gap → 原生；參考的 3D 是用時刻表算任意時間的位置 |
 
 外部專案：沒有用到程式碼或資料。圖示是自己畫的氣象圖颱風記號（art-style 的預覽與檢查），不是參考庫或任何人的圖。
+
+## 地圖的標記、站名底牌、列車一節一節畫（決策 205）
+
+參考是 `a91453/railway-reference-private`（`main` d3ebdf1）。搜過 `car`、`pitchM`、`車廂`、`halo`、`text-halo`、`waiting`、`badge`：2D 地圖沒有候車人數、等待環或建物徽章的畫法；3D 端逐節照真實長度放車。
+
+| 參考檔案／函式 | 目標檔案／函式 | 移植方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/memories/tainan-2026-09-12/replay.js`：車廂 1 單位＝1 公尺、不縮放；`fleet/catalog.json` 的 `pitchM`（17.4–22.1 m，多數 20–21 m） | `TrainCars.drawnCarLength`（20 m）、`TrainCars.cars(body:heading:count:gap:)` | adapted：取數值與「逐節照真實長度」的做法；2D 只換算畫面，GameCore 的 16 m 不動 |
+| `night-map.js` 等的 MapLibre `text-halo-color`（字墊底色） | `MapArt.drawPointStation` 的站名底牌 | 想法：用遊戲自己的 `land` 80% 底牌，和拉遠時的站名一樣 |
+| （參考沒有）路線附近不靠顏色的標記：候車人數、等待環、被擋住的軌道 | `MapArt.drawPointStation`、`drawWaitMarks`、`drawWaits`、`MapGlyphPerson` | gap → 原生 |
+| （參考沒有）拉遠時建物的種類徽章 | `MapArt.drawPlacedBuildings`（`buildingBadgeFromSize`） | gap → 原生 |
+
+圖照 art-style §7 自己畫（`MapGlyphPerson` 照現有擁擠等級的人形），沒有搬參考庫的圖。外部專案：沒有用到程式碼或資料。

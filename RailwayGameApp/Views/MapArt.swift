@@ -142,27 +142,33 @@ enum MapArt {
     ) {
         let region = drawingRegion(projection)
         let referenceSize = projection.referenceSize
-        let width = max(3, trainWidth(referenceSize))
         for run in motion.runs {
             guard let head = run.head(at: progress) else { continue }
             let colour = Palette.trainColor(run.look, plain: plain)
-            // A tail may still be visible when its head is offscreen.
-            if projection.detail == .full, run.length > 0,
-               region.expanded(by: run.length + run.lag).contains(x: head.point.x, y: head.point.y) {
-                let body = trainPolyline(run.body(at: progress), projection: projection)
-                context.stroke(body, with: .color(Palette.ink), style: StrokeStyle(lineWidth: width + 2, lineCap: .round, lineJoin: .round))
-                context.stroke(body, with: .color(colour), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
-            }
-            guard region.contains(x: head.point.x, y: head.point.y) else { continue }
-            if lights > 0 {
+            let isSelected = run.train == selectedTrainID
+            let inView = region.contains(x: head.point.x, y: head.point.y)
+            if lights > 0, inView {
                 let center = projection.screenPoint(worldX: head.point.x, worldY: head.point.y)
                 let radius = trainHeadRadius(referenceSize)
                 context.fill(disc(at: center, radius: radius * 3.2), with: .color(Palette.station.opacity(0.18 * lights)))
                 context.fill(disc(at: center, radius: radius * 2), with: .color(Palette.station.opacity(0.3 * lights)))
             }
+            if projection.detail == .full {
+                // Decision 205: close up, its cars. A tail may still be
+                // visible when its head is offscreen.
+                let cars = TrainCars.count(length: run.length)
+                let reach = run.length + run.lag + TrainCars.drawnCarLength * Double(cars)
+                guard region.expanded(by: reach).contains(x: head.point.x, y: head.point.y) else { continue }
+                drawCars(
+                    TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: cars),
+                    colour: colour, isSelected: isSelected, isHighSpeed: run.isHighSpeed, projection: projection, in: context
+                )
+                continue
+            }
+            guard inView else { continue }
             drawTrain(
                 at: head.point, heading: head.heading, colour: colour,
-                isSelected: run.train == selectedTrainID, isHighSpeed: run.isHighSpeed, projection: projection, in: context
+                isSelected: isSelected, isHighSpeed: run.isHighSpeed, projection: projection, in: context
             )
         }
         drawWaitMarks(traffic, deadlock: deadlock, projection: projection, in: context)
@@ -267,14 +273,19 @@ enum MapArt {
     }
 
     /// Where each waiting train meets the train holding its route, wider
-    /// than an authority: amber as the wait's words are, red in a
-    /// deadlock; and a dashed line from the waiting train's head to it.
+    /// than an authority: decision 205, a navy band cased in white (it was
+    /// amber, the colour a line can have), red in a deadlock; and a dashed
+    /// line from the waiting train's head to it.
     private static func drawWaits(_ traffic: TrafficOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let width = authorityWidth(projection) * 1.3
         let region = drawingRegion(projection)
         for wait in traffic.waits {
-            let color = wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber
-            drawTrafficTrack(wait.contested, color: color, width: width, projection: projection, in: context)
+            let color = wait.isDeadlocked ? Palette.metroRed : Palette.ink
+            if wait.isDeadlocked {
+                drawTrafficTrack(wait.contested, color: color, width: width, projection: projection, in: context)
+            } else {
+                drawTrafficTrack(wait.contested, color: color, width: width + 1, casing: Palette.markerFill, casingWidth: width + 4, projection: projection, in: context)
+            }
             guard wait.from != wait.to, let reach = WorldRegion(enclosing: [wait.from, wait.to]), region.intersects(reach) else { continue }
             // Dashed, so drawn whole (see the tunnels in drawNetwork).
             let dash = max(3, projection.referenceSize * 0.3)
@@ -282,13 +293,15 @@ enum MapArt {
         }
     }
 
-    /// A ring round each waiting train's head, over the trains: red with a
-    /// warning sign for a deadlocked one, beating as strong as `deadlock`.
+    /// A ring round each waiting train's head, over the trains: decision
+    /// 205, dashed navy on a white halo (a shape no line has; it was amber),
+    /// solid red with a warning sign for a deadlocked one, beating as
+    /// strong as `deadlock`.
     /// Rings that would overlap move apart across their track
     /// (``WaitMarkSides``, the `Railway/` site's `blockSideShift`).
     static func drawWaitMarks(_ traffic: TrafficOverlay, deadlock: Double = 1, projection: some MapProjection, in context: GraphicsContext) {
         let region = drawingRegion(projection)
-        let radius = trainHeadRadius(projection.referenceSize) + 4
+        let radius = trainHeadRadius(projection.referenceSize) + 6
         let shown = traffic.waits.filter { region.contains($0.from) }
         let marks = shown.map { wait in
             let center = projection.screenPoint(of: wait.from)
@@ -301,8 +314,8 @@ enum MapArt {
             )
             return WaitMarkSides.Mark(train: wait.train, center: center, along: ScreenPoint(x: ahead.x - center.x, y: ahead.y - center.y))
         }
-        // The ring's width and its 5-point halo.
-        let offsets = WaitMarkSides.offsets(marks, size: radius * 2 + 5)
+        // The ring and its 6-point halo.
+        let offsets = WaitMarkSides.offsets(marks, size: radius * 2 + 6)
         for (wait, placed) in zip(shown, marks) {
             var center = placed.center
             if let offset = offsets[wait.train] {
@@ -312,9 +325,12 @@ enum MapArt {
             var context = context
             if wait.isDeadlocked { context.opacity = deadlock }
             let ring = disc(at: center, radius: radius)
-            context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
-            context.stroke(ring, with: .color(wait.isDeadlocked ? Palette.metroRed : Palette.metroAmber), lineWidth: 3)
-            guard wait.isDeadlocked else { continue }
+            context.stroke(ring, with: .color(Palette.markerFill), lineWidth: 6)
+            guard wait.isDeadlocked else {
+                context.stroke(ring, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 3, dash: [4.5, 3]))
+                continue
+            }
+            context.stroke(ring, with: .color(Palette.metroRed), lineWidth: 3)
             // Decision 121: the sign on its own solid outline, a size up,
             // so its mark reads over any map.
             let size = radius * 1.4
@@ -328,13 +344,17 @@ enum MapArt {
         }
     }
 
-    private static func drawTrafficTrack(_ track: TrafficOverlay.Track, color: Color, width: Double, projection: some MapProjection, in context: GraphicsContext) {
+    private static func drawTrafficTrack(
+        _ track: TrafficOverlay.Track, color: Color, width: Double,
+        casing: Color = Palette.followCase, casingWidth: Double? = nil,
+        projection: some MapProjection, in context: GraphicsContext
+    ) {
         let region = drawingRegion(projection)
         let full = projection.detail == .full
         for line in track.lines where line.count > 1 {
             let path = polyline(line, projection: projection)
             if full {
-                context.stroke(path, with: .color(Palette.followCase), style: StrokeStyle(lineWidth: width * 8.5 / 4.4, lineCap: .round, lineJoin: .round))
+                context.stroke(path, with: .color(casing), style: StrokeStyle(lineWidth: casingWidth ?? width * 8.5 / 4.4, lineCap: .round, lineJoin: .round))
             }
             context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
         }
@@ -818,8 +838,8 @@ enum MapArt {
         return path
     }
 
-    /// A train's head: a dot, and in full detail a nose along the way it is
-    /// going. Decision 168: a high-speed set's head is an arrow along that
+    /// A train's head zoomed out: a dot (close up its cars are drawn
+    /// instead, ``drawCars``, decision 205). Decision 168: a high-speed set's head is an arrow along that
     /// way instead, so that it reads as another kind of train at a glance
     /// (and in grey: the shape is the difference, not the colour).
     private static func drawTrain(
@@ -836,12 +856,6 @@ enum MapArt {
             let distance = radius * 1.7 / projection.pointsPerUnit
             ahead = cgPoint(projection.screenPoint(worldX: position.x + dx / length * distance, worldY: position.y + dy / length * distance))
         }
-        if projection.detail == .full, !isHighSpeed, let ahead {
-            var nose = Path()
-            nose.move(to: cgPoint(center))
-            nose.addLine(to: ahead)
-            context.stroke(nose, with: .color(colour), style: StrokeStyle(lineWidth: max(2, projection.referenceSize * 0.12 * trainNearTrueScale(projection.referenceSize)), lineCap: .round))
-        }
         var head = disc(at: center, radius: radius)
         if isHighSpeed, let ahead {
             let from = cgPoint(center)
@@ -856,11 +870,82 @@ enum MapArt {
                 head = polygon([tip, left, right])
             }
         }
+        // Decision 205: edged in navy, as its body; selected, a warm yellow
+        // edge inside a navy line (both were the system's background and
+        // the track's teal).
+        if isSelected {
+            context.stroke(head, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 8, lineJoin: .round))
+            context.stroke(head, with: .color(Palette.trainSelection), style: StrokeStyle(lineWidth: 6, lineJoin: .round))
+        }
         context.fill(head, with: .color(colour))
-        context.stroke(
-            head, with: .color(isSelected ? .accentColor : Color(uiColor: .systemBackground)),
-            style: StrokeStyle(lineWidth: isSelected ? 3 : 1.5, lineJoin: .round)
-        )
+        context.stroke(head, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+    }
+
+    /// Decision 205: a train close up, car by car (``TrainCars``), each car
+    /// in its colour with a navy joint between, the whole cased in
+    /// ``Palette/ink`` and the leading car's nose rounded (pointed for a
+    /// high-speed set, decision 168: the shape is the difference). The
+    /// nose is its head: no dot. Selected, a warm yellow edge inside a navy
+    /// line round it, where the selection was the track's teal.
+    private static func drawCars(
+        _ cars: [[TrainMotion.Point]], colour: Color, isSelected: Bool, isHighSpeed: Bool,
+        projection: some MapProjection, in context: GraphicsContext
+    ) {
+        guard let leading = cars.first, leading.count > 1 else { return }
+        let width = max(3, trainWidth(projection.referenceSize))
+        // The nose's shape stands on the first car, this far back from its
+        // front, in world units.
+        let noseLength = (isHighSpeed ? width * 1.2 : width / 2) / projection.pointsPerUnit
+        let front = TrainMotion.Trail(leading)
+        guard let tip = front.point(at: 0), let base = front.point(at: noseLength),
+              let along = front.direction(at: noseLength) else { return }
+        let shortened = [front.points(from: noseLength, to: front.length)] + cars.dropFirst()
+        var whole = Path()
+        for (index, car) in shortened.enumerated() {
+            for (step, point) in car.enumerated() {
+                let screen = cgPoint(projection.screenPoint(worldX: point.x, worldY: point.y))
+                if index == 0, step == 0 { whole.move(to: screen) } else { whole.addLine(to: screen) }
+            }
+        }
+        let tipPoint = cgPoint(projection.screenPoint(worldX: tip.x, worldY: tip.y))
+        let basePoint = cgPoint(projection.screenPoint(worldX: base.x, worldY: base.y))
+        // Across the train, on the screen, half a body wide.
+        let ahead = projection.screenPoint(worldX: base.x + along.x, worldY: base.y + along.y)
+        var across = CGVector(dx: -(ahead.y - basePoint.y), dy: ahead.x - basePoint.x)
+        let size = (across.dx * across.dx + across.dy * across.dy).squareRoot()
+        across = size > 0 ? CGVector(dx: across.dx / size * width / 2, dy: across.dy / size * width / 2) : .zero
+        let nose: Path = isHighSpeed
+            ? polygon([tipPoint, CGPoint(x: basePoint.x + across.dx, y: basePoint.y + across.dy), CGPoint(x: basePoint.x - across.dx, y: basePoint.y - across.dy)])
+            : Path(ellipseIn: CGRect(x: basePoint.x - width / 2, y: basePoint.y - width / 2, width: width, height: width))
+        // The way the tail ends, on the screen, so each casing squares it off
+        // half its own extra width beyond the last car.
+        let tail = TrainMotion.Trail(shortened.last ?? leading)
+        let tailEnd = tail.point(at: tail.length).map { cgPoint(projection.screenPoint(worldX: $0.x, worldY: $0.y)) }
+        let tailLead = tail.point(at: tail.length - 1).map { cgPoint(projection.screenPoint(worldX: $0.x, worldY: $0.y)) }
+        func outline(_ extra: Double, _ colour: Color) {
+            context.stroke(whole, with: .color(colour), style: StrokeStyle(lineWidth: width + extra, lineCap: .butt, lineJoin: .round))
+            context.fill(nose, with: .color(colour))
+            context.stroke(nose, with: .color(colour), style: StrokeStyle(lineWidth: extra, lineJoin: .round))
+            guard let end = tailEnd, let lead = tailLead else { return }
+            let span = max(hypot(end.x - lead.x, end.y - lead.y), 0.001)
+            var cap = Path()
+            cap.move(to: end)
+            cap.addLine(to: CGPoint(x: end.x + (end.x - lead.x) / span * extra / 2, y: end.y + (end.y - lead.y) / span * extra / 2))
+            context.stroke(cap, with: .color(colour), style: StrokeStyle(lineWidth: width + extra, lineCap: .butt))
+        }
+        if isSelected {
+            outline(9, Palette.ink)
+            outline(7, Palette.trainSelection)
+        }
+        outline(3, Palette.ink)
+        // Each car, leaving a navy joint before the next.
+        let joint = 1.5 / projection.pointsPerUnit
+        for (index, car) in shortened.enumerated() {
+            let trail = TrainMotion.Trail(car)
+            let kept = trail.points(from: 0, to: trail.length - (index == shortened.count - 1 ? 0 : joint))
+            context.stroke(trainPolyline(kept, projection: projection), with: .color(colour), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+        }
+        context.fill(nose, with: .color(colour))
     }
 
     private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {
@@ -1092,6 +1177,12 @@ enum MapArt {
     /// The narrowest a player's building is drawn, in points, with its
     /// kind's glyph (decision 121): under it the glyph would be a smudge.
     private static let glyphMinimumSide = 14.0
+    /// Decision 205: a building smaller than ``glyphMinimumSide`` is drawn
+    /// as a badge that size over its ground, so its kind still reads, while
+    /// 16 m is at least this many points (a street block still shows);
+    /// zoomed out further it is a plain square again, or the badges would
+    /// cover the map.
+    static let buildingBadgeFromSize = 6.0
 
     /// The buildings the player placed (city building P0-A, decision 92):
     /// each a square in the station's yellow, edged in ink, always at least a
@@ -1108,15 +1199,23 @@ enum MapArt {
             if rect.width < minimum {
                 rect = rect.insetBy(dx: (rect.width - minimum) / 2, dy: (rect.height - minimum) / 2)
             }
+            var side = min(rect.width, rect.height)
+            var share = 0.62
+            if side < glyphMinimumSide, projection.referenceSize >= buildingBadgeFromSize {
+                // Decision 205: its ground, then a badge over it.
+                context.fill(Path(rect), with: .color(Palette.playerBuilding))
+                rect = CGRect(x: rect.midX - glyphMinimumSide / 2, y: rect.midY - glyphMinimumSide / 2, width: glyphMinimumSide, height: glyphMinimumSide)
+                side = glyphMinimumSide
+                share = 0.66
+            }
             let shape = Path(roundedRect: rect, cornerRadius: min(3, rect.width * 0.12))
             context.fill(shape, with: .color(Palette.playerBuilding))
             context.stroke(shape, with: .color(Palette.ink), lineWidth: rect.width < 10 ? 0.75 : 1.25)
             // Decision 121: what it is, once there is room to read it.
-            let side = min(rect.width, rect.height)
             guard side >= glyphMinimumSide else { continue }
             var glyph = context.resolve(building.kind.mapGlyph.image)
             glyph.shading = .color(Palette.buildingGlyph)
-            let size = side * 0.62
+            let size = side * share
             context.draw(glyph, in: CGRect(x: rect.midX - size / 2, y: rect.midY - size / 2, width: size, height: size))
         }
     }
@@ -1317,27 +1416,35 @@ enum MapArt {
         }
         drawStationSymbol(at: center, size: radius * 1.05, context: context)
         if let name {
+            // Decision 205: on the same pale plate as the names zoomed out
+            // (``drawOverviewNames``), so it reads over a line or a town.
+            context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
             context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
         }
 
-        // Waiting passengers count badge
-        if layers.showsWaitingCounts && projection.detail == .full {
-            if waitingCount > 0 {
-                let countText = context.resolve(
-                    Text(verbatim: "\(waitingCount)")
-                        .font(.system(size: max(8, min(11, radius * 0.7)), weight: .bold))
-                        .foregroundStyle(Color.white)
-                )
-                let countSize = countText.measure(in: CGSize(width: 120, height: 24))
-                let pillWidth = max(countSize.width + 6, radius * 1.5)
-                let pillHeight = max(countSize.height + 2, 11)
-                let pillY = center.y - radius - pillHeight / 2 - 2
-                let pillRect = CGRect(x: center.x - pillWidth / 2, y: pillY - pillHeight / 2, width: pillWidth, height: pillHeight)
-                let pillPath = Path(roundedRect: pillRect, cornerRadius: pillHeight / 2)
-                context.fill(pillPath, with: .color(Palette.metroBlue))
-                context.stroke(pillPath, with: .color(Color(uiColor: .systemBackground)), lineWidth: 1)
-                context.draw(countText, at: CGPoint(x: center.x, y: pillY), anchor: .center)
-            }
+        // The passengers waiting: decision 205, a white pill edged in navy
+        // with a person and the count, where it was a blue one that a blue
+        // line hid.
+        if layers.showsWaitingCounts && projection.detail == .full && waitingCount > 0 {
+            let fontSize = max(8, min(11, radius * 0.7))
+            let countText = context.resolve(
+                Text(verbatim: "\(waitingCount)")
+                    .font(.system(size: fontSize, weight: .bold))
+                    .foregroundStyle(Palette.ink)
+            )
+            let countSize = countText.measure(in: CGSize(width: 120, height: 24))
+            let icon = fontSize + 1
+            let pillHeight = max(countSize.height + 3, icon + 4)
+            let pillWidth = 3 + icon + 1.5 + countSize.width + 4
+            let pillY = center.y - radius - pillHeight / 2 - 3
+            let pillRect = CGRect(x: center.x - pillWidth / 2, y: pillY - pillHeight / 2, width: pillWidth, height: pillHeight)
+            let pillPath = Path(roundedRect: pillRect, cornerRadius: pillHeight / 2)
+            context.fill(pillPath, with: .color(Palette.markerFill))
+            context.stroke(pillPath, with: .color(Palette.ink), lineWidth: 1.5)
+            var person = context.resolve(MapGlyph.person.image)
+            person.shading = .color(Palette.ink)
+            context.draw(person, in: CGRect(x: pillRect.minX + 3, y: pillY - icon / 2, width: icon, height: icon))
+            context.draw(countText, at: CGPoint(x: pillRect.minX + 3 + icon + 1.5, y: pillY), anchor: .leading)
         }
     }
 
