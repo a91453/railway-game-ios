@@ -352,6 +352,20 @@ public struct Tutorial: Hashable, Sendable {
         show(0, over: world)
     }
 
+    /// The tutorial at step `index`, taken up again over a world it has not
+    /// watched being built (decision 188, later fix: TestFlight 54.1, the
+    /// tutorial skipped and the app closed): the chapters up to the step's
+    /// own take everything already in the world as built in them, so a goal
+    /// is read from the world as it is, and nothing built before is asked
+    /// for again. The chapters after it compare with the world when they
+    /// begin, as ever.
+    init(steps: [TutorialStep], resumingAt index: Int, over world: GameWorld) {
+        precondition(steps.indices.contains(index), "resuming needs one of the steps")
+        self.steps = steps
+        self.index = index
+        whenFirstShown = Dictionary(uniqueKeysWithValues: (0 ... index).map { ($0, Snapshot.nothing) })
+    }
+
     /// The step on screen.
     public var step: TutorialStep {
         steps[index]
@@ -417,6 +431,17 @@ public struct Tutorial: Hashable, Sendable {
         /// The newest ledger row, which the fares are counted after.
         let lastEntry: LedgerEntry?
 
+        /// A world with nothing built: everything there is counts as new.
+        static let nothing = Snapshot()
+
+        private init() {
+            edges = []
+            stations = []
+            lines = []
+            assignedTrains = []
+            lastEntry = nil
+        }
+
         init(of world: GameWorld) {
             edges = Set(world.network.edges.map(\.id))
             stations = Set(world.stations.map(\.id))
@@ -468,8 +493,8 @@ extension Tutorial {
             goal: .moveMap,
             title: ("Zoom out to see the town", "縮小地圖看看城鎮"),
             body: (
-                "Pinch, or tap the − button. Drag to move the map.",
-                "兩指開合或按「−」縮放，一指拖曳移動地圖。"
+                "Pinch or tap − to zoom, drag to move. Blocks: green homes, blue shops, orange offices.",
+                "兩指或按「−」縮放，拖曳移動。方塊是建物：綠住宅、藍商業、橘辦公。"
             )
         ),
         // Reference steps 0–1, placing stops and nodes so the line bends.

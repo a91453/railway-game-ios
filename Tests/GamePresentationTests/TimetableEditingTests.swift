@@ -143,6 +143,51 @@ final class TimetableEditingTests: XCTestCase {
     /// A timetable at the end of time, which a save may hold (GameCore asks
     /// only that its times never go back): an edit that would pass the
     /// largest second leaves it as it is instead of stopping the game.
+    /// TestFlight 56.1: a line's train has no timetable of its own until a
+    /// trip is sent out, so its screen shows the line, and the way off it.
+    func testALinesTrainShowsItsLineAndCanBeTakenOff() async throws {
+        try await MainActor.run {
+            var world = try makeLine()
+            let line = try world.createLine(named: "Main", stops: [alpha, beta])
+            let id = TrainID(rawValue: 1)
+            XCTAssertNil(world.lineTrainTimetable(of: id, in: .english))
+            try world.assignTrain(id, to: line.id)
+            let shown = try XCTUnwrap(world.lineTrainTimetable(of: id, in: .english))
+            XCTAssertEqual(shown.line, line.id)
+            XCTAssertEqual(shown.serviceName, "Main")
+            XCTAssertEqual(shown.stopsText, "Alpha – Beta")
+            XCTAssertEqual(shown.statusText, "Waiting to be sent out")
+            XCTAssertEqual(world.lineTrainTimetable(of: id, in: .traditionalChinese)?.statusText, "等待派車")
+
+            // Off the track too, the train comes off the line.
+            let spare = try world.purchaseTrain(named: "T2")
+            try world.assignTrain(spare.id, to: line.id)
+            let session = GameSession(world: world)
+            session.selectTrain(spare.id)
+            session.unassignSelectedTrain()
+            XCTAssertEqual(session.message?.text, "Took T2 off its line. A trip under way is finished.")
+            XCTAssertNil(session.world.lineTrainTimetable(of: spare.id, in: .english))
+            XCTAssertNotNil(session.world.lineTrainTimetable(of: id, in: .english))
+        }
+    }
+
+    /// A train of one of the line's services lists only the stops it calls at.
+    func testALinesServiceListsItsOwnStops() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        let track = TestLine(tiles: 7, row: 1)
+        try track.build(in: &world)
+        try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try track.buildStation(named: "Beta", beside: 3, at: 0, in: &world)
+        try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        let line = try world.createLine(named: "Main", stops: [StationID(rawValue: 1), StationID(rawValue: 2), StationID(rawValue: 3)])
+        let express = try world.addLinePattern(line.id, calling: [0, 2])
+        let train = try world.purchaseTrain(named: "T1")
+        try world.assignTrain(train.id, to: line.id, pattern: express)
+        let shown = try XCTUnwrap(world.lineTrainTimetable(of: train.id, in: .english))
+        XCTAssertEqual(shown.stopsText, "Alpha – Gamma")
+        XCTAssertEqual(shown.serviceName, "Main · Non-stop Alpha–Gamma")
+    }
+
     func testAnEditPastTheEndOfTimeChangesNothing() async throws {
         try await MainActor.run {
             var world = try makeLine()

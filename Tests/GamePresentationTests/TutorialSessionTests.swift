@@ -346,6 +346,124 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
+    /// Skip keeps the tutorial (TestFlight 54.1; decision 188, later fix):
+    /// the game menu takes it up again at the same step, where what was
+    /// built in the tutorial still counts, so nothing is built twice; Start
+    /// Over drops it. The launcher is told the step to take it up at.
+    func testASkippedTutorialIsTakenUpAgainAtTheSameStep() async throws {
+        await MainActor.run {
+            let session = GameSession(world: GameWorld.newGame(), language: .english)
+            var noted: [String?] = []
+            session.onTutorialStepToResume = { noted.append($0) }
+            session.resumeTutorial()
+            XCTAssertNil(session.tutorial, "nothing skipped to take up")
+            session.startTutorial()
+            Self.walk(session, to: "station.second.site")
+            let skipped = session.tutorial
+            session.skipTutorial()
+            XCTAssertNil(session.tutorial)
+            XCTAssertEqual(session.skippedTutorial, skipped)
+            XCTAssertEqual(noted.last, "station.second.site")
+            session.skipTutorial()
+            XCTAssertEqual(session.skippedTutorial, skipped, "a second Skip keeps it")
+
+            // Built while the tutorial was away: the step's own place is
+            // still to pick, as the place is the session's.
+            session.selectTool(.select)
+            session.resumeTutorial()
+            XCTAssertNil(session.skippedTutorial)
+            XCTAssertEqual(session.tutorial?.step.id, "station.second.site")
+            XCTAssertEqual(session.tutorial?.index, skipped?.index)
+            XCTAssertEqual(noted.last, "station.second.site", "the same step")
+            XCTAssertFalse(session.isTutorialStepDone)
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: Self.point(11, in: session), reach: Self.reach)
+            XCTAssertTrue(session.isTutorialStepDone)
+            session.showNextTutorialStep()
+            Self.carryOut("station.second.build", in: session)
+            XCTAssertTrue(session.isTutorialStepDone, "the first station, built before Skip, still counts")
+            XCTAssertEqual(session.world.stations.count, 2)
+            // The steps before are still done.
+            session.showPreviousTutorialStep()
+            session.showPreviousTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "station.first.build")
+            XCTAssertTrue(session.isTutorialStepDone)
+
+            session.skipTutorial()
+            session.startTutorial()
+            XCTAssertNil(session.skippedTutorial, "Start Over drops it")
+            XCTAssertEqual(session.tutorial?.index, 0)
+            XCTAssertEqual(noted.last, "build.network")
+        }
+    }
+
+    /// The tutorial's step is kept between launches (decision 188, later
+    /// fix): skipped, or on screen when the game is left, it is offered in
+    /// the next game at that step, its chapter read from the world as it
+    /// is, so what was built before is not asked for again. Finishing it
+    /// forgets it.
+    func testTheTutorialIsTakenUpAgainInALaterLaunch() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try await MainActor.run {
+            var launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+            launcher.startTutorial()
+            var session = try XCTUnwrap(launcher.session)
+            Self.walk(session, to: "station.second.site")
+            XCTAssertEqual(launcher.preferences.tutorialStepToResume, "station.second.site", "on screen")
+            session.skipTutorial()
+            XCTAssertEqual(launcher.preferences.tutorialStepToResume, "station.second.site", "skipped")
+            launcher.returnToStart()
+
+            launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+            XCTAssertEqual(launcher.preferences.tutorialStepToResume, "station.second.site")
+            launcher.continueGame()
+            session = try XCTUnwrap(launcher.session)
+            XCTAssertNil(session.tutorial)
+            XCTAssertEqual(session.skippedTutorial?.step.id, "station.second.site")
+            XCTAssertEqual(session.world.stations.count, 1)
+            session.resumeTutorial()
+            XCTAssertEqual(session.tutorial?.step.id, "station.second.site")
+            XCTAssertFalse(session.isTutorialStepDone)
+            // One more station, not two: the one built before counts.
+            session.selectTool(.network)
+            session.setNetworkMode(.platform)
+            session.tapNetwork(at: Self.point(11, in: session), reach: Self.reach)
+            XCTAssertTrue(session.isTutorialStepDone)
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "station.second.build")
+            Self.carryOut("station.second.build", in: session)
+            XCTAssertTrue(session.isTutorialStepDone)
+            // The steps before it read the world as it is.
+            session.showPreviousTutorialStep()
+            session.showPreviousTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "station.first.build")
+            XCTAssertTrue(session.isTutorialStepDone)
+            session.showNextTutorialStep()
+            session.showNextTutorialStep()
+            session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "line.open", "the line chapter asks for a new line")
+            XCTAssertFalse(session.isTutorialStepDone)
+            launcher.returnToStart()
+
+            launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+            XCTAssertEqual(launcher.preferences.tutorialStepToResume, "line.open", "on screen when left")
+            launcher.continueGame()
+            session = try XCTUnwrap(launcher.session)
+            session.resumeTutorial()
+            Self.walk(session, to: "end")
+            session.showNextTutorialStep()
+            XCTAssertNil(session.tutorial)
+            XCTAssertNil(launcher.preferences.tutorialStepToResume, "finished")
+            XCTAssertTrue(launcher.preferences.tutorialCompleted)
+
+            launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+            launcher.continueGame()
+            XCTAssertNil(launcher.session?.skippedTutorial)
+        }
+    }
+
     /// The start screen's tutorial entry starts a new game on the first
     /// step, keeping the autosave as starting a new game does; the
     /// tutorial's game keeps no holidays (decision 154), no building

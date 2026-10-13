@@ -529,7 +529,7 @@ final class TrafficControlPropertyTests: XCTestCase {
     /// 4096 lies somewhere along it, traffic control on, and three to five
     /// trains of one to three cars, each at the forward berth of a
     /// different station, mostly in the western half.
-    fileprivate static func beginFollowing(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
+    static func beginFollowing(_ testCase: inout PropertyCase) throws -> (world: GameWorld, model: ReferenceWorld) {
         let minute = Int64(testCase.random.below(1_440))
         var world = try GameWorld(bounds: WorldBounds(width: 204_800, height: 16_384), economy: GameEconomy(balance: 1_000_000_000, costs: costs), clock: GameClock(now: GameTime(minutes: minute), speed: .normal))
         var model = ReferenceWorld(width: 204_800, height: 16_384, balance: 1_000_000_000, costs: costs, minutes: minute, speed: .normal)

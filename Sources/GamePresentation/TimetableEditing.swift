@@ -204,6 +204,38 @@ extension GameWorld {
     }
 }
 
+/// The line a train runs for, as its timetable screen shows it: a line
+/// writes its trains' timetables one trip at a time, so the screen reads
+/// the line rather than the train's (empty until a trip is sent out).
+public struct LineTrainTimetable: Hashable, Sendable {
+    public let line: LineID
+    /// The line's name, with the train's service when it runs one: "Main"
+    /// or "Main · Express Alpha–Gamma".
+    public let serviceName: String
+    /// The stations the train calls at, in order: "Alpha – Beta – Gamma",
+    /// as the line panel lists a line's stops.
+    public let stopsText: String
+    /// Where it stands now: "Waiting to be sent out", "Next: Beta, due
+    /// 08:05" (``GameWorld/trainServiceStatus(of:in:)``).
+    public let statusText: String
+}
+
+extension GameWorld {
+    /// The line train `id` runs for; `nil` when it runs for none.
+    public func lineTrainTimetable(of id: TrainID, in language: DisplayLanguage) -> LineTrainTimetable? {
+        guard let lineID = assignedLine(of: id), let line = line(id: lineID),
+              let serviceName = assignedServiceName(of: id, in: language)
+        else { return nil }
+        let calls = assignedPattern(of: id).map { line.patterns[$0].calls } ?? Array(line.stops.indices)
+        return LineTrainTimetable(
+            line: lineID,
+            serviceName: serviceName,
+            stopsText: calls.map { stationName(line.stops[$0]) }.joined(separator: " – "),
+            statusText: trainServiceStatus(of: id, in: language)?.stopText ?? language.text("Waiting to be sent out", "等待派車")
+        )
+    }
+}
+
 extension GameSession {
     /// Adds a stop at `station` to the end of the selected train's
     /// timetable (see ``TimetableEditing/appending(_:to:start:)``); a first

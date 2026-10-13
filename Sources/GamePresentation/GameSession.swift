@@ -401,7 +401,22 @@ public final class GameSession {
 
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
-    public internal(set) var tutorial: Tutorial?
+    public internal(set) var tutorial: Tutorial? {
+        didSet { noteTutorialStepToResume() }
+    }
+    /// The tutorial the player skipped, kept to be taken up again at the
+    /// same step from the game menu (``resumeTutorial()``; decision 188,
+    /// later fix, TestFlight 54.1), or `nil`. Never saved; the launcher
+    /// keeps its step between launches.
+    public internal(set) var skippedTutorial: Tutorial? {
+        didSet { noteTutorialStepToResume() }
+    }
+    /// Called with the step a tutorial left now would be taken up again
+    /// at, the one on screen or skipped (`nil` when there is none, as once
+    /// it is finished), whenever it changes: the launcher keeps it, so the
+    /// tutorial can be taken up again after the app is closed.
+    @ObservationIgnored public var onTutorialStepToResume: (@MainActor (String?) -> Void)?
+    @ObservationIgnored var notedTutorialStepToResume: String?
     /// Called when the player finishes the tutorial's last step (decision
     /// 177): the launcher notes it in its preferences. Not on Skip.
     @ObservationIgnored public var onTutorialCompleted: (@MainActor () -> Void)?
@@ -1829,6 +1844,27 @@ public final class GameSession {
     /// count made even, up, as each way needs one).
     public func assignSelectedTrainToSelectedLine(pattern: Int? = nil) {
         guard let train = requireSelectedTrain(), let line = requireSelectedLine() else { return }
+        assign(train, to: line, pattern: pattern)
+    }
+
+    /// Assigns train `trainID` to a service of line `lineID` (its own for
+    /// `pattern` `nil`), as ``assignSelectedTrainToSelectedLine(pattern:)``
+    /// does: the train
+    /// card's line menu and the line panel's menu of trains without a
+    /// line (TestFlight 54.1).
+    public func assignTrain(_ trainID: TrainID, toLine lineID: LineID, pattern: Int? = nil) {
+        guard let train = world.train(id: trainID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownTrain(trainID).playerMessage(in: language))
+            return
+        }
+        guard let line = world.line(id: lineID) else {
+            message = StatusMessage(kind: .failure, text: GameError.unknownLine(lineID).playerMessage(in: language))
+            return
+        }
+        assign(train, to: line, pattern: pattern)
+    }
+
+    private func assign(_ train: Train, to line: ServiceLine, pattern: Int?) {
         perform(.assignTrain(train.id, line.id, pattern: pattern)) { outcome, _, world in
             let fast = outcome.highSpeed, started = outcome.number
             let service = world.assignedServiceName(of: train.id, in: language) ?? line.name

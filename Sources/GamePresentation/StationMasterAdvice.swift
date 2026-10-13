@@ -487,8 +487,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .materialsShort(_, let name):
             language.text(
-                "The town round \(name) ran short of building materials last night and grew slowly. Have a freight yard send materials, and run a freight line to \(name)'s yard.",
-                "「\(name)」附近昨晚缺建材，城市長得慢。讓一座貨運場出建材，開一條貨運路線運到「\(name)」的貨運場。"
+                "The town round \(name) ran short of building materials last night and grew slowly. Have a freight yard send materials, and give \(name) a yard too (in the station panel's Freight section). Then make a line between them a freight line in Lines: any train carries freight, \(Freight.tonsPerCar) t a car.",
+                "「\(name)」附近昨晚缺建材，城市長得慢。讓一座貨運場出建材，「\(name)」也蓋一座（在車站面板的「貨運」）。再到「路線」把連接兩站的路線設成貨運路線：不需要特別的貨車，任何列車每節載 \(Freight.tonsPerCar) 噸。"
             )
         case .scenarioWelcome(let scenario):
             scenario == Challenge.liuMingchuan.id ? LiuMingchuanChallenge.welcomeText(in: language) : PingxiChallenge.welcomeText(in: language)

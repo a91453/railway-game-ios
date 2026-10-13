@@ -69,9 +69,11 @@ struct MapAlertBubbles: View {
                 screen.panel = .lines
             }
             // Decision 184: a sight opens the sights, a challenge in the
-            // red the company's figures.
+            // red the company's figures. A town short of materials opens
+            // its station's panel, whose Freight section builds the yard.
             switch alert.kind {
             case .sightWithoutStation: screen.panel = .tourism
+            case .materialsShort where alert.station != nil: screen.panel = .station
             case .insolvency: screen.panel = .economy
             default: break
             }

@@ -41,6 +41,7 @@ public final class LinePanelMemo {
     private var trackCountTexts: [String]?
     private var coverageTexts: [ServiceLevel: String?] = [:]
     private var staffingPlans: [Staffing: LineStaffingPlan?] = [:]
+    private var capacityWarning: String??
 
     public init() {}
 
@@ -56,6 +57,7 @@ public final class LinePanelMemo {
         trackCountTexts = nil
         coverageTexts = [:]
         staffingPlans = [:]
+        capacityWarning = nil
     }
 
     /// ``GameWorld/lineServiceSummaries(_:in:)``, with the trains on a trip
@@ -124,5 +126,14 @@ public final class LinePanelMemo {
         let plan = session.world.lineStaffingPlan(id, headway: headway, type: type, cars: cars)
         staffingPlans[staffing] = .some(plan)
         return plan
+    }
+
+    /// ``GameWorld/lineCapacityWarning(_:in:)``.
+    public func capacityWarning(_ id: LineID, of session: GameSession) -> String? {
+        keep(id, of: session)
+        if let kept = capacityWarning { return kept }
+        let text = session.world.lineCapacityWarning(id, in: session.language)
+        capacityWarning = .some(text)
+        return text
     }
 }
