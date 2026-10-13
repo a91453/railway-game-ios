@@ -552,7 +552,7 @@ struct MapView: View {
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
                                 onCredit: { screen.panel = .dataSources },
-                                onFollowing: Self.readsBaseMap ? { baseMapFollowing = $0 } : nil
+                                onFollowing: baseMapFollowingReport
                             )
                         }
                     }
@@ -569,15 +569,7 @@ struct MapView: View {
                 }
             }
             .overlay(alignment: .topLeading) {
-                // UI tests only: whether Apple's map lines up.
-                if Self.readsBaseMap, realWorld != nil, mapStyle != .openStreetMap {
-                    Color.clear
-                        .frame(width: 1, height: 1)
-                        .allowsHitTesting(false)
-                        .accessibilityElement()
-                        .accessibilityIdentifier("map.base")
-                        .accessibilityValue(Text(verbatim: baseMapFollowing))
-                }
+                baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -1010,6 +1002,25 @@ struct MapView: View {
         }
         .accessibilityLabel("Map Layers")
         .accessibilityIdentifier("map.layers")
+    }
+
+    /// UI tests only: whether Apple's map lines up (`map.base`).
+    @ViewBuilder
+    private func baseMapReadout(shown: Bool) -> some View {
+        if Self.readsBaseMap, shown {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.base")
+                .accessibilityValue(Text(verbatim: baseMapFollowing))
+        }
+    }
+
+    /// Where Apple's map says how it follows, under UI tests only.
+    private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
+        guard Self.readsBaseMap else { return nil }
+        return { baseMapFollowing = $0 }
     }
 
     /// Whether the map reads out how Apple's map follows it
