@@ -6,18 +6,23 @@ import SwiftUI
 /// (decision 174), the star in the sky of a sight tourists can reach and
 /// grey beside one they cannot. A tap opens the tourism panel. Shown while
 /// the player is looking at the map (the Select tool), as the alert bubbles
-/// are, and not over what is being built.
+/// are. Decision 174, later (a player's report): while building too, as
+/// ``isPassive`` marks, faint and taking no touches, under the build's
+/// flags, so a player can build by a sight.
 struct MapAttractionMarks: View {
     let session: GameSession
     let camera: PlanCamera
     let viewport: ScreenSize
     /// What floats over the map's edges (``EnvironmentValues/mapInsets``).
     let insets: EdgeInsets
+    /// The marks shown while a building tool is chosen: faint, taking no
+    /// touches. Otherwise the marks of the Select tool.
+    var isPassive = false
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if session.tool == .select, let sights = session.world.tourism?.attractions {
+            if (session.tool == .select) != isPassive, let sights = session.world.tourism?.attractions {
                 ForEach(sights, id: \.id) { sight in
                     let at = camera.screenPoint(of: sight.point)
                     if at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
@@ -31,6 +36,9 @@ struct MapAttractionMarks: View {
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
+        .opacity(isPassive ? 0.5 : 1)
+        .allowsHitTesting(!isPassive)
+        .accessibilityHidden(isPassive)
     }
 
     private func mark(_ sight: Attraction) -> some View {

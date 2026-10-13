@@ -480,6 +480,58 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(hud.waitForNonExistence(timeout: 5), "MapConstructionHUD must disappear when preview is cleared")
     }
 
+    /// TestFlight 54.1: the track options are switches that say whether
+    /// they are on (decision 107, later). Snapping starts on, and a tap
+    /// turns it off.
+    func testTheTrackOptionsShowWhetherTheyAreOn() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        newGame.tap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        network.waitUntilSettled()
+        network.tap()
+
+        let advanced = app.buttons["network.advanced"]
+        XCTAssertTrue(advanced.waitForExistence(timeout: 10))
+        for _ in 0..<3 where !advanced.isHittable { app.swipeUp() }
+        advanced.tap()
+        let snap = app.buttons["network.snap"]
+        XCTAssertTrue(snap.waitForExistence(timeout: 5))
+        for _ in 0..<3 where !snap.isHittable { app.swipeUp() }
+        XCTAssertTrue(snap.isSelected, "Snapping starts on, and says so")
+        snap.tap()
+        let off = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == false"), object: snap)
+        XCTAssertEqual(XCTWaiter().wait(for: [off], timeout: 5), .completed, "A tap turns snapping off, and it says so")
+    }
+
+    /// TestFlight 54.1: the news log is the bell's alone (decision 175,
+    /// later). Tapping the station master, talking or not, never opens it.
+    func testTheStationMasterDoesNotOpenTheNewsLog() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        let stationMaster = app.buttons["stationMaster"]
+        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        let news = app.navigationBars["News"].firstMatch
+        for _ in 0..<3 {
+            stationMaster.tap()
+            XCTAssertFalse(news.waitForExistence(timeout: 2), "Only the bell opens the news log")
+        }
+    }
+
     /// A panel beside the map (Lines) takes the details card's place: the
     /// dock's toggle for the card has nothing to change then, and on a
     /// phone the panel's edge lay over the station master beside the dock

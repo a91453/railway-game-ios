@@ -53,7 +53,6 @@ struct StationMasterCorner: View {
     /// can have changed it (decision 184, later): not at every tick.
     @State private var advice: StationMasterAdvice?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(GameScreenState.self) private var screen
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
@@ -87,10 +86,9 @@ struct StationMasterCorner: View {
         HStack(alignment: .bottom, spacing: 8) {
             Button {
                 if isTalking {
-                    // Decision 175: a second tap, while it talks, opens the
-                    // news log.
+                    // Decision 175, later: a second tap, while it talks,
+                    // puts the bubble away. The news log is the bell's.
                     isTalking = false
-                    screen.panel = .news
                 } else {
                     // With nothing to advise it says all is well
                     // (decision 123).
@@ -134,13 +132,15 @@ struct StationMasterCorner: View {
                 .frame(maxWidth: width, alignment: .leading)
                 .onTapGesture {
                     // Decision 177: advice that points at a place takes
-                    // the map there. Decision 175: any other opens the
-                    // news log.
+                    // the map there. Decision 175, later: advice about a
+                    // station takes the map there and, while selecting,
+                    // selects it; any other only puts the bubble away.
                     isTalking = false
                     if let target = advice?.cameraTarget {
                         session.lookAt(target)
-                    } else {
-                        screen.panel = .news
+                    } else if let id = advice.flatMap(stationID(of:)), let station = session.world.station(id: id) {
+                        session.lookAt(station.point)
+                        if session.tool == .select { session.selectStation(id) }
                     }
                 }
                 .accessibilityHidden(true)
@@ -148,6 +148,18 @@ struct StationMasterCorner: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
+    }
+
+    /// The station the advice is about, if it is about one.
+    private func stationID(of advice: StationMasterAdvice) -> StationID? {
+        switch advice {
+        case .stationFull(let station, _), .stationCrowded(let station, _),
+             .underserved(let station, _, _), .townGrew(let station, _, _),
+             .materialsShort(let station, _):
+            station
+        default:
+            nil
+        }
     }
 
     /// Whether the bubble has the width it needs to show.
