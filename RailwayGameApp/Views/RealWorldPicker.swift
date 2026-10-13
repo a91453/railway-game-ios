@@ -165,6 +165,13 @@ struct RealWorldPicker: View {
                     } else {
                         Text("The square is your map, 16 km a side. Move the map to choose where its middle is, then tap Build Here.")
                     }
+                    // Decision 198: the ground chosen in the new game's options.
+                    if launcher.newGameOptions.ground == .flat {
+                        Text(verbatim: launcher.language.text(
+                            "Flat ground: track on this map is always level. Change it in New Game Options.",
+                            "地形平坦：這張地圖的軌道一律水平。可在「新遊戲選項」更改。"
+                        ))
+                    }
                 }
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)

@@ -5,7 +5,8 @@ import SwiftUI
 /// The new game's options (decision 177), after A-Train's difficulty choice:
 /// easy, standard or expert, with the cash each starts with; how much the
 /// holidays and weather disturb the traffic; whether building materials,
-/// the towns beyond the map's edge and buying the map are on; and the map's
+/// the towns beyond the map's edge and buying the map are on; a real-world
+/// map's ground, real or flat (decision 198); and the map's
 /// seed, to share a map. The choices are kept on the device
 /// (``GameLauncher/newGameOptions``) and used by every new game until
 /// changed; a line at the bottom says what they change.
@@ -65,6 +66,25 @@ struct NewGameOptionsView: View {
                     Text(verbatim: language.text(
                         "Materials: towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Buying the map applies to a blank map; real-world maps decide for themselves.",
                         "建材：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。分區購買只適用於空白地圖，實景地圖有自己的規則。"
+                    ))
+                }
+                Section {
+                    // Decision 198: real-world maps only; a blank map is flat.
+                    Picker(selection: options.ground) {
+                        ForEach(NewGameOptions.Ground.allCases, id: \.self) { ground in
+                            Text(verbatim: ground.title(in: language)).tag(ground)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Terrain", "地形"))
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("newGameOptions.ground")
+                } header: {
+                    Text(verbatim: language.text("Terrain (real-world maps)", "地形（實景地圖）"))
+                } footer: {
+                    Text(verbatim: language.text(
+                        "Real: track rises and falls with the hills, with tunnels and viaducts where they are steep. Flat: track is always level, with no grades or tunnels to think about. Blank maps are always flat.",
+                        "真實：軌道隨山勢起伏，太陡的地方要用隧道或高架。平坦：軌道一律水平，不用考慮坡度與隧道。空白地圖一律平坦。"
                     ))
                 }
                 Section {
