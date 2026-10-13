@@ -1074,8 +1074,8 @@ struct LinesPanel: View {
     /// The headway of a line that runs and its trains (TestFlight 54.1 and
     /// 56.1): choose how often a train comes and tap once; the trains it
     /// lacks are bought and placed where its trips start, those it no
-    /// longer needs go to no line after their trip, and its targets keep
-    /// them evenly apart. Shown with Advanced folded too: it is the main
+    /// longer needs go to no line (those waiting back to the depot, the
+    /// others after their trip), and its targets keep them evenly apart. Shown with Advanced folded too: it is the main
     /// way to run more trains, not a detail.
     private func headwaySection(_ line: ServiceLine) -> some View {
         let language = session.language
@@ -1144,8 +1144,8 @@ struct LinesPanel: View {
             Text(verbatim: language.text("Headway and trains", "班距與列車數"))
         } footer: {
             Text(verbatim: language.text(
-                "Pick how often a train comes and tap once: trains it lacks are bought and wait at the first station, extra trains go to no line after their trip, and the rest keep evenly apart.",
-                "選班距後按一下：不夠的車會買好在第一站等候，多的車跑完這一趟後回到未配屬，其餘的保持等間隔。"
+                "Pick how often a train comes and tap once: trains it lacks are bought and wait at the first station, extra trains go to no line, those waiting back to the depot and the others after their trip, and the rest keep evenly apart.",
+                "選班距後按一下：不夠的車會買好在第一站等候，多的車回到未配屬（等車的收回車庫，正在跑的跑完這一趟），其餘的保持等間隔。"
             ))
         }
         // The line's own headway, nearest of the choices, when it is
