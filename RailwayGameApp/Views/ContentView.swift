@@ -106,6 +106,11 @@ struct ContentView: View {
                     break
                 }
             }
+            // The tutorial's step that asks for the lines panel reads it
+            // from the session.
+            .onChange(of: screen.panel == .lines, initial: true) { _, shown in
+                session.linesPanelDidChange(isShown: shown)
+            }
             .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) { _, _ in
                 detailsChoice = nil
             }
