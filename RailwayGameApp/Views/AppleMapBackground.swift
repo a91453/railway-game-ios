@@ -311,7 +311,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         guard let placement, bounds.width > 0, bounds.height > 0 else { return nil }
         let wanted = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
         guard wanted.size.width > 0 else { return nil }
-        let shown = visibleMapRect
+        let shown = drawnMapRect
         let scale = Double(bounds.width) / wanted.size.width
         let edges = [shown.minX - wanted.minX, shown.minY - wanted.minY, shown.maxX - wanted.maxX, shown.maxY - wanted.maxY]
             .map { Int(($0 * scale).rounded()) }
@@ -346,9 +346,9 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
             level()
         }
         let rect = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
-        guard following.shouldAsk(for: Self.piece(rect), shown: Self.piece(visibleMapRect)) else { return }
+        guard following.shouldAsk(for: Self.piece(rect), shown: Self.piece(drawnMapRect)) else { return }
         setVisibleMapRect(rect, animated: false)
-        following.answered(Self.piece(visibleMapRect))
+        following.answered(Self.piece(drawnMapRect))
         reportZoomLimit(camera: placement.camera)
     }
 
@@ -371,6 +371,17 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         guard reportedZoomLimit.map({ abs($0 - limit) > limit / 100 }) ?? true else { return }
         reportedZoomLimit = limit
         Task { @MainActor in report(limit) }
+    }
+
+    /// The part of the Earth drawn from the view's top left corner to its
+    /// bottom right one, as MapKit converts those points: where the game's
+    /// drawing has to lie. Not `visibleMapRect`: in the Simulator (run
+    /// 38354841112) it said 24 points more above and below than the
+    /// game's view, the same width round the same middle.
+    private var drawnMapRect: MKMapRect {
+        let topLeft = MKMapPoint(convert(CGPoint(x: 0, y: 0), toCoordinateFrom: self))
+        let bottomRight = MKMapPoint(convert(CGPoint(x: bounds.width, y: bounds.height), toCoordinateFrom: self))
+        return MKMapRect(x: topLeft.x, y: topLeft.y, width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y)
     }
 
     private static func piece(_ rect: MKMapRect) -> BaseMapFollowing.Piece {
