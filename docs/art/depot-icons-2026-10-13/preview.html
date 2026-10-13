@@ -1,0 +1,397 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>機廠美術候選</title><style>
+*{box-sizing:border-box}body{margin:0;background:#ECEEF6;color:#262C57;font-family:"Noto Sans CJK TC",sans-serif;font-size:14px;line-height:1.6}.board{width:1180px;padding:40px;margin:auto}h1{font-size:36px;margin:5px 0 9px;letter-spacing:.06em}h2{font-size:23px;margin:0 0 16px}h2 small{font-size:13px;font-weight:400;margin-left:12px}h3{font-size:18px;margin:0}p{margin:5px 0 18px}section{margin-top:34px}header .eyebrow{font-size:13px;letter-spacing:.10em;color:#5B6189}header p{font-size:17px}.pending{display:inline-block;background:#FFC86B;color:#262C57;font-size:13px;padding:6px 14px;border-radius:9px}.grid{display:grid;gap:18px}.three{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:repeat(2,1fr)}article{background:#FFFFFF;border:1.5px solid #262C57;border-radius:18px;padding:20px}article p{color:#5B6189;font-size:13px;height:40px}em{font-size:11px;font-style:normal;color:#262C57;background:#FFC86B;padding:3px 7px;border-radius:5px;vertical-align:middle}svg{flex:none;display:block}.size-line{display:flex;align-items:flex-end;gap:24px;height:87px}.size-line span{display:flex;align-items:center;flex-direction:column;gap:5px}small{display:block;font-size:11px}.pair{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid #ECEEF6;margin-top:20px;padding-top:16px;gap:10px}.pair>div{display:flex;flex-direction:column;align-items:center;gap:8px}.pair small{font-size:10px}.badge{display:inline-flex;align-items:center;justify-content:center;background:#FFC86B;border:1.5px solid var(--ink,#262C57);position:relative;flex:none}.badge.depot{border-radius:4px}.badge.station{border-radius:50%}.badge.hsr:before{content:"";position:absolute;inset:-4.5px;border:1.5px solid var(--ink,#262C57);border-radius:50%}.comparison{margin-top:14px;padding:16px 10px 12px;border-radius:10px}.light{--ink:#262C57;--plate:#FFFFFF;--track:#10917F;color:#262C57;background:#ECEEF6}.dark{--ink:#ECEEF6;--plate:#30376A;--track:#45D3C0;color:#ECEEF6;background:#262C57}.station-row{display:flex;justify-content:space-around;align-items:center}.station-row>div{display:flex;flex-direction:column;align-items:center;gap:10px}.station-row small{font-size:11px}.map{margin-top:12px;height:144px;border-radius:10px;position:relative;overflow:hidden}.track{position:absolute;left:-10px;width:110%;height:8px;background:var(--track);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.track.one{top:65px}.track.two{top:79px}.yard-track{position:absolute;left:55%;width:38%;height:6px;background:var(--track);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.yard-track.y1{top:32px}.yard-track.y2{top:44px}.map-station{position:absolute;left:24%;top:59px}.map-depot{position:absolute;left:71%;top:24px}.name{position:absolute;padding:1px 4px;background:var(--plate);color:var(--ink);border-radius:3px;font-size:11px}.sname{top:88px;left:22%}.dname{top:57px;left:71%}.train{position:absolute;height:8px;border:1.5px solid var(--ink);border-radius:4px;background:#FFC86B;width:34px}.t1{top:65px;left:41%}.t2{top:32px;left:57%;width:26px}.caption{position:absolute;left:12px;bottom:8px;font-size:10px;opacity:.8}.roads{position:absolute;top:16px;left:18px;width:50%;height:22px;background:var(--plate);border-radius:4px}.states{display:flex;gap:55px;margin:12px 0 18px;justify-content:center}.states>div{display:flex;gap:8px;align-items:center;flex-direction:column;font-size:13px}.state-carrier{display:inline-flex;align-items:center;justify-content:center;position:relative;color:var(--ink,#262C57);background:var(--ink,#262C57);clip-path:polygon(0 0,75% 0,100% 25%,100% 100%,25% 100%,0 75%)}.state-carrier:before{content:"";position:absolute;inset:1.2px;background:var(--plate,#FFFFFF);clip-path:polygon(0 0,75% 0,100% 25%,100% 100%,25% 100%,0 75%)}.state-carrier svg{z-index:1}.inline-states{display:flex;justify-content:center;gap:20px;align-items:flex-end;height:53px}.inline-states>div{display:flex;flex-direction:column;align-items:center;gap:5px}.status-map{height:140px}.status-out-car{left:27%;top:65px;width:46px}.status-in-car{left:72%;top:79px;width:46px}.out-mark{position:absolute;top:32px;left:27%}.in-mark{position:absolute;top:44px;left:72%}.out-label{position:absolute;top:29px;left:34%;font-size:11px}.in-label{position:absolute;top:41px;left:79%;font-size:11px}.list-example{display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:15px;margin-top:16px}.list-example strong{font-size:14px;font-weight:500}.list-example>span{display:flex;gap:5px;align-items:center;border:1px solid var(--ink);border-radius:6px;padding:3px 7px;font-size:13px;background:var(--plate)}.list-example b{font-size:12px;font-weight:500}footer{margin-top:24px;font-size:12px;color:#5B6189;border-top:1px solid #B4B9D9;padding-top:15px}
+</style><body><main class="board"><header><span class="eyebrow">機廠 L1 · 美術候選 · 2026-10-13</span><h1>機廠、出入庫、在庫</h1><p>可以分別選：D 機廠／S 出入庫／I 在庫。推薦 D-A ＋ S-A ＋ I-B。</p><div class="pending">待作者選定；尚未放入正式 Asset Catalog，也未接功能。</div></header><section><h2>① 地圖機廠 <small>三種方案，兩種大小；暖黃底與粗外框沿用車站</small></h2><div class="grid three"><article><h3>D-A　雙門車庫 <em>推薦</em></h3><p>兩個大門像停車庫；縮小仍看得見雙門。</p><div class="size-line"><span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<small>48 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<small>24 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<small>16 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<small>10 點</small></span></div><div class="pair"><div><span class="badge depot " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+</span><small>拉遠：18 點徽章／11 點圖示</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>拉近：28 點徽章／17 點圖示</small></div></div><div class="comparison light"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="comparison dark"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="map light"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">淺色地圖</span></div><div class="map dark"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">深色地圖</span></div></article><article><h3>D-B　拱棚與列車</h3><p>一列車收在拱棚內；鐵道味較強，細節較多。</p><div class="size-line"><span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<small>48 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<small>24 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<small>16 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<small>10 點</small></span></div><div class="pair"><div><span class="badge depot " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <rect x="8" y="10" width="8" height="7" rx="1.5"/>
+</svg>
+</span><small>拉遠：18 點徽章／11 點圖示</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span><small>拉近：28 點徽章／17 點圖示</small></div></div><div class="comparison light"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="comparison dark"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="map light"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">淺色地圖</span></div><div class="map dark"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">深色地圖</span></div></article><article><h3>D-C　停車線俯視</h3><p>三股平行線像庫線；乾淨，但要靠名稱幫忙。</p><div class="size-line"><span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<small>48 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<small>24 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<small>16 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<small>10 點</small></span></div><div class="pair"><div><span class="badge depot " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+</svg>
+</span><small>拉遠：18 點徽章／11 點圖示</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span><small>拉近：28 點徽章／17 點圖示</small></div></div><div class="comparison light"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="comparison dark"><div class="station-row"><div><span class="badge station " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵車站</small></div><div><span class="badge depot " style="width:30px;height:30px"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span><small>機廠</small></div></div></div><div class="map light"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">淺色地圖</span></div><div class="map dark"><div class="roads"></div><div class="track one"></div><div class="track two"></div><div class="yard-track y1"></div><div class="yard-track y2"></div><div class="map-station"><span class="badge station " style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span></div><div class="map-depot"><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span></div><span class="name sname">中央站</span><span class="name dname">機廠</span><span class="train t1"></span><span class="train t2"></span><span class="caption">深色地圖</span></div></article></div></section><section><h2>② 列車狀態 <small>兩組方案；單色也能分出入，切角方牌避開等待環與小長牌</small></h2><div class="grid two"><article><h3>S-A　穿過庫門 <em>推薦</em></h3><p>出庫：箭頭離開門；入庫：箭頭進到門。</p><div class="states"><div><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+<strong>出庫中</strong></div><div><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+<strong>入庫中</strong></div></div><div class="inline-states"><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>24 點</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>24 點</small></div><div><span class="state-carrier" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>18 點</small></div><div><span class="state-carrier" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>18 點</small></div><div><span class="state-carrier" style="width:16px;height:16px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>16 點</small></div><div><span class="state-carrier" style="width:16px;height:16px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>16 點</small></div></div><div class="map status-map light"><div class="track one"></div><div class="track two"></div><span class="train status-out-car"></span><span class="train status-in-car"></span><span class="out-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span></span><span class="in-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span></span><span class="out-label">出庫中</span><span class="in-label">入庫中</span><span class="caption">方向是相對庫門，與列車朝向無關</span></div><div class="map status-map dark"><div class="track one"></div><div class="track two"></div><span class="train status-out-car"></span><span class="train status-in-car"></span><span class="out-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span></span><span class="in-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span></span><span class="out-label">出庫中</span><span class="in-label">入庫中</span><span class="caption">方向是相對庫門，與列車朝向無關</span></div></article><article><h3>S-B　升起／落下</h3><p>出庫：往上離開底座；入庫：往下落回底座。</p><div class="states"><div><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+<strong>出庫中</strong></div><div><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+<strong>入庫中</strong></div></div><div class="inline-states"><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>24 點</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>24 點</small></div><div><span class="state-carrier" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>18 點</small></div><div><span class="state-carrier" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>18 點</small></div><div><span class="state-carrier" style="width:16px;height:16px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>16 點</small></div><div><span class="state-carrier" style="width:16px;height:16px"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span><small>16 點</small></div></div><div class="map status-map light"><div class="track one"></div><div class="track two"></div><span class="train status-out-car"></span><span class="train status-in-car"></span><span class="out-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span></span><span class="in-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span></span><span class="out-label">出庫中</span><span class="in-label">入庫中</span><span class="caption">方向是相對庫門，與列車朝向無關</span></div><div class="map status-map dark"><div class="track one"></div><div class="track two"></div><span class="train status-out-car"></span><span class="train status-in-car"></span><span class="out-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 17V9H6.5L12 2L17.5 9H13.5V17Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span></span><span class="in-mark"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.5 2H13.5V10H17.5L12 17L6.5 10H10.5Z"/>
+  <path d="M3 17H6V19H18V17H21V20Q21 22 19 22H5Q3 22 3 20Z"/>
+</svg>
+</span></span><span class="out-label">出庫中</span><span class="in-label">入庫中</span><span class="caption">方向是相對庫門，與列車朝向無關</span></div></article></div></section><section><h2>③ 在庫徽章 <small>兩種方案；放在車隊、路線面板，保留「在庫」文字</small></h2><div class="grid two"><article><h3>I-A　庫棚</h3><p>和機廠共用雙門；較像「某個場所」。</p><div class="size-line"><span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+<small>48 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+<small>24 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+<small>16 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+<small>10 點</small></span></div><div class="list-example light"><strong>車隊 · 莒光 3</strong><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+在庫 <b>3</b></span></div><div class="list-example dark"><strong>路線 · 配屬車隊</strong><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+</svg>
+在庫 <b>3</b></span></div></article><article><h3>I-B　列車與底座 <em>推薦</em></h3><p>列車穩穩停著；也適用未放上軌道的車。</p><div class="size-line"><span><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>48 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>24 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>16 點</small></span><span><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>10 點</small></span></div><div class="list-example light"><strong>車隊 · 莒光 3</strong><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+在庫 <b>3</b></span></div><div class="list-example dark"><strong>路線 · 配屬車隊</strong><span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+在庫 <b>3</b></span></div></article></div></section><footer>停車線照一般軌道畫，第 23 層；機廠沿用第 30 層，狀態隨列車第 50 層，等待標記第 51 層仍在上方。這張是設計示意，未驗證 iOS／實機。</footer></main></body></html>

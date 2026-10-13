@@ -1,0 +1,471 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>機廠圖示對照</title><style>
+*{box-sizing:border-box}body{margin:0;background:#ECEEF6;color:#262C57;font-family:"Noto Sans CJK TC",sans-serif;font-size:14px;line-height:1.6}.board{width:1180px;padding:40px;margin:auto}h1{font-size:36px;margin:5px 0 9px;letter-spacing:.06em}h2{font-size:23px;margin:0 0 16px}h2 small{font-size:13px;font-weight:400;margin-left:12px}h3{font-size:18px;margin:0}p{margin:5px 0 18px}section{margin-top:34px}header .eyebrow{font-size:13px;letter-spacing:.10em;color:#5B6189}header p{font-size:17px}.pending{display:inline-block;background:#FFC86B;color:#262C57;font-size:13px;padding:6px 14px;border-radius:9px}.grid{display:grid;gap:18px}.three{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:repeat(2,1fr)}article{background:#FFFFFF;border:1.5px solid #262C57;border-radius:18px;padding:20px}article p{color:#5B6189;font-size:13px;height:40px}em{font-size:11px;font-style:normal;color:#262C57;background:#FFC86B;padding:3px 7px;border-radius:5px;vertical-align:middle}svg{flex:none;display:block}.size-line{display:flex;align-items:flex-end;gap:24px;height:87px}.size-line span{display:flex;align-items:center;flex-direction:column;gap:5px}small{display:block;font-size:11px}.pair{display:flex;align-items:flex-end;justify-content:space-between;border-top:1px solid #ECEEF6;margin-top:20px;padding-top:16px;gap:10px}.pair>div{display:flex;flex-direction:column;align-items:center;gap:8px}.pair small{font-size:10px}.badge{display:inline-flex;align-items:center;justify-content:center;background:#FFC86B;border:1.5px solid var(--ink,#262C57);position:relative;flex:none}.badge.depot{border-radius:4px}.badge.station{border-radius:50%}.badge.hsr:before{content:"";position:absolute;inset:-4.5px;border:1.5px solid var(--ink,#262C57);border-radius:50%}.comparison{margin-top:14px;padding:16px 10px 12px;border-radius:10px}.light{--ink:#262C57;--plate:#FFFFFF;--track:#10917F;color:#262C57;background:#ECEEF6}.dark{--ink:#ECEEF6;--plate:#30376A;--track:#45D3C0;color:#ECEEF6;background:#262C57}.station-row{display:flex;justify-content:space-around;align-items:center}.station-row>div{display:flex;flex-direction:column;align-items:center;gap:10px}.station-row small{font-size:11px}.map{margin-top:12px;height:144px;border-radius:10px;position:relative;overflow:hidden}.track{position:absolute;left:-10px;width:110%;height:8px;background:var(--track);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.track.one{top:65px}.track.two{top:79px}.yard-track{position:absolute;left:55%;width:38%;height:6px;background:var(--track);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.yard-track.y1{top:32px}.yard-track.y2{top:44px}.map-station{position:absolute;left:24%;top:59px}.map-depot{position:absolute;left:71%;top:24px}.name{position:absolute;padding:1px 4px;background:var(--plate);color:var(--ink);border-radius:3px;font-size:11px}.sname{top:88px;left:22%}.dname{top:57px;left:71%}.train{position:absolute;height:8px;border:1.5px solid var(--ink);border-radius:4px;background:#FFC86B;width:34px}.t1{top:65px;left:41%}.t2{top:32px;left:57%;width:26px}.caption{position:absolute;left:12px;bottom:8px;font-size:10px;opacity:.8}.roads{position:absolute;top:16px;left:18px;width:50%;height:22px;background:var(--plate);border-radius:4px}.states{display:flex;gap:55px;margin:12px 0 18px;justify-content:center}.states>div{display:flex;gap:8px;align-items:center;flex-direction:column;font-size:13px}.state-carrier{display:inline-flex;align-items:center;justify-content:center;position:relative;color:var(--ink,#262C57);background:var(--ink,#262C57);clip-path:polygon(0 0,75% 0,100% 25%,100% 100%,25% 100%,0 75%)}.state-carrier:before{content:"";position:absolute;inset:1.2px;background:var(--plate,#FFFFFF);clip-path:polygon(0 0,75% 0,100% 25%,100% 100%,25% 100%,0 75%)}.state-carrier svg{z-index:1}.inline-states{display:flex;justify-content:center;gap:20px;align-items:flex-end;height:53px}.inline-states>div{display:flex;flex-direction:column;align-items:center;gap:5px}.status-map{height:140px}.status-out-car{left:27%;top:65px;width:46px}.status-in-car{left:72%;top:79px;width:46px}.out-mark{position:absolute;top:32px;left:27%}.in-mark{position:absolute;top:44px;left:72%}.out-label{position:absolute;top:29px;left:34%;font-size:11px}.in-label{position:absolute;top:41px;left:79%;font-size:11px}.list-example{display:flex;align-items:center;justify-content:space-between;border-radius:10px;padding:15px;margin-top:16px}.list-example strong{font-size:14px;font-weight:500}.list-example>span{display:flex;gap:5px;align-items:center;border:1px solid var(--ink);border-radius:6px;padding:3px 7px;font-size:13px;background:var(--plate)}.list-example b{font-size:12px;font-weight:500}footer{margin-top:24px;font-size:12px;color:#5B6189;border-top:1px solid #B4B9D9;padding-top:15px}
+.conflicts{display:flex;align-items:center;gap:24px;padding:30px 22px;border-radius:14px;margin-bottom:20px}.conflicts>div{display:flex;flex-direction:column;align-items:center;gap:16px;min-width:75px}.conflicts small{font-size:11px}.route-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.route{position:relative;height:100px;display:flex;align-items:center;justify-content:center;gap:30px;border-radius:14px}.line-color{position:absolute;top:46px;width:100%;height:8px}.route small{position:absolute;bottom:10px}.route .state-carrier{top:-7px}.grey{filter:grayscale(1)}.context-note{background:#FFFFFF;padding:20px;border:1.5px solid #262C57;border-radius:14px;font-size:14px}.family{display:grid;grid-template-columns:repeat(6,1fr);padding:20px;border-radius:14px;gap:22px 14px;margin-bottom:16px}.family>div{display:flex;flex-direction:column;align-items:center;gap:9px}.family span{display:flex;align-items:center;gap:16px}.family small{font-size:10px}</style><body><main class="board"><header><span class="eyebrow">同形檢查 · 候選推薦組</span><h1>並排看，才不會認錯</h1><p>圓站徽、高鐵第二圈、量表弧、等待環、小長牌，都保留自己的意思。</p></header><section><div class="conflicts light"><div><span class="badge station " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵第二圈</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>D-A 機廠</small></div><div><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="var(--plate)" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width=".8" opacity=".35"/><path d="M20 5A15 15 0 1 1 5 20" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>擁擠量表環</small></div><div><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="var(--plate)" stroke-width="6"/><circle cx="17" cy="17" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4.5 3"/></svg><small>等待虛線環</small></div><div><span style="background:var(--plate);border:1.2px solid var(--ink);border-radius:3px;padding:2px 4px;font-size:11px">等交會 · 莒光 3</span><small>等待小長牌</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>S-A 出庫</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>S-A 入庫</small></div><div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>I-B 在庫</small></div></div><div class="conflicts dark"><div><span class="badge station " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵第二圈</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>D-A 機廠</small></div><div><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="var(--plate)" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width=".8" opacity=".35"/><path d="M20 5A15 15 0 1 1 5 20" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>擁擠量表環</small></div><div><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="var(--plate)" stroke-width="6"/><circle cx="17" cy="17" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4.5 3"/></svg><small>等待虛線環</small></div><div><span style="background:var(--plate);border:1.2px solid var(--ink);border-radius:3px;padding:2px 4px;font-size:11px">等交會 · 莒光 3</span><small>等待小長牌</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>S-A 出庫</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>S-A 入庫</small></div><div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>I-B 在庫</small></div></div></section><section><h2>放在不同路線色上 <small>藏青／白底，不依賴路線色</small></h2><div class="route-grid"><div class="route light"><div class="line-color" style="background:#007AFF"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>藍色路線</small></div><div class="route light"><div class="line-color" style="background:#FF9500"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>橘色路線</small></div><div class="route light"><div class="line-color" style="background:#262C57"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>藏青路線</small></div><div class="route dark"><div class="line-color" style="background:#007AFF"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>藍色路線</small></div><div class="route dark"><div class="line-color" style="background:#FF9500"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>橘色路線</small></div><div class="route dark"><div class="line-color" style="background:#262C57"></div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>藏青路線</small></div></div></section><section class="grey"><h2>同一組轉灰階</h2><div class="conflicts light"><div><span class="badge station " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵第二圈</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>D-A 機廠</small></div><div><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="var(--plate)" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width=".8" opacity=".35"/><path d="M20 5A15 15 0 1 1 5 20" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>擁擠量表環</small></div><div><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="var(--plate)" stroke-width="6"/><circle cx="17" cy="17" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4.5 3"/></svg><small>等待虛線環</small></div><div><span style="background:var(--plate);border:1.2px solid var(--ink);border-radius:3px;padding:2px 4px;font-size:11px">等交會 · 莒光 3</span><small>等待小長牌</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>S-A 出庫</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>S-A 入庫</small></div><div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>I-B 在庫</small></div></div><div class="conflicts dark"><div><span class="badge station " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>一般車站</small></div><div><span class="badge station hsr" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>高鐵第二圈</small></div><div><span class="badge depot " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="#262C57">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>D-A 機廠</small></div><div><svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="var(--plate)" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width=".8" opacity=".35"/><path d="M20 5A15 15 0 1 1 5 20" fill="none" stroke="currentColor" stroke-width="3"/></svg><small>擁擠量表環</small></div><div><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="var(--plate)" stroke-width="6"/><circle cx="17" cy="17" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4.5 3"/></svg><small>等待虛線環</small></div><div><span style="background:var(--plate);border:1.2px solid var(--ink);border-radius:3px;padding:2px 4px;font-size:11px">等交會 · 莒光 3</span><small>等待小長牌</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4 3H11.5V8H8.5V6H5V18H8.5V16H11.5V21H4Q2 21 2 19V5Q2 3 4 3Z"/>
+  <path d="M8 10.5H16.5V7L22 12L16.5 17V13.5H8Z"/>
+</svg>
+</span><small>S-A 出庫</small></div><div><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span><small>S-A 入庫</small></div><div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9 2H15Q18 2 18 5V14.5Q18 18 14.5 18H9.5Q6 18 6 14.5V5Q6 2 9 2ZM8.5 5V9H15.5V5ZM8.5 13H10.5V15H8.5ZM13.5 13H15.5V15H13.5Z"/>
+  <rect x="3" y="20" width="18" height="3" rx="1.5"/>
+</svg>
+<small>I-B 在庫</small></div></div></section><section><h2>和現有整組圖示並排 <small>24 點與 13 點</small></h2><div class="family light"><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3.6999999999999993 9.8A8.3 8.3 0 0 1 20.3 9.8A8.3 8.3 0 0 1 3.6999999999999993 9.8ZM6.7 9.8A5.3 5.3 0 0 1 17.3 9.8A5.3 5.3 0 0 1 6.7 9.8Z"/>
+  <path fill-rule="nonzero" d="M10.0 9.8A2.0 2.0 0 0 1 14.0 9.8A2.0 2.0 0 0 1 10.0 9.8ZM11.2 4.5H12.8V15.1H11.2ZM6.7 9.0H17.3V10.6H6.7ZM12 11L6.2 22.3H8.9L12 15.6L15.1 22.3H17.8Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3.6999999999999993 9.8A8.3 8.3 0 0 1 20.3 9.8A8.3 8.3 0 0 1 3.6999999999999993 9.8ZM6.7 9.8A5.3 5.3 0 0 1 17.3 9.8A5.3 5.3 0 0 1 6.7 9.8Z"/>
+  <path fill-rule="nonzero" d="M10.0 9.8A2.0 2.0 0 0 1 14.0 9.8A2.0 2.0 0 0 1 10.0 9.8ZM11.2 4.5H12.8V15.1H11.2ZM6.7 9.0H17.3V10.6H6.7ZM12 11L6.2 22.3H8.9L12 15.6L15.1 22.3H17.8Z"/>
+</svg>
+</span><small>AmusementPark</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3.7 7A3.1 3.1 0 1 0 9.9 7A3.1 3.1 0 1 0 3.7 7ZM2.5 19.7Q2.5 11 6.8 11Q11.1 11 11.1 19.7Q11.1 20.6 10.2 20.6H3.4Q2.5 20.6 2.5 19.7Z"/>
+  <path d="M14.1 7A3.1 3.1 0 1 0 20.3 7A3.1 3.1 0 1 0 14.1 7ZM12.9 19.7Q12.9 11 17.2 11Q21.5 11 21.5 19.7Q21.5 20.6 20.6 20.6H13.8Q12.9 20.6 12.9 19.7Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3.7 7A3.1 3.1 0 1 0 9.9 7A3.1 3.1 0 1 0 3.7 7ZM2.5 19.7Q2.5 11 6.8 11Q11.1 11 11.1 19.7Q11.1 20.6 10.2 20.6H3.4Q2.5 20.6 2.5 19.7Z"/>
+  <path d="M14.1 7A3.1 3.1 0 1 0 20.3 7A3.1 3.1 0 1 0 14.1 7ZM12.9 19.7Q12.9 11 17.2 11Q21.5 11 21.5 19.7Q21.5 20.6 20.6 20.6H13.8Q12.9 20.6 12.9 19.7Z"/>
+</svg>
+</span><small>Crowd</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M4.3 8H19.7A1.8 1.8 0 0 1 21.5 9.8V19.7A1.8 1.8 0 0 1 19.7 21.5H4.3A1.8 1.8 0 0 1 2.5 19.7V9.8A1.8 1.8 0 0 1 4.3 8ZM10.3 14.5H13.7V20H10.3ZM5 10.5H8.5V13H5ZM15.5 10.5H19V13H15.5ZM5 15H8.5V18H5ZM15.5 15H19V18H15.5Z"/>
+  <path fill-rule="nonzero" d="M8.7 2H15.3A1.2 1.2 0 0 1 16.5 3.2V5.3A1.2 1.2 0 0 1 15.3 6.5H8.7A1.2 1.2 0 0 1 7.5 5.3V3.2A1.2 1.2 0 0 1 8.7 2Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M4.3 8H19.7A1.8 1.8 0 0 1 21.5 9.8V19.7A1.8 1.8 0 0 1 19.7 21.5H4.3A1.8 1.8 0 0 1 2.5 19.7V9.8A1.8 1.8 0 0 1 4.3 8ZM10.3 14.5H13.7V20H10.3ZM5 10.5H8.5V13H5ZM15.5 10.5H19V13H15.5ZM5 15H8.5V18H5ZM15.5 15H19V18H15.5Z"/>
+  <path fill-rule="nonzero" d="M8.7 2H15.3A1.2 1.2 0 0 1 16.5 3.2V5.3A1.2 1.2 0 0 1 15.3 6.5H8.7A1.2 1.2 0 0 1 7.5 5.3V3.2A1.2 1.2 0 0 1 8.7 2Z"/>
+</svg>
+</span><small>DepartmentStore</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M2.1 8.4A2.5 2.5 0 1 0 7.1 8.4A2.5 2.5 0 1 0 2.1 8.4ZM1.4 19.7Q1.4 11.8 4.6 11.8Q7.8 11.8 7.8 19.7Q7.8 20.6 6.9 20.6H2.3Q1.4 20.6 1.4 19.7Z"/>
+  <path d="M9.1 7A2.9 2.9 0 1 0 14.9 7A2.9 2.9 0 1 0 9.1 7ZM8.4 19.7Q8.4 10.8 12 10.8Q15.6 10.8 15.6 19.7Q15.6 20.6 14.7 20.6H9.3Q8.4 20.6 8.4 19.7Z"/>
+  <path d="M16.9 8.4A2.5 2.5 0 1 0 21.9 8.4A2.5 2.5 0 1 0 16.9 8.4ZM16.2 19.7Q16.2 11.8 19.4 11.8Q22.6 11.8 22.6 19.7Q22.6 20.6 21.7 20.6H17.1Q16.2 20.6 16.2 19.7Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M2.1 8.4A2.5 2.5 0 1 0 7.1 8.4A2.5 2.5 0 1 0 2.1 8.4ZM1.4 19.7Q1.4 11.8 4.6 11.8Q7.8 11.8 7.8 19.7Q7.8 20.6 6.9 20.6H2.3Q1.4 20.6 1.4 19.7Z"/>
+  <path d="M9.1 7A2.9 2.9 0 1 0 14.9 7A2.9 2.9 0 1 0 9.1 7ZM8.4 19.7Q8.4 10.8 12 10.8Q15.6 10.8 15.6 19.7Q15.6 20.6 14.7 20.6H9.3Q8.4 20.6 8.4 19.7Z"/>
+  <path d="M16.9 8.4A2.5 2.5 0 1 0 21.9 8.4A2.5 2.5 0 1 0 16.9 8.4ZM16.2 19.7Q16.2 11.8 19.4 11.8Q22.6 11.8 22.6 19.7Q22.6 20.6 21.7 20.6H17.1Q16.2 20.6 16.2 19.7Z"/>
+</svg>
+</span><small>Full</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M12 1.8L20.2 7.2V20.2A1.3 1.3 0 0 1 18.9 21.5H5.1A1.3 1.3 0 0 1 3.8 20.2V7.2ZM6.3 9.5H9.3V12H6.3ZM10.5 9.5H13.5V12H10.5ZM14.7 9.5H17.7V12H14.7ZM6.3 13.8H9.3V16.3H6.3ZM14.7 13.8H17.7V16.3H14.7ZM10.5 16.5H13.5V20.2H10.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M12 1.8L20.2 7.2V20.2A1.3 1.3 0 0 1 18.9 21.5H5.1A1.3 1.3 0 0 1 3.8 20.2V7.2ZM6.3 9.5H9.3V12H6.3ZM10.5 9.5H13.5V12H10.5ZM14.7 9.5H17.7V12H14.7ZM6.3 13.8H9.3V16.3H6.3ZM14.7 13.8H17.7V16.3H14.7ZM10.5 16.5H13.5V20.2H10.5Z"/>
+</svg>
+</span><small>Hotel</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M11.1 2.9Q12 2.2 12.9 2.9L21.6 10Q22.4 10.9 21.3 11.4H19.3V19.6Q19.3 21 17.9 21H6.1Q4.7 21 4.7 19.6V11.4H2.7Q1.6 10.9 2.4 10ZM11 13.8H13A1 1 0 0 1 14 14.8V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.8A1 1 0 0 1 11 13.8Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M11.1 2.9Q12 2.2 12.9 2.9L21.6 10Q22.4 10.9 21.3 11.4H19.3V19.6Q19.3 21 17.9 21H6.1Q4.7 21 4.7 19.6V11.4H2.7Q1.6 10.9 2.4 10ZM11 13.8H13A1 1 0 0 1 14 14.8V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.8A1 1 0 0 1 11 13.8Z"/>
+</svg>
+</span><small>House</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.8 2.6Q11.6 2.2 11.6 3.2V13.4Q11.6 14.1 10.9 14.1H5.2Q4.2 14.1 4.7 13.2Z"/>
+  <path d="M13 5.4Q13 4.6 13.7 5.1L19.6 13.1Q20.1 14.1 19 14.1H13.7Q13 14.1 13 13.4Z"/>
+  <path d="M2.8 15.6H21.2Q22.2 15.6 21.8 16.6L20 20.4Q19.6 21.2 18.6 21.2H5.4Q4.4 21.2 4 20.4L2.2 16.6Q1.8 15.6 2.8 15.6Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.8 2.6Q11.6 2.2 11.6 3.2V13.4Q11.6 14.1 10.9 14.1H5.2Q4.2 14.1 4.7 13.2Z"/>
+  <path d="M13 5.4Q13 4.6 13.7 5.1L19.6 13.1Q20.1 14.1 19 14.1H13.7Q13 14.1 13 13.4Z"/>
+  <path d="M2.8 15.6H21.2Q22.2 15.6 21.8 16.6L20 20.4Q19.6 21.2 18.6 21.2H5.4Q4.4 21.2 4 20.4L2.2 16.6Q1.8 15.6 2.8 15.6Z"/>
+</svg>
+</span><small>Marina</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M5.3 2.5H11.7A1.8 1.8 0 0 1 13.5 4.3V19.2A1.8 1.8 0 0 1 11.7 21H5.3A1.8 1.8 0 0 1 3.5 19.2V4.3A1.8 1.8 0 0 1 5.3 2.5ZM6.3 5.3H7.5A0.5 0.5 0 0 1 8 5.8V7.2A0.5 0.5 0 0 1 7.5 7.7H6.3A0.5 0.5 0 0 1 5.8 7.2V5.8A0.5 0.5 0 0 1 6.3 5.3ZM9.5 5.3H10.7A0.5 0.5 0 0 1 11.2 5.8V7.2A0.5 0.5 0 0 1 10.7 7.7H9.5A0.5 0.5 0 0 1 9 7.2V5.8A0.5 0.5 0 0 1 9.5 5.3ZM6.3 9.6H7.5A0.5 0.5 0 0 1 8 10.1V11.5A0.5 0.5 0 0 1 7.5 12H6.3A0.5 0.5 0 0 1 5.8 11.5V10.1A0.5 0.5 0 0 1 6.3 9.6ZM9.5 9.6H10.7A0.5 0.5 0 0 1 11.2 10.1V11.5A0.5 0.5 0 0 1 10.7 12H9.5A0.5 0.5 0 0 1 9 11.5V10.1A0.5 0.5 0 0 1 9.5 9.6ZM6.3 13.9H7.5A0.5 0.5 0 0 1 8 14.4V15.8A0.5 0.5 0 0 1 7.5 16.3H6.3A0.5 0.5 0 0 1 5.8 15.8V14.4A0.5 0.5 0 0 1 6.3 13.9ZM9.5 13.9H10.7A0.5 0.5 0 0 1 11.2 14.4V15.8A0.5 0.5 0 0 1 10.7 16.3H9.5A0.5 0.5 0 0 1 9 15.8V14.4A0.5 0.5 0 0 1 9.5 13.9Z"/>
+  <path fill-rule="evenodd" d="M16.4 8.5H19.2A1.6 1.6 0 0 1 20.8 10.1V19.4A1.6 1.6 0 0 1 19.2 21H16.4A1.6 1.6 0 0 1 14.8 19.4V10.1A1.6 1.6 0 0 1 16.4 8.5ZM17.2 11.2H18.4A0.5 0.5 0 0 1 18.9 11.7V13.1A0.5 0.5 0 0 1 18.4 13.6H17.2A0.5 0.5 0 0 1 16.7 13.1V11.7A0.5 0.5 0 0 1 17.2 11.2ZM17.2 15.5H18.4A0.5 0.5 0 0 1 18.9 16V17.4A0.5 0.5 0 0 1 18.4 17.9H17.2A0.5 0.5 0 0 1 16.7 17.4V16A0.5 0.5 0 0 1 17.2 15.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M5.3 2.5H11.7A1.8 1.8 0 0 1 13.5 4.3V19.2A1.8 1.8 0 0 1 11.7 21H5.3A1.8 1.8 0 0 1 3.5 19.2V4.3A1.8 1.8 0 0 1 5.3 2.5ZM6.3 5.3H7.5A0.5 0.5 0 0 1 8 5.8V7.2A0.5 0.5 0 0 1 7.5 7.7H6.3A0.5 0.5 0 0 1 5.8 7.2V5.8A0.5 0.5 0 0 1 6.3 5.3ZM9.5 5.3H10.7A0.5 0.5 0 0 1 11.2 5.8V7.2A0.5 0.5 0 0 1 10.7 7.7H9.5A0.5 0.5 0 0 1 9 7.2V5.8A0.5 0.5 0 0 1 9.5 5.3ZM6.3 9.6H7.5A0.5 0.5 0 0 1 8 10.1V11.5A0.5 0.5 0 0 1 7.5 12H6.3A0.5 0.5 0 0 1 5.8 11.5V10.1A0.5 0.5 0 0 1 6.3 9.6ZM9.5 9.6H10.7A0.5 0.5 0 0 1 11.2 10.1V11.5A0.5 0.5 0 0 1 10.7 12H9.5A0.5 0.5 0 0 1 9 11.5V10.1A0.5 0.5 0 0 1 9.5 9.6ZM6.3 13.9H7.5A0.5 0.5 0 0 1 8 14.4V15.8A0.5 0.5 0 0 1 7.5 16.3H6.3A0.5 0.5 0 0 1 5.8 15.8V14.4A0.5 0.5 0 0 1 6.3 13.9ZM9.5 13.9H10.7A0.5 0.5 0 0 1 11.2 14.4V15.8A0.5 0.5 0 0 1 10.7 16.3H9.5A0.5 0.5 0 0 1 9 15.8V14.4A0.5 0.5 0 0 1 9.5 13.9Z"/>
+  <path fill-rule="evenodd" d="M16.4 8.5H19.2A1.6 1.6 0 0 1 20.8 10.1V19.4A1.6 1.6 0 0 1 19.2 21H16.4A1.6 1.6 0 0 1 14.8 19.4V10.1A1.6 1.6 0 0 1 16.4 8.5ZM17.2 11.2H18.4A0.5 0.5 0 0 1 18.9 11.7V13.1A0.5 0.5 0 0 1 18.4 13.6H17.2A0.5 0.5 0 0 1 16.7 13.1V11.7A0.5 0.5 0 0 1 17.2 11.2ZM17.2 15.5H18.4A0.5 0.5 0 0 1 18.9 16V17.4A0.5 0.5 0 0 1 18.4 17.9H17.2A0.5 0.5 0 0 1 16.7 17.4V16A0.5 0.5 0 0 1 17.2 15.5Z"/>
+</svg>
+</span><small>Office</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7.9 6.4A4.1 4.1 0 1 0 16.1 6.4A4.1 4.1 0 1 0 7.9 6.4ZM6.2 20Q6.2 11.4 12 11.4Q17.8 11.4 17.8 20Q17.8 21.2 16.6 21.2H7.4Q6.2 21.2 6.2 20Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7.9 6.4A4.1 4.1 0 1 0 16.1 6.4A4.1 4.1 0 1 0 7.9 6.4ZM6.2 20Q6.2 11.4 12 11.4Q17.8 11.4 17.8 20Q17.8 21.2 16.6 21.2H7.4Q6.2 21.2 6.2 20Z"/>
+</svg>
+</span><small>Person</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4.6 3.2H19.4Q20.3 3.2 20.7 4L22 7Q22.4 8.4 21 8.4H3Q1.6 8.4 2 7L3.3 4Q3.7 3.2 4.6 3.2Z"/>
+  <path fill-rule="evenodd" d="M5.8 9.8H18.2A1.6 1.6 0 0 1 19.8 11.4V19.4A1.6 1.6 0 0 1 18.2 21H5.8A1.6 1.6 0 0 1 4.2 19.4V11.4A1.6 1.6 0 0 1 5.8 9.8ZM11 13.6H13A1 1 0 0 1 14 14.6V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.6A1 1 0 0 1 11 13.6Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4.6 3.2H19.4Q20.3 3.2 20.7 4L22 7Q22.4 8.4 21 8.4H3Q1.6 8.4 2 7L3.3 4Q3.7 3.2 4.6 3.2Z"/>
+  <path fill-rule="evenodd" d="M5.8 9.8H18.2A1.6 1.6 0 0 1 19.8 11.4V19.4A1.6 1.6 0 0 1 18.2 21H5.8A1.6 1.6 0 0 1 4.2 19.4V11.4A1.6 1.6 0 0 1 5.8 9.8ZM11 13.6H13A1 1 0 0 1 14 14.6V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.6A1 1 0 0 1 11 13.6Z"/>
+</svg>
+</span><small>Shop</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M12.0 1.9L14.9 8.9L22.5 9.5L16.8 14.4L18.5 21.8L12.0 17.9L5.5 21.8L7.2 14.4L1.5 9.5L9.1 8.9Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M12.0 1.9L14.9 8.9L22.5 9.5L16.8 14.4L18.5 21.8L12.0 17.9L5.5 21.8L7.2 14.4L1.5 9.5L9.1 8.9Z"/>
+</svg>
+</span><small>Star</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>Train</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7 12A5 5 0 1 1 17 12A5 5 0 1 1 7 12ZM10 12A2 2 0 1 0 14 12A2 2 0 1 0 10 12ZM3.1 12L3.12 10.57L3.37 9.15L3.86 7.77L4.56 6.48L5.48 5.31L6.58 4.3L7.84 3.47L9.23 2.85L10.71 2.46L12.24 2.32L13.79 2.44L15.29 2.81L16.72 3.44L17.97 4.36L16.41 3.99L14.92 3.84L13.51 3.93L12.19 4.23L11.01 4.72L9.99 5.37L9.15 6.15L8.49 7.02L8.03 7.93L7.76 8.85L7.66 9.75L7.74 10.59L7.96 11.35L8.3 12ZM20.9 12L20.88 13.43L20.63 14.85L20.14 16.23L19.44 17.52L18.52 18.69L17.42 19.7L16.16 20.53L14.77 21.15L13.29 21.54L11.76 21.68L10.21 21.56L8.71 21.19L7.28 20.56L6.03 19.64L7.59 20.01L9.08 20.16L10.49 20.07L11.81 19.77L12.99 19.28L14.01 18.63L14.85 17.85L15.51 16.98L15.97 16.07L16.24 15.15L16.34 14.25L16.26 13.41L16.04 12.65L15.7 12Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7 12A5 5 0 1 1 17 12A5 5 0 1 1 7 12ZM10 12A2 2 0 1 0 14 12A2 2 0 1 0 10 12ZM3.1 12L3.12 10.57L3.37 9.15L3.86 7.77L4.56 6.48L5.48 5.31L6.58 4.3L7.84 3.47L9.23 2.85L10.71 2.46L12.24 2.32L13.79 2.44L15.29 2.81L16.72 3.44L17.97 4.36L16.41 3.99L14.92 3.84L13.51 3.93L12.19 4.23L11.01 4.72L9.99 5.37L9.15 6.15L8.49 7.02L8.03 7.93L7.76 8.85L7.66 9.75L7.74 10.59L7.96 11.35L8.3 12ZM20.9 12L20.88 13.43L20.63 14.85L20.14 16.23L19.44 17.52L18.52 18.69L17.42 19.7L16.16 20.53L14.77 21.15L13.29 21.54L11.76 21.68L10.21 21.56L8.71 21.19L7.28 20.56L6.03 19.64L7.59 20.01L9.08 20.16L10.49 20.07L11.81 19.77L12.99 19.28L14.01 18.63L14.85 17.85L15.51 16.98L15.97 16.07L16.24 15.15L16.34 14.25L16.26 13.41L16.04 12.65L15.7 12Z"/>
+</svg>
+</span><small>Typhoon</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4ZM12 7.6H12A1.25 1.25 0 0 1 13.25 8.85V13.95A1.25 1.25 0 0 1 12 15.2H12A1.25 1.25 0 0 1 10.75 13.95V8.85A1.25 1.25 0 0 1 12 7.6ZM10.55 18A1.45 1.45 0 1 0 13.45 18A1.45 1.45 0 1 0 10.55 18Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4ZM12 7.6H12A1.25 1.25 0 0 1 13.25 8.85V13.95A1.25 1.25 0 0 1 12 15.2H12A1.25 1.25 0 0 1 10.75 13.95V8.85A1.25 1.25 0 0 1 12 7.6ZM10.55 18A1.45 1.45 0 1 0 13.45 18A1.45 1.45 0 1 0 10.55 18Z"/>
+</svg>
+</span><small>Warning</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4Z"/>
+</svg>
+</span><small>WarningSolid</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2.5 9.2C4.8 2.6 13.8 1.4 18 9.2C13.8 17 4.8 15.8 2.5 9.2ZM5.75 8.1A1.45 1.45 0 1 0 8.65 8.1A1.45 1.45 0 1 0 5.75 8.1Z"/>
+  <path d="M16.2 9.2L21.3 4.2Q22.6 3.6 22.5 5.1L21.8 9.2L22.5 13.3Q22.6 14.8 21.3 14.2Z"/>
+  <path d="M2 18.4Q6 14.8 10 18.4Q14 22 18 18.4Q20.2 16.4 22 17.6V20.8Q20.2 19.6 18 21.4Q14 24 10 21.4Q6 18.2 2 21.4Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2.5 9.2C4.8 2.6 13.8 1.4 18 9.2C13.8 17 4.8 15.8 2.5 9.2ZM5.75 8.1A1.45 1.45 0 1 0 8.65 8.1A1.45 1.45 0 1 0 5.75 8.1Z"/>
+  <path d="M16.2 9.2L21.3 4.2Q22.6 3.6 22.5 5.1L21.8 9.2L22.5 13.3Q22.6 14.8 21.3 14.2Z"/>
+  <path d="M2 18.4Q6 14.8 10 18.4Q14 22 18 18.4Q20.2 16.4 22 17.6V20.8Q20.2 19.6 18 21.4Q14 24 10 21.4Q6 18.2 2 21.4Z"/>
+</svg>
+</span><small>Wharf</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>機廠 D-A</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span><small>機廠 D-B</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span><small>機廠 D-C</small></div></div><div class="family dark"><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3.6999999999999993 9.8A8.3 8.3 0 0 1 20.3 9.8A8.3 8.3 0 0 1 3.6999999999999993 9.8ZM6.7 9.8A5.3 5.3 0 0 1 17.3 9.8A5.3 5.3 0 0 1 6.7 9.8Z"/>
+  <path fill-rule="nonzero" d="M10.0 9.8A2.0 2.0 0 0 1 14.0 9.8A2.0 2.0 0 0 1 10.0 9.8ZM11.2 4.5H12.8V15.1H11.2ZM6.7 9.0H17.3V10.6H6.7ZM12 11L6.2 22.3H8.9L12 15.6L15.1 22.3H17.8Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3.6999999999999993 9.8A8.3 8.3 0 0 1 20.3 9.8A8.3 8.3 0 0 1 3.6999999999999993 9.8ZM6.7 9.8A5.3 5.3 0 0 1 17.3 9.8A5.3 5.3 0 0 1 6.7 9.8Z"/>
+  <path fill-rule="nonzero" d="M10.0 9.8A2.0 2.0 0 0 1 14.0 9.8A2.0 2.0 0 0 1 10.0 9.8ZM11.2 4.5H12.8V15.1H11.2ZM6.7 9.0H17.3V10.6H6.7ZM12 11L6.2 22.3H8.9L12 15.6L15.1 22.3H17.8Z"/>
+</svg>
+</span><small>AmusementPark</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3.7 7A3.1 3.1 0 1 0 9.9 7A3.1 3.1 0 1 0 3.7 7ZM2.5 19.7Q2.5 11 6.8 11Q11.1 11 11.1 19.7Q11.1 20.6 10.2 20.6H3.4Q2.5 20.6 2.5 19.7Z"/>
+  <path d="M14.1 7A3.1 3.1 0 1 0 20.3 7A3.1 3.1 0 1 0 14.1 7ZM12.9 19.7Q12.9 11 17.2 11Q21.5 11 21.5 19.7Q21.5 20.6 20.6 20.6H13.8Q12.9 20.6 12.9 19.7Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3.7 7A3.1 3.1 0 1 0 9.9 7A3.1 3.1 0 1 0 3.7 7ZM2.5 19.7Q2.5 11 6.8 11Q11.1 11 11.1 19.7Q11.1 20.6 10.2 20.6H3.4Q2.5 20.6 2.5 19.7Z"/>
+  <path d="M14.1 7A3.1 3.1 0 1 0 20.3 7A3.1 3.1 0 1 0 14.1 7ZM12.9 19.7Q12.9 11 17.2 11Q21.5 11 21.5 19.7Q21.5 20.6 20.6 20.6H13.8Q12.9 20.6 12.9 19.7Z"/>
+</svg>
+</span><small>Crowd</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M4.3 8H19.7A1.8 1.8 0 0 1 21.5 9.8V19.7A1.8 1.8 0 0 1 19.7 21.5H4.3A1.8 1.8 0 0 1 2.5 19.7V9.8A1.8 1.8 0 0 1 4.3 8ZM10.3 14.5H13.7V20H10.3ZM5 10.5H8.5V13H5ZM15.5 10.5H19V13H15.5ZM5 15H8.5V18H5ZM15.5 15H19V18H15.5Z"/>
+  <path fill-rule="nonzero" d="M8.7 2H15.3A1.2 1.2 0 0 1 16.5 3.2V5.3A1.2 1.2 0 0 1 15.3 6.5H8.7A1.2 1.2 0 0 1 7.5 5.3V3.2A1.2 1.2 0 0 1 8.7 2Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M4.3 8H19.7A1.8 1.8 0 0 1 21.5 9.8V19.7A1.8 1.8 0 0 1 19.7 21.5H4.3A1.8 1.8 0 0 1 2.5 19.7V9.8A1.8 1.8 0 0 1 4.3 8ZM10.3 14.5H13.7V20H10.3ZM5 10.5H8.5V13H5ZM15.5 10.5H19V13H15.5ZM5 15H8.5V18H5ZM15.5 15H19V18H15.5Z"/>
+  <path fill-rule="nonzero" d="M8.7 2H15.3A1.2 1.2 0 0 1 16.5 3.2V5.3A1.2 1.2 0 0 1 15.3 6.5H8.7A1.2 1.2 0 0 1 7.5 5.3V3.2A1.2 1.2 0 0 1 8.7 2Z"/>
+</svg>
+</span><small>DepartmentStore</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M2.1 8.4A2.5 2.5 0 1 0 7.1 8.4A2.5 2.5 0 1 0 2.1 8.4ZM1.4 19.7Q1.4 11.8 4.6 11.8Q7.8 11.8 7.8 19.7Q7.8 20.6 6.9 20.6H2.3Q1.4 20.6 1.4 19.7Z"/>
+  <path d="M9.1 7A2.9 2.9 0 1 0 14.9 7A2.9 2.9 0 1 0 9.1 7ZM8.4 19.7Q8.4 10.8 12 10.8Q15.6 10.8 15.6 19.7Q15.6 20.6 14.7 20.6H9.3Q8.4 20.6 8.4 19.7Z"/>
+  <path d="M16.9 8.4A2.5 2.5 0 1 0 21.9 8.4A2.5 2.5 0 1 0 16.9 8.4ZM16.2 19.7Q16.2 11.8 19.4 11.8Q22.6 11.8 22.6 19.7Q22.6 20.6 21.7 20.6H17.1Q16.2 20.6 16.2 19.7Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M2.1 8.4A2.5 2.5 0 1 0 7.1 8.4A2.5 2.5 0 1 0 2.1 8.4ZM1.4 19.7Q1.4 11.8 4.6 11.8Q7.8 11.8 7.8 19.7Q7.8 20.6 6.9 20.6H2.3Q1.4 20.6 1.4 19.7Z"/>
+  <path d="M9.1 7A2.9 2.9 0 1 0 14.9 7A2.9 2.9 0 1 0 9.1 7ZM8.4 19.7Q8.4 10.8 12 10.8Q15.6 10.8 15.6 19.7Q15.6 20.6 14.7 20.6H9.3Q8.4 20.6 8.4 19.7Z"/>
+  <path d="M16.9 8.4A2.5 2.5 0 1 0 21.9 8.4A2.5 2.5 0 1 0 16.9 8.4ZM16.2 19.7Q16.2 11.8 19.4 11.8Q22.6 11.8 22.6 19.7Q22.6 20.6 21.7 20.6H17.1Q16.2 20.6 16.2 19.7Z"/>
+</svg>
+</span><small>Full</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M12 1.8L20.2 7.2V20.2A1.3 1.3 0 0 1 18.9 21.5H5.1A1.3 1.3 0 0 1 3.8 20.2V7.2ZM6.3 9.5H9.3V12H6.3ZM10.5 9.5H13.5V12H10.5ZM14.7 9.5H17.7V12H14.7ZM6.3 13.8H9.3V16.3H6.3ZM14.7 13.8H17.7V16.3H14.7ZM10.5 16.5H13.5V20.2H10.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M12 1.8L20.2 7.2V20.2A1.3 1.3 0 0 1 18.9 21.5H5.1A1.3 1.3 0 0 1 3.8 20.2V7.2ZM6.3 9.5H9.3V12H6.3ZM10.5 9.5H13.5V12H10.5ZM14.7 9.5H17.7V12H14.7ZM6.3 13.8H9.3V16.3H6.3ZM14.7 13.8H17.7V16.3H14.7ZM10.5 16.5H13.5V20.2H10.5Z"/>
+</svg>
+</span><small>Hotel</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M11.1 2.9Q12 2.2 12.9 2.9L21.6 10Q22.4 10.9 21.3 11.4H19.3V19.6Q19.3 21 17.9 21H6.1Q4.7 21 4.7 19.6V11.4H2.7Q1.6 10.9 2.4 10ZM11 13.8H13A1 1 0 0 1 14 14.8V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.8A1 1 0 0 1 11 13.8Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M11.1 2.9Q12 2.2 12.9 2.9L21.6 10Q22.4 10.9 21.3 11.4H19.3V19.6Q19.3 21 17.9 21H6.1Q4.7 21 4.7 19.6V11.4H2.7Q1.6 10.9 2.4 10ZM11 13.8H13A1 1 0 0 1 14 14.8V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.8A1 1 0 0 1 11 13.8Z"/>
+</svg>
+</span><small>House</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.8 2.6Q11.6 2.2 11.6 3.2V13.4Q11.6 14.1 10.9 14.1H5.2Q4.2 14.1 4.7 13.2Z"/>
+  <path d="M13 5.4Q13 4.6 13.7 5.1L19.6 13.1Q20.1 14.1 19 14.1H13.7Q13 14.1 13 13.4Z"/>
+  <path d="M2.8 15.6H21.2Q22.2 15.6 21.8 16.6L20 20.4Q19.6 21.2 18.6 21.2H5.4Q4.4 21.2 4 20.4L2.2 16.6Q1.8 15.6 2.8 15.6Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.8 2.6Q11.6 2.2 11.6 3.2V13.4Q11.6 14.1 10.9 14.1H5.2Q4.2 14.1 4.7 13.2Z"/>
+  <path d="M13 5.4Q13 4.6 13.7 5.1L19.6 13.1Q20.1 14.1 19 14.1H13.7Q13 14.1 13 13.4Z"/>
+  <path d="M2.8 15.6H21.2Q22.2 15.6 21.8 16.6L20 20.4Q19.6 21.2 18.6 21.2H5.4Q4.4 21.2 4 20.4L2.2 16.6Q1.8 15.6 2.8 15.6Z"/>
+</svg>
+</span><small>Marina</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M5.3 2.5H11.7A1.8 1.8 0 0 1 13.5 4.3V19.2A1.8 1.8 0 0 1 11.7 21H5.3A1.8 1.8 0 0 1 3.5 19.2V4.3A1.8 1.8 0 0 1 5.3 2.5ZM6.3 5.3H7.5A0.5 0.5 0 0 1 8 5.8V7.2A0.5 0.5 0 0 1 7.5 7.7H6.3A0.5 0.5 0 0 1 5.8 7.2V5.8A0.5 0.5 0 0 1 6.3 5.3ZM9.5 5.3H10.7A0.5 0.5 0 0 1 11.2 5.8V7.2A0.5 0.5 0 0 1 10.7 7.7H9.5A0.5 0.5 0 0 1 9 7.2V5.8A0.5 0.5 0 0 1 9.5 5.3ZM6.3 9.6H7.5A0.5 0.5 0 0 1 8 10.1V11.5A0.5 0.5 0 0 1 7.5 12H6.3A0.5 0.5 0 0 1 5.8 11.5V10.1A0.5 0.5 0 0 1 6.3 9.6ZM9.5 9.6H10.7A0.5 0.5 0 0 1 11.2 10.1V11.5A0.5 0.5 0 0 1 10.7 12H9.5A0.5 0.5 0 0 1 9 11.5V10.1A0.5 0.5 0 0 1 9.5 9.6ZM6.3 13.9H7.5A0.5 0.5 0 0 1 8 14.4V15.8A0.5 0.5 0 0 1 7.5 16.3H6.3A0.5 0.5 0 0 1 5.8 15.8V14.4A0.5 0.5 0 0 1 6.3 13.9ZM9.5 13.9H10.7A0.5 0.5 0 0 1 11.2 14.4V15.8A0.5 0.5 0 0 1 10.7 16.3H9.5A0.5 0.5 0 0 1 9 15.8V14.4A0.5 0.5 0 0 1 9.5 13.9Z"/>
+  <path fill-rule="evenodd" d="M16.4 8.5H19.2A1.6 1.6 0 0 1 20.8 10.1V19.4A1.6 1.6 0 0 1 19.2 21H16.4A1.6 1.6 0 0 1 14.8 19.4V10.1A1.6 1.6 0 0 1 16.4 8.5ZM17.2 11.2H18.4A0.5 0.5 0 0 1 18.9 11.7V13.1A0.5 0.5 0 0 1 18.4 13.6H17.2A0.5 0.5 0 0 1 16.7 13.1V11.7A0.5 0.5 0 0 1 17.2 11.2ZM17.2 15.5H18.4A0.5 0.5 0 0 1 18.9 16V17.4A0.5 0.5 0 0 1 18.4 17.9H17.2A0.5 0.5 0 0 1 16.7 17.4V16A0.5 0.5 0 0 1 17.2 15.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M5.3 2.5H11.7A1.8 1.8 0 0 1 13.5 4.3V19.2A1.8 1.8 0 0 1 11.7 21H5.3A1.8 1.8 0 0 1 3.5 19.2V4.3A1.8 1.8 0 0 1 5.3 2.5ZM6.3 5.3H7.5A0.5 0.5 0 0 1 8 5.8V7.2A0.5 0.5 0 0 1 7.5 7.7H6.3A0.5 0.5 0 0 1 5.8 7.2V5.8A0.5 0.5 0 0 1 6.3 5.3ZM9.5 5.3H10.7A0.5 0.5 0 0 1 11.2 5.8V7.2A0.5 0.5 0 0 1 10.7 7.7H9.5A0.5 0.5 0 0 1 9 7.2V5.8A0.5 0.5 0 0 1 9.5 5.3ZM6.3 9.6H7.5A0.5 0.5 0 0 1 8 10.1V11.5A0.5 0.5 0 0 1 7.5 12H6.3A0.5 0.5 0 0 1 5.8 11.5V10.1A0.5 0.5 0 0 1 6.3 9.6ZM9.5 9.6H10.7A0.5 0.5 0 0 1 11.2 10.1V11.5A0.5 0.5 0 0 1 10.7 12H9.5A0.5 0.5 0 0 1 9 11.5V10.1A0.5 0.5 0 0 1 9.5 9.6ZM6.3 13.9H7.5A0.5 0.5 0 0 1 8 14.4V15.8A0.5 0.5 0 0 1 7.5 16.3H6.3A0.5 0.5 0 0 1 5.8 15.8V14.4A0.5 0.5 0 0 1 6.3 13.9ZM9.5 13.9H10.7A0.5 0.5 0 0 1 11.2 14.4V15.8A0.5 0.5 0 0 1 10.7 16.3H9.5A0.5 0.5 0 0 1 9 15.8V14.4A0.5 0.5 0 0 1 9.5 13.9Z"/>
+  <path fill-rule="evenodd" d="M16.4 8.5H19.2A1.6 1.6 0 0 1 20.8 10.1V19.4A1.6 1.6 0 0 1 19.2 21H16.4A1.6 1.6 0 0 1 14.8 19.4V10.1A1.6 1.6 0 0 1 16.4 8.5ZM17.2 11.2H18.4A0.5 0.5 0 0 1 18.9 11.7V13.1A0.5 0.5 0 0 1 18.4 13.6H17.2A0.5 0.5 0 0 1 16.7 13.1V11.7A0.5 0.5 0 0 1 17.2 11.2ZM17.2 15.5H18.4A0.5 0.5 0 0 1 18.9 16V17.4A0.5 0.5 0 0 1 18.4 17.9H17.2A0.5 0.5 0 0 1 16.7 17.4V16A0.5 0.5 0 0 1 17.2 15.5Z"/>
+</svg>
+</span><small>Office</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7.9 6.4A4.1 4.1 0 1 0 16.1 6.4A4.1 4.1 0 1 0 7.9 6.4ZM6.2 20Q6.2 11.4 12 11.4Q17.8 11.4 17.8 20Q17.8 21.2 16.6 21.2H7.4Q6.2 21.2 6.2 20Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7.9 6.4A4.1 4.1 0 1 0 16.1 6.4A4.1 4.1 0 1 0 7.9 6.4ZM6.2 20Q6.2 11.4 12 11.4Q17.8 11.4 17.8 20Q17.8 21.2 16.6 21.2H7.4Q6.2 21.2 6.2 20Z"/>
+</svg>
+</span><small>Person</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4.6 3.2H19.4Q20.3 3.2 20.7 4L22 7Q22.4 8.4 21 8.4H3Q1.6 8.4 2 7L3.3 4Q3.7 3.2 4.6 3.2Z"/>
+  <path fill-rule="evenodd" d="M5.8 9.8H18.2A1.6 1.6 0 0 1 19.8 11.4V19.4A1.6 1.6 0 0 1 18.2 21H5.8A1.6 1.6 0 0 1 4.2 19.4V11.4A1.6 1.6 0 0 1 5.8 9.8ZM11 13.6H13A1 1 0 0 1 14 14.6V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.6A1 1 0 0 1 11 13.6Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M4.6 3.2H19.4Q20.3 3.2 20.7 4L22 7Q22.4 8.4 21 8.4H3Q1.6 8.4 2 7L3.3 4Q3.7 3.2 4.6 3.2Z"/>
+  <path fill-rule="evenodd" d="M5.8 9.8H18.2A1.6 1.6 0 0 1 19.8 11.4V19.4A1.6 1.6 0 0 1 18.2 21H5.8A1.6 1.6 0 0 1 4.2 19.4V11.4A1.6 1.6 0 0 1 5.8 9.8ZM11 13.6H13A1 1 0 0 1 14 14.6V18.2A1 1 0 0 1 13 19.2H11A1 1 0 0 1 10 18.2V14.6A1 1 0 0 1 11 13.6Z"/>
+</svg>
+</span><small>Shop</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M12.0 1.9L14.9 8.9L22.5 9.5L16.8 14.4L18.5 21.8L12.0 17.9L5.5 21.8L7.2 14.4L1.5 9.5L9.1 8.9Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M12.0 1.9L14.9 8.9L22.5 9.5L16.8 14.4L18.5 21.8L12.0 17.9L5.5 21.8L7.2 14.4L1.5 9.5L9.1 8.9Z"/>
+</svg>
+</span><small>Star</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M9.5 2H14.5A4.5 4.5 0 0 1 19 6.5V13A4.5 4.5 0 0 1 14.5 17.5H9.5A4.5 4.5 0 0 1 5 13V6.5A4.5 4.5 0 0 1 9.5 2ZM9.1 4.8H14.9A1.6 1.6 0 0 1 16.5 6.4V8.4A1.6 1.6 0 0 1 14.9 10H9.1A1.6 1.6 0 0 1 7.5 8.4V6.4A1.6 1.6 0 0 1 9.1 4.8ZM7.55 13.6A1.35 1.35 0 1 0 10.25 13.6A1.35 1.35 0 1 0 7.55 13.6ZM13.75 13.6A1.35 1.35 0 1 0 16.45 13.6A1.35 1.35 0 1 0 13.75 13.6Z"/>
+  <path d="M8.3 17.2L10.2 18.1L8.4 21.9Q8 22.6 7.3 22.3L6.9 22.1Q6.3 21.8 6.6 21.1Z"/>
+  <path d="M15.7 17.2L13.8 18.1L15.6 21.9Q16 22.6 16.7 22.3L17.1 22.1Q17.7 21.8 17.4 21.1Z"/>
+</svg>
+</span><small>Train</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7 12A5 5 0 1 1 17 12A5 5 0 1 1 7 12ZM10 12A2 2 0 1 0 14 12A2 2 0 1 0 10 12ZM3.1 12L3.12 10.57L3.37 9.15L3.86 7.77L4.56 6.48L5.48 5.31L6.58 4.3L7.84 3.47L9.23 2.85L10.71 2.46L12.24 2.32L13.79 2.44L15.29 2.81L16.72 3.44L17.97 4.36L16.41 3.99L14.92 3.84L13.51 3.93L12.19 4.23L11.01 4.72L9.99 5.37L9.15 6.15L8.49 7.02L8.03 7.93L7.76 8.85L7.66 9.75L7.74 10.59L7.96 11.35L8.3 12ZM20.9 12L20.88 13.43L20.63 14.85L20.14 16.23L19.44 17.52L18.52 18.69L17.42 19.7L16.16 20.53L14.77 21.15L13.29 21.54L11.76 21.68L10.21 21.56L8.71 21.19L7.28 20.56L6.03 19.64L7.59 20.01L9.08 20.16L10.49 20.07L11.81 19.77L12.99 19.28L14.01 18.63L14.85 17.85L15.51 16.98L15.97 16.07L16.24 15.15L16.34 14.25L16.26 13.41L16.04 12.65L15.7 12Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M7 12A5 5 0 1 1 17 12A5 5 0 1 1 7 12ZM10 12A2 2 0 1 0 14 12A2 2 0 1 0 10 12ZM3.1 12L3.12 10.57L3.37 9.15L3.86 7.77L4.56 6.48L5.48 5.31L6.58 4.3L7.84 3.47L9.23 2.85L10.71 2.46L12.24 2.32L13.79 2.44L15.29 2.81L16.72 3.44L17.97 4.36L16.41 3.99L14.92 3.84L13.51 3.93L12.19 4.23L11.01 4.72L9.99 5.37L9.15 6.15L8.49 7.02L8.03 7.93L7.76 8.85L7.66 9.75L7.74 10.59L7.96 11.35L8.3 12ZM20.9 12L20.88 13.43L20.63 14.85L20.14 16.23L19.44 17.52L18.52 18.69L17.42 19.7L16.16 20.53L14.77 21.15L13.29 21.54L11.76 21.68L10.21 21.56L8.71 21.19L7.28 20.56L6.03 19.64L7.59 20.01L9.08 20.16L10.49 20.07L11.81 19.77L12.99 19.28L14.01 18.63L14.85 17.85L15.51 16.98L15.97 16.07L16.24 15.15L16.34 14.25L16.26 13.41L16.04 12.65L15.7 12Z"/>
+</svg>
+</span><small>Typhoon</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4ZM12 7.6H12A1.25 1.25 0 0 1 13.25 8.85V13.95A1.25 1.25 0 0 1 12 15.2H12A1.25 1.25 0 0 1 10.75 13.95V8.85A1.25 1.25 0 0 1 12 7.6ZM10.55 18A1.45 1.45 0 1 0 13.45 18A1.45 1.45 0 1 0 10.55 18Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4ZM12 7.6H12A1.25 1.25 0 0 1 13.25 8.85V13.95A1.25 1.25 0 0 1 12 15.2H12A1.25 1.25 0 0 1 10.75 13.95V8.85A1.25 1.25 0 0 1 12 7.6ZM10.55 18A1.45 1.45 0 1 0 13.45 18A1.45 1.45 0 1 0 10.55 18Z"/>
+</svg>
+</span><small>Warning</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M10.3 3.3Q12 0.6 13.7 3.3L22.4 18.4Q23.9 21.2 20.8 21.2H3.2Q0.1 21.2 1.6 18.4Z"/>
+</svg>
+</span><small>WarningSolid</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2.5 9.2C4.8 2.6 13.8 1.4 18 9.2C13.8 17 4.8 15.8 2.5 9.2ZM5.75 8.1A1.45 1.45 0 1 0 8.65 8.1A1.45 1.45 0 1 0 5.75 8.1Z"/>
+  <path d="M16.2 9.2L21.3 4.2Q22.6 3.6 22.5 5.1L21.8 9.2L22.5 13.3Q22.6 14.8 21.3 14.2Z"/>
+  <path d="M2 18.4Q6 14.8 10 18.4Q14 22 18 18.4Q20.2 16.4 22 17.6V20.8Q20.2 19.6 18 21.4Q14 24 10 21.4Q6 18.2 2 21.4Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2.5 9.2C4.8 2.6 13.8 1.4 18 9.2C13.8 17 4.8 15.8 2.5 9.2ZM5.75 8.1A1.45 1.45 0 1 0 8.65 8.1A1.45 1.45 0 1 0 5.75 8.1Z"/>
+  <path d="M16.2 9.2L21.3 4.2Q22.6 3.6 22.5 5.1L21.8 9.2L22.5 13.3Q22.6 14.8 21.3 14.2Z"/>
+  <path d="M2 18.4Q6 14.8 10 18.4Q14 22 18 18.4Q20.2 16.4 22 17.6V20.8Q20.2 19.6 18 21.4Q14 24 10 21.4Q6 18.2 2 21.4Z"/>
+</svg>
+</span><small>Wharf</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M3 7L7.5 3.5Q8 3 9 3H15Q16 3 16.5 3.5L21 7Q22 7.5 22 9V18.5Q22 20 20.5 20H3.5Q2 20 2 18.5V9Q2 7.5 3 7ZM5 9H9.5V17H5ZM14.5 9H19V17H14.5Z"/>
+  <path d="M6 20H8L7.5 22H5.5ZM16 20H18L18.5 22H16.5Z"/>
+</svg>
+</span><small>機廠 D-A</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path fill-rule="evenodd" d="M2 11A10 9 0 0 1 22 11V19Q22 21 20 21H4Q2 21 2 19ZM5 11V18H19V11A7 6 0 0 0 5 11Z"/>
+  <path fill-rule="evenodd" d="M9 9H15Q16.5 9 16.5 10.5V15.5Q16.5 17 15 17H9Q7.5 17 7.5 15.5V10.5Q7.5 9 9 9ZM10 11V13H14V11Z"/>
+</svg>
+</span><small>機廠 D-B</small></div><div><span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M3 3H21Q22 3 22 4.5V7H19V6H5V7H2V4.5Q2 3 3 3Z"/>
+  <rect x="3" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="10" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="17" y="9" width="4" height="12" rx="1.5"/>
+  <rect x="2" y="16" width="6" height="2" rx="1"/>
+  <rect x="9" y="16" width="6" height="2" rx="1"/>
+  <rect x="16" y="16" width="6" height="2" rx="1"/>
+</svg>
+</span><small>機廠 D-C</small></div></div></section><section><h2>同時入庫、等待</h2><div class="map light" style="height:150px"><div class="track one" style="top:83px"></div><span class="train" style="left:46%;top:83px;width:50px"></span><span style="position:absolute;left:calc(46% - 12px);top:70px"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="13" fill="none" stroke="var(--plate)" stroke-width="6"/><circle cx="17" cy="17" r="13" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4.5 3"/></svg></span><span style="position:absolute;left:calc(46% - 27px);top:42px"><span class="state-carrier" style="width:24px;height:24px"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+  <path d="M20 3H12.5V8H15.5V6H19V18H15.5V16H12.5V21H20Q22 21 22 19V5Q22 3 20 3Z"/>
+  <path d="M2 10.5H11V7L16.5 12L11 17V13.5H2Z"/>
+</svg>
+</span></span><span class="name" style="left:calc(46% + 30px);top:75px;border:1.2px solid #262C57">等進路 · 莒光 3</span><span class="caption">同一列車：入庫中 ＋ 等進路；小牌與等待環仍可讀</span></div><div class="context-note">機廠用暖黃圓角方徽章；出入庫用切角方牌；在庫是列車加底座，面板仍寫「在庫」。出入庫標記附在列車第 50 層，等待環與死結標記保留第 51 層。若擠在一起，先保留等待／死結提示；FollowBar 仍寫出入庫。</div></section><footer>檢查用設計示意，未接功能。候選對應的正式資產仍待作者選定。</footer></main></body></html>
