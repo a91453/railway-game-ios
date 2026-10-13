@@ -6233,6 +6233,40 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；膠囊的位置與 UI 測試要在 macOS CI 上跑，實景地圖上的手感要在 TestFlight 上看。
 
+### 193. 指令日誌：問題回報附上存檔與指令，在 Linux 重播
+
+2026-10-13，NEXT_PRIORITIES 波次 1 第 8 項：作者在 iPhone 上碰到的 bug，要能直接變成 Linux 上的回歸測試。號碼依工作登記 #231：決策 193；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、既有的 replay 都不變（只新增一個 replay fixture）。
+
+**做法的選擇**（優先順序 session 決定，選 B）：GamePresentation 唯一的入口是 `GameSession.performEdit(_:)`，但它收的是 closure，73 個呼叫點在 closure 裡直接呼叫約 80 種 `GameWorld` 方法，在入口記不到「指令本身」。所以指令要先變成值。不在 GameCore 加可 Codable 的指令型別：連線對戰不在優先清單上，那是預先設計，還要跑完整一層 CI、改共用的測試檔。改在 GamePresentation 加 `PlayerCommand`。
+
+1. **指令的值**（`PlayerCommand.swift`）：一個 case 是一個工具的一次編輯，帶著算出它的一切值（端點、曲線、縱斷面、構造、要讀地面的點、月台的區間、新車站的名稱、位置與運量）。`GameSession.apply(_:to:)` 做的是原本 closure 做的事（`EdgePlan.build` 改成呼叫它），`GameSession.perform(_:message:)` 經過 `performEdit` 套用並記下。寫成檔案時用純數字與字串（`kind` 加欄位，和 `ReplayCommand` 一樣），因為被拒絕的指令也要記，而 GameCore 自己的解碼會拒絕世界放不下的值。
+   - 第一個 PR 只有路網工具的四個：鋪一段軌道（`buildNetworkTrack`，交叉渡線不算）、在水平的軌道上設月台（`addNetworkPlatform`；要整平的照舊用 closure）、拆月台、拆軌道。其他編輯照舊用 closure，記成「沒有記錄的指令」，記下呼叫的函式名稱（`performEdit` 的 `caller: #function`）。其餘的種類下一個 PR 再補。
+2. **記錄**（`CommandLog.swift`，`GameSession.commandLog`）：從 session 開始（開新局或讀檔都會建新的 session）時的世界起，依序記每一個改變世界的事，和它的遊戲時間（秒）：
+   - 指令（`.command`），被拒絕的也照順序記（`refused`，被拒絕的什麼都沒改）；沒有改變任何東西的也記。
+   - 套用到世界的遊戲時間（`.advance(ticks:)`）。連續的 tick 合成一筆，下一個 tick 加到上一筆。背景算好、但因為玩家先下了指令而丟掉的 tick（決策 143）不記，因為它沒有套用。
+   - 速度、暫停、繼續（`setSpeed`、`togglePause`、建造時與事件的自動暫停）。
+   - 復原與重做（`.undo`、`.redo`）：它們直接換掉世界，不經過 `GameWorld` 的方法，用 session 重播才能經過同樣的快照。
+   - 讀入土地（`.readLandRoundStations(data)`、`.readLand(reach:at:)`），以及那時 session 有哪些實景資料。資料晚到時（`GameLauncher.install`），就算這一次沒讀到任何土地也記，重播才知道從哪裡起有資料。
+   - 保險：`world` 的 `didSet` 看到不是上面這些路徑造成的改變（不是 tick，也不是記錄中的路徑），就記一筆「沒有記錄」。所以日誌不會漏掉任何改變而沒人知道。
+3. **上限**：5,000 筆（`CommandLog.limit`）。記到 2,500 筆時留下那時的世界；到 5,000 筆時，那個世界成為新的起點，前 2,500 筆丟掉，再從現在留下下一個。所以日誌一直有 2,500 到 5,000 筆，記憶體多兩個世界（起點與下一個起點），沒改的部分和遊戲中的世界共用。遊戲時間合成一筆，所以 5,000 筆是 5,000 次操作，不是 5,000 個 tick。tick 每次只做一次陣列尾端的加法，不拖慢 tick。
+4. **回報的檔案**（`CommandLogReport.swift`，`command-log.json`）：只有存檔（`SavedGame`，起點的世界）、起點時有哪些資料、指令、App 的版本與 build、內附資料檔的雜湊（FNV-1a 64 位元，`dataFiles` 的五個檔：人口、地點、水域、高度、涵蓋），以及結束時的世界摘要（時間、現金、節點、邊、車站、路線、列車數）。不帶裝置識別碼、帳號、位置。存檔裡可能有玩家自己打的名稱：`typedNames` 列出存檔與指令裡的車站、路線、列車名稱，讓玩家看過再決定。
+5. **畫面**：設定頁「回報問題」多一個玩家自己選的開關「附上存檔與指令紀錄」，打開時列出會附上的東西與 `typedNames`，經 `ShareLink` 一起分享（決策 127 的分享表，不自動上傳）。**這一段等 #463（`SettingsView`）合併後再做**，在同一個 PR 裡補上。
+6. **在 Linux 重播**：
+   - **用 session 重播**（`Tests/GamePresentationTests/CommandLogReplay.swift`）：從起點的存檔開一個沒有畫面的 `GameSession`，照記錄的時機給它 App 內附的資料（`RailwayGameApp/Resources/RealWorld/`），每一筆從記下它的同一條路徑重播：指令走 `perform`、時間走 `advance(ticks:)`、復原走 `undo()`。所以每次編輯後 `performEdit` 讀入的土地（決策 88）與鋪軌讀的地面（決策 124）和實機相同，實景地圖、高鐵示範的回報也能重播，檔案也不會變大。每一筆先比遊戲時間，不同就停；遇到「沒有記錄」也停，說出是哪個函式。資料檔的雜湊和這個 checkout 不同時警告。實機的回報寫成像 `HighSpeedDemoTests` 那樣的 GamePresentationTests。
+   - **轉成 GameCore 的 replay fixture**（`Tests/GameCoreTests/ProblemReportFixtureTests.swift`）：不讀實景資料的世界（空白地圖、挑戰），而且指令都能用 fixture 現有的指令說出來時，轉成 `ReplayFixtures/` 的格式，checksum 用現有的 `ReplayFixture.checksums`，只新增檔案，不改共用的測試檔。鋪軌只轉得了地面（`surface`）、沒有豎曲線、端點不是切開的邊；復原與重做轉不了。轉不了的會說出原因，改用 session 重播。轉完比對結束的摘要。指令：`PROBLEM_REPORT=<report.json> REPLAY_RECORD="$PWD/ReplayFixtures" swift test --filter ProblemReportFixtureTests/testConvertingAReport`。
+   - **例子**：`ReplayFixtures/Reports/blank-map.json` 是 `CommandLogTests` 錄的回報（空白地圖、路網工具的軌道、車站、月台、一個被拒絕的月台、速度與時間），轉成 `ReplayFixtures/problem-report-blank-map.json`，`ReplayFixtureTests` 和其他 fixture 一起重播它。
+
+**測試**：`CommandLogTests`（每一種改變照順序記下、時間、被拒絕的也記；沒有記錄的改變；丟掉的 tick 不記；上限與新的起點；每一種指令和原本的 closure 得到同一個世界或同一個錯誤，經過 session 時全有或全無；每一筆存成檔案再讀回不變；回報列出玩家打的名稱；空白地圖、實景地圖（全台灣、內附的五個資料檔）與列車行駛的回報重播到同一個世界；遇到沒有記錄的改變時停下；例子的回報重播）、`ProblemReportFixtureTests`（例子轉成的 fixture 和提交的一樣；轉不了的說出原因）、`ReplayFixtureTests`（重播新的 fixture）。
+
+**參考**：參考庫（`382b9f8`）`Railway/railway_game_reference_clean/docs/debugging_desyncs.md` 與 `docs/desync.md` §3.1–3.2：每個指令經過唯一的入口（`DoCommandP`），以 ID 和值寫進 `commands-out.log`，配上開局時的存檔，用來重播整局；這裡照做（起點的存檔、依序的指令與日期、從起點重播）。`ReplayFixtures/` 本來就是從那裡來的（決策 51）。參考的做法沒有上限（重開時覆寫），這裡加上 5,000 筆的上限。`Ci/`、`Simulator/`、`MapBuilder/` 沒有指令紀錄或重播可以搬。參考庫已經有做法，沒有另外找外部專案。程式是本專案自己寫的。
+
+**限制**：
+- 這個 PR 只把路網工具的四種編輯變成值；其他編輯（路線、列車、建物、分區、買地…）記成「沒有記錄」，重播停在那裡。下一個 PR 補。
+- 用 session 重播需要和實機同一版的內附資料；不同時只能警告。
+- 摘要只比數量與現金，不是整個世界的雜湊：裝置與 Linux 的 JSON 編碼可能不同，所以不用存檔的位元組比。
+
+**沒有驗證的**：Linux 不能建置 App；設定頁的開關與分享表（第 5 點）要在 macOS CI 與實機上看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

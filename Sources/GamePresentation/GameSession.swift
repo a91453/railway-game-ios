@@ -33,8 +33,14 @@ public final class GameSession {
         didSet {
             worldRevision &+= 1
             if !isApplyingTick { commandRevision &+= 1 }
+            // Decision 193: a change no recorded path made is logged as one.
+            if !isLogging { log(.unrecorded("world")) }
         }
     }
+    /// What reached ``world`` since this session began (decision 193).
+    @ObservationIgnored public private(set) var commandLog: CommandLog
+    /// Whether a path that logs its own change is changing ``world``.
+    @ObservationIgnored private var isLogging = false
     /// Counts the changes to ``world``, so what is worked out from it (the
     /// track preview, ``networkPreview``) is kept until it changes.
     @ObservationIgnored private(set) var worldRevision = 0
@@ -486,7 +492,9 @@ public final class GameSession {
     /// (``StationDemand/cityDefault``), as stations built since do; saves
     /// from before ARCHITECTURE decision 46 may have such stations.
     public init(world: GameWorld, language: DisplayLanguage = .english) {
-        self.world = Self.withCityRidership(world)
+        let world = Self.withCityRidership(world)
+        self.world = world
+        self.commandLog = CommandLog(start: world)
         self.language = language
         let suggested = Self.suggestedStationName(for: world, in: language)
         self.stationName = suggested
@@ -718,7 +726,7 @@ public final class GameSession {
     /// be undone until time moves on: `true` when it paused it now.
     func pauseForBuilding() -> Bool {
         guard !world.clock.isPaused else { return false }
-        world.pause()
+        logging(.pause) { $0.pause() }
         isPausedForBuilding = true
         return true
     }
@@ -728,7 +736,7 @@ public final class GameSession {
     func endPauseForBuilding() {
         guard isPausedForBuilding else { return }
         isPausedForBuilding = false
-        if world.clock.isPaused { world.resume() }
+        if world.clock.isPaused { logging(.resume) { $0.resume() } }
     }
 
     /// Whether the session paused the game itself when a building tool was
@@ -749,14 +757,14 @@ public final class GameSession {
         var clock = world.clock
         clock.setSpeed(speed)
         guard clock != world.clock else { return }
-        world.setSpeed(speed)
+        logging(.setSpeed(speed)) { $0.setSpeed(speed) }
     }
 
     /// Pauses a running game for an event the player should see (decision
     /// 175); does nothing to one already paused.
     func pauseForEvent() {
         guard !world.clock.isPaused else { return }
-        world.pause()
+        logging(.pause) { $0.pause() }
         isPausedForEvent = true
     }
 
@@ -782,9 +790,9 @@ public final class GameSession {
         isPausedForBuilding = false
         isPausedForEvent = false
         if world.clock.isPaused {
-            world.resume()
+            logging(.resume) { $0.resume() }
         } else {
-            world.pause()
+            logging(.pause) { $0.pause() }
         }
     }
 
@@ -958,6 +966,12 @@ public final class GameSession {
         finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: listening) })
     }
 
+    /// Puts `ticks` of game time in place at once, as the game loop does a
+    /// tick at a time: a replay of the command log (decision 193).
+    func advance(ticks: Int) {
+        finish(Result { () throws(GameError) in try Self.advanced(world, by: ticks, listening: false) })
+    }
+
     /// The whole ticks `elapsed` real time makes due; none while paused,
     /// when the time is discarded rather than saved up.
     private func dueTicks(realElapsed elapsed: Duration) -> Int {
@@ -973,6 +987,8 @@ public final class GameSession {
     struct TickStep: Sendable {
         var world: GameWorld
         var arrived: [TrainID]
+        /// How many ticks it is.
+        var ticks: Int
     }
 
     /// `world` advanced by `ticks`, all or nothing. `listening` (sounds
@@ -986,7 +1002,7 @@ public final class GameSession {
         var world = world
         guard listening else {
             try world.advance(ticks: ticks)
-            return TickStep(world: world, arrived: [])
+            return TickStep(world: world, arrived: [], ticks: ticks)
         }
         var arrived: [TrainID] = []
         for _ in 0..<ticks {
@@ -994,7 +1010,7 @@ public final class GameSession {
             try world.advance(ticks: 1)
             arrived += SoundCue.trainsArrived(since: arrivals, in: world)
         }
-        return TickStep(world: world, arrived: arrived)
+        return TickStep(world: world, arrived: arrived, ticks: ticks)
     }
 
     /// Makes `outcome`, a step worked out from ``world`` as it is now, the
@@ -1017,7 +1033,11 @@ public final class GameSession {
         let endedBefore = world.scenario?.outcome != nil
         let lastEntry = world.accounts.entries.last
         let dayBefore = world.clock.now.seconds / GameTime.secondsPerDay
+        let timeBefore = world.clock.now
+        isLogging = true
         world = step.world
+        isLogging = false
+        log(.advance(ticks: step.ticks), at: timeBefore)
         // Game time moved on: no edit before it can be undone.
         undoHistory.removeAll()
         redoHistory.removeAll()
@@ -1860,15 +1880,55 @@ public final class GameSession {
     /// Runs one command against the world through ``performEdit(_:)`` and
     /// records its outcome. Returns whether the command succeeded.
     @discardableResult
-    func perform(_ command: (inout GameWorld) throws(GameError) -> String) -> Bool {
+    func perform(_ command: (inout GameWorld) throws(GameError) -> String, caller: String = #function) -> Bool {
         do throws(GameError) {
-            message = StatusMessage(kind: .success, text: try performEdit(command))
+            message = StatusMessage(kind: .success, text: try performEdit(command, caller: caller))
             endFollowIfGone()
             return true
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
             return false
         }
+    }
+
+    /// Runs `command` (decision 193) as ``perform(_:caller:)`` runs a
+    /// closure, through ``apply(_:to:)``, and logs it in its place, refused
+    /// or not. `text` says what it did, from its outcome and the world
+    /// before and after. Returns its outcome, or `nil` when refused.
+    @discardableResult
+    func perform(
+        _ command: PlayerCommand, message text: (PlayerCommand.Outcome, _ before: GameWorld, _ after: GameWorld) -> String
+    ) -> PlayerCommand.Outcome? {
+        let before = world
+        do throws(GameError) {
+            let outcome = try performEdit(logging: .command(command), whenUnchanged: true) { world throws(GameError) in
+                try apply(command, to: &world)
+            }
+            message = StatusMessage(kind: .success, text: text(outcome, before, world))
+            endFollowIfGone()
+            return outcome
+        } catch {
+            log(.command(command), refused: true)
+            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            return nil
+        }
+    }
+
+    /// Adds `action` to ``commandLog`` (decision 193), with the game time
+    /// it came at (by default, now), after it changed ``world``.
+    private func log(_ action: CommandLog.Action, at time: GameTime? = nil, refused: Bool = false) {
+        commandLog.append(
+            CommandLog.Entry(time: (time ?? world.clock.now).seconds, action: action, refused: refused), now: world, data: realWorldData
+        )
+    }
+
+    /// Changes ``world`` by `change`, which ``commandLog`` keeps as
+    /// `action` (decision 193).
+    private func logging(_ action: CommandLog.Action, _ change: (inout GameWorld) -> Void) {
+        isLogging = true
+        change(&world)
+        isLogging = false
+        log(action)
     }
 
     // MARK: - Editing and undo
@@ -1909,7 +1969,17 @@ public final class GameSession {
     public func readLandRoundStations() {
         var read = world
         Self.readLand(roundStationsOf: &read, population: population, places: places, water: water, coverage: coverage)
-        keepLand(of: read)
+        // Decision 193: the data's arrival is logged even when no land is
+        // read, so a replay has it from then on.
+        let data = realWorldData
+        keepLand(of: read, as: .readLandRoundStations(data), evenUnchanged: data != commandLog.lastData)
+    }
+
+    /// The real-world data the session has now (decision 193).
+    var realWorldData: RealWorldDataSet {
+        RealWorldDataSet(
+            population: population != nil, places: places != nil, water: water != nil, heights: heights != nil, coverage: coverage != nil
+        )
     }
 
     /// Reads in the land within `reach` of `point` (decision 95: under a
@@ -1918,26 +1988,40 @@ public final class GameSession {
     func readLand(within reach: Int64, of point: PlanPoint) {
         var read = world
         Self.readLand(within: reach, of: [point], in: &read, population: population, places: places, water: water, coverage: coverage)
-        keepLand(of: read)
+        keepLand(of: read, as: .readLand(reach: reach, at: point))
     }
 
     /// Takes `read`, the world with land read in, only if land was: any
     /// write drops the tick being worked out (decision 143), and on a map
     /// whose land is all there, or already read here, nothing is.
-    private func keepLand(of read: GameWorld) {
-        guard read.landBlocks != world.landBlocks else { return }
-        world = read
+    private func keepLand(of read: GameWorld, as action: CommandLog.Action, evenUnchanged: Bool = false) {
+        guard read.landBlocks != world.landBlocks else {
+            if evenUnchanged { log(action) }
+            return
+        }
+        logging(action) { $0 = read }
     }
 
     @discardableResult
     public func performEdit<Result, Failure: Error>(
-        _ command: (inout GameWorld) throws(Failure) -> Result
+        _ command: (inout GameWorld) throws(Failure) -> Result, caller: String = #function
+    ) throws(Failure) -> Result {
+        try performEdit(logging: .unrecorded(caller), whenUnchanged: false, command)
+    }
+
+    /// ``performEdit(_:caller:)``, logging the edit as `action` (decision
+    /// 193); one that changes nothing too, `whenUnchanged`.
+    private func performEdit<Result, Failure: Error>(
+        logging action: CommandLog.Action, whenUnchanged: Bool, _ command: (inout GameWorld) throws(Failure) -> Result
     ) throws(Failure) -> Result {
         var edited = world
         let result = try command(&edited)
         // Decision 88: a new station's land comes with it.
         Self.readLand(roundStationsOf: &edited, population: population, places: places, water: water, coverage: coverage)
-        guard edited != world else { return result }
+        guard edited != world else {
+            if whenUnchanged { log(action) }
+            return result
+        }
         // Decision 100: the new line's route follows the track.
         let trackChanged = lineDraft.count >= 2 && edited.network != world.network
         defer { if trackChanged { refreshLineDraftRoute() } }
@@ -1952,7 +2036,7 @@ public final class GameSession {
         // Decision 184: a new edit ends the line Redo went forward along
         // (the simulator's push clears `future`).
         redoHistory.removeAll()
-        world = edited
+        logging(action) { $0 = edited }
         editSerial &+= 1
         return result
     }
@@ -2035,7 +2119,7 @@ public final class GameSession {
         if redoHistory.count > Self.undoLimit {
             redoHistory.removeFirst(redoHistory.count - Self.undoLimit)
         }
-        step(to: restored)
+        step(to: restored, as: .undo)
         message = StatusMessage(kind: .success, text: language.text("Undid the last edit.", "已復原上一步編輯。"))
     }
 
@@ -2074,20 +2158,20 @@ public final class GameSession {
         if undoHistory.count > Self.undoLimit {
             undoHistory.removeFirst(undoHistory.count - Self.undoLimit)
         }
-        step(to: restored)
+        step(to: restored, as: .redo)
         message = StatusMessage(kind: .success, text: language.text("Redid the edit.", "已重做編輯。"))
     }
 
     /// Puts `snapshot`, a world Undo or Redo goes to, in place of
     /// ``world``, keeping the clock's speed and pause as they are now, and
     /// lets go of what the selection names that it does not have.
-    private func step(to snapshot: GameWorld) {
+    private func step(to snapshot: GameWorld, as action: CommandLog.Action) {
         var restored = snapshot
         // A drag still under way keeps a new snapshot at its next change.
         editGestureHasSnapshot = false
         restored.setSpeed(world.clock.runningSpeed)
         if world.clock.isPaused { restored.pause() }
-        world = restored
+        logging(action) { $0 = restored }
         editSerial &+= 1
         dropSelectionOfMissing()
         // The building shown keeps its land read in, which the undo may

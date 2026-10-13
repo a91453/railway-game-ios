@@ -1,0 +1,418 @@
+{
+  "build" : "0",
+  "data" : {
+
+  },
+  "end" : {
+    "balance" : 995200,
+    "edges" : 3,
+    "lines" : 0,
+    "nodes" : 4,
+    "stations" : 3,
+    "time" : 6840,
+    "trains" : 0
+  },
+  "entries" : [
+    {
+      "action" : "command",
+      "command" : {
+        "end" : {
+          "kind" : "point",
+          "point" : [
+            6144,
+            2048
+          ]
+        },
+        "from" : [
+          2048,
+          2048,
+          0
+        ],
+        "ground" : [
+          2048,
+          2048,
+          6144,
+          2048,
+          2560,
+          2048,
+          3584,
+          2048,
+          4608,
+          2048,
+          5632,
+          2048
+        ],
+        "kind" : "buildTrack",
+        "start" : {
+          "kind" : "point",
+          "point" : [
+            2048,
+            2048
+          ]
+        },
+        "structure" : "surface",
+        "to" : [
+          6144,
+          2048,
+          0
+        ],
+        "transitions" : [
+          0,
+          0
+        ]
+      },
+      "time" : 0
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "controls" : [
+          7670,
+          2048,
+          8875,
+          3413
+        ],
+        "end" : {
+          "kind" : "point",
+          "point" : [
+            10240,
+            4096
+          ]
+        },
+        "from" : [
+          6144,
+          2048,
+          0
+        ],
+        "ground" : [
+          6144,
+          2048,
+          10240,
+          4096,
+          6653,
+          2098,
+          7615,
+          2445,
+          8492,
+          2974,
+          9342,
+          3558,
+          10004,
+          3971
+        ],
+        "kind" : "buildTrack",
+        "start" : {
+          "kind" : "node",
+          "node" : 2
+        },
+        "structure" : "surface",
+        "to" : [
+          10240,
+          4096,
+          0
+        ],
+        "transitions" : [
+          0,
+          0
+        ]
+      },
+      "time" : 0
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "demand" : {
+          "dailyTrips" : 10000,
+          "hinterland" : 0,
+          "kind" : "residential"
+        },
+        "edge" : 1,
+        "endDistance" : 4096,
+        "kind" : "addPlatform",
+        "name" : "Station 1",
+        "point" : [
+          4096,
+          2048
+        ],
+        "startDistance" : 0
+      },
+      "time" : 0
+    },
+    {
+      "action" : "setSpeed",
+      "speed" : "normal",
+      "time" : 0
+    },
+    {
+      "action" : "advance",
+      "ticks" : 2,
+      "time" : 0
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "edge" : 1,
+        "endDistance" : 4096,
+        "kind" : "addPlatform",
+        "startDistance" : 0,
+        "station" : 1
+      },
+      "refused" : true,
+      "time" : 120
+    },
+    {
+      "action" : "advance",
+      "ticks" : 1,
+      "time" : 120
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "demand" : {
+          "dailyTrips" : 10000,
+          "hinterland" : 0,
+          "kind" : "residential"
+        },
+        "edge" : 2,
+        "endDistance" : 4425,
+        "kind" : "addPlatform",
+        "name" : "Station 2",
+        "point" : [
+          8339,
+          2872
+        ],
+        "startDistance" : 329
+      },
+      "time" : 180
+    },
+    {
+      "action" : "advance",
+      "ticks" : 3,
+      "time" : 180
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "controls" : [
+          11461,
+          4707,
+          12971,
+          4096
+        ],
+        "end" : {
+          "kind" : "point",
+          "point" : [
+            14336,
+            4096
+          ]
+        },
+        "from" : [
+          10240,
+          4096,
+          0
+        ],
+        "ground" : [
+          10240,
+          4096,
+          14336,
+          4096,
+          10721,
+          4274,
+          11738,
+          4363,
+          12762,
+          4257,
+          13786,
+          4124,
+          14317,
+          4096
+        ],
+        "kind" : "buildTrack",
+        "start" : {
+          "kind" : "node",
+          "node" : 3
+        },
+        "structure" : "surface",
+        "to" : [
+          14336,
+          4096,
+          0
+        ],
+        "transitions" : [
+          0,
+          0
+        ]
+      },
+      "time" : 360
+    },
+    {
+      "action" : "advance",
+      "ticks" : 1,
+      "time" : 360
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "controls" : [
+          15304,
+          4096,
+          14336,
+          6032
+        ],
+        "end" : {
+          "kind" : "point",
+          "point" : [
+            14336,
+            7000
+          ]
+        },
+        "from" : [
+          14336,
+          4096,
+          0
+        ],
+        "ground" : [
+          14336,
+          4096,
+          14336,
+          7000,
+          14730,
+          4361,
+          14658,
+          5375,
+          14420,
+          6366,
+          14338,
+          6937
+        ],
+        "kind" : "buildTrack",
+        "start" : {
+          "kind" : "node",
+          "node" : 4
+        },
+        "structure" : "surface",
+        "to" : [
+          14336,
+          7000,
+          0
+        ],
+        "transitions" : [
+          0,
+          0
+        ]
+      },
+      "time" : 420
+    },
+    {
+      "action" : "pause",
+      "time" : 420
+    },
+    {
+      "action" : "resume",
+      "time" : 420
+    },
+    {
+      "action" : "advance",
+      "ticks" : 5,
+      "time" : 420
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "edge" : 1,
+        "endDistance" : 4096,
+        "kind" : "removePlatform",
+        "startDistance" : 0,
+        "station" : 1
+      },
+      "time" : 720
+    },
+    {
+      "action" : "advance",
+      "ticks" : 2,
+      "time" : 720
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "edge" : 4,
+        "kind" : "removeTrack"
+      },
+      "time" : 840
+    },
+    {
+      "action" : "setSpeed",
+      "speed" : "fast",
+      "time" : 840
+    },
+    {
+      "action" : "advance",
+      "ticks" : 4,
+      "time" : 840
+    },
+    {
+      "action" : "command",
+      "command" : {
+        "demand" : {
+          "dailyTrips" : 10000,
+          "hinterland" : 0,
+          "kind" : "residential"
+        },
+        "edge" : 3,
+        "endDistance" : 4134,
+        "kind" : "addPlatform",
+        "name" : "Station 3",
+        "point" : [
+          12288,
+          4319
+        ],
+        "startDistance" : 38
+      },
+      "time" : 3240
+    },
+    {
+      "action" : "advance",
+      "ticks" : 6,
+      "time" : 3240
+    }
+  ],
+  "schemaVersion" : 1,
+  "start" : {
+    "saveVersion" : 50,
+    "world" : {
+      "bounds" : {
+        "height" : 8192,
+        "width" : 16384
+      },
+      "clock" : {
+        "now" : 0,
+        "resumeSpeed" : "normal",
+        "speed" : "paused"
+      },
+      "economy" : {
+        "balance" : 1000000,
+        "costs" : {
+          "station" : 1000,
+          "track" : 100,
+          "train" : 5000
+        }
+      },
+      "nextStationID" : 1,
+      "nextTrainID" : 1,
+      "stations" : [
+
+      ],
+      "trains" : [
+
+      ]
+    }
+  },
+  "startData" : {
+    "coverage" : false,
+    "heights" : false,
+    "places" : false,
+    "population" : false,
+    "water" : false
+  },
+  "version" : "example"
+}
