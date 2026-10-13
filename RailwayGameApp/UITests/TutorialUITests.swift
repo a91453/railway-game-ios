@@ -42,6 +42,8 @@ final class TutorialUITests: XCTestCase {
         // Stage E1: zooming out moves the map; the card leaves the zoom
         // buttons free.
         waitForStep(app, title: "Zoom out to see the town")
+        // Folded from the second step: open it, for the rest of the chapter.
+        openCard(app)
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
@@ -291,9 +293,9 @@ final class TutorialUITests: XCTestCase {
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 
-    /// Opens the tutorial's card, which starts folded (decision 188, later
-    /// fix), as the player does to read the step and reach Back, Next and
-    /// Skip.
+    /// Opens the tutorial's card, folded from the second step (decision
+    /// 188, later fix), as the player does to read the step and reach Back,
+    /// Next and Skip; an open card is left as it is.
     private func openCard(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let folded = app.buttons["tutorial.unfold"]
@@ -350,8 +352,11 @@ final class TutorialUITests: XCTestCase {
         // an uncovered network tool, in Traditional Chinese on the iPad).
         selectTool(app, "tool.network")
         // Decision 188: the done step moves on by itself, and the map step
-        // waits for the map to move.
-        XCTAssertTrue(back.waitForExistence(timeout: 10), "The done step did not move on by itself")
+        // waits for the map to move. From the second step the card starts
+        // folded (decision 188, later fix): open it for Back.
+        XCTAssertTrue(app.buttons["tutorial.unfold"].waitForExistence(timeout: 10), "The done step did not move on by itself")
+        openCard(app)
+        XCTAssertTrue(back.waitForExistence(timeout: 10))
         XCTAssertEqual(back.label, backLabel)
         waitForEnabled(app, false)
         back.tap()

@@ -181,8 +181,9 @@ private struct TutorialOverlay: View {
     }
 }
 
-/// The step's card, or the card folded to its title: folded until the
-/// player opens it (decision 188, later fix), by the player with its ⌄
+/// The step's card, or the card folded to its title: from the second step
+/// folded until the player opens it (decision 188, later fix), by the
+/// player with its ⌄
 /// button, or by itself while, open, it would cover what the step asks for
 /// (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on a phone
 /// on its side with a panel open (``TutorialCardFold``). The player's
@@ -216,7 +217,8 @@ private struct TutorialCardSlot: View {
 
     private var isFolded: Bool {
         fold.showsFolded(
-            stepChoice: folded, chapterChoice: chapterFold, waitsForNext: waitsForNext, isDone: session.isTutorialStepDone
+            stepChoice: folded, chapterChoice: chapterFold, waitsForNext: waitsForNext, isDone: session.isTutorialStepDone,
+            isFirstStep: tutorial.isFirstStep
         )
     }
 

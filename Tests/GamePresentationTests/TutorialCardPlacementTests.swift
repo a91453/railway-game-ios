@@ -272,11 +272,24 @@ final class TutorialCardPlacementTests: XCTestCase {
     }
 
     /// Decision 188, later fix (the author, on a phone on its side, found
-    /// the open card over the step's controls): the card starts folded to
-    /// the step and its title, and an action step, done, stays folded until
-    /// it moves on; the player opens it to read the rest.
-    func testTheCardStartsFolded() {
-        let fold = TutorialCardFold()
+    /// the open card over the step's controls): the first step's card is
+    /// open, so a player who does not want the tutorial finds Skip; from the
+    /// second step it is folded to the step and its title, and an action
+    /// step, done, stays folded until it moves on; the player opens it to
+    /// read the rest.
+    func testTheFirstStepIsOpenAndTheRestStartFolded() {
+        let first = Tutorial.standardSteps[0]
+        XCTAssertEqual(first.id, "build.network")
+        XCTAssertNotEqual(first.goal, .read)
+        var fold = TutorialCardFold()
+        XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: false, isFirstStep: true))
+        XCTAssertTrue(fold.showsFolded(stepChoice: true, chapterChoice: nil, waitsForNext: false, isDone: false, isFirstStep: true))
+        // Open over the tool it asks for, it folds itself, as every open card.
+        fold.cardPlaced(at: Self.networkTool, by: TutorialCardPlacement(
+            target: Self.networkTool, controls: Self.hud, required: [Self.networkTool], map: nil
+        ), mayFold: true)
+        XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: false, isFirstStep: true))
+        fold = TutorialCardFold()
         XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: false))
         XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: true))
         // A chapter the player folded in stays folded.

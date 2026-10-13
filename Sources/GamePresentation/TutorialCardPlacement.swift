@@ -297,10 +297,11 @@ public struct TutorialCardPlacement: Equatable, Sendable {
 /// each step's card and tells it where the open card went and what is on
 /// screen.
 ///
-/// The card starts folded (decision 188, later fix: the author, on a phone
-/// on its side, found the open card over the step's controls): the folded
-/// card shows the step and its title, which is the instruction, and the
-/// player opens it to read the rest (``showsFolded(stepChoice:chapterChoice:waitsForNext:isDone:)``).
+/// The card starts folded from the second step (decision 188, later fix:
+/// the author, on a phone on its side, found the open card over the step's
+/// controls): the folded card shows the step and its title, which is the
+/// instruction, and the player opens it to read the rest. The first step's
+/// card is open, with Skip (``showsFolded(stepChoice:chapterChoice:waitsForNext:isDone:isFirstStep:)``).
 ///
 /// The card folds when it is placed over what the step asks for, and when
 /// what the step asks for comes under the card where it would stand: the
@@ -326,13 +327,17 @@ public struct TutorialCardFold: Equatable, Sendable {
     /// - a step that waits for Next (one to read, or one reached by Back):
     ///   open, so Next shows and the step can be read again; one not done
     ///   folds by itself over what it asks for;
-    /// - opened by the player earlier in the step's chapter (`chapterChoice`
-    ///   false): open, unless it folded itself over what the step asks for;
+    /// - the first step (`isFirstStep`), where a player who does not want
+    ///   the tutorial finds Skip, and one opened by the player earlier in
+    ///   the step's chapter (`chapterChoice` false): open, unless it folded
+    ///   itself over what the step asks for;
     /// - otherwise folded.
-    public func showsFolded(stepChoice: Bool?, chapterChoice: Bool?, waitsForNext: Bool, isDone: Bool) -> Bool {
+    public func showsFolded(
+        stepChoice: Bool?, chapterChoice: Bool?, waitsForNext: Bool, isDone: Bool, isFirstStep: Bool = false
+    ) -> Bool {
         if let stepChoice { return stepChoice }
         if waitsForNext { return isDone ? false : isFolded }
-        if chapterChoice == false { return isFolded }
+        if isFirstStep || chapterChoice == false { return isFolded }
         return true
     }
 
