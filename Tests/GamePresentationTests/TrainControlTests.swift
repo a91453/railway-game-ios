@@ -147,6 +147,45 @@ final class TrainControlTests: XCTestCase {
         }
     }
 
+    /// TestFlight 56.1: the select tool's inspector follows the train a tap
+    /// on the map picked, and stops, without changing the selection or the
+    /// world.
+    func testTheSelectToolFollowsTheTappedTrain() async throws {
+        let world = try makeTwoPlacedWorld()
+        let second = try XCTUnwrap(world.train(id: Self.second)?.position.flatMap { world.location(of: $0)?.position })
+        await MainActor.run {
+            let session = GameSession(world: world)
+            XCTAssertEqual(session.tool, .select)
+            session.tapMap(at: PlanPoint(x: second.x, y: second.y), reach: 64)
+            XCTAssertEqual(session.tappedTrainID, Self.second)
+
+            session.toggleFollowTrain(Self.second)
+            XCTAssertTrue(session.isFollowing(Self.second))
+            XCTAssertEqual(session.tappedTrainID, Self.second, "following keeps the inspected train")
+
+            session.toggleFollowTrain(Self.second)
+            XCTAssertFalse(session.isFollowingTrain)
+
+            // Following another train switches to the inspected one.
+            session.followTrain(Self.first)
+            session.toggleFollowTrain(Self.second)
+            XCTAssertEqual(session.followedTrainID, Self.second)
+            XCTAssertEqual(session.world, world, "following never changes the world")
+        }
+    }
+
+    func testTheSelectToolCannotFollowAnUnplacedTrain() async throws {
+        var world = try makeLineWorld()
+        try world.purchaseTrain(named: "Unplaced Train")
+        await MainActor.run { [world] in
+            let session = GameSession(world: world)
+            session.toggleFollowTrain(Self.first)
+            XCTAssertNil(session.followedTrainID)
+            session.toggleFollowTrain(TrainID(rawValue: 99))
+            XCTAssertNil(session.followedTrainID)
+        }
+    }
+
     /// Follow ends as the reference ends it: a drag, pinch or zoom
     /// (`dragstart`, `zoomstart`, `rotatestart`), closing the train's panel
     /// (`closePanelTrain`), the unfollow button.
