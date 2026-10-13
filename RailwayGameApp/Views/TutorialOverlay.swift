@@ -87,7 +87,8 @@ private let tutorialOverlaySpace = "tutorial.overlay"
 /// Only the card receives touches: outlining a tool or the map must leave
 /// it usable, because Next waits for the player to perform the step. Kept
 /// across steps, it moves a done step on by itself (decision 188) and
-/// keeps the player's choice to fold the card for the rest of its chapter.
+/// keeps the player's choice to open or fold the card for the rest of its
+/// chapter.
 private struct TutorialOverlay: View {
     let session: GameSession
     let tutorial: Tutorial
@@ -180,14 +181,15 @@ private struct TutorialOverlay: View {
     }
 }
 
-/// The step's card, or the card folded to its title: by the player, with
-/// its ⌄ button, or by itself while, open, it would cover what the step
-/// asks for (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on
-/// a phone on its side with a panel open. The player's choice holds for
-/// the rest of the chapter (``TutorialOverlay``), but on a step to read or
-/// one reached by Back, which wait for Next: there only a choice made on
-/// the step counts, and a done one opens, so Next shows. New for each step
-/// (`.id`).
+/// The step's card, or the card folded to its title: folded until the
+/// player opens it (decision 188, later fix), by the player with its ⌄
+/// button, or by itself while, open, it would cover what the step asks for
+/// (``TutorialCardPlacement/leavesStepFree(_:)``), as it could on a phone
+/// on its side with a panel open (``TutorialCardFold``). The player's
+/// choice holds for the rest of the chapter (``TutorialOverlay``), but on a
+/// step to read or one reached by Back, which wait for Next: there only a
+/// choice made on the step counts, and a done one opens, so Next shows. New
+/// for each step (`.id`).
 private struct TutorialCardSlot: View {
     let session: GameSession
     let tutorial: Tutorial
@@ -212,20 +214,15 @@ private struct TutorialCardSlot: View {
         tutorial.step.goal == .read || tutorial.reachedByBack
     }
 
-    /// The player's choice that holds on this step, if any.
-    private var choice: Bool? {
-        waitsForNext ? folded : (folded ?? chapterFold)
-    }
-
     private var isFolded: Bool {
-        if session.isTutorialStepDone, waitsForNext { return folded == true }
-        return choice ?? fold.isFolded
+        fold.showsFolded(
+            stepChoice: folded, chapterChoice: chapterFold, waitsForNext: waitsForNext, isDone: session.isTutorialStepDone
+        )
     }
 
-    /// Whether the card may fold by itself: the player has not chosen,
-    /// and the step is not done.
+    /// Whether the open card may fold by itself.
     private var mayFold: Bool {
-        choice == nil && !session.isTutorialStepDone
+        TutorialCardFold.mayFold(stepChoice: folded, isDone: session.isTutorialStepDone)
     }
 
     /// Changes ``fold`` only when `change` changes it.

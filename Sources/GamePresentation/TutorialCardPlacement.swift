@@ -291,10 +291,16 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     }
 }
 
-/// Whether the tutorial's card has folded itself (decision 188): open, it
-/// covered what the step asks for (``TutorialCardPlacement/leavesStepFree(_:)``).
-/// The app keeps one for each step's card and tells it where the open card
-/// went and what is on screen.
+/// Whether the tutorial's card shows folded to its title (decision 188),
+/// and whether it has folded itself: open, it covered what the step asks for
+/// (``TutorialCardPlacement/leavesStepFree(_:)``). The app keeps one for
+/// each step's card and tells it where the open card went and what is on
+/// screen.
+///
+/// The card starts folded (decision 188, later fix: the author, on a phone
+/// on its side, found the open card over the step's controls): the folded
+/// card shows the step and its title, which is the instruction, and the
+/// player opens it to read the rest (``showsFolded(stepChoice:chapterChoice:waitsForNext:isDone:)``).
 ///
 /// The card folds when it is placed over what the step asks for, and when
 /// what the step asks for comes under the card where it would stand: the
@@ -314,6 +320,28 @@ public struct TutorialCardFold: Equatable, Sendable {
     private var openFrame: TutorialCardPlacement.Frame?
 
     public init() {}
+
+    /// Whether the card shows folded:
+    /// - the player's choice on the step (`stepChoice`), first;
+    /// - a step that waits for Next (one to read, or one reached by Back):
+    ///   open, so Next shows and the step can be read again; one not done
+    ///   folds by itself over what it asks for;
+    /// - opened by the player earlier in the step's chapter (`chapterChoice`
+    ///   false): open, unless it folded itself over what the step asks for;
+    /// - otherwise folded.
+    public func showsFolded(stepChoice: Bool?, chapterChoice: Bool?, waitsForNext: Bool, isDone: Bool) -> Bool {
+        if let stepChoice { return stepChoice }
+        if waitsForNext { return isDone ? false : isFolded }
+        if chapterChoice == false { return isFolded }
+        return true
+    }
+
+    /// Whether the open card may fold by itself: the player made no choice
+    /// on the step (one carried from the chapter gives way to the step), and
+    /// the step is not done.
+    public static func mayFold(stepChoice: Bool?, isDone: Bool) -> Bool {
+        stepChoice == nil && !isDone
+    }
 
     /// The open card was placed at `frame`: it folds when it covers what
     /// `placement` asks for and `mayFold` (the player has not chosen, and

@@ -33,6 +33,7 @@ final class TutorialUITests: XCTestCase {
         let start = app.buttons["start.tutorial"]
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         start.tap()
+        openCard(app)
         let next = app.buttons["tutorial.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
@@ -119,6 +120,8 @@ final class TutorialUITests: XCTestCase {
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
+        // A new chapter: the card is folded again.
+        openCard(app)
         waitForEnabled(app, false, "The platform step waits for the mode")
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         app.buttons["tutorial.skip"].tap()
@@ -288,6 +291,19 @@ final class TutorialUITests: XCTestCase {
         XCTFail("Timed out waiting for the step “\(title)”; showing “\(shown)”. \(message)", file: file, line: line)
     }
 
+    /// Opens the tutorial's card, which starts folded (decision 188, later
+    /// fix), as the player does to read the step and reach Back, Next and
+    /// Skip.
+    private func openCard(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
+        if !card.exists {
+            folded.tap()
+            XCTAssertTrue(card.waitForExistence(timeout: 10), "The folded card did not open", file: file, line: line)
+        }
+    }
+
     /// Waits up to 15 seconds for the tutorial's card, open or folded.
     private func waitForCard(_ card: XCUIElement, or folded: XCUIElement) -> Bool {
         let deadline = Date().addingTimeInterval(15)
@@ -316,6 +332,7 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 10))
         XCTAssertTrue(start.label.contains(tutorialLabel))
         start.tap()
+        openCard(app)
 
         let next = app.buttons["tutorial.next"]
         let back = app.buttons["tutorial.back"]
@@ -388,6 +405,7 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
+        openCard(app)
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertFalse(back.exists)
         waitForEnabled(app, false)

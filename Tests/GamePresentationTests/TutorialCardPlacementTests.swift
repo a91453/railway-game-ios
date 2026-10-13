@@ -271,6 +271,51 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertFalse(fold.isFolded)
     }
 
+    /// Decision 188, later fix (the author, on a phone on its side, found
+    /// the open card over the step's controls): the card starts folded to
+    /// the step and its title, and an action step, done, stays folded until
+    /// it moves on; the player opens it to read the rest.
+    func testTheCardStartsFolded() {
+        let fold = TutorialCardFold()
+        XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: false))
+        XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: false, isDone: true))
+        // A chapter the player folded in stays folded.
+        XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: true, waitsForNext: false, isDone: false))
+        // Opened on the step, it is open.
+        XCTAssertFalse(fold.showsFolded(stepChoice: false, chapterChoice: nil, waitsForNext: false, isDone: false))
+    }
+
+    /// The steps to read (the ridership and the end) wait for Next, which is
+    /// on the open card: they open by themselves, so the tutorial can be
+    /// walked to its end without opening the card; and so does a step
+    /// reached by Back. Folded on the step, they stay folded.
+    func testAStepToReadOpensSoNextShows() {
+        let fold = TutorialCardFold()
+        let toRead = Tutorial.standardSteps.filter { $0.goal == .read }.map(\.id)
+        XCTAssertEqual(toRead, ["station.ridership", "end"])
+        // A step to read is always done.
+        XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: true, isDone: true))
+        XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: true, waitsForNext: true, isDone: true))
+        // Reached by Back and undone again, it stays open to be read.
+        XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: nil, waitsForNext: true, isDone: false))
+        XCTAssertTrue(fold.showsFolded(stepChoice: true, chapterChoice: nil, waitsForNext: true, isDone: true))
+    }
+
+    /// Opened earlier in its chapter, the card stays open on the chapter's
+    /// next steps, but folds itself where it would cover what one asks for;
+    /// opened on the step itself, it stays open.
+    func testACardOpenedInTheChapterFoldsItselfOverTheStep() {
+        var fold = TutorialCardFold()
+        XCTAssertFalse(fold.showsFolded(stepChoice: nil, chapterChoice: false, waitsForNext: false, isDone: false))
+        let placement = Self.lineStationsStep(stationsKnown: true)
+        let covering = Frame(x: Self.lineStations[0].minX, y: Self.lineStations[0].minY, width: 200, height: 100)
+        fold.cardPlaced(at: covering, by: placement, mayFold: TutorialCardFold.mayFold(stepChoice: nil, isDone: false))
+        XCTAssertTrue(fold.showsFolded(stepChoice: nil, chapterChoice: false, waitsForNext: false, isDone: false))
+        XCTAssertFalse(TutorialCardFold.mayFold(stepChoice: false, isDone: false), "the player's choice on the step holds")
+        XCTAssertFalse(TutorialCardFold.mayFold(stepChoice: nil, isDone: true), "a done step does not fold")
+        XCTAssertFalse(fold.showsFolded(stepChoice: false, chapterChoice: false, waitsForNext: false, isDone: false))
+    }
+
     /// The steps before it, with the details card open: nothing the step
     /// asks for is covered and the card stays open (it is not folded), as
     /// the UI tests check on the Simulator.
