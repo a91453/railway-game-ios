@@ -379,7 +379,7 @@ struct ProblemReportRows: View {
 extension ProblemReport {
     /// The note for this app, system and device, and the game it is
     /// written from.
-    static func current(game: String?) -> ProblemReport {
+    @MainActor static func current(game: String?) -> ProblemReport {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
