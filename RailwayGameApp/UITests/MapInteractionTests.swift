@@ -367,6 +367,72 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, "Zoom out did not leave room to zoom in")
     }
 
+    /// TestFlight 59.1: building on a phone on its side opens and folds the
+    /// details card again and again (the tool, a start tapped, Clear, done);
+    /// each change zoomed the map out to the whole selected line. Building
+    /// leaves the camera where the player zoomed it.
+    func testBuildingKeepsTheCameraZoom() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        newGame.tap()
+        let zoomIn = app.buttons["Zoom in"]
+        XCTAssertTrue(zoomIn.appears(within: 10))
+        // A slow Simulator can lose the tap (main 81f3d4f's full lane):
+        // tap once more if the camera has not reached its closest zoom.
+        func closest() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
+                             timeout: 10) == .completed
+        }
+        zoomIn.tap()
+        if !closest() { zoomIn.tap() }
+        XCTAssertTrue(closest(), "Zoom in must reach the camera's closest zoom")
+        let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(zoom.appears(within: 5))
+        let zoomed = zoom.value as? String
+        XCTAssertNotNil(zoomed)
+        // The card moves in and out with a transition: read the zoom once
+        // it has had time to move the camera, as the bug did at once.
+        func keepsZoom(_ step: String) {
+            let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", zoomed ?? ""), object: zoom)
+            XCTAssertNotEqual(XCTWaiter().wait(for: [moved], timeout: 2), .completed,
+                              "\(step) must keep the camera's zoom; was \(zoomed ?? "nil"), now \(String(describing: zoom.value))")
+        }
+
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.appears(within: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10))
+        network.waitUntilSettled()
+        keepsZoom("Opening the network tool")
+
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let hud = app.otherElements["map.constructionHUD"]
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
+        keepsZoom("Tapping a track start")
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        XCTAssertTrue(hud.appears(within: 5), "Two taps must preview a stretch")
+        keepsZoom("Previewing a stretch")
+
+        let cancel = app.buttons["map.build.cancel"]
+        XCTAssertTrue(cancel.appears(within: 5))
+        cancel.tap()
+        XCTAssertTrue(hud.disappears(within: 5))
+        keepsZoom("Clearing the stretch")
+
+        buildEntry.waitUntilSettled()
+        buildEntry.tap()
+        XCTAssertTrue(network.disappears(within: 5), "Build pressed again must close the tools")
+        keepsZoom("Closing the tools")
+    }
+
     func testMapLayersSheetTogglesAndDismisses() {
         continueAfterFailure = false
         let app = XCUIApplication()
