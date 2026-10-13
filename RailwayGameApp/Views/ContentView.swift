@@ -174,7 +174,9 @@ struct ContentView: View {
             // Shown beside the map instead (``sidePanel(_:)``).
             EmptyView()
         case .timetable:
+            // Its line button opens the lines panel through the screen.
             TimetableEditor(session: session)
+                .environment(screen)
                 .presentationDetents([.medium, .large])
         case .fleet:
             FleetOverviewSheet(session: session)
