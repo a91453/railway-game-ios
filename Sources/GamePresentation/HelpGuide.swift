@@ -9,6 +9,8 @@
 // Taiwan's wording; the rest are this project's own. Presentation only:
 // nothing here is stored.
 
+import GameCore
+
 /// One question and its answer, in both languages.
 public struct HelpEntry: Hashable, Sendable, Identifiable {
     public enum Topic: String, CaseIterable, Sendable {
@@ -145,11 +147,20 @@ public enum HelpGuide {
             keywords: "grow town building 成長 發展 長高 人口"
         ),
         HelpEntry(
+            "mapColours", .city,
+            question: ("What do the colours on the map mean?", "地圖上的顏色是什麼？"),
+            answer: (
+                "The blocks are the town's own buildings, coloured by what they are for: green homes, blue shops, orange offices, purple industry and warehouses, salmon-red public buildings (schools, offices of the state), teal sights and leisure. Flat beige ground is farmland and flat pale green a park. The taller a block stands, the more people live or work there. Map Layers shows the same uses as a layer.",
+                "地圖上的方塊是城鎮自己的建物，依用途上色：綠色是住宅、藍色是商業、橘色是辦公、紫色是工業物流、鮭紅色是公共設施（學校、機關）、青綠色是觀光休閒。平的米色是農地，平的淡綠色是公園。方塊越高，住或工作的人越多。「地圖圖層」也能用圖層看同樣的用途。"
+            ),
+            keywords: "colour color legend block building land use green blue 顏色 圖例 方塊 建物 用途 住宅 商業 辦公 工業"
+        ),
+        HelpEntry(
             "materials", .city,
             question: ("What are building materials?", "建材是什麼？"),
             answer: (
-                "Towns need building materials to grow, as in the real world. Build a freight yard to send materials, run a freight line to the station near the town, and the town grows at full speed. A town short of materials grows slowly, and the station master says which one. A new game can turn this rule off in its options.",
-                "城市和現實一樣需要建材才能成長。蓋一座貨運場出建材，開一條貨運路線運到城鎮附近的貨運場，城市才能全速成長。缺建材的城市成長很慢，站長會告訴你是哪一座。新遊戲的選項可以關掉這個規則。"
+                "Towns need building materials to grow, as in the real world. Build a freight yard to send materials (in the station panel's Freight section: tap a station, then its tag), give the station near the town a yard too, and the town grows at full speed. A freight line is an ordinary line switched to Freight line in Lines; it needs no special trains: any train carries \(Freight.tonsPerCar) t a car. A town short of materials grows slowly, and the station master says which one; tap its bubble on the map to open that station. A new game can turn this rule off in its options.",
+                "城市和現實一樣需要建材才能成長。蓋一座貨運場出建材（在車站面板的「貨運」：點車站，再點它的標籤），城鎮附近的車站也蓋一座，城市才能全速成長。貨運路線就是在「路線」裡把一條路線打開「貨運路線」，不需要特別的貨車：任何列車每節載 \(Freight.tonsPerCar) 噸。缺建材的城市成長很慢，站長會告訴你是哪一座；點地圖上「缺建材」的泡泡就會打開那座車站。新遊戲的選項可以關掉這個規則。"
             ),
             keywords: "freight yard material cargo 貨運 貨運場 材料"
         ),
@@ -179,6 +190,24 @@ public enum HelpGuide {
                 "打開「經濟明細」，在「票價」區選固定票價或依距離計費。乘客覺得標準票價合理；調高會讓搭車的人變少，調低則搭的人變多但每人付得少。小幅調整，再看當天的收入。"
             ),
             keywords: "fare price ticket 票價 漲價 降價 收費"
+        ),
+        HelpEntry(
+            "oneTrain", .running,
+            question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
+            answer: (
+                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off at the top of Lines lets trains run regardless.",
+                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。在「路線」最上方關掉「交通控制」，列車也能照開。"
+            ),
+            keywords: "single track passing loop double one train capacity signal 單線 會車 待避 雙線 一列 列車數 上限"
+        ),
+        HelpEntry(
+            "unassignedTrain", .running,
+            question: ("What do No line and No path ahead mean?", "「未配屬路線」和「前方沒有路徑」是什麼？"),
+            answer: (
+                "No line: the train belongs to no line, so it carries no one and has nowhere to go; No path ahead is what such a train, or one whose track was cut, shows. Put it on a line: select the train, open Lines, pick the line and assign the train to it (or give the line a new train there). If a train on a line shows No path ahead, check that the line's track still joins all its stops.",
+                "「未配屬路線」是列車不屬於任何路線，不載客也沒有地方去；這種列車，或軌道被切斷的列車，會顯示「前方沒有路徑」。把它配到路線：選取列車，打開「路線」，選一條路線，把這列車指派給它（或在那裡幫路線配一列新車）。有路線的列車還顯示「前方沒有路徑」，就檢查路線的軌道是否仍連接所有停靠站。"
+            ),
+            keywords: "assign unassigned no line no path stuck idle 配屬 指派 未配屬 沒有路徑 停住 不動"
         ),
         HelpEntry(
             "trafficControl", .running,

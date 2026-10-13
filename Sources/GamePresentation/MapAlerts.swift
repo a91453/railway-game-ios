@@ -200,8 +200,9 @@ extension GameSession {
 
     /// Goes to what `alert` is about: selects its station, or for a line
     /// without trains, the line, so the line panel shows how to staff it
-    /// (decision 101). Returns whether the line panel should open. Never
-    /// changes the world.
+    /// (decision 101). Returns whether the line panel should open (the map
+    /// opens the station panel for a town short of materials, whose Freight
+    /// section builds the yard). Never changes the world.
     @discardableResult
     public func respond(to alert: MapAlert) -> Bool {
         switch alert.kind {
