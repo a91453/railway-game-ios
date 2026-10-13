@@ -553,48 +553,62 @@ extension GameSession {
     /// with no traversals. All or nothing; GameCore decides whether the
     /// track behind the platform takes the rest of the train.
     func place(_ train: Train, atPlatformOf station: Station) {
-        let platforms = world.trackPlatforms(of: station.id)
-        // Those as long as the train in track order, then the rest, longest
-        // first.
-        let ordered = platforms.filter { $0.length >= train.length }
-            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
-        guard !ordered.isEmpty else { return }
-        let heading = placementHeading
-        perform { world throws(GameError) in
-            var refusal: GameError?
-            for platform in ordered {
-                guard let edge = world.network.edge(platform.edge),
-                      let geometry = world.trackGeometry(of: platform.edge) else { continue }
-                let way = geometry.location(at: (platform.start + platform.end) / 2).direction
-                let forward: Bool
-                switch heading {
-                case .north: forward = way.dy <= 0
-                case .east: forward = way.dx >= 0
-                case .south: forward = way.dy >= 0
-                case .west: forward = way.dx <= 0
-                }
-                let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
-                // The offset is measured the way the train faces.
-                let offset = forward ? platform.end : edge.length - platform.start
-                var draft = world
-                do throws(GameError) {
-                    try draft.placeTrain(train.id, at: .onEdge(traversal, offset: offset))
-                    if offset < edge.length {
-                        try draft.setTrainContinuation(train.id, along: [], stoppingAt: offset)
-                    }
-                    try draft.useTrainPerformanceForMovement(train.id)
-                } catch {
-                    refusal = refusal ?? error
-                    continue
-                }
-                world = draft
-                return language.text(
-                    "Placed \(train.name) at \(station.name), on \(platform.edge.displayText(in: language).lowercased()) going \(forward ? "forward" : "backward").",
-                    "已將 \(train.name) 放在 \(station.name)，位於\(platform.edge.displayText(in: language))\(forward ? "正向" : "反向")。"
-                )
-            }
-            throw refusal ?? .unknownStation(station.id)
+        guard !Self.platforms(for: train, at: station.id, in: world).isEmpty else { return }
+        perform(.placeTrain(train.id, at: station.id, heading: placementHeading)) { outcome, _, _ in
+            guard let placed = outcome.placed else { return "" }
+            return language.text(
+                "Placed \(train.name) at \(station.name), on \(placed.edge.displayText(in: language).lowercased()) going \(placed.forward ? "forward" : "backward").",
+                "已將 \(train.name) 放在 \(station.name)，位於\(placed.edge.displayText(in: language))\(placed.forward ? "正向" : "反向")。"
+            )
         }
+    }
+
+    /// The platforms of `station` in the order a train is tried on them:
+    /// those as long as it in track order, then the rest, longest first.
+    static func platforms(for train: Train, at station: StationID, in world: GameWorld) -> [TrackPlatform] {
+        let platforms = world.trackPlatforms(of: station)
+        return platforms.filter { $0.length >= train.length }
+            + platforms.filter { $0.length < train.length }.sorted { $0.length > $1.length }
+    }
+
+    /// Places train `id` on the first of ``platforms(for:at:in:)`` GameCore
+    /// takes it on, facing the way nearer `heading` (decision 193: the
+    /// command ``PlayerCommand/Edit/placeTrain(_:at:heading:)``). Returns
+    /// the edge and whether it faces along it; throws the first refusal.
+    static func place(
+        _ id: TrainID, atPlatformOf station: StationID, heading: CompassHeading, in world: inout GameWorld
+    ) throws(GameError) -> (edge: TrackEdgeID, forward: Bool) {
+        guard let train = world.train(id: id) else { throw .unknownTrain(id) }
+        var refusal: GameError?
+        for platform in platforms(for: train, at: station, in: world) {
+            guard let edge = world.network.edge(platform.edge),
+                  let geometry = world.trackGeometry(of: platform.edge) else { continue }
+            let way = geometry.location(at: (platform.start + platform.end) / 2).direction
+            let forward: Bool
+            switch heading {
+            case .north: forward = way.dy <= 0
+            case .east: forward = way.dx >= 0
+            case .south: forward = way.dy >= 0
+            case .west: forward = way.dx <= 0
+            }
+            let traversal = TrackTraversal(edge: platform.edge, direction: forward ? .forward : .backward)
+            // The offset is measured the way the train faces.
+            let offset = forward ? platform.end : edge.length - platform.start
+            var draft = world
+            do throws(GameError) {
+                try draft.placeTrain(id, at: .onEdge(traversal, offset: offset))
+                if offset < edge.length {
+                    try draft.setTrainContinuation(id, along: [], stoppingAt: offset)
+                }
+                try draft.useTrainPerformanceForMovement(id)
+            } catch {
+                refusal = refusal ?? error
+                continue
+            }
+            world = draft
+            return (platform.edge, forward)
+        }
+        throw refusal ?? .unknownStation(station)
     }
 
     // MARK: - Removing

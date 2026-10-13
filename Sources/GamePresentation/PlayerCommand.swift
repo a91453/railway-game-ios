@@ -7,9 +7,9 @@ import GameCore
 /// runs it through ``GameSession/apply(_:to:)``, the same edit the tool
 /// made before as a closure, and records it.
 ///
-/// Only the network tool's commands have a value so far; every other edit
-/// still runs as a closure and is logged as not recorded
-/// (``CommandLog/Action/unrecorded(_:)``).
+/// The network tool's commands have cases of their own; the panels' and
+/// the other tools' are ``Edit``s. An edit still made as a closure is
+/// logged as not recorded (``CommandLog/Action/unrecorded(_:)``).
 ///
 /// The reference's desync log does the same (`docs/debugging_desyncs.md`,
 /// `docs/desync.md` §3.1): every command goes through one entry
@@ -26,6 +26,8 @@ public enum PlayerCommand: Hashable, Sendable {
     /// An edge and each of its end nodes no other edge ends at
     /// (``GameSession/removeNetworkEdge()``).
     case removeTrack(TrackEdgeID)
+    /// An edit from a panel or another tool (``Edit``).
+    case edit(Edit)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -110,6 +112,26 @@ public enum PlayerCommand: Hashable, Sendable {
         public var track: (edge: TrackEdgeID, to: TrackNodeID)?
         /// The station the platform went to.
         public var station: Station?
+        /// The train bought.
+        public var train: Train?
+        /// The line made.
+        public var line: ServiceLine?
+        /// The building put up, and the sale of one.
+        public var building: PlacedBuilding?
+        public var sale: PlacedBuildingSaleQuote?
+        /// A count the edit made: the new pattern's index, the cells zoned,
+        /// the city buildings cleared, the trains a service now runs.
+        public var number = 0
+        /// Whether the line now plans at high speed (decision 168).
+        public var highSpeed = false
+        /// The edge a train was placed on, and whether it faces along it.
+        public var placed: (edge: TrackEdgeID, forward: Bool)?
+        /// The trains bought for a line left off the track: the berth held,
+        /// or too long to stand there.
+        public var held = 0
+        public var unfit = 0
+        /// The trains left as they were, and why.
+        public var left: [String] = []
     }
 
     /// The name the log gives it.
@@ -119,6 +141,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .addPlatform: "addPlatform"
         case .removePlatform: "removePlatform"
         case .removeTrack: "removeTrack"
+        case .edit(let edit): edit.name
         }
     }
 }
@@ -154,6 +177,8 @@ extension GameSession {
             outcome.station = station
         case .removePlatform(let platform):
             try world.removeTrackPlatform(platform.station, on: platform.edge, from: platform.start)
+        case .edit(let edit):
+            return try apply(edit, to: &world)
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -208,6 +233,7 @@ extension PlayerCommand: Codable {
         var demand: Demand?
         var startDistance: Int64?
         var endDistance: Int64?
+        var edit: Edit?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -274,6 +300,9 @@ extension PlayerCommand: Codable {
                 throw invalid("a platform needs its station, edge, start and end")
             }
             self = .removePlatform(TrackPlatform(station: StationID(rawValue: station), edge: .edge(edge), start: start, end: end))
+        case "edit":
+            guard let edit = record.edit else { throw invalid("an edit needs its value") }
+            self = .edit(edit)
         case "removeTrack":
             guard let edge = record.edge else { throw invalid("needs its edge") }
             self = .removeTrack(.edge(edge))
@@ -284,6 +313,7 @@ extension PlayerCommand: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var record = Record(kind: name)
+        if case .edit = self { record.kind = "edit" }
         func anchor(_ anchor: NetworkAnchor) -> Record.Anchor {
             switch anchor {
             case .node(.node(let node)): Record.Anchor(kind: "node", node: node)
@@ -320,6 +350,8 @@ extension PlayerCommand: Codable {
             record.endDistance = platform.end
         case .removeTrack(let edge):
             record.edge = edge.number
+        case .edit(let edit):
+            record.edit = edit
         }
         try record.encode(to: encoder)
     }

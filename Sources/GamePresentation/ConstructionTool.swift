@@ -47,7 +47,7 @@ public enum ConstructionTool: CaseIterable, Hashable, Sendable {
 /// The way a train faces when it is placed (see
 /// ``GameSession/placementHeading``): a compass point on the map. A platform
 /// runs at any angle, so the train faces the way along it nearer this one.
-public enum CompassHeading: CaseIterable, Hashable, Sendable {
+public enum CompassHeading: CaseIterable, Hashable, Sendable, Codable {
     case north
     case east
     case south

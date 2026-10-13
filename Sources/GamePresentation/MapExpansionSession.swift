@@ -207,16 +207,15 @@ extension GameSession {
             return false
         }
         let towns = world.mapExpansion?.townSeed != nil
-        let bought = perform { world throws(GameError) in
-            let price = world.mapExpansion?.nextPrice ?? .zero
-            try world.buyMapTile(tile)
+        let bought = perform(.buyMapTile(tile)) { _, before, _ in
+            let price = before.mapExpansion?.nextPrice ?? .zero
             return towns
                 ? language.text("Bought the tile for \(price.moneyText). Its towns wait for your railway.", "以 \(price.moneyText) 買下這一塊，那裡的城鎮正等著你的鐵路。")
                 : language.text("Bought the tile for \(price.moneyText).", "以 \(price.moneyText) 買下這一塊。")
         }
-        if bought {
+        if bought != nil {
             chosenMapTile = nil
         }
-        return bought
+        return bought != nil
     }
 }

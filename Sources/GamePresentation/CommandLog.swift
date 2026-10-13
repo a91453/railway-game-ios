@@ -138,7 +138,14 @@ extension CommandLog.Entry: Codable {
         refused = try container.decodeIfPresent(Bool.self, forKey: .refused) ?? false
         let kind = try container.decode(String.self, forKey: .action)
         switch kind {
-        case "command": action = .command(try container.decode(PlayerCommand.self, forKey: .command))
+        case "command":
+            // GameCore's own coding refuses values a world cannot hold, as a
+            // refused command's may be: the replay stops there instead.
+            if let command = try? container.decode(PlayerCommand.self, forKey: .command) {
+                action = .command(command)
+            } else {
+                action = .unrecorded("a command this build cannot read")
+            }
         case "advance": action = .advance(ticks: try container.decode(Int.self, forKey: .ticks))
         case "setSpeed": action = .setSpeed(try container.decode(GameSpeed.self, forKey: .speed))
         case "pause": action = .pause
