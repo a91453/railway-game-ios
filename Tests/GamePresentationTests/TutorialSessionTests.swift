@@ -471,7 +471,8 @@ final class TutorialSessionTests: XCTestCase {
     /// step, keeping the autosave as starting a new game does; the
     /// tutorial's game keeps no holidays (decision 154), no building
     /// materials (decision 157), no slowing of the doors in a crowd
-    /// (decision 169) and no flexible dispatch (decision 172).
+    /// (decision 169), no flexible dispatch (decision 172) and no keeping
+    /// left (decision 202).
     func testTheStartScreenStartsANewGameWithTheTutorial() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TutorialSessionTests-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -481,13 +482,15 @@ final class TutorialSessionTests: XCTestCase {
             let session = try XCTUnwrap(launcher.session)
             // A new game, without its holidays (decision 154), its
             // building materials (decision 157), its crowded doors
-            // (decision 169) or its flexible dispatch (decision 172).
+            // (decision 169), its flexible dispatch (decision 172) or its
+            // keeping left (decision 202).
             var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
             expected.setDisruptions(nil)
             expected.setBuildingMaterials(false)
             expected.setDoorCrowding(false)
             expected.setRollingStockEconomics(false)
             expected.setFlexDispatch(false)
+            expected.setKeepLeft(false)
             expected.setTourism(nil)
             expected.setCityRequests(seed: nil)
             XCTAssertEqual(session.world, expected)
