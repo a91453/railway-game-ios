@@ -243,6 +243,7 @@ struct MapView: View {
                         layers: mapLayers,
                         waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
                         lines: lineMap,
+                        routePreview: session.routePreview,
                         labels: stationLabels,
                         flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
                         flowVersion: flowStrokesVersion,
@@ -622,6 +623,14 @@ struct MapView: View {
             }
             .onChange(of: insets.trailing) { _, _ in
                 keepSelectionClear(projection: projection, clear: clear, line: session.selectedStation == nil)
+            }
+            .onChange(of: session.routePreview?.request) { _, _ in
+                // Decision 201: a leg shown from the line panel is brought
+                // into view when its middle is out of view.
+                if !session.isFollowingTrain, let preview = session.routePreview, let focus = preview.focus,
+                   !projection.visibleRegion.contains(focus) {
+                    camera = projection.centered(on: focus)
+                }
             }
             .onChange(of: session.cameraRequest) { _, request in
                 // Decision 177: the station master's tap on advice that
@@ -1179,6 +1188,9 @@ private struct LineMapKey: Equatable {
         let id: LineID
         let stops: [StationID]
         let routes: [LineRoutePreference]
+        /// Decision 201: the patterns' calls and routes are drawn too.
+        let patterns: [[Int]]
+        let patternRoutes: [[LineRoutePreference]]
         let isRing: Bool
         let color: LineColor?
         /// Decision 168: a high-speed line is drawn differently.
@@ -1194,7 +1206,10 @@ private struct LineMapKey: Equatable {
     init(world: GameWorld) {
         network = world.network
         lines = world.lines.map {
-            Line(id: $0.id, stops: $0.stops, routes: $0.routePreferences, isRing: $0.isRing, color: $0.color, isHighSpeed: $0.isHighSpeed)
+            Line(
+                id: $0.id, stops: $0.stops, routes: $0.routePreferences, patterns: $0.patterns.map(\.calls),
+                patternRoutes: $0.patterns.map(\.routePreferences), isRing: $0.isRing, color: $0.color, isHighSpeed: $0.isHighSpeed
+            )
         }
         stations = world.stations.map(\.location)
         groups = world.transferGroups
@@ -1287,6 +1302,8 @@ private struct MapCanvas: View, Equatable {
     let layers: MapLayerPreferences
     let waitingCounts: [StationID: Int64]
     let lines: LineMap
+    /// Decision 201: the leg of a line the line panel shows on the map.
+    let routePreview: RoutePreview?
     let labels: StationLabels
     /// Decision 178: the passenger load layer's strokes in the shown hour,
     /// drawn in place of the lines' colours, and a number that changes with
@@ -1316,6 +1333,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.layers == rhs.layers
             && lhs.waitingCounts == rhs.waitingCounts
             && lhs.lines == rhs.lines
+            && lhs.routePreview == rhs.routePreview
             && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
             && lhs.lights == rhs.lights
@@ -1326,6 +1344,7 @@ private struct MapCanvas: View, Equatable {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
+        let routePreview = routePreview
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -1342,6 +1361,7 @@ private struct MapCanvas: View, Equatable {
                 layers: layers,
                 waitingCounts: waitingCounts,
                 lines: lines,
+                routePreview: routePreview,
                 labels: labels,
                 flowStrokes: flowStrokes,
                 latitude: latitude,

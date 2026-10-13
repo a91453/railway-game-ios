@@ -12,7 +12,7 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         XCTAssertTrue(app.buttons["Resume"].exists, "The demo must stay paused throughout this test")
 
         for name in ["Train 1", "Train 2"] {
@@ -28,16 +28,16 @@ final class MapInteractionTests: XCTestCase {
             trainTool.tap()
             let fleet = app.buttons["train.fleetOverview"]
             if !fleet.isHittable { app.swipeUp() }
-            XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+            XCTAssertTrue(fleet.appears(within: 5))
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
-            XCTAssertTrue(follow.waitForExistence(timeout: 5))
-            for _ in 0..<3 where !follow.isHittable { app.swipeUp() }
+            XCTAssertTrue(follow.appears(within: 5))
+            for _ in 0..<3 where !follow.becomesHittable(within: 1) { app.swipeUp() }
             XCTAssertTrue(follow.isHittable)
             follow.tap()
-            XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
             let speed = app.descendants(matching: .any)["train.speed"].firstMatch
-            XCTAssertTrue(speed.waitForExistence(timeout: 5))
+            XCTAssertTrue(speed.appears(within: 5))
             XCTAssertTrue(speed.label.contains("km/h"), "Train controls must show physical speed")
             XCTAssertFalse(app.steppers.containing(NSPredicate(format: "label BEGINSWITH 'Rate '")).firstMatch.exists,
                            "The obsolete per-minute rate must not remain a second speed control")
@@ -59,7 +59,7 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         XCTAssertTrue(app.buttons["Resume"].exists, "The demo must stay paused throughout this test")
 
         // Bring Train 1 under the camera: follow it from the fleet list,
@@ -70,29 +70,29 @@ final class MapInteractionTests: XCTestCase {
         trainTool.tap()
         let fleet = app.buttons["train.fleetOverview"]
         if !fleet.isHittable { app.swipeUp() }
-        XCTAssertTrue(fleet.waitForExistence(timeout: 5))
+        XCTAssertTrue(fleet.appears(within: 5))
         fleet.tap()
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
-        XCTAssertTrue(fleetFollow.waitForExistence(timeout: 5))
-        for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleetFollow.appears(within: 5))
+        for _ in 0..<3 where !fleetFollow.becomesHittable(within: 1) { app.swipeUp() }
         fleetFollow.tap()
         let unfollow = app.buttons["train.unfollow"]
-        XCTAssertTrue(unfollow.waitForExistence(timeout: 5))
+        XCTAssertTrue(unfollow.appears(within: 5))
         unfollow.tap()
-        XCTAssertTrue(unfollow.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(unfollow.disappears(within: 5))
         app.buttons["tool.select"].tap()
 
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue((map.value as? String)?.hasPrefix("Train · Train 1 ·") == true,
                       "The tap must pick Train 1; value: \(String(describing: map.value))")
         let follow = app.buttons["inspector.train.follow"]
-        XCTAssertTrue(follow.waitForExistence(timeout: 5))
-        XCTAssertTrue(follow.isHittable, "The follow button shows without scrolling the card")
+        XCTAssertTrue(follow.appears(within: 5))
+        XCTAssertTrue(follow.becomesHittable(), "The follow button shows without scrolling the card")
         follow.tap()
-        XCTAssertTrue(unfollow.waitForExistence(timeout: 5), "Following shows the follow bar")
+        XCTAssertTrue(unfollow.appears(within: 5), "Following shows the follow bar")
         XCTAssertTrue(follow.label.contains("Following"), "label: \(follow.label)")
         follow.tap()
-        XCTAssertTrue(unfollow.waitForNonExistence(timeout: 5), "A second tap stops following")
+        XCTAssertTrue(unfollow.disappears(within: 5), "A second tap stops following")
         XCTAssertTrue(app.buttons["Resume"].exists)
     }
 
@@ -105,9 +105,9 @@ final class MapInteractionTests: XCTestCase {
         app.openDemo("demo.simple")
         // A new game starts with no tool chosen: a tap selects (decision
         // 114: there is no Select button outside building).
-        XCTAssertTrue(app.buttons["dock.build"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["dock.build"].appears(within: 10))
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
 
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue((map.value as? String)?.contains("Central") == true,
@@ -123,13 +123,13 @@ final class MapInteractionTests: XCTestCase {
         app.openDemo("demo.simple")
         // A new game starts with no tool chosen: a tap selects (decision
         // 114: there is no Select button outside building).
-        XCTAssertTrue(app.buttons["dock.build"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["dock.build"].appears(within: 10))
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         let zoomOut = app.buttons["Zoom out"]
         let zoomIn = app.buttons["Zoom in"]
-        XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomOut.appears(within: 10))
+        XCTAssertTrue(zoomIn.appears(within: 10))
 
         for _ in 0..<12 {
             if !zoomOut.isEnabled { break }
@@ -153,21 +153,21 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         // Decision 114: Build opens the tools, starting with the network.
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
         let network = app.buttons["tool.network"]
-        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        XCTAssertTrue(network.appears(within: 10))
         // The tools slide in from the side: a point read mid-slide falls on
         // the map, which under the network tool chooses a track start (as
         // #326 found for the train tool).
         network.waitUntilSettled()
         network.tap()
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         let clear = app.buttons["Clear"]
         XCTAssertTrue(clear.exists)
         XCTAssertFalse(clear.isEnabled)
@@ -203,12 +203,12 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(labelled(), "The details card did not change to \(label)")
         }
         if zoomHidden { toggleControls(to: "Show Controls") }
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomIn.appears(within: 10))
         XCTAssertFalse(zoomIn.isEnabled, "A pinch past 2× must reach the camera's maximum zoom")
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
         if zoomHidden {
             toggleControls(to: "Hide Controls")
-            XCTAssertTrue(clear.waitForExistence(timeout: 10))
+            XCTAssertTrue(clear.appears(within: 10))
             XCTAssertFalse(clear.isEnabled)
         }
 
@@ -260,11 +260,11 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         let zoomIn = app.buttons["Zoom in"]
         let zoomOut = app.buttons["Zoom out"]
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomIn.appears(within: 10))
         // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
         // maximum zoom.
         zoomIn.tap()
@@ -285,23 +285,23 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
         let expansion = app.buttons["map.expansion"]
-        XCTAssertTrue(expansion.waitForExistence(timeout: 30), "A blank map can be expanded")
+        XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
 
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
         let network = app.buttons["tool.network"]
-        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        XCTAssertTrue(network.appears(within: 10))
         network.waitUntilSettled()
-        XCTAssertTrue(expansion.waitForNonExistence(timeout: 5), "No Expand the Map beside the building tools")
+        XCTAssertTrue(expansion.disappears(within: 5), "No Expand the Map beside the building tools")
         let done = app.buttons["tool.select"]
-        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(done.appears(within: 5))
         done.tap()
-        XCTAssertTrue(expansion.waitForExistence(timeout: 5), "Back once the tools are put away")
+        XCTAssertTrue(expansion.appears(within: 5), "Back once the tools are put away")
 
         expansion.tap()
         XCTAssertEqual(expansion.label, "Stop expanding the map")
@@ -309,17 +309,17 @@ final class MapInteractionTests: XCTestCase {
         // middle: a quarter of the narrower side below the middle is in
         // the tile below it, which is for sale.
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         let frame = map.frame
         let below = min(frame.width, frame.height) / 4
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5 + below / frame.height)).tap()
         let buy = app.buttons["map.expansion.buy"]
-        XCTAssertTrue(buy.waitForExistence(timeout: 5), "A pill to buy the tile chosen")
+        XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
         XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")
         XCTAssertFalse(app.buttons["map.build.confirm"].exists, "Not a build's ✓")
 
         expansion.tap()
-        XCTAssertTrue(buy.waitForNonExistence(timeout: 5), "Done leaves the expansion")
+        XCTAssertTrue(buy.disappears(within: 5), "Done leaves the expansion")
         XCTAssertEqual(expansion.label, "Expand the map")
     }
 
@@ -336,10 +336,10 @@ final class MapInteractionTests: XCTestCase {
             app.terminate()
         }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         let zoomIn = app.buttons["Zoom in"]
-        XCTAssertTrue(zoomIn.waitForExistence(timeout: 10))
+        XCTAssertTrue(zoomIn.appears(within: 10))
         zoomIn.tap()
         XCTAssertFalse(zoomIn.isEnabled)
 
@@ -368,30 +368,30 @@ final class MapInteractionTests: XCTestCase {
         app.openDemo("demo.simple")
 
         let pause = app.buttons["Pause"].firstMatch
-        XCTAssertTrue(pause.waitForExistence(timeout: 10))
+        XCTAssertTrue(pause.appears(within: 10))
         pause.tap()
-        XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
 
         let layersButton = app.buttons["map.layers"]
-        XCTAssertTrue(layersButton.waitForExistence(timeout: 10), "Map layers button must be visible on the map")
+        XCTAssertTrue(layersButton.appears(within: 10), "Map layers button must be visible on the map")
         layersButton.tap()
 
         let stationNamesToggle = app.switches["layer.stationNames"]
-        XCTAssertTrue(stationNamesToggle.waitForExistence(timeout: 5), "Station names toggle must exist in MapLayerSheet")
+        XCTAssertTrue(stationNamesToggle.appears(within: 5), "Station names toggle must exist in MapLayerSheet")
 
         let waitingCountsToggle = app.switches["layer.waitingCounts"]
-        XCTAssertTrue(waitingCountsToggle.waitForExistence(timeout: 5), "Waiting counts toggle must exist in MapLayerSheet")
+        XCTAssertTrue(waitingCountsToggle.appears(within: 5), "Waiting counts toggle must exist in MapLayerSheet")
 
         let catchmentRingsToggle = app.switches["layer.catchmentRings"]
-        XCTAssertTrue(catchmentRingsToggle.waitForExistence(timeout: 5), "Catchment rings toggle must exist in MapLayerSheet")
+        XCTAssertTrue(catchmentRingsToggle.appears(within: 5), "Catchment rings toggle must exist in MapLayerSheet")
 
         let heatmapRow = app.switches["layer.populationHeatmap"]
-        XCTAssertTrue(heatmapRow.waitForExistence(timeout: 5), "Population heatmap row must exist")
+        XCTAssertTrue(heatmapRow.appears(within: 5), "Population heatmap row must exist")
         // SwiftUI exposes a labelled wrapper and its actual UISwitch as
         // separate switches. Use the control's activation point; tapping
         // the wrapper or coordinates in its frame can leave it unchanged.
         let heatmapToggle = heatmapRow.switches.firstMatch
-        XCTAssertTrue(heatmapToggle.waitForExistence(timeout: 5), "Population heatmap control must exist")
+        XCTAssertTrue(heatmapToggle.appears(within: 5), "Population heatmap control must exist")
         XCTAssertTrue(heatmapToggle.isEnabled, "The implemented population overlay must be available")
         // The sheet may still be presenting when the switch first exists,
         // and a tap then can be lost (the value stays "0"): wait until it
@@ -406,7 +406,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertEqual(heatmapToggle.value as? String, "1", "Population heatmap must be on before dismissing")
 
         let doneButton = app.buttons["layer.done"]
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(doneButton.appears(within: 5))
         doneButton.tap()
 
         // The layers button exists under the sheet too: what shows the
@@ -415,12 +415,12 @@ final class MapInteractionTests: XCTestCase {
         // sheet was still up 5 s after Done (PR run 38064937060 on
         // 1ee3676, which touched no map or layer code). Allow it longer,
         // and tap Done again only if it is still there to tap.
-        if !doneButton.waitForNonExistence(timeout: 15), doneButton.isHittable {
+        if !doneButton.disappears(within: 15), doneButton.isHittable {
             doneButton.tap()
         }
-        XCTAssertTrue(doneButton.waitForNonExistence(timeout: 15), "Map must be restored after dismissing sheet")
+        XCTAssertTrue(doneButton.disappears(within: 15), "Map must be restored after dismissing sheet")
         let legend = app.descendants(matching: .any)["map.populationLegend"].firstMatch
-        XCTAssertTrue(legend.waitForExistence(timeout: 5))
+        XCTAssertTrue(legend.appears(within: 5))
         let value = legend.value as? String ?? ""
         // The reference's 1 km grid legend: a gradient from 0 to 10000+.
         for end in ["0", "10000+"] {
@@ -429,7 +429,7 @@ final class MapInteractionTests: XCTestCase {
         app.buttons["Close population legend"].tap()
         // The legend leaves with a transition (glass on iOS 26), which the
         // idle wait does not always cover: wait for it to go.
-        XCTAssertTrue(legend.waitForNonExistence(timeout: 5), "Closing the legend must remove it")
+        XCTAssertTrue(legend.disappears(within: 5), "Closing the legend must remove it")
     }
 
     /// Phase 6d (ARCHITECTURE decision 76): the land value layer shows its
@@ -441,15 +441,15 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
 
         let pause = app.buttons["Pause"].firstMatch
-        XCTAssertTrue(pause.waitForExistence(timeout: 10))
+        XCTAssertTrue(pause.appears(within: 10))
         pause.tap()
 
         let layersButton = app.buttons["map.layers"]
-        XCTAssertTrue(layersButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(layersButton.appears(within: 10))
         layersButton.tap()
 
         let row = app.switches["layer.landValue"]
@@ -459,7 +459,7 @@ final class MapInteractionTests: XCTestCase {
         // (as LineRoutePreferenceUITests' row on main a383f27).
         XCTAssertTrue(app.dragUntilWhollyOnScreen(row), "The land value row must come into view")
         let toggle = row.switches.firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(toggle.appears(within: 5))
         for _ in 0..<3 where toggle.value as? String != "1" {
             let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: toggle)
             _ = XCTWaiter.wait(for: [hittable], timeout: 5)
@@ -471,18 +471,18 @@ final class MapInteractionTests: XCTestCase {
         app.buttons["layer.done"].tap()
 
         let legend = app.descendants(matching: .any)["map.landValueLegend"].firstMatch
-        XCTAssertTrue(legend.waitForExistence(timeout: 5), "The land value legend must show")
+        XCTAssertTrue(legend.appears(within: 5), "The land value legend must show")
 
         // The new game opens on its first town, in the middle of the map.
         // On a phone the legend covers much of the map's trailing half,
         // and takes a tap there: tap the map halfway to the legend.
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
         let panel = app.descendants(matching: .any)["map.populationLegend"].firstMatch
         let clear = max(24, ((panel.exists ? panel : legend).frame.minX - map.frame.minX) / 2)
         map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: clear, dy: map.frame.height * 0.45)).tap()
         let tooltip = app.descendants(matching: .any)["map.cityTooltip"].firstMatch
-        XCTAssertTrue(tooltip.waitForExistence(timeout: 5), "A tapped cell must show its tooltip")
+        XCTAssertTrue(tooltip.appears(within: 5), "A tapped cell must show its tooltip")
         XCTAssertTrue((tooltip.label).contains("Land value"), "The tooltip must say the land value; label: \(tooltip.label)")
     }
 
@@ -493,15 +493,15 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
 
         // Decision 114: Build opens the tools, starting with the network.
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
         let network = app.buttons["tool.network"]
-        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        XCTAssertTrue(network.appears(within: 10))
         // The tools slide in from the side: a point read mid-slide falls on
         // the map, which under the network tool chooses a track start (as
         // #326 found for the train tool).
@@ -509,7 +509,7 @@ final class MapInteractionTests: XCTestCase {
         network.tap()
 
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
 
         let hud = app.otherElements["map.constructionHUD"]
         XCTAssertFalse(hud.exists, "HUD must not exist before track is previewed")
@@ -520,18 +520,18 @@ final class MapInteractionTests: XCTestCase {
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
 
-        XCTAssertTrue(hud.waitForExistence(timeout: 5), "MapConstructionHUD must appear when preview is active")
+        XCTAssertTrue(hud.appears(within: 5), "MapConstructionHUD must appear when preview is active")
 
         // Cancelling construction removes preview and HUD: the map's ✕
         // beside the track, which a phone shows with the details card
         // folded (decision 136), as the card's Clear does.
         let cancel = app.buttons["map.build.cancel"]
-        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(cancel.appears(within: 5))
         cancel.tap()
 
         // It leaves with a transition (move and fade, 0.2 s), which the
         // idle wait does not always cover, as the legend's (#198).
-        XCTAssertTrue(hud.waitForNonExistence(timeout: 5), "MapConstructionHUD must disappear when preview is cleared")
+        XCTAssertTrue(hud.disappears(within: 5), "MapConstructionHUD must disappear when preview is cleared")
     }
 
     /// TestFlight 54.1: the track options are switches that say whether
@@ -544,25 +544,25 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
         let network = app.buttons["tool.network"]
-        XCTAssertTrue(network.waitForExistence(timeout: 10))
+        XCTAssertTrue(network.appears(within: 10))
         network.waitUntilSettled()
         network.tap()
 
         let advanced = app.buttons["network.advanced"]
-        XCTAssertTrue(advanced.waitForExistence(timeout: 10))
-        for _ in 0..<3 where !advanced.isHittable { app.swipeUp() }
+        XCTAssertTrue(advanced.appears(within: 10))
+        for _ in 0..<3 where !advanced.becomesHittable(within: 1) { app.swipeUp() }
         advanced.tap()
         // A toggle with its own style: a toggle (value 1 or 0) or a
         // selected button, as the system reads it.
         let snap = app.descendants(matching: .any)["network.snap"].firstMatch
-        XCTAssertTrue(snap.waitForExistence(timeout: 5))
-        for _ in 0..<3 where !snap.isHittable { app.swipeUp() }
+        XCTAssertTrue(snap.appears(within: 5))
+        for _ in 0..<3 where !snap.becomesHittable(within: 1) { app.swipeUp() }
         func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
         XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
@@ -579,13 +579,13 @@ final class MapInteractionTests: XCTestCase {
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         let stationMaster = app.buttons["stationMaster"]
-        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        XCTAssertTrue(stationMaster.appears(within: 10))
         let news = app.navigationBars["News"].firstMatch
         for _ in 0..<3 {
             stationMaster.tap()
-            XCTAssertFalse(news.waitForExistence(timeout: 2), "Only the bell opens the news log")
+            XCTAssertFalse(news.appears(within: 2), "Only the bell opens the news log")
         }
     }
 
@@ -600,11 +600,11 @@ final class MapInteractionTests: XCTestCase {
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         let toggle = app.buttons["controls.toggle"]
         let stationMaster = app.buttons["stationMaster"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        XCTAssertTrue(toggle.appears(within: 10))
+        XCTAssertTrue(stationMaster.appears(within: 10))
         XCTAssertTrue(toggle.isEnabled)
         let cardBefore = toggle.label
 
@@ -612,7 +612,7 @@ final class MapInteractionTests: XCTestCase {
         lines.waitUntilSettled()
         lines.tap()
         let bar = app.navigationBars["Lines"].firstMatch
-        XCTAssertTrue(bar.waitForExistence(timeout: 10), "The lines panel opens")
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         bar.waitUntilSettled()
         XCTAssertFalse(toggle.isEnabled, "With a panel beside the map the details card's toggle has nothing to change")
         // A tap then used to change only what showed after the panel closed.
@@ -625,8 +625,8 @@ final class MapInteractionTests: XCTestCase {
         }
 
         bar.buttons["Done"].tap()
-        XCTAssertTrue(bar.waitForNonExistence(timeout: 10), "The lines panel closes")
-        XCTAssertTrue(stationMaster.waitForExistence(timeout: 10))
+        XCTAssertTrue(bar.disappears(within: 10), "The lines panel closes")
+        XCTAssertTrue(stationMaster.appears(within: 10))
         XCTAssertTrue(toggle.isEnabled)
         XCTAssertEqual(toggle.label, cardBefore, "Closing the panel must leave the details card as it was")
     }
@@ -644,16 +644,16 @@ final class MapInteractionTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let newGame = app.buttons["start.newGame"]
-        XCTAssertTrue(newGame.waitForExistence(timeout: 10))
+        XCTAssertTrue(newGame.appears(within: 10))
         newGame.tap()
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.waitForExistence(timeout: 10))
+        XCTAssertTrue(buildEntry.appears(within: 10))
         buildEntry.tap()
         let network = app.buttons["tool.network"]
         network.waitUntilSettled()
         network.tap()
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
 
         // A stretch of track in the map's leading half, clear of the card
         // (decision 106); a phone folds the card while drawing and builds
@@ -662,21 +662,21 @@ final class MapInteractionTests: XCTestCase {
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4)).tap()
         let confirm = app.buttons["map.build.confirm"]
         let buildTrack = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
-        let build = confirm.waitForExistence(timeout: 5) ? confirm : buildTrack
-        XCTAssertTrue(build.waitForExistence(timeout: 5))
+        let build = confirm.appears(within: 5) ? confirm : buildTrack
+        XCTAssertTrue(build.appears(within: 5))
         build.tap()
 
         let platform = app.buttons["Platform"]
-        if !platform.waitForExistence(timeout: 3) || !platform.isHittable {
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
-            XCTAssertTrue(controls.waitForExistence(timeout: 5))
+            XCTAssertTrue(controls.appears(within: 5))
             controls.tap()
         }
         platform.waitUntilSettled()
         platform.tap()
 
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.appears(within: 5))
         // An expectation is waited on once: a new one for each wait.
         func placed() -> Bool {
             let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "units along"), object: status)
@@ -696,11 +696,11 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(isPlaced, "A tap on the track must place a platform; status: \(status.label)")
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(card.appears(within: 5))
         waitUntilStill(card)
         let action = app.buttons["panel.action"]
-        XCTAssertTrue(action.waitForExistence(timeout: 5))
-        XCTAssertTrue(action.isHittable, "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
+        XCTAssertTrue(action.appears(within: 5))
+        XCTAssertTrue(action.becomesHittable(), "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
         assertWhollyInside(status, card, "before scrolling")
         assertWhollyInside(action, card, "before scrolling")
 
@@ -722,17 +722,17 @@ final class MapInteractionTests: XCTestCase {
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
         trainTool.waitUntilSettled()
         trainTool.tap()
 
         let card = app.descendants(matching: .any)["details.card"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(card.appears(within: 5))
         waitUntilStill(card)
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.appears(within: 5))
         assertWhollyInside(status, card, "when the train tool opens")
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
             .press(forDuration: 0.1, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
@@ -752,7 +752,7 @@ final class MapInteractionTests: XCTestCase {
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         func tap(_ element: XCUIElement, below dy: CGFloat) {
             element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
                 .withOffset(CGVector(dx: 0, dy: dy))
@@ -762,31 +762,31 @@ final class MapInteractionTests: XCTestCase {
         // The pause button, 40 points tall with its padding: 21 from its
         // centre, below and then above it.
         let resume = app.buttons["Resume"].firstMatch
-        XCTAssertTrue(resume.waitForExistence(timeout: 10), "The demo opens paused")
+        XCTAssertTrue(resume.appears(within: 10), "The demo opens paused")
         resume.waitUntilSettled()
         tap(resume, below: 21)
         let pause = app.buttons["Pause"].firstMatch
-        XCTAssertTrue(pause.waitForExistence(timeout: 5), "A tap 1 point below the drawn pause button resumes the game")
+        XCTAssertTrue(pause.appears(within: 5), "A tap 1 point below the drawn pause button resumes the game")
         tap(pause, below: -21)
-        XCTAssertTrue(resume.waitForExistence(timeout: 5), "A tap 1 point above the drawn pause button pauses the game")
+        XCTAssertTrue(resume.appears(within: 5), "A tap 1 point above the drawn pause button pauses the game")
 
         // The bell, 32 points tall: 20 below its centre.
         let bell = app.buttons["hud.news"]
-        XCTAssertTrue(bell.waitForExistence(timeout: 5))
+        XCTAssertTrue(bell.appears(within: 5))
         tap(bell, below: 20)
         let news = app.navigationBars["News"]
-        XCTAssertTrue(news.waitForExistence(timeout: 5), "A tap 4 points below the drawn bell opens the news")
+        XCTAssertTrue(news.appears(within: 5), "A tap 4 points below the drawn bell opens the news")
         let done = app.buttons["news.done"]
-        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        XCTAssertTrue(done.appears(within: 5))
         done.tap()
-        XCTAssertTrue(news.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(news.disappears(within: 5))
 
         // The menu, 32 points tall: 20 above its centre.
         let menu = app.buttons["hud.menu"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        XCTAssertTrue(menu.appears(within: 5))
         menu.waitUntilSettled()
         tap(menu, below: -20)
-        XCTAssertTrue(app.buttons["menu.backToStart"].waitForExistence(timeout: 5), "A tap 4 points above the drawn menu button opens the game menu")
+        XCTAssertTrue(app.buttons["menu.backToStart"].appears(within: 5), "A tap 4 points above the drawn menu button opens the game menu")
     }
 
     /// The details card keeps one layout for one subject while the clock
@@ -804,8 +804,8 @@ final class MapInteractionTests: XCTestCase {
         app.launchArguments = ["-ui-testing", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 10), "The clock must run")
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+        XCTAssertTrue(app.buttons["Pause"].appears(within: 10), "The clock must run")
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
         trainTool.waitUntilSettled()
@@ -814,25 +814,25 @@ final class MapInteractionTests: XCTestCase {
         // it there: the card's head shows its summary.
         let fleet = app.buttons["train.fleetOverview"]
         if !fleet.isHittable { app.swipeUp() }
-        XCTAssertTrue(fleet.waitForExistence(timeout: 15))
+        XCTAssertTrue(fleet.appears(within: 15))
         fleet.tap()
         // The demo's tree is large and its clock runs: the list can take
         // longer than a paused demo's (run 38332921819).
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
-        XCTAssertTrue(fleetFollow.waitForExistence(timeout: 20), "The fleet list must offer to follow Train 1")
-        for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
+        XCTAssertTrue(fleetFollow.appears(within: 20), "The fleet list must offer to follow Train 1")
+        for _ in 0..<3 where !fleetFollow.becomesHittable(within: 1) { app.swipeUp() }
         fleetFollow.tap()
-        XCTAssertTrue(app.buttons["train.unfollow"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 15))
         let map = app.descendants(matching: .any)["map"].firstMatch
         let status = app.descendants(matching: .any)["inspector.status"].firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 5))
+        XCTAssertTrue(status.appears(within: 5))
         for _ in 0..<5 where !status.label.contains("Train 1") {
             map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             Thread.sleep(forTimeInterval: 0.5)
         }
         XCTAssertTrue(status.label.contains("Train 1"), "The tap must pick Train 1: \(status.label)")
         let card = app.descendants(matching: .any)["details.card"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(card.appears(within: 5))
 
         // The layout and the head's summary, a few times a second.
         // A snapshot that finds neither layout's mark keeps the marks it did

@@ -31,11 +31,11 @@ final class TutorialUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(start.appears(within: 10))
         start.tap()
         openCard(app)
         let next = app.buttons["tutorial.next"]
-        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertTrue(next.appears(within: 10))
         checkToolIsUncovered(app, identifier: "tool.network")
         selectTool(app, "tool.network")
 
@@ -46,8 +46,8 @@ final class TutorialUITests: XCTestCase {
         openCard(app)
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let zoomOut = app.buttons["Zoom out"]
-        XCTAssertTrue(zoomOut.waitForExistence(timeout: 10))
-        XCTAssertTrue(zoomOut.isHittable)
+        XCTAssertTrue(zoomOut.appears(within: 10))
+        XCTAssertTrue(zoomOut.becomesHittable())
         if card.exists {
             XCTAssertFalse(card.frame.intersects(zoomOut.frame), "The tutorial card covers the zoom buttons")
         }
@@ -58,8 +58,8 @@ final class TutorialUITests: XCTestCase {
         // the map (it may cover part of it, never a control).
         let map = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label BEGINSWITH %@", "Map,")).firstMatch
-        XCTAssertTrue(map.waitForExistence(timeout: 10))
-        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        XCTAssertTrue(map.appears(within: 10))
+        XCTAssertTrue(card.appears(within: 10))
         // The map runs up under the status pill, which floats over its
         // top: only the map below the pill can be tapped.
         let gameTime = app.descendants(matching: .any)
@@ -101,8 +101,8 @@ final class TutorialUITests: XCTestCase {
         // The map's ✓ builds it: the card leaves it free.
         waitForStep(app, title: "Tap ✓ to build the track", "taps \(first), \(second); card \(card.frame), free \(free)")
         let confirm = app.buttons["map.build.confirm"]
-        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
-        XCTAssertTrue(confirm.isHittable, "The ✓ cannot be tapped")
+        XCTAssertTrue(confirm.appears(within: 10))
+        XCTAssertTrue(confirm.becomesHittable(), "The ✓ cannot be tapped")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(confirm.frame), "The tutorial card covers the ✓: card \(card.frame), ✓ \(confirm.frame)")
         }
@@ -110,15 +110,15 @@ final class TutorialUITests: XCTestCase {
         // A press can be dropped on a loaded runner (run 37554617441: the
         // button highlighted, its action never ran): tap once more only
         // while it is still there, as nothing was built.
-        if !confirm.waitForNonExistence(timeout: 10), confirm.isEnabled {
+        if !confirm.disappears(within: 10), confirm.isEnabled {
             confirm.tap()
         }
 
         // The station chapter: the details card opens for the modes.
         waitForStep(app, title: "Tap Platform", "The ✓ did not build the track")
         let platform = app.buttons["Platform"]
-        XCTAssertTrue(platform.waitForExistence(timeout: 10))
-        XCTAssertTrue(platform.isHittable, "The Platform mode cannot be tapped")
+        XCTAssertTrue(platform.appears(within: 10))
+        XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
@@ -128,8 +128,8 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(app.buttons["tutorial.back"].exists)
         app.buttons["tutorial.skip"].tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
-        XCTAssertTrue(app.buttons["tool.network"].isHittable)
+        XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
+        XCTAssertTrue(app.buttons["tool.network"].becomesHittable())
     }
 
     /// The line step on a phone on its side (the owner's device, 2026-10-12):
@@ -150,14 +150,14 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
 
         let lines = app.buttons["entry.lines"]
-        XCTAssertTrue(lines.waitForExistence(timeout: 10))
-        XCTAssertTrue(lines.isHittable, "The Lines button is covered")
+        XCTAssertTrue(lines.appears(within: 10))
+        XCTAssertTrue(lines.becomesHittable(), "The Lines button is covered")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
-        XCTAssertTrue(pick.waitForExistence(timeout: 10), "The lines panel did not open")
+        XCTAssertTrue(pick.appears(within: 10), "The lines panel did not open")
         // Picking starts by itself; Pick on Map is not tapped.
         let stop = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "line.draft.pick", "Stop Picking")).firstMatch
-        XCTAssertTrue(stop.waitForExistence(timeout: 10), "Picking did not start by itself")
+        XCTAssertTrue(stop.appears(within: 10), "Picking did not start by itself")
         waitForStep(app, title: "Tap one station, then the other")
         XCTAssertFalse(app.buttons["map.build.confirm"].exists, "A ✓ is left over")
 
@@ -174,18 +174,18 @@ final class TutorialUITests: XCTestCase {
         // The player can always fold the card out of the way, and open it.
         if card.exists {
             app.buttons["tutorial.fold"].tap()
-            XCTAssertTrue(folded.waitForExistence(timeout: 10), "The card did not fold")
+            XCTAssertTrue(folded.appears(within: 10), "The card did not fold")
         }
-        XCTAssertTrue(folded.isHittable)
+        XCTAssertTrue(folded.becomesHittable())
         folded.tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 10), "The folded card did not open")
-        XCTAssertTrue(app.buttons["tutorial.skip"].isHittable)
+        XCTAssertTrue(card.appears(within: 10), "The folded card did not open")
+        XCTAssertTrue(app.buttons["tutorial.skip"].becomesHittable())
         XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The stations are still to pick")
     }
 
-    /// Decision 188 (full lane and iPad, not the gate): the lines panel
-    /// scrolls Create Line, and then Buy … and Start Service, into view for
-    /// their steps, clear of the card; Done closes the panel and leaves the
+    /// Decision 188 (full lane and iPad, not the gate): the ✓ on the map
+    /// creates the line (decision 100, later), and the lines panel scrolls
+    /// Buy … and Start Service into view for its step, clear of the card; Done closes the panel and leaves the
     /// fares to wait for. The card the player folds stays folded through the
     /// service chapter's steps.
     func testCreateLineAndBuyAreInReach() {
@@ -199,18 +199,20 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
 
-        // The step opens the lines panel itself.
-        let create = app.buttons["line.draft.create"]
-        XCTAssertTrue(create.waitForExistence(timeout: 10), "The lines panel did not open")
-        XCTAssertTrue(waitForHittable(create), "Create Line was not scrolled into view")
+        // The step opens the lines panel itself; the ✓ beside the last
+        // station picked creates the line.
+        XCTAssertTrue(app.buttons["line.draft.pick"].appears(within: 10), "The lines panel did not open")
+        let create = app.buttons["map.build.confirm"]
+        XCTAssertTrue(create.appears(within: 10), "No ✓ on the map")
+        XCTAssertTrue(waitForHittable(create), "The ✓ on the map cannot be tapped")
         Thread.sleep(forTimeInterval: 1)
         if card.exists {
-            XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers Create Line")
+            XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers the ✓")
         }
         create.tap()
 
         let buy = app.buttons["line.staff.start"]
-        XCTAssertTrue(buy.waitForExistence(timeout: 10), "No Buy … and Start Service")
+        XCTAssertTrue(buy.appears(within: 10), "No Buy … and Start Service")
         XCTAssertTrue(waitForHittable(buy), "Buy … and Start Service was not scrolled into view")
         waitForStep(app, title: "Tap Buy … and Start Service")
         // Folded by the player, the card stays folded for the rest of the
@@ -220,7 +222,7 @@ final class TutorialUITests: XCTestCase {
         if card.exists {
             XCTAssertFalse(card.frame.intersects(buy.frame), "The tutorial card covers Buy … and Start Service")
             app.buttons["tutorial.fold"].tap()
-            XCTAssertTrue(folded.waitForExistence(timeout: 10), "The card did not fold")
+            XCTAssertTrue(folded.appears(within: 10), "The card did not fold")
             foldedByPlayer = true
         }
         XCTAssertTrue(waitForHittable(buy), "The folded card covers Buy … and Start Service")
@@ -230,7 +232,7 @@ final class TutorialUITests: XCTestCase {
         if foldedByPlayer {
             XCTAssertFalse(card.exists, "The card opened again within its chapter")
         }
-        XCTAssertTrue(app.buttons["line.draft.pick"].waitForNonExistence(timeout: 10), "The lines panel stayed open")
+        XCTAssertTrue(app.buttons["line.draft.pick"].disappears(within: 10), "The lines panel stayed open")
         selectTool(app, "tool.select")
         waitForStep(app, title: "Wait for your first fares")
         if foldedByPlayer {
@@ -253,7 +255,7 @@ final class TutorialUITests: XCTestCase {
         app.launch()
         defer { app.terminate() }
         let legend = app.descendants(matching: .any).matching(identifier: "map.populationLegend").firstMatch
-        XCTAssertTrue(legend.waitForExistence(timeout: 15), "The demand change layer was not on before the tutorial")
+        XCTAssertTrue(legend.appears(within: 15), "The demand change layer was not on before the tutorial")
 
         // Pause through the real HUD, as checkNavigation, so a running clock
         // does not rebuild the menu while XCTest targets it.
@@ -262,7 +264,7 @@ final class TutorialUITests: XCTestCase {
         hittableButton(app.buttons.matching(NSPredicate(format: "identifier == %@ OR label == %@", "menu.tutorial", "Tutorial"))).tap()
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(waitForCard(card, or: app.buttons["tutorial.unfold"]), "The tutorial did not start")
-        XCTAssertTrue(legend.waitForNonExistence(timeout: 10), "The data layer is still on in the tutorial")
+        XCTAssertTrue(legend.disappears(within: 10), "The data layer is still on in the tutorial")
     }
 
     /// Waits up to 10 seconds for `element` to be hittable.
@@ -305,7 +307,7 @@ final class TutorialUITests: XCTestCase {
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
         if !card.exists {
             folded.tap()
-            XCTAssertTrue(card.waitForExistence(timeout: 10), "The folded card did not open", file: file, line: line)
+            XCTAssertTrue(card.appears(within: 10), "The folded card did not open", file: file, line: line)
         }
     }
 
@@ -334,7 +336,7 @@ final class TutorialUITests: XCTestCase {
         }
 
         let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(start.appears(within: 10))
         XCTAssertTrue(start.label.contains(tutorialLabel))
         start.tap()
         openCard(app)
@@ -342,7 +344,7 @@ final class TutorialUITests: XCTestCase {
         let next = app.buttons["tutorial.next"]
         let back = app.buttons["tutorial.back"]
         let skip = app.buttons["tutorial.skip"]
-        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertTrue(next.appears(within: 10))
         XCTAssertEqual(next.label, nextLabel)
         XCTAssertEqual(skip.label, skipLabel)
         waitForEnabled(app, false, "The first step waits for the network tool")
@@ -357,13 +359,13 @@ final class TutorialUITests: XCTestCase {
         // Decision 188: the done step moves on by itself, and the map step
         // waits for the map to move. From the second step the card starts
         // folded (decision 188, later fix): open it for Back.
-        XCTAssertTrue(app.buttons["tutorial.unfold"].waitForExistence(timeout: 10), "The done step did not move on by itself")
+        XCTAssertTrue(app.buttons["tutorial.unfold"].appears(within: 10), "The done step did not move on by itself")
         openCard(app)
-        XCTAssertTrue(back.waitForExistence(timeout: 10))
+        XCTAssertTrue(back.appears(within: 10))
         XCTAssertEqual(back.label, backLabel)
         waitForEnabled(app, false)
         back.tap()
-        XCTAssertTrue(back.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(back.disappears(within: 10))
         waitForEnabled(app, true)
         XCTAssertTrue(app.buttons["tool.network"].isSelected)
         // Reached by Back, the done step waits for Next. A slow runner can
@@ -381,8 +383,10 @@ final class TutorialUITests: XCTestCase {
         // A phone turns from one side to the other (decision 106: it
         // plays only on its side); an iPad from upright to its side.
         XCUIDevice.shared.orientation = .landscapeRight
-        XCTAssertTrue(skip.waitForExistence(timeout: 10))
-        XCTAssertTrue(skip.isHittable)
+        // The card turns with the screen: Skip is there before it comes to
+        // rest (PR #493's run 38360304931 asked at once and found it out of
+        // reach), so wait until it stands still and can be touched.
+        skip.waitUntilSettled(timeout: 10)
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
         selectTool(app, "tool.select")
@@ -391,12 +395,12 @@ final class TutorialUITests: XCTestCase {
         waitForEnabled(app, true)
         skip.tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
+        XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
         // The restarted tutorial's first step waits for Network again.
         // Decision 114: outside the tutorial the tools show only while one
         // is chosen, so Done closes them rather than staying selected.
         app.buttons["tool.select"].tap()
-        XCTAssertTrue(app.buttons["tool.select"].waitForNonExistence(timeout: 10), "Done did not close the tools")
+        XCTAssertTrue(app.buttons["tool.select"].disappears(within: 10), "Done did not close the tools")
 
         // The game menu starts the tutorial again without leaving this game:
         // the skipped tutorial is offered at its step, or from the start
@@ -416,16 +420,16 @@ final class TutorialUITests: XCTestCase {
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
         let resume = app.buttons["menu.tutorial.resume"]
-        XCTAssertTrue(resume.waitForExistence(timeout: 10), "The skipped tutorial is not offered to continue")
+        XCTAssertTrue(resume.appears(within: 10), "The skipped tutorial is not offered to continue")
         XCTAssertTrue(resume.label.contains(language == "en" ? "Step 1" : "第 1 步"), resume.label)
         hittableButton(app.buttons.matching(identifier: "menu.tutorial.restart")).tap()
         openCard(app)
-        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertTrue(next.appears(within: 10))
         XCTAssertFalse(back.exists)
         waitForEnabled(app, false)
         skip.tap()
         // The card may still be closing right after Skip: wait for it to go.
-        XCTAssertTrue(next.waitForNonExistence(timeout: 10), "Skip did not close the tutorial")
+        XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
     }
 
     private func hittableButton(_ query: XCUIElementQuery) -> XCUIElement {
@@ -465,9 +469,9 @@ final class TutorialUITests: XCTestCase {
     private func checkToolIsUncovered(_ app: XCUIApplication, identifier: String) {
         let tool = app.buttons[identifier]
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
-        XCTAssertTrue(tool.waitForExistence(timeout: 10))
-        XCTAssertTrue(card.waitForExistence(timeout: 10))
-        XCTAssertTrue(tool.isHittable)
+        XCTAssertTrue(tool.appears(within: 10))
+        XCTAssertTrue(card.appears(within: 10))
+        XCTAssertTrue(tool.becomesHittable())
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 

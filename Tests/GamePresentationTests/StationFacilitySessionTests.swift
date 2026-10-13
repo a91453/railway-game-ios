@@ -49,7 +49,7 @@ final class StationFacilitySessionTests: XCTestCase {
             session.setPlacementHeading(.east)
             session.selectStation(StationID(rawValue: 1))
             session.applyTool()
-            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at West, on edge #3 going forward."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Placed Train 1 at West, on track #3 going forward."))
             XCTAssertEqual(session.selectedTrain?.position, .onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 1_024))
             XCTAssertEqual(session.selectedTrain?.trailEdges, [])
             session.setSelectedTrainCars(3)

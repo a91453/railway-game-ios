@@ -46,7 +46,7 @@ private final class TutorialJourney {
         "Tap ✓ for the second station",
         "Tap Lines",
         "Tap one station, then the other",
-        "Tap Create Line",
+        "Tap ✓ to create the line",
         "Tap Buy … and Start Service",
         "Tap Done to stop building",
         "Tap \u{25B6}\u{FE0E} to run time",
@@ -91,7 +91,7 @@ private final class TutorialJourney {
         defer { app.terminate() }
 
         let start = app.buttons["start.tutorial"]
-        XCTAssertTrue(start.waitForExistence(timeout: 15), "No Tutorial button on the start screen")
+        XCTAssertTrue(start.appears(within: 15), "No Tutorial button on the start screen")
         start.tap()
 
         // Track
@@ -117,7 +117,7 @@ private final class TutorialJourney {
         // The start is picked: the card asks for the end.
         if card.exists {
             let asksForEnd = card.staticTexts["Now tap where it ends."]
-            XCTAssertTrue(asksForEnd.waitForExistence(timeout: 5), failure("the tap at \(trackStart) did not pick the track's start"))
+            XCTAssertTrue(asksForEnd.appears(within: 5), failure("the tap at \(trackStart) did not pick the track's start"))
         }
         check(map: trackEnd, "the track's end")
         tap(trackEnd)
@@ -153,17 +153,16 @@ private final class TutorialJourney {
 
         arrive(at: 11)
         // The lines panel slides in before the map beside it is tapped.
-        XCTAssertTrue(app.buttons["line.draft.pick"].waitForExistence(timeout: 10), failure("the lines panel did not open"))
+        XCTAssertTrue(app.buttons["line.draft.pick"].appears(within: 10), failure("the lines panel did not open"))
         Thread.sleep(forTimeInterval: 1)
         check(map: firstStation, "the first station")
         tap(firstStation)
         check(map: secondStation, "the second station")
         tap(secondStation)
 
+        // Decision 100, later: the line is made by the ✓ on the map.
         arrive(at: 12)
-        let create = app.buttons["line.draft.create"]
-        check(create, "Create Line")
-        create.tap()
+        tapConfirm("the ✓ that creates the line")
 
         // Service
         arrive(at: 13)
@@ -193,7 +192,7 @@ private final class TutorialJourney {
         if !waitForStep(after: 16, timeout: 60) {
             speed.tap()
             let fastest = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "6000 times real time")).firstMatch
-            if fastest.waitForExistence(timeout: 5) {
+            if fastest.appears(within: 5) {
                 fastest.tap()
             }
         }
@@ -227,7 +226,7 @@ private final class TutorialJourney {
         arrive(at: 21)
         check(app.buttons["hud.menu"], "the game menu")
         tapNext(finishing: true)
-        XCTAssertTrue(card.waitForNonExistence(timeout: 10), failure("Finish did not end the tutorial"))
+        XCTAssertTrue(card.disappears(within: 10), failure("Finish did not end the tutorial"))
         XCTAssertFalse(folded.exists, failure("Finish left the folded card"))
     }
 
@@ -285,7 +284,7 @@ private final class TutorialJourney {
     /// reach and that the card, open or folded, leaves it free. A card that
     /// is still moving to its place, or folding itself, has a few seconds.
     private func check(_ element: XCUIElement, _ name: String, onCard: Bool = false) {
-        XCTAssertTrue(element.waitForExistence(timeout: 10), failure("\(name) is not on the screen"))
+        XCTAssertTrue(element.appears(within: 10), failure("\(name) is not on the screen"))
         let deadline = Date().addingTimeInterval(10)
         var covering: String?
         repeat {
@@ -347,7 +346,7 @@ private final class TutorialJourney {
         let confirm = app.buttons["map.build.confirm"]
         check(confirm, name)
         confirm.tap()
-        if !confirm.waitForNonExistence(timeout: 10), confirm.isEnabled, shownStep() == step {
+        if !confirm.disappears(within: 10), confirm.isEnabled, shownStep() == step {
             confirm.tap()
         }
     }
@@ -382,8 +381,8 @@ private final class TutorialJourney {
     private func planTrack() {
         let rail = app.buttons["tool.select"]
         let dock = app.buttons["dock.build"]
-        XCTAssertTrue(rail.waitForExistence(timeout: 10), failure("No tool rail"))
-        XCTAssertTrue(dock.waitForExistence(timeout: 10), failure("No dock"))
+        XCTAssertTrue(rail.appears(within: 10), failure("No tool rail"))
+        XCTAssertTrue(dock.appears(within: 10), failure("No dock"))
         let screen = app.frame
         // The rail stands one margin (10) inside the safe area, which is the
         // same on both sides of a phone on its side.

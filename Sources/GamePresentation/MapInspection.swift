@@ -65,8 +65,10 @@ extension GameWorld {
         return TrackInspection(edge: id, lines: lines.sorted(), signal: signal, length: edge.length, structure: edge.structure)
     }
 
-    /// "Track · 320 m · Elevated · Lines: Red, Blue · Signal: clear", or
-    /// in Chinese "軌道 · 320 公尺 · 高架 · 路線：紅線、藍線 · 號誌：綠燈（無列車）".
+    /// "Track #3 · 320 m · Elevated · Lines: Red, Blue · Signal: clear", or
+    /// in Chinese "軌段 #3 · 320 公尺 · 高架 · 路線：紅線、藍線 · 號誌：綠燈（無列車）":
+    /// since decision 201 with the track's number, the one the line
+    /// panel's routes and the map's labels use.
     public func trackInspectionText(of id: TrackEdgeID, in language: DisplayLanguage) -> String? {
         trackInspection(of: id).map { trackInspectionText(of: $0, in: language) }
     }
@@ -78,7 +80,7 @@ extension GameWorld {
             ? language.text("No line runs here", "沒有路線經過")
             : language.text("Lines: \(names.joined(separator: ", "))", "路線：\(names.joined(separator: "、"))")
         return [
-            language.text("Track", "軌道"),
+            inspection.edge.displayText(in: language),
             NetworkBuilding.lengthText(inspection.length, in: language),
             inspection.structure.name(in: language),
             lines,

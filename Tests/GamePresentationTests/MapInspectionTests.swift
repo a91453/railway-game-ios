@@ -23,7 +23,8 @@ final class MapInspectionTests: XCTestCase {
         XCTAssertEqual(inspection.lines, [line.id])
         XCTAssertEqual(inspection.signal, .occupied(train.id), "the train stands at the first platform")
         let text = try XCTUnwrap(world.trackInspectionText(of: edge, in: .english))
-        XCTAssertTrue(text.hasPrefix("Track · "), text)
+        // Decision 201: the track's number, as the map and the line panel show it.
+        XCTAssertTrue(text.hasPrefix("Track #\(RoutePreview.label(of: edge).dropFirst()) · "), text)
         XCTAssertTrue(text.contains("Lines: Red · Signal: stop, \(train.name) on it"), text)
         let chinese = try XCTUnwrap(world.trackInspectionText(of: edge, in: .traditionalChinese))
         XCTAssertTrue(chinese.contains("路線：Red · 號誌：紅燈（\(train.name) 佔用中）"), chinese)
@@ -39,7 +40,7 @@ final class MapInspectionTests: XCTestCase {
         XCTAssertEqual(inspection.signal, .clear)
         XCTAssertEqual(inspection.length, 40_000)
         let text = try XCTUnwrap(world.trackInspectionText(of: spur, in: .traditionalChinese))
-        XCTAssertEqual(text, "軌道 · 625 公尺 · \(inspection.structure.name(in: .traditionalChinese)) · 沒有路線經過 · 號誌：綠燈（無列車）")
+        XCTAssertEqual(text, "\(spur.displayText(in: .traditionalChinese)) · 625 公尺 · \(inspection.structure.name(in: .traditionalChinese)) · 沒有路線經過 · 號誌：綠燈（無列車）")
         XCTAssertEqual(world.signalText(.reserved(try XCTUnwrap(world.trains.first).id), in: .english),
                        "Signal: caution, reserved for \(try XCTUnwrap(world.trains.first).name)")
         XCTAssertNil(world.trackInspection(of: TrackEdgeID.edge(9_999)))
