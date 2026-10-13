@@ -484,6 +484,20 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         }
     }
 
+    /// A real-world map's ground (decision 198): its real heights, which
+    /// track climbs and tunnels through (decision 124), or flat, where
+    /// track is always level. Blank maps are flat either way.
+    public enum Ground: String, CaseIterable, Codable, Sendable {
+        case real, flat
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .real: language.text("Real", "真實")
+            case .flat: language.text("Flat", "平坦")
+            }
+        }
+    }
+
     public var difficulty: Difficulty = .standard
     /// Disruptions apart from the difficulty's; `nil` follows it.
     public var disruptionChoice: Disruption?
@@ -500,8 +514,25 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// The seed the towns and events are drawn from, so a map can be shared;
     /// `nil` draws a new one for each game.
     public var seed: UInt32?
+    /// Decision 198: a real-world map's ground, real unless chosen flat.
+    public var ground = Ground.real
 
     public init() {}
+
+    /// Reads the options as written, an option missing from the file as its
+    /// default: the options written before an option was added (and the
+    /// launcher's other preferences with them) still read.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let standard = Self()
+        difficulty = try container.decodeIfPresent(Difficulty.self, forKey: .difficulty) ?? standard.difficulty
+        disruptionChoice = try container.decodeIfPresent(Disruption.self, forKey: .disruptionChoice)
+        buildingMaterials = try container.decodeIfPresent(Bool.self, forKey: .buildingMaterials) ?? standard.buildingMaterials
+        outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? standard.outsideConnections
+        buysMap = try container.decodeIfPresent(Bool.self, forKey: .buysMap) ?? standard.buysMap
+        seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
+        ground = try container.decodeIfPresent(Ground.self, forKey: .ground) ?? standard.ground
+    }
 
     public var startingBalance: Money { difficulty.startingBalance }
 
@@ -547,6 +578,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         if !buildingMaterials { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
+        if ground == .flat { rules.append(language.text("flat ground on real-world maps", "實景地圖地形平坦")) }
         let rule = rules.isEmpty
             ? language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。")
             : language.text("Changed: \(rules.joined(separator: ", ")).", "已更改：\(rules.joined(separator: "、"))。")
