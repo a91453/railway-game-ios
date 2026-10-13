@@ -13,8 +13,7 @@ import GameCore
 // what they cost on top of a new game's money.
 
 /// A whole-Taiwan game with the Taiwan High Speed Rail built and running
-/// (decision 170), on the real day's timetable under traffic control
-/// (decision 197).
+/// (decision 170), on the real day's timetable (decision 197).
 ///
 /// - The track is double, as on the real line, flat and on the ground (the
 ///   game's track, not the real viaducts and tunnels): the down track
@@ -29,7 +28,9 @@ import GameCore
 ///   Taichung a crossover beyond each end, where those sets go over to the
 ///   other way's track. Each end has its platform on the down track and a
 ///   yard of dead-end tracks either side of it, each with a platform, where
-///   the sets wait for their next run and stand at night (``Yard``).
+///   the sets stand on the first night (``Yard``); with traffic control off
+///   a set coming in stops at the end's own platform, on any there, as
+///   before.
 /// - A station's platforms are staggered (decision 197), each
 ///   ``platformStagger`` beyond the one before, north to south: the down
 ///   through track's, the down loop's, the up loop's, the up through
@@ -55,9 +56,17 @@ import GameCore
 ///   rated 80 each), planned at `PERF_HSR`; the lines are high-speed lines
 ///   (decision 168), so their stations draw the people round them and their
 ///   riders pay by the kilometre.
-/// - Traffic control is on: a set takes its route before it leaves, an
-///   express that catches up with an all-stops set waits or passes it at a
-///   loop, and the sets wait their turn at the yards.
+/// - Traffic control is off (decision 197): under it the real day cannot
+///   be run. A set takes the whole of its way to its next stop before it
+///   leaves, follows a set ahead only on the shortest way and never one
+///   that stops on its way; an express's way runs 30 to 180 km past
+///   stations where other sets stand, so it seldom leaves on time, and on
+///   the real day 97 of the 191 runs were dropped and the rest ran one and
+///   a half to two hours late, at some 40 minutes of computing a game day. Off, a
+///   set may still run into one going its own way ahead of it; on the real
+///   timetable, with the expresses passing the all-stops sets at the loops,
+///   that is seldom. The yards, the crossovers and the staggered platforms
+///   are what traffic control would need when its rules allow it.
 public enum HighSpeedDemo {
     /// Cars of every set.
     static let cars = 12
@@ -108,16 +117,16 @@ public enum HighSpeedDemo {
         case noTimetable
     }
 
-    /// The minute of the first day the game opens at: 06:00, as the first
-    /// sets leave (at 05:50). Not later: under traffic control each game
-    /// hour of the day takes its time to work out (decision 197).
-    static let opensAt: Int64 = 6 * 60
+    /// The minute of the first day the game opens at: 07:00, an hour after
+    /// the first sets leave (at 05:50), when the first sets of each line are
+    /// on their way.
+    static let opensAt: Int64 = 7 * 60
     /// The minute the land round the stations is read in, before the first
     /// set leaves.
     static let landAt: Int64 = 5 * 60 + 30
 
     /// The demo: a new whole-Taiwan game with the railway built, running
-    /// from 06:00. `population`, `places`, `water` and `coverage` are the
+    /// from 07:00. `population`, `places`, `water` and `coverage` are the
     /// app's real-world data; the land round the high-speed stations is read
     /// in from them (``GameSession/readLand(roundStationsOf:population:places:water:coverage:)``).
     /// Without the population the stations have no hinterland, and so no
@@ -136,7 +145,7 @@ public enum HighSpeedDemo {
             try layout.build(in: &world, language: language)
             // The first sets leave at 05:50. Until then nothing runs and no
             // one is waiting, so the night passes before the land's people
-            // are read in.
+            // are read in; the game then opens an hour into the day.
             world.setSpeed(.fast)
             try world.advance(ticks: Int(landAt / 10))
             GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
@@ -588,7 +597,8 @@ public enum HighSpeedDemo {
         in world: inout GameWorld, language: DisplayLanguage, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
         ends: [Int: [TrackPlatform]], through: Through
     ) throws(GameError) {
-        try world.setTrafficControl(true)
+        // Traffic control is off (see ``HighSpeedDemo``).
+        try world.setTrafficControl(false)
         func endPlatform(of stop: Int) -> TrackPlatform? {
             ends[stop]?.first
         }
@@ -615,23 +625,16 @@ public enum HighSpeedDemo {
                     }
                     continue
                 }
-                // An express's leg that passes stations, whose loops may be the
-                // shorter way on the inside of a curve, names its whole way
-                // along the through track, but from an end: a set leaves an
-                // end from any of its yard's tracks, and a walk is followed
-                // only from a track on it (decision 61). Leaving an end,
-                // naming the platform keeps it to its way's track: no
-                // crossover is between.
-                let passes = b - a > 1
+                // An express's leg passes stations whose loops may be the
+                // shorter way on the inside of a curve: it names its whole
+                // way along the through track. A set that is not on the way
+                // (one in an end's yard) goes to the nearest platform, its
+                // own way's through track's (see ``platformStagger``).
                 guard let south = platform(of: b, onDown: true) ?? endPlatform(of: b), let north = platform(of: a, onDown: false) ?? endPlatform(of: a),
                       let start = platform(of: a, onDown: true) ?? endPlatform(of: a), let end = platform(of: b, onDown: false) ?? endPlatform(of: b)
                 else { continue }
-                preferences.append(LineRoutePreference(
-                    from: from, to: to, tracks: passes && a != 0 ? through.southbound(from: start.edge, to: south.edge) : [], platform: south
-                ))
-                preferences.append(LineRoutePreference(
-                    from: to, to: from, tracks: passes && b != stations.count - 1 ? through.northbound(from: end.edge, to: north.edge) : [], platform: north
-                ))
+                preferences.append(LineRoutePreference(from: from, to: to, tracks: through.southbound(from: start.edge, to: south.edge), platform: south))
+                preferences.append(LineRoutePreference(from: to, to: from, tracks: through.northbound(from: end.edge, to: north.edge), platform: north))
             }
             try world.setLineRoutePreferences(line, to: preferences)
             for set in timetableLine.overnight {

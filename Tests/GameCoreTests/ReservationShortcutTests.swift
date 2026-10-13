@@ -251,7 +251,7 @@ final class ReservationShortcutTests: XCTestCase {
                     let route = placed.envelopeCover(of: candidate)
                     if placed.trains.contains(where: { other in
                         guard let claim = holders.claims[other.id] else { return false }
-                        return holders.binds(claim, id) && placed.longClaim(of: other)!.waiting.contains(where: route.contains)
+                        return !holders.holdsAny(of: claim, id) && placed.longClaim(of: other)!.waiting.contains(where: route.contains)
                     }) {
                         joining += 1
                     }
@@ -361,12 +361,6 @@ extension ReservationShortcutTests {
 // MARK: - The long way, as it was
 
 extension GameWorld {
-    /// Whether train `id` follows a train itself and has a lower ID than
-    /// `other`, so that `other`'s claim does not keep it (decision 197).
-    func longGoesFirst(_ id: TrainID, before other: Train) -> Bool {
-        (train(id: id).map { isFollowing($0) } ?? false) && id < other.id
-    }
-
     /// `holder(of:except:)` as it was: every other train's track gathered,
     /// and every following train's claim worked out, for each question.
     func longHolder(of resources: Set<TrackResource>, except id: TrainID) -> TrainID? {
@@ -374,7 +368,7 @@ extension GameWorld {
         return trains.first { other in
             guard other.id != id, other.position != nil else { return false }
             if network.fouls(held(other), resources) { return true }
-            guard let claim = longClaim(of: other), own.isDisjoint(with: claim.route), !longGoesFirst(id, before: other) else { return false }
+            guard let claim = longClaim(of: other), own.isDisjoint(with: claim.route) else { return false }
             return network.fouls(claim.waiting, resources)
         }?.id
     }
@@ -385,7 +379,7 @@ extension GameWorld {
         var blocked: Set<TrackResource> = []
         for other in trains where other.id != id && other.position != nil {
             blocked.formUnion(held(other))
-            if let claim = longClaim(of: other), own.isDisjoint(with: claim.route), !longGoesFirst(id, before: other) {
+            if let claim = longClaim(of: other), own.isDisjoint(with: claim.route) {
                 blocked.formUnion(claim.waiting)
             }
         }
@@ -398,7 +392,7 @@ extension GameWorld {
         var blocked: Set<TrackResource> = []
         for other in trains where other.id != id && other.position != nil && ids.contains(other.id) {
             blocked.formUnion(held(other))
-            if let claim = longClaim(of: other), own.isDisjoint(with: claim.route), !longGoesFirst(id, before: other) {
+            if let claim = longClaim(of: other), own.isDisjoint(with: claim.route) {
                 blocked.formUnion(claim.waiting)
             }
         }
@@ -453,7 +447,7 @@ extension GameWorld {
         let own = train(id: candidate.id).map(held) ?? []
         for other in trains where other.id != candidate.id && other.position != nil {
             var holds = network.fouls(held(other), route)
-            if !holds, let claim = longClaim(of: other), own.isDisjoint(with: claim.route), !longGoesFirst(candidate.id, before: other) {
+            if !holds, let claim = longClaim(of: other), own.isDisjoint(with: claim.route) {
                 holds = network.fouls(claim.waiting, route)
             }
             guard holds else { continue }

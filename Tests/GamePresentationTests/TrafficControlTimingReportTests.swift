@@ -3,21 +3,27 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// How long traffic control takes on the high-speed demo
-/// (`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 items 6 and 7), and how
-/// punctual its sets are on the real day's timetable (decision 197): printed,
-/// and only on request:
+/// How punctual the high-speed demo's sets are on the real day's timetable
+/// (decision 197), and how long a day takes to work out, with traffic
+/// control off as the demo has it or on
+/// (`docs/research/NEXT_PRIORITIES_2026-10-12.md` §2 items 6 and 7):
+/// printed, and only on request:
 ///
 ///     swift build -c release -Xswiftc -enable-testing --build-tests
 ///     TRAFFIC_TIMING_REPORT=1 swift test -c release --skip-build --filter TrafficControlTimingReportTests
 ///
-/// `TRAFFIC_TIMING_HOURS` (default 20) is how many game hours from 05:00
-/// to run, and `TRAFFIC_TIMING_CAP` (default 1200) the seconds after which
-/// an hour stops the report. Each hour prints the seconds of computing it
-/// took, the sets running and a digest of the saved world, so two builds can
-/// be shown to run the same game; the end, the runs sent out, those dropped,
-/// how late the sets reached the end of their runs and how long the real
-/// trains that call at all of their line's stations took end to end.
+/// `TRAFFIC_TIMING_ON=1` turns traffic control on, `TRAFFIC_TIMING_HOURS`
+/// (default 20) is how many game hours from 05:00 to run, and
+/// `TRAFFIC_TIMING_CAP` (default 1200) the seconds after which an hour
+/// stops the report. `TRAFFIC_TIMING_DUMP=07:30,09:00` prints every set's
+/// state at those minutes (`TRAFFIC_TIMING_HELD=1` with what it holds).
+///
+/// Each hour prints the seconds of computing it took, the sets running, how
+/// many wait for a route, how many are deadlocked, how many set-minutes ran
+/// against their way's track, and a digest of the saved world, so two
+/// builds can be shown to run the same game. At the end: the runs due, those
+/// dropped, how late the sets reached the end of their runs, and how long
+/// the runs that call at all of their line's stops took end to end.
 final class TrafficControlTimingReportTests: XCTestCase {
     private func say(_ text: String) {
         FileHandle.standardError.write(Data(("TIMING " + text + "\n").utf8))
@@ -94,8 +100,9 @@ final class TrafficControlTimingReportTests: XCTestCase {
         let built = try layout.build(in: &world, language: .english)
         let tracks = HighSpeedDemoTests.Tracks(layout: layout, built: built)
         world.setSpeed(.normal)
-        // `TRAFFIC_TIMING_OFF=1`: the same day with traffic control off.
-        if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_OFF"] != nil { try world.setTrafficControl(false) }
+        // `TRAFFIC_TIMING_ON=1`: the same day with traffic control on (the
+        // demo has it off, decision 197).
+        if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_ON"] != nil { try world.setTrafficControl(true) }
         try world.advance(ticks: 5 * 60)
         say("== the demo on the real day: \(world.trains.count) sets, \(world.lines.map { $0.runs.count }) runs, traffic control \(world.isTrafficControlEnabled) ==")
         say("hour | seconds | running (most) | waiting for a route | deadlocked | against its track | digest")

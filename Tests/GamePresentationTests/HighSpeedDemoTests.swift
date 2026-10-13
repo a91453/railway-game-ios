@@ -149,11 +149,12 @@ final class HighSpeedDemoTests: XCTestCase {
         // two make up the whole network.
         XCTAssertEqual(Double(length(tracks.up)), Double(length(tracks.between)), accuracy: 30 * Self.metre)
         // A loop beside each track at each of the ten stations between the
-        // ends, a second at Taichung, two crossovers each at Taipei and
-        // Taichung and the two ends' yards: with them, the whole network.
+        // ends, a second at Taichung, a crossover north of Taichung and one
+        // south of Taipei, where sets turn back, and the two ends' yards:
+        // with them, the whole network.
         XCTAssertEqual(tracks.downLoops.count, 33)
         XCTAssertEqual(tracks.upLoops.count, 33)
-        XCTAssertEqual(tracks.crossovers.count, 3)
+        XCTAssertEqual(tracks.crossovers.count, 2)
         XCTAssertEqual(
             tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.yards.count,
             world.network.edges.count
@@ -200,7 +201,7 @@ final class HighSpeedDemoTests: XCTestCase {
         // The 169 real trains and the positioning runs.
         XCTAssertEqual(layout.timetable.lines.map { $0.runs.count - $0.positioning }, [59, 60, 50])
         XCTAssertEqual(layout.timetable.lines.map(\.positioning), [7, 4, 11])
-        XCTAssertTrue(world.isTrafficControlEnabled, "decision 197: the real day under traffic control")
+        XCTAssertFalse(world.isTrafficControlEnabled, "decision 197: under traffic control the real day cannot be run")
         XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
     }
 
@@ -293,39 +294,45 @@ final class HighSpeedDemoTests: XCTestCase {
 
     // MARK: - The game as it opens
 
+    /// At 07:00 every run due by then has sent its set out, both ways.
     func testItOpensAtSevenWithTheSetsOnTheirWay() throws {
         let world = try Self.opened.get()
+        let tracks = try Self.built.get().tracks
         XCTAssertEqual(world.clock.now.minute, 7 * 60)
         XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
         XCTAssertFalse(world.doorCrowding)
         XCTAssertEqual(world.stations.count, 12)
-        // The first set of each kind left at six, a third and a half more
-        // since: seven by seven o'clock, spread along the line, the first
-        // already past Taichung (the edges are numbered from Nangang).
-        let running = world.trains.filter { $0.execution != nil }
-        XCTAssertGreaterThanOrEqual(running.count, 7)
-        let down = try Self.built.get().tracks.down
-        let along = running.compactMap { train -> Int? in
-            if case .onEdge(let traversal, _) = train.position { return down.firstIndex(of: traversal.edge) }
-            return nil
+        for line in world.lines {
+            for (index, run) in line.runs.enumerated() where run.times[0].departure <= 7 * 3_600 {
+                XCTAssertEqual(line.runDays[index], 0, "\(line.name): the run leaving at \(run.times[0].departure / 60) min has gone")
+            }
         }
-        XCTAssertEqual(along.count, running.count, "all southbound so far, on the down track")
-        XCTAssertGreaterThanOrEqual(Set(along).count, 5, "spread along the line")
-        XCTAssertGreaterThan(along.max() ?? 0, down.count / 2, "the first sets are in the south")
+        var ways = (south: 0, north: 0)
+        for train in world.trains where train.execution != nil {
+            guard case .onEdge(let traversal, _)? = train.position else { continue }
+            if tracks.southbound.contains(traversal.edge) { ways.south += 1 }
+            if tracks.northbound.contains(traversal.edge) { ways.north += 1 }
+        }
+        XCTAssertGreaterThanOrEqual(ways.south, 4, "sets on their way south")
+        XCTAssertGreaterThanOrEqual(ways.north, 4, "and north")
     }
 
     /// The game as it runs, from 07:00 to half past seven the next morning,
     /// every ten minutes: no set runs against its way's track, so no two
-    /// sets going opposite ways are ever on the same track; both tracks
-    /// are used all day; and the next morning the sets are out again.
-    func testItsSetsKeepToTheirWaysTracksAllDay() throws {
+    /// sets going opposite ways are ever on the same track (but where sets
+    /// turn back); both tracks are used all day; no set is more than a few
+    /// minutes late; no run is dropped; and the next morning's runs leave
+    /// again (decision 197).
+    func testItsSetsKeepToTheRealDay() throws {
         var world = try Self.opened.get()
         let tracks = try Self.built.get().tracks
         world.setSpeed(.fast)
         var seen = (down: 0, up: 0)
+        var latest: Int64 = 0
         for _ in 0..<(6 * 24 + 3) {
             try world.advance(ticks: 1)
             for train in world.trains where train.execution != nil {
+                latest = max(latest, world.lateness(of: train.id) ?? 0)
                 guard case .onEdge(let traversal, _)? = train.position else { continue }
                 XCTAssertFalse(tracks.isAgainst(traversal), "\(train.name) at minute \(world.clock.now.minute)")
                 if tracks.southbound.contains(traversal.edge) { seen.down += 1 }
@@ -334,8 +341,15 @@ final class HighSpeedDemoTests: XCTestCase {
         }
         XCTAssertGreaterThan(seen.down, 500)
         XCTAssertGreaterThan(seen.up, 500)
+        XCTAssertLessThan(latest, 5 * 60, "on the real timetable, a few minutes late at most")
         XCTAssertEqual(world.clock.now.minute % 1_440, 7 * 60 + 30)
-        XCTAssertGreaterThanOrEqual(world.trains.filter { $0.execution != nil }.count, 7, "the sets are out again")
+        let now = world.clock.now.seconds - GameTime.secondsPerDay
+        for line in world.lines {
+            for (index, run) in line.runs.enumerated() {
+                let day: Int64 = run.times[0].departure + LineRun.latestDispatch < now ? 1 : 0
+                XCTAssertGreaterThanOrEqual(line.runDays[index] ?? -1, day, "\(line.name): the run leaving at \(run.times[0].departure / 60) min")
+            }
+        }
     }
 
     func testPeopleLiveRoundItsStationsAndTravelBetweenThem() throws {
