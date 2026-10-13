@@ -63,6 +63,35 @@ final class DoubleTrackSessionTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
 
+    /// Decision 164 eases a grade only where it fits under the steepest; the
+    /// track on the inside of a curve is shorter, so eased it can be too
+    /// steep where the stretch is not. Then both keep a steady grade and
+    /// the stretch is built, rather than refused as too steep.
+    func testAParallelTooSteepEasedKeepsBothSteady() throws {
+        var world = try makeWorld(width: 40_960, height: 40_960, balance: 1_000_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 5_120, y: 8_192))
+        try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.networkStructure = .elevated
+        session.networkHeight = 352
+        session.networkEasesGrade = true
+        session.networkBuildsDouble = true
+        // Round a curve to the south-east: the right side is the inside.
+        session.networkDoubleSide = .right
+        session.tapNetwork(at: PlanPoint(x: 5_120, y: 8_192), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 13_312, y: 16_384), reach: 16)
+        let draft = try XCTUnwrap(session.networkDraftPreview)
+        XCTAssertNil(draft.preview.problem, draft.preview.problem ?? "")
+        XCTAssertEqual(draft.preview.profile, .uniform)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let built = session.world.network.edges.filter { $0.id != .edge(1) }
+        XCTAssertEqual(built.count, 2)
+        XCTAssertTrue(built.allSatisfy { $0.profile == .uniform })
+    }
+
     func testWithoutRoomTheStretchIsNotBuilt() throws {
         var world = try makeWorld(width: 40_960, height: 20_480, balance: 10_000_000, speed: .paused)
         // A track 2 m north of where the parallel would go.

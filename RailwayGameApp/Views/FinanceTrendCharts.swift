@@ -54,7 +54,7 @@ struct FinanceTrendCharts: View {
     /// The x value of a bucket: unique, and short enough to label an axis
     /// (the day or year it starts on).
     private func key(_ point: FinanceTrendPoint) -> String {
-        history.range == .allYears ? "\(point.startDay / 360 + 1)" : "\(point.startDay + 1)"
+        point.axisKey(for: history.range)
     }
 
     /// About six axis labels, whatever the number of buckets.
