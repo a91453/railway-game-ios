@@ -279,6 +279,64 @@ struct MapView: View {
                         )
                         .equatable()
                     }
+                    // Decision 204: while a finger draws track, the map
+                    // under it three times closer, on the other side of
+                    // the map from the finger, with the stretch's tightest
+                    // radius.
+                    if let finger = session.networkDragFinger {
+                        let side = 132.0
+                        let leftOfFinger = projection.screenPoint(of: finger).x > viewport.width / 2
+                        VStack(spacing: 4) {
+                            ZStack {
+                                MapCanvas(
+                                    world: session.world,
+                                    selectedTrainID: session.selectedTrainID,
+                                    highlightedTrainID: session.followedTrain?.id,
+                                    selectedStationID: session.selectedStation?.id,
+                                    network: session.networkOverlay,
+                                    building: session.buildingOverlay,
+                                    expansion: session.mapExpansionOverlay,
+                                    traffic: traffic,
+                                    camera: projection.loupe(at: finger, size: ScreenSize(width: side, height: side), magnification: 3),
+                                    edges: edges,
+                                    layers: mapLayers,
+                                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                                    lines: lineMap,
+                                    routePreview: session.routePreview,
+                                    labels: stationLabels,
+                                    flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
+                                    flowVersion: flowStrokesVersion,
+                                    lights: lights
+                                )
+                                .equatable()
+                                // Where the finger is.
+                                Path { path in
+                                    path.move(to: CGPoint(x: side / 2 - 8, y: side / 2))
+                                    path.addLine(to: CGPoint(x: side / 2 + 8, y: side / 2))
+                                    path.move(to: CGPoint(x: side / 2, y: side / 2 - 8))
+                                    path.addLine(to: CGPoint(x: side / 2, y: side / 2 + 8))
+                                }
+                                .stroke(Palette.ink, lineWidth: 1.5)
+                            }
+                            .frame(width: side, height: side)
+                            .background(Theme.background)
+                            .clipShape(Circle())
+                            .overlay { Circle().stroke(Palette.ink, lineWidth: 2) }
+                            if let preview = session.networkPreview {
+                                Text(verbatim: preview.radiusText(in: session.language))
+                                    .font(.caption.weight(.semibold))
+                                    .monospacedDigit()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Theme.panel, in: Capsule())
+                            }
+                        }
+                        .position(
+                            x: leftOfFinger ? clear.leading + 12 + side / 2 : viewport.width - clear.trailing - 12 - side / 2,
+                            y: clear.top + 12 + side / 2
+                        )
+                        .accessibilityHidden(true)
+                    }
                 }
                 .mask { attribution.fill() }
                 // The gestures take the touches, and let those on the
