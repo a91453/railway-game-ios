@@ -264,6 +264,29 @@ extension XCUIApplication {
         }
     }
 
+    /// Scrolls whatever holds `button` (a scroll view, or a `List`'s
+    /// collection view) until it can be tapped; whether it can. Slow
+    /// swipes on the holder itself, not at the middle of the screen, which
+    /// on a phone on its side is the edge between the start screen's title
+    /// and its buttons, or the map beside a sheet's list. With the largest
+    /// accessibility text one start screen button is taller than the band
+    /// ``dragUntilWhollyOnScreen(_:in:)`` wants it wholly inside, so it is
+    /// enough here that it can be touched.
+    func scrollUntilHittable(_ button: XCUIElement, swipes: Int = 16) -> Bool {
+        guard button.waitForExistence(timeout: 10) else { return false }
+        let holders = [scrollViews, collectionViews, tables]
+            .map { $0.containing(.button, identifier: button.identifier).firstMatch }
+        guard let holder = holders.first(where: \.exists) else { return button.isHittable }
+        for _ in 0..<swipes where !button.isHittable {
+            if button.frame.midY < holder.frame.midY {
+                holder.swipeDown(velocity: .slow)
+            } else {
+                holder.swipeUp(velocity: .slow)
+            }
+        }
+        return button.isHittable
+    }
+
     /// Opens one of the start screen's demos (decision 135): the Demo Map
     /// button, then `identifier`'s row in its sheet (`demo.realWorld`,
     /// `demo.highSpeed` or `demo.simple`) once it is enabled: the
