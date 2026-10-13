@@ -46,7 +46,7 @@ private final class TutorialJourney {
         "Tap ✓ for the second station",
         "Tap Lines",
         "Tap one station, then the other",
-        "Tap Create Line",
+        "Tap ✓ to create the line",
         "Tap Buy … and Start Service",
         "Tap Done to stop building",
         "Tap \u{25B6}\u{FE0E} to run time",
@@ -158,10 +158,9 @@ private final class TutorialJourney {
         check(map: secondStation, "the second station")
         tap(secondStation)
 
+        // Decision 100, later: the line is made by the ✓ on the map.
         arrive(at: 12)
-        let create = app.buttons["line.draft.create"]
-        check(create, "Create Line")
-        create.tap()
+        tapConfirm("the ✓ that creates the line")
 
         // Service
         arrive(at: 13)

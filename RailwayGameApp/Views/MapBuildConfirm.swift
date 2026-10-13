@@ -22,11 +22,17 @@ struct MapBuildConfirm: View {
     /// under the top controls: where the pill may go when there is no room
     /// under them.
     let mapTop: CGFloat
+    @Environment(GameScreenState.self) private var screen
     @State private var pillSize = CGSize(width: 160, height: 44)
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if let build = BuildConfirmation(session) {
+            // Decision 100, later: the new line picked on the map, under
+            // its ✓.
+            if let draft = session.mapLineDraft {
+                MapLineDraftPath(draft: draft, camera: camera)
+            }
+            if let build = confirmation {
                 if build.showsCatchment {
                     catchmentRing(at: camera.screenPoint(of: build.anchor))
                 }
@@ -43,7 +49,11 @@ struct MapBuildConfirm: View {
             }
         }
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .animation(.spring(duration: 0.25, bounce: 0.3), value: BuildConfirmation(session) != nil)
+        .animation(.spring(duration: 0.25, bounce: 0.3), value: confirmation != nil)
+    }
+
+    private var confirmation: BuildConfirmation? {
+        BuildConfirmation(session, linesPanelOpen: screen.panel == .lines) { screen.panel = .lines }
     }
 
     private func flag(_ systemImage: String, at point: ScreenPoint, tint: Color) -> some View {
@@ -92,6 +102,20 @@ struct MapBuildConfirm: View {
 
     private func buttons(_ build: BuildConfirmation) -> some View {
         HStack(spacing: 6) {
+            // Decision 100, later: the new line's last stop taken back
+            // (the reference's `undoLastStation`).
+            if let undo = build.undo {
+                Button {
+                    undo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.body.weight(.bold))
+                        .frame(width: 44, height: 40)
+                }
+                .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
+                .accessibilityLabel(Text(verbatim: session.language.text("Take Back the Last Stop", "取消上一站")))
+                .accessibilityIdentifier("map.build.undo")
+            }
             Button {
                 build.cancel()
             } label: {
@@ -171,12 +195,54 @@ private struct BuildConfirmation {
     let showsCatchment: Bool
     let cancel: @MainActor () -> Void
     let confirm: @MainActor () -> Void
+    /// Takes back the new line's last stop (decision 100, later).
+    var undo: (@MainActor () -> Void)?
 
     enum Kind {
-        case track, platform, building, sale, mapTile
+        case track, platform, building, sale, mapTile, line, addStop
     }
 
-    init?(_ session: GameSession) {
+    /// `linesPanelOpen`: whether the lines panel is open, where a station
+    /// tapped can join the line it shows; `openLines` opens it, once a
+    /// new line is made, for its trains.
+    init?(_ session: GameSession, linesPanelOpen: Bool, openLines: @escaping @MainActor () -> Void) {
+        // Decision 100, later: a new line, picked on the map, is made
+        // there, beside its last station; a stretch of track being drawn
+        // keeps its own ✓.
+        if session.networkPreview == nil, let draft = session.mapLineDraft {
+            start = nil
+            flaggedEnd = nil
+            anchor = draft.anchor
+            clearance = 22
+            cost = nil
+            canConfirm = draft.canCreate
+            kind = .line
+            caption = draft.caption
+            showsCatchment = false
+            cancel = { session.clearLineDraft() }
+            confirm = {
+                session.createLineFromDraft()
+                if session.mapLineDraft == nil { openLines() }
+            }
+            undo = session.lineDraft.count >= 2 ? { session.removeLastLineDraftStop() } : nil
+            return
+        }
+        // Decision 196, later: a station tapped beside the lines panel
+        // joins the line it shows, where it fits.
+        if linesPanelOpen, session.tool == .select, let suggestion = session.mapStopSuggestion {
+            start = nil
+            flaggedEnd = nil
+            anchor = suggestion.anchor
+            clearance = 22
+            cost = nil
+            canConfirm = true
+            kind = .addStop
+            caption = suggestion.caption
+            showsCatchment = false
+            cancel = { session.clearSelection() }
+            confirm = { session.addStationToSelectedLine(suggestion.station) }
+            return
+        }
         // Decision 160: the tile of the map chosen to buy, at its middle.
         if session.isChoosingMapTile {
             guard let quote = session.chosenMapTileQuote else { return nil }
@@ -269,8 +335,52 @@ private struct BuildConfirmation {
         case .building: language.text("Build here", "蓋在這裡")
         case .sale: language.text("Sell to the city", "賣給城市")
         case .mapTile: language.text("Buy this tile", "買下這一塊")
+        case .line: language.text("Create this line", "建立這條路線")
+        case .addStop: language.text("Add to the line", "加入路線")
         }
         guard let cost else { return what }
         return "\(what), \(cost.moneyText)"
+    }
+}
+
+/// The new line picked on the map (decision 100, later): a line through
+/// the stations it will call at, in the theme's teal with the icon's navy
+/// edge (the art style), and the stations tapped numbered in the order they
+/// were. The reference draws its line being placed as a 5-point line in the
+/// line's colour (`Ci/`'s `metro-preview-layer`); the numbers are this
+/// project's own.
+private struct MapLineDraftPath: View {
+    let draft: MapLineDraft
+    let camera: PlanCamera
+
+    var body: some View {
+        let points = draft.calls.map { camera.screenPoint(of: $0) }
+        ZStack(alignment: .topLeading) {
+            Path { path in
+                guard let first = points.first else { return }
+                path.move(to: CGPoint(x: first.x, y: first.y))
+                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x, y: point.y)) }
+            }
+            .stroke(Theme.textPrimary, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+            Path { path in
+                guard let first = points.first else { return }
+                path.move(to: CGPoint(x: first.x, y: first.y))
+                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x, y: point.y)) }
+            }
+            .stroke(Theme.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+            ForEach(Array(draft.picked.enumerated()), id: \.offset) { index, point in
+                let screen = camera.screenPoint(of: point)
+                Text(verbatim: "\(index + 1)")
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 24, height: 24)
+                    .background(Theme.panel, in: Circle())
+                    .overlay(Circle().strokeBorder(Theme.textPrimary, lineWidth: 2))
+                    .offset(x: screen.x - 12, y: screen.y - 12)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

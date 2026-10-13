@@ -601,12 +601,14 @@ extension Tutorial {
                 "列車從先點的站出發，沿途的車站會自動加入。"
             )
         ),
+        // Decision 100, later: the line is made on the map, by the ✓
+        // beside its last station; the panel's Create Line does the same.
         TutorialStep(
             id: "line.create", chapter: .line,
-            targets: [.createLine],
+            targets: [.mapConfirm],
             goal: .createLine,
             panel: .lines,
-            title: ("Tap Create Line", "按「建立路線」"),
+            title: ("Tap ✓ to create the line", "按 ✓ 建立路線"),
             body: (
                 "Your line appears on the map.",
                 "新路線會畫在地圖上。"
