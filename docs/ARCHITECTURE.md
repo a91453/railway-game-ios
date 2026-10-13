@@ -6338,6 +6338,76 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 不能建置 App；按鈕的點擊、與 MapLibre／MapKit 手勢不衝突、膠囊的樣子要在 macOS CI 與 TestFlight 上看。MapLibre Native 6.31.0 在 style 的 source attribution 與 PMTiles 檔 metadata 的 attribution 都有時 (i) 顯示哪一個沒有驗證。
 
+### 192. 多槽輪替的自動存檔：回到幾分鐘前
+
+2026-10-13，`docs/research/NEXT_PRIORITIES_2026-10-12.md` 波次 1 第 7 項、§10 第 18 題；玩家意見 54.1 第 4 項「蓋錯了不能復原」。遊戲時間一走 Undo 就清空（決策 82），而自動存檔只有一份，每 15 分鐘與離開時都寫同一個 `autosave.json`，新手蓋錯了回不去。A 列車 9 Evolution 把多份自動存檔當主打功能。存檔的內容（`SavedGame`）不變，存檔版本不動；只改 GamePresentation 的存檔資料夾與 App 的畫面。
+
+**參考庫與外部專案**（私有 repo `382b9f8`）：
+- `Ci/reference_snapshot/` 的雲端自動存檔每 15 分鐘一次（`METRO_CLOUD_AUTOSAVE_INTERVAL_MS = 900 * 1e3`，`runMetroCloudAutosave`），但每次都寫第 1 槽（`saveCurrentCityCloudSlot(1, {automatic: true})`），沒有輪替；本機有 3 槽（`normalizeMetroAppLocalSlotNo`），存檔時間顯示成絕對時間（`formatCloudSlotTime`）；`archiveMetroAppCurrentDraftBeforeFreshStart` 把草稿放進第 2、3 槽的空位，滿了就不存。
+- `Railway/city_world_reference/source/assets/` 的備份（`engine-*.js` 的 `Dt`）是最新的在前、最多 3 份、最舊的擠掉（`[新, ...舊].slice(0, 3)`），但只在雲端覆蓋前備份，不是定時。相對時間 `dom-*.js` 的 `p(e, t)`：45 秒內「剛剛」，之後依序四捨五入成分鐘（60 分以內）、小時（24 小時以內）、天。**照搬**成 `SaveLibrary.agoText(from:to:in:)`，中英文字樣相同（英文 "just now"、"N min ago"、"N h ago"、"N d ago"）。
+- `Railway/railway_game_reference_clean/` 的 OpenTTD 只留下設定名（`gui.autosave_interval`、`gui.max_num_autosaves`、`gui.keep_all_autosave`），沒有預設值與輪替的程式。`Simulator/`、`MapBuilder/`、`OpenWorld/` 沒有可用的。
+- 外部專案沒有引用程式碼；「定時存檔輪流寫 N 份、最舊的先走」是 OpenTTD 的 `max_num_autosaves` 的想法（GPL，只取想法）。
+
+**檔案**（`SaveLibrary`）：
+- **最新的**：`autosave.json`，照舊在離開遊戲時寫（App 進背景、回到開始畫面）。舊版只有這一份，名字沒變，所以升級後照樣列出、照樣「繼續」，不需要轉換。
+- **輪替的**：`autosave-<n>.json`，遊戲中每 15 分鐘（`GameLauncher.autosaveInterval`，參考的 `AUTOSAVE_INTERVAL_MS`）寫一份，`n` 是目前最大的號碼加 1（`saveAutosaveSlot`），寫完才刪掉超過 `SaveLibrary.autosaveSlots`（5）的最小號碼與它的新聞旁檔，所以寫失敗不會少一份。用號碼而不用時間決定順序：不必為了找最舊的一份去解每個 7 MB 的檔頭，也不受裝置時鐘影響。舊版 build 會把 `autosave-<n>.json` 當成玩家的存檔列出（只有降版才會遇到）。
+- 兩者都是 `Kind.autosave`；`Entry.slot` 是號碼（最新的是 `nil`）。清單照存檔時間排，最新的在前；同一刻存的兩份，`autosave.json` 在前，再來號碼大的（回到之前時，先存離開的進度、再寫最新的，兩份同一秒）。
+- **不重複佔槽**：定時存檔時，世界和上一份輪替的（或這局剛開始時的）一樣就不寫（`GameLauncher.autosaveSlotInBackground`，`GameWorld` 的 `==`）。玩家暫停後放著不管，不會用五份一樣的存檔把可以回去的那幾份擠掉。
+
+**繼續與回到之前**（`GameLauncher`）：
+- 「繼續」讀最新的一份（所有自動存檔裡存檔時間最新、讀得到的；通常是 `autosave.json`，App 被系統關掉前最後一次定時存檔較新時就是那一份）。
+- **讀檔頭的時間**：檔頭要解整個 JSON，約 10 ms／MB（Linux release，6 份各 22.7 MB 的存檔讀 1.4 s），所以高鐵示範的 6 份約 0.4 s。主執行緒在等的地方（另開一局、在開始畫面回到之前）只讀可能是最新的兩份：`autosave.json` 與號碼最大的那份（`newestAutosave()`；每份輪替的都比前一份晚寫）。遊戲選單的清單在背景讀（`autosavesToGoBackTo()` 是 `async`）。比較世界（`==`）在沒變時約 1 ms（陣列先比儲存區是不是同一個）。
+- 讀其他的自動存檔就是「回到之前」（`load(_:at:)`），**可以反悔**：在遊戲裡回去時，先把現在的進度存成下一份輪替的；在開始畫面回去時，把最新的 `autosave.json` 搬成下一份輪替的（只換檔名，不重寫）。然後讀選的那份，並在背景把它寫成新的 `autosave.json`，所以之後「繼續」接的是回去後的這局。選的那份先讀進來才輪替，輪替刪掉它也不影響。
+- 遊戲選單：「另存或匯出」子選單改名「另存、匯出或回到之前」，多一項「回到之前的自動存檔…」（`menu.goBack`）。第一層列數不變（決策 184 的選單溢出）。按了才讀自動存檔（只讀自動存檔的檔頭，`autosavesToGoBackTo()`），列出每一份的「幾分鐘前 · 遊戲日期 · 資金」讓玩家選（`menu.goBack.<檔名>`）；選項在按下時就決定，遊戲的 tick 不會重建它（#449 的原則）。還沒有自動存檔時，狀態列說每 15 分鐘會存一份。
+- 遊戲中不重讀存檔清單（#425 的做法照舊）：`launcher.entries` 在回到開始畫面時才重讀。
+
+**讀檔畫面**（`StartView`）：「繼續」的說明多一個「幾分鐘前」。「存檔」清單最上面一段「之前的自動存檔」（`olderAutosaves`，最新的在前），每列寫「12 分鐘前 · 存檔日期時間」（`TimelineView(.everyMinute)` 讓它每分鐘更新），下面照舊是遊戲日期與資金、路網規模；可以滑動刪除，不能改名。玩家自己的存檔與讀不到的自動存檔照舊在下一段、照舊可以排序。新字串都是 `language.text` 的兩種語言（`Text(verbatim:)`），沒有改 `Localizable.xcstrings`。
+
+**清理**：
+- 自動存檔最多 6 份（最新的加 5 份輪替）：高鐵示範一份約 7.2 MB，最多約 43 MB；一般的局小得多。
+- 另開一局（新遊戲、示範、讀玩家的存檔、匯入）之前（`archiveAutosave`）：最新、讀得到的那份照舊變成玩家的存檔（`save-<時間>.json`），上一局永遠不會不見；**其他的自動存檔刪掉**，自動存檔永遠只屬於正在玩的這一局，「回到之前」不會回到別局。可能是最新的兩份裡讀不到的（例如較新的 build 寫的）也變成玩家的存檔留著，清單寫出原因，由玩家刪；較舊的輪替不讀就刪。
+- 先搬要留的、再刪：搬不動就不開新局，什麼都沒刪；刪除失敗不擋開新局（只是沒整理到）。
+
+**測試**：`AutosaveSlotsTests`（輪替與最舊的先走、新聞旁檔一起走；最新的不是槽；只認 `autosave-<數字>.json`；搬最新的進槽；相對時間逐值對照參考的四捨五入；定時存檔沒變就不佔槽；繼續讀最新的、其他列在 `olderAutosaves`；在遊戲裡回去並反悔；在開始畫面回去；新遊戲留最新、刪其他、讀不到的留著；舊版只有 `autosave.json` 照樣繼續）。既有的 `GameLauncherTests`、`SaveLibraryTests`、`BackgroundSaveTests`、`SaveNamingTests`、`ReleaseUIFixesTests` 不改。App 的畫面（SwiftUI）只能靠 macOS CI 編譯與實機確認。
+
+**還沒做**：雲端備份；輪替的份數與間隔可以在設定裡改（`SettingsView` 由 #463 佔用，之後再加）。
+
+### 193. 指令日誌：問題回報附上存檔與指令，在 Linux 重播
+
+2026-10-13，NEXT_PRIORITIES 波次 1 第 8 項：作者在 iPhone 上碰到的 bug，要能直接變成 Linux 上的回歸測試。號碼依工作登記 #231：決策 193；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、既有的 replay 都不變（只新增一個 replay fixture）。
+
+**做法的選擇**（優先順序 session 決定，選 B）：GamePresentation 唯一的入口是 `GameSession.performEdit(_:)`，但它收的是 closure，73 個呼叫點在 closure 裡直接呼叫約 80 種 `GameWorld` 方法，在入口記不到「指令本身」。所以指令要先變成值。不在 GameCore 加可 Codable 的指令型別：連線對戰不在優先清單上，那是預先設計，還要跑完整一層 CI、改共用的測試檔。改在 GamePresentation 加 `PlayerCommand`。
+
+1. **指令的值**（`PlayerCommand.swift`）：一個 case 是一個工具的一次編輯，帶著算出它的一切值（端點、曲線、縱斷面、構造、要讀地面的點、月台的區間、新車站的名稱、位置與運量）。`GameSession.apply(_:to:)` 做的是原本 closure 做的事（`EdgePlan.build` 改成呼叫它），`GameSession.perform(_:message:)` 經過 `performEdit` 套用並記下。寫成檔案時用純數字與字串（`kind` 加欄位，和 `ReplayCommand` 一樣），因為被拒絕的指令也要記，而 GameCore 自己的解碼會拒絕世界放不下的值。
+   - 第一個 PR 只有路網工具的四個：鋪一段軌道（`buildNetworkTrack`，交叉渡線不算）、在水平的軌道上設月台（`addNetworkPlatform`；要整平的照舊用 closure）、拆月台、拆軌道。其他編輯照舊用 closure，記成「沒有記錄的指令」，記下呼叫的函式名稱（`performEdit` 的 `caller: #function`）。其餘的種類下一個 PR 再補。
+2. **記錄**（`CommandLog.swift`，`GameSession.commandLog`）：從 session 開始（開新局或讀檔都會建新的 session）時的世界起，依序記每一個改變世界的事，和它的遊戲時間（秒）：
+   - 指令（`.command`），被拒絕的也照順序記（`refused`，被拒絕的什麼都沒改）；沒有改變任何東西的也記。
+   - 套用到世界的遊戲時間（`.advance(ticks:)`）。連續的 tick 合成一筆，下一個 tick 加到上一筆。背景算好、但因為玩家先下了指令而丟掉的 tick（決策 143）不記，因為它沒有套用。
+   - 速度、暫停、繼續（`setSpeed`、`togglePause`、建造時與事件的自動暫停）。
+   - 復原與重做（`.undo`、`.redo`）：它們直接換掉世界，不經過 `GameWorld` 的方法，用 session 重播才能經過同樣的快照。
+   - 讀入土地（`.readLandRoundStations(data)`、`.readLand(reach:at:)`），以及那時 session 有哪些實景資料。資料晚到時（`GameLauncher.install`），就算這一次沒讀到任何土地也記，重播才知道從哪裡起有資料。
+   - 保險：`world` 的 `didSet` 看到不是上面這些路徑造成的改變（不是 tick，也不是記錄中的路徑），就記一筆「沒有記錄」。所以日誌不會漏掉任何改變而沒人知道。
+3. **上限**：5,000 筆（`CommandLog.limit`）。記到 2,500 筆時留下那時的世界；到 5,000 筆時，那個世界成為新的起點，前 2,500 筆丟掉，再從現在留下下一個。所以日誌一直有 2,500 到 5,000 筆，記憶體多兩個世界（起點與下一個起點），沒改的部分和遊戲中的世界共用。遊戲時間合成一筆，所以 5,000 筆是 5,000 次操作，不是 5,000 個 tick。tick 每次只做一次陣列尾端的加法，不拖慢 tick。
+4. **回報的檔案**（`CommandLogReport.swift`，`command-log.json`）：只有存檔（`SavedGame`，起點的世界）、起點時有哪些資料、指令、App 的版本與 build、內附資料檔的雜湊（FNV-1a 64 位元，`dataFiles` 的五個檔：人口、地點、水域、高度、涵蓋），以及結束時的世界摘要（時間、現金、節點、邊、車站、路線、列車數）。不帶裝置識別碼、帳號、位置。存檔裡可能有玩家自己打的名稱：`typedNames` 列出存檔與指令裡的車站、路線、列車名稱，讓玩家看過再決定。
+5. **畫面**（`SettingsView` 的「關於」）：從遊戲打開設定時，「回報問題」上面多一個開關「附上存檔與指令紀錄」（`settings.report.attach`），預設關，由玩家自己打開。打開時在背景寫出 `command-log.json`（存檔可能有幾 MB，還要讀內附資料檔算雜湊），寫好後列出會附上什麼（`CommandLogReport.attachmentText`：檔名、這局開始時的存檔、之後做的幾件事、版本、「不含你或裝置的任何資料」，以及存檔裡的名稱，最多 20 個），寫好前「回報問題」按不下去。「回報問題」再把檔案和原本的訊息一起交給分享表（`ShareLink(item:subject:message:)`，決策 127：App 不寫收件者，玩家按下傳送前什麼都不送）。從開始畫面打開時沒有遊戲，沒有這個開關。新的字照決策 127 第 4 點用 `DisplayLanguage.app` 與 `Text(verbatim:)`，不進字串目錄。
+6. **在 Linux 重播**：
+   - **用 session 重播**（`Tests/GamePresentationTests/CommandLogReplay.swift`）：從起點的存檔開一個沒有畫面的 `GameSession`，照記錄的時機給它 App 內附的資料（`RailwayGameApp/Resources/RealWorld/`），每一筆從記下它的同一條路徑重播：指令走 `perform`、時間走 `advance(ticks:)`、復原走 `undo()`。所以每次編輯後 `performEdit` 讀入的土地（決策 88）與鋪軌讀的地面（決策 124）和實機相同，實景地圖、高鐵示範的回報也能重播，檔案也不會變大。每一筆先比遊戲時間，不同就停；遇到「沒有記錄」也停，說出是哪個函式。資料檔的雜湊和這個 checkout 不同時警告。實機的回報寫成像 `HighSpeedDemoTests` 那樣的 GamePresentationTests。
+   - **轉成 GameCore 的 replay fixture**（`Tests/GameCoreTests/ProblemReportFixtureTests.swift`）：不讀實景資料的世界（空白地圖、挑戰），而且指令都能用 fixture 現有的指令說出來時，轉成 `ReplayFixtures/` 的格式，checksum 用現有的 `ReplayFixture.checksums`，只新增檔案，不改共用的測試檔。鋪軌只轉得了地面（`surface`）、沒有豎曲線、端點不是切開的邊；復原與重做轉不了。轉不了的會說出原因，改用 session 重播。轉完比對結束的摘要。指令：`PROBLEM_REPORT=<report.json> REPLAY_RECORD="$PWD/ReplayFixtures" swift test --filter ProblemReportFixtureTests/testConvertingAReport`。
+   - **例子**：`ReplayFixtures/Reports/blank-map.json` 是 `CommandLogTests` 錄的回報（空白地圖、路網工具的軌道、車站、月台、一個被拒絕的月台、速度與時間），轉成 `ReplayFixtures/problem-report-blank-map.json`，`ReplayFixtureTests` 和其他 fixture 一起重播它。
+
+**測試**：`CommandLogTests`（每一種改變照順序記下、時間、被拒絕的也記；沒有記錄的改變；丟掉的 tick 不記；上限與新的起點；每一種指令和原本的 closure 得到同一個世界或同一個錯誤，經過 session 時全有或全無；每一筆存成檔案再讀回不變；回報列出玩家打的名稱；空白地圖、實景地圖（全台灣、內附的五個資料檔）與列車行駛的回報重播到同一個世界；遇到沒有記錄的改變時停下；例子的回報重播）、`ProblemReportFixtureTests`（例子轉成的 fixture 和提交的一樣；轉不了的說出原因）、`ReplayFixtureTests`（重播新的 fixture）。
+
+**參考**：參考庫（`382b9f8`）`Railway/railway_game_reference_clean/docs/debugging_desyncs.md` 與 `docs/desync.md` §3.1–3.2：每個指令經過唯一的入口（`DoCommandP`），以 ID 和值寫進 `commands-out.log`，配上開局時的存檔，用來重播整局；這裡照做（起點的存檔、依序的指令與日期、從起點重播）。`ReplayFixtures/` 本來就是從那裡來的（決策 51）。參考的做法沒有上限（重開時覆寫），這裡加上 5,000 筆的上限。`Ci/`、`Simulator/`、`MapBuilder/` 沒有指令紀錄或重播可以搬。參考庫已經有做法，沒有另外找外部專案。程式是本專案自己寫的。
+
+**限制**：
+- 這個 PR 只把路網工具的四種編輯變成值；其他編輯（路線、列車、建物、分區、買地…）記成「沒有記錄」，重播停在那裡。下一個 PR 補。
+- 用 session 重播需要和實機同一版的內附資料；不同時只能警告。
+- 摘要只比數量與現金，不是整個世界的雜湊：裝置與 Linux 的 JSON 編碼可能不同，所以不用存檔的位元組比。
+
+**UI 測試**：`SettingsUITests.testTheGameMenusReportCanAttachTheSaveAndCommands`（從遊戲選單打開設定、開關預設關、打開後說出附了什麼、「回報問題」按得下去；完整 lane）。
+
+**沒有驗證的**：Linux 不能建置 App；開關、說明的樣子與分享表（郵件裡的附件）要在 macOS CI 與實機上看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

@@ -18,6 +18,10 @@ struct HUDView: View {
     /// Decision 184: whether Save As's name is being asked, and the name.
     @State private var namingSave = false
     @State private var saveName = ""
+    /// Decision 192: the autosaves to go back to, read and labelled when
+    /// the player asks, so the ticks leave the question as it was asked.
+    @State private var goBackChoices: [GoBackChoice] = []
+    @State private var choosingGoBack = false
 
     var body: some View {
         // One row, as wide as what it shows, when it fits; otherwise cash
@@ -75,6 +79,44 @@ struct HUDView: View {
                 "為這個存檔取個名字，方便在「存檔」裡找到。"
             ))
         }
+        .confirmationDialog(
+            Text(verbatim: session.language.text("Go Back to an Autosave?", "回到之前的自動存檔？")),
+            isPresented: $choosingGoBack,
+            titleVisibility: .visible
+        ) {
+            ForEach(goBackChoices) { choice in
+                Button {
+                    launcher.load(choice.entry)
+                } label: {
+                    Text(verbatim: choice.label)
+                }
+                .accessibilityIdentifier("menu.goBack.\(choice.entry.id)")
+            }
+            Button(role: .cancel) {} label: {
+                Text(verbatim: session.language.text("Cancel", "取消"))
+            }
+        } message: {
+            Text(verbatim: session.language.text(
+                "The game as it is now is kept as an autosave, so you can come back to it.",
+                "現在的進度會先存成一份自動存檔，之後還能回來。"
+            ))
+        }
+    }
+
+    /// Reads the autosaves to go back to (decision 192) and asks which.
+    private func askGoBack() {
+        let language = session.language
+        Task {
+            let autosaves = await launcher.autosavesToGoBackTo()
+            let now = Date()
+            goBackChoices = autosaves.map { entry in
+                let ago = entry.savedAgoText(at: now, in: language) ?? ""
+                let date = entry.summary?.dateAndFundsText(in: language) ?? ""
+                return GoBackChoice(entry: entry, label: date.isEmpty ? ago : "\(ago) · \(date)")
+            }
+            // With none, the launcher says so on the status line.
+            choosingGoBack = !goBackChoices.isEmpty
+        }
     }
 
     /// The game menu, built from what it shows rather than from the world,
@@ -90,7 +132,8 @@ struct HUDView: View {
             askSaveName: {
                 saveName = ""
                 namingSave = true
-            }
+            },
+            askGoBack: askGoBack
         )
         .equatable()
     }
@@ -230,6 +273,9 @@ private struct GameMenu: View, Equatable {
     let language: DisplayLanguage
     /// Asks the name of a save (decision 184), in the HUD's alert.
     let askSaveName: @MainActor () -> Void
+    /// Asks which autosave to go back to (decision 192), in the HUD's
+    /// dialog.
+    let askGoBack: @MainActor () -> Void
 
     nonisolated static func == (lhs: GameMenu, rhs: GameMenu) -> Bool {
         lhs.session === rhs.session
@@ -266,9 +312,21 @@ private struct GameMenu: View, Equatable {
                 ShareLink(item: ExportedSave(session: session), preview: SharePreview(Text("Along the Line save"))) {
                     Label("Export Save", systemImage: "square.and.arrow.up")
                 }
+                // Decision 192: back to the game of some minutes before,
+                // in this row too, so the menu keeps its length.
+                Button {
+                    askGoBack()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Go Back to an Autosave…", "回到之前的自動存檔…"))
+                    } icon: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                }
+                .accessibilityIdentifier("menu.goBack")
             } label: {
                 Label {
-                    Text(verbatim: language.text("Save As or Export", "另存或匯出"))
+                    Text(verbatim: language.text("Save, Export or Go Back", "另存、匯出或回到之前"))
                 } icon: {
                     Image(systemName: "square.and.pencil")
                 }
@@ -494,4 +552,12 @@ private struct ExportedSave: Transferable {
             return SentTransferredFile(try SaveLibrary.exportFile(for: world, at: Date()))
         }
     }
+}
+
+/// An autosave the game menu offers to go back to (decision 192), with
+/// its label as it was when asked: how long ago, the game date and funds.
+private struct GoBackChoice: Identifiable {
+    let entry: SaveLibrary.Entry
+    let label: String
+    var id: String { entry.id }
 }
