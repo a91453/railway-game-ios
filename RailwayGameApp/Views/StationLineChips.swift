@@ -5,7 +5,7 @@ import SwiftUI
 /// The lines calling at the selected station, under its nameboard
 /// (ARCHITECTURE decision 112): a tag in each line's colour that opens the
 /// line, and one that starts a new line here, its other end tapped next on
-/// the map. The tags wrap onto more rows (decision 123): a row that
+/// the map and the line made there (decision 100, later). The tags wrap onto more rows (decision 123): a row that
 /// scrolled sideways showed its last tag cut in two, as if it were broken.
 /// The owner's site marks a stop's transfers with a bordered tag the same
 /// way (`Railway/site_archive_clean/index.html`, `.xfer-tag`).
@@ -58,9 +58,10 @@ struct StationLineChips: View {
     }
 
     private var newLine: some View {
+        // Decision 100, later: the line is picked and made on the map,
+        // beside its last station; the lines panel opens once it is made.
         Button {
             session.startLineFromSelectedStation()
-            screen.panel = .lines
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "plus")

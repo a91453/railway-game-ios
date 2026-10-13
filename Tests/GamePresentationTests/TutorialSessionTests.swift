@@ -590,7 +590,7 @@ final class TutorialSessionTests: XCTestCase {
             "Tap Network", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
             "Tap Platform", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
             "Tap ✓ for the second station",
-            "Tap Lines", "Tap one station, then the other", "Tap Create Line",
+            "Tap Lines", "Tap one station, then the other", "Tap ✓ to create the line",
             "Tap Buy … and Start Service", "Tap Done to stop building", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
             "Tap Lines to check your line", "Read your line's card",
             "Tap one of your stations", "Tap Ridership to see who rides", "That's the tour",
@@ -598,7 +598,7 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
             "點「路網」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
             "點「月台」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
-            "點「路線」", "點一座車站，再點另一座", "按「建立路線」",
+            "點「路線」", "點一座車站，再點另一座", "按 ✓ 建立路線",
             "按「購買…列並開始營運」", "點「完成」結束建造", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
             "點「路線」看營運收支", "看懂路線卡",
             "點你的一座車站", "點「客源」看誰在搭車", "導覽結束",
@@ -1010,7 +1010,7 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(steps.filter { $0.panel == .lines }.map(\.id), ["line.stations", "line.create", "line.staff", "line.card.read"])
         XCTAssertEqual(steps.filter { $0.panel == .closed }.map(\.id), ["build.network", "build.done", "station.select"])
         XCTAssertEqual(steps.filter(\.picksLineStops).map(\.id), ["line.open", "line.stations"])
-        XCTAssertEqual(steps.compactMap(\.revealsInPanel), [.createLine, .staffLine, .lineLoss])
+        XCTAssertEqual(steps.compactMap(\.revealsInPanel), [.staffLine, .lineLoss], "the line is created on the map (decision 100, later)")
         XCTAssertEqual(steps.map(\.skipOfferSeconds).filter { $0 != 20 }, [90])
     }
 

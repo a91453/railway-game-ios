@@ -3494,6 +3494,17 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **限制**：只取最短（列車實際會開）的一條路；分岔要靠點中間的站。環線仍照舊在路線面板設定。
 
 
+**之後的修正**（在地圖上建線，2026-10-13，手機精簡面板的第 3 個 PR；TestFlight 54.1 #6、56.1 #6「無法新增停靠站」；作者 2026-10-13 定的順序第 2 項）：號碼依 #231 都不動；只改 App 與 GamePresentation，GameCore、存檔、golden、replay 都不變。
+1. **在地圖上確認**：正在選站時（`GameSession.mapLineDraft`），地圖上畫出新路線（綠松色 5 點的線、藏青外框，經過它會停的每一站），點過的站依順序標 1、2、3…；最後點的站下面有和建造一樣的確認列（`MapBuildConfirm`，`map.build.confirm`）：一行「3 站：A → C」，✗ 放棄、↶ 取消上一站（`map.build.undo`，兩站以上才有）、✓ 建立。只點了一站時說「點路線的下一站」，✓ 不能按。建好後打開路線面板，讓玩家配車。路線面板的「建立路線」照舊。
+2. **從車站開新路線不必開面板**：車站的「從這站開新路線」只開始選站，不再打開路線面板；選站時車站標籤讓給確認列。
+3. **點車站加入既有路線**：路線面板開著、選了一條線時，在地圖上點一座這條線沒停的車站，車站下面出現「把 X 加入 Y」的確認列（`GameSession.mapStopSuggestion`），✓ 照決策 80 加在最順的位置（`addStationToSelectedLine`，MapBuilder 的 `handleAddStationToLine`），✗ 取消選取。
+4. **教學**：「建立路線」那一步（`line.create`）改指地圖上的 ✓（`mapConfirm`），標題「按 ✓ 建立路線」。
+5. **參考**：`Ci/` 的手機版在畫線時把 ✓ 與 ✕ 放在終點旁（`updateMobilePlaceActionButtons`，`confirmCreateLine` 至少兩站），預覽線是路線色、5 px（`metro-preview-layer`），可以取消上一站（`undoLastStation`）；照這個做。站號、外框與配色是本專案自己的（畫風照 `.claude/skills/art-style`，只用 `Theme` 的色票，沒有新的圖）。
+
+**測試**：`MapLineDraftTests`（沒選站時不畫；一站時要下一站、✓ 不能按；兩站時沿途的站、錨點與兩種語言的說明；建好後消失；選的車站加入選的路線、已經停的站與選站時沒有）、`TutorialSessionTests` 的標題與目標。UI 測試：`TutorialJourneyUITests` 第 12 步按地圖上的 ✓，`TutorialUITests.testCreateLineAndBuyAreInReach` 改按地圖上的 ✓。
+
+**沒有驗證的**：Linux 不能建置 App；地圖上的線、站號、確認列在實機上的樣子要在 macOS CI 與下一版 TestFlight 看。
+
 ### 101. 一步為路線配置列車
 
 2026-10-08，作者要求的 UI/UX 改版（UX-4）：建好路線後，原本要對每一列車各做一次購買、放置（選車站、選朝向）、指派，再到各時段設定班距。改成玩家只選「多久一班」，一步完成。只改 GamePresentation 與 App：GameCore、存檔、golden、replay 都不變。

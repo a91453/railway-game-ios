@@ -183,9 +183,9 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The stations are still to pick")
     }
 
-    /// Decision 188 (full lane and iPad, not the gate): the lines panel
-    /// scrolls Create Line, and then Buy … and Start Service, into view for
-    /// their steps, clear of the card; Done closes the panel and leaves the
+    /// Decision 188 (full lane and iPad, not the gate): the ✓ on the map
+    /// creates the line (decision 100, later), and the lines panel scrolls
+    /// Buy … and Start Service into view for its step, clear of the card; Done closes the panel and leaves the
     /// fares to wait for. The card the player folds stays folded through the
     /// service chapter's steps.
     func testCreateLineAndBuyAreInReach() {
@@ -199,13 +199,15 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card at the line step")
 
-        // The step opens the lines panel itself.
-        let create = app.buttons["line.draft.create"]
-        XCTAssertTrue(create.waitForExistence(timeout: 10), "The lines panel did not open")
-        XCTAssertTrue(waitForHittable(create), "Create Line was not scrolled into view")
+        // The step opens the lines panel itself; the ✓ beside the last
+        // station picked creates the line.
+        XCTAssertTrue(app.buttons["line.draft.pick"].waitForExistence(timeout: 10), "The lines panel did not open")
+        let create = app.buttons["map.build.confirm"]
+        XCTAssertTrue(create.waitForExistence(timeout: 10), "No ✓ on the map")
+        XCTAssertTrue(waitForHittable(create), "The ✓ on the map cannot be tapped")
         Thread.sleep(forTimeInterval: 1)
         if card.exists {
-            XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers Create Line")
+            XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers the ✓")
         }
         create.tap()
 
