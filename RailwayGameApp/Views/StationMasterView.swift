@@ -53,6 +53,8 @@ struct StationMasterCorner: View {
     /// can have changed it (decision 184, later): not at every tick.
     @State private var advice: StationMasterAdvice?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 194, later: a losing line's bubble opens the line panel.
+    @Environment(GameScreenState.self) private var screen
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
