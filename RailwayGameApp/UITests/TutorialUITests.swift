@@ -47,7 +47,7 @@ final class TutorialUITests: XCTestCase {
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomOut.appears(within: 10))
-        XCTAssertTrue(zoomOut.isHittable)
+        XCTAssertTrue(zoomOut.becomesHittable())
         if card.exists {
             XCTAssertFalse(card.frame.intersects(zoomOut.frame), "The tutorial card covers the zoom buttons")
         }
@@ -102,7 +102,7 @@ final class TutorialUITests: XCTestCase {
         waitForStep(app, title: "Tap ✓ to build the track", "taps \(first), \(second); card \(card.frame), free \(free)")
         let confirm = app.buttons["map.build.confirm"]
         XCTAssertTrue(confirm.appears(within: 10))
-        XCTAssertTrue(confirm.isHittable, "The ✓ cannot be tapped")
+        XCTAssertTrue(confirm.becomesHittable(), "The ✓ cannot be tapped")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(confirm.frame), "The tutorial card covers the ✓: card \(card.frame), ✓ \(confirm.frame)")
         }
@@ -118,7 +118,7 @@ final class TutorialUITests: XCTestCase {
         waitForStep(app, title: "Tap Platform", "The ✓ did not build the track")
         let platform = app.buttons["Platform"]
         XCTAssertTrue(platform.appears(within: 10))
-        XCTAssertTrue(platform.isHittable, "The Platform mode cannot be tapped")
+        XCTAssertTrue(platform.becomesHittable(), "The Platform mode cannot be tapped")
         if card.exists {
             XCTAssertFalse(card.frame.intersects(platform.frame), "The tutorial card covers the Platform mode")
         }
@@ -129,7 +129,7 @@ final class TutorialUITests: XCTestCase {
         app.buttons["tutorial.skip"].tap()
         // The card may still be closing right after Skip: wait for it to go.
         XCTAssertTrue(next.disappears(within: 10), "Skip did not close the tutorial")
-        XCTAssertTrue(app.buttons["tool.network"].isHittable)
+        XCTAssertTrue(app.buttons["tool.network"].becomesHittable())
     }
 
     /// The line step on a phone on its side (the owner's device, 2026-10-12):
@@ -151,7 +151,7 @@ final class TutorialUITests: XCTestCase {
 
         let lines = app.buttons["entry.lines"]
         XCTAssertTrue(lines.appears(within: 10))
-        XCTAssertTrue(lines.isHittable, "The Lines button is covered")
+        XCTAssertTrue(lines.becomesHittable(), "The Lines button is covered")
         lines.tap()
         let pick = app.buttons["line.draft.pick"]
         XCTAssertTrue(pick.appears(within: 10), "The lines panel did not open")
@@ -176,10 +176,10 @@ final class TutorialUITests: XCTestCase {
             app.buttons["tutorial.fold"].tap()
             XCTAssertTrue(folded.appears(within: 10), "The card did not fold")
         }
-        XCTAssertTrue(folded.isHittable)
+        XCTAssertTrue(folded.becomesHittable())
         folded.tap()
         XCTAssertTrue(card.appears(within: 10), "The folded card did not open")
-        XCTAssertTrue(app.buttons["tutorial.skip"].isHittable)
+        XCTAssertTrue(app.buttons["tutorial.skip"].becomesHittable())
         XCTAssertFalse(app.buttons["tutorial.next"].isEnabled, "The stations are still to pick")
     }
 
@@ -381,8 +381,10 @@ final class TutorialUITests: XCTestCase {
         // A phone turns from one side to the other (decision 106: it
         // plays only on its side); an iPad from upright to its side.
         XCUIDevice.shared.orientation = .landscapeRight
-        XCTAssertTrue(skip.appears(within: 10))
-        XCTAssertTrue(skip.isHittable)
+        // The card turns with the screen: Skip is there before it comes to
+        // rest (PR #493's run 38360304931 asked at once and found it out of
+        // reach), so wait until it stands still and can be touched.
+        skip.waitUntilSettled(timeout: 10)
         checkToolIsUncovered(app, identifier: "tool.network")
         checkToolIsUncovered(app, identifier: "tool.select")
         selectTool(app, "tool.select")
@@ -467,7 +469,7 @@ final class TutorialUITests: XCTestCase {
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(tool.appears(within: 10))
         XCTAssertTrue(card.appears(within: 10))
-        XCTAssertTrue(tool.isHittable)
+        XCTAssertTrue(tool.becomesHittable())
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 

@@ -6685,6 +6685,11 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
    - `appears(within:)` 是 `exists || waitForExistence(timeout:)`，`disappears(within:)` 是 `!exists || waitForNonExistence(timeout:)`。回答和原本相同（逾時之內有沒有出現或消失），只是已經成立時不等那一秒。
    - 所有 UI 測試檔的 229 與 26 處機械式換名。
    - 等標籤或狀態改變的 `XCTNSPredicateExpectation` 沒有改。
+   - 那一秒原本也讓滑入、隨畫面轉動或被露出來的元素先停好。這個 PR 的第一次執行（run 38360304931）在手機轉向後立刻問教學卡的「略過」點不點得到，結果失敗。所以：
+     - 出現後立刻問點不點得到的地方，改用 `becomesHittable(within:)`：每 0.1 秒看一次，預設最多 2 秒。
+     - 判斷要不要捲動的迴圈，用 `becomesHittable(within: 1)`。
+     - 轉向之後改用既有的 `waitUntilSettled`。
+     - 共 23 處，另加轉向那一處。
 2. **只建置一次**（`ios-build.yml`）：
    - 建置步驟改成 `build-for-testing`，以 ad hoc 簽署（`CODE_SIGN_IDENTITY=-`），和 UI 測試步驟原本自己建的一樣。
    - UI 測試步驟改成 `test-without-building`。Debug 標記的檢查與暖機都用這份產物。

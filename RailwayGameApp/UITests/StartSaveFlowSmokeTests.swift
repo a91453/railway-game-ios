@@ -482,7 +482,7 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         // A phone on its side (decision 106) shows fewer of the start
         // screen's buttons at once: scroll their column to the one wanted.
         let button = app.buttons[identifier]
-        if identifier.hasPrefix("start."), button.appears(within: 10), !button.isHittable {
+        if identifier.hasPrefix("start."), button.appears(within: 10), !button.becomesHittable(within: 1) {
             let column = app.scrollViews.containing(.button, identifier: identifier).firstMatch
             for _ in 0..<4 where column.exists && !button.isHittable {
                 // Slowly, so the column does not fling past the button.

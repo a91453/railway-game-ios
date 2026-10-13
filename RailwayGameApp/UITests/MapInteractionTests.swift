@@ -32,7 +32,7 @@ final class MapInteractionTests: XCTestCase {
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
             XCTAssertTrue(follow.appears(within: 5))
-            for _ in 0..<3 where !follow.isHittable { app.swipeUp() }
+            for _ in 0..<3 where !follow.becomesHittable(within: 1) { app.swipeUp() }
             XCTAssertTrue(follow.isHittable)
             follow.tap()
             XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
@@ -74,7 +74,7 @@ final class MapInteractionTests: XCTestCase {
         fleet.tap()
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
         XCTAssertTrue(fleetFollow.appears(within: 5))
-        for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !fleetFollow.becomesHittable(within: 1) { app.swipeUp() }
         fleetFollow.tap()
         let unfollow = app.buttons["train.unfollow"]
         XCTAssertTrue(unfollow.appears(within: 5))
@@ -87,7 +87,7 @@ final class MapInteractionTests: XCTestCase {
                       "The tap must pick Train 1; value: \(String(describing: map.value))")
         let follow = app.buttons["inspector.train.follow"]
         XCTAssertTrue(follow.appears(within: 5))
-        XCTAssertTrue(follow.isHittable, "The follow button shows without scrolling the card")
+        XCTAssertTrue(follow.becomesHittable(), "The follow button shows without scrolling the card")
         follow.tap()
         XCTAssertTrue(unfollow.appears(within: 5), "Following shows the follow bar")
         XCTAssertTrue(follow.label.contains("Following"), "label: \(follow.label)")
@@ -502,13 +502,13 @@ final class MapInteractionTests: XCTestCase {
 
         let advanced = app.buttons["network.advanced"]
         XCTAssertTrue(advanced.appears(within: 10))
-        for _ in 0..<3 where !advanced.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !advanced.becomesHittable(within: 1) { app.swipeUp() }
         advanced.tap()
         // A toggle with its own style: a toggle (value 1 or 0) or a
         // selected button, as the system reads it.
         let snap = app.descendants(matching: .any)["network.snap"].firstMatch
         XCTAssertTrue(snap.appears(within: 5))
-        for _ in 0..<3 where !snap.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !snap.becomesHittable(within: 1) { app.swipeUp() }
         func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
         XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
@@ -613,7 +613,7 @@ final class MapInteractionTests: XCTestCase {
         build.tap()
 
         let platform = app.buttons["Platform"]
-        if !platform.appears(within: 3) || !platform.isHittable {
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             XCTAssertTrue(controls.appears(within: 5))
             controls.tap()
@@ -638,7 +638,7 @@ final class MapInteractionTests: XCTestCase {
         waitUntilStill(card)
         let action = app.buttons["panel.action"]
         XCTAssertTrue(action.appears(within: 5))
-        XCTAssertTrue(action.isHittable, "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
+        XCTAssertTrue(action.becomesHittable(), "Add Platform \(action.frame) must be in reach without scrolling the card \(card.frame)")
         assertWhollyInside(status, card, "before scrolling")
         assertWhollyInside(action, card, "before scrolling")
 
@@ -758,7 +758,7 @@ final class MapInteractionTests: XCTestCase {
         // longer than a paused demo's (run 38332921819).
         let fleetFollow = app.buttons["fleet.follow.Train 1"]
         XCTAssertTrue(fleetFollow.appears(within: 20), "The fleet list must offer to follow Train 1")
-        for _ in 0..<3 where !fleetFollow.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !fleetFollow.becomesHittable(within: 1) { app.swipeUp() }
         fleetFollow.tap()
         XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 15))
         let map = app.descendants(matching: .any)["map"].firstMatch

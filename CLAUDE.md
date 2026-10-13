@@ -270,7 +270,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   only a Simulator can answer: whether it shows and a finger reaches it. UI
   tests wait with `appears(within:)` and `disappears(within:)`, which answer
   at once when the element already is (or is not) there;
-  `waitForExistence(timeout:)` first looks after a second.
+  `waitForExistence(timeout:)` first looks after a second. Something that
+  slides in, turns or is uncovered exists before it comes to rest, so ask
+  `becomesHittable(within:)` (or `waitUntilSettled`), not `isHittable`,
+  right after it appears.
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.

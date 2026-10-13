@@ -191,6 +191,22 @@ extension XCUIElement {
         !exists || waitForNonExistence(timeout: timeout)
     }
 
+    /// Whether the element can be touched within `timeout` seconds, looking
+    /// every tenth of a second. An element that slides in, turns with the
+    /// screen or is uncovered exists before it comes to rest, and
+    /// `isHittable` asked at once answers for where it is on its way: the
+    /// second `waitForExistence(timeout:)` waited before it looked used to
+    /// hide that (PR #493's run 38360304931, the tutorial's Skip right after
+    /// the phone turned).
+    func becomesHittable(within timeout: TimeInterval = 2) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !(exists && isHittable) {
+            guard Date() < deadline else { return false }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return true
+    }
+
     /// Waits until the element is hittable and in the same place twice in
     /// a row, a quarter of a second apart. Waiting for the app to idle does
     /// not wait for a turning layout or tools sliding in, and a tap found
@@ -269,7 +285,7 @@ extension XCUIApplication {
     /// title (decision 106): a `swipeUp()` at the middle of the screen
     /// lands on the edge between the two and may scroll the title instead.
     func bringStartButtonIntoView(_ button: XCUIElement) {
-        guard button.appears(within: 10), !button.isHittable else { return }
+        guard button.appears(within: 10), !button.becomesHittable(within: 1) else { return }
         let column = scrollViews.containing(.button, identifier: button.identifier).firstMatch
         for _ in 0..<6 where column.exists && !button.isHittable {
             // Slowly, so the column does not fling past the button.

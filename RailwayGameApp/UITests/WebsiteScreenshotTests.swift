@@ -118,7 +118,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         // the island lets the map zoom out. A closer look at the middle of
         // it, three steps in.
         let zoomIn = app.buttons["放大"]
-        if zoomIn.appears(within: 10), zoomIn.isHittable {
+        if zoomIn.appears(within: 10), zoomIn.becomesHittable(within: 1) {
             for _ in 0..<3 {
                 zoomIn.tap()
                 settle(seconds: 1)
@@ -329,7 +329,7 @@ final class WebsiteScreenshotTests: XCTestCase {
     /// Pauses the clock, when it runs.
     private func pauseTheClock(in app: XCUIApplication) {
         let pause = app.buttons.matching(NSPredicate(format: "label == %@", "暫停")).firstMatch
-        if pause.appears(within: 10), pause.isHittable {
+        if pause.appears(within: 10), pause.becomesHittable(within: 1) {
             pause.tap()
         }
     }

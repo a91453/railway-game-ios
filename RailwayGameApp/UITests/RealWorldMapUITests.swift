@@ -199,7 +199,7 @@ final class RealWorldMapUITests: XCTestCase {
         let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         let builder = confirm.appears(within: 10) ? confirm : card
         XCTAssertTrue(builder.appears(within: 10), "No way to build the stretch")
-        XCTAssertTrue(builder.isHittable, "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
+        XCTAssertTrue(builder.becomesHittable(), "The ✓ cannot be tapped: \(builder.frame), dock top \(dockTop)")
         builder.tap()
         let banner = { (text: String) in
             app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
@@ -208,7 +208,7 @@ final class RealWorldMapUITests: XCTestCase {
 
         // The platform mode, from the details card (opened if folded).
         let platform = app.buttons["Platform"]
-        if !platform.appears(within: 3) || !platform.isHittable {
+        if !platform.appears(within: 3) || !platform.becomesHittable(within: 1) {
             let controls = app.buttons["controls.toggle"]
             if controls.exists { controls.tap() }
         }
@@ -238,7 +238,7 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(confirm.appears(within: 5), "The pill went with the refusal")
         let dock = app.buttons["dock.build"].frame
         for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
-            XCTAssertTrue(button.isHittable, "The platform's \(name) cannot be tapped: \(button.frame)")
+            XCTAssertTrue(button.becomesHittable(), "The platform's \(name) cannot be tapped: \(button.frame)")
             XCTAssertLessThanOrEqual(button.frame.maxY, dock.minY, "The platform's \(name) goes under the dock: \(button.frame), dock \(dock)")
         }
     }
