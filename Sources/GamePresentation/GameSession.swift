@@ -335,6 +335,9 @@ public final class GameSession {
     /// Whether the drag under way picked a new start (it began on other
     /// track): cancelled, it keeps that start but not the old end.
     @ObservationIgnored var networkDragMovedStart = false
+    /// Where the finger drawing track is, for the magnifier (decision 204);
+    /// `nil` when no drag draws track.
+    public internal(set) var networkDragFinger: PlanPoint?
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic
