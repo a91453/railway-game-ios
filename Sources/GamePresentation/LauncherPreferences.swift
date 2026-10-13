@@ -10,6 +10,10 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     public var tutorialCompleted = false
     public var firstGameCardDismissed = false
     public var newGameOptions = NewGameOptions()
+    /// The tutorial's step to take it up again at in the next game
+    /// (decision 188, later fix): the step it was skipped on, or on screen
+    /// when the game was left; `nil` once finished or never begun.
+    public var tutorialStepToResume: String?
 
     public init() {}
 

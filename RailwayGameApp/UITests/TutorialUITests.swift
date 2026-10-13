@@ -398,7 +398,9 @@ final class TutorialUITests: XCTestCase {
         app.buttons["tool.select"].tap()
         XCTAssertTrue(app.buttons["tool.select"].waitForNonExistence(timeout: 10), "Done did not close the tools")
 
-        // The game menu starts the tutorial again without leaving this game.
+        // The game menu starts the tutorial again without leaving this game:
+        // the skipped tutorial is offered at its step, or from the start
+        // (decision 188, later fix).
         // Pause through the real HUD so a rapidly changing game clock does
         // not continuously rebuild the native menu while XCTest targets it.
         hittableButton(app.buttons.matching(NSPredicate(
@@ -413,6 +415,10 @@ final class TutorialUITests: XCTestCase {
         )))
         XCTAssertEqual(restart.label, tutorialLabel)
         restart.tap()
+        let resume = app.buttons["menu.tutorial.resume"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 10), "The skipped tutorial is not offered to continue")
+        XCTAssertTrue(resume.label.contains(language == "en" ? "Step 1" : "第 1 步"), resume.label)
+        hittableButton(app.buttons.matching(identifier: "menu.tutorial.restart")).tap()
         openCard(app)
         XCTAssertTrue(next.waitForExistence(timeout: 10))
         XCTAssertFalse(back.exists)

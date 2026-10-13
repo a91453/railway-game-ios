@@ -401,7 +401,22 @@ public final class GameSession {
 
     /// The tutorial on screen (Stage C5), or `nil`. Moved through the
     /// tutorial methods (see TutorialSession.swift); never saved.
-    public internal(set) var tutorial: Tutorial?
+    public internal(set) var tutorial: Tutorial? {
+        didSet { noteTutorialStepToResume() }
+    }
+    /// The tutorial the player skipped, kept to be taken up again at the
+    /// same step from the game menu (``resumeTutorial()``; decision 188,
+    /// later fix, TestFlight 54.1), or `nil`. Never saved; the launcher
+    /// keeps its step between launches.
+    public internal(set) var skippedTutorial: Tutorial? {
+        didSet { noteTutorialStepToResume() }
+    }
+    /// Called with the step a tutorial left now would be taken up again
+    /// at, the one on screen or skipped (`nil` when there is none, as once
+    /// it is finished), whenever it changes: the launcher keeps it, so the
+    /// tutorial can be taken up again after the app is closed.
+    @ObservationIgnored public var onTutorialStepToResume: (@MainActor (String?) -> Void)?
+    @ObservationIgnored var notedTutorialStepToResume: String?
     /// Called when the player finishes the tutorial's last step (decision
     /// 177): the launcher notes it in its preferences. Not on Skip.
     @ObservationIgnored public var onTutorialCompleted: (@MainActor () -> Void)?

@@ -157,6 +157,12 @@ public final class GameLauncher {
         savePreferences()
     }
 
+    func noteTutorialStepToResume(_ step: String?) {
+        guard step != preferences.tutorialStepToResume else { return }
+        preferences.tutorialStepToResume = step
+        savePreferences()
+    }
+
     func noteTutorialCompleted() {
         guard !preferences.tutorialCompleted else { return }
         preferences.tutorialCompleted = true
@@ -602,6 +608,13 @@ public final class GameLauncher {
         if let news { started.restoreNews(news) }
         if isDemo { started.news.isDemo = true }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
+        // Decision 188, later fix: the tutorial skipped, or left, in an
+        // earlier game or launch, offered at the same step.
+        if !isDemo, let step = preferences.tutorialStepToResume {
+            started.keepTutorialToResume(atStep: step)
+            started.notedTutorialStepToResume = step
+        }
+        started.onTutorialStepToResume = { [weak self] step in self?.noteTutorialStepToResume(step) }
         started.onMidnight = { [weak self, weak started] in
             guard let self, let started else { return }
             self.checkAchievements(of: started)
