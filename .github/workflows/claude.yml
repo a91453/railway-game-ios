@@ -22,8 +22,42 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  # TEMPORARY (never merged): checks the API key from this pull request.
+  pull_request:
 
 jobs:
+  key-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check the API key with one tiny request
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.request, urllib.error
+          raw = os.environ.get("KEY", "")
+          print("length:", len(raw))
+          print("starts with sk-ant-api03-:", raw.strip().startswith("sk-ant-api03-"))
+          print("leading/trailing whitespace:", raw != raw.strip())
+          print("whitespace inside:", any(c.isspace() for c in raw.strip()))
+          def ask(key, model):
+              body = json.dumps({"model": model, "max_tokens": 8,
+                                 "messages": [{"role": "user", "content": "ping"}]}).encode()
+              req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=body, headers={
+                  "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+              try:
+                  r = json.load(urllib.request.urlopen(req, timeout=60))
+                  print(model, "-> OK", r.get("model"), r.get("usage"))
+              except urllib.error.HTTPError as e:
+                  print(model, "-> HTTP", e.code, e.read().decode()[:500])
+          ask(raw, "claude-opus-5-5")
+          if raw != raw.strip():
+              ask(raw.strip(), "claude-opus-5-5")
+          EOF
+
   claude:
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
