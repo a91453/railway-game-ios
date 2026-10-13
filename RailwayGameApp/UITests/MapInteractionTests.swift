@@ -666,26 +666,33 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(card.waitForExistence(timeout: 5))
 
         // The layout and the head's summary, a few times a second.
+        // A snapshot that finds neither layout's mark keeps the marks it did
+        // find, for the failure message.
         var layouts: [String: Int] = [:]
         var summaries = Set<String>()
-        let deadline = Date().addingTimeInterval(15)
+        var samples: [String] = []
+        let deadline = Date().addingTimeInterval(20)
         while Date() < deadline {
             guard let snapshot = try? card.snapshot() else { continue }
-            var layout = "none", summary = ""
+            var layout = "none", summary = "", marks: [String] = []
             var queue = [snapshot]
             while let next = queue.popLast() {
                 if next.identifier.hasPrefix("details.scroll.") { layout = next.identifier }
                 if next.identifier == "inspector.status" { summary = next.label }
+                if !next.identifier.isEmpty { marks.append(next.identifier) }
                 queue.append(contentsOf: next.children)
             }
+            if layout == "none" { layout = "none(\(snapshot.elementType.rawValue) \(marks.prefix(8).joined(separator: ",")))" }
             layouts[layout, default: 0] += 1
+            let kind = summary.contains("Stopped at") ? "stopped" : summary.contains("running") ? "running" : "other"
+            samples.append("\(layout.prefix(24))/\(kind)/\(Int(snapshot.frame.height))")
             summaries.insert(summary.replacingOccurrences(of: "[0-9]+", with: "#", options: .regularExpression))
             Thread.sleep(forTimeInterval: 0.1)
         }
         XCTAssertTrue(app.buttons["Pause"].exists, "The clock must keep running")
         XCTAssertTrue(summaries.contains { $0.contains("Stopped at") } && summaries.contains { !$0.contains("Stopped at") },
                       "The train must both stop and run while watched: \(summaries)")
-        XCTAssertEqual(layouts.count, 1, "The card switched layouts while its train stopped and started: \(layouts); summaries: \(summaries)")
+        XCTAssertEqual(layouts.count, 1, "The card switched layouts while its train stopped and started: \(layouts); summaries: \(summaries); samples: \(samples)")
     }
 
     /// Waits until `element` is in the same place twice in a row, a
