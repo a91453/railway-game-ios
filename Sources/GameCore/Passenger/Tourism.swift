@@ -546,14 +546,12 @@ extension GameWorld {
         ), day: day)
     }
 
+    /// Records a level of attraction `id`'s souvenir shop as an asset of
+    /// its own, bought now: added to the first level's record, its cost was
+    /// written down on that record's days, all at once on the next day, or
+    /// never once the first level was written off.
     mutating func recordSouvenirAsset(of id: AttractionID, cost: Money) {
-        guard accounts.mode == .management else { return }
-        if let index = accounts.assets.firstIndex(where: { $0.kind == .souvenirShop && $0.owner == id.rawValue }) {
-            accounts.assets[index].cost = accounts.assets[index].cost + cost
-            accounts.bookCapital(day: dayIndex(of: clock.now)) { $0.capitalSpending = $0.capitalSpending + cost }
-        } else {
-            acquireAsset(.souvenirShop, owner: id.rawValue, cost: cost)
-        }
+        acquireAsset(.souvenirShop, owner: id.rawValue, cost: cost)
     }
 
     // MARK: - Validation

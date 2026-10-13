@@ -191,9 +191,35 @@ final class TourismTests: XCTestCase {
             try poor.investInSouvenirShop(of: AttractionID(rawValue: 1))
             return try XCTUnwrap(poor.accounts.assets.first { $0.kind == .souvenirShop })
         }()
-        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.count, 1, "one record, its cost grown")
-        XCTAssertEqual(record.cost, Money(60_000_000))
+        XCTAssertEqual(poor.accounts.assets.filter { $0.kind == .souvenirShop }.map(\.cost), [Money(30_000_000), Money(30_000_000)], "a record a level")
+        XCTAssertEqual(record.cost, Money(30_000_000))
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(poor)), poor)
+    }
+
+    /// The second level is written down from when it was bought, on its own
+    /// schedule (NEXT_PRIORITIES §2): added to the first level's record, its
+    /// cost was caught up on that record's days the next day, and never
+    /// written down once the first level was.
+    func testTheSecondLevelIsWrittenDownFromWhenItWasBought() throws {
+        let life = AssetClass.buildings.lifeDays
+        let daily = Money(30_000_000 / life)
+        for daysWritten in [Int64(100), life] {
+            var world = try self.world()
+            world.setEconomyMode(.management)
+            try world.investInSouvenirShop(of: AttractionID(rawValue: 1))
+            for _ in 0 ..< daysWritten { world.depreciateAssets(day: 0) }
+            XCTAssertEqual(world.accounts.assets.first { $0.kind == .souvenirShop }?.days, daysWritten)
+            try world.investInSouvenirShop(of: AttractionID(rawValue: 1))
+            let before = world.accounts.assets.reduce(Money.zero) { $0 + $1.depreciation }
+            world.depreciateAssets(day: 0)
+            let charge = world.accounts.assets.reduce(Money.zero) { $0 + $1.depreciation } - before
+            // A day of each level still being written down, give or take
+            // the cent the straight line rounds off.
+            let levels: Int64 = daysWritten < life ? 2 : 1
+            XCTAssertLessThanOrEqual(abs(charge.amount - daily.amount * levels), levels, "after \(daysWritten) days")
+            XCTAssertNil(world.assetsProblem())
+            XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+        }
     }
 
     func testNoStationWithinEightHundredMetres() throws {
