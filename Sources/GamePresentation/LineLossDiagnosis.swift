@@ -7,7 +7,7 @@ import GameCore
 // line accounts (``LineTally``) and the line as it is now; nothing is kept
 // in the world.
 //
-// Decision 206 adds the line's punctuality over the same days, with
+// Decision 207 adds the line's punctuality over the same days, with
 // realistic operation: the share of its trips that reached their last call
 // no more than five minutes late (the reference's `delay-stats.json` rule).
 //
@@ -134,7 +134,7 @@ public struct LineLossMeasures: Hashable, Sendable {
     /// The minutes a day the line runs.
     public var serviceMinutes: Int64
     /// Trips that reached their last call, with realistic operation
-    /// (decision 206), and of them the late ones.
+    /// (decision 207), and of them the late ones.
     public var trips: Int64
     public var lateTrips: Int64
 
@@ -160,7 +160,7 @@ public struct LineLossMeasures: Hashable, Sendable {
     }
 
     /// The trips on time, in thousandths, or `nil` with none counted
-    /// (decision 206).
+    /// (decision 207).
     public var punctualityPermille: Int64? {
         trips > 0 ? (trips - lateTrips) * 1_000 / trips : nil
     }
@@ -328,7 +328,7 @@ public struct LineLossDiagnosis: Hashable, Sendable {
     }
 
     /// "On time 96%: 10 of 240 trips over 5 min late", or `nil` without
-    /// trips counted (decision 206: a world with realistic operation).
+    /// trips counted (decision 207: a world with realistic operation).
     public func punctualityText(in language: DisplayLanguage) -> String? {
         guard let permille = measures.punctualityPermille else { return nil }
         let percent = "\(permille / 10)%"

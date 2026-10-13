@@ -66,7 +66,7 @@ public struct LineJourney: Hashable, Sendable {
     /// on its platform. The usual far-terminal turn and the trip's initial
     /// facing are separate. Derived from topology, never saved on the line.
     public let intermediateTurnbacks: [Int]
-    /// Seconds a train stays at a call between the ends (decision 206,
+    /// Seconds a train stays at a call between the ends (decision 207,
     /// ``GameWorld/dwellSeconds(of:)``): one minute unless the line or
     /// realistic operation says otherwise.
     public let dwellSeconds: Int64

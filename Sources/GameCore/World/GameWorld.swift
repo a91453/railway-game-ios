@@ -109,7 +109,7 @@ public struct GameWorld: Equatable, Sendable {
     /// Set by ``setKeepLeft(_:)`` only.
     public internal(set) var keepLeft: Bool = false
     /// Whether the lines plan their timetables realistically (decision
-    /// 206): each leg at the performance's usual rates with a recovery
+    /// 207): each leg at the performance's usual rates with a recovery
     /// margin a late train can make up, a line's dwell by its kind, and
     /// each line's punctuality counted. Off in a new world and in saves from
     /// before it; the app's new games turn it on. Set by
@@ -1922,7 +1922,7 @@ public struct GameWorld: Equatable, Sendable {
         }
     }
 
-    /// Sets line `id`'s dwell at a stop between its ends (decision 206), or
+    /// Sets line `id`'s dwell at a stop between its ends (decision 207), or
     /// with `nil` gives it back the world's default
     /// (``dwellSeconds(of:)``). A train already on its way keeps its
     /// timetable.
@@ -3158,7 +3158,7 @@ public struct GameWorld: Equatable, Sendable {
                     let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
                     left = overflow ? .max : sum
                 }
-                // Decision 206: with realistic operation, fitted to the time
+                // Decision 207: with realistic operation, fitted to the time
                 // left to its scheduled arrival; otherwise as fast as it can.
                 var scheduled: Int64?
                 if realisticOperation, case .travellingToStop(let stop, let cycle)? = train.execution {
@@ -3372,7 +3372,7 @@ public struct GameWorld: Equatable, Sendable {
         moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
         // Stage W2c: the run takes the time the timetable gives it, from the
         // scheduled departure to the scheduled arrival (never negative).
-        // Decision 206: with realistic operation, the time left to the
+        // Decision 207: with realistic operation, the time left to the
         // scheduled arrival, so a late train makes up its margin.
         let scheduled = realisticOperation
             ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
@@ -3441,7 +3441,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[index].execution = .waitingAtStop(stop, cycle: cycle)
             trains[index].times = ServiceTimes(arrival: clock.now, departure: trains[index].times?.departure)
             arrived = true
-            // Decision 206: a trip at its last call counts towards its
+            // Decision 207: a trip at its last call counts towards its
             // line's punctuality, as the reference counts a train's final
             // delay once a day.
             if realisticOperation, stop == trains[index].timetable.count - 1, !trains[index].isDeadheading,

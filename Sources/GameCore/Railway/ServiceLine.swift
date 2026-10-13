@@ -365,7 +365,7 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// `Int64.max`.
     public internal(set) var deadheadDistance: Int64 = 0
     /// Seconds a train stays at a stop between the ends of the line, as the
-    /// player set it (decision 206): ``ServiceDwell/minimum`` to
+    /// player set it (decision 207): ``ServiceDwell/minimum`` to
     /// ``maximumDwellSeconds``. `nil`, as for every line before it, is the
     /// world's default (see ``GameWorld/dwellSeconds(of:)``): 60 s, or with
     /// realistic operation a high-speed line's real dwell. Set by
@@ -385,9 +385,9 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     }
 
     /// Minutes a train stays at a stop between the ends of the line, unless
-    /// it has its own dwell (``dwellSeconds``, decision 206).
+    /// it has its own dwell (``dwellSeconds``, decision 207).
     public static let dwellMinutes: Int64 = 1
-    /// The longest dwell a line may set (decision 206): 10 minutes.
+    /// The longest dwell a line may set (decision 207): 10 minutes.
     public static let maximumDwellSeconds: Int64 = 600
     /// Minutes a train stays at either end of the line, where it turns round.
     public static let terminalDwellMinutes: Int64 = 2
@@ -1009,7 +1009,7 @@ extension ServiceLine: Codable {
         guard deadheadDistance >= 0, !container.contains(.deadheadDistance) || deadheadDistance > 0 else {
             throw DecodingError.dataCorruptedError(forKey: .deadheadDistance, in: container, debugDescription: "Line \(id.rawValue)'s empty running is a positive distance, or not written.")
         }
-        // Decision 206 (save version 53): a dwell the player set.
+        // Decision 207 (save version 53): a dwell the player set.
         dwellSeconds = try container.decodeIfPresent(Int64.self, forKey: .dwellSeconds)
         if let dwellSeconds, !Self.dwellRange.contains(dwellSeconds) {
             throw DecodingError.dataCorruptedError(forKey: .dwellSeconds, in: container, debugDescription: "Line \(id.rawValue)'s dwell must be \(Self.dwellRange.lowerBound) to \(Self.dwellRange.upperBound) seconds.")

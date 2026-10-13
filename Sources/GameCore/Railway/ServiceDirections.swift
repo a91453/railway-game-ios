@@ -77,7 +77,7 @@ extension GameWorld {
             let stations: [StationID]
             let flexDispatch: Bool
             let keepLeft: Bool
-            /// Decision 206: the legs' planned seconds.
+            /// Decision 207: the legs' planned seconds.
             let realisticOperation: Bool
 
             init(_ world: GameWorld) {

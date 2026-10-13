@@ -3,7 +3,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Realistic operation where the app meets it (ARCHITECTURE decision 206): a
+/// Realistic operation where the app meets it (ARCHITECTURE decision 207): a
 /// new game plans realistically and counts punctuality, the worlds whose
 /// timetables were measured without it (the demos, the challenges, the
 /// tutorial) keep it off, as an old save does, and the line card says how

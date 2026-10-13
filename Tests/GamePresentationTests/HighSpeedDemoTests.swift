@@ -204,7 +204,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertFalse(world.isTrafficControlEnabled, "decision 197: under traffic control the real day cannot be run")
         XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
         XCTAssertFalse(world.keepLeft, "its routes are as they were measured; its up line is laid west of the down line already (decision 202)")
-        XCTAssertFalse(world.realisticOperation, "it runs the real timetable, whose times its trains keep to (decision 206)")
+        XCTAssertFalse(world.realisticOperation, "it runs the real timetable, whose times its trains keep to (decision 207)")
     }
 
     /// Each line runs the same day again and again: the day's runs and

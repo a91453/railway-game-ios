@@ -48,14 +48,14 @@ public struct LineTally: Hashable, Sendable {
     public internal(set) var energyCost: Money = .zero
     public internal(set) var staffCost: Money = .zero
     /// Trips that reached their last call, with realistic operation
-    /// (decision 206): what its punctuality is counted from.
+    /// (decision 207): what its punctuality is counted from.
     public internal(set) var trips: Int64 = 0
     /// Of ``trips``, those more than ``GameWorld/punctualSeconds`` late.
     public internal(set) var lateTrips: Int64 = 0
 
     public init() {}
 
-    /// The trips on time, in thousandths of ``trips`` (decision 206), or
+    /// The trips on time, in thousandths of ``trips`` (decision 207), or
     /// `nil` with none counted.
     public var punctualityPermille: Int64? {
         trips > 0 ? (trips - lateTrips) * 1_000 / trips : nil
@@ -97,7 +97,7 @@ public struct LineTally: Hashable, Sendable {
     }
 }
 
-/// Saved with every figure; `"trips"` and `"lateTrips"` (decision 206)
+/// Saved with every figure; `"trips"` and `"lateTrips"` (decision 207)
 /// only when there are trips, which is how tallies from before them read.
 extension LineTally: Codable {
     private enum CodingKeys: String, CodingKey {
@@ -329,7 +329,7 @@ extension GameWorld {
     }
 
     /// A trip of line `line` reached its last call `late` seconds after its
-    /// scheduled arrival (decision 206; negative when early).
+    /// scheduled arrival (decision 207; negative when early).
     mutating func countLineTrip(on line: LineID, late: Int64) {
         guard recordsLines else { return }
         lineAccounts?.count({

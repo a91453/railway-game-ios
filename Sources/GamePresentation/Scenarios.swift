@@ -157,7 +157,7 @@ extension GameWorld {
         world.setFlexDispatch(false)
         // Decision 202: its routes are as they were measured.
         world.setKeepLeft(false)
-        // Decision 206: its timetables are as they were measured.
+        // Decision 207: its timetables are as they were measured.
         world.setRealisticOperation(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)

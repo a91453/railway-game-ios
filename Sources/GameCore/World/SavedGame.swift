@@ -271,7 +271,7 @@
 ///     its trains taking the left of double track. A build that reads only
 ///     an earlier version would drop it, and its trains would run both ways
 ///     on one line again, so it says the save is newer than it instead.
-/// 53. Realistic operation (decision 206): a world can have
+/// 53. Realistic operation (decision 207): a world can have
 ///     `"realisticOperation": true`, a line its own `"dwellSeconds"`, and a
 ///     line's tally `"trips"` and `"lateTrips"`. A build that reads only an
 ///     earlier version would drop them, and its lines would plan at their

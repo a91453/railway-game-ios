@@ -553,7 +553,7 @@ extension GameWorld {
         /// with the hotels near it.
         let tourism: Tourism?
         let tourismStars: [Int]
-        /// Decision 206: the legs' planned seconds and the dwells.
+        /// Decision 207: the legs' planned seconds and the dwells.
         let realisticOperation: Bool
     }
 

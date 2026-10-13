@@ -2,7 +2,7 @@ import Foundation
 @testable import GameCore
 import XCTest
 
-/// Realistic operation, first stage (ARCHITECTURE decision 206): with the
+/// Realistic operation, first stage (ARCHITECTURE decision 207): with the
 /// world's switch on, a line plans its legs at its performance's usual
 /// rates with a recovery margin, dwells by its kind or as set, a late train
 /// makes up its margin, and each line counts its trips' punctuality. Off,

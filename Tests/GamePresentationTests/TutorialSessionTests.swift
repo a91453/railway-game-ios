@@ -484,7 +484,7 @@ final class TutorialSessionTests: XCTestCase {
             // building materials (decision 157), its crowded doors
             // (decision 169), its flexible dispatch (decision 172), its
             // keeping left (decision 202) or its realistic operation
-            // (decision 206).
+            // (decision 207).
             var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
             expected.setDisruptions(nil)
             expected.setBuildingMaterials(false)

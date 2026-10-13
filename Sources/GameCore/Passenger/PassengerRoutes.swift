@@ -140,7 +140,7 @@ struct PassengerRouteGraph: Equatable {
         /// ``PassengerCrowding``); 0 for a hand-built graph.
         var dailyCapacity: Int64 = 0
         /// Seconds its trains stay at a call between its ends (decision
-        /// 206, ``LineJourney/dwellSeconds``).
+        /// 207, ``LineJourney/dwellSeconds``).
         var dwellSeconds: Int64 = GameWorld.defaultDwellSeconds
     }
 

@@ -604,7 +604,7 @@ final class BalanceReportTests: XCTestCase {
         }
     }
 
-    /// Decision 206: `BALANCE_NO_REALISTIC=1` measures a new game without
+    /// Decision 207: `BALANCE_NO_REALISTIC=1` measures a new game without
     /// realistic operation, as before it.
     private static func applyRealisticOperationSwitch(_ world: inout GameWorld) {
         if ProcessInfo.processInfo.environment["BALANCE_NO_REALISTIC"] != nil {

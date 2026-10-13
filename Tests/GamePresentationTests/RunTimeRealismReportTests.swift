@@ -17,7 +17,7 @@ import XCTest
 ///
 /// - The high-speed demo as it is built: its three services' journeys
 ///   (``GameWorld/lineJourney(_:pattern:)``: the legs, and its dwell at
-///   each call between), off and with realistic operation (decision 206),
+///   each call between), off and with realistic operation (decision 207),
 ///   against the median
 ///   Nangang → Zuoying train of the same stopping pattern in the bundled
 ///   `thsr-schedule.json`; leg by leg; and the lateness over the first two
@@ -118,11 +118,11 @@ final class RunTimeRealismReportTests: XCTestCase {
         let names = HighSpeedDemo.stationNames
         let ids = world.stations.map(\.id)
         let built = world
-        // Decision 206: the same lines planned with realistic operation.
+        // Decision 207: the same lines planned with realistic operation.
         for realistic in [false, true] {
             world = built
             world.setRealisticOperation(realistic)
-            say("== High-speed demo: Nangang → Zuoying, as built\(realistic ? ", realistic operation (decision 206)" : "") (journey legs + its dwell at each call between) ==")
+            say("== High-speed demo: Nangang → Zuoying, as built\(realistic ? ", realistic operation (decision 207)" : "") (journey legs + its dwell at each call between) ==")
             say("service | calls | game run | game dwell | game | real median (trains) | game/real")
             var legRows: [String] = []
             for line in world.lines {
