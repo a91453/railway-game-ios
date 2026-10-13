@@ -2510,14 +2510,15 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **之後的修正（2026-10-13，TestFlight 56.1 兩位玩家回報）：底圖一直跟著遊戲的相機，而且一直是平的、北朝上。**
 - 回報：(A)「從 OpenStreetMap 切到衛星，路線會直接跑掉」；(B) 鋪軌時「路軌呈現 3D」、「調節角度期間離開原定的位置」。
-- 原因（程式碼）：切換底圖時 `MapView` 丟掉 MapLibre 的 view、重建 `MKMapView`，`FollowingMapView` 只在遊戲的相機改變與 layout 時設定一次範圍。MapKit 自己再改範圍（載入完、套用樣式、或放大不到要的程度而保留中心、顯示更大的範圍）時，沒有人拉回來；遊戲的相機沒動，`updateUIView` 也不會再設。遊戲自己的畫（預覽、起點旗、節點）用同一個相機，彼此一致：Linux 上掃過各種角度、高度與構造（地面、高架），預覽的頭尾都在起點與終點上（B 的「離開原位」是相對底圖）。
+- 原因（Simulator 量到的，VERIFIED）：`FollowingMapView` 用 `setVisibleMapRect` 把整個 view 的範圍交給 MapKit，但 MapKit 把它放進 view 的 layout margins 裡面（決策 120 為了 Apple 的標誌與法律連結設的底部帶子，加上安全區域），不是整個 view。iPhone 橫拿時（874 × 402 點，左右各 72、下 27），地圖小了約五分之一、偏下：量到的四邊是左 −86、上 −24、右 +86、下 +55 點（run 38356653482；未修正的版本同樣錯開）。三種 Apple 底圖都一樣；預設的 OpenStreetMap 不受影響，所以玩家是在切到衛星時看到路線「跑掉」。B 的「離開原位」也是相對底圖：遊戲自己的畫（預覽、起點旗、節點）用同一個相機，彼此一致，Linux 上掃過各種角度、高度與構造（地面、高架），預覽的頭尾都在起點與終點上。另外，MapKit 自己再改範圍（載入完、套用樣式、放大不到）時沒有人拉回來。
 - 改法：
   - `BaseMapFollowing`（GamePresentation，Linux 測試）決定要不要再要一次：新的範圍一定要；同一個範圍只在 MapKit 離開它上一次的回應時再要，最多 3 次，所以 MapKit 一直不肯也不會無限迴圈。它也量出 MapKit 拒絕放大時多顯示了幾倍（`refusal`，同一個中心、寬 2% 以上）。
-  - `FollowingMapView` 在 `mapView(_:regionDidChangeAnimated:)`、`mapViewDidFinishLoadingMap` 重新套用（設定中不重入）；`cameraZoomRange` 放到最近，讓 MapKit 放大圖磚而不是停在較遠。
+  - `FollowingMapView` 交給 MapKit 的是遊戲在 layout margins 裡面那一塊的範圍，MapKit 放進 margins 之後，整個 view 就和遊戲的相機一致。量的是 MapKit 把 view 的四個角畫在哪裡（`convert(_:toCoordinateFrom:)`），不用 `visibleMapRect`（它在 Simulator 說的不是畫出來的範圍）。
+  - 在 `mapView(_:regionDidChangeAnimated:)`、`mapViewDidFinishLoadingMap` 重新套用（設定中不重入），畫完（fully rendered）後重試的次數重新算；`cameraZoomRange` 放到最近，讓 MapKit 放大圖磚而不是停在較遠。
   - MapKit 還是拒絕時，`MapView` 記下那個縮放（`baseMapZoomLimit`，換底圖樣式就忘記，最低不低於每 16 m 8 點），相機不再更近、「放大」按鈕停用，疊圖就對得上。OpenStreetMap（MapLibre）不受影響。
   - 兩種底圖都有 `allowsTilt`（預設 false）：每次套用時，相機有傾斜或旋轉就設回正上方、北朝上。之後的「拉近傾斜」3D 模式（決策 97 指向 MapLibre）可以打開。
   - 選地點的畫面（`RealWorldPicker`）：只能移動、縮放（`interactionModes: [.pan, .zoom]`），樣式平面（`.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll)`），中心改取相機的中心：地圖傾斜時 region 的中心不在「+」下面，開局地點可能和「+」不同。
-- UI 測試：Debug 版在 `-ui-testing` 下，`map.base` 讀出 Apple 地圖是否顯示遊戲相機的範圍（`follows`、`wider`、`off`，傾斜時加 `tilted`）；`RealWorldMapUITests/testAppleMapLinesUpAfterChangingToSatellite` 從 OpenStreetMap 切到衛星、放大到底，等它讀出 `follows`（full lane，需要 Apple 的圖磚）。
+- UI 測試：Debug 版在 `-ui-testing` 下，`map.base` 讀出 Apple 地圖是否顯示遊戲相機的範圍（四邊都在 1 點內是 `follows`，否則 `wider` 或 `off` 加上左、上、右、下各差幾點，傾斜時加 `tilted`）；`RealWorldMapUITests/testAppleMapLinesUpAfterChangingToSatellite` 從 OpenStreetMap 切到衛星、放大到底，等它讀出 `follows`（full lane，需要 Apple 的圖磚）。
 - 沒做：兩個底圖 view 都留著、切換時只隱藏一個（M）。
 
 ### 51. 移除 GameCore 的方格（Stage F3）——計畫與作者的決定

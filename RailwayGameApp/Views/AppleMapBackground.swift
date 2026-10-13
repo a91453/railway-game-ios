@@ -347,7 +347,19 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         }
         let rect = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
         guard following.shouldAsk(for: Self.piece(rect), shown: Self.piece(drawnMapRect)) else { return }
-        setVisibleMapRect(rect, animated: false)
+        // MapKit fits the rect it is given inside the view's layout
+        // margins (the band for its logo and legal link, and the safe
+        // area: decision 120), not the whole view: given the whole view's
+        // rect it drew the map a fifth smaller and lower (run 38356653482,
+        // "off -86 -24 +86 +55" on an iPhone on its side). So it is given
+        // what the game shows inside the margins.
+        let margins = layoutMargins
+        let inner = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height).inset(by: margins)
+        if inner.width > 0, inner.height > 0 {
+            setVisibleMapRect(Self.mapRect(placement.realWorld, camera: placement.camera, from: inner.origin, to: CGPoint(x: inner.maxX, y: inner.maxY)), animated: false)
+        } else {
+            setVisibleMapRect(rect, animated: false)
+        }
         following.answered(Self.piece(drawnMapRect))
         reportZoomLimit(camera: placement.camera)
     }
@@ -375,9 +387,8 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
 
     /// The part of the Earth drawn from the view's top left corner to its
     /// bottom right one, as MapKit converts those points: where the game's
-    /// drawing has to lie. Not `visibleMapRect`: in the Simulator (run
-    /// 38354841112) it said 24 points more above and below than the
-    /// game's view, the same width round the same middle.
+    /// drawing has to lie. Not `visibleMapRect`, which in the Simulator
+    /// (run 38354841112) did not say where the map was drawn.
     private var drawnMapRect: MKMapRect {
         let topLeft = MKMapPoint(convert(CGPoint(x: 0, y: 0), toCoordinateFrom: self))
         let bottomRight = MKMapPoint(convert(CGPoint(x: bounds.width, y: bounds.height), toCoordinateFrom: self))
@@ -503,8 +514,14 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// The part of the Earth a view of `size` shows when its top is the
     /// game's map view under `camera`, in MapKit's map points.
     static func mapRect(_ realWorld: RealWorldFrame, camera: PlanCamera, size: CGSize) -> MKMapRect {
-        let topLeft = camera.worldPosition(at: ScreenPoint(x: 0, y: 0))
-        let bottomRight = camera.worldPosition(at: ScreenPoint(x: size.width, y: size.height))
+        mapRect(realWorld, camera: camera, from: .zero, to: CGPoint(x: size.width, y: size.height))
+    }
+
+    /// The part of the Earth from `from` to `to` on the game's map view
+    /// under `camera`, in MapKit's map points.
+    static func mapRect(_ realWorld: RealWorldFrame, camera: PlanCamera, from start: CGPoint, to end: CGPoint) -> MKMapRect {
+        let topLeft = camera.worldPosition(at: ScreenPoint(x: start.x, y: start.y))
+        let bottomRight = camera.worldPosition(at: ScreenPoint(x: end.x, y: end.y))
         let from = realWorld.metresFromAnchor(worldX: topLeft.x, worldY: topLeft.y)
         let to = realWorld.metresFromAnchor(worldX: bottomRight.x, worldY: bottomRight.y)
         let anchor = CLLocationCoordinate2D(latitude: realWorld.anchor.latitudeDegrees, longitude: realWorld.anchor.longitudeDegrees)
