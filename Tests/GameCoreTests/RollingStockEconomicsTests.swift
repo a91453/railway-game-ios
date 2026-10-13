@@ -391,4 +391,20 @@ final class RollingStockEconomicsTests: XCTestCase {
         XCTAssertEqual(quote, Money((17_700_000 + 2_500_000) * 70 / 100))
         XCTAssertEqual(world.refitCost(of: kept.id, to: .maglev), Money((600_000 + 150_000) * 100) - quote)
     }
+
+    /// A save may hold a train whose books are as large as the accounts
+    /// allow; changing its type shares the proceeds out without a crash.
+    func testARefitOfATrainWithHugeBooksDoesNotOverflow() throws {
+        var world = try makeWorld(economics: true)
+        let train = try world.purchaseTrain(named: "Blue")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let text = String(decoding: try encoder.encode(world), as: UTF8.self)
+        let record = #""cost":15000000,"days":0,"depreciation":0,"kind":"train""#
+        XCTAssertTrue(text.contains(record))
+        let huge = text.replacingOccurrences(of: record, with: #""cost":\#(Int64(1) << 49),"days":0,"depreciation":0,"kind":"train""#)
+        var loaded = try JSONDecoder().decode(GameWorld.self, from: Data(huge.utf8))
+        try loaded.setTrainType(train.id, to: .steam)
+        XCTAssertEqual(loaded.train(id: train.id)?.type, .steam)
+    }
 }
