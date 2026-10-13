@@ -264,6 +264,53 @@ extension XCUIApplication {
         }
     }
 
+    /// Scrolls `holder`, or whatever holds `button` (a scroll view, or a
+    /// `List`'s collection view), until the middle of `button` shows in
+    /// it; whether it does. Slow swipes on the holder itself, not at the
+    /// middle of the screen, which on a phone on its side is the edge
+    /// between the start screen's title and its buttons, or the map beside
+    /// a sheet's list. With the largest accessibility text one start
+    /// screen button is taller than the band
+    /// ``dragUntilWhollyOnScreen(_:in:)`` wants it wholly inside. A `List`
+    /// makes its rows only as they come near, so a `holder` is swiped up
+    /// until the row is there. Nothing here asks XCTest whether the button
+    /// can be touched: of a start screen button scrolled partly into
+    /// sight it failed the test, its middle on screen or not (runs
+    /// 38335812150 and 38339333769), so ``tapMiddle(of:)`` touches it.
+    func scrollUntilShown(_ button: XCUIElement, in holder: XCUIElement? = nil, swipes: Int = 20) -> Bool {
+        if holder == nil, !button.waitForExistence(timeout: 10) { return false }
+        guard let holder = holder ?? [scrollViews, collectionViews, tables]
+            .map({ $0.containing(.button, identifier: button.identifier).firstMatch })
+            .first(where: \.exists) else {
+            return button.exists && frame.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
+        }
+        _ = holder.waitForExistence(timeout: 10)
+        func shown() -> Bool {
+            // Clear of the holder's edges, where a navigation or home bar
+            // can lie over it.
+            let area = holder.frame.intersection(frame).insetBy(dx: 0, dy: 24)
+            return button.exists && area.contains(CGPoint(x: button.frame.midX, y: button.frame.midY))
+        }
+        for _ in 0..<swipes where !shown() {
+            if button.exists, button.frame.midY < holder.frame.midY {
+                holder.swipeDown(velocity: .slow)
+            } else {
+                holder.swipeUp(velocity: .slow)
+            }
+        }
+        return shown()
+    }
+
+    /// Touches the middle of `element`'s frame, once it is enabled.
+    func tapMiddle(of element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: element)
+        XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 15), .completed, "\(element) never became enabled", file: file, line: line)
+        let place = element.frame
+        coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: place.midX - frame.minX, dy: place.midY - frame.minY))
+            .tap()
+    }
+
     /// Opens one of the start screen's demos (decision 135): the Demo Map
     /// button, then `identifier`'s row in its sheet (`demo.realWorld`,
     /// `demo.highSpeed` or `demo.simple`) once it is enabled: the

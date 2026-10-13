@@ -119,27 +119,50 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertFalse(app.buttons["map.style"].exists)
     }
 
+    /// The start screen scrolls (decision 106), so with any text size,
+    /// up to the largest accessibility size, each of its buttons can be
+    /// reached; the real-world map's (runs 38281750910 and 38285956099
+    /// could not bring it into sight, but they dragged down the middle of
+    /// the screen, on a phone on its side the edge between the title and
+    /// the buttons, and wanted the button wholly inside a band shorter
+    /// than it). With the largest text a real-world game is started from
+    /// the start screen and the place list (a phone is held on its side
+    /// only). Full lane only (not in the pull request gate).
+    func testTheRealWorldMapIsReachedWithTheLargestText() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        startARealWorldGameFromTaipei(in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 15), "The game starts")
+    }
+
     /// Decision 190's report (TestFlight 54.1): on a real-world map, a
-    /// phone on its side, a tall banner under the top controls left no
+    /// phone on its side, a tall banner under the top controls (here the
+    /// largest accessibility text, which makes the banner tall) left no
     /// room between it and the dock, and the platform's ✓ went half under
     /// the dock. Here a platform is put on a stretch, then asked for again
     /// on the same place: GameCore refuses it (the platforms would
     /// overlap), the refusal stays in the banner for some seconds, and the
-    /// ✓ and ✕ stay whole and above the dock meanwhile. (The largest
-    /// accessibility text, which would make the banner taller still, hides
-    /// the start screen's real-world button: runs 38281750910 and
-    /// 38285956099.) Full lane only (not in the pull request gate).
+    /// ✓ and ✕ stay whole and above the dock meanwhile. Full lane only
+    /// (not in the pull request gate).
     func testThePlatformConfirmStaysAboveTheDockUnderATallBanner() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXL",
+        ]
         app.launch()
         defer { app.terminate() }
 
-        tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
-        tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei").tap()
-        tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
+        startARealWorldGameFromTaipei(in: app)
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.waitForExistence(timeout: 15), "The game starts")
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
@@ -217,6 +240,20 @@ final class RealWorldMapUITests: XCTestCase {
         for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
             XCTAssertTrue(button.isHittable, "The platform's \(name) cannot be tapped: \(button.frame)")
             XCTAssertLessThanOrEqual(button.frame.maxY, dock.minY, "The platform's \(name) goes under the dock: \(button.frame), dock \(dock)")
+        }
+    }
+
+    /// Start screen, Real-World Map, Taipei, Build Here: each scrolled
+    /// to first, as the largest text needs.
+    private func startARealWorldGameFromTaipei(in app: XCUIApplication) {
+        // The place list (the sheet's only collection view) makes its rows
+        // as they come near: with this text Taipei's is not made at first.
+        for (identifier, holder) in [
+            ("start.realWorld", nil), ("place.tra-taipei", app.collectionViews.firstMatch), ("realWorld.start", nil),
+        ] as [(String, XCUIElement?)] {
+            let button = app.buttons.matching(identifier: identifier).firstMatch
+            XCTAssertTrue(app.scrollUntilShown(button, in: holder), "\(identifier) cannot be scrolled to")
+            app.tapMiddle(of: button)
         }
     }
 
