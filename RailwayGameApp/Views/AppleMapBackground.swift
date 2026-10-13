@@ -269,7 +269,9 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
         guard let placement, bounds.width > 0, bounds.height > 0 else { return nil }
         let wanted = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
         guard wanted.size.width > 0 else { return nil }
-        let shown = visibleMapRect
+        let topLeft = MKMapPoint(convert(CGPoint(x: 0, y: 0), toCoordinateFrom: self))
+        let bottomRight = MKMapPoint(convert(CGPoint(x: bounds.width, y: bounds.height), toCoordinateFrom: self))
+        let shown = MKMapRect(x: topLeft.x, y: topLeft.y, width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y)
         let scale = Double(bounds.width) / wanted.size.width
         let edges = [shown.minX - wanted.minX, shown.minY - wanted.minY, shown.maxX - wanted.maxX, shown.maxY - wanted.maxY]
             .map { Int(($0 * scale).rounded()) }
