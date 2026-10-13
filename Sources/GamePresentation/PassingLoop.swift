@@ -153,9 +153,11 @@ extension GameSession {
                 "\(plan.name)：已加上 \(length) 的待避線，花費 \(cost.moneyText)。把它加進路線的停靠站，列車就能在這裡交會。"
             )
         }
-        if built != nil {
+        if let built {
             networkEdgePoint = nil
             playSound?(.track)
+            // Decision 204, later: the lines it lies on may take it as a stop.
+            if let station = built.station?.id { offerPassingLoop(station) }
         }
     }
 }

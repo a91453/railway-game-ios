@@ -241,8 +241,11 @@ jobs:
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
     # first boot's data migration (up to 14 minutes), the warm-up launch and
-    # the translation check (about a minute).
-    timeout-minutes: 60
+    # the translation check (about a minute). 80 since the full lane's UI
+    # step got 60 (below): on 2026-10-13 the job reached 60 minutes with the
+    # step cut at 40, booting the Simulator now takes 4 to 6 minutes, and the
+    # string export up to 5.
+    timeout-minutes: 80
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
       # base, and the archivable-products check below compares the two.
@@ -444,8 +447,13 @@ jobs:
         # 25: a hung app then holds a macOS runner 15 minutes less. With 10
         # tests it took 9m59s to 15m02s (median 12m23s) over 13 pull request
         # runs on 2026-10-13; decision 199 then took 3 of them out and the
-        # idle second from each wait.
-        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 40 }}
+        # idle second from each wait. The full list then outgrew its 40: it
+        # took 19m55s to 23m19s on main on 2026-10-12, but 30m14s and 33m21s,
+        # and four runs cut at 40 minutes (40m13s to 40m21s) on 2026-10-13,
+        # one of them with the tutorial classes still to run (run
+        # 38458089903: its first test alone took 7.5 minutes on a slow
+        # Simulator). 60 lets the slowest of those finish.
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 60 }}
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
         run: |

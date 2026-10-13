@@ -280,6 +280,9 @@ struct StationPanel: View {
                                 session.addPlatformTrack(beside: platform, layout: choice.id.layout, side: choice.id.side)
                             } label: {
                                 Text(verbatim: choice.title)
+                                if let detail = choice.detail {
+                                    Text(verbatim: detail)
+                                }
                             }
                         }
                     } label: {
@@ -809,10 +812,20 @@ struct StationPanel: View {
                     .monospacedDigit()
                     .accessibilityIdentifier("station.flow.yesterday")
             }
-            ForEach(session.world.waitingText(at: station.id, in: session.language), id: \.self) { group in
+            // TestFlight 59.1: who waits for which line and way, how many
+            // of them change trains here, and whether the line has closed.
+            ForEach(session.world.waitingBreakdown(at: station.id, in: session.language), id: \.self) { group in
                 Label(group, systemImage: "person.2")
                     .font(.footnote)
                     .monospacedDigit()
+            }
+            .accessibilityIdentifier("station.waiting")
+            if let note = session.world.crowdedStationNote(at: station.id, in: session.language) {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("station.crowdedNote")
             }
             ForEach(session.world.passengerLedgerRows(of: station.id, in: session.language), id: \.title) { row in
                 LabeledContent(row.title, value: row.countText)

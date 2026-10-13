@@ -271,6 +271,8 @@ struct MapView: View {
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
                         reduceMotion: reduceMotion,
+                        running: !session.world.clock.isPaused,
+                        language: session.language,
                         camera: projection
                     )
                     .equatable()
@@ -653,6 +655,7 @@ struct MapView: View {
             }
             .overlay(alignment: .topLeading) {
                 baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
+                cameraZoomReadout(projection.pointsPerUnit)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -684,11 +687,19 @@ struct MapView: View {
             // Decision 106, later: a line chosen in the lines panel, and the
             // selection when a panel opens over it, move into the map the
             // panel leaves.
+            // TestFlight 59.1: only the lines panel's own choice; a line
+            // that building makes or picks stays where the player looks.
             .onChange(of: session.selectedLineID) { _, _ in
+                guard screen.panel == .lines else { return }
                 keepSelectionClear(projection: projection, clear: clear, line: true)
             }
+            // TestFlight 59.1: the details card opens and closes all through
+            // building (the tool's card, a start tapped, Clear, Done); the
+            // line the session keeps selected then zoomed the map out to its
+            // whole length each time. Only the lines panel shows a line.
             .onChange(of: insets.trailing) { _, _ in
-                keepSelectionClear(projection: projection, clear: clear, line: session.selectedStation == nil)
+                keepSelectionClear(projection: projection, clear: clear,
+                                   line: screen.panel == .lines && session.selectedStation == nil)
             }
             .onChange(of: session.routePreview?.request) { _, _ in
                 // Decision 201: a leg shown from the line panel is brought
@@ -1147,6 +1158,20 @@ struct MapView: View {
         }
     }
 
+    /// UI tests only: the camera's zoom (`map.camera`, points per world
+    /// unit), which building must leave alone (TestFlight 59.1).
+    @ViewBuilder
+    private func cameraZoomReadout(_ pointsPerUnit: Double) -> some View {
+        if Self.readsBaseMap {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.camera")
+                .accessibilityValue(Text(verbatim: String(pointsPerUnit)))
+        }
+    }
+
     /// Where Apple's map says how it follows, under UI tests only.
     private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
         guard Self.readsBaseMap else { return nil }
@@ -1207,9 +1232,11 @@ struct MapView: View {
     /// the screen's controls leave (`clear`), in its middle, when it does
     /// not show there now; a line is zoomed out to fit, never in. Not
     /// while a train is followed, whose camera stays on it, nor during the
-    /// tutorial, whose steps point at places on the map.
+    /// tutorial, whose steps point at places on the map, nor while a
+    /// building tool is chosen, whose player is zoomed in on the track
+    /// (TestFlight 59.1).
     private func keepSelectionClear(projection: PlanCamera, clear: EdgeInsets, line: Bool) {
-        guard !session.isFollowingTrain, session.tutorial == nil else { return }
+        guard session.tool == .select, !session.isFollowingTrain, session.tutorial == nil else { return }
         let free = ScreenInsets(top: clear.top, leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
         if line {
             guard let selected = session.selectedLine else { return }
@@ -1555,18 +1582,26 @@ private struct MapTrainCanvas: View, Equatable {
     /// A deadlocked train's mark beats (decision 64, later fix) unless the
     /// player reduces motion.
     let reduceMotion: Bool
+    /// Whether game time runs: the rings round waiting trains pulse only
+    /// then (decision 210).
+    let running: Bool
+    /// The tags' language (decision 210).
+    let language: DisplayLanguage
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
-            && lhs.reduceMotion == rhs.reduceMotion && lhs.camera == rhs.camera
+            && lhs.reduceMotion == rhs.reduceMotion && lhs.running == rhs.running && lhs.language == rhs.language
+            && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, reduceMotion = reduceMotion, camera = camera
-        let beats = !reduceMotion && traffic.waits.contains(where: \.isDeadlocked)
+        let traffic = traffic, reduceMotion = reduceMotion, running = running, language = language, camera = camera
+        // A deadlock beats even while paused; the other waits pulse while
+        // the game runs (decision 210).
+        let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
         return TimelineView(.animation(paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -1578,6 +1613,8 @@ private struct MapTrainCanvas: View, Equatable {
                     plain: plain,
                     traffic: traffic,
                     deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
+                    pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
+                    language: language,
                     projection: camera,
                     in: context
                 )

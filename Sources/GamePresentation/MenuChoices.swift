@@ -68,16 +68,26 @@ extension GameSession {
     /// The platform tracks that can go beside `platform`, island or side,
     /// on either side of its track
     /// (``addPlatformTrack(beside:layout:side:)``), each named by its layout
-    /// and the way it lies.
+    /// and the way it lies, with what it would cost or why it cannot be
+    /// built (``platformTrackPreview(beside:layout:side:)``, TestFlight
+    /// 59.1). The dry runs are kept until the next command: a tick leaves
+    /// the track alone, though a cost the balance could not meet may then
+    /// read as built until the player taps it.
     public func platformTrackMenuChoices(beside platform: TrackPlatform) -> [MenuChoice<PlatformTrackPlacement>] {
-        PlatformTrackLayout.allCases.flatMap { layout in
+        if let memo = platformTrackMenuMemo[platform], memo.revision == commandRevision { return memo.choices }
+        let choices = PlatformTrackLayout.allCases.flatMap { layout in
             PlatformTrackSide.allCases.map { side in
-                MenuChoice(
+                let preview = platformTrackPreview(beside: platform, layout: layout, side: side)
+                return MenuChoice(
                     id: PlatformTrackPlacement(layout: layout, side: side),
-                    title: "\(layout.title(in: language)) · \(platformTrackSideText(side, of: platform))"
+                    title: "\(layout.title(in: language)) · \(platformTrackSideText(side, of: platform))",
+                    detail: preview.cost.map { language.text("Costs \($0.moneyText)", "費用 \($0.moneyText)") } ?? preview.problem
                 )
             }
         }
+        platformTrackMenuMemo = platformTrackMenuMemo.filter { $0.value.revision == commandRevision }
+        platformTrackMenuMemo[platform] = (commandRevision, choices)
+        return choices
     }
 }
 

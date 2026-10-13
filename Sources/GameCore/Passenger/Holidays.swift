@@ -13,7 +13,8 @@
 //   public holidays of 2026 and 2027) has, and its Qingming is one day where
 //   `TW_DAYTYPE` has the four of Children's Day and Tomb Sweeping Day: this
 //   project's Taiwan follows `TW_DAYTYPE` (a deliberate change, decision
-//   154).
+//   154), with Teachers' Day, Retrocession Day and Constitution Day that
+//   it has too (the days off the 2025 law gave back, decision 208).
 //
 // The reference draws a holiday at random among a country's; a railway's
 // calendar is known, so here each holiday comes on the same days every
@@ -46,6 +47,12 @@ public enum HolidayKind: String, CaseIterable, Codable, Sendable {
     case dragonBoat
     case midAutumn
     case nationalDay
+    /// Taiwan's Teachers' Day, 28 September (`TW_DAYTYPE`, decision 208).
+    case teachersDay
+    /// Taiwan's Retrocession Day, 25 October (`TW_DAYTYPE`, decision 208).
+    case retrocessionDay
+    /// Taiwan's Constitution Day, 25 December (`TW_DAYTYPE`, decision 208).
+    case constitutionDay
     case christmas
     case easter
     case thanksgiving
@@ -103,7 +110,10 @@ public enum HolidayCalendar {
             Holiday(.labourDay, 5, 1, days: 1, boost: 80),
             Holiday(.dragonBoat, 6, 19, days: 1, boost: 50),
             Holiday(.midAutumn, 9, 25, days: 1, boost: 50),
+            Holiday(.teachersDay, 9, 28, days: 1, boost: 50),
             Holiday(.nationalDay, 10, 10, days: 1, boost: 100),
+            Holiday(.retrocessionDay, 10, 25, days: 1, boost: 50),
+            Holiday(.constitutionDay, 12, 25, days: 1, boost: 50),
         ],
         "CN": [
             Holiday(.newYear, 1, 1, days: 3, boost: 50),

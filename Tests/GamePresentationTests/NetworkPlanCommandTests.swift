@@ -59,6 +59,23 @@ final class NetworkPlanCommandTests: XCTestCase {
         try assertLoggedAndReplayed(session) { if case .buildDoubleTrack = $0 { true } else { false } }
     }
 
+    func testADoubleTrackIsLoggedWithItsCrossover() throws {
+        var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: 5_120, y: 8_192))
+        try world.buildTrackEdge(from: west, to: east)
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.networkBuildsDouble = true
+        session.tapNetwork(at: PlanPoint(x: 5_120, y: 8_192), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 18_432, y: 8_192), reach: 16)
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        try assertLoggedAndReplayed(session) {
+            if case .buildDoubleTrack(_, _, let crossovers) = $0 { crossovers.count == 1 } else { false }
+        }
+    }
+
     func testAPassingLoopIsLoggedWithItsPlan() throws {
         var world = try makeWorld(width: 32_768, height: 16_384, balance: 10_000_000, speed: .paused)
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))

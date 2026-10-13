@@ -89,6 +89,12 @@ public struct NetworkPreview: Hashable, Sendable {
     /// (decision 124, H3); `nil` when GameCore refused it, and for an X
     /// crossover, which is level.
     public var longSection: TrackLongSection? = nil
+    /// A double track's crossovers where it joins the track there
+    /// (decision 204, later), each a centre line, drawn like the stretch.
+    public var crossovers: [[WorldCoordinate]] = []
+    /// What the double track does about joining the track there: the
+    /// crossovers it adds, or why it adds none; `nil` when it joins none.
+    public var crossoverNote: String? = nil
 }
 
 /// What a stretch of track the network tool would build costs, part by
