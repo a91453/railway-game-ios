@@ -54,6 +54,10 @@ extension PlayerCommand {
         /// A line's waiting trains re-formed (decision 180); what is left as
         /// it was is said in `language`.
         case reformLine(LineID, type: TrainType?, cars: Int, language: DisplayLanguage)
+        /// `count` trains bought, placed and assigned to a line, and its
+        /// target headways set to `targets` (decision 194, later: the line
+        /// card's "run more trains"), named in `language`.
+        case addLineTrains(LineID, count: Int, type: TrainType?, cars: Int, targets: TargetHeadways, language: DisplayLanguage)
 
         // MARK: Stations
         case renameStation(StationID, name: String)
@@ -216,6 +220,9 @@ extension GameSession {
             (outcome.held, outcome.unfit) = try Self.staff(id, headway: headway, type: type, cars: cars, in: &world, language: language)
         case .reformLine(let id, let type, let cars, let language):
             (outcome.number, outcome.left) = try Self.reform(id, type: type, cars: cars, in: &world, language: language)
+        case .addLineTrains(let id, let count, let type, let cars, let targets, let language):
+            (outcome.held, outcome.unfit) = try Self.addTrains(count, of: type, cars: cars, to: id, in: &world, language: language)
+            try world.setLineTargetHeadways(id, to: targets, pattern: nil)
 
         case .renameStation(let id, let name): try world.renameStation(id, to: name)
         case .removeStation(let id): try world.removeStation(id)

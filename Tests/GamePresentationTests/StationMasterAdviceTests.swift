@@ -103,10 +103,13 @@ final class StationMasterAdviceTests: XCTestCase {
         }
         XCTAssertNotNil(expected, "the line's towns grew or asked for trains")
         // Decision 177: three stations in the first month that lost money
-        // yesterday are coached first; the growth is what a free-play
+        // yesterday are coached first; decision 194, later: else the line,
+        // which runs nearly empty, and why. The growth is what a free-play
         // company, with nothing to lose, is told.
-        if case .firstLineLosing? = StationMasterAdvice(world: world) {} else {
-            XCTAssertEqual(StationMasterAdvice(world: world), expected)
+        switch StationMasterAdvice(world: world) {
+        case .firstLineLosing?: break
+        case let said?: XCTAssertEqual(said, .lineLosing(line: line, name: "Line 1", reason: .lowLoad))
+        case nil: XCTFail("a managed company's losing line is said")
         }
         var free = world
         free.setEconomyMode(.free)

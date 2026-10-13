@@ -52,6 +52,15 @@ public enum LineLossReason: Hashable, Sendable {
     /// Which reason it is, without its figures.
     public enum Kind: String, CaseIterable, Hashable, Sendable {
         case tooManyTrains, longHeadway, emptyRuns, lowLoad
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .tooManyTrains: language.text("Too many trains", "車太多")
+            case .longHeadway: language.text("Trains too far apart", "班距太長")
+            case .emptyRuns: language.text("Too much empty running", "空車回送太多")
+            case .lowLoad: language.text("Trains run nearly empty", "載客率低")
+            }
+        }
     }
 
     public var kind: Kind {
@@ -64,12 +73,7 @@ public enum LineLossReason: Hashable, Sendable {
     }
 
     public func title(in language: DisplayLanguage) -> String {
-        switch kind {
-        case .tooManyTrains: language.text("Too many trains", "車太多")
-        case .longHeadway: language.text("Trains too far apart", "班距太長")
-        case .emptyRuns: language.text("Too much empty running", "空車回送太多")
-        case .lowLoad: language.text("Trains run nearly empty", "載客率低")
-        }
+        kind.title(in: language)
     }
 
     /// What it means, with its figure, in a sentence or two.
@@ -402,10 +406,18 @@ public final class LineLossMemo {
 
     private var key: Key?
     private var kept: LineLossDiagnosis?
+    private var keptFixes: [LineLossReason.Kind: LineLossFix] = [:]
     /// How many times it has worked the diagnosis out (for the tests).
     private(set) var workedOut = 0
 
     public init() {}
+
+    /// The change that answers each of the diagnosis's reasons (decision
+    /// 194, later: ``GameWorld/lineLossFix(_:on:)``), worked out with it.
+    public func fixes(_ id: LineID, of session: GameSession) -> [LineLossReason.Kind: LineLossFix] {
+        _ = diagnosis(id, of: session)
+        return keptFixes
+    }
 
     /// ``GameWorld/lineLossDiagnosis(_:)`` of `session`'s world.
     public func diagnosis(_ id: LineID, of session: GameSession) -> LineLossDiagnosis? {
@@ -415,6 +427,11 @@ public final class LineLossMemo {
         guard now != key else { return kept }
         key = now
         kept = world.lineLossDiagnosis(id)
+        var fixes: [LineLossReason.Kind: LineLossFix] = [:]
+        for reason in kept?.reasons ?? [] {
+            fixes[reason.kind] = world.lineLossFix(reason.kind, on: id)
+        }
+        keptFixes = fixes
         workedOut += 1
         return kept
     }

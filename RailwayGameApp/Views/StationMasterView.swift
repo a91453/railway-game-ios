@@ -53,6 +53,8 @@ struct StationMasterCorner: View {
     /// can have changed it (decision 184, later): not at every tick.
     @State private var advice: StationMasterAdvice?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 194, later: a losing line's bubble opens the line panel.
+    @Environment(GameScreenState.self) private var screen
 
     /// How long the bubble stays.
     private static let speakingTime = Duration.seconds(7)
@@ -66,7 +68,7 @@ struct StationMasterCorner: View {
             }
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
-            advice = StationMasterAdvice(world: session.world)
+            advice = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -136,7 +138,12 @@ struct StationMasterCorner: View {
                     // station takes the map there and, while selecting,
                     // selects it; any other only puts the bubble away.
                     isTalking = false
-                    if let target = advice?.cameraTarget {
+                    if let line = advice?.line {
+                        // Decision 194, later: a losing line opens in the
+                        // line panel, its card saying why.
+                        session.selectLine(line)
+                        screen.panel = .lines
+                    } else if let target = advice?.cameraTarget {
                         session.lookAt(target)
                     } else if let id = advice.flatMap(stationID(of:)), let station = session.world.station(id: id) {
                         session.lookAt(station.point)
