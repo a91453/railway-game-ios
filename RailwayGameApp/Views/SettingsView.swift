@@ -31,12 +31,6 @@ struct SettingsView: View {
     /// Decision 182: the map's time of day and weather, on the device.
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
-    /// Decision 193: whether the game's save and commands go with a
-    /// problem report: the player's choice, off until they turn it on.
-    @State private var attachesCommandLog = false
-    /// The file written for it, and what the player is told it holds;
-    /// `nil` while it is being written.
-    @State private var commandLog: (file: URL?, text: String)?
 
     var body: some View {
         NavigationStack {
@@ -234,7 +228,7 @@ struct SettingsView: View {
     /// problem, through the share sheet to wherever the player chooses.
     private var aboutSection: some View {
         let language = DisplayLanguage.app
-        let report = problemReport
+        let report = ProblemReport.current(game: game)
         return Section {
             Button {
                 showsHelp = true
@@ -257,43 +251,7 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.version")
-            if let session {
-                Toggle(isOn: $attachesCommandLog) {
-                    Label {
-                        Text(verbatim: language.text("Attach the Save and Commands", "附上存檔與指令紀錄"))
-                    } icon: {
-                        Image(systemName: "paperclip")
-                    }
-                }
-                .accessibilityIdentifier("settings.report.attach")
-                .onChange(of: attachesCommandLog) { _, attaches in
-                    commandLog = nil
-                    if attaches { prepareCommandLog(of: session, version: report.version, build: report.build) }
-                }
-                if attachesCommandLog {
-                    if let commandLog {
-                        Text(verbatim: commandLog.text)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("settings.report.attached")
-                    } else {
-                        ProgressView()
-                    }
-                }
-            }
-            Group {
-                if attachesCommandLog, let file = commandLog?.file {
-                    ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: report.text(in: language))) {
-                        reportLabel(language)
-                    }
-                } else {
-                    ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
-                        reportLabel(language)
-                    }
-                    .disabled(attachesCommandLog)
-                }
-            }
-            .accessibilityIdentifier("settings.report")
+            ProblemReportRows(game: game, session: session)
             Button {
                 showsWebsite = true
             } label: {
@@ -307,11 +265,79 @@ struct SettingsView: View {
         } header: {
             Text(verbatim: language.text("About", "關於"))
         } footer: {
-            Text(verbatim: language.text(
-                "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there. Website opens alongthelinegame.com in the game.",
-                "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。「官網」在遊戲裡打開 alongthelinegame.com。"
+            Text(verbatim: ProblemReportRows.footer(in: language) + language.text(
+                " Website opens alongthelinegame.com in the game.",
+                "「官網」在遊戲裡打開 alongthelinegame.com。"
             ))
         }
+    }
+}
+
+/// Decision 127: a note about a problem, with the version, the device and,
+/// from a game, what is in it, through the share sheet to wherever the
+/// player chooses; decision 193: from a game, with its save and commands if
+/// the player turns them on. The settings' About section and, from a game,
+/// the game menu's own sheet (``ProblemReportSheet``) show the same rows.
+struct ProblemReportRows: View {
+    /// What is in the game (``GameSession/problemReportGame``); `nil` from
+    /// the start screen.
+    let game: String?
+    let session: GameSession?
+    /// Decision 193: whether the game's save and commands go with a
+    /// problem report: the player's choice, off until they turn it on.
+    @State private var attachesCommandLog = false
+    /// The file written for it, and what the player is told it holds;
+    /// `nil` while it is being written.
+    @State private var commandLog: (file: URL?, text: String)?
+
+    /// What the rows do, under them.
+    static func footer(in language: DisplayLanguage) -> String {
+        language.text(
+            "Report a Problem writes a note with the version, your device and, from a game, what is in it, for Mail, Messages or any app you choose. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. Testing in TestFlight? You can also take a screenshot and share it with the developer from there.",
+            "「回報問題」會寫好一則附上版本、裝置（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。用 TestFlight 測試時，也可以截圖後直接分享給開發者。"
+        )
+    }
+
+    var body: some View {
+        let language = DisplayLanguage.app
+        let report = ProblemReport.current(game: game)
+        if let session {
+            Toggle(isOn: $attachesCommandLog) {
+                Label {
+                    Text(verbatim: language.text("Attach the Save and Commands", "附上存檔與指令紀錄"))
+                } icon: {
+                    Image(systemName: "paperclip")
+                }
+            }
+            .accessibilityIdentifier("settings.report.attach")
+            .onChange(of: attachesCommandLog) { _, attaches in
+                commandLog = nil
+                if attaches { prepareCommandLog(of: session, version: report.version, build: report.build) }
+            }
+            if attachesCommandLog {
+                if let commandLog {
+                    Text(verbatim: commandLog.text)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("settings.report.attached")
+                } else {
+                    ProgressView()
+                }
+            }
+        }
+        Group {
+            if attachesCommandLog, let file = commandLog?.file {
+                ShareLink(item: file, subject: Text(verbatim: report.subject(in: language)), message: Text(verbatim: report.text(in: language))) {
+                    reportLabel(language)
+                }
+            } else {
+                ShareLink(item: report.text(in: language), subject: Text(verbatim: report.subject(in: language))) {
+                    reportLabel(language)
+                }
+                .disabled(attachesCommandLog)
+            }
+        }
+        .accessibilityIdentifier("settings.report")
     }
 
     private func reportLabel(_ language: DisplayLanguage) -> some View {
@@ -348,15 +374,18 @@ struct SettingsView: View {
             if attachesCommandLog { commandLog = prepared }
         }
     }
+}
 
-    /// The note for this app, system and device.
-    private var problemReport: ProblemReport {
+extension ProblemReport {
+    /// The note for this app, system and device, and the game it is
+    /// written from.
+    @MainActor static func current(game: String?) -> ProblemReport {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         let device = UIDevice.current
         return ProblemReport(
-            version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: Self.modelIdentifier, game: game
+            version: version, build: build, system: "\(device.systemName) \(device.systemVersion)", device: modelIdentifier, game: game
         )
     }
 
@@ -367,6 +396,49 @@ struct SettingsView: View {
         uname(&system)
         return withUnsafeBytes(of: &system.machine) { bytes in
             String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self)
+        }
+    }
+}
+
+/// The problem report from the game menu (TestFlight 54.1: a player found
+/// it only in the settings, and asked where to send a note): the same rows
+/// as the settings' About section, on their own.
+struct ProblemReportSheet: View {
+    let game: String?
+    let session: GameSession
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let language = DisplayLanguage.app
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent {
+                        Text(verbatim: ProblemReport.current(game: game).versionText)
+                            .textSelection(.enabled)
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Version", "版本"))
+                        } icon: {
+                            Image(systemName: "info.circle")
+                        }
+                    }
+                    ProblemReportRows(game: game, session: session)
+                } footer: {
+                    Text(verbatim: ProblemReportRows.footer(in: language))
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle(Text(verbatim: language.text("Report a Problem", "回報問題")))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("report.done")
+                }
+            }
         }
     }
 }
