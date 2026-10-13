@@ -343,6 +343,28 @@ final class CommandLogTests: XCTestCase {
         XCTAssertEqual(replay.session.world, session.world)
     }
 
+    /// A pause the session makes by itself for an event (the monthly
+    /// report, decision 175) is made again by the replay's own session:
+    /// the replay goes on past it to the same world.
+    func testAPauseForTheMonthlyReportReplays() throws {
+        var world = try newGameLine(through: [PlanPoint(x: 20_000, y: 20_000), PlanPoint(x: 60_000, y: 20_000)])
+        world.setSpeed(.normal)
+        let session = GameSession(world: world)
+        var ticks = 0
+        while let tick = session.beginLoopTick(), ticks < 40 * 24 {
+            XCTAssertTrue(session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 60, listening: false))))
+            ticks += 1
+        }
+        XCTAssertTrue(session.world.clock.isPaused, "the month's report paused the game")
+        XCTAssertTrue(session.isPausedForEvent)
+        session.togglePause()
+        let tick = try XCTUnwrap(session.beginLoopTick())
+        XCTAssertTrue(session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 60, listening: false))))
+        let replay = try CommandLogReplay(report(of: session))
+        XCTAssertNil(replay.stopped?.reason)
+        XCTAssertEqual(replay.session.world, session.world)
+    }
+
     /// A replay stops before what it cannot replay, and says what.
     func testAReplayStopsBeforeAChangeWithNoCommand() throws {
         let session = GameSession(world: try blankWorld())
