@@ -83,6 +83,27 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.waitForExistence(timeout: 30))
     }
 
+    /// Decision 191: the short credit in the real-world map's corner is
+    /// always there and opens the data sources page. Full lane only (not
+    /// in the pull request gate).
+    func testTheMapCreditOpensTheDataSources() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        app.openDemo("demo.realWorld")
+
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.waitForExistence(timeout: 60), "The demo starts")
+        let credit = app.descendants(matching: .any)["map.credit"].firstMatch
+        XCTAssertTrue(credit.waitForExistence(timeout: 30), "The map's corner credits its sources")
+        XCTAssertTrue(credit.label.contains("© OpenMapTiles © OpenStreetMap"), credit.label)
+        credit.tap()
+        XCTAssertTrue(app.navigationBars["Data Sources"].waitForExistence(timeout: 10), "Tapping the credit opens the data sources")
+    }
+
     /// A blank new game has no Apple map and no style menu.
     func testABlankGameHasNoMapStyle() {
         continueAfterFailure = false

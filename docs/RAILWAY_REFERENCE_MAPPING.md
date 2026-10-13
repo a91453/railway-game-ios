@@ -1140,7 +1140,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`initOsmMapEngine`（MapLibre GL 的 OSM 地圖引擎，`G.mlMap`） | `RailwayGameApp/Views/OSMMapBackground.swift`（MapLibre Native 的 `MLNMapView`） | adapted：同一個引擎的 iOS 版；地圖跟著遊戲的相機，不自己接手勢 |
 | 同上／`osmStyleKey` 預設 `positron`，`readStoredOsmStyleKey` 的 `ofm-positron`、`ofm-dark` | `OpenStreetMapBase.styleURL(dark:)` | direct：OpenFreeMap 的 Positron 與 Dark；深色外觀用 Dark |
 | 同上／`osmLabelLang`（預設 `local`）與地名圖層的判斷（`isOsmBaseMapNameLayer`） | `OpenStreetMapBase.labelText(in:)`、`showsName(_:)` | adapted：中文介面是當地名稱（台灣的 `name`），英文介面是英文名稱；只換顯示名稱的圖層 |
-| 同上／地圖下方的 `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | `DataSourceCredits.openStreetMapBaseMap(in:)`、資料來源畫面的「OpenFreeMap」 | direct：同一段文字 |
+| 同上／地圖下方的 `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | `BaseMapStyle.style` 的 source attribution（MapLibre 的 (i)）、資料來源畫面的「OpenFreeMap」 | direct：同一段文字。決策 191 起地圖角落只留短標示 `DataSourceCredits.mapCorner`，這句改由 (i) 與資料來源頁提供 |
 | 同上／`applyOsmSensitiveFacilityLabelFilter`（隱藏軍事設施的標示） | — | 之後：這一步還沒做，見決策 97 的限制 |
 | 同上／建物的 `fill-extrusion` | — | 之後：3D 建築 |
 | `Railway/` 網站的 `glTracksInstall`（真實鐵道畫在 MapLibre 上的順序） | `FollowingMapLibreView.drawRailways(in:)` | direct：和 Apple 地圖上的畫法相同（決策 50），這次直接是 MapLibre 的圖層 |

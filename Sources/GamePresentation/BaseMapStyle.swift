@@ -96,6 +96,11 @@ public enum BaseMapStyle {
         )
     }
 
+    /// The attribution of Taiwan's bundled tiles (decision 191): MapLibre
+    /// lists it, with its links, under the map's attribution button.
+    public static let bundledAttribution =
+        "<a href=\"https://openmaptiles.org/\">© OpenMapTiles</a> <a href=\"https://www.openstreetmap.org/copyright\">© OpenStreetMap contributors</a>"
+
     /// The style JSON object for `tiles`, light or dark, its glyphs at
     /// `glyphs` (a MapLibre glyph address with `{fontstack}` and `{range}`),
     /// the hills shaded from the Terrarium PMTiles file at `terrain`, if any.
@@ -104,6 +109,10 @@ public enum BaseMapStyle {
         var vector: [String: Any] = ["type": "vector", "url": address(of: tiles)]
         if tiles == .openFreeMap {
             vector["attribution"] = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+        } else {
+            // Decision 191: the bundled tiles' sources in the map's
+            // attribution button, linked as OpenMapTiles' own credit is.
+            vector["attribution"] = bundledAttribution
         }
         var sources: [String: Any] = [source: vector]
         var drawn = layers(colors)

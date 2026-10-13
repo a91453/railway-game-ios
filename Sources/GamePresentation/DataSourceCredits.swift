@@ -72,17 +72,23 @@ public enum DataSourceCredits {
         language.text("Railways: MOTC TDX, © OpenStreetMap contributors", "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
     }
 
-    /// The short credit on a real-world map whose base map is
-    /// OpenStreetMap's (decision 97): the wording OpenFreeMap asks for.
-    public static func openStreetMapBaseMap(in language: DisplayLanguage) -> String {
-        language.text("OpenFreeMap © OpenMapTiles Data from OpenStreetMap", "OpenFreeMap © OpenMapTiles，資料來自 OpenStreetMap")
-    }
-
-    /// The short credit on a real-world map in Taiwan, whose base map is
-    /// the one the app bundles (decision 151): OpenStreetMap's data, in
-    /// tiles after the OpenMapTiles schema.
-    public static func bundledBaseMap(in language: DisplayLanguage) -> String {
-        language.text("© OpenMapTiles © OpenStreetMap contributors", "© OpenMapTiles © OpenStreetMap 貢獻者")
+    /// The short credit always shown in the corner of a real-world map
+    /// (decision 191), tapped for the data sources page: OpenMapTiles and
+    /// OpenStreetMap while the base map is OpenStreetMap's (in Taiwan the
+    /// bundled tiles, elsewhere OpenFreeMap's, both after the OpenMapTiles
+    /// schema, whose licence asks for its credit in the map's corner), and
+    /// TDX while Taiwan's railways are drawn. Apple's map credits itself;
+    /// on it only the railways'. Empty when the map shows neither.
+    /// OpenFreeMap's own words are in the map's attribution button.
+    public static func mapCorner(baseMap: Bool, railways: Bool, in language: DisplayLanguage) -> String {
+        let openStreetMap = "© OpenMapTiles © OpenStreetMap"
+        let tdx = language.text("MOTC TDX", "交通部 TDX")
+        switch (baseMap, railways) {
+        case (true, false): return openStreetMap
+        case (true, true): return "\(openStreetMap) · \(tdx)"
+        case (false, true): return language.text("Railways: © OpenStreetMap · \(tdx)", "鐵道：© OpenStreetMap · \(tdx)")
+        case (false, false): return ""
+        }
     }
 
     /// Every source, by the part of the game that uses it. The same wording
@@ -97,15 +103,15 @@ public enum DataSourceCredits {
                         id: "tdx",
                         title: language.text(
                             "MOTC Transport Data eXchange (TDX)",
-                            "交通部 TDX 運輸資料流通服務"
+                            "交通部運輸資料流通服務平臺（TDX）"
                         ),
                         detail: language.text(
                             "Routes, station order and names of the High Speed Rail, metro, light rail and Alishan Forest Railway lines; the positions of some TRA stations; official line colours, station codes, addresses and headways.",
                             "提供高鐵、捷運、輕軌與阿里山林鐵的路線、站序與站名，部分台鐵車站的位置，各線的官方路線色、車站代碼、地址與營運班距。"
                         ),
                         notice: language.text(
-                            "Used under the Open Government Data License, version 1.0.",
-                            "依「政府資料開放授權條款第 1 版」使用。"
+                            "Ministry of Transportation and Communications, Transport Data eXchange (TDX), 2026: rail stations, lines, station order of lines, line shapes, travel times between stations, headways, station timetables and the High Speed Rail's daily timetable. This open data is released to the public under the Open Government Data License, version 1.0; users may use it provided they comply with the terms of the licence.",
+                            "交通部運輸資料流通服務平臺（TDX）2026 年軌道車站、路線、路線站序、路線線型、站間行駛時間、班距、車站時刻表與高鐵每日時刻表（此開放資料依政府資料開放授權條款（Open Government Data License）第 1 版進行公眾釋出，使用者於遵守本條款各項規定之前提下，得利用之。）"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "TDX", url: tdxURL),
