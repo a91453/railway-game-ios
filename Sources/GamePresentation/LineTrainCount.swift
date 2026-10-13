@@ -232,6 +232,7 @@ extension GameSession {
                     "花 \(cost.moneyText) 買了 \(count) 列車："
                 ) + text
             }
+            if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             let left = outcome.held + outcome.unfit
             if left > 0 {
                 text += language.text(
