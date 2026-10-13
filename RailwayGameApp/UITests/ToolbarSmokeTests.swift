@@ -89,7 +89,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let platform = app.buttons["line.route.choice.-1.0.1.0"]
         tapMenuAction(platform, in: app)
         XCTAssertTrue(route.appears(within: 10))
-        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform track #"), object: route)
+        // "Platform on track #N · route chosen automatically" since decision
+        // 201 (RoutePreview.choiceText).
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Platform on track #"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 10), .completed)
         // Choosing a path posts a status message, pinned to the bottom of
         // the sheet over the row at the bottom of the screen: the next tap
@@ -133,8 +135,12 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let toggle = app.switches["lines.advanced"]
         bringIntoView(toggle, in: app)
         guard (toggle.value as? String == "1") != shown else { return }
-        // The switch itself sits at the row's trailing edge.
-        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        // The switch itself sits at the row's trailing edge, some 51 points
+        // wide inside a margin of about 16: a fixed 42 points in lands on
+        // it whether the element's frame takes the margin in or not. At 95%
+        // of the row the touch fell in the margin once the panel narrowed
+        // to 270 points (#499; main's full lane, run 38404565525).
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
         let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
         XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 5), .completed)
     }
