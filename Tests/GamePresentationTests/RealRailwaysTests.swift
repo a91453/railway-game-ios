@@ -413,8 +413,10 @@ final class RealRailwaysTests: XCTestCase {
         let licence = try String(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/Licenses/MapLibre-iOS-LICENSE.md"), encoding: .utf8)
         XCTAssertTrue(licence.contains("Copyright (c) 2021 MapLibre contributors"))
         XCTAssertTrue(licence.contains("Redistributions in binary form must reproduce the above copyright"))
+        // TDX's notice is the licence's attribution (above); Taiwan
+        // Railway's open data keeps the short one.
         XCTAssertEqual(
-            DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first?.notice,
+            DataSourceCredits.sections(in: .traditionalChinese).first?.credits.first { $0.id == "traOpenData" }?.notice,
             "依「政府資料開放授權條款第 1 版」使用。"
         )
     }
