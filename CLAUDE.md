@@ -158,7 +158,11 @@ needs OSM data reads the same extract.
   (tests of the release scripts with fake values and a macOS dry run; no
   secrets), `website-screenshots.yml` (the website's screenshots from the
   Debug app on an iPhone Simulator, `WebsiteScreenshotTests`; by hand only,
-  on the branch whose screenshots are wanted; decisions 165 and 187).
+  on the branch whose screenshots are wanted; decisions 165 and 187),
+  `claude.yml` (`@claude` in an issue, a pull request comment or a review
+  by the owner or a collaborator runs `anthropics/claude-code-action` on a
+  Linux runner, billed to the Claude API key in the repository secret
+  `ANTHROPIC_API_KEY`; decision 187's later amendment).
 - Distribution: GitHub Actions → internal TestFlight
   (`docs/TESTFLIGHT_GITHUB_ACTIONS.md`). A real run has verified the signed
   Release archive, the App Store distribution export, the IPA check and the
@@ -277,6 +281,9 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (`send_message` to that session, or ask the user). Comment again when the
   PR opens, the scope changes, it merges, or it is dropped (release its
   numbers). Only comment; never edit the issue's body.
+- Sessions comment on GitHub as the owner's account, so never write
+  `@claude` in an issue, comment or review unless you mean to start
+  `claude.yml`: every mention is a run billed to the API key.
 - Work on a task branch and open a pull request. Never commit to `main`, never
   merge a PR, never enable auto-merge, never force-push `main`. The user
   decides what gets merged.

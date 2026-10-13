@@ -48,6 +48,7 @@ on:
       - ".github/workflows/release-archive.yml"
       - ".github/workflows/testflight*.yml"
       - ".github/workflows/website-screenshots.yml"
+      - ".github/workflows/claude.yml"
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
