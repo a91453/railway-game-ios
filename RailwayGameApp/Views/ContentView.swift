@@ -127,6 +127,9 @@ struct ContentView: View {
             .onDisappear {
                 screen.stopPopTravelPlay()
             }
+            // Decision 201, later: the one-time card about track numbers
+            // and routes.
+            .modifier(RouteHintCard(session: session, screen: screen))
     }
 
     /// What a closing left to show: how the scenario ended first, then the
@@ -753,4 +756,77 @@ final class GameScreenState {
 enum SecretarySettings {
     static let pauseKey = "secretary.pausesForImportantEvents"
     static let monthlyKey = "secretary.monthlyReport"
+}
+
+/// The one-time card about track numbers and routes (decision 201, later;
+/// ``RouteHint``): when a line first gets double track, or the line panel's
+/// route menus first come into view. Shown over the map or the lines
+/// panel only, never over another sheet; seen once, kept on the device.
+private struct RouteHintCard: ViewModifier {
+    let session: GameSession
+    let screen: GameScreenState
+    @AppStorage(RouteHint.seenKey) private var seen = false
+    /// The lines panel's Advanced switch (decision 196, later), opened by
+    /// the card's button.
+    @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: seen ? nil : RouteHintWatch(world: session.world), initial: true) { _, watch in
+                if watch != nil { session.watchRouteHint() }
+            }
+            .alert(
+                Text(verbatim: RouteHint.title(in: session.language)),
+                isPresented: shown,
+                presenting: session.routeHint
+            ) { trigger in
+                if let show = RouteHint.showButton(trigger, in: session.language) {
+                    Button {
+                        showRoutes(trigger)
+                    } label: {
+                        Text(verbatim: show)
+                    }
+                }
+                Button(role: .cancel) {
+                    finish()
+                } label: {
+                    Text(verbatim: RouteHint.dismissButton(in: session.language))
+                }
+            } message: { trigger in
+                Text(verbatim: RouteHint.message(trigger, in: session.world, language: session.language, advancedShown: advancedShown))
+            }
+    }
+
+    private var shown: Binding<Bool> {
+        Binding {
+            !seen && session.routeHint != nil && (screen.panel == nil || screen.panel == .lines)
+        } set: { shown in
+            if !shown { finish() }
+        }
+    }
+
+    private var advancedShown: Bool {
+        AdvancedDetails.isShown(
+            stored: storedShowsAdvanced,
+            roomy: horizontalSizeClass == .regular && verticalSizeClass == .regular
+        )
+    }
+
+    /// The line with the new double track, in the lines panel with its
+    /// route menus unfolded.
+    private func showRoutes(_ trigger: RouteHint.Trigger) {
+        if case .parallelTrack(let line) = trigger {
+            storedShowsAdvanced = true
+            session.selectLine(line)
+            screen.panel = .lines
+        }
+        finish()
+    }
+
+    private func finish() {
+        seen = true
+        session.dismissRouteHint()
+    }
 }
