@@ -104,6 +104,9 @@ extension GameWorld {
             // Decision 169: a crowded train's doors pass fewer passengers a
             // second, so a full train dwells longer.
             world.setDoorCrowding(true)
+            // Decision 202: trains keep left on double track, as Taiwan's
+            // railways and its high-speed line do.
+            world.setKeepLeft(true)
             // Decision 180: trains cost and weigh what their type and cars
             // do, and are sold back at 70 % of their books.
             world.setRollingStockEconomics(true)
@@ -241,6 +244,8 @@ public enum DemoWorld {
         world.setDoorCrowding(false)
         world.setRollingStockEconomics(false)
         world.setFlexDispatch(false)
+        // Decision 202: its routes are as they were measured.
+        world.setKeepLeft(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
         // Decision 183: nor the city's requests.
