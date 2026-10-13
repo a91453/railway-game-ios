@@ -6014,7 +6014,7 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 站長角落不再每次繪製都算建議（可能走 `UnservedCluster` 讀整張土地）：只在 `GameSession.stationMasterRefreshKey`（session、編輯序號 `editSerial`、遊戲小時）改變時重算，和祕書室每小時記一次同一節奏（決策 175）。編輯、復原、重做都會讓序號加一。
 - 車隊總覽依載客率、誤點等排序時，順序在打開、換排序鍵或按「立即重新排序」時固定（`GameWorld.fleet(keeping:)`：新買的列車排最後、賣掉的拿掉），遊戲在跑也不會每 tick 重排、點錯列車。
 - 存檔用玩家的速度（決策 99／175 的後續）：`GameSession.worldToSave` 在 session 自己暫停（建造工具 `isPausedForBuilding`、事件 `isPausedForEvent`）時存成以暫停前的速度在跑；玩家自己按的暫停照存。手動存檔、自動存檔、匯出都用它。以前切到背景時自動存檔存成暫停，回來按「繼續」遊戲停著也沒有說明。
-- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。
+- 切到背景與每 15 分鐘的自動存檔不再重讀整個存檔資料夾（`autosaveCurrentGame(refreshing: false)`）：遊戲中沒有存檔清單在畫面上，回開始畫面（`returnToStart`）時才讀。存檔仍在主執行緒寫（沒有搬到別的執行緒）。（#452 之後：進背景與每 15 分鐘的自動存檔改由 `autosaveInBackground(at:)` 在 `GameLauncher` 的序列化佇列寫，一樣不重讀存檔庫；`autosaveCurrentGame(refreshing: false)` 只剩回到開始畫面（`returnToStart`）時用，在主執行緒等佇列寫完。見決策 45 之後的修正「存檔在背景編碼與寫入」。）
 - VoiceOver：地圖上的訊息條與旁邊面板的訊息條同一則訊息只念一次：面板的 `StatusBanner(announces: false)` 不發公告，地圖的照舊。
 
 **之後的修正（第三次全程式碼查 bug，2026-10-12）**：每項先有在 Linux 上失敗的測試。
