@@ -489,9 +489,9 @@ extension GameSession {
     /// Removes `platform` through
     /// `GameWorld.removeTrackPlatform(_:on:from:)`.
     public func removeNetworkPlatform(_ platform: TrackPlatform) {
-        perform(.removePlatform(platform)) { _, _, world in
-            let name = world.station(id: platform.station)?.name ?? "#\(platform.station.rawValue)"
-            return language.text("Removed a platform of \(name).", "已拆除 \(name) 的一座月台。")
+        let name = platformStationName(platform)
+        perform(.removePlatform(platform)) { _, _, _ in
+            language.text("Removed a platform of \(name).", "已拆除 \(name) 的一座月台。")
         }
     }
 
@@ -603,7 +603,29 @@ extension GameSession {
         }
         if removed != nil {
             networkEdgePoint = nil
+        } else if message?.text == GameError.trackEdgeHasPlatform(id).playerMessage(in: language) {
+            // 56.1: say whose platform it is and where to remove it.
+            message = StatusMessage(kind: .failure, text: platformsBlockRemovalText(of: id))
         }
+    }
+
+    /// Why the track `edge` cannot be removed while platforms stand on it,
+    /// naming their stations and where to remove them: "Track #94 has a
+    /// platform of Chitukei station. Tap “Remove platform” below, or
+    /// remove the whole station in its station panel."
+    public func platformsBlockRemovalText(of edge: TrackEdgeID) -> String {
+        var names: [String] = []
+        for platform in world.network.platforms(on: edge) {
+            let name = platformStationName(platform)
+            if !names.contains(name) { names.append(name) }
+        }
+        let track = edge.displayText(in: language)
+        let english = names.map { "\($0) station" }.joined(separator: " and ")
+        let chinese = names.map { $0.hasSuffix("站") ? $0 : "\($0)站" }.joined(separator: "、")
+        return language.text(
+            "\(track) has a platform of \(english). Tap “Remove platform” below, or remove the whole station in its station panel.",
+            "\(track) 上有\(chinese)的月台。請先在下方按「拆除月台」，或在車站面板拆除整個車站。"
+        )
     }
 }
 
@@ -947,17 +969,31 @@ extension GameSession {
         )
     }
 
-    /// The platforms on the edge the platform mode picked, to remove.
+    /// The platforms on the edge the platform or remove mode picked, to
+    /// remove (56.1: track with a platform on it cannot be removed, so the
+    /// remove mode lists them too).
     public var platformsOnPickedEdge: [TrackPlatform] {
-        guard networkMode == .platform, let edge = networkEdgePoint?.edge else { return [] }
+        guard networkMode != .build, let edge = networkEdgePoint?.edge else { return [] }
         return world.network.platforms(on: edge)
     }
 
     /// "Station 1, 952–5048 units along" for one of
     /// ``platformsOnPickedEdge``.
     public func platformText(_ platform: TrackPlatform) -> String {
-        let name = world.station(id: platform.station)?.name ?? "#\(platform.station.rawValue)"
+        let name = platformStationName(platform)
         return language.text("\(name), \(platform.start)–\(platform.end) units along", "\(name)，距起點 \(platform.start)–\(platform.end) 單位")
+    }
+
+    /// The title of the button that removes `platform`: "Remove platform
+    /// (Station 1)".
+    public func removePlatformTitle(_ platform: TrackPlatform) -> String {
+        let name = platformStationName(platform)
+        return language.text("Remove platform (\(name))", "拆除月台（\(name)）")
+    }
+
+    /// The name of the station `platform` belongs to, or "#3".
+    private func platformStationName(_ platform: TrackPlatform) -> String {
+        world.station(id: platform.station)?.name ?? "#\(platform.station.rawValue)"
     }
 }
 

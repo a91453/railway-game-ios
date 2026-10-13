@@ -1823,16 +1823,6 @@
         }
       }
     },
-    "Remove this platform" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拆除這座月台"
-          }
-        }
-      }
-    },
     "Repeats" : {
       "localizations" : {
         "zh-Hant" : {
