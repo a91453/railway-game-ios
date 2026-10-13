@@ -140,7 +140,9 @@ final class HeightGridTests: XCTestCase {
 
     func testTheNetworkToolShowsTheGroundAtItsEnds() throws {
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 23.5103, longitudeDegrees: 120.8050))
-        let session = GameSession(world: GameWorld.newGame(anchor: anchor), language: .traditionalChinese)
+        var world = GameWorld.newGame(anchor: anchor)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .traditionalChinese)
         session.heights = Self.grid
         session.selectTool(.network)
         let middle = GameWorld.newGameBounds.width / 2
@@ -158,6 +160,14 @@ final class HeightGridTests: XCTestCase {
         blank.selectTool(.network)
         blank.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
         XCTAssertEqual(blank.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
+
+        // Nor does a real-world map on flat ground (decision 198): its
+        // track is level whatever the real heights.
+        let flat = GameSession(world: GameWorld.newGame(anchor: anchor), language: .traditionalChinese)
+        flat.heights = Self.grid
+        flat.selectTool(.network)
+        flat.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
+        XCTAssertEqual(flat.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
     }
     /// A straight stretch is only its two ends, but the ground is surveyed
     /// every 16 m along it: a block between its ends must be read too, or

@@ -413,7 +413,8 @@ struct MapView: View {
                                 isPlaying: screen.isPlayingPopTravel,
                                 onTogglePlay: togglePopTravelPlay,
                                 nothingZoned: session.world.zones.isEmpty,
-                                isFlat: terrainMap?.isFlat ?? false
+                                isFlat: terrainMap?.isFlat ?? false,
+                                tracksLevel: terrainMap?.tracksLevel ?? false
                             ) {
                                 stopPopTravelPlay()
                                 cellTooltip = nil

@@ -177,6 +177,13 @@ extension GameSession {
         tutorial = shown
     }
 
+    /// The app opened or closed the lines panel. Changes the session only
+    /// when it is so, as the app tells it on every change of its panel.
+    public func linesPanelDidChange(isShown: Bool) {
+        guard isLinesPanelShown != isShown else { return }
+        isLinesPanelShown = isShown
+    }
+
     /// Shows step `index` and sets it up if it is shown for the first time,
     /// then passes over the action steps after it that are already done.
     private func moveTutorialForward(to index: Int) {
@@ -221,6 +228,11 @@ extension GameSession {
                 clearLineDraft()
             case .clearSelection:
                 clearSelection()
+            case .selectNewestLine:
+                // The line the tutorial made, unless the player chose one.
+                if selectedLine == nil, let newest = world.lines.last {
+                    selectLine(newest.id)
+                }
             }
         }
     }
@@ -280,6 +292,8 @@ extension GameSession {
                 || CompanyAccounts.income(writtenAfter: before.lastEntry, in: world.accounts.entries, of: [.fareRevenue]) > .zero
         case .selectStation:
             return tool == .select && selectedStationID != nil
+        case .openLines:
+            return isLinesPanelShown
         }
     }
 
@@ -403,7 +417,7 @@ extension GameSession {
             if tool != .select {
                 return TutorialHint(language.text("Tap Done first, then a station.", "先點「完成」，再點車站。"))
             }
-        case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns:
+        case .read, .chooseTool, .moveMap, .chooseNetworkMode, .startPickingStops, .timeRuns, .openLines:
             break
         }
         return nil

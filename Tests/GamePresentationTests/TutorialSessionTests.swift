@@ -17,7 +17,7 @@ final class TutorialSessionTests: XCTestCase {
         "build.network", "map.move", "track.draw", "track.build",
         "station.mode", "station.first.site", "station.first.build", "station.second.site", "station.second.build",
         "line.open", "line.stations", "line.create",
-        "line.staff", "build.done", "time.play", "first.fare",
+        "line.staff", "build.done", "time.play", "first.fare", "line.card.open", "line.card.read",
         "station.select", "station.ridership", "end",
     ]
 
@@ -138,6 +138,9 @@ final class TutorialSessionTests: XCTestCase {
             session.selectTool(.select)
         case "first.fare":
             runUntilFares(session)
+        case "line.card.open":
+            XCTAssertNotNil(session.selectedLine, "the tutorial's line is selected")
+            session.linesPanelDidChange(isShown: true)
         case "station.select":
             XCTAssertNil(session.selectedStationID, "picking the line's stations selected one")
             session.selectStation(newStations(session).first.id)
@@ -557,7 +560,8 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(names, [
             "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "line.staff.start", "network.modes",
             "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu", "line.draft.pick",
-            "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership",
+            "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
+            "line.loss.fix",
         ])
         for tool in ConstructionTool.allCases {
             XCTAssertEqual(TutorialTarget(tool: tool)?.rawValue, "tool.\(tool)", "every tool has its button")
@@ -588,6 +592,7 @@ final class TutorialSessionTests: XCTestCase {
             "Tap ✓ for the second station",
             "Tap Lines", "Tap one station, then the other", "Tap ✓ to create the line",
             "Tap Buy … and Start Service", "Tap Done to stop building", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
+            "Tap Lines to check your line", "Read your line's card",
             "Tap one of your stations", "Tap Ridership to see who rides", "That's the tour",
         ])
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
@@ -595,11 +600,13 @@ final class TutorialSessionTests: XCTestCase {
             "點「月台」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
             "點「路線」", "點一座車站，再點另一座", "按 ✓ 建立路線",
             "按「購買…列並開始營運」", "點「完成」結束建造", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
+            "點「路線」看營運收支", "看懂路線卡",
             "點你的一座車站", "點「客源」看誰在搭車", "導覽結束",
         ])
         XCTAssertEqual(steps.map(\.chapter), [
             .track, .track, .track, .track, .stations, .stations, .stations, .stations, .stations,
-            .line, .line, .line, .service, .service, .service, .service, .passengers, .passengers, .passengers,
+            .line, .line, .line, .service, .service, .service, .service, .service, .service,
+            .passengers, .passengers, .passengers,
         ])
         XCTAssertEqual(steps[0].body(in: .traditionalChinese), "目標：蓋一條賺到第一筆車資的路線。軌道和車站都用「路網」蓋。")
         XCTAssertTrue(steps[2].body(in: .english).contains("at least \(Tutorial.minimumTrackMetres) m"))
@@ -685,7 +692,7 @@ final class TutorialSessionTests: XCTestCase {
                 session.selectTool(.select)
                 session.showNextTutorialStep()
                 guard charges else {
-                    XCTAssertEqual(session.tutorial?.step.id, "station.select", "nothing to wait for")
+                    XCTAssertEqual(session.tutorial?.step.id, "line.card.open", "nothing to wait for")
                     return
                 }
                 XCTAssertEqual(session.tutorial?.step.id, "first.fare")
@@ -696,7 +703,7 @@ final class TutorialSessionTests: XCTestCase {
                 session.showPreviousTutorialStep()
                 XCTAssertEqual(session.tutorial?.step.id, "time.play")
                 session.showNextTutorialStep()
-                XCTAssertEqual(session.tutorial?.step.id, "station.select", "the fares are still in")
+                XCTAssertEqual(session.tutorial?.step.id, "line.card.open", "the fares are still in")
             }
         }
     }
@@ -797,9 +804,12 @@ final class TutorialSessionTests: XCTestCase {
                 session.skipTutorialStep()
                 skips += 1
             }
-            XCTAssertEqual(session.tutorial?.step.id, "station.ridership")
+            XCTAssertEqual(session.tutorial?.step.id, "line.card.read")
             session.skipTutorialStep()
-            XCTAssertEqual(session.tutorial?.step.id, "station.ridership", "a read step has Next")
+            XCTAssertEqual(session.tutorial?.step.id, "line.card.read", "a read step has Next")
+            session.showNextTutorialStep()
+            session.skipTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "station.ridership")
             session.showNextTutorialStep()
             session.skipTutorialStep()
             XCTAssertEqual(session.tutorial?.step.id, "end", "the last step has Finish")
@@ -858,6 +868,67 @@ final class TutorialSessionTests: XCTestCase {
 
             Self.walk(session, to: "station.select")
             XCTAssertNil(session.selectedStationID)
+        }
+    }
+
+    /// Decision 188, later fix (#491's gap): after the first fares the
+    /// tutorial has the player open the lines panel at the line it made
+    /// and points at the line's card, its fares against its costs and the
+    /// fix beside the first reason it loses money (decision 194), scrolled
+    /// into view; the next step, on the map, closes the panel again.
+    func testTheLineCardStepsOpenTheLinesPanelAtTheTutorialsLine() async throws {
+        try await MainActor.run {
+            let session = GameSession(world: DemoWorld.make(in: .english), language: .english)
+            session.startTutorial()
+            Self.walk(session, to: "first.fare")
+            let made = session.selectedLineID
+            XCTAssertNotNil(made)
+            XCTAssertEqual(made, session.world.lines.last?.id, "the line the tutorial made")
+            Self.runUntilFares(session)
+            session.showNextTutorialStep()
+
+            XCTAssertEqual(session.tutorial?.step.id, "line.card.open")
+            let open = try XCTUnwrap(session.tutorial?.step)
+            XCTAssertEqual(open.targets, [.linesButton])
+            XCTAssertNil(open.panel, "the player opens it")
+            XCTAssertFalse(session.isTutorialStepDone, "the panel is closed")
+            session.linesPanelDidChange(isShown: true)
+            XCTAssertTrue(session.isTutorialStepDone)
+            XCTAssertTrue(session.tutorialAdvancesByItself)
+            session.linesPanelDidChange(isShown: false)
+            XCTAssertFalse(session.isTutorialStepDone, "closed again")
+            session.linesPanelDidChange(isShown: true)
+            session.showNextTutorialStep(from: session.tutorial?.index ?? 0)
+
+            let read = try XCTUnwrap(session.tutorial?.step)
+            XCTAssertEqual(read.id, "line.card.read")
+            XCTAssertEqual(read.chapter, .service)
+            XCTAssertEqual(read.goal, .read)
+            XCTAssertEqual(read.panel, .lines)
+            XCTAssertEqual(read.targets, [.lineLoss, .lineLossFix, .sidePanel])
+            XCTAssertEqual(read.revealsInPanel, .lineLoss, "the panel scrolls to the card")
+            XCTAssertEqual(TutorialTarget.lineLoss.rawValue, "line.loss", "the card's accessibility identifier")
+            XCTAssertEqual(session.selectedLineID, made)
+            XCTAssertTrue(read.body(in: .english).contains("fix"))
+            XCTAssertTrue(read.body(in: .traditionalChinese).contains("一鍵修正"))
+            session.showNextTutorialStep()
+
+            XCTAssertEqual(session.tutorial?.step.id, "station.select")
+            XCTAssertEqual(session.tutorial?.step.panel, .closed, "the map gets the screen")
+        }
+    }
+
+    /// The lines panel step selects the newest line when none is selected
+    /// (the `Ci/` line steps' `openUI`), and keeps the player's choice.
+    func testTheLineCardStepSelectsTheNewestLineOnlyWhenNoneIs() async throws {
+        await MainActor.run {
+            let session = GameSession(world: DemoWorld.make(in: .english), language: .english)
+            let lines = session.world.lines.map(\.id)
+            XCTAssertGreaterThan(lines.count, 1)
+            session.selectLine(lines[0])
+            session.startTutorial(atStep: "line.card.open")
+            XCTAssertEqual(session.tutorial?.step.id, "line.card.open")
+            XCTAssertEqual(session.selectedLineID, lines[0], "the player's line is kept")
         }
     }
 
@@ -936,10 +1007,10 @@ final class TutorialSessionTests: XCTestCase {
     func testOnlyTheModeAndRidershipStepsNeedTheDetailsCard() {
         let steps = Tutorial.standardSteps
         XCTAssertEqual(steps.filter(\.usesDetailsCard).map(\.id), ["station.mode", "station.ridership"])
-        XCTAssertEqual(steps.filter { $0.panel == .lines }.map(\.id), ["line.stations", "line.create", "line.staff"])
-        XCTAssertEqual(steps.filter { $0.panel == .closed }.map(\.id), ["build.network", "build.done"])
+        XCTAssertEqual(steps.filter { $0.panel == .lines }.map(\.id), ["line.stations", "line.create", "line.staff", "line.card.read"])
+        XCTAssertEqual(steps.filter { $0.panel == .closed }.map(\.id), ["build.network", "build.done", "station.select"])
         XCTAssertEqual(steps.filter(\.picksLineStops).map(\.id), ["line.open", "line.stations"])
-        XCTAssertEqual(steps.compactMap(\.revealsInPanel), [.staffLine], "the line is created on the map (decision 100, later)")
+        XCTAssertEqual(steps.compactMap(\.revealsInPanel), [.staffLine, .lineLoss], "the line is created on the map (decision 100, later)")
         XCTAssertEqual(steps.map(\.skipOfferSeconds).filter { $0 != 20 }, [90])
     }
 
