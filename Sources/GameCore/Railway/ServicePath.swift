@@ -136,7 +136,7 @@ extension GameWorld {
     /// a berth on it, the berth's offset less where the head is on it (0
     /// just after entering it); to the next traversal, the rest of this
     /// one. Only a step from the start can be 0.
-    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, blocked: Set<TrackResource> = [], forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil) -> TrainPath? {
+    private func networkPath(from start: TrackTraversal, offset: Int64, toStation id: StationID, length: Int64, clear: ((TrackStretch) -> Bool)? = nil, forbidden: Set<TrackTraversal> = [], berthPenalty: [Berth: Int64] = [:], edgePenalty: [TrackEdgeID: Int64] = [:], only: Berth? = nil, eligible: Set<Berth>? = nil) -> TrainPath? {
         guard isOnNetwork(start, offset: offset) else { return nil }
         // Each traversal's berths, nearest first. Only looked up by key.
         var berthsAlong: [TrackTraversal: [Int64]] = [:]
@@ -157,10 +157,8 @@ extension GameWorld {
             let edgeLength = network.edge(traversal.edge)!.length
             func allowed(to end: Int64) -> Bool {
                 if end > from, forbidden.contains(traversal) { return false }
-                guard !blocked.isEmpty else { return true }
-                let step = [TrackStretch(traversal: traversal, from: from, to: end)]
-                let track = Set(resources(covering: step)).union(foulingNodes(covering: step))
-                return !network.fouls(track, blocked)
+                guard let clear else { return true }
+                return clear(TrackStretch(traversal: traversal, from: from, to: end))
             }
             let stops = (berthsAlong[traversal] ?? []).filter { $0 >= from && allowed(to: $0) }
                 .map { (BerthSearch.berth(traversal, $0), $0 - from + (berthPenalty[Berth(traversal: traversal, offset: $0)] ?? 0) + (edgePenalty[traversal.edge] ?? 0)) }
@@ -192,7 +190,21 @@ extension GameWorld {
     func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: Set<TrackResource>, forbidden: Set<TrackTraversal> = [], only: Berth? = nil) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
-            networkPath(from: traversal, offset: offset, toStation: id, length: length, blocked: blocked, forbidden: forbidden, only: only)
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, clear: blocked.isEmpty ? nil : { step in
+                !network.fouls(resources(covering: [step]) + foulingNodes(covering: [step])) { blocked.contains($0) }
+            }, forbidden: forbidden, only: only)
+        }
+    }
+
+    /// ``path(from:toStation:length:avoiding:forbidden:only:)`` avoiding
+    /// what other trains keep a train from (see ``blockedTrack(except:)``),
+    /// each step asked whole (see ``TrackCover``).
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: BlockedTrack, forbidden: Set<TrackTraversal> = [], only: Berth? = nil) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length, clear: blocked.isEmpty ? nil : { step in
+                !blocked.blocks(cover(of: [step]), in: network)
+            }, forbidden: forbidden, only: only)
         }
     }
 

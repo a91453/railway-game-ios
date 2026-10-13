@@ -1439,7 +1439,7 @@ public struct GameWorld: Equatable, Sendable {
     private mutating func admit(_ candidate: Train, at index: Int) throws(GameError) {
         switch reserving(candidate) {
         case .granted(let train): trains[index] = train
-        case .held(let holder, _): throw .trackReserved(holder)
+        case .held(let holder): throw .trackReserved(holder)
         }
     }
 
@@ -2354,7 +2354,7 @@ public struct GameWorld: Equatable, Sendable {
             var changed = false
             // Stage U2: trains following others take what has freed ahead of
             // them first, before any train sets off.
-            if extendAuthorities() {
+            if extendAuthorities(memo: &memo.directions) {
                 changed = true
             }
             if start.isWholeMinute {
@@ -2431,7 +2431,7 @@ public struct GameWorld: Equatable, Sendable {
             // train following them to take more of its route. `moves` keeps
             // the trains as each span tried leaves them, for the move below.
             var moves: [Int64: (trains: [Train], moved: Bool)] = [:]
-            if span > 1, !held.isEmpty || trains.contains(where: isFollowing),
+            if span > 1, !held.isEmpty || trains.contains(where: { isFollowing($0, memo: &memo.directions) }),
                let freed = secondsUntilARouteFrees(held, from: start, within: span, moves: &moves, memo: &memo) {
                 span = freed
             }
@@ -2462,7 +2462,7 @@ public struct GameWorld: Equatable, Sendable {
                 if move.moved {
                     changed = true
                 }
-            } else if moveTrains(from: start, for: span) {
+            } else if moveTrains(from: start, for: span, memo: &memo.directions) {
                 changed = true
             }
             if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span)) {
@@ -2935,14 +2935,14 @@ public struct GameWorld: Equatable, Sendable {
             follow(chosen.path, &scheduled)
             let plannedRun = run(of: scheduled, length: chosen.path.distance, scheduled: chosen.seconds)
             scheduled.times?.run = plannedRun
-            if case .granted(let granted) = reserving(scheduled) {
+            if case .granted(let granted) = reserving(scheduled, memo: &memo.directions) {
                 setOff(index, as: granted)
                 return true
             }
             whole.append(scheduled)
         }
         if let preferred = preferredGoingOn(trains[index]) {
-            if case .granted(let granted) = reserving(preferred) {
+            if case .granted(let granted) = reserving(preferred, memo: &memo.directions) {
                 setOff(index, as: granted)
                 return true
             }
@@ -3001,7 +3001,7 @@ public struct GameWorld: Equatable, Sendable {
             follow(passing.path, &aside)
             let fastest = run(of: aside, length: passing.path.distance)
             aside.times?.run = fastest
-            guard case .granted(let granted) = reserving(aside) else { continue }
+            guard case .granted(let granted) = reserving(aside, memo: &memo.directions) else { continue }
             let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
             setOff(index, as: granted)
             if let left {
@@ -3190,10 +3190,10 @@ public struct GameWorld: Equatable, Sendable {
         var whole: [Train] = []
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan) {
-            if case .granted(let train) = reserving(scheduled) { granted = train } else { whole.append(scheduled) }
+            if case .granted(let train) = reserving(scheduled, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle) {
-            if case .granted(let train) = reserving(preferred) { granted = train } else { whole.append(preferred) }
+            if case .granted(let train) = reserving(preferred, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
         }
         let train: Train
         if let granted {
@@ -3522,14 +3522,16 @@ public struct GameWorld: Equatable, Sendable {
     /// seconds (see ``travelShare(of:from:)``), in one move. The moves of
     /// the seconds one at a time add up to it, since a move depends on the
     /// map alone. Returns whether any train changed.
-    private mutating func moveTrains(from start: GameTime, for span: Int64) -> Bool {
+    /// `memo` keeps the trains' movement authorities (see
+    /// ``authority(of:memo:)``).
+    private mutating func moveTrains(from start: GameTime, for span: Int64, memo: inout DirectionMemo) -> Bool {
         var moved = false
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
             let distance = travelShare(of: trains[index], from: start)(span)
             guard distance > 0 else { continue }
-            let travel = travelling(trains[index], distance: distance)
+            let travel = travelling(trains[index], distance: distance, memo: &memo)
             guard travel.position != position || travel.cursor != movement.cursor else { continue }
             switch (position, travel.position) {
             case (.onEdge(let traversal, _), .onEdge(_, let reached)):
@@ -3603,7 +3605,14 @@ public struct GameWorld: Equatable, Sendable {
     /// movement authority (Stage U2, see ``authorityLeft(of:)``). It depends
     /// on the network and the train's reservation alone.
     func travelling(_ train: Train, distance: Int64) -> (position: TrainPosition, cursor: Int) {
-        let distance = authorityLeft(of: train).map { min(distance, $0) } ?? distance
+        var memo = DirectionMemo()
+        return travelling(train, distance: distance, memo: &memo)
+    }
+
+    /// ``travelling(_:distance:)`` with the train's movement authority kept
+    /// in `memo` (see ``authority(of:memo:)``).
+    func travelling(_ train: Train, distance: Int64, memo: inout DirectionMemo) -> (position: TrainPosition, cursor: Int) {
+        let distance = authority(of: train, memo: &memo).map { min(distance, $0.left) } ?? distance
         let movement = train.movement
         switch train.position! {
         case .onEdge(let traversal, let offset):
@@ -3627,8 +3636,15 @@ public struct GameWorld: Equatable, Sendable {
     /// still use is released.
     private mutating func releasePassedTrack(_ index: Int) {
         guard !trains[index].reservation.isEmpty else { return }
-        let envelope = routeEnvelope(of: trains[index])
-        trains[index].reservation = envelope.moves ? trains[index].reservation.filter(envelope.resources.contains) : []
+        // Its route envelope (see ``routeEnvelope(of:)``), asked a resource
+        // at a time (see ``TrackCover``).
+        let route = routeStretches(of: trains[index])
+        guard route.moves else {
+            trains[index].reservation = []
+            return
+        }
+        let envelope = cover(of: bodyStretches(of: trains[index]) + route.stretches)
+        trains[index].reservation = trains[index].reservation.filter(envelope.contains)
     }
 
     /// Stage U2: every train that follows another, in ascending ID order,
@@ -3639,22 +3655,30 @@ public struct GameWorld: Equatable, Sendable {
     /// train sets off: trains already on the way go on first. Returns
     /// whether any reservation changed.
     mutating func extendAuthorities() -> Bool {
+        var memo = DirectionMemo()
+        return extendAuthorities(memo: &memo)
+    }
+
+    /// ``extendAuthorities()`` with the trains' holders and authorities kept
+    /// in `memo` (see ``trackHolders(memo:)``).
+    mutating func extendAuthorities(memo: inout DirectionMemo) -> Bool {
         var extended = false
         // Worked out again once a reservation changes.
         var holders: TrackHolders?
         for index in trains.indices {
-            guard let (held, envelopes) = authority(of: trains[index]) else { continue }
-            // Its route envelope (see ``routeEnvelope(of:)``).
-            let route = routeResources(envelopes)
-            if holders == nil { holders = trackHolders() }
+            guard let (held, envelopes) = authority(of: trains[index], memo: &memo) else { continue }
+            // Its route envelope (see ``routeEnvelope(of:)``): the base and
+            // the track of every stretch, asked a resource at a time.
+            let route = cover(of: bodyStretches(of: trains[index]) + envelopes.stretches)
+            if holders == nil { holders = trackHolders(memo: &memo) }
             if holder(of: route, except: trains[index].id, holders: holders!) == nil {
-                trains[index].reservation = route.sorted()
+                trains[index].reservation = Set(route.resources).sorted()
                 extended = true
                 holders = nil
                 continue
             }
-            let blocked = blockedTrack(except: trains[index].id, holders: holders!)
-            let free = longestAuthority(envelopes, from: held) { !network.fouls($0, blocked.contains) }
+            let clear = clearOfBlocked(blockedTrack(except: trains[index].id, holders: holders!))
+            let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
             let authority = free - Self.followingGap
             guard authority > held else { continue }
             trains[index].reservation = Set(trains[index].reservation).union(authorityEnvelope(envelopes, to: authority)).sorted()
@@ -3669,15 +3693,18 @@ public struct GameWorld: Equatable, Sendable {
     /// ``followingGap`` past its authority is free. One train taking more
     /// only ever leaves the others less, so the first that could is the
     /// first that does.
-    private func canExtendAnyAuthority() -> Bool {
-        let authorities = trains.map(authority)
+    private func canExtendAnyAuthority(memo: inout DirectionMemo) -> Bool {
+        var authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?] = []
+        for train in trains {
+            authorities.append(authority(of: train, memo: &memo))
+        }
         guard authorities.contains(where: { $0 != nil }) else { return false }
-        let holders = trackHolders(authorities: authorities)
+        let holders = trackHolders(memo: &memo)
         return zip(trains, authorities).contains { train, authority in
             guard let (held, envelopes) = authority else { return false }
             let (reach, overflow) = held.addingReportingOverflow(Self.followingGap + 1)
-            let blocked = blockedTrack(except: train.id, holders: holders)
-            return isAuthority(envelopes, to: overflow ? .max : reach) { !network.fouls($0, blocked.contains) }
+            let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
+            return isAuthority(envelopes, to: overflow ? .max : reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
         }
     }
 
@@ -3705,7 +3732,7 @@ public struct GameWorld: Equatable, Sendable {
     /// `span` are asked.
     ///
     /// `moves` gets the trains as each span tried leaves them (see
-    /// ``moveTrains(from:for:)``), and whether any moved.
+    /// ``moveTrains(from:for:memo:)``), and whether any moved.
     ///
     /// - Precondition: `start.secondOfMinute + span <= 60`.
     private func secondsUntilARouteFrees(
@@ -3714,14 +3741,16 @@ public struct GameWorld: Equatable, Sendable {
     ) -> Int64? {
         func frees(after seconds: Int64) -> Bool {
             var moved = self
-            let any = moved.moveTrains(from: start, for: seconds)
+            let any = moved.moveTrains(from: start, for: seconds, memo: &memo.directions)
             moves[seconds] = (moved.trains, any)
             // The cheaper question first: either answer frees.
-            if moved.canExtendAnyAuthority() {
+            if moved.canExtendAnyAuthority(memo: &memo.directions) {
                 return true
             }
             return held.contains { route in
-                if route.whole.contains(where: { if case .granted = moved.reserving($0) { true } else { false } }) { return true }
+                for train in route.whole {
+                    if case .granted = moved.reserving(train, memo: &memo.directions) { return true }
+                }
                 if case .granted = moved.reservingDeparture(route.candidate, memo: &memo.directions) { return true }
                 return false
             }
@@ -3729,7 +3758,7 @@ public struct GameWorld: Equatable, Sendable {
         // The least `k` after which one is free. A train following another
         // moving on takes more of its route almost every second, so then
         // the first second is tried first.
-        if trains.contains(where: isFollowing), frees(after: 1) { return 1 }
+        if trains.contains(where: { isFollowing($0, memo: &memo.directions) }), frees(after: 1) { return 1 }
         // The step ends after `span` anyway, so only the seconds before it
         // are asked. After `span` a train may have come to the end of its
         // route (see ``secondsUntilARouteEnds(from:within:)``), and one
