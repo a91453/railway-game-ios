@@ -579,6 +579,8 @@ private struct DetailsCard: View {
                         }
                     }
                     .tutorialClip()
+                    // Which of the two layouts shows, for the UI tests.
+                    .accessibilityIdentifier("details.scroll.middle")
                     if hasFoot { foot }
                 }
             } else {
@@ -592,6 +594,7 @@ private struct DetailsCard: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicatorsFlash(onAppear: true)
                 .tutorialClip()
+                .accessibilityIdentifier("details.scroll.whole")
             }
         }
         .frame(height: min(max(ends + middleHeight, 1), maxHeight), alignment: .top)
