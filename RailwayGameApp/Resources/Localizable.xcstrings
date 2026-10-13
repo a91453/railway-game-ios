@@ -2493,6 +2493,56 @@
         }
       }
     },
+    "Line" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路線"
+          }
+        }
+      }
+    },
+    "This Trip" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這一趟"
+          }
+        }
+      }
+    },
+    "Edit Stops in the Lines Panel" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到路線面板編輯停靠站"
+          }
+        }
+      }
+    },
+    "Take Off the Line for Its Own Timetable" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移出路線以自訂時刻表"
+          }
+        }
+      }
+    },
+    "A trip under way is finished first; after that the train's timetable is its own to change." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在跑的這一趟會先跑完，之後就能自訂這列車的時刻表。"
+          }
+        }
+      }
+    },
     "To" : {
       "localizations" : {
         "zh-Hant" : {
