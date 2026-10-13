@@ -28,6 +28,9 @@ struct MapAttractionMarks: View {
                     if at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
                        at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) {
                         mark(sight)
+                            .opacity(isPassive ? 0.5 : 1)
+                            .allowsHitTesting(!isPassive)
+                            .accessibilityHidden(isPassive)
                             .fixedSize()
                             .frame(width: 0, height: 0, alignment: .center)
                             .position(x: at.x, y: at.y)
@@ -35,10 +38,9 @@ struct MapAttractionMarks: View {
                 }
             }
         }
+        // Not on this view, which covers the whole map: hidden from
+        // VoiceOver it hid the map and its zoom buttons from UI tests' taps.
         .frame(width: viewport.width, height: viewport.height, alignment: .topLeading)
-        .opacity(isPassive ? 0.5 : 1)
-        .allowsHitTesting(!isPassive)
-        .accessibilityHidden(isPassive)
     }
 
     private func mark(_ sight: Attraction) -> some View {
