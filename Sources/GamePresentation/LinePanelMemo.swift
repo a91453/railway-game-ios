@@ -42,6 +42,20 @@ public final class LinePanelMemo {
     private var coverageTexts: [ServiceLevel: String?] = [:]
     private var staffingPlans: [Staffing: LineStaffingPlan?] = [:]
     private var capacityWarning: String??
+    private var headwayChanges: [Int64: LineHeadwayChange?] = [:]
+    private var shortfall: LineTrainShortfall??
+    private var runningHeadway: Int64??
+
+    /// The lines list's train texts, kept for a command and the language
+    /// whichever line is selected.
+    private struct RowKey: Equatable {
+        let session: ObjectIdentifier
+        let revision: Int
+        let language: DisplayLanguage
+    }
+
+    private var rowKey: RowKey?
+    private var rowTexts: [LineID: String] = [:]
 
     public init() {}
 
@@ -58,6 +72,9 @@ public final class LinePanelMemo {
         coverageTexts = [:]
         staffingPlans = [:]
         capacityWarning = nil
+        headwayChanges = [:]
+        shortfall = nil
+        runningHeadway = nil
     }
 
     /// ``GameWorld/lineServiceSummaries(_:in:)``, with the trains on a trip
@@ -134,6 +151,46 @@ public final class LinePanelMemo {
         if let kept = capacityWarning { return kept }
         let text = session.world.lineCapacityWarning(id, in: session.language)
         capacityWarning = .some(text)
+        return text
+    }
+
+    /// ``GameWorld/lineHeadwayChange(_:headway:)``.
+    public func headwayChange(_ id: LineID, headway: Int64, of session: GameSession) -> LineHeadwayChange? {
+        keep(id, of: session)
+        if let kept = headwayChanges[headway] { return kept }
+        let change = session.world.lineHeadwayChange(id, headway: headway)
+        headwayChanges[headway] = .some(change)
+        return change
+    }
+
+    /// ``GameWorld/lineTrainShortfall(_:)``.
+    public func trainShortfall(_ id: LineID, of session: GameSession) -> LineTrainShortfall? {
+        keep(id, of: session)
+        if let kept = shortfall { return kept }
+        let found = session.world.lineTrainShortfall(id)
+        shortfall = .some(found)
+        return found
+    }
+
+    /// ``GameWorld/lineRunningHeadway(_:)``.
+    public func runningHeadway(_ id: LineID, of session: GameSession) -> Int64? {
+        keep(id, of: session)
+        if let kept = runningHeadway { return kept }
+        let headway = session.world.lineRunningHeadway(id)
+        runningHeadway = .some(headway)
+        return headway
+    }
+
+    /// ``GameWorld/lineTrainsRowText(_:in:)``, for any line of the list.
+    public func trainsRowText(_ id: LineID, of session: GameSession) -> String {
+        let now = RowKey(session: ObjectIdentifier(session), revision: session.commandRevision, language: session.language)
+        if now != rowKey {
+            rowKey = now
+            rowTexts = [:]
+        }
+        if let kept = rowTexts[id] { return kept }
+        let text = session.world.lineTrainsRowText(id, in: session.language)
+        rowTexts[id] = text
         return text
     }
 }
