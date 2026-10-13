@@ -342,12 +342,46 @@ private struct GameMenu: View, Equatable {
             }
             .accessibilityIdentifier("menu.backToStart")
             Divider()
-            Button {
-                session.startTutorial()
-            } label: {
-                Label("Tutorial", systemImage: "hand.point.up.left")
+            // Decision 188, later fix (TestFlight 54.1): a skipped tutorial
+            // is taken up again where it was, or started over, from one row,
+            // so the menu keeps its six rows.
+            if let skipped = session.skippedTutorial {
+                Menu {
+                    Button {
+                        session.resumeTutorial()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text(
+                                "Continue Tutorial (Step \(skipped.index + 1))",
+                                "繼續教學（第 \(skipped.index + 1) 步）"
+                            ))
+                        } icon: {
+                            Image(systemName: "play")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.tutorial.resume")
+                    Button {
+                        session.startTutorial()
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Start Over", "從頭開始"))
+                        } icon: {
+                            Image(systemName: "arrow.counterclockwise")
+                        }
+                    }
+                    .accessibilityIdentifier("menu.tutorial.restart")
+                } label: {
+                    Label("Tutorial", systemImage: "hand.point.up.left")
+                }
+                .accessibilityIdentifier("menu.tutorial")
+            } else {
+                Button {
+                    session.startTutorial()
+                } label: {
+                    Label("Tutorial", systemImage: "hand.point.up.left")
+                }
+                .accessibilityIdentifier("menu.tutorial")
             }
-            .accessibilityIdentifier("menu.tutorial")
             // The panels opened less often, in one row whatever the game
             // has: on a phone on its side the menu shows about six rows,
             // and the goals (decisions 86 and 183) and the sights (decision

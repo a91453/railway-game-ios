@@ -2,7 +2,7 @@ import GameCore
 
 // The tutorial's controls (Stage C5; see Tutorial.swift): start it, or
 // start it again from the first step, from the start screen or the game
-// menu; Back, Next (Finish on the last step), Skip and "Skip this step" on
+// menu, or take it up again where it was skipped; Back, Next (Finish on the last step), Skip and "Skip this step" on
 // its card, and the step moving on by itself once done (decision 188).
 // None of them changes the world.
 
@@ -11,6 +11,7 @@ extension GameSession {
     /// `startTutorial`, and starting it again from the game menu.
     public func startTutorial() {
         tutorial = Tutorial(steps: Tutorial.steps(over: world), over: world)
+        skippedTutorial = nil
         setUpTutorialStep()
     }
 
@@ -24,6 +25,7 @@ extension GameSession {
             shown.show(index, over: world)
         }
         tutorial = shown
+        skippedTutorial = nil
         setUpTutorialStep()
     }
 
@@ -119,9 +121,45 @@ extension GameSession {
     }
 
     /// Skip: ends the tutorial at any step (the reference's
-    /// `dismissTutorial`).
+    /// `dismissTutorial`), keeping it, with what each chapter began with,
+    /// to be taken up again at the same step (``resumeTutorial()``).
     public func skipTutorial() {
+        guard let shown = tutorial else { return }
+        skippedTutorial = shown
         tutorial = nil
+    }
+
+    /// Takes the skipped tutorial up again at the step it was skipped on
+    /// (decision 188, later fix: TestFlight 54.1 found the game menu
+    /// started it again from the first step, and, as its goals ask for
+    /// what is new since their chapter began, had the player build the
+    /// track and the stations again). What was built in the tutorial still
+    /// counts; a step done since moves on by itself.
+    public func resumeTutorial() {
+        guard let skipped = skippedTutorial else { return }
+        tutorial = skipped
+        skippedTutorial = nil
+        setUpTutorialStep()
+    }
+
+    /// Keeps the tutorial to be taken up again at step `id` over the world
+    /// as it is (``Tutorial/init(steps:resumingAt:over:)``): the step the
+    /// launcher kept from an earlier launch. Nothing for an unknown step,
+    /// or with a tutorial on screen.
+    func keepTutorialToResume(atStep id: String) {
+        guard tutorial == nil else { return }
+        let steps = Tutorial.steps(over: world)
+        guard let index = steps.firstIndex(where: { $0.id == id }) else { return }
+        skippedTutorial = Tutorial(steps: steps, resumingAt: index, over: world)
+    }
+
+    /// Tells the launcher the step a tutorial left now would be taken up
+    /// again at, when it has changed.
+    func noteTutorialStepToResume() {
+        let step = (tutorial ?? skippedTutorial)?.step.id
+        guard step != notedTutorialStepToResume else { return }
+        notedTutorialStepToResume = step
+        onTutorialStepToResume?(step)
     }
 
     /// The player moved the map: pinched, dragged or tapped a zoom button
