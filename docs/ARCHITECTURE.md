@@ -3632,6 +3632,14 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - 換了主體（`ControlDetails.Subject`：工具、選的車站、點的列車、有沒有選取、是否在畫軌道）就清掉記住的版面，照原本 88 點的規則重新決定。
 - 兩種版面的捲動區有識別碼 `details.scroll.middle`、`details.scroll.whole`。UI 測試 `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts`（full lane）：iPhone 橫拿、時鐘照走，跟隨並點選 Train 1，看到列車停靠與行駛各三次（最多 60 秒），期間卡片只用一種版面。Linux 測試 `DetailsCardLayoutTests`。
 
+**之後的修正**（手機精簡面板，2026-10-13，TestFlight 54.1 #6；作者 2026-10-13 定的順序第 2 項）：iPhone 14 Pro 橫拿時路線面板佔了畫面 49 %，地圖被蓋一半。號碼依 #231 都不動；只改 App 與 GamePresentation，GameCore、存檔、golden、replay 都不變。
+- **寬度**（`SidePanelWidth`）：高度是 compact（手機橫拿）時，地圖旁的面板 300 點、最多 36 %，細節卡 300 點、最多 35 %；其他情況照舊（面板 420 點、最多一半，細節卡 340 點、最多 40 %）。iPhone 14 Pro 橫拿（安全區域內約 734 點寬）時，面板 264 點、細節卡 257 點。
+- **相機**（`PlanCamera.centered(on:clearOf:)`、`showing(_:clearOf:)`、`showsClear(_:of:)`）：「看得到」改成在畫面控制項（狀態列、面板、細節卡、底部按鈕、安全區域）留下的地圖裡。選的車站不在那裡時，移到那塊地圖的中間；在路線面板選路線時，路線的站不全在那裡就移到中間，放不下時拉遠（不會拉近）；面板或細節卡打開時也照這樣檢查選的車站或路線。地圖邊緣擋住時照舊停在邊緣。跟隨列車時、教學進行中不動（教學的步驟指著地圖上的位置）。
+
+**測試**：`MapFocusTests`（兩種寬度；面板下的車站移到旁邊地圖的中間；沒有內距時是畫面中間；路線拉遠放進去、不拉近）。
+
+**沒有驗證的**：Linux 不能建置 App；300 點寬的路線面板在實機上排得下（分段選擇器、選單）要在 macOS CI 與下一版 TestFlight 看。
+
 ### 107. 建造模式：起終點插旗、在預覽旁確認、進階選項收起
 
 2026-10-09，UI/UX 改版第二輪的 UX-5b（決策 106 之後）：作者的實機截圖裡，鋪軌時卡片塞滿工程選項（構造、新節點高度、平順曲線、緩和坡度、清除、吸附軌道），主要的「鋪設軌道」按鈕在選好兩點之前一直是灰的，而且在畫面的另一邊。只改 App 與 GamePresentation 的兩個小介面：GameCore、存檔、golden、replay 都不變。
