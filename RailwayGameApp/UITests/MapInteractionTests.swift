@@ -504,13 +504,16 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(advanced.waitForExistence(timeout: 10))
         for _ in 0..<3 where !advanced.isHittable { app.swipeUp() }
         advanced.tap()
-        let snap = app.buttons["network.snap"]
+        // A toggle with its own style: a toggle (value 1 or 0) or a
+        // selected button, as the system reads it.
+        let snap = app.descendants(matching: .any)["network.snap"].firstMatch
         XCTAssertTrue(snap.waitForExistence(timeout: 5))
         for _ in 0..<3 where !snap.isHittable { app.swipeUp() }
-        XCTAssertTrue(snap.isSelected, "Snapping starts on, and says so")
+        func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
+        XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
-        let off = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == false"), object: snap)
-        XCTAssertEqual(XCTWaiter().wait(for: [off], timeout: 5), .completed, "A tap turns snapping off, and it says so")
+        for _ in 0..<10 where isOn() { RunLoop.current.run(until: Date().addingTimeInterval(0.5)) }
+        XCTAssertFalse(isOn(), "A tap turns snapping off, and says so; value: \(String(describing: snap.value))")
     }
 
     /// TestFlight 54.1: the news log is the bell's alone (decision 175,
