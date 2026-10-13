@@ -253,13 +253,17 @@ private final class TutorialJourney {
         return false
     }
 
-    /// The step on the card or its folded pill, from 1.
+    /// The step on the card or its folded pill, from 1. Each is read from a
+    /// snapshot, nil when it is gone: a card that folded between `exists`
+    /// and `label` failed the label's lookup.
     private func shownStep() -> Int? {
-        let title = app.staticTexts["tutorial.title"]
-        if title.exists, let index = Self.titles.firstIndex(of: title.label) { return index + 1 }
-        if folded.exists {
-            let label = folded.label
-            if let index = Self.titles.firstIndex(where: { label.hasSuffix(": " + $0) }) { return index + 1 }
+        if let title = try? app.staticTexts["tutorial.title"].firstMatch.snapshot(),
+           let index = Self.titles.firstIndex(of: title.label) {
+            return index + 1
+        }
+        if let pill = try? folded.firstMatch.snapshot(),
+           let index = Self.titles.firstIndex(where: { pill.label.hasSuffix(": " + $0) }) {
+            return index + 1
         }
         return nil
     }

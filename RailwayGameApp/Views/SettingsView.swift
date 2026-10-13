@@ -111,19 +111,22 @@ struct SettingsView: View {
         let fixed = session.eventsAreFixed
         let levels: [DisruptionLevel?] = fixed ? (current == nil ? [nil] : [nil, current]) : [nil, .light, .standard]
         return Section {
-            Picker(selection: Binding(get: { session.world.disruptions?.level }, set: { session.setDisruptionLevel($0) })) {
-                ForEach(levels, id: \.self) { level in
-                    Text(verbatim: level?.title(in: language) ?? language.text("Off", "關")).tag(level)
+            // Decision 184, later: a menu the ticks leave alone.
+            TickStable(StableKey(current, levels, language)) {
+                Picker(selection: Binding(get: { current }, set: { session.setDisruptionLevel($0) })) {
+                    ForEach(levels, id: \.self) { level in
+                        Text(verbatim: level?.title(in: language) ?? language.text("Off", "關")).tag(level)
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Holidays and events", "連假與事件"))
+                    } icon: {
+                        Image(systemName: "calendar")
+                    }
                 }
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Holidays and events", "連假與事件"))
-                } icon: {
-                    Image(systemName: "calendar")
-                }
+                .accessibilityIdentifier("settings.disruptions")
             }
             .disabled(fixed && current == nil)
-            .accessibilityIdentifier("settings.disruptions")
             if let country = session.world.disruptions?.country {
                 LabeledContent {
                     Text(verbatim: holidayCountryName(country, in: language))
@@ -160,18 +163,21 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("settings.autoPause")
-            Picker(selection: $monthlyReportMode) {
-                ForEach(MonthlyReportMode.allCases, id: \.rawValue) { mode in
-                    Text(verbatim: mode.title(in: language)).tag(mode.rawValue)
+            // Decision 184, later: a menu the ticks leave alone.
+            TickStable(StableKey(monthlyReportMode, language)) {
+                Picker(selection: $monthlyReportMode) {
+                    ForEach(MonthlyReportMode.allCases, id: \.rawValue) { mode in
+                        Text(verbatim: mode.title(in: language)).tag(mode.rawValue)
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Monthly report", "每月報告"))
+                    } icon: {
+                        Image(systemName: "calendar")
+                    }
                 }
-            } label: {
-                Label {
-                    Text(verbatim: language.text("Monthly report", "每月報告"))
-                } icon: {
-                    Image(systemName: "calendar")
-                }
+                .accessibilityIdentifier("settings.monthlyReport")
             }
-            .accessibilityIdentifier("settings.monthlyReport")
         } header: {
             Text(verbatim: language.text("Secretary", "秘書室"))
         } footer: {

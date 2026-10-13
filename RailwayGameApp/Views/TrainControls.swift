@@ -22,9 +22,10 @@ struct TrainControls: View {
             if let train = session.selectedTrain {
                 status(of: train)
                 // Stage C3: how it runs between calls (Stage W2c).
-                PerformanceMenu(performance: train.performance, language: session.language) { performance in
+                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance") { performance in
                     session.setSelectedTrainPerformance(performance)
                 }
+                .equatable()
                 // Stage C2: its own timetable.
                 Button {
                     screen.panel = .timetable
@@ -49,11 +50,11 @@ struct TrainControls: View {
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
                     TrainTypeMenu(
-                        type: train.type, offered: session.world.offeredTrainTypes, standard: session.world.offersStandardCar,
-                        detail: { session.world.trainTypeMenuText($0, for: train.id, in: session.language) }, language: session.language
+                        type: train.type, choices: session.trainTypeMenuChoices(for: train.id), language: session.language
                     ) { type in
                         session.setSelectedTrainType(type)
                     }
+                    .equatable()
                     headingPicker
                 } else {
                     HStack {
@@ -354,32 +355,31 @@ private struct TrainPickerMenu: View, Equatable {
 /// (decision 153), only the era's types. Keeps no type of its own: a choice
 /// calls `choose`, which applies one `GameWorld` command through the
 /// session.
-private struct TrainTypeMenu: View {
+///
+/// Equatable on what it shows, from ``GameSession/trainTypeMenuChoices(for:)``,
+/// and used with `.equatable()`: the author could not scroll it while the
+/// game ran (decision 184, later).
+private struct TrainTypeMenu: View, Equatable {
     let type: TrainType?
-    let offered: [TrainType]
-    let standard: Bool
-    /// The line under a type's name (decision 180): its capacity, prices,
-    /// daily cost and top speed, and what changing the train to it costs.
-    let detail: (TrainType?) -> String
+    /// Each type with the line under its name (decision 180): its capacity,
+    /// prices, daily cost and top speed, and what changing the train to it
+    /// costs. The standard car (`nil`) first where the game offers it.
+    let choices: [MenuChoice<TrainType?>]
     let language: DisplayLanguage
     let choose: @MainActor (TrainType?) -> Void
 
+    nonisolated static func == (lhs: TrainTypeMenu, rhs: TrainTypeMenu) -> Bool {
+        lhs.type == rhs.type && lhs.choices == rhs.choices && lhs.language == rhs.language
+    }
+
     var body: some View {
         Menu {
-            if standard {
-                Button {
-                    choose(nil)
-                } label: {
-                    option(Train.typeText(nil, in: language), detail: detail(nil), isChosen: type == nil)
-                }
+            ForEach(choices.filter { $0.id == nil }) { choice in
+                button(choice)
             }
             Section {
-                ForEach(offered, id: \.self) { candidate in
-                    Button {
-                        choose(candidate)
-                    } label: {
-                        option(Train.typeText(candidate, in: language), detail: detail(candidate), isChosen: candidate == type)
-                    }
+                ForEach(choices.filter { $0.id != nil }) { choice in
+                    button(choice)
                 }
             }
         } label: {
@@ -397,6 +397,14 @@ private struct TrainTypeMenu: View {
             "Chooses the type of its cars: how many passengers each carries and how many doors it has.",
             "選擇車種：每節載客數與車門數。"
         )))
+    }
+
+    private func button(_ choice: MenuChoice<TrainType?>) -> some View {
+        Button {
+            choose(choice.id)
+        } label: {
+            option(choice.title, detail: choice.detail ?? "", isChosen: choice.id == type)
+        }
     }
 
     @ViewBuilder

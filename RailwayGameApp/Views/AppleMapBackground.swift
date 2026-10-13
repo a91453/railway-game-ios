@@ -83,6 +83,8 @@ struct AppleMapBackground: UIViewRepresentable {
     /// view's coordinates, whenever that changes: the game draws nothing
     /// there and leaves the touches there to them (decision 120).
     let onAttributionFrames: @MainActor ([CGRect]) -> Void
+    /// Tapping the credit opens the data sources page (decision 191).
+    let onCredit: @MainActor () -> Void
 
     /// The band along the bottom of the map view, above the home
     /// indicator, where Apple's logo and legal link and the credit are:
@@ -115,6 +117,7 @@ struct AppleMapBackground: UIViewRepresentable {
             map.layoutMargins = margins
         }
         map.onAttributionFrames = onAttributionFrames
+        map.credit.onTap = onCredit
         if map.appliedStyle != style {
             map.appliedStyle = style
             map.preferredConfiguration = style.configuration
@@ -129,7 +132,7 @@ struct AppleMapBackground: UIViewRepresentable {
             look: FollowingMapView.RailwayLook(
                 anchor: realWorld.anchor, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme
             ),
-            credit: DataSourceCredits.railwaysOnMap(in: language)
+            credit: DataSourceCredits.mapCorner(baseMap: false, railways: true, in: language)
         )
         map.follow(realWorld, camera: camera)
     }
@@ -170,20 +173,13 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     private var strokes: [ObjectIdentifier: (color: UIColor, width: CGFloat)] = [:]
     /// The overlay the stations are drawn in, and their circles.
     private var stations: (overlay: MKPolygon, renderer: StationDotsRenderer)?
-    private lazy var credit: UILabel = {
-        let label = UILabel()
-        label.font = .preferredFont(forTextStyle: .caption2)
-        label.adjustsFontForContentSizeCategory = true
-        label.adjustsFontSizeToFitWidth = true
-        label.minimumScaleFactor = 0.6
-        label.textAlignment = .center
-        label.textColor = .secondaryLabel
-        label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
-        label.layer.cornerRadius = 4
-        label.layer.masksToBounds = true
-        label.isHidden = true
-        self.addSubview(label)
-        return label
+    /// The railways' credit (decision 191), which opens the data sources
+    /// page.
+    private(set) lazy var credit: MapCreditButton = {
+        let credit = MapCreditButton(alignment: .center)
+        credit.isHidden = true
+        self.addSubview(credit)
+        return credit
     }()
 
     func follow(_ realWorld: RealWorldFrame, camera: PlanCamera) {
@@ -259,7 +255,10 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// Draws `railways` near `anchor` as `look` says, replacing what was
     /// drawn for another look.
     func showRailways(_ railways: RealRailways?, near anchor: GeoAnchor, look: RailwayLook, credit text: String) {
-        credit.text = text
+        if credit.text != text {
+            credit.text = text
+            setNeedsLayout()
+        }
         guard look != railwayLook else { return }
         railwayLook = look
         removeOverlays(railwayOverlays)
@@ -332,16 +331,18 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     }
 
     /// The credit in the middle of the band at the bottom, clear of
-    /// Apple's logo on the left and legal link on the right.
+    /// Apple's logo on the left and legal link on the right; it can be
+    /// tapped anywhere up the band.
     private func placeCredit() {
         guard !credit.isHidden else { return }
-        let width = min(credit.intrinsicContentSize.width + 8, bounds.width * 0.45)
-        let height = credit.intrinsicContentSize.height + 2
-        credit.frame = CGRect(
-            x: (bounds.width - width) / 2,
-            y: bounds.height - layoutMargins.bottom - height,
-            width: width,
-            height: height
+        let size = credit.textSize
+        let width = min(size.width + 8, bounds.width * 0.45)
+        let height = size.height + 2
+        let bottom = bounds.height - layoutMargins.bottom
+        credit.place(
+            text: CGRect(x: (bounds.width - width) / 2, y: bottom - height, width: width, height: height),
+            bandTop: bottom - AppleMapBackground.attributionHeight + 6,
+            bandBottom: bottom + 6
         )
         bringSubviewToFront(credit)
     }
@@ -387,6 +388,67 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
             && abs(a.origin.y - b.origin.y) <= tolerance
             && abs(a.size.width - b.size.width) <= tolerance
             && abs(a.size.height - b.size.height) <= tolerance
+    }
+}
+
+/// The short credit in a real-world map's corner (decision 191), always
+/// shown and never folded away (OpenMapTiles' licence asks for its credit
+/// in the map's corner), on a small capsule as wide as its words. A tap
+/// opens the data sources page, where every source and its licence are
+/// named in full. A button, so a tap on it is its own and not the map
+/// view's; it reaches up the attribution band, so it is easy to hit.
+final class MapCreditButton: UIButton {
+    private let label = UILabel()
+    var onTap: (@MainActor () -> Void)?
+
+    init(alignment: NSTextAlignment) {
+        super.init(frame: .zero)
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.adjustsFontForContentSizeCategory = true
+        label.maximumContentSizeCategory = .extraExtraExtraLarge
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.85
+        label.textAlignment = alignment
+        label.textColor = .secondaryLabel
+        label.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
+        label.layer.cornerRadius = 4
+        label.layer.masksToBounds = true
+        label.isUserInteractionEnabled = false
+        addSubview(label)
+        isAccessibilityElement = true
+        accessibilityTraits = .link
+        accessibilityHint = String(localized: "Shows the data sources and their licences")
+        accessibilityIdentifier = "map.credit"
+        addTarget(self, action: #selector(tapped), for: .touchUpInside)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    var text: String {
+        get { label.text ?? "" }
+        set {
+            label.text = newValue
+            accessibilityLabel = newValue
+        }
+    }
+
+    /// The words' own size, at the player's text size.
+    var textSize: CGSize { label.intrinsicContentSize }
+
+    /// Puts the words at `text` and makes the button reach from `bandTop`
+    /// to `bandBottom` too, all in the map view's coordinates.
+    func place(text: CGRect, bandTop: CGFloat, bandBottom: CGFloat) {
+        let top = min(text.minY, bandTop)
+        let bottom = max(text.maxY, bandBottom)
+        frame = CGRect(x: text.minX, y: top, width: text.width, height: bottom - top)
+        label.frame = CGRect(x: 0, y: text.minY - top, width: text.width, height: text.height)
+    }
+
+    @objc private func tapped() {
+        onTap?()
     }
 }
 

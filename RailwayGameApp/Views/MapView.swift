@@ -534,7 +534,8 @@ struct MapView: View {
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         } else {
                             AppleMapBackground(
@@ -545,7 +546,8 @@ struct MapView: View {
                                 trackStyle: trackStyle,
                                 language: session.language,
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         }
                     }
@@ -913,39 +915,45 @@ struct MapView: View {
     /// Chooses how Apple's map under a real-world game looks, and how
     /// strongly Taiwan's real railways show on it where there are any.
     private func mapStyleMenu(_ realWorld: RealWorldFrame) -> some View {
-        Menu {
-            Picker("Map Style", selection: $mapStyle) {
-                ForEach(AppleMapStyle.allCases) { style in
-                    Text(style.title)
-                        .tag(style)
-                }
-            }
-            if session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false {
-                Picker(selection: $trackStyle) {
-                    ForEach(RealRailways.TrackStyle.allCases) { style in
-                        Text(verbatim: style.name(in: session.language))
+        // Decision 184, later: drawn from these values alone, so a running
+        // game's ticks leave the open menu alone.
+        let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
+        let language = session.language
+        return TickStable(StableKey(mapStyle, trackStyle, showsRailways, language)) {
+            Menu {
+                Picker("Map Style", selection: $mapStyle) {
+                    ForEach(AppleMapStyle.allCases) { style in
+                        Text(style.title)
                             .tag(style)
                     }
-                } label: {
-                    Label("Real Railways", systemImage: "tram")
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("map.realRailways")
-            }
-            Button {
-                screen.panel = .dataSources
+                if showsRailways {
+                    Picker(selection: $trackStyle) {
+                        ForEach(RealRailways.TrackStyle.allCases) { style in
+                            Text(verbatim: style.name(in: language))
+                                .tag(style)
+                        }
+                    } label: {
+                        Label("Real Railways", systemImage: "tram")
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("map.realRailways")
+                }
+                Button {
+                    screen.panel = .dataSources
+                } label: {
+                    Label("Data Sources", systemImage: "info.circle")
+                }
+                .accessibilityIdentifier("map.dataSources")
             } label: {
-                Label("Data Sources", systemImage: "info.circle")
+                Image(systemName: "map")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
             }
-            .accessibilityIdentifier("map.dataSources")
-        } label: {
-            Image(systemName: "map")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+            .accessibilityLabel("Map Style")
+            .accessibilityIdentifier("map.style")
         }
-        .accessibilityLabel("Map Style")
-        .accessibilityIdentifier("map.style")
     }
 
     /// Decision 160: starts choosing a tile of the map to buy, and shows
