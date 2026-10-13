@@ -484,6 +484,20 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         }
     }
 
+    /// A real-world map's ground (decision 198): its real heights, which
+    /// track climbs and tunnels through (decision 124), or flat, where
+    /// track is always level. Blank maps are flat either way.
+    public enum Ground: String, CaseIterable, Codable, Sendable {
+        case real, flat
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .real: language.text("Real", "真實")
+            case .flat: language.text("Flat", "平坦")
+            }
+        }
+    }
+
     /// Decision 200: whether the company pays for what it builds. With
     /// unlimited funds nothing is charged and the game counts no
     /// achievements; the rest of the rules are a managed game's.
@@ -514,6 +528,8 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// The seed the towns and events are drawn from, so a map can be shared;
     /// `nil` draws a new one for each game.
     public var seed: UInt32?
+    /// Decision 198: a real-world map's ground, real unless chosen flat.
+    public var ground = Ground.real
     /// Decision 200: standard unless chosen unlimited.
     public var funds = Funds.standard
 
@@ -531,6 +547,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? standard.outsideConnections
         buysMap = try container.decodeIfPresent(Bool.self, forKey: .buysMap) ?? standard.buysMap
         seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
+        ground = try container.decodeIfPresent(Ground.self, forKey: .ground) ?? standard.ground
         funds = try container.decodeIfPresent(Funds.self, forKey: .funds) ?? standard.funds
     }
 
@@ -580,6 +597,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         if !buildingMaterials { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
+        if ground == .flat { rules.append(language.text("flat ground on real-world maps", "實景地圖地形平坦")) }
         if funds == .unlimited {
             rules.append(language.text("unlimited funds, no achievements", "資金無限，不計成就"))
         }

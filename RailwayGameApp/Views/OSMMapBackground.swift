@@ -42,6 +42,9 @@ struct OSMMapBackground: UIViewRepresentable {
     let onAttributionFrames: @MainActor ([CGRect]) -> Void
     /// Tapping the credit opens the data sources page (decision 191).
     let onCredit: @MainActor () -> Void
+    /// Whether the map may be tilted or turned
+    /// (``AppleMapBackground/allowsTilt``): not while the game is played.
+    var allowsTilt = false
 
     func makeUIView(context: Context) -> FollowingMapLibreView {
         FollowingMapLibreView(frame: .zero)
@@ -70,6 +73,7 @@ struct OSMMapBackground: UIViewRepresentable {
         map.stations = stations
         map.screenSafeArea = safeArea
         map.onAttributionFrames = onAttributionFrames
+        map.allowsTilt = allowsTilt
         map.follow(realWorld, camera: camera)
     }
 
@@ -95,6 +99,8 @@ struct OSMMapBackground: UIViewRepresentable {
 /// the style or its own size changes, and once a style has loaded.
 final class FollowingMapLibreView: MLNMapView {
     private var placement: (realWorld: RealWorldFrame, camera: PlanCamera)?
+    /// Whether the map may be tilted or turned (``OSMMapBackground/allowsTilt``).
+    var allowsTilt = false
     /// The style asked for, and whether it has loaded: layers go only into
     /// a loaded style.
     private var styleAddress: String?
@@ -261,6 +267,14 @@ final class FollowingMapLibreView: MLNMapView {
 
     private func apply() {
         guard let placement, bounds.width > 0, bounds.height > 0 else { return }
+        // Straight down and north up (decision 50), as Apple's map
+        // (``FollowingMapView``): the game's plan is drawn over it.
+        if !allowsTilt, camera.pitch != 0 || direction != 0 {
+            let level = camera
+            level.pitch = 0
+            level.heading = 0
+            setCamera(level, animated: false)
+        }
         let view = OpenStreetMapBase.camera(
             of: placement.camera, in: placement.realWorld, width: Double(bounds.width), height: Double(bounds.height)
         )
