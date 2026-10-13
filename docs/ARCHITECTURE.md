@@ -6177,6 +6177,18 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **沒有驗證的**：Linux 上驗證了 YAML、actionlint（含 shellcheck）、分片自測、key 的計算（同一份改動加文件 commit 時相同，空白改動與上下文改動時不同）與 `only_testing` 的解析；跳過與存 key、`run-name`、gate 在取消時的顯示，要等 GitHub 上真的跑過。
 
+**之後的修正**（2026-10-13）：新增 `.github/workflows/claude.yml`。作者想讓 Claude 用 Claude API 的額度改程式。claude.ai/code 的雲端 session 一律用訂閱，在環境裡設 `ANTHROPIC_API_KEY` 也不會改變計費，所以作者選了官方的 Claude Code GitHub Action，並用 API 金鑰認證。Console 的身分聯合（WIF）也能用，但步驟較多，之後可以換過去。號碼依工作登記 #231：決策、存檔版本、golden schema 都不動。
+- 內容照官方範例：`anthropics/claude-code-action` 的 `examples/claude.yml`（`@v1`，MIT）。issue／PR 的留言、review 或新的 issue 裡出現 `@claude` 時執行。金鑰放在 repo secret `ANTHROPIC_API_KEY`。
+- 省 runner 與花費：
+  - `if:` 只讓 OWNER、MEMBER、COLLABORATOR 的留言啟動 runner。公開 repo 裡陌生人的留言不佔 runner，也不花 token；action 自己也會拒絕沒有寫入權限的人與 bot。
+  - 同一個 issue／PR 一次只跑一個 run（job 的 `concurrency`）：後來的排隊，不會取消前面的。GitHub 每組只留一個排隊的，所以第三次提及會取代排隊中的那個。放在 job 上而不是整個 workflow：沒有提及的留言（包括 Claude 自己的留言）會跳過 job，不佔這一組。
+  - `timeout-minutes: 60`。
+  - 模型固定用 Claude Opus 5.5（`claude_args` 的 `--model claude-opus-5-5`），這是作者選的；不跟著 Claude Code 的預設值變動。
+- `ios-build.yml`（`paths-ignore` 與 key 的排除清單）和 `ios-full-lane.yml` 的清單補上 `claude.yml`。`ci.yml` 原本就把其他 workflow 的改動當成不必跑 Swift。
+- 規則（CLAUDE.md 的 Workflow）：session 是用作者的帳號留言，所以除非要啟動它，否則不寫 `@claude`。每提及一次就是一次用 API 計費的執行。
+- 沒有做的：runner 上沒有裝 Swift 6.4，action 預設也不讓 Claude 執行 `swift build`／`swift test`，所以它的改動由 PR 的 CI 檢查。要讓它在 runner 上建置，必須另外加安裝步驟與 `--allowedTools`，每次執行會多幾分鐘。
+- 沒有驗證的：issue 與留言事件只會用預設分支上的這個檔案，action 也會拒絕和預設分支內容不同的版本，所以合併前沒辦法在 PR 上試。合併後要留一則提及它的留言來測試。
+
 ### 188. 教學重做：一步一個動作、做完自己前進
 
 2026-10-12。作者宣布功能凍結（修 bug 輪），但要求優先重做教學：實機上卡片擋住操作、第 6 步卡死（PR #429 已修遮擋），步驟本身也要重做。派工 session（session_01WqneoRKVdxbKuAMTid84Pd）的設計工作流定了規格（`docs/research/TUTORIAL_REDO_SPEC.md`，逐步稽核在 `TUTORIAL_REDO_AUDIT.md`）；這個決策實作它的 P0。號碼依工作登記 #231：決策 188；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
