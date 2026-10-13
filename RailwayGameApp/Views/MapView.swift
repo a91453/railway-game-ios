@@ -267,6 +267,8 @@ struct MapView: View {
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
                         reduceMotion: reduceMotion,
+                        running: !session.world.clock.isPaused,
+                        language: session.language,
                         camera: projection
                     )
                     .equatable()
@@ -1572,18 +1574,26 @@ private struct MapTrainCanvas: View, Equatable {
     /// A deadlocked train's mark beats (decision 64, later fix) unless the
     /// player reduces motion.
     let reduceMotion: Bool
+    /// Whether game time runs: the rings round waiting trains pulse only
+    /// then (decision 210).
+    let running: Bool
+    /// The tags' language (decision 210).
+    let language: DisplayLanguage
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
             && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
-            && lhs.reduceMotion == rhs.reduceMotion && lhs.camera == rhs.camera
+            && lhs.reduceMotion == rhs.reduceMotion && lhs.running == rhs.running && lhs.language == rhs.language
+            && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, reduceMotion = reduceMotion, camera = camera
-        let beats = !reduceMotion && traffic.waits.contains(where: \.isDeadlocked)
+        let traffic = traffic, reduceMotion = reduceMotion, running = running, language = language, camera = camera
+        // A deadlock beats even while paused; the other waits pulse while
+        // the game runs (decision 210).
+        let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
         return TimelineView(.animation(paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -1595,6 +1605,8 @@ private struct MapTrainCanvas: View, Equatable {
                     plain: plain,
                     traffic: traffic,
                     deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
+                    pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
+                    language: language,
                     projection: camera,
                     in: context
                 )

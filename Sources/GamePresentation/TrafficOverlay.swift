@@ -37,12 +37,54 @@ public struct TrafficOverlay: Hashable, Sendable {
         }
     }
 
+    /// Why a train waits (decision 210): the cases of
+    /// ``GameCore/GameWorld/routeWaitText(of:in:)``, short enough for a tag
+    /// on the map beside its ring.
+    public enum WaitReason: Hashable, Sendable {
+        /// By plan, to meet a train coming the other way (decision 59).
+        case meet
+        /// By plan for a faster train behind (decision 59), or at a
+        /// passing place the dispatcher sent it to (Stage V2).
+        case standAside
+        /// On its way, behind a train ahead (Stage U2).
+        case following
+        /// Due to leave, on a route another train holds.
+        case route
+        /// It and the trains it waits for wait for each other (Stage V2).
+        case deadlock
+
+        /// "Meet", "等交會": the tag's first word.
+        public func text(in language: DisplayLanguage) -> String {
+            switch self {
+            case .meet: language.text("Meet", "等交會")
+            case .standAside: language.text("Stand aside", "待避")
+            case .following: language.text("Following", "跟車")
+            case .route: language.text("Route", "等進路")
+            case .deadlock: language.text("Deadlock", "死結")
+            }
+        }
+
+        /// The tag: the reason, then the train it waits for, its name cut
+        /// to ``nameLimit`` characters: "等交會 · 莒光 3".
+        public func tag(holder name: String, in language: DisplayLanguage) -> String {
+            let short = name.count > Self.nameLimit ? String(name.prefix(Self.nameLimit - 1)) + "…" : name
+            return short.isEmpty ? text(in: language) : "\(text(in: language)) · \(short)"
+        }
+
+        /// The most characters of a train's name a tag shows.
+        public static let nameLimit = 10
+    }
+
     /// A train waiting for its route (see
     /// ``GameCore/GameWorld/trainHoldingRoute(of:)``).
     public struct Wait: Hashable, Sendable {
         public let train: TrainID
         /// The train holding its route.
         public let holder: TrainID
+        /// Its name, for the tag (decision 210).
+        public let holderName: String
+        /// Why it waits (decision 210).
+        public let reason: WaitReason
         /// Whether the two are in a deadlock (see
         /// ``GameCore/GameWorld/deadlockedTrains()``).
         public let isDeadlocked: Bool
@@ -59,9 +101,15 @@ public struct TrafficOverlay: Hashable, Sendable {
         /// its mark moves aside across it (``WaitMarkSides``).
         public let heading: PlanVector
 
-        public init(train: TrainID, holder: TrainID, isDeadlocked: Bool, contested: Track, from: WorldCoordinate, to: WorldCoordinate, heading: PlanVector) {
+        public init(
+            train: TrainID, holder: TrainID, holderName: String = "", reason: WaitReason? = nil, isDeadlocked: Bool,
+            contested: Track, from: WorldCoordinate, to: WorldCoordinate, heading: PlanVector
+        ) {
             self.train = train
             self.holder = holder
+            self.holderName = holderName
+            // Without one (a test's wait), a deadlock or a wait for a route.
+            self.reason = reason ?? (isDeadlocked ? .deadlock : .route)
             self.isDeadlocked = isDeadlocked
             self.contested = contested
             self.from = from
@@ -104,11 +152,14 @@ extension GameWorld {
     /// traffic control off. Derived on every call, never saved.
     public func trafficOverlay() -> TrafficOverlay {
         guard isTrafficControlEnabled else { return TrafficOverlay() }
-        return trafficOverlay(routeWaits())
+        var kinds = ScheduledWaitKinds()
+        return trafficOverlay(routeWaits(), kinds: &kinds)
     }
 
-    /// The overlay of `routeWaits`, this world's ``GameCore/GameWorld/routeWaits()``.
-    func trafficOverlay(_ routeWaits: [RouteWait]) -> TrafficOverlay {
+    /// The overlay of `routeWaits`, this world's ``GameCore/GameWorld/routeWaits()``,
+    /// with the kind of each scheduled wait taken from `kinds` or worked
+    /// out and kept there.
+    func trafficOverlay(_ routeWaits: [RouteWait], kinds: inout ScheduledWaitKinds) -> TrafficOverlay {
         var overlay = TrafficOverlay()
         guard isTrafficControlEnabled else { return overlay }
         // One pass for every wait (see routeWaits()), not three queries a train.
@@ -127,11 +178,26 @@ extension GameWorld {
                 ?? self.train(id: wait.holder)?.position.flatMap { location(of: $0)?.position }
                 ?? head
             overlay.waits.append(.init(
-                train: train.id, holder: wait.holder, isDeadlocked: wait.isDeadlocked,
+                train: train.id, holder: wait.holder, holderName: self.train(id: wait.holder)?.name ?? "#\(wait.holder.rawValue)",
+                reason: waitReason(of: train, wait, kinds: &kinds), isDeadlocked: wait.isDeadlocked,
                 contested: contested, from: head, to: target, heading: headLocation.direction
             ))
         }
         return overlay
+    }
+
+    /// Why `train` waits (decision 210), in the order
+    /// ``GameCore/GameWorld/routeWaitText(of:in:)`` tells it: a deadlock,
+    /// a scheduled wait (nothing contested: it waits by plan, not for
+    /// track), a passing place, following, or a route.
+    func waitReason(of train: Train, _ wait: RouteWait, kinds: inout ScheduledWaitKinds) -> TrafficOverlay.WaitReason {
+        if wait.isDeadlocked { return .deadlock }
+        if wait.contested.isEmpty, let execution = train.execution {
+            return kinds.kind(of: train.id, holder: wait.holder, at: execution, in: self) == .overtake ? .standAside : .meet
+        }
+        if passingPlace(of: train.id) != nil { return .standAside }
+        if case .travellingToStop? = train.execution { return .following }
+        return .route
     }
 
     /// `resources` on the map: the spans of each edge joined where one ends
@@ -170,6 +236,50 @@ extension GameWorld {
 
 // MARK: - Read once a tick (decision 64, later fix)
 
+/// Whether each scheduled wait (decision 59) is a meet or an overtake,
+/// kept from one tick's reading to the next (decision 210): the plan that
+/// says so costs as much as the rest of the reading, and a wait keeps its
+/// kind while it lasts, so the plan is asked again only when a train
+/// starts a wait not seen before.
+struct ScheduledWaitKinds: Sendable {
+    struct Key: Hashable, Sendable {
+        let train: TrainID
+        let holder: TrainID
+        let execution: TimetableExecution
+    }
+
+    private(set) var kinds: [Key: ScheduledTrafficWait.Kind] = [:]
+    /// The plan's waits, asked at most once for this reading.
+    private var plan: [ScheduledTrafficWait]?
+
+    /// The kind of `train`'s wait for `holder` at `execution`'s stop: the
+    /// plan's wait for that stop and cycle (as
+    /// ``GameCore/GameWorld/scheduledTrafficWait(of:)`` finds it), a meet
+    /// when the plan has none.
+    mutating func kind(of train: TrainID, holder: TrainID, at execution: TimetableExecution, in world: GameWorld) -> ScheduledTrafficWait.Kind {
+        let key = Key(train: train, holder: holder, execution: execution)
+        if let kept = kinds[key] { return kept }
+        if plan == nil { plan = world.scheduledTrafficWaits() }
+        let kind = plan?.first {
+            $0.train == train && $0.other == holder && $0.stop == execution.stop && $0.cycle == execution.cycle
+        }?.kind ?? .meet
+        kinds[key] = kind
+        return kind
+    }
+
+    /// Only the kinds of the waits still going on, for the next reading:
+    /// without the plan, which is of this world.
+    func kept(for waits: [TrafficOverlay.Wait], in world: GameWorld) -> ScheduledWaitKinds {
+        var next = ScheduledWaitKinds()
+        for wait in waits {
+            guard let execution = world.train(id: wait.train)?.execution else { continue }
+            let key = Key(train: wait.train, holder: wait.holder, execution: execution)
+            if let kind = kinds[key] { next.kinds[key] = kind }
+        }
+        return next
+    }
+}
+
 /// What the map and the train tool show of traffic control for one world:
 /// the overlay, and the selected train's wait in words, worked out with one
 /// search for every wait (``GameCore/GameWorld/routeWaits()``). The game
@@ -185,11 +295,18 @@ public struct TrafficReading: Sendable {
     let waiting: Set<TrainID>
     /// The words of the waits worked out so far, by train.
     private(set) var texts: [TrainID: String?] = [:]
+    /// The kinds of the scheduled waits still going on (decision 210),
+    /// for the next reading.
+    let kinds: ScheduledWaitKinds
 
-    /// The reading of `world`, with the words of `train`'s wait if it has one.
-    public init(world: GameWorld, train: TrainID? = nil, in language: DisplayLanguage) {
+    /// The reading of `world`, with the words of `train`'s wait if it has
+    /// one, and the kinds of scheduled waits `previous` (the last
+    /// reading) already knew.
+    public init(world: GameWorld, train: TrainID? = nil, in language: DisplayLanguage, previous: TrafficReading? = nil) {
         let waits = world.isTrafficControlEnabled ? world.routeWaits() : []
-        overlay = world.trafficOverlay(waits)
+        var kinds = previous?.kinds ?? ScheduledWaitKinds()
+        overlay = world.trafficOverlay(waits, kinds: &kinds)
+        self.kinds = kinds.kept(for: overlay.waits, in: world)
         waiting = Set(waits.map(\.train))
         if let train { _ = waitText(of: train, in: world, language: language) }
     }

@@ -47,6 +47,22 @@ final class TrafficOverlayTests: XCTestCase {
 
     private func point(_ x: Int64) -> WorldCoordinate { WorldCoordinate(x: x, y: 4_096) }
 
+    /// Decision 210: the reason a wait's tag gives is the case its words
+    /// (``GameCore/GameWorld/routeWaitText(of:in:)``) tell.
+    private func assertReasonsMatchTheWords(_ overlay: TrafficOverlay, in world: GameWorld, file: StaticString = #filePath, line: UInt = #line) {
+        for wait in overlay.waits {
+            let text = world.routeWaitText(of: wait.train, in: .english) ?? ""
+            let expected: TrafficOverlay.WaitReason? =
+                text.hasPrefix("Deadlocked") ? .deadlock
+                : text.hasPrefix("Standing aside") ? .standAside
+                : text.hasPrefix("Following") ? .following
+                : text.hasPrefix("Waiting for") ? .route
+                : text.hasPrefix("Waiting at") ? .meet
+                : nil
+            XCTAssertEqual(wait.reason, expected, "\(wait.train): \(text)", file: file, line: line)
+        }
+    }
+
     func testWithoutTrafficControlNothingIsDrawn() throws {
         var world = try passingLoopWorld()
         try world.advance(ticks: 1)
@@ -68,9 +84,9 @@ final class TrafficOverlayTests: XCTestCase {
         let overlay = world.trafficOverlay()
         XCTAssertEqual(overlay.authorities, [])
         XCTAssertEqual(overlay.waits, [
-            .init(train: east, holder: west, isDeadlocked: true,
+            .init(train: east, holder: west, holderName: "Westbound", reason: .deadlock, isDeadlocked: true,
                   contested: .init(lines: [[point(29_696), point(32_768)]]), from: point(4_096), to: point(29_696), heading: PlanVector(dx: 8_192, dy: 0)),
-            .init(train: west, holder: east, isDeadlocked: true,
+            .init(train: west, holder: east, holderName: "Eastbound", reason: .deadlock, isDeadlocked: true,
                   contested: .init(lines: [[point(2_048), point(5_120)]]), from: point(30_720), to: point(5_120), heading: PlanVector(dx: -8_192, dy: 0)),
         ])
         // The other train holds exactly what each waits for.
@@ -99,6 +115,9 @@ final class TrafficOverlayTests: XCTestCase {
         XCTAssertEqual(wait.train, east)
         XCTAssertEqual(wait.holder, west)
         XCTAssertFalse(wait.isDeadlocked)
+        // Decision 210: why, for its tag.
+        XCTAssertEqual(wait.reason, .standAside)
+        XCTAssertEqual(wait.reason.tag(holder: wait.holderName, in: .traditionalChinese), "待避 · Westbound")
         XCTAssertEqual(wait.from, point(18_432))
         XCTAssertEqual(wait.to, point(23_552))
         XCTAssertEqual(wait.contested.nodes, [point(25_600)])
@@ -124,6 +143,9 @@ final class TrafficOverlayTests: XCTestCase {
         XCTAssertTrue(wait.contested.isEmpty)
         XCTAssertFalse(wait.isDeadlocked)
         XCTAssertEqual(wait.to, other.position)
+        // Decision 210: a meet by plan, as the plan has it.
+        XCTAssertEqual(world.scheduledTrafficWait(of: TrainID(rawValue: 1))?.kind, .meet)
+        XCTAssertEqual(wait.reason, .meet)
     }
 
     // MARK: - Read once a tick (decision 64, later fix)
@@ -137,12 +159,17 @@ final class TrafficOverlayTests: XCTestCase {
         let unplaced = try world.purchaseTrain(named: "Spare").id
         try world.setTrafficControl(true)
         var waited: Set<String> = []
+        var reasons: Set<TrafficOverlay.WaitReason> = []
+        var previous: TrafficReading?
         for tick in 0..<240 {
             if tick == 200 { try world.setTrafficControl(false) }
             try world.advance(ticks: 1)
             for language in [DisplayLanguage.english, .traditionalChinese] {
-                var reading = TrafficReading(world: world, train: east, in: language)
+                var reading = TrafficReading(world: world, train: east, in: language, previous: language == .english ? previous : nil)
+                if language == .english { previous = reading }
                 XCTAssertEqual(reading.overlay, world.trafficOverlay(), "tick \(tick)")
+                reasons.formUnion(reading.overlay.waits.map(\.reason))
+                assertReasonsMatchTheWords(reading.overlay, in: world)
                 for id in [east, west, unplaced, TrainID(rawValue: 99)] {
                     let text = world.routeWaitText(of: id, in: language)
                     XCTAssertEqual(reading.waitText(of: id, in: world, language: language), text, "tick \(tick), train \(id)")
@@ -153,6 +180,7 @@ final class TrafficOverlayTests: XCTestCase {
         // The deadlock, the dispatcher's standing aside and the following.
         XCTAssertTrue(waited.contains("Deadlocked w"), "\(waited)")
         XCTAssertTrue(waited.contains("Standing asi"), "\(waited)")
+        XCTAssertTrue(reasons.isSuperset(of: [.deadlock, .standAside]), "\(reasons)")
     }
 
     /// The same for a scheduled meet (decision 59), over its next minutes.
@@ -160,9 +188,13 @@ final class TrafficOverlayTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         var world = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: root.appendingPathComponent("SaveFixtures/v9-scheduled-meet.json"))).world
         var scheduled = 0
+        var previous: TrafficReading?
         for _ in 0..<30 {
-            var reading = TrafficReading(world: world, in: .english)
+            // Decision 210: with the kinds the last reading kept, the same.
+            var reading = TrafficReading(world: world, in: .english, previous: previous)
+            previous = reading
             XCTAssertEqual(reading.overlay, world.trafficOverlay())
+            assertReasonsMatchTheWords(reading.overlay, in: world)
             for train in world.trains {
                 XCTAssertEqual(reading.waitText(of: train.id, in: world, language: .english), world.routeWaitText(of: train.id, in: .english))
                 if world.scheduledTrafficWait(of: train.id) != nil { scheduled += 1 }
