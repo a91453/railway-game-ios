@@ -196,8 +196,8 @@ extension GameSession {
             perform(.removeLineTrains(line.id, count: change.removing, targets: change.targets)) { _, _, _ in
                 language.text(
                     "\(line.name) now runs \(change.trains) \(change.trains == 1 ? "train" : "trains"), every \(headway) min. "
-                        + "\(change.removing) more \(change.removing == 1 ? "goes" : "go") to no line once \(change.removing == 1 ? "its" : "their") trip is over.",
-                    "「\(line.name)」現在跑 \(change.trains) 列，每 \(headway) 分一班。另外 \(change.removing) 列跑完這一趟後回到未配屬。"
+                        + "\(change.removing) more \(change.removing == 1 ? "goes" : "go") to no line: back to the depot, or once a trip under way is over.",
+                    "「\(line.name)」現在跑 \(change.trains) 列，每 \(headway) 分一班。另外 \(change.removing) 列回到未配屬：等車的收回車庫，正在跑的跑完這一趟。"
                 )
             }
         } else {
@@ -245,8 +245,9 @@ extension GameSession {
     }
 
     /// Takes `count` of line `id`'s own trains off it in `world`, those
-    /// waiting for their next trip first, the last assigned first; a train
-    /// on a trip finishes it. Its targets are set to `targets`.
+    /// waiting for their next trip first, the last assigned first. One
+    /// waiting goes back to the depot (off the track); one on a trip
+    /// finishes it. Its targets are set to `targets`.
     static func removeTrains(_ count: Int, from id: LineID, targets: TargetHeadways, in world: inout GameWorld) throws(GameError) {
         guard let line = world.line(id: id) else { throw .unknownLine(id) }
         let newestFirst = line.trains.reversed()
@@ -254,6 +255,10 @@ extension GameSession {
         let running = newestFirst.filter { world.train(id: $0)?.execution != nil }
         for train in (waiting + running).prefix(max(0, count)) {
             try world.unassignTrain(train)
+            // One waiting goes back to the depot, so that it does not keep
+            // the line's platform (the author's call, 2026-10-13); one on a
+            // trip finishes it first, where it stops.
+            if waiting.contains(train) { try world.unplaceTrain(train) }
         }
         try world.setLineTargetHeadways(id, to: targets, pattern: nil)
     }

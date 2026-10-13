@@ -141,8 +141,8 @@ public enum HelpGuide {
             "moreTrains", .running,
             question: ("How do I run more trains on a line?", "一條路線怎麼多跑幾列車？"),
             answer: (
-                "Open Lines and pick the line. Under Headway and trains, choose how often a train should come, then tap the button once. The trains the line lacks are bought and set off evenly apart; if it has more than it needs, the extra ones go to no line after their trip. If a time of day is set to more trains than the line has, a warning says so, with a button that buys the rest. On single track trains can only pass at stations, so a line holds just a few trains: to run more, build double track or passing loops (see \"Why does my line run only one train at a time?\").",
-                "打開「路線」，選這條路線。在「班距與列車數」選多久來一班，再按一下按鈕。不夠的列車會自動買好，保持等間隔發車；車太多時，多的車跑完這一趟後回到未配屬。某個時段設定的列車比路線實際有的多時，會出現警告，按一下就補齊。單線只能在車站會車，能跑的列車有上限：要再多跑，就蓋雙線或待避線（見「為什麼我的路線一次只跑一列車？」）。"
+                "Open Lines and pick the line. Under Headway and trains, choose how often a train should come, then tap the button once. The trains the line lacks are bought and set off evenly apart; if it has more than it needs, the extra ones go to no line: those waiting back to the depot, the others after their trip. If a time of day is set to more trains than the line has, a warning says so, with a button that buys the rest. On single track trains can only pass at stations, so a line holds just a few trains: to run more, build double track or passing loops (see \"Why does my line run only one train at a time?\").",
+                "打開「路線」，選這條路線。在「班距與列車數」選多久來一班，再按一下按鈕。不夠的列車會自動買好，保持等間隔發車；車太多時，多的車回到未配屬：等車的收回車庫，正在跑的跑完這一趟。某個時段設定的列車比路線實際有的多時，會出現警告，按一下就補齊。單線只能在車站會車，能跑的列車有上限：要再多跑，就蓋雙線或待避線（見「為什麼我的路線一次只跑一列車？」）。"
             ),
             keywords: "more trains headway frequency add train how many dispatch 加開 多跑 班距 列車數 調度 配車 發車 補齊 上限"
         ),
