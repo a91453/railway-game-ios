@@ -404,12 +404,14 @@ class ChangesTests(Fixture):
         cls.git("checkout", "-q", "main")
         cls.git("merge", "-q", "--no-ff", "-m", message, name)
 
-    def github(self, runs, titles, runs_status=200):
+    def github(self, runs, titles, runs_status=200, jobs=None):
         def answer(method, path, query, body):
             if path == f"/repos/{REPOSITORY}/actions/workflows/testflight.yml/runs":
                 if runs_status != 200:
                     return runs_status, {"message": "fake failure"}
                 return 200, {"total_count": len(runs), "workflow_runs": runs}
+            if jobs is not None and path == f"/repos/{REPOSITORY}/actions/runs/800/jobs":
+                return 200, {"total_count": len(jobs), "jobs": jobs}
             prefix = f"/repos/{REPOSITORY}/pulls/"
             if path.startswith(prefix) and path[len(prefix):] in titles:
                 return 200, {"number": int(path[len(prefix):]), "title": titles[path[len(prefix):]]}
@@ -452,6 +454,19 @@ class ChangesTests(Fixture):
         self.assertTrue(result.stdout.startswith("Changes since build 151.2:\n"), result.stdout)
         # Without a title from GitHub: the merge body, else the branch name.
         self.assertIn("- owner/claude/one (#10)\n", result.stdout)
+
+    def test_names_the_attempt_that_uploaded_not_a_later_rerun_of_processing(self):
+        # Run 51 uploaded build 51.1; only its processing job was run again
+        # (attempt 2), so the run's own run_attempt reads 2.
+        upload = "Archive, sign, export, check and upload"
+        processing = "Wait for App Store Connect processing, fill What to Test"
+        jobs = [{"name": upload, "conclusion": "success", "run_attempt": 1},
+                {"name": processing, "conclusion": "failure", "run_attempt": 1},
+                {"name": processing, "conclusion": "success", "run_attempt": 2}]
+        result = self.run_changes(self.github(self.runs(number=51, attempt=2), {}, jobs=jobs))
+        self.assertTrue(result.stdout.startswith("Changes since build 51.1:\n"), result.stdout)
+        query = dict(urllib.parse.parse_qsl(result.requests[1]["raw_query"]))
+        self.assertEqual(query.get("filter"), "all")
 
     def test_same_commit_as_the_last_release(self):
         result = self.run_changes(self.github(self.runs(sha=self.head), {}))

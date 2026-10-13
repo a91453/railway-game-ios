@@ -127,6 +127,14 @@ final class LineTrainCountTests: XCTestCase {
         try GameSession.removeTrains(waiting.count, from: Self.line, targets: TargetHeadways(peak: 30), in: &world)
         XCTAssertEqual(world.line(id: Self.line)?.trains, running, "those on a trip stay")
         XCTAssertEqual(world.line(id: Self.line)?.targetHeadways, TargetHeadways(peak: 30))
+        // The 2026-10-13 decision: those taken off go back to the depot, so
+        // none keeps the line's first platform.
+        for train in waiting {
+            XCTAssertNil(world.train(id: train)?.position, "train \(train.rawValue) leaves the track")
+        }
+        for train in running {
+            XCTAssertNotNil(world.train(id: train)?.position)
+        }
     }
 
     // MARK: Single track

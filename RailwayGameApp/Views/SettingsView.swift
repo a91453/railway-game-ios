@@ -107,9 +107,10 @@ struct SettingsView: View {
         let language = session.language
         let current = session.world.disruptions?.level
         // Decision 154, later: a challenge's rules are fixed, so there the
-        // menu only offers Off (to an older save that has them on).
+        // menu shows what the game has and cannot be changed (an older save
+        // with them on keeps them, and its result is not kept).
         let fixed = session.eventsAreFixed
-        let levels: [DisruptionLevel?] = fixed ? (current == nil ? [nil] : [nil, current]) : [nil, .light, .standard]
+        let levels: [DisruptionLevel?] = fixed ? [current] : [nil, .light, .standard]
         return Section {
             // Decision 184, later: a menu the ticks leave alone.
             TickStable(StableKey(current, levels, language)) {
@@ -126,7 +127,7 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.disruptions")
             }
-            .disabled(fixed && current == nil)
+            .disabled(fixed)
             if let country = session.world.disruptions?.country {
                 LabeledContent {
                     Text(verbatim: holidayCountryName(country, in: language))
@@ -137,10 +138,12 @@ struct SettingsView: View {
         } header: {
             Text(verbatim: language.text("This game", "這一局"))
         } footer: {
-            if fixed {
+            if fixed, current != nil {
+                Text(verbatim: GameSession.challengeSavedWithEventsText(in: language))
+            } else if fixed {
                 Text(verbatim: language.text(
-                    "A challenge's rules are fixed and the same for every player: no holidays, weather, typhoons or fuel spells. A game saved with them on can only turn them off, and its result is not kept.",
-                    "挑戰的規則固定，每位玩家都一樣：沒有連假、天氣、颱風與油電漲跌。之前存檔時已經打開的，只能關閉，成績也不會列入紀錄。"
+                    "A challenge's rules are fixed and the same for every player: no holidays, weather, typhoons or fuel spells.",
+                    "挑戰的規則固定，每位玩家都一樣：沒有連假、天氣、颱風與油電漲跌。"
                 ))
             } else {
                 Text(verbatim: language.text(

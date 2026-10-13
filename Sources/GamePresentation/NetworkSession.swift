@@ -153,7 +153,7 @@ extension GameSession {
         // on it.
         var prepared = world
         try? prepared.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
-        let plan: EdgePlan
+        var plan: EdgePlan
         switch edgePlan(from: start, to: end, in: prepared) {
         case .success(let found): plan = found
         case .failure(let problem):
@@ -162,7 +162,10 @@ extension GameSession {
         }
         var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure))
         if networkBuildsDouble {
-            guard let parallel = parallelPlan(beside: plan, in: prepared) else {
+            let pair = doublePlans(plan, in: prepared)
+            plan = pair.main
+            command = .buildTrack(plan.stretch(structure: networkStructure))
+            guard let parallel = pair.parallel else {
                 message = StatusMessage(kind: .failure, text: Self.noParallelText(in: language))
                 return
             }
@@ -196,7 +199,7 @@ extension GameSession {
         // point stands on it; the rest of the way as it is built.
         var draft = world
         try? draft.readGround(under: [start, end].compactMap(planPoint(of:)), from: heights)
-        let plan: EdgePlan
+        var plan: EdgePlan
         switch edgePlan(from: start, to: end, in: draft) {
         case .success(let found): plan = found
         case .failure(let problem):
@@ -212,7 +215,8 @@ extension GameSession {
                 startHeight: from.z, endHeight: to.z, joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)
             ), [])
         }
-        let parallel = networkBuildsDouble ? parallelPlan(beside: plan, in: draft) : nil
+        var parallel: EdgePlan?
+        if networkBuildsDouble { (plan, parallel) = doublePlans(plan, in: draft) }
         let cost: Money?
         let problem: String?
         var longSection: TrackLongSection?

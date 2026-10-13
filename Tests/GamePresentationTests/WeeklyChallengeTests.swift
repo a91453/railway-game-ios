@@ -162,16 +162,20 @@ final class WeeklyChallengeTests: XCTestCase {
             "A challenge's rules are fixed: it has no holidays, weather or other events."
         )
         XCTAssertFalse(session.canUndo)
-        // An older save with them on may turn them off.
+        // An older save with them on keeps them (the owner's decision on
+        // the #319–#400 review): turning them off mid-challenge would let a
+        // result reached on holiday peaks be kept, so its result is never
+        // kept and the setting stays, during the challenge and after it.
         var older = GameWorld.newGame(weekly: WeeklyChallenge(containing: monday))
         older.setDisruptions(Disruptions(level: .standard, country: "TW", seed: 1))
         let oldSession = GameSession(world: older, language: .traditionalChinese)
         oldSession.setDisruptionLevel(.light)
         XCTAssertEqual(oldSession.world.disruptions?.level, .standard)
-        XCTAssertEqual(oldSession.message?.text, "挑戰的規則固定，不含連假、天氣與其他事件。")
         oldSession.setDisruptionLevel(nil)
-        XCTAssertNil(oldSession.world.disruptions)
-        XCTAssertEqual(oldSession.message?.kind, .success)
+        XCTAssertEqual(oldSession.world.disruptions?.level, .standard)
+        XCTAssertEqual(oldSession.message?.kind, .failure)
+        XCTAssertEqual(oldSession.message?.text, "這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。")
+        XCTAssertFalse(oldSession.canUndo)
         // A game without goals is not held.
         XCTAssertFalse(GameSession(world: GameWorld.newGame()).eventsAreFixed)
     }

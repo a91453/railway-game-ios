@@ -57,8 +57,11 @@ extension GameWorld {
         if let most = lineMaximumTrains(id) { trains = min(trains, max(1, most)) }
         let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
         // Decision 168: a high-speed line gets high-speed sets where the
-        // game offers them, unless the player chose a type.
-        let type = type ?? (line.isHighSpeed && offeredTrainTypes.contains(.highSpeed) ? .highSpeed : nil)
+        // game offers them, unless the player chose a type. An era has no
+        // standard car (decision 153): its own type, as a train bought there
+        // is, so re-forming with the line's default keeps it.
+        let type = type ?? (!offersStandardCar ? offeredTrainTypes.first
+            : line.isHighSpeed && offeredTrainTypes.contains(.highSpeed) ? .highSpeed : nil)
         let price = purchaseCost(of: type, cars: cars)
         let (cost, overflow) = price.amount.multipliedReportingOverflow(by: Int64(trains))
         return LineStaffingPlan(
@@ -139,6 +142,7 @@ extension GameSession {
                 let time = clockText(minuteOfDay: open % 1_440)
                 text += language.text(" It opens at \(time).", "\(time) 開始營運。")
             }
+            if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             return text
         }
     }
@@ -151,6 +155,13 @@ extension GameSession {
     static func staff(
         _ id: LineID, headway: Int64, type chosen: TrainType?, cars: Int, in world: inout GameWorld, language: DisplayLanguage
     ) throws(GameError) -> (held: Int, unfit: Int) {
+        // Decision 168 rule 7: high-speed sets on a line that runs nothing
+        // else make it a high-speed line in the same edit; planned at high
+        // speed first, the plan counts the trains its faster trips need.
+        if chosen == .highSpeed, let line = world.line(id: id), line.performance == .standard, !line.isFreight,
+           line.assignedTrains.allSatisfy({ world.train(id: $0)?.type == .highSpeed }) {
+            try world.setLinePerformance(id, to: .highSpeed)
+        }
         guard let plan = world.lineStaffingPlan(id, headway: headway, type: chosen, cars: cars) else {
             throw .unknownLine(id)
         }
@@ -217,7 +228,7 @@ extension GameSession {
     }
 
     /// Re-forms the selected line's trains into `cars` cars of `type`
-    /// (`nil`: the standard car): each train that stands waiting for its
+    /// (`nil`: each keeps its own type, decision 180 later): each train that stands waiting for its
     /// next trip is unassigned, taken off the track, given the type and the
     /// cars (a refit and the cars added are paid for, decision 180), put
     /// back at the start of the line and assigned to the service it was on.
@@ -240,6 +251,12 @@ extension GameSession {
             let (changed, left) = (outcome.number, outcome.left)
             let summary: String = {
                 let paid = before.economy.balance - world.economy.balance
+                guard let type else {
+                    return language.text(
+                        "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)), each keeping its type, for \(paid.moneyText).",
+                        "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))，車型不變，花費 \(paid.moneyText)。"
+                    )
+                }
                 let name = Train.typeText(type, in: language)
                 return language.text(
                     "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)) of \(name), for \(paid.moneyText).",
@@ -252,6 +269,7 @@ extension GameSession {
             if !left.isEmpty {
                 text += language.text(" Left as they were: ", " 沒有改的：") + left.joined(separator: language.text(", ", "、")) + "."
             }
+            if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             message = StatusMessage(kind: changed > 0 || left.isEmpty ? .success : .failure, text: text)
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
@@ -274,6 +292,9 @@ extension GameSession {
                 left.append(language.text("\(train.name) (on a trip)", "\(train.name)（正在行駛）"))
                 continue
             }
+            // No type named (the line's default on a line with none of its
+            // own): each train keeps the type it has (decision 180, later).
+            let type = type ?? train.type
             if train.type == type && train.cars == cars { continue }
             var attempt = world
             do throws(GameError) {
@@ -286,7 +307,7 @@ extension GameSession {
                 if cars < train.cars { try attempt.setTrainCars(trainID, to: cars) }
                 if train.type != type {
                     try attempt.setTrainType(trainID, to: type)
-                    if let performance = type?.performance { try attempt.setTrainPerformance(trainID, to: performance) }
+                    try attempt.runAsItsType(trainID, ranAs: train.type)
                 }
                 if cars > train.cars { try attempt.setTrainCars(trainID, to: cars) }
                 try Self.placeAtStart(trainID, of: journey, in: &attempt)

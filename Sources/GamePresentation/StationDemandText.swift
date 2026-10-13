@@ -231,6 +231,10 @@ public struct RidershipInputs: Equatable, Sendable {
     let distanceDemand: Bool
     let outsideConnections: Bool
     let ownedTiles: [MapTile]?
+    /// The sights and their ratings now (decision 174): a souvenir shop or a
+    /// hotel changes how many tourists come, as the passenger plan's key has.
+    let tourism: Tourism?
+    let tourismStars: [Int]
 
     public init(world: GameWorld) {
         day = world.clock.now.seconds / GameTime.secondsPerDay
@@ -259,6 +263,8 @@ public struct RidershipInputs: Equatable, Sendable {
         distanceDemand = world.distanceDemand
         outsideConnections = world.outsideConnections
         ownedTiles = world.mapExpansion?.owned
+        tourism = world.tourism
+        tourismStars = world.tourism?.attractions.map { world.stars(of: $0) } ?? []
     }
 }
 

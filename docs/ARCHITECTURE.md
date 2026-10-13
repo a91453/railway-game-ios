@@ -3913,6 +3913,16 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 - **放在哪**：路線面板沒有路線時（`LinesPanel` 的 `linesSection`）、存檔庫沒有存檔時（`StartView` 的 `ContentUnavailableView`，取代系統的 `tray`）、車隊沒有列車時（`FleetOverviewSheet`），都在原本那行字的上面，96 點，對 VoiceOver 隱藏（字已經說了）。
 - **沒有驗證的**：Asset Catalog 與面板上的樣子（CI 的 Xcode 建置）；實機。
 
+**之後的修正（2026-10-13，美術線：建造卡的插圖）**：建造工具的種類按鈕原本是 18 點的地圖圖示加名字，改成**建造卡**：上面 44 點的多色插圖（隨動態字級放大），下面名字與價錢。版面是作者看過兩種之後選的（「用你推薦的版面」）；地圖上照舊用單色的 `MapGlyph`（決策 121）。
+- **圖**：`Assets.xcassets` 的 `BuildingHouse`、`BuildingShop`、`BuildingOffice`、`BuildingHotel`、`BuildingDepartmentStore`、`BuildingWharf`、`BuildingMarina`、`BuildingAmusementPark`（`PlacedBuildingKind.cardArt`），120 × 120 的多色 SVG，淺色深色共用。來源是 #514 的原稿，描法和空狀態一樣。底是淺綠松 `#BDEFE7` 的圓角方塊（`rx` 22）：建物有高有寬，放進圓會擠。
+- **作者看過之後改的**：
+  - 住宅用原稿的正面簡單版。透視的細節版改成正面重畫後，作者說不好看，就不用了。
+  - 遊樂園只留摩天輪。原稿上挖掉售票亭、旋轉木馬和雲霄飛車會留下破口與殘片（作者指出），所以整座摩天輪照原稿的配色與外框重畫，車廂用圓形（作者在兩種車廂中選了這種）。
+  - 百貨每邊的橫條窗 7 條減為 4 條；旅館 13 層窗減為 7 層；遊艇港陽台的細欄杆併成一條。
+  - 碼頭照原稿：拿掉吊桿和木箱都會切出斷口（作者指出右下破圖），所以不挖補。
+- **檢查**：64／44／28 點，淺色與深色面板，模糊與灰階；放大和原稿並排看外框都連著。
+- **沒有驗證的**：Asset Catalog 與按鈕上的樣子（CI 的 Xcode 建置）；手機上建造面板變高之後好不好捲（實機）。
+
 ### 123. 實機截圖的修正（TestFlight #37）
 
 2026-10-09，作者在 iPhone 上用 TestFlight #37（含決策 106–122）拍了 22 張橫拿的截圖：空白地圖、實景示範（瑞芳一帶，OSM 底圖）、台北車站（Apple 地圖）、各圖層、車站卡片、路線面板、經營明細與開始畫面。這裡是從截圖找到的問題與修法，一點一個 commit。GameCore、存檔、golden、replay 都不變。
@@ -4868,6 +4878,11 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - 設定頁的「連假與事件」：這種局目前是「關」時選單停用；已經打開時只能選「關」；footer 說明挑戰的規則固定。整節照樣顯示。
 - `ChallengeRecords.record` 在 `world.disruptions != nil` 時不記錄（舊存檔的保險）。
 - 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`、`testAResultWithEventsOnIsNotKept`。GameCore、存檔、golden、replay 都不變。
+
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：開著事件存檔的挑戰（決策 154 之前的舊存檔），也不能把事件關掉。挑戰中、挑戰結束後都一樣。
+- 原因：存檔裡沒有任何東西記得「這一局開過事件」。關掉之後，靠連假尖峰提早達成的成績，下一次自動存檔就會被記下來。要記住這件事得升存檔版本，所以改成不能關：事件一直開著，成績一直不記，規則一致。
+- 設定頁的選單在挑戰中一律停用；開著事件時，footer 與拒絕的訊息都寫「這一局挑戰存檔時已開著連假與事件：設定不能更改，成績不列入紀錄。」
+- 測試：`WeeklyChallengeTests.testAChallengeKeepsItsEventsOff`。GameCore、存檔、golden、replay 都不變。
 
 ### 155. 貨運：貨運場、貨運路線與噸公里運費
 
@@ -5890,6 +5905,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12）：拆掉一個有人上下車的車站，`lineAccounts.flows` 還留著它，拆到只剩一站的路線也被 `removeStation` 直接移除而沒有清掉該線的紀錄，之後存的檔讀不回來（「The line accounts must be well formed」）。`removeStation` 現在一併清掉兩者（`LineAccountsTests.testRemovingAStationLeavesNoRecordsOfIt`）。
 
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：沒有列車的路線不出「連續虧損」泡泡，也不算 `lineLosingMoney`。它已經有「沒有列車」的泡泡，那才是玩家能直接處理的原因；車站費用照算，報表的損益不變（`LineReportTests.testALineLosingMoneyForAWeekShowsOnTheMap`）。
+
 ### 180. 車輛經濟：依車種的價格與營運成本、改裝、出售列車
 
 2026-10-12，作者睡覺期間派工的「車輛經濟」（ROADMAP 的 P7-3）。號碼依工作登記 #231：決策 180、存檔版本 49、golden schema 71。
@@ -5925,6 +5942,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **之後的修正**（查 bug，2026-10-12）：賣掉載著貨的貨運列車時，`freight.loads` 還留著它的貨，到整點的 `tickFreight` 才清；在那之前存的檔讀不回來（「Cargo is on a train… that does not exist」）。`sellTrain` 現在先 `loseCargo(of:)`，貨算損失（`FreightTests.testSellingALoadedFreightTrainLosesItsCargo`）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 換車種時舊車賣得比新車種貴（費用 0，`refitCost` 也報 0），公司在赤字時 `setTrainType` 先把舊車的帳賣掉、再 `spend` 新車全價而拋出 `insufficientFunds`，等於一次不收錢的改裝被拒絕、而且拋出前已經改了帳。現在只檢查費用付得起，餘額只少「新價 − 賣得的錢」（`testAChangeOfTypeTheOldTrainPaysForIsMadeInTheRed`）。② 換車種後新車的價錢整筆記在列車的帳上，之後拆車廂沒有沖銷，一節車的列車帳面還是 16 節的價、照它折舊、賣出也照它算；現在和買車一樣，第一節記在列車、其餘記成車廂（`testCarsTakenOffAfterAChangeOfTypeLeaveTheBooks`）。③ 路線改編組（`reformSelectedLine`）先換車種再減車廂，玩家為馬上拆掉的車廂付了新車種的錢；現在減車廂在前、加車廂在後（`RollingStockSessionTests.testReformingIntoFewerCarsPaysOnlyForTheCarsKept`）。存檔格式、golden、replay 不動。
+
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：路線改編組選「依路線預設」時：
+- 路線有自己的車型（時代劇本的車種、高鐵線的高鐵車組），套用那個車型。
+- 路線沒有自己的車型時，每列車保留原本的車型，只改節數，不會悄悄換回標準車、收改裝費（`RollingStockSessionTests.testReformingWithTheLinesDefaultKeepsEachTrainsType`）。
 
 ### 178. 載客量圖層與車站「即將進站」看板
 
