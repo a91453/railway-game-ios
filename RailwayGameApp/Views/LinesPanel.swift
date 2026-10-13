@@ -55,6 +55,9 @@ struct LinesPanel: View {
     /// Decision 196, later: the player's choice for the "Advanced" switch,
     /// or `nil` for the device's default (folded on a phone).
     @AppStorage("linesPanel.showsAdvanced") private var storedShowsAdvanced: Bool?
+    /// Decision 201, later: whether the card about track numbers and
+    /// routes has been seen.
+    @AppStorage(RouteHint.seenKey) private var routeHintSeen = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
@@ -932,6 +935,11 @@ struct LinesPanel: View {
                             .accessibilityIdentifier("line.route.preview.text")
                     }
                 }
+            }
+            .onAppear {
+                // Decision 201, later: the first route menus seen bring up
+                // the card about track numbers and routes, once.
+                if !routeHintSeen { session.routeMenusDidAppear() }
             }
         }
     }

@@ -43,9 +43,13 @@ struct PerformanceMenu: View, Equatable {
                 }
             }
         } label: {
+            // Touched over at least 44 points: the footnote line alone was
+            // some 16 points tall (full lane run 38362099969).
             Label(performance.displayText(in: language), systemImage: "speedometer")
                 .font(.footnote)
                 .monospacedDigit()
+                .frame(minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .accessibilityIdentifier(identifier)
         .accessibilityLabel("Performance: \(performance.displayText(in: language))")
