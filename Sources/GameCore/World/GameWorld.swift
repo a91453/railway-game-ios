@@ -108,6 +108,13 @@ public struct GameWorld: Equatable, Sendable {
     /// world and in saves from before it; the app's new games turn it on.
     /// Set by ``setKeepLeft(_:)`` only.
     public internal(set) var keepLeft: Bool = false
+    /// Whether the lines plan their timetables realistically (decision
+    /// 207): each leg at the performance's usual rates with a recovery
+    /// margin a late train can make up, a line's dwell by its kind, and
+    /// each line's punctuality counted. Off in a new world and in saves from
+    /// before it; the app's new games turn it on. Set by
+    /// ``setRealisticOperation(_:)`` only.
+    public internal(set) var realisticOperation: Bool = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -1915,6 +1922,20 @@ public struct GameWorld: Equatable, Sendable {
         }
     }
 
+    /// Sets line `id`'s dwell at a stop between its ends (decision 207), or
+    /// with `nil` gives it back the world's default
+    /// (``dwellSeconds(of:)``). A train already on its way keeps its
+    /// timetable.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
+    ///   ``GameError/invalidLineDwell``.
+    public mutating func setLineDwell(_ id: LineID, seconds: Int64?) throws(GameError) {
+        let index = try lineIndex(of: id)
+        if let seconds, !ServiceLine.dwellRange.contains(seconds) { throw .invalidLineDwell }
+        lines[index].dwellSeconds = seconds
+        abandonUnservedPassengers()
+    }
+
     /// Sets when a line runs during the day (see ``ServiceWindow``).
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)`` or
@@ -3155,7 +3176,13 @@ public struct GameWorld: Equatable, Sendable {
                     let (sum, overflow) = left.addingReportingOverflow(stretch.to - stretch.from)
                     left = overflow ? .max : sum
                 }
-                if let run = run(of: train, length: left) {
+                // Decision 207: with realistic operation, fitted to the time
+                // left to its scheduled arrival; otherwise as fast as it can.
+                var scheduled: Int64?
+                if realisticOperation, case .travellingToStop(let stop, let cycle)? = train.execution {
+                    scheduled = secondsToScheduledArrival(of: train, stop: stop, cycle: cycle)
+                }
+                if let run = run(of: train, length: left, scheduled: scheduled) {
                     times.run = run
                     changed = true
                 }
@@ -3363,8 +3390,11 @@ public struct GameWorld: Equatable, Sendable {
         moved.execution = .travellingToStop(next.stop, cycle: next.cycle)
         // Stage W2c: the run takes the time the timetable gives it, from the
         // scheduled departure to the scheduled arrival (never negative).
-        let scheduled = train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds
-            - train.scheduledDeparture(of: stop, cycle: cycle).seconds
+        // Decision 207: with realistic operation, the time left to the
+        // scheduled arrival, so a late train makes up its margin.
+        let scheduled = realisticOperation
+            ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
+            : train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
             arrival: train.times?.arrival ?? now, departure: now,
             run: run(of: moved, length: path.distance, scheduled: chosen.seconds ?? scheduled)
@@ -3429,6 +3459,14 @@ public struct GameWorld: Equatable, Sendable {
             trains[index].execution = .waitingAtStop(stop, cycle: cycle)
             trains[index].times = ServiceTimes(arrival: clock.now, departure: trains[index].times?.departure)
             arrived = true
+            // Decision 207: a trip at its last call counts towards its
+            // line's punctuality, as the reference counts a train's final
+            // delay once a day.
+            if realisticOperation, stop == trains[index].timetable.count - 1, !trains[index].isDeadheading,
+               let line = assignedLine(of: trains[index].id), self.line(id: line)?.isFreight == false {
+                let scheduled = trains[index].scheduledArrival(of: stop, cycle: cycle)
+                countLineTrip(on: line, late: Self.gap(from: scheduled, to: clock.now))
+            }
         }
         return arrived
     }
@@ -3985,7 +4023,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4086,6 +4124,7 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
+        realisticOperation = try container.decodeIfPresent(Bool.self, forKey: .realisticOperation) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4210,6 +4249,9 @@ extension GameWorld: Codable {
         }
         if keepLeft {
             try container.encode(true, forKey: .keepLeft)
+        }
+        if realisticOperation {
+            try container.encode(true, forKey: .realisticOperation)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)

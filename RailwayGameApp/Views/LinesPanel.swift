@@ -1453,6 +1453,14 @@ private struct LineLossCard: View, Equatable {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("line.costs")
+            // Decision 207: with realistic operation, how many trips were
+            // on time.
+            if let punctuality = diagnosis.punctualityText(in: language) {
+                Text(verbatim: punctuality)
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("line.punctuality")
+            }
             if diagnosis.isLosing {
                 Text(verbatim: language.text("Why it loses money", "為什麼虧錢"))
                     .font(.caption.weight(.semibold))

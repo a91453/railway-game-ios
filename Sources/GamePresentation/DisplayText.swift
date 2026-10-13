@@ -265,6 +265,11 @@ extension GameError {
                 "That acceleration, braking or top speed is out of range.",
                 "加速度、減速度或最高速度超出範圍。"
             )
+        case .invalidLineDwell:
+            language.text(
+                "A train stays at a stop \(ServiceDwell.minimum) s to \(ServiceLine.maximumDwellSeconds / 60) min.",
+                "停站時間要在 \(ServiceDwell.minimum) 秒到 \(ServiceLine.maximumDwellSeconds / 60) 分鐘之間。"
+            )
         case .invalidServiceWindow:
             language.text(
                 "A line opens between 00:00 and 23:59 and closes after it opens, by 06:00 the next morning.",
