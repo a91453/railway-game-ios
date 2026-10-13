@@ -3474,6 +3474,8 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 
 **行為改變**：點兩站而軌道經過其他車站時，預設會多停那些車站（`LineSessionTests` 的 Alpha → Gamma 現在是 Alpha → Beta → Gamma）。
 
+**之後的修正**：第 6 點「『新路線』移到面板最上面」由決策 196 修正：已有路線、沒在選站、不在教學中時，路線清單排第一，「新路線」收成一列。
+
 **參考**：`Ci/` 一次加一站（`tutorial.transport.18`），MapBuilder 依位置插入（決策 80），兩者都沒有沿軌道找站；私有參考庫的其他尋路（`Railway/taipei_gta_reference` 的人物 worker）與這個問題無關。外部專案沒有可直接用的；用的是本專案 GameCore 既有的路徑搜尋。
 
 **限制**：只取最短（列車實際會開）的一條路；分岔要靠點中間的站。環線仍照舊在路線面板設定。
@@ -5600,6 +5602,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12，發佈前）：① 現金在零附近來回穿越，每次向下穿越都寫一則「現金低於零」並暫停；現在十天內只說一次（`NewsWatch.debtNewsDay`）。② 同一句狀態訊息（點了做不到的事重複出現）在最近 5 則內只進新聞一次。③ 月底報告在教學、示範、或「重要事件自動暫停」關著時只寫進新聞，不開表也不暫停。④ `NewsLog` 讀檔拒絕不合理的 `nextID`（0、負數、近 `Int.max`：下一次 `add` 會溢位當掉）與負的訊息 ID；`restoreNews` 遇到比現在還晚的月報基準（別局的旁檔）重新起算。測試：`MonthlyReportTests`、`NewsSessionTests`。
 
+**之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家分不清站長和鈴鐺：兩者都打開新聞紀錄。現在**新聞紀錄只從 HUD 的鈴鐺開**：站長說話時再點頭像只收起泡泡；點泡泡時，有地點的建議（`cameraTarget`）照決策 177 把地圖移過去，跟某座車站有關的建議（`stationFull`、`stationCrowded`、`underserved`、`townGrew`、`materialsShort`）把地圖移到那座車站、選取工具時並選取它（建設工具時不動選取，以免改到列車工具的目的地），其他的只收起泡泡。上面「開啟」一條的後兩種開法因此取消。`StationMasterAdvice` 不改（只讀它的案例）；`StationMasterView` 不再讀 `GameScreenState`。
+
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
@@ -5767,6 +5771,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 - **限制**：飯店只有一種等級；加星用距離，不看飯店賣得好不好；一家飯店同時靠近兩個景點時，每個景點都算它一家、客人兩邊都收（站得很近的景點不多見，沒有特別處理）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 只有路線的停車模式（pattern）列車停靠的車站，原本不算服務景點（`servingStation` 只看路線本身的列車），景點沒有觀光客、紀念品店和旁邊的飯店都沒收入；現在路線本身或停靠該站的停車模式有列車就算（`ServiceLine.hasTrainsCalling(at:)`，決策 183 的「有車停靠」同樣改用它；`TourismTests.testAStationOnlyAPatternServesStillServesTheSight`）。② `setTourism` 重設或關掉觀光時，紀念品店的資產紀錄留在帳上，存檔讀不回來（「An asset record names a souvenirShop that does not exist」）；現在照拆站一樣沖銷（`testSettingTourismAgainTakesTheShopsOffTheBooks`）。App 只在建立新世界時呼叫 `setTourism`，玩家碰不到②。存檔格式、golden、replay 不動。
+
+**之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家進入建設工具時景點標記不見了，正想蓋在景點旁。現在建設工具（選取以外的工具）也畫景點標記，但半透明（0.5）、不能點（`allowsHitTesting(false)`）、VoiceOver 不讀，畫在 ✓／✕ 建造確認旗（`MapBuildConfirm`）下面，不蓋住它們（`MapAttractionMarks(isPassive: true)`，`MapView` 裡排在確認旗那一層之前）。選取工具時不變：同一個位置、可以點、打開觀光面板。只改 App；存檔、golden、replay 不動。
 
 ### 179. 逐線營運報表：每條線的運量、票收、成本與損益
 
@@ -6640,3 +6646,28 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 
 **之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
 
+### 196. 路線與列車的操作找得到：路線面板先列路線、配屬選單、下一步提示
+
+2026-10-13，TestFlight 54.1 的玩家回報（iPhone 14 Pro 橫拿，約 852×393 pt）：找不到路線和列車的操作。號碼依工作登記 #231：決策 196；存檔版本、golden schema 不動。只改 App 與 GamePresentation：GameCore、存檔、golden、replay 都不變。
+
+1. **路線面板的順序（決策 100 第 6 點的修正）**：決策 100 把「新路線」放在最上面，讓半高的面板在地圖上選站時看得到。但已有路線時，玩家打開面板多半是要看或改路線，路線清單卻排在新路線、補車、交通管制、服務日之後，手機上要往下捲好幾屏。現在（`LinesPanel.listsLinesFirst`）：
+   - 已有路線、沒在選站（`isPickingLineStops` 為假、`lineDraft` 是空的）、不在教學中（`tutorial == nil`）時：路線清單 → 一列「新路線…」（`line.new`，按了展開原本的新路線表單）→ 選中路線的補車（沒有列車時，決策 101）→ 停靠站 → 路線設定 → 營運 → 各服務與停站模式 → 交通管制 → 服務日。
+   - 沒有路線、正在選站或草稿不是空的、教學中：照原本的順序。所以在展開的表單按「在地圖上選站」後，新路線回到最上面，選站時看得到（決策 100 的理由仍然成立）。教學第 10–13 步看的是原本的版面，不受影響。
+2. **停靠站**：停靠站段移到路線清單與路線設定之間（原本在設定與運行圖下面）。地圖上選了一個不在這條路線的車站時，多一個「把〈車站〉加入〈路線〉」（`line.addSelectedStation`），用現有的 `addStationToSelectedLine`（決策 80，依位置插在最合適的地方）。
+3. **配屬列車**：
+   - 列車卡（`TrainControls`）：軌道上、沒有路線、也沒跑自己時刻表的列車，指令下面多一個「配屬路線」選單（`train.assignLine`），列出所有路線，選了就配屬到該路線本身的服務（`GameSession.assignTrain(_:toLine:pattern:)`，和原本的 `assignSelectedTrainToSelectedLine` 同一段程式與訊息）。
+   - 路線面板各服務的「把〈列車〉指派到這裡」原本只用最後選的那列車，那列車還可能在別條線上（GameCore 會拒絕）。改成「配屬列車…」選單（`line.assignTrain.<停站模式>`），列出軌道上、沒有路線、沒跑自己時刻表的列車（`GameSession.unassignedTrainMenuChoices`）；沒有時說怎麼得到一列。
+   - 不在軌道上的列車不列出：GameCore 允許配屬，但它永遠發不了車（§10 #19），不引導玩家這樣做。
+   - 兩個選單都照 `MenuChoice` 與 equatable view 的做法（#449/#463），每 tick 重畫時開著的選單不會被重建。
+4. **下一步提示**（`GameWorld.trainNextStepText(of:in:)`，列車卡 `train.nextStep`）：
+   - 不在軌道上：「選一個月台空著的車站，按『把〈列車〉放在這裡』」。
+   - 在軌道上、沒有路線、沒有服務、前方沒有路徑：「用下方的『配屬路線』或在路線面板配屬路線，或選一個車站按『派〈列車〉到這裡』」。
+   - 這時路徑那一行（`trainPathStatusText`）也從「前方沒有路徑」改成「未配屬路線」。`Train.pathText` 不變。
+5. **單線的列數警告**（`GameWorld.lineCapacityWarning(_:in:)`，路線設定段與補車段的 `line.capacityWarning`）：交通管制開著，而 `lineMaximumTrains` 比沒有交通管制時（來回時間除以最小班距 2 分鐘，環線兩倍）少時，說「單線又沒有會車站，交通管制下只能跑 N 列：在中間站加第二股月台，或改成雙線」。`LinePanelMemo` 依指令版本記住它，不每 tick 重算。
+6. **購買鍵**：iPhone 橫拿時「購買 · $150,000」只剩約 100 pt，被擠成四行。現在文字一行（`lineLimit(1)`、`fixedSize`），放不下時（`ViewThatFits`）只剩「+」，名稱仍由原本的 accessibility label 說出。列車選擇器的名稱也是一行，過長截掉尾巴。
+
+**參考**：不是新的 Stage，只是既有操作的版面與文字，沒有可以搬的實作，也沒有另外找外部專案；程式是本專案自己寫的。
+
+**測試**：`LineGuidanceTests`（兩種語言的下一步提示：不在軌道上、軌道上沒有路線、有路線時沒有；路徑那一行的「未配屬路線」；單線交通管制的警告與雙線、交通管制關閉時沒有；路線選單；未配屬列車的選單排除不在軌道上的與已有路線的；`assignTrain(_:toLine:)` 配屬並寫訊息，拒絕時寫原因）。
+
+**沒有驗證的**：Linux 不能建置 App；面板的順序、選單與購買鍵在橫拿手機上的樣子要在 macOS CI 的 UI 測試與實機上看。

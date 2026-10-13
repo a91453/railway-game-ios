@@ -458,6 +458,11 @@ struct MapView: View {
                     .padding(.bottom, clear.bottom)
                     .padding(.leading, clear.leading)
                 }
+                // Decision 174, later: the sights while building, faint
+                // and under the flags below.
+                .overlay(alignment: .topLeading) {
+                    MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear, isPassive: true)
+                }
                 // Decision 107: flags at the ends of the track previewed,
                 // and beside it, or the building shown, cancel and build.
                 .overlay(alignment: .topLeading) {
