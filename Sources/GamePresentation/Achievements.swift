@@ -95,7 +95,9 @@ public struct AchievementFacts: Hashable, Sendable {
             let running = !line.trains.isEmpty || line.patterns.contains { !$0.trains.isEmpty }
             for stop in Set(line.stops) { linesAt[stop, default: 0] += 1 }
             mostStopsOnALine = max(mostStopsOnALine, line.stops.count)
-            let points = line.stops.compactMap { world.station(id: $0)?.location }
+            var points = line.stops.compactMap { world.station(id: $0)?.location }
+            // A ring runs on from its last stop back to its first.
+            if line.isRing, let first = points.first { points.append(first) }
             var length: Int64 = 0
             for (a, b) in zip(points, points.dropFirst()) {
                 let dx = Double(b.x - a.x), dy = Double(b.y - a.y)
@@ -122,7 +124,7 @@ public struct AchievementFacts: Hashable, Sendable {
             touristsYesterday = attractions.map(\.yesterday).max() ?? 0
             touristsInAYear = max(attractions.reduce(0) { $0 + $1.thisYear }, attractions.reduce(0) { $0 + $1.lastYear })
             bestSouvenirShop = attractions.map(\.souvenir).max() ?? 0
-            bestStars = attractions.map(\.stars).max() ?? 0
+            bestStars = attractions.map { world.stars(of: $0) }.max() ?? 0
         }
         let businesses = world.placedBuildings.filter(\.kind.isSubsidiary)
         subsidiaries = businesses.count

@@ -266,3 +266,31 @@ extension AchievementsTests {
         XCTAssertNotNil(launcher.achievements.unlocked["longTrain"])
     }
 }
+
+extension AchievementsTests {
+    /// "Five Stars" reads a sight's rating as the game shows it, with the
+    /// quarter star of each hotel near it (decision 174).
+    func testTheBestStarsCountTheHotelsNearASight() throws {
+        var world = try makeWorld(width: 40_960, height: 8_192, balance: Money(100_000_000))
+        let sight = Attraction(id: AttractionID(rawValue: 1), name: "古蹟", englishName: "Sight",
+                               point: PlanPoint(x: 30_000, y: 4_096), kind: .town, baseStars: 375)
+        world.setTourism([sight])
+        try world.placeBuilding(.hotel, at: PlanPoint(x: 30_000, y: 6_000))
+        let rated = world.stars(of: try XCTUnwrap(world.attraction(id: sight.id)))
+        XCTAssertEqual(rated, 400)
+        XCTAssertEqual(AchievementFacts(world: world).bestStars, rated)
+    }
+
+    /// A ring's length runs back from its last stop to its first.
+    func testARingLineIsMeasuredAllTheWayRound() throws {
+        var world = try makeWorld(width: 131_072, height: 131_072, balance: Money(100_000_000))
+        var stops: [StationID] = []
+        for (index, (x, y)) in [(1_000, 1_000), (65_000, 1_000), (65_000, 65_000)].enumerated() {
+            stops.append(try world.buildStation(named: "S\(index)", at: PlanPoint(x: Int64(x), y: Int64(y))).id)
+        }
+        let line = try world.createLine(named: "Ring", stops: stops)
+        XCTAssertEqual(AchievementFacts(world: world).longestLineMetres, 2_000)
+        try world.setLineRing(line.id, to: true)
+        XCTAssertEqual(AchievementFacts(world: world).longestLineMetres, 2_000 + 1_414)
+    }
+}
