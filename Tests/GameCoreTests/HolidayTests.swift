@@ -3,7 +3,8 @@ import Foundation
 import XCTest
 
 /// Public holidays (decision 154): each country's holidays on the same days
-/// of every game year, raising the whole network's demand while they run.
+/// of every game year, Taiwan's worked out for each year (decision 211),
+/// raising the whole network's demand while they run.
 final class HolidayTests: XCTestCase {
     private let ids = (1...4).map { StationID(rawValue: $0) }
 
@@ -66,26 +67,45 @@ final class HolidayTests: XCTestCase {
         XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.dayOfYear), [0, 43, 57, 92, 120, 168, 264, 267, 279, 294, 354])
     }
 
-    func testAHolidayComesOnTheSameDaysEveryYear() throws {
+    func testTaiwansHolidaysFollowTheLawOnTheGamesOwnWeek() throws {
         let world = try world()
-        // 1 January is day 0; the Spring Festival runs from 14 February
-        // (day 43) for nine days; 10 October is day 279.
-        XCTAssertEqual(world.holiday(onDay: 0)?.holiday.kind, .newYear)
-        XCTAssertEqual(world.holiday(onDay: 0)?.boost, 50)
-        XCTAssertNil(world.holiday(onDay: 1))
-        XCTAssertNil(world.holiday(onDay: 42))
-        for day in Int64(43)...51 {
-            let run = try XCTUnwrap(world.holiday(onDay: day))
-            XCTAssertEqual(run.holiday.kind, .springFestival)
-            XCTAssertEqual(run.start, 43)
-            XCTAssertEqual(run.end, 52)
-            XCTAssertEqual(run.boost, 200)
+        func run(_ day: Int64) -> (HolidayKind, Int64, Int64)? {
+            world.holiday(onDay: day).map { ($0.holiday.kind, $0.start, $0.end) }
         }
-        XCTAssertNil(world.holiday(onDay: 52))
-        XCTAssertEqual(world.holiday(onDay: 279)?.holiday.kind, .nationalDay)
-        // A year later, and a year before the game began.
-        XCTAssertEqual(world.holiday(onDay: 360 + 47)?.start, 360 + 43)
-        XCTAssertEqual(world.holiday(onDay: -360 + 279)?.holiday.kind, .nationalDay)
+        // Game year 0 is 2026; day 0, 1 January, is a Monday, so New Year's
+        // Day joins the weekend before it.
+        XCTAssertEqual(StationDemand.weekday(ofDay: 0), 1)
+        XCTAssertTrue(run(0)! == (.newYear, -2, 1))
+        XCTAssertEqual(world.holiday(onDay: 0)?.boost, 50)
+        XCTAssertNil(run(1))
+        // The Lunar New Year (17 February 2026, day 46): from the day before
+        // New Year's Eve (day 44, a Wednesday) to the third day (Sunday),
+        // and the Saturday's and Sunday's made up on Monday and Tuesday.
+        XCTAssertNil(run(43))
+        for day in Int64(44)...50 {
+            XCTAssertTrue(run(day)! == (.springFestival, 44, 51), "\(day)")
+            XCTAssertEqual(world.holiday(onDay: day)?.boost, 200)
+        }
+        XCTAssertNil(run(51))
+        // 28 February is a Tuesday: one day.
+        XCTAssertTrue(run(57)! == (.peaceMemorial, 57, 58))
+        // Children's Day (4 April) and Qingming (5 April in 2026): Wednesday
+        // and Thursday.
+        XCTAssertTrue(run(93)! == (.qingming, 93, 95))
+        // The Mid-Autumn Festival (25 September) is a Saturday: made up on
+        // the Friday before. Teachers' Day (28 September) is a Tuesday.
+        XCTAssertTrue(run(264)! == (.midAutumn, 263, 266))
+        XCTAssertTrue(run(267)! == (.teachersDay, 267, 268))
+        // National Day (10 October) is a Sunday: made up on the Monday.
+        XCTAssertEqual(StationDemand.weekday(ofDay: 279), 0)
+        XCTAssertTrue(run(279)! == (.nationalDay, 278, 281))
+        // A year later (2027) the week has moved three days and the lunar
+        // dates their own way: National Day is a Wednesday, the Lunar New
+        // Year (6 February) starts on day 393.
+        XCTAssertTrue(run(360 + 279)! == (.nationalDay, 639, 640))
+        XCTAssertTrue(run(395)! == (.springFestival, 393, 400))
+        // And a year before the game began (2025), National Day is a Thursday.
+        XCTAssertTrue(run(-81)! == (.nationalDay, -81, -80))
         // The runs on any of some days, by start.
         XCTAssertEqual(world.holidays(from: 40, through: 120).map(\.holiday.kind), [.springFestival, .peaceMemorial, .qingming, .labourDay])
         XCTAssertEqual(world.holidays(from: 50, through: 50).map(\.holiday.kind), [.springFestival])
@@ -94,18 +114,100 @@ final class HolidayTests: XCTestCase {
         // Light disruptions add half.
         var light = world
         light.setDisruptions(Disruptions(level: .light, country: "TW"))
-        XCTAssertEqual(light.holiday(onDay: 43)?.boost, 100)
+        XCTAssertEqual(light.holiday(onDay: 44)?.boost, 100)
         XCTAssertEqual(light.holiday(onDay: 0)?.boost, 25)
-        // Another country keeps its own.
+        // Another country keeps its own days, the same every year.
         var china = world
         china.setDisruptions(Disruptions(level: .standard, country: "CN"))
         XCTAssertEqual(china.holiday(onDay: 270)?.holiday.kind, .nationalDay)
+        XCTAssertEqual(china.holiday(onDay: 360 + 270)?.start, 360 + 270)
         XCTAssertNil(china.holiday(onDay: 279))
         // Without disruptions there are none.
         var off = world
         off.setDisruptions(nil)
         XCTAssertNil(off.holiday(onDay: 0))
         XCTAssertEqual(off.holidayMultiplier, 1_000)
+    }
+
+    func testEveryTaiwaneseYearHasItsHolidaysOnce() {
+        // From 2024 to well past the table's end (2100), where the dates
+        // come round every 19 years.
+        for year in Int64(-2)...Int64(120) {
+            let runs = TaiwanHolidays.runs(from: year * 360, through: year * 360 + 359, level: .standard)
+            // By start, never overlapping, each with a day off.
+            for (earlier, later) in zip(runs, runs.dropFirst()) {
+                XCTAssertLessThanOrEqual(earlier.end, later.start, "\(year)")
+            }
+            let days = TaiwanHolidays.daysOff(inYear: year)
+            XCTAssertEqual(Set(days.map(\.day)).count, days.count, "a day off is taken once, \(year)")
+            // The Lunar New Year's five days and as many more as fell on a
+            // weekend; every other holiday one day (Children's Day and
+            // Qingming two), on the day or made up.
+            XCTAssertGreaterThanOrEqual(days.filter { $0.kind == .springFestival }.count, 5, "\(year)")
+            XCTAssertLessThanOrEqual(days.filter { $0.kind == .springFestival }.count, 7, "\(year)")
+            for kind in [HolidayKind.newYear, .peaceMemorial, .labourDay, .dragonBoat, .midAutumn, .teachersDay, .nationalDay, .retrocessionDay, .constitutionDay] {
+                XCTAssertLessThanOrEqual(days.filter { $0.kind == kind }.count, 1, "\(kind) \(year)")
+            }
+            XCTAssertLessThanOrEqual(days.filter { $0.kind == .qingming }.count, 2, "\(year)")
+            // No day off is a weekend's: those are made up.
+            XCTAssertTrue(days.allSatisfy { !StationDemand.isWeekend(day: $0.day) || $0.kind == .springFestival }, "\(year)")
+            // Each run is in the year's holidays (weekly, a run holds no
+            // more than a week and a half).
+            XCTAssertTrue(runs.allSatisfy { $0.end - $0.start <= 11 }, "\(year)")
+        }
+        // Outside the table a year takes the dates of one 19 years away.
+        XCTAssertEqual(TaiwanHolidays.lunarDates(ofRealYear: 2101), TaiwanHolidays.lunarDates(ofRealYear: 2082))
+        XCTAssertEqual(TaiwanHolidays.lunarDates(ofRealYear: 2024), TaiwanHolidays.lunarDates(ofRealYear: 2043))
+        XCTAssertEqual(TaiwanHolidays.lunarDates(ofRealYear: 2026), [217, 405, 619, 925])
+    }
+
+    /// The rules on the real calendar give the owner's reference's days off
+    /// (`Railway/site_archive_clean/index.html`, `TW_DAYTYPE`: Taiwan's days
+    /// off of 2026 and 2027, the 31 December of 2027 being 2028's New
+    /// Year's Day made up), counting the days that are not weekends.
+    func testOnTheRealCalendarTheRulesGiveTheReferencesDaysOff() {
+        // Days since 1 January 2026 (a Thursday), for the real calendar.
+        @Sendable func days(_ year: Int64, _ month: Int64, _ day: Int64) -> Int64 {
+            let y = month <= 2 ? year - 1 : year
+            let era = (y >= 0 ? y : y - 399) / 400
+            let yoe = y - era * 400
+            let doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1
+            let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+            return era * 146_097 + doe - 719_468 - 20_454
+        }
+        let real = TaiwanHolidays.Week(
+            day: { mmdd, year in days(2026 + year, Int64(mmdd / 100), Int64(mmdd % 100)) },
+            weekday: { day in Int(((day + 4) % 7 + 7) % 7) }
+        )
+        XCTAssertEqual(days(2026, 1, 1), 0)
+        XCTAssertEqual(days(2027, 1, 1), 365)
+        let reference: [Int64: [String]] = [
+            2026: ["01-01", "02-15", "02-16", "02-17", "02-18", "02-19", "02-20", "02-27", "02-28", "04-03", "04-04", "04-05",
+                   "04-06", "05-01", "06-19", "09-25", "09-28", "10-09", "10-10", "10-25", "10-26", "12-25"],
+            2027: ["01-01", "02-04", "02-05", "02-06", "02-07", "02-08", "02-09", "02-10", "02-28", "03-01", "04-04", "04-05",
+                   "04-06", "04-30", "05-01", "06-09", "09-15", "09-28", "10-10", "10-11", "10-25", "12-24", "12-25", "12-31"],
+        ]
+        let off = (0...2).flatMap { TaiwanHolidays.daysOff(inYear: $0, on: real).map(\.day) }
+        for (year, dates) in reference {
+            let expected = Set(dates.map { days(year, Int64($0.prefix(2))!, Int64($0.suffix(2))!) }.filter { !real.isWeekend($0) })
+            let start = days(year, 1, 1), end = days(year + 1, 1, 1)
+            XCTAssertEqual(Set(off.filter { (start..<end).contains($0) && !real.isWeekend($0) }), expected, "\(year)")
+        }
+    }
+
+    func testChildrensDayAndQingmingOnOneDay() {
+        // In 2025 (game year -1) Qingming is 4 April, Children's Day too:
+        // Children's Day is the day before, or the day after when 4 April is
+        // a Thursday (both made up when on a weekend).
+        XCTAssertEqual(TaiwanHolidays.lunarDates(ofRealYear: 2025)[1], 404)
+        let fourth = TaiwanHolidays.day(404, inYear: -1)
+        let days = TaiwanHolidays.daysOff(inYear: -1).filter { $0.kind == .qingming }.map(\.day)
+        XCTAssertEqual(days.count, 2)
+        if StationDemand.weekday(ofDay: fourth) == 4 {
+            XCTAssertTrue(days.contains(fourth + 1))
+        } else if !StationDemand.isWeekend(day: fourth - 1) {
+            XCTAssertTrue(days.contains(fourth - 1))
+        }
     }
 
     func testAHolidayRaisesTheNetworksDemandAndFollowsTheWeekendsHours() throws {
@@ -164,8 +266,8 @@ final class HolidayTests: XCTestCase {
     }
 
     func testAHolidayReleasesMorePassengersThanTheSameDayWithout() throws {
-        var with = try world(day: 43)
-        var without = try world(nil, day: 43)
+        var with = try world(day: 44)
+        var without = try world(nil, day: 44)
         try with.advance(ticks: 1_440)
         try without.advance(ticks: 1_440)
         let released = { (world: GameWorld) in self.ids.reduce(Int64(0)) { $0 + world.passengerLedger(of: $1).released } }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 57,
-  "description": "Public holidays (decision 154, schema 57). Home (1, residential, 1000 trips a day) and Office (2, office) on line Main; the clock is at day 0. Without disruptions no day is a holiday and Home's 1000 trips to Office are shared over the hours in proportion to dayShape x the morning peak x the morning peak, by largest remainder. With Taiwan's holidays at the standard level, day 0 is New Year's Day (1 January, one day, +50 per mille), the Spring Festival runs from day 43 (14 February) for nine days at +200, National Day is day 279 (10 October) at +100, and every year again: day 407 is in the next year's Spring Festival (403 to 412), day -81 the previous year's National Day. Today's demand is raised by today's holiday: 1000 x 1.050 = 1050, shared over the same hours. China's New Year runs three days and its National Day seven from day 270, and day 279 is no holiday there. Off, there is none again and the demand is 1000. At the light level a holiday adds half its boost, rounded down: +100 for the Spring Festival, +25 on New Year's Day, so today's demand is 1025.",
+  "description": "Public holidays (decisions 154 and 211, schema 57). Home (1, residential, 1000 trips a day) and Office (2, office) on line Main; the clock is at day 0. Without disruptions no day is a holiday and Home's 1000 trips to Office are shared over the hours in proportion to dayShape x the morning peak x the morning peak, by largest remainder. With Taiwan's holidays at the standard level (worked out for each year from decision 211; game year 0 is 2026 on the game's own week, day 0 a Monday), day 0 is New Year's Day (1 January, +50 per mille), joined to the weekend before it: days -2 to 0. The Lunar New Year (17 February 2026, day 46) runs from day 44 to day 50 at +200: the day before New Year's Eve to the third day, and the Saturday's and Sunday's made up on the two days after; day 51 is no holiday. National Day (10 October, day 279) is a Sunday, made up on the Monday: days 278 to 280 at +100. Another year's are its own: the Lunar New Year of 2027 (6 February) runs from day 393 to day 399, and day -81, National Day of 2025, is a Thursday, one day. Today's demand is raised by today's holiday: 1000 x 1.050 = 1050, shared over the same hours. China's New Year runs three days and its National Day seven from day 270, and day 279 is no holiday there. Off, there is none again and the demand is 1000. At the light level a holiday adds half its boost, rounded down: +100 for the Spring Festival, +25 on New Year's Day, so today's demand is 1025.",
   "initialState": {
     "worldWidth": 12288,
     "worldHeight": 3072,
@@ -143,7 +143,7 @@
         "found": true,
         "holiday": {
           "kind": "newYear",
-          "start": 0,
+          "start": -2,
           "end": 1,
           "boost": 50
         }
@@ -161,14 +161,29 @@
     {
       "observe": {
         "type": "holiday",
-        "day": 43
+        "day": 44
       },
       "expect": {
         "found": true,
         "holiday": {
           "kind": "springFestival",
-          "start": 43,
-          "end": 52,
+          "start": 44,
+          "end": 51,
+          "boost": 200
+        }
+      }
+    },
+    {
+      "observe": {
+        "type": "holiday",
+        "day": 50
+      },
+      "expect": {
+        "found": true,
+        "holiday": {
+          "kind": "springFestival",
+          "start": 44,
+          "end": 51,
           "boost": 200
         }
       }
@@ -177,21 +192,6 @@
       "observe": {
         "type": "holiday",
         "day": 51
-      },
-      "expect": {
-        "found": true,
-        "holiday": {
-          "kind": "springFestival",
-          "start": 43,
-          "end": 52,
-          "boost": 200
-        }
-      }
-    },
-    {
-      "observe": {
-        "type": "holiday",
-        "day": 52
       },
       "expect": {
         "found": false
@@ -206,8 +206,8 @@
         "found": true,
         "holiday": {
           "kind": "nationalDay",
-          "start": 279,
-          "end": 280,
+          "start": 278,
+          "end": 281,
           "boost": 100
         }
       }
@@ -215,14 +215,14 @@
     {
       "observe": {
         "type": "holiday",
-        "day": 407
+        "day": 395
       },
       "expect": {
         "found": true,
         "holiday": {
           "kind": "springFestival",
-          "start": 403,
-          "end": 412,
+          "start": 393,
+          "end": 400,
           "boost": 200
         }
       }
@@ -394,14 +394,14 @@
     {
       "observe": {
         "type": "holiday",
-        "day": 43
+        "day": 44
       },
       "expect": {
         "found": true,
         "holiday": {
           "kind": "springFestival",
-          "start": 43,
-          "end": 52,
+          "start": 44,
+          "end": 51,
           "boost": 100
         }
       }
@@ -415,7 +415,7 @@
         "found": true,
         "holiday": {
           "kind": "newYear",
-          "start": 0,
+          "start": -2,
           "end": 1,
           "boost": 25
         }

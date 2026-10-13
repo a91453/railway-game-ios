@@ -59,7 +59,8 @@ public enum PingxiChallenge {
     /// The Sky Lantern Festival: from day 62 of each 360-day year for 3 days,
     /// the demand at Shifen and Pingxi two and a half times their own,
     /// announced a week before. The day is the Lantern Festival's in 2026,
-    /// 3 March, as the holidays keep 2026's dates (decisions 154 and 208).
+    /// 3 March (decision 208), every year: the challenge keeps no holidays,
+    /// and a scenario's festival is saved as a day of the year.
     static let festivalDay: Int64 = 62
     static let festivalDays: Int64 = 3
     static let festivalBoost: Int64 = 1_500

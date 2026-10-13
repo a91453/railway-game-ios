@@ -146,12 +146,12 @@ final class NewsSessionTests: XCTestCase {
     }
 
     func testAHolidayBeginningIsWrittenOnceInBothLanguages() throws {
-        let session = GameSession(world: try Self.world(day: 42), language: .english)
+        let session = GameSession(world: try Self.world(day: 43), language: .english)
         try run(session, ticks: 1_440)
         let holiday = try XCTUnwrap(session.news.items.first { $0.category == .holiday && ($0.english ?? "").contains("begins") })
-        XCTAssertEqual(holiday.text(in: .english), "Lunar New Year begins: +20% demand on every line for 9 days.")
-        XCTAssertEqual(holiday.text(in: .traditionalChinese), "春節開始：全線需求 +20%，連續 9 天。")
-        XCTAssertEqual(holiday.day, 43)
+        XCTAssertEqual(holiday.text(in: .english), "Lunar New Year begins: +20% demand on every line for 7 days.")
+        XCTAssertEqual(holiday.text(in: .traditionalChinese), "春節開始：全線需求 +20%，連續 7 天。")
+        XCTAssertEqual(holiday.day, 44)
         XCTAssertEqual(session.news.items.filter { ($0.english ?? "").contains("begins") }.count, 1)
     }
 
@@ -343,11 +343,11 @@ final class NewsSessionTests: XCTestCase {
     // MARK: - The forecast
 
     func testTheForecastLooksSevenDaysAheadAndIsEmptyWithoutEvents() throws {
-        let world = try Self.world(day: 37, managed: true)
+        let world = try Self.world(day: 38, managed: true)
         let forecast = world.forecast()
         XCTAssertEqual(forecast.count, 7)
-        XCTAssertEqual(forecast.first?.date.day, 37)
-        XCTAssertEqual(forecast.last?.holiday, .springFestival, "Lunar New Year starts on day 43")
+        XCTAssertEqual(forecast.first?.date.day, 38)
+        XCTAssertEqual(forecast.last?.holiday, .springFestival, "Lunar New Year starts on day 44")
         XCTAssertEqual(forecast.last?.text(in: .traditionalChinese), "晴 · 春節")
         XCTAssertNil(world.todayHoliday())
         XCTAssertEqual(try Self.world(day: 45).todayHoliday(), .springFestival)
