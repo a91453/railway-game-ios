@@ -236,14 +236,9 @@ extension GameSession {
     @discardableResult
     public func placeBuilding(at point: PlanPoint) -> Bool {
         let kind = buildingKind
-        let (population, places, water) = (population, places, water)
-        var cleared = 0
-        let placed = perform { world throws(GameError) in
-            // The site's land, read when it was picked, may have gone with an
-            // undo since: read it again, as part of the edit (decision 95).
-            Self.readLand(within: Self.buildingLandReach, of: [point], in: &world, population: population, places: places, water: water, coverage: coverage)
-            cleared = world.placedBuildingQuote(kind, at: point)?.cleared.count ?? 0
-            let building = try world.placeBuilding(kind, at: point)
+        let placed = perform(.placeBuilding(kind, at: point)) { outcome, _, world in
+            guard let building = outcome.building else { return "" }
+            let cleared = outcome.number
             let english = kind.title(in: .english).lowercased(), chinese = kind.title(in: .traditionalChinese), id = building.id.rawValue
             var bought = cleared == 0 ? ("", "") : (
                 cleared == 1 ? ", pulling down 1 city building" : ", pulling down \(cleared) city buildings",
@@ -261,10 +256,10 @@ extension GameSession {
                 "蓋好\(chinese) #\(id)，花費 \(building.cost.moneyText)\(bought.1)。"
             )
         }
-        if placed {
+        if placed != nil {
             notePutUp(at: point)
         }
-        return placed
+        return placed != nil
     }
 
     /// Demolishes the company's building `id` with
@@ -278,8 +273,7 @@ extension GameSession {
         }
         let fee = world.demolitionCost(of: building)
         let name = { (language: DisplayLanguage) in building.kind.title(in: language) }
-        return perform { world throws(GameError) in
-            try world.removePlacedBuilding(id)
+        return perform(.demolishBuilding(id)) { _, _, _ in
             guard fee > .zero else {
                 return language.text(
                     "Demolished \(name(.english).lowercased()) #\(id.rawValue).", "拆除\(name(.traditionalChinese)) #\(id.rawValue)。"
@@ -289,7 +283,7 @@ extension GameSession {
                 "Demolished \(name(.english).lowercased()) #\(id.rawValue) for \(fee.moneyText).",
                 "拆除\(name(.traditionalChinese)) #\(id.rawValue)，花費 \(fee.moneyText)。"
             )
-        }
+        } != nil
     }
 
     /// How many buildings the player has placed, and who lives and works in

@@ -60,6 +60,86 @@ enum TrackSpacing {
         return keepsAway(a, from: b, ends: ends) && keepsAway(b, from: a, ends: ends.swapped)
     }
 
+    /// ``isSpaced(_:_:distance:)`` for two edges whose checkpoints and
+    /// pieces were worked out beforehand: the same answer, for checking
+    /// every pair of a network.
+    static func isSpaced(_ a: Prepared, _ b: Prepared, distance: (TrackNodeID, TrackNodeID) -> Int64?) -> Bool {
+        guard PlanBox(a.shape).mayComeClose(to: PlanBox(b.shape)) else { return true }
+        let ends = Ends(a.shape, b.shape, distance: distance)
+        return keepsAway(a, from: b, ends: ends) && keepsAway(b, from: a, ends: ends.swapped)
+    }
+
+    /// An edge's checkpoints where they lie, in runs, and its pieces in
+    /// runs (see ``TrackClearance/Run``), worked out once to check the edge
+    /// against many others: what ``keepsAway(_:from:ends:)`` works out
+    /// again for every pair.
+    struct Prepared {
+        let shape: ClearanceShape
+        /// Each checkpoint (see ``checkpoints(along:)``) and where it lies.
+        let checkpoints: [(at: Int64, position: WorldCoordinate)]
+        /// The checkpoints, by index, in runs of ``TrackClearance/runLength``
+        /// with the box that holds them.
+        let checkpointRuns: [TrackClearance.Run]
+        /// Every piece of the sampled centre line, in runs.
+        let pieceRuns: [TrackClearance.Run]
+
+        init(_ shape: ClearanceShape) {
+            self.shape = shape
+            let checkpoints = TrackSpacing.checkpoints(along: shape.geometry.length).map { (at: $0, position: shape.geometry.location(at: $0).position) }
+            self.checkpoints = checkpoints
+            let length = TrackClearance.runLength
+            let indices = Array(checkpoints.indices)
+            checkpointRuns = stride(from: 0, to: checkpoints.count, by: length).map { start in
+                let run = indices[start..<min(start + length, checkpoints.count)]
+                var (low, high) = (checkpoints[start].position.plan, checkpoints[start].position.plan)
+                for c in run {
+                    let point = checkpoints[c].position.plan
+                    low = PlanPoint(x: min(low.x, point.x), y: min(low.y, point.y))
+                    high = PlanPoint(x: max(high.x, point.x), y: max(high.y, point.y))
+                }
+                return TrackClearance.Run(pieces: run, minimum: low, maximum: high)
+            }
+            let points = shape.geometry.points.map(\.plan)
+            pieceRuns = TrackClearance.runs(of: points, pieces: Array(points.indices.dropLast()))
+        }
+    }
+
+    /// ``keepsAway(_:from:ends:)`` for prepared edges: the same answer.
+    private static func keepsAway(_ a: Prepared, from b: Prepared, ends: Ends) -> Bool {
+        closePoints(of: a, to: b) { s, t in
+            ends.isWithin(RailwayNetwork.partingReach, s, of: a.shape.geometry.length, t, of: b.shape.geometry.length)
+        }
+    }
+
+    /// Goes through the checkpoints of `a` close to a piece of `b`, and the
+    /// chainage along `b` of each such piece's point nearest them, as
+    /// ``closePieces(to:of:)`` finds them, until `body` returns `false`;
+    /// whether it never did. The same pairs as ``Pieces/init(_:near:)`` and
+    /// ``closePieces(to:of:)`` find, in another order: only the pieces of
+    /// `b` that come within the spacing of `a`'s box are tried, as
+    /// ``Pieces/init(_:near:)`` files them; and only in runs whose boxes
+    /// come within the spacing of a run of checkpoints (a point less than
+    /// the spacing from a piece is less than it from the piece's box in x
+    /// and in y).
+    static func closePoints(of a: Prepared, to b: Prepared, _ body: (Int64, Int64) -> Bool) -> Bool {
+        let w = RailwayNetwork.trackSpacing
+        let geometry = b.shape.geometry
+        for checkpointRun in a.checkpointRuns {
+            for pieceRun in b.pieceRuns
+            where pieceRun.minimum.x - w < checkpointRun.maximum.x && checkpointRun.minimum.x < pieceRun.maximum.x + w
+                && pieceRun.minimum.y - w < checkpointRun.maximum.y && checkpointRun.minimum.y < pieceRun.maximum.y + w {
+                for c in checkpointRun.pieces {
+                    let (s, position) = a.checkpoints[c]
+                    for i in pieceRun.pieces where Pieces.piece(i, of: b.shape, isNear: a.shape) {
+                        guard let t = closePoint(to: position, piece: i, of: geometry) else { continue }
+                        if !body(s, t) { return false }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
     /// The checkpoints along an edge `length` long: every
     /// ``checkpointStep`` from its `from` node, and its `to` node.
     static func checkpoints(along length: Int64) -> [Int64] {
@@ -159,11 +239,7 @@ enum TrackSpacing {
             self.shape = shape
             let w = RailwayNetwork.trackSpacing
             let points = shape.geometry.points
-            indices = points.indices.dropLast().filter { i in
-                let (p, q) = (points[i].plan, points[i + 1].plan)
-                return min(p.x, q.x) - w < other.maximum.x && other.minimum.x - w < max(p.x, q.x)
-                    && min(p.y, q.y) - w < other.maximum.y && other.minimum.y - w < max(p.y, q.y)
-            }
+            indices = points.indices.dropLast().filter { Self.piece($0, of: shape, isNear: other) }
             var cells: [Cell: [Int]] = [:]
             for i in indices {
                 for cell in Self.cells(near: points[i].plan, points[i + 1].plan, within: w) {
@@ -171,6 +247,15 @@ enum TrackSpacing {
                 }
             }
             self.cells = cells
+        }
+
+        /// Whether piece `i` of `shape` comes within the spacing of `other`'s
+        /// box: the pieces ``init(_:near:)`` files.
+        static func piece(_ i: Int, of shape: ClearanceShape, isNear other: ClearanceShape) -> Bool {
+            let w = RailwayNetwork.trackSpacing
+            let (p, q) = (shape.geometry.points[i].plan, shape.geometry.points[i + 1].plan)
+            return min(p.x, q.x) - w < other.maximum.x && other.minimum.x - w < max(p.x, q.x)
+                && min(p.y, q.y) - w < other.maximum.y && other.minimum.y - w < max(p.y, q.y)
         }
 
         /// The cells a point less than `w` from the piece from `p` to `q`
@@ -229,33 +314,36 @@ enum TrackSpacing {
     /// distance beside a piece is compared as `cross² < w² · |piece|²` in
     /// 128 bits (``WideInteger``), so nothing overflows.
     static func closePieces(to point: WorldCoordinate, of pieces: Pieces) -> [Int64] {
+        pieces.near(point.plan).compactMap { closePoint(to: point, piece: $0, of: pieces.shape.geometry) }
+    }
+
+    /// The chainage along `geometry` of the point of its piece `i` nearest
+    /// `point`, if that is less than ``RailwayNetwork/trackSpacing`` from it
+    /// in plan where the edge is less than ``TrackStructure/clearance``
+    /// above or below it: one piece of ``closePieces(to:of:)``.
+    static func closePoint(to point: WorldCoordinate, piece i: Int, of geometry: TrackGeometry) -> Int64? {
         let w = RailwayNetwork.trackSpacing
-        let geometry = pieces.shape.geometry
         let p = point.plan
-        var found: [Int64] = []
-        for i in pieces.near(p) {
-            let (r, s) = (geometry.points[i].plan, geometry.points[i + 1].plan)
-            guard min(r.x, s.x) - w < p.x, p.x < max(r.x, s.x) + w, min(r.y, s.y) - w < p.y, p.y < max(r.y, s.y) + w else { continue }
-            let way = s.vector(from: r)
-            let offset = p.vector(from: r)
-            let along = offset.dot(way)
-            let squared = way.dot(way)
-            let chainage: Int64
-            if along <= 0 {
-                guard offset.dot(offset) < w * w else { continue }
-                chainage = geometry.distances[i]
-            } else if along >= squared {
-                let beyond = p.vector(from: s)
-                guard beyond.dot(beyond) < w * w else { continue }
-                chainage = geometry.distances[i + 1]
-            } else {
-                let cross = way.cross(offset).magnitude
-                guard WideInteger.product(cross, cross) < WideInteger.product(w * w, squared) else { continue }
-                chainage = geometry.distances[i] + FixedPoint.roundedProduct(along, times: geometry.distances[i + 1] - geometry.distances[i], over: squared)
-            }
-            if abs(point.z - geometry.height(at: chainage)) < TrackStructure.clearance { found.append(chainage) }
+        let (r, s) = (geometry.points[i].plan, geometry.points[i + 1].plan)
+        guard min(r.x, s.x) - w < p.x, p.x < max(r.x, s.x) + w, min(r.y, s.y) - w < p.y, p.y < max(r.y, s.y) + w else { return nil }
+        let way = s.vector(from: r)
+        let offset = p.vector(from: r)
+        let along = offset.dot(way)
+        let squared = way.dot(way)
+        let chainage: Int64
+        if along <= 0 {
+            guard offset.dot(offset) < w * w else { return nil }
+            chainage = geometry.distances[i]
+        } else if along >= squared {
+            let beyond = p.vector(from: s)
+            guard beyond.dot(beyond) < w * w else { return nil }
+            chainage = geometry.distances[i + 1]
+        } else {
+            let cross = way.cross(offset).magnitude
+            guard WideInteger.product(cross, cross) < WideInteger.product(w * w, squared) else { return nil }
+            chainage = geometry.distances[i] + FixedPoint.roundedProduct(along, times: geometry.distances[i + 1] - geometry.distances[i], over: squared)
         }
-        return found
+        return abs(point.z - geometry.height(at: chainage)) < TrackStructure.clearance ? chainage : nil
     }
 }
 
@@ -324,21 +412,32 @@ extension RailwayNetwork {
     /// Every pair of edges closer than the track spacing beyond the reach,
     /// in order: what the ``GameWorld`` decoder compares with
     /// ``spacingExemptions``. `geometries` are the edges' geometries in ID
-    /// order, worked out once by the caller.
+    /// order, worked out once by the caller. Only pairs whose boxes may
+    /// come close are sampled.
     func tooClosePairs(geometries: [TrackGeometry]) -> [TrackEdgePair] {
         let shapes = zip(edges, geometries).map { edge, geometry in
             (edge.id, ClearanceShape(from: edge.from, to: edge.to, curve: edge.curve, geometry: geometry))
         }
+        // Every pair that may come close is among the pairs in reach, in
+        // the same order as every pair; the rest keep the spacing
+        // (``TrackSpacing/isSpaced(_:_:distance:)`` asks that first). Each
+        // edge's checkpoints and pieces are worked out once.
+        let boxes = shapes.map { PlanBox($0.1) }
+        var prepared: [TrackSpacing.Prepared?] = Array(repeating: nil, count: shapes.count)
+        func edge(_ i: Int) -> TrackSpacing.Prepared {
+            if let edge = prepared[i] { return edge }
+            let edge = TrackSpacing.Prepared(shapes[i].1)
+            prepared[i] = edge
+            return edge
+        }
         var reach: [TrackNodeID: [TrackNodeID: Int64]] = [:]
         var pairs: [TrackEdgePair] = []
-        for i in shapes.indices {
-            for j in shapes.indices where j > i {
-                let spaced = TrackSpacing.isSpaced(shapes[i].1, shapes[j].1) { a, b in
-                    if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.partingReach) }
-                    return reach[a]?[b]
-                }
-                if !spaced { pairs.append(TrackEdgePair(shapes[i].0, shapes[j].0)) }
+        for (i, j) in PlanBox.pairsInReach(boxes, margin: Self.trackSpacing) where boxes[i].mayComeClose(to: boxes[j]) {
+            let spaced = TrackSpacing.isSpaced(edge(i), edge(j)) { a, b in
+                if reach[a] == nil { reach[a] = trackDistances(from: a, within: Self.partingReach) }
+                return reach[a]?[b]
             }
+            if !spaced { pairs.append(TrackEdgePair(shapes[i].0, shapes[j].0)) }
         }
         return pairs
     }
@@ -430,6 +529,26 @@ struct PlanBox {
 
     init(_ shape: ClearanceShape) {
         self.init(minimum: shape.minimum, maximum: shape.maximum, lowest: shape.lowest, highest: shape.highest)
+    }
+
+    /// Every pair of `boxes` (by index, the lower first) whose boxes, each
+    /// widened by `margin` in plan, meet, edges included, in order: by the
+    /// first, then the second. Found by sweeping across x: the boxes in
+    /// order of their left sides, each tried only against those whose left
+    /// sides lie between its own and its right side widened.
+    static func pairsInReach(_ boxes: [PlanBox], margin: Int64) -> [(Int, Int)] {
+        let order = boxes.indices.sorted { (boxes[$0].minimum.x, $0) < (boxes[$1].minimum.x, $1) }
+        var pairs: [(Int, Int)] = []
+        for (k, i) in order.enumerated() {
+            let box = boxes[i]
+            for j in order[(k + 1)...] {
+                let other = boxes[j]
+                guard other.minimum.x <= box.maximum.x + 2 * margin else { break }
+                guard box.minimum.y <= other.maximum.y + 2 * margin, other.minimum.y <= box.maximum.y + 2 * margin else { continue }
+                pairs.append(i < j ? (i, j) : (j, i))
+            }
+        }
+        return pairs.sorted { $0 < $1 }
     }
 
     /// Whether the two boxes meet in plan, edges included: the test

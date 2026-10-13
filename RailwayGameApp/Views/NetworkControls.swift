@@ -154,12 +154,16 @@ struct NetworkControls: View {
     private var advancedOptions: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Picker("Structure", selection: $session.networkStructure) {
-                    ForEach(TrackStructure.offered, id: \.self) { structure in
-                        Text(structure.name(in: session.language)).tag(structure)
+                // Decision 184, later: a menu the ticks leave alone.
+                let language = session.language
+                TickStable(StableKey(session.networkStructure, language)) {
+                    Picker("Structure", selection: $session.networkStructure) {
+                        ForEach(TrackStructure.offered, id: \.self) { structure in
+                            Text(structure.name(in: language)).tag(structure)
+                        }
                     }
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
                 Stepper(
                     value: $session.networkHeight,
                     in: NetworkBuilding.heightRange,
@@ -225,13 +229,18 @@ struct NetworkControls: View {
                     .font(.footnote)
                     .monospacedDigit()
             }
-            Picker("Platform station", selection: $session.platformStationID) {
-                Text("New station").tag(StationID?.none)
-                ForEach(session.world.stations) { station in
-                    Text(verbatim: station.name).tag(StationID?.some(station.id))
+            // Decision 184, later: drawn from the stations' names alone, so
+            // a running game's ticks leave the open menu alone.
+            let stations = session.stationMenuChoices
+            TickStable(StableKey(stations, session.platformStationID)) {
+                Picker("Platform station", selection: $session.platformStationID) {
+                    Text("New station").tag(StationID?.none)
+                    ForEach(stations) { station in
+                        Text(verbatim: station.title).tag(StationID?.some(station.id))
+                    }
                 }
+                .pickerStyle(.menu)
             }
-            .pickerStyle(.menu)
             if session.platformStationID == nil {
                 TextField("Station name", text: $session.stationName)
                     .textFieldStyle(.roundedBorder)

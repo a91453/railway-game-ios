@@ -133,8 +133,8 @@ struct MapView: View {
     /// credits. Nothing of the game is drawn there, and a touch there
     /// reaches them.
     @State private var attributionFrames: [CGRect] = []
-    /// What the map shows of traffic control (Stage V4e), worked out when
-    /// the world changes, not on every pan or zoom.
+    /// What the map shows of traffic control (Stage V4e), taken from the
+    /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
     /// The lines along their track and the transfer groups' links
     /// (decision 84), worked out off the main actor when the track, the
@@ -255,6 +255,7 @@ struct MapView: View {
                         lights: lights,
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
+                        reduceMotion: reduceMotion,
                         camera: projection
                     )
                     .equatable()
@@ -534,7 +535,8 @@ struct MapView: View {
                                 language: session.language,
                                 stations: OSMMapBackground.stationMarks(of: session.world, in: realWorld),
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         } else {
                             AppleMapBackground(
@@ -545,7 +547,8 @@ struct MapView: View {
                                 trackStyle: trackStyle,
                                 language: session.language,
                                 safeArea: safeArea,
-                                onAttributionFrames: { attributionFrames = $0 }
+                                onAttributionFrames: { attributionFrames = $0 },
+                                onCredit: { screen.panel = .dataSources }
                             )
                         }
                     }
@@ -592,6 +595,11 @@ struct MapView: View {
                 guard let request else { return }
                 camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y))
             }
+            // Decision 188, later fix: where the places the tutorial's
+            // step has the player tap stand, which its card keeps clear of.
+            .onChange(of: tutorialSites(projection: projection, origin: proxy.frame(in: .global).origin), initial: true) { _, sites in
+                screen.tutorialMapSites = sites
+            }
             .onChange(of: session.world.clock) { _, _ in
                 centerOnFollowedTrain(projection: projection)
             }
@@ -603,7 +611,8 @@ struct MapView: View {
             }
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
-            traffic = session.world.trafficOverlay()
+            // Decision 64, later fix: read with the tick, off the main actor.
+            traffic = session.trafficOverlay
         }
         .onChange(of: session.world.trains, initial: true) { _, _ in
             // Decision 182: each tick's trains glide from the last tick's.
@@ -878,6 +887,17 @@ struct MapView: View {
         cellTooltip = heatmap.cellInfo(atX: place.x, y: place.y).map { ($0, location) }
     }
 
+    /// The touch each place the tutorial's step has the player tap takes
+    /// on the screen (``GameSession/tutorialPlacesToTap``), in global
+    /// coordinates: a tap within ``NetworkBuilding/touchRadius`` reaches it.
+    private func tutorialSites(projection: PlanCamera, origin: CGPoint) -> [CGRect] {
+        let radius = CGFloat(NetworkBuilding.touchRadius)
+        return session.tutorialPlacesToTap.map { place in
+            let point = projection.screenPoint(of: place)
+            return CGRect(x: origin.x + CGFloat(point.x) - radius, y: origin.y + CGFloat(point.y) - radius, width: 2 * radius, height: 2 * radius)
+        }
+    }
+
     /// The camera a game opens on (Stage E1): what it has built, or the
     /// middle of its world.
     private func openingCamera(viewport: ScreenSize) -> PlanCamera {
@@ -897,39 +917,45 @@ struct MapView: View {
     /// Chooses how Apple's map under a real-world game looks, and how
     /// strongly Taiwan's real railways show on it where there are any.
     private func mapStyleMenu(_ realWorld: RealWorldFrame) -> some View {
-        Menu {
-            Picker("Map Style", selection: $mapStyle) {
-                ForEach(AppleMapStyle.allCases) { style in
-                    Text(style.title)
-                        .tag(style)
-                }
-            }
-            if session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false {
-                Picker(selection: $trackStyle) {
-                    ForEach(RealRailways.TrackStyle.allCases) { style in
-                        Text(verbatim: style.name(in: session.language))
+        // Decision 184, later: drawn from these values alone, so a running
+        // game's ticks leave the open menu alone.
+        let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
+        let language = session.language
+        return TickStable(StableKey(mapStyle, trackStyle, showsRailways, language)) {
+            Menu {
+                Picker("Map Style", selection: $mapStyle) {
+                    ForEach(AppleMapStyle.allCases) { style in
+                        Text(style.title)
                             .tag(style)
                     }
-                } label: {
-                    Label("Real Railways", systemImage: "tram")
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("map.realRailways")
-            }
-            Button {
-                screen.panel = .dataSources
+                if showsRailways {
+                    Picker(selection: $trackStyle) {
+                        ForEach(RealRailways.TrackStyle.allCases) { style in
+                            Text(verbatim: style.name(in: language))
+                                .tag(style)
+                        }
+                    } label: {
+                        Label("Real Railways", systemImage: "tram")
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("map.realRailways")
+                }
+                Button {
+                    screen.panel = .dataSources
+                } label: {
+                    Label("Data Sources", systemImage: "info.circle")
+                }
+                .accessibilityIdentifier("map.dataSources")
             } label: {
-                Label("Data Sources", systemImage: "info.circle")
+                Image(systemName: "map")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
             }
-            .accessibilityIdentifier("map.dataSources")
-        } label: {
-            Image(systemName: "map")
-                .font(.title3)
-                .frame(width: 44, height: 44)
-                .glassBackground(in: Circle(), interactive: true)
+            .accessibilityLabel("Map Style")
+            .accessibilityIdentifier("map.style")
         }
-        .accessibilityLabel("Map Style")
-        .accessibilityIdentifier("map.style")
     }
 
     /// Decision 160: starts choosing a tile of the map to buy, and shows
@@ -1017,10 +1043,6 @@ struct MapView: View {
     }
 }
 
-/// What the traffic overlay is worked out from (Stage V4e): the time
-/// (a due departure starts a wait), the trains with their routes and
-/// reservations, the lines that send them out, the track and whether
-/// traffic control is on.
 /// What the lines' map (``LineMap``, decision 84) is worked out from: the
 /// track and its platforms, the lines' stops, ways, colours and whether they
 /// are high-speed lines (decision 168), the
@@ -1056,6 +1078,11 @@ private struct LineMapKey: Equatable {
     }
 }
 
+/// What the traffic overlay is worked out from (Stage V4e): the time
+/// (a due departure starts a wait), the trains with their routes and
+/// reservations, the lines that send them out, the track and whether
+/// traffic control is on. The session reads the overlay with each tick
+/// (``GameSession/trafficOverlay``); this says when to take it again.
 private struct TrafficKey: Equatable {
     let now: GameTime
     let isEnabled: Bool
@@ -1310,17 +1337,22 @@ private struct MapTrainCanvas: View, Equatable {
     /// Every train in the map's train colour (the passenger load layer).
     let plain: Bool
     let traffic: TrafficOverlay
+    /// A deadlocked train's mark beats (decision 64, later fix) unless the
+    /// player reduces motion.
+    let reduceMotion: Bool
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic && lhs.camera == rhs.camera
+            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
+            && lhs.reduceMotion == rhs.reduceMotion && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, camera = camera
-        return TimelineView(.animation(paused: !animating)) { timeline in
+        let traffic = traffic, reduceMotion = reduceMotion, camera = camera
+        let beats = !reduceMotion && traffic.waits.contains(where: \.isDeadlocked)
+        return TimelineView(.animation(paused: !animating && !beats)) { timeline in
             Canvas { context, size in
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
                 MapArt.drawTrains(
@@ -1330,6 +1362,7 @@ private struct MapTrainCanvas: View, Equatable {
                     lights: lights,
                     plain: plain,
                     traffic: traffic,
+                    deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
                     projection: camera,
                     in: context
                 )

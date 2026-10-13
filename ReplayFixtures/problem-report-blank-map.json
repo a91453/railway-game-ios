@@ -1,0 +1,224 @@
+{
+  "checksums" : [
+    "C00E50C1595464D3",
+    "C54B3151DE61E0F4",
+    "DF059FE5FD8AB4E8",
+    "B691E519DD313356"
+  ],
+  "commands" : [
+    {
+      "coordinate" : [
+        2048,
+        2048,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "coordinate" : [
+        6144,
+        2048,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "kind" : "buildEdge",
+      "node" : 1,
+      "to" : 2
+    },
+    {
+      "coordinate" : [
+        10240,
+        4096,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "controls" : [
+        7670,
+        2048,
+        8875,
+        3413
+      ],
+      "kind" : "buildEdge",
+      "node" : 2,
+      "to" : 3
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "Station 1",
+      "point" : [
+        4096,
+        2048
+      ]
+    },
+    {
+      "edge" : 1,
+      "end" : 4096,
+      "kind" : "addPlatform",
+      "start" : 0,
+      "station" : 1
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "normal"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "Station 2",
+      "point" : [
+        8339,
+        2872
+      ]
+    },
+    {
+      "edge" : 2,
+      "end" : 4425,
+      "kind" : "addPlatform",
+      "start" : 329,
+      "station" : 2
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 3
+    },
+    {
+      "coordinate" : [
+        14336,
+        4096,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "controls" : [
+        11461,
+        4707,
+        12971,
+        4096
+      ],
+      "kind" : "buildEdge",
+      "node" : 3,
+      "to" : 4
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 1
+    },
+    {
+      "coordinate" : [
+        14336,
+        7000,
+        0
+      ],
+      "kind" : "buildNode"
+    },
+    {
+      "controls" : [
+        15304,
+        4096,
+        14336,
+        6032
+      ],
+      "kind" : "buildEdge",
+      "node" : 4,
+      "to" : 5
+    },
+    {
+      "kind" : "pause"
+    },
+    {
+      "kind" : "resume"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 5
+    },
+    {
+      "edge" : 1,
+      "kind" : "removePlatform",
+      "start" : 0,
+      "station" : 1
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 2
+    },
+    {
+      "edge" : 4,
+      "kind" : "removeEdge"
+    },
+    {
+      "kind" : "removeNode",
+      "node" : 5
+    },
+    {
+      "kind" : "setSpeed",
+      "speed" : "fast"
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 4
+    },
+    {
+      "kind" : "buildStationAt",
+      "name" : "Station 3",
+      "point" : [
+        12288,
+        4319
+      ]
+    },
+    {
+      "edge" : 3,
+      "end" : 4134,
+      "kind" : "addPlatform",
+      "start" : 38,
+      "station" : 3
+    },
+    {
+      "kind" : "advance",
+      "ticks" : 6
+    }
+  ],
+  "description" : "A problem report's command log (decision 193), from app example (0).",
+  "interval" : 10,
+  "schemaVersion" : 1,
+  "source" : "problem report blank-map.json",
+  "start" : {
+    "bounds" : {
+      "height" : 8192,
+      "width" : 16384
+    },
+    "clock" : {
+      "now" : 0,
+      "resumeSpeed" : "normal",
+      "speed" : "paused"
+    },
+    "economy" : {
+      "balance" : 1000000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}

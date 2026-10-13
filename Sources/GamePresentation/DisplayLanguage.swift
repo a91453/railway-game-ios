@@ -6,7 +6,7 @@
 /// Every text function here takes it explicitly, so the text stays a pure
 /// function of the world and the language, and both languages can be tested
 /// anywhere GameCore runs.
-public enum DisplayLanguage: CaseIterable, Hashable, Sendable {
+public enum DisplayLanguage: CaseIterable, Hashable, Sendable, Codable {
     case english
     case traditionalChinese
 

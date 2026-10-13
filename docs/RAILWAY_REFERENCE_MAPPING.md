@@ -766,7 +766,7 @@ V 實際放行 → T、U（保證不互穿）
 | --- | --- | --- | --- |
 | Railway/site_archive_clean/index.html 跟隨列車路線（約 10372–10380 行：`followCase` 外框 lineWidth 8.5、`railDimColor(train.color, FOLLOW_DIM=0.62)` lineWidth 4.4、round cap/join；畫在基本軌道後、列車前）與 palette `followCase`（light #fffdf6、dark #10141c） | `MapArt.drawAuthorities`／`drawTrafficTrack`、`Palette.followCase` | faithful（顏色、比例、層次）／adapted（線色） | 外框色與 8.5 : 4.4 比例、0.62 調暗照搬；寬度按地圖 referenceSize 縮放；遊戲列車沒有各自顏色，線色用 `metroGreen`，選取車不調暗。來源畫整條跟隨路線，遊戲畫 GameCore 的實際預約。 |
 | 同檔 `blockHoldSec`／`updateBlockHolds`（8885–9125 行：`trainPos` 減 hold 秒數、`BLOCK_GAP_KM` 0.4、`BLOCK_CAP_SEC` 120、`_blockGap.lead`、`_blockCapped`） | 無直接移植；等候對象由 `trainHoldingRoute`／`routeWaits` | gap | 來源 block hold 是畫面時間延遲避免重疊，不是預約或授權；GameCore 早已用原子預約保證不互穿。`_blockGap.lead` 的「等誰」語義對應 holder；`_blockCapped` 永不清除，不仿。 |
-| 同檔 `blockSideShift`（10827 行，同組列車標籤側移 2 px／15 px、緩動 0.18） | 無 | gap | 遊戲地圖沒有列車標籤，不移植；列為之後畫面工作。 |
+| 同檔 `blockSideShift`（10827 行，同組列車標籤側移 2 px／15 px、緩動 0.18）與 `updateBlockHolds` 的分組（9095–9120 行：`nat` 交替、`_blockSideSign`） | `WaitMarkSides.offsets(_:size:)`（`TrafficOverlay.swift`）、`MapArt.drawWaitMarks` | adapted（2026-10-13，決策 64 之後的修正） | 用在等候列車的圈（遊戲沒有列車號碼標籤）。`BLOCK_SIDE_GAP` 2 點、移動量 `(|nx|·near + |ny|·BLOCK_TAG_H)/2 + GAP/2`、交替兩側照搬；圈寬高相同，`near`＝`BLOCK_TAG_H`＝圈寬（直徑加 5 點底色）。分組依畫面距離而非同線里程 `BLOCK_SIDE_KM`；`solo`（停站車移兩倍）、跨幀記憶、遲滯 latch 與 0.18 緩動沒有移植（等候車都停著，次序只依列車 ID）。 |
 | Railway/railway_game_reference_clean 01_MIGRATION_MAP §7、binary_reference `pf.reserve_paths`、`gui.show_track_reservation`、PBS 符號 | `contestedResources`／`routeWaits` 的概念依據 | gap | 只有設定與符號名稱，沒有可讀實作或顏色；不杜撰。 |
 | Railway/city_world_reference/source/assets/actors-DPDGaah7.js（MRT 前車間距 −35 m、道路 `cons(e, why)` 的 `e.lead`、stuck/idle 計時） | 無直接移植 | gap | 雙軌捷運與道路車流的跟車限制，沒有地圖預約或死結標示；`e.lead` 同為「等誰」語義，無繪法。 |
 | Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js 共用軌道 headway ledger（`MIN_HEADWAY_MINUTES` 1.5、`_sharedTrackHeadwayWaiting`、`_blockedByFrontTrain`） | 無直接移植 | gap | 旗標只餵環境音效，不畫在地圖；沒有 deadlock 字樣。 |
@@ -1140,7 +1140,7 @@ V 實際放行 → T、U（保證不互穿）
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`／`initOsmMapEngine`（MapLibre GL 的 OSM 地圖引擎，`G.mlMap`） | `RailwayGameApp/Views/OSMMapBackground.swift`（MapLibre Native 的 `MLNMapView`） | adapted：同一個引擎的 iOS 版；地圖跟著遊戲的相機，不自己接手勢 |
 | 同上／`osmStyleKey` 預設 `positron`，`readStoredOsmStyleKey` 的 `ofm-positron`、`ofm-dark` | `OpenStreetMapBase.styleURL(dark:)` | direct：OpenFreeMap 的 Positron 與 Dark；深色外觀用 Dark |
 | 同上／`osmLabelLang`（預設 `local`）與地名圖層的判斷（`isOsmBaseMapNameLayer`） | `OpenStreetMapBase.labelText(in:)`、`showsName(_:)` | adapted：中文介面是當地名稱（台灣的 `name`），英文介面是英文名稱；只換顯示名稱的圖層 |
-| 同上／地圖下方的 `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | `DataSourceCredits.openStreetMapBaseMap(in:)`、資料來源畫面的「OpenFreeMap」 | direct：同一段文字 |
+| 同上／地圖下方的 `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | `BaseMapStyle.style` 的 source attribution（MapLibre 的 (i)）、資料來源畫面的「OpenFreeMap」 | direct：同一段文字。決策 191 起地圖角落只留短標示 `DataSourceCredits.mapCorner`，這句改由 (i) 與資料來源頁提供 |
 | 同上／`applyOsmSensitiveFacilityLabelFilter`（隱藏軍事設施的標示） | — | 之後：這一步還沒做，見決策 97 的限制 |
 | 同上／建物的 `fill-extrusion` | — | 之後：3D 建築 |
 | `Railway/` 網站的 `glTracksInstall`（真實鐵道畫在 MapLibre 上的順序） | `FollowingMapLibreView.drawRailways(in:)` | direct：和 Apple 地圖上的畫法相同（決策 50），這次直接是 MapLibre 的圖層 |

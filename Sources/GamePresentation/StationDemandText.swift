@@ -409,9 +409,8 @@ extension GameSession {
     /// there stay. Free play only.
     public func removeSelectedStationDemand() {
         guard requireDemandEditing(), let station = requireSelectedStation() else { return }
-        perform { world throws(GameError) in
-            try world.setStationDemand(station.id, to: nil)
-            return language.text(
+        perform(.setStationDemand(station.id, nil)) { _, _, _ in
+            language.text(
                 "\(station.name) has no ridership now. Passengers already waiting stay.",
                 "已移除 \(station.name) 的客源。已在候車的乘客會留下。"
             )
@@ -471,12 +470,7 @@ extension GameSession {
             return
         }
         let targets = Set(lines.flatMap(\.stops)).sorted()
-        perform { world throws(GameError) in
-            var draft = world
-            for target in targets {
-                try draft.setStationDemand(target, to: Self.demand(demand, for: target, in: draft))
-            }
-            world = draft
+        perform(.applyStationDemand(demand, to: targets)) { _, _, _ in
             let kind = demand.kind.title(in: language)
             return language.text(
                 "Applied \(kind.lowercased()) to \(lines.count) \(lines.count == 1 ? "line" : "lines"), \(targets.count) stations.",
@@ -487,14 +481,13 @@ extension GameSession {
 
     /// `demand`'s kind for station `id`, with the trips `id` already
     /// starts, or `demand`'s if it has none.
-    private static func demand(_ demand: StationDemand, for id: StationID, in world: GameWorld) -> StationDemand {
+    static func demand(_ demand: StationDemand, for id: StationID, in world: GameWorld) -> StationDemand {
         StationDemand(kind: demand.kind, dailyTrips: world.stationDemand(of: id)?.dailyTrips ?? demand.dailyTrips)
     }
 
     private func setDemand(_ demand: StationDemand, of station: Station) {
-        perform { world throws(GameError) in
-            try world.setStationDemand(station.id, to: demand)
-            return language.text(
+        perform(.setStationDemand(station.id, demand)) { _, _, _ in
+            language.text(
                 "\(station.name): \(demand.displayText(in: language)).",
                 "\(station.name)：\(demand.displayText(in: language))。"
             )
@@ -532,9 +525,8 @@ extension GameSession {
     /// and arrive) or closed (those waiting there leave).
     public func setSelectedStationOperationMode(_ mode: StationOperationMode) {
         guard let station = requireSelectedStation() else { return }
-        perform { world throws(GameError) in
-            try world.setStationOperationMode(station.id, to: mode)
-            return language.text("\(station.name): \(mode.title(in: .english)).",
+        perform(.setStationOperationMode(station.id, mode)) { _, _, _ in
+            language.text("\(station.name): \(mode.title(in: .english)).",
                                  "\(station.name)：\(mode.title(in: .traditionalChinese))。")
         }
     }

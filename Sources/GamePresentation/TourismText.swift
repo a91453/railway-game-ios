@@ -148,9 +148,8 @@ extension GameSession {
     /// Builds the next level of sight `id`'s souvenir shop.
     public func investInSouvenirShop(of id: AttractionID) {
         guard let sight = world.attraction(id: id) else { return }
-        perform { world throws(GameError) in
-            try world.investInSouvenirShop(of: id)
-            return language.text(
+        perform(.investInSouvenirShop(id)) { _, _, _ in
+            language.text(
                 "\(sight.englishName) has a souvenir shop of level \(sight.souvenir + 1) for \(Money(Tourism.souvenirCost).moneyText).",
                 "\(sight.name)的名產店升到 \(sight.souvenir + 1) 級，花費 \(Money(Tourism.souvenirCost).moneyText)。"
             )

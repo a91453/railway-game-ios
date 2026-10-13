@@ -91,43 +91,15 @@ extension GameSession {
     /// standard car of one car.
     public func staffSelectedLine(headway: Int64, type chosen: TrainType? = nil, cars: Int = 1) {
         guard let line = requireSelectedLine() else { return }
-        guard let plan = world.lineStaffingPlan(line.id, headway: headway, type: chosen, cars: cars), let journey = world.lineJourney(line.id) else {
+        guard let plan = world.lineStaffingPlan(line.id, headway: headway, type: chosen, cars: cars), world.lineJourney(line.id) != nil else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(line.name)'s trains cannot run yet: build track joining its stations, with a platform at each.",
                 "\(line.name) 的列車還不能行駛：請先鋪設連接各站的軌道，並在每站設置月台。"
             ))
             return
         }
-        perform { world throws(GameError) in
-            var draft = world
-            // Trains left off the track: the berth held under traffic
-            // control, or too long to stand there.
-            var held = 0, unfit = 0
-            // Decision 168: a high-speed line is run with high-speed sets,
-            // where the game offers them (not in an era with types of its own).
-            for _ in 0..<plan.trains {
-                let name = Self.suggestedTrainName(for: draft, in: language)
-                let train: Train
-                if let type = plan.type {
-                    train = try draft.purchaseTrain(named: name, as: type)
-                } else {
-                    train = try draft.purchaseTrain(named: name)
-                }
-                if plan.cars > Train.minimumCars { try draft.setTrainCars(train.id, to: plan.cars) }
-                var placed = draft
-                do throws(GameError) {
-                    try Self.placeAtStart(train.id, of: journey, in: &placed)
-                    draft = placed
-                } catch {
-                    if case .trackReserved = error { held += 1 } else { unfit += 1 }
-                    continue
-                }
-                try draft.assignTrain(train.id, to: line.id, pattern: nil)
-            }
-            try draft.setLineTargetHeadways(
-                line.id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil
-            )
-            world = draft
+        perform(.staffLine(line.id, headway: headway, type: chosen, cars: cars, language: language)) { outcome, _, world in
+            let (held, unfit) = (outcome.held, outcome.unfit)
             let first = world.station(id: line.stops[0])?.name ?? line.name
             let running = plan.trains - held - unfit
             var text: String
@@ -170,6 +142,45 @@ extension GameSession {
             return text
         }
     }
+
+    /// Runs line `id` every `headway` minutes in `world`, as
+    /// ``staffSelectedLine(headway:type:cars:)`` does, naming the trains in
+    /// `language`: how many trains were left off the track because the
+    /// berth was held, and how many because they were too long to stand
+    /// there.
+    static func staff(
+        _ id: LineID, headway: Int64, type chosen: TrainType?, cars: Int, in world: inout GameWorld, language: DisplayLanguage
+    ) throws(GameError) -> (held: Int, unfit: Int) {
+        guard let plan = world.lineStaffingPlan(id, headway: headway, type: chosen, cars: cars), let journey = world.lineJourney(id) else {
+            throw .unknownLine(id)
+        }
+        // Trains left off the track: the berth held under traffic
+        // control, or too long to stand there.
+        var held = 0, unfit = 0
+        // Decision 168: a high-speed line is run with high-speed sets,
+        // where the game offers them (not in an era with types of its own).
+        for _ in 0..<plan.trains {
+            let name = Self.suggestedTrainName(for: world, in: language)
+            let train: Train
+            if let type = plan.type {
+                train = try world.purchaseTrain(named: name, as: type)
+            } else {
+                train = try world.purchaseTrain(named: name)
+            }
+            if plan.cars > Train.minimumCars { try world.setTrainCars(train.id, to: plan.cars) }
+            var placed = world
+            do throws(GameError) {
+                try Self.placeAtStart(train.id, of: journey, in: &placed)
+                world = placed
+            } catch {
+                if case .trackReserved = error { held += 1 } else { unfit += 1 }
+                continue
+            }
+            try world.assignTrain(train.id, to: id, pattern: nil)
+        }
+        try world.setLineTargetHeadways(id, to: TargetHeadways(peak: headway, offPeak: headway, low: headway), pattern: nil)
+        return (held, unfit)
+    }
 }
 
 // Re-forming a whole line's trains (decision 180): the trains of a line that
@@ -200,7 +211,7 @@ extension GameSession {
     /// the reason.
     public func reformSelectedLine(type: TrainType?, cars: Int) {
         guard let line = requireSelectedLine() else { return }
-        guard let journey = world.lineJourney(line.id) else {
+        guard world.lineJourney(line.id) != nil else {
             message = StatusMessage(kind: .failure, text: language.text(
                 "\(line.name)'s trains cannot be re-formed yet: build track joining its stations, with a platform at each.",
                 "\(line.name) 的列車還不能改編組：請先鋪設連接各站的軌道，並在每站設置月台。"
@@ -208,48 +219,18 @@ extension GameSession {
             return
         }
         let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
-        var changed = 0
-        var left: [String] = []
-        var paid = Money.zero
         do throws(GameError) {
-            let summary = try performEdit { world throws(GameError) in
-                let balance = world.economy.balance
-                for id in line.assignedTrains {
-                    guard let train = world.train(id: id) else { continue }
-                    if train.execution != nil {
-                        left.append(language.text("\(train.name) (on a trip)", "\(train.name)（正在行駛）"))
-                        continue
-                    }
-                    if train.type == type && train.cars == cars { continue }
-                    var attempt = world
-                    do throws(GameError) {
-                        let pattern = attempt.assignedPattern(of: id)
-                        try attempt.unassignTrain(id)
-                        if train.position != nil { try attempt.unplaceTrain(id) }
-                        // Cars taken off go first, so the new type is paid
-                        // for the cars kept only (a later fix); cars added
-                        // come after, at the new type's car price.
-                        if cars < train.cars { try attempt.setTrainCars(id, to: cars) }
-                        if train.type != type {
-                            try attempt.setTrainType(id, to: type)
-                            if let performance = type?.performance { try attempt.setTrainPerformance(id, to: performance) }
-                        }
-                        if cars > train.cars { try attempt.setTrainCars(id, to: cars) }
-                        try Self.placeAtStart(id, of: journey, in: &attempt)
-                        try attempt.assignTrain(id, to: line.id, pattern: pattern)
-                        world = attempt
-                        changed += 1
-                    } catch {
-                        left.append("\(train.name) (\(error.playerMessage(in: language)))")
-                    }
-                }
-                paid = balance - world.economy.balance
+            let before = world
+            let outcome = try performCommand(.edit(.reformLine(line.id, type: type, cars: cars, language: language)))
+            let (changed, left) = (outcome.number, outcome.left)
+            let summary: String = {
+                let paid = before.economy.balance - world.economy.balance
                 let name = Train.typeText(type, in: language)
                 return language.text(
                     "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)) of \(name), for \(paid.moneyText).",
                     "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))的\(name)，花費 \(paid.moneyText)。"
                 )
-            }
+            }()
             var text = changed == 0 && left.isEmpty
                 ? language.text("\(line.name)'s trains are already so.", "\(line.name) 的列車已經是這個編組。")
                 : summary
@@ -260,5 +241,47 @@ extension GameSession {
         } catch {
             message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
+    }
+
+    /// Re-forms line `id`'s waiting trains in `world`, as
+    /// ``reformSelectedLine(type:cars:)`` does: how many were, and those
+    /// left as they were, with the reason in `language`.
+    static func reform(
+        _ id: LineID, type: TrainType?, cars: Int, in world: inout GameWorld, language: DisplayLanguage
+    ) throws(GameError) -> (changed: Int, left: [String]) {
+        guard let line = world.line(id: id) else { throw .unknownLine(id) }
+        guard let journey = world.lineJourney(id) else { throw .unknownLine(id) }
+        var changed = 0
+        var left: [String] = []
+        for trainID in line.assignedTrains {
+            guard let train = world.train(id: trainID) else { continue }
+            if train.execution != nil {
+                left.append(language.text("\(train.name) (on a trip)", "\(train.name)（正在行駛）"))
+                continue
+            }
+            if train.type == type && train.cars == cars { continue }
+            var attempt = world
+            do throws(GameError) {
+                let pattern = attempt.assignedPattern(of: trainID)
+                try attempt.unassignTrain(trainID)
+                if train.position != nil { try attempt.unplaceTrain(trainID) }
+                // Cars taken off go first, so the new type is paid
+                // for the cars kept only (a later fix); cars added
+                // come after, at the new type's car price.
+                if cars < train.cars { try attempt.setTrainCars(trainID, to: cars) }
+                if train.type != type {
+                    try attempt.setTrainType(trainID, to: type)
+                    if let performance = type?.performance { try attempt.setTrainPerformance(trainID, to: performance) }
+                }
+                if cars > train.cars { try attempt.setTrainCars(trainID, to: cars) }
+                try Self.placeAtStart(trainID, of: journey, in: &attempt)
+                try attempt.assignTrain(trainID, to: id, pattern: pattern)
+                world = attempt
+                changed += 1
+            } catch {
+                left.append("\(train.name) (\(error.playerMessage(in: language)))")
+            }
+        }
+        return (changed, left)
     }
 }

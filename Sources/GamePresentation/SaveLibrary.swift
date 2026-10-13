@@ -8,16 +8,23 @@ import GameCore
 // here and nowhere else in GamePresentation, for JSON and files only; it is
 // part of the Swift toolchain on Linux too, so all of this is tested there.
 
-/// The saves in one folder: the autosave, `autosave.json`, and the
-/// player's own saves, one file each.
+/// The saves in one folder: the autosaves, and the player's own saves, one
+/// file each.
+///
+/// Decision 192: the autosaves are the latest, `autosave.json`, written
+/// whenever the game is left (the app leaves the foreground, the player
+/// goes back to the start screen), and up to ``autosaveSlots`` taken in
+/// turn every 15 minutes of play, `autosave-<n>.json`, each with the next
+/// number, so the player can go back to one of them. A build before 192
+/// wrote `autosave.json` alone; it is read as before.
 ///
 /// A file is `{"app": "RailwayGame", "savedAt": "…", "summary": {…},
 /// "game": {"saveVersion": 2, "world": {…}}}`. The summary repeats a few
 /// facts of the world so a list of saves reads without decoding every
 /// world; `game` is GameCore's ``SavedGame`` and alone decides what loads.
 public struct SaveLibrary: Sendable {
-    /// What a save is: the one the app writes by itself, or one the player
-    /// made.
+    /// What a save is: one the app writes by itself (the latest or one of
+    /// the slots, decision 192), or one the player made.
     public enum Kind: Hashable, Sendable {
         case autosave
         case manual
@@ -37,6 +44,17 @@ public struct SaveLibrary: Sendable {
         /// then names it by when it was saved. Kept beside the file, never
         /// in the game.
         public let name: String?
+
+        /// The number of an autosave taken in turn (decision 192), or `nil`
+        /// for the latest autosave and the player's own saves.
+        public var slot: Int? { SaveLibrary.slotNumber(of: id) }
+
+        /// How long ago it was saved, by the clock on the wall (decision
+        /// 192): "just now", "12 min ago", "3 h ago", "2 d ago"; "剛剛",
+        /// "12 分鐘前"…; `nil` when that is not known.
+        public func savedAgoText(at now: Date, in language: DisplayLanguage) -> String? {
+            savedAt.map { SaveLibrary.agoText(from: $0, to: now, in: language) }
+        }
 
         init(id: String, kind: Kind, savedAt: Date?, summary: SaveSummary?, problem: SaveError?, name: String? = nil) {
             self.id = id
@@ -65,12 +83,19 @@ public struct SaveLibrary: Sendable {
         }
     }
 
+    /// How many autosaves taken every 15 minutes are kept (decision 192),
+    /// beside the latest: a high-speed demo's save is some 7.2 MB, so at
+    /// most six files, some 43 MB.
+    public static let autosaveSlots = 5
+
     /// The longest name a save keeps; a longer one is cut.
     public static let maximumNameLength = 60
 
     /// The `"app"` every save names. Keep this identifier for save compatibility.
     public static let appName = "RailwayGame"
     static let autosaveFile = "autosave.json"
+    /// The autosaves taken in turn (decision 192) are `autosave-<n>.json`.
+    static let slotPrefix = "autosave-"
     /// What a save's news log's file name ends with: `autosave.json`'s is
     /// `autosave.news.json`.
     static let newsSuffix = ".news.json"
@@ -102,19 +127,54 @@ public struct SaveLibrary: Sendable {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
         // A save's news log (decision 175) lies beside it and is no save.
         let entries = names.filter { $0.hasSuffix(".json") && !$0.hasSuffix(Self.newsSuffix) }.map(entry(named:))
-        return entries.sorted { lhs, rhs in
+        return Self.listed(entries)
+    }
+
+    /// The autosaves alone (decision 192), as ``entries()`` lists them: the
+    /// newest first. Reads no save of the player's.
+    public func autosaves() -> [Entry] {
+        Self.listed(autosaveFiles().map(entry(named:)))
+    }
+
+    /// The newest autosave that can be loaded, or `nil` (decision 192).
+    /// Reads two files at most: the latest, and the autosave taken in turn
+    /// with the highest number, the newest of those (each is numbered
+    /// after the last). A save of the high-speed demo takes some 70 ms to
+    /// read, and this is read while the game waits.
+    public func newestAutosave() -> Entry? {
+        newestCandidates().first { $0.problem == nil }
+    }
+
+    /// The latest autosave and the highest-numbered one taken in turn, as
+    /// ``entries()`` orders them.
+    private func newestCandidates() -> [Entry] {
+        let files = autosaveFiles()
+        let highest = files.compactMap(Self.slotNumber).max().map(Self.slotFile)
+        return Self.listed([Self.autosaveFile, highest].compactMap { $0 }.filter(files.contains).map(entry(named:)))
+    }
+
+    /// `entries` in ``entries()``'s order.
+    private static func listed(_ entries: [Entry]) -> [Entry] {
+        entries.sorted { lhs, rhs in
             if (lhs.kind == .autosave) != (rhs.kind == .autosave) { return lhs.kind == .autosave }
             switch (lhs.savedAt, rhs.savedAt) {
             case let (left?, right?) where left != right: return left > right
             case (.some, nil): return true
             case (nil, .some): return false
-            default: return lhs.id < rhs.id
+            default:
+                // Two autosaves of one moment (decision 192: going back
+                // keeps the game left in turn, then writes the latest): the
+                // latest, then the higher number, was written after.
+                if lhs.kind == .autosave, rhs.kind == .autosave, lhs.slot != rhs.slot {
+                    return (lhs.slot ?? .max) > (rhs.slot ?? .max)
+                }
+                return lhs.id < rhs.id
             }
         }
     }
 
     private func entry(named name: String) -> Entry {
-        let kind: Kind = name == Self.autosaveFile ? .autosave : .manual
+        let kind: Kind = Self.isAutosave(name) ? .autosave : .manual
         guard let data = try? Data(contentsOf: url(of: name)) else {
             return Entry(id: name, kind: kind, savedAt: nil, summary: nil, problem: .fileSystem)
         }
@@ -233,22 +293,83 @@ public struct SaveLibrary: Sendable {
         return (try? rename(entry, to: playerName)) ?? entry
     }
 
-    /// Keeps the autosave as a save of the player's own before another game
-    /// starts and writes over it, as the reference archives the current
-    /// draft before a fresh start (`archiveMetroAppCurrentDraftBeforeFreshStart`).
-    /// Does nothing when there is no autosave.
-    public func archiveAutosave() throws(SaveError) {
-        let autosave = url(of: Self.autosaveFile)
-        guard FileManager.default.fileExists(atPath: autosave.path) else { return }
-        let savedAt = (try? Data(contentsOf: autosave)).flatMap { try? Self.header(of: $0).get().savedAt } ?? Date()
-        let name = freeName(for: savedAt)
+    /// What writing an autosave in turn did (decision 192): the autosave
+    /// written, and the files of the oldest that it took the place of.
+    public struct SlotWrite: Hashable, Sendable {
+        public let entry: Entry
+        public let removed: [String]
+    }
+
+    /// Writes `world` as the next autosave taken in turn (decision 192),
+    /// `autosave-<n>.json` with the next number, then deletes the oldest
+    /// beyond ``autosaveSlots``. The new one is written whole before any
+    /// is deleted, so a failure never leaves fewer than there were.
+    @discardableResult
+    public func saveAutosaveSlot(_ world: GameWorld, news: NewsLog? = nil, at date: Date) throws(SaveError) -> SlotWrite {
+        let data = try Self.encode(world, at: date)
+        let name = Self.slotFile(nextSlot())
         do {
-            try FileManager.default.moveItem(at: autosave, to: url(of: name))
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try data.write(to: url(of: name), options: .atomic)
         } catch {
             throw .fileSystem
         }
-        // Its news log goes with it.
+        if let news, let log = try? JSONEncoder().encode(news) {
+            try? log.write(to: url(of: Self.newsFile(of: name)), options: .atomic)
+        }
+        return SlotWrite(entry: Entry(id: name, kind: .autosave, savedAt: date, summary: SaveSummary(world: world), problem: nil), removed: pruneSlots())
+    }
+
+    /// Keeps the latest autosave as the next one taken in turn (decision
+    /// 192), before the player goes back to an earlier one and the latest
+    /// is written over: going back can be undone. The file is moved, not
+    /// written again. Does nothing when there is no latest autosave.
+    public func keepLatestAutosaveInSlot() throws(SaveError) {
+        let latest = url(of: Self.autosaveFile)
+        guard FileManager.default.fileExists(atPath: latest.path) else { return }
+        let name = Self.slotFile(nextSlot())
+        do {
+            try FileManager.default.moveItem(at: latest, to: url(of: name))
+        } catch {
+            throw .fileSystem
+        }
         try? FileManager.default.moveItem(at: url(of: Self.newsFile(of: Self.autosaveFile)), to: url(of: Self.newsFile(of: name)))
+        pruneSlots()
+    }
+
+    /// Keeps the newest autosave as a save of the player's own before
+    /// another game starts and writes over it, as the reference archives the
+    /// current draft before a fresh start
+    /// (`archiveMetroAppCurrentDraftBeforeFreshStart`). Does nothing when
+    /// there is no autosave.
+    ///
+    /// Decision 192: the older autosaves of that game are deleted, so the
+    /// autosaves are always of the game being played and never more than
+    /// ``autosaveSlots`` and the latest. Only the two that may be the
+    /// newest are read (``newestAutosave()``); of those, one that cannot be
+    /// read is kept as a save of the player's too, listed with why, as
+    /// before 192: it may be a later build's.
+    public func archiveAutosave() throws(SaveError) {
+        let candidates = newestCandidates()
+        let newest = candidates.first { $0.problem == nil }
+        let kept = Set(candidates.filter { $0 == newest || $0.problem != nil }.map(\.id))
+        let files = autosaveFiles()
+        // Kept first: one that fails to move stops here, with none deleted.
+        for entry in candidates where kept.contains(entry.id) {
+            let name = freeName(for: entry.savedAt ?? Date())
+            do {
+                try FileManager.default.moveItem(at: url(of: entry.id), to: url(of: name))
+            } catch {
+                throw .fileSystem
+            }
+            // Its news log goes with it.
+            try? FileManager.default.moveItem(at: url(of: Self.newsFile(of: entry.id)), to: url(of: Self.newsFile(of: name)))
+        }
+        // Deleting is tidying up: failing to never stops the new game.
+        for name in files where !kept.contains(name) {
+            try? FileManager.default.removeItem(at: url(of: name))
+            try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: name)))
+        }
     }
 
     /// The news log kept beside `entry` (decision 175), or an empty one
@@ -334,6 +455,74 @@ public struct SaveLibrary: Sendable {
 
     private func url(of name: String) -> URL {
         directory.appendingPathComponent(name)
+    }
+
+    // MARK: - Autosaves in turn (decision 192)
+
+    /// Whether save file `name` is an autosave: the latest, or one taken in
+    /// turn.
+    static func isAutosave(_ name: String) -> Bool {
+        name == autosaveFile || slotNumber(of: name) != nil
+    }
+
+    /// `n` of `autosave-<n>.json`, or `nil` for any other name.
+    static func slotNumber(of name: String) -> Int? {
+        guard name.hasPrefix(slotPrefix), name.hasSuffix(".json") else { return nil }
+        let digits = name.dropFirst(slotPrefix.count).dropLast(".json".count)
+        guard !digits.isEmpty, digits.allSatisfy(\.isASCII), digits.allSatisfy(\.isNumber), let number = Int(digits) else { return nil }
+        return number
+    }
+
+    static func slotFile(_ number: Int) -> String {
+        "\(slotPrefix)\(number).json"
+    }
+
+    /// The autosaves' file names.
+    private func autosaveFiles() -> [String] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.filter(Self.isAutosave)
+    }
+
+    /// The numbers of the autosaves taken in turn, the lowest first.
+    private func slotNumbers() -> [Int] {
+        autosaveFiles().compactMap(Self.slotNumber).sorted()
+    }
+
+    /// The number after the highest taken.
+    private func nextSlot() -> Int {
+        (slotNumbers().last ?? 0) + 1
+    }
+
+    /// Deletes the autosaves taken in turn beyond ``autosaveSlots``, the
+    /// lowest numbers (the oldest taken) first, with their news logs.
+    /// Returns their file names.
+    @discardableResult
+    private func pruneSlots() -> [String] {
+        let numbers = slotNumbers()
+        let removed = numbers.dropLast(Self.autosaveSlots).map(Self.slotFile)
+        for name in removed {
+            try? FileManager.default.removeItem(at: url(of: name))
+            try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: name)))
+            try? FileManager.default.removeItem(at: url(of: Self.nameFile(of: name)))
+        }
+        return removed
+    }
+
+    /// How long ago `date` was at `now` (decision 192), after the
+    /// reference's relative time (`Railway/city_world_reference`'s
+    /// `dom-*.js`, `p(e, t)`): under 45 seconds "just now", then minutes
+    /// under an hour, hours under a day, then days, each rounded to the
+    /// nearest. A date after `now` is "just now".
+    public static func agoText(from date: Date, to now: Date, in language: DisplayLanguage) -> String {
+        let elapsed = max(0, now.timeIntervalSince(date))
+        let seconds = Int((elapsed).rounded(.toNearestOrAwayFromZero))
+        if seconds < 45 { return language.text("just now", "剛剛") }
+        let minutes = (seconds + 30) / 60
+        if minutes < 60 { return language.text("\(minutes) min ago", "\(minutes) 分鐘前") }
+        let hours = (minutes + 30) / 60
+        if hours < 24 { return language.text("\(hours) h ago", "\(hours) 小時前") }
+        let days = (hours + 12) / 24
+        return language.text("\(days) d ago", "\(days) 天前")
     }
 
     /// `save-<stamp>.json`, or with `-2`, `-3`… when that is taken.

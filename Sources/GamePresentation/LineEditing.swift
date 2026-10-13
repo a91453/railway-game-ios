@@ -289,8 +289,7 @@ extension GameSession {
     /// `handleReverseStationOrder`).
     public func reverseSelectedLine() {
         guard let line = requireSelectedLine() else { return }
-        perform { world throws(GameError) in
-            try world.reverseLineStops(line.id)
+        perform(.reverseLineStops(line.id)) { _, _, world in
             let names = (world.line(id: line.id)?.stops ?? []).map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
             return language.text("Reversed \(line.name): \(names).", "已反轉 \(line.name) 的站序：\(names)。")
                 + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
@@ -303,15 +302,13 @@ extension GameSession {
     public func duplicateSelectedLine() {
         guard let line = requireSelectedLine() else { return }
         let name = language.text("\(line.name) - Fork", "\(line.name) - 分支")
-        var copied: LineID?
-        perform { world throws(GameError) in
-            copied = try world.duplicateLine(line.id, named: name).id
-            return language.text(
+        let copy = perform(.duplicateLine(line.id, name: name)) { _, _, _ in
+            language.text(
                 "Copied \(line.name) as \(name). Assign trains to run it.",
                 "已複製 \(line.name) 為 \(name)。請指派列車來營運。"
             )
         }
-        if let copied {
+        if let copied = copy?.line?.id {
             // Selecting clears the message; the copy's stays.
             let shown = message
             selectLine(copied)
@@ -324,12 +321,10 @@ extension GameSession {
     /// message says to wait for the run or take the train off the line.
     private func setStops(of line: ServiceLine, to stops: [StationID]) {
         do throws(GameError) {
-            let text = try performEdit { world throws(GameError) in
-                try world.setLineStops(line.id, to: stops)
-                let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
-                return language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
-                    + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
-            }
+            try performCommand(.edit(.setLineStops(line.id, stops)))
+            let names = stops.map { world.station(id: $0)?.name ?? "#\($0.rawValue)" }.joined(separator: " – ")
+            let text = language.text("\(line.name) now calls at \(names).", "\(line.name) 改停 \(names)。")
+                + (world.dispatchNotice(of: line.id, in: language).map { language.text(" ", "") + $0 } ?? "")
             message = StatusMessage(kind: .success, text: text)
             endFollowIfGone()
         } catch {
@@ -380,8 +375,7 @@ extension GameSession {
     }
 
     private func setServiceDay(_ day: ServiceDay, changed index: Int?) {
-        perform { world throws(GameError) in
-            try world.setServiceDay(day)
+        perform(.setServiceDay(day)) { _, _, _ in
             if let index, day.bands.indices.contains(index) {
                 return language.text("Service day: \(day.bandText(index, in: language)).", "服務日：\(day.bandText(index, in: language))。")
             }
