@@ -5900,6 +5900,8 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（查 bug，2026-10-12）：拆掉一個有人上下車的車站，`lineAccounts.flows` 還留著它，拆到只剩一站的路線也被 `removeStation` 直接移除而沒有清掉該線的紀錄，之後存的檔讀不回來（「The line accounts must be well formed」）。`removeStation` 現在一併清掉兩者（`LineAccountsTests.testRemovingAStationLeavesNoRecordsOfIt`）。
 
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：沒有列車的路線不出「連續虧損」泡泡，也不算 `lineLosingMoney`。它已經有「沒有列車」的泡泡，那才是玩家能直接處理的原因；車站費用照算，報表的損益不變（`LineReportTests.testALineLosingMoneyForAWeekShowsOnTheMap`）。
+
 ### 180. 車輛經濟：依車種的價格與營運成本、改裝、出售列車
 
 2026-10-12，作者睡覺期間派工的「車輛經濟」（ROADMAP 的 P7-3）。號碼依工作登記 #231：決策 180、存檔版本 49、golden schema 71。
@@ -5935,6 +5937,10 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 **之後的修正**（查 bug，2026-10-12）：賣掉載著貨的貨運列車時，`freight.loads` 還留著它的貨，到整點的 `tickFreight` 才清；在那之前存的檔讀不回來（「Cargo is on a train… that does not exist」）。`sellTrain` 現在先 `loseCargo(of:)`，貨算損失（`FreightTests.testSellingALoadedFreightTrainLosesItsCargo`）。
 
 **之後的修正**（第三次查 bug，2026-10-12）：① 換車種時舊車賣得比新車種貴（費用 0，`refitCost` 也報 0），公司在赤字時 `setTrainType` 先把舊車的帳賣掉、再 `spend` 新車全價而拋出 `insufficientFunds`，等於一次不收錢的改裝被拒絕、而且拋出前已經改了帳。現在只檢查費用付得起，餘額只少「新價 − 賣得的錢」（`testAChangeOfTypeTheOldTrainPaysForIsMadeInTheRed`）。② 換車種後新車的價錢整筆記在列車的帳上，之後拆車廂沒有沖銷，一節車的列車帳面還是 16 節的價、照它折舊、賣出也照它算；現在和買車一樣，第一節記在列車、其餘記成車廂（`testCarsTakenOffAfterAChangeOfTypeLeaveTheBooks`）。③ 路線改編組（`reformSelectedLine`）先換車種再減車廂，玩家為馬上拆掉的車廂付了新車種的錢；現在減車廂在前、加車廂在後（`RollingStockSessionTests.testReformingIntoFewerCarsPaysOnlyForTheCarsKept`）。存檔格式、golden、replay 不動。
+
+**之後的修正（作者決定，2026-10-13，#319–#400 審查）**：路線改編組選「依路線預設」時：
+- 路線有自己的車型（時代劇本的車種、高鐵線的高鐵車組），套用那個車型。
+- 路線沒有自己的車型時，每列車保留原本的車型，只改節數，不會悄悄換回標準車、收改裝費（`RollingStockSessionTests.testReformingWithTheLinesDefaultKeepsEachTrainsType`）。
 
 ### 178. 載客量圖層與車站「即將進站」看板
 

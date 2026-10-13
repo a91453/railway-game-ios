@@ -228,7 +228,7 @@ extension GameSession {
     }
 
     /// Re-forms the selected line's trains into `cars` cars of `type`
-    /// (`nil`: the standard car): each train that stands waiting for its
+    /// (`nil`: each keeps its own type, decision 180 later): each train that stands waiting for its
     /// next trip is unassigned, taken off the track, given the type and the
     /// cars (a refit and the cars added are paid for, decision 180), put
     /// back at the start of the line and assigned to the service it was on.
@@ -251,6 +251,12 @@ extension GameSession {
             let (changed, left) = (outcome.number, outcome.left)
             let summary: String = {
                 let paid = before.economy.balance - world.economy.balance
+                guard let type else {
+                    return language.text(
+                        "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)), each keeping its type, for \(paid.moneyText).",
+                        "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))，車型不變，花費 \(paid.moneyText)。"
+                    )
+                }
                 let name = Train.typeText(type, in: language)
                 return language.text(
                     "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)) of \(name), for \(paid.moneyText).",
@@ -286,6 +292,9 @@ extension GameSession {
                 left.append(language.text("\(train.name) (on a trip)", "\(train.name)（正在行駛）"))
                 continue
             }
+            // No type named (the line's default on a line with none of its
+            // own): each train keeps the type it has (decision 180, later).
+            let type = type ?? train.type
             if train.type == type && train.cars == cars { continue }
             var attempt = world
             do throws(GameError) {

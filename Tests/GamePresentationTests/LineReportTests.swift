@@ -76,6 +76,18 @@ final class LineReportTests: XCTestCase {
 
     func testALineLosingMoneyForAWeekShowsOnTheMap() throws {
         var world = try managedWorld()
+        // Decision 179, later: a line with no trains says "no trains", not
+        // "losing money" (its stations cost what they cost).
+        var without = world
+        try without.advance(ticks: 7 * 1_440 + 120)
+        XCTAssertFalse(without.lineLosingMoney(Self.short))
+        XCTAssertFalse(without.mapAlerts().contains { if case .lineLosingMoney = $0.kind { true } else { false } })
+        XCTAssertTrue(without.mapAlerts().contains { $0.kind == .lineWithoutTrains(Self.short) })
+        // With a train each, still no fares: both lose money.
+        for line in [Self.short, Self.long] {
+            let train = try world.purchaseTrain(named: "T\(line.rawValue)").id
+            try world.assignTrain(train, to: line)
+        }
         try world.advance(ticks: 6 * 1_440 + 120)
         XCTAssertFalse(world.lineLosingMoney(Self.short), "six completed days")
         XCTAssertFalse(world.mapAlerts().contains { if case .lineLosingMoney = $0.kind { true } else { false } })
