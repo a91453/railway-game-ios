@@ -281,7 +281,13 @@ struct CompanyRankSection: View {
     var body: some View {
         let language = session.language
         Section {
-            if let rank {
+            // Decision 200: a game with unlimited funds is not ranked.
+            if session.world.economy.unlimitedFunds {
+                Text(verbatim: GameEconomy.uncountedText(in: language))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("goals.uncounted")
+            } else if let rank {
                 VStack(alignment: .leading, spacing: 4) {
                     Label {
                         Text(verbatim: rank.headline(in: language))
@@ -357,7 +363,20 @@ struct CompanyRankSection: View {
                     }
                     .accessibilityIdentifier("goals.nextTown")
                 }
-                if let achievements {
+                if let achievements, session.world.economy.unlimitedFunds {
+                    // Decision 200: the entry is greyed and says why.
+                    Label {
+                        Text(verbatim: language.text(
+                            "Achievements \(achievements.count)/\(Achievement.all.count): not counted with unlimited funds",
+                            "成就 \(achievements.count)/\(Achievement.all.count)：資金無限的局不計成就"
+                        ))
+                    } icon: {
+                        Image(systemName: "rosette")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("goals.achievements")
+                } else if let achievements {
                     NavigationLink {
                         AchievementsView(language: language, records: achievements, facts: facts)
                     } label: {

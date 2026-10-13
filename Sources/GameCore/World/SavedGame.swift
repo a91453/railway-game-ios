@@ -262,9 +262,14 @@
 ///     reads only an earlier version would drop them, and the requests in
 ///     hand and what is owed would be lost, so it says the save is newer
 ///     than it instead.
+/// 51. Unlimited funds (decision 200): a world's `"economy"` can have
+///     `"unlimitedFunds": true`, a company that pays for nothing. A build
+///     that reads only an earlier version would drop it, and the company
+///     would start paying from a balance it never had to keep, so it says
+///     the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 50
+    public static let currentVersion = 51
 
     public let world: GameWorld
 
@@ -404,6 +409,8 @@ extension SavedGame: Codable {
         // off, and every train costs and weighs what it did.
         // Version 49 to 50: a world without `"cityRequests"` has none, and
         // its ledger no subsidy rows.
+        // Version 50 to 51: an economy without `"unlimitedFunds"` pays for
+        // what it builds, as every one did.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

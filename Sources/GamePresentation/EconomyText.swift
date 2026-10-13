@@ -41,6 +41,24 @@ extension GameWorld {
     }
 }
 
+extension GameEconomy {
+    /// The cash as the HUD and the economy panel show it: the balance, or
+    /// "∞" with free play's unlimited funds (decision 200).
+    public var cashText: String {
+        unlimitedFunds ? "∞" : balance.moneyText
+    }
+
+    /// Whether the cash is shown as in the red: never with unlimited funds.
+    public var showsInTheRed: Bool {
+        !unlimitedFunds && balance < .zero
+    }
+
+    /// Why a game with unlimited funds has no achievements or rank.
+    public static func uncountedText(in language: DisplayLanguage) -> String {
+        language.text("Games with unlimited funds do not count for achievements or the company rank.", "資金無限的局不計成就與公司評等。")
+    }
+}
+
 extension EconomyMode {
     public func displayName(in language: DisplayLanguage) -> String {
         switch self {
