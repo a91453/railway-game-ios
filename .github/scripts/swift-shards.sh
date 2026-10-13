@@ -217,10 +217,10 @@ die() {
 # named like a prefix of another (ServiceLineTests, ServiceLinePropertyTests)
 # is never caught by accident. The same regex goes to grep and to SwiftPM.
 pattern_for() {
-  local names
-  IFS=' ' read -r -a names <<<"$1"
+  local classes
+  IFS=' ' read -r -a classes <<<"$1"
   local IFS='|'
-  echo "\\.(${names[*]})/"
+  echo "\\.(${classes[*]})/"
 }
 
 all_campaign_classes() {
@@ -242,15 +242,15 @@ is_shard() {
 # The regex for SELECTED_TESTS: `^Module\.` for `Module.*`, `\.Class/` for
 # a class.
 selected_pattern() {
-  local word words modules=() classes=() parts=()
+  local word words modules=() classes=() alternatives=()
   read -r -a words <<<"${SELECTED_TESTS:-}"
   for word in "${words[@]}"; do
     if [[ "$word" == *.\* ]]; then modules+=("${word%.\*}"); else classes+=("$word"); fi
   done
-  [[ ${#modules[@]} -eq 0 ]] || parts+=("^($(IFS='|'; echo "${modules[*]}"))\\.")
-  [[ ${#classes[@]} -eq 0 ]] || parts+=("$(pattern_for "${classes[*]}")")
+  [[ ${#modules[@]} -eq 0 ]] || alternatives+=("^($(IFS='|'; echo "${modules[*]}"))\\.")
+  [[ ${#classes[@]} -eq 0 ]] || alternatives+=("$(pattern_for "${classes[*]}")")
   local IFS='|'
-  echo "${parts[*]}"
+  echo "${alternatives[*]}"
 }
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts: the
@@ -654,6 +654,8 @@ single_owner_classes() {
   tests="$(swift_declarations "$file" | sed -n 's/^test //p')"
   [[ -n "$tests" ]] || return 1
   [[ -z "$(users_of "$file" "$names")" ]] || return 1
+  # One line, the names split on whitespace.
+  # shellcheck disable=SC2086
   echo $tests
 }
 
@@ -664,6 +666,8 @@ single_owner_classes() {
 # of its members uses it is not followed). Reads code_cache.
 containers_of() {
   local dir="$1" token="$2" mode="${3:-word}"
+  # The awk program is in single quotes: its $ are awk's, not the shell's.
+  # shellcheck disable=SC2016
   grep -l -F -e "$token" "$CODE_CACHE/$dir"/*.swift 2>/dev/null | xargs -r awk -v token="$token" -v mode="$mode" -v cache="$CODE_CACHE/" '
     function strip_attributes(s) {
       while (s ~ /^@[A-Za-z_]+(\([^)]*\))?[ \t]+/) sub(/^@[A-Za-z_]+(\([^)]*\))?[ \t]+/, "", s)
