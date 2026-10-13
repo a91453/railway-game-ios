@@ -56,11 +56,11 @@ public enum PingxiChallenge {
     /// A closed year's net profit to reach: $2,000,000.
     static let profitTarget = Money(200_000_000)
 
-    /// The Sky Lantern Festival: from day 45 of each 360-day year for 3 days
-    /// (the game's calendar has no lunar new year, so a fixed day stands in
-    /// for the Lantern Festival), the demand at Shifen and Pingxi two and a
-    /// half times their own, announced a week before.
-    static let festivalDay: Int64 = 45
+    /// The Sky Lantern Festival: from day 62 of each 360-day year for 3 days,
+    /// the demand at Shifen and Pingxi two and a half times their own,
+    /// announced a week before. The day is the Lantern Festival's in 2026,
+    /// 3 March, as the holidays keep 2026's dates (decisions 154 and 208).
+    static let festivalDay: Int64 = 62
     static let festivalDays: Int64 = 3
     static let festivalBoost: Int64 = 1_500
     static let festivalNotice: Int64 = 7
@@ -116,7 +116,7 @@ public enum PingxiChallenge {
     }
 
     /// The festival's line on the challenge card: "Sky Lantern Festival:
-    /// day 45 of each year, 3 days, crowds at Shifen and Pingxi".
+    /// day 63 of each year, 3 days, crowds at Shifen and Pingxi".
     public static func festivalText(in language: DisplayLanguage) -> String {
         language.text(
             "Sky Lantern Festival: day \(festivalDay + 1) of each year, \(festivalDays) days, crowds at Shifen and Pingxi",

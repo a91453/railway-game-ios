@@ -30,11 +30,11 @@ final class PingxiChallengeTests: XCTestCase {
         // When and how the festival is announced and runs is GameCore's
         // (`GoalsTests.testAFestivalComesBackOnItsDayEveryYear`): playing
         // the demo 38 days to see it takes too long in a debug build.
-        XCTAssertTrue(state.scenario.events.allSatisfy { $0.dayOfYear == 45 && $0.days == 3 && $0.boost == 1_500 && $0.notice == 7 })
+        XCTAssertTrue(state.scenario.events.allSatisfy { $0.dayOfYear == 62 && $0.days == 3 && $0.boost == 1_500 && $0.notice == 7 })
         XCTAssertEqual(world.scenarioTitle(in: .traditionalChinese), "平溪線：天燈之鄉")
         XCTAssertEqual(Challenge.named("history.pingxi")?.map, .pingxi)
         XCTAssertTrue(Challenge.pingxi.story(in: .traditionalChinese).contains("1921"))
-        XCTAssertEqual(PingxiChallenge.festivalText(in: .traditionalChinese), "天燈節：每年第 46 天起 3 天，十分與平溪湧入人潮")
+        XCTAssertEqual(PingxiChallenge.festivalText(in: .traditionalChinese), "天燈節：每年第 63 天起 3 天，十分與平溪湧入人潮")
         // It saves and loads as it is.
         let data = try JSONEncoder().encode(SavedGame(world: world))
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)

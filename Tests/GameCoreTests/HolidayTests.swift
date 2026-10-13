@@ -56,11 +56,15 @@ final class HolidayTests: XCTestCase {
         }
         // Taiwan's are TW_DAYTYPE's: New Year, nine days of the Spring
         // Festival, 228, four days of Children's Day and Qingming, Labour
-        // Day, the Dragon Boat and Mid-Autumn festivals and National Day.
+        // Day, the Dragon Boat and Mid-Autumn festivals (on to Teachers'
+        // Day), National Day, Retrocession Day and Constitution Day, each
+        // with 2026's weekend joined to it (decision 208).
         XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.kind), [
             .newYear, .springFestival, .peaceMemorial, .qingming, .labourDay, .dragonBoat, .midAutumn, .nationalDay,
+            .retrocessionDay, .constitutionDay,
         ])
-        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.days), [1, 9, 1, 4, 1, 1, 1, 1])
+        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.days), [1, 9, 3, 4, 3, 3, 4, 3, 3, 3])
+        XCTAssertEqual(HolidayCalendar.countries["TW"]!.map(\.dayOfYear), [0, 43, 56, 92, 120, 168, 264, 278, 293, 354])
     }
 
     func testAHolidayComesOnTheSameDaysEveryYear() throws {
@@ -80,6 +84,8 @@ final class HolidayTests: XCTestCase {
         }
         XCTAssertNil(world.holiday(onDay: 52))
         XCTAssertEqual(world.holiday(onDay: 279)?.holiday.kind, .nationalDay)
+        XCTAssertEqual(world.holiday(onDay: 279)?.start, 278)
+        XCTAssertEqual(world.holiday(onDay: 279)?.end, 281)
         // A year later, and a year before the game began.
         XCTAssertEqual(world.holiday(onDay: 360 + 47)?.start, 360 + 43)
         XCTAssertEqual(world.holiday(onDay: -360 + 279)?.holiday.kind, .nationalDay)

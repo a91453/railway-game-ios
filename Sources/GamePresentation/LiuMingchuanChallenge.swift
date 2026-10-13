@@ -111,7 +111,7 @@ public enum LiuMingchuanChallenge {
     static let milestones = [
         Milestone(places: [keelung, badu], english: "Shiqiuling: Keelung to Badu", chinese: "獅球嶺：基隆—八堵"),
         Milestone(places: [keelung, twatutia], english: "Keelung to Twatutia (1891)", chinese: "基隆—大稻埕通車（1891）"),
-        Milestone(places: [twatutia, taoyuan], english: "Over the Tamsui: Twatutia to Taoyuan", chinese: "淡水河鐵橋：大稻埕—桃仔園"),
+        Milestone(places: [twatutia, taoyuan], english: "Over the Tamsui: Twatutia to Taoyuan", chinese: "淡水河木橋：大稻埕—桃仔園"),
         Milestone(places: [keelung, twatutia, hsinchu], english: "On to Hsinchu (1893)", chinese: "延伸到新竹（1893）"),
     ]
 
@@ -158,7 +158,7 @@ public enum LiuMingchuanChallenge {
         case 0: language.text("Through Shiqiuling! Trains from Keelung reach Badu.", "獅球嶺打通了！基隆的列車開得到八堵了。")
         case 1: language.text("Keelung to Twatutia is open, as in 1891!", "基隆到大稻埕通車了，就像 1891 年！")
         case 2: language.text("Over the Tamsui! The way to Taoyuan is open.", "跨過淡水河了！往桃仔園的路通了。")
-        default: language.text("On to Hsinchu! Governor Liu's railway is done, as in 1893.", "通車到新竹了！劉巡撫的鐵路完成了，就像 1893 年。")
+        default: language.text("On to Hsinchu! The railway Governor Liu planned is done, as in 1893.", "通車到新竹了！劉銘傳規劃的鐵路完成了，就像 1893 年。")
         }
     }
 
@@ -205,7 +205,7 @@ public enum LiuMingchuanChallenge {
     public static func milestonesText(in language: DisplayLanguage) -> String {
         language.text(
             "Milestones: Shiqiuling, Twatutia, the Tamsui bridge, Hsinchu · steam trains only, 50 a car",
-            "里程碑：獅球嶺、大稻埕、淡水河鐵橋、新竹 · 只有蒸汽列車，每節 50 人"
+            "里程碑：獅球嶺、大稻埕、淡水河木橋、新竹 · 只有蒸汽列車，每節 50 人"
         )
     }
 }

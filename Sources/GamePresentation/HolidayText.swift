@@ -40,6 +40,8 @@ extension HolidayKind {
         case .dragonBoat: language.text("Dragon Boat Festival", "端午節")
         case .midAutumn: language.text("Mid-Autumn Festival", "中秋節")
         case .nationalDay: language.text("National Day", "國慶日")
+        case .retrocessionDay: language.text("Retrocession Day", "光復節")
+        case .constitutionDay: language.text("Constitution Day", "行憲紀念日")
         case .christmas: language.text("Christmas", "聖誕節")
         case .easter: language.text("Easter", "復活節")
         case .thanksgiving: language.text("Thanksgiving", "感恩節")
