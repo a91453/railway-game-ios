@@ -94,6 +94,8 @@ final class TrafficControlTimingReportTests: XCTestCase {
         let built = try layout.build(in: &world, language: .english)
         let tracks = HighSpeedDemoTests.Tracks(layout: layout, built: built)
         world.setSpeed(.normal)
+        // `TRAFFIC_TIMING_OFF=1`: the same day with traffic control off.
+        if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_OFF"] != nil { try world.setTrafficControl(false) }
         try world.advance(ticks: 5 * 60)
         say("== the demo on the real day: \(world.trains.count) sets, \(world.lines.map { $0.runs.count }) runs, traffic control \(world.isTrafficControlEnabled) ==")
         say("hour | seconds | running (most) | waiting for a route | deadlocked | against its track | digest")
