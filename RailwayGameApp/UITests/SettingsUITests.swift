@@ -130,6 +130,43 @@ final class SettingsUITests: XCTestCase {
         XCTAssertFalse(attached.exists)
     }
 
+    /// TestFlight 54.1: a player found the report only in the settings.
+    /// The game menu's More opens the same rows on their own, with the
+    /// game's save and commands to attach.
+    func testTheGameMenuOpensTheProblemReport() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-ui-testing-paused", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+
+        tapHittable("hud.menu", in: app)
+        tapHittable("menu.more", in: app)
+        tapHittable("menu.report", in: app)
+        XCTAssertTrue(app.buttons["settings.report"].waitForExistence(timeout: 10), "Missing Report a Problem")
+        XCTAssertTrue(app.switches["settings.report.attach"].exists, "Missing the attach switch")
+        XCTAssertFalse(app.switches["settings.music"].exists, "The report opens on its own, not the settings")
+        tap(app.buttons["report.done"], name: "report.done")
+        XCTAssertTrue(app.buttons["report.done"].waitForNonExistence(timeout: 10), "Done did not go back to the game")
+    }
+
+    /// Taps the copy of the button `identifier` that can be touched: a
+    /// native menu can hold an unplaced copy of an action
+    /// (`WebsiteScreenshotTests.tapButton`).
+    private func tapHittable(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15) {
+        let buttons = app.buttons.matching(identifier: identifier)
+        XCTAssertTrue(buttons.firstMatch.waitForExistence(timeout: timeout), "Missing \(identifier)")
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if let button = buttons.allElementsBoundByIndex.first(where: { $0.isHittable && $0.isEnabled }) {
+                button.tap()
+                return
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        } while Date() < deadline
+        XCTFail("\(identifier) cannot be tapped")
+    }
+
     /// Opens the game menu and chooses Settings, and waits for its music
     /// switch. A native menu's action can report hittable and still fail
     /// to compute its activation point (as in StartSaveFlowSmokeTests):
