@@ -17,7 +17,11 @@ final class HighSpeedDemoTests: XCTestCase {
         func file(_ name: String) throws -> Data {
             try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/\(name)"))
         }
-        return try RealRailways(lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"))
+        let schedule = try file("thsr-schedule.json")
+        return try RealRailways(
+            lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"),
+            operations: RealRailwayOperations(systems: [:], timetables: [:], schedules: ["thsr": schedule])
+        )
     }
 
     static let population = try? PopulationGrid(
@@ -50,8 +54,16 @@ final class HighSpeedDemoTests: XCTestCase {
         /// southbound sets run: beyond them are the ends' platforms, where
         /// the sets turn back.
         let between: Set<TrackEdgeID>
+        /// Every loop beside the down track and the up track, the second
+        /// loops too.
         let downLoops: Set<TrackEdgeID>
         let upLoops: Set<TrackEdgeID>
+        let crossovers: Set<TrackEdgeID>
+        let yards: Set<TrackEdgeID>
+        /// The track run both ways: the ends' yards, and at the stations
+        /// where sets turn back, everything from one crossover to the other
+        /// (decision 197).
+        let bothWays: Set<TrackEdgeID>
 
         init(layout: HighSpeedDemo.Layout, built: HighSpeedDemo.Built) {
             down = built.down.edges
@@ -61,13 +73,29 @@ final class HighSpeedDemoTests: XCTestCase {
             between = Set(down.indices.filter {
                 distances[$0] >= layout.junctions.north - 1 && distances[$0 + 1] <= layout.junctions.south + 1
             }.map { built.down.edges[$0] })
-            downLoops = Set(built.loops.flatMap(\.down.edges))
-            upLoops = Set(built.loops.flatMap(\.up.edges))
+            downLoops = Set((built.loops + built.outerLoops).flatMap(\.down.edges))
+            upLoops = Set((built.loops + built.outerLoops).flatMap(\.up.edges))
+            crossovers = Set(built.crossovers)
+            yards = Set(built.yards.flatMap(\.edges))
+            var bothWays = crossovers.union(yards)
+            for reach in layout.turnbackReach.values {
+                func within(_ track: RealWorldDemo.Track) -> [TrackEdgeID] {
+                    let d = track.plan.distances
+                    return track.edges.indices.filter { reach.contains(d[$0]) && reach.contains(d[$0 + 1]) }.map { track.edges[$0] }
+                }
+                bothWays.formUnion(within(built.down))
+                bothWays.formUnion(within(built.up))
+                for loop in built.loops + built.outerLoops {
+                    bothWays.formUnion(within(loop.down))
+                    bothWays.formUnion(within(loop.up))
+                }
+            }
+            self.bothWays = bothWays
         }
 
         /// The edges only southbound sets run on, and only northbound.
-        var southbound: Set<TrackEdgeID> { between.union(downLoops) }
-        var northbound: Set<TrackEdgeID> { up.union(upLoops) }
+        var southbound: Set<TrackEdgeID> { between.union(downLoops).subtracting(bothWays) }
+        var northbound: Set<TrackEdgeID> { up.union(upLoops).subtracting(bothWays) }
 
         /// Whether a set travelling `traversal` runs against its track: on
         /// a southbound edge northbound or the other way round (every edge
@@ -120,11 +148,17 @@ final class HighSpeedDemoTests: XCTestCase {
         // within a few metres (the inside of a curve is shorter), and the
         // two make up the whole network.
         XCTAssertEqual(Double(length(tracks.up)), Double(length(tracks.between)), accuracy: 30 * Self.metre)
-        // With a loop beside each track at each of the ten stations between
-        // the ends, they make up the whole network.
-        XCTAssertEqual(tracks.downLoops.count, 30)
-        XCTAssertEqual(tracks.upLoops.count, 30)
-        XCTAssertEqual(tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count, world.network.edges.count)
+        // A loop beside each track at each of the ten stations between the
+        // ends, a second at Taichung, a crossover north of Taichung and one
+        // south of Taipei, where sets turn back, and the two ends' yards:
+        // with them, the whole network.
+        XCTAssertEqual(tracks.downLoops.count, 33)
+        XCTAssertEqual(tracks.upLoops.count, 33)
+        XCTAssertEqual(tracks.crossovers.count, 2)
+        XCTAssertEqual(
+            tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.yards.count,
+            world.network.edges.count
+        )
     }
 
     /// Double track: between its ramps the up track runs 5 m beside the
@@ -151,24 +185,46 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertLessThan(apart.max() ?? .infinity, 5.5)
     }
 
-    // MARK: - The line and its sets
+    // MARK: - The lines and their sets
 
-    func testItsLineCallsAtAllTwelveStationsAndIsAHighSpeedLine() throws {
-        let world = try Self.built.get().world
-        let line = try XCTUnwrap(world.lines.first)
-        XCTAssertEqual(world.lines.count, 1)
-        XCTAssertEqual(line.stops, world.stations.map(\.id))
-        XCTAssertEqual(line.patterns.map(\.calls), [[0, 1, 2, 3, 4, 6, 9, 10, 11], [0, 1, 2, 6, 11]])
-        XCTAssertTrue(line.isHighSpeed, "planned at PERF_HSR: the line is a high-speed line (decision 168)")
-        XCTAssertEqual(line.window, .standard, "the real day's first train is at 06:00 and the last at midnight")
-        XCTAssertFalse(world.isTrafficControlEnabled, "route reservation over 30 to 180 km legs would take the game minutes an hour")
+    /// The real day's three kinds of train (decision 197): a line each,
+    /// calling at its stations, with the day's trains as runs.
+    func testItsLinesAreTheRealDaysThreeKindsOfTrain() throws {
+        let (layout, world, _) = try Self.built.get()
+        let ids = world.stations.map(\.id)
+        XCTAssertEqual(world.lines.map { $0.stops.map { ids.firstIndex(of: $0)! } }, [Array(0..<12), [0, 1, 2, 3, 4, 6, 9, 10, 11], [0, 1, 2, 6, 11]])
+        for (line, planned) in zip(world.lines, layout.timetable.lines) {
+            XCTAssertTrue(line.patterns.isEmpty, "a line with runs has no stopping patterns (decision 133)")
+            XCTAssertTrue(line.isHighSpeed, "planned at PERF_HSR: a high-speed line (decision 168)")
+            XCTAssertEqual(line.runs, planned.runs)
+        }
+        // The 169 real trains and the positioning runs.
+        XCTAssertEqual(layout.timetable.lines.map { $0.runs.count - $0.positioning }, [59, 60, 50])
+        XCTAssertEqual(layout.timetable.lines.map(\.positioning), [7, 4, 11])
+        XCTAssertFalse(world.isTrafficControlEnabled, "decision 197: under traffic control the real day cannot be run")
         XCTAssertFalse(world.doorCrowding, "dwells do not lengthen in a crowd, as in the other demos (decision 169)")
         XCTAssertFalse(world.keepLeft, "its routes are as they were measured; its up line is laid west of the down line already (decision 202)")
     }
 
+    /// Each line runs the same day again and again: the day's runs and
+    /// positioning runs leave as many sets at each station as it began
+    /// with, and the first run of each set leaves from where it stands.
+    func testEachLinesDayEndsWhereItBegan() throws {
+        let timetable = try Self.built.get().layout.timetable
+        for line in timetable.lines {
+            var change = [Int: Int]()
+            for run in line.runs {
+                change[line.stops[run.from], default: 0] -= 1
+                change[line.stops[run.to], default: 0] += 1
+            }
+            XCTAssertTrue(change.values.allSatisfy { $0 == 0 }, "\(line.english): \(change)")
+        }
+        XCTAssertEqual(timetable.lines.map(\.sets), [14, 11, 10], "35 sets; the real High Speed Rail has 34")
+    }
+
     func testItsSetsAreTwelveCarHighSpeedSets() throws {
-        let world = try Self.built.get().world
-        XCTAssertEqual(world.trains.count, HighSpeedDemo.services.reduce(0) { $0 + $1.sets })
+        let (layout, world, _) = try Self.built.get()
+        XCTAssertEqual(world.trains.count, layout.sets)
         for train in world.trains {
             XCTAssertEqual(train.type, .highSpeed, train.name)
             XCTAssertEqual(train.cars, 12, train.name)
@@ -177,47 +233,44 @@ final class HighSpeedDemoTests: XCTestCase {
         }
     }
 
-    /// The sets of every service are what its headway needs of its round
-    /// trip on the track as built (the money to buy them is worked out
-    /// from the count before anything is built).
-    func testEveryServiceHasTheSetsItsHeadwayNeeds() throws {
-        let world = try Self.built.get().world
-        let line = try XCTUnwrap(world.lines.first)
-        for (index, service) in HighSpeedDemo.services.enumerated() {
-            let pattern: Int? = index == 0 ? nil : index - 1
-            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: pattern), service.english)
-            XCTAssertEqual(
-                HighSpeedDemo.sets(roundTripMinutes: journey.roundTripMinutes, headway: service.headway), service.sets,
-                "\(service.english): a round trip of \(journey.roundTripMinutes) minutes every \(service.headway)"
-            )
-            XCTAssertEqual((index == 0 ? line.trains : line.patterns[index - 1].trains).count, service.sets, service.english)
-            XCTAssertEqual(
-                index == 0 ? line.targetHeadways : line.patterns[index - 1].targetHeadways,
-                TargetHeadways(peak: service.headway, offPeak: service.headway, low: service.headway), service.english
-            )
+    /// At midnight every set stands at a platform of the station its first
+    /// run leaves, facing the way it goes.
+    func testEverySetStandsWhereItsFirstRunLeaves() throws {
+        let (layout, world, _) = try Self.built.get()
+        for (line, planned) in zip(world.lines, layout.timetable.lines) {
+            XCTAssertEqual(line.trains.count, planned.sets, planned.english)
+            var expected = planned.overnight.map { "\($0.station)\($0.southbound)" }.sorted()
+            var found: [String] = []
+            for id in line.trains {
+                let train = try XCTUnwrap(world.train(id: id))
+                guard case .onEdge(let traversal, _)? = train.position,
+                      let station = world.stationsStoppedAt(by: id).first, let index = world.stations.firstIndex(where: { $0.id == station })
+                else { XCTFail("\(train.name) stands at no station"); continue }
+                found.append("\(index)\(traversal.direction == .forward)")
+            }
+            found.sort()
+            expected.sort()
+            XCTAssertEqual(found, expected, planned.english)
         }
     }
 
     /// Each way keeps to its own track (the author saw the sets of the two
     /// ways run through each other on what was one track): every leg of
-    /// every service, as the game drives it, runs southbound on the down
-    /// track (and its loops) only and northbound on the up track, turning
-    /// back only beyond the turnouts at the ends; the stopping sets call on
-    /// the loops, and the expresses never use them.
+    /// every line, as the game drives it, runs southbound on the down
+    /// track (and its loops) only and northbound on the up track, but where
+    /// sets turn back; the all-stops sets call on the loops, and the
+    /// expresses never use them.
     func testEveryLegKeepsToItsWaysTrack() throws {
         let (_, world, tracks) = try Self.built.get()
-        let line = try XCTUnwrap(world.lines.first)
-        for (index, service) in HighSpeedDemo.services.enumerated() {
-            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: index == 0 ? nil : index - 1), service.english)
-            XCTAssertEqual(journey.legs.count, 2 * (service.stops.count - 1), service.english)
+        for (index, line) in world.lines.enumerated() {
+            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil), line.name)
+            XCTAssertEqual(journey.legs.count, 2 * (line.stops.count - 1), line.name)
             for leg in journey.legs {
                 let southbound = leg.to > leg.from
                 for traversal in leg.path.traversals {
-                    let place = "\(service.english), \(leg.from) to \(leg.to)"
+                    let place = "\(line.name), \(leg.from) to \(leg.to)"
                     XCTAssertFalse(tracks.isAgainst(traversal), place)
                     XCTAssertFalse((southbound ? tracks.northbound : tracks.southbound).contains(traversal.edge), "\(place): on the other way's track")
-                    // The sets that call at every station stop on the
-                    // loops; the expresses keep to the through tracks.
                     if index > 0 { XCTAssertFalse(tracks.downLoops.union(tracks.upLoops).contains(traversal.edge), "\(place): an express on a loop") }
                 }
                 if index == 0, leg.to != 0, leg.to != 11, let last = leg.path.traversals.last {
@@ -242,39 +295,45 @@ final class HighSpeedDemoTests: XCTestCase {
 
     // MARK: - The game as it opens
 
+    /// At 07:00 every run due by then has sent its set out, both ways.
     func testItOpensAtSevenWithTheSetsOnTheirWay() throws {
         let world = try Self.opened.get()
+        let tracks = try Self.built.get().tracks
         XCTAssertEqual(world.clock.now.minute, 7 * 60)
         XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
         XCTAssertFalse(world.doorCrowding)
         XCTAssertEqual(world.stations.count, 12)
-        // The first set of each kind left at six, a third and a half more
-        // since: seven by seven o'clock, spread along the line, the first
-        // already past Taichung (the edges are numbered from Nangang).
-        let running = world.trains.filter { $0.execution != nil }
-        XCTAssertGreaterThanOrEqual(running.count, 7)
-        let down = try Self.built.get().tracks.down
-        let along = running.compactMap { train -> Int? in
-            if case .onEdge(let traversal, _) = train.position { return down.firstIndex(of: traversal.edge) }
-            return nil
+        for line in world.lines {
+            for (index, run) in line.runs.enumerated() where run.times[0].departure <= 7 * 3_600 {
+                XCTAssertEqual(line.runDays[index], 0, "\(line.name): the run leaving at \(run.times[0].departure / 60) min has gone")
+            }
         }
-        XCTAssertEqual(along.count, running.count, "all southbound so far, on the down track")
-        XCTAssertGreaterThanOrEqual(Set(along).count, 5, "spread along the line")
-        XCTAssertGreaterThan(along.max() ?? 0, down.count / 2, "the first sets are in the south")
+        var ways = (south: 0, north: 0)
+        for train in world.trains where train.execution != nil {
+            guard case .onEdge(let traversal, _)? = train.position else { continue }
+            if tracks.southbound.contains(traversal.edge) { ways.south += 1 }
+            if tracks.northbound.contains(traversal.edge) { ways.north += 1 }
+        }
+        XCTAssertGreaterThanOrEqual(ways.south, 4, "sets on their way south")
+        XCTAssertGreaterThanOrEqual(ways.north, 4, "and north")
     }
 
     /// The game as it runs, from 07:00 to half past seven the next morning,
     /// every ten minutes: no set runs against its way's track, so no two
-    /// sets going opposite ways are ever on the same track; both tracks
-    /// are used all day; and the next morning the sets are out again.
-    func testItsSetsKeepToTheirWaysTracksAllDay() throws {
+    /// sets going opposite ways are ever on the same track (but where sets
+    /// turn back); both tracks are used all day; no set is more than a few
+    /// minutes late; no run is dropped; and the next morning's runs leave
+    /// again (decision 197).
+    func testItsSetsKeepToTheRealDay() throws {
         var world = try Self.opened.get()
         let tracks = try Self.built.get().tracks
         world.setSpeed(.fast)
         var seen = (down: 0, up: 0)
+        var latest: Int64 = 0
         for _ in 0..<(6 * 24 + 3) {
             try world.advance(ticks: 1)
             for train in world.trains where train.execution != nil {
+                latest = max(latest, world.lateness(of: train.id) ?? 0)
                 guard case .onEdge(let traversal, _)? = train.position else { continue }
                 XCTAssertFalse(tracks.isAgainst(traversal), "\(train.name) at minute \(world.clock.now.minute)")
                 if tracks.southbound.contains(traversal.edge) { seen.down += 1 }
@@ -283,8 +342,15 @@ final class HighSpeedDemoTests: XCTestCase {
         }
         XCTAssertGreaterThan(seen.down, 500)
         XCTAssertGreaterThan(seen.up, 500)
+        XCTAssertLessThan(latest, 5 * 60, "on the real timetable, a few minutes late at most")
         XCTAssertEqual(world.clock.now.minute % 1_440, 7 * 60 + 30)
-        XCTAssertGreaterThanOrEqual(world.trains.filter { $0.execution != nil }.count, 7, "the sets are out again")
+        let now = world.clock.now.seconds - GameTime.secondsPerDay
+        for line in world.lines {
+            for (index, run) in line.runs.enumerated() {
+                let day: Int64 = run.times[0].departure + LineRun.latestDispatch < now ? 1 : 0
+                XCTAssertGreaterThanOrEqual(line.runDays[index] ?? -1, day, "\(line.name): the run leaving at \(run.times[0].departure / 60) min")
+            }
+        }
     }
 
     func testPeopleLiveRoundItsStationsAndTravelBetweenThem() throws {
@@ -367,12 +433,8 @@ final class HighSpeedDemoTests: XCTestCase {
         lap("make")
         say("at \(world.clock.now.minute / 60):00, balance \(world.economy.balance.moneyText); stations \(world.stations.count), sets \(world.trains.count), edges \(world.network.edges.count), land cells \(world.land.cells.count)")
         for line in world.lines {
-            let services: [(pattern: Int?, calls: Int, sets: Int)] =
-                [(nil, line.stops.count, line.trains.count)] + line.patterns.enumerated().map { ($0.offset, $0.element.calls.count, $0.element.trains.count) }
-            for (service, entry) in services.enumerated() {
-                let journey = world.lineJourney(line.id, pattern: entry.pattern)
-                say("service \(service): \(entry.calls) calls, \(entry.sets) sets, round trip \(journey?.roundTripMinutes ?? -1) min")
-            }
+            let journey = world.lineJourney(line.id, pattern: nil)
+            say("\(line.name): \(line.stops.count) calls, \(line.runs.count) runs, \(line.trains.count) sets, round trip \(journey?.roundTripMinutes ?? -1) min")
         }
         say("hinterlands \(world.stations.map { world.stationDemand(of: $0.id)?.hinterland ?? 0 })")
         let ordinary = world.stations.map { world.stationDemand(of: $0.id)?.dailyTrips ?? 0 }

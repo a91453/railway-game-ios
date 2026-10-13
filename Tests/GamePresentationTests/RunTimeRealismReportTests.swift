@@ -114,17 +114,15 @@ final class RunTimeRealismReportTests: XCTestCase {
         let layout = try HighSpeedDemo.Layout(railways: railways)
         var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
         try layout.build(in: &world, language: .traditionalChinese)
-        let line = try XCTUnwrap(world.lines.first)
         let names = HighSpeedDemo.stationNames
-        XCTAssertEqual(line.stops.count, names.count)
+        let ids = world.stations.map(\.id)
 
         say("== High-speed demo: Nangang → Zuoying, as built (journey legs + \(ServiceLine.dwellMinutes) min a call between) ==")
         say("service | calls | game run | game dwell | game | real median (trains) | game/real")
         var legRows: [String] = []
-        for pattern in [nil] + Array(line.patterns.indices) {
-            let service = try XCTUnwrap(line.service(pattern))
-            let calls = line.calls(ofService: service)
-            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: pattern))
+        for line in world.lines {
+            let calls = line.stops.compactMap { ids.firstIndex(of: $0) }
+            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil))
             let out = Array(journey.legs.prefix(calls.count - 1))
             for leg in out {
                 XCTAssertEqual(leg.seconds, RunningCurve.leastSeconds(length: leg.path.distance, performance: line.performance) ?? -1,
@@ -136,7 +134,7 @@ final class RunTimeRealismReportTests: XCTestCase {
             let same = real.filter { $0.names == stopNames }
             let median = Self.median(same.map { $0.arrivals.last! - $0.departures.first! })
             XCTAssertFalse(same.isEmpty, "the real day has trains calling at \(stopNames)")
-            say("\(pattern.map { "pattern \($0)" } ?? "all stops") | \(calls.count) | \(Self.minutes(run)) | \(Self.minutes(dwell)) | \(Self.minutes(run + dwell)) | \(Self.minutes(median)) (\(same.count)) | \(Self.ratio(run + dwell, median))")
+            say("\(line.name) | \(calls.count) | \(Self.minutes(run)) | \(Self.minutes(dwell)) | \(Self.minutes(run + dwell)) | \(Self.minutes(median)) (\(same.count)) | \(Self.ratio(run + dwell, median))")
             // Leg by leg: the real median run between the same two calls
             // of the same pattern, and the real dwell at each call between.
             for (index, leg) in out.enumerated() {
@@ -144,7 +142,7 @@ final class RunTimeRealismReportTests: XCTestCase {
                 let legs = same.map { $0.arrivals[index + 1] - $0.departures[index] }
                 let dwells = index + 1 < stopNames.count - 1 ? same.map { $0.departures[index + 1] - $0.arrivals[index + 1] } : []
                 let km = Double(leg.path.distance) / Double(WorldCoordinate.unitsPerMetre) / 1_000
-                legRows.append("\(pattern.map { "p\($0)" } ?? "all") \(from)→\(to) | \(String(format: "%.1f", km)) | \(leg.seconds) | \(Self.median(legs).map(String.init) ?? "–") | \(Self.ratio(leg.seconds, Self.median(legs))) | \(Self.median(dwells).map { "\($0)" } ?? "–")")
+                legRows.append("\(line.name) \(from)→\(to) | \(String(format: "%.1f", km)) | \(leg.seconds) | \(Self.median(legs).map(String.init) ?? "–") | \(Self.ratio(leg.seconds, Self.median(legs))) | \(Self.median(dwells).map { "\($0)" } ?? "–")")
             }
         }
         say("-- leg by leg: service from→to | km | game s | real median s | game/real | real dwell at the arrival s (game \(ServiceLine.dwellMinutes * 60)) --")
@@ -153,10 +151,8 @@ final class RunTimeRealismReportTests: XCTestCase {
         // Opened: the sets' own timetables, and lateness sampled every game
         // minute for two hours.
         var opened = try HighSpeedDemo.make(in: .traditionalChinese, railways: railways)
-        let openedLine = try XCTUnwrap(opened.lines.first)
-        let (nangang, zuoying) = (openedLine.stops.first!, openedLine.stops.last!)
-        let services: [(String, [TrainID])] = [("all stops", openedLine.trains)] + openedLine.patterns.enumerated().map { ("pattern \($0.offset)", $0.element.trains) }
-        for (name, trains) in services {
+        let (nangang, zuoying) = (opened.stations[0].id, opened.stations[11].id)
+        for (name, trains) in opened.lines.map({ ($0.name, $0.trains) }) {
             let journeys: [Int64] = trains.compactMap { id in
                 guard let timetable = opened.train(id: id)?.timetable,
                       let start = timetable.firstIndex(where: { $0.station == nangang }),
