@@ -173,18 +173,18 @@
    "kind": "town",
    "stars": 300,
    "lat": 25.0386,
-   "lon": 121.5462,
+   "lon": 121.5704,
    "source": "approx",
    "matched": ""
   },
   {
    "id": "s25",
    "name": "淡江大橋",
-   "englishName": "Tamsui River Bridge",
+   "englishName": "Danjiang Bridge",
    "kind": "town",
    "stars": 250,
-   "lat": 25.1744,
-   "lon": 121.431,
+   "lat": 25.1753,
+   "lon": 121.4178,
    "source": "approx",
    "matched": ""
   },
@@ -238,10 +238,10 @@
    "englishName": "Jiaoxi Hot Springs",
    "kind": "hotSpring",
    "stars": 350,
-   "lat": 24.67,
-   "lon": 121.77,
-   "source": "approx",
-   "matched": ""
+   "lat": 24.82117,
+   "lon": 121.76991,
+   "source": "node/4356807294",
+   "matched": "礁溪生活學習館"
   },
   {
    "id": "h04",
