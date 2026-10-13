@@ -498,6 +498,20 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         }
     }
 
+    /// Decision 200: whether the company pays for what it builds. With
+    /// unlimited funds nothing is charged and the game counts no
+    /// achievements; the rest of the rules are a managed game's.
+    public enum Funds: String, CaseIterable, Codable, Sendable {
+        case standard, unlimited
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .standard: language.text("Standard", "一般")
+            case .unlimited: language.text("Unlimited", "無限")
+            }
+        }
+    }
+
     public var difficulty: Difficulty = .standard
     /// Disruptions apart from the difficulty's; `nil` follows it.
     public var disruptionChoice: Disruption?
@@ -516,6 +530,8 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     public var seed: UInt32?
     /// Decision 198: a real-world map's ground, real unless chosen flat.
     public var ground = Ground.real
+    /// Decision 200: standard unless chosen unlimited.
+    public var funds = Funds.standard
 
     public init() {}
 
@@ -532,6 +548,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         buysMap = try container.decodeIfPresent(Bool.self, forKey: .buysMap) ?? standard.buysMap
         seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
         ground = try container.decodeIfPresent(Ground.self, forKey: .ground) ?? standard.ground
+        funds = try container.decodeIfPresent(Funds.self, forKey: .funds) ?? standard.funds
     }
 
     public var startingBalance: Money { difficulty.startingBalance }
@@ -543,8 +560,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         seed ?? .random(in: .min ... .max)
     }
 
-    /// Turns `world`'s disruptions, building materials and outside
-    /// connections to these options. Free, and nothing else changes.
+    /// Turns `world`'s disruptions, building materials, outside
+    /// connections and funds to these options. Free, and nothing else
+    /// changes.
     public func apply(to world: inout GameWorld) {
         switch disruption {
         case .off:
@@ -557,6 +575,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         }
         world.setBuildingMaterials(buildingMaterials)
         if !outsideConnections { world.setOutsideConnections(false) }
+        world.setUnlimitedFunds(funds == .unlimited)
     }
 
     /// The seed as typed: digits only, up to ``UInt32/max``; `nil` for
@@ -568,7 +587,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// One short paragraph on what these options change from the standard
     /// game, shown under the options.
     public func summary(in language: DisplayLanguage) -> String {
-        let cash = startingBalance.moneyText
+        let cash = funds == .unlimited ? "∞" : startingBalance.moneyText
         let disruptions = switch disruption {
         case .off: language.text("No holidays, weather or typhoons disturb the traffic.", "假日、天氣與颱風不影響客流。")
         case .light: language.text("Holidays, weather and typhoons disturb the traffic gently.", "假日、天氣與颱風對客流的影響較輕。")
@@ -579,6 +598,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
         if ground == .flat { rules.append(language.text("flat ground on real-world maps", "實景地圖地形平坦")) }
+        if funds == .unlimited {
+            rules.append(language.text("unlimited funds, no achievements", "資金無限，不計成就"))
+        }
         let rule = rules.isEmpty
             ? language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。")
             : language.text("Changed: \(rules.joined(separator: ", ")).", "已更改：\(rules.joined(separator: "、"))。")

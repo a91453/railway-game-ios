@@ -61,6 +61,9 @@ struct YearEndReport: View {
     /// The year before, if it closed and is kept.
     let previous: AnnualStatement?
     let language: DisplayLanguage
+    /// Decision 200: the company has unlimited funds, so there is no cash
+    /// in hand to show.
+    var unlimitedFunds = false
 
     var body: some View {
         Form {
@@ -83,7 +86,7 @@ struct YearEndReport: View {
             Section {
                 StatementGrid(rows: statement.income.cashFlowRows(
                                   previous: previous?.income,
-                                  closingCash: (statement.closing.cash, previous?.closing.cash),
+                                  closingCash: unlimitedFunds ? nil : (statement.closing.cash, previous?.closing.cash),
                                   in: language
                               ),
                               currentTitle: statement.yearText(in: language), previousTitle: previous?.yearText(in: language))
@@ -115,7 +118,8 @@ struct YearEndSheet: View {
             Group {
                 if let statement = session.yearEndStatement {
                     let years = session.world.accounts.years
-                    YearEndReport(statement: statement, previous: years.last { $0.year == statement.year - 1 }, language: session.language)
+                    YearEndReport(statement: statement, previous: years.last { $0.year == statement.year - 1 }, language: session.language,
+                                  unlimitedFunds: session.world.economy.unlimitedFunds)
                 } else {
                     Text(verbatim: session.language.text("No year has closed yet.", "還沒有完成的年度決算。"))
                         .foregroundStyle(Theme.textSecondary)

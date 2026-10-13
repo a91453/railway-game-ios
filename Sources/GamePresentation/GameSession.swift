@@ -429,6 +429,10 @@ public final class GameSession {
     public internal(set) var skippedTutorial: Tutorial? {
         didSet { noteTutorialStepToResume() }
     }
+    /// Whether the lines panel is on screen, as the app tells it
+    /// (``linesPanelDidChange(isShown:)``), for the tutorial's
+    /// ``TutorialGoal/openLines``. Only UI state, never saved.
+    public internal(set) var isLinesPanelShown = false
     /// Called with the step a tutorial left now would be taken up again
     /// at, the one on screen or skipped (`nil` when there is none, as once
     /// it is finished), whenever it changes: the launcher keeps it, so the

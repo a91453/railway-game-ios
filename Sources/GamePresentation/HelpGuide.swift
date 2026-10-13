@@ -290,5 +290,14 @@ public enum HelpGuide {
             ),
             keywords: "intro guide 導覽 簡介 重看"
         ),
+        HelpEntry(
+            "reportProblem", .running,
+            question: ("Where do I send a problem or an idea?", "問題或意見要送到哪裡？"),
+            answer: (
+                "Open the game menu (the three lines at the top), choose More, then Report a Problem. It writes a note with the version, your device and what is in the game, for Mail, Messages or any app you choose; you may also attach the game's save and what you did since, so the problem can be played again. Nothing is sent until you send it. Settings has the same button.",
+                "打開遊戲選單（頂端的三條線），選「更多」→「回報問題」。它會寫好一則附上版本、裝置與這局狀態的訊息，由你選擇用郵件、訊息或其他 App 傳送；也可以附上這局的存檔和之後做過的事，讓問題可以重現。你按下傳送前不會送出任何東西。設定頁也有同一個按鈕。"
+            ),
+            keywords: "report bug problem feedback idea suggestion send 回報 問題 意見 建議 錯誤 送"
+        ),
     ]
 }
