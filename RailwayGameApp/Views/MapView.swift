@@ -133,6 +133,9 @@ struct MapView: View {
     /// credits. Nothing of the game is drawn there, and a touch there
     /// reaches them.
     @State private var attributionFrames: [CGRect] = []
+    /// Whether Apple's map shows what the camera shows, for the UI tests
+    /// (``FollowingMapView/followingText``).
+    @State private var baseMapFollowing = ""
     /// What the map shows of traffic control (Stage V4e), taken from the
     /// session when the world changes, not on every pan or zoom.
     @State private var traffic = TrafficOverlay()
@@ -548,7 +551,8 @@ struct MapView: View {
                                 language: session.language,
                                 safeArea: safeArea,
                                 onAttributionFrames: { attributionFrames = $0 },
-                                onCredit: { screen.panel = .dataSources }
+                                onCredit: { screen.panel = .dataSources },
+                                onFollowing: Self.readsBaseMap ? { baseMapFollowing = $0 } : nil
                             )
                         }
                     }
@@ -562,6 +566,17 @@ struct MapView: View {
                                 .allowsHitTesting(false)
                         }
                     }
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                // UI tests only: whether Apple's map lines up.
+                if Self.readsBaseMap, realWorld != nil, mapStyle != .openStreetMap {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .allowsHitTesting(false)
+                        .accessibilityElement()
+                        .accessibilityIdentifier("map.base")
+                        .accessibilityValue(Text(verbatim: baseMapFollowing))
                 }
             }
             .onChange(of: isZoning) { _, zoning in
@@ -995,6 +1010,17 @@ struct MapView: View {
         }
         .accessibilityLabel("Map Layers")
         .accessibilityIdentifier("map.layers")
+    }
+
+    /// Whether the map reads out how Apple's map follows it
+    /// (``FollowingMapView/followingText``): in a Debug build under UI
+    /// tests only.
+    private static var readsBaseMap: Bool {
+        #if DEBUG
+        UITestTrace.isOn
+        #else
+        false
+        #endif
     }
 
     private func zoomControls(camera: PlanCamera) -> some View {

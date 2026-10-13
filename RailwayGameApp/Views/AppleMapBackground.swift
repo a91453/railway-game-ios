@@ -85,6 +85,9 @@ struct AppleMapBackground: UIViewRepresentable {
     let onAttributionFrames: @MainActor ([CGRect]) -> Void
     /// Tapping the credit opens the data sources page (decision 191).
     let onCredit: @MainActor () -> Void
+    /// UI tests only (``FollowingMapView/followingText``): whether MapKit
+    /// shows what the game's camera shows.
+    var onFollowing: (@MainActor (String) -> Void)?
 
     /// The band along the bottom of the map view, above the home
     /// indicator, where Apple's logo and legal link and the credit are:
@@ -117,6 +120,7 @@ struct AppleMapBackground: UIViewRepresentable {
             map.layoutMargins = margins
         }
         map.onAttributionFrames = onAttributionFrames
+        map.onFollowing = onFollowing
         map.credit.onTap = onCredit
         if map.appliedStyle != style {
             map.appliedStyle = style
@@ -145,6 +149,9 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// The style last set, so a redraw of the game does not set it again.
     var appliedStyle: AppleMapStyle?
     private var placement: (realWorld: RealWorldFrame, camera: PlanCamera)?
+    /// Told ``followingText`` when it changes (UI tests only).
+    var onFollowing: (@MainActor (String) -> Void)?
+    private var reportedFollowing: String?
     /// Told where the attribution is (``AppleMapBackground/onAttributionFrames``).
     var onAttributionFrames: (@MainActor ([CGRect]) -> Void)?
     private var reportedAttribution: [CGRect]?
@@ -241,11 +248,48 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
     /// layout, once the map has drawn.
     func mapViewDidFinishRenderingMap(_ mapView: MKMapView, fullyRendered: Bool) {
         reportAttribution()
+        reportFollowing()
+    }
+
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        reportFollowing()
+    }
+
+    // MARK: - Following, for the UI tests
+
+    /// Whether MapKit shows what the game's camera shows: "follows";
+    /// "wider" when it shows more round the same middle (it would not come
+    /// as close); "off" when it shows somewhere else; with " tilted" when
+    /// its camera is not straight down and north up. TestFlight 56.1's
+    /// "the route runs off when the map changes to satellite".
+    var followingText: String? {
+        guard let placement, bounds.width > 0, bounds.height > 0 else { return nil }
+        let wanted = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
+        let shown = visibleMapRect
+        var text = if Self.isClose(shown, to: wanted) {
+            "follows"
+        } else if shown.size.width > wanted.size.width * 1.02,
+                  abs(shown.midX - wanted.midX) <= shown.size.width / 100, abs(shown.midY - wanted.midY) <= shown.size.width / 100 {
+            "wider"
+        } else {
+            "off"
+        }
+        if camera.pitch != 0 || camera.heading != 0 {
+            text += " tilted"
+        }
+        return text
+    }
+
+    private func reportFollowing() {
+        guard let report = onFollowing, let text = followingText, text != reportedFollowing else { return }
+        reportedFollowing = text
+        Task { @MainActor in report(text) }
     }
 
     private func apply() {
         guard let placement, bounds.width > 0, bounds.height > 0 else { return }
         let rect = Self.mapRect(placement.realWorld, camera: placement.camera, size: bounds.size)
+        defer { reportFollowing() }
         guard !Self.isClose(visibleMapRect, to: rect) else { return }
         setVisibleMapRect(rect, animated: false)
     }
