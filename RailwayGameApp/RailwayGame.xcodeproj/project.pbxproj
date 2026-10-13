@@ -96,6 +96,7 @@
 		B8B325969899BBA81E72BD3B /* MonthlyReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */; };
 		BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 3EDAFCBFB7EEDE187DEFCAB1 /* tmrt_times.json */; };
 		BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */; };
+		C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */; };
 		C2A0206D4D8F4C5F50DE9083 /* warning.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5BF4BA3F66CFC369FCBE3407 /* warning.wav */; };
 		C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */; };
 		CA2D393EB1EEDB99A27C093F /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB483D5847D06BCBC26230C /* HelpView.swift */; };
@@ -175,6 +176,7 @@
 		611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FleetOverviewSheet.swift; sourceTree = "<group>"; };
 		6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewGameOptionsView.swift; sourceTree = "<group>"; };
 		649A13DFCE7328AD6D549B82 /* RouteStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStrip.swift; sourceTree = "<group>"; };
+		66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickStable.swift; sourceTree = "<group>"; };
 		68B0C0FD89F59C53A9685C67 /* sanying_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_times.json; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
+				66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
 				9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
@@ -661,6 +664,7 @@
 				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
+				C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
 				B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,

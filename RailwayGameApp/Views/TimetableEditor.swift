@@ -187,17 +187,22 @@ struct TimetableEditor: View {
     }
 
     private func addSection(_ train: Train) -> some View {
-        Section {
-            Menu {
-                ForEach(session.world.stations) { station in
-                    Button(station.name) {
-                        session.addStopToSelectedTrainTimetable(station.id)
+        let stations = session.stationMenuChoices
+        return Section {
+            // Decision 184, later: drawn from the stations' names alone, so
+            // a running game's ticks leave the open menu alone.
+            TickStable(stations) {
+                Menu {
+                    ForEach(stations) { station in
+                        Button(station.title) {
+                            session.addStopToSelectedTrainTimetable(station.id)
+                        }
                     }
+                } label: {
+                    Label("Add Stop", systemImage: "plus.circle")
                 }
-            } label: {
-                Label("Add Stop", systemImage: "plus.circle")
             }
-            .disabled(lock(of: train) != nil || session.world.stations.isEmpty)
+            .disabled(lock(of: train) != nil || stations.isEmpty)
         } footer: {
             Text("A new stop comes 3 minutes after the last one and waits a minute; move its times with the steppers. Swipe a stop to remove it.")
         }
