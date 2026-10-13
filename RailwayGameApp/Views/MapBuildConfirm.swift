@@ -53,7 +53,9 @@ struct MapBuildConfirm: View {
     }
 
     private var confirmation: BuildConfirmation? {
-        BuildConfirmation(session, linesPanelOpen: screen.panel == .lines) { screen.panel = .lines }
+        let screen = screen
+        let openLines: @MainActor () -> Void = { screen.panel = GameScreenState.Panel.lines }
+        return BuildConfirmation(session, linesPanelOpen: screen.panel == .lines, openLines: openLines)
     }
 
     private func flag(_ systemImage: String, at point: ScreenPoint, tint: Color) -> some View {
@@ -224,7 +226,9 @@ private struct BuildConfirmation {
                 session.createLineFromDraft()
                 if session.mapLineDraft == nil { openLines() }
             }
-            undo = session.lineDraft.count >= 2 ? { session.removeLastLineDraftStop() } : nil
+            if session.lineDraft.count >= 2 {
+                undo = { session.removeLastLineDraftStop() }
+            }
             return
         }
         // Decision 196, later: a station tapped beside the lines panel
@@ -354,33 +358,41 @@ private struct MapLineDraftPath: View {
     let camera: PlanCamera
 
     var body: some View {
-        let points = draft.calls.map { camera.screenPoint(of: $0) }
         ZStack(alignment: .topLeading) {
-            Path { path in
-                guard let first = points.first else { return }
-                path.move(to: CGPoint(x: first.x, y: first.y))
-                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x, y: point.y)) }
-            }
-            .stroke(Theme.textPrimary, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-            Path { path in
-                guard let first = points.first else { return }
-                path.move(to: CGPoint(x: first.x, y: first.y))
-                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x, y: point.y)) }
-            }
-            .stroke(Theme.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-            ForEach(Array(draft.picked.enumerated()), id: \.offset) { index, point in
-                let screen = camera.screenPoint(of: point)
-                Text(verbatim: "\(index + 1)")
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(width: 24, height: 24)
-                    .background(Theme.panel, in: Circle())
-                    .overlay(Circle().strokeBorder(Theme.textPrimary, lineWidth: 2))
-                    .offset(x: screen.x - 12, y: screen.y - 12)
+            path.stroke(Theme.textPrimary, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
+            path.stroke(Theme.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+            ForEach(draft.picked.indices, id: \.self) { index in
+                badge(index + 1, at: camera.screenPoint(of: draft.picked[index]))
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// The line through the stations it will call at, on the screen.
+    private var path: Path {
+        var path = Path()
+        let points: [CGPoint] = draft.calls.map { point in
+            let screen = camera.screenPoint(of: point)
+            return CGPoint(x: screen.x, y: screen.y)
+        }
+        guard let first = points.first else { return path }
+        path.move(to: first)
+        for point in points.dropFirst() {
+            path.addLine(to: point)
+        }
+        return path
+    }
+
+    /// The order a station was tapped in, over it.
+    private func badge(_ number: Int, at point: ScreenPoint) -> some View {
+        Text(verbatim: String(number))
+            .font(.caption.weight(.bold))
+            .monospacedDigit()
+            .foregroundStyle(Theme.textPrimary)
+            .frame(width: 24, height: 24)
+            .background(Theme.panel, in: Circle())
+            .overlay(Circle().strokeBorder(Theme.textPrimary, lineWidth: 2))
+            .offset(x: point.x - 12, y: point.y - 12)
     }
 }
