@@ -96,8 +96,20 @@ struct StationPanel: View {
                 StatusBanner(session: session, announces: false)
             }
         }
+        .onAppear(perform: renameIfAsked)
+        .onChange(of: screen.renamesStationOnOpen) { _, _ in renameIfAsked() }
         .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {
             await workOutRidership()
+        }
+    }
+
+    /// Puts up the rename alert when the station tag's pencil opened the
+    /// panel (``GameScreenState/renamesStationOnOpen``).
+    private func renameIfAsked() {
+        guard screen.renamesStationOnOpen else { return }
+        screen.renamesStationOnOpen = false
+        if let station = session.selectedStation {
+            renaming = station.name
         }
     }
 

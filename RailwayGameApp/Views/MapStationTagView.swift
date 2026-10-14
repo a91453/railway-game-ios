@@ -10,9 +10,11 @@ extension EnvironmentValues {
 
 /// The tag by the station selected while looking at the map (decision
 /// 119), under it: its name, who waits there and its lines' colours (``StationTag``).
-/// A tap on it opens the details card; its pencil, as holding the station
-/// does, opens the station's panel, so VoiceOver and Switch Control have a
-/// way to it that is not a long press. Shown only while neither is open.
+/// A tap on it opens the details card; its pencil opens the station's
+/// panel, as holding the station does, with the rename alert up and its
+/// field ready to type in (TestFlight 60.1), so VoiceOver and Switch
+/// Control have a way to it that is not a long press. Shown only while
+/// neither is open.
 struct MapStationTagView: View {
     let session: GameSession
     let camera: PlanCamera
@@ -90,6 +92,7 @@ struct MapStationTagView: View {
             Divider()
                 .frame(height: 24)
             Button {
+                screen.renamesStationOnOpen = true
                 screen.panel = .station
             } label: {
                 Image(systemName: "pencil")
@@ -99,7 +102,7 @@ struct MapStationTagView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: session.language.text("Edit the station", "編輯車站")))
+            .accessibilityLabel(Text(verbatim: session.language.text("Rename the station", "車站更名")))
             .accessibilityIdentifier("map.stationTag.edit")
         }
         .fixedSize()
