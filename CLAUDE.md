@@ -66,7 +66,11 @@ simulation: residents, jobs, land value, procedural models; it uses
 state) and `Railway/street_scene_reference_clean/` (start with its
 `00_READ_ME_FIRST.md`; a Three.js street scene with LOD building models,
 pedestrians and vehicles, day and night; its OSM data keeps its ODbL
-attribution).
+attribution), `Railway/commuter_journey_reference_clean/` (start with its
+`00_READ_ME_FIRST.md` and `REFERENCE_COMPARISON.md`; a Hong Kong metro
+commuter game in Three.js: crowds, queues, train doors, interchange
+wayfinding, station shops; it uses `Math.random()` and live input, so port
+it into the presentation layer, not GameCore).
 
 When a problem is hard (an algorithm, a data source, a performance or
 platform limit, a design with no obvious answer), look for prior work before

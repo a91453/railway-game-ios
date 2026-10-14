@@ -259,6 +259,7 @@
 | 色盲配色與線號徽章、課程典藏、情境檔案格式（木柵線） | 玩家角度的中段項目；情境格式一公開就變成長期契約 |
 | 唯讀 3D，以及商場、機廠的 3D 外觀 | 3D 城市現在不讀遊戲狀態。作者 2026-10-13 定了方向：同一張地圖拉近就傾斜，排在波次 1 之後，開工前先量實機幀時間 |
 | 公車接駁（抽象化，擴大車站服務圈）、台鐵實景示範照真實班表、網頁版 W1 | 價值較低或要先有前面的工作 |
+| 香港示範（港鐵路網、班表、站名） | 作者 2026-10-14 問過；三方考慮後先不做：玩家沒有要求、核心是台灣；「真實世界任意地點」已能在香港開新遊戲；要做示範得另備港鐵資料，3D 畫風也定為台灣版。`commuter_journey_reference_clean/` 先當人潮、轉乘、車站商業的素材 |
 | iOS App Build 設成必要檢查、CI 4B 的其他項目、從 b0722e7 上傳的那一版 TestFlight 要不要過期 | 要作者在 GitHub 或 App Store Connect 設定，列在 §10 |
 
 ## 7. 不做
@@ -472,7 +473,11 @@
 | `Railway/site_archive_clean/data/tra_pass_obs.json`、`tra_run_profiles.json`、`tra_schedule_dense.json` | 寫實度基準報告、之後的台鐵實測曲線 | 台鐵實測通過時間與 14 天班表；本次用來量真實時間 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `MIN_CURVE_RADIUS_M`（80 km/h↔300 m、100↔600、120↔800、160↔1200） | 之後的幾何限速 | 依半徑反查限速的表 |
 | 同檔的 `metroResolveStationWaitCap`、`metroGetHubWaitingTotal` | 車站商業的轉乘群組合算 | 參考把一個轉乘站群的候車人數加總，可以照做 |
-| 同檔的 `flowDashboardCaptureStationForDailyReport` | `StationFlowDay`（決策 179，已移植） | 車站商業的客流來源 |
+| `Railway/commuter_journey_reference_clean/`（2026-10-14 加入，香港地鐵的乘客視角遊戲，Three.js r160，先讀 `00_READ_ME_FIRST.md`、`REFERENCE_COMPARISON.md`）：`crowd/SpatialHash.js`、`Steering.js`、`QueueSystem.js`、`ConcourseCrowd.js`、`MallCrowd.js` | §0 第 14 項 3D 拉近時的月台與大廳人群；§13 第 5 名車站商業的商場人流 | 人潮的空間索引、避讓與排隊。用 `Math.random()` 與即時輸入，只當畫面層移植，不進 GameCore |
+| 同上的 `train/`、`config/seatConfig.js`、`alightConfig.js`、`gameplay/CapacitySystem.js` | 車門擁擠（決策 169）的畫面、3D 的上下車 | 個別乘客選車門、排隊、上下車與容量提示 |
+| 同上的 `ui/InterchangeMap.js`、`NavigationPrompt.js`、`TransferHUD.js`、`InterchangeHUD.js` | §13 第 6 名旅程追蹤、車站面板的轉乘說明 | 旅客視角的轉乘地圖與導引 |
+| 同上的 `ui/ShoppingPanel.js`、`config/shoppingConfig.js`、`mallConfig.js` | §13 第 5 名車站商業的畫面 | 站內商店與購物的版面 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureStationForDailyReport` | `StationFlowDay`（決策 179，已移植） | 車站商業的客流來源 |
 | `Railway/site_archive_clean/rail-3d/physical/network.json`（OSM，ODbL） | 實景地圖的機廠建議位置 | `service=yard`、`siding` 的群聚 |
 | `Railway/site_archive_clean/rail-3d/physical/topology.js` 的 `shortestPath`（`allowYard=false`） | 機廠 L1 | 停車線不給載客路線走 |
 | `Simulator/reference_snapshot/api/templates/`（五線留置線、貨物調車場的版面） | 機廠建造工具 | 「N 股留置線＋梯形道岔」的範本概念；軌道片尺寸要換算 |
