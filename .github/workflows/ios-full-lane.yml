@@ -52,6 +52,7 @@ on:
       - ".github/scripts/swift-shards*.sh"
       - ".github/scripts/testflight-*"
       - ".github/scripts/install-swift-linux.sh"
+      - ".github/testflight-whats-new.md"
   schedule:
     # 17 minutes past every third hour (UTC), except 18:17, when ios-build.yml's
     # nightly run starts. A scheduled run uses the default branch.
