@@ -1976,7 +1976,7 @@ public final class GameSession {
             // TestFlight 60.1: a line already running trains keeps its
             // counts, so the new train would wait: say so, and how.
             if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {
-                let now = unused.counts.peak
+                let now = unused.busiest
                 return text + opens + language.text(
                     " \(service) is set to run \(now) \(now == 1 ? "train" : "trains"): tap Run \(unused.target) on the train card, or set it in the Lines panel.",
                     "\(service) 只設定上線 \(now) 列：在列車卡按「加開到 \(unused.target) 列」，或在路線面板設定。"

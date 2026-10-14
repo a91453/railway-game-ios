@@ -96,6 +96,19 @@ final class LineDispatchTextTests: XCTestCase {
         XCTAssertNotEqual(later.world.lineDispatchHold(of: second), .serviceFull(running: 1, planned: 1))
     }
 
+    func testALevelSetLowerOnPurposeIsNeitherCountedNorRaised() throws {
+        var (world, _, first, second) = try lineWorld()
+        try world.assignTrain(first, to: Self.main)
+        try world.assignTrain(second, to: Self.main)
+        try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 2, offPeak: 2, low: 0))
+        XCTAssertNil(world.lineUnusedTrains(ofTrain: second), "the busiest level runs both")
+
+        try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 1, offPeak: 1, low: 0))
+        let unused = try XCTUnwrap(world.lineUnusedTrains(ofTrain: second))
+        XCTAssertEqual(unused.busiest, 1)
+        XCTAssertEqual(unused.raised, TrainsInService(peak: 2, offPeak: 2, low: 0), "the quiet level keeps its 0")
+    }
+
     func testTheTrainCardOffersTheLineMenuOnlyForAPlacedTrainWithoutALine() throws {
         let (world, stops, placed, unplaced) = try lineWorld()
         let session = GameSession(world: world)

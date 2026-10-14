@@ -5,28 +5,35 @@ import GameCore
 // why (``GameWorld/lineDispatchHold(of:)``) and, when the line is set to run
 // fewer trains than it has, offers to run them all.
 
-/// A service that has more trains assigned than it is set to run at some
-/// level: assigning a train to a line that already runs some leaves its
-/// counts as they were, so the new train waits.
+/// A service that has more trains assigned than it is set to run even at
+/// its busiest level: assigning a train to a line that already runs some
+/// leaves its counts as they were, so the new train never leaves. A level
+/// set below the busiest one is the player's choice and is not counted.
 public struct LineUnusedTrains: Hashable, Sendable {
     public let line: LineID
     /// The line's pattern, or `nil` for its own service.
     public let pattern: Int?
-    /// How many trains every level is to run so that all of them run: the
+    /// How many trains the busiest level is to run so that all of them run: the
     /// trains assigned, on a ring made even, up (decision 49).
     public let target: Int
     /// The service's counts now.
     public let counts: TrainsInService
 
-    /// The counts with each level below ``target`` raised to it.
+    /// The most the service is set to run at any level.
+    public var busiest: Int { ServiceLevel.allCases.map { counts[$0] }.max() ?? 0 }
+
+    /// The counts with each level set to the busiest count raised to
+    /// ``target``; a level set lower stays as it is.
     public var raised: TrainsInService {
-        TrainsInService(peak: max(counts.peak, target), offPeak: max(counts.offPeak, target), low: max(counts.low, target))
+        let busiest = busiest
+        func raise(_ count: Int) -> Int { count == busiest ? max(count, target) : count }
+        return TrainsInService(peak: raise(counts.peak), offPeak: raise(counts.offPeak), low: raise(counts.low))
     }
 }
 
 extension GameWorld {
     /// The unused trains of the service train `id` runs for (see
-    /// ``LineUnusedTrains``), or `nil` when every level runs at least as
+    /// ``LineUnusedTrains``), or `nil` when its busiest level runs at least as
     /// many trains as it has.
     public func lineUnusedTrains(ofTrain id: TrainID) -> LineUnusedTrains? {
         guard let lineID = assignedLine(of: id), let line = line(id: lineID) else { return nil }
@@ -34,8 +41,8 @@ extension GameWorld {
         let counts = pattern.map { line.patterns[$0].trainsInService } ?? line.trainsInService
         let assigned = (pattern.map { line.patterns[$0].trains } ?? line.trains).count
         let target = min(TrainsInService.maximum, line.isRing ? assigned + assigned % 2 : assigned)
-        guard ServiceLevel.allCases.contains(where: { counts[$0] < target }) else { return nil }
-        return LineUnusedTrains(line: lineID, pattern: pattern, target: target, counts: counts)
+        let unused = LineUnusedTrains(line: lineID, pattern: pattern, target: target, counts: counts)
+        return unused.busiest < target ? unused : nil
     }
 
     /// Why line train `id` is not sent out (``lineDispatchHold(of:)``), in
@@ -84,16 +91,16 @@ extension GameWorld {
 }
 
 extension GameSession {
-    /// Sets the service of train `id` to run every train it has at every
-    /// level (``LineUnusedTrains/raised``), through the same command as
-    /// the line panel's counts.
+    /// Sets the service of train `id` to run every train it has at its
+    /// busiest levels (``LineUnusedTrains/raised``), through the same
+    /// command as the line panel's counts.
     public func runAllAssignedTrains(ofTrain id: TrainID) {
         guard let unused = world.lineUnusedTrains(ofTrain: id), let line = world.line(id: unused.line) else { return }
         let service = world.assignedServiceName(of: id, in: language) ?? line.name
         perform(.setLineTrains(unused.line, unused.raised, pattern: unused.pattern)) { _, _, _ in
             language.text(
-                "\(service) now runs \(unused.target) \(unused.target == 1 ? "train" : "trains") at every level.",
-                "\(service) 各時段上線 \(unused.target) 列。"
+                "\(service) now runs up to \(unused.target) \(unused.target == 1 ? "train" : "trains").",
+                "\(service) 最多上線 \(unused.target) 列。"
             )
         }
     }
