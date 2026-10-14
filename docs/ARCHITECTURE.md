@@ -7461,9 +7461,9 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 **沒有驗證的**：之後的年份，人事行政總處每年公告的調整（例如額外的彈性放假）。規則只照條例。
 
 
-### 213. 機廠的建造工具與畫面
+### 214. 機廠的建造工具與畫面
 
-2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 1 名、§4 波次 2 第 3 項），接在決策 209 的機廠 L1 之後。號碼依 #231：決策 213；存檔版本、golden schema 不動，GameCore 不動（只用決策 209 的 `setStationDepot`、`setLineDepot`、`Station.isDepot`、`ServiceLine.depot`）。圖示是作者選定的 #555（`MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`，`docs/UI_THEME.md` 機廠一節）。
+2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 1 名、§4 波次 2 第 3 項），接在決策 209 的機廠 L1 之後。號碼依 #231：決策 214（原登記 213，和描線建造 #558 撞號，改取 214）；存檔版本、golden schema 不動，GameCore 不動（只用決策 209 的 `setStationDepot`、`setLineDepot`、`Station.isDepot`、`ServiceLine.depot`）。圖示是作者選定的 #555（`MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`，`docs/UI_THEME.md` 機廠一節）。
 
 1. **停車線工具**（新檔 `Sources/GamePresentation/DepotYard.swift`；路網工具多一個模式「機廠」，`NetworkToolMode.depot`）：點一條軌道的盡頭（只有一條邊接著的節點），選幾股（1–6，預設 3）與往哪一側，一次鋪好：
    - 第一股是原軌道直直延伸出去；其餘每一股從內側那一股的一個轉轍器分出，S 形曲線往外 `DepotYard.spacing`（5 m），再直走到底：一個往一側展開的梯形。轉轍器前、S 曲線與下一個轉轍器之間都留 `NetworkBuilding.minimumSpacing`（22 m）的直線，S 曲線長 `DepotYard.reach`（50 m，和岸式月台軌道一樣）。

@@ -378,7 +378,7 @@ public final class GameSession {
     public var networkDoubleSide: PlatformTrackSide = .left
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
-    /// The depot tool's sidings (decision 213, ``DepotYard``): how many,
+    /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
     /// which side of the track's end they fan out to, and the end picked.
     public var networkDepotSidings = DepotYard.defaultSidings
     public var networkDepotSide: PlatformTrackSide = .left

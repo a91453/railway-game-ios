@@ -1,6 +1,6 @@
 import GameCore
 
-// The depot's panels and status (decision 213, on decision 209's depots):
+// The depot's panels and status (decision 214, on decision 209's depots):
 // the station panel's "Make a depot" switch, the line panel's choice of
 // depot, and what a train on its way to or from one, or standing in it,
 // shows in the follow bar, its card and the fleet list. Everything is read

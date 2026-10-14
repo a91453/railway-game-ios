@@ -1001,7 +1001,7 @@ final class MapInteractionTests: XCTestCase {
                       file: file, line: line)
     }
 
-    /// Decision 213: the network tool's fifth mode, Depot, shows how many
+    /// Decision 214: the network tool's fifth mode, Depot, shows how many
     /// sidings to lay, within reach of a finger on a phone. Full lane only
     /// (decision 199): the tool's logic is `DepotToolsTests` on Linux.
     func testTheDepotModeOffersItsSidings() {

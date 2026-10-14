@@ -564,7 +564,7 @@ private struct ActionButton: View {
                 guard let cost = session.networkLoopPreview?.cost else { return session.language.text("Add Passing Loop", "加待避線") }
                 return session.language.text("Add Passing Loop · \(cost.moneyText)", "加待避線 · \(cost.moneyText)")
             case .depot:
-                // Decision 213: the sidings and the depot, for what.
+                // Decision 214: the sidings and the depot, for what.
                 guard let cost = session.networkDepotPreview?.cost else { return session.language.text("Lay Depot Sidings", "鋪機廠停車線") }
                 return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
             }

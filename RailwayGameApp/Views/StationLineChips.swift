@@ -131,7 +131,7 @@ private struct ChipFlow: Layout {
     }
 }
 
-/// Decision 213 (`docs/UI_THEME.md` 機廠): a pale capsule with the depot's
+/// Decision 214 (`docs/UI_THEME.md` 機廠): a pale capsule with the depot's
 /// garage, saying a train or a line's trains stand in their depot, or are
 /// leaving or entering it: the fleet list, the train card and the line
 /// panel.

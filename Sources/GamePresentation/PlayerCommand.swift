@@ -41,7 +41,7 @@ public enum PlayerCommand: Hashable, Sendable {
     /// as planned (decision 204).
     case addPassingLoop(PassingLoopPlan)
     /// A depot's sidings and the depot (``GameSession/addDepotYard()``), as
-    /// planned (decision 213).
+    /// planned (decision 214).
     case buildDepotYard(DepotYardPlan)
     /// An edit from a panel or another tool (``Edit``).
     case edit(Edit)

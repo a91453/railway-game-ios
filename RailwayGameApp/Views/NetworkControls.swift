@@ -269,7 +269,7 @@ struct NetworkControls: View {
 
     // MARK: - Depot
 
-    /// Decision 213: how many sidings, and which side of the picked end
+    /// Decision 214: how many sidings, and which side of the picked end
     /// they fan out to, by compass (the inspector says what the tap picked
     /// and why it cannot go there).
     private var depotOptions: some View {

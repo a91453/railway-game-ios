@@ -249,7 +249,7 @@ struct FleetOverviewSheet: View {
 
             if train.position != nil {
                 HStack(spacing: 6) {
-                    // Decision 213: in its depot, or on its way out or in.
+                    // Decision 214: in its depot, or on its way out or in.
                     if let depot = session.world.depotState(of: train.id) {
                         DepotBadge(depot, language: language)
                             .accessibilityIdentifier("fleet.depot.\(train.name)")

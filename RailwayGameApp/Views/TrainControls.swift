@@ -199,7 +199,7 @@ struct TrainControls: View {
                         .padding(.top, 2)
                 }
             }
-            // Decision 213: in its depot, or on its way out or in.
+            // Decision 214: in its depot, or on its way out or in.
             if let depot = session.world.depotState(of: train.id) {
                 DepotBadge(depot, language: language)
                     .accessibilityIdentifier("train.depot")

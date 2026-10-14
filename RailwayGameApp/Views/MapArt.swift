@@ -189,7 +189,7 @@ enum MapArt {
         drawWaitMarks(traffic, deadlock: deadlock, pulse: pulse, language: language, projection: projection, in: context)
     }
 
-    /// Decision 213 (`docs/UI_THEME.md` 機廠): a train leaving or entering
+    /// Decision 214 (`docs/UI_THEME.md` 機廠): a train leaving or entering
     /// its depot has a small square plate over its head, navy with a white
     /// edge and glyph, the garage on the left going out, on the right going
     /// in; no words, no circle, so it reads apart from the waits' rings and
@@ -1470,7 +1470,7 @@ enum MapArt {
         // can be visible while its station is just outside the viewport.
         guard badgeRect.insetBy(dx: -6, dy: -6).intersects(context.clipBoundingRect)
             || nameRect.intersects(context.clipBoundingRect) else { return }
-        // Decision 213: a depot's badge is an arch, round above and square
+        // Decision 214: a depot's badge is an arch, round above and square
         // below, with the garage in it (`docs/UI_THEME.md` 機廠).
         let badge = station.isDepot ? archPath(in: badgeRect) : Path(ellipseIn: badgeRect)
         context.fill(badge, with: .color(Palette.station))

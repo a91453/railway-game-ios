@@ -15,7 +15,7 @@ import GameCore
 /// while it runs; a line's train on an empty run to an end of its line
 /// (decision 172) says "Running empty" (回送中), or with a depot (decision
 /// 209) "Leaving depot" (出庫中) or "Entering depot" (入庫中), and one
-/// standing in its depot "In depot" (在庫; decision 213). Read from the world each time it is shown; never stored.
+/// standing in its depot "In depot" (在庫; decision 214). Read from the world each time it is shown; never stored.
 public struct FollowBarInfo: Hashable, Sendable {
     public enum Status: Hashable, Sendable {
         case notDeparted

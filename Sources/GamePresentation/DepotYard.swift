@@ -1,6 +1,6 @@
 import GameCore
 
-// A depot's sidings in one step (decision 213, on decision 209's depots):
+// A depot's sidings in one step (decision 214, on decision 209's depots):
 // tap the end of a track, and the track runs on straight from it as the
 // first siding, with the others beside it, ``DepotYard/spacing`` (5 m)
 // apart, each leaving the one inside it by a turnout and an S-curve, as a

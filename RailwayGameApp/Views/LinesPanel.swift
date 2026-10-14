@@ -572,7 +572,7 @@ struct LinesPanel: View {
 
     // MARK: - The selected line
 
-    /// Decision 213: the depot the line keeps its trains at (decision
+    /// Decision 214: the depot the line keeps its trains at (decision
     /// 209), or none, with how many stand in it now; shown once there is a
     /// depot to choose, or with Advanced unfolded to say how to get one.
     @ViewBuilder

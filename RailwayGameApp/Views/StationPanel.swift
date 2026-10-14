@@ -220,7 +220,7 @@ struct StationPanel: View {
         }
     }
 
-    /// Decision 213: make the station a depot (decision 209), or an
+    /// Decision 214: make the station a depot (decision 209), or an
     /// ordinary one again, through `GameSession.setSelectedStationDepot(_:)`;
     /// off limits, with why, while a line stops here or keeps its trains
     /// here.

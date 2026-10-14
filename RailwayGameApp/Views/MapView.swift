@@ -1580,7 +1580,7 @@ private struct MapTrainCanvas: View, Equatable {
     /// Every train in the map's train colour (the passenger load layer).
     let plain: Bool
     let traffic: TrafficOverlay
-    /// Decision 213: the trains leaving or entering a depot, each with a
+    /// Decision 214: the trains leaving or entering a depot, each with a
     /// plate over its head (layer 51).
     let depotRuns: [TrainID: TrainDepotState]
     /// A deadlocked train's mark beats (decision 64, later fix) unless the
