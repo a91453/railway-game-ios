@@ -467,7 +467,7 @@ extension SavedGame: Codable {
         // a station day without `"transferred"` counted no changes.
         // Version 57 to 58: a world without `"curveSpeedLimits"` runs and
         // plans as before, and a run without `"limits"` meets none.
-        // Version 58 to 60: a world without `"tripLog"` has kept no trips.
+        // Version 59 to 60: a world without `"tripLog"` has kept no trips.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
