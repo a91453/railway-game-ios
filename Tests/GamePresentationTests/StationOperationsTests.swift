@@ -91,6 +91,43 @@ final class StationOperationsTests: XCTestCase {
         XCTAssertEqual(use.use(of: platform, now: start.clock.now).sampled, 1)
     }
 
+    /// The sampling, every game minute whether or not a station page is
+    /// open, asks only the trains wholly on an edge with a platform, and
+    /// notes the same platforms as asking every placed train: on the demo,
+    /// and on a track whose stations are on edges of their own, where a
+    /// train away from them is not asked.
+    func testPlatformUseAsksOnlyTrainsOnAPlatformsEdgeAndNotesTheSame() throws {
+        func every(_ world: GameWorld) -> Set<TrackPlatform> {
+            var platforms = Set<TrackPlatform>()
+            for train in world.trains where train.position != nil {
+                platforms.formUnion(world.trackPlatformsAlongWholeTrain(train.id))
+            }
+            return platforms
+        }
+        var demo = DemoWorld.make(in: .english)
+        for _ in 0..<240 {
+            try demo.advance(ticks: 1)
+            XCTAssertEqual(PlatformUse.platformsTaken(in: demo), every(demo))
+        }
+
+        var (world, own, _, _) = try Self.ownRoundTrip()
+        // A second train stands on the track past B, away from any platform.
+        let idle = try world.purchaseTrain(named: "Idle").id
+        try world.placeTrain(idle, at: Self.track.at(6, facingEast: true))
+        var asked = 0, placed = 0, seen = 0
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            let taken = PlatformUse.platformsTaken(in: world)
+            XCTAssertEqual(taken, every(world))
+            seen += taken.count
+            asked += PlatformUse.trainsAlongPlatformEdges(in: world).count
+            placed += world.trains.count { $0.position != nil }
+        }
+        XCTAssertNotNil(world.train(id: own)?.position)
+        XCTAssertGreaterThan(seen, 0, "it stands at A and B")
+        XCTAssertLessThan(asked, placed, "the train away from the platforms is not asked")
+    }
+
     /// At a high speed a game minute is not sampled every minute: the page
     /// names the minutes the samples span, not how many there are.
     func testTheMinutesNamedAreThoseSpannedNotTheSamples() throws {
