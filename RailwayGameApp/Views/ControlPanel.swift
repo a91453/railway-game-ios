@@ -14,6 +14,16 @@ struct ControlPanel: View {
     enum Arrangement {
         /// The Build entry, the lines and the figures, and Undo, in a row.
         case tools
+        /// Decision 226: Data, Lines and Build in a column down the leading
+        /// edge of a phone held sideways, Build at the bottom, under the
+        /// thumb.
+        case toolsColumn
+        /// Decision 226: Build alone, at the foot of that column while the
+        /// building tools are out over it, where a second tap closes them.
+        case buildEntry
+        /// Decision 226: Undo and Redo in a row beside the column's foot,
+        /// when there is an edit to take back or make again.
+        case editsRow
         /// The selection inspector, or what the network tool's taps
         /// picked: the details card's head, which stays put.
         case inspector
@@ -38,21 +48,51 @@ struct ControlPanel: View {
         ActionButton(session: session).title != nil
     }
 
+    /// Decision 226: whether Undo and Redo show. Only while there is an
+    /// edit to take back or make again (in practice just after one, while
+    /// paused), so most of the time the screen has two buttons fewer; and
+    /// never in the tutorial, as the details toggle is not, so its steps'
+    /// spotlights stay where they were (the session refuses Undo then too,
+    /// ``GameSession/canUndo``).
+    static func showsEdits(_ session: GameSession) -> Bool {
+        session.tutorial == nil && (session.canUndo || session.canRedo)
+    }
+
     var body: some View {
         switch arrangement {
         case .tools:
-            HStack(spacing: 8) {
+            HStack(spacing: Self.tileGap) {
+                HStack(spacing: 4) {
+                    BuildEntry(session: session)
+                    // Decision 104: the lines and the company's figures,
+                    // named, beside the tools.
+                    QuickEntries(session: session, vertical: false)
+                }
+                .controlTile()
+                if Self.showsEdits(session) {
+                    HStack(spacing: 4) {
+                        UndoButton(session: session)
+                        RedoButton(session: session)
+                    }
+                    .controlTile()
+                }
+            }
+        case .toolsColumn:
+            VStack(spacing: 4) {
+                QuickEntries(session: session, vertical: true)
                 BuildEntry(session: session)
-                // Decision 104: the lines and the company's figures, named,
-                // beside the tools.
-                QuickEntries(session: session)
-                // Hidden during the tutorial, as the details toggle is, so
-                // its steps' spotlights stay where they were; the session
-                // refuses Undo then too (``GameSession/canUndo``).
-                if session.tutorial == nil {
+            }
+            .controlTile()
+        case .buildEntry:
+            BuildEntry(session: session)
+                .controlTile()
+        case .editsRow:
+            if Self.showsEdits(session) {
+                HStack(spacing: 4) {
                     UndoButton(session: session)
                     RedoButton(session: session)
                 }
+                .controlTile()
             }
         case .inspector:
             if Self.showsInspector(session) {
@@ -64,6 +104,17 @@ struct ControlPanel: View {
         case .action:
             ActionButton(session: session)
         }
+    }
+
+    /// The space between tiles (decision 226): the map shows through it.
+    static let tileGap: CGFloat = 6
+}
+
+extension View {
+    /// Decision 226: a group of the screen's controls in its own solid tile.
+    func controlTile() -> some View {
+        padding(4)
+            .chromeTile(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -95,25 +146,40 @@ struct TabLabel: View {
 /// the tutorial.
 private struct QuickEntries: View {
     let session: GameSession
+    /// Decision 226: in a column, Data above Lines, so Build, under them,
+    /// is nearest the thumb; in a row, Lines first, beside Build.
+    let vertical: Bool
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
-        HStack(spacing: 6) {
-            entry(.lines, systemImage: "point.3.connected.trianglepath.dotted",
-                  title: session.language.text("Lines", "路線"),
-                  name: Text("Lines"), id: "entry.lines")
-                .accessibilityHint("Shows the service lines and their timetables.")
-                .tutorialTarget(.linesButton)
-            entry(.economy, systemImage: "chart.bar.fill",
-                  title: session.language.text("Data", "資料"),
-                  name: Text(verbatim: session.language.text("Open the company's figures", "開啟經營資料")), id: "entry.economy")
+        // Decision 226: no frame of their own; the tile they sit in is it.
+        if vertical {
+            VStack(spacing: 4) {
+                data
+                lines
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        } else {
+            HStack(spacing: 4) {
+                lines
+                data
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(3)
-        .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .strokeBorder(Theme.panelBorder, lineWidth: 1)
-        )
-        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var lines: some View {
+        entry(.lines, systemImage: "point.3.connected.trianglepath.dotted",
+              title: session.language.text("Lines", "路線"),
+              name: Text("Lines"), id: "entry.lines")
+            .accessibilityHint("Shows the service lines and their timetables.")
+            .tutorialTarget(.linesButton)
+    }
+
+    private var data: some View {
+        entry(.economy, systemImage: "chart.bar.fill",
+              title: session.language.text("Data", "資料"),
+              name: Text(verbatim: session.language.text("Open the company's figures", "開啟經營資料")), id: "entry.economy")
     }
 
     private func entry(_ panel: GameScreenState.Panel, systemImage: String, title: String, name: Text, id: String) -> some View {

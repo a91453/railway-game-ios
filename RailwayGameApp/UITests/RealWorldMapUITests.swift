@@ -284,7 +284,12 @@ final class RealWorldMapUITests: XCTestCase {
         confirm.tap()
         XCTAssertTrue(banner("overlap").appears(within: 5), "No refusal in the banner")
         XCTAssertTrue(confirm.appears(within: 5), "The pill went with the refusal")
-        let dock = app.buttons["dock.build"].frame
+        // Decision 226: on a phone held sideways the tools are a column
+        // down the leading edge, and while building it holds the building
+        // tools, not Build; with no dock along the bottom there is none to
+        // go under.
+        let buildEntry = app.buttons["dock.build"]
+        let dock = buildEntry.exists ? buildEntry.frame : CGRect(x: 0, y: app.frame.maxY, width: app.frame.width, height: 0)
         for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
             XCTAssertTrue(button.becomesHittable(), "The platform's \(name) cannot be tapped: \(button.frame)")
             XCTAssertLessThanOrEqual(button.frame.maxY, dock.minY, "The platform's \(name) goes under the dock: \(button.frame), dock \(dock)")

@@ -44,7 +44,8 @@ struct BuildToolRail: View {
             .tutorialClip()
         }
         .frame(width: Self.width)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        // Decision 226: a solid tile, as the rest of the screen's controls.
+        .chromeTile(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         // Offered only the room between the pill and the dock, from the top.
         .frame(maxHeight: maxHeight, alignment: .top)
     }
@@ -141,10 +142,5 @@ struct BuildEntry: View {
         )))
         .accessibilityIdentifier("dock.build")
         .accessibilityAddTraits(isActive ? .isSelected : [])
-        .padding(3)
-        .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .strokeBorder(Theme.panelBorder, lineWidth: 1)
-        )
     }
 }
