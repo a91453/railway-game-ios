@@ -1254,9 +1254,16 @@ struct MapView: View {
         } label: {
             if session.isChoosingMapTile {
                 HStack(spacing: 8) {
-                    Image(systemName: "plus.square.dashed")
-                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
-                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    // Decision 226: on a phone held sideways only Done. The
+                    // tools column puts this row farther in, and the whole
+                    // pill lay over the tile below the land, the first one
+                    // a player taps (main's full lane, run 38641908091);
+                    // the dashed tiles and the banner say what is going on.
+                    if verticalSizeClass != .compact {
+                        Image(systemName: "plus.square.dashed")
+                        Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                        Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    }
                     Image(systemName: "xmark")
                     Text(verbatim: session.language.text("Done", "結束"))
                 }

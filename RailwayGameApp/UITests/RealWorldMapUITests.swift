@@ -211,7 +211,7 @@ final class RealWorldMapUITests: XCTestCase {
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
         // The map opens on the whole place, some 48 m a point: the stretch
         // below would run 10 km, onto land not owned (run 38289886049).
-        // Five steps, each halving it, make it some 330 m. Before a tool is
+        // Five steps, each halving it, make it some 460 m. Before a tool is
         // chosen, while the zoom buttons show beside the map.
         let zoomIn = app.buttons["Zoom in"]
         XCTAssertTrue(zoomIn.appears(within: 10))
@@ -236,8 +236,14 @@ final class RealWorldMapUITests: XCTestCase {
         func point(_ fraction: CGFloat) -> XCUICoordinate {
             origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
         }
-        point(0.3).tap()
-        point(0.55).tap()
+        // About the same middle as the platform's site (0.425), long enough
+        // that the track beside a levelled platform stays within its
+        // gradient: a stretch from 0.3 to 0.55 some points lower, once the
+        // tools stood in a column (decision 226), ran through a cutting,
+        // and its 256 m platform could not be levelled (main's full lane,
+        // run 38641908091).
+        point(0.25).tap()
+        point(0.6).tap()
         let confirm = app.buttons["map.build.confirm"]
         let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         let builder = confirm.appears(within: 10) ? confirm : card
