@@ -165,6 +165,20 @@ final class RunDepotTests: XCTestCase {
         XCTAssertEqual(world.line(id: main)?.runDays[1], 0, "and takes its 07:00 run")
     }
 
+    /// A train on its way to a stop counts for a run there only if it
+    /// arrives by the run's departure, each train taking the earliest run
+    /// it can; and in the world, Gamma's 06:00 run has East's train, not
+    /// Alpha's that reaches Gamma at 06:10.
+    func testATrainArrivingAfterTheRunDoesNotCount() throws {
+        XCTAssertEqual(GameWorld.runsWithoutTrains([100, 200], ready: [150]), 1)
+        XCTAssertEqual(GameWorld.runsWithoutTrains([100, 200], ready: [50, 150]), 0)
+        XCTAssertEqual(GameWorld.runsWithoutTrains([100], ready: [150, 160]), 1)
+        var world = try makeWorld()
+        try world.advance(ticks: 6 * 60 + 1)
+        XCTAssertEqual(world.line(id: main)?.runDays[1], 0)
+        XCTAssertEqual(world.train(id: id(2))?.timetable.first?.departure, GameTime(minutes: 360), "Gamma's run leaves on time")
+    }
+
     /// A train that waits where no run of its line leaves goes into a
     /// depot: Beta is between the line's ends.
     func testATrainWhereNoRunLeavesGoesIn() throws {

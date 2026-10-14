@@ -43,14 +43,31 @@ extension GameWorld {
         }
     }
 
-    /// How many of `line`'s trains wait at `station` or are on their way to
-    /// end there, running a service or empty.
-    private func runTrainsFor(_ line: ServiceLine, at station: StationID) -> Int {
-        let coming = line.trains.count { id in
-            guard let train = train(id: id), train.execution != nil else { return false }
-            return train.timetable.last?.station == station
+    /// When each of `line`'s trains for `station` can take a run there,
+    /// earliest first: now for those waiting there, and for those on their
+    /// way to end there, running a service or empty, their arrival.
+    private func runTrainsReady(of line: ServiceLine, at station: StationID) -> [Int64] {
+        var times = runTrainsWaiting(of: line, at: station).map { _ in clock.now.seconds }
+        for id in line.trains {
+            guard let train = train(id: id), train.execution != nil, let last = train.timetable.last, last.station == station else { continue }
+            times.append(last.arrival.seconds)
         }
-        return runTrainsWaiting(of: line, at: station).count + coming
+        return times.sorted()
+    }
+
+    /// How many of the runs leaving at `starts` find no train of `ready`
+    /// (when each can take one, earliest first) there by their first
+    /// departure, each train taking the earliest run it can.
+    static func runsWithoutTrains(_ starts: [Int64], ready: [Int64]) -> Int {
+        var next = 0, missing = 0
+        for start in starts.sorted() {
+            if next < ready.count, ready[next] <= start {
+                next += 1
+            } else {
+                missing += 1
+            }
+        }
+        return missing
     }
 
     // MARK: - Into the depot
@@ -116,14 +133,15 @@ extension GameWorld {
 
     /// The train of `line`, a line with runs and depots, to send out of a
     /// depot now, with its empty run, or `nil` (decision 221). For each
-    /// stop in turn: when more of its runs are due by the time a train out
-    /// of the depot would stand there than trains wait there or are on
-    /// their way to it, the train out of the nearest depot (see
-    /// ``runPullOut(of:to:memo:)``). A run is due by then when its first
-    /// departure, less ``LineRun/earliestDispatch`` and the run out's lead
-    /// (decision 209's: the least dwell and the run's seconds, in whole
-    /// minutes, and a minute more), has come. Under traffic control the
-    /// train must be able to take its route now.
+    /// stop in turn: when some run due by the time a train out of the
+    /// depot would stand there finds no train there by its first departure
+    /// (of those waiting there, and those on their way that arrive by
+    /// then, see ``runsWithoutTrains(_:ready:)``), the train out of the
+    /// nearest depot (see ``runPullOut(of:to:memo:)``). A run is due by
+    /// then when its first departure, less ``LineRun/earliestDispatch`` and
+    /// the run out's lead (decision 209's: the least dwell and the run's
+    /// seconds, in whole minutes, and a minute more), has come. Under
+    /// traffic control the train must be able to take its route now.
     func runTrainLeavingDepot(of line: ServiceLine, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
@@ -132,10 +150,12 @@ extension GameWorld {
             let starts = pendingRunStarts(of: line, from: station)
             // Nothing is due within the look ahead: no run out takes longer.
             let soon = starts.filter { $0 - LineRun.earliestDispatch - Self.runDepotLookahead <= now }
-            let there = runTrainsFor(line, at: station)
-            guard soon.count > there, let (index, trip) = runPullOut(of: line, to: station, memo: &memo), let run = trip.deadhead else { continue }
+            let ready = runTrainsReady(of: line, at: station)
+            guard Self.runsWithoutTrains(soon, ready: ready) > 0, let (index, trip) = runPullOut(of: line, to: station, memo: &memo),
+                  let run = trip.deadhead
+            else { continue }
             let lead = Self.lead(of: run) * GameTime.secondsPerMinute
-            guard soon.count(where: { $0 - LineRun.earliestDispatch - lead <= now }) > there else { continue }
+            guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
