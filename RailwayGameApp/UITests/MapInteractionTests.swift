@@ -115,6 +115,26 @@ final class MapInteractionTests: XCTestCase {
                       "The opening camera must put Central at the map view's center; value: \(String(describing: map.value))")
     }
 
+    /// Decision 220: holding a station opens its panel (decision 119) and
+    /// the map traces its busiest trips, which the map's value reads out
+    /// (the arcs are drawn, not elements).
+    func testHoldingAStationTracesItsBusiestTrips() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.simple")
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.8)
+        XCTAssertTrue(app.navigationBars["Central"].appears(within: 5), "The hold opens Central's panel")
+        func traces() -> Bool { (map.value as? String)?.contains("Busiest trips:") == true }
+        let deadline = Date().addingTimeInterval(10)
+        while !traces() && Date() < deadline { Thread.sleep(forTimeInterval: 0.25) }
+        XCTAssertTrue(traces(), "The map traces Central's trips; value: \(String(describing: map.value))")
+    }
+
     /// TestFlight 60.1: renaming a station took three taps before a letter
     /// could be typed. The station tag's pencil puts up the rename alert
     /// with its field ready, while the clock runs and redraws the panel.
