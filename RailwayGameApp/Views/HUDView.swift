@@ -27,14 +27,23 @@ struct HUDView: View {
     @State private var reportingProblem = false
 
     var body: some View {
-        // One row, as wide as what it shows, when it fits; otherwise cash
-        // and time stack; with the largest text the time gets a row of its
-        // own rather than being cut short ("Day 2 · 07…"), and the cash is
-        // never cut short ("$ 3,0…").
+        // Decision 226: one row, a board across the top, as wide as what it
+        // shows; then one row with the shorter date ("2 年 5/12（六）08:40");
+        // only then do cash and time stack. With the largest text the time
+        // gets a row of its own rather than being cut short ("Day 2 ·
+        // 07…"), and the cash is never cut short ("$ 3,0…").
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 16) {
                 cash
-                time
+                time(short: false)
+                SpeedControl(session: session)
+                ViewingReadout(session: session)
+                newsBell
+                gameMenu
+            }
+            HStack(spacing: 12) {
+                cash
+                time(short: true)
                 SpeedControl(session: session)
                 ViewingReadout(session: session)
                 newsBell
@@ -43,7 +52,7 @@ struct HUDView: View {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     cash
-                    time
+                    time(short: false)
                 }
                 SpeedControl(session: session)
                 ViewingReadout(session: session)
@@ -57,7 +66,7 @@ struct HUDView: View {
                     newsBell
                     gameMenu
                 }
-                time
+                time(short: false)
                     .minimumScaleFactor(0.75)
                 ViewingReadout(session: session)
             }
@@ -217,10 +226,12 @@ struct HUDView: View {
     }
 
     /// The date and time (decision 175), today's weather and holiday; it
-    /// opens the forecast of the next days.
-    private var time: some View {
+    /// opens the forecast of the next days. `short`: the board's shorter
+    /// date (decision 226), which keeps it to one row.
+    private func time(short: Bool) -> some View {
         let language = session.language
-        let text = session.world.clock.calendarText(in: language)
+        let clock = session.world.clock
+        let text = short ? clock.shortCalendarText(in: language) : clock.calendarText(in: language)
         return Button {
             showsForecast = true
         } label: {
@@ -593,43 +604,61 @@ private struct SpeedControl: View {
     }
 }
 
-/// Decision 195: beside the speed, the followed train's speed and how fast
-/// the game really runs ("actual ×600", or "actual ×290 (falling behind)"
-/// when the device cannot keep up), read from the session's measure; the
-/// speed menu's label says the speed the game is set to. Nothing while
-/// paused and following no train.
+/// Decision 195: beside the speed, the followed train's speed, read from
+/// the session's measure; the speed menu's label says the speed the game
+/// is set to. Decision 226: how fast the game really runs is no longer
+/// written out, which made the board two rows on a phone; a `warning` dot
+/// says the device is falling behind, and tapped says by how much
+/// (``ViewingSpeed/lagText(in:)``). Nothing while paused, keeping up and
+/// following no train.
 private struct ViewingReadout: View {
     let session: GameSession
+    @State private var showsLag = false
 
     var body: some View {
         let viewing = session.viewingSpeed
         let language = session.language
-        let actual = viewing.actualText(in: language)
+        let lag = viewing.lagText(in: language)
         let train = viewing.trainSpeedText
         // Decision 217: the curve limit it keeps to, or brakes for.
         let curve = session.followedTrainID.flatMap { session.world.curveLimit(of: $0) }?.text(in: language)
-        if actual != nil || train != nil {
-            VStack(alignment: .leading, spacing: 0) {
-                if let train {
+        HStack(spacing: 6) {
+            if lag != nil {
+                Button {
+                    showsLag = true
+                } label: {
+                    Circle()
+                        .fill(Theme.warning)
+                        .frame(width: 8, height: 8)
+                        .frame(width: 16, height: 32)
+                }
+                .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 16, height: 32)))
+                .popover(isPresented: $showsLag) {
+                    Text(verbatim: viewing.lagText(in: language) ?? viewing.actualText(in: language) ?? "")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .padding()
+                        .presentationCompactAdaptation(.popover)
+                }
+                .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
+                .accessibilityIdentifier("hud.lag")
+            }
+            if let train {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: train)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
+                    if let curve {
+                        Text(verbatim: curve)
+                            .font(.caption2)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
-                if train != nil, let curve {
-                    Text(verbatim: curve)
-                        .font(.caption2)
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                if let actual {
-                    Text(verbatim: actual)
-                        .font(viewing.isBehind ? Font.caption2.weight(.bold) : Font.caption2)
-                        .foregroundStyle(viewing.isBehind ? Theme.warning : Theme.textSecondary)
-                }
+                .monospacedDigit()
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: [viewing.accessibilityText(in: language), curve].compactMap { $0 }.joined(separator: language.text(". ", "，"))))
+                .accessibilityIdentifier("hud.viewing")
             }
-            .monospacedDigit()
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: [viewing.accessibilityText(in: language), curve].compactMap { $0 }.joined(separator: language.text(". ", "，"))))
-            .accessibilityIdentifier("hud.viewing")
         }
     }
 }

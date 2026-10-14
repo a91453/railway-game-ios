@@ -143,6 +143,14 @@ final class GameTimeDisplayTests: XCTestCase {
         XCTAssertEqual(GameDate(day: 360).month, 1)
     }
 
+    func testTheBoardsShorterClockKeepsTheYearAndTheWeekday() {
+        // Decision 226: one row on a phone held sideways.
+        let day = GameTime(seconds: 491 * GameTime.secondsPerDay + 8 * 3_600 + 40 * 60)
+        XCTAssertEqual(day.shortCalendarText(in: .traditionalChinese), "2 年 5/12（二）08:40")
+        XCTAssertEqual(day.shortCalendarText(in: .english), "Y2 May 12 (Tue) 08:40")
+        XCTAssertLessThan(day.shortCalendarText(in: .traditionalChinese).count, day.calendarText(in: .traditionalChinese).count)
+    }
+
     func testTheCalendarAgreesWithTheDemandsWeekdays() {
         for day in Int64(0)..<30 {
             XCTAssertEqual(GameDate(day: day).weekday, StationDemand.weekday(ofDay: day))

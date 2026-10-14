@@ -36,6 +36,7 @@ final class ViewingSpeedTests: XCTestCase {
         XCTAssertFalse(viewing.isBehind)
         XCTAssertEqual(viewing.actualText(in: .english), "actual ×600")
         XCTAssertEqual(viewing.actualText(in: .traditionalChinese), "實際 ×600")
+        XCTAssertNil(viewing.lagText(in: .traditionalChinese), "keeping up: no dot on the board")
         XCTAssertNil(viewing.trainSpeedText, "following no train")
     }
 
@@ -50,6 +51,9 @@ final class ViewingSpeedTests: XCTestCase {
         XCTAssertEqual(viewing.actualText(in: .english), "actual ×300 (falling behind)")
         XCTAssertEqual(viewing.actualText(in: .traditionalChinese), "實際 ×300（跟不上）")
         XCTAssertTrue(viewing.accessibilityText(in: .traditionalChinese).contains("跟不上"))
+        // Decision 226: the board's dot, tapped.
+        XCTAssertEqual(viewing.lagText(in: .traditionalChinese), "遊戲現在只跑得到 ×300，比設定的 ×600 慢。")
+        XCTAssertEqual(viewing.lagText(in: .english), "The game is running at ×300, slower than ×600.")
         // Keeping up again, the last three seconds read as the speed.
         run(session, 40)
         XCTAssertEqual(session.viewingSpeed.actualTenths, 6_000)
