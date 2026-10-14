@@ -787,7 +787,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(status.appears(within: 5))
         // An expectation is waited on once: a new one for each wait.
         func placed() -> Bool {
-            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", " m along"), object: status)
+            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "m platform here"), object: status)
             return XCTWaiter().wait(for: [expectation], timeout: 5) == .completed
         }
         let mid = map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.4))

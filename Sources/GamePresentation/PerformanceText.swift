@@ -196,7 +196,13 @@ extension GameWorld {
         if train.execution == nil, train.position != nil, !train.hasPathAhead, assignedLine(of: id) == nil {
             return language.text("Not assigned to a line", "未配屬路線")
         }
-        return train.pathText(in: language)
+        // Author's report, 2026-10-14: how far it goes, not its path's
+        // track numbers (``Train/pathText(in:)`` keeps them).
+        guard let left = pathDistanceLeft(of: train), left > 0 else {
+            return language.text("No path ahead", "前方沒有路徑")
+        }
+        let distance = NetworkBuilding.distanceText(left, in: language)
+        return language.text("Path: stops \(distance) ahead", "路徑：前方 \(distance) 處停車")
     }
 
     /// How far `train` has left along its path, in units: the rest of the

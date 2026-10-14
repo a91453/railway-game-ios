@@ -505,7 +505,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
             XCTAssertEqual(session.networkEdgePoint, NetworkEdgePoint(edge: .edge(1), distance: 3_000))
             XCTAssertNil(session.platformStationID, "no station within two tiles")
-            XCTAssertEqual(session.networkDraftText(), "64 m platform on track #1, 15–79 m along")
+            XCTAssertEqual(session.networkDraftText(), "64 m platform here")
 
             session.addNetworkPlatform()
 

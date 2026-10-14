@@ -866,10 +866,8 @@ extension GameSession {
                 return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
-            let place = language.text(
-                "\(length) platform on \(stretch.edge.displayText(in: language).lowercased()), \(Self.metresSpanText(stretch.start, stretch.end)) m along",
-                "\(stretch.edge.displayText(in: language)) 上 \(length) 的月台，距起點 \(Self.metresSpanText(stretch.start, stretch.end)) 公尺"
-            )
+            // Author's report, 2026-10-14: no track numbers or units.
+            let place = language.text("\(length) platform here", "在這裡設 \(length) 的月台")
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
