@@ -172,8 +172,12 @@ final class ServicePropertyTests: XCTestCase {
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let ran = try runCampaign(name, cases: 30) { c in
+        // The cases of `cases` whose body ran: runCampaign's own count
+        // includes the cases skipped here, so it holds for any range.
+        var ran = 0
+        _ = try runCampaign(name, cases: 30) { c in
             guard cases.contains(c.index) else { return }
+            ran += 1
             let (setup, operations) = try Self.generate(&c, operations: 120, repeating: repeating)
             c.note("setup: \(setup.summary), +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
@@ -227,7 +231,7 @@ final class ServicePropertyTests: XCTestCase {
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
         let part = cases == 0..<30 ? "" : " cases \(cases.lowerBound)-\(cases.upperBound - 1)"
         print("[digest] \(name)\(part) \(digest.hex) (\(summary))")
-        assertVolume(ran == 30 * PropertySeeds.active.count, "every case should run")
+        assertVolume(!cases.isEmpty && ran == cases.count * PropertySeeds.active.count, "every case of \(cases) should run, \(ran) did")
         return counts
     }
 
