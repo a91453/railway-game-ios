@@ -5,7 +5,9 @@ import SwiftUI
 
 /// Plays the game's music and sounds (`Resources/Audio/`, made by
 /// `tools/audio/make_game_audio.py`): the soundtrack of the first promo
-/// video, so the game sounds as the video does. The music loops while the
+/// video, so the game sounds as the video does. Decision 219: an arrival
+/// rings the station's chime (local, metro or tourist), or its motif at
+/// high speed. The music loops while the
 /// app is in the foreground; the sounds play for the session's cues
 /// (``SoundCue``). The player turns either off in the game menu, and the
 /// choice is kept on the device, never in a save.
@@ -107,19 +109,21 @@ final class GameAudio {
     func play(_ cue: SoundCue) {
         guard plays, isActive else { return }
         let now = ContinuousClock.now
-        if let last = lastPlayed[cue], now - last < Self.spacing(of: cue) { return }
+        // Decision 219: the chimes of all stations share their spacing.
+        let spaced = Self.spacingKey(of: cue)
+        if let last = lastPlayed[spaced], now - last < Self.spacing(of: cue) { return }
         if let feedback = Self.feedback(for: cue) {
             haptic = HapticPulse(feedback: feedback, serial: (haptic?.serial ?? 0) &+ 1)
         }
         guard soundsOn else {
-            lastPlayed[cue] = now
+            lastPlayed[spaced] = now
             return
         }
         let players = sounds[cue] ?? loadSound(cue)
         // A free player of the sound's few, so a sound can overlap itself.
         guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
-        lastPlayed[cue] = now
-        if cue == .arrival(watched: true) {
+        lastPlayed[spaced] = now
+        if case .arrival(true, _, _) = cue {
             // The others' chime would only echo it.
             lastPlayed[.arrival(watched: false)] = now
         }
@@ -139,27 +143,40 @@ final class GameAudio {
         }
     }
 
+    /// Decision 219: the file is the cue's (``SoundCue/resource``): the
+    /// station's chime, or its motif at high speed.
     private func loadSound(_ cue: SoundCue) -> [AVAudioPlayer] {
-        let (name, volume): (String, Float) = switch cue {
-        case .arrival(watched: true): ("station-chime", 0.55)
-        case .arrival(watched: false): ("station-chime", 0.2)
-        case .track: ("rail-joint", 0.7)
-        case .transition: ("whoosh", 0.3)
-        case .built: ("build-done", 0.6)
-        case .income: ("coins", 0.35)
-        case .refused: ("refused", 0.5)
-        case .warning: ("warning", 0.45)
+        let volume: Float = switch cue {
+        case .arrival(true, _, _): 0.55
+        case .arrival(false, _, _): 0.2
+        case .track: 0.7
+        case .transition: 0.3
+        case .built: 0.6
+        case .income: 0.35
+        case .refused: 0.5
+        case .warning: 0.45
         }
-        let players = (0..<3).compactMap { _ in Self.player(named: name, extension: "wav", volume: volume) }
+        let file = cue.resource
+        let players = (0..<3).compactMap { _ in Self.player(named: file.name, extension: file.extension, volume: volume) }
         sounds[cue] = players
         return players
+    }
+
+    /// What a cue's spacing is kept by: an arrival by whether it is
+    /// watched and a motif, whichever station's chime it is.
+    private static func spacingKey(of cue: SoundCue) -> SoundCue {
+        if case .arrival(let watched, _, let motif) = cue { return .arrival(watched: watched, motif: motif) }
+        return cue
     }
 
     /// The least time between two plays of a sound.
     private static func spacing(of cue: SoundCue) -> Duration {
         switch cue {
-        case .arrival(watched: true): .milliseconds(500)
-        case .arrival(watched: false): .seconds(6)
+        // Decision 219: the motif plays at 600× and faster, at most every
+        // 1.5 s (the research note's §6).
+        case .arrival(true, _, true): .milliseconds(1500)
+        case .arrival(true, _, false): .milliseconds(500)
+        case .arrival(false, _, _): .seconds(6)
         case .track: .milliseconds(100)
         case .transition: .milliseconds(250)
         case .built: .milliseconds(150)

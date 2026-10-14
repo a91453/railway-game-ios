@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Local station chime",
+  "source": "tools/audio/make_game_audio.py: the station chime of decision 79 (station-chime.wav), written out as a score",
+  "tempo": 100,
+  "beatsPerBar": 4,
+  "length": 3520,
+  "motif": 2,
+  "fadeOut": 0,
+  "tracks": [
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 84, "start": 0, "length": 400, "velocity": 100},
+        {"pitch": 91, "start": 400, "length": 3120, "velocity": 60}
+      ]
+    }
+  ]
+}
