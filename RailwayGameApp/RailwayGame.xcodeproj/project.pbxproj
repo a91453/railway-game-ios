@@ -82,6 +82,7 @@
 		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
 		8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */; };
 		8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E428A92A98C07A45636F5E3 /* trtc_times.json */; };
+		8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */; };
 		945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8363C536E3BE341871325469 /* MapLayerSheet.swift */; };
 		95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */ = {isa = PBXBuildFile; fileRef = C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */; };
 		991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */; };
@@ -267,6 +268,7 @@
 		E2038D64EB91D02F90FE6716 /* ntdlrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ntdlrt.json; sourceTree = "<group>"; };
 		E4631B47557CC9944903820E /* refused.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = refused.wav; sourceTree = "<group>"; };
 		E6EEB9DC1C736BE4F98AD2BC /* GameAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAudio.swift; sourceTree = "<group>"; };
+		E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaySettlementsSection.swift; sourceTree = "<group>"; };
 		EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsPanel.swift; sourceTree = "<group>"; };
 		F04BA3646C6BDB8801CF770B /* station_transfers.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_transfers.json; sourceTree = "<group>"; };
 		F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "MapLibre-iOS-LICENSE.md"; sourceTree = "<group>"; };
@@ -419,6 +421,7 @@
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */,
 				BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */,
+				E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */,
 				9BDC97F7CE4B4CD1486F8245 /* TourismPanel.swift */,
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				35B383D349E8080CFE435A11 /* TrainDiagramView.swift */,
@@ -720,6 +723,7 @@
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */,
 				C61BAB200CEB800C0F50B796 /* TimetableEditor.swift in Sources */,
+				8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */,
 				B66C11081A6C43C87B222D37 /* TourismPanel.swift in Sources */,
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */,
