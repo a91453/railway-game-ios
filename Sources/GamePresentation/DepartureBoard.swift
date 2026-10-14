@@ -61,6 +61,56 @@ public struct DepartureBoard: Equatable, Sendable {
         public func lateText(in language: DisplayLanguage) -> String? {
             lateMinutes >= 1 ? language.text("\(lateMinutes) min late", "慢 \(lateMinutes) 分") : nil
         }
+
+        /// Decision 223: the timetable's time before the lateness, struck
+        /// through on the board when the train is late; `nil` when not known.
+        public internal(set) var scheduled: GameTime? = nil
+        /// Decision 223: late, it seems, because the train before it in the
+        /// same direction is late (see ``DepartureBoard/followWindowSeconds``).
+        public internal(set) var followsLateTrain = false
+
+        /// What the board's status capsule says (decision 223), in words
+        /// and not only in colour.
+        public enum Status: Hashable, Sendable {
+            case boarding
+            case passes
+            case onTime
+            case late(minutes: Int)
+            /// Late behind a late train: "前車誤點".
+            case lateBehind(minutes: Int)
+
+            public func text(in language: DisplayLanguage) -> String {
+                switch self {
+                case .boarding: language.text("Boarding", "進站中")
+                case .passes: language.text("Passes", "通過")
+                case .onTime: language.text("On time", "準點")
+                case .late(let minutes): language.text("\(minutes) min late", "誤點 \(minutes) 分")
+                case .lateBehind: language.text("Train ahead late", "前車誤點")
+                }
+            }
+
+            /// Whether the train is behind its timetable.
+            public var isLate: Bool {
+                switch self {
+                case .late, .lateBehind: true
+                default: false
+                }
+            }
+        }
+
+        public var status: Status {
+            if isBoarding { return .boarding }
+            if passes { return .passes }
+            guard lateMinutes >= 1 else { return .onTime }
+            return followsLateTrain ? .lateBehind(minutes: lateMinutes) : .late(minutes: lateMinutes)
+        }
+
+        /// The time struck through, "HH:MM", when the train is late and its
+        /// timetable's time is known; `nil` otherwise.
+        public var replacedTimeText: String? {
+            guard status.isLate, let scheduled, scheduled.clockText != expected.clockText else { return nil }
+            return scheduled.clockText
+        }
     }
 
     /// The trains going one way, soonest first.
@@ -82,6 +132,11 @@ public struct DepartureBoard: Equatable, Sendable {
     public static let horizonSeconds: Int64 = 3 * GameTime.secondsPerHour
     /// How many trains a direction lists.
     public static let rowsPerDirection = 6
+    /// Decision 223: a late train due at most this long after a late train
+    /// before it, going the same way, is taken to be held up by it
+    /// ("前車誤點"). The world keeps no cause for lateness; this is the
+    /// board's guess, and a train further behind is simply "late".
+    public static let followWindowSeconds: Int64 = 10 * GameTime.secondsPerMinute
 
     public var isEmpty: Bool { directions.isEmpty }
 
@@ -115,11 +170,27 @@ public struct DepartureBoard: Equatable, Sendable {
             grouped[key, default: []].append(row)
         }
         let directions = order.map { key -> Direction in
-            let rows = Array(grouped[key]!.prefix(max(1, perDirection)))
+            let rows = Array(Self.markingFollowers(grouped[key]!).prefix(max(1, perDirection)))
             return Direction(destination: rows[0].destination, endsHere: rows[0].endsHere, rows: rows)
         }
         // The reference lists the trains that end here last.
         self.init(station: station, directions: directions.filter { !$0.endsHere } + directions.filter(\.endsHere))
+    }
+
+    /// `rows`, one direction's soonest first, with each late train due
+    /// within ``followWindowSeconds`` after another late train marked as
+    /// following it.
+    static func markingFollowers(_ rows: [Row]) -> [Row] {
+        var rows = rows
+        for index in rows.indices.dropFirst() {
+            let ahead = rows[index - 1]
+            guard rows[index].lateMinutes >= 1, !rows[index].passes, !rows[index].isBoarding,
+                  ahead.train != rows[index].train, ahead.lateMinutes >= 1,
+                  rows[index].expected.seconds - ahead.expected.seconds <= followWindowSeconds
+            else { continue }
+            rows[index].followsLateTrain = true
+        }
+        return rows
     }
 
     // MARK: - From a train's timetable
@@ -168,7 +239,8 @@ public struct DepartureBoard: Equatable, Sendable {
                         line: line.id, lineName: line.name, color: line.color,
                         destination: target.endsHere ? station : target.station, endsHere: target.endsHere,
                         passes: false, isBoarding: boarding, expected: GameTime(seconds: expected),
-                        secondsAway: max(0, expected - now), lateMinutes: boarding ? 0 : lateMinutes))
+                        secondsAway: max(0, expected - now), lateMinutes: boarding ? 0 : lateMinutes,
+                        scheduled: GameTime(seconds: scheduled)))
                 } else if let next, !line.isRing {
                     // A pass: the station is a stop of the line between two
                     // calls of this train, one after the other.
@@ -186,7 +258,8 @@ public struct DepartureBoard: Equatable, Sendable {
                         line: line.id, lineName: line.name, color: line.color,
                         destination: target.endsHere ? next.station : target.station, endsHere: false,
                         passes: true, isBoarding: false, expected: GameTime(seconds: expected),
-                        secondsAway: max(0, expected - now), lateMinutes: lateMinutes))
+                        secondsAway: max(0, expected - now), lateMinutes: lateMinutes,
+                        scheduled: GameTime(seconds: scheduled)))
                 }
             }
         }
@@ -221,7 +294,8 @@ public struct DepartureBoard: Equatable, Sendable {
                     id: "r\(line.id.rawValue)|\(index)|\(day)", train: nil, trainName: "",
                     line: line.id, lineName: line.name, color: line.color,
                     destination: last ? station : line.stops[run.to], endsHere: last, passes: false, isBoarding: false,
-                    expected: GameTime(seconds: time), secondsAway: max(0, time - now), lateMinutes: 0))
+                    expected: GameTime(seconds: time), secondsAway: max(0, time - now), lateMinutes: 0,
+                    scheduled: GameTime(seconds: time)))
             }
         }
         return rows
