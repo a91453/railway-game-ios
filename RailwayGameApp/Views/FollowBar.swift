@@ -19,9 +19,19 @@ struct FollowBar: View {
         let language = session.language
         let info = session.world.followBarInfo(of: train.id, in: language)
         HStack(spacing: 9) {
-            Circle()
-                .fill(info?.line.map { Palette.lineColor($0, custom: session.world.line(id: $0)?.color) } ?? Palette.train)
-                .frame(width: 9, height: 9)
+            // Decision 216: the train's line by its badge; a dot when it
+            // runs on none.
+            if let line = info?.line {
+                LineCodeBadge(
+                    code: LineBadge.codes(for: session.world.lines)[line] ?? "",
+                    color: Palette.lineColor(line, custom: session.world.line(id: line)?.color),
+                    size: .small
+                )
+            } else {
+                Circle()
+                    .fill(Palette.train)
+                    .frame(width: 9, height: 9)
+            }
 
             Text(verbatim: train.name)
                 .font(.subheadline.weight(.bold))

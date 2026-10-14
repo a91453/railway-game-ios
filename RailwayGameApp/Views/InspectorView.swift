@@ -91,7 +91,8 @@ struct InspectorView: View {
 
     /// A chip for each of `lines` that opens the line's details.
     private func lineButtons(_ lines: [LineID]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let codes = LineBadge.codes(for: session.world.lines)
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(lines, id: \.self) { id in
                     if let line = session.world.line(id: id) {
@@ -100,10 +101,8 @@ struct InspectorView: View {
                             screen.panel = .lines
                         } label: {
                             HStack(spacing: 4) {
-                                Circle()
-                                    .fill(Palette.lineColor(id, custom: line.color))
-                                    .frame(width: 10, height: 10)
-                                    .accessibilityHidden(true)
+                                // Decision 216: the line's badge.
+                                LineCodeBadge(code: codes[id] ?? "", color: Palette.lineColor(id, custom: line.color), size: .small)
                                 Text(verbatim: line.name)
                                     .font(.caption.weight(.semibold))
                                     .lineLimit(1)

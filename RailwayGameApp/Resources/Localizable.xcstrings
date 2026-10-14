@@ -3173,6 +3173,36 @@
         }
       }
     },
+    "Colour-Blind Friendly Colours" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "色盲友善配色"
+          }
+        }
+      }
+    },
+    "Line Colours" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路線顏色"
+          }
+        }
+      }
+    },
+    "Draws every line in one of eight colours that stay apart with red–green or blue–yellow colour blindness, the one nearest its own. Only the screen changes: the colours you chose are kept, and come back when this is off. Every line also shows its code, such as BL or R, on its badge." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把每條路線改畫成紅綠、藍黃色盲也分得開的八種顏色之一，取最接近原色的那一個。只改畫面：你選的顏色照樣保留，關掉就恢復。每條路線的徽章上也有線號，例如 BL、R。"
+          }
+        }
+      }
+    },
     "Weather Effects" : {
       "localizations" : {
         "zh-Hant" : {

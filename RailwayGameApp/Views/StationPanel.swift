@@ -155,9 +155,9 @@ struct StationPanel: View {
 
     private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage) -> some View {
         HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Palette.lineColor(row.line, custom: row.color))
-                .frame(width: 6, height: 28)
+            // Decision 216: the line's badge.
+            LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[row.line] ?? "", color: Palette.lineColor(row.line, custom: row.color), size: .small)
+                .frame(minWidth: 36, alignment: .leading)
             VStack(alignment: .leading, spacing: 1) {
                 Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
                     .font(.subheadline.weight(.semibold))

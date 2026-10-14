@@ -14,26 +14,30 @@ struct StationLineChips: View {
     let station: Station
     @Environment(GameScreenState.self) private var screen
 
+    /// Decision 216: redraws the tags when the line palette changes.
+    @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
+
     var body: some View {
-        ChipFlow(spacing: 6) {
+        let codes = LineBadge.codes(for: session.world.lines)
+        return ChipFlow(spacing: 6) {
             ForEach(session.world.lines(callingAt: station.id), id: \.id) { line in
-                chip(line)
+                chip(line, codes: codes)
             }
             newLine
         }
         .padding(.vertical, 2)
     }
 
-    private func chip(_ line: ServiceLine) -> some View {
+    private func chip(_ line: ServiceLine, codes: [LineID: String]) -> some View {
         let color = Palette.lineColor(line.id, custom: line.color)
         return Button {
             session.selectLine(line.id)
             screen.panel = .lines
         } label: {
             HStack(spacing: 6) {
-                Circle()
-                    .fill(color)
-                    .frame(width: 10, height: 10)
+                // Decision 216: the line's code on its badge, where a dot
+                // of its colour was.
+                LineCodeBadge(code: codes[line.id] ?? "", color: color, size: .small)
                 Text(verbatim: line.name)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
@@ -169,5 +173,53 @@ struct DepotBadge: View {
         .background(Theme.chip)
         .clipShape(Capsule())
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A line's badge (ARCHITECTURE decision 216, `docs/UI_THEME.md` 線號徽章):
+/// a white tag edged in navy (``Palette/markerFill``, ``Palette/ink``), a
+/// patch of the line's colour at its left, and the line's code in navy,
+/// which reads 13.29:1 (9.64:1 dark) whatever the line's colour, so lines
+/// tell themselves apart by their codes and not by colour alone.
+struct LineCodeBadge: View {
+    enum Size {
+        /// 14 points high, the code 9 points: beside a line's name in a
+        /// list or a tag (the reference's `station-line-chip`).
+        case small
+        /// 18 points high, the code 11 points: a line's own row or card.
+        case regular
+
+        var height: CGFloat { self == .small ? 14 : 18 }
+        var font: CGFloat { self == .small ? 9 : 11 }
+    }
+
+    let code: String
+    let color: Color
+    var size: Size = .regular
+
+    var body: some View {
+        let height = size.height
+        let corner = height * 0.22
+        HStack(spacing: 0) {
+            color
+                .frame(width: height * 0.42)
+            Rectangle()
+                .fill(Palette.ink)
+                .frame(width: 1)
+            Text(verbatim: code)
+                .font(.system(size: size.font, weight: .heavy, design: .rounded))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, height * 0.21)
+                .frame(minWidth: height * 0.9)
+        }
+        .frame(height: height)
+        .background(Palette.markerFill)
+        .clipShape(RoundedRectangle(cornerRadius: corner))
+        .overlay(RoundedRectangle(cornerRadius: corner).strokeBorder(Palette.ink, lineWidth: 1.5))
+        // Its own font: the badge keeps its size with Dynamic Type, as the
+        // map's does, and the line's name beside it carries the reading.
+        .accessibilityHidden(true)
     }
 }

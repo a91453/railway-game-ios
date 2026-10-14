@@ -332,6 +332,11 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// The colour the player chose for the line, or `nil` for the app's
     /// own pick (see ``LineColor``).
     public internal(set) var color: LineColor?
+    /// The line's code as the player set it (decision 216), such as `BL`
+    /// or `R2`, or `nil` for the app's own from the line's colour (see
+    /// ``LineCode``). No rule reads it. Set by
+    /// ``GameWorld/setLineCode(_:to:)`` only.
+    public internal(set) var code: LineCode?
     /// The runs of a real timetable the line sends its trains out on
     /// (decision 133), or none for a line that runs at a headway.
     public internal(set) var runs: [LineRun]
@@ -969,7 +974,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight, deadheadDistance, dwellSeconds, depot
+        case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, code
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1008,6 +1013,8 @@ extension ServiceLine: Codable {
         isRing = container.contains(.ring) ? try container.decode(Bool.self, forKey: .ring) : false
         outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
         color = container.contains(.color) ? try container.decode(LineColor.self, forKey: .color) : nil
+        // Decision 216 (save version 56): a code the player set.
+        code = try container.decodeIfPresent(LineCode.self, forKey: .code)
         runs = container.contains(.runs) ? try container.decode([LineRun].self, forKey: .runs) : []
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
@@ -1105,6 +1112,7 @@ extension ServiceLine: Codable {
         }
         try container.encodeIfPresent(outerLastDispatch, forKey: .outerLastDispatch)
         try container.encodeIfPresent(color, forKey: .color)
+        try container.encodeIfPresent(code, forKey: .code)
         if isFreight {
             try container.encode(true, forKey: .freight)
         }
@@ -1212,5 +1220,41 @@ extension LineColor: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rgb)
+    }
+}
+
+/// A line's code (decision 216), the short name on its badge, as the
+/// Taipei Metro's lines are BL, R or BR: one to three of the capital
+/// letters `A`–`Z` and the digits `0`–`9`, so that it fits a badge and
+/// reads in any language.
+public struct LineCode: Hashable, Sendable {
+    public let text: String
+
+    /// The longest code.
+    public static let maximumLength = 3
+
+    /// `nil` unless `text` is one to ``maximumLength`` capital letters
+    /// `A`–`Z` and digits.
+    public init?(_ text: String) {
+        let scalars = text.unicodeScalars
+        guard (1...Self.maximumLength).contains(scalars.count),
+              scalars.allSatisfy({ ("A"..."Z").contains($0) || ("0"..."9").contains($0) }) else { return nil }
+        self.text = text
+    }
+}
+
+extension LineCode: Codable {
+    /// Decodes the text, rejecting one that is not a code.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        guard let code = LineCode(try container.decode(String.self)) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "A line code is one to \(LineCode.maximumLength) capital letters A to Z and digits.")
+        }
+        self = code
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(text)
     }
 }

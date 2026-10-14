@@ -49,4 +49,58 @@ final class RenameAndColourTests: XCTestCase {
         XCTAssertNil(world.line(id: line)?.color)
         XCTAssertThrowsError(try world.setLineColor(LineID(rawValue: 9), to: nil))
     }
+
+    /// Decision 216: a line's code, one to three capitals and digits, saved
+    /// only when the player set one.
+    func testALinesCodeIsSavedAndChecked() throws {
+        var (world, _, line) = try world()
+        XCTAssertEqual(LineCode("BL")?.text, "BL")
+        XCTAssertEqual(LineCode("R2")?.text, "R2")
+        XCTAssertEqual(LineCode("123")?.text, "123")
+        for bad in ["", "bl", "ABCD", "B L", "線", "Ａ", "B-"] {
+            XCTAssertNil(LineCode(bad), bad)
+        }
+        let balance = world.economy.balance
+        let plain = String(decoding: try JSONEncoder().encode(world), as: UTF8.self)
+        XCTAssertFalse(plain.contains(#""code""#))
+        try world.setLineCode(line, to: LineCode("BL"))
+        XCTAssertEqual(world.line(id: line)?.code, LineCode("BL"))
+        XCTAssertEqual(world.economy.balance, balance)
+        let text = String(decoding: try JSONEncoder().encode(world), as: UTF8.self)
+        XCTAssertTrue(text.contains(#""code":"BL""#))
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: Data(text.utf8)), world)
+        for bad in [#""code":"bl""#, #""code":"ABCD""#, #""code":"""#, #""code":7"#] {
+            XCTAssertThrowsError(try JSONDecoder().decode(GameWorld.self, from: Data(text.replacingOccurrences(of: #""code":"BL""#, with: bad).utf8)), bad)
+        }
+        try world.setLineCode(line, to: nil)
+        XCTAssertNil(world.line(id: line)?.code)
+        let before = world
+        XCTAssertThrowsError(try world.setLineCode(LineID(rawValue: 9), to: LineCode("R"))) {
+            XCTAssertEqual($0 as? GameError, .unknownLine(LineID(rawValue: 9)))
+        }
+        XCTAssertEqual(world, before)
+    }
+
+    /// Save version 56 (decision 216): a line's code, read back as it was.
+    func testVersionFiftySixKeepsALinesCode() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v56-line-code.json")
+        var (made, _, line) = try world()
+        try made.setLineColor(line, to: LineColor.presets[8])
+        try made.setLineCode(line, to: LineCode("BL"))
+        try made.advance(ticks: 10)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if ProcessInfo.processInfo.environment["LINE_CODE_SAVE_NEW"] != nil {
+            try encoder.encode(SavedGame(world: made)).write(to: url)
+        }
+        let data = try Data(contentsOf: url)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["saveVersion"] as? Int, 56)
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, made)
+        XCTAssertEqual(loaded.line(id: line)?.code, LineCode("BL"))
+        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 56,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
 }

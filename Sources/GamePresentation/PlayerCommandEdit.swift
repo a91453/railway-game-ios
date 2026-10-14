@@ -85,6 +85,8 @@ extension PlayerCommand {
         case removeLine(LineID)
         case renameLine(LineID, name: String)
         case setLineColor(LineID, LineColor?)
+        /// The line's code, or `nil` for the app's own (decision 216).
+        case setLineCode(LineID, LineCode?)
         case setLineStops(LineID, [StationID])
         case reverseLineStops(LineID)
         case setLineRoutes(LineID, [LineRoutePreference], pattern: Int?)
@@ -260,6 +262,7 @@ extension GameSession {
         case .removeLine(let id): try world.removeLine(id)
         case .renameLine(let id, let name): try world.renameLine(id, to: name)
         case .setLineColor(let id, let color): try world.setLineColor(id, to: color)
+        case .setLineCode(let id, let code): try world.setLineCode(id, to: code)
         case .setLineStops(let id, let stops): try world.setLineStops(id, to: stops)
         case .reverseLineStops(let id): try world.reverseLineStops(id)
         case .setLineRoutes(let id, let routes, let pattern): try world.setLineRoutePreferences(id, to: routes, pattern: pattern)

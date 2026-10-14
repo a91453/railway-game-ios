@@ -1512,3 +1512,7 @@ V 實際放行 → T、U（保證不互穿）
 ## 沿真實路線描線建造（決策 213）
 
 參考庫 d3ebdf1。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 213 的「參考」：`Railway/site_archive_clean/index.html` 的 `projectOntoShape`、`shapeSlice`、`buildFollowRoute` 移植成 `RealRailwayTraces`；`rail-3d/physical/topology.js` 的最短路只取做法；`Ci/` 的 `radiusAtPoint` 移植成 `GameSession.tightestRadius(of:)`，`MIN_CURVE_RADIUS_M` 沒有採用；`track_style_layers.json` 的 `track-follow-*` 只取想法。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部專案沒有用到。
+
+## 線號徽章與色盲友善色票（決策 216）
+
+參考庫 788870262e。對照表寫在 ARCHITECTURE 決策 216 的「參考」：`Ci/` 的 `PRESET_COLORS` 沿用、`metroLineChipShortLabel` 只取做法（改從顏色取線號）、`getReadableChipTextColor` 沒有採用（改白底藏青字）、`.station-line-chip` 取大小；`Railway/site_archive_clean/index.html` 的 `drawTag` 只取做法；`data/trtc.json` 等的台灣捷運線號與色碼只用在測試。色盲：參考庫沒有可用的。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部：Okabe–Ito 七色、Paul Tol 的淺灰、Machado 2009 的模擬矩陣，只取數值。

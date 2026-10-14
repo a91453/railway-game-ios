@@ -1475,6 +1475,26 @@ public final class GameSession {
         }
     }
 
+    /// Sets the selected line's code (decision 216) through
+    /// `GameWorld.setLineCode(_:to:)`: `text` as ``LineBadge/code(from:)``
+    /// reads it, or the app's own for a blank one. Text that is no code
+    /// changes nothing and says why.
+    public func setSelectedLineCode(_ text: String) {
+        guard let line = requireSelectedLine() else { return }
+        let code = LineBadge.code(from: text)
+        guard code != nil || LineBadge.isBlank(text) else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "A line code is one to three letters A–Z or digits.",
+                "線號是一到三個英文字母或數字。"
+            ))
+            return
+        }
+        perform(.setLineCode(line.id, code)) { _, _, _ in
+            code.map { language.text("\(line.name) is now \($0.text).", "\(line.name) 的線號改為 \($0.text)。") }
+                ?? language.text("\(line.name) has its own code again.", "\(line.name) 改回自動線號。")
+        }
+    }
+
     /// Borrows one ``CompanyAccounts/loanStep`` through
     /// `GameWorld.borrow(_:)` (decision 67).
     public func borrowLoanStep() {
