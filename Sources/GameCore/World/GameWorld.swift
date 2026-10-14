@@ -945,7 +945,7 @@ public struct GameWorld: Equatable, Sendable {
                     guard changed.journey(of: line, service: service) != nil else { throw .depotBlocksLine(line.id) }
                 }
             }
-        } else if let line = lines.first(where: { $0.depot == id }) {
+        } else if let line = lines.first(where: { $0.depots.contains(id) }) {
             throw .depotInUse(line.id)
         }
         stations[index].isDepot = isDepot
@@ -958,25 +958,37 @@ public struct GameWorld: Equatable, Sendable {
         stations[index].commerce = level
     }
 
-    /// Gives line `id` the depot `depot`, or with `nil` none (decision
-    /// 209). Free. From then on the line sends its trains to the depot
-    /// empty when it no longer needs them, and out of it in time for their
-    /// trips; a train on its way to another depot gets there first. Without
-    /// one, trains stay where their trips end, as before.
+    /// Gives line `id` the depot `depot` as its only one, or with `nil`
+    /// none (decision 209). Free. From then on the line sends its trains to
+    /// the depot empty when it no longer needs them, and out of it in time
+    /// for their trips; a train on its way to another depot gets there
+    /// first. Without one, trains stay where their trips end, as before. A
+    /// line with runs (decision 133) may have one too (decision 221).
     ///
     /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
-    ///   for a depot, ``GameError/unknownStation(_:)``,
-    ///   ``GameError/notADepot(_:)`` or ``GameError/depotWithRuns(_:)`` for a
-    ///   line with runs (decision 133), which sends its trains out at the
-    ///   runs' times from where each run starts.
+    ///   for a depot, ``GameError/unknownStation(_:)`` or
+    ///   ``GameError/notADepot(_:)``.
     public mutating func setLineDepot(_ id: LineID, to depot: StationID?) throws(GameError) {
+        try setLineDepots(id, to: depot.map { [$0] } ?? [])
+    }
+
+    /// Gives line `id` the depots `depots`, none for none (decision 221).
+    /// Free. Its trains run into the one they reach soonest, and out of the
+    /// one nearest where they are wanted. A line whose trains stand at both
+    /// its ends at night keeps them near each.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownLine(_:)``;
+    ///   for the first depot, in the order given, that is not one,
+    ///   ``GameError/unknownStation(_:)``, ``GameError/notADepot(_:)`` or
+    ///   ``GameError/depotListedTwice(_:)``.
+    public mutating func setLineDepots(_ id: LineID, to depots: [StationID]) throws(GameError) {
         let index = try lineIndex(of: id)
-        if let depot {
+        for (position, depot) in depots.enumerated() {
+            guard !depots[..<position].contains(depot) else { throw .depotListedTwice(depot) }
             guard let station = station(id: depot) else { throw .unknownStation(depot) }
             guard station.isDepot else { throw .notADepot(depot) }
-            guard !lines[index].hasRuns else { throw .depotWithRuns(id) }
         }
-        lines[index].depot = depot
+        lines[index].depots = depots
     }
 
     /// Sets station `id`'s operation mode (Phase 5F, see
@@ -1094,9 +1106,10 @@ public struct GameWorld: Equatable, Sendable {
                 reindexPassengerJourneys(on: line.id, removing: pattern)
             }
         }
-        // Decision 209: a line whose depot it was has none.
-        for index in lines.indices where lines[index].depot == id {
-            lines[index].depot = nil
+        // Decision 209: a line whose depot it was has none (decision 221:
+        // keeps its others).
+        for index in lines.indices {
+            lines[index].depots.removeAll { $0 == id }
         }
         for index in trains.indices {
             if trains[index].execution == nil, trains[index].timetable.contains(where: { $0.station == id }) {
@@ -1894,8 +1907,6 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func setLineRuns(_ id: LineID, to runs: [LineRun]) throws(GameError) {
         let index = try lineIndex(of: id)
         guard lines[index].canHave(runs) else { throw .invalidLineRuns }
-        // Decision 209: a line with runs has no depot.
-        guard runs.isEmpty || lines[index].depot == nil else { throw .depotWithRuns(id) }
         if let running = lines[index].trains.first(where: { train(id: $0)?.execution != nil }) {
             throw .trainServiceActive(running)
         }
@@ -1926,7 +1937,7 @@ public struct GameWorld: Equatable, Sendable {
         copy.window = original.window
         copy.trainsInService = original.trainsInService
         copy.targetHeadways = original.targetHeadways
-        copy.depot = original.depot
+        copy.depots = original.depots
         copy.patterns = original.patterns.map { pattern in
             var copied = pattern
             copied.trains = []
@@ -2711,6 +2722,10 @@ public struct GameWorld: Equatable, Sendable {
         /// Decision 209: each train's empty run out of its line's depot from
         /// where it stood when it was looked up, or `nil` if it had none.
         var depotTrips: [TrainID: (from: TrainPlacement, trip: LineTrip?)] = [:]
+        /// Decision 221: each train's empty run out of its line's depot to a
+        /// stop of a line with runs, from where it stood when it was looked
+        /// up, or `nil` if it had none.
+        var runDepotTrips: [TrainID: (from: TrainPlacement, to: StationID, trip: LineTrip?)] = [:]
         /// Whether each line's service, by line and pattern, has a journey
         /// and runs trains at some level of its window (see
         /// ``GameWorld/isServed(_:memo:)``), once worked out.
@@ -2745,6 +2760,20 @@ public struct GameWorld: Equatable, Sendable {
             // runs' times instead.
             if lines[index].hasRuns {
                 if dispatchRuns(ofLine: index) { dispatched = true }
+                // Decision 221: out of a depot in time for a run, or into
+                // one when no run wants the train for a while.
+                let line = lines[index]
+                if let (ready, trip) = runTrainLeavingDepot(of: line, memo: &memo) ?? runTrainEnteringDepot(of: line, memo: &memo),
+                   let timetable = trip.timetable(calling: line.stops, sentOutAt: now) {
+                    trains[ready].trafficVisits = []
+                    trains[ready].timetable = timetable
+                    trains[ready].timetablePeriod = nil
+                    trains[ready].execution = .waitingAtStop(0)
+                    trains[ready].isDeadheading = true
+                    trains[ready].isStandingAside = false
+                    trains[ready].times = ServiceTimes(arrival: now)
+                    dispatched = true
+                }
                 continue
             }
             for stream in lines[index].dispatchStreams where !lines[index].trains(of: stream).isEmpty {
@@ -2977,6 +3006,10 @@ public struct GameWorld: Equatable, Sendable {
                 guard !line.trains.isEmpty else { continue }
                 let wake = hasReadyRun(line) ? now : line.nextRunChange(after: now)
                 if let wake { soonest = min(soonest ?? .max, Self.minutes(from: now, until: wake)) }
+                // Decision 221: a train into or out of a depot.
+                if let minutes = minutesUntilRunDepotMove(of: line, memo: &memo) {
+                    soonest = min(soonest ?? .max, minutes)
+                }
                 continue
             }
             for stream in line.dispatchStreams where !line.trains(of: stream).isEmpty {
@@ -3507,7 +3540,12 @@ public struct GameWorld: Equatable, Sendable {
     /// ``leaving(_:stop:cycle:)``, with the path kept in `memo`.
     func leaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving {
         leaving(train, stop: stop, cycle: cycle) { start, call in
-            path(from: start, toStation: call, length: train.length, memo: &memo).map { ($0, nil) }
+            // Decision 221: into a depot, a free siding first.
+            if let free = freeDepotBerths(call, for: train),
+               let path = path(from: start, toStation: call, length: train.length, eligible: free, memo: &memo) {
+                return (path, nil)
+            }
+            return path(from: start, toStation: call, length: train.length, memo: &memo).map { ($0, nil) }
         } ?? .noRoute
     }
 
@@ -4662,13 +4700,17 @@ extension GameWorld: Codable {
             if let missing = line.stops.first(where: { station(id: $0) == nil }) {
                 return "Line \(line.id.rawValue) calls at station \(missing.rawValue), which does not exist."
             }
-            // Decision 209: no line calls at a depot; a line's depot is
-            // one, and a line with runs has none.
+            // Decision 209: no line calls at a depot, and a line's depots
+            // are depots (decision 221: several, none twice, on a line with
+            // runs too).
             if let depot = line.stops.first(where: { station(id: $0)?.isDepot == true }) {
                 return "Line \(line.id.rawValue) calls at station \(depot.rawValue), which is a depot."
             }
-            if let depot = line.depot, station(id: depot)?.isDepot != true || line.hasRuns {
-                return "Line \(line.id.rawValue)'s depot \(depot.rawValue) must be a depot station, on a line without runs."
+            if let depot = line.depots.first(where: { station(id: $0)?.isDepot != true }) {
+                return "Line \(line.id.rawValue)'s depot \(depot.rawValue) must be a depot station."
+            }
+            if Set(line.depots).count != line.depots.count {
+                return "Line \(line.id.rawValue) has a depot twice."
             }
             for service in 0..<line.serviceCount {
                 for id in line.trains(ofService: service) {

@@ -1610,9 +1610,9 @@ extension StepOutcome: Codable {
         case .rejected(.depotInUse(let id)):
             try container.encode("depotInUse", forKey: .result)
             try container.encode(id.rawValue, forKey: .line)
-        case .rejected(.depotWithRuns(let id)):
-            try container.encode("depotWithRuns", forKey: .result)
-            try container.encode(id.rawValue, forKey: .line)
+        case .rejected(.depotListedTwice(let id)):
+            try container.encode("depotListedTwice", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
         case .rejected(.depotBlocksLine(let id)):
             try container.encode("depotBlocksLine", forKey: .result)
             try container.encode(id.rawValue, forKey: .line)

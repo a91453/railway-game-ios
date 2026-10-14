@@ -120,6 +120,7 @@ struct GoalsSections: View {
                     "每天午夜檢查目標。挑戰結束之後可以繼續玩下去。"
                 ))
             }
+            TodaySettlementsSection(session: session)
         }
     }
 
@@ -324,6 +325,8 @@ struct CompanyRankSection: View {
             town = UnservedCluster.largest(in: session.world)
             if achievements != nil { facts = AchievementFacts(world: session.world) }
         }
+        // Decision 224 (1C): today's trips under the rank.
+        TodaySettlementsSection(session: session)
         if let rank {
             Section {
                 if let tiles = session.mapExpansionText {

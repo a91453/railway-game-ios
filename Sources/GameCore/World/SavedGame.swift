@@ -303,6 +303,12 @@
 ///     build that reads only an earlier version would drop them, and its
 ///     trains would run through curves at full speed on shorter timetables
 ///     again, so it says the save is newer than it instead.
+/// 59. Depots of lines with runs (decision 221): a line can have several
+///     depots, written as `"depots"` (one is written as `"depot"`, as
+///     before), and a line with runs can have them. A build that reads only
+///     an earlier version would refuse the line with runs or drop the
+///     depots after the first, so it says the save is newer than it
+///     instead.
 /// 60. The trip log (decision 223, point 5): a world can have its
 ///     `"tripLog"`, each train's trips of today and yesterday with the
 ///     times of every call and its line's share of the fares. A build that
@@ -467,6 +473,8 @@ extension SavedGame: Codable {
         // a station day without `"transferred"` counted no changes.
         // Version 57 to 58: a world without `"curveSpeedLimits"` runs and
         // plans as before, and a run without `"limits"` meets none.
+        // Version 58 to 59: a line's single `"depot"` reads as its only
+        // depot, and a line with runs had none.
         // Version 59 to 60: a world without `"tripLog"` has kept no trips.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
