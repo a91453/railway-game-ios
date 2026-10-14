@@ -61,11 +61,23 @@ extension GameWorld {
         return overflow ? nil : reach
     }
 
-    /// Whether `chainage` along an edge `length` long, measured from its
-    /// `from` node, bounds a block: an end of the edge, or a whole number
-    /// of ``blockLength`` from its `from` node.
-    private static func isBlockBoundary(_ chainage: Int64, length: Int64) -> Bool {
-        chainage == 0 || chainage == length || chainage % blockLength == 0
+    /// Whether `chainage` along edge `edge`, measured from its `from` node,
+    /// bounds a block: an end of the edge, or a whole number of
+    /// ``blockLength`` from its `from` node. Never at a junction, nor within
+    /// ``RailwayNetwork/junctionZone`` of one (a node where more than two
+    /// edges end): a train waits for more of its route on plain track, and
+    /// takes its way through a station's turnouts at once, as decision 32
+    /// takes a whole route, so it never stands among them holding half a
+    /// way another train needs to cross.
+    private func isBlockBoundary(_ chainage: Int64, of edge: TrackEdge) -> Bool {
+        if isJunction(edge.from), chainage < RailwayNetwork.junctionZone { return false }
+        if isJunction(edge.to), edge.length - chainage < RailwayNetwork.junctionZone { return false }
+        return chainage == 0 || chainage == edge.length || chainage % Self.blockLength == 0
+    }
+
+    /// Whether more than two edges end at node `node`.
+    private func isJunction(_ node: TrackNodeID) -> Bool {
+        (network.node(node)?.ends.count ?? 0) > 2
     }
 
     /// The farthest block boundary along the route of `envelopes`, measured
@@ -73,32 +85,12 @@ extension GameWorld {
     /// there is none beyond the head.
     func blockBoundary(_ envelopes: AuthorityEnvelopes, atOrBefore distance: Int64) -> Int64 {
         guard distance > 0, !envelopes.stretches.isEmpty else { return 0 }
-        var index = envelopes.ends.firstIndex { distance <= $0 } ?? envelopes.stretches.count - 1
-        var distance = min(distance, envelopes.length)
-        while index >= 0 {
-            let stretch = envelopes.stretches[index]
+        let last = envelopes.ends.firstIndex { distance <= $0 } ?? envelopes.stretches.count - 1
+        let distance = min(distance, envelopes.length)
+        for index in stride(from: last, through: 0, by: -1) {
             let start = index == 0 ? 0 : envelopes.ends[index - 1]
-            guard let length = network.edge(stretch.traversal.edge)?.length else { return 0 }
-            let at = stretch.from + (distance - start)
-            // The boundary at or before `at`, the way the stretch is
-            // travelled.
-            let boundary: Int64
-            if Self.isBlockBoundary(stretch.traversal.direction == .forward ? at : length - at, length: length) {
-                boundary = at
-            } else if stretch.traversal.direction == .forward {
-                boundary = at / Self.blockLength * Self.blockLength
-            } else {
-                let chainage = length - at
-                boundary = length - min(length, (chainage / Self.blockLength + 1) * Self.blockLength)
-            }
-            if boundary >= stretch.from {
-                return max(0, start + (boundary - stretch.from))
-            }
-            // None on this stretch: the end of the one before, where it
-            // leaves its edge.
-            index -= 1
-            guard index >= 0 else { return 0 }
-            distance = envelopes.ends[index]
+            let limit = index == last ? distance - start : envelopes.ends[index] - start
+            if let along = boundaries(on: envelopes.stretches[index], upTo: limit).last { return start + along }
         }
         return 0
     }
@@ -107,23 +99,38 @@ extension GameWorld {
     /// `distance`, or `nil` when there is none before its end.
     func blockBoundary(_ envelopes: AuthorityEnvelopes, after distance: Int64) -> Int64? {
         let distance = max(distance, 0)
-        guard let index = envelopes.ends.firstIndex(where: { distance < $0 }) else { return nil }
-        let stretch = envelopes.stretches[index]
-        let start = index == 0 ? 0 : envelopes.ends[index - 1]
-        guard let length = network.edge(stretch.traversal.edge)?.length else { return nil }
-        let at = stretch.from + (distance - start)
-        let boundary: Int64
-        if stretch.traversal.direction == .forward {
-            boundary = min(length, (at / Self.blockLength + 1) * Self.blockLength)
-        } else {
-            let chainage = length - at
-            boundary = length - (chainage - 1) / Self.blockLength * Self.blockLength
+        guard let first = envelopes.ends.firstIndex(where: { distance < $0 }) else { return nil }
+        for index in first..<envelopes.stretches.count {
+            let start = index == 0 ? 0 : envelopes.ends[index - 1]
+            let stretch = envelopes.stretches[index]
+            if let along = boundaries(on: stretch, upTo: stretch.to - stretch.from).first(where: { start + $0 > distance }) {
+                return start + along
+            }
         }
-        guard boundary <= stretch.to else {
-            // The stretch ends first: where it leaves its edge, unless the
-            // route ends there.
-            return stretch.to == length ? envelopes.ends[index] : nil
+        return nil
+    }
+
+    /// The block boundaries on `stretch`, as distances from its start the
+    /// way it is travelled, in order, up to `limit` along it. Its start
+    /// counts only where it leaves a node (it is the end of the stretch
+    /// before); its end only where it reaches one.
+    private func boundaries(on stretch: TrackStretch, upTo limit: Int64) -> [Int64] {
+        guard let edge = network.edge(stretch.traversal.edge) else { return [] }
+        let forward = stretch.traversal.direction == .forward
+        let (low, high) = (stretch.from, min(stretch.to, stretch.from + limit))
+        guard low <= high else { return [] }
+        // Points along the way it is travelled: the edge's ends, and every
+        // whole block from its `from` node.
+        var points: [Int64] = [0, edge.length]
+        var block = Self.blockLength
+        while block < edge.length {
+            points.append(forward ? block : edge.length - block)
+            block += Self.blockLength
         }
-        return start + (boundary - stretch.from)
+        return points.filter { $0 > low || ($0 == low && low == 0) }
+            .filter { $0 <= high && (($0 < stretch.to) || stretch.to == edge.length) }
+            .filter { isBlockBoundary(forward ? $0 : edge.length - $0, of: edge) }
+            .sorted()
+            .map { $0 - low }
     }
 }

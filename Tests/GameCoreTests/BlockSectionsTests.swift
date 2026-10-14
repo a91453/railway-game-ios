@@ -93,6 +93,34 @@ final class BlockSectionsTests: XCTestCase {
         XCTAssertNil(world.blockBoundary(w, after: 454_000))
     }
 
+    /// A junction bounds no block, nor does any point within 1,024 of it:
+    /// a train waits on plain track, never among a station's turnouts.
+    func testAJunctionBoundsNoBlock() throws {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 2 * Self.edgeLength + 4_096, height: 40_960), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        // n1 ──e1── J ──e2── n3, and e3 from J off to n4: a turnout at J.
+        let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 1_024))
+        let junction = try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + Self.edgeLength, y: 1_024))
+        let n3 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + 2 * Self.edgeLength, y: 1_024))
+        let n4 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024 + 2 * Self.edgeLength, y: 13_524))
+        try world.buildTrackEdge(from: n1, to: junction)
+        try world.buildTrackEdge(from: junction, to: n3)
+        try world.buildTrackEdge(from: junction, to: n4)
+        world.setBlockSections(true)
+        let east = try world.purchaseTrain(named: "E").id
+        try world.placeTrain(east, at: .onEdge(forward(1), offset: 50_000))
+        try world.setTrainContinuation(east, along: [forward(2)], stoppingAt: 150_000)
+        let e = world.authorityEnvelopes(of: try XCTUnwrap(world.train(id: east)))
+        // e1's 96,000 and 192,000 are 46,000 and 142,000 on; J, 150,000 on,
+        // is none; e2's 96,000 is 246,000 on.
+        XCTAssertEqual(world.blockBoundary(e, atOrBefore: 149_999), 142_000)
+        XCTAssertEqual(world.blockBoundary(e, atOrBefore: 245_999), 142_000)
+        XCTAssertEqual(world.blockBoundary(e, after: 142_000), 246_000)
+        XCTAssertEqual(world.blockBoundary(e, atOrBefore: 246_000), 246_000)
+    }
+
     // MARK: - Following
 
     /// Five more stations along the line, west to east: S1 on e1, S2 and
