@@ -14,13 +14,13 @@ extension GameWorld {
         guard train.position != nil else {
             return language.text(
                 "Next: select a station with a free platform, then tap Place \(train.name) Here.",
-                "下一步：選一個月台空著的車站，按「把 \(train.name) 放在這裡」。"
+                "下一步：選一個月台空著的車站，按「把『\(train.name)』放在這裡」。"
             )
         }
         guard train.execution == nil, !train.hasPathAhead, assignedLine(of: id) == nil else { return nil }
         return language.text(
             "Next: give it a line with Assign to a Line below or in the Lines panel, or select a station and tap Send \(train.name) Here.",
-            "下一步：用下方的「配屬路線」或在路線面板配屬路線，或選一個車站按「派 \(train.name) 到這裡」。"
+            "下一步：用下方的「配屬路線」或在路線面板配屬路線，或選一個車站按「派『\(train.name)』到這裡」。"
         )
     }
 

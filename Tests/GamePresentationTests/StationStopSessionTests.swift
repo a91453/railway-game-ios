@@ -66,7 +66,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Market, 3072 units along the track.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Market, 48 m along the track.")
             )
         }
     }
@@ -90,7 +90,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(heading.world, onEdgeExpected, "the rest of edge 2 to Central's platform end")
             XCTAssertEqual(
                 heading.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 512 units along the track.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 8 m along the track.")
             )
         }
     }
@@ -131,7 +131,7 @@ final class StationStopSessionTests: XCTestCase {
             XCTAssertEqual(session.world, expected)
             XCTAssertEqual(
                 session.message,
-                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 1024 units along the track.")
+                StatusMessage(kind: .success, text: "Sent Train 1 to Central, 16 m along the track.")
             )
         }
     }
@@ -160,7 +160,7 @@ final class StationStopSessionTests: XCTestCase {
             session.advance(realElapsed: .milliseconds(100))
             XCTAssertEqual(session.world, arrived)
             XCTAssertEqual(session.world.stationStopText(of: Self.first, in: .english), "Stopped at Market")
-            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #4 forward, 1024 units along")
+            XCTAssertEqual(session.selectedTrain?.positionText(in: .english), "Track #4 forward, 16 m along")
             XCTAssertEqual(session.selectedTrain?.pathText(in: .english), "No path ahead")
         }
     }

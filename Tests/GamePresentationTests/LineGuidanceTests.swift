@@ -39,7 +39,7 @@ final class LineGuidanceTests: XCTestCase {
         )
         XCTAssertEqual(
             world.trainNextStepText(of: train, in: .traditionalChinese),
-            "下一步：選一個月台空著的車站，按「把 Train 1 放在這裡」。"
+            "下一步：選一個月台空著的車站，按「把『Train 1』放在這裡」。"
         )
         XCTAssertNil(world.trainNextStepText(of: TrainID(rawValue: 99), in: .english))
     }
@@ -52,7 +52,7 @@ final class LineGuidanceTests: XCTestCase {
         )
         XCTAssertEqual(
             world.trainNextStepText(of: train, in: .traditionalChinese),
-            "下一步：用下方的「配屬路線」或在路線面板配屬路線，或選一個車站按「派 Train 1 到這裡」。"
+            "下一步：用下方的「配屬路線」或在路線面板配屬路線，或選一個車站按「派『Train 1』到這裡」。"
         )
         XCTAssertEqual(world.trainPathStatusText(of: train, in: .english), "Not assigned to a line")
         XCTAssertEqual(world.trainPathStatusText(of: train, in: .traditionalChinese), "未配屬路線")

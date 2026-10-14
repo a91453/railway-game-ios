@@ -660,11 +660,13 @@ private struct DetailsCard: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { middleHeight = $0 }
     }
 
-    /// The action button.
+    /// The action button. Under a scrolling middle it keeps a whole gap
+    /// clear of the fade: the author saw a train's load bar half under it
+    /// (report of 2026-10-14).
     private var foot: some View {
         ControlPanel(session: session, arrangement: .action)
             .padding([.bottom, .horizontal], Self.padding)
-            .padding(.top, Self.spacing - Self.fade)
+            .padding(.top, pinsEnds ? Self.spacing : Self.spacing - Self.fade)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footHeight = $0 }
     }
 }
