@@ -8,27 +8,51 @@ import GameCore
 // system's share sheet.
 //
 // The owner's choice, 2026-10-14: of three drafts (a nameboard header, a
-// postcard with a stamp, a portrait poster) the poster, C, by the player's,
+// postcard with a stamp, a portrait poster) the poster, by the player's,
 // the developer's and the art's view together: upright, it fills a phone
-// and the feeds it is shared to (4:5); its parts stack, so its layout is a
-// few fixed frames; its title is the largest thing on it.
+// and the feeds it is shared to (4:5); its title is the largest thing on
+// it. Seen on a device it was found ugly, the round station master badge
+// above all; v2 (the planning session's choice C, same day) frames the map
+// to the network and draws the lines as a route map's (``PostcardNetwork``).
 
 /// What the postcard says.
 public struct NetworkPostcard: Hashable, Sendable {
-    /// One of the four figures under the map.
+    /// One of the figures under or beside the map.
     public struct Figure: Hashable, Sendable {
         public let value: String
         public let label: String
     }
 
-    /// The small line over the title: the game's name.
-    public let eyebrow: String
-    /// The company's name, as the player wrote it (``companyName(_:in:)``).
+    /// A line in the legend: its badge (decision 216) and its name.
+    public struct LegendLine: Hashable, Sendable {
+        public let id: LineID
+        public let code: String
+        public let name: String
+        public let color: LineColor?
+    }
+
+    /// How the card is laid out (decision 215, v2: the owner's choice C):
+    /// a network taller than wide stands in a narrow map with the legend
+    /// and figures in a column beside it; any other fills the width, the
+    /// legend and figures under it.
+    public enum Shape: Hashable, Sendable {
+        case tall, wide
+    }
+
+    /// The company's name, as the player wrote it (``companyName(_:in:)``):
+    /// the title, the only large words on the card.
     public let title: String
     /// The game's date and the company's title (decision 181).
     public let subtitle: String
-    /// Lines, stations, track and yesterday's riders, in that order.
+    /// The game's name, small in the corner: v2 drops the line over the
+    /// title, so the name is written once.
+    public let wordmark: String
+    /// At most ``figureLimit`` figures, none of them 0: yesterday's riders,
+    /// the track, the stations, the lines, in that order.
     public let figures: [Figure]
+    /// The lines with their badges, when there are two or more: one line
+    /// needs no key.
+    public let legend: [LegendLine]
     /// The credit the map on it needs (``DataSourceCredits``), or empty.
     public let credit: String
     /// The part of the world the map shows: what is built, with room round
@@ -39,19 +63,28 @@ public struct NetworkPostcard: Hashable, Sendable {
     public static let margin = 0.08
     /// The longest company name kept, in characters.
     public static let nameLimit = 16
+    /// The most figures on the card.
+    public static let figureLimit = 3
 
     public init(world: GameWorld, companyName: String, in language: DisplayLanguage) {
-        eyebrow = language.text("ALONG THE LINE", "ALONG THE LINE ・ 沿線")
         title = Self.companyName(companyName, in: language)
         let rank = CompanyRank(world: world)
         subtitle = "\(world.clock.now.date.text(in: language)) ・ \(rank.title.title(in: language))"
+        wordmark = language.text("Along the Line", "沿線")
         figures = Self.figures(lines: world.lines.count, figures: rank.figures, in: language)
+        legend = Self.legend(of: world)
         // Decision 215: the postcard draws the game's own map, never Apple's
         // or OpenStreetMap's base map (they cannot be drawn into a picture),
         // so it owes only the railways' credit, on a real-world map, where
-        // the stations and the traced lines come from TDX and OpenStreetMap.
+        // the stations and the traced lines come from TDX and OpenStreetMap
+        // (and v2's coast, from OpenStreetMap too).
         credit = world.geoAnchor == nil ? "" : DataSourceCredits.mapCorner(baseMap: false, railways: true, in: language)
         region = Self.region(of: world)
+    }
+
+    /// Tall when the map's region is a tenth taller than it is wide.
+    public var shape: Shape {
+        region.height > region.width * 1.1 ? .tall : .wide
     }
 
     /// `name` trimmed and cut to ``nameLimit`` characters; the game's
@@ -67,13 +100,23 @@ public struct NetworkPostcard: Hashable, Sendable {
         language.text("My Railway", "我的鐵道")
     }
 
+    /// Decision 215, v2: a 0 on a new game looks like nothing works, so a
+    /// figure that is 0 is left out, and at most three are kept, riders
+    /// first.
     static func figures(lines: Int, figures: CompanyFigures, in language: DisplayLanguage) -> [Figure] {
-        [
-            Figure(value: Money(Int64(lines)).displayText, label: language.text(lines == 1 ? "line" : "lines", "條路線")),
-            Figure(value: Money(Int64(figures.stations)).displayText, label: language.text(figures.stations == 1 ? "station" : "stations", "座車站")),
-            Figure(value: RankMeasure.network.valueText(figures.trackMetres), label: language.text("of track", "路網長度")),
-            Figure(value: Money(figures.yesterdayRiders).displayText, label: language.text("riders yesterday", "昨日旅客")),
+        let all: [(Int64, Figure)] = [
+            (figures.yesterdayRiders, Figure(value: Money(figures.yesterdayRiders).displayText, label: language.text("riders yesterday", "昨日旅客"))),
+            (figures.trackMetres, Figure(value: RankMeasure.network.valueText(figures.trackMetres), label: language.text("of track", "路網長度"))),
+            (Int64(figures.stations), Figure(value: Money(Int64(figures.stations)).displayText, label: language.text(figures.stations == 1 ? "station" : "stations", "座車站"))),
+            (Int64(lines), Figure(value: Money(Int64(lines)).displayText, label: language.text(lines == 1 ? "line" : "lines", "條路線"))),
         ]
+        return Array(all.filter { $0.0 != 0 }.map(\.1).prefix(figureLimit))
+    }
+
+    static func legend(of world: GameWorld) -> [LegendLine] {
+        guard world.lines.count > 1 else { return [] }
+        let codes = LineBadge.codes(for: world.lines)
+        return world.lines.map { LegendLine(id: $0.id, code: codes[$0.id] ?? "", name: $0.name, color: $0.color) }
     }
 
     static func region(of world: GameWorld) -> WorldRegion {
@@ -92,6 +135,12 @@ public struct NetworkPostcard: Hashable, Sendable {
 
 /// Where each part of the postcard goes, in points of a card
 /// ``size`` large; the app renders it at ``scale`` (1200 by 1500 pixels).
+///
+/// Decision 215, v2 (the owner's choice C, `docs/art/postcard-v2-2026-10-14/`):
+/// the station master's head beside the title, inside the card; under it
+/// the map, framed to the network. A tall network's map is as narrow as
+/// it needs, the legend and the figures in a column beside it; a wide
+/// one's fills the width down to the legend's row and the figures'.
 public enum PostcardLayout {
     public struct Frame: Hashable, Sendable {
         public let x: Double
@@ -118,6 +167,15 @@ public enum PostcardLayout {
         }
     }
 
+    /// Where the map, the legend and the figures go on one card.
+    public struct Parts: Hashable, Sendable {
+        public let map: Frame
+        /// One frame a legend entry: as many as fit, the last of them
+        /// ``NetworkPostcard/legend``'s "+N" when not all do.
+        public let legend: [Frame]
+        public let figures: [Frame]
+    }
+
     /// The card, 4:5 upright, about a phone's width.
     public static let size = (width: 400.0, height: 500.0)
     /// Pixels per point of the picture shared.
@@ -126,37 +184,97 @@ public enum PostcardLayout {
     public static let border = 4.0
     public static let cornerRadius = 15.0
 
-    public static let eyebrow = Frame(x: 18, y: 14, width: 364, height: 14)
-    public static let title = Frame(x: 16, y: 28, width: 368, height: 40)
-    public static let subtitle = Frame(x: 18, y: 68, width: 364, height: 16)
-    /// The map, with its own navy edge and corner.
-    public static let map = Frame(x: 10, y: 90, width: 380, height: 296)
+    /// The station master's head, in a rounded square beside the title.
+    public static let stationMaster = Frame(x: 18, y: 18, width: 50, height: 50)
+    public static let stationMasterCornerRadius = 11.0
+    public static let title = Frame(x: 78, y: 16, width: 304, height: 36)
+    public static let subtitle = Frame(x: 79, y: 52, width: 302, height: 14)
+    /// What the map, legend and figures share: under the title, over the
+    /// credit.
+    public static let body = Frame(x: 14, y: 82, width: 372, height: 384)
     public static let mapCornerRadius = 9.0
-    /// The credit, under the map's left corner.
-    public static let credit = Frame(x: 16, y: 389, width: 262, height: 10)
-    /// The four figures, two by two.
-    public static let figures = Frame(x: 14, y: 402, width: 262, height: 84)
-    public static let figureSpacing = 5.0
-    /// The station master in a round badge, over the map's lower right corner.
-    public static let stationMaster = Frame(x: 286, y: 384, width: 100, height: 100)
+    /// The credit, along the bottom on the left; the game's name on the right.
+    public static let credit = Frame(x: 18, y: 474, width: 286, height: 12)
+    public static let wordmark = Frame(x: 308, y: 472, width: 74, height: 16)
 
-    /// The frame of figure `index` (0 to 3: left to right, top to bottom).
-    public static func figure(_ index: Int) -> Frame {
-        let width = (figures.width - figureSpacing) / 2, height = (figures.height - figureSpacing) / 2
-        return Frame(
-            x: figures.x + Double(index % 2) * (width + figureSpacing),
-            y: figures.y + Double(index / 2) * (height + figureSpacing),
-            width: width, height: height
+    /// A tall map is never narrower than this or wider than ``tallMapWidest``.
+    public static let tallMapNarrowest = 160.0
+    public static let tallMapWidest = 250.0
+    public static let gap = 8.0
+    public static let figureSpacing = 6.0
+    public static let tallFigureHeight = 58.0
+    public static let wideFigureHeight = 54.0
+    public static let legendRow = 18.0
+    /// The most legend entries in a wide card's row.
+    public static let wideLegendLimit = 4
+
+    /// The parts of a card for a network of `shape`, its map's region
+    /// `aspect` (width over height) wide, with `legend` lines in the key
+    /// and `figures` figures.
+    public static func parts(shape: NetworkPostcard.Shape, aspect: Double, legend: Int, figures: Int) -> Parts {
+        switch shape {
+        case .tall:
+            let width = min(max(body.height * aspect, tallMapNarrowest), tallMapWidest)
+            let map = Frame(x: body.x, y: body.y, width: width, height: body.height)
+            let column = (x: map.maxX + gap, width: body.maxX - map.maxX - gap)
+            let figureFrames = (0..<figures).map { index in
+                let bottom = body.maxY - Double(figures - 1 - index) * (tallFigureHeight + figureSpacing)
+                return Frame(x: column.x, y: bottom - tallFigureHeight, width: column.width, height: tallFigureHeight)
+            }
+            let floor = (figureFrames.first?.y ?? body.maxY) - gap
+            let fit = max(0, Int((floor - body.y - gap) / legendRow))
+            let legendFrames = (0..<min(legend, fit)).map {
+                Frame(x: column.x, y: body.y + gap + Double($0) * legendRow, width: column.width, height: legendRow)
+            }
+            return Parts(map: map, legend: legendFrames, figures: figureFrames)
+        case .wide:
+            let figureTop = body.maxY - wideFigureHeight
+            let legendTop = figureTop - gap - (legend > 0 ? legendRow : 0)
+            let map = Frame(x: body.x, y: body.y, width: body.width, height: legendTop - body.y - (legend > 0 ? 2 : gap))
+            let shown = min(legend, wideLegendLimit)
+            let legendFrames = (0..<shown).map {
+                Frame(x: body.x + Double($0) * body.width / Double(shown), y: legendTop, width: body.width / Double(shown), height: legendRow)
+            }
+            let width = (body.width - figureSpacing * Double(max(figures - 1, 0))) / Double(max(figures, 1))
+            let figureFrames = (0..<figures).map {
+                Frame(x: body.x + Double($0) * (width + figureSpacing), y: figureTop, width: width, height: wideFigureHeight)
+            }
+            return Parts(map: map, legend: legendFrames, figures: figureFrames)
+        }
+    }
+
+    /// The parts of `postcard`'s card.
+    public static func parts(of postcard: NetworkPostcard) -> Parts {
+        parts(
+            shape: postcard.shape, aspect: postcard.region.width / max(postcard.region.height, 1),
+            legend: postcard.legend.count, figures: postcard.figures.count
         )
     }
 
     /// The type sizes, in points.
-    public static let eyebrowSize = 9.5
-    public static let titleSize = 32.0
+    public static let titleSize = 30.0
     public static let subtitleSize = 10.0
-    public static let figureValueSize = 17.0
+    public static let wordmarkSize = 10.0
+    public static let figureValueSize = 19.0
     public static let figureLabelSize = 8.0
-    public static let creditSize = 6.0
+    public static let legendSize = 9.5
+    public static let creditSize = 6.5
+}
+
+extension NetworkPostcard {
+    /// One entry of the legend: a line, or how many more there are.
+    public enum LegendEntry: Hashable, Sendable {
+        case line(LegendLine)
+        case more(Int)
+    }
+
+    /// The legend in `slots` entries: every line when they fit, otherwise
+    /// the first ones and "+N" for the rest in the last slot.
+    public func legendEntries(slots: Int) -> [LegendEntry] {
+        guard slots > 0 else { return [] }
+        guard legend.count > slots else { return legend.map(LegendEntry.line) }
+        return legend.prefix(slots - 1).map(LegendEntry.line) + [.more(legend.count - slots + 1)]
+    }
 }
 
 /// The map's projection on the postcard: `region` fitted into a view
