@@ -248,10 +248,13 @@ private struct TutorialCardSlot: View {
         !done && tutorial.step.goal != .read && (hint?.isProblem == true || waitedForSkip)
     }
 
-    /// Narrower on a phone on its side, whose map is short and wide.
+    /// Narrower and shorter on a phone on its side, whose map is short and
+    /// wide: the explanation scrolls, so the map shows beside the card.
     private var sized: TutorialCardPlacement {
         var placement = placement
-        placement.maxWidth = verticalSizeClass == .compact ? 320 : 340
+        let compact = verticalSizeClass == .compact
+        placement.maxWidth = compact ? 320 : 340
+        placement.maxHeight = compact ? TutorialCardPlacement.compactMaxHeight : .infinity
         return placement
     }
 
@@ -260,7 +263,7 @@ private struct TutorialCardSlot: View {
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
         TutorialCardLayout(placement: sized) {
             if isFolded {
-                FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint) {
+                FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
                     UITestTrace.action("tutorial.unfold")
                     choose(folded: false)
                 }
@@ -469,7 +472,7 @@ private struct TutorialCard: View {
                         Text(verbatim: session.language.text("Skip this step", "略過這一步"))
                             .font(.footnote.weight(.semibold))
                             .underline()
-                            .frame(minWidth: 44, minHeight: 44)
+                            .frame(minWidth: 44, minHeight: isCompact ? 36 : 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -527,48 +530,89 @@ private struct TutorialCard: View {
 }
 
 /// The card folded to its step and title, at the card's place, so the
-/// controls it covered are in reach; a tap opens it again.
+/// controls it covered are in reach; a tap opens it again, which its
+/// trailing "Tap for help" says (a player's report on 59.1 did not find
+/// the open card's buttons). "Skip this step" shows beside it as on the
+/// open card, when the step has waited long enough or something is wrong.
 private struct FoldedTutorialCard: View {
     let session: GameSession
     let tutorial: Tutorial
     /// Marked when something is wrong.
     let hint: TutorialHint?
+    /// Whether "Skip this step" shows.
+    let offersSkip: Bool
     let unfold: () -> Void
 
     var body: some View {
-        Button(action: unfold) {
-            HStack(spacing: 8) {
-                StationMasterAvatar(size: 24, mood: session.isTutorialStepDone ? .happy : .normal)
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 0) {
-                        Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                            .monospacedDigit()
-                            .accessibilityIdentifier("tutorial.progress")
-                        Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
-                        if hint?.isProblem == true {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundStyle(Theme.warning)
-                                .padding(.leading, 4)
+        HStack(spacing: 0) {
+            Button(action: unfold) {
+                HStack(spacing: 8) {
+                    StationMasterAvatar(size: 24, mood: session.isTutorialStepDone ? .happy : .normal)
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 0) {
+                            Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                                .monospacedDigit()
+                                .accessibilityIdentifier("tutorial.progress")
+                            Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
+                            if hint?.isProblem == true {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(Theme.warning)
+                                    .padding(.leading, 4)
+                            }
                         }
-                    }
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.primary)
-                    .lineLimit(1)
-                    Text(verbatim: tutorial.step.title(in: session.language))
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.primary)
                         .lineLimit(1)
-                }
-                Image(systemName: "chevron.up")
-                    .font(.footnote.weight(.bold))
+                        Text(verbatim: tutorial.step.title(in: session.language))
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 3) {
+                        Text(verbatim: session.language.text("Tap for help", "點我看說明"))
+                            .font(.caption2.weight(.bold))
+                            .lineLimit(1)
+                        Image(systemName: "chevron.up")
+                            .font(.caption2.weight(.bold))
+                    }
                     .foregroundStyle(Theme.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.primary.opacity(0.14), in: Capsule())
+                }
+                .padding(.leading, 12)
+                .padding(.trailing, offersSkip ? 8 : 12)
+                .padding(.vertical, 6)
+                .frame(minHeight: 44)
+                .contentShape(Capsule())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .frame(minHeight: 44)
-            .contentShape(Capsule())
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: session.language.text(
+                "Show Tutorial: \(tutorial.step.title(in: .english))",
+                "展開教學：\(tutorial.step.title(in: .traditionalChinese))"
+            )))
+            .accessibilityIdentifier("tutorial.unfold")
+            if offersSkip {
+                Divider()
+                    .frame(height: 24)
+                Button {
+                    UITestTrace.action("tutorial.skipStep")
+                    session.skipTutorialStep()
+                } label: {
+                    Text(verbatim: session.language.text("Skip this step", "略過這一步"))
+                        .font(.footnote.weight(.semibold))
+                        .underline()
+                        .lineLimit(1)
+                        .padding(.leading, 8)
+                        .padding(.trailing, 12)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.primary)
+                .accessibilityIdentifier("tutorial.skipStep")
+            }
         }
-        .buttonStyle(.plain)
         .background(Theme.panel, in: Capsule())
         .overlay {
             Capsule()
@@ -577,10 +621,5 @@ private struct FoldedTutorialCard: View {
         }
         .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
         .fixedSize()
-        .accessibilityLabel(Text(verbatim: session.language.text(
-            "Show Tutorial: \(tutorial.step.title(in: .english))",
-            "展開教學：\(tutorial.step.title(in: .traditionalChinese))"
-        )))
-        .accessibilityIdentifier("tutorial.unfold")
     }
 }
