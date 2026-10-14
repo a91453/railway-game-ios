@@ -20,6 +20,7 @@
 		196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B00B0A86FFD245909EF3231A /* ntdlrt_times.json */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
 		1D588A25E6C866FD0509878D /* trtc.json in Resources */ = {isa = PBXBuildFile; fileRef = 56ABC6AFF31D91F9079F6044 /* trtc.json */; };
+		1D765F8EE00C620166255264 /* PromotionLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */; };
 		1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7E2B69371F0B985A7107860 /* GameCore */; };
 		1E9DD55C059CAB8D682CA656 /* afr.json in Resources */ = {isa = PBXBuildFile; fileRef = 52815B08C6FE03A12ABC22D5 /* afr.json */; };
 		20561212C765FBDE6629645A /* ListSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */; };
@@ -201,6 +202,7 @@
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
 		6F88DCCA78BB699F97926C9A /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
+		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
@@ -399,6 +401,7 @@
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
 				FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */,
+				6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */,
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
 				C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */,
 				771361B568387359268A6B83 /* RollingStockCatalogView.swift */,
@@ -697,6 +700,7 @@
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */,
 				BB5F13C5775274242DF7E68C /* PostcardView.swift in Sources */,
+				1D765F8EE00C620166255264 /* PromotionLineView.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
 				7620F6925D1B67C07C540F42 /* RegionStyle.swift in Sources */,
