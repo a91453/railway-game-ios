@@ -89,9 +89,10 @@ final class RealWorldMapUITests: XCTestCase {
     /// a tick does is `DepotToolsTests` on Linux.
     func testTheLinePanelTicksAHighSpeedLinesDepot() {
         continueAfterFailure = false
-        // Upright: the panel is a sheet, so the drags below move its list,
-        // not the map beside it.
-        XCUIDevice.shared.orientation = .portrait
+        // The demo alone takes some four minutes to build on a runner
+        // (run 38645907391), past XCTest's own eight.
+        executionTimeAllowance = 20 * 60
+        XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -99,19 +100,26 @@ final class RealWorldMapUITests: XCTestCase {
 
         app.openDemo("demo.highSpeed")
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
+        // Paused, the app goes idle between queries: running, each took 5
+        // to 15 s and the drags below outran the allowance.
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
 
         let lines = app.buttons["entry.lines"]
         XCTAssertTrue(lines.appears(within: 10))
         lines.waitUntilSettled()
         lines.tap()
-        XCTAssertTrue(app.navigationBars["Lines"].firstMatch.appears(within: 10), "The lines panel opens")
+        let bar = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        bar.waitUntilSettled()
+        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let line = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(line), "A line's row must come into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list), "A line's row must come into reach")
         line.tap()
 
         let depot = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot), "The line's depots must come into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot, in: list), "The line's depots must come into reach")
         XCTAssertTrue(depot.becomesHittable(within: 10))
         let ticked = depot.isSelected
         depot.tap()
