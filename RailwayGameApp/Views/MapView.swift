@@ -434,6 +434,8 @@ struct MapView: View {
                             reach: projection.worldDistance(NetworkBuilding.touchRadius)
                         )
                     }, onPaint: { start, end, phase in
+                        // Decision 226: the tools fade while the finger is under them.
+                        noteDrawing(at: phase == .moved ? end : nil, mapOrigin: proxy.frame(in: .global).origin)
                         let from = projection.planPoint(at: start), to = projection.planPoint(at: end)
                         if isZoning {
                             switch phase {
@@ -1042,6 +1044,19 @@ struct MapView: View {
 
     private func stopPopTravelPlay() {
         screen.stopPopTravelPlay()
+    }
+
+    /// Decision 226: whether a finger drawing at `point` (the map's own
+    /// coordinates, whose origin lies at `mapOrigin` on the screen) is under
+    /// the tools (``GameScreenState/toolsFrame``, with a margin for the
+    /// finger); `nil` once it lifts. Set only when it changes, so a drag
+    /// redraws the screen twice, not on every move.
+    private func noteDrawing(at point: ScreenPoint?, mapOrigin: CGPoint) {
+        let under = point.map { point in
+            screen.toolsFrame.insetBy(dx: -16, dy: -16)
+                .contains(CGPoint(x: CGFloat(point.x) + mapOrigin.x, y: CGFloat(point.y) + mapOrigin.y))
+        } ?? false
+        if screen.isDrawingUnderTools != under { screen.isDrawingUnderTools = under }
     }
 
     /// Shows the tapped cell's people and density while the population
