@@ -75,11 +75,14 @@ public struct FollowBarInfo: Hashable, Sendable {
 
     /// The text after the name: "Main　Alpha→Gamma　08:00–08:24　· Not
     /// departed", or as much of it as the train has.
-    public func detail(in language: DisplayLanguage) -> String {
+    /// Without `times`, the departure and arrival are left out, for a bar
+    /// that shows them itself (decision 223: the arrival struck through
+    /// when the train is late).
+    public func detail(in language: DisplayLanguage, times: Bool = true) -> String {
         var parts: [String] = []
         if let kind { parts.append(kind) }
         if let origin, let terminus { parts.append("\(origin)→\(terminus)") }
-        if let departure, let arrival { parts.append("\(departure)–\(arrival)") }
+        if times, let departure, let arrival { parts.append("\(departure)–\(arrival)") }
         var text = parts.joined(separator: "　")
         if let status = status.text(in: language) {
             text += text.isEmpty ? "· \(status)" : "　· \(status)"
