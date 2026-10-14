@@ -112,7 +112,7 @@ extension Station: Codable {
         }
         // Decision 222: a station without `"commerce"` has none (every save
         // before version 57), and a depot has none.
-        commerce = try container.decodeIfPresent(StationCommerceLevel.self, forKey: .commerce)
+        commerce = container.contains(.commerce) ? try container.decode(StationCommerceLevel.self, forKey: .commerce) : nil
         if commerce != nil, isDepot {
             throw DecodingError.dataCorruptedError(
                 forKey: .commerce, in: container, debugDescription: "Station \(id.rawValue) is a depot, which has no shops."

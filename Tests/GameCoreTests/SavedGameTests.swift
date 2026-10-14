@@ -261,6 +261,50 @@ final class SavedGameTests: XCTestCase {
         return #"{"width":\#(width),"height":\#(height),"tiles":[\#(tiles.joined(separator: ","))]}"#
     }
 
+    /// The keys of save versions 53 to 60 are written only with a value, as
+    /// the older ones of lines, stations and the line accounts are: an
+    /// explicit `null`, which no build writes, is refused.
+    func testTheNewerKeysRefuseAnExplicitNull() throws {
+        let data = try Data(contentsOf: Self.fixtures.appendingPathComponent("v60-trip-log.json"))
+        XCTAssertNoThrow(try JSONDecoder().decode(SavedGame.self, from: data))
+        func refuses(_ key: String, _ change: (inout [String: Any]) -> Void, file: StaticString = #filePath, line: UInt = #line) throws {
+            var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+            var world = try XCTUnwrap(object["world"] as? [String: Any])
+            change(&world)
+            object["world"] = world
+            let broken = try JSONSerialization.data(withJSONObject: object)
+            XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: broken), "\(key): null", file: file, line: line)
+        }
+        for key in ["realisticOperation", "blockSections", "curveSpeedLimits", "tripLog"] {
+            try refuses(key) { $0[key] = NSNull() }
+        }
+        for key in ["code", "dwellSeconds", "depot", "depots"] {
+            try refuses(key) { world in
+                var lines = world["lines"] as! [[String: Any]]
+                lines[0][key] = NSNull()
+                world["lines"] = lines
+            }
+        }
+        try refuses("commerce") { world in
+            var stations = world["stations"] as! [[String: Any]]
+            stations[0]["commerce"] = NSNull()
+            world["stations"] = stations
+        }
+        for key in ["trips", "lateTrips"] {
+            try refuses(key) { world in
+                var accounts = world["lineAccounts"] as! [String: Any]
+                var lines = accounts["lines"] as! [[String: Any]]
+                var days = lines[0]["days"] as! [[String: Any]]
+                var tally = days[0]["tally"] as! [String: Any]
+                tally[key] = NSNull()
+                days[0]["tally"] = tally
+                lines[0]["days"] = days
+                accounts["lines"] = lines
+                world["lineAccounts"] = accounts
+            }
+        }
+    }
+
     /// Every committed save of every version still loads, round-trips and
     /// runs on.
     func testEveryCommittedSaveStillLoads() throws {
