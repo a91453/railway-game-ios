@@ -29,6 +29,9 @@ struct ContentView: View {
     @State private var pillDepth: CGFloat = 0
     /// The layer strip's height, without its margin.
     @State private var stripHeight: CGFloat = 0
+    /// How far Undo and Redo reach from the leading edge beside the tools
+    /// column, with the column (decision 226).
+    @State private var editsWidth: CGFloat = 0
     /// The dock's size, with its margin.
     @State private var dockSize = CGSize.zero
     /// How far down the details card reaches, with its margins.
@@ -239,9 +242,15 @@ struct ContentView: View {
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
             )
+            // Decision 226: on a phone held sideways (out of the tutorial,
+            // whose steps point where its controls have always been), the
+            // tools are a column down the leading edge, not a dock along the
+            // bottom; the map keeps its height. `dockSize` measures either.
+            let toolsColumn = compactHeight && session.tutorial == nil
+            let dockBottom = toolsColumn ? 0 : dockSize.height
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
-            let besideDock = dockSize.width + cardWidth + margin <= proxy.size.width
+            let besideDock = toolsColumn || dockSize.width + cardWidth + margin <= proxy.size.width
             let cardBottom = strip + (besideDock ? 0 : dockSize.height)
             let cardHeight = max(120, proxy.size.height - pillDepth - cardBottom - 2 * margin)
             // Decision 114: the tools down the leading edge while building,
@@ -261,7 +270,9 @@ struct ContentView: View {
                 .background {
                     map
                         .environment(\.mapInsets, EdgeInsets(
-                            top: mapTop, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
+                            top: mapTop,
+                            leading: toolsColumn ? dockSize.width : showsRail ? BuildToolRail.width + margin : 0,
+                            bottom: dockBottom,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         ))
                         // A panel beside the map runs down its whole side.
@@ -302,7 +313,7 @@ struct ContentView: View {
                     }
                 }
                 .overlay(alignment: .topLeading) {
-                    if showsRail {
+                    if showsRail, !toolsColumn {
                         BuildToolRail(session: session, maxHeight: railHeight)
                             .padding(.top, pillDepth)
                             .padding([.top, .leading], margin)
@@ -313,12 +324,37 @@ struct ContentView: View {
                     // The card gives way to a panel beside the map: while
                     // one is open the toggle could only set what shows after
                     // it closes, with nothing to see now.
-                    ControlDock(session: session, isOpen: isOpen, canToggle: sidePanel == nil) {
-                        detailsChoice = !isOpen
+                    Group {
+                        if toolsColumn {
+                            // Between the board and the bottom, less the
+                            // card's toggle over the building tools and
+                            // Build under them.
+                            ToolsColumn(
+                                session: session, isOpen: isOpen, canToggle: sidePanel == nil,
+                                railHeight: max(60, proxy.size.height - pillDepth - strip - 2 * margin - 2 * ToolsColumn.tileDepth)
+                            ) {
+                                detailsChoice = !isOpen
+                            }
+                            .transition(.opacity)
+                        } else {
+                            ControlDock(session: session, isOpen: isOpen, canToggle: sidePanel == nil) {
+                                detailsChoice = !isOpen
+                            }
+                        }
                     }
                     .padding([.leading, .bottom], margin)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     .padding(.bottom, strip)
+                }
+                // Decision 226: Undo and Redo beside the tools column's
+                // foot, when there is an edit to take back or make again.
+                .overlay(alignment: .bottomLeading) {
+                    if toolsColumn {
+                        ControlPanel(session: session, arrangement: .editsRow)
+                            .padding(.leading, dockSize.width + ControlPanel.tileGap)
+                            .padding(.bottom, strip + margin)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { editsWidth = $0 }
+                    }
                 }
                 // Decision 118: the station master beside the dock, not in
                 // the tutorial, whose card has the station master. Only once
@@ -335,14 +371,17 @@ struct ContentView: View {
                     // lies over the station master beside the dock (x
                     // 350-394), leaving a sliver to tap. Kept, not removed,
                     // so it remembers what it has said.
-                    let isCovered = dockSize.width + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
+                    // Beside the tools column, past Undo and Redo when they
+                    // show (decision 226).
+                    let beside = dockSize.width + (toolsColumn && ControlPanel.showsEdits(session) ? editsWidth - dockSize.width : 0)
+                    let isCovered = beside + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     if session.tutorial == nil, dockSize != .zero {
                         StationMasterCorner(
                             session: session,
-                            maxBubbleWidth: proxy.size.width - dockSize.width - trailing - 3 * margin - 52,
+                            maxBubbleWidth: proxy.size.width - beside - trailing - 3 * margin - 52,
                             isCovered: isCovered
                         )
-                        .padding(.leading, dockSize.width + margin)
+                        .padding(.leading, beside + margin)
                         .padding(.bottom, strip + margin)
                     }
                 }
@@ -354,8 +393,11 @@ struct ContentView: View {
                     if session.tutorial == nil, draft.count >= 2 {
                         StationPairDrawer(session: session, from: draft[draft.count - 2], to: draft[draft.count - 1])
                             .padding(.horizontal, margin)
+                            .padding(.leading, toolsColumn ? dockSize.width : 0)
                             .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
-                            .padding(.bottom, strip + dockSize.height + 2 * margin)
+                            // Beside the tools column, above the station
+                            // master, who stands at its foot.
+                            .padding(.bottom, strip + (toolsColumn ? StationMasterCorner.avatarSize + margin : dockBottom) + 2 * margin)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -381,6 +423,7 @@ struct ContentView: View {
                 }
                 .animation(.easeInOut(duration: 0.2), value: isOpen)
                 .animation(.easeInOut(duration: 0.2), value: showsRail)
+                .animation(.easeInOut(duration: 0.2), value: toolsColumn)
                 .animation(.easeInOut(duration: 0.25), value: sidePanel)
                 .animation(.easeInOut(duration: 0.2), value: session.lineDraft.count >= 2)
         }
@@ -528,8 +571,9 @@ private struct StatusPill: View {
 }
 
 /// Build, the lines and the company's figures, and Undo
-/// (``ControlPanel``'s tools), in a glass dock at the bottom of the screen
-/// (decision 106), with the button that shows or hides the details card.
+/// (``ControlPanel``'s tools), in a dock at the bottom of the screen
+/// (decision 106; an iPad, and the tutorial), with the button that shows or
+/// hides the details card.
 private struct ControlDock: View {
     let session: GameSession
     let isOpen: Bool
@@ -537,7 +581,9 @@ private struct ControlDock: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        // Decision 226: solid tiles by group, the map showing between them,
+        // instead of one glass dock.
+        HStack(spacing: ControlPanel.tileGap) {
             ControlPanel(session: session, arrangement: .tools)
             // In the tutorial, only on the steps that do not point into the
             // card: on a phone on its side it covered a third of the map,
@@ -545,11 +591,54 @@ private struct ControlDock: View {
             if session.tutorial?.step.usesDetailsCard != true {
                 ControlDetailsToggle(isOpen: isOpen, action: toggle)
                     .disabled(!canToggle)
+                    .controlTile()
             }
         }
         .fixedSize()
-        .padding(8)
-        .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+/// Decision 226: on a phone held sideways, the tools in a column down the
+/// leading edge, anchored at the bottom where the thumb rests, so the map
+/// keeps its height: the details card's toggle on top, then the tools
+/// (``ControlPanel/Arrangement/toolsColumn``, Build at the bottom). While
+/// building, the building tools (``BuildToolRail``, decision 114) take the
+/// tools' place, over Build. Undo and Redo, when they show, stand beside the
+/// column's foot (``ContentView``), not in it: a phone held sideways has
+/// not the height for all of them.
+private struct ToolsColumn: View {
+    let session: GameSession
+    let isOpen: Bool
+    var canToggle = true
+    /// The most height the building tools may take.
+    let railHeight: CGFloat
+    let toggle: () -> Void
+
+    var body: some View {
+        VStack(alignment: .center, spacing: ControlPanel.tileGap) {
+            // The card's toggle stays on top while building too: a chosen
+            // tool keeps the card open, and folding it shows the map.
+            toggleTile
+            if BuildToolRail.isShown(session) {
+                BuildToolRail(session: session, maxHeight: railHeight)
+                // Build where it was, lit: a second tap closes the tools.
+                ControlPanel(session: session, arrangement: .buildEntry)
+            } else {
+                ControlPanel(session: session, arrangement: .toolsColumn)
+            }
+        }
+        // As narrow as its buttons; the building tools fit their height
+        // themselves (``BuildToolRail``'s `ViewThatFits`).
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    /// A one-button tile and the gap after it.
+    static let tileDepth: CGFloat = 48 + 8 + ControlPanel.tileGap
+
+    private var toggleTile: some View {
+        ControlDetailsToggle(isOpen: isOpen, action: toggle)
+            .disabled(!canToggle)
+            .controlTile()
     }
 }
 

@@ -12,6 +12,8 @@
 | `c-route-frame.png` | **C 路線圖的框**（定案）：iPhone 工具一欄在左、地圖控制一欄在右；iPad 工具留在左下一排。都有一條看板。多一組 iPad 直拿（820×1180） |
 | `solid-groups.png` | 實色外框的三種切法：一整排、每顆分開、**按組分開**（定案），以及拖曳時那一欄變淡、iPad |
 | `solid-outline.png` | 深色模式的外框：`ECEEF6` 2 點對 **`B4B9D9` 1.5 點**（定案），淺色照舊藏青 |
+| `final-iphone.png` | **最終版**，iPhone 橫拿五種狀態：平常、選了車站、建造中、跟著一班車、拖曳經過左欄 |
+| `final-ipad.png` | **最終版**，iPad 橫拿與直拿 |
 | `c-states.png` | C 的「選了車站」「建造中」 |
 
 - 每張都有 iPhone（淺色、深色、灰階）和 iPad（淺色、深色）。
