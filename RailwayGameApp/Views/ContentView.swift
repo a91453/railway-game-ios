@@ -247,7 +247,11 @@ struct ContentView: View {
             // tools are a column down the leading edge, not a dock along the
             // bottom; the map keeps its height. `dockSize` measures either.
             let toolsColumn = compactHeight && session.tutorial == nil
-            let dockBottom = toolsColumn ? 0 : dockSize.height
+            // With the column, the bottom is the station master's: the
+            // map's own buttons at its leading foot (layers, map style)
+            // stay above it, as they stood above the dock (a tap on the map
+            // style menu reached the station master instead).
+            let dockBottom = toolsColumn ? StationMasterCorner.avatarSize + 2 * margin : dockSize.height
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = toolsColumn || dockSize.width + cardWidth + margin <= proxy.size.width
@@ -401,7 +405,7 @@ struct ContentView: View {
                             .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
                             // Beside the tools column, above the station
                             // master, who stands at its foot.
-                            .padding(.bottom, strip + (toolsColumn ? StationMasterCorner.avatarSize + margin : dockBottom) + 2 * margin)
+                            .padding(.bottom, strip + dockBottom + 2 * margin)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
