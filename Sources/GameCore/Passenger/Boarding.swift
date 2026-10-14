@@ -334,10 +334,13 @@ extension GameWorld {
         }
         // Each destination's boarders pay together, rounded to whole
         // dollars (G1c; the reference's fare trips of a boarding plan).
+        var tripFare = Money.zero
         for payers in paying.keys.sorted() {
             let fare = chargeFares(paying[payers]!, from: passengers[record].station, to: payers.destination, highSpeed: payers.highSpeed)
-            if let weights = shares[payers] { shareFare(fare, among: Self.merged(weights)) }
+            if let weights = shares[payers] { tripFare = tripFare + shareFare(fare, among: Self.merged(weights), crediting: boardingLine) }
         }
+        // Decision 223: the train's trip takes its line's share.
+        creditTrip(of: train.id, fare: tripFare, boarded: boarded)
         countBoarding(boarded, on: boardingLine, at: passengers[record].station)
         passengers[record].board(taken)
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {

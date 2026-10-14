@@ -213,6 +213,8 @@ final class StationCommerceTests: XCTestCase {
         try made.upgradeStationCommerce(at: b)
         try made.upgradeStationCommerce(at: b)
         try made.advance(ticks: 1_440 + 20)
+        // Decision 223: version 57 kept no trip log.
+        made.tripLog = []
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["STATION_COMMERCE_SAVE_NEW"] != nil {
