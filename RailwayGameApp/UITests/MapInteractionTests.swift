@@ -144,7 +144,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertEqual(field.value as? String, "Central Plaza")
         alert.buttons["Rename"].tap()
         XCTAssertTrue(alert.disappears(within: 5))
-        XCTAssertTrue(app.navigationBars.staticTexts["Central Plaza"].appears(within: 5),
+        XCTAssertTrue(app.navigationBars["Central Plaza"].appears(within: 5),
                       "The station panel shows the new name")
     }
 
