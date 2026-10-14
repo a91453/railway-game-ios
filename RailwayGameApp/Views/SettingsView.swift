@@ -59,7 +59,7 @@ struct SettingsView: View {
             }
             .listStyle(.insetGrouped)
             .fullScreenCover(item: $cityViewArea) { area in
-                CityView3D(area: area)
+                CityView3D(area: area, close: { cityViewArea = nil })
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app)
