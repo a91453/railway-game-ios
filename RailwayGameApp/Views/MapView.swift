@@ -238,8 +238,11 @@ struct MapView: View {
             // Only when the camera moves itself (opening a game, jumping to
             // a station or a place); the player's pans and zooms are left
             // as they are (#544).
-            let topClear = ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
-            let framing = topClear.clearing([bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }, viewport: viewport)
+            let cover = MapCover(
+                edges: ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing),
+                corners: [bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }
+            )
+            let framing = cover.framing(in: viewport)
             let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport, clearOf: framing)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
@@ -754,7 +757,7 @@ struct MapView: View {
                 // While a train is followed the camera stays on it.
                 // Decision 106, later: "in view" is the map the screen's
                 // controls leave, and one under them moves to its middle.
-                keepSelectionClear(projection: projection, clear: framing, line: false)
+                keepSelectionClear(projection: projection, cover: cover, line: false)
             }
             // Decision 106, later: a line chosen in the lines panel, and the
             // selection when a panel opens over it, move into the map the
@@ -763,14 +766,14 @@ struct MapView: View {
             // that building makes or picks stays where the player looks.
             .onChange(of: session.selectedLineID) { _, _ in
                 guard screen.panel == .lines else { return }
-                keepSelectionClear(projection: projection, clear: framing, line: true)
+                keepSelectionClear(projection: projection, cover: cover, line: true)
             }
             // TestFlight 59.1: the details card opens and closes all through
             // building (the tool's card, a start tapped, Clear, Done); the
             // line the session keeps selected then zoomed the map out to its
             // whole length each time. Only the lines panel shows a line.
             .onChange(of: insets.trailing) { _, _ in
-                keepSelectionClear(projection: projection, clear: framing,
+                keepSelectionClear(projection: projection, cover: cover,
                                    line: screen.panel == .lines && session.selectedStation == nil)
             }
             .onChange(of: session.routePreview?.request) { _, _ in
@@ -1440,26 +1443,28 @@ struct MapView: View {
 
     /// Decision 106, later: moves the camera so the selected station (or,
     /// for `line`, the selected line's stops) shows in the part of the map
-    /// the screen's controls leave (`clear`), in its middle, when it does
-    /// not show there now; a line is zoomed out to fit, never in. Not
+    /// the screen's controls leave (`cover`'s framing), in its middle, when
+    /// what covers the map hides it now (``PlanCamera/hides(_:under:)``:
+    /// under a control, not beside one, B1); a line is zoomed out to fit,
+    /// never in. Not
     /// while a train is followed, whose camera stays on it, nor during the
     /// tutorial, whose steps point at places on the map, nor while a
     /// building tool is chosen, whose player is zoomed in on the track
     /// (TestFlight 59.1).
-    private func keepSelectionClear(projection: PlanCamera, clear free: ScreenInsets, line: Bool) {
+    private func keepSelectionClear(projection: PlanCamera, cover: MapCover, line: Bool) {
         guard session.tool == .select, !session.isFollowingTrain, session.tutorial == nil else { return }
         if line {
             guard let selected = session.selectedLine else { return }
             let stops = selected.stops.compactMap { session.world.station(id: $0) }
                 .map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
             guard let region = WorldRegion(enclosing: stops),
-                  !stops.allSatisfy({ projection.showsClear($0, of: free) }) else { return }
-            camera = projection.showing(region, clearOf: free)
-        } else if let station = session.selectedStation {
-            let point = WorldCoordinate(x: station.location.x, y: station.location.y)
-            if !projection.showsClear(point, of: free) {
-                camera = projection.centered(on: point, clearOf: free)
-            }
+                  stops.contains(where: { projection.hides($0, under: cover) }) else { return }
+            camera = projection.showing(region, clearOf: cover.framing(in: projection.viewport))
+        } else if let station = session.selectedStation,
+                  let moved = projection.keepingClear(WorldCoordinate(x: station.location.x, y: station.location.y), of: cover) {
+            // Along an axis the framing leaves almost nothing of, the
+            // station keeps its place (B1).
+            camera = moved
         }
     }
 

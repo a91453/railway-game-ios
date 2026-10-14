@@ -61,11 +61,7 @@ extension ScreenInsets {
     /// jumping to a place), not for the player's pans and zooms.
     public func clearing(_ corners: [ScreenFrame], viewport: ScreenSize) -> ScreenInsets {
         var insets = self
-        // A frame not wholly in the view, or one past half of it, is a
-        // layout still settling (a column moving in), not a corner: skipped.
-        for frame in corners where frame.width > 0 && frame.height > 0
-            && frame.x >= 0 && frame.y >= 0 && frame.x + frame.width <= viewport.width && frame.y + frame.height <= viewport.height
-            && frame.width <= viewport.width / 2 && frame.height <= viewport.height / 2 {
+        for frame in corners where frame.standsInCorner(of: viewport) {
             let atTrailing = frame.x + frame.width / 2 > viewport.width / 2
             let atBottom = frame.y + frame.height / 2 > viewport.height / 2
             let side = atTrailing ? viewport.width - frame.x : frame.x + frame.width
@@ -81,7 +77,99 @@ extension ScreenInsets {
     }
 }
 
+extension ScreenFrame {
+    /// Whether this frame is a control standing in a corner of `viewport`:
+    /// a frame not wholly in the view, or one past half of it, is a layout
+    /// still settling (a column moving in), not a corner; an empty one is
+    /// not laid out yet.
+    func standsInCorner(of viewport: ScreenSize) -> Bool {
+        width > 0 && height > 0
+            && x >= 0 && y >= 0 && x + width <= viewport.width && y + height <= viewport.height
+            && width <= viewport.width / 2 && height <= viewport.height / 2
+    }
+
+    /// Whether `point` is inside this frame.
+    func contains(_ point: ScreenPoint) -> Bool {
+        point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height
+    }
+}
+
+/// What covers the map view (decision 106, #593): the panels, the screen's
+/// controls and the column at the top along its edges (`edges`), and the
+/// controls standing in its corners (`corners`: the layer buttons, the
+/// legend, the zoom buttons).
+public struct MapCover: Hashable, Sendable {
+    public var edges: ScreenInsets
+    public var corners: [ScreenFrame]
+
+    public init(edges: ScreenInsets = ScreenInsets(), corners: [ScreenFrame] = []) {
+        self.edges = edges
+        self.corners = corners
+    }
+
+    /// The insets the camera's own framing keeps clear of: the edges, each
+    /// corner's control pushing in one of them
+    /// (``ScreenInsets/clearing(_:viewport:)``).
+    public func framing(in viewport: ScreenSize) -> ScreenInsets {
+        edges.clearing(corners, viewport: viewport)
+    }
+}
+
 extension PlanCamera {
+    /// The least room, across or down, that the camera's framing must
+    /// leave for a selection to be moved into its middle along that axis:
+    /// a fingertip's width. Less, and the selection keeps its place along
+    /// that axis.
+    public static let smallestClearSpan = 44.0
+
+    /// Whether `point` is out of the view or under what covers it
+    /// (`cover`): under a panel or control along an edge, along an axis
+    /// where the framing leaves room (``smallestClearSpan``), or under a
+    /// corner's control itself; not merely beside a corner's control, in
+    /// the band of the view the framing gives up to it (B1: a selected
+    /// station moved every time the details card opened or closed).
+    public func hides(_ point: WorldCoordinate, under cover: MapCover) -> Bool {
+        let screen = screenPoint(of: point)
+        guard screen.x >= 0, screen.x <= viewport.width, screen.y >= 0, screen.y <= viewport.height else { return true }
+        let room = clearRoom(cover.framing(in: viewport))
+        if room.across, screen.x < cover.edges.leading || screen.x > viewport.width - cover.edges.trailing { return true }
+        if room.down, screen.y < cover.edges.top || screen.y > viewport.height - cover.edges.bottom { return true }
+        return cover.corners.contains { $0.standsInCorner(of: viewport) && $0.contains(screen) }
+    }
+
+    /// Decision 106, later, and B1: the camera that brings `point` (the
+    /// selected station) out from under `cover` into the middle of the
+    /// part of the view its framing leaves, as near as the map's edges
+    /// allow; `nil` when it is not hidden (``hides(_:under:)``), or when
+    /// moving would not change the camera. Along an axis where the framing
+    /// leaves less than ``smallestClearSpan``, `point` keeps its place (in
+    /// the view's middle when it is out of the view that way).
+    public func keepingClear(_ point: WorldCoordinate, of cover: MapCover) -> PlanCamera? {
+        guard hides(point, under: cover) else { return nil }
+        let framing = cover.framing(in: viewport)
+        let room = clearRoom(framing)
+        let screen = screenPoint(of: point)
+        func target(room: Bool, near: Double, far: Double, at current: Double, size: Double) -> Double? {
+            if room { return near + (size - near - far) / 2 }
+            return current >= 0 && current <= size ? nil : size / 2
+        }
+        let x = target(room: room.across, near: framing.leading, far: framing.trailing, at: screen.x, size: viewport.width)
+            .map { Double(point.x) - ($0 - viewport.width / 2) / pointsPerUnit } ?? centerX
+        let y = target(room: room.down, near: framing.top, far: framing.bottom, at: screen.y, size: viewport.height)
+            .map { Double(point.y) - ($0 - viewport.height / 2) / pointsPerUnit } ?? centerY
+        let moved = centered(atX: x, y: y)
+        return moved == self ? nil : moved
+    }
+
+    /// Whether `framing` leaves at least ``smallestClearSpan`` of the view
+    /// across and down.
+    private func clearRoom(_ framing: ScreenInsets) -> (across: Bool, down: Bool) {
+        (
+            across: viewport.width - framing.leading - framing.trailing >= Self.smallestClearSpan,
+            down: viewport.height - framing.top - framing.bottom >= Self.smallestClearSpan
+        )
+    }
+
     /// The camera a game opens on (#593): as it always opened
     /// (``init(bounds:viewport:showing:clearOf:)`` with no insets) when
     /// none of `stations` it shows is under the screen's controls
