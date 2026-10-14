@@ -1,8 +1,8 @@
 # 內容目錄：車型數值搬到內建資料（設計，2026-10-14）
 
-NEXT_PRIORITIES 2026-10-12 §5 第 2 項、§13 第 20 名。工作登記 #231：決策 225（待合併 session 確認），存檔版本與 golden schema **不動**。遊戲規劃 session 派工。
+NEXT_PRIORITIES 2026-10-12 §5 第 2 項、§13 第 20 名。工作登記 #231：決策 225（合併 session 2026-10-14 確認），存檔版本與 golden schema **不動**。遊戲規劃 session 派工。
 
-這份是第一段（只有文件）。第二段是 GameCore 程式，排在 GameCore 隊列第四（彎道限速二 #588 已合併，接著高鐵機廠規則 #611、班次紀錄），等合併 session 給名額才推會跑 GameCore 全量 CI 的 commit。
+這份是第一段（只有文件）。第二段是 GameCore 程式，排在 GameCore 隊列第四（彎道限速二 #588 已合併，接著高鐵機廠規則 #611、班次紀錄），等合併 session 通知（#611 或班次紀錄其中一個合併之後）才推會跑 GameCore 全量 CI 的 commit。
 
 **這件事做什麼**：
 
