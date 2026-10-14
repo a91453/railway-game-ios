@@ -7531,3 +7531,33 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。
 
 **之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
+
+### 212. 區間閉塞：長區間也能跟車、越行
+
+2026-10-14。NEXT_PRIORITIES §0 第 15 項。設計與試驗：[`research/BLOCK_SECTIONS_2026-10-13.md`](research/BLOCK_SECTIONS_2026-10-13.md)（作者授權 session 從開發、美術、玩家三個角度決定第 7 節的四題）。
+
+**為什麼**：決策 56 的跟車在高鐵的 30–180 km 區間幾乎跟不起來，高鐵示範打開行車控制時 191 班丟 97 班（決策 197 第 5 點；#513 之後本機 release 一整天 742.9 秒，丟班不變）。四個卡點：(A) 前車自己在跟車就不能當前車；(B) 只沿預設的路跟車；(C) 前車會停在後車的路上就不能跟；(D) 跟車中的列車幾乎每秒都延長授權。只拿掉 A 的試驗反而有 10–34 列死結、丟 150 班：後車「等著」前方的軌道（決策 56 第 6 點），擋住了在它前面要出發的車。
+
+**規則**（世界開關 `GameWorld.blockSections`，存成 `"blockSections": true`，缺 key＝關；關著時以下都不發生，結果逐位元不變）：
+
+1. **閉塞區段**：每條邊從 `from` 端起每 `GameWorld.blockLength` = 96,000 單位（1.5 km，新幹線數位 ATC 的軌道電路長度）一個分界，邊的兩端也是分界。只由拓撲與整數里程決定，不存檔（`BlockSections.swift` 的 `blockBoundary(_:atOrBefore:)`、`blockBoundary(_:after:)`）。
+2. **授權停在分界**：跟車的授權原本到「第一段被別人持有的軌道之前 `followingGap`」，改成那裡之前最近的分界（`followingAuthority(_:free:)`）；至少拿到一個分界才發車。延長也一樣，所以前車的車尾每離開一個閉塞，後車才延長一次。
+3. **可以串成一串**：`isLeading` 不再要求前車整段拿到；前車自己在跟車時，算它「停靠時站的位置」要算到它的停靠點，不是它的授權終點（清掉複本的預約再算 `travelling`）。
+4. **跟車的列車不替前方佔位**：決策 56 第 6 點（`Claim`、`binds`）不適用，跟車中的列車只持有拿到的閉塞。第三列車可以插進前後車之間：同方向、會讓出的，後車改跟它；不是的，後車等。對向的車仍要整段拿到才出發，而它的路會經過後車持有的閉塞，所以拿不到。
+5. **排定的路與指定的路也能跟車**：`departService` 與 `goOn` 試排定的路（決策 59）、路線指定的路（決策 61）時用 `reserving(_:following:)`；拿不到授權才記進 `HeldRoute.whole`，批次判斷也用同樣的規則。
+6. **批次推進**：`canExtendAnyAuthority` 問「下一個分界之後 `followingGap`」是否空出來（`reachToExtend(_:beyond:)`），和第 2 點延長的條件相同，所以以分鐘推進與逐秒推進結果相同（`BlockSectionsTests`）。
+
+**沒有做的**：C 的「前車要停的月台被佔時改去同一站的另一個月台」先不做，量完 A、B、D 再看（見量測）。依煞車曲線提前減速留給幾何限速。
+
+**開關**：App 的新遊戲打開（`NewGame`），示範、挑戰、教學、平溪與劉銘傳劇本、實景示範關掉；高鐵示範這個 PR 不打開行車控制（量完另開 PR）。
+
+**存檔**：版本 55。只讀到 54 的 build 會丟掉這個 key，讓列車改回整段跟車，所以說存檔比它新。fixture `SaveFixtures/v55-block-sections.json`（`BlockSectionsTests.testVersionFiftyFiveKeepsBlockSections`，`BLOCK_SECTIONS_SAVE_NEW=1`）。
+
+**參考庫與外部專案**：
+- 參考庫（`d3ebdf1`）沒有閉塞、號誌或執行中的佔用狀態。`Railway/site_archive_clean/index.html` 的 `planSameDirectionOvertakes`（`need = 30 + v/b`）是排點時的越行，照舊由決策 59／60 負責；`BLOCK_GAP_KM` 已是 `followingGap`。對照表在設計文件第 3 節。
+- OpenTTD（GPL-2.0）、Simutrans 與 Simutrans-Extended（Artistic 1.0）、OSRD（LGPL-3.0）只參考想法：預約只到「安全等待位置」（這裡是閉塞分界），等待中的列車在那之外不持有任何東西。沒有複製程式。
+- 程式是這個專案自己的。
+
+**golden、replay、SaveFixtures**：開關都是關的，每一個值都不變。
+
+**驗證**：`BlockSectionsTests`（分界的手算值、三列串跟、逐分與逐秒相同、存讀與 v55 fixture）、`BlockSectionsSessionTests`（新遊戲開、示範與教學關）；既有的 `TrafficControlTests`、`FollowerDeadlockTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、golden、replay、`SavedGameTests` 照舊通過。

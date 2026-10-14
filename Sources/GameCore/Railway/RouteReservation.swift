@@ -881,7 +881,9 @@ extension GameWorld {
             bodies: bodies, unordered: unordered
         )
         var claims: [TrainID: Claim] = [:]
-        for (train, route) in zip(trains, covers) {
+        // With block sections (decision 212) a following train holds only
+        // what it has taken, and waits for nothing more.
+        for (train, route) in zip(trains, covers) where !blockSections {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
             // is the base and the track of every stretch; it waits for
             // the track of its route no other placed train holds.
@@ -1350,7 +1352,7 @@ extension GameWorld {
     /// of the trains ahead, which it follows. `nil` for a train that does
     /// not follow another.
     func claim(of train: Train) -> (route: Set<TrackResource>, waiting: Set<TrackResource>)? {
-        guard isFollowing(train) else { return nil }
+        guard !blockSections, isFollowing(train) else { return nil }
         let route = routeEnvelope(of: train).resources
         var waiting = route
         for other in trains where other.id != train.id && other.position != nil {
@@ -1388,7 +1390,7 @@ extension GameWorld {
         let envelopes = authorityEnvelopes(of: candidate)
         let clear = clearOfBlocked(blocked)
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-        let authority = free - Self.followingGap
+        let authority = followingAuthority(envelopes, free: free)
         guard authority >= 1 else { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
@@ -1412,14 +1414,16 @@ extension GameWorld {
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-              routeStretches(of: train).moves, !isFollowing(train)
+              routeStretches(of: train).moves, blockSections || !isFollowing(train)
         else { return false }
         let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
             return false
         }
-        // Where it stops for its call.
+        // Where it stops for its call: for a train following another
+        // (decision 212), there and not where its authority ends.
         var arrived = train
+        arrived.reservation = []
         let end = travelling(arrived, distance: routeLength(of: train))
         arrived.position = end.position
         arrived.movement.cursor = end.cursor
