@@ -1871,7 +1871,7 @@ G1 的最後一步：乘客上車時付票價，路線的列車每次離站記�
 | `metroEconomyMoneyText`：`"$ " + Math.round(dollars)` 加千分位 | `GamePresentation` 的 `Money.moneyText` | faithful |
 | 經濟明細的分類標籤（`economy.ledger.*`、`economy.group.*`，只有 zh-CN） | `LedgerItem.displayName(in:)`、`LedgerEntry.Kind.displayName(in:)`（英文；繁體中文照參考轉換，決策 38） | 翻譯 |
 
-**1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）：一般四捨五入到整美元（`moneyText`），票價與「餘額不足」的訊息精確到美分（`centsText`），以免顯示成「需要 $ 10、只有 $ 10」。
+**1. 金額**：`Money` 是參考美元的**美分**。之前的建設費用與餘額數值不變，只是從 G1c 起以美元顯示（`$ 10,000` 是 1,000,000）：一般四捨五入到整美元（`moneyText`），票價精確到美分（`centsText`）。「餘額不足」的訊息原本也精確到美分；2026-10-14 起（TestFlight 回報：警告的數字和現金、✓ 的價錢對不上）改成和現金一樣的整美元，只有四捨五入會顯示成「需要 $ 10、只有 $ 10」時才用美分（`Money.shortfallTexts`）。訊息同時說出是哪個動作（`PlayerCommand.actionText`）、玩家手上真正的現金與整個指令要的錢（不是指令做到一半剩下的錢），現金夠了就收掉（`GameSession.refusal`、`StatusMessage.fundsNeeded`）。
 
 **2. 票價**：`tripFare(from:to:)` 是規則對兩站直線距離的票價，0 以下收 5 美元；距離段 `[from, to)`，正好在終點的距離屬於下一段。沒有設定規則時用 `FareRules.standard`（均一 5 美元）。
 

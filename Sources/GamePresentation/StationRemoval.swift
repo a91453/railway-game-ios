@@ -27,7 +27,7 @@ extension GameSession {
                     "\(line.name) 的列車 #\(train.rawValue) 服務 \(station.name)。請先讓它離開路線並停止服務。"
                 ))
             } else {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                message = refusal(error)
             }
             return
         }

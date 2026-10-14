@@ -1176,7 +1176,7 @@ public final class GameSession {
         case .success(let advanced):
             step = advanced
         case .failure(let error):
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error)
             return
         }
         isApplyingTick = true
@@ -1205,6 +1205,7 @@ public final class GameSession {
         }
         // Decision 117: fares and rent settled within the step.
         noteIncome(since: lastEntry)
+        retireCoveredShortfall()
         noteDayLoss(since: dayBefore)
         if let closed = world.accounts.years.last?.year, closed != closedBefore {
             yearEndYear = closed
@@ -1543,7 +1544,7 @@ public final class GameSession {
         do throws(GameError) {
             try performCommand(.edit(.setTrainRate(train.id, rate: rate)))
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error)
         }
     }
 
@@ -2091,6 +2092,39 @@ public final class GameSession {
         if messageSerial == serial { message = nil }
     }
 
+    /// The status line for `error`, which refused `command` on ``world``
+    /// (left as it was). A refusal for want of cash names what `command`
+    /// does (``PlayerCommand/actionText(in:)``) and says the cash the
+    /// player has, not what a step part of the way through the command
+    /// had left: a new station's platform on a grade is levelled first,
+    /// so GameCore's refusal of the station counts the cash after the
+    /// levelling. What it takes is that step's price and all paid before
+    /// it, and the refusal goes once the cash covers it
+    /// (``StatusMessage/fundsNeeded``).
+    func refusal(_ error: GameError, doing command: PlayerCommand? = nil) -> StatusMessage {
+        guard case .insufficientFunds(let required, let available) = error else {
+            return StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+        }
+        let balance = world.economy.balance
+        let spent = max(0, balance.amount - available.amount)
+        let (needed, overflow) = required.amount.addingReportingOverflow(spent)
+        let total = overflow ? Money(.max) : Money(needed)
+        return StatusMessage(
+            kind: .failure,
+            text: GameError.insufficientFundsText(
+                required: total, available: balance, doing: command?.actionText(in: language), in: language
+            ),
+            fundsNeeded: total
+        )
+    }
+
+    /// Drops a refusal for want of cash that the cash now covers
+    /// (``StatusMessage/fundsNeeded``): at speed the cash can pass it
+    /// while the banner still shows it, and its figures are out of date.
+    func retireCoveredShortfall() {
+        if let needed = message?.fundsNeeded, world.economy.canAfford(needed) { message = nil }
+    }
+
     /// Runs one command against the world through ``performEdit(_:)`` and
     /// records its outcome. Returns whether the command succeeded.
     @discardableResult
@@ -2100,7 +2134,7 @@ public final class GameSession {
             endFollowIfGone()
             return true
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error)
             return false
         }
     }
@@ -2120,7 +2154,7 @@ public final class GameSession {
             endFollowIfGone()
             return outcome
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error, doing: command)
             return nil
         }
     }
@@ -2611,10 +2645,15 @@ public struct StatusMessage: Hashable, Sendable {
 
     public let kind: Kind
     public let text: String
+    /// For a refusal for want of cash, what it would have taken: once the
+    /// cash covers it, the refusal is out of date and goes
+    /// (``GameSession/refusal(_:doing:)``).
+    public let fundsNeeded: Money?
 
-    public init(kind: Kind, text: String) {
+    public init(kind: Kind, text: String, fundsNeeded: Money? = nil) {
         self.kind = kind
         self.text = text
+        self.fundsNeeded = fundsNeeded
     }
 
     /// How long the banner shows the message before clearing it: a success
