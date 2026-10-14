@@ -115,6 +115,13 @@ public struct GameWorld: Equatable, Sendable {
     /// before it; the app's new games turn it on. Set by
     /// ``setRealisticOperation(_:)`` only.
     public internal(set) var realisticOperation: Bool = false
+    /// Whether long legs are cut into block sections under traffic control
+    /// (decision 212): a following train's authority ends at a block's
+    /// boundary, a train following others may lead another, and a service
+    /// may follow on its scheduled or preferred path. Off in a new world and
+    /// in saves from before it; the app's new games turn it on. Set by
+    /// ``setBlockSections(_:)`` only.
+    public internal(set) var blockSections: Bool = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -3075,14 +3082,14 @@ public struct GameWorld: Equatable, Sendable {
             follow(chosen.path, &scheduled)
             let plannedRun = run(of: scheduled, length: chosen.path.distance, scheduled: chosen.seconds)
             scheduled.times?.run = plannedRun
-            if case .granted(let granted) = reserving(scheduled, memo: &memo.directions) {
+            if case .granted(let granted) = reserving(scheduled, following: blockSections, memo: &memo.directions) {
                 setOff(index, as: granted)
                 return true
             }
             whole.append(scheduled)
         }
         if let preferred = preferredGoingOn(trains[index]) {
-            if case .granted(let granted) = reserving(preferred, memo: &memo.directions) {
+            if case .granted(let granted) = reserving(preferred, following: blockSections, memo: &memo.directions) {
                 setOff(index, as: granted)
                 return true
             }
@@ -3387,12 +3394,14 @@ public struct GameWorld: Equatable, Sendable {
         // one does (decision 55).
         var granted: Train?
         var whole: [Train] = []
+        // With block sections (decision 212) it may follow the trains ahead
+        // on them too.
         if case .setsOff = departure,
            case .setsOff(let scheduled, _)? = scheduledLeaving(trains[index], stop: stop, cycle: cycle, plan: plan, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(scheduled, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
+            if case .granted(let train) = reserving(scheduled, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(scheduled) }
         }
         if granted == nil, case .setsOff(let preferred, _)? = preferredLeaving(trains[index], stop: stop, cycle: cycle, memo: &memo.directions.paths) {
-            if case .granted(let train) = reserving(preferred, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
+            if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
         }
         let train: Train
         if let granted {
@@ -3906,7 +3915,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             let clear = clearOfBlocked(blockedTrack(except: trains[index].id, holders: holders!))
             let free = longestAuthority(envelopes, from: held, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-            let authority = free - Self.followingGap
+            let authority = followingAuthority(envelopes, free: free)
             guard authority > held else { continue }
             trains[index].reservation = reservation(trains[index].reservation, extending: envelopes, from: held, to: authority)
             extended = true
@@ -3929,16 +3938,17 @@ public struct GameWorld: Equatable, Sendable {
         let holders = trackHolders(memo: &memo)
         return zip(trains, authorities).contains { train, authority in
             guard let (held, envelopes) = authority else { return false }
-            let (reach, overflow) = held.addingReportingOverflow(Self.followingGap + 1)
+            let reach = reachToExtend(envelopes, beyond: held) ?? .max
             let clear = clearOfBlocked(blockedTrack(except: train.id, holders: holders))
-            return isAuthority(envelopes, to: overflow ? .max : reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
+            return isAuthority(envelopes, to: reach, clearBase: clear.base(envelopes.base), clear: clear.stretch)
         }
     }
 
     /// A departure due at the start of a step whose route another train
     /// holds (Stage T): the train as it would set off, and as it would set
     /// off on the whole routes it tries first (its scheduled path, decision
-    /// 59, and its line's preferred one, decision 61).
+    /// 59, and its line's preferred one, decision 61), which with block
+    /// sections it may also follow the trains ahead on (decision 212).
     struct HeldRoute {
         let candidate: Train
         var whole: [Train] = []
@@ -3976,7 +3986,7 @@ public struct GameWorld: Equatable, Sendable {
             }
             return held.contains { route in
                 for train in route.whole {
-                    if case .granted = moved.reserving(train, memo: &memo.directions) { return true }
+                    if case .granted = moved.reserving(train, following: blockSections, memo: &memo.directions) { return true }
                 }
                 if case .granted = moved.reservingDeparture(route.candidate, memo: &memo.directions) { return true }
                 return false
@@ -4154,7 +4164,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4256,6 +4266,7 @@ extension GameWorld: Codable {
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
         realisticOperation = try container.decodeIfPresent(Bool.self, forKey: .realisticOperation) ?? false
+        blockSections = try container.decodeIfPresent(Bool.self, forKey: .blockSections) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4383,6 +4394,9 @@ extension GameWorld: Codable {
         }
         if realisticOperation {
             try container.encode(true, forKey: .realisticOperation)
+        }
+        if blockSections {
+            try container.encode(true, forKey: .blockSections)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)

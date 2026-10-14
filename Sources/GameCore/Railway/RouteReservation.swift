@@ -214,10 +214,32 @@ extension GameWorld {
     func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         let planned = reserving(candidate, following: true, memo: &memo)
         guard isTrafficControlEnabled, case .held = planned,
-              case .travellingToStop(let stop, let cycle)? = candidate.execution,
-              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
-                                                 avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo)
+              case .travellingToStop(let stop, let cycle)? = candidate.execution
         else { return planned }
+        if let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+                                              avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo),
+           case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
+            return .granted(granted)
+        }
+        // With block sections (decision 212): the shortest route to a berth
+        // of the station that only the trains standing there or on the way
+        // block (those it may never follow), followed behind the trains
+        // ahead on it.
+        guard blockSections else { return planned }
+        let standing = Set(trains.filter { train in
+            guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
+            return false
+        }.map(\.id))
+        guard let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+                                                 avoiding: blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo)), memo: &memo),
+              case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
+        else { return planned }
+        return .granted(granted)
+    }
+
+    /// `candidate`, a service setting off for stop `stop` (of cycle
+    /// `cycle`), along `alternative` instead, on a run for its time there.
+    private func rerouted(_ candidate: Train, along alternative: TrainPath, stop: Int, cycle: Int64) -> Train {
         var rerouted = candidate
         follow(alternative, &rerouted)
         let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
@@ -226,8 +248,7 @@ extension GameWorld {
             - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
         let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
         rerouted.times?.run = reroutedRun
-        if case .granted(let granted) = reserving(rerouted, memo: &memo) { return .granted(granted) }
-        return planned
+        return rerouted
     }
 
     /// How much longer than a service's default route an alternative
@@ -881,7 +902,9 @@ extension GameWorld {
             bodies: bodies, unordered: unordered
         )
         var claims: [TrainID: Claim] = [:]
-        for (train, route) in zip(trains, covers) {
+        // With block sections (decision 212) a following train holds only
+        // what it has taken, and waits for nothing more.
+        for (train, route) in zip(trains, covers) where !blockSections {
             // A following train's route envelope (see ``routeEnvelope(of:)``)
             // is the base and the track of every stretch; it waits for
             // the track of its route no other placed train holds.
@@ -1350,7 +1373,7 @@ extension GameWorld {
     /// of the trains ahead, which it follows. `nil` for a train that does
     /// not follow another.
     func claim(of train: Train) -> (route: Set<TrackResource>, waiting: Set<TrackResource>)? {
-        guard isFollowing(train) else { return nil }
+        guard !blockSections, isFollowing(train) else { return nil }
         let route = routeEnvelope(of: train).resources
         var waiting = route
         for other in trains where other.id != train.id && other.position != nil {
@@ -1388,7 +1411,7 @@ extension GameWorld {
         let envelopes = authorityEnvelopes(of: candidate)
         let clear = clearOfBlocked(blocked)
         let free = longestAuthority(envelopes, from: 0, clearBase: clear.base(envelopes.base), clear: clear.stretch)
-        let authority = free - Self.followingGap
+        let authority = followingAuthority(envelopes, free: free)
         guard authority >= 1 else { return nil }
         var train = candidate
         train.reservation = authorityEnvelope(envelopes, to: authority).sorted()
@@ -1412,14 +1435,16 @@ extension GameWorld {
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-              routeStretches(of: train).moves, !isFollowing(train)
+              routeStretches(of: train).moves, blockSections || !isFollowing(train)
         else { return false }
         let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
             return false
         }
-        // Where it stops for its call.
+        // Where it stops for its call: for a train following another
+        // (decision 212), there and not where its authority ends.
         var arrived = train
+        arrived.reservation = []
         let end = travelling(arrived, distance: routeLength(of: train))
         arrived.position = end.position
         arrived.movement.cursor = end.cursor

@@ -507,8 +507,8 @@ final class TutorialSessionTests: XCTestCase {
             // A new game, without its holidays (decision 154), its
             // building materials (decision 157), its crowded doors
             // (decision 169), its flexible dispatch (decision 172), its
-            // keeping left (decision 202) or its realistic operation
-            // (decision 207).
+            // keeping left (decision 202), its realistic operation
+            // (decision 207) or its block sections (decision 212).
             var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
             expected.setDisruptions(nil)
             expected.setBuildingMaterials(false)
@@ -517,6 +517,7 @@ final class TutorialSessionTests: XCTestCase {
             expected.setFlexDispatch(false)
             expected.setKeepLeft(false)
             expected.setRealisticOperation(false)
+            expected.setBlockSections(false)
             expected.setTourism(nil)
             expected.setCityRequests(seed: nil)
             XCTAssertEqual(session.world, expected)

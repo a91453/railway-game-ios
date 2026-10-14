@@ -447,6 +447,8 @@ public final class GameLauncher {
         world.setKeepLeft(false)
         // Decision 207: its timetables are as they were measured.
         world.setRealisticOperation(false)
+        // Decision 212: its traffic control takes whole legs as measured.
+        world.setBlockSections(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
         // Decision 183: nor does the city ask it for anything.

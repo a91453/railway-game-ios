@@ -110,6 +110,9 @@ extension GameWorld {
             // Decision 207: legs planned at the usual rates with a recovery
             // margin, a high-speed line's real dwell, and punctuality.
             world.setRealisticOperation(true)
+            // Decision 212: long legs cut into block sections, so trains
+            // follow each other along them under traffic control.
+            world.setBlockSections(true)
             // Decision 180: trains cost and weigh what their type and cars
             // do, and are sold back at 70 % of their books.
             world.setRollingStockEconomics(true)
@@ -251,6 +254,8 @@ public enum DemoWorld {
         world.setKeepLeft(false)
         // Decision 207: its timetables are as they were measured.
         world.setRealisticOperation(false)
+        // Decision 212: its traffic control takes whole legs as measured.
+        world.setBlockSections(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
         // Decision 183: nor the city's requests.

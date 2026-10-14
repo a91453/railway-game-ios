@@ -12,7 +12,8 @@ import XCTest
 ///     swift build -c release -Xswiftc -enable-testing --build-tests
 ///     TRAFFIC_TIMING_REPORT=1 swift test -c release --skip-build --filter TrafficControlTimingReportTests
 ///
-/// `TRAFFIC_TIMING_ON=1` turns traffic control on, `TRAFFIC_TIMING_HOURS`
+/// `TRAFFIC_TIMING_ON=1` turns traffic control on (`TRAFFIC_TIMING_BLOCKS=1`
+/// with block sections, decision 212), `TRAFFIC_TIMING_HOURS`
 /// (default 20) is how many game hours from 05:00 to run, and
 /// `TRAFFIC_TIMING_CAP` (default 1200) the seconds after which an hour
 /// stops the report. `TRAFFIC_TIMING_DUMP=07:30,09:00` prints every set's
@@ -103,8 +104,9 @@ final class TrafficControlTimingReportTests: XCTestCase {
         // `TRAFFIC_TIMING_ON=1`: the same day with traffic control on (the
         // demo has it off, decision 197).
         if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_ON"] != nil { try world.setTrafficControl(true) }
+        if ProcessInfo.processInfo.environment["TRAFFIC_TIMING_BLOCKS"] != nil { world.setBlockSections(true) }
         try world.advance(ticks: 5 * 60)
-        say("== the demo on the real day: \(world.trains.count) sets, \(world.lines.map { $0.runs.count }) runs, traffic control \(world.isTrafficControlEnabled) ==")
+        say("== the demo on the real day: \(world.trains.count) sets, \(world.lines.map { $0.runs.count }) runs, traffic control \(world.isTrafficControlEnabled), block sections \(world.blockSections) ==")
         say("hour | seconds | running (most) | waiting for a route | deadlocked | against its track | digest")
 
         // Each run sent out: the set, and the second it left its first stop
