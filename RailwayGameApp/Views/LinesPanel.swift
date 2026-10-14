@@ -38,6 +38,8 @@ struct LinesPanel: View {
     /// into (decision 180); `nil`: the line's own pick.
     @State private var staffType: TrainType?
     @State private var staffCars = 1
+    /// Decision 224 (2A): whether the train types' showroom is open.
+    @State private var showsCatalog = false
     /// Decision 179: how the lines are ordered, or `nil` for the order
     /// they were made in.
     @State private var lineSort: LineReportSort?
@@ -1266,6 +1268,22 @@ struct LinesPanel: View {
                     .font(.footnote)
                 }
                 .accessibilityIdentifier("line.staff.type")
+            }
+            // Decision 224 (2A): the same choice in the showroom, with the
+            // train drawn and its price.
+            Button {
+                showsCatalog = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("See the train types", "看車種型錄"))
+                } icon: {
+                    Image(systemName: "tram.circle")
+                }
+                .font(.footnote)
+            }
+            .accessibilityIdentifier("line.staff.catalog")
+            .sheet(isPresented: $showsCatalog) {
+                RollingStockCatalogView(session: session, type: $staffType, cars: $staffCars)
             }
             capacityWarning(line)
             Stepper(value: $staffCars, in: Train.minimumCars...Train.maximumCars) {
