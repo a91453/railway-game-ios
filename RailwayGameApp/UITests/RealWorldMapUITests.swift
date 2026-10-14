@@ -233,8 +233,16 @@ final class RealWorldMapUITests: XCTestCase {
         let middle = (hudBottom + dockTop) / 2
         let frame = map.frame.intersection(app.frame)
         let origin = app.coordinate(withNormalizedOffset: .zero)
+        // Decision 226: on a phone on its side the tools are a column down
+        // the leading edge (Lines above Build), and the camera centres the
+        // map beside it, half the column's width to the right. The stretch
+        // keeps to the same ground by moving with it: without, its middle
+        // climbed 11‰ and its platform could not be levelled (main
+        // bf12187's full lane, run 38641908091).
+        let lines = app.buttons["Lines"]
+        let column = lines.exists && lines.frame.maxY <= build.frame.minY + 1 ? build.frame.maxX : 0
         func point(_ fraction: CGFloat) -> XCUICoordinate {
-            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
+            origin.withOffset(CGVector(dx: frame.minX + column / 2 + frame.width * fraction, dy: middle))
         }
         point(0.3).tap()
         point(0.55).tap()
@@ -264,7 +272,7 @@ final class RealWorldMapUITests: XCTestCase {
         platform.waitUntilSettled()
         platform.tap()
         // A platform on the track, levelled first where it climbs.
-        let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
+        let site = origin.withOffset(CGVector(dx: frame.minX + column / 2 + frame.width * 0.425, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         confirm.waitUntilSettled()

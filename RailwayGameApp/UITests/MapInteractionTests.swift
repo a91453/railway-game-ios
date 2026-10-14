@@ -407,13 +407,16 @@ final class MapInteractionTests: XCTestCase {
         expansion.tap()
         XCTAssertEqual(expansion.label, "Stop expanding the map")
         // The camera fits the 3 × 3 tiles around the one owned, in the
-        // middle: a quarter of the narrower side below the middle is in
-        // the tile below it, which is for sale.
+        // middle: a third of the narrower side beside the middle is in the
+        // tile to its right, which is for sale. Not the tile below: on a
+        // phone on its side the expansion's pill (with its Done) stands
+        // over it since the tools became a column (#626; main bf12187's
+        // full lane, run 38641908091, tapped Done at (437, 301)).
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
         let frame = map.frame
-        let below = min(frame.width, frame.height) / 4
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5 + below / frame.height)).tap()
+        let beside = min(frame.width, frame.height) / 3
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5 + beside / frame.width, dy: 0.5)).tap()
         let buy = app.buttons["map.expansion.buy"]
         XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
         XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")
