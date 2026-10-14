@@ -7868,7 +7868,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 ### 221. 照班次跑的路線也能用機廠；一條路線可以有幾個機廠
 
-2026-10-14。NEXT_PRIORITIES 2026-10-12 §5 第 6 項、§13 第 8 名（高鐵示範的真實機廠）。設計與 OSM 資料：[`research/HSR_DEPOTS_2026-10-14.md`](research/HSR_DEPOTS_2026-10-14.md)、`tools/hsr-depots/`（#578）。遊戲規劃 session 2026-10-14 定案走 GameCore 的做法，也定了「一條線幾個機廠」與存檔的讀法。號碼依 #231：決策 221、存檔 59；golden schema 不動。這一段是 GameCore；高鐵示範接上真實機廠是下一個 PR，補在這個決策裡。
+2026-10-14。NEXT_PRIORITIES 2026-10-12 §5 第 6 項、§13 第 8 名（高鐵示範的真實機廠）。設計與 OSM 資料：[`research/HSR_DEPOTS_2026-10-14.md`](research/HSR_DEPOTS_2026-10-14.md)、`tools/hsr-depots/`（#578）。遊戲規劃 session 2026-10-14 定案走 GameCore 的做法，也定了「一條線幾個機廠」與存檔的讀法。號碼依 #231：決策 221、存檔 61（原登記 59；合併前 `main` 已到 60，格式改動要高於現有的版本，59 留空不用）；golden schema 不動。這一段是 GameCore；高鐵示範接上真實機廠是下一個 PR，補在這個決策裡。
 
 **為什麼**：高鐵示範的三條線都照班次跑（決策 197），決策 209 第 3 點不讓這種路線設機廠，所以夜裡 35 組全停在月台上，05:40 時 28 組疊在別的車上。示範的每條線，車在兩端（和台中）過夜，只有一個機廠的話，有一端的車每晚要空車跑 300 km。
 
@@ -7885,7 +7885,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 每條路線每一步最多送一台進或出，排在正式發車之後（和決策 209 一樣）。交通管制下要能取得進路才送。
    - **喚醒**（`minutesUntilRunDepotMove`）：入庫與出庫的條件只在列車改變時，以及每班的「開車時刻 − 2 小時」「− 5 分 − 2 小時」「− 5 分 − 出庫時間」「最晚發車時刻過後」這幾個時刻改變，所以取其中最早的。一次推進等於逐分鐘推進（`RunDepotTests.testLongBatchesMatchSingleMinutes`，交通管制開與關）。
    - 決策 209 的其他規則照舊適用：停車線不給路線走、在庫的車不付能源與人事、每股每日 $400、「入庫中／出庫中／在庫」（決策 214）。
-3. **存檔 59**：一個機廠照舊寫 `"depot"`，兩個以上寫 `"depots"`（不能同時有，不能重複）；照班次跑的路線也可以有。舊存檔的 `"depot"` 讀成只有一個的清單。只讀到 58 的 build 會拒絕有班次又有機廠的路線，或丟掉第一個以外的機廠，所以升版。新的 fixture `SaveFixtures/v59-run-depots.json`（`RunDepotTests.testVersionFiftyNineKeepsTheDepots`，`RUN_DEPOT_SAVE_NEW=1`）。
+3. **存檔 61**：一個機廠照舊寫 `"depot"`，兩個以上寫 `"depots"`（不能同時有，不能重複）；照班次跑的路線也可以有。舊存檔的 `"depot"` 讀成只有一個的清單。只讀到 60 的 build 會拒絕有班次又有機廠的路線，或丟掉第一個以外的機廠，所以升版。新的 fixture `SaveFixtures/v61-run-depots.json`（`RunDepotTests.testVersionSixtyOneKeepsTheDepots`，`RUN_DEPOT_SAVE_NEW=1`）。
 4. **不變**：沒有一個 golden、replay 有機廠，也沒有照班次跑又有機廠的路線；只有一個機廠的路線逐位元相同，所以 golden、replay、`SaveFixtures` 的值都不變。`GoldenScenario.swift` 只為了窮舉把錯誤名稱 `depotWithRuns` 換成 `depotListedTwice`，schema 不讀它。`DepotTests` 原本斷言「照班次跑的路線不能設機廠」，改成斷言現在可以（這是這個決策的行為改變）。
 
 **參考**（`a91453/railway-reference-private` 7888702）：參考的 `sched` 系統讓每班車在起站出現、在終站消失（`Railway/site_archive_clean/index.html`），沒有車組的過夜與入出庫；`rail-3d/physical/` 的 `dispatch.json`、`turnbacks.js` 也沒有（決策 209 已查過）。所以班次路線的入出庫規則是這個專案自己的。外部專案：OpenTTD（GPL-2.0）的「go to depot」命令只讀想法，沒有複製。
@@ -7907,7 +7907,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 一次推進等於逐分鐘；
 - 兩台進同一個機廠時各停一股；
 - 沒有機廠時照舊；
-- v59 fixture。
+- v61 fixture。
 
 **沒有驗證的**：玩家選幾個機廠的畫面（路線面板的「所屬機廠」目前只能選一個；照班次跑的路線原本寫「不能指定機廠」）。示範 PR 或之後的畫面 PR 再改。
 

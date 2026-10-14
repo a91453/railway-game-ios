@@ -90,7 +90,7 @@ GameCore 的 PR 排在 GameCore 隊列裡「車站商業三級」之後，開工
 
 ### 3.3 存檔、golden、replay
 
-- **存檔 59**：路線多了 `"depots"`，照班次跑的路線也可以有 `"depot"`。只讀到 58 的 build 會拒絕這種路線（`depotWithRuns`），所以升版。新的 fixture `SaveFixtures/v59-run-depot.json`：一條照班次跑、有兩個機廠的路線，05:50 一列車正從機廠出庫。
+- **存檔 59**（後來改成 61，見決策 221）：路線多了 `"depots"`，照班次跑的路線也可以有 `"depot"`。只讀到 58 的 build 會拒絕這種路線（`depotWithRuns`），所以升版。新的 fixture `SaveFixtures/v59-run-depot.json`：一條照班次跑、有兩個機廠的路線，05:50 一列車正從機廠出庫。
 - **golden**：沒有一個 golden 有機廠，也沒有「有班次又有機廠」的路線。只有一個機廠的路線行為逐位元相同，所以預期每個值都不變，schema 不動。
 - **replay**：`ReplayFixtures` 沒有機廠，預期 checksum 都不變。
 - **決策 209 的 `DepotTests`**：照舊通過（只有一個機廠的路線）。
@@ -105,7 +105,7 @@ GameCore 的 PR 排在 GameCore 隊列裡「車站商業三級」之後，開工
 - 兩端各有機廠時，各回各的。
 - 交通管制下要等進路。
 - 一次推進等於逐分鐘推進。
-- v59 fixture。
+- v59 fixture（後來是 v61）。
 
 `DepotTests`、`CommandEditTests` 的新指令；golden、replay、`SavedGameTests` 照舊通過。
 

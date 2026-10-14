@@ -245,11 +245,11 @@ final class RunDepotTests: XCTestCase {
 
     // MARK: - Saves
 
-    /// Save version 59: a line with runs and two depots, its trains on
+    /// Save version 61: a line with runs and two depots, its trains on
     /// their way out of the depots just before 06:00.
-    func testVersionFiftyNineKeepsTheDepots() throws {
+    func testVersionSixtyOneKeepsTheDepots() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("SaveFixtures/v59-run-depots.json")
+            .appendingPathComponent("SaveFixtures/v61-run-depots.json")
         var made = try makeWorld()
         made.setEconomyMode(.management)
         try made.advance(ticks: 353)
@@ -261,13 +261,13 @@ final class RunDepotTests: XCTestCase {
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 59)
+        XCTAssertEqual(object["saveVersion"] as? Int, 61)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertEqual(loaded.line(id: main)?.depots, [west, east])
         XCTAssertTrue(loaded.line(id: main)?.hasRuns ?? false)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 59,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+            .replacingOccurrences(of: #""saveVersion" : 61,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
         try loaded.advance(ticks: 30)
         XCTAssertEqual(loaded.line(id: main)?.runDays[0], 0, "and the runs leave")
     }
