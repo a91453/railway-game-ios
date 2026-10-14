@@ -174,6 +174,20 @@ final class RunDepotTests: XCTestCase {
         XCTAssertTrue([west, east].contains(world.stationsStoppedAt(by: id(1)).first ?? beta))
     }
 
+    /// Two trains going into the same depot take a siding each, not the
+    /// one where the first stands: West has its sidings either side of
+    /// column 1.
+    func testTrainsGoingIntoADepotTakeASidingEach() throws {
+        var world = try makeWorld(minutes: 600, depots: [west], at: [(3, false), (5, false)])
+        try world.advance(ticks: 30)
+        let edges = world.trains.compactMap { train -> TrackEdgeID? in
+            guard case .onEdge(let traversal, _)? = train.position else { return nil }
+            return traversal.edge
+        }
+        XCTAssertEqual(world.trains.map { world.stationsStoppedAt(by: $0.id) }, [[west], [west]])
+        XCTAssertEqual(Set(edges).count, 2, "a siding each")
+    }
+
     /// Under traffic control the trains still go in and out: train 1 runs
     /// out of West for the 06:00 run, takes the 06:30 back from Gamma (it
     /// stands there, so East sends none), goes into West after it and runs

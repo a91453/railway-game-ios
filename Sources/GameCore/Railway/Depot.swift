@@ -35,6 +35,22 @@ extension GameWorld {
         return line.depots.contains(end)
     }
 
+    /// The berths of depot `station` that `train` fits and no other train
+    /// stands on or runs to the end of (decision 221), or `nil` when the
+    /// station is not a depot or every berth is taken: a train running
+    /// into a depot takes a free siding, not the one where the trains
+    /// before it stand.
+    func freeDepotBerths(_ station: StationID, for train: Train) -> Set<Berth>? {
+        guard self.station(id: station)?.isDepot == true else { return nil }
+        var taken: Set<TrackEdgeID> = []
+        for other in trains where other.id != train.id {
+            if case .onEdge(let traversal, _)? = other.position { taken.insert(traversal.edge) }
+            if other.execution != nil, other.timetable.last?.station == station, let last = other.movement.edges.last { taken.insert(last) }
+        }
+        let free = berths(of: station, length: train.length).filter { !taken.contains($0.traversal.edge) }
+        return free.isEmpty ? nil : Set(free)
+    }
+
     /// The edges with a platform of a depot, its sidings (decision 209),
     /// but those of a depot with a platform on `edge`, where a train
     /// starts: no way to another station runs over them.
