@@ -83,50 +83,6 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")).firstMatch.appears(within: 30))
     }
 
-    /// Decision 221: the line panel lists a line's depots with a tick each,
-    /// and a tap ticks or unticks one. The high-speed demo's lines have
-    /// depots. Full lane only (decision 199): what the list holds and what
-    /// a tick does is `DepotToolsTests` on Linux.
-    func testTheLinePanelTicksAHighSpeedLinesDepot() {
-        continueAfterFailure = false
-        // The demo alone takes some four minutes to build on a runner
-        // (run 38645907391), past XCTest's own eight.
-        executionTimeAllowance = 20 * 60
-        XCUIDevice.shared.orientation = .landscapeLeft
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        defer { app.terminate() }
-
-        app.openDemo("demo.highSpeed")
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 600), "The demo is built and opens")
-        // Paused, the app goes idle between queries: running, each took 5
-        // to 15 s and the drags below outran the allowance.
-        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
-
-        let lines = app.buttons["entry.lines"]
-        XCTAssertTrue(lines.appears(within: 10))
-        lines.waitUntilSettled()
-        lines.tap()
-        let bar = app.navigationBars["Lines"].firstMatch
-        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
-        bar.waitUntilSettled()
-        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
-        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-        let line = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list), "A line's row must come into reach")
-        line.tap()
-
-        let depot = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot.")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot, in: list), "The line's depots must come into reach")
-        XCTAssertTrue(depot.becomesHittable(within: 10))
-        let ticked = depot.isSelected
-        depot.tap()
-        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == %@", NSNumber(value: !ticked)), object: depot)
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 10), .completed, "A tap must \(ticked ? "untick" : "tick") the depot")
-    }
-
     /// Decision 191: the short credit in the real-world map's corner is
     /// always there and opens the data sources page. Full lane only (not
     /// in the pull request gate).

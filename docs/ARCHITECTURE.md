@@ -7976,7 +7976,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 審查交接的 U8（#559）：
      - 路線面板的「在庫 N 列」原本算停在任何機廠的這條線的車；現在只算停在這條線自己機廠的車（換了機廠後，留在舊機廠的車不算）。
      - 機廠工具的 S 形岔線鋪不出來時，原本說「請點選軌道的盡頭」；現在說「停車線在這裡彎不出去：換另一邊，或少鋪幾股。」這條路其實走不到：岔線的形狀固定、一路往前，從任何軌道盡頭、1 到 6 股、兩邊都鋪得出來（`testTheSidingsBendOutFromAnyEnd`）。
-4. **測試**：`DepotToolsTests.testTheLinePanelTicksSeveralDepots`（清單順序、勾與取消、訊息、第二個機廠也擋住「取消機廠」、指令紀錄重播）在 Linux；`RealWorldMapUITests.testTheLinePanelTicksAHighSpeedLinesDepot`（高鐵示範的路線，機廠列看得到、點得到、點了會勾或取消）在完整 UI 測試，不進 PR 的 gate。
+4. **測試**：`DepotToolsTests.testTheLinePanelTicksSeveralDepots`（清單順序、勾與取消、訊息、第二個機廠也擋住「取消機廠」、指令紀錄重播）在 Linux；沒有 UI 測試：唯一有機廠的世界是高鐵示範，在 runner 上要建 2 到 4 分鐘，建的時候主執行緒忙到 XCTest 讀不到畫面（兩次手動跑：一次超過 8 分鐘上限，一次在等地圖時失敗）；機廠列是路線面板一般的按鈕列。
 5. **四方**：
    - 玩家：一條線可以同時用兩端的機廠，車晚上回近的那一個，不必空車跑全線。
    - 開發：只動 GamePresentation 與 App，沿用路線面板的列樣式，沒有新元件；GameCore 早有 `setLineDepots`。
