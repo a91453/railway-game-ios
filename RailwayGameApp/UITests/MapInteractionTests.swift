@@ -867,7 +867,15 @@ final class MapInteractionTests: XCTestCase {
         tap(resume, below: 21)
         let pause = app.buttons["Pause"].firstMatch
         XCTAssertTrue(pause.appears(within: 5), "A tap 1 point below the drawn pause button resumes the game")
+        // Tried twice, like the network tool's taps: this one, about a
+        // second after the game resumed and some 12 points from the top of
+        // a phone on its side, left the game running twice in the full
+        // lane (runs 38430642081 and 38479608720; that run's recording shows
+        // the button in place at the tap). A second tap comes only after
+        // five seconds without a pause, so it cannot undo a slow first one.
+        pause.waitUntilSettled()
         tap(pause, below: -21)
+        if !resume.appears(within: 5) { tap(pause, below: -21) }
         XCTAssertTrue(resume.appears(within: 5), "A tap 1 point above the drawn pause button pauses the game")
 
         // The bell, 32 points tall: 20 below its centre.
