@@ -133,6 +133,44 @@ final class DepotTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// A train sent out of the depot that reaches the first stop a minute
+    /// or two before the window opens waits there for its trip: it is not
+    /// sent back in because no train runs yet (decision 209). A quicker
+    /// line on a longer track than the others here.
+    func testATrainOutOfTheDepotWaitsForTheFirstTrip() throws {
+        for (top, column) in [(Int64(3), 4), (3, 7)] {
+            let track = TestLine(tiles: 14)
+            var world = try GameWorld(
+                bounds: WorldBounds(width: 16_384, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                clock: GameClock(now: GameTime(minutes: 330), speed: .normal)
+            )
+            try track.build(in: &world)
+            let depot = try track.buildStation(named: "Depot", beside: 1, at: 0, in: &world)
+            let alpha = try track.buildStation(named: "Alpha", beside: column, at: 0, in: &world)
+            let gamma = try track.buildStation(named: "Gamma", beside: column + 4, at: 0, in: &world)
+            let line = try world.createLine(named: "Main", stops: [alpha, gamma]).id
+            try world.setLinePerformance(line, to: TrainPerformance(acceleration: 125, braking: 100, topSpeed: top))
+            try world.setLineServiceWindow(line, to: .standard)
+            try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+            try world.setStationDepot(depot, to: true)
+            try world.setLineDepot(line, to: depot)
+            let train = try world.purchaseTrain(named: "T1").id
+            try world.placeTrain(train, at: track.at(1, facingEast: true))
+            try world.setTrainMovementRate(train, to: 1024)
+            try world.assignTrain(train, to: line)
+            var leftTheDepot = false
+            while world.line(id: line)?.lastDispatch == nil, world.clock.now < GameTime(minutes: 400) {
+                try world.advance(ticks: 1)
+                guard let now = world.train(id: train) else { continue }
+                if now.isDeadheading, now.timetable.last?.station == alpha { leftTheDepot = true }
+                if leftTheDepot {
+                    XCTAssertFalse(now.isDeadheading && now.timetable.last?.station == depot, "top speed \(top), Alpha at \(column): back into the depot at \(world.clock.now.seconds / 60) min")
+                }
+            }
+            XCTAssertEqual(world.line(id: line)?.lastDispatch, GameTime(minutes: 360), "top speed \(top), Alpha at \(column)")
+        }
+    }
+
     /// Once the window has closed at midnight the train finishes its trip
     /// and runs empty into the depot, where it stands until the morning.
     func testAfterTheWindowClosesTheTrainGoesIntoTheDepot() throws {

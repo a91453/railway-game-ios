@@ -119,6 +119,10 @@ extension GameWorld {
         return trip
     }
 
+    /// The most whole minutes a train out of the depot stands at its end
+    /// before its trip: ``lead(of:)`` rounds the run up and adds a minute.
+    static let waitingLead: Int64 = 2
+
     /// The whole minutes before its trip a train out of the depot leaves:
     /// its least dwell and the run's seconds, rounded up, and a minute
     /// more, so that it stands at the end, its run over, when the trip is
@@ -217,8 +221,9 @@ extension GameWorld {
     /// (decisions 209 and 221). Of its trains without a service
     /// standing at a station other than the depot: one that cannot be sent
     /// out from where it stands, or, while more of the stream's trains run
-    /// or wait to be sent out than it runs now (none once its window has
-    /// closed), the last in ID order of those that wait. Under traffic
+    /// or wait to be sent out than it runs now and ``waitingLead`` minutes
+    /// from now (none once its window has closed), the last in ID order of
+    /// those that wait. Under traffic
     /// control it must be able to take its route now.
     func trainEnteringDepot(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
         guard !line.depots.isEmpty, !line.hasRuns, clock.now.seconds >= 0 else { return nil }
@@ -231,7 +236,13 @@ extension GameWorld {
             else { continue }
             if readyTrip(of: train, on: line, stream.service, memo: &memo) != nil { waiting.append(index) } else { stranded.append(index) }
         }
-        let wanted = wanted(line, stream, at: clock.now, memo: &memo)?.trains ?? 0
+        // A train sent out for a trip reaches its end up to
+        // ``waitingLead`` minutes before it: it is not surplus meanwhile.
+        let soon = Self.time(clock.now, plusMinutes: Self.waitingLead)
+        let wanted = max(
+            wanted(line, stream, at: clock.now, memo: &memo)?.trains ?? 0,
+            soon.flatMap { wanted(line, stream, at: $0, memo: &memo)?.trains } ?? 0
+        )
         let surplus = runningTrains(of: line, stream) + waiting.count > wanted
         for index in stranded + (surplus ? waiting.reversed() : []) {
             guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
@@ -250,7 +261,8 @@ extension GameWorld {
     /// `stream` may send a train into or out of its depot (decision 209),
     /// or `nil` if none can before something changes: now if one can now;
     /// else, for a train that waits at a station, the next minute the
-    /// line's window or level changes, and for each train in the depot the
+    /// line's window or level changes, now or ``waitingLead`` minutes
+    /// later, and for each train in the depot the
     /// first minute at which, its lead later, the window or level changes
     /// or a headway since the last dispatch has passed. Nothing else that
     /// decides these changes without a train changing, so this is exact.
@@ -268,7 +280,12 @@ extension GameWorld {
             guard let train = train(id: id) else { return false }
             return train.execution == nil && !isInDepot(train, of: line) && !stationsStoppedAt(by: id).isEmpty
         }
-        if waits { wake(at: line.nextChange(after: now, in: serviceDay)) }
+        if waits {
+            wake(at: line.nextChange(after: now, in: serviceDay))
+            if let soon = Self.time(now, plusMinutes: Self.waitingLead) {
+                wake(at: line.nextChange(after: soon, in: serviceDay).flatMap { Self.time($0, plusMinutes: -Self.waitingLead) })
+            }
+        }
         guard !hasTrainOnItsWay(line, stream, memo: &memo) else { return soonest }
         for id in line.trains(of: stream) {
             guard let train = train(id: id), train.movement.rate > 0, isInDepot(train, of: line),
