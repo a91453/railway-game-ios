@@ -210,9 +210,17 @@ set -euo pipefail
 # of every seed): the first stays in campaigns-1 (about 400 s), the second,
 # ServiceRepeatingSecondHalfPropertyTests, joins campaigns-6
 # (SaveMutationSecondHalfTests 272 to 450 s), about 850 s at most.
+# 2026-10-14, later still: rest took 15:45 to 17:01 of tests (1013 s of
+# classes in run 38617840641) and, with a 4:25 build on a slow runner, ran
+# out of its 20 minutes on main (run 38615317464). Four of its larger
+# GameCore classes move to the shortest shards: WorldStateMachineTests (66 s)
+# and IdleTrainDeadlockTests (48 s) to campaigns-1 (4:46 to 6:25 of tests),
+# ScheduledTrafficTests (45 s) and TurnbackTests (32 s) to campaigns-14
+# (5:32 to 7:44); rest drops to about 820 s. FlexDispatchPropertyTests
+# (160 s) stays: the self-test's plans use it as a class no campaign names.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
+    campaigns-1) echo "ServiceRepeatingPropertyTests WorldStateMachineTests IdleTrainDeadlockTests" ;;
     campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
     campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
@@ -225,7 +233,7 @@ classes_of() {
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests EconomyPropertyTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
     *) return 1 ;;
   esac
