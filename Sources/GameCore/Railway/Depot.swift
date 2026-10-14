@@ -58,7 +58,7 @@ extension GameWorld {
                 guard let path = path(from: from.position, toStation: end, length: train.length) else { continue }
                 var seconds: Int64 = 0
                 if path.distance > 0 {
-                    guard let least = plannedSeconds(length: path.distance, line: line) else { continue }
+                    guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: from, along: path, below: line.performance.topSpeed)) else { continue }
                     seconds = least
                 }
                 if best == nil || seconds < best!.seconds { best = (seconds, turns, end) }

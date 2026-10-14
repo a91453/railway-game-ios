@@ -118,18 +118,20 @@ final class RunTimeRealismReportTests: XCTestCase {
         let names = HighSpeedDemo.stationNames
         let ids = world.stations.map(\.id)
         let built = world
-        // Decision 207: the same lines planned with realistic operation.
-        for realistic in [false, true] {
+        // Decision 207: the same lines planned with realistic operation;
+        // decision 217: and with the curve limits too.
+        for (realistic, limits) in [(false, false), (true, false), (true, true)] {
             world = built
             world.setRealisticOperation(realistic)
-            say("== High-speed demo: Nangang → Zuoying, as built\(realistic ? ", realistic operation (decision 207)" : "") (journey legs + its dwell at each call between) ==")
+            world.setCurveSpeedLimits(limits)
+            say("== High-speed demo: Nangang → Zuoying, as built\(realistic ? ", realistic operation (decision 207)" : "")\(limits ? ", curve limits (decision 217)" : "") (journey legs + its dwell at each call between) ==")
             say("service | calls | game run | game dwell | game | real median (trains) | game/real")
             var legRows: [String] = []
             for line in world.lines {
                 let calls = line.stops.compactMap { ids.firstIndex(of: $0) }
                 let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil))
                 let out = Array(journey.legs.prefix(calls.count - 1))
-                for leg in out {
+                for leg in out where !limits {
                     XCTAssertEqual(leg.seconds, world.plannedSeconds(length: leg.path.distance, line: line) ?? -1,
                                    "a leg takes the seconds its line plans")
                 }
@@ -340,7 +342,10 @@ final class RunTimeRealismReportTests: XCTestCase {
             in: .traditionalChinese, railways: railways, water: water.cells(frame: frame, bounds: GameWorld.newGameBounds),
             steep: water.steepCells(frame: frame, bounds: GameWorld.newGameBounds), heights: heights
         )
-        for (title, world) in [("flat (the challenge, at a headway)", flat), ("on the ground (the real runs)", ground)] {
+        var limited = ground
+        limited.setCurveSpeedLimits(true)
+        for (title, world) in [("flat (the challenge, at a headway)", flat), ("on the ground (the real runs)", ground),
+                               ("on the ground, curve limits (decision 217)", limited)] {
             let line = try XCTUnwrap(world.lines.first { $0.name == "平溪線" }, "the Pingxi Line")
             let names = line.stops.map { world.station(id: $0)?.name ?? "?" }
             let journey = try XCTUnwrap(world.lineJourney(line.id))
@@ -350,7 +355,9 @@ final class RunTimeRealismReportTests: XCTestCase {
             var fromSandiaoling: (game: Int64, real: Int64) = (0, 0)
             let sandiaoling = names.firstIndex(of: "三貂嶺")
             for leg in journey.legs {
-                XCTAssertEqual(leg.seconds, RunningCurve.leastSeconds(length: leg.path.distance, performance: line.performance) ?? -1)
+                if !world.curveSpeedLimits {
+                    XCTAssertEqual(leg.seconds, RunningCurve.leastSeconds(length: leg.path.distance, performance: line.performance) ?? -1)
+                }
                 let from = names[leg.from], to = names[leg.to]
                 let real = realMedian(from: from, to: to)
                 let km = Double(leg.path.distance) / Double(WorldCoordinate.unitsPerMetre) / 1_000

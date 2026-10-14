@@ -19,6 +19,25 @@ extension GameSession {
         return planPoint(of: .track(point))
     }
 
+    /// What ✓ pays for the platform picked (``platformSitePlanPoint``):
+    /// levelling its stretch (``networkPlatformLevelling``), and for a new
+    /// station the station and clearing what stands where it goes, as
+    /// `GameWorld.buildStation(named:at:)` charges; the platform itself is
+    /// free. `nil` when nothing is picked, it costs nothing, or the
+    /// stretch cannot be levelled.
+    public var networkPlatformCost: Money? {
+        guard let site = platformSitePlanPoint else { return nil }
+        var total = Money.zero
+        if let levelling = networkPlatformLevelling {
+            guard let cost = levelling.cost else { return nil }
+            total = total + cost
+        }
+        if platformStationID.flatMap({ world.station(id: $0) }) == nil {
+            total = total + world.economy.costs.station + world.clearingCost(of: world.placedBuildings(inTheWayOf: [site]))
+        }
+        return total > .zero ? total : nil
+    }
+
     /// Who lives and works within a station's catchment of the platform
     /// site (``platformSitePlanPoint``): `nil` when none is picked.
     public var platformSiteCatchment: LandTotals? {

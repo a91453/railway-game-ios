@@ -44,10 +44,10 @@ final class LocalizationTests: XCTestCase {
         }
         XCTAssertEqual(
             GameError.insufficientFunds(required: 50_000, available: 1_234).playerMessage(in: .traditionalChinese),
-            "餘額不足：需要 $ 500.00，目前只有 $ 12.34。"
+            "餘額不足：需要 $ 500，目前只有 $ 12。"
         )
-        XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .traditionalChinese), "軌段 #2 上有列車。請先把列車移出軌道。")
-        XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .traditionalChinese), "還有軌道接在節點 #2。請先拆除那段軌道。")
+        XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .traditionalChinese), "這段軌道上有列車。請先把列車移出軌道。")
+        XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .traditionalChinese), "還有軌道接在這裡。請先拆除那段軌道。")
         XCTAssertEqual(GameError.invalidTrainLength.playerMessage(in: .traditionalChinese), "列車可以有 1 到 16 節車廂。")
     }
 
@@ -55,7 +55,7 @@ final class LocalizationTests: XCTestCase {
         var world = try makeWorld()
         try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))
         let zh = DisplayLanguage.traditionalChinese
-        XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 個軌段")
+        XCTAssertEqual(world.networkSummary(in: zh), "1 座車站 · 0 段軌道")
         XCTAssertEqual(ConstructionTool.allCases.map { $0.title(in: zh) }, ["選取", "路網", "列車", "建物"])
 
         XCTAssertEqual(TrainPosition.onEdge(TrackTraversal(edge: .edge(2), direction: .backward), offset: 256).displayText(in: zh), "軌段 #2 反向，距起點 4 公尺")

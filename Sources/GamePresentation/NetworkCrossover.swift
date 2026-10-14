@@ -181,7 +181,7 @@ extension GameSession {
                 return
             }
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error)
             return
         }
         // Decision 193: the plan is the command; building it again on the
@@ -225,8 +225,8 @@ enum ScissorsProblem: Error {
             language.text("Make the crossover longer: at least 44 m along the tracks.", "交叉渡線要再長一點：沿軌道至少 44 公尺。")
         case .nearANode:
             language.text(
-                "An X crossover needs 22 m of track beyond each of its four ends: tap farther from the nodes.",
-                "X 型交叉渡線的四個端點外都需要 22 公尺的軌道：請點離節點遠一點的位置。"
+                "An X crossover needs 22 m of track beyond each of its four ends: tap farther from switches and track ends.",
+                "X 型交叉渡線的四個端點外都需要 22 公尺的軌道：請點離道岔與軌道端點遠一點的位置。"
             )
         case .tooSharp:
             language.text("The tracks turn too sharply for an X crossover there.", "那裡的軌道彎曲太大，無法設 X 型交叉渡線。")

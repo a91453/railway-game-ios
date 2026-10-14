@@ -41,7 +41,7 @@
 | 50 | 列車（車身、車頭、夜燈） | `MapArt.drawTrains` → `drawTrain` | `MapTrainCanvas`：每一幀重畫 |
 | 51 | 出庫中、入庫中的小方牌：車頭上方、藏青底，`MapGlyphDepotOut`／`MapGlyphDepotIn` 用 `markerFill` 畫 | `drawTrains` 的 `drawDepotPlate`（決策 214，`GameWorld.depotRuns()`）：畫在列車之後、等待環之前 | 2026-10-13 作者選定。不用圓（避開等待環、量表環、高鐵的第二圈），不帶字（避開白底的等待小牌）；擠不下時先留等待與死結 |
 | 52 | 等待環（遊戲在跑時往外擴散）、死結的警告、為何在等的小牌（決策 210） | `drawWaitMarks`、`drawWaitTag` | 最多 12 個環、6 張小牌，死結先 |
-| 55 | 站名（帶底牌），站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216） | `MapArt.drawStationLabels` → `drawStationName` | `MapLabelCanvas`：鏡頭、車站、路線或候車人數變了才重畫，列車動不重畫。一站一站畫完，所以後面的站名會蓋住前面的。在列車上面：停在站上的列車不會蓋住站名（#593） |
+| 55 | 站名（帶底牌），站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216）；有車站商業時站名牌左邊一個暖黃方章，裡面 1、2、3 個購物袋（決策 222） | `MapArt.drawStationLabels` → `drawStationName` | `MapLabelCanvas`：鏡頭、車站、路線或候車人數變了才重畫，列車動不重畫。一站一站畫完，所以後面的站名會蓋住前面的。在列車上面：停在站上的列車不會蓋住站名（#593） |
 | 56 | 拉遠時的站名（帶底牌） | `drawOverviewNames` | 同上 |
 | 57 | 候車人數膠囊、擁擠站的量表環（決策 210） | `drawStationProblems` | 所有站名畫完才畫，不會被後面的站名蓋住；中等縮放起就畫，數量有上限（`MapProblems`）。在列車上面（#593） |
 | 60 | 天氣：壓暗、雨、閃電、颱風標記 | `MapWeatherLayer` → `drawWeather` | |

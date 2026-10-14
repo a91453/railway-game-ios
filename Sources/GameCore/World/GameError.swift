@@ -294,4 +294,14 @@ public enum GameError: Error, Hashable, Sendable {
     /// stops, as no line's service runs over a depot's sidings (decision
     /// 209): the line.
     case depotBlocksLine(LineID)
+    /// A depot has no shops (decision 222): the depot.
+    case stationIsDepot(StationID)
+    /// A station with shops cannot become a depot (decision 222): the
+    /// station, whose shops are demolished first.
+    case stationHasCommerce(StationID)
+    /// The station's shops are at their top level, or already built
+    /// (decision 222).
+    case stationCommerceMaxedOut
+    /// The station has no shops (decision 222).
+    case noStationCommerce(StationID)
 }

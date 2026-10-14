@@ -52,6 +52,9 @@ struct StationMasterCorner: View {
     /// The advice, worked out again only when an edit or a new game hour
     /// can have changed it (decision 184, later): not at every tick.
     @State private var advice: StationMasterAdvice?
+    /// Decision 224: the company's title it wears, worked out with the
+    /// advice (the rank reads the whole network).
+    @State private var title: StationMasterTitle?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 194, later: a losing line's bubble opens the line panel.
     @Environment(GameScreenState.self) private var screen
@@ -69,6 +72,7 @@ struct StationMasterCorner: View {
         }
         .onChange(of: session.stationMasterRefreshKey, initial: true) {
             advice = StationMasterAdvice(world: session.world, worstLosingLine: { session.worstLosingLine })
+            title = StationMasterTitle.isShown(in: session.world) ? StationMasterTitle(rank: CompanyRank(world: session.world)) : nil
         }
         .onChange(of: advice, initial: true) { _, advice in
             if advice == nil { isTalking = false }
@@ -86,6 +90,8 @@ struct StationMasterCorner: View {
 
     private var corner: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            // Decision 224 (6C): the company's title under the avatar.
+            VStack(spacing: -3) {
             Button {
                 if isTalking {
                     // Decision 175, later: a second tap, while it talks,
@@ -121,6 +127,10 @@ struct StationMasterCorner: View {
             .accessibilityLabel(Text(verbatim: session.language.text("Station master", "站長")))
             .accessibilityValue(Text(verbatim: said(advice)))
             .accessibilityIdentifier("stationMaster")
+            if let title, StationMasterTitle.isShown(in: session.world) {
+                titleBadge(title)
+            }
+            }
             if isTalking, hasRoom {
                 let width = min(maxBubbleWidth, 320)
                 let worry = advice?.isWorry ?? false
@@ -155,6 +165,41 @@ struct StationMasterCorner: View {
             }
         }
         .animation(.spring(duration: 0.3, bounce: 0.3), value: isTalking)
+    }
+
+    /// The title on a warm plate with a navy edge, and under it how far to
+    /// the next title; opens the goals panel, where the rank is.
+    private func titleBadge(_ title: StationMasterTitle) -> some View {
+        let language = session.language
+        return Button {
+            screen.panel = .goals
+        } label: {
+            VStack(spacing: 2) {
+                Text(verbatim: title.title.title(in: language))
+                    .font(.system(size: 10, weight: .heavy))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .foregroundStyle(Theme.onAccent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Palette.ink, lineWidth: 1.5))
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.panel)
+                        Capsule().fill(Theme.primary).frame(width: proxy.size.width * title.progress)
+                    }
+                    .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1))
+                }
+                .frame(width: 40, height: 5)
+            }
+            .frame(minWidth: 44, minHeight: 28)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: title.title.title(in: language)))
+        .accessibilityHint(Text(verbatim: language.text("Opens your company's rank.", "打開公司評等。")))
+        .accessibilityIdentifier("stationMaster.title")
     }
 
     /// The station the advice is about, if it is about one.

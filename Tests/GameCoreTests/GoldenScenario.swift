@@ -51,7 +51,7 @@ extension Train {
 /// outcome each one must have, and read-only observations with the answer
 /// each one must give), and the state the world must end in.
 struct GoldenScenario: Decodable {
-    static let schemaVersion = 72
+    static let schemaVersion = 74
 
     var description: String
     var initialState: InitialState
@@ -204,7 +204,7 @@ struct GoldenScenario: Decodable {
                  .command(.setDistanceDemand, _), .command(.setOutsideConnections, _),
                  .command(.setCityDemand, _), .observe(.cityDemand, _), .command(.setCityFootprints, _), .command(.setAreaBuyOut, _),
                  .command(.enableFreight, _), .command(.buildFreightFacility, _), .command(.setLineFreight, _),
-                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _), .command(.setRollingStockEconomics, _), .command(.sellTrain, _),
+                 .command(.enableBuildingMaterials, _), .command(.setFreightProduct, _), .command(.setDoorCrowding, _), .command(.setTourism, _), .command(.investInSouvenirShop, _), .command(.buildStationCommerce, _), .command(.upgradeStationCommerce, _), .command(.demolishStationCommerce, _), .command(.reverseLineStops, _), .command(.setFlexDispatch, _), .command(.setLineAccounts, _), .command(.setRollingStockEconomics, _), .command(.sellTrain, _),
                  .command(.setCityRequests, _), .command(.acceptRequest, _), .command(.declineRequest, _), .observe(.cityRequests, _),
                  .command(.enableMapExpansion, _), .command(.buyMapTile, _),
                  .command(.setCityBuildings, _), .command(.setTownGrowth, _),
@@ -595,6 +595,10 @@ enum ScenarioCommand: Equatable {
     /// Schema 69 (decision 174): tourism.
     case setTourism([WorldSummary.AttractionSeed])
     case investInSouvenirShop(Int)
+    /// Schema 74 (decision 222): station commerce.
+    case buildStationCommerce(StationID)
+    case upgradeStationCommerce(StationID)
+    case demolishStationCommerce(StationID)
     /// Schema 71 (decision 180): rolling-stock economics, a refit and a sale.
     case setRollingStockEconomics(Bool)
     case setTrainType(TrainID, TrainType?)
@@ -760,6 +764,12 @@ enum ScenarioCommand: Equatable {
                 world.setTourism(seeds.isEmpty ? nil : seeds.enumerated().map { $1.attraction(id: $0 + 1) })
             case .investInSouvenirShop(let id):
                 try world.investInSouvenirShop(of: AttractionID(rawValue: id))
+            case .buildStationCommerce(let id):
+                try world.buildStationCommerce(at: id)
+            case .upgradeStationCommerce(let id):
+                try world.upgradeStationCommerce(at: id)
+            case .demolishStationCommerce(let id):
+                try world.demolishStationCommerce(at: id)
             case .setRollingStockEconomics(let enabled):
                 world.setRollingStockEconomics(enabled)
             case .setTrainType(let id, let type):
@@ -881,6 +891,13 @@ extension ScenarioCommand: Decodable {
             self = try .setTourism(container.decode([WorldSummary.AttractionSeed].self, forKey: .attractions))
         case "investInSouvenirShop":
             self = try .investInSouvenirShop(container.decode(Int.self, forKey: .attraction))
+        // Schema 74: station commerce (decision 222).
+        case "buildStationCommerce":
+            self = try .buildStationCommerce(container.decodeStation(forKey: .station))
+        case "upgradeStationCommerce":
+            self = try .upgradeStationCommerce(container.decodeStation(forKey: .station))
+        case "demolishStationCommerce":
+            self = try .demolishStationCommerce(container.decodeStation(forKey: .station))
         // Schema 59: building materials (decision 156).
         case "enableBuildingMaterials":
             self = .enableBuildingMaterials
@@ -1200,6 +1217,15 @@ extension StepOutcome: Codable {
             self = .rejected(.invalidTimetable)
         case "unknownStation":
             self = try .rejected(.unknownStation(container.decodeStation(forKey: .station)))
+        // Schema 74: station commerce (decision 222).
+        case "stationIsDepot":
+            self = try .rejected(.stationIsDepot(container.decodeStation(forKey: .station)))
+        case "stationHasCommerce":
+            self = try .rejected(.stationHasCommerce(container.decodeStation(forKey: .station)))
+        case "stationCommerceMaxedOut":
+            self = .rejected(.stationCommerceMaxedOut)
+        case "noStationCommerce":
+            self = try .rejected(.noStationCommerce(container.decodeStation(forKey: .station)))
         case "trainServiceActive":
             self = try .rejected(.trainServiceActive(container.decodeTrain(forKey: .train)))
         case "trainServiceNotActive":
@@ -1590,6 +1616,18 @@ extension StepOutcome: Codable {
         case .rejected(.depotBlocksLine(let id)):
             try container.encode("depotBlocksLine", forKey: .result)
             try container.encode(id.rawValue, forKey: .line)
+        // Decision 222: station commerce.
+        case .rejected(.stationIsDepot(let id)):
+            try container.encode("stationIsDepot", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationHasCommerce(let id)):
+            try container.encode("stationHasCommerce", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
+        case .rejected(.stationCommerceMaxedOut):
+            try container.encode("stationCommerceMaxedOut", forKey: .result)
+        case .rejected(.noStationCommerce(let id)):
+            try container.encode("noStationCommerce", forKey: .result)
+            try container.encode(id.rawValue, forKey: .station)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):
@@ -2588,16 +2626,20 @@ struct WorldSummary: Codable, Equatable {
         var point: PlanPoint
         /// Schema 35: `"flowControl"` or `"closed"`; left out while open.
         var operationMode: String?
+        /// Schema 74 (decision 222): its shops' level, 1 to 3; left out
+        /// without them.
+        var commerce: Int?
 
-        init(id: Int, name: String, point: PlanPoint, operationMode: String? = nil) {
+        init(id: Int, name: String, point: PlanPoint, operationMode: String? = nil, commerce: Int? = nil) {
             self.id = id
             self.name = name
             self.point = point
             self.operationMode = operationMode
+            self.commerce = commerce
         }
 
         private enum CodingKeys: String, CodingKey {
-            case id, name, x, y, annexes, point, operationMode
+            case id, name, x, y, annexes, point, operationMode, commerce
         }
 
         init(from decoder: any Decoder) throws {
@@ -2609,6 +2651,7 @@ struct WorldSummary: Codable, Equatable {
             }
             point = try container.decode(PlanPoint.self, forKey: .point)
             operationMode = try container.decodeIfPresent(String.self, forKey: .operationMode)
+            commerce = try container.decodeIfPresent(Int.self, forKey: .commerce)
         }
 
         func encode(to encoder: any Encoder) throws {
@@ -2617,6 +2660,7 @@ struct WorldSummary: Codable, Equatable {
             try container.encode(name, forKey: .name)
             try container.encode(point, forKey: .point)
             try container.encodeIfPresent(operationMode, forKey: .operationMode)
+            try container.encodeIfPresent(commerce, forKey: .commerce)
         }
     }
 
@@ -2772,7 +2816,8 @@ struct WorldSummary: Codable, Equatable {
         balance = world.economy.balance.amount
         stations = world.stations
             .map { StationSummary(id: $0.id.rawValue, name: $0.name, point: $0.point,
-                                  operationMode: $0.operationMode == .normalFlow ? nil : $0.operationMode.rawValue) }
+                                  operationMode: $0.operationMode == .normalFlow ? nil : $0.operationMode.rawValue,
+                                  commerce: $0.commerce?.rawValue) }
             .sorted { $0.id < $1.id }
         trains = world.trains
             .map { train in

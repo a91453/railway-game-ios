@@ -168,13 +168,15 @@ extension GameWorld {
         // station they ride to, either: their trip is abandoned there.
         let isOpen = station(id: entry.station)?.operationMode.allowsService ?? false
         var alighted: Int64 = 0
+        // Decision 222: those who wait here for their next train.
+        var changing: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
                 if group.destination == entry.station && isOpen {
                     if let next = group.journey?.next {
-                        enqueueTransfer(group.count, along: next, at: entry.station,
-                                        after: group.journey!.leg.line, memo: &memo)
+                        changing += enqueueTransfer(group.count, along: next, at: entry.station,
+                                                    after: group.journey!.leg.line, memo: &memo)
                     } else {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                     }
@@ -193,6 +195,7 @@ extension GameWorld {
             }
         }
         countAlighting(alighted, at: entry.station)
+        countTransfer(changing, at: entry.station)
         let boarded = isLast || !isOpen ? 0 : boardPassengers(train, at: stop)
         return max(alighted, boarded)
     }
@@ -353,9 +356,10 @@ extension GameWorld {
     /// (``PassengerTransferRules.minimumChangeSeconds``, 120 s) or their
     /// walk, if longer, has passed; another train of the same line at the
     /// same station needs no time. Those whose next leg is gone or out of
-    /// reach, or who find no room to wait, leave.
+    /// reach, or who find no room to wait, leave. Returns how many wait at
+    /// `alighting` itself (decision 222 counts them once).
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                          at alighting: StationID, after line: LineID, memo: inout DispatchMemo) {
+                                          at alighting: StationID, after line: LineID, memo: inout DispatchMemo) -> Int64 {
         let origin = journey.origin
         let station = journey.leg.from
         let seconds: Int64
@@ -365,7 +369,7 @@ extension GameWorld {
             seconds = max(PassengerTransferRules.minimumChangeSeconds, walk.seconds)
         } else {
             passengers[passengerIndex(of: origin)].abandoned += count
-            return
+            return 0
         }
         let planned = WaitingGroup(line: journey.leg.line, direction: journey.leg.direction,
             destination: journey.leg.to, since: clock.now, count: count, journey: journey)
@@ -375,12 +379,12 @@ extension GameWorld {
         }
         guard isServed(planned, at: station, checkingLeg: { served[$0]! }) else {
             passengers[passengerIndex(of: origin)].abandoned += count
-            return
+            return 0
         }
         let (readySeconds, overflow) = clock.now.seconds.addingReportingOverflow(seconds)
         guard !overflow else {
             passengers[passengerIndex(of: origin)].abandoned += count
-            return
+            return 0
         }
         let ready = GameTime(seconds: readySeconds)
         let slot: Int
@@ -392,6 +396,7 @@ extension GameWorld {
         }
         let admitted = passengers[slot].enqueueTransfer(count, along: journey, at: clock.now, readyAt: ready)
         passengers[passengerIndex(of: origin)].abandoned += count - admitted
+        return station == alighting ? admitted : 0
     }
 
     /// `train`, leaving stop `stop` full, counts those still waiting there

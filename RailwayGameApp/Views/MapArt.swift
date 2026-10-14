@@ -1614,8 +1614,8 @@ enum MapArt {
         // frame redraws: first rule out stations whose name cannot reach
         // the view. A caption2 character is under 24 points wide and a line
         // under 48 high at the largest text size, so this bound needs no
-        // measuring.
-        let reach = Double(station.name.count) * 12
+        // measuring; the shops' square (decision 222) adds 20 to its left.
+        let reach = Double(station.name.count) * 12 + 20
         let largest = CGRect(x: center.x - reach, y: center.y + radius, width: reach * 2, height: 4 + 48 + 14)
         guard largest.intersects(context.clipBoundingRect) else { return }
         let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
@@ -1625,6 +1625,16 @@ enum MapArt {
         // (``drawOverviewNames``), so it reads over a line or a town.
         context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
         context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
+        // Decision 222: the station's shops, a warm yellow square to the
+        // left of its name with one, two or three bags in it.
+        if let level = station.commerce {
+            let side = max(12, min(16, nameSize.height))
+            let chip = CGRect(x: nameRect.minX - 4 - side, y: nameRect.midY - side / 2, width: side, height: side)
+            let square = Path(roundedRect: chip, cornerRadius: 3)
+            context.fill(square, with: .color(Palette.playerBuilding))
+            context.stroke(square, with: .color(Palette.ink), lineWidth: 1.2)
+            drawStationSymbol(.shops(level), at: ScreenPoint(x: chip.midX, y: chip.midY), size: side * 0.8, context: context)
+        }
         // Decision 216: the badges of its lines in a row under the name,
         // at most four.
         if !badges.isEmpty {

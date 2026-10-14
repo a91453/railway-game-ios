@@ -194,7 +194,7 @@ struct PopulationLegendView: View {
         case .population: "0"
         case .travel: language.text("Few", "少")
         case .movement: language.text("Decrease", "減少")
-        case .landUse: language.text("Low-rise (D1)", "低層（D1）")
+        case .landUse: language.text("Low-rise", "低層")
         case .landValue: "$ 0"
         case .sectionFlow: language.text("Empty", "空")
         case .coverage, .zoning, .terrain: ""
@@ -206,7 +206,7 @@ struct PopulationLegendView: View {
         case .population: "10000+"
         case .travel: language.text("Many", "多")
         case .movement: language.text("Increase", "增加")
-        case .landUse: language.text("Towers (D4)", "超高層（D4）")
+        case .landUse: language.text("Towers", "超高層")
         case .landValue: "$ \(CityMap.valueSteps.last ?? 0)+ / m²"
         case .sectionFlow: language.text("Full", "滿載")
         case .coverage, .zoning, .terrain: ""

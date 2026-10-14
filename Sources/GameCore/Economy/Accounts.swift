@@ -75,6 +75,10 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     case subsidy
     /// The depots' sidings, a fee each a day (decision 209; native), out.
     case depotUpkeep
+    /// The stations' shops (decision 222; native): what the passengers
+    /// through each spend in them, in, and their upkeep, out.
+    case stationCommerceRevenue
+    case stationCommerceUpkeep
 }
 
 /// One line of a ledger row's breakdown.
@@ -145,6 +149,8 @@ public struct LedgerEntry: Hashable, Sendable {
         case monthlySubsidy
         /// A day's fee for the depots' sidings (decision 209).
         case dailyDepot
+        /// The stations' shops: takings and upkeep (decision 222).
+        case dailyStationCommerce
     }
 
     public let kind: Kind
@@ -211,8 +217,8 @@ public struct DayAccount: Hashable, Sendable {
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost
-            case .propertyRent, .tourismRevenue, .subsidiarySales, .subsidy: propertyRevenue = propertyRevenue + line.amount
-            case .propertyUpkeep, .tourismUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost: propertyCost = propertyCost + cost
+            case .propertyRent, .tourismRevenue, .stationCommerceRevenue, .subsidiarySales, .subsidy: propertyRevenue = propertyRevenue + line.amount
+            case .propertyUpkeep, .tourismUpkeep, .stationCommerceUpkeep, .propertyTax, .propertyDemolition, .subsidiaryCost: propertyCost = propertyCost + cost
             case .incomeTax: taxCost = taxCost + cost
             case .freightRevenue: freightRevenue = freightRevenue + line.amount
             }
