@@ -1,6 +1,6 @@
 # 車站商業三級：便利商店 → 站內商店街 → 車站商場（設計與校準）
 
-2026-10-14。遊戲規劃 session 第二波派工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 第 1 項、§9.4、§13 第 5 名）。決策 220。號碼依工作登記 #231：存檔 58（規劃板預留）、決策 220、golden schema 74（第二段才用）。
+2026-10-14。遊戲規劃 session 第二波派工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 第 1 項、§9.4、§13 第 5 名）。決策 222。號碼依工作登記 #231：存檔 57（規劃板預留）、決策 222、golden schema 74（第二段才用）。
 
 這份是**第一段**：規則、數字、畫面、美術方案。GameCore 的程式在第二段，等合併 session 說 GameCore 的 CI 名額空出來再推（彎道限速、區間閉塞的越行正在用）。
 
@@ -35,7 +35,7 @@
 - `P × H ÷ (P + H)` 是「上門的客人」：人少時幾乎每個人都算，人多時趨近 `H`（店就那麼大）。這是 §9.4 說的「越多越接近每一級的上限（有遞減）」。三級的 `H` 一級比一級大，所以人越多的站，越值得升級。
 - **同站轉乘只算一次**：在這站下車、接著在這站上另一班車的人，下車與上車各記了一次（決策 179 的站別上下車），要扣掉一次。只扣「同一站」的；走路轉乘（到旁邊的站）在兩站各算一次，因為他真的走過兩個站。轉乘人次是新的計數（§6.2）。
 - **關站**（`StationOperationMode.closed`）那天收入是 0：封閉的車站也會記到被迫下車的人（§9.4），不能讓它賺錢。維護費照付。
-- **沒有站別上下車紀錄時**（逐線帳沒開，或不是經營模式，決策 179）：`P` 改用這站的需求旅次 × 2（一趟出發、一趟到達；`scaledTrips`，與子公司同一個量，決策 173）。判斷條件是「逐線帳在不在、是不是經營模式」，不是存檔版本。第二段用測試量這個近似值和實際人次差多少，寫回這裡。
+- **沒有站別上下車紀錄時**（逐線帳沒開，或不是經營模式，決策 179）：`P` 改用這站的需求旅次 × 2（一趟出發、一趟到達；`scaledTrips`，與子公司同一個量，決策 173）。判斷條件是「逐線帳在不在、是不是經營模式」，不是存檔版本。× 2 假設每趟去的人都會回來；這個近似值和實際人次差多少還沒有量，是之後的工作（新遊戲預設打開逐線帳，所以多數存檔用不到它）。
 - **機廠**（`Station.isDepot`，決策 209）不能蓋商業。
 - 兩個相鄰的站各有商場不會互搶：各算各的人次（和子公司的 800 m 分客不同，因為商業吃的是「這一站裡走過的人」）。
 
@@ -191,35 +191,52 @@
 
 ## 6. 第二段：GameCore
 
-等合併 session（`send_message`）說 GameCore 的名額空了再推。
+PR 在第一段之後（branch `claude/station-commerce-core`），等合併 session 說 GameCore 的名額空了才推。
 
 ### 6.1 狀態與存檔
 
-- `Station` 多一個 `commerce: StationCommerceLevel?`（或 0–3 的整數），**缺 key 的意思是「沒有」**，0 不寫進存檔（和 `souvenir`、`depot` 同一個慣例）。
-- `StationFlowDay` 多一個 `transferred`，缺 key 是 0，0 不寫。
-- `SavedGame.currentVersion` 升到 58，加 57 → 58 的遷移步驟（舊存檔沒有這兩個 key，遷移不用改內容），加 `SaveFixtures/v58-station-commerce.json`（有一站蓋了商場、有轉乘計數）。如果彎道限速（存檔 57）還沒合併，先問合併 session 版本號怎麼接。
-- 驗證：等級在 0–3；機廠不能有商業；有商業就要有對應的資產紀錄（反過來也是）；`transferred` 不大於 `alighted` 與 `boarded`。
+- `Station.commerce: StationCommerceLevel?`（1 便利商店、2 商店街、3 商場）。**缺 key 是「沒有」**，沒有就不寫（和 `operationMode`、`depot` 同一個慣例）。讀檔時，機廠帶著商業、或等級不是 1–3，都拒絕。
+- `StationFlowDay.transferred`：缺 key 是 0，0 不寫。
+- `SavedGame.currentVersion` 是 57。存檔號照合併順序（合併 session）：這個 PR 先合就是 57，彎道限速改用 58；彎道限速先合，這裡就改成 58。遷移步驟「56 → 57」不改內容，因為舊存檔沒有這兩個 key。fixture 是 `SaveFixtures/v57-station-commerce.json`：B 站蓋到商場，跑一天二十分鐘，昨天的紀錄有轉乘。
+- 驗證：
+  - 每一級最多一筆資產紀錄，紀錄的車站要有商業。自由模式不記資產，所以「有商業就一定有紀錄」不檢查（和名產店一樣）。
+  - `transferred` 在 0 到 `alighted` 之間。不和 `boarded` 比：轉乘的人可能過了午夜才上車。
 
 ### 6.2 轉乘計數
 
-在 `enqueueTransfer`（`Boarding.swift`）確定這群人真的排進同一站的隊伍之後，`countFlow(transferred:)`。只在 `recordsLines`（逐線帳在、經營模式）時記，和上下車一樣。走路轉乘不記。
+`enqueueTransfer`（`Boarding.swift`）回傳在同一站排進隊伍的人數，下車計數之後再 `countTransfer`。只在 `recordsLines`（逐線帳在、經營模式）時記，和上下車一樣。走路轉乘、被擠掉的人都不算。
 
 ### 6.3 指令與結算
 
-- `GameWorld.buildStationCommerce(at:)`、`upgradeStationCommerce(at:)`、`demolishStationCommerce(at:)`；查詢 `stationCommercePeople(of:)`、`stationCommerceDay(of:)`、`stationCommerceQuote(of:)`（預估下一級）。
-- 午夜結算 `settleStationCommerce(day:time:)`，放在 `settleTourism` 旁邊。
-- 拆車站（`removeStation`）時先 `disposeAsset(.stationCommerce, owner:)`。
+- `GameWorld.buildStationCommerce(at:)`、`upgradeStationCommerce(at:)`、`demolishStationCommerce(at:)`。
+- 查詢：`stationCommercePeople(of:onDay:)`、`stationCommerceDay(of:level:onDay:)`。傳入下一級，就是面板上的預估。
+- 錯誤：`stationIsDepot`、`stationHasCommerce`（有商業的站不能改成機廠）、`stationCommerceMaxedOut`、`noStationCommerce`。
+- 午夜結算 `settleStationCommerce(day:time:)` 緊接在 `settleTourism` 之後，一列 `dailyStationCommerce`。損益表算在建物收支（`propertyRevenue`／`propertyCost`），和名產店同一欄。
+- 拆車站（`removeStation`）時 `disposeAsset(.stationCommerce, owner:)`。
 
-### 6.4 golden 與 replay
+### 6.4 golden、replay 與既有測試
 
-- 既有的 golden、replay、存檔 fixture **一個值都不改**：沒有蓋商業的世界不寫新 key、不多一列帳；轉乘計數只寫在逐線帳裡，`ReplayState` 不讀逐線帳。
-- 新的 golden（schema 74）：一站從便利商店升到商場、一天關站、一天有轉乘、最後拆除，逐日的淨額與資產。
+- 既有的 golden、replay、存檔 fixture **一個值、一個字節都不改**。
+  - 沒蓋商業的世界不寫新 key，也不多一列帳。
+  - 轉乘計數只寫在逐線帳裡，`ReplayState` 不讀逐線帳。
+- 新的 golden（schema 74）`station-commerce.json` 不推進時間：蓋、升級、錢不夠、拆除、不存在的車站，每個值都是手算的。一天的結算由 `StationCommerceTests` 驗。
+- 唯一改到的既有測試是 `LineAccountsTests.testVersionFortyEightKeepsLineAccounts`。它把 v48 的存檔和「現在重新建的同一個世界」比相等；現在新建的世界會在 B 記下轉乘，v48 當時沒有這個計數。比較時先把新世界的轉乘歸零，其他照比。fixture 沒有改，照樣讀得進來，重新存檔的字節也照樣相同。
 
 ### 6.5 測試
 
-- `StationCommerceTests`（新類別，落在 `rest` shard）：公式的邊界（P = 0、極大值不溢位）、關站、轉乘只扣同站、沒有逐線帳時的需求近似、各指令的錯誤與失敗原子、拆站沖銷資產、存檔讀回。
-- `SavedGameTests`（v58 fixture）、`GoldenScenarioTests`（新 golden）、`LineAccountsTests`（轉乘計數）。
-- 只跑改到的類別與受影響的 shard（CLAUDE.md）。
+- `StationCommerceTests`（新類別，在 `rest` shard），涵蓋：
+  - 公式的值與邊界（0、負數、極大值不溢位）；
+  - 三個指令與它們的錯誤，錢不夠時世界不變；
+  - 機廠；
+  - 拆站時沖銷資產；
+  - 午夜那一列（轉乘只扣同站，沒人停靠的站是 0）；
+  - 關站時只剩維護；
+  - 沒有逐線帳時用需求旅次 × 2；
+  - 沒蓋就沒有帳列與新 key；
+  - 壞存檔被拒；
+  - v57 fixture。
+- `LineAccountsTests.testChangesAreCountedWhereTheyWait`：B 站記到轉乘，端點站沒有。
+- `GoldenScenarioTests`（新 golden）、`SavedGameTests`（版本 57）。
 
 ## 7. 參考檢查
 

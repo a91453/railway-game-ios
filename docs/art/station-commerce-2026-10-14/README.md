@@ -1,4 +1,4 @@
-# 車站商業的圖：方案預覽（2026-10-14，決策 220）
+# 車站商業的圖：方案預覽（2026-10-14，決策 222）
 
 規則與數字在 `docs/research/STATION_COMMERCE_2026-10-14.md`。照 `.claude/skills/art-style/SKILL.md` 做：每張都看過淺色與深色的面板、地圖，大小、模糊、灰階。這些是**預覽**，還沒有放進 `Assets.xcassets`；第二段的畫面 PR 才放推薦的那一套。SVG 用 scratchpad 的 Python 腳本產生（不放進 repo，決策 121、122 的做法）。
 
