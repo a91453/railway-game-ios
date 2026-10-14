@@ -135,6 +135,12 @@ struct MapView: View {
     /// How far down the column at the top of the map (the status banner,
     /// the construction HUD or the traffic key) reaches.
     @State private var topColumnDepth: CGFloat = 0
+    /// Where the round buttons at the bottom-leading corner, and the
+    /// legend, overview map and zoom buttons at the bottom-trailing one,
+    /// are on the map (``MapView/mapArea``): the build's ✕ and ✓ keep off
+    /// them.
+    @State private var bottomLeadingFrame: CGRect = .zero
+    @State private var bottomTrailingFrame: CGRect = .zero
     /// Where a real-world map's attribution sits (decision 120): Apple's
     /// logo and legal link, or MapLibre's attribution button, and the
     /// credits. Nothing of the game is drawn there, and a touch there
@@ -530,6 +536,7 @@ struct MapView: View {
                             zoomControls(camera: projection, limit: zoomLimit)
                         }
                     }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomTrailingFrame = $0 }
                     .padding(12)
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                         bottomTrailingHeight = frame.height
@@ -554,6 +561,7 @@ struct MapView: View {
                             mapExpansionButton(viewport: viewport)
                         }
                     }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
                     .padding(12)
                     // Above the dock (decision 106), beside the tools
                     // (decision 114).
@@ -573,7 +581,7 @@ struct MapView: View {
                     MapBuildConfirm(session: session, camera: projection, viewport: viewport, insets: EdgeInsets(
                         top: max(clear.top, topColumnDepth), leading: clear.leading,
                         bottom: clear.bottom, trailing: clear.trailing
-                    ), mapTop: clear.top)
+                    ), mapTop: clear.top, avoiding: [bottomLeadingFrame, bottomTrailingFrame])
                     // Its flags and ring are where the track and the site
                     // are, which may be by the attribution.
                     .mask { attribution.fill() }
@@ -601,31 +609,26 @@ struct MapView: View {
                 // and layer buttons do not cover a tooltip near them (it
                 // takes no touches, so they can still be tapped).
                 .overlay(alignment: .topLeading) {
-                    if let cellTooltip {
-                        PopulationCellTooltip(info: cellTooltip.info, language: session.language)
-                            .offset(x: max(clear.leading + 8, min(cellTooltip.at.x + 12, viewport.width - clear.trailing - 220)), y: max(clear.top + 8, min(cellTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
-                            .allowsHitTesting(false)
+                    // Not while the build's ✕ and ✓ are up (a player's
+                    // report: the population grid's tooltip covered the
+                    // ✓): the tap that picked the track asked the layer
+                    // for its cell too.
+                    if !buildPillShown {
+                        cellTooltips(clear: clear, viewport: viewport, screenEdges: screenEdges)
                     }
-                    if let cityTooltip {
-                        CityCellTooltip(info: cityTooltip.info, language: session.language)
-                            .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
-                            .allowsHitTesting(false)
-                    }
-                    if let sectionFlowTooltip {
-                        SectionFlowTooltip(text: sectionFlowTooltip.text)
-                            .offset(x: max(clear.leading + 8, min(sectionFlowTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(sectionFlowTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
-                            .allowsHitTesting(false)
-                    }
-                    if let terrainTooltip {
-                        TerrainCellTooltip(lines: terrainTooltip.lines, language: session.language)
-                            .offset(x: max(clear.leading + 8, min(terrainTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(terrainTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
-                            .allowsHitTesting(false)
-                    }
+                }
+                // Nor come back, out of date, when they go.
+                .onChange(of: buildPillShown) {
+                    cellTooltip = nil
+                    cityTooltip = nil
+                    terrainTooltip = nil
+                    sectionFlowTooltip = nil
                 }
                 .animation(.easeInOut(duration: 0.2), value: session.networkPreview != nil)
                 .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
                 .animation(.easeInOut(duration: 0.2), value: mapLayers.popTravelMode)
                 .frame(height: viewport.height)
+                .coordinateSpace(.named(Self.mapArea))
             }
             .background {
                 if let realWorld {
@@ -1187,6 +1190,41 @@ struct MapView: View {
             : session.language.text("Expand the map", "擴建地圖")))
         .accessibilityIdentifier("map.expansion")
     }
+
+    /// The tapped cell's tooltip of the layer shown (they take no touches,
+    /// so the buttons near them can still be tapped).
+    @ViewBuilder
+    private func cellTooltips(clear: EdgeInsets, viewport: ScreenSize, screenEdges: EdgeInsets) -> some View {
+        if let cellTooltip {
+            PopulationCellTooltip(info: cellTooltip.info, language: session.language)
+                .offset(x: max(clear.leading + 8, min(cellTooltip.at.x + 12, viewport.width - clear.trailing - 220)), y: max(clear.top + 8, min(cellTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
+                .allowsHitTesting(false)
+        }
+        if let cityTooltip {
+            CityCellTooltip(info: cityTooltip.info, language: session.language)
+                .offset(x: max(clear.leading + 8, min(cityTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(cityTooltip.at.y + 12, viewport.height - screenEdges.bottom - 130)))
+                .allowsHitTesting(false)
+        }
+        if let sectionFlowTooltip {
+            SectionFlowTooltip(text: sectionFlowTooltip.text)
+                .offset(x: max(clear.leading + 8, min(sectionFlowTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(sectionFlowTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
+                .allowsHitTesting(false)
+        }
+        if let terrainTooltip {
+            TerrainCellTooltip(lines: terrainTooltip.lines, language: session.language)
+                .offset(x: max(clear.leading + 8, min(terrainTooltip.at.x + 12, viewport.width - clear.trailing - 280)), y: max(clear.top + 8, min(terrainTooltip.at.y + 12, viewport.height - screenEdges.bottom - 80)))
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// Whether the build's ✕ and ✓ are on the map (``MapBuildConfirm``).
+    private var buildPillShown: Bool {
+        MapBuildConfirm.isShown(session, panel: screen.panel)
+    }
+
+    /// The map's own coordinates, which the controls over it are measured
+    /// in.
+    nonisolated static let mapArea = "MapView.mapArea"
 
     private var mapLayersButton: some View {
         Button {
