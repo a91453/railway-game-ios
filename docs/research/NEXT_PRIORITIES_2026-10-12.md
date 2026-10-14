@@ -43,6 +43,11 @@
 - 合併 session 管合併、CI 名額、#231 號碼與衝突，並在這張表標「已合併」；
 - bug session 管錯誤回報與回歸。
 
+**作者 2026-10-14：「之後預設都這樣，不用我」。** 從此以後：
+- 選項、先後、派工，由遊戲規劃 session 從玩家、開發、美術、音樂四方比較後定案，理由寫進 PR 與這張表，不回頭問作者。
+- 每天的 Threads 開發日誌草稿也由遊戲規劃 session 派人寫，交給作者，發文仍是作者自己。
+- 仍然是作者的事（CLAUDE.md）：出 TestFlight、Apple 帳號與 App Store Connect、密鑰、加新的相依套件、採用 copyleft 或沒有授權的程式碼，以及 CLAUDE.md 裡所有「never」規則。
+
 派工的規則：
 - 功能 session 同時最多 4 個；
 - GameCore 一次只升一個存檔版本，同時最多 2 個 GameCore PR 跑 CI；
