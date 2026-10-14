@@ -597,6 +597,9 @@ public final class GameSession {
     private var shownViewingSpeed = ViewingSpeed(speed: .paused, permille: nil, trainKilometresPerHour: nil)
     @ObservationIgnored private var speedMeter = GameSpeedMeter()
     @ObservationIgnored private var trainSpeedometer = TrainSpeedometer()
+    /// Decision 224: which platforms had a train standing at them over the
+    /// last game hour, for the station's operations page.
+    @ObservationIgnored public private(set) var platformUse = PlatformUse()
     /// The real time the game has run, and the ticks put in place in it,
     /// for ``speedMeter``.
     @ObservationIgnored private var realTimeRun: Duration = .zero
@@ -1200,6 +1203,7 @@ public final class GameSession {
         editGestureHasSnapshot = false
         endFollowIfGone()
         trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
+        platformUse.record(world)
         if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
             playSound(cue)
         }
