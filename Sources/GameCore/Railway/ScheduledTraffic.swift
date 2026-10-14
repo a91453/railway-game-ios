@@ -41,6 +41,12 @@ extension GameWorld {
         /// Distance from the previous point along the nominal corridor.
         var distance: Int64
         var onward: Int64
+        /// Distance from the call the point's leg leaves (decision 217): 0
+        /// at a train's first call, the leg's length at the call it ends at.
+        var along: Int64 = 0
+        /// The curve limits of the point's leg, from the call it leaves
+        /// (none at a train's first call, or with the limits off).
+        var legLimits: [TrackSpeedLimit] = []
     }
     struct TrafficService {
         var train: Train
@@ -205,10 +211,10 @@ extension GameWorld {
                 guard let path = plannedPath(for: train, from: placement.position, departing: stop - 1, to: stop) else { valid = false; break }
                 if let route = routePreference(for: train, from: stop - 1, to: stop), preferredPath(from: placement.position, preference: route, length: train.length) == path { matched += 1 }
                 let duration = train.scheduledArrival(of: stop, cycle: cycle).seconds - train.scheduledDeparture(of: stop - 1, cycle: cycle).seconds
+                let legLimits = speedLimits(from: placement, along: path, below: train.performance.topSpeed)
                 // No interpolated points without a physically buildable run.
                 let curve = duration > 0 && duration <= RunningCurve.maximumSeconds && path.distance > 0
-                    ? RunCurve(length: path.distance, duration: duration * 1000, performance: train.performance,
-                               limits: speedLimits(from: placement, along: path, below: train.performance.topSpeed)) : nil
+                    ? RunCurve(length: path.distance, duration: duration * 1000, performance: train.performance, limits: legLimits) : nil
                 let stretches = trafficStretches(from: placement.position, along: path)
                 var pass: [(distance: Int64, station: StationID, berth: Berth)] = []
                 if let curve, path.distance > 0 {
@@ -229,7 +235,8 @@ extension GameWorld {
                     for p in pass where seen.insert(p.station).inserted {
                         let time = train.scheduledDeparture(of: stop - 1, cycle: cycle).seconds + trafficTime(on: curve, distance: p.distance)
                         points.append(TrafficPoint(station: p.station, stop: stop, cycle: cycle, arrival: time, departure: time,
-                                                   calls: false, berth: p.berth, distance: p.distance - previous, onward: path.distance - p.distance))
+                                                   calls: false, berth: p.berth, distance: p.distance - previous, onward: path.distance - p.distance,
+                                                   along: p.distance, legLimits: legLimits))
                         previous = p.distance
                     }
                 }
@@ -239,7 +246,8 @@ extension GameWorld {
                 points.append(TrafficPoint(station: target, stop: stop, cycle: cycle,
                                            arrival: train.scheduledArrival(of: stop, cycle: cycle).seconds,
                                            departure: train.scheduledDeparture(of: stop, cycle: cycle).seconds,
-                                           calls: true, berth: Berth(traversal: last, offset: offset), distance: part, onward: 0))
+                                           calls: true, berth: Berth(traversal: last, offset: offset), distance: part, onward: 0,
+                                           along: path.distance, legLimits: legLimits))
                 placement = there
                 let (sum, overflow) = total.addingReportingOverflow(path.distance)
                 guard !overflow else { valid = false; break }
@@ -411,8 +419,19 @@ extension GameWorld {
         return overflow ? .max : value
     }
 
+    /// The curve limits from point `from` to point `to` of `points`, on
+    /// one leg, measured from `from` (decision 217).
+    static func trafficLimits(_ points: [TrafficPoint], from: Int, to: Int) -> [TrackSpeedLimit] {
+        let start = points[from].calls ? 0 : points[from].along, end = points[to].along
+        return points[to].legLimits.compactMap { limit in
+            let (low, high) = (max(limit.start, start), min(limit.end, end))
+            return low < high ? TrackSpeedLimit(start: low - start, end: high - start, speed: limit.speed) : nil
+        }
+    }
+
     /// overtakeRunBuildable: both new stopping runs must fit, with the W1
-    /// alternatives tried by RunningCurve. Existing calls are boundaries.
+    /// alternatives tried by RunningCurve, under the curve limits of the
+    /// way (decision 217). Existing calls are boundaries.
     func trafficStopBuildable(_ service: TrafficService, at j: Int, departure: Int64) -> Bool {
         let points = service.points
         var a = j - 1, b = j + 1
@@ -421,7 +440,8 @@ extension GameWorld {
         func can(_ from: Int, _ to: Int, _ seconds: Int64) -> Bool {
             let distance = points[(from + 1)...to].reduce(Int64(0)) { $0 + $1.distance }
             return distance > 0 && seconds > 0 && seconds <= RunningCurve.maximumSeconds
-                && RunningCurve(length: distance, duration: seconds * 1000, performance: service.train.performance) != nil
+                && RunCurve(length: distance, duration: seconds * 1000, performance: service.train.performance,
+                            limits: Self.trafficLimits(points, from: from, to: to)) != nil
         }
         return (j == 0 || can(a, j, points[j].arrival - points[a].departure)) && can(j, b, points[b].arrival - departure)
     }
@@ -436,7 +456,8 @@ extension GameWorld {
         let distance = service.points[(j + 1)...b].reduce(Int64(0)) { $0 + $1.distance }
         let seconds = service.points[b].arrival - service.points[j].departure
         guard distance > 0, seconds > 0, seconds <= RunningCurve.maximumSeconds,
-              let curve = RunningCurve(length: distance, duration: seconds * 1000, performance: service.train.performance)
+              let curve = RunCurve(length: distance, duration: seconds * 1000, performance: service.train.performance,
+                                   limits: Self.trafficLimits(service.points, from: j, to: b))
         else { return }
         var covered: Int64 = 0
         for i in (j + 1)..<b {
