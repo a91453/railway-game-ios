@@ -500,8 +500,13 @@ public enum HighSpeedDemo {
 
         /// Every piece of track beside the down track.
         private var pieces: [RealWorldDemo.TrackPlan] {
-            [up] + loops.values.flatMap { [$0.down, $0.up] } + outerLoops.values.flatMap { [$0.down, $0.up] }
-                + crossovers.values.flatMap { $0 } + depotCrossovers + depots.flatMap { $0.east + $0.west }
+            var pieces: [RealWorldDemo.TrackPlan] = [up]
+            pieces += loops.values.flatMap { [$0.down, $0.up] }
+            pieces += outerLoops.values.flatMap { [$0.down, $0.up] }
+            pieces += crossovers.values.flatMap { $0 }
+            pieces += depotCrossovers
+            pieces += depots.flatMap { $0.east + $0.west }
+            return pieces
         }
 
         /// What building it costs at `costs` (the prices of
