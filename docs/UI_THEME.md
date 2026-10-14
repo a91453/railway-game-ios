@@ -47,6 +47,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `ThemeProminentButtonStyle(isDestructive:)` | 主要動作：`primary`，移除類用 `error`；不能按時用 `panelBorder` 底配 `textSecondary` |
 | `.themeCard(padding:cornerRadius:)` | 實色 `panel` 卡片，即使放在玻璃上，文字對比也固定 |
 | `.glassBackground(in:interactive:)` | 浮在地圖上的元件：iOS 26 用 Liquid Glass，iOS 17–25 用 `.regularMaterial` |
+| `.chromeTile(in:)` | 決策 226：地圖上常駐的元件改用的實色格子（`panel`＋1.5 點 `chromeOutline`）；看板先換，兩欄與其他元件隨決策 226 的後兩步換掉 `glassBackground` |
 
 `.borderedProminent` 固定用白字，在 Dark 的 `primary`（1.85:1）和 `error` 上都不到 AA，所以主要動作改用 `ThemeProminentButtonStyle`。`.bordered` 按鈕沿用全域 tint。
 
@@ -382,7 +383,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 
 | 部分 | 顏色 | 對比 Light／Dark |
 | --- | --- | --- |
-| 看板、左欄、右欄的底 | 照舊是玻璃（`StatusPill`、工具列同一種） | 見「待確認」：玻璃上的字要看實機 |
+| 看板、左欄、右欄的格子 | `panel` 實色，1.5 點 `chromeOutline` 外框（淺色 `262C57`，深色 `B4B9D9`）；不用玻璃 | 外框對地面 11.47／6.89，對 `panel` 13.29／5.79；字照 `panel` 上的對比 |
 | 「跟不上」的黃點（圖形） | `warning` 對 `panel` | 5.86／6.33 |
 | 倍速、通知、選單（圖形與字） | `primary` 對 `panel` | 5.50／6.03 |
 | 開著的圖層鈕 | `chip` 底加 `ink` 外框（決策 224 的 5B 同一個樣子） | 外框對地面 11.47 |

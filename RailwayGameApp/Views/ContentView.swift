@@ -504,17 +504,17 @@ private struct ControlDetailsToggle: View {
     }
 }
 
-/// Cash, time, speed and the game menu (``HUDView``) in one glass pill at
-/// the top of the screen (decision 106), as wide as what it shows.
+/// Cash, time, speed and the game menu (``HUDView``) at the top of the
+/// screen (decision 106), as wide as what it shows; since decision 226 a
+/// row of solid tiles rather than one glass pill.
 private struct StatusPill: View {
     let session: GameSession
     let launcher: GameLauncher
 
     var body: some View {
+        // Decision 226: the board brings its own solid tiles, with the map
+        // showing between them; no glass behind the whole row.
         HUDView(session: session, launcher: launcher)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 5)
-            .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

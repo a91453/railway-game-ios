@@ -33,42 +33,38 @@ struct HUDView: View {
         // gets a row of its own rather than being cut short ("Day 2 ·
         // 07…"), and the cash is never cut short ("$ 3,0…").
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) {
-                cash
-                time(short: false)
-                SpeedControl(session: session)
-                ViewingReadout(session: session)
-                newsBell
-                gameMenu
+            HStack(spacing: Self.gap) {
+                tile { cash }
+                tile { time(short: false) }
+                tile { speed }
+                tile { bellAndMenu }
             }
-            HStack(spacing: 12) {
-                cash
-                time(short: true)
-                SpeedControl(session: session)
-                ViewingReadout(session: session)
-                newsBell
-                gameMenu
+            HStack(spacing: Self.gap) {
+                tile { cash }
+                tile { time(short: true) }
+                tile { speed }
+                tile { bellAndMenu }
             }
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    cash
+            HStack(spacing: Self.gap) {
+                tile {
+                    VStack(alignment: .leading, spacing: 2) {
+                        cash
+                        time(short: false)
+                    }
+                }
+                tile { speed }
+                tile { bellAndMenu }
+            }
+            VStack(alignment: .leading, spacing: Self.gap) {
+                HStack(spacing: Self.gap) {
+                    tile { cash }
+                    tile { speed }
+                    tile { bellAndMenu }
+                }
+                tile {
                     time(short: false)
+                        .minimumScaleFactor(0.75)
                 }
-                SpeedControl(session: session)
-                ViewingReadout(session: session)
-                newsBell
-                gameMenu
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 10) {
-                    cash
-                    SpeedControl(session: session)
-                    newsBell
-                    gameMenu
-                }
-                time(short: false)
-                    .minimumScaleFactor(0.75)
-                ViewingReadout(session: session)
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -118,6 +114,34 @@ struct HUDView: View {
                 "The game as it is now is kept as an autosave, so you can come back to it.",
                 "現在的進度會先存成一份自動存檔，之後還能回來。"
             ))
+        }
+    }
+
+    /// The space between the tiles: the map shows through it.
+    private static let gap: CGFloat = 6
+
+    /// One solid tile of the board (decision 226).
+    private func tile(@ViewBuilder _ content: () -> some View) -> some View {
+        content()
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .frame(minHeight: 44)
+            .chromeTile(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Pause, the speed and, beside it, the dot or the followed train's speed.
+    private var speed: some View {
+        HStack(spacing: 6) {
+            SpeedControl(session: session)
+            ViewingReadout(session: session)
+        }
+    }
+
+    /// The news and the game menu, which share a tile.
+    private var bellAndMenu: some View {
+        HStack(spacing: 10) {
+            newsBell
+            gameMenu
         }
     }
 
