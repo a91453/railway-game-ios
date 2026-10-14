@@ -20,6 +20,8 @@ struct FleetOverviewSheet: View {
     /// game runs, so a list by load or lateness does not move under the
     /// finger.
     @State private var order: [TrainID]?
+    /// Decision 223: the train roster, over the whole screen.
+    @State private var showsRoster = false
 
     /// Sorts the roster by ``sort`` as the trains are now, and keeps that
     /// order.
@@ -145,6 +147,9 @@ struct FleetOverviewSheet: View {
                 "可取回帳面價值的 70 %。"
             ))
         }
+        .fullScreenCover(isPresented: $showsRoster) {
+            TrainRosterView(session: session)
+        }
     }
 
     private var summaryCard: some View {
@@ -186,6 +191,22 @@ struct FleetOverviewSheet: View {
                         .font(.headline.weight(.bold).monospacedDigit())
                         .foregroundStyle(fleetLoad?.isOverload == true ? Theme.error : Theme.textPrimary)
                 }
+            }
+
+            // Decision 223: what each train did today, trip by trip.
+            if !trains.isEmpty {
+                Button {
+                    showsRoster = true
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                    } icon: {
+                        Image(systemName: "chart.bar.doc.horizontal")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("fleet.roster")
             }
         }
         .padding(14)

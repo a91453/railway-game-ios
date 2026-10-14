@@ -7955,6 +7955,15 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - **畫面**：
      - GamePresentation 的 `TrainRoster` 讀 `tripLog`：今天的格子；正在跑的那趟加 `lateness(of:)`；固定班表或重複時刻表還沒發的班畫成預定。
      - 使用率 ＝ 今天各趟跑的時間 ÷ 從營運開始到現在的時間。
+   - **運用表的實作**（2026-10-14，班次紀錄 session，畫面線，GameCore 不動）：
+     - `Sources/GamePresentation/TrainRoster.swift`（`TrainRoster`、`TrainRosterLayout`），App 的 `RailwayGameApp/Views/TrainRosterView.swift`。從車隊總覽的摘要卡「列車運用表」打開，全螢幕。
+     - 一列一列車：線號徽章、車名、當天收入、使用率（數字與直條）。順序是路線在世界裡的順序，同一路線照世界的列車順序，沒有路線的排最後。今天列出跑過班次、在路線上、或正在跑服務的列車；昨天只列跑過的。
+     - 一格一趟，從開出（停到第一站）到到站：準點 `success`、誤點 `warning` 加「+N」與右上角藏青三角、正在跑的加藏青外框（誤點時 `warning`）、中斷的 `chip` 底加細框、回送 `chip` 底。格子第二行寫「第 N 趟 · $2.1k」，車次就是當天第幾趟（回送不編號）。
+     - 預定的班：只有列車自己的重複時刻表算得出來（之後每一輪，到午夜為止），畫 `textSecondary` 虛線框。路線的車是每趟派車時才拿到時刻表，固定班表也不知道會派哪一列，所以路線車沒有預定格。
+     - 使用率 ＝ 各趟在「當天第一趟開出到現在（昨天到午夜）」之間跑的時間 ÷ 這段時間。
+     - 一小時 90 點（iPhone）／120 點（iPad），橫向捲動整天，打開時捲到現在；右上「現在」捲回來。列數放不下時用 C 的列高（`TrainRosterLayout.usesCompactRows`），格子只寫收入或「+N」。
+     - 畫面說明一句：每一格寫它替路線賺到的票價，轉乘的旅客只在起點付一次票（所以各趟加總會比路線帳少）。
+     - 每秒（真實時間）在背景重算一次。顏色全取自 `Theme`／`Palette`，對比照 `UI_THEME.md` 的「航空 UI 借版型」表。
    - **實作**（2026-10-14，班次紀錄 session，存檔 60）：
      - `Sources/GameCore/Railway/TrainTrips.swift`：`TrainTrip`、`TripCall`，`GameWorld.tripLog`、`trips(of:)`。
      - 一趟從時刻表第一站到最後一站：路線的一個來回、固定班表的一班、自己時刻表的一個週期。列車停到第一站時開（`dispatchTrains`、`dispatchRuns`、`startTrainService`，重複時刻表下一週期回到第一站時也開），停到最後一站時收（`recordArrivals`；`departService` 一開就已經在下一站的情形也算）。所以不只 `dispatchTrains`，凡是列車「開始在某站等」的地方都記一站。
