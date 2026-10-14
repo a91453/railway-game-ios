@@ -407,3 +407,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 222 | 車站商業三級：便利商店 → 站內商店街 → 車站商場（規則、校準、畫面與美術方案，`docs/research/STATION_COMMERCE_2026-10-14.md`；程式在第二段，存檔 57） |
 | 223 | 航空 UI 借版型：列車卡、即將進站看板、列車運用表（列車卡 A、看板 B、運用表 A＋GameCore 班次紀錄；預覽 `docs/art/airline-ui-borrow-2026-10-14/`） |
 | 224 | 六個新畫面的原創排版：營運概覽、車種型錄、開新路線比較、車站營運頁、圖層開關、HUD（1C、2A、3B、4A、5B、6C，先做 4A；預覽 `docs/art/railway-ui-redesign-2026-10-14/`） |
+| 225 | 內容目錄：車型的數值是 GameCore 的一張內建資料表，代號是 ID，「是不是高鐵車組」是明寫的分類（`docs/research/CONTENT_CATALOG_2026-10-14.md`；存檔不動） |

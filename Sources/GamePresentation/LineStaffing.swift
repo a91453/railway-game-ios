@@ -61,7 +61,7 @@ extension GameWorld {
         // standard car (decision 153): its own type, as a train bought there
         // is, so re-forming with the line's default keeps it.
         let type = type ?? (!offersStandardCar ? offeredTrainTypes.first
-            : line.isHighSpeed && offeredTrainTypes.contains(.highSpeed) ? .highSpeed : nil)
+            : line.isHighSpeed ? offeredTrainTypes.first(where: \.isHighSpeed) : nil)
         let price = purchaseCost(of: type, cars: cars)
         let (cost, overflow) = price.amount.multipliedReportingOverflow(by: Int64(trains))
         return LineStaffingPlan(
@@ -158,8 +158,8 @@ extension GameSession {
         // Decision 168 rule 7: high-speed sets on a line that runs nothing
         // else make it a high-speed line in the same edit; planned at high
         // speed first, the plan counts the trains its faster trips need.
-        if chosen == .highSpeed, let line = world.line(id: id), line.performance == .standard, !line.isFreight,
-           line.assignedTrains.allSatisfy({ world.train(id: $0)?.type == .highSpeed }) {
+        if chosen?.isHighSpeed == true, let line = world.line(id: id), line.performance == .standard, !line.isFreight,
+           line.assignedTrains.allSatisfy({ world.train(id: $0)?.type?.isHighSpeed == true }) {
             try world.setLinePerformance(id, to: .highSpeed)
         }
         guard let plan = world.lineStaffingPlan(id, headway: headway, type: chosen, cars: cars) else {

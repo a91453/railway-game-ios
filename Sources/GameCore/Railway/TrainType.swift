@@ -1,138 +1,128 @@
 // Train types: how many passengers a car carries and how many doors it has
-// (Phase 7 groundwork), ported from the owner's `Ci/` reference
-// (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`):
+// (Phase 7 groundwork, ported from the owner's `Ci/` reference's
+// `TRAIN_TYPES`). A train rates `round(ppc × cars)` (`getTrainCap`) and takes
+// `round(rated × 1.1)` (`getMetroTrainOperationalCap`,
+// `METRO_TRAIN_OPERATIONAL_LOAD_FACTOR`), but for a type that never
+// overloads.
 //
-// - `TRAIN_TYPES` rates each type's car in persons (`ppc`): A 310, B 260,
-//   C 200, L 243, D 230, APM 138, maglev 240, sky rail 140, monorail 224;
-//   `LINE_TRAIN_TYPE_MAIN` is A, B and C, `LINE_TRAIN_TYPE_EXTRA` the rest;
-// - `getTrainCap` rates a train `round(ppc × cars)`, and
-//   `getMetroTrainOperationalCap` lets it take `round(rated × 1.1)`
-//   (`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR`).
-//
-// The reference has no doors: its boarding is instant and its dwell fixed.
-// The door count of each type is this project's (gap), as the four doors of
-// the standard car already were (``ServiceDwell/doorsPerCar``).
-//
-// The steam train (decision 153) is this project's too: the references have
-// no steam train or 19th-century car. It is the era type of the Liu
-// Mingchuan Railway challenge.
-//
-// The high-speed set (decision 168) comes from the reference's HSR options
-// (`HSR_TRAIN_CARS_CAPACITY` 650, 1,200 and 1,283 persons for 8, 16 and 17
-// cars: set totals, where this model rates each car, so a car is rated 80,
-// 640 and 1,280 for 8 and 16 cars) and its rule that a high-speed train
-// never overloads (`metroTrainUsesOperationalOverload` is false for
-// `lineKind === "hsr"`): it takes what it is rated for, not 1.1 times.
-//
-// The Taiwan Railway's EMU3000 (decision 169), the express the 3D city view
-// draws, is in neither reference. A car is rated 45 persons: the set's
-// rated 538 (the Wikipedia page of the type, which gives the cars' seats and
-// their total as the set's `編組定員`; Taiwan News repeats the 538) over its 12
-// cars, 44.8 rounded. Two doors a side, as the owner's fleet catalogue counts
-// them from photographs (`fleet/catalog.json`, `emu3000-mid`: 「每節每側 2 門
-// 在客室兩端」, marked inferred) and as the city view draws them. It takes
-// 1.1 times what it is rated for, as every type but the high-speed set does,
-// and runs as the owner's `PERF_RULES` have the EMU3000 express run
-// (``TrainPerformance/emu3000``: 135 km/h, which the performance menu has
-// offered since the performance presets).
+// Since decision 225 each type's numbers are a row of the built-in catalog
+// (`TrainTypeCatalog.swift`, which says where each number comes from); a
+// type is its row, known by its code.
 
 /// A type of train car (the reference's `TRAIN_TYPES`): what a car is rated
-/// to carry and how many doors it has on the platform side. A train without
-/// a type has the standard car of G1b: 320 passengers and four doors.
-public enum TrainType: String, CaseIterable, Codable, Sendable {
-    case a = "A"
-    case b = "B"
-    case c = "C"
-    case l = "L"
-    case d = "D"
-    case apm = "APM"
-    case maglev = "MAGLEV"
-    case skyRail = "SKYRAIL"
-    case monorail = "MONORAIL"
+/// to carry and how many doors it has, one row of ``TrainTypeCatalog``. A
+/// train without a type has the standard car of G1b: 320 passengers and four
+/// doors.
+public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Sendable {
+    /// Its row in ``TrainTypeCatalog/builtIn``.
+    let row: Int
+
+    /// The type with code `rawValue`, or `nil` for a code no type has.
+    public init?(rawValue: String) {
+        guard let row = TrainTypeCatalog.rowByCode[rawValue] else { return nil }
+        self.row = row
+    }
+
+    private init(row: Int) {
+        self.row = row
+    }
+
+    /// A type the catalog lists; traps on a code it does not.
+    private init(listed code: String) {
+        guard let type = Self(rawValue: code) else { preconditionFailure("No train type has the code \(code).") }
+        self = type
+    }
+
+    /// Its code: what saves, golden scenarios and replays store.
+    public var rawValue: String { spec.code }
+
+    /// Its row of the catalog.
+    public var spec: TrainTypeSpec { TrainTypeCatalog.builtIn[row] }
+
+    /// Every type, in the catalog's order.
+    public static let allCases: [TrainType] = TrainTypeCatalog.builtIn.indices.map(TrainType.init(row:))
+
+    public static let a = TrainType(listed: "A")
+    public static let b = TrainType(listed: "B")
+    public static let c = TrainType(listed: "C")
+    public static let l = TrainType(listed: "L")
+    public static let d = TrainType(listed: "D")
+    public static let apm = TrainType(listed: "APM")
+    public static let maglev = TrainType(listed: "MAGLEV")
+    public static let skyRail = TrainType(listed: "SKYRAIL")
+    public static let monorail = TrainType(listed: "MONORAIL")
     /// A steam train of the 1890s (decision 153): small four-wheeled
     /// coaches behind a tank engine, slow on its way. Not one of the
     /// reference's types.
-    case steam = "STEAM"
+    public static let steam = TrainType(listed: "STEAM")
     /// A high-speed train set (decision 168): long cars with two doors a
     /// side, rated 80 persons, which never takes more than it is rated for.
     /// Not one of the reference's `TRAIN_TYPES`: its `HSR_TRAIN_*` options.
-    case highSpeed = "HSR"
+    public static let highSpeed = TrainType(listed: "HSR")
     /// The Taiwan Railway's EMU3000 express (decision 169): twelve cars of
     /// 45 seats, two doors a side. Not one of the reference's types: neither
     /// reference has a Taiwanese train but its high-speed options.
-    case emu3000 = "EMU3000"
+    public static let emu3000 = TrainType(listed: "EMU3000")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
     /// (`LINE_TRAIN_TYPE_EXTRA`).
-    public static let main: [TrainType] = [.a, .b, .c]
+    public static let main: [TrainType] = allCases.filter { $0.spec.offer == .referenceMain }
 
     /// The reference's types (`TRAIN_TYPES`), main and extra: every type
-    /// but the steam train of decision 153, which only an era offers, the
-    /// high-speed set of decision 168, which is the reference's HSR
-    /// option rather than a `TRAIN_TYPES` entry, and the EMU3000 of
-    /// decision 169, which is in neither.
-    public static let reference: [TrainType] = [.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail]
+    /// but this project's own (the steam train of decision 153, the
+    /// high-speed set of decision 168 and the EMU3000 of decision 169).
+    public static let reference: [TrainType] = allCases.filter { [.referenceMain, .referenceExtra].contains($0.spec.offer) }
 
-    /// The types a world without an era offers (decisions 168 and 169): the
-    /// reference's, the high-speed set and the EMU3000.
-    public static let offered: [TrainType] = reference + [.highSpeed, .emu3000]
+    /// The types a world without an era offers: every type but those only
+    /// an era offers (decisions 153, 168 and 169).
+    public static let offered: [TrainType] = allCases.filter { $0.spec.offer != .eraOnly }
 
     /// The type the reference gives a new line (`_lineFormState.type`, and
     /// `normalizeLineTrainTypeForCityKey`'s fallback).
     public static let referenceDefault: TrainType = .b
 
     /// Passengers a car is rated for (`TRAIN_TYPES[type].ppc`).
-    public var ratedCapacityPerCar: Int64 {
-        switch self {
-        case .a: 310
-        case .b: 260
-        case .c: 200
-        case .l: 243
-        case .d: 230
-        case .apm: 138
-        case .maglev: 240
-        case .skyRail: 140
-        case .monorail: 224
-        case .steam: 50
-        case .highSpeed: 80
-        case .emu3000: 45
-        }
-    }
+    public var ratedCapacityPerCar: Int64 { spec.ratedCapacityPerCar }
 
     /// Whether a train of this type takes up to 1.1 times what it is rated
     /// for (`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR`): every type but the
     /// high-speed set, which never overloads (decision 168).
-    public var overloads: Bool {
-        self != .highSpeed
-    }
+    public var overloads: Bool { spec.overloads }
 
     /// Doors on a car's platform side (gap: the reference has no doors).
-    /// Wide-body metro cars five, standard and light ones four, linear-motor
-    /// and maglev cars three, people movers, sky rail, monorail and the
-    /// long-distance types (the high-speed set, the EMU3000) two.
-    public var doorsPerCar: Int64 {
-        switch self {
-        case .a, .d: 5
-        case .b, .c: 4
-        case .l, .maglev: 3
-        case .apm, .skyRail, .monorail, .steam, .highSpeed, .emu3000: 2
-        }
-    }
+    public var doorsPerCar: Int64 { spec.doorsPerCar }
 
     /// How a train of this type runs, when the type has its own way
-    /// (decision 153): the steam train's ``TrainPerformance/steam``, since
-    /// decision 168 the high-speed set's ``TrainPerformance/highSpeed``
-    /// (`PERF_HSR`) and since decision 169 the EMU3000's
-    /// ``TrainPerformance/emu3000`` (`PERF_RULES`' EMU3000 expresses, already
-    /// a performance preset). Every other type runs as the train is set to.
-    public var performance: TrainPerformance? {
-        switch self {
-        case .steam: .steam
-        case .highSpeed: .highSpeed
-        case .emu3000: .emu3000
-        default: nil
+    /// (decision 153): the steam train's ``TrainPerformance/steam``, the
+    /// high-speed set's ``TrainPerformance/highSpeed`` (`PERF_HSR`) and the
+    /// EMU3000's ``TrainPerformance/emu3000``. Every other type runs as the
+    /// train is set to.
+    public var performance: TrainPerformance? { spec.performance }
+
+    /// Its family in the catalogue (decision 224).
+    public var family: TrainFamily { spec.family }
+
+    /// Whether it is a high-speed set (decision 168): its family is high
+    /// speed.
+    public var isHighSpeed: Bool { spec.family == .highSpeed }
+
+    /// Reads a code; a code no type has does not read, as the type's codes
+    /// did when they were an enum's raw values.
+    public init(from decoder: any Decoder) throws {
+        let code = try decoder.singleValueContainer().decode(String.self)
+        guard let type = Self(rawValue: code) else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath, debugDescription: "Cannot initialize TrainType from invalid String value \(code)"
+            ))
         }
+        self = type
+    }
+
+    /// Writes its code.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 

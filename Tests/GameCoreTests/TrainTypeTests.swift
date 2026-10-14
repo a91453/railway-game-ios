@@ -175,4 +175,24 @@ final class TrainTypeTests: XCTestCase {
         XCTAssertEqual(world.riderCount(of: id), 152)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
     }
+
+    /// Decision 225: the catalog's rows. Each code once, each type its own
+    /// row, a high-speed set by its family and never overloaded (decision
+    /// 168), and the families of decision 224's catalogue.
+    func testTheCatalogsRows() throws {
+        let codes = TrainTypeCatalog.builtIn.map(\.code)
+        XCTAssertEqual(Set(codes).count, codes.count, "a code is listed once")
+        XCTAssertEqual(TrainType.allCases.map(\.spec), TrainTypeCatalog.builtIn)
+        for type in TrainType.allCases {
+            XCTAssertEqual(try XCTUnwrap(TrainType(rawValue: type.rawValue)), type)
+            XCTAssertEqual(type.isHighSpeed, type.family == .highSpeed)
+            if type.isHighSpeed { XCTAssertFalse(type.overloads, "a high-speed set never overloads: \(type.rawValue)") }
+        }
+        XCTAssertEqual(TrainType.allCases.filter(\.isHighSpeed), [.highSpeed])
+        XCTAssertEqual(TrainType.allCases.filter { !$0.overloads }, [.highSpeed])
+        XCTAssertEqual(TrainFamily.allCases.map { family in TrainType.allCases.filter { $0.family == family }.map(\.rawValue) }, [
+            ["A", "B", "C", "L", "D", "APM"], ["STEAM", "EMU3000"], ["HSR"], ["MAGLEV", "SKYRAIL", "MONORAIL"],
+        ])
+        XCTAssertEqual(TrainType.allCases.filter { $0.spec.offer == .eraOnly }, [.steam])
+    }
 }

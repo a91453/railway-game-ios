@@ -33,21 +33,9 @@ public struct RollingStockPricing: Hashable, Sendable {
 }
 
 extension TrainType {
-    /// This type's prices and running-cost weight (decision 180).
-    public var pricing: RollingStockPricing {
-        switch self {
-        case .a, .b, .c: .init(firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000)
-        case .l: .init(firstDollars: 90_000, carDollars: 25_000, operatingPermille: 700)
-        case .d: .init(firstDollars: 120_000, carDollars: 35_000, operatingPermille: 1_300)
-        case .steam: .init(firstDollars: 80_000, carDollars: 20_000, operatingPermille: 1_400)
-        case .apm: .init(firstDollars: 110_000, carDollars: 30_000, operatingPermille: 800)
-        case .monorail: .init(firstDollars: 160_000, carDollars: 45_000, operatingPermille: 1_000)
-        case .skyRail: .init(firstDollars: 170_000, carDollars: 50_000, operatingPermille: 1_000)
-        case .maglev: .init(firstDollars: 600_000, carDollars: 150_000, operatingPermille: 1_800)
-        case .highSpeed: .init(firstDollars: 900_000, carDollars: 120_000, operatingPermille: 2_000)
-        case .emu3000: .init(firstDollars: 260_000, carDollars: 55_000, operatingPermille: 1_200)
-        }
-    }
+    /// This type's prices and running-cost weight (decision 180), from its
+    /// row of the catalog (decision 225).
+    public var pricing: RollingStockPricing { spec.pricing }
 }
 
 /// The rules of decision 180 as plain functions of a type and a car count.
