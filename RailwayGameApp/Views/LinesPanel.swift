@@ -1827,14 +1827,24 @@ private struct RenameAlert: ViewModifier {
 }
 
 /// Decision 216: an alert to type a line's code in, shown while `code` is
-/// not `nil`; blank asks for the app's own code again.
+/// not `nil`; blank asks for the app's own code again. Kept out of the
+/// panel's redraw on every tick as ``RenameAlert`` is, so the field keeps
+/// its keyboard; `save` sets whichever line is selected when it is pressed.
 private struct LineCodeAlert: ViewModifier {
     @Binding var code: String?
     let language: DisplayLanguage
     let save: (String) -> Void
 
     func body(content: Content) -> some View {
-        content.alert(
+        content.background {
+            TickStable(StableKey(code, language)) {
+                alert
+            }
+        }
+    }
+
+    private var alert: some View {
+        Color.clear.alert(
             Text(verbatim: language.text("Line Code", "線號")),
             isPresented: Binding(get: { code != nil }, set: { if !$0 { code = nil } })
         ) {
