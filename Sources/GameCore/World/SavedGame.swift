@@ -292,9 +292,15 @@
 ///     control. A build that reads only an earlier version would drop it,
 ///     and its trains would wait for whole legs again, so it says the save
 ///     is newer than it instead.
+/// 57. Station commerce (decision 222): a station can have its
+///     `"commerce"` (1 to 3), the line accounts' station days their
+///     `"transferred"`, and the ledger `"dailyStationCommerce"` rows. A
+///     build that reads only an earlier version would drop the shops while
+///     keeping their asset records, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 56
+    public static let currentVersion = 57
 
     public let world: GameWorld
 
@@ -446,6 +452,8 @@ extension SavedGame: Codable {
         // Version 54 to 55: a line without `"code"` has the app's own.
         // Version 55 to 56: a world without `"blockSections"` takes and
         // follows on whole legs, as before.
+        // Version 56 to 57: a station without `"commerce"` has no shops, and
+        // a station day without `"transferred"` counted no changes.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
