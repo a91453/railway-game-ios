@@ -288,6 +288,9 @@ struct CompanyRankSection: View {
                     .foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("goals.uncounted")
             } else if let rank {
+                // Decision 224 (1C): the titles as a line, the company's
+                // train where it stands.
+                PromotionLineView(line: PromotionLine(rank: rank), language: language)
                 VStack(alignment: .leading, spacing: 4) {
                     Label {
                         Text(verbatim: rank.headline(in: language))
@@ -296,24 +299,15 @@ struct CompanyRankSection: View {
                         Image(systemName: rank.title == .tycoon ? "crown.fill" : "person.crop.circle.badge.checkmark")
                             .foregroundStyle(Theme.primary)
                     }
-                    ProgressView(value: Double(rank.score), total: 1_000)
-                        .tint(Theme.primary)
                     Text(verbatim: rank.nextTitleText(in: language))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("goals.rank")
-                ForEach(rank.parts, id: \.measure) { part in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: rank.partText(part, in: language))
-                            .font(.footnote)
-                            .monospacedDigit()
-                        ProgressView(value: Double(part.points), total: Double(part.maximum))
-                            .tint(part.points == part.maximum ? Theme.success : Theme.primary)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
+                // Decision 224 (1C): the seven measures as a train's cars.
+                ScoreTrainView(rank: rank, language: language)
+                    .accessibilityIdentifier("goals.scoreTrain")
             } else {
                 ProgressView()
             }
