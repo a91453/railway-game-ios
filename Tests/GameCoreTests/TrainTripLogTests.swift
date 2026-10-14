@@ -126,6 +126,14 @@ final class TrainTripLogTests: XCTestCase {
         var world = try build(accounts: false)
         try world.advance(ticks: 600)
         XCTAssertEqual(world.tripLog, [])
+        // Turning the accounts off drops the log with them.
+        var on = try build()
+        try on.advance(ticks: 600)
+        XCTAssertFalse(on.tripLog.isEmpty)
+        on.setLineAccounts(false)
+        XCTAssertEqual(on.tripLog, [])
+        try on.advance(ticks: 60)
+        XCTAssertEqual(on.tripLog, [])
     }
 
     /// The log is a record only: batched and minute by minute give the

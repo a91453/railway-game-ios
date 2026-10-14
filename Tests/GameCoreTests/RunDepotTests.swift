@@ -246,28 +246,42 @@ final class RunDepotTests: XCTestCase {
     // MARK: - Saves
 
     /// Save version 59: a line with runs and two depots, its trains on
-    /// their way out of the depots just before 06:00.
+    /// their way out of the depots just before 06:00. Written by the
+    /// version 59 build (#611), merged as version 59; no build since writes
+    /// it.
     func testVersionFiftyNineKeepsTheDepots() throws {
+        try checkFixture("v59-run-depots.json", version: 59, writing: false)
+    }
+
+    /// Save version 61: the same world. The format came in under 59 while
+    /// `main` was at 60 (the trip log), so a version 60 build would have
+    /// read it as its own and dropped the depots after a line's first;
+    /// since 61 a build before it says the save is newer instead.
+    func testVersionSixtyOneKeepsTheDepots() throws {
+        try checkFixture("v61-run-depots.json", version: 61, writing: ProcessInfo.processInfo.environment["RUN_DEPOT_SAVE_NEW"] != nil)
+    }
+
+    private func checkFixture(_ name: String, version: Int, writing: Bool) throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("SaveFixtures/v59-run-depots.json")
+            .appendingPathComponent("SaveFixtures/\(name)")
         var made = try makeWorld()
         made.setEconomyMode(.management)
         try made.advance(ticks: 353)
         XCTAssertTrue(made.trains.allSatisfy(\.isDeadheading), "both on their way out")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if ProcessInfo.processInfo.environment["RUN_DEPOT_SAVE_NEW"] != nil {
+        if writing {
             try encoder.encode(SavedGame(world: made)).write(to: url)
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 59)
+        XCTAssertEqual(object["saveVersion"] as? Int, version)
         var loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertEqual(loaded.line(id: main)?.depots, [west, east])
         XCTAssertTrue(loaded.line(id: main)?.hasRuns ?? false)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 59,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+            .replacingOccurrences(of: #""saveVersion" : \#(version),"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
         try loaded.advance(ticks: 30)
         XCTAssertEqual(loaded.line(id: main)?.runDays[0], 0, "and the runs leave")
     }
