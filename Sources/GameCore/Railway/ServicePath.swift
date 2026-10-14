@@ -135,6 +135,7 @@ extension GameWorld {
             let station: StationID
             let length: Int64
             let eligible: Set<Berth>?
+            let keepingLeft: Bool
         }
         var found: [Query: TrainPath?] = [:]
     }
@@ -143,7 +144,7 @@ extension GameWorld {
     func path(from start: TrainPosition, toStation id: StationID, length: Int64, memo: inout PathMemo) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
-            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: nil)
+            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: nil, keepingLeft: true)
             if let known = memo.found[query] { return known }
             let found = networkPath(from: traversal, offset: offset, toStation: id, length: length)
             memo.found[query] = .some(found)
@@ -153,14 +154,15 @@ extension GameWorld {
 
     /// The shortest path to one of `eligible`, berths of station `id`, as
     /// ``trafficPath(from:toStation:length:berthPenalty:edgePenalty:only:eligible:forbidden:keepingLeft:)``
-    /// finds it with no penalty, nothing forbidden and without keeping left
-    /// (a line's chosen platform, decision 202), kept in `memo`.
-    func path(from start: TrainPosition, toStation id: StationID, length: Int64, eligible: Set<Berth>, memo: inout PathMemo) -> TrainPath? {
+    /// finds it with no penalty and nothing forbidden, kept in `memo`;
+    /// without keeping left unless `keepingLeft` (a line's chosen platform,
+    /// decision 202).
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, eligible: Set<Berth>, keepingLeft: Bool = false, memo: inout PathMemo) -> TrainPath? {
         switch start {
         case .onEdge(let traversal, let offset):
-            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: eligible)
+            let query = PathMemo.Query(start: traversal, offset: offset, station: id, length: length, eligible: eligible, keepingLeft: keepingLeft)
             if let known = memo.found[query] { return known }
-            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, eligible: eligible, keepingLeft: false)
+            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, eligible: eligible, keepingLeft: keepingLeft)
             memo.found[query] = .some(found)
             return found
         }

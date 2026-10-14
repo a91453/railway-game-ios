@@ -3541,8 +3541,7 @@ public struct GameWorld: Equatable, Sendable {
     func leaving(_ train: Train, stop: Int, cycle: Int64, memo: inout PathMemo) -> Leaving {
         leaving(train, stop: stop, cycle: cycle) { start, call in
             // Decision 221: into a depot, a free siding first.
-            if let free = freeDepotBerths(call, for: train),
-               let path = path(from: start, toStation: call, length: train.length, eligible: free, memo: &memo) {
+            if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
                 return (path, nil)
             }
             return path(from: start, toStation: call, length: train.length, memo: &memo).map { ($0, nil) }

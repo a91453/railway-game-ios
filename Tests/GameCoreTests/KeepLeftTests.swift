@@ -94,6 +94,16 @@ final class KeepLeftTests: XCTestCase {
         XCTAssertEqual(out.distance, back.distance)
     }
 
+    /// Into a depot's free siding (decision 221) a train keeps left too.
+    func testTheWayIntoADepotKeepsLeft() throws {
+        var (world, west, _) = try Self.world(keepLeft: true)
+        try world.setStationDepot(west, to: true)
+        let train = try world.purchaseTrain(named: "T1")
+        var memo = GameWorld.PathMemo()
+        let path = try XCTUnwrap(world.pathIntoDepot(west, from: Self.fromEast, for: train, memo: &memo))
+        XCTAssertEqual(path.traversals, Self.westboundLeft, "south, on the left going west")
+    }
+
     func testTheWaysOnRightOfTheLeftmost() throws {
         let world = try Self.world(keepLeft: true).world
         let forward = { (edge: Int) in TrackTraversal(edge: .edge(edge), direction: .forward) }

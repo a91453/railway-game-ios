@@ -51,6 +51,15 @@ extension GameWorld {
         return free.isEmpty ? nil : Set(free)
     }
 
+    /// The way from `start` into one of depot `station`'s free sidings for
+    /// `train` (decision 221), keeping left as any other way does
+    /// (decision 202); `nil` when `station` is not a depot, none is free
+    /// or none is reached.
+    func pathIntoDepot(_ station: StationID, from start: TrainPosition, for train: Train, memo: inout PathMemo) -> TrainPath? {
+        guard let free = freeDepotBerths(station, for: train) else { return nil }
+        return path(from: start, toStation: station, length: train.length, eligible: free, keepingLeft: true, memo: &memo)
+    }
+
     /// The edges with a platform of a depot, its sidings (decision 209),
     /// but those of a depot with a platform on `edge`, where a train
     /// starts: no way to another station runs over them.
