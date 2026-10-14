@@ -2,54 +2,67 @@ import GameCore
 import GamePresentation
 import SwiftUI
 
+/// The postcard's map, worked out off the main actor (decision 215, v2):
+/// the route map's strokes, dots and names, and on a real-world map the sea.
+struct PostcardMap: Sendable {
+    let network: PostcardNetwork
+    let sea: PostcardSea?
+
+    init(world: GameWorld, water: WaterGrid?) {
+        let postcard = NetworkPostcard(world: world, companyName: "", in: .english)
+        let frame = PostcardLayout.parts(of: postcard).map
+        let size = ScreenSize(width: frame.width, height: frame.height)
+        let projection = PostcardProjection(region: postcard.region, size: size)
+        network = PostcardNetwork(world: world, lines: LineMap(world: world), projection: projection, size: size)
+        if let water, let realWorld = RealWorldFrame(world: world) {
+            sea = PostcardSea(water: water, frame: realWorld, projection: projection, size: size)
+        } else {
+            sea = nil
+        }
+    }
+}
+
 /// The network postcard (decision 215): the card itself, laid out by
 /// ``PostcardLayout`` at its own size, so the picture shared is the same on
-/// every device. The map is the game's own drawing (``MapArt``): the land,
-/// the town, the track, the lines in their colours, the stations with their
-/// name plates and the trains car by car, fitted to what is built. It is
-/// never Apple's or OpenStreetMap's base map, which cannot be drawn into a
-/// picture; ``NetworkPostcard/credit`` keeps the railways' credit on a
-/// real-world map.
+/// every device. v2 (the planning session's choice C, 2026-10-14): the
+/// station master's head beside the title, inside the card; the map framed
+/// to the network, drawn as a route map (``PostcardNetwork``: the lines
+/// side by side, the stations as dots, the names on plates off the lines),
+/// on the game's own ground (the town on its own map, the sea on a
+/// real-world one); the legend and at most three figures beside a tall
+/// network or under a wide one. It is never Apple's or OpenStreetMap's base
+/// map, which cannot be drawn into a picture; ``NetworkPostcard/credit``
+/// keeps the railways' credit on a real-world map.
 struct PostcardCard: View {
     let postcard: NetworkPostcard
     let world: GameWorld
+    let map: PostcardMap?
     let skyline: CitySkyline?
-    let language: DisplayLanguage
     @Environment(\.regionStyle) private var region
 
     var body: some View {
+        let parts = PostcardLayout.parts(of: postcard)
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: PostcardLayout.cornerRadius)
                 .fill(Theme.panel)
-            text(postcard.eyebrow, in: PostcardLayout.eyebrow, size: PostcardLayout.eyebrowSize, weight: .bold, colour: Theme.primary, tracking: 2)
-            text(postcard.title, in: PostcardLayout.title, size: PostcardLayout.titleSize, weight: .bold, colour: Theme.textPrimary)
+            stationMaster
+            text(postcard.title, in: PostcardLayout.title, size: PostcardLayout.titleSize, weight: .heavy, colour: Theme.textPrimary)
             text(postcard.subtitle, in: PostcardLayout.subtitle, size: PostcardLayout.subtitleSize, weight: .medium, colour: Theme.textSecondary)
-            map
-                .frame(width: PostcardLayout.map.width, height: PostcardLayout.map.height)
+            mapView
+                .frame(width: parts.map.width, height: parts.map.height)
                 .clipShape(RoundedRectangle(cornerRadius: PostcardLayout.mapCornerRadius))
                 .overlay(RoundedRectangle(cornerRadius: PostcardLayout.mapCornerRadius).strokeBorder(Palette.ink, lineWidth: 1.7))
-                .offset(x: PostcardLayout.map.x, y: PostcardLayout.map.y)
+                .offset(x: parts.map.x, y: parts.map.y)
+            ForEach(Array(zip(parts.legend, postcard.legendEntries(slots: parts.legend.count)).enumerated()), id: \.offset) { _, entry in
+                legend(entry.1, in: entry.0)
+            }
+            ForEach(Array(zip(parts.figures, postcard.figures).enumerated()), id: \.offset) { _, entry in
+                figure(entry.1, in: entry.0)
+            }
             if !postcard.credit.isEmpty {
                 text(postcard.credit, in: PostcardLayout.credit, size: PostcardLayout.creditSize, weight: .regular, colour: Theme.textSecondary)
             }
-            ForEach(Array(postcard.figures.enumerated()), id: \.offset) { index, figure in
-                let frame = PostcardLayout.figure(index)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(verbatim: figure.value)
-                        .font(.system(size: PostcardLayout.figureValueSize, weight: .bold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(verbatim: figure.label)
-                        .font(.system(size: PostcardLayout.figureLabelSize, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .padding(.horizontal, 8)
-                .frame(width: frame.width, height: frame.height, alignment: .leading)
-                .background(Theme.chip, in: RoundedRectangle(cornerRadius: 7))
-                .offset(x: frame.x, y: frame.y)
-            }
-            stationMaster
+            text(postcard.wordmark, in: PostcardLayout.wordmark, size: PostcardLayout.wordmarkSize, weight: .heavy, colour: Theme.primary, tracking: 1, alignment: .trailing)
         }
         .frame(width: PostcardLayout.size.width, height: PostcardLayout.size.height)
         .overlay(RoundedRectangle(cornerRadius: PostcardLayout.cornerRadius).strokeBorder(Palette.ink, lineWidth: PostcardLayout.border))
@@ -57,7 +70,8 @@ struct PostcardCard: View {
     }
 
     private func text(
-        _ words: String, in frame: PostcardLayout.Frame, size: Double, weight: Font.Weight, colour: Color, tracking: Double = 0
+        _ words: String, in frame: PostcardLayout.Frame, size: Double, weight: Font.Weight, colour: Color, tracking: Double = 0,
+        alignment: Alignment = .leading
     ) -> some View {
         Text(verbatim: words)
             .font(.system(size: size, weight: weight))
@@ -65,14 +79,51 @@ struct PostcardCard: View {
             .foregroundStyle(colour)
             .lineLimit(1)
             .minimumScaleFactor(0.4)
-            .frame(width: frame.width, height: frame.height, alignment: .leading)
+            .frame(width: frame.width, height: frame.height, alignment: alignment)
             .offset(x: frame.x, y: frame.y)
     }
 
-    /// The map's layers 10–35 and 50 (`docs/MAP_LAYERS.md`), at noon, with
-    /// no waits, counts or rings: a picture of the network, not of its
-    /// problems.
-    private var map: some View {
+    private func figure(_ figure: NetworkPostcard.Figure, in frame: PostcardLayout.Frame) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(verbatim: figure.value)
+                .font(.system(size: PostcardLayout.figureValueSize, weight: .heavy))
+                .foregroundStyle(Theme.textPrimary)
+            Text(verbatim: figure.label)
+                .font(.system(size: PostcardLayout.figureLabelSize, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+        .padding(.horizontal, 10)
+        .frame(width: frame.width, height: frame.height, alignment: .leading)
+        .background(Theme.chip, in: RoundedRectangle(cornerRadius: 8))
+        .offset(x: frame.x, y: frame.y)
+    }
+
+    /// A line's badge (decision 216) and name, or how many more lines.
+    private func legend(_ entry: NetworkPostcard.LegendEntry, in frame: PostcardLayout.Frame) -> some View {
+        HStack(spacing: 5) {
+            switch entry {
+            case .line(let line):
+                LineCodeBadge(code: line.code, color: Palette.lineColor(line.id, custom: line.color), size: .small)
+                Text(verbatim: line.name)
+            case .more(let count):
+                Text(verbatim: "+\(count)")
+            }
+        }
+        .font(.system(size: PostcardLayout.legendSize, weight: .semibold))
+        .foregroundStyle(Theme.textPrimary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .padding(.horizontal, 4)
+        .frame(width: frame.width, height: frame.height, alignment: .leading)
+        .offset(x: frame.x, y: frame.y)
+    }
+
+    /// The ground (layers 10–15 of `docs/MAP_LAYERS.md`: the land and, on
+    /// the game's own map, the town), the sea on a real-world map, then the
+    /// route map: at noon, with no trains, waits, counts or rings.
+    private var mapView: some View {
         Canvas { context, size in
             let projection = PostcardProjection(region: postcard.region, size: ScreenSize(width: size.width, height: size.height))
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Palette.land))
@@ -80,31 +131,72 @@ struct PostcardCard: View {
                 bounds: world.bounds, drawsLand: true, skyline: skyline, growth: nil, growthOnly: false, layer: nil,
                 projection: projection, in: context
             )
-            MapArt.drawMap(
-                world,
-                selectedTrainID: nil,
-                projection: projection,
-                edges: [:],
-                layers: MapLayerPreferences(showsStationNames: true, showsWaitingCounts: false, showsCatchmentRings: false),
-                lines: LineMap(world: world),
-                labels: StationLabels(world: world),
-                in: context
-            )
-            MapArt.drawTrains(
-                TrainMotion(world: world, time: 0), progress: 1, selectedTrainID: nil, lights: 0, plain: false,
-                traffic: TrafficOverlay(), language: language, projection: projection, in: context
+            guard let map else { return }
+            if let sea = map.sea {
+                var water = Path()
+                for run in sea.runs {
+                    // A hair over a cell, so the cells meet without seams.
+                    water.addRect(CGRect(
+                        x: Double(run.columns.lowerBound) * sea.cell, y: Double(run.row) * sea.cell,
+                        width: Double(run.columns.count) * sea.cell + 0.05, height: sea.cell + 0.05
+                    ))
+                }
+                context.fill(water, with: .color(Palette.water))
+            }
+            drawNetwork(map.network, in: context)
+        }
+    }
+
+    private func drawNetwork(_ network: PostcardNetwork, in context: GraphicsContext) {
+        func path(_ points: [ScreenPoint]) -> Path {
+            var path = Path()
+            path.addLines(points.map { CGPoint(x: $0.x, y: $0.y) })
+            return path
+        }
+        let round = { (width: Double) in StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round) }
+        for edge in network.track {
+            context.stroke(path(edge), with: .color(Palette.track), style: round(PostcardNetwork.trackWidth))
+        }
+        for stroke in network.strokes {
+            context.stroke(path(stroke.points), with: .color(Palette.markerFill), style: round(network.lineWidth + PostcardNetwork.casing))
+        }
+        for stroke in network.strokes {
+            context.stroke(path(stroke.points), with: .color(Palette.lineColor(stroke.line, custom: stroke.color)), style: round(network.lineWidth))
+        }
+        for dot in network.dots {
+            let capsule = path([dot.from, dot.to])
+            let radius = PostcardNetwork.dotRadius
+            context.stroke(capsule, with: .color(Palette.ink), style: round(2 * (radius + PostcardNetwork.dotEdge)))
+            context.stroke(capsule, with: .color(Palette.markerFill), style: round(2 * radius))
+        }
+        for label in network.labels {
+            if let leader = label.leader {
+                context.stroke(path(leader), with: .color(Palette.ink), lineWidth: 0.8)
+            }
+        }
+        for label in network.labels {
+            let rect = CGRect(x: label.frame.x, y: label.frame.y, width: label.frame.width, height: label.frame.height)
+            // Decision 205's name plate: the land at 80 %, corners of 3.
+            context.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
+            context.draw(
+                Text(verbatim: label.name).font(.system(size: PostcardNetwork.labelSize, weight: .semibold)).foregroundStyle(Palette.ink),
+                at: CGPoint(x: rect.midX, y: rect.midY)
             )
         }
     }
 
+    /// The station master's head (``StationMasterAvatar``'s zoom), happy,
+    /// in a rounded square beside the title: inside the card, over nothing.
     private var stationMaster: some View {
         let frame = PostcardLayout.stationMaster
+        let corner = RoundedRectangle(cornerRadius: PostcardLayout.stationMasterCornerRadius)
         return Image(region.stationMasterArt + StationMasterMood.happy.rawValue)
             .resizable()
             .scaledToFill()
             .frame(width: frame.width, height: frame.height)
-            .clipShape(Circle())
-            .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 2))
+            .scaleEffect(1.45, anchor: UnitPoint(x: 0.44, y: 0.3))
+            .clipShape(corner)
+            .overlay(corner.strokeBorder(Palette.ink, lineWidth: 1.5))
             .offset(x: frame.x, y: frame.y)
     }
 }
@@ -138,6 +230,7 @@ struct PostcardSheet: View {
     @AppStorage("postcard.companyName") private var companyName = ""
     @State private var appearance: PostcardAppearance?
     @State private var skyline: CitySkyline?
+    @State private var map: PostcardMap?
     @State private var picture: Image?
 
     private var language: DisplayLanguage { session.language }
@@ -214,6 +307,11 @@ struct PostcardSheet: View {
                 if world.geoAnchor == nil, !world.land.isEmpty {
                     skyline = await Task.detached(priority: .userInitiated) { CitySkyline(world: world) }.value
                 }
+                // The route map and the sea (decision 215, v2): the lines'
+                // journeys and the names' places take a moment on a large
+                // network.
+                let water = session.water
+                map = await Task.detached(priority: .userInitiated) { PostcardMap(world: world, water: water) }.value
                 render()
             }
             .onChange(of: companyName) { render() }
@@ -222,7 +320,7 @@ struct PostcardSheet: View {
     }
 
     private func card(_ postcard: NetworkPostcard, appearance: PostcardAppearance) -> some View {
-        PostcardCard(postcard: postcard, world: session.world, skyline: skyline, language: language)
+        PostcardCard(postcard: postcard, world: session.world, map: map, skyline: skyline)
             .environment(\.colorScheme, appearance.colorScheme)
             .environment(\.regionStyle, region)
     }

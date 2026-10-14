@@ -14,6 +14,7 @@ struct FollowBar: View {
     let train: Train
     let session: GameSession
     let onUnfollow: () -> Void
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         let language = session.language
@@ -38,12 +39,32 @@ struct FollowBar: View {
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
 
-            if let detail = info?.detail(in: language), !detail.isEmpty {
+            // Decision 223: a train on a trip shows its times with the
+            // arrival struck through when late, a status in words and, on
+            // a wide screen, the trip's bar.
+            let card = session.world.trainCard(of: train.id, in: language)
+            if let detail = info?.detail(in: language, times: card == nil), !detail.isEmpty {
                 Text(verbatim: detail)
                     .font(.footnote.monospacedDigit())
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
+            }
+            if let card {
+                if horizontalSizeClass == .regular {
+                    TrainTripProgressBar(progress: card.progress, height: 6, marker: 16)
+                        .frame(width: 72)
+                }
+                HStack(spacing: 3) {
+                    Text(verbatim: card.departure.clockText + "–")
+                        .foregroundStyle(Theme.textPrimary)
+                    LateTimeText(scheduled: card.arrival.clockText, expected: card.isLate ? card.expectedArrival.clockText : nil)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                .font(.footnote.monospacedDigit())
+                .lineLimit(1)
+                .fixedSize()
+                TrainStatusCapsule(card: card, language: language)
             }
 
             Spacer(minLength: 4)

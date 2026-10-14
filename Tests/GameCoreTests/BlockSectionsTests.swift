@@ -211,6 +211,91 @@ final class BlockSectionsTests: XCTestCase {
         XCTAssertEqual(minutes, byTicks)
     }
 
+    // MARK: - A line's train between runs
+
+    //   n4 ──stub── J ──main── n3        A beside e1, B beside main and
+    //   n1 ──e1────╯                      stub, C at the far end of main
+    //
+    // The stub leaves J westwards beside e1, 1 in 19.5 off it (a turnout's
+    // branches part by 1 in 16 at most): a train on main reaches it by
+    // turning round. S, a train of a line with runs, stands idle at B's
+    // main berth until its run at 10:00; T, a service from A to C, has to
+    // pass it.
+    private func makeIdleBetweenRuns(blocks: Bool) throws -> (world: GameWorld, idle: TrainID, service: TrainID, b: StationID, c: StationID) {
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 106_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
+            clock: GameClock(speed: .normal)
+        )
+        let n1 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 4_096))
+        let junction = try world.buildTrackNode(at: WorldCoordinate(x: 40_960, y: 4_096))
+        let n3 = try world.buildTrackNode(at: WorldCoordinate(x: 102_400, y: 4_096))
+        let n4 = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 6_144))
+        try world.buildTrackEdge(from: n1, to: junction)
+        try world.buildTrackEdge(from: junction, to: n3)
+        try world.buildTrackEdge(from: junction, to: n4)
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: 3_072, y: 2_048)).id
+        try world.addTrackPlatform(a, on: .edge(1), from: 1_024, to: 3_072)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: 45_056, y: 6_144)).id
+        try world.addTrackPlatform(b, on: .edge(2), from: 4_096, to: 6_144)
+        try world.addTrackPlatform(b, on: .edge(3), from: 4_096, to: 6_144)
+        let c = try world.buildStation(named: "C", at: PlanPoint(x: 100_352, y: 2_048)).id
+        let main = try XCTUnwrap(world.trackEdge(.edge(2))?.length)
+        try world.addTrackPlatform(c, on: .edge(2), from: main - 3_072, to: main - 1_024)
+        world.setBlockSections(blocks)
+
+        let idle = try world.purchaseTrain(named: "S").id
+        try world.setTrainCars(idle, to: 2)
+        try world.placeTrain(idle, at: .onEdge(forward(2), offset: 6_144))
+        try world.setTrainContinuation(idle, along: [], stoppingAt: 6_144)
+        try world.setTrainMovementRate(idle, to: 4_096)
+        let line = try world.createLine(named: "R", stops: [b, c]).id
+        try world.setLineRuns(line, to: [LineRun(from: 0, to: 1, times: [
+            LineRunTime(arrival: 36_000, departure: 36_000), LineRunTime(arrival: 37_200, departure: 37_200),
+        ])])
+        try world.assignTrain(idle, to: line)
+
+        let service = try world.purchaseTrain(named: "T").id
+        try world.setTrainCars(service, to: 2)
+        try world.placeTrain(service, at: .onEdge(forward(1), offset: 3_072))
+        try world.setTrainContinuation(service, along: [], stoppingAt: 3_072)
+        try world.setTrainMovementRate(service, to: 4_096)
+        try world.setTrainTimetable(service, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: c, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 20)),
+        ])
+        try world.setTrafficControl(true)
+        try world.startTrainService(service)
+        return (world, idle, service, b, c)
+    }
+
+    /// With block sections a line's train between runs is a spare there
+    /// (decision 212): when it keeps a service from going, it steps aside,
+    /// but only to another berth of the station it stands at, where its
+    /// next run starts. Without them the service waits for it, as before.
+    func testATrainBetweenRunsStepsAsideAtItsOwnStation() throws {
+        var (old, oldIdle, oldService, b, _) = try makeIdleBetweenRuns(blocks: false)
+        try old.advance(ticks: 30)
+        XCTAssertEqual(old.train(id: oldService)?.execution, .waitingAtStop(0, cycle: 0), "it waits for the idle train")
+        XCTAssertEqual(old.trainHoldingRoute(of: oldService), oldIdle)
+        XCTAssertEqual(old.train(id: oldIdle)?.position, .onEdge(forward(2), offset: 6_144))
+
+        var (world, idle, service, _, c) = try makeIdleBetweenRuns(blocks: true)
+        var reachedC = false
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            if world.stationsStoppedAt(by: service) == [c] { reachedC = true }
+            let held = Set(world.heldResources(of: idle))
+            XCTAssertTrue(held.isDisjoint(with: Set(world.heldResources(of: service))))
+        }
+        XCTAssertTrue(reachedC, "the service went on to C")
+        XCTAssertEqual(world.stationsStoppedAt(by: idle), [b], "it stood aside at B, its own station")
+        guard case .onEdge(let traversal, _)? = world.train(id: idle)?.position else { return XCTFail("placed") }
+        XCTAssertEqual(traversal.edge, .edge(3), "on the stub")
+        XCTAssertNil(world.train(id: idle)?.execution, "still without a service")
+        XCTAssertFalse(world.train(id: idle)?.isStandingAside ?? true, "its next run finds it where it is")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     // MARK: - Saves
 
     /// Missing key is off; on, it is saved as `"blockSections": true` and

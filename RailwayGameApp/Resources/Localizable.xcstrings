@@ -538,7 +538,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把 %@ 指派到這裡"
+            "value" : "把「%@」指派到這裡"
           }
         }
       }
@@ -1608,7 +1608,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把 %@ 放在這裡"
+            "value" : "把「%@」放在這裡"
           }
         }
       }
@@ -2078,7 +2078,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "派 %@ 到這裡"
+            "value" : "派「%@」到這裡"
           }
         }
       }

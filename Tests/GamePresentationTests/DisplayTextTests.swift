@@ -7,20 +7,20 @@ final class DisplayTextTests: XCTestCase {
     /// track tiles are gone.
     func testNetworkSummaryCountsStationsAndEdges() throws {
         var world = try makeWorld(balance: 100_000)
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 edges")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 track sections")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 段軌道")
 
         try world.buildStation(named: "Central", at: PlanPoint(x: 512, y: 512))
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: 1_536, y: 1_536))
         try world.buildTrackEdge(from: west, to: east)
-        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 edge")
+        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 track section")
 
         try world.buildStation(named: "Harbor", at: PlanPoint(x: 3_584, y: 512))
         let far = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 1_536))
         try world.buildTrackEdge(from: east, to: far)
-        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 edges")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 track sections")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 段軌道")
     }
 
     /// Stage F3d: the map's VoiceOver label gives how far the world reaches

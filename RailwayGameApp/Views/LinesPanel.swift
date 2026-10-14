@@ -120,6 +120,7 @@ struct LinesPanel: View {
                         }
                     }
                 }
+                .hardTopScrollEdge()
                 // The tutorial's targets in the form report their place on the
                 // screen themselves (`tutorialPanelTarget(_:)`); the overlay
                 // counts them only inside the panel.
@@ -1164,15 +1165,7 @@ struct LinesPanel: View {
                 .disabled(!session.world.economy.canAfford(shortfall.cost))
                 .accessibilityIdentifier("line.trains.fill")
             }
-            Picker(selection: $staffHeadway) {
-                ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
-                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
-                }
-            } label: {
-                Text(verbatim: language.text("A train every", "班距"))
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("line.staff.headway")
+            headwayPicker
             capacityWarning(line)
             if let change {
                 if let limit = change.limitText(in: language) {
@@ -1212,6 +1205,32 @@ struct LinesPanel: View {
         }
     }
 
+    /// How often a train should come, for ``headwaySection(_:)`` and
+    /// ``staffSection(_:)``. Author's report, 2026-10-14: six segments of
+    /// "10 min" were cut to "1…" beside the map on a phone held on its
+    /// side, so the segments hold the minutes alone and the unit is said
+    /// once above them (and to VoiceOver on each).
+    private var headwayPicker: some View {
+        let language = session.language
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: language.text("Minutes between trains", "班距（分鐘）"))
+                .font(.footnote)
+                .foregroundStyle(Theme.textSecondary)
+                .accessibilityHidden(true)
+            Picker(selection: $staffHeadway) {
+                ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
+                    Text(verbatim: "\(minutes)")
+                        .accessibilityLabel(Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")))
+                        .tag(minutes)
+                }
+            } label: {
+                Text(verbatim: language.text("A train every", "班距"))
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("line.staff.headway")
+        }
+    }
+
     /// How often a train should come on `line`, and what that takes: the
     /// trains its round trip needs, their price, and one button that buys,
     /// places and assigns them.
@@ -1219,15 +1238,7 @@ struct LinesPanel: View {
         let language = session.language
         let plan = memo.staffingPlan(line.id, headway: staffHeadway, type: staffType, cars: staffCars, of: session)
         return Section {
-            Picker(selection: $staffHeadway) {
-                ForEach(GameWorld.staffingHeadways, id: \.self) { minutes in
-                    Text(verbatim: language.text("\(minutes) min", "\(minutes) 分")).tag(minutes)
-                }
-            } label: {
-                Text(verbatim: language.text("A train every", "班距"))
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("line.staff.headway")
+            headwayPicker
             // Decision 180: the type and the cars of the trains it buys.
             // Decision 184, later: a menu the ticks leave alone.
             let types = session.trainTypeCardChoices

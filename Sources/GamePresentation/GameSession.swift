@@ -1594,8 +1594,8 @@ public final class GameSession {
             let sent = path.distance == 0
                 ? language.text("\(train.name) stops at \(station.name).", "\(train.name) 停在 \(station.name)。")
                 : language.text(
-                    "Sent \(train.name) to \(station.name), \(path.distance) units along the track.",
-                    "已派 \(train.name) 前往 \(station.name)，沿軌道 \(path.distance) 單位。"
+                    "Sent \(train.name) to \(station.name), \(NetworkBuilding.distanceText(path.distance, in: language)) along the track.",
+                    "已派 \(train.name) 前往 \(station.name)，沿軌道 \(NetworkBuilding.distanceText(path.distance, in: language))。"
                 )
             return sent
         }

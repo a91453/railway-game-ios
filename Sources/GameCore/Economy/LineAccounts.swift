@@ -166,12 +166,52 @@ public struct LineRecords: Hashable, Codable, Sendable {
     }
 }
 
-/// How many got on and off at a station on a day.
-public struct StationFlowDay: Hashable, Codable, Sendable {
+/// How many got on and off at a station on a day, and how many of those
+/// who got off changed there to another train (decision 222).
+public struct StationFlowDay: Hashable, Sendable {
     public let station: StationID
     public let day: Int64
     public internal(set) var boarded: Int64 = 0
     public internal(set) var alighted: Int64 = 0
+    /// Of ``alighted``, those who waited here for their next leg: counted
+    /// again in ``boarded`` when they board, so one person (decision 222).
+    public internal(set) var transferred: Int64 = 0
+
+    init(station: StationID, day: Int64, boarded: Int64 = 0, alighted: Int64 = 0, transferred: Int64 = 0) {
+        self.station = station
+        self.day = day
+        self.boarded = boarded
+        self.alighted = alighted
+        self.transferred = transferred
+    }
+
+    /// The people who passed through: those who got on or off, a change
+    /// counted once (decision 222).
+    public var people: Int64 { boarded + alighted - transferred }
+}
+
+extension StationFlowDay: Codable {
+    private enum CodingKeys: String, CodingKey { case station, day, boarded, alighted, transferred }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        station = try container.decode(StationID.self, forKey: .station)
+        day = try container.decode(Int64.self, forKey: .day)
+        boarded = try container.decode(Int64.self, forKey: .boarded)
+        alighted = try container.decode(Int64.self, forKey: .alighted)
+        // Decision 222: a day without `"transferred"` counted none (every
+        // save before version 57); none is left out.
+        transferred = try container.decodeIfPresent(Int64.self, forKey: .transferred) ?? 0
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(station, forKey: .station)
+        try container.encode(day, forKey: .day)
+        try container.encode(boarded, forKey: .boarded)
+        try container.encode(alighted, forKey: .alighted)
+        if transferred != 0 { try container.encode(transferred, forKey: .transferred) }
+    }
 }
 
 public struct LineAccounts: Equatable, Sendable {
@@ -199,11 +239,16 @@ public struct LineAccounts: Equatable, Sendable {
         change(&lines[index(of: line)].pending)
     }
 
-    mutating func countFlow(boarded: Int64 = 0, alighted: Int64 = 0, at station: StationID, day: Int64) {
+    mutating func countFlow(boarded: Int64 = 0, alighted: Int64 = 0, transferred: Int64 = 0, at station: StationID, day: Int64) {
         flows.removeAll { $0.day < day - 1 }
         if let index = flows.firstIndex(where: { $0.station == station && $0.day == day }) {
             flows[index].boarded = min(flows[index].boarded + boarded, GameWorld.maximumHourly)
             flows[index].alighted = min(flows[index].alighted + alighted, GameWorld.maximumHourly)
+            flows[index].transferred = min(flows[index].transferred + transferred, flows[index].alighted)
+        } else if transferred > 0 {
+            // A change is counted after the alighting it follows, so the
+            // day's record is there; without it there is no one to count.
+            return
         } else {
             flows.append(StationFlowDay(station: station, day: day, boarded: boarded, alighted: alighted))
             flows.sort { ($0.station, $0.day) < ($1.station, $1.day) }
@@ -244,7 +289,8 @@ public struct LineAccounts: Equatable, Sendable {
         }
         let flowsOK = zip(flows, flows.dropFirst()).allSatisfy { ($0.station, $0.day) < ($1.station, $1.day) }
             && flows.allSatisfy { stationIDs.contains($0.station) && $0.boarded >= 0 && $0.alighted >= 0
-                && $0.boarded <= GameWorld.maximumHourly && $0.alighted <= GameWorld.maximumHourly }
+                && $0.boarded <= GameWorld.maximumHourly && $0.alighted <= GameWorld.maximumHourly
+                && (0...$0.alighted).contains($0.transferred) }
         return ordered && recordsOK && flowsOK
     }
 }
@@ -300,6 +346,12 @@ extension GameWorld {
         return (flow.boarded, flow.alighted)
     }
 
+    /// What got on, off and changed at station `id` on day `day`, if the
+    /// day is still kept (today and yesterday; decision 222).
+    public func stationFlow(_ id: StationID, onDay day: Int64) -> StationFlowDay? {
+        lineAccounts?.flows.first { $0.station == id && $0.day == day }
+    }
+
     // MARK: Recording
 
     private var recordsLines: Bool { lineAccounts != nil && accounts.mode == .management }
@@ -317,6 +369,14 @@ extension GameWorld {
         guard recordsLines, count > 0 else { return }
         let day = dayIndex(of: clock.now)
         lineAccounts?.countFlow(alighted: count, at: station, day: day)
+    }
+
+    /// `count` who got off at `station` wait there for their next train
+    /// (decision 222): counted once, though they board again.
+    mutating func countTransfer(_ count: Int64, at station: StationID) {
+        guard recordsLines, count > 0 else { return }
+        let day = dayIndex(of: clock.now)
+        lineAccounts?.countFlow(transferred: count, at: station, day: day)
     }
 
     mutating func countLineDeparture(on line: LineID, distance: Int64, passengers: Int64, seats: Int64) {

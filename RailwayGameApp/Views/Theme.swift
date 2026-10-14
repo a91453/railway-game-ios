@@ -141,6 +141,19 @@ extension View {
             }
     }
 
+    /// A hard edge where a panel's form scrolls under its navigation bar,
+    /// on iOS 26 and later: the soft edge left a section's header half
+    /// under the bar, blurred (author's report, 2026-10-14). Earlier
+    /// versions draw the bar as before.
+    @ViewBuilder
+    func hardTopScrollEdge() -> some View {
+        if #available(iOS 26.0, *) {
+            scrollEdgeEffectStyle(.hard, for: .top)
+        } else {
+            self
+        }
+    }
+
     /// Glass behind this view, in `shape`, for the controls that float over
     /// the map: Liquid Glass on iOS 26 and later (reacting to touches when
     /// `interactive`), a material on earlier versions.

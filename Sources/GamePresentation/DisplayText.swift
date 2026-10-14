@@ -66,10 +66,10 @@ extension GameWorld {
         switch language {
         case .english:
             let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
-            let edgeText = edgeCount == 1 ? "1 edge" : "\(edgeCount) edges"
+            let edgeText = edgeCount == 1 ? "1 track section" : "\(edgeCount) track sections"
             return "\(stationText) · \(edgeText)"
         case .traditionalChinese:
-            return "\(stationCount) 座車站 · \(edgeCount) 個軌段"
+            return "\(stationCount) 座車站 · \(edgeCount) 段軌道"
         }
     }
 }
@@ -92,17 +92,44 @@ extension GameWorld {
         guard stationsBesideWholeTrain(id).count < stopped.count else { return text }
         return text + language.text(" · the platform is too short for all its cars", " · 月台太短，容不下所有車廂")
     }
+
+    /// How near a station must be for a train to be "near" it: 500 m.
+    static let nearStationReach: Int64 = 500 * WorldCoordinate.unitsPerMetre
+
+    /// Where train `id` is, in the player's words (author's report,
+    /// 2026-10-14: the track number and "units" meant nothing to a
+    /// player): the nearest station, "Near Central" within
+    /// ``nearStationReach`` or "1.2 km from Central"; "Not on the track"
+    /// while unplaced, "On the track" with no station. Where it is going
+    /// is ``trainPathStatusText(of:in:)``'s. `nil` for an unknown train.
+    public func trainWhereText(of id: TrainID, in language: DisplayLanguage) -> String? {
+        guard let train = train(id: id) else { return nil }
+        guard let position = train.position else { return train.positionText(in: language) }
+        guard let point = location(of: position)?.position.plan else { return language.text("On the track", "在軌道上") }
+        var nearest: (station: Station, squared: Int64)?
+        for station in stations {
+            let dx = station.location.x - point.x, dy = station.location.y - point.y
+            let squared = dx * dx + dy * dy
+            if nearest == nil || squared < nearest!.squared { nearest = (station, squared) }
+        }
+        guard let nearest else { return language.text("On the track", "在軌道上") }
+        if nearest.squared <= Self.nearStationReach * Self.nearStationReach {
+            return language.text("Near \(nearest.station.name)", "在 \(nearest.station.name) 附近")
+        }
+        let distance = NetworkBuilding.distanceText(Int64(Double(nearest.squared).squareRoot().rounded()), in: language)
+        return language.text("\(distance) from \(nearest.station.name)", "距 \(nearest.station.name) \(distance)")
+    }
 }
 
 extension TrainPosition {
-    /// Where a train is, exactly as GameCore records it: "Track #3 forward,
-    /// 256 units along".
+    /// Where a train is, as GameCore records it, in whole metres: "Track #3
+    /// forward, 4 m along". The cards show ``GameWorld/trainWhereText(of:in:)``.
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .onEdge(let traversal, let offset):
             language.text(
-                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along",
-                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "正向" : "反向")，距起點 \(offset) 單位"
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(NetworkBuilding.lengthText(offset, in: language)) along",
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "正向" : "反向")，距起點 \(NetworkBuilding.lengthText(offset, in: language))"
             )
         }
     }
@@ -153,18 +180,22 @@ extension Train {
 
     /// The path the train has left on the track network: "No path ahead",
     /// "Path: 1 more edge, Track #4",
-    /// "Path: 3 more edges, ending on Track #9", with ", stopping 3000 units
+    /// "Path: 3 more edges, ending on Track #9", with ", stopping 47 m
     /// along it" when it stops part of the way along the last (Stage S5),
-    /// or "Path: stops 1024 units ahead" on the edge it is on.
+    /// or "Path: stops 16 m ahead" on the edge it is on.
     public func pathText(in language: DisplayLanguage) -> String {
         guard case .onEdge(_, let offset)? = position else { return language.text("No path ahead", "前方沒有路徑") }
         let edges = movement.remainingEdges
         guard let last = edges.last else {
             guard let end = movement.end, end > offset else { return language.text("No path ahead", "前方沒有路徑") }
-            return language.text("Path: stops \(end - offset) units ahead", "路徑：前方 \(end - offset) 單位處停車")
+            let ahead = NetworkBuilding.distanceText(end - offset, in: language)
+            return language.text("Path: stops \(ahead) ahead", "路徑：前方 \(ahead) 處停車")
         }
         let edge = last.displayText(in: language)
-        let stop = movement.end.map { language.text(", stopping \($0) units along it", "，在其 \($0) 單位處停車") } ?? ""
+        let stop = movement.end.map {
+            let along = NetworkBuilding.lengthText($0, in: language)
+            return language.text(", stopping \(along) along it", "，在其 \(along) 處停車")
+        } ?? ""
         switch language {
         case .english:
             return edges.count == 1
@@ -292,7 +323,7 @@ extension GameError {
         case .trainNotOnLine(let id):
             language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
         case .invalidLineRoutePreference:
-            language.text("Choose a physical path for a leg of this service.", "請為這個停站模式的路段選擇進路（軌段與月台）。")
+            language.text("Choose a route for a leg of this service.", "請為這個停站模式的路段選擇進路。")
         case .invalidLineRuns:
             language.text(
                 "A timetable's trains each run between two of the line's stops at times that never go back. A ring, a line with patterns or one calling at a station twice has no timetable.",
@@ -310,30 +341,30 @@ extension GameError {
                 "A train has \(Train.minimumCars) to \(Train.maximumCars) cars.",
                 "列車可以有 \(Train.minimumCars) 到 \(Train.maximumCars) 節車廂。"
             )
-        case .unknownTrackNode(let node):
+        case .unknownTrackNode:
             language.text(
-                "\(node.displayText(in: language)) is not a node of the track network.",
-                "\(node.displayText(in: language)) 不是路網的節點。"
+                "That point of the track network no longer exists.",
+                "這個軌道接點已經不存在。"
             )
-        case .unknownTrackEdge(let edge):
+        case .unknownTrackEdge:
             language.text(
-                "\(edge.displayText(in: language)) is not an edge of the track network.",
-                "\(edge.displayText(in: language)) 不是路網的軌段。"
+                "That track no longer exists.",
+                "這段軌道已經不存在。"
             )
         case .invalidTrackGeometry:
             language.text(
-                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different nodes, and run smoothly.",
-                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點是不同的節點，而且線形要平順。"
+                "Track can't be built there: it must stay on the map within 64 m of the ground, start and end at different points, and run smoothly.",
+                "這裡不能建軌道：軌道必須在地圖內、與地面的高度差在 64 公尺以內、起點與終點不能是同一點，而且線形要平順。"
             )
-        case .trackNodeInUse(let node):
+        case .trackNodeInUse:
             language.text(
-                "Track still ends at \(node.displayText(in: language).lowercased()). Remove that track first.",
-                "還有軌道接在\(node.displayText(in: language))。請先拆除那段軌道。"
+                "Track still ends there. Remove that track first.",
+                "還有軌道接在這裡。請先拆除那段軌道。"
             )
-        case .trackEdgeInUse(let edge):
+        case .trackEdgeInUse:
             language.text(
-                "A train is on \(edge.displayText(in: language).lowercased()). Take the train off the track first.",
-                "\(edge.displayText(in: language)) 上有列車。請先把列車移出軌道。"
+                "A train is on that track. Take the train off the track first.",
+                "這段軌道上有列車。請先把列車移出軌道。"
             )
         case .trackTooSteep:
             language.text(
@@ -345,35 +376,35 @@ extension GameError {
                 "That structure can't carry track at those heights: surface track stays within 2 m of the ground, viaducts and bridges above it, tunnels below it.",
                 "這種結構物無法在這個高度鋪設軌道：地面軌道與地面的高度差在 2 公尺以內，高架與橋樑在地面以上，隧道在地面以下。"
             )
-        case .trackConflict(let edge):
+        case .trackConflict:
             language.text(
-                "That track would cross \(edge.displayText(in: language).lowercased()) without 8 m between them. Pass over or under it, or cross at a shared node.",
-                "這段軌道會與\(edge.displayText(in: language))交叉，但兩者的高度差不到 8 公尺。請從上方或下方通過，或在共用的節點交會。"
+                "That track would cross another track without 8 m between them. Pass over or under it, or join the two tracks where they meet.",
+                "這段軌道會與另一段軌道交叉，但兩者的高度差不到 8 公尺。請從上方或下方通過，或讓兩段軌道在交會處相接。"
             )
-        case .trackTooClose(let edge):
+        case .trackTooClose:
             language.text(
-                "That track would run less than 4 m beside \(edge.displayText(in: language).lowercased()). Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.",
-                "這段軌道與\(edge.displayText(in: language))並行時距離不到 4 公尺。平行的軌道中心之間至少要 4 公尺，或上下相差 8 公尺。"
+                "That track would run less than 4 m beside another track. Keep parallel tracks 4 m apart, centre to centre, or pass 8 m over or under.",
+                "這段軌道與另一段軌道並行時距離不到 4 公尺。平行的軌道中心之間至少要 4 公尺，或上下相差 8 公尺。"
             )
-        case .tracksWouldBeTooClose(let first, let second):
+        case .tracksWouldBeTooClose:
             language.text(
-                "Without that track, \(first.displayText(in: language).lowercased()) and \(second.displayText(in: language).lowercased()) would run less than 4 m apart with no junction near. Remove one of them first.",
-                "拆掉這段軌道之後，\(first.displayText(in: language))與\(second.displayText(in: language))之間不到 4 公尺，附近又沒有相接的交會點。請先拆掉其中一條。"
+                "Without that track, two tracks nearby would run less than 4 m apart with no junction near. Remove one of them first.",
+                "拆掉這段軌道之後，附近兩段軌道之間會不到 4 公尺，又沒有相接的交會點。請先拆掉其中一條。"
             )
         case .trackEdgeInLineRoute(let line):
             language.text(
                 "Line #\(line.rawValue)'s chosen path runs along that track. Clear the line's path first.",
                 "路線 #\(line.rawValue) 指定的進路經過這段軌道。請先清除該路線指定的進路。"
             )
-        case .trackEdgeHasPlatform(let edge):
+        case .trackEdgeHasPlatform:
             language.text(
-                "A station has a platform on \(edge.displayText(in: language).lowercased()). Remove the platform first: in Network, choose Remove, tap that track and tap “Remove platform”.",
-                "\(edge.displayText(in: language)) 上有車站的月台。請先拆除月台：在「路網」選「拆除」，點這段軌道，再按「拆除月台」。"
+                "A station has a platform on that track. Remove the platform first: in Network, choose Remove, tap that track and tap “Remove platform”.",
+                "這段軌道上有車站的月台。請先拆除月台：在「路網」選「拆除」，點這段軌道，再按「拆除月台」。"
             )
         case .invalidPlatform:
             language.text(
-                "A platform must lie on a level stretch of one edge and not overlap another platform.",
-                "月台必須位於同一個軌段上的平坦區間，而且不能與其他月台重疊。"
+                "A platform must lie on a level stretch of a single track and not overlap another platform.",
+                "月台必須位於同一段軌道的平坦區間，而且不能與其他月台重疊。"
             )
         case .trackReserved(let id):
             language.text(
@@ -497,6 +528,14 @@ extension GameError {
             )
         case .notADepot:
             language.text("That station is not a depot.", "這個車站不是機廠。")
+        case .stationIsDepot:
+            language.text("A depot has no shops.", "機廠不能開店。")
+        case .stationHasCommerce:
+            language.text("This station has shops: demolish them before making it a depot.", "這個車站有商業：先拆除商業，才能改成機廠。")
+        case .stationCommerceMaxedOut:
+            language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
+        case .noStationCommerce:
+            language.text("This station has no shops.", "這個車站沒有商業。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
         case .depotWithRuns:

@@ -221,17 +221,18 @@ extension GameWorld {
            case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
             return .granted(granted)
         }
-        // With block sections (decision 212): the shortest route to a berth
-        // of the station that only the trains standing there or on the way
-        // block (those it may never follow), followed behind the trains
-        // ahead on it.
+        // With block sections (decision 212): when trains standing (those
+        // it may never follow) keep it from its route, the shortest route to
+        // a berth of the station that only they block, followed behind the
+        // trains ahead on it.
         guard blockSections else { return planned }
         let standing = Set(trains.filter { train in
             guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
             return false
         }.map(\.id))
-        guard let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
-                                                 avoiding: blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo)), memo: &memo),
+        let standingBlocked = blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo))
+        guard standingBlocked.blocks(envelopeCover(of: candidate), in: network),
+              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: standingBlocked, memo: &memo),
               case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
         else { return planned }
         return .granted(granted)

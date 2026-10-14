@@ -501,6 +501,45 @@ class ChangesTests(Fixture):
         shown = len(text.splitlines()) - 2
         self.assertEqual(int(text.splitlines()[-1].split()[2]) + shown, 400)
 
+    def curated_module(self, changed, text):
+        """The module with git answering for the curated file and two merges."""
+        module = load(CHANGES, "changes_curated")
+        module.first_parent_commits = lambda repo, base: [
+            ("sha2", "Merge pull request #2 from owner/b2", "Two"), ("sha1", "Merge pull request #1 from owner/b1", "One")]
+        module.previous_release = lambda repository, run_id: ("abc", 51, 1)
+        module.github = lambda path: None
+
+        def git(repo, *args, check=True):
+            if args[0] == "diff":
+                self.assertEqual(args[1:], ("--name-only", "abc..HEAD", "--", module.CURATED))
+                return subprocess.CompletedProcess(args, 0, module.CURATED + "\n" if changed else "", "")
+            if args[0] == "show":
+                self.assertEqual(args[1], "HEAD:" + module.CURATED)
+                return subprocess.CompletedProcess(args, 0 if text is not None else 128, text or "", "")
+            return subprocess.CompletedProcess(args, 0, "", "")
+        module.git = git
+        return module
+
+    def test_a_curated_text_written_since_the_last_release_is_used_as_is(self):
+        module = self.curated_module(changed=True, text="這版新增：到站鈴\n沿用：存檔不變\n")
+        self.assertEqual(module.whats_new(".", REPOSITORY, "900", 0), "這版新增：到站鈴\n沿用：存檔不變")
+
+    def test_an_old_curated_text_falls_back_to_the_list(self):
+        module = self.curated_module(changed=False, text="上一版的說明")
+        text = module.whats_new(".", REPOSITORY, "900", 0)
+        self.assertEqual(text, "Changes since build 51.1:\n- Two (#2)\n- One (#1)")
+
+    def test_a_removed_or_empty_curated_text_falls_back_to_the_list(self):
+        for text in (None, "  \n"):
+            module = self.curated_module(changed=True, text=text)
+            self.assertTrue(module.whats_new(".", REPOSITORY, "900", 0).startswith("Changes since build 51.1:"))
+
+    def test_a_long_curated_text_is_cut_to_the_limit(self):
+        module = self.curated_module(changed=True, text="字" * 5000)
+        text = module.whats_new(".", REPOSITORY, "900", 0)
+        self.assertEqual(len(text), 4000)
+        self.assertTrue(text.endswith("…"))
+
     def test_missing_settings(self):
         result = self.run_changes(self.github(self.runs(), {}), GITHUB_TOKEN=None, GITHUB_RUN_ID=None)
         self.assertEqual(result.returncode, 1)

@@ -128,4 +128,44 @@ final class DepartureBoardTests: XCTestCase {
         let board = DepartureBoard(world: world, station: last)
         XCTAssertNil(board.directions.flatMap(\.rows).first { $0.train == nil })
     }
+
+    /// Decision 223: the status capsule in words, the time struck through
+    /// when late, and "前車誤點" for a late train close behind a late one.
+    func testTheStatusAndTheStruckThroughTime() {
+        func row(_ id: String, train: Int?, away: Int64, late: Int = 0, scheduled: Int64? = nil, boarding: Bool = false, passes: Bool = false) -> DepartureBoard.Row {
+            DepartureBoard.Row(
+                id: id, train: train.map { TrainID(rawValue: $0) }, trainName: "", line: LineID(rawValue: 1), lineName: "L", color: nil,
+                destination: StationID(rawValue: 2), endsHere: false, passes: passes, isBoarding: boarding,
+                expected: GameTime(seconds: away), secondsAway: away, lateMinutes: late,
+                scheduled: scheduled.map { GameTime(seconds: $0) })
+        }
+        XCTAssertEqual(row("a", train: 1, away: 0, boarding: true).status, .boarding)
+        XCTAssertEqual(row("a", train: 1, away: 60, passes: true).status, .passes)
+        XCTAssertEqual(row("a", train: 1, away: 60).status.text(in: .traditionalChinese), "準點")
+        let late = row("a", train: 1, away: 9 * 3600 + 12 * 60, late: 6, scheduled: 9 * 3600 + 6 * 60)
+        XCTAssertEqual(late.status.text(in: .traditionalChinese), "誤點 6 分")
+        XCTAssertEqual(late.replacedTimeText, "09:06")
+        XCTAssertNil(row("a", train: 1, away: 600, scheduled: 600).replacedTimeText, "an on-time train strikes nothing")
+
+        let marked = DepartureBoard.markingFollowers([
+            late,
+            row("b", train: 2, away: 9 * 3600 + 13 * 60, late: 4, scheduled: 9 * 3600 + 9 * 60),
+            row("c", train: 3, away: 9 * 3600 + 40 * 60, late: 2),
+            row("d", train: 4, away: 9 * 3600 + 41 * 60),
+        ])
+        XCTAssertEqual(marked.map(\.followsLateTrain), [false, true, false, false])
+        XCTAssertEqual(marked[1].status.text(in: .traditionalChinese), "前車誤點")
+        XCTAssertEqual(marked[1].status, .lateBehind(minutes: 4))
+        XCTAssertEqual(marked[2].status, .late(minutes: 2), "27 minutes behind a late train is late on its own")
+    }
+
+    func testATrainsRowKeepsItsTimetablesTimeBeforeTheLateness() throws {
+        var world = DemoWorld.make(in: .english)
+        try world.advance(ticks: 200)
+        let station = try XCTUnwrap(world.stations.first { $0.name == "Central" }).id
+        for row in DepartureBoard(world: world, station: station).directions.flatMap(\.rows) where !row.isBoarding {
+            let scheduled = try XCTUnwrap(row.scheduled)
+            XCTAssertLessThanOrEqual(scheduled.seconds, row.expected.seconds)
+        }
+    }
 }

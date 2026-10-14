@@ -926,6 +926,7 @@ public struct GameWorld: Equatable, Sendable {
         guard stations[index].isDepot != isDepot else { return }
         if isDepot {
             guard !lines.contains(where: { $0.stops.contains(id) }) else { throw .depotIsLineStop(id) }
+            guard stations[index].commerce == nil else { throw .stationHasCommerce(id) }
             var changed = self
             changed.stations[index].isDepot = true
             for line in lines {
@@ -937,6 +938,13 @@ public struct GameWorld: Equatable, Sendable {
             throw .depotInUse(line.id)
         }
         stations[index].isDepot = isDepot
+    }
+
+    /// Sets the level of the shops of the station at `index` (decision
+    /// 222); ``buildStationCommerce(at:)`` and the commands beside it check
+    /// and charge.
+    mutating func setStationCommerce(_ level: StationCommerceLevel?, at index: Int) {
+        stations[index].commerce = level
     }
 
     /// Gives line `id` the depot `depot`, or with `nil` none (decision
@@ -1097,6 +1105,8 @@ public struct GameWorld: Equatable, Sendable {
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
+        // Decision 222: its shops go with it.
+        disposeAsset(.stationCommerce, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()
@@ -3167,7 +3177,9 @@ public struct GameWorld: Equatable, Sendable {
         if let aside = spareStandingAside(in: stuck, memo: &memo.directions),
            let index = trains.firstIndex(where: { $0.id == aside.id }) {
             trains[index] = aside
-            trains[index].isStandingAside = true
+            // A train of a line with runs stands aside at its own station
+            // (decision 212), where its next run finds it.
+            trains[index].isStandingAside = lines.first(where: { assignedLine(of: aside.id) == $0.id })?.hasRuns != true
             return aside.id
         }
         return nil

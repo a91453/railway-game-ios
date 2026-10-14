@@ -59,6 +59,8 @@ public struct AssetRecord: Hashable, Sendable {
         case mapTile
         /// The souvenir shop of attraction ``owner`` (decision 174).
         case souvenirShop
+        /// A level of the shops of station ``owner`` (decision 222).
+        case stationCommerce
 
         public var assetClass: AssetClass {
             switch self {
@@ -67,7 +69,7 @@ public struct AssetRecord: Hashable, Sendable {
             case .train, .cars: .rollingStock
             case .building: .buildings
             case .mapTile: .land
-            case .souvenirShop: .buildings
+            case .souvenirShop, .stationCommerce: .buildings
             }
         }
     }
@@ -459,6 +461,7 @@ extension GameWorld {
         var owners: Set<String> = []
         var carsByTrain: [Int: Int] = [:]
         var shopLevels: [Int: Int] = [:]
+        var commerceLevels: [Int: Int] = [:]
         var total: Int64 = 0
         for record in accounts.assets {
             let exists = switch record.kind {
@@ -467,6 +470,7 @@ extension GameWorld {
             case .train, .cars: train(id: TrainID(rawValue: record.owner)) != nil
             case .building: placedBuilding(id: PlacedBuildingID(rawValue: record.owner)) != nil
             case .souvenirShop: tourism?.attractions.contains { $0.id.rawValue == record.owner && $0.souvenir > 0 } ?? false
+            case .stationCommerce: station(id: StationID(rawValue: record.owner))?.commerce != nil
             case .mapTile: mapExpansion.map { record.owner >= 0 && $0.owns(MapTile(row: record.owner / mapTileColumns, column: record.owner % mapTileColumns)) } ?? false
             }
             guard exists else { return "An asset record names a \(record.kind.rawValue) that does not exist." }
@@ -481,6 +485,13 @@ extension GameWorld {
                 let level = tourism?.attractions.first { $0.id.rawValue == record.owner }?.souvenir ?? 0
                 guard record.cars == 0, shopLevels[record.owner, default: 0] <= level else {
                     return "A souvenir shop has at most one asset record a level."
+                }
+            } else if record.kind == .stationCommerce {
+                // A record a level (decision 222).
+                commerceLevels[record.owner, default: 0] += 1
+                let level = station(id: StationID(rawValue: record.owner))?.commerce?.rawValue ?? 0
+                guard record.cars == 0, commerceLevels[record.owner, default: 0] <= level else {
+                    return "A station's shops have at most one asset record a level."
                 }
             } else {
                 guard record.cars == 0, owners.insert("\(record.kind.rawValue) \(record.owner)").inserted else {

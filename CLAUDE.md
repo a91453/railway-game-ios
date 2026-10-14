@@ -345,8 +345,8 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Text the game shows players (both languages) says only what a control or
   feature does for them, in a sentence or two: never design reasons, how it
   is computed, internal units or IDs, or program and library names. Those go
-  in the decision in `docs/ARCHITECTURE.md`; data and licence credits stay
-  (`docs/UI_THEME.md`, 玩家看的文字).
+  in the decision in docs/ARCHITECTURE.md; data and licence credits stay
+  (docs/UI_THEME.md, 玩家看的文字).
 - Before drawing or changing any icon, glyph, character or illustration for
   the app, read `.claude/skills/art-style/SKILL.md`: the art style the owner
   chose and how to check a drawing before showing it.

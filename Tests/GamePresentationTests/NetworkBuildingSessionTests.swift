@@ -505,7 +505,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: PlanPoint(x: 4_024, y: 3_200), reach: Self.reach)
             XCTAssertEqual(session.networkEdgePoint, NetworkEdgePoint(edge: .edge(1), distance: 3_000))
             XCTAssertNil(session.platformStationID, "no station within two tiles")
-            XCTAssertEqual(session.networkDraftText(), "64 m platform on track #1, 952–5048 units along")
+            XCTAssertEqual(session.networkDraftText(), "64 m platform here")
 
             session.addNetworkPlatform()
 
@@ -806,8 +806,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testTheToolsSettingsAndTheNetworkSummaryRead() async throws {
         let world = try makeLineWorld()
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 edge")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 track section")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 段軌道")
         await MainActor.run {
             let session = GameSession(world: world)
             XCTAssertEqual(session.networkHeightText(), "New nodes on the ground")
