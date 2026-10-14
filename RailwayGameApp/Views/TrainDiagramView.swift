@@ -4,8 +4,9 @@ import SwiftUI
 
 /// The train diagram (運行圖, ARCHITECTURE decision 206) of one line, over
 /// the whole screen: time across, the line's stations down, each trip's
-/// planned line in the line's colour, where the trains actually were since
-/// it opened in navy, a late train's expected line dashed in the warning
+/// planned line in the line's colour, where the trains actually were in
+/// navy (the day so far from the trip log, decision 223, and since it
+/// opened, between the stations too), a late train's expected line dashed in the warning
 /// colour with how late it is, and a mark where two trips meet (◆) or one
 /// overtakes the other (▲). Pinch to zoom, drag to move; "Now" follows the
 /// clock again.
@@ -311,6 +312,16 @@ struct TrainDiagramView: View {
             }
             for piece in trip.lines {
                 plotContext.stroke(path(piece), with: .color(color), style: style)
+            }
+        }
+        // Decision 223: the trips the trains actually ran, from the trip
+        // log, so the day so far is there as soon as the diagram opens.
+        for trip in diagram.actual {
+            let style = trip.isEmptyRun
+                ? StrokeStyle(lineWidth: 1, dash: [6, 4])
+                : StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+            for piece in trip.lines where piece.count > 1 {
+                plotContext.stroke(path(piece), with: .color(Theme.textPrimary), style: style)
             }
         }
         for pieces in history.trails.values {

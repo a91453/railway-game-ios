@@ -247,6 +247,39 @@ final class TrainDiagramTests: XCTestCase {
         ])
     }
 
+    // MARK: The trip log (decision 223)
+
+    /// Opened late in the day, the diagram still draws the trips the
+    /// trains actually ran since the start: each call's arrival and
+    /// departure from the trip log, on its row; a trip still running goes
+    /// on to its train. Without the log there are none.
+    func testTheTripsActuallyRunAreThereWhenTheDiagramOpens() throws {
+        var (world, line, _) = try singleTrackWithLoop()
+        var without = world
+        world.setLineAccounts(true)
+        try world.advance(ticks: 3_000)
+        try without.advance(ticks: 3_000)
+        // No history: a diagram opened now.
+        let diagram = try XCTUnwrap(TrainDiagram(world: world, line: line))
+        let stops = try XCTUnwrap(world.line(id: line)).stops
+        let logged = world.tripLog.filter { $0.line == line && ($0.arrival?.seconds ?? diagram.now) >= diagram.from }
+        XCTAssertGreaterThan(logged.filter { !$0.isRunning }.count, 1)
+        XCTAssertEqual(diagram.actual.count, logged.count)
+        for (actual, trip) in zip(diagram.actual, logged) {
+            XCTAssertEqual(actual.train, trip.train)
+            let points = actual.lines.flatMap { $0 }
+            let first = try XCTUnwrap(points.first)
+            XCTAssertEqual(first, .init(time: trip.sentOut.seconds, place: Double(try XCTUnwrap(stops.firstIndex(of: trip.from)))))
+            XCTAssertEqual(points.map(\.time), points.map(\.time).sorted(), "time runs on")
+            if let arrival = trip.arrival {
+                XCTAssertEqual(points.last?.time, max(arrival.seconds, trip.calls.last?.departure?.seconds ?? arrival.seconds))
+            } else if let running = diagram.running.first(where: { $0.train == trip.train }) {
+                XCTAssertEqual(points.last, running.now)
+            }
+        }
+        XCTAssertEqual(try XCTUnwrap(TrainDiagram(world: without, line: line)).actual, [])
+    }
+
     // MARK: History
 
     func testTheHistoryStartsAgainForAnotherLineOrWhenTheClockGoesBack() throws {
