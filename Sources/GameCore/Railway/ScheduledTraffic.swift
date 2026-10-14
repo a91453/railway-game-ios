@@ -206,8 +206,9 @@ extension GameWorld {
                 if let route = routePreference(for: train, from: stop - 1, to: stop), preferredPath(from: placement.position, preference: route, length: train.length) == path { matched += 1 }
                 let duration = train.scheduledArrival(of: stop, cycle: cycle).seconds - train.scheduledDeparture(of: stop - 1, cycle: cycle).seconds
                 // No interpolated points without a physically buildable run.
-                let curve = duration > 0 && duration <= RunningCurve.maximumSeconds
-                    ? RunningCurve(length: path.distance, duration: duration * 1000, performance: train.performance) : nil
+                let curve = duration > 0 && duration <= RunningCurve.maximumSeconds && path.distance > 0
+                    ? RunCurve(length: path.distance, duration: duration * 1000, performance: train.performance,
+                               limits: speedLimits(from: placement, along: path, below: train.performance.topSpeed)) : nil
                 let stretches = trafficStretches(from: placement.position, along: path)
                 var pass: [(distance: Int64, station: StationID, berth: Berth)] = []
                 if let curve, path.distance > 0 {
@@ -261,6 +262,11 @@ extension GameWorld {
     /// profProgToTime: first whole second at which the fixed-point curve
     /// reaches the requested distance (binary search, rather than floats).
     func trafficTime(on curve: RunningCurve, distance: Int64) -> Int64 {
+        trafficTime(on: .plain(curve), distance: distance)
+    }
+
+    /// ``trafficTime(on:distance:)`` on a run's curve (decision 217).
+    func trafficTime(on curve: RunCurve, distance: Int64) -> Int64 {
         var (low, high): (Int64, Int64) = (0, curve.duration / 1000)
         while low < high {
             let middle = low + (high - low) / 2

@@ -298,9 +298,14 @@
 ///     build that reads only an earlier version would drop the shops while
 ///     keeping their asset records, so it says the save is newer than it
 ///     instead.
+/// 58. Curve speed limits (decision 217): a world can have
+///     `"curveSpeedLimits": true`, and a train's run its `"limits"`. A
+///     build that reads only an earlier version would drop them, and its
+///     trains would run through curves at full speed on shorter timetables
+///     again, so it says the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 57
+    public static let currentVersion = 58
 
     public let world: GameWorld
 
@@ -454,6 +459,8 @@ extension SavedGame: Codable {
         // follows on whole legs, as before.
         // Version 56 to 57: a station without `"commerce"` has no shops, and
         // a station day without `"transferred"` counted no changes.
+        // Version 57 to 58: a world without `"curveSpeedLimits"` runs and
+        // plans as before, and a run without `"limits"` meets none.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
