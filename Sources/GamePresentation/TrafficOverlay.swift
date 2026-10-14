@@ -137,8 +137,8 @@ public struct TrafficOverlay: Hashable, Sendable {
         var parts: [String] = []
         if !authorities.isEmpty {
             parts.append(language.text(
-                "Movement authority for \(authorities.count) \(authorities.count == 1 ? "train" : "trains")",
-                "\(authorities.count) 列車有行車授權"
+                "\(authorities.count) \(authorities.count == 1 ? "train" : "trains") cleared to run",
+                "\(authorities.count) 列車可通行"
             ))
         }
         if waiting > 0 { parts.append(language.text("\(waiting) waiting", "\(waiting) 列等候")) }

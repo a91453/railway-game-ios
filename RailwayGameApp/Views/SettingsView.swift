@@ -100,7 +100,7 @@ struct SettingsView: View {
         } header: {
             Text("Map")
         } footer: {
-            Text("Day and night: the map darkens from dusk to dawn as the game's clock turns, and stations, trains and windows light up. Weather effects: rain and lightning on the map on a day of rain or storms, and a typhoon's sign at the stations it hits. With Reduce Motion on, the rain does not fall and nothing flashes.")
+            Text("Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits.")
         }
     }
 
@@ -117,7 +117,7 @@ struct SettingsView: View {
         } header: {
             Text("Line Colours")
         } footer: {
-            Text("Draws every line in one of eight colours that stay apart with red–green or blue–yellow colour blindness, the one nearest its own. Only the screen changes: the colours you chose are kept, and come back when this is off. Every line also shows its code, such as BL or R, on its badge.")
+            Text("Lines use colours that stay easy to tell apart with colour blindness, and every line badge shows its code.")
         }
     }
 
@@ -167,8 +167,8 @@ struct SettingsView: View {
                 ))
             } else {
                 Text(verbatim: language.text(
-                    "Public holidays raise demand on every line, announced a week ahead. Rain lowers it, a typhoon (announced days ahead) cuts it at the stations in its path, and fuel spells change the day's energy cost. Light is half as strong as Standard. Kept in this game's save.",
-                    "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。設定存在這一局的存檔裡。"
+                    "Public holidays raise demand on every line, announced a week ahead. Rain lowers it, a typhoon (announced days ahead) cuts it at the stations in its path, and fuel spells change the day's energy cost. Light is half as strong as Standard. Applies to this game only.",
+                    "國定假日時各線需求增加，一週前公布。下雨時需求減少，颱風（幾天前預警）讓路徑上的車站需求大減，油電價格偶爾漲跌、影響能源費。「輕」的影響是「標準」的一半。只套用在這一局。"
                 ))
             }
         }
@@ -205,8 +205,8 @@ struct SettingsView: View {
             Text(verbatim: language.text("Secretary", "秘書室"))
         } footer: {
             Text(verbatim: language.text(
-                "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log. Kept on this device.",
-                "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。設定存在這台裝置上。"
+                "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log. Applies to every game on this device.",
+                "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。套用到這台裝置上的每一局。"
             ))
         }
     }
@@ -238,11 +238,11 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings.cityView.taichung")
         } header: {
-            Text(verbatim: language.text("Preview", "試作"))
+            Text(verbatim: language.text("Preview", "搶先看"))
         } footer: {
             Text(verbatim: language.text(
-                "A try-out of a 3D city: the real buildings, roads and parks round Kaohsiung and Taichung Stations, drawn by the Procedural Tokyo renderer. At Taichung the TRA's trains run on the viaduct. It is not part of your game yet: the cars, the trains and the light are its own. It loads from the game's website, so it needs the internet. Drag to move, pinch to zoom, two fingers to turn.",
-                "3D 城市的試作：高雄車站與臺中車站周圍真實的建物、道路與公園，用 Procedural Tokyo 的繪製程式畫出來。臺中的高架上有臺鐵的列車在跑。還沒有接上你的遊戲：車流、列車與光線都是它自己的。它從遊戲官網載入，需要網路連線。拖曳移動、兩指縮放、兩指旋轉。"
+                "A first look at a 3D city: the real buildings, roads and parks around Kaohsiung and Taichung Stations, with TRA trains on the viaduct at Taichung. It is a sample scene, not your own game, and needs the internet. Drag to move, pinch to zoom, two fingers to turn.",
+                "搶先看 3D 城市：高雄車站與臺中車站周圍真實的建物、道路與公園，臺中的高架上有臺鐵列車在跑。這是示範畫面，不是你的這一局，需要網路連線。拖曳移動、兩指縮放、兩指旋轉。"
             ))
         }
     }

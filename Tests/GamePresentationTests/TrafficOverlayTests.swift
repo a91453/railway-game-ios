@@ -122,14 +122,14 @@ final class TrafficOverlayTests: XCTestCase {
         XCTAssertEqual(wait.to, point(23_552))
         XCTAssertEqual(wait.contested.nodes, [point(25_600)])
         XCTAssertTrue(wait.contested.lines.contains([point(23_552), point(25_600)]))
-        XCTAssertEqual(overlay.summary(in: .english), "Movement authority for 1 train · 1 waiting")
-        XCTAssertEqual(overlay.summary(in: .traditionalChinese), "1 列車有行車授權 · 1 列等候")
+        XCTAssertEqual(overlay.summary(in: .english), "1 train cleared to run · 1 waiting")
+        XCTAssertEqual(overlay.summary(in: .traditionalChinese), "1 列車可通行 · 1 列等候")
         XCTAssertEqual(world.routeWaitText(of: east, in: .english), "Standing aside at M until Westbound clears the route")
         // Both on their way: two authorities, no waits.
         try world.advance(ticks: 1)
         XCTAssertEqual(world.trafficOverlay().authorities.map(\.train), [east, west])
         XCTAssertEqual(world.trafficOverlay().waits, [])
-        XCTAssertEqual(world.trafficOverlay().summary(in: .english), "Movement authority for 2 trains")
+        XCTAssertEqual(world.trafficOverlay().summary(in: .english), "2 trains cleared to run")
     }
 
     /// A scheduled meet (decision 59) keeps the train for the other by plan,

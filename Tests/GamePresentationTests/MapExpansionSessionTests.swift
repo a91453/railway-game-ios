@@ -84,7 +84,7 @@ final class MapExpansionSessionTests: XCTestCase {
         session.startChoosingMapTile()
         XCTAssertTrue(session.world.clock.isPaused)
         XCTAssertTrue(session.isPausedForBuilding)
-        XCTAssertEqual(session.message?.text, "Tap a tile next to your land to see its price. Paused meanwhile, so a tile bought can be undone.")
+        XCTAssertEqual(session.message?.text, "Tap a tile next to your land to see its price. The game pauses while you expand, and a tile bought can be undone.")
         XCTAssertTrue(session.tapMapExpansion(at: PlanPoint(x: 3 * length + 10, y: 2 * length + 10)))
         XCTAssertTrue(session.buyChosenMapTile())
         let now = session.world.clock.now

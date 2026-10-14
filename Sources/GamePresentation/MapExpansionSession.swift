@@ -113,7 +113,7 @@ extension GameSession {
         message = StatusMessage(
             kind: .success,
             text: paused
-                ? tap + language.text(" Paused meanwhile, so a tile bought can be undone.", "擴建時遊戲暫停，買下的地也能復原。")
+                ? tap + language.text(" The game pauses while you expand, and a tile bought can be undone.", "擴建時遊戲暫停，買下的地可以復原。")
                 : tap
         )
     }

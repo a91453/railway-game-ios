@@ -806,8 +806,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testTheToolsSettingsAndTheNetworkSummaryRead() async throws {
         let world = try makeLineWorld()
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 edge")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 track section")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 段軌道")
         await MainActor.run {
             let session = GameSession(world: world)
             XCTAssertEqual(session.networkHeightText(), "New nodes on the ground")

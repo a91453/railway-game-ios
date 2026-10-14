@@ -65,8 +65,8 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
             )
         case .travel:
             language.text(
-                "Trips that start in each area in each hour from 0 to 23, from the stations' demand.",
-                "依車站需求推算 0–23 時各區域的交通需求。"
+                "Trips starting in each area, hour by hour.",
+                "各區域每小時出發的旅次。"
             )
         case .movement:
             language.text(
@@ -95,8 +95,8 @@ public enum PopTravelMode: String, CaseIterable, Hashable, Sendable {
             )
         case .terrain:
             language.text(
-                "The ground's height, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; the track's earthwork and structures follow the same ground.",
-                "地面的海拔，以西北方的光照出起伏；斜線是超過 30% 的陡坡，城市不能開發。軌道的土方與結構物量的是同一份地面。"
+                "The ground's height; hatching marks slopes steeper than 30%, where the city cannot build.",
+                "地面的高低；斜線是超過 30% 的陡坡，城市不能開發。"
             )
         case .sectionFlow:
             language.text(

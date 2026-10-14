@@ -354,11 +354,11 @@ public struct CityCellInfo: Hashable, Sendable {
         let useName: (String, String)? = use.map { ($0.names.english, $0.names.chinese) }
         if let useName {
             if kind == .existingStock {
-                lines.append(language.text("\(useName.0) · existing stock", "\(useName.1) · 既有存量"))
+                lines.append(language.text("\(useName.0) · existing building", "\(useName.1) · 原有建物"))
             } else if let density {
                 lines.append(language.text(
-                    "\(useName.0) · D\(density.rawValue) (\(density.floors) storeys)",
-                    "\(useName.1) · D\(density.rawValue)（\(density.floors) 層）"
+                    "\(useName.0) · \(density.floors) storeys",
+                    "\(useName.1) · \(density.floors) 層樓"
                 ))
             } else {
                 lines.append(language.text(useName.0, useName.1))
@@ -371,7 +371,7 @@ public struct CityCellInfo: Hashable, Sendable {
         let total = Money(value.value).centsText
         lines.append(language.text("Land value \(total) a m²", "地價 每平方公尺 \(total)"))
         let base = Money(value.base).centsText, service = Money(value.servicePremium).centsText, access = Money(value.accessPremium).centsText
-        lines.append(language.text("Base \(base) · Service + \(service) · Access + \(access)", "基準 \(base) · 服務 + \(service) · 可達 + \(access)"))
+        lines.append(language.text("Base \(base) · Train service + \(service) · Easy to reach + \(access)", "基本 \(base) · 列車服務 + \(service) · 交通便利 + \(access)"))
         if value.parkPremium > 0 {
             let park = Money(value.parkPremium).centsText
             lines.append(language.text("Near a park + \(park)", "鄰近公園 + \(park)"))
