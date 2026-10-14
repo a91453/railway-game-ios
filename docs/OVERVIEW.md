@@ -109,7 +109,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 文件 | 內容 | 狀態 |
 | --- | --- | --- |
 | `docs/UI_INTERFACES.md` | GamePresentation 與 App 之間的介面：教學步驟、目標識別碼、相機、圖層 | 現行，§2、§7、§8 有過時處 |
-| `docs/UI_THEME.md` | 色票、按鈕、地區外觀、地圖顏色、圖示 | 現行 |
+| `docs/UI_THEME.md` | 色票、按鈕、玩家看的文字、地區外觀、地圖顏色、圖示 | 現行 |
 | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` | 發佈手冊 | 現行 |
 | `docs/XCODE_CLOUD_ONBOARDING.md` | Xcode Cloud（暫緩） | 擱置；技術前提已變（有 MapLibre、MapKit 與網路） |
 | `docs/RAILWAY_REFERENCE_MAPPING.md` | 參考庫逐函式對照 | 到決策 153 左右最完整，之後的對照寫在各決策與 PR 裡 |

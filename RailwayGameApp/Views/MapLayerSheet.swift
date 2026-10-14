@@ -50,7 +50,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("Population and Travel Data")
                 } footer: {
-                    Text("Population: WorldPop 1 km estimates on real-world maps (0 to 10,000+ people a cell), the towns' 64 m cells on blank maps (people per square km). Travel demand: the trips starting in each 1 km square in each hour, from the stations' demand. Demand change: how they rise or fall from the hour before.")
+                    Text("Population: where people live, from WorldPop estimates on real-world maps and from your towns on blank maps. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before.")
                 }
 
                 // Phase 6d: the city's layers, in the same group as the
@@ -92,7 +92,7 @@ struct MapLayerSheet: View {
                 } header: {
                     Text("Terrain")
                 } footer: {
-                    Text("The ground's height on real-world maps, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; tap a cell for its height. Blank maps are flat.")
+                    Text("The ground's height on real-world maps; hatching marks slopes steeper than 30%, where the city cannot build. Tap a cell for its height. Blank maps are flat.")
                 }
 
                 // Decision 178: the passengers on each stretch of track
