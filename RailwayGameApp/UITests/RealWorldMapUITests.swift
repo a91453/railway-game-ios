@@ -233,19 +233,17 @@ final class RealWorldMapUITests: XCTestCase {
         let middle = (hudBottom + dockTop) / 2
         let frame = map.frame.intersection(app.frame)
         let origin = app.coordinate(withNormalizedOffset: .zero)
-        // Decision 226: on a phone on its side the tools are a column down
-        // the leading edge (Lines above Build), and the camera centres the
-        // map beside it, half the column's width to the right. The stretch
-        // keeps to the same ground by moving with it: without, its middle
-        // climbed 11‰ and its platform could not be levelled (main
-        // bf12187's full lane, run 38641908091).
-        let lines = app.buttons["Lines"]
-        let column = lines.exists && lines.frame.maxY <= build.frame.minY + 1 ? build.frame.maxX : 0
         func point(_ fraction: CGFloat) -> XCUICoordinate {
-            origin.withOffset(CGVector(dx: frame.minX + column / 2 + frame.width * fraction, dy: middle))
+            origin.withOffset(CGVector(dx: frame.minX + frame.width * fraction, dy: middle))
         }
-        point(0.3).tap()
-        point(0.55).tap()
+        // From 0.25 to 0.6, its middle at 0.425 where the platform goes.
+        // Decision 226 put the tools in a column on a phone on its side,
+        // and the middle line moved with them; the stretch from 0.3 to 0.55
+        // then crossed a cutting, its middle climbing 11‰, and its platform
+        // was not built (main bf12187's full lane, run 38641908091). The
+        // longer stretch spreads that climb.
+        point(0.25).tap()
+        point(0.6).tap()
         let confirm = app.buttons["map.build.confirm"]
         let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Build Track'")).firstMatch
         let builder = confirm.appears(within: 10) ? confirm : card
@@ -272,7 +270,7 @@ final class RealWorldMapUITests: XCTestCase {
         platform.waitUntilSettled()
         platform.tap()
         // A platform on the track, levelled first where it climbs.
-        let site = origin.withOffset(CGVector(dx: frame.minX + column / 2 + frame.width * 0.425, dy: middle))
+        let site = origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.425, dy: middle))
         site.tap()
         XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the platform")
         confirm.waitUntilSettled()
