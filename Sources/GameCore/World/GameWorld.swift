@@ -926,6 +926,7 @@ public struct GameWorld: Equatable, Sendable {
         guard stations[index].isDepot != isDepot else { return }
         if isDepot {
             guard !lines.contains(where: { $0.stops.contains(id) }) else { throw .depotIsLineStop(id) }
+            guard stations[index].commerce == nil else { throw .stationHasCommerce(id) }
             var changed = self
             changed.stations[index].isDepot = true
             for line in lines {
@@ -937,6 +938,13 @@ public struct GameWorld: Equatable, Sendable {
             throw .depotInUse(line.id)
         }
         stations[index].isDepot = isDepot
+    }
+
+    /// Sets the level of the shops of the station at `index` (decision
+    /// 222); ``buildStationCommerce(at:)`` and the commands beside it check
+    /// and charge.
+    mutating func setStationCommerce(_ level: StationCommerceLevel?, at index: Int) {
+        stations[index].commerce = level
     }
 
     /// Gives line `id` the depot `depot`, or with `nil` none (decision
@@ -1097,6 +1105,8 @@ public struct GameWorld: Equatable, Sendable {
         stations.remove(at: stationIndex)
         removeStationFlows(of: id)
         disposeAsset(.station, owner: id.rawValue)
+        // Decision 222: its shops go with it.
+        disposeAsset(.stationCommerce, owner: id.rawValue)
 
         abandonUnservedPassengers()
         refreshLandDemand()

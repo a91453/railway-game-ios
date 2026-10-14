@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 74,
+  "description": "Station commerce (decision 222, schema 74). A world of 8,192 x 4,096 units, free play, 1,000,000,000 at the start; stations Main and Halt for 1,000 each (999,998,000). Main has no shops to upgrade (noStationCommerce). A convenience store in Main costs 35,000,000 (964,998,000) and cannot be built twice (stationCommerceMaxedOut); the arcade costs 315,000,000 (649,998,000); the mall's 1,250,000,000 is more than is left (insufficientFunds), and the refusal changes nothing. Main's shops are demolished: nothing comes back; a second demolition finds none. A convenience store in Halt: 35,000,000 (614,998,000). Station 9 does not exist (unknownStation). Main ends with no shops, Halt with level 1 (\"commerce\": 1).",
+  "initialState": {
+    "worldWidth": 8192,
+    "worldHeight": 4096,
+    "balance": 1000000000,
+    "costs": {
+      "track": 100,
+      "station": 1000,
+      "train": 5000
+    },
+    "gameMinutes": 0,
+    "speed": "paused"
+  },
+  "steps": [
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Main",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationAt",
+        "name": "Halt",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        }
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "upgradeStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "noStationCommerce",
+        "station": 1
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "stationCommerceMaxedOut"
+      }
+    },
+    {
+      "command": {
+        "type": "upgradeStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "upgradeStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "insufficientFunds",
+        "required": 1250000000,
+        "available": 649998000
+      }
+    },
+    {
+      "command": {
+        "type": "demolishStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "demolishStationCommerce",
+        "station": 1
+      },
+      "expect": {
+        "result": "noStationCommerce",
+        "station": 1
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationCommerce",
+        "station": 2
+      },
+      "expect": {
+        "result": "ok"
+      }
+    },
+    {
+      "command": {
+        "type": "buildStationCommerce",
+        "station": 9
+      },
+      "expect": {
+        "result": "unknownStation",
+        "station": 9
+      }
+    }
+  ],
+  "expectedFinalState": {
+    "accounts": {
+      "days": [],
+      "fareRules": null,
+      "ledger": [],
+      "mode": "free",
+      "openedAt": null,
+      "pending": {
+        "departures": 0,
+        "fareRevenue": 0,
+        "fareTrips": 0,
+        "passengers": 0,
+        "seats": 0,
+        "trainDistance": 0
+      }
+    },
+    "balance": 614998000,
+    "gameMinutes": 0,
+    "lines": [],
+    "network": {
+      "edges": [],
+      "nodes": [],
+      "platforms": []
+    },
+    "passengers": [],
+    "riders": [],
+    "serviceDay": [
+      {
+        "level": "low",
+        "start": 0
+      },
+      {
+        "level": "peak",
+        "start": 420
+      },
+      {
+        "level": "offPeak",
+        "start": 600
+      },
+      {
+        "level": "peak",
+        "start": 960
+      },
+      {
+        "level": "offPeak",
+        "start": 1200
+      },
+      {
+        "level": "low",
+        "start": 1260
+      }
+    ],
+    "speed": "paused",
+    "stations": [
+      {
+        "id": 1,
+        "name": "Main",
+        "point": {
+          "x": 1536,
+          "y": 1536
+        }
+      },
+      {
+        "id": 2,
+        "name": "Halt",
+        "point": {
+          "x": 5632,
+          "y": 1536
+        },
+        "commerce": 1
+      }
+    ],
+    "trafficControl": false,
+    "trains": []
+  }
+}
