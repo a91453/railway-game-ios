@@ -33,7 +33,7 @@
 | 27 | 列車的行車許可（交通管制） | `drawAuthorities` | |
 | 28 | 建造工具：城市建物的位置、玩家的建物、建物的預覽 | `drawCityBuildingSites`、`drawPlacedBuildings`、`drawBuildingOverlay` | |
 | 29 | 夜裡車站的燈 | `drawStationLights` | |
-| 30 | 車站（徽章、高鐵的第二圈、選取圈、站名）；機廠（`Station.isDepot`）換成拱門徽章（上圓下平）配 `MapGlyphDepot`；站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216） | `drawPointStation` | 一站一站畫完，所以後面的站會蓋住前面站的站名。機廠徽章 2026-10-13 作者選定，決策 214 接上（`archPath`） |
+| 30 | 車站（徽章、高鐵的第二圈、選取圈、站名）；機廠（`Station.isDepot`）換成拱門徽章（上圓下平）配 `MapGlyphDepot`；站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216）；有車站商業時站名牌左邊一個暖黃方章，裡面 1、2、3 個購物袋（決策 222） | `drawPointStation` | 一站一站畫完，所以後面的站會蓋住前面站的站名。機廠徽章 2026-10-13 作者選定，決策 214 接上（`archPath`） |
 | 31 | 拉遠時的站名（帶底牌） | `drawOverviewNames` | |
 | 32 | 候車人數膠囊、擁擠站的量表環（決策 210） | `drawStationProblems` | 所有站與站名畫完才畫，不會被後面的站蓋住；中等縮放起就畫，數量有上限（`MapProblems`） |
 | 33 | 鋪軌的預覽線、錨點；描線停下後剩下那段（灰虛線，決策 213） | `drawNetworkOverlay` | |

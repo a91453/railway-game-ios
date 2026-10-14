@@ -41,6 +41,8 @@ struct StationPanel: View {
                 if let station = session.selectedStation {
                     // Decision 224: the platforms and the weather, first.
                     StationOperationsSection(session: session, station: station.id)
+                    // Decision 222: the station's shops.
+                    StationCommerceSection(session: session, station: station.id)
                     departureBoardSection(station)
                     Section {
                         Button {
