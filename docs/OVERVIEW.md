@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 56（區間閉塞，#556；55 是線號 #567）；每個版本一個存檔 fixture，共 60 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 72，76 個情境 | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219、220、222、223（218、221 已登記未合併）。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–223（218 已登記未合併）。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -404,6 +404,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 217 | 曲線限速：半徑換限速、多段行駛曲線（分三個 PR） |
 | 219 | 鐵道聲音：車站識別鈴聲、隨城市成長的配樂、MML Studio 的產製流程（方向與分階段，`docs/research/RAILWAY_SOUND_2026-10-14.md`） |
 | 220 | 旅程追蹤：長按車站，地圖畫出這一站最多人往返的五站（藏青白邊弧線，第 25.5 層） |
+| 221 | 照班次跑的路線也能用機廠；一條路線可以有幾個機廠（存檔 59；高鐵示範的真實機廠，設計 `docs/research/HSR_DEPOTS_2026-10-14.md`，示範在下一個 PR） |
 | 222 | 車站商業三級：便利商店 → 站內商店街 → 車站商場（規則、校準、畫面與美術方案，`docs/research/STATION_COMMERCE_2026-10-14.md`；程式在第二段，存檔 57） |
 | 223 | 航空 UI 借版型：列車卡、即將進站看板、列車運用表（列車卡 A、看板 B、運用表 A＋GameCore 班次紀錄；預覽 `docs/art/airline-ui-borrow-2026-10-14/`） |
 | 224 | 六個新畫面的原創排版：營運概覽、車種型錄、開新路線比較、車站營運頁、圖層開關、HUD（1C、2A、3B、4A、5B、6C，先做 4A；預覽 `docs/art/railway-ui-redesign-2026-10-14/`） |

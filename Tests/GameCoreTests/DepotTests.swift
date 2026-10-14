@@ -68,7 +68,10 @@ final class DepotTests: XCTestCase {
         let run = LineRun(from: 0, to: 1, times: [
             LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 900, departure: 900),
         ])
-        XCTAssertThrowsError(try world.setLineRuns(main, to: [run])) { XCTAssertEqual($0 as? GameError, .depotWithRuns(main)) }
+        // Decision 221: a line with runs may keep its depot.
+        try world.setLineRuns(main, to: [run])
+        XCTAssertEqual(world.line(id: main)?.depots, [depot])
+        try world.setLineRuns(main, to: [])
         try world.setLineDepot(main, to: nil)
         try world.setStationDepot(depot, to: false)
         XCTAssertFalse(world.station(id: depot)?.isDepot ?? true)
