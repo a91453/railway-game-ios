@@ -157,6 +157,21 @@ final class DepartureBoardTests: XCTestCase {
         XCTAssertEqual(marked[1].status.text(in: .traditionalChinese), "前車誤點")
         XCTAssertEqual(marked[1].status, .lateBehind(minutes: 4))
         XCTAssertEqual(marked[2].status, .late(minutes: 2), "27 minutes behind a late train is late on its own")
+
+        // A late train that runs past without calling is no train ahead at
+        // the platform: the one behind it is late on its own, or behind
+        // the late train that called before it.
+        let passing = DepartureBoard.markingFollowers([
+            row("p", train: 5, away: 9 * 3600, late: 6, passes: true),
+            row("q", train: 6, away: 9 * 3600 + 3 * 60, late: 3),
+        ])
+        XCTAssertEqual(passing.map(\.followsLateTrain), [false, false])
+        let between = DepartureBoard.markingFollowers([
+            row("x", train: 7, away: 9 * 3600, late: 5),
+            row("p", train: 5, away: 9 * 3600 + 2 * 60, late: 6, passes: true),
+            row("y", train: 8, away: 9 * 3600 + 4 * 60, late: 3),
+        ])
+        XCTAssertEqual(between.map(\.followsLateTrain), [false, false, true])
     }
 
     func testATrainsRowKeepsItsTimetablesTimeBeforeTheLateness() throws {

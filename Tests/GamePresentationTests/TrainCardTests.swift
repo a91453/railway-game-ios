@@ -7,20 +7,22 @@ import XCTest
 final class TrainCardTests: XCTestCase {
     func testEveryRunningTrainHasACardOfItsTripWithin0To1() throws {
         var world = DemoWorld.make(in: .english)
-        try world.advance(ticks: 120)
         var cards = 0
-        for train in world.trains where train.timetable.count > 1 {
-            let card = try XCTUnwrap(world.trainCard(of: train.id, in: .english))
-            cards += 1
-            // The trip it is on: a line's round trip is a trip each way.
-            let trip = try XCTUnwrap(train.currentTrip)
-            XCTAssertEqual(card.origin, world.station(id: train.timetable[trip.lowerBound].station)?.name)
-            XCTAssertEqual(card.terminus, world.station(id: train.timetable[trip.upperBound].station)?.name)
-            XCTAssertTrue((0...1).contains(card.progress))
-            XCTAssertGreaterThanOrEqual(card.remainingMetres, 0)
-            XCTAssertEqual(card.expectedArrival.seconds, card.arrival.seconds + card.lateMinutes * 60)
-            XCTAssertGreaterThanOrEqual(card.departure.seconds, 0)
-            XCTAssertLessThanOrEqual(card.departure.seconds, card.arrival.seconds)
+        for _ in 0..<120 {
+            try world.advance(ticks: 1)
+            for train in world.trains where train.timetable.count > 1 && train.execution != nil {
+                let card = try XCTUnwrap(world.trainCard(of: train.id, in: .english))
+                cards += 1
+                // The trip it is on: a line's round trip is a trip each way.
+                let trip = try XCTUnwrap(train.currentTrip)
+                XCTAssertEqual(card.origin, world.station(id: train.timetable[trip.lowerBound].station)?.name)
+                XCTAssertEqual(card.terminus, world.station(id: train.timetable[trip.upperBound].station)?.name)
+                XCTAssertTrue((0...1).contains(card.progress))
+                XCTAssertGreaterThanOrEqual(card.remainingMetres, 0)
+                XCTAssertEqual(card.expectedArrival.seconds, card.arrival.seconds + card.lateMinutes * 60)
+                XCTAssertGreaterThanOrEqual(card.departure.seconds, 0)
+                XCTAssertLessThanOrEqual(card.departure.seconds, card.arrival.seconds)
+            }
         }
         XCTAssertGreaterThan(cards, 0, "the demo's lines run trains")
     }
@@ -88,6 +90,23 @@ final class TrainCardTests: XCTestCase {
         XCTAssertTrue(back.hasDeparted)
         XCTAssertTrue((0...1).contains(back.progress))
         XCTAssertEqual(world.followBarInfo(of: own, in: .english).map { [$0.origin, $0.terminus] }, ["B", "A"])
+    }
+
+    /// Between two trips a line's train keeps the finished trip's
+    /// timetable: it is on no trip, so it has no card ("Left 300 min ago"
+    /// was the trip before), and the inspector says what it waits for.
+    func testALineTrainBetweenTripsHasNoCard() throws {
+        var world = DemoWorld.make(in: .english)
+        var between: TrainID?
+        for _ in 0..<1_440 where between == nil {
+            try world.advance(ticks: 1)
+            between = world.trains.first {
+                $0.execution == nil && $0.timetable.count > 1 && world.assignedLine(of: $0.id) != nil
+            }?.id
+        }
+        let id = try XCTUnwrap(between, "a line's train stands between two trips")
+        XCTAssertNil(world.trainCard(of: id, in: .english))
+        XCTAssertNotNil(world.followBarInfo(of: id, in: .english))
     }
 
     func testAnUnknownTrainHasNoCard() {

@@ -179,12 +179,13 @@ public struct DepartureBoard: Equatable, Sendable {
 
     /// `rows`, one direction's soonest first, with each late train due
     /// within ``followWindowSeconds`` after another late train marked as
-    /// following it.
+    /// following it. The train ahead is the last one before it that calls
+    /// at the station: one that runs past is not waited for there.
     static func markingFollowers(_ rows: [Row]) -> [Row] {
         var rows = rows
         for index in rows.indices.dropFirst() {
-            let ahead = rows[index - 1]
-            guard rows[index].lateMinutes >= 1, !rows[index].passes, !rows[index].isBoarding,
+            guard let ahead = rows[..<index].last(where: { !$0.passes }),
+                  rows[index].lateMinutes >= 1, !rows[index].passes, !rows[index].isBoarding,
                   ahead.train != rows[index].train, ahead.lateMinutes >= 1,
                   rows[index].expected.seconds - ahead.expected.seconds <= followWindowSeconds
             else { continue }
