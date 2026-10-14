@@ -195,6 +195,21 @@ final class HolidayTests: XCTestCase {
         }
     }
 
+    /// Two holidays on one weekend day (Mid-Autumn on Teachers' Day, as in
+    /// 2042) make up one day, as two on one working day give one.
+    func testTwoHolidaysOnOneWeekendDayMakeUpOneDay() {
+        let year: Int64 = 2042 - TaiwanHolidays.firstGameYear
+        XCTAssertEqual(TaiwanHolidays.lunarDates(ofRealYear: 2042)[3], 928, "Mid-Autumn on 28 September")
+        let shared = TaiwanHolidays.Week.game.day(928, year)
+        // The game's week, turned so that the day is a Saturday.
+        let shift = Int64(6 - StationDemand.weekday(ofDay: shared))
+        let week = TaiwanHolidays.Week(day: TaiwanHolidays.Week.game.day, weekday: { StationDemand.weekday(ofDay: $0 + shift) })
+        XCTAssertEqual(week.weekday(shared), 6)
+        let off = TaiwanHolidays.daysOff(inYear: year, on: week)
+        XCTAssertEqual(off.filter { $0.kind == .midAutumn || $0.kind == .teachersDay }.count, 1, "\(off)")
+        XCTAssertEqual(Set(off.map(\.day)).count, off.count, "no day off twice")
+    }
+
     func testChildrensDayAndQingmingOnOneDay() {
         // In 2025 (game year -1) Qingming is 4 April, Children's Day too:
         // Children's Day is the day before, or the day after when 4 April is
