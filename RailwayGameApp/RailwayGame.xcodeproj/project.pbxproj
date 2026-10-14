@@ -118,6 +118,7 @@
 		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
 		DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */; };
 		DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */; };
+		DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
 		E0751BAC4F08ABCE62170267 /* GoalsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */; };
 		E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */; };
@@ -264,6 +265,7 @@
 		F7E81C097849391C73D31AF5 /* krtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc.json; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 		FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostcardView.swift; sourceTree = "<group>"; };
+		FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapQuickLayerStrip.swift; sourceTree = "<group>"; };
 		FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -375,6 +377,7 @@
 				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
+				FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */,
 				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
@@ -668,6 +671,7 @@
 				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
+				DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */,
 				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,
