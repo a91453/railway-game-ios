@@ -704,6 +704,10 @@ final class GameScreenState {
     }
 
     var panel: Panel?
+    /// Whether the station panel, as it opens, puts up its rename alert
+    /// at once: the station tag's pencil (TestFlight 60.1, renaming took
+    /// three taps before a letter could be typed).
+    var renamesStationOnOpen = false
     /// Counts the requests to open the details card from the map (the
     /// station's tag, decision 119); the screen opens it on each.
     var detailsRequests = 0

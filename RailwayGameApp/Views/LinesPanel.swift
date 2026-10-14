@@ -1769,7 +1769,11 @@ private struct AddStopMenu: View, Equatable {
 }
 
 /// An alert to type a new name in, shown while `name` is not `nil`: the
-/// rename button calls `rename` with what was typed.
+/// rename button calls `rename` with what was typed. Kept out of the
+/// panel's redraw on every tick (``TickStable``), so the field is not
+/// rebuilt under the player's finger and keeps its keyboard (TestFlight
+/// 60.1). So `rename` must depend on nothing but the key: both panels'
+/// rename whichever line or station is selected when it is pressed.
 private struct RenameAlert: ViewModifier {
     let title: String
     @Binding var name: String?
@@ -1777,7 +1781,15 @@ private struct RenameAlert: ViewModifier {
     let rename: (String) -> Void
 
     func body(content: Content) -> some View {
-        content.alert(
+        content.background {
+            TickStable(StableKey(title, name, language)) {
+                alert
+            }
+        }
+    }
+
+    private var alert: some View {
+        Color.clear.alert(
             Text(verbatim: title),
             isPresented: Binding(get: { name != nil }, set: { if !$0 { name = nil } })
         ) {
