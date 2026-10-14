@@ -182,14 +182,29 @@ set -euo pipefail
 # (272 s); ScreenshotSceneTests 22 and NewGameBalanceTests 21 to campaigns-8
 # (387 s); RealWorldDemoGroundTests 18, RealWorldDataLoadTests 15 and
 # MonthlyReportTests 14 to campaigns-12 (461 s). rest about 1042 -> 786 s.
+# 2026-10-14: campaigns-14 had become the slowest shard (784 s of tests on
+# run 38524235458: ServiceLinePropertyTests 480, LineLossFixesTests 231,
+# OnboardingTests 72) while campaigns-3, -5 and -9 took 6 to 6.5 minutes.
+# Seconds of tests, the slower of runs 38524235458 and 38521807996:
+#   campaigns-14  784 -> 552   LineLossFixesTests (231) to campaigns-5
+#   campaigns-5   361 -> 592   ScheduledTraffic 219, ScheduledOvertakeTrack
+#                              142, LineLossFixes 231
+#   campaigns-6   735 -> 450   EconomyPropertyTests (285) to campaigns-3
+#   campaigns-3   405 -> 692   LineDispatch 339, ScheduledOvertakeTrackLast
+#                              68, Economy 285
+# campaigns-9 (EconomySecondHalfPropertyTests 323, GoldenScenarioTests 281)
+# was the other place for EconomyPropertyTests, but would have reached 889.
+# The slowest shards are now rest (865) and campaigns-1 (801), unchanged.
+# LineLossFixesTests is being made faster (about 30 s); campaigns-5 then
+# drops to about 390.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
     campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
-    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests" ;;
+    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests EconomyPropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
-    campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests" ;;
-    campaigns-6) echo "SaveMutationSecondHalfTests EconomyPropertyTests" ;;
+    campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
+    campaigns-6) echo "SaveMutationSecondHalfTests" ;;
     campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
     campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
@@ -197,7 +212,7 @@ classes_of() {
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
     campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests LineLossFixesTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
     *) return 1 ;;
   esac
@@ -253,15 +268,71 @@ selected_pattern() {
   echo "${alternatives[*]}"
 }
 
-# With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts: the
-# classes, sorted by name, dealt out in turn (a class stays in one part).
+# Seconds of tests per class, for dealing a selection out into parts
+# (selected_part): the slower of runs 38525866535 (a pull request's three
+# presentation parts), 38524235458 and 38521807996 (main), 2026-10-14. Every
+# class of 3 s or more is listed; any other class counts CLASS_WEIGHT_DEFAULT
+# (the 150 GamePresentation classes under 3 s took 0.5 s each on average).
+# Only the proportions matter: a stale or missing weight moves a class to
+# another part, never out of the selection. LineLossFixesTests is being made
+# faster (from about 230 s to about 30 s); lower it here once that merges.
+CLASS_WEIGHTS="HighSpeedDemoTests:387 LineLossFixesTests:231
+  NewGameSavePropertyTests:80 OnboardingTests:72 CommandLogTests:56
+  RealWorldDemoTests:53 LineLossDiagnosisTests:52 RealWorldDemoGroundTests:17
+  NewGameBalanceTests:16 RealWorldDataLoadTests:16 AchievementsTests:14
+  MonthlyReportTests:13 ScreenshotSceneTests:13 NewGameCampaignTests:12
+  NewsSessionTests:12 FreightSessionTests:10 LinePanelMemoTests:8
+  RealWorldExpansionTests:7 SparseCityLandTests:7 CompanyRankTests:6
+  PingxiChallengeTests:6 StationDemandSessionTests:6 WholeTaiwanTests:5
+  DepartureBoardTests:4 TrafficOverlayTests:4 TutorialSessionTests:4
+  WaterGridTests:4 WebsiteTimelineTests:4 HolidayTextTests:3 LandImportTests:3"
+CLASS_WEIGHT_DEFAULT=1
+
+# With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each
+# class stays in one part; the classes, heaviest first (CLASS_WEIGHTS; ties
+# by name), each go to the part with the least weight so far (ties to the
+# lowest part). Every part works this out from the same list, so the n parts
+# split the selection exactly. Dealing the classes out in turn by name had
+# put HighSpeedDemoTests, RealWorldDemoTests and LineLossDiagnosisTests in
+# one part: 2.9, 7.2 and 9.6 minutes of tests on run 38525866535.
 selected_part() {
   local part="${SELECTED_PART:-1/1}"
   [[ "$part" =~ ^([1-9][0-9]*)/([1-9][0-9]*)$ && "${BASH_REMATCH[1]}" -le "${BASH_REMATCH[2]}" ]] ||
     die "SELECTED_PART '$part' is not k/n."
-  sort | awk -v k="${BASH_REMATCH[1]}" -v n="${BASH_REMATCH[2]}" '
-    { split($0, id, "/"); if (id[1] != last) { index_ = index_ + 1; last = id[1] } }
-    (index_ - 1) % n == k - 1'
+  sort | awk -v k="${BASH_REMATCH[1]}" -v n="${BASH_REMATCH[2]}" \
+    -v weights="$CLASS_WEIGHTS" -v fallback="$CLASS_WEIGHT_DEFAULT" '
+    BEGIN {
+      count = split(weights, pairs, /[ \n]+/)
+      for (i = 1; i <= count; i++) if (split(pairs[i], pair, ":") == 2) weight[pair[1]] = pair[2] + 0
+    }
+    {
+      ids[NR] = $0
+      split($0, id, "/"); split(id[1], name, ".")
+      class_of[NR] = id[1]
+      if (!(id[1] in seen)) {
+        seen[id[1]] = 1
+        classes[++class_count] = id[1]
+        w[id[1]] = (name[2] in weight) ? weight[name[2]] : fallback
+      }
+    }
+    END {
+      # Heaviest first, then by name: an insertion sort, as the classes are
+      # a few hundred at most.
+      for (i = 2; i <= class_count; i++) {
+        c = classes[i]
+        for (j = i - 1; j >= 1 && (w[classes[j]] < w[c] || (w[classes[j]] == w[c] && classes[j] > c)); j--)
+          classes[j + 1] = classes[j]
+        classes[j + 1] = c
+      }
+      for (p = 1; p <= n; p++) load[p] = 0
+      for (i = 1; i <= class_count; i++) {
+        best = 1
+        for (p = 2; p <= n; p++) if (load[p] < load[best]) best = p
+        load[best] += w[classes[i]]
+        part_of[classes[i]] = best
+      }
+      for (i = 1; i <= NR; i++) if (part_of[class_of[i]] == k) print ids[i]
+    }'
 }
 
 # The test IDs shard $1 selects from the list file $2.
@@ -845,7 +916,8 @@ pr_plan() {
     # All the GamePresentation tests take longer than the rest of a partial
     # tier (452 s of tests locally on 2026-10-12, up to about 1.8 times that
     # on a slow runner, after a build of about 5 minutes); PRESENTATION_PARTS
-    # jobs share them (selected_part), so a job stays near 10 minutes.
+    # jobs share them by the classes' weights (selected_part): about 6.5
+    # minutes of tests each on 2026-10-14 (1,169 s in all).
     [[ " $tests " != *" GamePresentationTests.* "* ]] || parts="$PRESENTATION_PARTS"
     # An edited campaign file's class can take most of a job's 20 minutes
     # on its own (ServiceRepeatingPropertyTests 792 s of tests); two of
