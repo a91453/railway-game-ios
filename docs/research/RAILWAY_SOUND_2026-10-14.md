@@ -31,7 +31,9 @@
 | 城市成長動態配樂 | 採用：同長度的分軌一起循環，調整各軌音量 | 第三階段（P2） | 成長的量用公司職稱（決策 181） |
 | 日夜、天氣的音樂變化 | 採用，和動態配樂一起做 | 第三階段（P2） | 補上速度規則：1200 倍速以上，日夜層不跟著時鐘換 |
 | 地區風格（例如高雄、屏東不同） | 採用 | 第三階段之後 | 需要縣市界資料。不模仿族群音樂（第 2.9 節） |
-| 玩家自訂車站 MML、MML 匯入 | 採用 | 第四階段（P3） | MMLKit 要先在 mml-tools 加「音符事件」功能 |
+| **遊戲用的格式：《沿線》自己的樂譜** | 採用（作者 2026-10-14 追問後定案） | 第一階段起 | 遊戲、存檔、合成器只認自己的事件式樂譜；MML、MIDI 降成匯入格式（第 2.14 節） |
+| 玩家自訂車站旋律（鋼琴捲軸） | 採用 | 第四階段（P3） | 直接編輯《沿線》樂譜，不需要 MMLKit |
+| 貼上 MML 匯入 | 採用 | 第四階段之後 | 要 MMLKit 先在 mml-tools 加「音符事件」功能，所以排在鋼琴捲軸之後 |
 | MIDI 匯入 | 採用 | P4 | |
 | 車站藍圖連同音樂分享 | 保留 | P4 | 等藍圖功能 |
 | 車站廣播（語音） | 保留 | 第四階段之後 | 要裝置上的語音合成，是另一個系統（第 2.13 節） |
@@ -47,7 +49,7 @@
 | `GameAudio.swift` 用 `AVAudioPlayer` 播音樂、到站鈴與建造音效，同一種音效有最短間隔 | 對。每種音效 3 個 player；在看的列車到站鈴最短間隔 0.5 秒，其他列車 6 秒；音訊工作階段是 ambient | 官方素材繼續走這條路 |
 | 音樂是 38.4 秒的無縫循環 | 對。100 bpm，8 小節一輪 19.2 秒，取兩輪；1,843,200 個取樣，正好是 IMA4 封包（64 個取樣）的整數倍，循環沒有空隙（決策 79） | 分軌都要同一個長度，也要守住這個整數倍 |
 | `SoundCue.arrival(watched:)` 不知道是哪一站 | 對。到站的判斷（`SoundCue.trainsArrived`）只回傳列車編號 | 不必改 GameCore：在 GamePresentation 讀那列車的 `execution`（`waitingAtStop(stop)`），再查 `timetable[stop].station`，就知道是哪一站。高速時同一步裡到站又離站的列車，改取它剛離開的那一站 |
-| MMLKit 有 MML 語法檢查、MIDI 處理與精確的音符時間軸 | **一半對**。Swift 的 `MMLCoreEngine` 只有 `identity()`、`technicalCheck`、`canonicalDocument`（`apps/ios/MMLKit`，Stage 1），沒有音符事件、播放或 MIDI。音符事件與 MIDI 在 JS 核心（`dist/core.js` 的 `parseTrack`、`validateMML`、`writeMidi`／`readMidi`） | 第一階段在建置時用 Node 跑 JS 核心取音符事件。第四階段要在遊戲內取音符，MMLKit 的 JavaScriptCore bundle 要先加一個「事件」功能（mml-tools 的工作） |
+| MMLKit 有 MML 語法檢查、MIDI 處理與精確的音符時間軸 | **一半對**。Swift 的 `MMLCoreEngine` 只有 `identity()`、`technicalCheck`、`canonicalDocument`（`apps/ios/MMLKit`，Stage 1），沒有音符事件、播放或 MIDI。音符事件與 MIDI 在 JS 核心（`dist/core.js` 的 `parseTrack`、`validateMML`、`writeMidi`／`readMidi`） | 第一階段在建置時用 Node 跑 JS 核心取音符事件，轉成《沿線》樂譜。遊戲內只有「貼上 MML」需要 MMLKit 先加一個「事件」功能（mml-tools 的工作）；鋼琴捲軸不需要 |
 | MML Studio 可以輸出音檔 | 有，但不能直接用。Workshop 的 `mixdown.mjs` 在瀏覽器裡用 SpessaSynth 輸出 44.1 kHz WAV，音色庫由使用者選：免費的是執行時才下載的 FluidR3Mono 子集（MIT）；「遊戲風格」音色庫是作者自己錄的，不在 Git 裡，也不在 MIT 授權內。沒有分軌輸出，也沒有 CAF | 遊戲的音檔照舊由《沿線》自己的合成器產生（第 2.2 節）。作者自己錄的音色庫不進 App |
 | MML Studio 有 A/B 比較、版本追溯 | 對。聽感 A/B 與只播改過的小節（`studio/web/listen-ui.mjs`、`listen-timeline.mjs`），版本漂移（`studio/backend/compare/version-drift.mjs`），2–4 個候選的音色預篩（`docs/AUDIO_PRESCREEN.md`） | 直接用，不在《沿線》重做 |
 | 瑪奇的 6 軌、2400 字上限會綁住《沿線》 | 寫死在 `splitMML` 與 `studio/backend/rules/index.mjs`，不是設定。但是綁不到《沿線》：鈴聲最多 4 聲部，配樂一個分軌一份 MML，6 軌夠用；16 小節的循環一軌約 200 字 | 第一階段**不必改 mml-tools 的解析器**。《沿線》的規格（第 3 節）是另一層更嚴的檢查 |
@@ -61,7 +63,7 @@
 ### 2.1 MML Studio 作為產製流程（P0）：採用
 
 - **玩家**：玩家聽到的是結果。產製流程讓之後的鈴聲、配樂出得快、品質穩定。
-- **開發**：樂譜（MML 文字）進 repo，可以比較差異、可以重做。Python 不解析 MML，所以只有一份解析器，就是 MML Studio 的 JS 核心。
+- **開發**：MML 原稿與轉出的《沿線》樂譜（第 2.14 節）都進 repo，可以比較差異、可以重做。Python 不解析 MML，所以只有一份解析器，就是 MML Studio 的 JS 核心。
 - **美術**：沒有畫面工作。
 - **音樂**：MML 比直接寫 numpy 好編曲。旋律、和聲、分軌都看得到；改一個音就是改一個字。
 
@@ -70,14 +72,14 @@
 - **玩家**：音色和現在的遊戲、介紹影片一致（決策 79）。新鈴聲聽起來還是同一款遊戲。
 - **開發**：沿用 `make_game_audio.py`：正弦波與固定種子的雜訊，每次輸出相同，沒有第三方音源的授權問題。作者自己錄的音色庫不在 MIT 授權內，不能進 App。
 - **美術**：遊戲畫風是扁平、柔和、圓角的微縮感（art-style §1）。聲音也該柔和：鐘、撥弦、和弦墊，不要尖銳的電子嗶聲。
-- **音樂**：MML 本身沒有樂器的定義，所以要一張「音色對應表」，決定每一軌用合成器的哪個聲音。現有四種：鐘 `bell`、撥弦 `pluck`、和弦墊 `pad`、軌道接縫 `clack`。第一階段最多再加兩種（候選：木琴、長笛般的正弦加顫音），超過就要重新評估。
+- **音樂**：MML 本身沒有樂器的定義，所以轉成《沿線》樂譜時，要指定每一軌用合成器的哪個聲音（樂譜的 `voice`）。現有四種：鐘 `bell`、撥弦 `pluck`、和弦墊 `pad`、軌道接縫 `clack`。第一階段最多再加兩種（候選：木琴、長笛般的正弦加顫音），超過就要重新評估。
 
 ### 2.3 A/B 比較與版本追溯（P0）：採用，分兩邊
 
 - **玩家**：響度一致，不會有某一站特別刺耳。
 - **開發**：聽感 A/B 用 MML Studio 現成的。《沿線》這邊只加 `tools/audio/manifest.json`，每個音檔記下：
   - 來源樂譜、用的是哪個 mml-tools commit；
-  - 音符事件與輸出音檔的 SHA-256；
+  - 《沿線》樂譜與輸出音檔的 SHA-256；
   - 峰值、RMS 響度、長度；
   - 循環接縫處前後兩個取樣的落差。
 
@@ -170,13 +172,17 @@
 - **參考**：`Railway/city_world_reference/` 的 `regionAudio`（`RegionAmbience`、`BED_ZONES`）是依地區配環境音的做法，開工時照它的分區與時段規則移植。
 - **音樂**：用刻板的「民族風」代表一個地方，容易冒犯人，也很快聽膩。用配器和音域的性格比較耐聽。
 
-### 2.10 玩家自訂車站 MML、匯入、分享（P3、P4）：採用，順序照作者的方案
+### 2.10 玩家自訂車站旋律、匯入、分享（P3、P4）：採用，順序照作者的方案
 
 - **規格**：自訂的旋律和官方鈴聲守同樣的長度、聲部、音域上限（第 3 節）。每一站都能寫完整的旋律，**不靠車站等級限制**。
-- **檢查**：在 App 裡用 MMLKit 的 JavaScriptCore 引擎（iOS 有 JavaScriptCore），所以還是只有一份解析器。前提是 mml-tools 先替 MMLKit 的 bundle 加一個回傳音符事件的功能（現在只有檢查）。
+- **編輯**：鋼琴捲軸直接編輯《沿線》樂譜（第 2.14 節），不經過 MML。
+- **檢查**：GameCore 用 `Codable` 完整檢查一首樂譜：音域、聲部數、長度、音數、聲音名稱，不合的整首拒絕。不需要 JavaScriptCore。
 - **聲音**：存檔時用 Swift 照 `make_game_audio.py` 的合成器把旋律算成音檔，快取起來，播放照舊走 `AVAudioPlayer`。只有在即時試聽的延遲不能接受時，才加 `AVAudioEngine`。
-- **存檔**：MML 文字存在世界裡，有字數上限。GameCore 只檢查長度與字元，不解析 MML；App 檢查不過的，就改播那一站的官方風格。
-- **匯入**：MML 文字先做，MIDI 檔放後面。MIDI 匯入用 MML Studio 現成的 `midi-in.mjs`（含聲部分離），不重寫。匯入別人的曲子時，提醒著作權。
+- **存檔**：樂譜存在世界裡，音數有上限。
+- **匯入**（都在鋼琴捲軸之後）：
+  - 貼上 MML：用 MMLKit 的 JavaScriptCore 引擎轉成《沿線》樂譜，所以仍然只有一份 MML 解析器。前提是 mml-tools 先替 MMLKit 加回傳音符事件的功能（現在只有檢查）。
+  - MIDI 檔：用 MML Studio 現成的 `midi-in.mjs`（含聲部分離）的做法，不另外發明。
+  - 匯入別人的曲子時，提醒著作權。
 - **玩家**：進階玩家可以替自己的主力幹線寫旋律，鐵路網更有個人特色。
 - **開發**：GameCore 不需要懂音樂，存檔的大小有上限，決定論不受影響。
 - **美術**：工作坊的畫面（簡化的鋼琴捲軸、音軌、試聽）照 `Theme` 的色票與系統元件，不另做一套風格。
@@ -217,6 +223,48 @@
 
 **定案**：這次不做，放在第四階段之後另議。到時候文字照搬 `ANNOUNCE_TEMPLATES`，時機照搬 `eventsForCall`，只在 60 倍速以下、跟隨列車時播。
 
+### 2.14 《沿線》自己的樂譜格式：遊戲只認自己的格式，MML 與 MIDI 只是匯入
+
+作者 2026-10-14 追問：「可以放棄 MML 相容，建立自己的格式嗎？」
+
+**定案**：可以，而且應該。但「自己的格式」是事件式的資料（JSON），不是另一種新的文字記譜語言。MML 不丟，降成匯入格式之一。
+
+- **遊戲、存檔、合成器、GameCore 只認《沿線》樂譜**（`*.score.json`）。
+- **官方素材**：照舊可以在 MML Studio 寫，再轉一次成《沿線》樂譜。MML 原稿留在 repo 當出處（清單記下雜湊），遊戲不讀它。
+- **工作坊**（第四階段）：鋼琴捲軸直接編輯《沿線》樂譜。貼上 MML 變成可選的匯入。
+
+**第一版的樣子**（實作時可以補欄位，但要升 `format`）：
+
+| 欄位 | 內容 |
+| --- | --- |
+| `format` | 1 |
+| `role` | `chime`（到站鈴）、`departure`（發車旋律）、`stem`（配樂分軌） |
+| `tempo` | 每分鐘拍數，整首一個（第一版不變速） |
+| `beatsPerBar` | 每小節幾拍 |
+| `length` | 全長，以 tick 計；分軌就是循環的長度 |
+| `motif` | 高速時播前幾個音（2–3，第 6 節） |
+| `tracks[]` | 每軌：`voice`（合成器的聲音：`bell`、`pluck`、`pad`、`clack`……）、`gain`、`pan`、`notes[]` |
+| `notes[]` | `pitch`（MIDI 音高）、`start`、`length`（tick）、`velocity`（1–127） |
+
+- **時間單位**：每拍 960 tick，整數。960 能被 64 分音符（60）、三連音（320）、五連音（192）整除。用整數，GameCore 不用浮點也不用分數就能檢查長度。
+- **轉換的規則**：MML 轉進來時，落不到整數 tick 的音，轉換器拒絕，不偷偷四捨五入。這照 mml-tools `writeMidi` 的做法：超出 PPQ 上限就拒絕，不自動近似。
+
+**四個角度**：
+- **玩家**：玩家多半用鋼琴捲軸與預設，不會打字，格式換掉了也看不到。會寫瑪奇 MML 的玩家，之後仍可以貼上匯入。
+- **開發**：
+  - GameCore 可以用 `Codable` 完整檢查一首樂譜。存 MML 文字的話，只能檢查字數。決定論與「失敗不留半套」照舊。
+  - 第四階段的鋼琴捲軸不再卡在 mml-tools 要先加功能。
+  - 不發明新的文字語言，所以還是不用寫解析器。
+- **美術**：鋼琴捲軸畫的就是 `notes[]`，一個音一個方塊；每個 `voice` 一個 `Theme` 的顏色。
+- **音樂**：
+  - MML 沒有地方寫的東西，這裡都有：音色、每個音的力度、左右、哪幾個音是動機、循環長度。
+  - 瑪奇的規則不再綁著：六格、字數、每軌第 0 拍設速度、最後一小節寫滿。
+  - 代價：工作坊做好之前，官方素材仍要在 MML Studio 寫再轉。
+
+**不做**：另外發明一種文字記譜語言。那要寫一個解析器（正是這份決策避免的），要寫文件、教玩家，做的事卻和 MML 一樣。
+
+**mml-tools 本身**：不用改，它照舊是瑪奇的 MML Studio。《沿線》只把它的核心當轉換器的上游。
+
 ## 3. 《沿線》的聲音規格
 
 | 項目 | 規格 | 理由 |
@@ -227,18 +275,18 @@
 | 高速時的動機 | 每段旋律取前 2–3 個音，最長 0.8 秒 | 600 倍時兩站之間常不到一秒，整段旋律放不下；動機讓每一站在快轉時仍可辨認 |
 | 官方鈴聲的音階 | C 大調五聲音階 C D E G A | 和配樂的每個和弦都和諧 |
 | 響度 | 鈴聲峰值 0.6，同一類的 RMS 差 3 dB 以內 | 照現有的 `station-chime.wav` |
-| MML 的寫法 | 瑪奇的 `MML@a,b,c,d,e,f;` 六格，空的格留空。每一軌第 0 拍設速度，最後一小節寫滿 | `dist/core.js` 原樣接受，不改解析器（它要求每一軌第 0 拍有速度，並檢查最後一小節） |
-| 音色 | 樂譜旁邊一份 JSON，寫每一格用哪個合成器聲音 | MML 沒有音色的定義 |
+| 遊戲用的格式 | 《沿線》樂譜第 1 版（第 2.14 節）：每拍 960 tick，每軌一個合成器聲音。存進存檔的（玩家自訂的鈴聲）一首最多 128 個音；官方的配樂分軌不進存檔，不受這個限制 | GameCore 能完整檢查；存檔大小有上限 |
+| MML（只在轉換時） | 瑪奇的 `MML@a,b,c,d,e,f;` 六格，空的格留空。每一軌第 0 拍設速度，最後一小節寫滿 | `dist/core.js` 原樣接受，不改解析器（它要求每一軌第 0 拍有速度，並檢查最後一小節）。這些規則只綁 MML 原稿，不綁《沿線》樂譜 |
 | 不採用的瑪奇規則 | 瑪奇的樂器表、字數當玩法、Canonical 驗收、MCP 流程 | 屬於另一款遊戲與 AI 的工作流程 |
 
 ## 4. 架構
 
 ```
 【建置時（開發者的電腦或雲端 session）】
-tools/audio/scores/*.mml  ＋  scores.json（每格的合成器聲音、用途）
+tools/audio/mml/*.mml（MML 原稿）＋ 每一格用哪個合成器聲音、用途
         │  Node 執行 mml-tools 的 dist/core.js（固定一個 commit）
         ▼
-tools/audio/events/*.json（音符事件，提交進 repo）
+tools/audio/scores/*.score.json（《沿線》樂譜，提交進 repo；之後工作坊做的也是這個格式）
         │  python3 make_game_audio.py（合成器，固定輸出）
         ▼
 RailwayGameApp/Resources/Audio/*.wav、*.caf  ＋  tools/audio/manifest.json
@@ -253,7 +301,7 @@ GamePresentation：SoundCue（帶車站風格）、MusicMix（各分軌的目標
 App 的 GameAudio：AVAudioPlayer 播音效與分軌（之後必要時才加 AVAudioEngine）
 ```
 
-- **`dist/core.js` 怎麼取得**：複製進 `tools/audio/mml/`，附上 mml-tools 的 MIT 授權與版權聲明（Copyright (c) 2026 a91453），並在清單中記下 commit 與 SHA-256。音符事件提交進 repo，所以 Python 這一步和 App 的建置都不需要 Node。
+- **`dist/core.js` 怎麼取得**：複製進 `tools/audio/mml-core/`，附上 mml-tools 的 MIT 授權與版權聲明（Copyright (c) 2026 a91453），並在清單中記下 commit 與 SHA-256。轉出的樂譜提交進 repo，所以 Python 這一步和 App 的建置都不需要 Node；只有改了 MML 原稿、要重轉時才要 Node。
 - **GamePresentation 新增的**（都可以在 Linux 上測）：
   - 車站的風格（從停靠的路線、高鐵、景點推導）；
   - 到站的是哪一站（`execution` → `timetable[stop].station`）；
@@ -262,16 +310,16 @@ App 的 GameAudio：AVAudioPlayer 播音效與分軌（之後必要時才加 AVA
 - **App** 只負責照這些結果播放、淡入淡出，以及畫面上的鈴聲圈。
 - **音量分三條**（第二階段）：音樂、車站鈴、音效各一個音量，總開關照舊。參考庫 OpenWorld 的 `AudioSys` 也是這樣分：一個總音量，下面是音樂與音效兩條。
 - **同一時間只有一個「聲音場景」**：地圖、之後的 3D 城市畫面、工作坊的試聽三者中，只有一個場景出聲，其他的淡出。這照參考庫 `Ci/.../lib/audio-focus` 的 `PANEL_SCENES`：車站、車廂、高鐵、地圖四個場景，同時只有一個聽得到。
-- **GameCore**：第一、三階段完全不動；第二階段只加「車站指定的鈴聲」一個欄位與一個指令；第四階段加自訂 MML 文字（有上限）。
+- **GameCore**：第一、三階段完全不動；第二階段只加「車站指定的鈴聲」一個欄位與一個指令；第四階段加自訂樂譜（《沿線》樂譜，音數有上限，GameCore 完整檢查）。
 
 ## 5. 四個階段
 
 | 階段 | 做什麼 | 動到 | 不做 | 怎麼算完成 |
 | --- | --- | --- | --- | --- |
-| **1. 產製流程＋三種到站鈴**（P0＋P1） | `tools/audio/scores/` 的樂譜與音色表、Node 轉音符事件、`make_game_audio.py` 讀事件合成、`manifest.json`；做「都會轉運」「觀光」兩種新鈴聲（都會照搬參考的四音鐘，觀光用 MML 新寫；地方小站沿用現有的）；`SoundCue.arrival` 帶上風格，車站風格由世界推導 | `tools/audio/`、`Resources/Audio/`、GamePresentation 的 `SoundCue`、App 的 `GameAudio` | 遊戲內編輯器、存檔欄位、分軌配樂 | 重新產生時既有音檔位元組不變；`SoundCueTests` 測三種風格的推導與高速的動機；作者在 MML Studio 聽過 A/B；TestFlight 實機聽過 |
+| **1. 產製流程＋三種到站鈴**（P0＋P1） | 《沿線》樂譜第 1 版的格式與檢查、MML 轉樂譜（Node）、`make_game_audio.py` 讀樂譜合成、`manifest.json`；做「都會轉運」「觀光」兩種新鈴聲（都會照搬參考的四音鐘，觀光用 MML 新寫；地方小站沿用現有的）；`SoundCue.arrival` 帶上風格，車站風格由世界推導 | `tools/audio/`、`Resources/Audio/`、GamePresentation 的 `SoundCue`、App 的 `GameAudio` | 遊戲內編輯器、存檔欄位、分軌配樂 | 重新產生時既有音檔位元組不變；`SoundCueTests` 測三種風格的推導與高速的動機；作者在 MML Studio 聽過 A/B；TestFlight 實機聽過 |
 | **2. 車站鈴聲的玩法** | 車站面板指定鈴聲（存檔欄位與指令，升存檔版本）、發車旋律（60 倍速以下）、拉近才響、跟隨時配樂淡出、音量分三條、鈴聲圈 | GameCore 一個欄位、GamePresentation、App 的車站面板與設定 | 自訂 MML | 存檔 fixture、golden 不變（沒有規則讀它）、UI 測試只測「看得到、點得到」 |
 | **3. 動態配樂** | 拆分軌、主旋律與夜間軌、`MusicMix`、職稱、日夜、天氣、速度規則、雨聲與風聲 | `tools/audio/`、GamePresentation、App 的 `GameAudio` | 即時合成 | 三軌疊起來和現有的 `music-loop.caf` 一樣（腳本檢查）；`MusicMix` 的 Linux 測試；實機聽 30 分鐘不漂移 |
-| **4. 車站音樂工作坊** | MMLKit 加「音符事件」（mml-tools 的 PR）、貼上 MML、簡化的鋼琴捲軸、存檔時合成成音檔、MML 匯入；之後 MIDI 匯入、分享 | mml-tools、App、GameCore 的自訂 MML 欄位 | — | 另行設計 |
+| **4. 車站音樂工作坊** | 簡化的鋼琴捲軸直接編輯《沿線》樂譜、存檔時合成成音檔；之後貼上 MML（要 MMLKit 加「音符事件」，mml-tools 的 PR）、MIDI 匯入、分享 | App、GameCore 的自訂樂譜欄位；mml-tools 只有在做 MML 貼上時才要改 | — | 另行設計 |
 
 **和主線的關係**：第一、三階段不動 GameCore，和行車控制、介面、3D 的主線不搶 GameCore 名額（CLAUDE.md：同時最多兩個改 GameCore 的 PR）。第二階段要排進 GameCore 線。每個階段開工前照 #231 登記。
 
@@ -290,7 +338,8 @@ App 的 GameAudio：AVAudioPlayer 播音效與分軌（之後必要時才加 AVA
 | 不採用 | 理由 |
 | --- | --- |
 | SpriteKit 場景 | 地圖不是 SpriteKit（第 1 節） |
-| 用 Swift 重寫一套 MML 解析器 | 兩份解析器要同步維護。建置時用 JS 核心，遊戲內用 MMLKit 的 JavaScriptCore |
+| 用 Swift 重寫一套 MML 解析器 | 兩份解析器要同步維護。建置時用 JS 核心轉成《沿線》樂譜；遊戲內只有貼上 MML 時才用 MMLKit 的 JavaScriptCore |
+| 另外發明一種文字記譜語言 | 要寫解析器、寫文件、教玩家，做的事和 MML 一樣（第 2.14 節） |
 | 現在把 `AVAudioPlayer` 換成 `AVAudioEngine` | 現有的播放穩定；分軌用 `play(atTime:)` 就能對齊。只有實機漂移或即時試聽需要時才換，而且只換用得到的那一部分 |
 | 配樂跟著遊戲速度加速 | 第 2.7 節 |
 | 車站升級才解鎖音軌數 | 第 2.12 節 |
@@ -308,7 +357,8 @@ CLAUDE.md 的決策規則：選一個做下去，其他選項留著給作者看�
 | 音檔怎麼產生 | 《沿線》自己的合成器 | FluidR3 GM 音色庫（MIT）、作者自己錄的音色庫 | 第 7 節 |
 | 第一階段的風格怎麼套用 | 依車站自動套用（觀光 > 都會 > 地方） | 依路線套用、玩家選（要存檔）、隨機 | 依路線的話，同一站不同路線的鈴聲會不同；玩家選要升存檔，放第二步；隨機沒有意義 |
 | 分軌怎麼同步 | `AVAudioPlayer` 的 `play(atTime:)` | `AVAudioEngine` 的 `AVAudioPlayerNode` | 不用重寫播放，壓縮檔省記憶體；有退路 |
-| `dist/core.js` 怎麼取得 | 複製進 `tools/audio/mml/`，記下 commit | 要求旁邊有一份 mml-tools 的 checkout；git submodule | 別人重做時拿得到；不新增 submodule 的設定 |
+| 遊戲用的格式 | 《沿線》樂譜（事件式 JSON，每拍 960 tick） | 存 MML 文字（原本的方向）、新的文字記譜語言、標準 MIDI 檔 | MML：GameCore 只能檢查字數，還綁著瑪奇的規則，也沒有音色；新的文字語言：要寫解析器；MIDI：二進位，git 看不出改了什麼，GameCore 還要會讀 MIDI |
+| `dist/core.js` 怎麼取得 | 複製進 `tools/audio/mml-core/`，記下 commit | 要求旁邊有一份 mml-tools 的 checkout；git submodule | 別人重做時拿得到；不新增 submodule 的設定 |
 
 ## 9. 參考檢查
 
@@ -354,4 +404,4 @@ MML 的部分改用作者的另一個 repo，`a91453/mml-tools`（MIT，Copyrigh
 - 幾個 `AVAudioPlayer` 的分軌一起循環 30 分鐘以上會不會漂移、App 回前景時能不能重新對齊：要實機。
 - iPhone 喇叭與耳機上的響度、五聲音階的鈴聲疊在配樂上是否真的不刺耳：要實機聽。
 - 第一階段的三種風格玩家分不分得出來：TestFlight 回饋。
-- MMLKit 的 JavaScriptCore 在 iOS 上回傳音符事件的速度：第四階段量。
+- MMLKit 的 JavaScriptCore 在 iOS 上回傳音符事件的速度：做「貼上 MML」時量。
