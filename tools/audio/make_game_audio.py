@@ -9,18 +9,42 @@ and a warning (decision 184). Everything is made here from
 sine waves and seeded noise: no samples or third-party audio. The output is
 the same on every run.
 
+Decision 219: the station chimes are played from scores of 《沿線》
+(`scores/*.score.json`, checked by `score.py`): the local chime (the
+station chime above), the metro interchange chime and the tourist chime,
+each also as its motif, the first notes alone, for high speed. Every file
+is listed in `manifest.json` with its source, SHA-256, peak, RMS and its
+loop seam or end.
+
     python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
+    python3 tools/audio/make_game_audio.py --check RailwayGameApp/Resources/Audio
+
+`--check` makes everything again in a temporary folder and fails unless
+every file and the manifest are byte for byte the committed ones (and the
+scores match their MML, when Node is on the PATH).
 
 Needs numpy, and ffmpeg on the PATH for the music's IMA4 CAF.
 """
 
+import hashlib
+import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import wave
 
 import numpy as np
+
+import score as scores
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+MANIFEST = os.path.join(HERE, "manifest.json")
+MML_CORE = os.path.join(HERE, "mml-core", "core.js")
+# The mml-tools commit `mml-core/core.js` was copied from (mml-core/README.md).
+MML_CORE_COMMIT = "0a974f68c05112f2d871c5de837ae15d29fc9af2"
 
 SR = 48_000
 # 100 bpm makes a cycle of the chords exactly 921,600 frames: a whole number
@@ -38,7 +62,11 @@ def note_hz(m):
 
 
 def pluck(m, length=0.9):
-    k = np.arange(int(SR * length)) / SR
+    return pluck_frames(m, int(SR * length))
+
+
+def pluck_frames(m, frames):
+    k = np.arange(frames) / SR
     f = note_hz(m)
     env = np.exp(-k * 5.5) * np.minimum(1, k * 400)
     return env * (np.sin(2 * np.pi * f * k) + 0.35 * np.sin(4 * np.pi * f * k) + 0.12 * np.sin(6 * np.pi * f * k))
@@ -63,7 +91,11 @@ def clack():
 
 
 def bell(m, length=2.2):
-    k = np.arange(int(SR * length)) / SR
+    return bell_frames(m, int(SR * length))
+
+
+def bell_frames(m, frames):
+    k = np.arange(frames) / SR
     f = note_hz(m)
     return np.exp(-k * 2.2) * (np.sin(2 * np.pi * f * k) + 0.4 * np.sin(2 * np.pi * f * 2.76 * k) * np.exp(-k * 3))
 
@@ -136,6 +168,195 @@ def write_wav(path, x):
         w.writeframes(pcm.tobytes())
 
 
+# Decision 219: how long a struck voice rings when its note is shorter (a
+# bell or a pluck sounds on past its written length, as the chimes and the
+# music above always played them), cut at the score's end.
+RING_FRAMES = {"bell": int(SR * 2.2), "pluck": int(SR * 0.9)}
+# The official chimes' peak (§3 of the research note: the station chime's).
+CHIME_PEAK = 0.6
+
+
+def frames_per_tick(score):
+    """Whole frames a tick: the synth needs 48,000 × 60 a multiple of
+    tempo × 960 (100 bpm: 30 frames)."""
+    numerator = SR * 60
+    denominator = score["tempo"] * scores.TICKS_PER_BEAT
+    if numerator % denominator:
+        raise scores.ScoreError(f"{score['title']}: tempo {score['tempo']} is not a whole number of frames a tick")
+    return numerator // denominator
+
+
+def voice(name, pitch, frames):
+    if name == "bell":
+        return bell_frames(pitch, max(frames, RING_FRAMES["bell"]))
+    if name == "pluck":
+        return pluck_frames(pitch, max(frames, RING_FRAMES["pluck"]))
+    if name == "pad":
+        return pad([pitch], frames / SR)
+    return clack()
+
+
+def fade_tail(x, frames):
+    """A linear fade over the last `frames`, as the reference's chime ends
+    (`chimeBuffer`'s `tail`)."""
+    if frames <= 0:
+        return x
+    n = len(x)
+    tail = np.minimum(1, (n - 1 - np.arange(n)) / frames)
+    return x * (tail if x.ndim == 1 else tail[:, None])
+
+
+def render(score, only=None, frames=None):
+    """The score's sound, unnormalized: mono unless a track is panned.
+
+    Velocities are relative to the loudest note (the file is normalized to
+    its peak), times the track's gain. `only` keeps those notes (the
+    motif); `frames` cuts the sound there instead of at the score's end.
+    """
+    step = frames_per_tick(score)
+    n = frames if frames is not None else score["length"] * step
+    loudest = max(note["velocity"] for t in score["tracks"] for note in t["notes"])
+    stereo = any(t["pan"] for t in score["tracks"])
+    out = np.zeros((n, 2) if stereo else n)
+    for track in score["tracks"]:
+        for note in track["notes"]:
+            if only is not None and not any(note is m for m in only):
+                continue
+            start = note["start"] * step
+            if start >= n:
+                continue
+            amp = (note["velocity"] / loudest) * (track["gain"] / 100)
+            sig = amp * voice(track["voice"], note["pitch"], note["length"] * step)[: n - start]
+            if stereo:
+                pan = track["pan"] / 100
+                out[start : start + len(sig), 0] += sig * (1 - pan) / 2**0.5
+                out[start : start + len(sig), 1] += sig * (1 + pan) / 2**0.5
+            else:
+                out[start : start + len(sig)] += sig
+    return out
+
+
+def chime(score):
+    return normalized(fade_tail(render(score), score["fadeOut"] * frames_per_tick(score)), CHIME_PEAK)
+
+
+def motif(score):
+    """The motif file: the first notes alone, 0.8 s, the last 0.12 s faded
+    (§6: 600× and faster play it for the watched train)."""
+    sound = render(score, only=scores.motif_notes(score), frames=int(SR * scores.MOTIF_SECONDS))
+    return normalized(fade_tail(sound, int(SR * scores.MOTIF_FADE_SECONDS)), CHIME_PEAK)
+
+
+# Decision 219: the station chimes, by score: (score, chime file, motif file).
+CHIMES = [
+    ("chime-local", "station-chime.wav", "chime-local-motif.wav"),
+    ("chime-metro", "chime-metro.wav", "chime-metro-motif.wav"),
+    ("chime-tourist", "chime-tourist.wav", "chime-tourist-motif.wav"),
+]
+
+
+def sha256(path):
+    with open(path, "rb") as file:
+        return hashlib.sha256(file.read()).hexdigest()
+
+
+def relative(path):
+    return os.path.relpath(path, ROOT).replace(os.sep, "/")
+
+
+def read_pcm(path):
+    """A file's samples as floats (-1...1), frames × channels: WAV read
+    directly, anything else decoded by ffmpeg to 16-bit stereo."""
+    if path.endswith(".wav"):
+        with wave.open(path, "rb") as w:
+            channels = w.getnchannels()
+            raw = w.readframes(w.getnframes())
+    else:
+        channels = 2
+        raw = subprocess.run(
+            ["ffmpeg", "-loglevel", "error", "-i", path, "-f", "s16le", "-ac", "2", "-"],
+            check=True, capture_output=True,
+        ).stdout
+    return np.frombuffer(raw, dtype="<i2").reshape(-1, channels) / 32768
+
+
+def dbfs(x):
+    return round(20 * np.log10(max(x, 1e-9)), 2)
+
+
+def measured(path, loops):
+    """What the manifest says of a file: peak and RMS (dBFS), its largest
+    step between two frames, and its loop seam (the jump from the last
+    frame to the first, which a click would show as larger than the
+    largest step) or, for a one-shot, its end level."""
+    x = read_pcm(path)
+    entry = {
+        "sha256": sha256(path),
+        "frames": len(x),
+        "seconds": round(len(x) / SR, 4),
+        "peakDbfs": dbfs(np.abs(x).max()),
+        "rmsDbfs": dbfs(float(np.sqrt(np.mean(x**2)))),
+        "largestStep": round(float(np.abs(np.diff(x, axis=0)).max()), 5),
+    }
+    if loops:
+        entry["loopSeam"] = round(float(np.abs(x[0] - x[-1]).max()), 5)
+    else:
+        entry["endLevel"] = round(float(np.abs(x[-1]).max()), 5)
+    return entry
+
+
+# The files `main` makes that no score describes, and what makes them.
+SYNTH_SOURCES = {
+    "music-loop.caf": "music()",
+    "rail-joint.wav": "clack()",
+    "whoosh.wav": "whoosh()",
+    "build-done.wav": "clack() and pluck(), decision 117",
+    "coins.wav": "bell(), decision 117",
+    "refused.wav": "pluck(), decision 184",
+    "warning.wav": "bell(), decision 184",
+}
+
+
+def manifest(out_dir):
+    """The manifest of everything in `out_dir`, as text."""
+    files = []
+    by_file = {}
+    for name, full, short in CHIMES:
+        path = os.path.join(HERE, "scores", f"{name}.score.json")
+        source = {"score": relative(path), "scoreSha256": sha256(path)}
+        mml = scores.load(path).get("source", "")
+        if mml.startswith("tools/audio/mml/"):
+            source["mml"] = mml
+            source["mmlSha256"] = sha256(os.path.join(ROOT, mml))
+        by_file[full] = dict(source, kind="chime")
+        by_file[short] = dict(source, kind="motif")
+    for file in sorted(os.listdir(out_dir)):
+        entry = {"file": file}
+        if file in by_file:
+            entry.update(by_file[file])
+        else:
+            entry["kind"] = "music" if file.endswith(".caf") else "sound"
+            entry["synth"] = f"make_game_audio.py {SYNTH_SOURCES[file]}"
+        entry.update(measured(os.path.join(out_dir, file), loops=file.endswith(".caf")))
+        files.append(entry)
+    data = {
+        "about": "Made by tools/audio/make_game_audio.py (decision 219); never edit by hand.",
+        "mmlCore": {
+            "path": relative(MML_CORE),
+            "repository": "a91453/mml-tools",
+            "commit": MML_CORE_COMMIT,
+            "sha256": sha256(MML_CORE),
+            "license": "MIT, Copyright (c) 2026 a91453 (mml-core/LICENSE)",
+        },
+        "files": files,
+    }
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    rms = [f["rmsDbfs"] for f in files if f["kind"] == "chime"]
+    if max(rms) - min(rms) > 3:
+        raise SystemExit(f"the chimes' RMS spread {max(rms) - min(rms):.2f} dB, more than §3's 3 dB")
+    return text
+
+
 def main(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
@@ -151,9 +372,13 @@ def main(out_dir):
             check=True,
         )
 
-    chime = bell(84)
-    chime[int(0.25 * SR) :] += 0.6 * bell(91)[: len(chime) - int(0.25 * SR)]
-    write_wav(os.path.join(out_dir, "station-chime.wav"), normalized(chime, 0.6))
+    # Decision 219: the station chimes from their scores. The local one is
+    # decision 79's station chime, a bell on C6 and, 0.25 s later, a softer
+    # one on G6, byte for byte as before.
+    for name, full, short in CHIMES:
+        sheet = scores.load(os.path.join(HERE, "scores", f"{name}.score.json"))
+        write_wav(os.path.join(out_dir, full), chime(sheet))
+        write_wav(os.path.join(out_dir, short), motif(sheet))
     write_wav(os.path.join(out_dir, "whoosh.wav"), normalized(whoosh(1.0), 0.6))
     joint = np.zeros(int(0.35 * SR))
     a = clack()
@@ -195,7 +420,41 @@ def main(out_dir):
     write_wav(os.path.join(out_dir, "warning.wav"), normalized(warning, 0.45))
 
 
+def check(out_dir):
+    """Fails unless making everything again gives `out_dir` and the
+    manifest byte for byte."""
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        main(tmp)
+        made = sorted(os.listdir(tmp))
+        committed = sorted(os.listdir(out_dir))
+        if made != committed:
+            problems.append(f"files differ: made {made}, committed {committed}")
+        for file in made:
+            path = os.path.join(out_dir, file)
+            if os.path.exists(path) and sha256(path) != sha256(os.path.join(tmp, file)):
+                problems.append(f"{file} is not what the script makes")
+        with open(MANIFEST, encoding="utf-8") as f:
+            if f.read() != manifest(tmp):
+                problems.append("manifest.json is not what the script makes")
+    if shutil.which("node"):
+        if subprocess.run(["node", os.path.join(HERE, "mml_to_score.mjs"), "--check"]).returncode:
+            problems.append("a score differs from its MML")
+    else:
+        print("node is not on the PATH: the scores were not compared with their MML")
+    for p in problems:
+        print(p, file=sys.stderr)
+    if problems:
+        sys.exit(1)
+    print("every file and the manifest are as the script makes them")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 3 and sys.argv[1] == "--check":
+        check(sys.argv[2])
+    elif len(sys.argv) == 2:
+        main(sys.argv[1])
+        with open(MANIFEST, "w", encoding="utf-8") as f:
+            f.write(manifest(sys.argv[1]))
+    else:
         sys.exit(__doc__)
-    main(sys.argv[1])
