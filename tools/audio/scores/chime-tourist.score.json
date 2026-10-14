@@ -1,0 +1,34 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Tourist station chime",
+  "source": "tools/audio/mml/chime-tourist.mml",
+  "tempo": 100,
+  "beatsPerBar": 4,
+  "length": 3840,
+  "motif": 3,
+  "fadeOut": 160,
+  "tracks": [
+    {
+      "voice": "pluck",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 79, "start": 0, "length": 240, "velocity": 102},
+        {"pitch": 81, "start": 240, "length": 240, "velocity": 102},
+        {"pitch": 84, "start": 480, "length": 240, "velocity": 102},
+        {"pitch": 86, "start": 720, "length": 240, "velocity": 102},
+        {"pitch": 88, "start": 960, "length": 480, "velocity": 102},
+        {"pitch": 84, "start": 1440, "length": 480, "velocity": 102}
+      ]
+    },
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 72, "start": 1440, "length": 480, "velocity": 51}
+      ]
+    }
+  ]
+}

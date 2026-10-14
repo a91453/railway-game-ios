@@ -5,11 +5,15 @@ import GameCore
 /// (`tools/audio/`). Only what to play: the app plays it, and the player
 /// can turn the sounds off. Never part of the world, never saved.
 public enum SoundCue: Hashable, Sendable {
-    /// A train in service arrived at a station: the station chime.
+    /// A train in service arrived at a station: the station's chime.
     /// `watched` when one of the trains is one the player is looking at
     /// (``GameSession/watchedTrainIDs``); the app rings the others quieter
     /// and less often, so a busy network does not ring all the time.
-    case arrival(watched: Bool)
+    ///
+    /// Decision 219: `chime` is the station's (``StationChime``), and
+    /// `motif` plays only its first notes, as a watched train does at 600×
+    /// and faster (``arrivalCue(for:watched:speed:in:)``).
+    case arrival(watched: Bool, chime: StationChime = .local, motif: Bool = false)
     /// Track was built: a rail joint.
     case track
     /// The player moved to another tool, or into or out of a game: a whoosh.
@@ -35,7 +39,7 @@ public enum SoundCue: Hashable, Sendable {
         for train in world.trains {
             if let times = train.times {
                 let atLastCall = if case .waitingAtStop(let stop, _) = train.execution { stop == train.timetable.count - 1 } else { false }
-                arrivals[train.id] = Arrival(time: times.arrival, atLastCall: atLastCall)
+                arrivals[train.id] = Arrival(time: times.arrival, atLastCall: atLastCall, lastCall: train.timetable.last?.station)
             }
         }
         return arrivals
@@ -45,6 +49,16 @@ public enum SoundCue: Hashable, Sendable {
     struct Arrival: Hashable, Sendable {
         var time: GameTime
         var atLastCall: Bool
+        /// The station of its timetable's last call: where a service that
+        /// completes within the step arrived last (decision 219).
+        var lastCall: StationID?
+    }
+
+    /// A train that arrived within a step, and at which station, when it
+    /// is known (decision 219).
+    struct ArrivedTrain: Hashable, Sendable {
+        var train: TrainID
+        var station: StationID?
     }
 
     /// The trains in service that arrived at a call in `world` since
@@ -71,17 +85,79 @@ public enum SoundCue: Hashable, Sendable {
     /// arrival counts too. GameCore keeps no times of a completed service,
     /// and a loop step can hold several ticks
     /// (``GameSession/maximumStepDuration``).
-    static func trainsArrived(since before: [TrainID: Arrival], in world: GameWorld) -> [TrainID] {
+    ///
+    /// Decision 219: each with the station it arrived at. A train standing
+    /// at a call arrived at that call's station; one already on its way
+    /// again (it arrived and left within the step) arrived at the call it
+    /// left, the one before the call it heads for; one that completed its
+    /// service arrived at its last call.
+    static func trainsArrived(since before: [TrainID: Arrival], in world: GameWorld) -> [ArrivedTrain] {
         world.trains.compactMap { train in
             guard let times = train.times, let departure = times.departure else {
                 guard let earlier = before[train.id], !earlier.atLastCall else { return nil }
                 // Still the same send-out, not left yet: no arrival.
-                return train.times?.arrival == earlier.time ? nil : train.id
+                return train.times?.arrival == earlier.time ? nil : ArrivedTrain(train: train.id, station: earlier.lastCall)
             }
+            let arrived: Bool
             if let earlier = before[train.id] {
-                return earlier.time != times.arrival ? train.id : nil
+                arrived = earlier.time != times.arrival
+            } else {
+                arrived = times.arrival >= departure
             }
-            return times.arrival >= departure ? train.id : nil
+            return arrived ? ArrivedTrain(train: train.id, station: station(arrivedAtBy: train)) : nil
+        }
+    }
+
+    /// The station of the call a train in service last arrived at: the one
+    /// it stands at, or the one before the call it heads for.
+    private static func station(arrivedAtBy train: Train) -> StationID? {
+        let timetable = train.timetable
+        switch train.execution {
+        case .waitingAtStop(let stop, _)?:
+            return timetable.indices.contains(stop) ? timetable[stop].station : nil
+        case .travellingToStop(let stop, _)?:
+            let left = stop > 0 ? stop - 1 : timetable.count - 1
+            return timetable.indices.contains(left) ? timetable[left].station : nil
+        case nil:
+            return nil
+        }
+    }
+
+    /// The one sound for the trains that arrived within a step, or `nil`
+    /// (decision 219, the research note's §6):
+    ///
+    /// - at 60× and slower, the whole chime of the station: a watched
+    ///   train's when one arrived, else the first train's, quieter;
+    /// - at 600×, a watched train plays the station's motif, the first two
+    ///   or three notes (stations are a second or two apart); the others
+    ///   ring the whole chime, quieter, as before;
+    /// - at 1200× and 6000×, only a watched train sounds, with its motif.
+    ///
+    /// The chime is the station's (``StationChime``); a station not known
+    /// rings the local one.
+    static func arrivalCue(for arrived: [ArrivedTrain], watched: Set<TrainID>, speed: GameSpeed, in world: GameWorld) -> SoundCue? {
+        let seen = arrived.first { watched.contains($0.train) }
+        let fast = speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick
+        if seen == nil, speed.tenthsPerTick > GameSpeed.normal.tenthsPerTick { return nil }
+        guard let train = seen ?? arrived.first else { return nil }
+        let chime = train.station.map { StationChime.of($0, in: world) } ?? .local
+        return .arrival(watched: seen != nil, chime: chime, motif: seen != nil && fast)
+    }
+
+    /// The file the app plays for the cue, in its bundle's `Audio`
+    /// resources (made by `tools/audio/make_game_audio.py`, listed in
+    /// `tools/audio/manifest.json`).
+    public var resource: (name: String, extension: String) {
+        switch self {
+        case .arrival(_, let chime, true): ("chime-\(chime.rawValue)-motif", "wav")
+        case .arrival(_, .local, false): ("station-chime", "wav")
+        case .arrival(_, let chime, false): ("chime-\(chime.rawValue)", "wav")
+        case .track: ("rail-joint", "wav")
+        case .transition: ("whoosh", "wav")
+        case .built: ("build-done", "wav")
+        case .income: ("coins", "wav")
+        case .refused: ("refused", "wav")
+        case .warning: ("warning", "wav")
         }
     }
 }

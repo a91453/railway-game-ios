@@ -1520,3 +1520,17 @@ V 實際放行 → T、U（保證不互穿）
 ## 線號徽章與色盲友善色票（決策 216）
 
 參考庫 788870262e。對照表寫在 ARCHITECTURE 決策 216 的「參考」：`Ci/` 的 `PRESET_COLORS` 沿用、`metroLineChipShortLabel` 只取做法（改從顏色取線號）、`getReadableChipTextColor` 沒有採用（改白底藏青字）、`.station-line-chip` 取大小；`Railway/site_archive_clean/index.html` 的 `drawTag` 只取做法；`data/trtc.json` 等的台灣捷運線號與色碼只用在測試。色盲：參考庫沒有可用的。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部：Okabe–Ito 七色、Paul Tol 的淺灰、Machado 2009 的模擬矩陣，只取數值。
+
+## 到站鈴與樂譜（決策 219 第一階段）
+
+參考庫 `a91453/railway-reference-private` `7888702`（2026-10-14 讀取）與 `a91453/mml-tools` `0a974f6`。
+
+| 參考（檔案與名稱） | 本專案 | 換算 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs` 的 `chimeBuffer`：523.251、659.255、783.991、1046.502 Hz，`n × 0.3` 秒，`CHIME_SECONDS` 1.8，結尾 `tail` 0.06 秒線性淡出 | `tools/audio/scores/chime-metro.score.json` → `chime-metro.wav`、`chime-metro-motif.wav` | MIDI 72、76、79、84；100 bpm、每拍 960 tick，0.3 秒 = 480 tick，1.8 秒 = 2,880 tick，0.06 秒 = `fadeOut` 96 tick；音色用本專案的 `bell`（參考的包絡 `exp(-5t)` 與二倍泛音不照搬） |
+| 同一檔的 `tail = min(1, (N-1-i)/(sr·0.06))` | `make_game_audio.py` 的 `fade_tail` | 照搬公式，長度由樂譜的 `fadeOut` 決定 |
+| `mml-tools` `dist/core.js` 的 `validateMML`、`parseTrack`、`F` | `tools/audio/mml-core/core.js`（原樣複製）、`tools/audio/mml_to_score.mjs` | 拍數（分數）× 960 = tick，非整數拒絕；V1–V15 → 力度 `round(V × 127 ÷ 15)` |
+| `mml-tools` `writeMidi` 超出 PPQ 就拒絕的做法 | `mml_to_score.mjs` 的 `ticks` | 照搬原則：不四捨五入 |
+
+參考庫沒有的（本專案自己寫的）：依車站自動選鈴聲的規則（`StationChime`）、到站車站的判定、高速時的動機與速度規則（`SoundCue.arrivalCue`）、《沿線》樂譜格式與檢查（`score.py`）、清單（`manifest.json`）、觀光鈴的旋律。
+
