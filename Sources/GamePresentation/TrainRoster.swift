@@ -114,6 +114,17 @@ public struct TrainRoster: Equatable, Sendable {
         public let cells: [Cell]
 
         public var id: TrainID { train }
+
+        /// Whether its line sends it out trip by trip (a train on a line
+        /// today), so it has no planned boxes ahead: the line decides its
+        /// trips as it goes.
+        public var isDispatchedByLine: Bool { line != nil && !cells.contains { $0.state == .planned } }
+
+        /// The note under a line's train: "Dispatched by line"; `nil`
+        /// otherwise.
+        public func dispatchText(in language: DisplayLanguage) -> String? {
+            isDispatchedByLine ? language.text("Dispatched by line", "依路線派車") : nil
+        }
     }
 
     public let day: Day
@@ -257,8 +268,9 @@ public struct TrainRoster: Equatable, Sendable {
 /// How tall the roster's rows are (decision 223: on an iPhone held
 /// sideways with many trains, the rows of layout C).
 public enum TrainRosterLayout {
-    /// The row height with the route and the fare on two lines.
-    public static let fullRowHeight: Double = 40
+    /// The row height with the route and the fare on two lines (and, at
+    /// the head, a line's train's note).
+    public static let fullRowHeight: Double = 44
     /// The row height with one line, the fare only.
     public static let compactRowHeight: Double = 26
 
