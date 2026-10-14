@@ -7880,7 +7880,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **之後的修正（2026-10-14，畫面）**：第 7、8 點接上 App。GameCore、存檔、golden、replay 都不動。
 - **資料**：GamePresentation 的 `StationCommerceCard` 包含目前的等級、昨天經過的人次、昨天的淨額，以及下一級的價錢、每天約多賺多少、約幾年回本（十分之一年，無條件進位；一年 360 天；不會回本時說「經過的人還不夠多」）。按鈕走 `PlayerCommand.Edit` 的 `buildStationCommerce`、`upgradeStationCommerce`、`demolishStationCommerce`，所以記在指令紀錄裡、可以復原。
-- **畫面**：`StationCommerceSection` 是一節獨立的 Form，現在放在車站面板的貨運之後，只在經營模式、不是機廠時出現。決策 224 的車站營運頁（#602）合併時，由它搬進 `StationOperationsSection`。內容是目前那一級的卡（44 點插圖、「昨天 +$X」）、下一級的卡、拆除（要再確認一次）。
+- **畫面**：`StationCommerceSection` 是一節獨立的 Form，放在車站面板最上面「車站現況」（`StationOperationsSection`，決策 224）的正後面，只在經營模式、不是機廠時出現。內容是目前那一級的卡（44 點插圖、「昨天 +$X」）、下一級的卡、拆除（要再確認一次）。
 - **文字**：照 #600，玩家看的字只寫做什麼、每天約賺多少、幾年回本，不寫公式與數值的由來。
 - **地圖**：站名牌左邊的暖黃方章，裡面 1、2、3 個購物袋（`MapGlyphShops1`–`3`，`docs/UI_THEME.md` 車站商業）。
 - **沒有驗證的**：App 的畫面要靠 macOS CI 編譯；方章會不會擋到旁邊的站名、插圖在 44 點時看不看得清楚，要在 TestFlight 看。

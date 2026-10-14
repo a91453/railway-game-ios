@@ -27,7 +27,7 @@ struct StationCommerceSection: View {
                                 .font(.subheadline.weight(.semibold))
                             Text(verbatim: card.yesterdayText(in: language))
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
                     .accessibilityElement(children: .combine)
@@ -45,7 +45,7 @@ struct StationCommerceSection: View {
                                 if let text = card.offerText(in: language) {
                                     Text(verbatim: text)
                                         .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Theme.textSecondary)
                                 }
                             }
                             Spacer(minLength: 8)
