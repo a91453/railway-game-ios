@@ -7753,6 +7753,46 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 9. **其他選項**（留給作者）：觀光鈴用鐘（不用撥弦）、或 120 bpm 的八分音符（較慢較穩）；都會鈴只取三個音（C E G）；動機檔在 App 裡即時截斷而不另做檔案（不能淡出，會有喀聲）；一步裡有幾個到站時選「最特別」的風格而不是第一個。沒選的理由在 PR。
 10. **沒有驗證的**：iPhone 喇叭上的響度與音色、三種鈴玩家分不分得出、鈴聲疊在配樂上是否不刺耳、600 倍時動機的間隔聽起來對不對：都要 TestFlight 實機。App 的程式（`GameAudio.swift`）只能靠 macOS CI 編譯。
 
+### 220. 旅程追蹤：長按車站，畫出這一站最多人往返的五站
+
+2026-10-14，遊戲規劃 session 派工、作者同意（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 第 7 項、§13 第 6 名）。號碼依工作登記 #231：main 219，未釋出的登記到 219，所以取 220。第一版只做車站，路線之後再加。GameCore、存檔版本、golden、replay 都不動。
+
+1. **怎麼叫出來**：選取時在車站上按住 0.45 秒，和決策 119 的長按是**同一個手勢**：選取那座車站、打開車站面板，地圖同時畫出這一站的旅程。不另加手勢，所以和點一下（看）、拖曳（移動地圖、鋪軌、劃分區）、兩指（縮放）都不衝突；正在用工具或路線面板開著時，長按照舊不成立。弧線跟著面板：車站面板開著、選的是這座車站、手上沒有工具時才畫（`MapView.tracedStationID`），換一座車站就換它的、關掉面板就收掉。標籤上的鉛筆（決策 119 第 4 點）也打開同一個面板，所以 VoiceOver 與切換控制不必長按。
+2. **資料**（GamePresentation `JourneyTrace`、`GameWorld.journeyTrace(of:)`）：讀車站面板已經在用的每日需求（`stationDemandPairs(of:)`，`dailyDemand` 兩個方向），去、回相加，取最多的 5 站，同數字時站號小的在前，0 人的不畫。`Ci/` 的參考把兩個方向畫成兩條線，這裡兩條會疊在同一個位置，所以相加。網路路由時要搜整張圖，地圖在主執行緒外算（`Task.detached`），鍵是車站加 `RidershipInputs`，和車站面板、旅次圖層一樣，不會每個 tick 重算。
+3. **外觀**（`MapArt.drawJourneyTrace`，`docs/MAP_LAYERS.md` 第 25.5 層）：
+   - 不用路線色、不用漸層：藏青（`Palette.journeyArc`）墊白邊（`journeyCase`，寬 +3 點），兩種外觀都一樣，等於轉乘連線（25）的兩色反過來。
+   - 粗細代表人數：參考的 `0.8 + 5.5 × 人數 ÷ 最多`，下限從 0.8 改成 2 點，手機上第五條也看得到白邊；最寬 6.3 點。細的先畫，最多人的在最上面。
+   - 弧線是二次曲線，從車站往對方，向前進方向的左邊彎出弦長的 20%。所有弧線都往同一邊彎，從車站像扇子一樣展開，也不會和兩站之間的直線軌道疊在一起。
+   - 畫完後在每條弧線的中點寫往返人數（白底藏青框的膠囊，照決策 205），會蓋到前一個就不寫。
+4. **動畫**：從車站往外畫出來，0.4 秒分 8 步（每步重畫一次 `MapCanvas`，所以步數少）；「減少動態效果」打開時一次畫完（`JourneyTrace.progress`）。同一站的需求變了只換弧線，不再畫一次。
+5. **無障礙**：弧線是畫出來的，所以地圖的 `accessibilityValue` 在選取說明後面加一句「最多人往返：Beta 2,000、Gamma 900（每天）」。
+6. **四方理由**：
+   - 玩家：一按就看到這站的人要去哪裡，該往哪裡加線、加車一目了然；不用學新手勢。
+   - 開發：不動 GameCore，讀現成的每日需求；長按沿用決策 119 的辨識器，沒有新的手勢衝突要處理；邏輯在 GamePresentation，Linux 上測。
+   - 美術：藏青白邊與粗細照 §13 的美術注意事項，不和路線色、區間流量搶；扇形的弧線不交叉，數字在底牌上。
+   - 音樂：無。
+7. **沒有採用的**（PR 裡有預覽）：B「按住才顯示、放開就收」（要改決策 119 的長按，面板打開時手指已經離開，看不到）；C 車站面板加一顆「旅程」開關（多一步，§0 說第一個小時用不到的功能不要佔面板）；D 兩指長按（沒人找得到）；直線（參考的畫法，會和直線軌道疊在一起）；照人數換顏色（參考的藍到紅漸層，§13 已定不用）。
+8. **沒有做的**：路線的旅程（長按路線）；實際在車上、在候車的乘客（`WaitingGroup`、`RidingGroup` 的起訖）而不是每日需求（數字會跳，第一版用穩定的需求）；鏡頭自動縮放到看得到五站；弧線的端點記號。
+
+**參考**（`a91453/railway-reference-private`，7888702）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `showStationODForStation`（OD 圖層開著時，選一站就只畫那一站的 OD） | `MapView.tracedStationID`、`workOutJourneyTrace` | 做法照搬：選站即畫；這裡由長按打開面板代替圖層開關 |
+| 同檔 `renderStationODLayerFromMatrix` 的 `focusStationIndex`、`focusOutbound`／`focusInbound`（只留和焦點站有關的格，依人數排序、`maxLines` 取最多的幾條） | `JourneyTrace.init(station:pairs:)` | 照搬，改成兩個方向相加（第 2 點） |
+| 同檔線寬 `x = .8 + 5.5 * E`（`E = v / max`），夾在 0.8…6.5 | `JourneyTrace.width(of:largest:)` | 照搬，下限改 2 點（第 3 點） |
+| 同檔顏色 `c(Math.pow(E, .6))`（藍→天藍→綠→黃→紅五段）、`strokeOpacity: .4` | 無 | 沒有採用：§13 已定藏青白邊、不用漸層 |
+| 同檔 `metroRenderStationODLinksFromValues`（單條路線上一站到其他站，寬 `2 + 6 × 比例`） | 無 | 只取做法；路線的旅程留到下一版 |
+| `MapBuilder/` 的轉換連線（決策 84 已移植為 `drawTransfers`） | `Palette.journeyArc`／`journeyCase` | 兩色反過來用 |
+
+`Simulator/`、`OpenWorld/`、`train_loop`、`island_city`、`street_scene`、`commuter_journey`、`city_world` 沒有起訖弧線（搜尋 OD、origin、destination、arc、desire line）。
+
+**外部**：SimCity 4 的 Route Query（點一格看經過的車流），只取「點一下、看見人往哪裡去」的做法，沒有程式碼。程式是這個專案自己寫的。
+
+**測試**：`JourneyTraceTests`（前 5 名與排序、0 人不畫、線寬、彎的方向、動畫步數與減少動態效果、從世界的需求推導、示範地圖每站最多 5 條且是最多的）；UI 測試 `MapInteractionTests/testHoldingAStationTracesItsBusiestTrips`（長按 Central 打開面板、地圖的值寫出旅程；只在完整流程跑，不進閘門清單）。
+
+**沒有驗證的**：App 的畫面（Linux 不能建置 App，交給 CI 的 iOS build）；弧線的粗細、白邊在實景地圖與深色地圖上夠不夠清楚、數字膠囊會不會擋到站名、0.4 秒的動畫順不順，都要在下一版 TestFlight 看。
+
 ### 223. 航空 UI 借版型：列車卡、即將進站看板、列車運用表
 
 2026-10-14。作者給了自己另外做的航空模擬器 UI 截圖，請遊戲規劃 session 看哪些能融入《沿線》。遊戲規劃 session 定的方向：**只借版型與資訊結構，外觀照《沿線》的畫風重畫**。不借深色玻璃、細線霓虹、寫實機體照片、製造商或航空公司的商標、裝飾用的細直條紋。美術 session 做預覽（`docs/art/airline-ui-borrow-2026-10-14/`，每個版型三種方案，iPhone 橫拿與 iPad 各一張，淺色、深色、灰階）。遊戲規劃 session 看過之後定案（見下）。號碼依工作登記 #231：決策 223；存檔版本、golden schema 不動。

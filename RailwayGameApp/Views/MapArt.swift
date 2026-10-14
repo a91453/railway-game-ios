@@ -48,6 +48,8 @@ enum MapArt {
         latitude: Double = 0,
         lights: Double = 0,
         lineCodes: [LineID: String] = [:],
+        journey: JourneyTrace? = nil,
+        journeyProgress: Double = 1,
         in context: GraphicsContext
     ) {
         let detail = projection.detail
@@ -90,6 +92,10 @@ enum MapArt {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
         }
         drawTransfers(lines, projection: projection, in: context)
+        // Decision 220: the held station's busiest trips (docs/MAP_LAYERS.md, 25.5).
+        if let journey {
+            drawJourneyTrace(journey, world: world, progress: journeyProgress, projection: projection, in: context)
+        }
         if let routePreview {
             drawRoutePreview(routePreview, world: world, projection: projection, cached: edges, in: context)
         }
@@ -917,6 +923,50 @@ enum MapArt {
             guard path.boundingRect.insetBy(dx: -inner, dy: -inner).intersects(context.clipBoundingRect) else { continue }
             context.stroke(path, with: .color(Palette.transferEdge), style: StrokeStyle(lineWidth: inner + 4, lineCap: .round, lineJoin: .round))
             context.stroke(path, with: .color(Palette.transferLink), style: StrokeStyle(lineWidth: inner, lineCap: .round, lineJoin: .round))
+        }
+    }
+
+    /// Decision 220: the journey trace. An arc from the held station to
+    /// each of its busiest pairs (``JourneyTrace``), navy on a white edge,
+    /// as wide as its trips, the narrowest drawn first so the busiest lies
+    /// on top; drawn out from the station as `progress` goes to 1. Once
+    /// whole, each arc's trips on a white plate edged in navy halfway
+    /// along it, left out where it would cover one already written.
+    private static func drawJourneyTrace(
+        _ trace: JourneyTrace, world: GameWorld, progress: Double, projection: some MapProjection, in context: GraphicsContext
+    ) {
+        guard let origin = world.station(id: trace.station).map({ projection.screenPoint(of: $0.location) }) else { return }
+        let curves: [(arc: JourneyTrace.Arc, end: ScreenPoint)] = trace.arcs.compactMap { arc in
+            world.station(id: arc.station).map { (arc: arc, end: projection.screenPoint(of: $0.location)) }
+        }
+        let share = min(1, max(0, progress))
+        for (arc, end) in curves.reversed() {
+            var path = Path()
+            path.move(to: cgPoint(origin))
+            path.addQuadCurve(to: cgPoint(end), control: cgPoint(JourneyTrace.control(from: origin, to: end)))
+            let shown = share < 1 ? path.trimmedPath(from: 0, to: share) : path
+            guard shown.boundingRect.insetBy(dx: -arc.width - 3, dy: -arc.width - 3).intersects(context.clipBoundingRect) else { continue }
+            context.stroke(shown, with: .color(Palette.journeyCase), style: StrokeStyle(lineWidth: arc.width + 3, lineCap: .round))
+            context.stroke(shown, with: .color(Palette.journeyArc), style: StrokeStyle(lineWidth: arc.width, lineCap: .round))
+        }
+        guard share >= 1 else { return }
+        let view = context.clipBoundingRect
+        var placed: [CGRect] = []
+        for (arc, end) in curves {
+            let point = cgPoint(JourneyTrace.apex(from: origin, to: end))
+            let text = context.resolve(
+                Text(verbatim: JourneyTrace.tripsText(arc))
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .foregroundStyle(Palette.ink)
+            )
+            let size = text.measure(in: CGSize(width: 120, height: 40))
+            let rect = CGRect(x: point.x - size.width / 2 - 4, y: point.y - size.height / 2 - 1, width: size.width + 8, height: size.height + 2)
+            guard rect.intersects(view), !placed.contains(where: { $0.intersects(rect) }) else { continue }
+            placed.append(rect)
+            let plate = Path(roundedRect: rect, cornerRadius: rect.height / 2)
+            context.fill(plate, with: .color(Palette.markerFill))
+            context.stroke(plate, with: .color(Palette.ink), lineWidth: 1)
+            context.draw(text, at: point, anchor: .center)
         }
     }
 

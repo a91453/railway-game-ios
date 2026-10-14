@@ -161,6 +161,11 @@ struct MapView: View {
     @State private var stationLabels = StationLabels()
     /// The whole map, small (decision 116), worked out with the lines' map.
     @State private var miniMap: MiniMap?
+    /// Decision 220: the busiest trips of the station whose panel a hold
+    /// opened, worked out off the main actor, and how much of each arc is
+    /// drawn yet (drawn out once, or whole at once with Reduce Motion).
+    @State private var journeyTrace: JourneyTrace?
+    @State private var journeyProgress = 1.0
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
@@ -256,7 +261,11 @@ struct MapView: View {
                         flowVersion: flowStrokesVersion,
                         lights: lights,
                         lineCodes: LineBadge.codes(for: session.world.lines),
-                        linePalette: linePalette
+                        linePalette: linePalette,
+                        // Only the traced station's: not the last one's while
+                        // the next is worked out, nor once its panel closes.
+                        journey: journeyTrace.flatMap { $0.station == tracedStationID ? $0 : nil },
+                        journeyProgress: journeyProgress
                     )
                     .equatable()
                     // Decision 182: the time of day over the ground, the
@@ -321,7 +330,9 @@ struct MapView: View {
                                     flowVersion: flowStrokesVersion,
                                     lights: lights,
                                     lineCodes: LineBadge.codes(for: session.world.lines),
-                                    linePalette: linePalette
+                                    linePalette: linePalette,
+                                    journey: nil,
+                                    journeyProgress: 1
                                 )
                                 .equatable()
                                 // Where the finger is.
@@ -751,6 +762,9 @@ struct MapView: View {
         .onChange(of: MapWeatherKey(world: session.world), initial: true) { _, _ in
             mapWeather = MapWeather(world: session.world)
         }
+        .task(id: JourneyTraceKey(world: session.world, station: tracedStationID)) {
+            await workOutJourneyTrace()
+        }
         .task(id: LineMapKey(world: session.world)) {
             // A journey a line costs a route search a leg: on a large map
             // that is too slow for a frame.
@@ -1040,7 +1054,48 @@ struct MapView: View {
     }
 
     private var selectionDescription: String {
-        session.selectionText() ?? String(localized: "Nothing selected")
+        let selection = session.selectionText() ?? String(localized: "Nothing selected")
+        // Decision 220: the trace's trips, which the arcs show by width.
+        guard let trace = journeyTrace, trace.station == tracedStationID,
+              let trips = trace.summary(in: session.world, language: session.language) else { return selection }
+        return "\(selection). \(trips)"
+    }
+
+    /// Decision 220: the station whose journey trace the map draws: the
+    /// selected one while its panel is open beside the map, which holding
+    /// a station opens (decision 119) as does the station tag's pencil; only
+    /// while looking at the map, not building.
+    private var tracedStationID: StationID? {
+        guard screen.panel == .station, session.tool == .select, session.networkOverlay == nil else { return nil }
+        return session.selectedStationID
+    }
+
+    /// Works out the traced station's busiest trips for the world as it
+    /// is, off the main actor (with network routing each station's day is a
+    /// search over the whole map), then draws the arcs out from it. The
+    /// same station's trace worked out again (its demand or the lines
+    /// changed) replaces the arcs without drawing them out again.
+    private func workOutJourneyTrace() async {
+        guard let id = tracedStationID else {
+            journeyTrace = nil
+            return
+        }
+        let world = session.world
+        let trace = await Task.detached(priority: .userInitiated) { world.journeyTrace(of: id) }.value
+        guard !Task.isCancelled else { return }
+        let redraws = journeyTrace?.station != id
+        journeyTrace = trace
+        guard redraws else { return }
+        let start = Date()
+        journeyProgress = JourneyTrace.progress(elapsed: 0, reduceMotion: reduceMotion)
+        while journeyProgress < 1 {
+            try? await Task.sleep(for: .seconds(JourneyTrace.drawDuration / Double(JourneyTrace.drawSteps)))
+            guard !Task.isCancelled else {
+                journeyProgress = 1
+                return
+            }
+            journeyProgress = JourneyTrace.progress(elapsed: Date().timeIntervalSince(start), reduceMotion: reduceMotion)
+        }
     }
 
     /// Chooses how Apple's map under a real-world game looks, and how
@@ -1424,6 +1479,10 @@ private struct MapCanvas: View, Equatable {
     /// Decision 216: compared so that the lines redraw in the new palette
     /// (``Palette/lineColor(_:custom:)`` reads it).
     let linePalette: LinePalette
+    /// Decision 220: the held station's busiest trips, and how much of
+    /// each arc is drawn yet.
+    let journey: JourneyTrace?
+    let journeyProgress: Double
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
     /// so a tick that only moves them does not redraw it.
@@ -1451,6 +1510,8 @@ private struct MapCanvas: View, Equatable {
             && lhs.lights == rhs.lights
             && lhs.lineCodes == rhs.lineCodes
             && lhs.linePalette == rhs.linePalette
+            && lhs.journey == rhs.journey
+            && lhs.journeyProgress == rhs.journeyProgress
     }
 
     var body: some View {
@@ -1458,7 +1519,7 @@ private struct MapCanvas: View, Equatable {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
-        let routePreview = routePreview
+        let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -1481,6 +1542,8 @@ private struct MapCanvas: View, Equatable {
                 latitude: latitude,
                 lights: lights,
                 lineCodes: lineCodes,
+                journey: journey,
+                journeyProgress: journeyProgress,
                 in: context
             )
         }
@@ -1904,6 +1967,19 @@ private struct TravelTilesKey: Equatable {
     let mode: PopTravelMode?
     let hour: Int
     let demand: TravelDemandMap
+}
+
+/// What the journey trace (decision 220) is worked out from, so the map
+/// works it out again only when one of them changes, not on every tick:
+/// the traced station and what its day reads (``RidershipInputs``).
+private struct JourneyTraceKey: Equatable {
+    let station: StationID?
+    let inputs: RidershipInputs?
+
+    init(world: GameWorld, station: StationID?) {
+        self.station = station
+        inputs = station == nil ? nil : RidershipInputs(world: world)
+    }
 }
 
 /// What the travel demand map is worked out from (``RidershipInputs``,
