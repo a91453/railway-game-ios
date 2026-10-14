@@ -289,6 +289,16 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 
 - Inspect the latest remote state (`git fetch`, `main`, the files involved)
   rather than trusting memory from earlier sessions.
+- Decisions (owner, 2026-10-14: "我不再做決定，都以這個當預設"): a choice that
+  would otherwise wait for the owner (which option, which look, which
+  default, which order, a golden value a rule change moves) is made by the
+  session itself from three angles: player, developer and art. Write one
+  line of reason per angle in the PR (and in the decision when there is
+  one), keep the other options' previews in the PR so the owner can look
+  later, and go ahead. This does not change what stays the owner's: starting
+  a TestFlight release, Apple account and App Store Connect steps, secrets,
+  adding a dependency, and reusing copyleft or unlicensed code; nor any
+  "never" rule in this file.
 - Several sessions work in parallel. Before starting a task, read every
   comment of the work registry, issue #231, and post a claim there: the
   session, branch, task, main files, and the save version, ARCHITECTURE
