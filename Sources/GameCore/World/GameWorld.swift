@@ -2772,6 +2772,7 @@ public struct GameWorld: Equatable, Sendable {
                     trains[ready].isDeadheading = true
                     trains[ready].isStandingAside = false
                     trains[ready].times = ServiceTimes(arrival: now)
+                    logArrival(of: ready)
                     dispatched = true
                 }
                 continue
