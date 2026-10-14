@@ -92,10 +92,16 @@ public struct TrackEdge: Hashable, Sendable {
     /// covering every pricing length once; empty for an explicit
     /// structure (see ``sectionSpans``).
     public let sections: [TrackSection]
+    /// The curve speed limits along the edge, from its `from` node
+    /// (decision 217, ``CurveSpeedLimit/limits(from:to:curve:length:)``):
+    /// derived from the end nodes and the curve when the edge is built or
+    /// loaded, never saved. Empty for a straight edge.
+    public let speedLimits: [TrackSpeedLimit]
 
     init(
         id: TrackEdgeID, from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, length: Int64,
-        profile: TrackProfile = .uniform, structure: TrackStructure = .surface, sections: [TrackSection] = []
+        profile: TrackProfile = .uniform, structure: TrackStructure = .surface, sections: [TrackSection] = [],
+        speedLimits: [TrackSpeedLimit] = []
     ) {
         self.id = id
         self.from = from
@@ -105,6 +111,7 @@ public struct TrackEdge: Hashable, Sendable {
         self.profile = profile
         self.structure = structure
         self.sections = sections
+        self.speedLimits = speedLimits
     }
 
     /// The node a traversal of this edge ends at.
@@ -371,7 +378,8 @@ public struct RailwayNetwork: Hashable, Sendable {
     ) -> TrackEdgeID {
         let id = TrackEdgeID.edge(nextEdgeNumber)
         edges.append(TrackEdge(
-            id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections
+            id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
+            speedLimits: CurveSpeedLimit.limits(of: geometry, curve: curve)
         ))
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
@@ -527,7 +535,8 @@ extension RailwayNetwork: Codable {
             }
             let id = TrackEdgeID.edge(number)
             edges.append(TrackEdge(
-                id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections
+                id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
+                speedLimits: CurveSpeedLimit.limits(of: geometry, curve: curve)
             ))
             attach(id, direction: geometry.startDirection, at: from)
             attach(id, direction: geometry.endDirection, at: to)

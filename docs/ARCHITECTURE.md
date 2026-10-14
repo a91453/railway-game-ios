@@ -822,7 +822,7 @@ S3B 的實作先寫成（第一版 PR），S3A 的「唯一權威」與 span 在
 | 7. 移植到其他語言／引擎 | ✗ | ✓ | ✗ | ✓ | ✓（整數 Bernstein 多項式與整數平方根，數十行） |
 | 8. 溢位安全、驗證簡單 | △ | ✓ | ✗ | ✓ | ✓（座標有界，Int64 範圍可證明） |
 
-E 的弱點是曲率不固定，行駛曲線（Stage W）的曲線限速要由取樣推導；需要時再給 `TrackCurve` 加一個整數的圓弧 case，topology 不受影響。
+E 的弱點是曲率不固定，行駛曲線（Stage W）的曲線限速要由取樣推導；需要時再給 `TrackCurve` 加一個整數的圓弧 case，topology 不受影響。（決策 217：限速由三次曲線 65 步的精確曲率推導，不需要圓弧 case。）
 
 **3. 定點刻度？**
 - 1 單位＝既有的邏輯單位（`rate`、`offset` 用的單位），一格邊長 1024 單位；名目上 1 單位 = 1/64 公尺（一格 16 公尺），只給 renderer 與坡度換算用，模擬不依賴公尺。
@@ -7637,6 +7637,36 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 **測試**：`RenameAndColourTests`（線號存檔與拒絕不合格的、`testVersionFiftyFiveKeepsALinesCode` 與新 fixture `SaveFixtures/v55-line-code.json`）、`LineBadgeTests`（每個色票都有字母、北捷各色照色相取到同樣的字母、加數字、不撞玩家的線號、輸入轉換、安全色）、`CommandEditTests`（`setLineCode` 的日誌編碼）。
 
 **沒有驗證的**：App 的畫面（Linux 不能建置 App，交給 CI 的 iOS build）；地圖上徽章很多時會不會太擠、色帶上的徽章位置在彎道上是否合適、深色地圖上 `#0072B2` 的路線（對深色地面 2.56）夠不夠清楚，都要在下一版 TestFlight 看。
+
+### 217. 曲線限速
+
+2026-10-14，TestFlight 60.1 的玩家回報（苗栗附近的大彎道，跟隨的列車 83 km/h：「大彎道時看時速 80 以上，都會覺得不會翻車嗎？」），`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 波次 3 第 3 項、§13 第 19 名。號碼依 #231：決策 217、存檔版本 57（第二個 PR）；golden schema 預留 73，用不到就釋出。分三個 PR，各自能合併：(1) 純計算與測試（本節 1–3），(2) 列車照限速跑、排點一致、開關與存檔 57，(3) 畫面。
+
+1. **規則**（`CurveSpeedLimit`，新檔 `Sources/GameCore/Railway/CurveSpeedLimit.swift`）：限速 V = √(19.4 × R) km/h（R 公尺），**往下取到 5 km/h**，最低 15，**400 以上不限**。19.4 = 4.4²：台鐵 1067 mm（軌道中心距 1120 mm）超高上限 105 mm、超高不足 60 mm（電聯車）時 √(127·R·165 ÷ 1120) = 4.41√R；高鐵 1435 mm、超高 180 mm、不足 60 mm 是 4.61√R，同一條規則兩種軌距差 5 % 以內，所以不分軌距。半徑 300 m 是 75 km/h、400 m 85、600 m 105、1000 m 135、4600 m 295、6250 m 345（高鐵最小半徑跑 300 有餘）。參考庫 `Ci/` 沒用到的 `MIN_CURVE_RADIUS_M`（80→300 m、100→600、120→800、160→1200）換算是 4.1–4.6√R，和這條規則一致。
+2. **每條邊的限速只在建造與讀檔時算一次**（`TrackEdge.speedLimits`，和 `length` 一樣是推導值、不存檔）：從兩端節點與三次曲線**精確**讀曲率（和鋪軌放大鏡同樣的 65 步，決策 204，但全是整數）：`D1 = (M−i)²a + 2(M−i)i·b + i²c`、`D2 = (M−i)(b−a) + i(c−b)`（M = 64），R = 3|D1|³ ÷ (2M³·|D1 × D2|)；兩個向量先縮到每個分量 24 位元（七位有效數字），128 位元的 `WideInteger` 算完。**每一步的限速取它前後至少 100 m（`CurveSpeedLimit.smoothing`；邊比較短時整條邊）的平均曲率**（依弧長加權），兩條三次曲線接點附近、描線建造（決策 213，最小半徑 40 m）造成的短促急彎不會單獨決定整段的限速，真實路線也是依一段曲線的半徑訂限速；**一條邊分成 8 段標示**（每段 8 步、9 個讀數取最低），相鄰同速的合併：真實路線一段彎道標一個限速，不會每幾公尺換一次；逐步標示時高鐵示範一段行駛平均有 180 個限速片段（5 km/h 一級在 290、295 之間跳），分 8 段後是 48 個。步在邊上的位置是精確點之間弦長的比例乘邊長。直線邊沒有限速。高鐵示範 774 條邊有 426 條帶限速，讀檔時間不變（量測見 PR）。
+3. **多段行駛曲線**（`LimitedRunningCurve`，新檔）：有限速的一段行駛不再是一個巡航速度。每一點允許的速度是「巡航上限、那裡的限速、從上一個較慢處（或起點）加速得到的、還來得及煞到下一個限速（或終點停車）的」最小值（前向與後向包絡）；同一個限速區段裡 v² 沿著三條直線（加速、限速、煞車），所以分段由 v² 精確算出，不逐步模擬。巡航上限和 `RunningCurve` 一樣是「剛好用完這段時間」的那一個，從平均速度到最高速度之間對分，到上限自己的 1/4096 為止（列車不比需要的快，最多早到行駛時間的 1/4096）。加減速照性能的正常值，排不下時依序試備用煞車、兩個備用值（同 `assignRunProfiles`）；**有限速的行駛不惰行**（惰行是高鐵的，高鐵幾乎碰不到限速）。最少秒數（`leastSeconds`）是全速跑完各段的時間進位到整秒，不用對分；同理「這段時間排得下嗎」（`RunCurve.fits`）只算一次全速，不建曲線。`RunCurve` 在沒有低於最高速的限速時就是原本的 `RunningCurve`（逐位元相同），有時才是 `LimitedRunningCurve`。查詢（`distance(at:)`、`time(atDistance:)`、`speed(at:)`）是對分搜尋分段再代公式：一次 0.7 µs（debug）；建一條 100 km、30 個限速的曲線約 2.8 ms（debug），所以第二個 PR 每段行駛只建一次。沒有限速時和 `RunningCurve` 的最少秒數差 1 秒以內（測試）。
+4. **一段行駛遇到的限速**（`RailwayNetwork.speedLimits(from:offset:through:distance:trailing:)`）：沿列車的路徑把各邊的限速換到行駛的距離上（反向通過時倒過來），**每個限速延長一個列車長**，車尾離開彎道才加速；只收低於最高速的限速，最後合併成依序、不重疊、每段取最低的清單（`CurveSpeedLimit.merged`，一次掃描）。出發時車尾還在彎道裡的那一段不算（看不到車頭後面的邊，量級是一個車長）。
+5. **開關與預設**（第二個 PR 做，這裡先定）：獨立的世界開關 `curveSpeedLimits`，只在打開時存，缺 key＝關。App 的新遊戲打開；示範地圖、挑戰、教學、`GameWorld` 的新世界與舊存檔關掉。第一版沒有設定介面（同決策 207；遊戲中切換要多一種指令日誌的編輯，重播與復原都要跟著改）。依作者 2026-10-14 的規則從三方面定：
+   - 玩家：回報要的正是大彎減速；新遊戲一開始就看得到，舊存檔不會載入後時刻表全部改掉。
+   - 開發：開關獨立、缺 key＝關，golden、`ReplayFixtures`、`SaveFixtures` 與示範的數字都不動；限速是邊的推導值，存檔只多一個 key（存檔 57）。
+   - 美術：不畫限速牌，地圖不加新圖示；用跟隨列的「彎道限速 60」與鋪軌放大鏡半徑旁的「可跑 105 km/h」表現（NEXT_PRIORITIES §13 第 19 名的建議）。
+   - 沒有採用的：(B) 綁在寫實運轉上（舊存檔裡開著寫實運轉的時刻表會在讀檔後全部變慢）；(C) 新遊戲也預設關（玩家回報的問題在新遊戲裡照樣看得到）。
+6. **沒有做的**（之後）：道岔側向的固定限速（側線本身是曲線時已經照曲率限速）、節點上的折角、坡道對速度的影響、移動授權終點前依煞車曲線減速（#556 的區間閉塞也不做）、擺式列車（參考 `SPEED_ZONES` 的普悠瑪／太魯閣比一般車快 10–20 km/h）。
+
+**參考**（`a91453/railway-reference-private`，`7888702`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `SPEED_ZONES`（8180–8185）：`{anchor 站名, side, lenKm, v: {puyuma, tilting, regular}}`，新馬彎道 75／85／65、和仁－崇德 130／130／115 | `TrackSpeedLimit`（`start`、`end`、`speed`）：區段的形狀照搬 | 資料形狀照搬；數值綁真實地名、這裡由曲率推導，不搬 |
+| 同檔 `runSpeedZones`（8190–8212）：區段換成一段行駛裡的 `{d0, d1, v}`，夾在 `[0, runL]`，50 m 以下略過 | `RailwayNetwork.speedLimits(from:offset:through:distance:trailing:)`、`LimitedRunningCurve.zones` | 換到行駛距離、夾到兩端照搬；重疊取最低 |
+| 同檔 `zoneProfileOk`（8214–8228）：取樣檢查不超過 `v × 1.02` | `CurveSpeedLimitTests.checkKeepsTo`（每 0.1 秒，2 %） | 檢查方式照搬 |
+| 同檔 `speedZoneKnots`、`buildObsProfile`（8239–8380）：固定總時間，在區段插入 Hermite 節點、壓低切線 | `LimitedRunningCurve`（v² 的前向／後向包絡，對分巡航上限） | 不搬：參考是擬合曲線，不是物理；保留「總時間不變、區段內不超速」的意圖（9/19 更新紀錄：「照彎道速限通過，到站時刻不變」） |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` `MIN_CURVE_RADIUS_M`（沒有被用到） | `CurveSpeedLimit.kmhSquaredPerMetre` 的對照 | 只用來驗證係數 |
+| `Railway/train_loop_reference_clean/source/index.html` `KAP`（418–429，±12 m 平均轉角）、`stepTilt` | `CurveSpeedLimit.speed(at:a:b:c:)`（從三次曲線精確算） | 不搬：這裡的邊是精確的三次曲線；`KAP` 驅動車體傾斜與出軌小遊戲，不限速 |
+
+`Simulator/`、`MapBuilder/`、`OpenWorld/`、`Railway/city_world_reference/`、`island_city`、`street_scene`、`commuter_journey`、`railway_game_reference_clean`（OpenTTD 的 YAPF 彎道是尋路成本）都沒有半徑換速度的規則。**外部**：OpenTTD（GPL-2.0，只看想法）`Train::GetCurveSpeedLimit` 看相鄰車廂的轉向、不看半徑，而且只在已經進彎時限速、不提前煞車；Simutrans-Extended（Artistic License 1.0，沒列在 CLAUDE.md 的寬鬆授權裡，只看想法）`calc_speed_limit` 由轉 90°/135°/180° 用了幾格估半徑，`isqrt(87·R ÷ 10)`，並且依煞車距離提前減速（`simconvoi.cc` 的 `route_infos`）：提前減速的想法和這裡一致，程式沒有搬。真實公式：淡江大學鐵路工程講義（`rail-lc3.pdf`、`rail-lc4.pdf`，C = 8.4V²/R、超高上限 105 mm、超高不足 50–60 mm）、Wikipedia「Cant deficiency」。程式全是本專案自己寫的。
+
+**測試**：`CurveSpeedLimitTests`（規則的表；四分之一圓整段受半徑限制；直線與很緩的邊不限速；S 形在反曲點不限速；400 個隨機三次曲線的整數曲率和浮點數相差不到一級；建造與讀檔後邊的限速相同；一段行駛的限速順向、逆向、延長一個車長、車頭後面的不算；沒有限速時和 `RunningCurve` 差 1 秒內；限速越低越慢、高於最高速不變；三種性能、三種時間下每 0.1 秒不超速 2 %、不後退、時間與距離互逆；進彎前就在減速、出彎後回到最高速；長時間的行駛整段在限速下）。
 
 ### 219. 鐵道聲音：車站識別鈴聲、隨城市成長的配樂、MML Studio 的產製流程（方向與分階段）
 
