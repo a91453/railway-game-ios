@@ -194,6 +194,23 @@ final class TrainTripLogTests: XCTestCase {
         XCTAssertTrue(trip.isValid)
     }
 
+    /// The log keeps today's and yesterday's trips of a line or station the
+    /// player has since removed: a save holding them loads, so the log's
+    /// check does not ask that its stations and lines still exist (the
+    /// screens look them up as they may be gone).
+    func testTripsOfARemovedLineAndStationStillLoad() throws {
+        var world = try build()
+        try world.advance(ticks: 600)
+        XCTAssertTrue(world.tripLog.contains { $0.line == second && $0.calls.contains { $0.station == c } })
+        try world.removeLine(second)
+        try world.removeStation(c)
+        XCTAssertNil(world.station(id: c))
+        XCTAssertTrue(world.tripLog.contains { $0.line == second && $0.calls.contains { $0.station == c } }, "kept")
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     /// Riders credited to a train's running trip find it without walking
     /// the log: on a log of 20,000 trips of other trains, crediting takes
     /// about as long as on a short one (the log is ordered by train).
