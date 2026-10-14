@@ -6423,7 +6423,7 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - **手機橫拿時卡片變矮**：`TutorialCardPlacement.maxHeight`。手機橫拿（compact height）時是 `compactMaxHeight` 150 pt，說明文字在卡片裡捲動，標題、問題提示與按鈕一直看得到。原本量卡片時用整個可用高度，最矮也算 200 pt，約 250 pt 高的地圖只剩下一條。iPad 與直拿不變（`.infinity`）。
 - **詳細資料卡可以收起來**：教學中，步驟沒有指到詳細資料卡（`TutorialStep.usesDetailsCard` 為 false）時，工具列上顯示收合按鈕（`controls.toggle`），`ControlDetails.isOpen` 也照玩家的選擇。指到它的步驟照舊一定打開，也不顯示按鈕。
 - 其他蓋在地圖上的互動卡片：路線提示（決策 201）、待避線（決策 204）都是系統 alert，路線面板與詳細資料卡在手機橫拿時已經變窄（決策 106 的之後的修正）。這次沒有改。
-- 不做卡片拖曳，等作者決定。
+- 不做卡片拖曳（作者讓 session 決定，三方理由在 #562）：卡片變矮、膠囊一點就收、詳細資料卡可以收起，已經讓出地圖；拖過的位置要和 `TutorialCardPlacement` 的自動擺放、`TutorialCardFold` 的自動收合協調，還會和地圖拖曳搶手勢，也會讓卡片離開它圈選的目標。實機上仍不夠再另做。
 - **參考**：沒有查參考與外部專案：這是本專案既有版面的尺寸修正，不是新的 Stage。
 
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
