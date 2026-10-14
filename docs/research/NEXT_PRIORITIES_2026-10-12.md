@@ -259,6 +259,7 @@
 | 色盲配色與線號徽章、課程典藏、情境檔案格式（木柵線） | 玩家角度的中段項目；情境格式一公開就變成長期契約 |
 | 唯讀 3D，以及商場、機廠的 3D 外觀 | 3D 城市現在不讀遊戲狀態。作者 2026-10-13 定了方向：同一張地圖拉近就傾斜，排在波次 1 之後，開工前先量實機幀時間 |
 | 公車接駁（抽象化，擴大車站服務圈）、台鐵實景示範照真實班表、網頁版 W1 | 價值較低或要先有前面的工作 |
+| 香港示範（港鐵路網、班表、站名） | 作者 2026-10-14 問過；三方考慮後先不做：玩家沒有要求、核心是台灣；「真實世界任意地點」已能在香港開新遊戲；要做示範得另備港鐵資料，3D 畫風也定為台灣版。`commuter_journey_reference_clean/` 先當人潮、轉乘、車站商業的素材 |
 | iOS App Build 設成必要檢查、CI 4B 的其他項目、從 b0722e7 上傳的那一版 TestFlight 要不要過期 | 要作者在 GitHub 或 App Store Connect 設定，列在 §10 |
 
 ## 7. 不做
@@ -472,7 +473,11 @@
 | `Railway/site_archive_clean/data/tra_pass_obs.json`、`tra_run_profiles.json`、`tra_schedule_dense.json` | 寫實度基準報告、之後的台鐵實測曲線 | 台鐵實測通過時間與 14 天班表；本次用來量真實時間 |
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `MIN_CURVE_RADIUS_M`（80 km/h↔300 m、100↔600、120↔800、160↔1200） | 之後的幾何限速 | 依半徑反查限速的表 |
 | 同檔的 `metroResolveStationWaitCap`、`metroGetHubWaitingTotal` | 車站商業的轉乘群組合算 | 參考把一個轉乘站群的候車人數加總，可以照做 |
-| 同檔的 `flowDashboardCaptureStationForDailyReport` | `StationFlowDay`（決策 179，已移植） | 車站商業的客流來源 |
+| `Railway/commuter_journey_reference_clean/`（2026-10-14 加入，香港地鐵的乘客視角遊戲，Three.js r160，先讀 `00_READ_ME_FIRST.md`、`REFERENCE_COMPARISON.md`）：`crowd/SpatialHash.js`、`Steering.js`、`QueueSystem.js`、`ConcourseCrowd.js`、`MallCrowd.js` | §0 第 14 項 3D 拉近時的月台與大廳人群；§13 第 5 名車站商業的商場人流 | 人潮的空間索引、避讓與排隊。用 `Math.random()` 與即時輸入，只當畫面層移植，不進 GameCore |
+| 同上的 `train/`、`config/seatConfig.js`、`alightConfig.js`、`gameplay/CapacitySystem.js` | 車門擁擠（決策 169）的畫面、3D 的上下車 | 個別乘客選車門、排隊、上下車與容量提示 |
+| 同上的 `ui/InterchangeMap.js`、`NavigationPrompt.js`、`TransferHUD.js`、`InterchangeHUD.js` | §13 第 6 名旅程追蹤、車站面板的轉乘說明 | 旅客視角的轉乘地圖與導引 |
+| 同上的 `ui/ShoppingPanel.js`、`config/shoppingConfig.js`、`mallConfig.js` | §13 第 5 名車站商業的畫面 | 站內商店與購物的版面 |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `flowDashboardCaptureStationForDailyReport` | `StationFlowDay`（決策 179，已移植） | 車站商業的客流來源 |
 | `Railway/site_archive_clean/rail-3d/physical/network.json`（OSM，ODbL） | 實景地圖的機廠建議位置 | `service=yard`、`siding` 的群聚 |
 | `Railway/site_archive_clean/rail-3d/physical/topology.js` 的 `shortestPath`（`allowYard=false`） | 機廠 L1 | 停車線不給載客路線走 |
 | `Simulator/reference_snapshot/api/templates/`（五線留置線、貨物調車場的版面） | 機廠建造工具 | 「N 股留置線＋梯形道岔」的範本概念；軌道片尺寸要換算 |
@@ -547,10 +552,10 @@
 
 | 新排名 | 項目 | 原位置 | 玩家 | 開發 | 美術 | 鐵道迷＋產品 | 加權分 | 美術注意事項 |
 | --: | --- | --- | --: | --: | --: | --: | --: | --- |
-| 1 | 機廠建造工具與畫面 | 波次 2 第 3 項 | 3 | 4 | 5 | 5 | 4.05 | **招牌畫面**。要一個新的地圖圖示「機廠」（單色模板，和車站整組並排看，art-style §2）、「出庫中／入庫中」的列車狀態標記、停車線照一般軌道畫。新標記先在 `MAP_LAYERS.md` 定列（車站那層 30 或等待那層 34 附近），標記用形狀不用路線色（決策 205）。依賴：機廠 L1（#548）合併。參考庫：`Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/` 有彰化扇形車庫、羅東林場檢車庫的 3D 模型，只在 3D 做好後搬白模；2D 圖示自己畫 |
-| 2 | 沿真實路線描線建造 | 波次 2 第 8 項 | 4 | 3 | 4 | 5 | 3.95 | 實景與全島地圖上多一層「真實鐵路」的底線，不能和玩家的軌道（綠松）或路線色搞混：建議藏青細虛線或淡灰，吸附時才加亮。新疊層要在 `MAP_LAYERS.md` 定列（軌道 23 下面）。資料用 App 內附的 OSM 軌道（ODbL，`DataSourceCredits` 已列）。工作量中，不用新插圖 |
-| 3 | 路網明信片 | §6 | 3 | 4 | 5 | 4 | 3.85 | **玩家會分享出去的圖**，等於遊戲的門面。用現有的 `MapArt`（站名底牌、列車逐節、玩家建物暖黃）與站長插圖排版；要訂框、標題字級、淺色與深色兩版，照 art-style §5 做 2–4 種方案給作者挑。不用參考庫的圖 |
-| 4 | 色盲配色與線號徽章 | §6 | 3 | 4 | 5 | 4 | 3.85 | 決策 205 已經讓標記不靠顏色，但**路線本身**還只靠玩家選的顏色分。線號徽章（像北捷 BL、R）讓路線用文字與形狀分開；色盲配色要把路線色票每一對算過對比與灰階（art-style §5 的灰階檢查），寫進 `UI_THEME.md`。要先訂徽章的規則（形狀、字級、放在路線色帶 24 還是站名 30 旁）。參考庫：沒有可用的徽章圖 |
+| 1 | 機廠建造工具與畫面（**已合併** #559，決策 214；圖示 #555） | 波次 2 第 3 項 | 3 | 4 | 5 | 5 | 4.05 | **招牌畫面**。要一個新的地圖圖示「機廠」（單色模板，和車站整組並排看，art-style §2）、「出庫中／入庫中」的列車狀態標記、停車線照一般軌道畫。新標記先在 `MAP_LAYERS.md` 定列（車站那層 30 或等待那層 34 附近），標記用形狀不用路線色（決策 205）。依賴：機廠 L1（#548）合併。參考庫：`Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/` 有彰化扇形車庫、羅東林場檢車庫的 3D 模型，只在 3D 做好後搬白模；2D 圖示自己畫 |
+| 2 | 沿真實路線描線建造（**已合併** #558，決策 213，底線 A 藏青細虛線） | 波次 2 第 8 項 | 4 | 3 | 4 | 5 | 3.95 | 實景與全島地圖上多一層「真實鐵路」的底線，不能和玩家的軌道（綠松）或路線色搞混：建議藏青細虛線或淡灰，吸附時才加亮。新疊層要在 `MAP_LAYERS.md` 定列（軌道 23 下面）。資料用 App 內附的 OSM 軌道（ODbL，`DataSourceCredits` 已列）。工作量中，不用新插圖 |
+| 3 | 路網明信片（2026-10-14 已派工） | §6 | 3 | 4 | 5 | 4 | 3.85 | **玩家會分享出去的圖**，等於遊戲的門面。用現有的 `MapArt`（站名底牌、列車逐節、玩家建物暖黃）與站長插圖排版；要訂框、標題字級、淺色與深色兩版，照 art-style §5 做 2–4 種方案給作者挑。不用參考庫的圖 |
+| 4 | 色盲配色與線號徽章（2026-10-14 已派工） | §6 | 3 | 4 | 5 | 4 | 3.85 | 決策 205 已經讓標記不靠顏色，但**路線本身**還只靠玩家選的顏色分。線號徽章（像北捷 BL、R）讓路線用文字與形狀分開；色盲配色要把路線色票每一對算過對比與灰階（art-style §5 的灰階檢查），寫進 `UI_THEME.md`。要先訂徽章的規則（形狀、字級、放在路線色帶 24 還是站名 30 旁）。參考庫：沒有可用的徽章圖 |
 | 5 | 車站商業三級 | 波次 3 第 1 項 | 3 | 3 | 5 | 4 | 3.60 | 作者問過的「車站商場」，看得見、玩家會想點。要三級的車站圖示或站徽變化（圖層 30），以及建造卡那種多色插圖三張（照 #532 的做法，art-style §2）。商業是玩家的東西，用暖黃（§0 回答 4）。數字要先校準（§9.4）。3D 之後：參考庫 `blender-buildings-v1/` 有臺北車站、左營・新左營，只搬白模 |
 | 6 | 旅程追蹤 | 波次 3 第 7 項 | 3 | 4 | 4 | 3 | 3.45 | 前 5 名起訖的弧線是很好看的畫面。弧線不用路線色、不用漸層：藏青墊白邊，粗細代表人數，最多 5 條；新疊層定在轉乘連線 25 與進路預覽 26 之間。工作量小 |
 | 7 | 真實車款的性能數值 | 波次 2 第 5 項 | 2 | 5 | 2 | 5 | 3.35 | 幾乎看不見，只在車種選單多幾個名字與數值。注意：選單上出現 EMU3000、TEMU 之後，玩家會預期地圖上外觀也不同；第一版只給文字，外觀等內容目錄（第 20 名）與 rolling-stock skill 的 3D |

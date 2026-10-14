@@ -18,12 +18,12 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 54（機廠 L1，#548）；每個版本一個存檔 fixture，共 58 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 72，76 個情境 | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–210。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準（2026-10-13：211 由台灣假日規則 #551 登記） | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–214。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
 | 測試數 | GameCoreTests 約 1,205、GamePresentationTests 約 1,010、UI 測試 42 個 | — |
-| 發佈 | GitHub Actions → TestFlight。run #54（2026-10-12）實際驗證到簽章、上傳、App Store Connect 處理（VALID）、填 What to Test。測試者拿到之前，App Store Connect 還要先回答出口合規（log 寫 Missing Compliance）。TestFlight 安裝 UNVERIFIED。最新一版：run #59（2026-10-13，`main` `5680fbf` → 0.5.0 (59.1)） | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` |
+| 發佈 | GitHub Actions → TestFlight。run #54（2026-10-12）實際驗證到簽章、上傳、App Store Connect 處理（VALID）、填 What to Test。測試者拿到之前，App Store Connect 還要先回答出口合規（log 寫 Missing Compliance）。TestFlight 安裝 UNVERIFIED。最新一版：run #60（2026-10-13，`main` `a272c69` → 0.5.0 (60.1)） | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` |
 
 ## 3. 遊戲已有的系統
 
@@ -393,3 +393,6 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 208 | 用 Taiwan.md 查核遊戲的事實：台灣假日、天燈節、劉銘傳劇本、三個景點 |
 | 209 | 機廠 L1：車站旗標、路線所屬機廠、自動入出庫與成本（存檔 54） |
 | 210 | 地圖上看得見問題：中等縮放的候車膠囊、擁擠的量表環、為何在等的小牌與擁擠泡泡的一句原因 |
+| 211 | 台灣的假日每年照規則算（紀念日及節日實施條例、農曆對照表） |
+| 213 | 沿真實路線描線建造 |
+| 214 | 機廠的建造工具與畫面 |

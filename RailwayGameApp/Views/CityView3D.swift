@@ -14,7 +14,11 @@ import WebKit
 /// traffic and trains are the page's own.
 struct CityView3D: View {
     let area: CityViewArea
-    @Environment(\.dismiss) private var dismiss
+    /// Closes the preview from the view that presents it. The environment's
+    /// `dismiss()` showed the × pressed and left the preview open while the
+    /// page was still loading its city (full lane run 38521818299, its
+    /// screen recording at 35.4 s).
+    let close: () -> Void
     @State private var host = CityViewHost()
     /// A page the city view's page links to (the website's home page),
     /// shown in the app in Safari's view rather than in Safari.
@@ -64,14 +68,21 @@ struct CityView3D: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("cityView.loading")
             }
+        }
+        // The × in an overlay of its own, above the web view and whatever it
+        // shows, and touched by a tap gesture beside the button's action, so
+        // the web view's gestures cannot take the touch from it. Closing
+        // twice does nothing more.
+        .overlay(alignment: .topLeading) {
             Button {
-                dismiss()
+                close()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, .black.opacity(0.55))
             }
+            .simultaneousGesture(TapGesture().onEnded { close() })
             .padding(12)
             .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
             .accessibilityIdentifier("cityView.close")

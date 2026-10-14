@@ -6417,6 +6417,15 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - **參考**：`Ci/` 的 `TUTORIAL_STEPS` 第 7–9 步打開路線資訊面板（`openUI` 選第一條有車站的線），圈出面板與其中一列（`#panel-line-info`、`#line-info-capacity-row`），這兩步照這個做法。參考沒有讀收支或虧損的步驟，內文是本專案寫的。外部專案沒有搜尋：參考的做法已經夠用。
 - `TutorialJourneyUITests` 一起改：第 17 步點 `entry.lines`，第 18 步按「下一步」，之後的步驟號碼加 2。
 
+**之後的修正（2026-10-14，玩家回報 59.1，iPhone 18 Pro：教學與互動卡片太大，看不到地圖上發生什麼；「卡在第 6 頁」）**：
+- 「11 頁、卡第 6 頁」是 54.1 的舊問題（橫拿時卡片蓋住路線面板），56.1 已修好；59.1 的教學有 21 步。這次修的是還剩下的「卡片太大」與「收合後不知道怎麼繼續」。
+- **收合的膠囊**：右邊加「點我看說明 ⌃」（英文 “Tap for help”），讓玩家知道點它會展開。等夠久或卡片顯示問題時，膠囊旁邊直接有「略過這一步」（和展開的卡片同一個 `tutorial.skipStep`，兩者不會同時出現）。原本只有展開的卡片上才有這個按鈕。
+- **手機橫拿時卡片變矮**：`TutorialCardPlacement.maxHeight`。手機橫拿（compact height）時是 `compactMaxHeight` 150 pt，說明文字在卡片裡捲動，標題、問題提示與按鈕一直看得到。原本量卡片時用整個可用高度，最矮也算 200 pt，約 250 pt 高的地圖只剩下一條。iPad 與直拿不變（`.infinity`）。
+- **詳細資料卡可以收起來**：教學中，步驟沒有指到詳細資料卡（`TutorialStep.usesDetailsCard` 為 false）時，工具列上顯示收合按鈕（`controls.toggle`），`ControlDetails.isOpen` 也照玩家的選擇。指到它的步驟照舊一定打開，也不顯示按鈕。
+- 其他蓋在地圖上的互動卡片：路線提示（決策 201）、待避線（決策 204）都是系統 alert，路線面板與詳細資料卡在手機橫拿時已經變窄（決策 106 的之後的修正）。這次沒有改。
+- 不做卡片拖曳（作者讓 session 決定，三方理由在 #562）：卡片變矮、膠囊一點就收、詳細資料卡可以收起，已經讓出地圖；拖過的位置要和 `TutorialCardPlacement` 的自動擺放、`TutorialCardFold` 的自動收合協調，還會和地圖拖曳搶手勢，也會讓卡片離開它圈選的目標。實機上仍不夠再另做。
+- **參考**：沒有查參考與外部專案：這是本專案既有版面的尺寸修正，不是新的 Stage。
+
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 
 2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -7526,6 +7535,38 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 **測試**：`DepotToolsTests`（點軌道盡頭鋪 3 股：兩個轉轍器、北邊 5 m 一股、每股一個月台、存檔來回；1 股與右側 6 股；點軌道中間不行；出了地圖整個不蓋；指令日誌記得到、重播一樣；一條路線用工具蓋的機廠：收班後「入庫中」→「在庫」→ 早上「出庫中」，路線面板的在庫數與 FollowBar；車站面板說明為何不能設、開不通時寫出路線名；路線面板沒有機廠與照班次跑的說明；說明頁）。`NetworkBuildingSessionTests` 的模式中文名多一個「機廠」。UI 測試 `MapInteractionTests.testTheDepotModeOffersItsSidings` 放 full lane（決策 199）。
 
 **沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、實機外觀（拱門徽章、小方牌在深色地圖、在庫膠囊）、手機上路網模式五格的寬度。交通管制下機廠出入口的會車要在實機玩。
+
+### 215. 路網明信片
+
+2026-10-14，作者 2026-10-14 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 3 名，原在 §6「之後」）。號碼依 #231：決策 215；GameCore、存檔版本、golden schema 都不動。
+
+1. **一鍵做一張可分享的圖**：遊戲選單「更多」裡的「做明信片」（`menu.postcard`）打開 `PostcardSheet`：上面是會分享出去的那張卡，下面是公司名稱、淺色／深色、「分享明信片」。分享鍵把圖（1200×1500 像素）交給系統的分享面板（`ShareLink`），玩家可以存到相簿、傳 LINE、貼 IG。
+2. **版面：C 直式海報**（4:5）。三種方案（A 站名牌標題列、B 郵票明信片、C 直式海報，`docs/art/postcard-2026-10-14/options.png`）給作者看，作者交由「玩家、開發者、美術三方考慮」選定 C：
+   - 玩家：直式在手機上最大，也正好是 IG、LINE 動態的比例；
+   - 開發：各部分上下堆疊，版面是幾個固定的框（`PostcardLayout`），Linux 測得到不重疊；
+   - 美術：標題是卡上最大的字，站長的圓章壓在地圖右下角，有人味但不擋路網。
+   - 參考庫的島嶼城市「分享圖」也是 1080×1350（4:5）、上圖下字、四格數字，結構相同（下面的對照表）。
+3. **卡上的內容**（`NetworkPostcard`，GamePresentation）：小字「ALONG THE LINE ・ 沿線」；公司名稱（遊戲裡沒有公司名，玩家在這裡寫，存在裝置上，`@AppStorage("postcard.companyName")`；去頭尾空白、換行變空白、最多 16 字，空的時候是「我的鐵道」）；遊戲日期・公司稱號（決策 181）；四格數字：路線數、車站數、路網長度、昨日旅客（`CompanyFigures`，和公司等級同一份）。
+4. **地圖**：用地圖本身的畫法（`MapArt.drawBase`、`drawMap`、`drawTrains`：地面、城市的建物、軌道、路線色帶、車站與站名底牌、列車逐節、玩家建物暖黃），不另畫一套。範圍是蓋好的東西（`WorldRegion.built`），至少 256 m 寬，四周留 8%；還沒蓋時是整張地圖。投影 `PostcardProjection` 把範圍塞進卡上的地圖框，最近不超過地圖最近的縮放（`MapScale.largestSize`）。不畫候車人數、擁擠環、服務範圍、等待：明信片是路網的樣子，不是問題清單。時間固定在白天（不加夜色）。
+5. **署名**：明信片不畫 Apple 地圖或 OSM 底圖（兩者是另外的 View，畫不進 `ImageRenderer` 的圖），只畫遊戲自己的地面。所以在實景地圖上只欠鐵道的署名，寫在地圖框下面：`DataSourceCredits.mapCorner(baseMap: false, railways: true)`（「鐵道：© OpenStreetMap · 交通部 TDX」）；自己的地圖不寫。之後若要把底圖畫進去（`MKMapSnapshotter`、MapLibre 的 snapshotter），署名改成 `baseMap: true` 那一行。
+6. **淺色與深色**：同一個版面，顏色全取 `Theme`（卡底 `panel`、字 `textPrimary`／`textSecondary`、小字 `primary`、數字格 `chip`）與 `Palette`（外框與地圖框 `ink`、地圖本身）。預設跟著手機的外觀，可以切換；`ImageRenderer` 照選的外觀畫。
+
+**參考**（`a91453/railway-reference-private`，`7888702`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/island_city_reference_clean/source/js/g10.js` `makeShareImage`（1080×1350 畫布：上面 920 高的畫面，下面白底：島名 64 px、等級・年・大小一行 30 px、四格數字 220×120、腳註遊戲名） | `PostcardLayout`（400×500 點 ×3 = 1200×1500，同為 4:5）：上面標題、中間地圖、下面四格數字 2×2（右邊讓給站長圓章） | 版面結構與比例照搬，數值換成這個遊戲的；標題移到地圖上面（作者選的 C） |
+| 同目錄 `g11.js` `makeIdCard` 與「我的市長證」表單（名字最多 10 字，存在存檔 `S.mayorName`；`navigator.share({files})`，不支援時下載） | 公司名稱欄（最多 16 字，存在裝置上，不進存檔：GameCore 不動）；`ShareLink` 交給系統的分享面板 | 做法照搬；分享改用 iOS 的 |
+| `Railway/train_loop_reference_clean/source/index.html` 1662 行 `navigator.share({ text })` | 無 | 只分享文字 |
+| `Ci/` anycity 的「分享存檔」 | 無 | 是存檔代碼，不是圖；本專案的匯出存檔（`ExportedSave`）另有 |
+| `OpenWorld/reference_snapshot/play/src/game/device-notice.js` `navigator.share` | 無 | 分享網址 |
+| `Railway/commuter_journey_reference_clean/source/js/ui/PhotoJournal.js`（3D 畫面截圖存成明信片收集） | 無 | 截 3D 畫布；這裡的地圖是 Canvas，直接重畫 |
+
+`Simulator/`、`MapBuilder/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Railway/street_scene_reference_clean/` 沒有做成圖分享的功能（`site_archive_clean` 的「行程分享」是網址）。圖一律不用參考庫的（art-style §7）：卡上只有遊戲自己的地圖與站長。外部專案沒有用到：`ImageRenderer`、`ShareLink` 是 iOS 16 起的系統 API。
+
+**測試**：`NetworkPostcardTests`（示範地圖的標題、日期・稱號、四格數字與公司等級一致、自己的地圖沒有署名；英文單複數；名稱去空白、截斷、空的給預設；實景地圖寫鐵道署名；地圖範圍包住整個路網、每站都在框裡；新地圖是整張；投影最近不超過最大縮放、來回換算；各部分都在卡內、字與數字互不重疊也不碰地圖與站長、只有站長圓章壓在地圖角上、輸出 1200×1500）。
+
+**沒有驗證的**：畫面與輸出的圖（SwiftUI、`ImageRenderer`，只在 macOS CI 編譯）；深色版 `ImageRenderer` 是否照選的外觀解析 `Theme`／`Palette` 的動態色、實機上分享到相簿與 LINE。沒有加 UI 測試：選單多一列、面板打開，留給實機看。
 
 ### 216. 線號徽章與色盲友善色票
 
