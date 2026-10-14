@@ -43,7 +43,7 @@ extension GameWorld {
     func runsHighSpeedSetsOnly(_ id: LineID) -> Bool {
         guard let line = line(id: id), !line.isFreight else { return false }
         let assigned = line.assignedTrains
-        return !assigned.isEmpty && assigned.allSatisfy { train(id: $0)?.type == .highSpeed }
+        return !assigned.isEmpty && assigned.allSatisfy { train(id: $0)?.type?.isHighSpeed == true }
     }
 
     /// Plans line `id` at high speed when it runs high-speed sets and

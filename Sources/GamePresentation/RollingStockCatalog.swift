@@ -9,27 +9,8 @@ import GameCore
 public struct RollingStockCatalog: Equatable, Sendable {
     /// A family of types: the showroom's tabs, and the colour of the
     /// stripe along the cars.
-    public enum Family: CaseIterable, Hashable, Sendable {
-        case metro, railway, highSpeed, special
-
-        public init(_ type: TrainType) {
-            switch type {
-            case .a, .b, .c, .l, .d, .apm: self = .metro
-            case .steam, .emu3000: self = .railway
-            case .highSpeed: self = .highSpeed
-            case .maglev, .skyRail, .monorail: self = .special
-            }
-        }
-
-        public func title(in language: DisplayLanguage) -> String {
-            switch self {
-            case .metro: language.text("Metro", "捷運")
-            case .railway: language.text("Railway", "鐵路")
-            case .highSpeed: language.text("High speed", "高鐵")
-            case .special: language.text("Special", "特殊")
-            }
-        }
-    }
+    /// Each type's is its row of the catalog (decision 225).
+    public typealias Family = TrainFamily
 
     /// One type.
     public struct Entry: Equatable, Sendable, Identifiable {
@@ -81,5 +62,21 @@ public struct RollingStockCatalog: Equatable, Sendable {
     public static func train(_ type: TrainType, cars: Int, in world: GameWorld) -> (riders: Int64, price: Money, daily: Money) {
         let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
         return (type.ratedCapacityPerCar * Int64(cars), world.purchaseCost(of: type, cars: cars), world.dailyRunningCost(of: type, cars: cars))
+    }
+}
+
+extension TrainFamily {
+    /// The family of `type`: its row of the catalog says which.
+    public init(_ type: TrainType) {
+        self = type.family
+    }
+
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .metro: language.text("Metro", "捷運")
+        case .railway: language.text("Railway", "鐵路")
+        case .highSpeed: language.text("High speed", "高鐵")
+        case .special: language.text("Special", "特殊")
+        }
     }
 }

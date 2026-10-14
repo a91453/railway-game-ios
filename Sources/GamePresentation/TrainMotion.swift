@@ -247,7 +247,7 @@ public struct TrainMotion: Sendable {
                 }
             }
             runs.append(Run(
-                train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type == .highSpeed,
+                train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
                 trail: trail, lag: lag, length: Double(train.length), heading: heading
             ))
         }
