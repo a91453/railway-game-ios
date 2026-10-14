@@ -214,10 +214,32 @@ extension GameWorld {
     func reservingDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         let planned = reserving(candidate, following: true, memo: &memo)
         guard isTrafficControlEnabled, case .held = planned,
-              case .travellingToStop(let stop, let cycle)? = candidate.execution,
-              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
-                                                 avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo)
+              case .travellingToStop(let stop, let cycle)? = candidate.execution
         else { return planned }
+        if let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+                                              avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo),
+           case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
+            return .granted(granted)
+        }
+        // With block sections (decision 212): the shortest route to a berth
+        // of the station that only the trains standing there or on the way
+        // block (those it may never follow), followed behind the trains
+        // ahead on it.
+        guard blockSections else { return planned }
+        let standing = Set(trains.filter { train in
+            guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
+            return false
+        }.map(\.id))
+        guard let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
+                                                 avoiding: blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo)), memo: &memo),
+              case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
+        else { return planned }
+        return .granted(granted)
+    }
+
+    /// `candidate`, a service setting off for stop `stop` (of cycle
+    /// `cycle`), along `alternative` instead, on a run for its time there.
+    private func rerouted(_ candidate: Train, along alternative: TrainPath, stop: Int, cycle: Int64) -> Train {
         var rerouted = candidate
         follow(alternative, &rerouted)
         let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
@@ -226,8 +248,7 @@ extension GameWorld {
             - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
         let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
         rerouted.times?.run = reroutedRun
-        if case .granted(let granted) = reserving(rerouted, memo: &memo) { return .granted(granted) }
-        return planned
+        return rerouted
     }
 
     /// How much longer than a service's default route an alternative
