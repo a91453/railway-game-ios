@@ -636,10 +636,10 @@ public enum SaveError: Error, Hashable, Sendable {
         switch self {
         case .notASave:
             language.text("That file is not an Along the Line save.", "這個檔案不是《沿線》的存檔。")
-        case .newerVersion(let version):
+        case .newerVersion:
             language.text(
-                "That save comes from a newer version of the game (save format \(version)). Update the app to load it.",
-                "這個存檔來自較新版本的遊戲（存檔格式 \(version)）。請更新 App 後再讀取。"
+                "That save comes from a newer version of the game. Update the app to load it.",
+                "這個存檔來自較新版本的遊戲，請更新 App 後再讀取。"
             )
         case .damaged:
             language.text("That save is damaged and cannot be loaded.", "這個存檔已損壞，無法讀取。")

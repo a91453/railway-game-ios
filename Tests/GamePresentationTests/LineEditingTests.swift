@@ -84,8 +84,8 @@ final class LineEditingTests: XCTestCase {
                 XCTAssertEqual(session.selectedLine?.stops, [alpha, beta, gamma])
                 XCTAssertEqual(session.message?.kind, .failure)
                 XCTAssertEqual(session.message?.text, language.text(
-                    "Train #1 of Main is on one of its runs, which new stops end. Wait for it to finish, or take it off the line first.",
-                    "Main 的列車 #1 正在跑班次，改停靠會結束班次。請等它跑完，或先讓它離開路線。"
+                    "Blue of Main is on a run. Wait for it to finish, or take it off the line first.",
+                    "Main 的 Blue 正在跑班次。請等它跑完，或先讓它離開路線。"
                 ))
             }
         }

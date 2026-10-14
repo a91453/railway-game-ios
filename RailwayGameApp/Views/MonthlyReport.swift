@@ -70,7 +70,7 @@ private struct MonthlyReportCard: View {
                 Section {
                     if report.newTowers > 0 {
                         Label {
-                            Text(verbatim: language.text("\(report.newTowers) new tall buildings (D3 or D4)", "新增 \(report.newTowers) 棟高樓（D3、D4）"))
+                            Text(verbatim: language.text("\(report.newTowers) new tall buildings", "新增 \(report.newTowers) 棟高樓"))
                         } icon: {
                             Image(systemName: "building.2.fill")
                         }

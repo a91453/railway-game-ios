@@ -130,8 +130,8 @@ struct NewGameOptionsView: View {
                     Text(verbatim: language.text("Map seed", "地圖種子"))
                 } footer: {
                     Text(verbatim: language.text(
-                        "The same seed draws the same towns and events, so a map can be shared. Digits only, up to 4294967295.",
-                        "相同的種子會產生相同的城鎮與事件，可以和朋友分享地圖。只能輸入數字，最大 4294967295。"
+                        "The same seed draws the same towns and events, so a map can be shared. Digits only, up to 10 of them.",
+                        "相同的種子會產生相同的城鎮與事件，可以和朋友分享地圖。只能輸入數字，最多 10 位。"
                     ))
                 }
                 Section {

@@ -233,15 +233,15 @@ final class LandImportTests: XCTestCase {
         XCTAssertEqual(world.landCatchmentText(of: station, in: .traditionalChinese), "800 公尺內：居民 44,394 人 · 就業 42,396 個")
         XCTAssertNil(world.landCatchmentText(of: StationID(rawValue: 99), in: .english))
         // Phase 6c-1: the first town's cells by their buildings' density.
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: low-rise 102 · mid-rise 189 · high-rise 130 · towers 27")
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：低層 102 格 · 中層 189 格 · 高層 130 格 · 超高層 27 格")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Buildings within 800 m: low-rise 102 · mid-rise 189 · high-rise 130 · towers 27")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內的建物：低層 102 棟 · 中層 189 棟 · 高層 130 棟 · 超高層 27 棟")
         XCTAssertNil(world.catchmentBuildingsText(of: StationID(rawValue: 99), in: .english))
         try world.setLand([
             LandCell(row: 128, column: 128, use: .office, residents: 0, jobs: 5_000),
             LandCell(row: 128, column: 127, use: .residential, residents: 300, jobs: 0),
         ])
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Cells within 800 m by density: high-rise 1 · existing stock 1")
-        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內各密度的格：高層 1 格 · 既有存量 1 格")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .english), "Buildings within 800 m: high-rise 1 · existing 1")
+        XCTAssertEqual(world.catchmentBuildingsText(of: station, in: .traditionalChinese), "800 公尺內的建物：高層 1 棟 · 原有建物 1 棟")
         world.setCityBuildings(false)
         XCTAssertNil(world.catchmentBuildingsText(of: station, in: .english), "no buildings, no line")
         try world.setLand([])
@@ -259,13 +259,13 @@ final class LandImportTests: XCTestCase {
             .appendingPathComponent("SaveFixtures")
         let measured = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v14-city-growth.json"))).world
         let station = StationID(rawValue: 1)
-        XCTAssertEqual(measured.cityGrowthText(of: station, in: .english), "Yesterday: 100% of trips served · 1 station reached · buildings 90% full rise")
-        XCTAssertEqual(measured.cityGrowthText(of: station, in: .traditionalChinese), "昨日：旅次服務 100% · 可達 1 站 · 90%滿的建物會升級")
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .english), "Yesterday: 100% of trips served · 1 station reached · full buildings grow taller")
+        XCTAssertEqual(measured.cityGrowthText(of: station, in: .traditionalChinese), "昨日：旅次服務 100% · 可達 1 站 · 客滿的建物會長高")
         let earlier = try JSONDecoder().decode(SavedGame.self, from: Data(contentsOf: fixtures.appendingPathComponent("v13-city-buildings.json"))).world
         XCTAssertEqual(earlier.cityGrowthText(of: station, in: .english),
-                       "Yesterday: 0% of trips served · 0 stations reached · buildings 90% full rise at 80% served and 1 station reached")
+                       "Yesterday: 0% of trips served · 0 stations reached · full buildings grow taller at 80% served and 1 station reached")
         XCTAssertEqual(earlier.cityGrowthText(of: station, in: .traditionalChinese),
-                       "昨日：旅次服務 0% · 可達 0 站 · 服務達 80% 且可達至少 1 站時，90%滿的建物才會升級")
+                       "昨日：旅次服務 0% · 可達 0 站 · 服務達 80% 且可達至少 1 站時，客滿的建物才會長高")
         XCTAssertNil(measured.cityGrowthText(of: StationID(rawValue: 99), in: .english))
         var off = measured
         off.setCityBuildings(false)

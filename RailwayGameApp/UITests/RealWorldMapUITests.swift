@@ -60,7 +60,7 @@ final class RealWorldMapUITests: XCTestCase {
 
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         let authority = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "Movement authority")).firstMatch
+            .matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "map.traffic", "cleared to run")).firstMatch
         XCTAssertTrue(authority.appears(within: 60), "The demo's trains take their routes under traffic control")
     }
 

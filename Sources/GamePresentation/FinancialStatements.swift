@@ -272,8 +272,8 @@ extension GameWorld {
         let count = unrecordedAssetCount()
         guard count > 0 else { return nil }
         return language.text(
-            "\(count) track, station or train items built before their cost was kept are on the books at $ 0.",
-            "有 \(count) 項軌道、車站或列車在開始記錄成本之前建造，以 $ 0 入帳。"
+            "\(count) track, station or train items have no purchase cost on record and are listed at $ 0.",
+            "有 \(count) 項軌道、車站或列車沒有購置成本紀錄，以 $ 0 列帳。"
         )
     }
 

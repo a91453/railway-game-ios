@@ -638,8 +638,8 @@ struct LinesPanel: View {
                 Text(verbatim: session.language.text("Operations", "營運"))
             } footer: {
                 Text(verbatim: session.language.text(
-                    "Profit is fares less this line's own running costs: no interest, buildings or tax. A transfer's fare is shared among the lines it rides by distance.",
-                    "損益是票收減去這條線自己的營運成本，不含利息、建物與稅。轉乘旅客的票價依各段距離分給所搭的路線。"
+                    "Profit is this line's fares less its own running costs, before interest, buildings and tax.",
+                    "損益是這條線的票收減去它自己的營運成本，不含利息、建物與稅。"
                 ))
             }
         }
@@ -1200,8 +1200,8 @@ struct LinesPanel: View {
             Text(verbatim: language.text("Headway and trains", "班距與列車數"))
         } footer: {
             Text(verbatim: language.text(
-                "Pick how often a train comes and tap once: trains it lacks are bought and wait at the first station, extra trains go to no line, those waiting back to the depot and the others after their trip, and the rest keep evenly apart.",
-                "選班距後按一下：不夠的車會買好在第一站等候，多的車回到未配屬（等車的收回車庫，正在跑的跑完這一趟），其餘的保持等間隔。"
+                "Pick how often a train comes and tap once: missing trains are bought and wait at the first station, extra ones leave the line after their trip, and the rest keep evenly apart.",
+                "選班距後按一下：不夠的車會買好在第一站等候，多的車跑完這一趟後離開路線，其餘的保持等間隔。"
             ))
         }
         // The line's own headway, nearest of the choices, when it is

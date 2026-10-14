@@ -55,17 +55,17 @@ extension GameWorld {
             let count = buildings.count { $0.kind == .city && $0.density == density }
             if count > 0 {
                 let number = Money(Int64(count)).displayText
-                parts.append(("\(english) \(number)", "\(chinese) \(number) 格"))
+                parts.append(("\(english) \(number)", "\(chinese) \(number) 棟"))
             }
         }
         let stock = buildings.count { $0.kind == .existingStock }
         if stock > 0 {
             let number = Money(Int64(stock)).displayText
-            parts.append(("existing stock \(number)", "既有存量 \(number) 格"))
+            parts.append(("existing \(number)", "原有建物 \(number) 棟"))
         }
         return language.text(
-            "Cells within 800 m by density: " + parts.map(\.0).joined(separator: " · "),
-            "800 公尺內各密度的格：" + parts.map(\.1).joined(separator: " · ")
+            "Buildings within 800 m: " + parts.map(\.0).joined(separator: " · "),
+            "800 公尺內的建物：" + parts.map(\.1).joined(separator: " · ")
         )
     }
 
@@ -80,12 +80,12 @@ extension GameWorld {
         let percent = "\(place.lastService / 10)%"
         let reached = place.lastReached
         let rises = place.lastService >= LandDemand.upgradeService && place.lastReached >= LandDemand.upgradeReached
-        let need = "\(LandDemand.upgradeService / 10)%", full = "\(LandDemand.upgradeFullness / 10)%"
+        let need = "\(LandDemand.upgradeService / 10)%"
         return language.text(
             "Yesterday: \(percent) of trips served · \(reached) \(reached == 1 ? "station" : "stations") reached · "
-                + (rises ? "buildings \(full) full rise" : "buildings \(full) full rise at \(need) served and \(LandDemand.upgradeReached) station reached"),
+                + (rises ? "full buildings grow taller" : "full buildings grow taller at \(need) served and \(LandDemand.upgradeReached) station reached"),
             "昨日：旅次服務 \(percent) · 可達 \(reached) 站 · "
-                + (rises ? "\(full)滿的建物會升級" : "服務達 \(need) 且可達至少 \(LandDemand.upgradeReached) 站時，\(full)滿的建物才會升級")
+                + (rises ? "客滿的建物會長高" : "服務達 \(need) 且可達至少 \(LandDemand.upgradeReached) 站時，客滿的建物才會長高")
         )
     }
 }

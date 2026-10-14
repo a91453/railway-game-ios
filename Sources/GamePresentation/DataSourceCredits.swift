@@ -144,8 +144,8 @@ public enum DataSourceCredits {
                         id: "openStreetMap",
                         title: "OpenStreetMap",
                         detail: language.text(
-                            "The track alignment of every real railway line (redrawn on OpenStreetMap's tracks; TDX's shape kept only where OpenStreetMap has no track in use, as at Duolin on the Alishan line), station and platform positions, single and double track, places such as shops, offices, schools and sights that tell the game what kind of area a new station serves, and the industrial land, parks and farmland of real-world maps, and their coastline, rivers and lakes, where towns do not grow; the names of settlements, villages and townships that new stations are named after; where the tourist sights of a real-world map stand (matched by name in the extract); the roads, parks and shop names of the 3D city preview.",
-                            "提供每條真實鐵道的軌道走向（照 OpenStreetMap 的軌道重畫；只有 OpenStreetMap 沒有現行軌道的地方，例如林鐵的多林一帶，保留 TDX 的線形）、車站與月台位置、單雙線資訊，商店、辦公室、學校、景點等地點（用來判斷新車站周邊是什麼樣的地方），以及實景地圖上的工業區、公園與農地，和海岸線、河川與湖泊（城鎮不會長到水上）；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置（依名稱在檔案中比對）；3D 城市試作的道路、公園與店名。"
+                            "The track of every real railway line, station and platform positions, single and double track; places such as shops, offices, schools and sights round new stations; the industrial land, parks, farmland, coastline, rivers and lakes of real-world maps; the names of the settlements, villages and townships new stations are named after; where the tourist sights of real-world maps stand; the roads, parks and shop names of the 3D city preview.",
+                            "提供每條真實鐵道的軌道走向、車站與月台位置、單雙線資訊；新車站周邊的商店、辦公室、學校、景點等地點；實景地圖上的工業區、公園、農地、海岸線、河川與湖泊；替新車站命名的聚落、村里與鄉鎮市區名稱；實景地圖上觀光景點的位置；3D 城市預覽的道路、公園與店名。"
                         ),
                         // The ODbL asks for the derived files to be offered
                         // under the same licence: the source repository link
@@ -206,7 +206,7 @@ public enum DataSourceCredits {
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
                             "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings of the 3D city preview round Kaohsiung and Taichung Stations are its footprints too.",
-                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍 3D 城市試作的建物也是它的足跡。"
+                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍 3D 城市預覽的建物也是它的足跡。"
                         ),
                         notice: language.text(
                             "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file the game derives from them is available under the same licence from the source repository.",
@@ -246,12 +246,12 @@ public enum DataSourceCredits {
                         id: "taiwanBaseMap",
                         title: language.text("Taiwan’s OpenStreetMap base map", "台灣的 OpenStreetMap 底圖"),
                         detail: language.text(
-                            "The OpenStreetMap base map of real-world maps in Taiwan (the map style menu’s OSM), which needs no network: the game’s own vector tiles of OpenStreetMap’s sea, rivers, woods, parks, roads, boundaries and place names, made from the same extract (osmtoday.com) as the real-world maps’ water, zones and places, in tiles after the OpenMapTiles schema; its labels in Noto Sans.",
-                            "台灣的實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路：遊戲自己的向量圖磚，畫 OpenStreetMap 的海、河川、森林、公園、道路、行政界與地名，和實景地圖的水域、分區、地點來自同一份整包檔（osmtoday.com），圖層照 OpenMapTiles 的格式；文字用 Noto Sans。"
+                            "The OpenStreetMap base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names, with labels in Noto Sans.",
+                            "台灣實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名，文字用 Noto Sans。"
                         ),
                         notice: language.text(
                             "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Noto Sans is © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
-                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權在遊戲的公開 repo 提供。圖層照 OpenMapTiles 的格式（CC BY 4.0）。Noto Sans © The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
+                            "© OpenMapTiles © OpenStreetMap 貢獻者。地圖資料 © OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用；圖磚與產生它的工具依同一授權放在遊戲公開的原始碼儲存庫。圖層照 OpenMapTiles 的格式（CC BY 4.0）。Noto Sans © The Noto Project Authors，依 SIL Open Font License 1.1 使用，授權條款隨 App 提供。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL),
@@ -318,7 +318,7 @@ public enum DataSourceCredits {
             // Decision 152: the 3D city view of the settings' preview.
             DataSourceSection(
                 id: "cityView",
-                title: language.text("3D City Preview", "3D 城市試作"),
+                title: language.text("3D City Preview", "3D 城市預覽"),
                 credits: [
                     DataSourceCredit(
                         id: "proceduralTokyo",
