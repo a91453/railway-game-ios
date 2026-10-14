@@ -261,7 +261,7 @@ private struct TutorialCardSlot: View {
     var body: some View {
         let hint = session.tutorialHint
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
-        TutorialCardLayout(placement: sized) {
+        TutorialCardLayout(placement: isFolded ? sized.folded : sized) {
             if isFolded {
                 FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
                     UITestTrace.action("tutorial.unfold")
@@ -469,11 +469,15 @@ private struct TutorialCard: View {
                         UITestTrace.action("tutorial.skipStep")
                         session.skipTutorialStep()
                     } label: {
+                        // A fingertip's 44 points to tap; on a phone on its
+                        // side the row lays out 36 tall, the rest reaching
+                        // into the spacing above and below it.
                         Text(verbatim: session.language.text("Skip this step", "略過這一步"))
                             .font(.footnote.weight(.semibold))
                             .underline()
-                            .frame(minWidth: 44, minHeight: isCompact ? 36 : 44)
+                            .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
+                            .padding(.vertical, isCompact ? -4 : 0)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Theme.primary)
@@ -579,6 +583,9 @@ private struct FoldedTutorialCard: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Theme.primary.opacity(0.14), in: Capsule())
+                    // Where the capsule is narrow, the title is cut short
+                    // first.
+                    .layoutPriority(1)
                 }
                 .padding(.leading, 12)
                 .padding(.trailing, offersSkip ? 8 : 12)
@@ -610,6 +617,7 @@ private struct FoldedTutorialCard: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Theme.primary)
+                .layoutPriority(1)
                 .accessibilityIdentifier("tutorial.skipStep")
             }
         }
@@ -620,6 +628,9 @@ private struct FoldedTutorialCard: View {
                 .allowsHitTesting(false)
         }
         .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-        .fixedSize()
+        // As tall as it needs, and as wide up to the width the placement
+        // offers (``TutorialCardPlacement``), never wider than the screen:
+        // with a long title and large text the title is cut short.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
