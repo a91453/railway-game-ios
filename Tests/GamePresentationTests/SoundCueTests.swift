@@ -255,12 +255,13 @@ final class SoundCueTests: XCTestCase {
         XCTAssertEqual(StationChime.of(Self.west, in: world), .local)
     }
 
-    /// The chime is the station's the train arrived at: a line's train
-    /// rings East's tourist chime there and West's local one back there,
-    /// also in steps of several ticks, where it arrives and leaves within
-    /// one step, or completes its trip at West (one sound a step: the
-    /// step's first arrival).
-    func testATrainRingsTheChimeOfTheStationItArrivedAt() async throws {
+    /// The chime is the station's the watched train arrived at: a line's
+    /// train rings East's tourist motif there and West's local one back
+    /// there (600×), also in steps of several ticks, where it arrives and
+    /// leaves within one step, or completes its trip at West (one sound a
+    /// step: the step's first arrival). Not watched, it rings the local
+    /// chime everywhere.
+    func testAWatchedTrainRingsTheChimeOfTheStationItArrivedAt() async throws {
         var world = try makeServiceWorld()
         try world.stopTrainService(Self.tram)
         try world.setTrainTimetable(Self.tram, to: [])
@@ -272,27 +273,37 @@ final class SoundCueTests: XCTestCase {
         await MainActor.run { [world] in
             for step in [GameSession.tickInterval, GameSession.maximumStepDuration] {
                 let session = GameSession(world: world)
+                session.followTrain(Self.tram)
                 var heard: [(cue: SoundCue, at: [StationID])] = []
                 session.playSound = { heard.append(($0, session.world.stationsStoppedAt(by: Self.tram))) }
                 for _ in 0..<(step == GameSession.tickInterval ? 40 : 8) {
                     session.advance(realElapsed: step)
                 }
                 let chimes = heard.map(\.cue)
-                XCTAssertTrue(chimes.contains(.arrival(watched: false, chime: .tourist)), "\(step): East")
-                XCTAssertTrue(chimes.contains(.arrival(watched: false, chime: .local)), "\(step): West")
+                XCTAssertTrue(chimes.contains(.arrival(watched: true, chime: .tourist, motif: true)), "\(step): East")
+                XCTAssertTrue(chimes.contains(.arrival(watched: true, chime: .local, motif: true)), "\(step): West")
                 // A tick at a time the train still stands where it rang;
                 // a longer step may take it on to the next station.
                 for (cue, at) in heard where step == GameSession.tickInterval && !at.isEmpty {
                     let expected: StationChime = at == [Self.east] ? .tourist : .local
-                    XCTAssertEqual(cue, .arrival(watched: false, chime: expected), "\(step): standing at \(at)")
+                    XCTAssertEqual(cue, .arrival(watched: true, chime: expected, motif: true), "\(step): standing at \(at)")
                 }
+
+                let unwatched = GameSession(world: world)
+                var others: [SoundCue] = []
+                unwatched.playSound = { others.append($0) }
+                for _ in 0..<(step == GameSession.tickInterval ? 40 : 8) {
+                    unwatched.advance(realElapsed: step)
+                }
+                XCTAssertFalse(others.isEmpty)
+                XCTAssertTrue(others.allSatisfy { $0 == .arrival(watched: false) }, "\(step): the local chime, quieter")
             }
         }
     }
 
-    /// The research note's §6: the whole chime at 60× and slower; at 600×
-    /// the watched train's motif, the others' whole chime; at 1200× and
-    /// 6000× only the watched train, with its motif.
+    /// The research note's §6: a watched train rings its station's whole
+    /// chime at 60× and slower and its motif at 600× and faster; the
+    /// others ring the local chime at every speed.
     func testTheSpeedDecidesBetweenTheChimeAndItsMotif() throws {
         var world = try makeServiceWorld()
         world.setTourism([Self.sight])
@@ -301,18 +312,14 @@ final class SoundCueTests: XCTestCase {
         func cue(_ arrived: [SoundCue.ArrivedTrain], watched: Set<TrainID>, _ speed: GameSpeed) -> SoundCue? {
             SoundCue.arrivalCue(for: arrived, watched: watched, speed: speed, in: world)
         }
-        for speed in [GameSpeed.x1, .x10, .x60] {
-            XCTAssertEqual(cue([other, east], watched: [Self.tram], speed), .arrival(watched: true, chime: .tourist, motif: false), "\(speed)")
-            XCTAssertEqual(cue([east, other], watched: [], speed), .arrival(watched: false, chime: .tourist, motif: false), "\(speed)")
-        }
-        XCTAssertEqual(cue([other, east], watched: [Self.tram], .normal), .arrival(watched: true, chime: .tourist, motif: true))
-        XCTAssertEqual(cue([other, east], watched: [], .normal), .arrival(watched: false, chime: .local, motif: false), "the first train's station")
-        for speed in [GameSpeed.double, .fast] {
-            XCTAssertEqual(cue([other, east], watched: [Self.tram], speed), .arrival(watched: true, chime: .tourist, motif: true), "\(speed)")
-            XCTAssertNil(cue([other, east], watched: [], speed), "\(speed): only a watched train sounds")
+        for speed in [GameSpeed.x1, .x10, .x60, .normal, .double, .fast] {
+            let motif = speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick
+            XCTAssertEqual(cue([other, east], watched: [Self.tram], speed), .arrival(watched: true, chime: .tourist, motif: motif), "\(speed)")
+            XCTAssertEqual(cue([east, other], watched: [], speed), .arrival(watched: false), "\(speed): the others ring the local chime")
         }
         XCTAssertNil(cue([], watched: [Self.tram], .x1))
-        XCTAssertEqual(cue([SoundCue.ArrivedTrain(train: Self.tram, station: nil)], watched: [], .x1), .arrival(watched: false), "a station not known rings the local chime")
+        XCTAssertEqual(cue([SoundCue.ArrivedTrain(train: Self.tram, station: nil)], watched: [Self.tram], .x1),
+                       .arrival(watched: true), "a station not known rings the local chime")
     }
 
     /// Every chime and motif the cues name is a file the app bundles and

@@ -70,9 +70,9 @@ RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
 | 檔案 | 內容 | 遊戲裡 |
 | --- | --- | --- |
 | `music-loop.caf` | 38.4 秒、可無縫循環的音樂：和弦墊、琶音與鐵軌接縫聲，C 大調 I – vi – IV – V，100 bpm；IMA4，48 kHz 立體聲 | App 在前景時循環播放 |
-| `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 營運中的列車到「地方小站」（決策 219） |
-| `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
-| `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 到「觀光」站：800 m 內有景點（決策 174、219） |
+| `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 在看的列車到「地方小站」；沒在看的列車到任何站（小聲，決策 219） |
+| `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 在看的列車到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
+| `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 在看的列車到「觀光」站：800 m 內有景點（決策 174、219） |
 | `chime-local-motif.wav`、`chime-metro-motif.wav`、`chime-tourist-motif.wav` | 各自的動機：前 2、3、3 個音，0.8 秒 | 600 倍速以上，在看的列車到站（決策 219） |
 | `rail-joint.wav` | 「喀噠、喀噠」的鐵軌接縫聲 | 建好一段軌道 |
 | `whoosh.wav` | 一秒的「咻」聲 | 換工具、開始或離開遊戲 |

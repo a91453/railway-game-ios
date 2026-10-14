@@ -10,8 +10,8 @@ public enum SoundCue: Hashable, Sendable {
     /// (``GameSession/watchedTrainIDs``); the app rings the others quieter
     /// and less often, so a busy network does not ring all the time.
     ///
-    /// Decision 219: `chime` is the station's (``StationChime``), and
-    /// `motif` plays only its first notes, as a watched train does at 600×
+    /// Decision 219: for a watched train, `chime` is the station's
+    /// (``StationChime``), and `motif` plays only its first notes, at 600×
     /// and faster (``arrivalCue(for:watched:speed:in:)``).
     case arrival(watched: Bool, chime: StationChime = .local, motif: Bool = false)
     /// Track was built: a rail joint.
@@ -124,24 +124,21 @@ public enum SoundCue: Hashable, Sendable {
     }
 
     /// The one sound for the trains that arrived within a step, or `nil`
-    /// (decision 219, the research note's §6):
+    /// (decision 219, the research note's §6). The station's chime
+    /// (``StationChime``) and its motif are for a watched train only:
     ///
-    /// - at 60× and slower, the whole chime of the station: a watched
-    ///   train's when one arrived, else the first train's, quieter;
-    /// - at 600×, a watched train plays the station's motif, the first two
-    ///   or three notes (stations are a second or two apart); the others
-    ///   ring the whole chime, quieter, as before;
-    /// - at 1200× and 6000×, only a watched train sounds, with its motif.
+    /// - a watched train rings its station's whole chime at 60× and
+    ///   slower, and its motif, the first two or three notes, at 600× and
+    ///   faster (stations are a second or two apart);
+    /// - the others ring the local chime, quieter, at every speed, as
+    ///   before (the app rings them at most every few seconds).
     ///
-    /// The chime is the station's (``StationChime``); a station not known
-    /// rings the local one.
+    /// A station not known rings the local chime.
     static func arrivalCue(for arrived: [ArrivedTrain], watched: Set<TrainID>, speed: GameSpeed, in world: GameWorld) -> SoundCue? {
-        let seen = arrived.first { watched.contains($0.train) }
-        let fast = speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick
-        if seen == nil, speed.tenthsPerTick > GameSpeed.normal.tenthsPerTick { return nil }
-        guard let train = seen ?? arrived.first else { return nil }
-        let chime = train.station.map { StationChime.of($0, in: world) } ?? .local
-        return .arrival(watched: seen != nil, chime: chime, motif: seen != nil && fast)
+        guard !arrived.isEmpty else { return nil }
+        guard let seen = arrived.first(where: { watched.contains($0.train) }) else { return .arrival(watched: false) }
+        let chime = seen.station.map { StationChime.of($0, in: world) } ?? .local
+        return .arrival(watched: true, chime: chime, motif: speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
     }
 
     /// The file the app plays for the cue, in its bundle's `Audio`
