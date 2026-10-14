@@ -137,6 +137,20 @@ final class LineTrainCountTests: XCTestCase {
         }
     }
 
+    /// A train assigned to the line but never placed waits off the track:
+    /// taking it off leaves it there, and the rest of the change goes on.
+    func testFewerTrainsTakeOffAnUnplacedTrain() throws {
+        var world = try lineBetweenTwoTowns()
+        let unplaced = try world.purchaseTrain(named: "Spare").id
+        try world.assignTrain(unplaced, to: Self.line)
+        XCTAssertNil(world.train(id: unplaced)?.position)
+        XCTAssertEqual(world.line(id: Self.line)?.trains.last, unplaced)
+        try GameSession.removeTrains(1, from: Self.line, targets: TargetHeadways(peak: 30), in: &world)
+        XCTAssertFalse(world.line(id: Self.line)?.trains.contains(unplaced) ?? true)
+        XCTAssertNil(world.train(id: unplaced)?.position)
+        XCTAssertEqual(world.line(id: Self.line)?.targetHeadways, TargetHeadways(peak: 30))
+    }
+
     // MARK: Single track
 
     func testSingleTrackSaysWhatHoldsItBack() throws {

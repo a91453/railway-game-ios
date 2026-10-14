@@ -258,7 +258,8 @@ extension GameSession {
             // One waiting goes back to the depot, so that it does not keep
             // the line's platform (the author's call, 2026-10-13); one on a
             // trip finishes it first, where it stops.
-            if waiting.contains(train) { try world.unplaceTrain(train) }
+            // One never placed is already off the track.
+            if waiting.contains(train), world.train(id: train)?.position != nil { try world.unplaceTrain(train) }
         }
         try world.setLineTargetHeadways(id, to: targets, pattern: nil)
     }
