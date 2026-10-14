@@ -176,6 +176,8 @@ extension GameWorld {
                 let time = clockText(minuteOfDay: open % 1_440)
                 return language.text("Waiting: \(line.name) opens at \(time)", "等候發車：\(line.name) \(time) 開始營運")
             }
+            // TestFlight 60.1: say why the line does not send it out.
+            if let hold = lineDispatchHoldText(of: id, in: language) { return hold }
             return language.text("Waiting for service dispatch", "等候派車")
         }
         // TestFlight 54.1: a placed train standing with no line says so,
