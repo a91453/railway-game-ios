@@ -93,6 +93,7 @@ public enum PingxiChallenge {
         world.setRealisticOperation(false)
         // Decision 212: its traffic control takes whole legs as measured.
         world.setBlockSections(false)
+        world.setCurveSpeedLimits(false)
         // Decision 174: but the Sky Lanterns of Pingxi are a sight tourists
         // come to (the only one on this map), by the festival's days and
         // all year; its riders' target counts them.

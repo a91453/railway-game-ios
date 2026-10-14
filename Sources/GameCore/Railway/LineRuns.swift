@@ -273,7 +273,8 @@ extension GameWorld {
             guard let path = chosen else { return nil }
             var seconds: Int64 = 0
             if path.distance > 0 {
-                guard let least = RunningCurve.leastSeconds(length: path.distance, performance: line.performance) else { return nil }
+                guard let least = RunCurve.leastSeconds(length: path.distance, performance: line.performance,
+                                                       limits: speedLimits(from: placement, along: path, below: line.performance.topSpeed)) else { return nil }
                 seconds = least
             }
             legs.append(LineLeg(from: from, to: to, path: path, seconds: seconds))

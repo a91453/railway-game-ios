@@ -147,7 +147,7 @@ extension GameWorld {
         if let execution = train.execution {
             guard case .travellingToStop = execution,
                   let run = train.times?.run, clock.now > run.start, clock.now < run.end,
-                  let curve = run.curve(for: train.performance) else { return 0 }
+                  let curve = runCurve(of: run, for: train.performance) else { return 0 }
             let elapsed = (clock.now.seconds - run.start.seconds) * 1000
             let first = max(0, elapsed - 500), last = min(curve.duration, elapsed + 500)
             return Double(curve.distance(at: last) - curve.distance(at: first)) * 3600

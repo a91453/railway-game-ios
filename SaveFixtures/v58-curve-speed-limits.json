@@ -1,0 +1,242 @@
+{
+  "saveVersion" : 58,
+  "world" : {
+    "bounds" : {
+      "height" : 262144,
+      "width" : 262144
+    },
+    "clock" : {
+      "now" : 60,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "curveSpeedLimits" : true,
+    "economy" : {
+      "balance" : 999981100,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 500
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "lastDispatch" : 0,
+        "name" : "Main",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "cubic" : {
+              "control1" : {
+                "x" : 86892,
+                "y" : 8192
+              },
+              "control2" : {
+                "x" : 95488,
+                "y" : 16788
+              }
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        }
+      ],
+      "nextEdgeID" : 6,
+      "nextNodeID" : 7,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 8192,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 12288,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 76288,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 95488,
+          "y" : 27392,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 95488,
+          "y" : 91392,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 95488,
+          "y" : 95488,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 5,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 2,
+    "realisticOperation" : true,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "A",
+        "point" : {
+          "x" : 10240,
+          "y" : 8704
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "B",
+        "point" : {
+          "x" : 96000,
+          "y" : 93440
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 1,
+          "edges" : [
+            2,
+            3,
+            4,
+            5
+          ],
+          "rate" : 1024
+        },
+        "name" : "Blue",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 2,
+            "offset" : 4320
+          }
+        },
+        "times" : {
+          "arrival" : 0,
+          "departure" : 42,
+          "run" : {
+            "length" : 162240,
+            "limits" : [
+              {
+                "end" : 94144,
+                "speed" : 75,
+                "start" : 64000
+              }
+            ],
+            "seconds" : 161,
+            "start" : 42
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 0,
+            "departure" : 42,
+            "station" : 1
+          },
+          {
+            "arrival" : 203,
+            "departure" : 323,
+            "reverse" : true,
+            "station" : 2
+          },
+          {
+            "arrival" : 486,
+            "departure" : 486,
+            "reverse" : true,
+            "station" : 1
+          }
+        ]
+      }
+    ]
+  }
+}
