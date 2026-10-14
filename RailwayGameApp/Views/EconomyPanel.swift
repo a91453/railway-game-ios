@@ -48,6 +48,7 @@ struct EconomyPanel: View {
                 ledgerSection
             }
             .navigationTitle("Economy")
+            .hardTopScrollEdge()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

@@ -83,8 +83,9 @@ struct StationLineChips: View {
 }
 
 /// Lays its views out in rows, left to right, starting a new row when the
-/// next one would pass the width it is offered.
-private struct ChipFlow: Layout {
+/// next one would pass the width it is offered; one wider than that alone
+/// is given the width, and wraps its words in it.
+struct ChipFlow: Layout {
     let spacing: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -99,10 +100,10 @@ private struct ChipFlow: Layout {
         for row in rows(subviews, width: bounds.width) {
             var x = bounds.minX
             for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+                let size = fittedSize(of: subviews[index], width: bounds.width)
                 subviews[index].place(
                     at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
-                    proposal: ProposedViewSize(width: min(size.width, bounds.width), height: size.height)
+                    proposal: ProposedViewSize(width: size.width, height: size.height)
                 )
                 x += size.width + spacing
             }
@@ -120,7 +121,7 @@ private struct ChipFlow: Layout {
         var rows: [Row] = []
         var row = Row()
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            let size = fittedSize(of: subviews[index], width: width)
             let needed = row.indices.isEmpty ? size.width : row.width + spacing + size.width
             if !row.indices.isEmpty, needed > width {
                 rows.append(row)
@@ -132,6 +133,14 @@ private struct ChipFlow: Layout {
         }
         if !row.indices.isEmpty { rows.append(row) }
         return rows
+    }
+
+    /// Its own size, or, wider than `width`, its size in `width`.
+    private func fittedSize(of subview: LayoutSubview, width: CGFloat) -> CGSize {
+        let size = subview.sizeThatFits(.unspecified)
+        guard size.width > width else { return size }
+        let fitted = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+        return CGSize(width: min(fitted.width, width), height: fitted.height)
     }
 }
 

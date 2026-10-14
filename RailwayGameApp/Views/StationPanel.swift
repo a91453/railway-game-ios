@@ -74,6 +74,7 @@ struct StationPanel: View {
                 }
             }
             .navigationTitle(session.selectedStation.map { Text(verbatim: $0.name) } ?? Text("Station"))
+            .hardTopScrollEdge()
             .navigationBarTitleDisplayMode(.inline)
             .renameAlert(
                 title: session.language.text("Rename Station", "車站更名"),
@@ -173,30 +174,26 @@ struct StationPanel: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
                     .font(.subheadline.weight(.semibold))
-                Text(verbatim: departureDetail(row, language: language))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                // Decision 223: the time it is due, the timetable's struck
+                // through when late.
+                HStack(spacing: 4) {
+                    LateTimeText(scheduled: row.replacedTimeText ?? row.expected.clockText,
+                                 expected: row.replacedTimeText == nil ? nil : row.expected.clockText)
+                    Text(verbatim: departureDetail(row, language: language))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                .font(.caption.monospacedDigit())
             }
             Spacer(minLength: 4)
-            if let late = row.lateText(in: language) {
-                Text(verbatim: late)
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Color.orange.opacity(0.25)))
-                    .foregroundStyle(Color.orange)
-            }
-            if row.passes {
-                Text(verbatim: language.text("Passes", "通過"))
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Theme.textSecondary.opacity(0.2)))
-                    .foregroundStyle(Theme.textSecondary)
+            // The capsule says how it stands in words (decision 223); a
+            // train at the platform says so in the time column instead.
+            if !row.isBoarding {
+                TrainStatusCapsule(row: row, language: language)
             }
             Text(verbatim: row.awayText(in: language))
                 .font(.subheadline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(row.isBoarding ? Color.green : Theme.textPrimary)
+                .foregroundStyle(row.isBoarding ? Theme.primary : Theme.textPrimary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("station.board.row")

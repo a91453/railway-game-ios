@@ -168,6 +168,16 @@ extension GameWorld {
         if case .waitingAtStop? = train.execution {
             return language.text("Waiting for departure", "等候發車")
         }
+        // Author's report, 2026-10-14: a train on a trip says where it is
+        // going and how far it has left, not its path's track numbers.
+        if case .travellingToStop(let stop, _)? = train.execution, train.timetable.indices.contains(stop) {
+            let name = stationName(train.timetable[stop].station)
+            guard let left = pathDistanceLeft(of: train), left > 0 else {
+                return language.text("Heading to \(name)", "開往 \(name)")
+            }
+            let distance = NetworkBuilding.distanceText(left, in: language)
+            return language.text("Heading to \(name), \(distance) to go", "開往 \(name)，還有 \(distance)")
+        }
         if train.execution == nil, let lineID = assignedLine(of: id) {
             // A line outside its service window sends nobody out: say
             // when it opens, not only that the train waits.
@@ -186,7 +196,28 @@ extension GameWorld {
         if train.execution == nil, train.position != nil, !train.hasPathAhead, assignedLine(of: id) == nil {
             return language.text("Not assigned to a line", "未配屬路線")
         }
-        return train.pathText(in: language)
+        // Author's report, 2026-10-14: how far it goes, not its path's
+        // track numbers (``Train/pathText(in:)`` keeps them).
+        guard let left = pathDistanceLeft(of: train), left > 0 else {
+            return language.text("No path ahead", "前方沒有路徑")
+        }
+        let distance = NetworkBuilding.distanceText(left, in: language)
+        return language.text("Path: stops \(distance) ahead", "路徑：前方 \(distance) 處停車")
+    }
+
+    /// How far `train` has left along its path, in units: the rest of the
+    /// edge it is on and the edges after it, to where it stops on the last;
+    /// `nil` when it has no path ahead.
+    func pathDistanceLeft(of train: Train) -> Int64? {
+        guard train.hasPathAhead, case .onEdge(let traversal, let offset)? = train.position,
+              let length = network.edge(traversal.edge)?.length else { return nil }
+        let edges = train.movement.remainingEdges
+        guard let last = edges.last else { return max(0, (train.movement.end ?? length) - offset) }
+        var left = max(0, length - offset)
+        for edge in edges.dropLast() {
+            left += network.edge(edge)?.length ?? 0
+        }
+        return left + (train.movement.end ?? network.edge(last)?.length ?? 0)
     }
 
     /// How long line `id`'s own service takes, worked out with the line's

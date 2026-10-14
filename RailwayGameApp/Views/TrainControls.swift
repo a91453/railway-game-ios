@@ -104,6 +104,10 @@ struct TrainControls: View {
                 // open (it scrolled back and showed two layers of text).
                 TrainPickerMenu(session: session, choices: session.trainMenuChoices, selectedName: train.name)
                     .equatable()
+                    // Author's report, 2026-10-14: the buy button took the
+                    // row and left the name a bare "…". The name comes
+                    // first; the buy button falls back to its plus.
+                    .layoutPriority(1)
             }
 
             Button {
@@ -158,9 +162,12 @@ struct TrainControls: View {
         let language = session.language
         return VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(verbatim: "\(train.positionText(in: language)) · \(train.carsText(in: language))")
+                // Author's report, 2026-10-14: the nearest station, not
+                // the track number and offset in units.
+                Text(verbatim: "\(session.world.trainWhereText(of: train.id, in: language) ?? train.positionText(in: language)) · \(train.carsText(in: language))")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 

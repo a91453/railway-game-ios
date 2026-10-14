@@ -53,42 +53,15 @@ struct NetworkControls: View {
 
     private var buildOptions: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                // Decision 107: how the track is built is chosen for the
-                // player (ground, smooth, easy grade, snapping); changing
-                // it is one tap further away, folded until wanted.
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { showsAdvanced.toggle() }
-                } label: {
-                    Label {
-                        Text(verbatim: session.language.text("Track options", "進階選項"))
-                    } icon: {
-                        Image(systemName: showsAdvanced ? "chevron.down" : "chevron.right")
-                    }
-                }
-                .accessibilityValue(Text(verbatim: advancedSummary))
-                .accessibilityIdentifier("network.advanced")
-                // Decision 204: a second track 5 m beside each stretch, in
-                // one step; which side is among the folded options.
-                Toggle(isOn: $session.networkBuildsDouble) {
-                    Text(verbatim: session.language.text("Double", "複線"))
-                }
-                .toggleStyle(OnOffButtonToggleStyle())
-                .accessibilityIdentifier("network.double")
-                // Decision 213: on a real-world map, follow the real
-                // railway drawn under it.
-                if session.canTraceRealRailway {
-                    Toggle(isOn: $session.networkTracesRealRailway) {
-                        Text(verbatim: session.language.text("Trace real", "沿真實鐵路"))
-                    }
-                    .toggleStyle(OnOffButtonToggleStyle())
-                    .accessibilityIdentifier("network.trace")
-                }
-                Spacer(minLength: 0)
-                Button("Clear") {
-                    session.clearNetworkDraft()
-                }
-                .disabled(session.networkStart == nil)
+            // Four buttons in a row did not fit a phone held sideways (the
+            // side panel is narrow there): SwiftUI squeezed their words one
+            // character to a line. In rows, each button as wide as its
+            // words: one row where they fit, else two, else more.
+            ChipFlow(spacing: 8) {
+                advancedButton
+                doubleToggle
+                traceToggle
+                clearButton
             }
             .buttonStyle(.bordered)
             .font(.footnote)
@@ -185,6 +158,53 @@ struct NetworkControls: View {
         }
     }
 
+    // Decision 107: how the track is built is chosen for the player
+    // (ground, smooth, easy grade, snapping); changing it is one tap
+    // further away, folded until wanted.
+    private var advancedButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { showsAdvanced.toggle() }
+        } label: {
+            Label {
+                Text(verbatim: session.language.text("Track options", "進階選項"))
+            } icon: {
+                Image(systemName: showsAdvanced ? "chevron.down" : "chevron.right")
+            }
+        }
+        .accessibilityValue(Text(verbatim: advancedSummary))
+        .accessibilityIdentifier("network.advanced")
+    }
+
+    /// Decision 204: a second track 5 m beside each stretch, in one step;
+    /// which side is among the folded options.
+    private var doubleToggle: some View {
+        Toggle(isOn: $session.networkBuildsDouble) {
+            Text(verbatim: session.language.text("Double", "複線"))
+        }
+        .toggleStyle(OnOffButtonToggleStyle())
+        .accessibilityIdentifier("network.double")
+    }
+
+    /// Decision 213: on a real-world map, follow the real railway drawn
+    /// under it.
+    @ViewBuilder
+    private var traceToggle: some View {
+        if session.canTraceRealRailway {
+            Toggle(isOn: $session.networkTracesRealRailway) {
+                Text(verbatim: session.language.text("Trace real", "沿真實鐵路"))
+            }
+            .toggleStyle(OnOffButtonToggleStyle())
+            .accessibilityIdentifier("network.trace")
+        }
+    }
+
+    private var clearButton: some View {
+        Button("Clear") {
+            session.clearNetworkDraft()
+        }
+        .disabled(session.networkStart == nil)
+    }
+
     /// The structure, the height of new nodes, and how the track follows
     /// other track and the ground (decision 107: folded by default).
     private var advancedOptions: some View {
@@ -211,7 +231,9 @@ struct NetworkControls: View {
                         .monospacedDigit()
                 }
             }
-            HStack(spacing: 8) {
+            // The second under the first where the two do not fit side
+            // by side.
+            ChipFlow(spacing: 8) {
                 Toggle("Smooth curves", isOn: $session.networkFollowsTrack)
                 Toggle("Ease the grade", isOn: $session.networkEasesGrade)
             }
@@ -367,27 +389,32 @@ struct NetworkControls: View {
     /// where along the track each lies.
     private func platformRemovals(showsPlace: Bool) -> some View {
         ForEach(Array(session.platformsOnPickedEdge.enumerated()), id: \.element) { index, platform in
-            HStack(spacing: 8) {
+            // The button beside the place where they fit, else under it:
+            // squeezed beside it, the words stood one character to a line.
+            ChipFlow(spacing: 8) {
                 if showsPlace {
                     Text(verbatim: session.platformText(platform))
                         .font(.footnote)
                         .monospacedDigit()
-                    Spacer(minLength: 0)
                 }
-                Button(role: .destructive) {
-                    session.removeNetworkPlatform(platform)
-                } label: {
-                    Label {
-                        Text(verbatim: session.removePlatformTitle(platform))
-                    } icon: {
-                        Image(systemName: "trash")
-                    }
-                }
-                .buttonStyle(.bordered)
-                .font(.footnote)
-                .accessibilityIdentifier("network.removePlatform.\(index)")
+                removePlatformButton(platform, index: index)
             }
         }
+    }
+
+    private func removePlatformButton(_ platform: TrackPlatform, index: Int) -> some View {
+        Button(role: .destructive) {
+            session.removeNetworkPlatform(platform)
+        } label: {
+            Label {
+                Text(verbatim: session.removePlatformTitle(platform))
+            } icon: {
+                Image(systemName: "trash")
+            }
+        }
+        .buttonStyle(.bordered)
+        .font(.footnote)
+        .accessibilityIdentifier("network.removePlatform.\(index)")
     }
 }
 

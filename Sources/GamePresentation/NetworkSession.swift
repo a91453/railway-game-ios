@@ -866,10 +866,8 @@ extension GameSession {
                 return language.text("Tap the track where the platform goes.", "請點選要設置月台的軌道。")
             }
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
-            let place = language.text(
-                "\(length) platform on \(stretch.edge.displayText(in: language).lowercased()), \(stretch.start)–\(stretch.end) units along",
-                "\(stretch.edge.displayText(in: language)) 上 \(length) 的月台，距起點 \(stretch.start)–\(stretch.end) 單位"
-            )
+            // Author's report, 2026-10-14: no track numbers or units.
+            let place = language.text("\(length) platform here", "在這裡設 \(length) 的月台")
             // Decision 164: a grade says so before the tap on ✓; decision
             // 190: and that ✓ levels it, for what.
             guard let levelling = networkPlatformLevelling else { return place }
@@ -1102,11 +1100,19 @@ extension GameSession {
         return world.network.platforms(on: edge)
     }
 
-    /// "Station 1, 952–5048 units along" for one of
-    /// ``platformsOnPickedEdge``.
+    /// "Station 1, 15–79 m along" for one of ``platformsOnPickedEdge``.
     public func platformText(_ platform: TrackPlatform) -> String {
         let name = platformStationName(platform)
-        return language.text("\(name), \(platform.start)–\(platform.end) units along", "\(name)，距起點 \(platform.start)–\(platform.end) 單位")
+        let span = Self.metresSpanText(platform.start, platform.end)
+        return language.text("\(name), \(span) m along", "\(name)，距起點 \(span) 公尺")
+    }
+
+    /// Two distances along an edge in whole metres, "15–79", for a
+    /// platform's place (author's report, 2026-10-14: no "units").
+    nonisolated static func metresSpanText(_ start: Int64, _ end: Int64) -> String {
+        let unitsPerMetre = WorldCoordinate.unitsPerMetre
+        func metres(_ units: Int64) -> Int64 { (units + unitsPerMetre / 2) / unitsPerMetre }
+        return "\(metres(start))–\(metres(end))"
     }
 
     /// The title of the button that removes `platform`: "Remove platform

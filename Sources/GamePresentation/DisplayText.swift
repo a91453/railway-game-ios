@@ -92,17 +92,44 @@ extension GameWorld {
         guard stationsBesideWholeTrain(id).count < stopped.count else { return text }
         return text + language.text(" · the platform is too short for all its cars", " · 月台太短，容不下所有車廂")
     }
+
+    /// How near a station must be for a train to be "near" it: 500 m.
+    static let nearStationReach: Int64 = 500 * WorldCoordinate.unitsPerMetre
+
+    /// Where train `id` is, in the player's words (author's report,
+    /// 2026-10-14: the track number and "units" meant nothing to a
+    /// player): the nearest station, "Near Central" within
+    /// ``nearStationReach`` or "1.2 km from Central"; "Not on the track"
+    /// while unplaced, "On the track" with no station. Where it is going
+    /// is ``trainPathStatusText(of:in:)``'s. `nil` for an unknown train.
+    public func trainWhereText(of id: TrainID, in language: DisplayLanguage) -> String? {
+        guard let train = train(id: id) else { return nil }
+        guard let position = train.position else { return train.positionText(in: language) }
+        guard let point = location(of: position)?.position.plan else { return language.text("On the track", "在軌道上") }
+        var nearest: (station: Station, squared: Int64)?
+        for station in stations {
+            let dx = station.location.x - point.x, dy = station.location.y - point.y
+            let squared = dx * dx + dy * dy
+            if nearest == nil || squared < nearest!.squared { nearest = (station, squared) }
+        }
+        guard let nearest else { return language.text("On the track", "在軌道上") }
+        if nearest.squared <= Self.nearStationReach * Self.nearStationReach {
+            return language.text("Near \(nearest.station.name)", "在 \(nearest.station.name) 附近")
+        }
+        let distance = NetworkBuilding.distanceText(Int64(Double(nearest.squared).squareRoot().rounded()), in: language)
+        return language.text("\(distance) from \(nearest.station.name)", "距 \(nearest.station.name) \(distance)")
+    }
 }
 
 extension TrainPosition {
-    /// Where a train is, exactly as GameCore records it: "Track #3 forward,
-    /// 256 units along".
+    /// Where a train is, as GameCore records it, in whole metres: "Track #3
+    /// forward, 4 m along". The cards show ``GameWorld/trainWhereText(of:in:)``.
     public func displayText(in language: DisplayLanguage) -> String {
         switch self {
         case .onEdge(let traversal, let offset):
             language.text(
-                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(offset) units along",
-                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "正向" : "反向")，距起點 \(offset) 單位"
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "forward" : "backward"), \(NetworkBuilding.lengthText(offset, in: language)) along",
+                "\(traversal.edge.displayText(in: language)) \(traversal.direction == .forward ? "正向" : "反向")，距起點 \(NetworkBuilding.lengthText(offset, in: language))"
             )
         }
     }
@@ -153,18 +180,22 @@ extension Train {
 
     /// The path the train has left on the track network: "No path ahead",
     /// "Path: 1 more edge, Track #4",
-    /// "Path: 3 more edges, ending on Track #9", with ", stopping 3000 units
+    /// "Path: 3 more edges, ending on Track #9", with ", stopping 47 m
     /// along it" when it stops part of the way along the last (Stage S5),
-    /// or "Path: stops 1024 units ahead" on the edge it is on.
+    /// or "Path: stops 16 m ahead" on the edge it is on.
     public func pathText(in language: DisplayLanguage) -> String {
         guard case .onEdge(_, let offset)? = position else { return language.text("No path ahead", "前方沒有路徑") }
         let edges = movement.remainingEdges
         guard let last = edges.last else {
             guard let end = movement.end, end > offset else { return language.text("No path ahead", "前方沒有路徑") }
-            return language.text("Path: stops \(end - offset) units ahead", "路徑：前方 \(end - offset) 單位處停車")
+            let ahead = NetworkBuilding.distanceText(end - offset, in: language)
+            return language.text("Path: stops \(ahead) ahead", "路徑：前方 \(ahead) 處停車")
         }
         let edge = last.displayText(in: language)
-        let stop = movement.end.map { language.text(", stopping \($0) units along it", "，在其 \($0) 單位處停車") } ?? ""
+        let stop = movement.end.map {
+            let along = NetworkBuilding.lengthText($0, in: language)
+            return language.text(", stopping \(along) along it", "，在其 \(along) 處停車")
+        } ?? ""
         switch language {
         case .english:
             return edges.count == 1
@@ -497,6 +528,14 @@ extension GameError {
             )
         case .notADepot:
             language.text("That station is not a depot.", "這個車站不是機廠。")
+        case .stationIsDepot:
+            language.text("A depot has no shops.", "機廠不能開店。")
+        case .stationHasCommerce:
+            language.text("This station has shops: demolish them before making it a depot.", "這個車站有商業：先拆除商業，才能改成機廠。")
+        case .stationCommerceMaxedOut:
+            language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
+        case .noStationCommerce:
+            language.text("This station has no shops.", "這個車站沒有商業。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
         case .depotWithRuns:

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Write a TestFlight build's "What to Test": what was merged since the last release.
 
-Lists the pull requests merged into main since the commit of the last
-TestFlight run that succeeded, newest first, with their titles as GitHub
-has them now. Used by the processing job of .github/workflows/testflight.yml;
+When the planning session wrote a short text for this release
+(CURATED, changed on main since the last release's commit), that text is
+the What to Test, as written. Otherwise it lists the pull requests merged
+into main since the commit of the last TestFlight run that succeeded,
+newest first, with their titles as GitHub has them now. Used by the processing job of .github/workflows/testflight.yml;
 testflight-processing.py puts the text into App Store Connect. Only Python's
 standard library and git are used. Tested by testflight-selftest-processing.py.
 
@@ -36,6 +38,10 @@ UPLOAD_JOB = "Archive, sign, export, check and upload"
 WORKFLOW = "testflight.yml"
 LIMIT = 4000
 RECENT = 20
+# The planning session's short text for the next release: what was decided,
+# what stays as it was, what to look at. Under .github because the
+# processing job checks out only .github; read from git, not the disk.
+CURATED = ".github/testflight-whats-new.md"
 MERGE = re.compile(r"^Merge pull request #(\d+) from (\S+)")
 SQUASH = re.compile(r"^(.*\S)\s+\(#(\d+)\)$")
 
@@ -124,6 +130,23 @@ def change_line(repository, subject, body, titles):
     return f"{(titles[number] or title).strip()} (#{number})"
 
 
+def curated(repo, base):
+    """CURATED as it is at HEAD, when it changed since `base`; else None.
+
+    With no known last release there is nothing to tell a fresh text from an
+    old one, so the list is used."""
+    if base is None:
+        return None
+    changed = git(repo, "diff", "--name-only", f"{base}..HEAD", "--", CURATED, check=False).stdout.strip()
+    if not changed:
+        return None
+    shown = git(repo, "show", f"HEAD:{CURATED}", check=False)
+    text = shown.stdout.strip() if shown.returncode == 0 else ""
+    if not text:
+        return None
+    return text if len(text) <= LIMIT else text[:LIMIT - 1] + "…"
+
+
 def whats_new(repo, repository, run_id, offset):
     previous = previous_release(repository, run_id)
     base = None
@@ -139,6 +162,9 @@ def whats_new(repo, repository, run_id, offset):
         since = f"build {offset + run_number}.{attempt}"
         if not commits:
             return f"No changes since {since}: the same commit."
+        text = curated(repo, base)
+        if text:
+            return text
         header = f"Changes since {since}:"
     else:
         header = "Recent changes:"

@@ -56,7 +56,7 @@ final class NetworkDisplayTests: XCTestCase {
 
     func testNetworkPositionsAndRefusalsReadInWords() throws {
         let (world, _, id) = try makeNetworkWorld()
-        XCTAssertEqual(world.train(id: id)?.positionText(in: .english), "Track #2 forward, 1024 units along")
+        XCTAssertEqual(world.train(id: id)?.positionText(in: .english), "Track #2 forward, 16 m along")
         XCTAssertEqual(GameError.unknownTrackNode(.node(7)).playerMessage(in: .english), "Node #7 is not a node of the track network.")
         XCTAssertEqual(GameError.unknownTrackEdge(.edge(3)).playerMessage(in: .english), "Track #3 is not an edge of the track network.")
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .english), "Track still ends at node #2. Remove that track first.")

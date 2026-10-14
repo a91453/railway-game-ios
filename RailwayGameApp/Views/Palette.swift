@@ -45,6 +45,11 @@ enum Palette {
     /// white with the icon's navy.
     static let transferLink = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
     static let transferEdge = hex(light: 0x262C57, dark: 0x262C57)
+    /// Decision 220: a journey trace's arcs, navy on a white edge in either
+    /// appearance (the transfer link's two colours the other way round):
+    /// never a line's colour or a gradient, so an arc is not read as a line.
+    static let journeyArc = hex(light: 0x262C57, dark: 0x262C57)
+    static let journeyCase = hex(light: 0xFFFFFF, dark: 0xFFFFFF)
     /// The player's buildings (decision 92), edged in ``ink``: every kind
     /// in the station's warm yellow, told apart by its glyph (decision 121).
     /// The owner's choice of 2026-10-13: what the player built reads as the
