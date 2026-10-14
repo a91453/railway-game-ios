@@ -531,10 +531,21 @@ final class MapInteractionTests: XCTestCase {
         defer { app.terminate() }
         app.openDemo("demo.simple")
 
+        // The status pill lays itself out again just after the demo opens,
+        // and a tap found before then lands where the pause button was: on
+        // the map, leaving the clock running (main 7eb3892's full lane, run
+        // 38599636375: found at (555, 35), drawn at (425, 44)). Wait until
+        // it stays put, and tap again while the game has not paused.
         let pause = app.buttons["Pause"].firstMatch
+        let resume = app.buttons["Resume"].firstMatch
         XCTAssertTrue(pause.appears(within: 10))
+        pause.waitUntilSettled()
         pause.tap()
-        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
+        if !resume.appears(within: 5) {
+            pause.waitUntilSettled()
+            pause.tap()
+        }
+        XCTAssertTrue(resume.appears(within: 5), "Pause must pause the game")
 
         let layersButton = app.buttons["map.layers"]
         XCTAssertTrue(layersButton.appears(within: 10), "Map layers button must be visible on the map")
