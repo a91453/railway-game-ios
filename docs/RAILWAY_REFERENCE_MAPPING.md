@@ -1286,6 +1286,17 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼或素材）：SimCity BuildIt（作者的截圖，商業遊戲）狀態泡泡裡的圓形圖示。
 
+## 機廠的圖示（2026-10-13，決策 209 的畫面）
+
+查 `a91453/railway-reference-private`：沒有 2D 的機廠圖示。`Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/catalog.json` 有彰化扇形車庫（`changhua-roundhouse`）、羅東林場檢車庫（`luodong-forest`）的 3D 模型，只讀清單，留給之後的 3D（art-style §7：只搬白模）。
+
+| 參考檔案 | 目標 | 方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/catalog.json`（彰化扇形車庫、羅東林場檢車庫） | — | 不用在 2D；留給 3D |
+| （參考沒有） | `MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`；機廠的拱門徽章、出入庫的藏青方牌、在庫膠囊 | gap → 原生 |
+
+外部參考（只取想法，沒有素材）：北捷、中捷、高捷的乘客路網圖都不畫機廠，列車回廠時用文字（「不載客」）而不是圖示，所以遊戲照樣在面板寫「出庫中」「入庫中」，地圖上的方牌只是補充。
+
 ## 站長的角色（決策 122）
 
 查 `a91453/railway-reference-private` `435350d` 裡的人物與角色：只有 `Railway/city_world_reference/source/avatars/` 的八個 3D 人物（`casual-*`、`elder-*`、`student-*`、`jie`、`wen`，`.glb`，KTX2 貼圖，寫實），畫風與 App 圖示不合；其餘的來源沒有角色或吉祥物。
