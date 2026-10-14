@@ -218,6 +218,26 @@ extension TrainMovement {
 }
 
 extension GameError {
+    /// Not enough cash for what `action` (as ``PlayerCommand/actionText(in:)``
+    /// words it, such as "buy a train") costs: `required`, with
+    /// `available` in hand, in whole dollars as the cash shows them
+    /// (``Money/shortfallTexts(required:available:)``).
+    public static func insufficientFundsText(
+        required: Money, available: Money, doing action: String?, in language: DisplayLanguage
+    ) -> String {
+        let (required, available) = Money.shortfallTexts(required: required, available: available)
+        guard let action else {
+            return language.text(
+                "Not enough cash: this costs \(required) and you have \(available).",
+                "餘額不足：需要 \(required)，目前只有 \(available)。"
+            )
+        }
+        return language.text(
+            "Not enough cash to \(action): it costs \(required) and you have \(available).",
+            "餘額不足，無法\(action)：需要 \(required)，目前只有 \(available)。"
+        )
+    }
+
     /// What went wrong, in words a player can act on. GameError itself
     /// carries only structured data.
     public func playerMessage(in language: DisplayLanguage) -> String {
@@ -232,10 +252,7 @@ extension GameError {
         case .invalidName:
             language.text("Enter a name.", "請輸入名稱。")
         case .insufficientFunds(let required, let available):
-            language.text(
-                "Not enough cash: this costs \(required.centsText) and you have \(available.centsText).",
-                "餘額不足：需要 \(required.centsText)，目前只有 \(available.centsText)。"
-            )
+            Self.insufficientFundsText(required: required, available: available, doing: nil, in: language)
         case .unknownTrain(let id):
             language.text("There is no train #\(id.rawValue).", "沒有列車 #\(id.rawValue)。")
         case .trainAlreadyPlaced(let id):

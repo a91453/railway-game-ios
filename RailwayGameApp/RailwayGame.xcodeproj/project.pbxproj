@@ -126,6 +126,7 @@
 		EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */; };
 		EBF4B51615CD5EA956ADD087 /* tra_station_class.json in Resources */ = {isa = PBXBuildFile; fileRef = F34F5FAD9996ED6204B4F23C /* tra_station_class.json */; };
 		F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4966256D18F5622FE1A080BB /* station-chime.wav */; };
+		F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */; };
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
 		F720FC931D713539D1AF8CCC /* tmrt.json in Resources */ = {isa = PBXBuildFile; fileRef = 10BAAEA97DA689ABA4004F2A /* tmrt.json */; };
 		F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3934A6F628AA98414B2B952D /* Theme.swift */; };
@@ -181,6 +182,7 @@
 		4966256D18F5622FE1A080BB /* station-chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "station-chime.wav"; sourceTree = "<group>"; };
 		4B68167398B13543EA8C564A /* RealWorldPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldPicker.swift; sourceTree = "<group>"; };
 		52449D8DCD618CC726CACDDE /* chime-tourist.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist.wav"; sourceTree = "<group>"; };
+		5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationOperationsView.swift; sourceTree = "<group>"; };
 		52815B08C6FE03A12ABC22D5 /* afr.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = afr.json; sourceTree = "<group>"; };
 		56ABC6AFF31D91F9079F6044 /* trtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc.json; sourceTree = "<group>"; };
 		58D2ECE334BAC4B7C9744680 /* whoosh.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = whoosh.wav; sourceTree = "<group>"; };
@@ -398,6 +400,7 @@
 				CE177E709243BF5670A3607B /* StationCommerceSection.swift */,
 				BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */,
 				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
+				5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */,
@@ -693,6 +696,7 @@
 				CE87C0C107D2EBA7DF932407 /* StationCommerceSection.swift in Sources */,
 				8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */,
 				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
+				F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */,
