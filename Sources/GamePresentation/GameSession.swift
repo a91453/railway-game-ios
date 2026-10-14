@@ -66,6 +66,12 @@ public final class GameSession {
     @ObservationIgnored private var isApplyingTick = false
     /// The bubbles ``situationAlerts`` last worked out, and for what.
     @ObservationIgnored var situationAlertsMemo: SituationAlertsMemo?
+    /// Why lines hold their trains, as ``trainPathStatusText(of:)`` last
+    /// worked it out, and for what.
+    @ObservationIgnored var lineDispatchHoldMemo: LineDispatchHoldMemo?
+    /// How many times ``lineDispatchHoldText(of:)`` was worked out (for
+    /// the tests).
+    @ObservationIgnored var lineDispatchHoldsWorkedOut = 0
     /// The line map ``trackInspection(of:)`` last built, and for which
     /// ``commandRevision``.
     @ObservationIgnored var inspectionLineMap: (revision: Int, map: LineMap)?

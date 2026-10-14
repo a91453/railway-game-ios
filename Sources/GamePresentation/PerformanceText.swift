@@ -164,6 +164,12 @@ extension GameWorld {
     /// A service creates its next path when it departs, so an empty
     /// continuation while it waits is not a routing failure.
     public func trainPathStatusText(of id: TrainID, in language: DisplayLanguage) -> String {
+        trainPathStatusText(of: id, in: language) { lineDispatchHoldText(of: $0, in: language) }
+    }
+
+    /// ``trainPathStatusText(of:in:)``, with why a line holds a train
+    /// (``lineDispatchHoldText(of:in:)``) from `holdText`.
+    func trainPathStatusText(of id: TrainID, in language: DisplayLanguage, holdText: (TrainID) -> String?) -> String {
         guard let train = train(id: id) else { return language.text("No train", "沒有列車") }
         if case .waitingAtStop? = train.execution {
             return language.text("Waiting for departure", "等候發車")
@@ -187,7 +193,7 @@ extension GameWorld {
                 return language.text("Waiting: \(line.name) opens at \(time)", "等候發車：\(line.name) \(time) 開始營運")
             }
             // TestFlight 60.1: say why the line does not send it out.
-            if let hold = lineDispatchHoldText(of: id, in: language) { return hold }
+            if let hold = holdText(id) { return hold }
             return language.text("Waiting for service dispatch", "等候派車")
         }
         // TestFlight 54.1: a placed train standing with no line says so,

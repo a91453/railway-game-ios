@@ -94,7 +94,39 @@ extension GameWorld {
     }
 }
 
+/// Why lines hold their trains (``GameWorld/lineDispatchHoldText(of:in:)``),
+/// kept for the ``GameSession/commandRevision`` and game minute they were
+/// worked out in.
+struct LineDispatchHoldMemo {
+    let revision: Int
+    let minute: Int64
+    var texts: [TrainID: String?] = [:]
+}
+
 extension GameSession {
+    /// ``GameWorld/trainPathStatusText(of:in:)`` of the world as it is now,
+    /// in ``language``, with why a line holds the train worked out once a
+    /// command (``commandRevision``) or a game minute, not at every read:
+    /// it plans the train's trip (a route search), and the fleet overview
+    /// reads every waiting train's at each redraw.
+    public func trainPathStatusText(of id: TrainID) -> String {
+        world.trainPathStatusText(of: id, in: language) { lineDispatchHoldText(of: $0) }
+    }
+
+    /// ``GameWorld/lineDispatchHoldText(of:in:)``, kept as
+    /// ``trainPathStatusText(of:)`` says.
+    func lineDispatchHoldText(of id: TrainID) -> String? {
+        let minute = world.clock.now.seconds / GameTime.secondsPerMinute
+        if lineDispatchHoldMemo?.revision != commandRevision || lineDispatchHoldMemo?.minute != minute {
+            lineDispatchHoldMemo = LineDispatchHoldMemo(revision: commandRevision, minute: minute)
+        }
+        if let text = lineDispatchHoldMemo?.texts[id] { return text }
+        let text = world.lineDispatchHoldText(of: id, in: language)
+        lineDispatchHoldMemo?.texts[id] = text
+        lineDispatchHoldsWorkedOut += 1
+        return text
+    }
+
     /// Sets the service of train `id` to run every train it has at its
     /// busiest levels (``LineUnusedTrains/raised``), through the same
     /// command as the line panel's counts.
