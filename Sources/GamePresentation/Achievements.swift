@@ -116,7 +116,7 @@ public struct AchievementFacts: Hashable, Sendable {
             }
         }
         mostLinesAtAStation = linesAt.values.max() ?? 0
-        hasHighSpeedTrain = world.trains.contains { $0.performance == .highSpeed || $0.type == .highSpeed }
+        hasHighSpeedTrain = world.trains.contains { $0.performance == .highSpeed || $0.type?.isHighSpeed == true }
         trains = world.trains.count
         if let tourism = world.tourism, !tourism.attractions.isEmpty {
             let attractions = tourism.attractions

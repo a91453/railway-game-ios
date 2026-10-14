@@ -93,9 +93,26 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle], clearOf: insets), plain)
         let corner = WorldCoordinate(x: Int64(built.maxX), y: Int64(built.maxY))
         XCTAssertFalse(plain.showsClear(corner, of: insets))
-        let opened = PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle, corner], clearOf: insets)
-        XCTAssertEqual(opened, camera)
-        XCTAssertTrue(opened.showsClear(corner, of: insets))
+        let modest = ScreenInsets(top: 20, leading: 0, bottom: 40, trailing: 40)
+        XCTAssertFalse(plain.showsClear(corner, of: modest))
+        let opened = PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle, corner], clearOf: modest)
+        XCTAssertTrue(opened.showsClear(corner, of: modest))
+        // About the same middle, only farther out.
+        XCTAssertEqual(opened.centerX, plain.centerX, accuracy: 0.001)
+        XCTAssertEqual(opened.centerY, plain.centerY, accuracy: 0.001)
+        XCTAssertLessThan(opened.pointsPerUnit, plain.pointsPerUnit)
+        // Insets that leave only a small box keep the usual opening, not a
+        // network shrunk into a corner.
+        let crowded = ScreenInsets(top: 40, leading: 0, bottom: 200, trailing: 400)
+        XCTAssertEqual(PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle, corner], clearOf: crowded), plain)
+    }
+
+    /// A frame still moving in (partly outside the view) or past half of
+    /// it pushes nothing.
+    func testFramesStillSettlingPushNothing() {
+        let outside = ScreenFrame(x: 700, y: 300, width: 120, height: 112)
+        let huge = ScreenFrame(x: 300, y: 100, width: 434, height: 272)
+        XCTAssertEqual(ScreenInsets(top: 40).clearing([outside, huge], viewport: phone), ScreenInsets(top: 40))
     }
 }
 

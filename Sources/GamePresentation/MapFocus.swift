@@ -61,7 +61,11 @@ extension ScreenInsets {
     /// jumping to a place), not for the player's pans and zooms.
     public func clearing(_ corners: [ScreenFrame], viewport: ScreenSize) -> ScreenInsets {
         var insets = self
-        for frame in corners where frame.width > 0 && frame.height > 0 {
+        // A frame not wholly in the view, or one past half of it, is a
+        // layout still settling (a column moving in), not a corner: skipped.
+        for frame in corners where frame.width > 0 && frame.height > 0
+            && frame.x >= 0 && frame.y >= 0 && frame.x + frame.width <= viewport.width && frame.y + frame.height <= viewport.height
+            && frame.width <= viewport.width / 2 && frame.height <= viewport.height / 2 {
             let atTrailing = frame.x + frame.width / 2 > viewport.width / 2
             let atBottom = frame.y + frame.height / 2 > viewport.height / 2
             let side = atTrailing ? viewport.width - frame.x : frame.x + frame.width
@@ -81,8 +85,9 @@ extension PlanCamera {
     /// The camera a game opens on (#593): as it always opened
     /// (``init(bounds:viewport:showing:clearOf:)`` with no insets) when
     /// none of `stations` it shows is under the screen's controls
-    /// (`insets`); otherwise `focus` fitted, and centred, in the part of the
-    /// view they leave, so none is.
+    /// (`insets`); otherwise farther out about the same middle, `focus`
+    /// fitted inside the larger inset of each pair of opposite edges, but
+    /// never below ``openingZoomOutLimit`` of the usual scale.
     public static func opening(
         bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion?,
         keeping stations: [WorldCoordinate], clearOf insets: ScreenInsets
@@ -90,8 +95,21 @@ extension PlanCamera {
         let plain = PlanCamera(bounds: bounds, viewport: viewport, showing: focus)
         let shown = plain.visibleRegion
         let covered = stations.contains { shown.contains($0) && !plain.showsClear($0, of: insets) }
-        return covered ? PlanCamera(bounds: bounds, viewport: viewport, showing: focus, clearOf: insets) : plain
+        guard covered else { return plain }
+        // The same on opposite edges, so what it opens on stays in the
+        // middle of the view (the demo's Central under a tap there).
+        let across = max(insets.leading, insets.trailing), down = max(insets.top, insets.bottom)
+        let balanced = ScreenInsets(top: down, leading: across, bottom: down, trailing: across)
+        let fitted = PlanCamera(bounds: bounds, viewport: viewport, showing: focus, clearOf: balanced)
+        // Never much farther out than the usual opening: insets that leave
+        // a small box would shrink the network to a corner of the map
+        // (main's full lane on #603: the demo opened zoomed far out).
+        return fitted.pointsPerUnit >= plain.pointsPerUnit * Self.openingZoomOutLimit ? fitted : plain
     }
+
+    /// How far out the opening may go to keep the stations clear of the
+    /// controls: no smaller than this share of the usual opening's scale.
+    public static let openingZoomOutLimit = 0.6
 
     /// The middle of the part of the view `insets` leave clear; the view's
     /// middle when they leave none.

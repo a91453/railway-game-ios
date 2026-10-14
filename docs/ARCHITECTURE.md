@@ -8202,6 +8202,27 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - iPhone 橫拿時營運概覽七節車廂的寬度；
 - 左下分段條和路線圖例、迷你地圖會不會搶位置。
 
+### 225. 內容目錄：車型的數值是一張內建資料表
+
+2026-10-14，NEXT_PRIORITIES §5 第 2 項（§13 第 20 名）。設計：`docs/research/CONTENT_CATALOG_2026-10-14.md`（#612，遊戲規劃 session 定案方案 A）。號碼依工作登記 #231：決策 225，存檔版本與 golden schema 不動。
+
+1. **一張表**（新檔 `Sources/GameCore/Railway/TrainTypeCatalog.swift`）：`TrainTypeCatalog.builtIn` 每列一種車型（`TrainTypeSpec`）：代號、分類（`TrainFamily`：捷運、鐵路、高鐵、特殊，決策 224 的車種型錄）、供應方式（`TrainTypeOffer`：參考的主要、參考的其他、這個專案加的、只有年代劇本有）、每節額定、門數、會不會超載、自己的跑法、價格（決策 180）。數值與來源註解原樣從原本各處的 `switch` 搬過來，**一個值都沒改**。
+2. **`TrainType` 是表上的一列**：從 `enum` 改成 `struct`，代號（`rawValue`）就是原本的字串，另存表上的位置，所以讀屬性是 O(1)，不比字串。`.a`、`.highSpeed` 這些常數保留；`allCases` 是表的順序（和原本相同）；`main`、`reference`、`offered` 由 `offer` 推出，內容與順序和原本相同。`Codable` 寫出與讀入同一個字串，不認得的代號照舊讀不進來。
+3. **「是不是高鐵車組」是明寫的一欄**：`TrainType.isHighSpeed` 就是 `family == .highSpeed`；`overloads` 是表上的一欄（只有高鐵 `false`，測試檢查高鐵分類的一定不超載）。畫面層原本寫 `type == .highSpeed` 當「高鐵車組」用的地方（車鼻、成就、配車時跟著改高鐵性能、只跑高鐵車組的路線）改讀 `isHighSpeed`；配車時高鐵路線的預設車種是第一個可選的高鐵車組。路線是不是高鐵路線照舊看性能（決策 168 規則 1）。
+4. **名稱與分類標題留在 GamePresentation**：`TrainType.title(in:)` 依代號查名稱表，文字不改；表上沒有名稱的車型是錯誤，`TrainTypeNameTests` 檢查每種都有。#608 的 `RollingStockCatalog.Family` 改成 GameCore 的 `TrainFamily`，分類讀表。**不留 `default:`**：依賴窮舉車型的 `switch` 都改成讀欄位。
+5. **存檔**：格式不變，不升版、不加遷移、不加 fixture。**表上的一列永遠不刪、代號永遠不改**（舊存檔可能有它）；不再賣的車型改 `offer`。之後加車型只加一列與名稱，不必升存檔版本（只認得舊表的 build 讀不進有新車型的存檔，錯誤和讀到不認得的字串一樣）。之後改既有車型的數值（真實車長、檢修老化）是行為改變，照 NEXT_PRIORITIES §6 用新的世界開關與存檔版本，舊存檔保留舊值。
+6. **逐位元不變的證明**：`TrainTypeCatalogTests` 在搬家之前的第一個 commit 對著原本的 `enum` 寫死每種車型的每個數值、清單與順序、標準車，以及 1、2、16 節列車的載客、上下車速度、價格與權重；搬家之後這個檔一行沒改。`GoldenScenarios/`、`SaveFixtures/`、`ReplayFixtures/` 沒有任何改動。
+
+**四方**：
+- 玩家：看不到任何改變；之後加車型，舊存檔不用升版。
+- 開發：加車型加一列，加屬性加一欄，編譯器檢查每列都填；GameCore 沒有 Foundation，所以不在執行時讀 JSON，也不需要產生器（方案 B、C 與預覽在設計文件 §2.2）。
+- 美術：分類與「是不是高鐵」是明寫的欄，車鼻、2D 逐節畫法、車種型錄、之後的車長、塗裝、模型名稱都讀同一張表。
+- 音樂：這次沒有；之後依車種的聲音（決策 219）用同一個代號對。
+
+**參考**（`a91453/railway-reference-private` 7888702）：表上的數值本來就從 `Ci/` 的 `TRAIN_TYPES`、`LINE_TRAIN_TYPE_MAIN`／`EXTRA`、`HSR_TRAIN_CARS_CAPACITY` 與 `Railway/` 的 `PERF_RULES`、`PERF_HSR` 移植（決策 66、153、168、169、180）；這次只搬家。之後的來源：`Ci/` 26 個城市的 `*_STOCK_MODELS`（更多車型）、`Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 的 `pitchM`（真實車長）、`OpenWorld/` 與 `Simulator/` 的 3D 車款（外觀）。外部專案沒有搜尋：資料表是這個專案自己的程式。
+
+**測試**：`TrainTypeCatalogTests`（釘住的數值，見第 6 點）、`TrainTypeTests.testTheCatalogsRows`（代號不重複、每種車型是自己那一列、高鐵分類不超載、分類與供應方式）；既有的 `TrainTypeNameTests`、`RollingStockCatalogTests`、golden、存檔與重播照舊。
+
 ### 226. 整個畫面的外框：工具一欄在左、地圖控制一欄在右，上面一條看板
 
 2026-10-14。美術 session 自己定（作者 2026-10-14：「我不再做決定，都以這個當預設」），以四方角度決定；其他方案的預覽留著，作者之後可以看。決策 224 的六個畫面合完之後做。
@@ -8392,6 +8413,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 存檔是 `{"saveVersion": n, "world": {...}}`：讀檔拒絕比這個 build 新的版本與 1 以下的版本；`SaveFixtures/` 的每一份存檔之後都必須讀得進來（決策 45）。版本 2 的地圖只寫不是空地的格子（`occupied`），版本 1 的每一格（`tiles`）照舊讀得進來（決策 48）。版本 3 的路線可以是環線（決策 49）。版本 4 的世界可以有地理錨點（`geoAnchor`，地圖中心的經緯度，千萬分之一度）；沒有規則讀它，沒有錨點是空白地圖（決策 50）。任何版本裡手做的方格內容都拒絕並說明原因（決策 51）。版本 5 的路網列出 F2 之前蓋得太近的邊對（`spacingExemptions`）；版本 1–4 讀檔時把太近的邊對記成豁免，版本 5 的清單必須正好是太近的邊對（決策 52）。版本 6 的世界寫 `"bounds"`（世界單位），版本 1–5 的 `w × h` 格地圖讀成 `1024w × 1024h` 單位（決策 54）。版本 12 的世界可以有土地（`"land"`，決策 72）與土地需求的開關（`"landDemand"`，決策 73）。 版本 13 以後每一版的內容與 fixture 見 `SaveFixtures/README.md`（目前是 50）。
 - 車站可以拆除（決策 83，`removeStation`）：免費、不退款；有服務需要它的月台、或車上有從它出發、到它或在它換車的乘客時拒絕；等車的乘客放棄，路線拿掉這站，月台一起拆。
 - 餘額不足時不做任何修改，建設不會讓餘額變成負數（經營的結算可以，決策 36）。無限資金（決策 200，存檔版本 51）：什麼都不扣、不會因為沒錢被拒絕，結算照記但不動餘額。
+- 內容目錄（決策 225）：車型的數值是 GameCore 的一張內建資料表（`TrainTypeCatalog.builtIn`），`TrainType` 是表上的一列、以存檔的代號為 ID；「是不是高鐵車組」是 `family == .highSpeed`。表上的一列永遠不刪、代號永遠不改，加車型不升存檔版本。
 - 車輛經濟（決策 180）：App 的新遊戲打開 `rollingStockEconomics`（存檔版本 49；示範地圖、挑戰與教學關掉）：列車依車種與節數計價，改車種付新車種價格減舊車的賣價、最少 0（決策 180 之後的修正，`RollingStock.refitFee`），`sellTrain` 取回帳面價值的 70 %（列車必須離軌、離線、沒有服務，否則 `trainInService`），路線上列車的人事、能源、保養依 節數 × 車種係數 計，車公里依車種係數計。
 - 秘書室（決策 175）：遊戲日期是 360 天一年、30 天一個月、第一天星期一；HUD 寫日期、天氣、節日，點時鐘看 7 天預報；新聞紀錄（300 則，旁檔 `.news.json`，不進存檔）收站長的提醒與各種事件；重要事件自動暫停與每月報告可在設定調整。GameCore 沒有動。
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。

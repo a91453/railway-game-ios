@@ -32,9 +32,12 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(fleet.appears(within: 5))
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
-            XCTAssertTrue(follow.appears(within: 5))
-            for _ in 0..<3 where !follow.becomesHittable(within: 1) { app.swipeUp() }
-            XCTAssertTrue(follow.isHittable)
+            // The overview's list makes a row only once it scrolls into
+            // view, and since the summary card's roster button (#615) Train
+            // 2's row starts below the screen of a phone on its side, where
+            // `swipeUp()` left the list where it was (this branch's run
+            // 38619859987): drag it until the row is made and wholly shown.
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(follow), "The overview's \(name) row never came into reach")
             follow.tap()
             XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
             let speed = app.descendants(matching: .any)["train.speed"].firstMatch
@@ -531,10 +534,21 @@ final class MapInteractionTests: XCTestCase {
         defer { app.terminate() }
         app.openDemo("demo.simple")
 
+        // The status pill lays itself out again just after the demo opens,
+        // and a tap found before then lands where the pause button was: on
+        // the map, leaving the clock running (main 7eb3892's full lane, run
+        // 38599636375: found at (555, 35), drawn at (425, 44)). Wait until
+        // it stays put, and tap again while the game has not paused.
         let pause = app.buttons["Pause"].firstMatch
+        let resume = app.buttons["Resume"].firstMatch
         XCTAssertTrue(pause.appears(within: 10))
+        pause.waitUntilSettled()
         pause.tap()
-        XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
+        if !resume.appears(within: 5) {
+            pause.waitUntilSettled()
+            pause.tap()
+        }
+        XCTAssertTrue(resume.appears(within: 5), "Pause must pause the game")
 
         let layersButton = app.buttons["map.layers"]
         XCTAssertTrue(layersButton.appears(within: 10), "Map layers button must be visible on the map")
