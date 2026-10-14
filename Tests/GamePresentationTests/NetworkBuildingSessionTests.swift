@@ -732,7 +732,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.message?.text, "已建造軌段 #1：64 公尺，自動：地面 64 公尺，花費 $ 4。")
             session.tapNetwork(at: PlanPoint(x: 6_144 + 1_000, y: 2_048), reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.problem, "該位置與另一端太近：兩者至少要相距 22 公尺。")
-            XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "月台", "拆除", "待避"])
+            XCTAssertEqual(NetworkToolMode.allCases.map { $0.title(in: .traditionalChinese) }, ["鋪設", "月台", "拆除", "待避", "機廠"])
             XCTAssertEqual(TrackStructure.allCases.map { $0.name(in: .traditionalChinese) }, ["地面", "高架", "橋樑", "隧道", "自動"])
             XCTAssertEqual(TrackStructure.offered.map { $0.name(in: .traditionalChinese) }, ["自動", "地面", "高架", "橋樑", "隧道"])
         }

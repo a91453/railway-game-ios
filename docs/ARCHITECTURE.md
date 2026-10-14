@@ -7496,6 +7496,37 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **沒有驗證的**：App 的開關與疊層的樣子（Linux 不能建置 App，交給 CI 的 iOS build）；實機上拖曳長距離時預覽算得夠不夠快（Linux debug 建置台北到板橋 7 km 約半秒，release 與實機未量）；有地形的實景地圖上描山線的高度與結構。
 
+### 214. 機廠的建造工具與畫面
+
+2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 1 名、§4 波次 2 第 3 項），接在決策 209 的機廠 L1 之後。號碼依 #231：決策 214（原登記 213，和描線建造 #558 撞號，改取 214）；存檔版本、golden schema 不動，GameCore 不動（只用決策 209 的 `setStationDepot`、`setLineDepot`、`Station.isDepot`、`ServiceLine.depot`）。圖示是作者選定的 #555（`MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`，`docs/UI_THEME.md` 機廠一節）。
+
+1. **停車線工具**（新檔 `Sources/GamePresentation/DepotYard.swift`；路網工具多一個模式「機廠」，`NetworkToolMode.depot`）：點一條軌道的盡頭（只有一條邊接著的節點），選幾股（1–6，預設 3）與往哪一側，一次鋪好：
+   - 第一股是原軌道直直延伸出去；其餘每一股從內側那一股的一個轉轍器分出，S 形曲線往外 `DepotYard.spacing`（5 m），再直走到底：一個往一側展開的梯形。轉轍器前、S 曲線與下一個轉轍器之間都留 `NetworkBuilding.minimumSpacing`（22 m）的直線，S 曲線長 `DepotYard.reach`（50 m，和岸式月台軌道一樣）。
+   - **平行鋪設的核心和一鍵雙線共用**：側邊的位置用 `DoubleTrack.beside`（端點沿法線推 5 m），往前用新的 `DoubleTrack.ahead`；月台軌道與待避線的 `sidingPlan` 原本自己算同一個法線偏移，改成也呼叫 `DoubleTrack.beside`（同一個公式、同樣的四捨五入，結果逐位元不變）。S 曲線照月台軌道的做法（`NetworkBuilding.curve`）。
+   - 同時蓋機廠：一個車站（名稱「機廠 N」），每股一個月台，都從最外一股的 S 曲線結束處到底，長度是公司最長的列車、至少 6 節（`passingLoopLength`，和待避線同一個）；最後 `setStationDepot(…, true)`。不設成封閉：面板上的開關和工具得到的機廠一樣。
+   - 一個指令（`PlayerCommand.buildDepotYard(DepotYardPlan)`，計畫裡是座標與曲線，重播照座標找回被轉轍器切開的邊），全成或全不成；放不下（出了地圖、太陡、撞到別的軌道）時 GameCore 拒絕，什麼都不蓋。預覽在世界的副本上蓋一次，算費用或原因，地圖畫出每一股（第一股是預覽線，其他股走 `crossovers`）。
+   - 實際的股間距：參考庫 `network.json` 裡台灣 OSM 的 955 條 `service=yard` 軌道，相鄰股（2.5–20 m 之間）的中心距中位數 4.8 m（四分位 3.9／6.3 m，482 條），和 5 m 一致。
+2. **車站面板**：「設為機廠／取消機廠」（`GameSession.setSelectedStationDepot`，指令日誌記成既有的 `.setStationDepot`）。按之前就說清楚不能按的原因（`StationDepotSwitch.problem`）：有路線停靠（寫出路線名，「先把這站從路線的停靠站拿掉」）、有路線把列車停在這裡（「先到路線面板換一個機廠」）。「設成機廠會讓路線開不通」（`depotBlocksLine`）要跑每條路線的行程，太貴，不在畫面每一幀算；按下去 GameCore 拒絕時，訊息改成寫出那條路線的名字。
+3. **路線面板**：「所屬機廠」選單（`selectedLineDepotRow`、`setSelectedLineDepot`）：「不用機廠」加上每個機廠與它離路線較近一端的直線距離，近的在前。照時刻表跑的路線（決策 133）不給選，寫明「依班次發車，不能指定機廠」；還沒有機廠時寫怎麼蓋。手機上：有機廠可選、或路線已有機廠時才顯示，否則收在「進階」裡。
+4. **狀態**（`TrainDepotState`，`GameWorld.depotState(of:)`）：空車回送（決策 172）的終點是機廠 =「入庫中」，起點是機廠 =「出庫中」，沒有服務、停在機廠的月台 =「在庫」。FollowBar 的狀態接在後面（「· 出庫中」，取代「回送中」）；列車卡與車隊清單加淡色膠囊（`DepotBadge`）；路線面板寫「在庫 N 列」（`trainsInDepot(of:)`）。地圖：機廠的徽章換成拱門形配 `MapGlyphDepot`（圖層 30）；出入庫的列車頭上一塊藏青小方牌（圖層 51，`GameWorld.depotRuns()`，沒有機廠的世界直接回空，不多花時間）。
+5. **說明頁**一則「機廠是什麼？怎麼蓋？」（`HelpGuide` 的 `depot`）。教學不加步驟。
+
+**參考**（`a91453/railway-reference-private`，`d3ebdf1`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` `shortestPath`（113 行：`allowYard=false` 時跳過 `service=yard`／`spur`） | 決策 209 已移植；這裡的工具蓋出來的停車線就是機廠的月台邊，照樣不給路線走 | 已移植（決策 209） |
+| 同目錄 `network.json`（OSM，ODbL）的 `service=yard` 軌道 | `DepotYard.spacing` = 5 m 的佐證（中位數 4.8 m） | 只量數值，沒有搬資料 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` 的 `edge(p, ux, uy)`（法線偏移） | `DoubleTrack.beside`（決策 204 已用），停車線也用 | 共用 |
+| 同目錄 `overtake-sidings.js`、`turnbacks.js`、`dispatch.json` | 無 | 待避與折返、派車表，沒有停車場的配置 |
+| `Railway/railway_game_reference_clean/` 的 `CmdBuildTrainDepot`（只有名稱） | 無 | 沒有規則或數值 |
+
+參考裡沒有「一次鋪 N 股停車線」的工具，梯形的配置與工具是這個專案自己的。外部專案沒有另外搜尋：OpenTTD 的車庫是一格的建物、Simutrans 的 depot 也是，都沒有停車線群的工具（一般知識）。
+
+**測試**：`DepotToolsTests`（點軌道盡頭鋪 3 股：兩個轉轍器、北邊 5 m 一股、每股一個月台、存檔來回；1 股與右側 6 股；點軌道中間不行；出了地圖整個不蓋；指令日誌記得到、重播一樣；一條路線用工具蓋的機廠：收班後「入庫中」→「在庫」→ 早上「出庫中」，路線面板的在庫數與 FollowBar；車站面板說明為何不能設、開不通時寫出路線名；路線面板沒有機廠與照班次跑的說明；說明頁）。`NetworkBuildingSessionTests` 的模式中文名多一個「機廠」。UI 測試 `MapInteractionTests.testTheDepotModeOffersItsSidings` 放 full lane（決策 199）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、實機外觀（拱門徽章、小方牌在深色地圖、在庫膠囊）、手機上路網模式五格的寬度。交通管制下機廠出入口的會車要在實機玩。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

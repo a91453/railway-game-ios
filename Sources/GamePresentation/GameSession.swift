@@ -90,6 +90,8 @@ public final class GameSession {
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
+    /// The depot's sidings at the picked end, kept likewise.
+    @ObservationIgnored var depotYardMemo: DepotYardMemo?
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
@@ -388,6 +390,11 @@ public final class GameSession {
     @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
+    /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
+    /// which side of the track's end they fan out to, and the end picked.
+    public var networkDepotSidings = DepotYard.defaultSidings
+    public var networkDepotSide: PlatformTrackSide = .left
+    public internal(set) var networkDepotEnd: TrackNodeID?
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
     /// where it fits under the steepest grade.
@@ -425,6 +432,7 @@ public final class GameSession {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
             passingLoopMemo = nil
+            depotYardMemo = nil
         }
     }
 
