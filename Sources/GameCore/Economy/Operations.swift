@@ -428,10 +428,11 @@ extension GameWorld {
                 let out = Int64(line.assignedTrains.count - parked)
                 resting = max(0, counted.trains - out) * 1_000
             }
-            resting = min(resting, counted.trainWeight)
+            // Capped as a save is checked, so the world always saves.
+            resting = min(resting, counted.trainWeight, Self.maximumHourly)
             guard resting > 0 else { continue }
             if let index = accounts.depotHours.firstIndex(where: { $0.line == line.id }) {
-                accounts.depotHours[index].weightHours += resting
+                accounts.depotHours[index].weightHours = min(accounts.depotHours[index].weightHours + resting, Self.maximumHourly)
             } else {
                 accounts.depotHours.append(DepotHours(line: line.id, weightHours: resting))
                 accounts.depotHours.sort { $0.line < $1.line }

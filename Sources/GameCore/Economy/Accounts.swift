@@ -642,8 +642,8 @@ extension CompanyAccounts: Codable {
         years = container.contains(.years) ? try container.decode([AnnualStatement].self, forKey: .years) : []
         // Decision 209 (save version 54).
         depotHours = try container.decodeIfPresent([DepotHours].self, forKey: .depotHours) ?? []
-        guard zip(depotHours, depotHours.dropFirst()).allSatisfy({ $0.line < $1.line }), depotHours.allSatisfy({ $0.weightHours > 0 }) else {
-            throw DecodingError.dataCorruptedError(forKey: .depotHours, in: container, debugDescription: "Depot hours are positive, once a line, in line order.")
+        guard zip(depotHours, depotHours.dropFirst()).allSatisfy({ $0.line < $1.line }), depotHours.allSatisfy({ $0.weightHours > 0 && $0.weightHours <= GameWorld.maximumHourly }) else {
+            throw DecodingError.dataCorruptedError(forKey: .depotHours, in: container, debugDescription: "Depot hours are positive and capped, once a line, in line order.")
         }
     }
 

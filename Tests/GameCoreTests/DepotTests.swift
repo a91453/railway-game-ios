@@ -277,4 +277,20 @@ final class DepotTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 54,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
+
+    /// A day's depot hours beyond what a day can count are refused: the
+    /// next hour in the depot would overflow the sum and stop the game.
+    func testDepotHoursBeyondTheCapAreRefused() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SaveFixtures/v54-depot.json")
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        var world = try XCTUnwrap(object["world"] as? [String: Any])
+        var accounts = try XCTUnwrap(world["accounts"] as? [String: Any])
+        XCTAssertNotNil(accounts["depotHours"])
+        accounts["depotHours"] = [["line": 1, "weightHours": Int64.max]]
+        world["accounts"] = accounts
+        object["world"] = world
+        let broken = try JSONSerialization.data(withJSONObject: object)
+        XCTAssertThrowsError(try JSONDecoder().decode(SavedGame.self, from: broken))
+    }
 }

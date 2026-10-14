@@ -93,7 +93,9 @@ public struct TrainTrip: Hashable, Sendable {
 
     /// Whether the record is well formed.
     var isValid: Bool {
-        guard let first = calls.first, first.station == from, fare >= .zero, boarded >= 0 else { return false }
+        guard let first = calls.first, first.station == from,
+              fare >= .zero, fare.amount <= GameWorld.maximumHourly / 100 * 100,
+              (0...GameWorld.maximumHourly).contains(boarded) else { return false }
         // The calls follow one another in time: each departure after its
         // arrival, each arrival after the departure before it. A departure
         // missing is not refused: a record must never stop a save loading.
