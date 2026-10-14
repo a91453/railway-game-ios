@@ -34,18 +34,18 @@
 | 28 | 建造工具：城市建物的位置、玩家的建物、建物的預覽 | `drawCityBuildingSites`、`drawPlacedBuildings`、`drawBuildingOverlay` | |
 | 29 | 夜裡車站的燈 | `drawStationLights` | |
 | 30 | 車站（徽章、高鐵的第二圈、選取圈）；機廠（`Station.isDepot`）換成拱門徽章（上圓下平）配 `MapGlyphDepot` | `drawPointStation` | 站名、候車膠囊搬到列車上面（55–57，#593）。機廠徽章 2026-10-13 作者選定，決策 214 接上（`archPath`） |
-| 33 | 鋪軌的預覽線、錨點；描線停下後剩下那段（灰虛線，決策 213） | `drawNetworkOverlay` | |
-| 34 | 軌段編號（決策 201） | `drawTrackNumbers` | |
 | 35 | 等待列車與擋住它的那段軌道、虛線 | `drawWaits` | |
-| 40 | 時間的色調（multiply，決策 182） | `MapView` 的 `Palette.tint` | 只蓋到上面這些，蓋不到列車 |
+| 40 | 時間的色調（multiply，決策 182） | `MapView` 的 `Palette.tint` | 只蓋到上面這些，蓋不到列車；列車上面的 55–59 用 `colorMultiply(Palette.dimming)` 跟著一起變暗 |
 | 50 | 列車（車身、車頭、夜燈） | `MapArt.drawTrains` → `drawTrain` | `MapTrainCanvas`：每一幀重畫 |
 | 51 | 出庫中、入庫中的小方牌：車頭上方、藏青底，`MapGlyphDepotOut`／`MapGlyphDepotIn` 用 `markerFill` 畫 | `drawTrains` 的 `drawDepotPlate`（決策 214，`GameWorld.depotRuns()`）：畫在列車之後、等待環之前 | 2026-10-13 作者選定。不用圓（避開等待環、量表環、高鐵的第二圈），不帶字（避開白底的等待小牌）；擠不下時先留等待與死結 |
 | 52 | 等待環（遊戲在跑時往外擴散）、死結的警告、為何在等的小牌（決策 210） | `drawWaitMarks`、`drawWaitTag` | 最多 12 個環、6 張小牌，死結先 |
-| 55 | 站名（帶底牌），站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216）；有車站商業時站名牌左邊一個暖黃方章，裡面 1、2、3 個購物袋（決策 222） | `MapArt.drawStationLabels` → `drawStationName` | `MapLabelCanvas`：鏡頭、車站、路線或候車人數變了才重畫，列車動不重畫。一站一站畫完，所以後面的站名會蓋住前面的。在列車上面：停在站上的列車不會蓋住站名（#593） |
+| 55 | 站名（帶底牌），站名下一排停靠路線的線號徽章（12 點、最多四個，決策 216）；有車站商業時站名牌左邊一個暖黃方章，裡面 1、2、3 個購物袋（決策 222） | `MapArt.drawStationLabels` → `drawStationName` | `MapLabelCanvas`：鏡頭、車站、路線、候車人數、軌道或預覽變了才重畫，列車動不重畫；夜裡和地圖一樣變暗（40 的色調）。一站一站畫完，所以後面的站名會蓋住前面的。在列車上面：停在站上的列車不會蓋住站名（#593） |
 | 56 | 拉遠時的站名（帶底牌） | `drawOverviewNames` | 同上 |
 | 57 | 候車人數膠囊、擁擠站的量表環（決策 210） | `drawStationProblems` | 所有站名畫完才畫，不會被後面的站名蓋住；中等縮放起就畫，數量有上限（`MapProblems`）。在列車上面（#593） |
+| 58 | 鋪軌的預覽線、錨點；描線停下後剩下那段（灰虛線，決策 213） | `MapArt.drawBuildMarks` → `drawNetworkOverlay` | `MapLabelCanvas`，在站名上面（站名搬到列車上面之前就是這樣） |
+| 59 | 軌段編號（決策 201） | `drawBuildMarks` → `drawTrackNumbers` | 同上 |
 | 60 | 天氣：壓暗、雨、閃電、颱風標記 | `MapWeatherLayer` → `drawWeather` | |
-| 61 | 鋪軌的放大鏡：同一個 `MapCanvas` 換成 3 倍近的相機，拖曳鋪軌時在一角（#522，一鍵雙線工具） | `MapView` 的 ZStack | 照這張表的 20–35 畫，站名與候車膠囊（55–57）也畫在裡面（放大鏡沒有列車），配色跟著 `MapArt` |
+| 61 | 鋪軌的放大鏡：同一個 `MapCanvas` 換成 3 倍近的相機，拖曳鋪軌時在一角（#522，一鍵雙線工具） | `MapView` 的 ZStack | 照這張表的 20–35 畫，站名與候車膠囊（55–57）、鋪軌預覽與軌段編號（58–59）也畫在裡面（35 之前）（放大鏡沒有列車），配色跟著 `MapArt` |
 
 ## 3. SwiftUI 的疊層（`MapView` 的 `.overlay`，由下往上）
 

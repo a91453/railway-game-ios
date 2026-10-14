@@ -123,15 +123,31 @@ enum MapArt {
         if drawsLabels {
             drawStationLabels(world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
                               lineCodes: lineCodes, projection: projection, in: context)
+            drawBuildMarks(world, network: overlay, routePreview: routePreview, projection: projection, cached: edges, in: context)
         }
-        if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
-        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
         drawWaits(traffic, projection: projection, in: context)
         // The trains and the rings round the waiting ones are drawn over
         // this, by ``drawTrains``, in a canvas of their own (decision 182);
         // and over them the stations' names and waiting counts
-        // (``drawStationLabels``, docs/MAP_LAYERS.md 55–57), unless
-        // `drawsLabels` draws them here (the track-drawing loupe).
+        // (``drawStationLabels``, docs/MAP_LAYERS.md 55–57) and over those
+        // the network tool's preview and the tracks' numbers
+        // (``drawBuildMarks``), unless `drawsLabels` draws them here (the
+        // track-drawing loupe).
+    }
+
+    /// The network tool's preview and the tracks' numbers (decision 201),
+    /// over the stations' names, as they were before the names moved over
+    /// the trains (#603).
+    static func drawBuildMarks(
+        _ world: GameWorld,
+        network overlay: NetworkOverlay?,
+        routePreview: RoutePreview?,
+        projection: some MapProjection,
+        cached edges: [TrackEdgeID: MapEdgeDrawing],
+        in context: GraphicsContext
+    ) {
+        if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
+        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
     }
 
     /// The stations' names (with their lines' badges under them, decision

@@ -189,6 +189,14 @@ enum Palette {
         Color(red: tint.colour.red, green: tint.colour.green, blue: tint.colour.blue).opacity(tint.strength)
     }
 
+    /// Decision 182: what the time of day's tint does to what is under it
+    /// (``DayNight/Tint/multiplier``), for a view drawn over the tint that
+    /// darkens with the map (`colorMultiply`).
+    static func dimming(_ tint: DayNight.Tint) -> Color {
+        let multiplier = tint.multiplier
+        return Color(red: multiplier.red, green: multiplier.green, blue: multiplier.blue)
+    }
+
     /// A ``LineColor`` as a SwiftUI colour.
     static func color(_ line: LineColor) -> Color {
         rgb(line.rgb)

@@ -249,6 +249,8 @@ struct MapView: View {
             // twenty times as they come on, not on every tick.
             let tint = showsDayNight ? DayNight.tint(at: session.world.clock.now) : .day
             let lights = DayNight.step(tint.lights)
+            // Once for the map and its loupe, not once for each canvas.
+            let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
 
             VStack(spacing: 0) {
                 ZStack {
@@ -283,7 +285,7 @@ struct MapView: View {
                         camera: projection,
                         edges: edges,
                         layers: mapLayers,
-                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        waitingCounts: waitingCounts,
                         lines: lineMap,
                         routePreview: session.routePreview,
                         labels: stationLabels,
@@ -324,17 +326,23 @@ struct MapView: View {
                     )
                     .equatable()
                     // The stations' names and waiting counts over the
-                    // trains (docs/MAP_LAYERS.md 55–57).
+                    // trains (docs/MAP_LAYERS.md 55–57), and the network
+                    // tool's preview and the tracks' numbers over them;
+                    // darkened with the map at night, as under the tint.
                     MapLabelCanvas(
                         world: session.world,
                         camera: projection,
                         layers: mapLayers,
-                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        waitingCounts: waitingCounts,
                         labels: stationLabels,
                         lineCodes: LineBadge.codes(for: session.world.lines),
-                        linePalette: linePalette
+                        linePalette: linePalette,
+                        network: session.networkOverlay,
+                        routePreview: session.routePreview,
+                        edges: edges
                     )
                     .equatable()
+                    .colorMultiply(Palette.dimming(tint))
                     if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
                         MapWeatherLayer(
                             weather: mapWeather,
@@ -365,7 +373,7 @@ struct MapView: View {
                                     camera: projection.loupe(at: finger, size: ScreenSize(width: side, height: side), magnification: 3),
                                     edges: edges,
                                     layers: mapLayers,
-                                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                                    waitingCounts: waitingCounts,
                                     lines: lineMap,
                                     routePreview: session.routePreview,
                                     labels: stationLabels,
@@ -1646,14 +1654,17 @@ private struct MapCanvas: View, Equatable {
     /// each arc is drawn yet.
     let journey: JourneyTrace?
     let journeyProgress: Double
-    /// Whether the stations' names and waiting counts are drawn here; the
-    /// map draws them over the trains instead, in ``MapLabelCanvas``.
+    /// Whether the stations' names and waiting counts, the network tool's
+    /// preview and the tracks' numbers are drawn here; the map draws them
+    /// over the trains instead, in ``MapLabelCanvas``.
     var drawsLabels = true
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
     /// so a tick that only moves them does not redraw it.
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
-        lhs.world.bounds == rhs.world.bounds
+        // Drawn only with the names (``MapLabelCanvas`` otherwise).
+        let labelsMatch = !lhs.drawsLabels || (lhs.waitingCounts == rhs.waitingCounts && lhs.labels == rhs.labels)
+        return lhs.world.bounds == rhs.world.bounds
             && lhs.world.stations == rhs.world.stations
             && lhs.world.network == rhs.world.network
             && lhs.world.placedBuildings == rhs.world.placedBuildings
@@ -1668,10 +1679,9 @@ private struct MapCanvas: View, Equatable {
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
             && lhs.layers == rhs.layers
-            && lhs.waitingCounts == rhs.waitingCounts
+            && labelsMatch
             && lhs.lines == rhs.lines
             && lhs.routePreview == rhs.routePreview
-            && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
             && lhs.lights == rhs.lights
             && lhs.lineCodes == rhs.lineCodes
@@ -1719,9 +1729,11 @@ private struct MapCanvas: View, Equatable {
 }
 
 /// The stations' names and waiting counts (docs/MAP_LAYERS.md 55–57), over
-/// the trains: a train stopped at a station never covers them. Redrawn
-/// when the camera, the stations, their lines or the counts change, never
-/// for a moving train.
+/// the trains: a train stopped at a station never covers them; and over
+/// them, as before, the network tool's preview and the tracks' numbers
+/// (``MapArt/drawBuildMarks``). Redrawn when the camera, the stations,
+/// their lines, the counts, the track or the preview change, never for a
+/// moving train.
 private struct MapLabelCanvas: View, Equatable {
     let world: GameWorld
     let camera: PlanCamera
@@ -1730,6 +1742,9 @@ private struct MapLabelCanvas: View, Equatable {
     let labels: StationLabels
     let lineCodes: [LineID: String]
     let linePalette: LinePalette
+    let network: NetworkOverlay?
+    let routePreview: RoutePreview?
+    let edges: [TrackEdgeID: MapEdgeDrawing]
 
     nonisolated static func == (lhs: MapLabelCanvas, rhs: MapLabelCanvas) -> Bool {
         lhs.world.stations == rhs.world.stations
@@ -1742,17 +1757,23 @@ private struct MapLabelCanvas: View, Equatable {
             && lhs.labels == rhs.labels
             && lhs.lineCodes == rhs.lineCodes
             && lhs.linePalette == rhs.linePalette
+            && lhs.world.network == rhs.world.network
+            && lhs.network == rhs.network
+            && lhs.routePreview == rhs.routePreview
+            && lhs.edges == rhs.edges
     }
 
     var body: some View {
         let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts
         let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
+        let network = network, routePreview = routePreview, edges = edges
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawStationLabels(
                 world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
                 lineCodes: lineCodes, projection: camera, in: context
             )
+            MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
         }
         .allowsHitTesting(false)
     }

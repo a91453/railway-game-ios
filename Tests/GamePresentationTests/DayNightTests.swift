@@ -35,6 +35,22 @@ final class DayNightTests: XCTestCase {
         XCTAssertEqual(DayNight.tint(atMinute: -1_110), dawn)
     }
 
+    /// #603 drew the stations' names over the trains, so over the tint:
+    /// they are multiplied by what the tint does to the map under it.
+    func testTheMultiplierIsWhatTheTintDoesToTheMap() {
+        XCTAssertEqual(DayNight.Tint.day.multiplier, DayNight.Colour(red: 1, green: 1, blue: 1))
+        let night = DayNight.tint(atMinute: 0).multiplier
+        // The night's blue (0x0E1640) at 25 %.
+        XCTAssertEqual(night.red, 0.75 + 0.25 * 14 / 255, accuracy: 1e-9)
+        XCTAssertEqual(night.green, 0.75 + 0.25 * 22 / 255, accuracy: 1e-9)
+        XCTAssertEqual(night.blue, 0.75 + 0.25 * 64 / 255, accuracy: 1e-9)
+        // A colour under the tint, multiplied as the blend does.
+        let tint = DayNight.tint(atMinute: 1_117.5)
+        let under = 0.6
+        let blended = (1 - tint.strength) * under + tint.strength * under * tint.colour.blue
+        XCTAssertEqual(under * tint.multiplier.blue, blended, accuracy: 1e-9)
+    }
+
     func testTheTintNeverJumps() {
         var previous = DayNight.tint(atMinute: 0)
         for tenth in 1...14_400 {
