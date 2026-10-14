@@ -303,9 +303,15 @@
 ///     build that reads only an earlier version would drop them, and its
 ///     trains would run through curves at full speed on shorter timetables
 ///     again, so it says the save is newer than it instead.
+/// 59. Depots of lines with runs (decision 221): a line can have several
+///     depots, written as `"depots"` (one is written as `"depot"`, as
+///     before), and a line with runs can have them. A build that reads only
+///     an earlier version would refuse the line with runs or drop the
+///     depots after the first, so it says the save is newer than it
+///     instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 58
+    public static let currentVersion = 59
 
     public let world: GameWorld
 
@@ -461,6 +467,8 @@ extension SavedGame: Codable {
         // a station day without `"transferred"` counted no changes.
         // Version 57 to 58: a world without `"curveSpeedLimits"` runs and
         // plans as before, and a run without `"limits"` meets none.
+        // Version 58 to 59: a line's single `"depot"` reads as its only
+        // depot, and a line without runs had none of either.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

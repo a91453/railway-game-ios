@@ -15,10 +15,11 @@
 extension GameWorld {
     // MARK: - Where trains stand
 
-    /// Whether `train`, without a service, stands at `line`'s depot.
+    /// Whether `train`, without a service, stands at one of `line`'s
+    /// depots.
     func isInDepot(_ train: Train, of line: ServiceLine) -> Bool {
-        guard let depot = line.depot, train.execution == nil else { return false }
-        return isStopped(train, at: depot)
+        guard !line.depots.isEmpty, train.execution == nil else { return false }
+        return line.depots.contains { isStopped(train, at: $0) }
     }
 
     /// Whether `train`, without a service, stands at any depot (decision
@@ -28,10 +29,10 @@ extension GameWorld {
         return stationsStoppedAt(by: train.id).contains { station(id: $0)?.isDepot == true }
     }
 
-    /// Whether `train` runs empty to `line`'s depot.
+    /// Whether `train` runs empty to one of `line`'s depots.
     func isPullingIn(_ train: Train, of line: ServiceLine) -> Bool {
-        guard let depot = line.depot else { return false }
-        return train.isDeadheading && train.timetable.last?.station == depot
+        guard !line.depots.isEmpty, train.isDeadheading, let end = train.timetable.last?.station else { return false }
+        return line.depots.contains(end)
     }
 
     /// The edges with a platform of a depot, its sidings (decision 209),
@@ -97,7 +98,7 @@ extension GameWorld {
     /// its least dwell and the run's seconds, rounded up, and a minute
     /// more, so that it stands at the end, its run over, when the trip is
     /// due.
-    private static func lead(of run: LineTrip.DeadheadRun) -> Int64 {
+    static func lead(of run: LineTrip.DeadheadRun) -> Int64 {
         let seconds = ServiceDwell.terminalMinimum + run.seconds
         return seconds / GameTime.secondsPerMinute + (seconds % GameTime.secondsPerMinute == 0 ? 0 : 1) + 1
     }
@@ -155,12 +156,22 @@ extension GameWorld {
     /// The train of `line`'s `stream` to send out of the depot now, with
     /// its empty run, or `nil` (decision 209): while no other of its
     /// trains waits at an end or is on its way to one, the first in ID
-    /// order standing in the depot whose run is due (see
+    /// order standing in a depot of the line whose run is due (see
     /// ``isPullOutDue(_:_:lead:memo:)``) and, under traffic control, can
-    /// take its route now.
+    /// take its route now. A line with several depots (decision 221) tries
+    /// first the train with the shortest run out.
     func trainLeavingDepot(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
-        guard line.depot != nil, !line.hasRuns, clock.now.seconds >= 0, !hasTrainOnItsWay(line, stream, memo: &memo) else { return nil }
-        for id in line.trains(of: stream) {
+        guard !line.depots.isEmpty, !line.hasRuns, clock.now.seconds >= 0, !hasTrainOnItsWay(line, stream, memo: &memo) else { return nil }
+        var ids = line.trains(of: stream)
+        if line.depots.count > 1 {
+            var seconds: [TrainID: Int64] = [:]
+            for id in ids {
+                guard let train = train(id: id), isInDepot(train, of: line) else { continue }
+                seconds[id] = pullOutTrip(of: train, on: line, stream.service, memo: &memo)?.deadhead?.seconds
+            }
+            ids.sort { (seconds[$0] ?? .max, $0) < (seconds[$1] ?? .max, $1) }
+        }
+        for id in ids {
             guard let index = trains.firstIndex(where: { $0.id == id }), trains[index].movement.rate > 0, isInDepot(trains[index], of: line),
                   let trip = pullOutTrip(of: trains[index], on: line, stream.service, memo: &memo), let run = trip.deadhead,
                   isPullOutDue(line, stream, lead: Self.lead(of: run), memo: &memo)
@@ -177,14 +188,15 @@ extension GameWorld {
     // MARK: - Into the depot
 
     /// The train of `line`'s `stream` to send into the depot now, with its
-    /// empty run, or `nil` (decision 209). Of its trains without a service
+    /// empty run to the depot of the line it reaches soonest, or `nil`
+    /// (decisions 209 and 221). Of its trains without a service
     /// standing at a station other than the depot: one that cannot be sent
     /// out from where it stands, or, while more of the stream's trains run
     /// or wait to be sent out than it runs now (none once its window has
     /// closed), the last in ID order of those that wait. Under traffic
     /// control it must be able to take its route now.
     func trainEnteringDepot(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> (index: Int, trip: LineTrip)? {
-        guard let depot = line.depot, !line.hasRuns, clock.now.seconds >= 0 else { return nil }
+        guard !line.depots.isEmpty, !line.hasRuns, clock.now.seconds >= 0 else { return nil }
         var waiting: [Int] = [], stranded: [Int] = []
         for id in line.trains(of: stream) {
             guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
@@ -197,7 +209,7 @@ extension GameWorld {
         let wanted = wanted(line, stream, at: clock.now, memo: &memo)?.trains ?? 0
         let surplus = runningTrains(of: line, stream) + waiting.count > wanted
         for index in stranded + (surplus ? waiting.reversed() : []) {
-            guard let trip = emptyRun(of: line, for: trains[index], to: [depot]) else { continue }
+            guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions) {
                 continue
@@ -218,7 +230,7 @@ extension GameWorld {
     /// or a headway since the last dispatch has passed. Nothing else that
     /// decides these changes without a train changing, so this is exact.
     func minutesUntilDepotMove(of line: ServiceLine, _ stream: DispatchStream, memo: inout DispatchMemo) -> Int64? {
-        guard line.depot != nil, !line.hasRuns else { return nil }
+        guard !line.depots.isEmpty, !line.hasRuns else { return nil }
         let now = clock.now
         guard now.seconds >= 0 else { return Self.minutes(from: now, until: .zero) }
         if trainEnteringDepot(of: line, stream, memo: &memo) != nil || trainLeavingDepot(of: line, stream, memo: &memo) != nil { return 0 }

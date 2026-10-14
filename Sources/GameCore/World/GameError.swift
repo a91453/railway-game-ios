@@ -287,9 +287,8 @@ public enum GameError: Error, Hashable, Sendable {
     /// The depot is a line's depot, which must be changed first (decision
     /// 209): the line.
     case depotInUse(LineID)
-    /// A line with runs sends its trains out at the runs' times and has no
-    /// depot (decision 209).
-    case depotWithRuns(LineID)
+    /// A line's depots name this depot twice (decision 221).
+    case depotListedTwice(StationID)
     /// Making the station a depot would leave a line with no way along its
     /// stops, as no line's service runs over a depot's sidings (decision
     /// 209): the line.
