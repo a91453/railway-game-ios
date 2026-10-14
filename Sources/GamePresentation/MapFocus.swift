@@ -52,14 +52,6 @@ public struct ScreenFrame: Hashable, Sendable {
 }
 
 extension ScreenInsets {
-    /// The same on opposite edges, the larger of the two: what the camera
-    /// opens clear of keeps what it opens on in the middle of the view
-    /// (#593: the demo's middle station stays in the middle of the map).
-    public var balanced: ScreenInsets {
-        let across = max(leading, trailing), down = max(top, bottom)
-        return ScreenInsets(top: down, leading: across, bottom: down, trailing: across)
-    }
-
     /// These insets with the controls in the map's corners kept clear too
     /// (the layer buttons, the legend, the zoom buttons): each frame pushes
     /// in the edge, beside it or below it, that leaves more of the view,
@@ -86,6 +78,21 @@ extension ScreenInsets {
 }
 
 extension PlanCamera {
+    /// The camera a game opens on (#593): as it always opened
+    /// (``init(bounds:viewport:showing:clearOf:)`` with no insets) when
+    /// none of `stations` it shows is under the screen's controls
+    /// (`insets`); otherwise `focus` fitted, and centred, in the part of the
+    /// view they leave, so none is.
+    public static func opening(
+        bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion?,
+        keeping stations: [WorldCoordinate], clearOf insets: ScreenInsets
+    ) -> PlanCamera {
+        let plain = PlanCamera(bounds: bounds, viewport: viewport, showing: focus)
+        let shown = plain.visibleRegion
+        let covered = stations.contains { shown.contains($0) && !plain.showsClear($0, of: insets) }
+        return covered ? PlanCamera(bounds: bounds, viewport: viewport, showing: focus, clearOf: insets) : plain
+    }
+
     /// The middle of the part of the view `insets` leave clear; the view's
     /// middle when they leave none.
     public func clearMiddle(_ insets: ScreenInsets) -> ScreenPoint {

@@ -86,14 +86,16 @@ final class MapFocusTests: XCTestCase {
         let plain = PlanCamera(bounds: map, viewport: phone, showing: built)
         XCTAssertEqual(PlanCamera(bounds: map, viewport: phone, showing: built, clearOf: ScreenInsets()), plain)
         XCTAssertLessThanOrEqual(camera.pointsPerUnit, plain.pointsPerUnit)
-        // Balanced, it opens on the same middle, only farther out.
-        let balanced = PlanCamera(bounds: map, viewport: phone, showing: built, clearOf: insets.balanced)
-        XCTAssertEqual(insets.balanced, ScreenInsets(top: 68, leading: 68, bottom: 68, trailing: 68))
-        XCTAssertEqual(balanced.centerX, plain.centerX, accuracy: 0.001)
-        XCTAssertEqual(balanced.centerY, plain.centerY, accuracy: 0.001)
-        for corner in [(built.minX, built.minY), (built.maxX, built.maxY)] {
-            XCTAssertTrue(balanced.showsClear(WorldCoordinate(x: Int64(corner.0), y: Int64(corner.1)), of: insets))
-        }
+
+        // A game opens as it always did unless a station it shows would be
+        // under the controls.
+        let middle = WorldCoordinate(x: 130_000, y: 115_000)
+        XCTAssertEqual(PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle], clearOf: insets), plain)
+        let corner = WorldCoordinate(x: Int64(built.maxX), y: Int64(built.maxY))
+        XCTAssertFalse(plain.showsClear(corner, of: insets))
+        let opened = PlanCamera.opening(bounds: map, viewport: phone, showing: built, keeping: [middle, corner], clearOf: insets)
+        XCTAssertEqual(opened, camera)
+        XCTAssertTrue(opened.showsClear(corner, of: insets))
     }
 }
 

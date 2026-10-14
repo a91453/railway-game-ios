@@ -1103,10 +1103,13 @@ struct MapView: View {
     }
 
     /// The camera a game opens on (Stage E1): what it has built, or the
-    /// middle of its world, clear of the screen's controls (`framing`,
-    /// #593), balanced so it stays in the middle of the view.
+    /// middle of its world, with no station under the screen's controls
+    /// (`framing`, #593).
     private func openingCamera(viewport: ScreenSize, clearOf framing: ScreenInsets) -> PlanCamera {
-        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world), clearOf: framing.balanced)
+        PlanCamera.opening(
+            bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world),
+            keeping: session.world.stations.map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }, clearOf: framing
+        )
     }
 
     /// The opening camera, remembered as it was set, so that the corners'
