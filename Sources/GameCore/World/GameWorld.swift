@@ -3120,7 +3120,7 @@ public struct GameWorld: Equatable, Sendable {
             if case .waitingAtStop? = train.execution, let due = departureDue(of: train), due <= clock.now { return true }
             return isAtPassingPlace(train)
         }
-        guard serviceDue || trains.contains(where: { $0.execution == nil && mayBeSentOut($0, memo: &memo) }) else { return nil }
+        guard serviceDue || anyTrainMayBeSentOut(memo: &memo) else { return nil }
         let stuck = deadlock(memo: &memo.directions)
         for id in stuck.keys.sorted() {
             guard let request = stuck[id], request.departs, let index = trains.firstIndex(where: { $0.id == id }),
@@ -3156,16 +3156,50 @@ public struct GameWorld: Equatable, Sendable {
         return nil
     }
 
-    /// Whether `train`, without a service, may be due to be sent out by
-    /// its line now: a due run would send it (decision 133), or its stream
-    /// has room for one more train (``isDispatchDue(_:_:at:deadhead:memo:)``
+    /// Whether a train without a service may be due to be sent out by its
+    /// line now: a due run would send it (decision 133), or its stream has
+    /// room for one more train (``isDispatchDue(_:_:at:deadhead:memo:)``
     /// asked as for an empty run, which a headway does not hold back). A
     /// cheap first look: ``departureRequest(of:memo:)`` says for sure.
-    private func mayBeSentOut(_ train: Train, memo: inout DispatchMemo) -> Bool {
-        guard let line = lines.first(where: { assignedLine(of: train.id) == $0.id }) else { return false }
-        if line.hasRuns { return dueRunDeparture(of: train, on: line) != nil }
-        guard let stream = line.dispatchStream(of: train.id) else { return false }
-        return isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
+    ///
+    /// Each train's line (the first that has it, as
+    /// ``assignedLine(of:)``) and stream are looked up once, and each
+    /// stream asked once: the world does not change while asked, and a
+    /// stream's trains all get the same answer.
+    private func anyTrainMayBeSentOut(memo: inout DispatchMemo) -> Bool {
+        var lineOf: [TrainID: Int] = [:]
+        for (index, line) in lines.enumerated() {
+            for service in 0..<line.serviceCount {
+                for id in line.trains(ofService: service) where lineOf[id] == nil {
+                    lineOf[id] = index
+                }
+            }
+        }
+        var streams: [Int: [TrainID: DispatchStream]] = [:]
+        var due: [Int: [DispatchStream: Bool]] = [:]
+        for train in trains where train.execution == nil {
+            guard let index = lineOf[train.id] else { continue }
+            let line = lines[index]
+            if line.hasRuns {
+                if dueRunDeparture(of: train, on: line) != nil { return true }
+                continue
+            }
+            if streams[index] == nil {
+                var of: [TrainID: DispatchStream] = [:]
+                for stream in line.dispatchStreams {
+                    for id in line.trains(of: stream) where of[id] == nil {
+                        of[id] = stream
+                    }
+                }
+                streams[index] = of
+            }
+            guard let stream = streams[index]?[train.id] else { continue }
+            if due[index]?[stream] == nil {
+                due[index, default: [:]][stream] = isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
+            }
+            if due[index]?[stream] == true { return true }
+        }
+        return false
     }
 
     /// This world with `train` in place of the train of its ID: for asking
