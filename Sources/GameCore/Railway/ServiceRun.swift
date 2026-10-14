@@ -103,7 +103,7 @@ extension ServiceRun: Codable {
     }
 
     /// Decodes `{"start": second, "length", "seconds"}` and, when it meets
-    /// any (decision 217, save version 57), `"limits": [{"start", "end",
+    /// any (decision 217, save version 58), `"limits": [{"start", "end",
     /// "speed"}]`, rejecting a length below 1, seconds outside
     /// `1...RunningCurve.maximumSeconds`, an explicit `null` and a limit
     /// outside the run, empty or at a speed below 1. That the
