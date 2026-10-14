@@ -291,6 +291,83 @@ final class RealWorldMapUITests: XCTestCase {
         }
     }
 
+    /// A player's report (a phone held sideways, a real-world map, in
+    /// Chinese): the track tool's buttons, with "沿真實鐵路" (decision 213)
+    /// added, did not fit the side panel, and "進階選項" and "沿真實鐵路"
+    /// stood one character to a line, as tall as a column; the population
+    /// grid's tooltip covered the map's ✓, and the layer and map buttons
+    /// stood under the ✕ and ✓. Here each button keeps its words on one
+    /// line, and the ✓ of a stretch is whole, uncovered, and clear of the
+    /// round buttons. Full lane only (not in the pull request gate).
+    func testTheTrackButtonsKeepTheirWordsOnALineAndTheConfirmIsClear() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW", "-map-layer", "population",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        startARealWorldGameFromTaipei(in: app)
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 15), "The game starts")
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "暫停")), name: "暫停").tap()
+        // Some 330 m a point, as in the platform test above, so the stretch
+        // stays on land the game owns.
+        let zoomIn = app.buttons["放大"]
+        XCTAssertTrue(zoomIn.appears(within: 10))
+        for _ in 0..<5 where zoomIn.isEnabled {
+            zoomIn.tap()
+        }
+
+        let build = app.buttons["dock.build"]
+        tappable(app.buttons.matching(identifier: "dock.build"), name: "dock.build").tap()
+        let network = app.buttons["tool.network"]
+        network.waitUntilSettled()
+        network.tap()
+
+        // One line of footnote text in a bordered button: "複線"'s height.
+        let double = app.descendants(matching: .any)["network.double"].firstMatch
+        XCTAssertTrue(double.appears(within: 10), "No 複線 button")
+        for name in ["network.advanced", "network.trace"] {
+            let button = app.descendants(matching: .any)[name].firstMatch
+            XCTAssertTrue(button.appears(within: 5), "No \(name) button")
+            XCTAssertLessThanOrEqual(
+                button.frame.height, double.frame.height * 1.5,
+                "\(name)'s words do not stand on one line: \(button.frame), 複線 \(double.frame)"
+            )
+            XCTAssertGreaterThan(button.frame.width, button.frame.height, "\(name) is a column: \(button.frame)")
+        }
+
+        // A stretch across the middle of the map, as in the platform test.
+        let hudBottom = app.buttons["hud.menu"].frame.maxY
+        let dockTop = build.frame.minY
+        let middle = (hudBottom + dockTop) / 2
+        let frame = map.frame.intersection(app.frame)
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.3, dy: middle)).tap()
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.55, dy: middle)).tap()
+        let confirm = app.buttons["map.build.confirm"]
+        XCTAssertTrue(confirm.appears(within: 10), "No ✓ for the stretch")
+        confirm.waitUntilSettled()
+        XCTAssertTrue(confirm.becomesHittable(), "The ✓ cannot be tapped: \(confirm.frame)")
+        XCTAssertFalse(
+            app.descendants(matching: .any)["map.populationTooltip"].exists,
+            "The population grid's tooltip stays over the ✕ and ✓"
+        )
+        for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
+            for round in ["map.layers", "map.style"] {
+                let other = app.buttons[round]
+                guard other.exists else { continue }
+                XCTAssertFalse(
+                    button.frame.intersects(other.frame),
+                    "The \(name) is over \(round): \(button.frame), \(other.frame)"
+                )
+            }
+        }
+    }
+
     /// Start screen, Real-World Map, Taipei, Build Here: each scrolled
     /// to first, as the largest text needs.
     private func startARealWorldGameFromTaipei(in app: XCUIApplication) {
