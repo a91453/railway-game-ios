@@ -115,6 +115,39 @@ final class MapInteractionTests: XCTestCase {
                       "The opening camera must put Central at the map view's center; value: \(String(describing: map.value))")
     }
 
+    /// TestFlight 60.1: renaming a station took three taps before a letter
+    /// could be typed. The station tag's pencil puts up the rename alert
+    /// with its field ready, while the clock runs and redraws the panel.
+    func testTheStationTagsPencilRenamesAtOnce() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.simple")
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let pencil = app.buttons["map.stationTag.edit"]
+        XCTAssertTrue(pencil.appears(within: 5), "A tap on Central picks it and shows its tag")
+        XCTAssertTrue(pencil.becomesHittable())
+        pencil.tap()
+
+        let alert = app.alerts["Rename Station"]
+        XCTAssertTrue(alert.appears(within: 5), "The pencil puts up the rename alert")
+        // The alert's UIKit field does not carry SwiftUI's identifier
+        // (`rename.field`): run 38525633704 found it only by its kind.
+        let field = alert.textFields.firstMatch
+        XCTAssertTrue(field.appears(within: 5))
+        // No tap on the field: the keyboard is already its.
+        app.typeText(" Plaza")
+        XCTAssertEqual(field.value as? String, "Central Plaza")
+        alert.buttons["Rename"].tap()
+        XCTAssertTrue(alert.disappears(within: 5))
+        XCTAssertTrue(app.navigationBars["Central Plaza"].appears(within: 5),
+                      "The station panel shows the new name")
+    }
+
     func testZoomingOutShowsTheWholeLargeMap() {
         continueAfterFailure = false
         let app = XCUIApplication()
