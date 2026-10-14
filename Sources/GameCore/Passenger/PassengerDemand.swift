@@ -57,11 +57,11 @@ extension GameWorld {
     /// ``trips(of:at:)``); those of game day `day` instead, when given.
     func scaledTrips(_ trips: Int64, at station: StationID, onDay day: Int64? = nil) -> Int64 {
         guard demandEvents != nil || disruptions != nil else { return trips }
-        let day = day ?? dayIndex(of: clock.now)
+        let counted = day ?? dayIndex(of: clock.now)
         // Without holidays or weather the network's multiplier is 1000, and
         // this is the event's rounding alone, as before them.
-        let network = (1_000 + (holiday(onDay: day)?.boost ?? 0)) * (1_000 - weatherDrop(onDay: day)) / 1_000
-        let local = demandEvents != nil ? demandMultiplier(at: station, onDay: day) : 1_000
+        let network = (1_000 + (holiday(onDay: counted)?.boost ?? 0)) * (1_000 - weatherDrop(onDay: counted)) / 1_000
+        let local = demandEvents != nil ? demandMultiplier(at: station, onDay: counted) : 1_000
         return (trips * local * network + 500_000) / 1_000_000
     }
 
