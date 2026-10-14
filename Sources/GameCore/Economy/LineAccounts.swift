@@ -315,12 +315,14 @@ extension LineAccounts: Codable {
 
 extension GameWorld {
     /// Turns the line accounts on or off (decision 179). Turning them on
-    /// starts empty records; turning them off drops them. Free.
+    /// starts empty records; turning them off drops them, and the trip log
+    /// kept with them (decision 223). Free.
     public mutating func setLineAccounts(_ enabled: Bool) {
         if enabled {
             if lineAccounts == nil { lineAccounts = LineAccounts() }
         } else {
             lineAccounts = nil
+            tripLog = []
         }
     }
 
