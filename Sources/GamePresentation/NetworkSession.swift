@@ -537,10 +537,11 @@ extension GameSession {
             added = true
             if chosen == nil { built = outcome.station?.id }
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error, doing: .addPlatform(addition))
             // GameCore's reason the levelling was refused, said with the
-            // grade it was to level.
-            if let levelling, let grade {
+            // grade it was to level; want of cash is said as above, for
+            // the levelling and the station together.
+            if message?.fundsNeeded == nil, let levelling, let grade {
                 var probe = world
                 do throws(GameError) { _ = try build(levelling, in: &probe) } catch {
                     message = StatusMessage(kind: .failure, text: platformGradeText(grade, problem: error.playerMessage(in: language)))

@@ -20,10 +20,25 @@ extension Money {
 
     /// The exact amount in dollars and cents, such as "$ 0.55" or
     /// "$ 5.00": for fares, and where rounding to dollars would hide a
-    /// difference (not enough cash).
+    /// difference (not enough cash, ``shortfallTexts(required:available:)``).
     public var centsText: String {
         let cents = amount.magnitude % 100
         return "$ \(amount < 0 ? "-" : "")\(Money(Int64(amount.magnitude / 100)).displayText).\(cents < 10 ? "0" : "")\(cents)"
+    }
+
+    /// What a refusal for want of cash says `required` and `available`
+    /// are: whole dollars, as the cash and the ✓ price show them
+    /// (``moneyText``), unless rounding would make the two look enough,
+    /// when both are in cents (``centsText``).
+    public static func shortfallTexts(required: Money, available: Money) -> (required: String, available: String) {
+        // floor((amount + 50) / 100), as moneyText rounds.
+        func dollars(_ money: Money) -> Int64 {
+            let remainder = money.amount % 100 + 50
+            return money.amount / 100 + (remainder >= 100 ? 1 : remainder < 0 ? -1 : 0)
+        }
+        return dollars(required) > dollars(available)
+            ? (required.moneyText, available.moneyText)
+            : (required.centsText, available.centsText)
     }
 }
 
