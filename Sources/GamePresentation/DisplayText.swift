@@ -497,6 +497,14 @@ extension GameError {
             )
         case .notADepot:
             language.text("That station is not a depot.", "這個車站不是機廠。")
+        case .stationIsDepot:
+            language.text("A depot has no shops.", "機廠不能開店。")
+        case .stationHasCommerce:
+            language.text("This station has shops: demolish them before making it a depot.", "這個車站有商業：先拆除商業，才能改成機廠。")
+        case .stationCommerceMaxedOut:
+            language.text("The station's shops are at their top level.", "這一站的商業已經是最高等級。")
+        case .noStationCommerce:
+            language.text("This station has no shops.", "這個車站沒有商業。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
         case .depotWithRuns:

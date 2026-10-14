@@ -40,6 +40,11 @@ public struct Station: Identifiable, Hashable, Sendable {
     /// ``GameWorld/setStationDepot(_:to:)`` only; not one of the
     /// ``StationOperationMode``s, which the player switches on the panel.
     public internal(set) var isDepot: Bool = false
+    /// The shops the company runs in it (decision 222), `nil` for none.
+    /// Set by ``GameWorld/buildStationCommerce(at:)``,
+    /// ``GameWorld/upgradeStationCommerce(at:)`` and
+    /// ``GameWorld/demolishStationCommerce(at:)`` only; a depot has none.
+    public internal(set) var commerce: StationCommerceLevel?
 
     /// A station standing at `point`.
     ///
@@ -59,7 +64,7 @@ public struct Station: Identifiable, Hashable, Sendable {
 
 extension Station: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, annexes, point, operationMode, depot
+        case id, name, position, annexes, point, operationMode, depot, commerce
     }
 
     /// Decodes a station, `{"id", "name", "point"}` (Stage F1), rejecting a
@@ -105,6 +110,14 @@ extension Station: Codable {
                 forKey: .depot, in: container, debugDescription: "Station \(id.rawValue) is written with \"depot\": false, which a save leaves out."
             )
         }
+        // Decision 222: a station without `"commerce"` has none (every save
+        // before version 57), and a depot has none.
+        commerce = try container.decodeIfPresent(StationCommerceLevel.self, forKey: .commerce)
+        if commerce != nil, isDepot {
+            throw DecodingError.dataCorruptedError(
+                forKey: .commerce, in: container, debugDescription: "Station \(id.rawValue) is a depot, which has no shops."
+            )
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -119,6 +132,7 @@ extension Station: Codable {
         if isDepot {
             try container.encode(true, forKey: .depot)
         }
+        try container.encodeIfPresent(commerce, forKey: .commerce)
     }
 }
 

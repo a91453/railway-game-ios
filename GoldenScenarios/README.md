@@ -1005,3 +1005,15 @@ fixture 一個位元組都沒動。執行器（`Tests/GameCoreTests/GoldenScenar
   - 土地長到 1,440 人，下一個午夜達成：欠 $1,000,000、兩星，第 1 天可以再承接第二件。
   - 第 30 天開始的午夜付款（`monthlySubsidy` 列在第 43,199 分，記在第 29 天）並抽第 1 月：Home 的運量與 Far 的人口（1,440 → 1,728）；Work 的運量在手上，不再出。
 - 每個值都由 `tools/golden-checks/city_requests.py` 照規則獨立算出（`--check` 比對 fixture）；最終狀態取自 GameCore。既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。
+
+## 決策 222：車站商業（schema 74）
+
+- 新指令 `buildStationCommerce`、`upgradeStationCommerce`、`demolishStationCommerce`（`station`）；新結果 `stationIsDepot`、`stationHasCommerce`、`noStationCommerce`（`station`）與 `stationCommerceMaxedOut`。世界摘要的車站多一個 `commerce`（1 到 3），沒有商業時不寫，所以既有 golden 一個字節都不變。
+- `station-commerce.json`（新）：8,192 × 4,096 單位的世界，自由模式，起始 1,000,000,000；Main 與 Halt 兩站各 1,000（999,998,000）。
+  - Main 還沒有商業，升級是 `noStationCommerce`。
+  - Main 蓋便利商店 35,000,000（964,998,000），再蓋一次是 `stationCommerceMaxedOut`；升成商店街 315,000,000（649,998,000）；商場的 1,250,000,000 不夠（`insufficientFunds`，被拒絕的指令不改任何狀態）。
+  - 拆除 Main 的商業：不退錢；再拆一次是 `noStationCommerce`。
+  - Halt 蓋便利商店 35,000,000（614,998,000）；車站 9 不存在（`unknownStation`）。
+  - 最後 Main 沒有商業、Halt 是 `"commerce": 1`，餘額 614,998,000。
+- 每個值都是手算的（價錢是決策 222 的表）；不推進時間，一天的結算由 `StationCommerceTests` 驗。最終狀態的其他欄位照 `map-expansion-once.json` 的空世界。
+- 既有 golden、SaveFixtures 與 ReplayFixtures 都沒有修改。

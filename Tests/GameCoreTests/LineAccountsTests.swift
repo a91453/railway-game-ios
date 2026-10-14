@@ -208,7 +208,8 @@ final class LineAccountsTests: XCTestCase {
         XCTAssertEqual(object["saveVersion"] as? Int, 48)
         XCTAssertNotNil((object["world"] as? [String: Any])?["lineAccounts"])
         let world = try JSONDecoder().decode(SavedGame.self, from: data).world
-        XCTAssertEqual(world, made)
+        // Decision 222 counts the changes at B, which version 48 did not.
+        XCTAssertEqual(world, Self.withoutChanges(made))
         XCTAssertEqual(world.lineAccounts?.lines.count, 2)
         XCTAssertFalse(world.lineDays(first).isEmpty)
         // It goes on to be the same world as one that never was saved.
@@ -216,9 +217,34 @@ final class LineAccountsTests: XCTestCase {
         var straight = made
         try carried.advance(ticks: 40)
         try straight.advance(ticks: 40)
-        XCTAssertEqual(carried, straight)
+        XCTAssertEqual(Self.withoutChanges(carried), Self.withoutChanges(straight))
         XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 48,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+    }
+
+    /// `world` with no changes counted at its stations (decision 222).
+    private static func withoutChanges(_ world: GameWorld) -> GameWorld {
+        var world = world
+        let flows: [StationFlowDay] = (world.lineAccounts?.flows ?? []).map { flow in
+            var flow = flow
+            flow.transferred = 0
+            return flow
+        }
+        world.lineAccounts?.flows = flows
+        return world
+    }
+
+    /// Decision 222: each passenger changing at B is counted there once as
+    /// a change, and got off and on there.
+    func testChangesAreCountedWhereTheyWait() throws {
+        var world = try build()
+        try world.advance(ticks: 1_440 + 600)
+        let yesterday = world.dayIndex(of: world.clock.now) - 1
+        let atB = try XCTUnwrap(world.stationFlow(b, onDay: yesterday))
+        XCTAssertGreaterThan(atB.transferred, 0)
+        XCTAssertLessThanOrEqual(atB.transferred, atB.alighted)
+        XCTAssertEqual(atB.people, atB.boarded + atB.alighted - atB.transferred)
+        XCTAssertEqual(world.stationFlow(a, onDay: yesterday)?.transferred, 0, "nobody changes at an end")
     }
 
     /// A world from before the accounts has none, and records nothing.
