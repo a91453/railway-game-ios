@@ -7955,6 +7955,17 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - **畫面**：
      - GamePresentation 的 `TrainRoster` 讀 `tripLog`：今天的格子；正在跑的那趟加 `lateness(of:)`；固定班表或重複時刻表還沒發的班畫成預定。
      - 使用率 ＝ 今天各趟跑的時間 ÷ 從營運開始到現在的時間。
+   - **實作**（2026-10-14，班次紀錄 session，存檔 60）：
+     - `Sources/GameCore/Railway/TrainTrips.swift`：`TrainTrip`、`TripCall`，`GameWorld.tripLog`、`trips(of:)`。
+     - 一趟從時刻表第一站到最後一站：路線的一個來回、固定班表的一班、自己時刻表的一個週期。列車停到第一站時開（`dispatchTrains`、`dispatchRuns`、`startTrainService`，重複時刻表下一週期回到第一站時也開），停到最後一站時收（`recordArrivals`；`departService` 一開就已經在下一站的情形也算）。所以不只 `dispatchTrains`，凡是列車「開始在某站等」的地方都記一站。
+     - 每站記 `[車站, 實際到站, 實際發車]`（JSON 用陣列，省大小）。發車在 `setOff` 記，那是所有出站（含死結讓車）共用的地方。原定時刻只記整趟的首站發車與末站到站，每站的原定時刻畫面從時刻表讀。
+     - 中斷：只有 `stopTrainService` 會讓還沒跑完的服務停下來，那時收起來並標 `interrupted`，`arrival` 是停下的時刻。換線（`unassignTrain`）、刪路線不中斷：列車照 GameCore 現有規則把這一趟跑完。另外，第一站開新的一趟時若還有沒收的，也照中斷收。
+     - 收入：`shareFare(_:among:crediting:)` 回傳這列車所屬路線**實際加進路線帳**的錢（路線帳有上限時只算加進去的部分），`boardPassengers` 把它和上車人數加到進行中的那一趟。一趟加總永遠 ≤ 路線帳，`TrainTripLogTests.testTheTripsFaresAddUpToAtMostTheLines` 驗證。
+     - 只在有路線帳（`lineAccounts != nil`）時記，和路線帳一起；新遊戲都開著。收入只在經營模式（路線帳本來就只在那時記）。
+     - 留兩天：經營模式的午夜日結（`settleDay`）刪前天；開新的一趟時也刪，所以自由模式、或跳過整段空閒分鐘時也一樣（一次跑完與一分鐘一分鐘跑結果相同）。還在跑的那趟不刪。
+     - 讀檔檢查：每趟格式正確、時刻前後順序對、列車編號是發過的；照列車、再照開出時刻排；只有每列車最後一趟可以還在跑。缺某站的發車時刻不拒絕，免得一筆紀錄讓存檔讀不進來。
+     - replay 的 checksum 不含它（和 `lineAccounts` 一樣）；golden 與 replay 的值都沒變。
+     - **實際大小**：高鐵示範從開局跑到第三天 23:00，紀錄留前兩天整天：382 趟（每天 191）、3,028 站，存檔 8,419,578 → 8,530,074 位元組，**多 107.9 KB**（設計估的 60–75 KB 加每站約 76 KB，實際比估的小，因為每站用陣列）。
 
 **四方的理由**（推薦的組合 A／B／A）：
 

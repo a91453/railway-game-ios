@@ -363,6 +363,9 @@ extension GameWorld {
         }
         let trainStaff = Self.roundedDollars(480 * assets.trainWeight, over: 1_000)
         settleLineDay(day: day, assets: assets, routeEnergy: routeEnergy, trainEnergy: trainEnergy, trainStaff: trainStaff)
+        // Decision 223: the trip log keeps the day that ended and the new
+        // one.
+        dropTrips(before: day)
         let staff = Money(620 * assets.stations * 100) + trainStaff
         if staff > .zero {
             write(LedgerEntry(

@@ -404,14 +404,23 @@ extension GameWorld {
     }
 
     /// `fare` just charged for boarders whose journeys ride `lines` (each
-    /// with its weight): shared among them.
-    mutating func shareFare(_ fare: Money, among weights: [(line: LineID, weight: Int64)]) {
-        guard recordsLines, fare > .zero, !weights.isEmpty else { return }
+    /// with its weight): shared among them. Returns what line `credited`
+    /// was given of it, exactly what its accounts gained (decision 223:
+    /// the boarding train's trip records it).
+    @discardableResult
+    mutating func shareFare(_ fare: Money, among weights: [(line: LineID, weight: Int64)], crediting credited: LineID? = nil) -> Money {
+        guard recordsLines, fare > .zero, !weights.isEmpty else { return .zero }
         let ordered = weights.sorted { $0.line < $1.line }
         let shares = LineAccounts.apportion(fare.amount / 100, by: ordered.map(\.weight))
+        var given = Money.zero
         for (entry, share) in zip(ordered, shares) where share > 0 {
-            lineAccounts?.count({ $0.fareRevenue = Money(min($0.fareRevenue.amount + share * 100, Self.maximumHourly / 100 * 100)) }, on: entry.line)
+            lineAccounts?.count({
+                let before = $0.fareRevenue
+                $0.fareRevenue = Money(min($0.fareRevenue.amount + share * 100, Self.maximumHourly / 100 * 100))
+                if entry.line == credited { given = $0.fareRevenue - before }
+            }, on: entry.line)
         }
+        return given
     }
 
     /// The weights that share a journey's fare among its legs' lines: each

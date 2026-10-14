@@ -222,9 +222,11 @@ final class LineAccountsTests: XCTestCase {
             .replacingOccurrences(of: #""saveVersion" : 48,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 
-    /// `world` with no changes counted at its stations (decision 222).
+    /// `world` with no changes counted at its stations (decision 222), and
+    /// no trip log (decision 223).
     private static func withoutChanges(_ world: GameWorld) -> GameWorld {
         var world = world
+        world.tripLog = []
         let flows: [StationFlowDay] = (world.lineAccounts?.flows ?? []).map { flow in
             var flow = flow
             flow.transferred = 0
