@@ -315,8 +315,8 @@ struct CompanyRankSection: View {
             Text(verbatim: language.text("Company rank", "公司評等"))
         } footer: {
             Text(verbatim: language.text(
-                "Measured on the best day's riders, track, stations, net worth, people within 800 m of a station, yesterday's operating ratio and the trains on time now.",
-                "依最佳單日旅客、路網長度、車站數、淨值、車站 800 m 內的住戶、昨天的營業比與目前列車的準點率評分。"
+                "Rises with your best day's riders, track, stations, net worth, people near stations, operating ratio and trains on time.",
+                "最佳單日旅客、路網長度、車站數、淨值、車站附近的住戶、營業比與準點率越好，評等越高。"
             ))
         }
         .task(id: today) {

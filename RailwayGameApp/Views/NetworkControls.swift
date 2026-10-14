@@ -260,7 +260,7 @@ struct NetworkControls: View {
             // second track beside the first.
             Text(verbatim: session.language.text(
                 "Turn it off to lay a parallel track 4 m or more beside another by hand; \"Double\" lays both at once.",
-                "關掉後可以自己鋪相距 4 m 以上的平行軌；「複線」會一次鋪好兩條"
+                "關掉後可以自己鋪相距 4 m 以上的平行軌；「複線」會一次鋪好兩條。"
             ))
             .font(.caption)
             .foregroundStyle(Theme.textSecondary)

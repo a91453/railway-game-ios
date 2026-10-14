@@ -15,10 +15,10 @@ extension GameWorld {
         let near = HighSpeed.nearDistance / WorldCoordinate.unitsPerMetre / 1_000
         let full = HighSpeed.fullDistance / WorldCoordinate.unitsPerMetre / 1_000
         return language.text(
-            "High-speed line: riders pay \(perKilometre) a kilometre, or the network's fare if that is more. Its stations draw intercity trips from the people within \(radius) km of them, "
-                + "to the other high-speed stations: none under \(near) km, all from \(full) km. Run it with high-speed sets.",
-            "高鐵路線：乘客付每公里 \(perKilometre)，路網的票價比較高就付路網的。它的車站從 \(radius) 公里內的居民與就業取得城際旅次，"
-                + "去其他高鐵站：\(near) 公里內沒有，\(full) 公里起全部。列車請用高鐵車種。"
+            "High-speed line: riders pay \(perKilometre) a kilometre, never less than the network's fare. Its stations draw travellers from within \(radius) km "
+                + "to the other high-speed stations: none for trips under \(near) km, the most from \(full) km. Run high-speed trains on it.",
+            "高鐵路線：每公里 \(perKilometre)，不低於一般路網的票價。車站吸引 \(radius) 公里內的旅客前往其他高鐵站："
+                + "\(near) 公里內沒人搭，\(full) 公里以上搭的人最多。請用高鐵列車。"
         )
     }
 
@@ -74,6 +74,6 @@ extension DisplayLanguage {
     /// What is said after a line has been planned at high speed because of
     /// the set put on it (see ``GameWorld/planAtHighSpeedWhenRunByHighSpeedSets(_:)``).
     func nowHighSpeedText(_ line: String) -> String {
-        text(" \(line) is planned at high speed now: a high-speed line.", "\(line) 現在以高鐵規劃，是高鐵路線。")
+        text(" \(line) is now a high-speed line.", "\(line) 現在是高鐵路線。")
     }
 }

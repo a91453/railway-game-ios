@@ -112,6 +112,10 @@ extension PlayerCommand {
         case acceptRequest(Int)
         case declineRequest(Int)
         case investInSouvenirShop(AttractionID)
+        /// A station's shops (decision 222): built, a level up, demolished.
+        case buildStationCommerce(StationID)
+        case upgradeStationCommerce(StationID)
+        case demolishStationCommerce(StationID)
 
         /// A step of a train's path: an edge and the way along it.
         public struct Step: Hashable, Sendable, Codable {
@@ -289,6 +293,9 @@ extension GameSession {
         case .acceptRequest(let id): try world.acceptRequest(id)
         case .declineRequest(let id): try world.declineRequest(id)
         case .investInSouvenirShop(let id): try world.investInSouvenirShop(of: id)
+        case .buildStationCommerce(let id): try world.buildStationCommerce(at: id)
+        case .upgradeStationCommerce(let id): try world.upgradeStationCommerce(at: id)
+        case .demolishStationCommerce(let id): try world.demolishStationCommerce(at: id)
         }
         return outcome
     }

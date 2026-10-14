@@ -87,6 +87,6 @@ final class StationRemovalSessionTests: XCTestCase {
 
         XCTAssertEqual(session.world, world)
         XCTAssertFalse(session.canUndo)
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Train #1 of Shuttle serves East. Take it off the line and stop its service first."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Tram of Shuttle serves East. Take it off the line and stop its service first."))
     }
 }

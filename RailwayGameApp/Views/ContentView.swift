@@ -279,6 +279,19 @@ struct ContentView: View {
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
+                // Decision 224 (5B): the layers used most, under the pill,
+                // while not building (the tool rail has that edge then) and
+                // not in the tutorial, whose card points at the map.
+                .overlay(alignment: .topLeading) {
+                    if !showsRail, session.tutorial == nil {
+                        MapQuickLayerStrip(language: session.language) {
+                            screen.panel = .mapLayers
+                        }
+                        .padding(.top, pillDepth)
+                        .padding([.top, .leading], margin)
+                        .transition(.opacity)
+                    }
+                }
                 .overlay(alignment: .topLeading) {
                     if showsRail {
                         BuildToolRail(session: session, maxHeight: railHeight)
@@ -324,6 +337,19 @@ struct ContentView: View {
                         .padding(.bottom, strip + margin)
                     }
                 }
+                // Decision 224 (3B): the last two stations picked for a new
+                // line, compared, above the dock and clear of a panel
+                // beside the map; not in the tutorial, whose card leads.
+                .overlay(alignment: .bottom) {
+                    let draft = session.lineDraft
+                    if session.tutorial == nil, draft.count >= 2 {
+                        StationPairDrawer(session: session, from: draft[draft.count - 2], to: draft[draft.count - 1])
+                            .padding(.horizontal, margin)
+                            .padding(.trailing, sidePanel != nil ? sideWidth + margin : 0)
+                            .padding(.bottom, strip + dockSize.height + 2 * margin)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
                 .overlay(alignment: .trailing) {
                     if let sidePanel {
                         self.sidePanel(sidePanel)
@@ -347,6 +373,7 @@ struct ContentView: View {
                 .animation(.easeInOut(duration: 0.2), value: isOpen)
                 .animation(.easeInOut(duration: 0.2), value: showsRail)
                 .animation(.easeInOut(duration: 0.25), value: sidePanel)
+                .animation(.easeInOut(duration: 0.2), value: session.lineDraft.count >= 2)
         }
     }
 
