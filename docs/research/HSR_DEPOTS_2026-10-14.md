@@ -39,7 +39,7 @@ GameCore 的 PR 排在 GameCore 隊列裡「車站商業三級」之後，開工
 
 - `ServiceLine.depots: [StationID]`，取代 `depot`。
   - 存檔：一個機廠照舊寫 `"depot"`；兩個以上寫 `"depots"`。
-  - 讀檔：兩個 key 都讀，不能同時出現。
+  - 讀檔：兩個 key 都讀，不能同時出現；舊存檔的單一 `"depot"` 讀成只有一個元素的 `depots`（遊戲規劃 session 2026-10-14 定案，連同「一條線幾個機廠」）。
 - 指令：
   - `setLineDepot(_:to:)` 照舊，`nil` 清空，一個值就是只有那一個機廠。決策 209 的一鍵修正（`LineLossFix`）照舊用它。
   - 新增 `setLineDepots(_:to:)`，指令日誌記成新的 `PlayerCommand.Edit.setLineDepots`。
@@ -143,6 +143,8 @@ GameCore 的 PR 排在 GameCore 隊列裡「車站商業三級」之後，開工
 - 南港：下行月台 6 組、另一個月台 3 組；
 - 台中：一個月台 5 組；
 - 左營：一個月台 13 組、另一個 6 組。
+
+一整天的計算時間（release、`-enable-testing`，同一台容器）：開局後 07:00 到隔天 07:00 共 2.2 秒；疊車的數字和 debug build 相同。示範 PR 把這兩個數字（05:40 的疊車、一整天的秒數）寫成前後對照（遊戲規劃 session 的要求）。
 
 所以第一晚以後，兩端的停車股道（決策 197 的 `Yard`）都沒有用到：交通管制關著時，回來的車停在終點自己的月台上，一個疊一個。示範 PR 的目標是 05:40 的疊車 0，35 組都在機廠或各自的月台上。
 
