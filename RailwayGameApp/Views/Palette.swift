@@ -259,6 +259,20 @@ enum MapGlyph: String {
     case depot = "MapGlyphDepot"
     case depotOut = "MapGlyphDepotOut"
     case depotIn = "MapGlyphDepotIn"
+    /// Decision 222: a station's shops, one, two or three bags for the
+    /// convenience store, the arcade and the mall (`docs/UI_THEME.md`).
+    case shops1 = "MapGlyphShops1"
+    case shops2 = "MapGlyphShops2"
+    case shops3 = "MapGlyphShops3"
+
+    /// The glyph of a station's shops at `level`.
+    static func shops(_ level: StationCommerceLevel) -> MapGlyph {
+        switch level {
+        case .convenienceStore: .shops1
+        case .arcade: .shops2
+        case .mall: .shops3
+        }
+    }
 
     var image: Image {
         Image(rawValue).renderingMode(.template)

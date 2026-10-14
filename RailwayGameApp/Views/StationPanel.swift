@@ -64,6 +64,8 @@ struct StationPanel: View {
                     ridershipSections(station)
                     passengersSection(station)
                     freightSection(station)
+                    // Decision 222: the station's shops.
+                    StationCommerceSection(session: session, station: station.id)
                     removalSection(station)
                 } else {
                     Section {
