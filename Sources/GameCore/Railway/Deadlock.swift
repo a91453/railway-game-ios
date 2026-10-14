@@ -134,14 +134,38 @@ extension GameWorld {
     /// Until the line wants another train nothing sends it anywhere, so a
     /// train waiting for its track waits as long as for a train of a
     /// deadlock (see ``deadlock(memo:)``).
+    ///
+    /// With block sections (decision 212), a train of a line that sends
+    /// its trains out by runs is a spare too between them: without a
+    /// service, standing where its path ends with a rate above 0, while no
+    /// run of its line is due for it. It may stand aside only at the
+    /// station it stands at (see ``spareStandingAside(in:memo:)``), where
+    /// its next run starts.
     func isSpare(_ train: Train) -> Bool {
         guard train.execution == nil, train.movement.rate > 0, standingPoint(of: train) != nil,
-              let line = lines.first(where: { assignedLine(of: train.id) == $0.id }), !line.hasRuns,
-              line.window.contains(minuteOfDay: clock.now.minuteOfDay),
+              let line = lines.first(where: { assignedLine(of: train.id) == $0.id })
+        else { return false }
+        if line.hasRuns {
+            return blockSections && dueRunDeparture(of: train, on: line) == nil
+        }
+        guard line.window.contains(minuteOfDay: clock.now.minuteOfDay),
               let stream = line.dispatchStream(of: train.id)
         else { return false }
         var memo = DispatchMemo()
         return !isDispatchDue(line, stream, at: clock.now, deadhead: true, memo: &memo)
+    }
+
+    /// Where a spare may stand aside (see ``spareStandingAside(in:memo:)``):
+    /// the nearest berth of any station, or, for a train of a line that
+    /// sends its trains out by runs, each berth of the stations it stands
+    /// at, where its next run starts (decision 212): the nearest berth of
+    /// those is where it stands.
+    private func standingAsideTargets(for spare: Train) -> [(station: StationID, berth: Berth?)] {
+        guard lines.first(where: { assignedLine(of: spare.id) == $0.id })?.hasRuns == true else { return stations.map { ($0.id, nil) } }
+        let here = Set(stationsStoppedAt(by: spare.id))
+        return stations.filter { here.contains($0.id) }.flatMap { station in
+            berths(of: station.id, length: spare.length).map { (station.id, Optional($0)) }
+        }
     }
 
     /// Everything the trains `among` (other than `id`) keep train `id`
@@ -328,9 +352,10 @@ extension GameWorld {
             let blocked = blockedTrack(except: spare.id, holders: trackHolders(memo: &memo))
             let starts = stationsBesideWholeTrain(spare.id).isEmpty ? [place] : [place, turnedRound(place)]
             var best: (train: Train, distance: Int64)?
+            let targets = standingAsideTargets(for: spare)
             for start in starts {
-                for station in stations {
-                    guard let way = path(from: start.position, toStation: station.id, length: spare.length, avoiding: blocked),
+                for target in targets {
+                    guard let way = path(from: start.position, toStation: target.station, length: spare.length, avoiding: blocked, only: target.berth),
                           way.distance > 0, way.distance < best?.distance ?? .max
                     else { continue }
                     var moving = spare
