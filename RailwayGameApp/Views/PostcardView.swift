@@ -217,10 +217,27 @@ enum PostcardAppearance: String, CaseIterable, Identifiable {
     }
 }
 
+/// What the picture to share was drawn with (``PostcardSheet``): the
+/// company's name and light or dark, once the map was worked out.
+private struct PostcardPictureKey: Equatable {
+    let companyName: String
+    let appearance: PostcardAppearance
+    let mapReady: Bool
+}
+
+/// The picture to share, its title, and what it was drawn with.
+private struct PostcardPicture {
+    let key: PostcardPictureKey
+    let title: String
+    let image: Image
+}
+
 /// "Make a Postcard" (decision 215), from the game menu's More: the card as
 /// it will be shared, the company's name to write on it, light or dark, and
 /// the share button, which hands the picture (1200 by 1500 pixels) to the
-/// system's share sheet.
+/// system's share sheet. The card shows the network as it was when the
+/// sheet opened, and the picture shared is drawn from that same moment:
+/// the game running underneath changes neither.
 struct PostcardSheet: View {
     let session: GameSession
     @Environment(\.dismiss) private var dismiss
@@ -229,16 +246,25 @@ struct PostcardSheet: View {
     /// The name the player last wrote, kept on the device.
     @AppStorage("postcard.companyName") private var companyName = ""
     @State private var appearance: PostcardAppearance?
+    /// The world when the sheet opened: the card and the picture are both
+    /// drawn from it, not redrawn on every tick of the game.
+    @State private var world: GameWorld
     @State private var skyline: CitySkyline?
     @State private var map: PostcardMap?
-    @State private var picture: Image?
+    @State private var picture: PostcardPicture?
+
+    init(session: GameSession) {
+        self.session = session
+        _world = State(initialValue: session.world)
+    }
 
     private var language: DisplayLanguage { session.language }
     private var chosen: PostcardAppearance { appearance ?? (screenScheme == .dark ? .dark : .light) }
 
     var body: some View {
         NavigationStack {
-            let postcard = NetworkPostcard(world: session.world, companyName: companyName, in: language)
+            let postcard = NetworkPostcard(world: world, companyName: companyName, in: language)
+            let key = PostcardPictureKey(companyName: companyName, appearance: chosen, mapReady: map != nil)
             ScrollView {
                 VStack(spacing: 16) {
                     GeometryReader { proxy in
@@ -273,7 +299,7 @@ struct PostcardSheet: View {
                     .accessibilityIdentifier("postcard.appearance")
 
                     if let picture {
-                        ShareLink(item: picture, preview: SharePreview(Text(verbatim: postcard.title), image: picture)) {
+                        ShareLink(item: picture.image, preview: SharePreview(Text(verbatim: picture.title), image: picture.image)) {
                             Label {
                                 Text(verbatim: language.text("Share Postcard", "分享明信片"))
                             } icon: {
@@ -282,6 +308,9 @@ struct PostcardSheet: View {
                             .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(ThemeProminentButtonStyle())
+                        // Until the picture is drawn again with the name
+                        // and look shown, so what is shared is the card above.
+                        .disabled(picture.key != key)
                         .accessibilityIdentifier("postcard.share")
                     } else {
                         ProgressView()
@@ -303,7 +332,7 @@ struct PostcardSheet: View {
             .task {
                 // The town under the network, as the map draws it; not on a
                 // real-world map, whose houses are the base map's.
-                let world = session.world
+                let world = world
                 if world.geoAnchor == nil, !world.land.isEmpty {
                     skyline = await Task.detached(priority: .userInitiated) { CitySkyline(world: world) }.value
                 }
@@ -312,24 +341,32 @@ struct PostcardSheet: View {
                 // network.
                 let water = session.water
                 map = await Task.detached(priority: .userInitiated) { PostcardMap(world: world, water: water) }.value
-                render()
             }
-            .onChange(of: companyName) { render() }
-            .onChange(of: chosen) { render() }
+            // The picture to share: once the map is worked out, at once for
+            // a new look, and a moment after the name stops changing, not
+            // on every keystroke.
+            .task(id: key) {
+                guard key.mapReady else { return }
+                if let picture, picture.key.companyName != key.companyName {
+                    do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+                }
+                render(key)
+            }
         }
     }
 
     private func card(_ postcard: NetworkPostcard, appearance: PostcardAppearance) -> some View {
-        PostcardCard(postcard: postcard, world: session.world, map: map, skyline: skyline)
+        PostcardCard(postcard: postcard, world: world, map: map, skyline: skyline)
             .environment(\.colorScheme, appearance.colorScheme)
             .environment(\.regionStyle, region)
     }
 
-    /// The picture to share, at ``PostcardLayout/scale``.
-    private func render() {
-        let postcard = NetworkPostcard(world: session.world, companyName: companyName, in: language)
-        let renderer = ImageRenderer(content: card(postcard, appearance: chosen))
+    /// The picture to share, at ``PostcardLayout/scale``, as the card
+    /// shows with `key`'s name and look.
+    private func render(_ key: PostcardPictureKey) {
+        let postcard = NetworkPostcard(world: world, companyName: key.companyName, in: language)
+        let renderer = ImageRenderer(content: card(postcard, appearance: key.appearance))
         renderer.scale = PostcardLayout.scale
-        picture = renderer.uiImage.map { Image(uiImage: $0) }
+        picture = renderer.uiImage.map { PostcardPicture(key: key, title: postcard.title, image: Image(uiImage: $0)) }
     }
 }
