@@ -127,7 +127,8 @@ public struct PostcardNetwork: Sendable {
         }
         var dots: [Dot] = []
         var places: [(name: String, at: ScreenPoint, tangent: ScreenPoint, reach: Double)] = []
-        for station in world.stations {
+        // A depot (decision 209) is no stop of a line: no dot, no name.
+        for station in world.stations where !station.isDepot {
             let at = projection.screenPoint(of: station.location)
             let ids = Set(stopping[station.id] ?? [])
             let nearest = ids.compactMap { id -> (ScreenPoint, ScreenPoint)? in
@@ -179,7 +180,10 @@ public struct PostcardNetwork: Sendable {
                         let shift = slide * (width * abs(t.x) + height * abs(t.y))
                         let x = place.at.x + side * n.x * reach + t.x * shift
                         let y = place.at.y + side * n.y * reach + t.y * shift
-                        candidates.append((Box(midX: x, midY: y, width: width, height: height), 0.6 * Double(ring) + 0.1 * Double(slideIndex), ring > 0))
+                        // A plate a little over the map's edge is slid back in.
+                        let midX = min(max(x, bounds.minX + width / 2), bounds.maxX - width / 2)
+                        let midY = min(max(y, bounds.minY + height / 2), bounds.maxY - height / 2)
+                        candidates.append((Box(midX: midX, midY: midY, width: width, height: height), 0.6 * Double(ring) + 0.1 * Double(slideIndex), ring > 0))
                     }
                 }
             }

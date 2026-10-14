@@ -59,10 +59,13 @@ final class HighSpeedDemoTests: XCTestCase {
         let downLoops: Set<TrackEdgeID>
         let upLoops: Set<TrackEdgeID>
         let crossovers: Set<TrackEdgeID>
-        let yards: Set<TrackEdgeID>
-        /// The track run both ways: the ends' yards, and at the stations
-        /// where sets turn back, everything from one crossover to the other
-        /// (decision 197).
+        /// The depots' sidings (decision 221).
+        let sidings: Set<TrackEdgeID>
+        /// The track run both ways: at the stations where sets turn back,
+        /// everything from one crossover to the other (decision 197); the
+        /// depots' sidings, and the track between each depot and the
+        /// stations it serves, which the sets run into and out of it either
+        /// way (decision 221).
         let bothWays: Set<TrackEdgeID>
 
         init(layout: HighSpeedDemo.Layout, built: HighSpeedDemo.Built) {
@@ -76,9 +79,17 @@ final class HighSpeedDemoTests: XCTestCase {
             downLoops = Set((built.loops + built.outerLoops).flatMap(\.down.edges))
             upLoops = Set((built.loops + built.outerLoops).flatMap(\.up.edges))
             crossovers = Set(built.crossovers)
-            yards = Set(built.yards.flatMap(\.edges))
-            var bothWays = crossovers.union(yards)
-            for reach in layout.turnbackReach.values {
+            sidings = Set(built.sidings.flatMap(\.edges))
+            var bothWays = crossovers.union(sidings)
+            var reaches = Array(layout.turnbackReach.values)
+            for depot in layout.depots {
+                for station in depot.serving {
+                    let zone = layout.platforms[station]
+                    let near = depot.entry < zone.lowerBound ? zone.lowerBound : zone.upperBound
+                    reaches.append(min(near, depot.entry)...max(near, depot.entry))
+                }
+            }
+            for reach in reaches {
                 func within(_ track: RealWorldDemo.Track) -> [TrackEdgeID] {
                     let d = track.plan.distances
                     return track.edges.indices.filter { reach.contains(d[$0]) && reach.contains(d[$0 + 1]) }.map { track.edges[$0] }
@@ -116,14 +127,46 @@ final class HighSpeedDemoTests: XCTestCase {
     func testItBuildsTheRealHighSpeedRailsTwelveStations() throws {
         let world = try Self.built.get().world
         XCTAssertEqual(
-            world.stations.map(\.name),
+            world.stations.filter { !$0.isDepot }.map(\.name),
             ["Nangang", "Taipei", "Banqiao", "Taoyuan", "Hsinchu", "Miaoli", "Taichung", "Changhua", "Yunlin", "Chiayi", "Tainan", "Zuoying"]
         )
+        XCTAssertEqual(world.stations.filter(\.isDepot).map(\.name), ["Nangang Depot", "Wuri Depot", "Zuoying Depot"])
+    }
+
+    /// Decision 221: the depots stand where OpenStreetMap has the real
+    /// ones along the line (`tools/hsr-depots/hsr_depots.json`), on their
+    /// side of it: Nangang's beyond its station, Wuri's south of Taichung,
+    /// Zuoying's north of its station, the sidings within a kilometre
+    /// either way of the real yard's middle along the line; each a siding
+    /// for each set that stands there on the first night and one to spare,
+    /// every line keeping its sets in all three.
+    func testItsDepotsStandWhereTheRealOnesDo() throws {
+        let (layout, world, _) = try Self.built.get()
+        XCTAssertEqual(layout.depots.map(\.real.chinese), ["南港機廠", "烏日機廠", "左營機廠"])
+        let names = layout.depots.map { $0.serving.map { HighSpeedDemo.stationNames[$0] } }
+        XCTAssertEqual(names, [["南港", "台北"], ["台中"], ["左營"]])
+        XCTAssertLessThan(layout.depots[0].entry, layout.platforms[0].lowerBound, "beyond Nangang's platform")
+        XCTAssertGreaterThan(layout.depots[1].entry, layout.platforms[6].upperBound, "south of Taichung")
+        XCTAssertLessThan(layout.depots[2].entry, layout.platforms[11].lowerBound, "north of Zuoying")
+        for depot in layout.depots {
+            let point = WorldVector(HighSpeedDemo.frame.worldPosition(latitude: depot.real.latitude, longitude: depot.real.longitude))
+            let real = layout.plan.path.project(point)
+            let span = min(depot.entry, depot.deadEnd)...max(depot.entry, depot.deadEnd)
+            XCTAssertLessThan(max(0, span.lowerBound - real, real - span.upperBound) / Self.metre, 1_000, depot.real.english)
+        }
+        XCTAssertEqual(layout.depots.map { $0.east.count + $0.west.count }, [11, 7, 20], "10, 6 and 19 sets, and one to spare")
+        let depots = world.stations.filter(\.isDepot).map(\.id)
+        for line in world.lines {
+            XCTAssertEqual(line.depots, depots, line.name)
+        }
+        for (depot, count) in zip(depots, [11, 7, 20]) {
+            XCTAssertEqual(world.network.platforms(of: depot).count, count, "a platform on each siding")
+        }
     }
 
     func testItsStationsStandWhereTheRealOnesDo() throws {
         let (layout, world, _) = try Self.built.get()
-        for (station, stop) in zip(world.stations, layout.stops) {
+        for (station, stop) in zip(world.stations.filter { !$0.isDepot }, layout.stops) {
             let east = Double(station.point.x) - stop.point.x
             let south = Double(station.point.y) - stop.point.y
             // The platform is on the track, which passes the real station
@@ -143,20 +186,21 @@ final class HighSpeedDemoTests: XCTestCase {
         // are a few metres either side of the polyline.
         XCTAssertEqual(Double(track) / Self.metre / 1_000, 352.2, accuracy: 2)
         XCTAssertEqual(Double(track), real, accuracy: real * 0.005)
-        XCTAssertLessThan(tracks.down.count, 300, "the track is fitted loosely: every edge is checked against all before it")
+        XCTAssertLessThan(tracks.down.count, 330, "the track is fitted loosely: every edge is checked against all before it")
         // The up track runs beside it from turnout to turnout: as long
         // within a few metres (the inside of a curve is shorter), and the
         // two make up the whole network.
         XCTAssertEqual(Double(length(tracks.up)), Double(length(tracks.between)), accuracy: 30 * Self.metre)
         // A loop beside each track at each of the ten stations between the
         // ends, a second at Taichung, a crossover north of Taichung and one
-        // south of Taipei, where sets turn back, and the two ends' yards:
-        // with them, the whole network.
+        // south of Taipei, where sets turn back, one south of Taichung into
+        // Wuri's depot, and the three depots' sidings: with them, the whole
+        // network.
         XCTAssertEqual(tracks.downLoops.count, 33)
         XCTAssertEqual(tracks.upLoops.count, 33)
-        XCTAssertEqual(tracks.crossovers.count, 2)
+        XCTAssertEqual(tracks.crossovers.count, 3)
         XCTAssertEqual(
-            tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.yards.count,
+            tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.sidings.count,
             world.network.edges.count
         )
     }
@@ -236,20 +280,24 @@ final class HighSpeedDemoTests: XCTestCase {
         }
     }
 
-    /// At midnight every set stands at a platform of the station its first
-    /// run leaves, facing the way it goes.
-    func testEverySetStandsWhereItsFirstRunLeaves() throws {
+    /// At midnight every set stands in the depot of the station its first
+    /// run leaves (decision 221), on a siding of its own, facing the way out.
+    func testEverySetStandsInTheDepotOfWhereItsFirstRunLeaves() throws {
         let (layout, world, _) = try Self.built.get()
+        let depots = world.stations.filter(\.isDepot).map(\.id)
+        var edges: Set<TrackEdgeID> = []
         for (line, planned) in zip(world.lines, layout.timetable.lines) {
             XCTAssertEqual(line.trains.count, planned.sets, planned.english)
-            var expected = planned.overnight.map { "\($0.station)\($0.southbound)" }.sorted()
-            var found: [String] = []
+            var expected = planned.overnight.map { set in layout.depots.firstIndex { $0.serving.contains(set.station) }! }.sorted()
+            var found: [Int] = []
             for id in line.trains {
                 let train = try XCTUnwrap(world.train(id: id))
-                guard case .onEdge(let traversal, _)? = train.position,
-                      let station = world.stationsStoppedAt(by: id).first, let index = world.stations.firstIndex(where: { $0.id == station })
-                else { XCTFail("\(train.name) stands at no station"); continue }
-                found.append("\(index)\(traversal.direction == .forward)")
+                guard case .onEdge(let traversal, _)? = train.position, let station = world.stationsStoppedAt(by: id).first,
+                      let index = depots.firstIndex(of: station)
+                else { XCTFail("\(train.name) stands in no depot"); continue }
+                XCTAssertTrue(edges.insert(traversal.edge).inserted, "\(train.name): a siding of its own")
+                XCTAssertEqual(traversal.direction == .forward, !layout.depots[index].southward, "\(train.name) faces the way out")
+                found.append(index)
             }
             found.sort()
             expected.sort()
@@ -297,7 +345,8 @@ final class HighSpeedDemoTests: XCTestCase {
             var worst: [TrainID: Int64] = [:]
             for _ in 0..<90 {
                 try world.advance(ticks: 1)
-                for train in world.trains where train.execution != nil {
+                // The runs: a set out of a depot runs empty at its own pace.
+                for train in world.trains where train.execution != nil && !train.isDeadheading {
                     worst[train.id] = max(worst[train.id] ?? 0, world.lateness(of: train.id) ?? 0)
                 }
             }
@@ -353,7 +402,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(world.clock.now.minute, 7 * 60)
         XCTAssertEqual(world.clock.speed, .normal, "it runs at once, like the other demos")
         XCTAssertFalse(world.doorCrowding)
-        XCTAssertEqual(world.stations.count, 12)
+        XCTAssertEqual(world.stations.count, 15, "twelve and the three depots")
         for line in world.lines {
             for (index, run) in line.runs.enumerated() where run.times[0].departure <= 7 * 3_600 {
                 XCTAssertEqual(line.runDays[index], 0, "\(line.name): the run leaving at \(run.times[0].departure / 60) min has gone")
@@ -374,7 +423,8 @@ final class HighSpeedDemoTests: XCTestCase {
     /// sets going opposite ways are ever on the same track (but where sets
     /// turn back); both tracks are used all day; no set is more than a few
     /// minutes late; no run is dropped; and the next morning's runs leave
-    /// again (decision 197).
+    /// again (decision 197). At 03:00 every set stands in a depot, on a
+    /// siding of its own, and none on a platform (decision 221).
     func testItsSetsKeepToTheRealDay() throws {
         var world = try Self.opened.get()
         let tracks = try Self.built.get().tracks
@@ -383,6 +433,15 @@ final class HighSpeedDemoTests: XCTestCase {
         var latest: Int64 = 0
         for _ in 0..<(6 * 24 + 3) {
             try world.advance(ticks: 1)
+            if world.clock.now.minute == 1_440 + 3 * 60 {
+                var sidings: Set<TrackEdgeID> = []
+                for train in world.trains {
+                    XCTAssertTrue(world.standsInADepot(train), "\(train.name) is in a depot at 03:00")
+                    if case .onEdge(let traversal, _)? = train.position {
+                        XCTAssertTrue(sidings.insert(traversal.edge).inserted, "\(train.name): a siding of its own")
+                    }
+                }
+            }
             for train in world.trains where train.execution != nil {
                 latest = max(latest, world.lateness(of: train.id) ?? 0)
                 guard case .onEdge(let traversal, _)? = train.position else { continue }
@@ -408,7 +467,7 @@ final class HighSpeedDemoTests: XCTestCase {
         try XCTSkipIf(Self.population == nil, "The population file is not here.")
         let world = try Self.opened.get()
         var total: Int64 = 0
-        for station in world.stations {
+        for station in world.stations where !station.isDepot {
             let hinterland = try XCTUnwrap(world.stationDemand(of: station.id)?.hinterland, station.name)
             XCTAssertGreaterThan(hinterland, 100_000, "\(station.name): the people within 8 km")
             total += hinterland
@@ -439,7 +498,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertNil(launcher.session, "still on the start screen")
         await task?.value
         XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
-        XCTAssertEqual(launcher.session?.world.stations.count, 12, "the game is open")
+        XCTAssertEqual(launcher.session?.world.stations.count, 15, "the game is open")
         XCTAssertEqual(launcher.session?.world.lines.first?.isHighSpeed, true)
         try XCTSkipIf(Self.population == nil, "The population file is not here.")
         let taipei = try XCTUnwrap(launcher.session?.world.stations.first { $0.name == "Taipei" })

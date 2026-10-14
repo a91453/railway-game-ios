@@ -279,10 +279,12 @@ final class NetworkPostcardTests: XCTestCase {
         let postcard = NetworkPostcard(world: world, companyName: "", in: .traditionalChinese)
         let (network, size) = map(of: world, postcard)
         let projection = self.projection(postcard)
-        XCTAssertEqual(network.labels.count, world.stations.count, file: file, line: line)
-        XCTAssertEqual(network.dots.count, world.stations.count, file: file, line: line)
+        // A depot (decision 209) has no dot and no name.
+        let stations = world.stations.filter { !$0.isDepot }
+        XCTAssertEqual(network.labels.count, stations.count, file: file, line: line)
+        XCTAssertEqual(network.dots.count, stations.count, file: file, line: line)
         let card = PostcardLayout.Frame(x: 0, y: 0, width: size.width, height: size.height)
-        let points = world.stations.map { projection.screenPoint(of: $0.location) }
+        let points = stations.map { projection.screenPoint(of: $0.location) }
         for (index, label) in network.labels.enumerated() {
             XCTAssertTrue(card.contains(label.frame), "\(label.name) \(label.frame)", file: file, line: line)
             for other in network.labels[(index + 1)...] {
@@ -291,7 +293,7 @@ final class NetworkPostcardTests: XCTestCase {
             let box = PostcardNetwork.Box(minX: label.frame.x, minY: label.frame.y, maxX: label.frame.maxX, maxY: label.frame.maxY)
             let own = box.distance(to: points[index])
             for (other, point) in points.enumerated() where other != index {
-                XCTAssertGreaterThanOrEqual(box.distance(to: point), own - 0.5, "\(label.name) nearer \(world.stations[other].name)", file: file, line: line)
+                XCTAssertGreaterThanOrEqual(box.distance(to: point), own - 0.5, "\(label.name) nearer \(stations[other].name)", file: file, line: line)
             }
         }
     }
