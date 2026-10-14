@@ -1,0 +1,15 @@
+{
+  "role": "chime",
+  "title": "Tourist station chime",
+  "beatsPerBar": 4,
+  "motif": 3,
+  "fadeOut": 160,
+  "tracks": [
+    {"voice": "pluck", "gain": 100, "pan": 0},
+    {"voice": "bell", "gain": 100, "pan": 0},
+    null,
+    null,
+    null,
+    null
+  ]
+}

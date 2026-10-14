@@ -4,7 +4,8 @@ import GameCore
 import XCTest
 
 /// The sounds the session asks the app to play (``SoundCue``): the station
-/// chime when a train in service arrives, a rail joint when track is built
+/// chime when a train in service arrives (decision 219: the station's own,
+/// or its motif at high speed), a rail joint when track is built
 /// and a whoosh when the player changes tool or goes into or out of a game.
 /// The sounds never change the world.
 final class SoundCueTests: XCTestCase {
@@ -215,8 +216,134 @@ final class SoundCueTests: XCTestCase {
             for _ in 0..<10 {
                 session.advance(realElapsed: GameSession.tickInterval)
             }
-            XCTAssertEqual(heard, [.arrival(watched: true)])
+            // Decision 219: at 600× a watched train plays the motif.
+            XCTAssertEqual(heard, [.arrival(watched: true, chime: .local, motif: true)])
         }
+    }
+
+    // MARK: - Decision 219: each station's chime
+
+    /// An attraction 703 m east of East, inside its 800 m catchment
+    /// (51,200 units) and 863 m from West, outside West's. The service
+    /// world is only 256 m wide, so it lies past the map's east edge,
+    /// which the chime's distance does not mind.
+    private static let sight = Attraction(id: AttractionID(rawValue: 1), name: "海岸", englishName: "Shore",
+                                          point: PlanPoint(x: 12_800 + 45_000, y: 3_584), kind: .coast, baseStars: 300)
+
+    /// Tourist before metro before local: an attraction in the catchment
+    /// makes a tourist station, two passenger lines or a high speed line
+    /// a metro one, anything else a local one.
+    func testAStationsChimeIsTouristBeforeMetroBeforeLocal() throws {
+        var world = try makeServiceWorld()
+        XCTAssertEqual(StationChime.of(Self.west, in: world), .local, "no line calls")
+        let first = try world.createLine(named: "One", stops: [Self.west, Self.east]).id
+        XCTAssertEqual(StationChime.of(Self.west, in: world), .local, "one line")
+        try world.createLine(named: "Two", stops: [Self.west, Self.east])
+        XCTAssertEqual(StationChime.of(Self.west, in: world), .metro, "two lines")
+        XCTAssertEqual(StationChime.of(StationID(rawValue: 99), in: world), .local, "no such station")
+
+        var fast = try makeServiceWorld()
+        let line = try fast.createLine(named: "HSR", stops: [Self.west, Self.east]).id
+        XCTAssertEqual(StationChime.of(Self.west, in: fast), .local)
+        try fast.setLinePerformance(line, to: .highSpeed)
+        XCTAssertEqual(StationChime.of(Self.west, in: fast), .metro, "a high speed line calls")
+
+        world.setTourism([Self.sight])
+        XCTAssertEqual(StationChime.of(Self.east, in: world), .tourist, "the attraction beats the two lines")
+        XCTAssertEqual(StationChime.of(Self.west, in: world), .metro, "the attraction is out of West's catchment")
+        try world.removeLine(first)
+        XCTAssertEqual(StationChime.of(Self.west, in: world), .local)
+    }
+
+    /// The chime is the station's the watched train arrived at: a line's
+    /// train rings East's tourist motif there and West's local one back
+    /// there (600×), also in steps of several ticks, where it arrives and
+    /// leaves within one step, or completes its trip at West (one sound a
+    /// step: the step's first arrival). Not watched, it rings the local
+    /// chime everywhere.
+    func testAWatchedTrainRingsTheChimeOfTheStationItArrivedAt() async throws {
+        var world = try makeServiceWorld()
+        try world.stopTrainService(Self.tram)
+        try world.setTrainTimetable(Self.tram, to: [])
+        world.setTourism([Self.sight])
+        let line = try world.createLine(named: "Shuttle", stops: [Self.west, Self.east]).id
+        try world.setLineServiceWindow(line, to: .allDay)
+        try world.setLineTrainsInService(line, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        try world.assignTrain(Self.tram, to: line)
+        await MainActor.run { [world] in
+            for step in [GameSession.tickInterval, GameSession.maximumStepDuration] {
+                let session = GameSession(world: world)
+                session.followTrain(Self.tram)
+                var heard: [(cue: SoundCue, at: [StationID])] = []
+                session.playSound = { heard.append(($0, session.world.stationsStoppedAt(by: Self.tram))) }
+                for _ in 0..<(step == GameSession.tickInterval ? 40 : 8) {
+                    session.advance(realElapsed: step)
+                }
+                let chimes = heard.map(\.cue)
+                XCTAssertTrue(chimes.contains(.arrival(watched: true, chime: .tourist, motif: true)), "\(step): East")
+                XCTAssertTrue(chimes.contains(.arrival(watched: true, chime: .local, motif: true)), "\(step): West")
+                // A tick at a time the train still stands where it rang;
+                // a longer step may take it on to the next station.
+                for (cue, at) in heard where step == GameSession.tickInterval && !at.isEmpty {
+                    let expected: StationChime = at == [Self.east] ? .tourist : .local
+                    XCTAssertEqual(cue, .arrival(watched: true, chime: expected, motif: true), "\(step): standing at \(at)")
+                }
+
+                let unwatched = GameSession(world: world)
+                var others: [SoundCue] = []
+                unwatched.playSound = { others.append($0) }
+                for _ in 0..<(step == GameSession.tickInterval ? 40 : 8) {
+                    unwatched.advance(realElapsed: step)
+                }
+                XCTAssertFalse(others.isEmpty)
+                XCTAssertTrue(others.allSatisfy { $0 == .arrival(watched: false) }, "\(step): the local chime, quieter")
+            }
+        }
+    }
+
+    /// The research note's §6: a watched train rings its station's whole
+    /// chime at 60× and slower and its motif at 600× and faster; the
+    /// others ring the local chime at every speed.
+    func testTheSpeedDecidesBetweenTheChimeAndItsMotif() throws {
+        var world = try makeServiceWorld()
+        world.setTourism([Self.sight])
+        let east = SoundCue.ArrivedTrain(train: Self.tram, station: Self.east)
+        let other = SoundCue.ArrivedTrain(train: TrainID(rawValue: 7), station: Self.west)
+        func cue(_ arrived: [SoundCue.ArrivedTrain], watched: Set<TrainID>, _ speed: GameSpeed) -> SoundCue? {
+            SoundCue.arrivalCue(for: arrived, watched: watched, speed: speed, in: world)
+        }
+        for speed in [GameSpeed.x1, .x10, .x60, .normal, .double, .fast] {
+            let motif = speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick
+            XCTAssertEqual(cue([other, east], watched: [Self.tram], speed), .arrival(watched: true, chime: .tourist, motif: motif), "\(speed)")
+            XCTAssertEqual(cue([east, other], watched: [], speed), .arrival(watched: false), "\(speed): the others ring the local chime")
+        }
+        XCTAssertNil(cue([], watched: [Self.tram], .x1))
+        XCTAssertEqual(cue([SoundCue.ArrivedTrain(train: Self.tram, station: nil)], watched: [Self.tram], .x1),
+                       .arrival(watched: true), "a station not known rings the local chime")
+    }
+
+    /// Every chime and motif the cues name is a file the app bundles and
+    /// the audio manifest lists (`tools/audio/manifest.json`).
+    func testEveryChimeIsABundledFileInTheManifest() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("tools/audio/manifest.json"))) as? [String: Any]
+        let listed = Set((manifest?["files"] as? [[String: Any]] ?? []).compactMap { $0["file"] as? String })
+        var cues: [SoundCue] = [.track, .transition, .built, .income, .refused, .warning]
+        for chime in StationChime.allCases {
+            for watched in [false, true] {
+                cues.append(.arrival(watched: watched, chime: chime, motif: false))
+                cues.append(.arrival(watched: watched, chime: chime, motif: true))
+            }
+        }
+        var files: Set<String> = []
+        for cue in cues {
+            let file = "\(cue.resource.name).\(cue.resource.extension)"
+            files.insert(file)
+            XCTAssertTrue(listed.contains(file), "\(file) is in the manifest")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("RailwayGameApp/Resources/Audio/\(file)").path), "\(file) is bundled")
+        }
+        XCTAssertEqual(SoundCue.arrival(watched: false, chime: .local).resource.name, "station-chime", "the local chime is decision 79's")
+        XCTAssertEqual(files.count, 12, "three chimes, three motifs, six sounds")
     }
 
     func testTheSoundsChangeNothingInTheWorld() async throws {

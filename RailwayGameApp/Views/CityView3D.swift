@@ -23,6 +23,8 @@ struct CityView3D: View {
     /// A page the city view's page links to (the website's home page),
     /// shown in the app in Safari's view rather than in Safari.
     @State private var linkedPage: LinkedPage?
+    /// Whether the × has closed the preview already.
+    @State private var closing = false
 
     var body: some View {
         let language = DisplayLanguage.app
@@ -70,19 +72,22 @@ struct CityView3D: View {
             }
         }
         // The × in an overlay of its own, above the web view and whatever it
-        // shows, and touched by a tap gesture beside the button's action, so
-        // the web view's gestures cannot take the touch from it. Closing
-        // twice does nothing more.
+        // shows. It closes when the finger comes down: the system cancelled
+        // a touch on it 45 ms after it began, with the × drawn pressed, while
+        // the page drew its city (full lane run 38548848760, the app's
+        // ui-test trace), and a cancelled touch runs neither the button's
+        // action nor a tap gesture. The button's action stays for VoiceOver
+        // and the keyboard. Closing twice does nothing more.
         .overlay(alignment: .topLeading) {
             Button {
-                close()
+                closeOnce()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(.white, .black.opacity(0.55))
             }
-            .simultaneousGesture(TapGesture().onEnded { close() })
+            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in closeOnce() })
             .padding(12)
             .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
             .accessibilityIdentifier("cityView.close")
@@ -92,6 +97,15 @@ struct CityView3D: View {
             SafariView(url: page.url)
                 .ignoresSafeArea()
         }
+    }
+
+    /// Closes the preview, once: the drag's changes and the button's action
+    /// all arrive here.
+    private func closeOnce() {
+        guard !closing else { return }
+        closing = true
+        UITestTrace.action("cityView.close")
+        close()
     }
 }
 

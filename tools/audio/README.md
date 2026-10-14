@@ -6,14 +6,74 @@
 python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 ```
 
-需要 numpy，以及 `PATH` 上的 ffmpeg（把音樂轉成 IMA4 的 CAF）。每次輸出相同。
+需要 numpy，以及 `PATH` 上的 ffmpeg（把音樂轉成 IMA4 的 CAF）。每次輸出相同。同時寫出 `manifest.json`。
+
+檢查（決策 219）：重新產生到暫存資料夾，每個音檔與 `manifest.json` 都要和提交的一個位元組都不差；`PATH` 上有 Node 時，也檢查樂譜和 MML 原稿一致。
+
+```sh
+python3 tools/audio/make_game_audio.py --check RailwayGameApp/Resources/Audio
+```
+
+## 產製流程（決策 219）
+
+```
+mml/名稱.mml（MML 原稿，MML Studio 寫的瑪奇六格 MML@…;）＋ mml/名稱.json（每一格的合成器聲音、用途、動機）
+        │  node tools/audio/mml_to_score.mjs mml/名稱.mml（mml-core/core.js，MML Studio 的核心）
+        ▼
+scores/名稱.score.json（《沿線》樂譜，提交進 repo）
+        │  python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
+        ▼
+RailwayGameApp/Resources/Audio/*.wav ＋ manifest.json
+```
+
+- **MML 轉樂譜**只需要 Node（不用 npm 套件）。只有改了 MML 原稿才要重轉；Python 這一步與 App 的建置都不需要 Node。落不到整數 tick（每拍 960）的音一律拒絕，不四捨五入；不過 `core.js` 的 strict profile 只接受 1、2、3、4、6、8、12、16、24、32 分音符與單附點，這些都落在整數 tick 上，所以這條目前是保險。換速度（`T` 在中途改變）也拒絕：一首樂譜只有一個速度。V0 的音是靜音，拒絕。
+- **MML 的音量 V1–V15** 轉成力度 `round(V × 127 ÷ 15)`。
+- **樂譜也可以直接手寫**（`chime-local`、`chime-metro` 就是）：沒有 MML 的樂譜，`source` 寫出處。
+
+## 《沿線》樂譜第 1 版（`*.score.json`）
+
+`score.py` 檢查；之後 GameCore 用 `Codable` 檢查玩家的樂譜（第四階段）時照同一份規則。所有數字都是整數。
+
+| 欄位 | 內容 |
+| --- | --- |
+| `format` | 1 |
+| `role` | `chime`（到站鈴）、`departure`（發車旋律）、`stem`（配樂分軌） |
+| `title` | 名稱 |
+| `source` | 可省略：MML 原稿的路徑，或手寫樂譜的出處 |
+| `tempo` | 每分鐘拍數，整首一個（20–300）。合成器另外要求每個 tick 是整數個取樣（48,000 × 60 是 `tempo` × 960 的倍數，例如 100、120、125、150） |
+| `beatsPerBar` | 每小節幾拍（1–16） |
+| `length` | 全長（tick）；鈴聲在這裡截斷 |
+| `motif` | 高速時播前幾個音：鈴聲與發車旋律 2–3，分軌 0 |
+| `fadeOut` | 結尾線性淡出的長度（tick），0 是不淡出 |
+| `tracks[]` | 每軌：`voice`（`bell`、`pluck`、`pad`、`clack`）、`gain`（0–100）、`pan`（−100–100）、`notes[]` |
+| `notes[]` | `pitch`（MIDI 0–127）、`start`、`length`（tick，結束不超過 `length`）、`velocity`（1–127）；依 `start`、`pitch` 排序，不重複 |
+
+- **每拍 960 tick**：64 分音符 60、三連音 320、五連音 192 都整除。
+- **力度是相對的**：合成時一個音的大小是 `velocity ÷ 最大的力度 × gain ÷ 100`，整個檔案再正規化到峰值。
+- **撥弦與鐘聲會響過寫的長度**（鐘 2.2 秒、撥弦 0.9 秒，比寫的短時照自然的餘音），到樂譜結尾截斷；`pad` 照寫的長度；`clack` 固定 0.08 秒。所有軌都不左右移時輸出單聲道複製成兩聲道。
+- **鈴聲（`role: chime`）另外的規則**（研究文件第 3 節）：最長 3 秒、最多 4 軌、音域 C3–C7（MIDI 48–96）、只用 C 大調五聲音階 C D E G A、動機的音都在前 0.68 秒內開始。
+- **動機檔**：只播動機那幾個音，0.8 秒，最後 0.12 秒淡出，峰值同鈴聲 0.6。600 倍速以上在看的列車播它（研究文件第 6 節）。
+
+## 清單（`manifest.json`）
+
+腳本產生，不要手改。每個音檔一列：
+
+- 來源：樂譜與它的 SHA-256；從 MML 轉來的，另記 MML 原稿與它的 SHA-256；沒有樂譜的音效記下合成它的函式；
+- 音檔的 SHA-256、取樣數、秒數；
+- 峰值與 RMS（dBFS）、相鄰兩個取樣最大的落差（`largestStep`）；
+- 循環的音樂記 `loopSeam`（最後一個取樣跳回第一個的落差，比 `largestStep` 大就會聽到「喀」一聲），單次的音效記 `endLevel`（最後一個取樣的大小）。
+
+另外記下 `mml-core/core.js` 的來源 commit 與 SHA-256。三種到站鈴的 RMS 差超過 3 dB 時腳本停下（研究文件第 3 節）。
 
 ## 檔案
 
 | 檔案 | 內容 | 遊戲裡 |
 | --- | --- | --- |
 | `music-loop.caf` | 38.4 秒、可無縫循環的音樂：和弦墊、琶音與鐵軌接縫聲，C 大調 I – vi – IV – V，100 bpm；IMA4，48 kHz 立體聲 | App 在前景時循環播放 |
-| `station-chime.wav` | 兩個音的到站鈴 | 營運中的列車到站 |
+| `station-chime.wav` | 兩個音的到站鈴（C6、G6），樂譜 `scores/chime-local.score.json` | 在看的列車到「地方小站」；沒在看的列車到任何站（小聲，決策 219） |
+| `chime-metro.wav` | 四音鐘 C5–E5–G5–C6，每 0.3 秒一個，1.8 秒；照搬參考庫的 `chimeBuffer`，用我們的鐘聲，樂譜 `scores/chime-metro.score.json` | 在看的列車到「都會轉運」站：停靠的客運路線 2 條以上，或有高鐵（決策 219） |
+| `chime-tourist.wav` | 撥弦 G5 A5 C6 D6 往上、E6、落在 C6，下面一聲小小的 C5 鐘，五聲音階，2.4 秒；MML 原稿 `mml/chime-tourist.mml` | 在看的列車到「觀光」站：800 m 內有景點（決策 174、219） |
+| `chime-local-motif.wav`、`chime-metro-motif.wav`、`chime-tourist-motif.wav` | 各自的動機：前 2、3、3 個音，0.8 秒 | 600 倍速以上，在看的列車到站（決策 219） |
 | `rail-joint.wav` | 「喀噠、喀噠」的鐵軌接縫聲 | 建好一段軌道 |
 | `whoosh.wav` | 一秒的「咻」聲 | 換工具、開始或離開遊戲 |
 | `build-done.wav` | 輕輕的「咚」加上往上的兩個撥弦音（G、高八度的 C） | 放好建物、加好月台或車站（決策 117） |
@@ -23,6 +83,6 @@ python3 tools/audio/make_game_audio.py RailwayGameApp/Resources/Audio
 
 ## 來源與授權
 
-全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成音樂或第三方音源，是本專案自己的素材。
+全部由這支腳本用正弦波與固定種子的雜訊產生，沒有取樣、現成音樂或第三方音源，是本專案自己的素材。都會轉運鈴的音高與節奏照搬作者的參考庫（`a91453/railway-reference-private` 的 `Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs`，也是合成的、沒有音檔）。`mml-core/core.js` 是作者的 `a91453/mml-tools`（MIT），授權在 `mml-core/LICENSE`。
 
 音樂兩輪和弦正好 1,843,200 個取樣，是 IMA4 封包（64 個取樣）的整數倍，所以 CAF 結尾沒有補零；腳本會檢查這一點。改節奏或長度時，要保持這個條件，否則循環會有短暫的空隙。

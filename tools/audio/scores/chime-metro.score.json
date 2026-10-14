@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Metro interchange chime",
+  "source": "a91453/railway-reference-private Ci/reference_snapshot/lib/audio/airport-pa/chime.mjs chimeBuffer: C5 E5 G5 C6, 0.3 s apart, 1.8 s with a 0.06 s fade; played on this project's bell",
+  "tempo": 100,
+  "beatsPerBar": 4,
+  "length": 2880,
+  "motif": 3,
+  "fadeOut": 96,
+  "tracks": [
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 72, "start": 0, "length": 480, "velocity": 100},
+        {"pitch": 76, "start": 480, "length": 480, "velocity": 100},
+        {"pitch": 79, "start": 960, "length": 480, "velocity": 100},
+        {"pitch": 84, "start": 1440, "length": 1440, "velocity": 100}
+      ]
+    }
+  ]
+}

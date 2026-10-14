@@ -1133,10 +1133,10 @@ public final class GameSession {
     }
 
     /// What a step of ticks made of a world: the world after it, and the
-    /// trains that arrived at a call within it, in train order.
+    /// trains that arrived at a call within it and where, in train order.
     struct TickStep: Sendable {
         var world: GameWorld
-        var arrived: [TrainID]
+        var arrived: [SoundCue.ArrivedTrain]
         /// How many ticks it is.
         var ticks: Int
         /// What traffic control shows of ``world``, when the step read it.
@@ -1156,7 +1156,7 @@ public final class GameSession {
             try world.advance(ticks: ticks)
             return TickStep(world: world, arrived: [], ticks: ticks)
         }
-        var arrived: [TrainID] = []
+        var arrived: [SoundCue.ArrivedTrain] = []
         for _ in 0..<ticks {
             let arrivals = SoundCue.arrivals(in: world)
             try world.advance(ticks: 1)
@@ -1200,9 +1200,8 @@ public final class GameSession {
         editGestureHasSnapshot = false
         endFollowIfGone()
         trainSpeedometer.observe(followedTrainID, from: worldBefore, to: world)
-        if let playSound, !step.arrived.isEmpty {
-            let watched = watchedTrainIDs
-            playSound(.arrival(watched: step.arrived.contains { watched.contains($0) }))
+        if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
+            playSound(cue)
         }
         // Decision 117: fares and rent settled within the step.
         noteIncome(since: lastEntry)
