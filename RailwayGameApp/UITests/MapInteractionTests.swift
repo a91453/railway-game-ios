@@ -32,7 +32,12 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(fleet.appears(within: 5))
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
-            XCTAssertTrue(follow.appears(within: 5))
+            // The overview's list makes a row only once it scrolls into
+            // view, and since the summary card's timetable button (#615)
+            // Train 2's row starts below it: scroll until the row is made,
+            // then until it can be reached.
+            for _ in 0..<3 where !follow.appears(within: 2) { app.swipeUp() }
+            XCTAssertTrue(follow.appears(within: 5), "The overview lists \(name)")
             for _ in 0..<3 where !follow.becomesHittable(within: 1) { app.swipeUp() }
             XCTAssertTrue(follow.isHittable)
             follow.tap()
