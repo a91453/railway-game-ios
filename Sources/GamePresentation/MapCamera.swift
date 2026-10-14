@@ -229,7 +229,12 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
     /// `fitAnycityImportedSaveNetworkView`, `Railway/` `fitData`), never
     /// closer than a set zoom (`Ci/`'s `maxZoom: 12`, here the automatic
     /// size).
-    public init(bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion? = nil) {
+    ///
+    /// With `insets`, what the screen's controls cover (the corner buttons,
+    /// the legend, the zoom buttons: ``ScreenInsets/clearing(_:viewport:)``)
+    /// is left out: `focus` fits, and is centred, in the part of the view
+    /// they leave, so no station opens under a button.
+    public init(bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion? = nil, clearOf insets: ScreenInsets = ScreenInsets()) {
         mapRegion = WorldRegion(bounds: bounds)
         self.viewport = Self.usable(viewport)
         pointsPerUnit = 1
@@ -239,18 +244,19 @@ public struct PlanCamera: MapProjection, Hashable, Sendable {
         if let focus {
             // Room inside the padding; a view too small for it uses all of
             // itself.
+            let clear = clearArea(insets)
             let room = (
-                width: self.viewport.width > 4 * Self.focusPadding ? self.viewport.width - 2 * Self.focusPadding : self.viewport.width,
-                height: self.viewport.height > 4 * Self.focusPadding ? self.viewport.height - 2 * Self.focusPadding : self.viewport.height
+                width: clear.width > 4 * Self.focusPadding ? clear.width - 2 * Self.focusPadding : clear.width,
+                height: clear.height > 4 * Self.focusPadding ? clear.height - 2 * Self.focusPadding : clear.height
             )
             let fitting = min(room.width / focus.width, room.height / focus.height) * Double(MapScale.referenceLength)
             size = MapScale.clamped(min(size, fitting), fitting: fittingReferenceSize)
         }
         pointsPerUnit = size / Double(MapScale.referenceLength)
         let middle = focus ?? mapRegion
-        centerX = (middle.minX + middle.maxX) / 2
-        centerY = (middle.minY + middle.maxY) / 2
-        clampCenter()
+        let centred = centered(atX: (middle.minX + middle.maxX) / 2, y: (middle.minY + middle.maxY) / 2, clearOf: insets)
+        centerX = centred.centerX
+        centerY = centred.centerY
     }
 
     /// Room left around what a camera opens on, in points on each side:

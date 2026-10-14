@@ -220,6 +220,8 @@ final class RealisticOperationTests: XCTestCase {
         try made.setLineDwell(main, seconds: 90)
         _ = try trainOnLine(&made)
         try made.advance(ticks: 3 * 60)
+        // Decision 223: version 53 kept no trip log.
+        made.tripLog = []
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         if ProcessInfo.processInfo.environment["REALISTIC_OPERATION_SAVE_NEW"] != nil {

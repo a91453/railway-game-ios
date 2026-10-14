@@ -135,8 +135,8 @@ final class FinancialStatementsTests: XCTestCase {
         var world = try GameWorld(bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 10_000_000, costs: Self.costs))
         try world.buildStation(named: "West", at: PlanPoint(x: 2_048, y: 2_048))
         world.setEconomyMode(.management)
-        XCTAssertEqual(world.unrecordedAssetsText(in: .english), "1 track, station or train items built before their cost was kept are on the books at $ 0.")
-        XCTAssertEqual(world.unrecordedAssetsText(in: .traditionalChinese), "有 1 項軌道、車站或列車在開始記錄成本之前建造，以 $ 0 入帳。")
+        XCTAssertEqual(world.unrecordedAssetsText(in: .english), "1 track, station or train items have no purchase cost on record and are listed at $ 0.")
+        XCTAssertEqual(world.unrecordedAssetsText(in: .traditionalChinese), "有 1 項軌道、車站或列車沒有購置成本紀錄，以 $ 0 列帳。")
     }
 
     @MainActor

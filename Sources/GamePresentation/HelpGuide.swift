@@ -123,8 +123,8 @@ public enum HelpGuide {
             "islandOrSide", .building,
             question: ("What is the difference between an island and a side platform?", "島式和岸式月台差在哪？"),
             answer: (
-                "For now only the track layout: an island platform stands between the two tracks, so the new track lies 11 m out and needs 88 m of straight, level track past each end of the platform for its turnouts; side platforms stand outside each track, 5 m apart, with 50 m. Trains and passengers use both the same way: the same room, the same boarding and the same walk. Each choice in the station panel's platform track menu shows its cost.",
-                "目前只差在軌道配置：島式月台在兩條軌道中間，新軌道離原軌道 11 公尺，月台兩端外各要 88 公尺平直的軌道放轉轍器；岸式月台在兩條軌道外側，軌道相距 5 公尺，只要 50 公尺。營運上兩者完全相同：容量、上下車和步行都一樣。車站面板的「加月台軌道」選單會列出每個選項的費用。"
+                "Only the track layout: an island platform stands between the two tracks, so the new track lies 11 m out and needs 88 m of straight, level track past each end of the platform; side platforms stand outside each track, 5 m apart, and need 50 m. Trains and passengers use both the same way. Each choice in the station panel's platform track menu shows its cost.",
+                "只差在軌道配置：島式月台在兩條軌道中間，新軌道離原軌道 11 公尺，月台兩端外各要 88 公尺平直的軌道；岸式月台在兩條軌道外側，軌道相距 5 公尺，只要 50 公尺。列車和乘客用起來都一樣。車站面板的「加月台軌道」選單會列出每個選項的費用。"
             ),
             keywords: "island side platform track turnout cost 島式 岸式 月台 月台軌道 差別 費用"
         ),

@@ -20,6 +20,7 @@
 		196DB07B71A523EE4DCE91DE /* ntdlrt_times.json in Resources */ = {isa = PBXBuildFile; fileRef = B00B0A86FFD245909EF3231A /* ntdlrt_times.json */; };
 		19E3457A000AB98921141272 /* taiwan_population.json in Resources */ = {isa = PBXBuildFile; fileRef = 6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */; };
 		1D588A25E6C866FD0509878D /* trtc.json in Resources */ = {isa = PBXBuildFile; fileRef = 56ABC6AFF31D91F9079F6044 /* trtc.json */; };
+		1D765F8EE00C620166255264 /* PromotionLineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */; };
 		1DD4F130E64F5E59D3A91E3A /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7E2B69371F0B985A7107860 /* GameCore */; };
 		1E9DD55C059CAB8D682CA656 /* afr.json in Resources */ = {isa = PBXBuildFile; fileRef = 52815B08C6FE03A12ABC22D5 /* afr.json */; };
 		20561212C765FBDE6629645A /* ListSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */; };
@@ -27,6 +28,7 @@
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
+		2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */; };
 		2955C8F1CA4B38DCACFCE92A /* chime-metro-motif.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */; };
 		298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */; };
 		2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B68167398B13543EA8C564A /* RealWorldPicker.swift */; };
@@ -69,6 +71,7 @@
 		789C9FAADEA0419549125729 /* krtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = A1B80E3285C9871A9D98DECB /* krtc_times.json */; };
 		792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 68B0C0FD89F59C53A9685C67 /* sanying_times.json */; };
 		7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */; };
+		7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 771361B568387359268A6B83 /* RollingStockCatalogView.swift */; };
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		806D73969CCF23668A25B510 /* ntdlrt.json in Resources */ = {isa = PBXBuildFile; fileRef = E2038D64EB91D02F90FE6716 /* ntdlrt.json */; };
 		8163932343EEB39A635118DD /* taiwan_places.json in Resources */ = {isa = PBXBuildFile; fileRef = 894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */; };
@@ -111,13 +114,16 @@
 		CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */ = {isa = PBXBuildFile; fileRef = 52449D8DCD618CC726CACDDE /* chime-tourist.wav */; };
 		CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */ = {isa = PBXBuildFile; fileRef = DA79BA929F6262FB0DD353E2 /* BaseMap */; };
 		CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = 825875E22D08C0197C0EC180 /* coins.wav */; };
+		CE87C0C107D2EBA7DF932407 /* StationCommerceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE177E709243BF5670A3607B /* StationCommerceSection.swift */; };
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
 		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */ = {isa = PBXBuildFile; fileRef = 2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */; };
+		D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
 		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
 		DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */; };
 		DDE073E597E0A494A18D4B85 /* AppleMapBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */; };
+		DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */; };
 		DE4AC9AE303F65DF2C543FF3 /* GamePresentation in Frameworks */ = {isa = PBXBuildFile; productRef = 45EC5C77CE30354C4B4E2BAF /* GamePresentation */; };
 		E0751BAC4F08ABCE62170267 /* GoalsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA92CA4D96486CF019CFB053 /* GoalsPanel.swift */; };
 		E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */; };
@@ -150,6 +156,7 @@
 		0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapConstructionHUD.swift; sourceTree = "<group>"; };
 		0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTargets.swift; sourceTree = "<group>"; };
 		10BAAEA97DA689ABA4004F2A /* tmrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt.json; sourceTree = "<group>"; };
+		10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPairDrawer.swift; sourceTree = "<group>"; };
 		10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowBar.swift; sourceTree = "<group>"; };
 		150E696C9936773A65399191 /* tra_station_info.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_info.json; sourceTree = "<group>"; };
 		17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinesPanel.swift; sourceTree = "<group>"; };
@@ -196,6 +203,8 @@
 		6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_population.json; sourceTree = "<group>"; };
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
 		6F88DCCA78BB699F97926C9A /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
+		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
+		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
 		7E833A49B8766511EF574847 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
@@ -217,6 +226,7 @@
 		9E428A92A98C07A45636F5E3 /* trtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_times.json; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
 		A0888B79097535628EEF865F /* RailwayGameUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RailwayGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainRosterView.swift; sourceTree = "<group>"; };
 		A1B80E3285C9871A9D98DECB /* krtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc_times.json; sourceTree = "<group>"; };
 		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView3D.swift; sourceTree = "<group>"; };
@@ -246,6 +256,7 @@
 		CB6CFDE772AE458BC8B1AD89 /* build-done.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "build-done.wav"; sourceTree = "<group>"; };
 		CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopulationLegendView.swift; sourceTree = "<group>"; };
 		CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_place_names.json; sourceTree = "<group>"; };
+		CE177E709243BF5670A3607B /* StationCommerceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCommerceSection.swift; sourceTree = "<group>"; };
 		CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */ = {isa = PBXFileReference; path = taiwan_coverage.dat; sourceTree = "<group>"; };
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -266,6 +277,7 @@
 		F7E81C097849391C73D31AF5 /* krtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc.json; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 		FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostcardView.swift; sourceTree = "<group>"; };
+		FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapQuickLayerStrip.swift; sourceTree = "<group>"; };
 		FFC0DA778E9B720DF0A4177A /* MonthlyReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -377,6 +389,7 @@
 				B8372106A7EF953548452B15 /* MapBuildConfirm.swift */,
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
+				FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */,
 				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
@@ -390,14 +403,18 @@
 				DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */,
 				CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */,
 				FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */,
+				6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */,
 				4B68167398B13543EA8C564A /* RealWorldPicker.swift */,
 				C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */,
+				771361B568387359268A6B83 /* RollingStockCatalogView.swift */,
 				649A13DFCE7328AD6D549B82 /* RouteStrip.swift */,
 				D4C0B07BD9AF82071392AB20 /* SettingsView.swift */,
 				A23CAC8DC027701B44D9FEF2 /* StartView.swift */,
+				CE177E709243BF5670A3607B /* StationCommerceSection.swift */,
 				BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */,
 				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
 				5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */,
+				10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */,
@@ -406,6 +423,7 @@
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				35B383D349E8080CFE435A11 /* TrainDiagramView.swift */,
 				6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */,
+				A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
 				1FC5AEB0936E154EABD2610F /* YearEndReport.swift */,
@@ -671,6 +689,7 @@
 				10E13E2AD7D42FDB96BF2C00 /* MapBuildConfirm.swift in Sources */,
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
+				DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */,
 				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,
@@ -684,15 +703,19 @@
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */,
 				BB5F13C5775274242DF7E68C /* PostcardView.swift in Sources */,
+				1D765F8EE00C620166255264 /* PromotionLineView.swift in Sources */,
 				2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */,
 				2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */,
 				7620F6925D1B67C07C540F42 /* RegionStyle.swift in Sources */,
+				7B2C7C245265CD7529B9371B /* RollingStockCatalogView.swift in Sources */,
 				9C967885AEABC53789FB4165 /* RouteStrip.swift in Sources */,
 				A3960BFF1A41CEBA47C4ADE1 /* SettingsView.swift in Sources */,
 				AF80C7D3AA57530427081DFF /* StartView.swift in Sources */,
+				CE87C0C107D2EBA7DF932407 /* StationCommerceSection.swift in Sources */,
 				8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */,
 				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
 				F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */,
+				2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */,
@@ -701,6 +724,7 @@
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */,
 				991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */,
+				D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,
 				231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */,
 				7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */,

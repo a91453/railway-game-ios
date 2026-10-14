@@ -35,7 +35,64 @@ public struct ScreenInsets: Hashable, Sendable {
     }
 }
 
+/// A control floating in a corner of the map view, in the view's points:
+/// its leading and top edges and its size.
+public struct ScreenFrame: Hashable, Sendable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
+extension ScreenInsets {
+    /// These insets with the controls in the map's corners kept clear too
+    /// (the layer buttons, the legend, the zoom buttons): each frame pushes
+    /// in the edge, beside it or below it, that leaves more of the view,
+    /// and only as far as it reaches past what these insets cover already;
+    /// an empty frame (not laid out yet) pushes nothing. For the camera's
+    /// own framing (opening a game,
+    /// jumping to a place), not for the player's pans and zooms.
+    public func clearing(_ corners: [ScreenFrame], viewport: ScreenSize) -> ScreenInsets {
+        var insets = self
+        for frame in corners where frame.width > 0 && frame.height > 0 {
+            let atTrailing = frame.x + frame.width / 2 > viewport.width / 2
+            let atBottom = frame.y + frame.height / 2 > viewport.height / 2
+            let side = atTrailing ? viewport.width - frame.x : frame.x + frame.width
+            let edge = atBottom ? viewport.height - frame.y : frame.y + frame.height
+            // The share of the view each way would leave out.
+            if side / max(viewport.width, 1) <= edge / max(viewport.height, 1) {
+                if atTrailing { insets.trailing = max(insets.trailing, side) } else { insets.leading = max(insets.leading, side) }
+            } else {
+                if atBottom { insets.bottom = max(insets.bottom, edge) } else { insets.top = max(insets.top, edge) }
+            }
+        }
+        return insets
+    }
+}
+
 extension PlanCamera {
+    /// The camera a game opens on (#593): as it always opened
+    /// (``init(bounds:viewport:showing:clearOf:)`` with no insets) when
+    /// none of `stations` it shows is under the screen's controls
+    /// (`insets`); otherwise `focus` fitted, and centred, in the part of the
+    /// view they leave, so none is.
+    public static func opening(
+        bounds: WorldBounds, viewport: ScreenSize, showing focus: WorldRegion?,
+        keeping stations: [WorldCoordinate], clearOf insets: ScreenInsets
+    ) -> PlanCamera {
+        let plain = PlanCamera(bounds: bounds, viewport: viewport, showing: focus)
+        let shown = plain.visibleRegion
+        let covered = stations.contains { shown.contains($0) && !plain.showsClear($0, of: insets) }
+        return covered ? PlanCamera(bounds: bounds, viewport: viewport, showing: focus, clearOf: insets) : plain
+    }
+
     /// The middle of the part of the view `insets` leave clear; the view's
     /// middle when they leave none.
     public func clearMiddle(_ insets: ScreenInsets) -> ScreenPoint {
@@ -55,10 +112,18 @@ extension PlanCamera {
     /// as near as the map's edges allow (decision 106, later: a station
     /// selected beside a panel moves into the map left beside it).
     public func centered(on point: WorldCoordinate, clearOf insets: ScreenInsets) -> PlanCamera {
+        centered(atX: Double(point.x), y: Double(point.y), clearOf: insets)
+    }
+
+    /// The world point (`x`, `y`) in the middle of the part of the view
+    /// `insets` leave clear, as near as the map's edges allow: for a centre
+    /// between whole units (a region's middle, a followed train's eased
+    /// centre).
+    public func centered(atX x: Double, y: Double, clearOf insets: ScreenInsets) -> PlanCamera {
         let middle = clearMiddle(insets)
         return centered(
-            atX: Double(point.x) - (middle.x - viewport.width / 2) / pointsPerUnit,
-            y: Double(point.y) - (middle.y - viewport.height / 2) / pointsPerUnit
+            atX: x - (middle.x - viewport.width / 2) / pointsPerUnit,
+            y: y - (middle.y - viewport.height / 2) / pointsPerUnit
         )
     }
 
@@ -82,7 +147,7 @@ extension PlanCamera {
     /// The part of the view `insets` leave clear: its leading and top
     /// edges and its size; the whole view along a side where they would
     /// leave less than a point.
-    private func clearArea(_ insets: ScreenInsets) -> (leading: Double, top: Double, width: Double, height: Double) {
+    func clearArea(_ insets: ScreenInsets) -> (leading: Double, top: Double, width: Double, height: Double) {
         let width = viewport.width - insets.leading - insets.trailing
         let height = viewport.height - insets.top - insets.bottom
         return (

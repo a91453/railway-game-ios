@@ -87,7 +87,7 @@ final class SaveLibraryTests: XCTestCase {
             "files with a date first, then the unreadable ones by name"
         )
 
-        XCTAssertEqual(SaveError.newerVersion(2).playerMessage(in: .english), "That save comes from a newer version of the game (save format 2). Update the app to load it.")
+        XCTAssertEqual(SaveError.newerVersion(2).playerMessage(in: .english), "That save comes from a newer version of the game. Update the app to load it.")
         XCTAssertEqual(SaveError.damaged.playerMessage(in: .traditionalChinese), "這個存檔已損壞，無法讀取。")
     }
 

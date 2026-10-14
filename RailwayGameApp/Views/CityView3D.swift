@@ -165,7 +165,7 @@ final class CityViewHost {
                 "3D 城市要從遊戲官網載入：請連上網路再試一次。"
             )
         }
-        return language.text("The 3D page did not load: ", "3D 網頁沒有載入：")
+        return language.text("The 3D city did not load: ", "3D 城市沒有載入：")
             + "\(error.localizedDescription) (\(error.domain) \(error.code))"
     }
 

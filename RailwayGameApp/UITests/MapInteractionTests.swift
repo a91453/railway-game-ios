@@ -115,6 +115,42 @@ final class MapInteractionTests: XCTestCase {
                       "The opening camera must put Central at the map view's center; value: \(String(describing: map.value))")
     }
 
+    /// #593 (a player's report, an iPhone on its side): the demo opened
+    /// with a station under the zoom buttons. The opening camera keeps
+    /// every station clear of the buttons in the map's corners.
+    func testTheOpeningKeepsTheStationsClearOfTheCornerButtons() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        app.openDemo("demo.simple")
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 10))
+        let buttons = [app.buttons["Zoom in"], app.buttons["Zoom out"], app.buttons["map.layers"]]
+        for button in buttons { XCTAssertTrue(button.appears(within: 10), "\(button)") }
+        // The buttons are measured after the first layout, and the camera
+        // opens again clear of them: give it the time.
+        func covered() -> [String] {
+            let origin = map.frame.origin
+            let points = ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: origin.x + xy[0], y: origin.y + xy[1]) : nil
+            }
+            XCTAssertFalse(points.isEmpty, "The demo has stations")
+            return points.flatMap { point in
+                buttons.filter { $0.frame.insetBy(dx: -4, dy: -4).contains(point) }.map { "\(point) under \($0.label)" }
+            }
+        }
+        let deadline = Date().addingTimeInterval(5)
+        while !covered().isEmpty && Date() < deadline { Thread.sleep(forTimeInterval: 0.25) }
+        XCTAssertEqual(covered(), [], "No station opens under a corner button")
+    }
+
     /// Decision 220: holding a station opens its panel (decision 119) and
     /// the map traces its busiest trips, which the map's value reads out
     /// (the arcs are drawn, not elements).

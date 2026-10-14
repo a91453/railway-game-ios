@@ -142,6 +142,11 @@ public struct GameWorld: Equatable, Sendable {
     /// yesterday (decision 179); `nil`, off, in a world from before them. A
     /// new game turns it on. Set by ``setLineAccounts(_:)`` only.
     public internal(set) var lineAccounts: LineAccounts?
+    /// Each train's trips of today and yesterday (decision 223, point 5),
+    /// ordered by train and then by when they were sent out; kept with the
+    /// line accounts, empty without them and in saves from before it. A
+    /// record only: no rule reads it. Changed only as trains run.
+    public internal(set) var tripLog: [TrainTrip] = []
     /// The sights and the tourists they draw (decision 174), or `nil`: off
     /// in a new world and in saves from before it; the app's new games turn
     /// it on. Set by ``setTourism(_:)`` and every midnight only.
@@ -1703,6 +1708,7 @@ public struct GameWorld: Equatable, Sendable {
         // Stage W2b: starting counts as arriving at the first stop now, so
         // the train dwells there before it leaves.
         trains[index].times = ServiceTimes(arrival: clock.now)
+        logArrival(of: index)
     }
 
     /// Stops the train's service, wherever it has got to. Only the
@@ -1725,6 +1731,7 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].times = nil
         trains[index].trafficVisits = []
         abandonRiders(of: id)
+        interruptTrip(of: id)
     }
 
     // MARK: - Service lines
@@ -2797,6 +2804,7 @@ public struct GameWorld: Equatable, Sendable {
                 // Stage W2b: the train is sent out as if it had just
                 // arrived at the first call; it dwells there first.
                 trains[ready].times = ServiceTimes(arrival: now)
+                logArrival(of: ready)
                 if !deadhead { lines[index].recordDispatch(of: stream, at: now) }
                 dispatched = true
             }
@@ -2816,6 +2824,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[ready].execution = .waitingAtStop(0)
             trains[ready].isStandingAside = false
             trains[ready].times = ServiceTimes(arrival: clock.now)
+            logArrival(of: ready)
             lines[index].runDays[run] = day
             dispatched = true
         }
@@ -3161,9 +3170,16 @@ public struct GameWorld: Equatable, Sendable {
     /// kept, with its departure from where it stands.
     private mutating func setOff(_ index: Int, as train: Train) {
         recordTrafficDeparture(index)
+        let left: Int? = if case .waitingAtStop(let stop, _)? = trains[index].execution { stop } else { nil }
         var departed = train
         departed.trafficVisits = trains[index].trafficVisits
         trains[index] = departed
+        // Decision 223: the trip log notes the departure, and the call it
+        // makes at once when it was already at the next one's station.
+        if let left {
+            logDeparture(of: train.id, from: train.timetable[left].station)
+            if case .waitingAtStop? = train.execution { logArrival(of: index) }
+        }
     }
 
     /// Stage V2 (ARCHITECTURE decision 58): the dispatcher's phase, at a
@@ -3666,6 +3682,7 @@ public struct GameWorld: Equatable, Sendable {
             trains[index].execution = .waitingAtStop(stop, cycle: cycle)
             trains[index].times = ServiceTimes(arrival: clock.now, departure: trains[index].times?.departure)
             arrived = true
+            logArrival(of: index)
             // Decision 207: a trip at its last call counts towards its
             // line's punctuality, as the reference counts a train's final
             // delay once a day.
@@ -4256,7 +4273,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4363,6 +4380,7 @@ extension GameWorld: Codable {
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
+        tripLog = try container.decodeIfPresent([TrainTrip].self, forKey: .tripLog) ?? []
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false
@@ -4502,6 +4520,9 @@ extension GameWorld: Codable {
         }
         if let lineAccounts {
             try container.encode(lineAccounts, forKey: .lineAccounts)
+        }
+        if !tripLog.isEmpty {
+            try container.encode(tripLog, forKey: .tripLog)
         }
         try container.encodeIfPresent(tourism, forKey: .tourism)
         try container.encodeIfPresent(cityRequests, forKey: .cityRequests)
@@ -4667,6 +4688,7 @@ extension GameWorld: Codable {
         if let book = lineAccounts, !book.isValid(lines: Set(lines.map(\.id)), stations: Set(stations.map(\.id))) {
             return "The line accounts must be well formed, for lines and stations that exist."
         }
+        if let problem = tripLogProblem(trainIDsBelow: nextTrainID) { return problem }
         if let problem = transferGroupProblem() { return problem }
         if let problem = placedBuildingProblem() { return problem }
         if let problem = freightProblem() { return problem }

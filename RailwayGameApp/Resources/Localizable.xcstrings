@@ -413,12 +413,12 @@
         }
       }
     },
-    "A preset keeps the station's daily trips. They go to the stations its lines reach that have ridership, shared by their own daily trips." : {
+    "A preset keeps the station's daily trips; they travel to the stations its lines reach." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "預設會保留車站的每日人次。旅次分給路線能到、而且有客源的車站，依各站自己的每日人次分配。"
+            "value" : "套用預設時，車站的每日人次不變；旅客會前往路線能到的車站。"
           }
         }
       }
@@ -953,12 +953,12 @@
         }
       }
     },
-    "Everyone released here is waiting, riding, arrived, left a full station or gave up. Left behind counts the times a full train left people waiting." : {
+    "Everyone who set out from here is waiting, riding, has arrived, or left a full station or gave up. Left behind counts the times a full train left people waiting." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在這裡釋出的每位乘客，不是在候車、在車上、已抵達，就是因車站客滿離開或放棄搭乘。「未能上車」計算客滿列車留下候車乘客的次數。"
+            "value" : "從這裡出發的每位乘客，不是在候車、在車上、已抵達，就是因車站客滿離開或放棄搭乘。「未能上車」計算客滿列車留下候車乘客的次數。"
           }
         }
       }
@@ -2793,12 +2793,12 @@
         }
       }
     },
-    "Population: WorldPop 1 km estimates on real-world maps (0 to 10,000+ people a cell), the towns' 64 m cells on blank maps (people per square km). Travel demand: the trips starting in each 1 km square in each hour, from the stations' demand. Demand change: how they rise or fall from the hour before." : {
+    "Population: where people live, from WorldPop estimates on real-world maps and from your towns on blank maps. Travel demand: the trips starting in each area each hour. Demand change: how they rise or fall from the hour before." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "人口：實景地圖上的 WorldPop 約 1km 人口格網（每格 0 至 10,000+ 人），空白地圖上城鎮的 64 m 土地格（每平方公里人數）。交通需求：依車站需求推算每小時從各 1km 方格出發的旅次量。需求變化：與前一小時相比的增減。"
+            "value" : "人口：居住人口的分布，實景地圖用 WorldPop 的推估，空白地圖用你的城鎮。交通需求：每小時從各地出發的旅次量。需求變化：與前一小時相比的增減。"
           }
         }
       }
@@ -2913,12 +2913,12 @@
         }
       }
     },
-    "The ground's height on real-world maps, shaded as if lit from the north-west, and the slopes steeper than 30% the city cannot build on; tap a cell for its height. Blank maps are flat." : {
+    "The ground's height on real-world maps; hatching marks slopes steeper than 30%, where the city cannot build. Tap a cell for its height. Blank maps are flat." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "實景地圖的地面海拔，以西北方的光照出起伏；斜線是超過 30% 的陡坡，城市不能開發。點一格看海拔。空白地圖是平地。"
+            "value" : "實景地圖的地面高度；斜線是超過 30% 的陡坡，城市不能開發。點一格看海拔。空白地圖是平地。"
           }
         }
       }
@@ -2943,12 +2943,12 @@
         }
       }
     },
-    "Land use: each 64 m cell's homes, shops or offices, darker for taller buildings. Land value: dollars a square metre from the cell's use, density and the best nearby service; tap a cell for its parts. Catchment coverage: the cells within 800 m of a station, and the cells with people no station reaches." : {
+    "Land use: homes, shops or offices, darker for taller buildings. Land value: dollars a square metre, higher near good train service; tap a cell for its parts. Catchment coverage: the land within 800 m of a station, and the people no station reaches." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "土地用途：每個 64 公尺格的住宅、商業或辦公，建物越高顏色越深。地價：依該格的用途、密度與附近最好的車站服務推算，單位是每平方公尺美元；點一格可看分項。腹地涵蓋：車站 800 公尺內的格，以及有人但不在任何車站腹地裡的格。"
+            "value" : "土地用途：住宅、商業或辦公，建物越高顏色越深。地價：每平方公尺美元，車站服務越好越高；點一格可看分項。腹地涵蓋：車站 800 公尺內的範圍，以及沒有車站涵蓋的住戶。"
           }
         }
       }
@@ -3193,12 +3193,12 @@
         }
       }
     },
-    "Draws every line in one of eight colours that stay apart with red–green or blue–yellow colour blindness, the one nearest its own. Only the screen changes: the colours you chose are kept, and come back when this is off. Every line also shows its code, such as BL or R, on its badge." : {
+    "Lines use colours that stay easy to tell apart with colour blindness, and every line badge shows its code." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "把每條路線改畫成紅綠、藍黃色盲也分得開的八種顏色之一，取最接近原色的那一個。只改畫面：你選的顏色照樣保留，關掉就恢復。每條路線的徽章上也有線號，例如 BL、R。"
+            "value" : "路線改用色盲也分得清的顏色，徽章上加上線號。"
           }
         }
       }
@@ -3213,12 +3213,12 @@
         }
       }
     },
-    "Day and night: the map darkens from dusk to dawn as the game's clock turns, and stations, trains and windows light up. Weather effects: rain and lightning on the map on a day of rain or storms, and a typhoon's sign at the stations it hits. With Reduce Motion on, the rain does not fall and nothing flashes." : {
+    "Day and night: the map gets dark at night, and stations, trains and windows light up. Weather effects: rain and lightning on rainy and stormy days, and a typhoon sign at the stations a typhoon hits." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "晝夜變化：地圖隨遊戲時鐘從黃昏到清晨變暗，車站、列車與窗戶亮起燈光。天氣效果：下雨或雷雨的日子地圖上會下雨、打雷閃電，颱風經過的車站會標上颱風符號。開啟「減少動態效果」時，雨不會落下，也不會閃光。"
+            "value" : "晝夜變化：入夜後地圖變暗，車站、列車與窗戶亮起燈光。天氣效果：下雨或雷雨的日子地圖上會下雨、閃電，颱風經過的車站會標上颱風符號。"
           }
         }
       }
