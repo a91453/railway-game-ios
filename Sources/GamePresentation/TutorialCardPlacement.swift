@@ -122,6 +122,10 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// the map shows (a player's report on 59.1: the card left too little
     /// of the map to see what happened).
     public var maxHeight: Double
+    /// Whether the card may be measured shorter or narrower to leave a
+    /// band of the map free: the open card; not the folded one
+    /// (``folded``), one line as wide as its words.
+    public var narrows = true
 
     /// The card's distance from the screen's edges.
     static let margin: Double = 16
@@ -161,22 +165,38 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         self.maxHeight = maxHeight
     }
 
+    /// This placement for the card folded to its title (U10): as wide as
+    /// its words, up to the bounds' width less the margins and never wider
+    /// (a long title is cut short), and never measured shorter or narrower.
+    public var folded: TutorialCardPlacement {
+        var placement = self
+        placement.maxWidth = .infinity
+        placement.narrows = false
+        return placement
+    }
+
     /// The card's frame in `bounds`, which may have its origin elsewhere
     /// than the screen's coordinates (a layout's bounds), given how it
-    /// measures: its size for a proposed size.
+    /// measures: its size for a proposed size. A card that measures wider
+    /// than proposed is laid out at the width proposed, so it never runs
+    /// past the bounds.
     public func frame(in bounds: Frame, measure: (Size) -> Size) -> Frame {
+        func measured(_ proposed: Size) -> Size {
+            let size = measure(proposed)
+            return Size(width: min(size.width, proposed.width), height: size.height)
+        }
         let margin = Self.margin
         let available = bounds.insetBy(dx: min(margin, bounds.width / 4), dy: min(margin, bounds.height / 4))
         let width = min(maxWidth, available.width)
         let tallest = min(maxHeight, available.height)
-        var size = measure(Size(width: width, height: tallest))
+        var size = measured(Size(width: width, height: tallest))
         var best = placement(of: size, in: bounds, available: available)
         // With large text a card can be too tall to leave the map, or the
         // step's controls, free anywhere: measure it shorter, so its
         // explanation scrolls, and place it again if that does better.
         let free = map.map { min(tallest, max(Self.minimumCardHeight, $0.height - Self.minimumFreeMap - Self.gap)) }
-        if best.cost >= Self.mapCoveredCost, let free, free < size.height {
-            let shorter = measure(Size(width: width, height: free))
+        if narrows, best.cost >= Self.mapCoveredCost, let free, free < size.height {
+            let shorter = measured(Size(width: width, height: free))
             let retry = placement(of: shorter, in: bounds, available: available)
             if retry.cost < best.cost {
                 size = shorter
@@ -188,12 +208,12 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         // of the full width can cover all of it. Narrower, 20 points at a
         // time, until a band of the map stays free beside it; tall, or
         // measured shorter as above.
-        if best.cost >= Self.mapCoveredCost, let free {
+        if narrows, best.cost >= Self.mapCoveredCost, let free {
             let heights = [tallest, free]
             var narrow = width - 20
             while narrow >= Self.minimumCardWidth, best.cost >= Self.mapCoveredCost {
                 for height in heights {
-                    let narrower = measure(Size(width: narrow, height: height))
+                    let narrower = measured(Size(width: narrow, height: height))
                     let retry = placement(of: narrower, in: bounds, available: available)
                     if retry.cost < best.cost {
                         size = narrower
