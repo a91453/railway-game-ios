@@ -27,6 +27,8 @@ struct ContentView: View {
     @State private var screen = GameScreenState()
     /// How far down the status pill reaches, with its margin.
     @State private var pillDepth: CGFloat = 0
+    /// The layer strip's height, without its margin.
+    @State private var stripHeight: CGFloat = 0
     /// The dock's size, with its margin.
     @State private var dockSize = CGSize.zero
     /// How far down the details card reaches, with its margins.
@@ -246,6 +248,12 @@ struct ContentView: View {
             // between the pill and the dock.
             let showsRail = BuildToolRail.isShown(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
+            // Decision 224 (5B): the layer strip under the pill, while not
+            // building and not in the tutorial. The map's top column (its
+            // banner, the follow bar, the construction readout) starts
+            // under it, not behind it.
+            let showsLayerStrip = !showsRail && session.tutorial == nil
+            let mapTop = pillDepth + (showsLayerStrip ? margin + stripHeight : 0)
             // Decision 120: the map runs to the screen's edges, under the
             // camera housing and the home indicator, as Apple's Maps does;
             // the controls stay inside the safe area.
@@ -253,7 +261,7 @@ struct ContentView: View {
                 .background {
                     map
                         .environment(\.mapInsets, EdgeInsets(
-                            top: pillDepth, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
+                            top: mapTop, leading: showsRail ? BuildToolRail.width + margin : 0, bottom: dockSize.height,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         ))
                         // A panel beside the map runs down its whole side.
@@ -283,10 +291,11 @@ struct ContentView: View {
                 // while not building (the tool rail has that edge then) and
                 // not in the tutorial, whose card points at the map.
                 .overlay(alignment: .topLeading) {
-                    if !showsRail, session.tutorial == nil {
+                    if showsLayerStrip {
                         MapQuickLayerStrip(language: session.language) {
                             screen.panel = .mapLayers
                         }
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
                         .padding(.top, pillDepth)
                         .padding([.top, .leading], margin)
                         .transition(.opacity)
