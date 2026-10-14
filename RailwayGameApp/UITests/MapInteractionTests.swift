@@ -32,9 +32,12 @@ final class MapInteractionTests: XCTestCase {
             XCTAssertTrue(fleet.appears(within: 5))
             fleet.tap()
             let follow = app.buttons["fleet.follow.\(name)"]
-            XCTAssertTrue(follow.appears(within: 5))
-            for _ in 0..<3 where !follow.becomesHittable(within: 1) { app.swipeUp() }
-            XCTAssertTrue(follow.isHittable)
+            // The overview's list makes a row only once it scrolls into
+            // view, and since the summary card's roster button (#615) Train
+            // 2's row starts below the screen of a phone on its side, where
+            // `swipeUp()` left the list where it was (this branch's run
+            // 38619859987): drag it until the row is made and wholly shown.
+            XCTAssertTrue(app.dragUntilWhollyOnScreen(follow), "The overview's \(name) row never came into reach")
             follow.tap()
             XCTAssertTrue(app.buttons["train.unfollow"].appears(within: 5))
             let speed = app.descendants(matching: .any)["train.speed"].firstMatch
