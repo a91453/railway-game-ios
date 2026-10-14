@@ -1512,3 +1512,7 @@ V 實際放行 → T、U（保證不互穿）
 ## 沿真實路線描線建造（決策 213）
 
 參考庫 d3ebdf1。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 213 的「參考」：`Railway/site_archive_clean/index.html` 的 `projectOntoShape`、`shapeSlice`、`buildFollowRoute` 移植成 `RealRailwayTraces`；`rail-3d/physical/topology.js` 的最短路只取做法；`Ci/` 的 `radiusAtPoint` 移植成 `GameSession.tightestRadius(of:)`，`MIN_CURVE_RADIUS_M` 沒有採用；`track_style_layers.json` 的 `track-follow-*` 只取想法。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部專案沒有用到。
+
+## 路網明信片（決策 215）
+
+參考庫 7888702。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 215 的「參考」：`Railway/island_city_reference_clean/` 的 `makeShareImage`（g10.js，1080×1350 分享圖）給了版面的結構與 4:5 的比例，`makeIdCard`（g11.js）給了「玩家寫名字、做成圖、交給分享面板」的做法；`train_loop`、`OpenWorld/`、`Ci/` 的分享只是文字、網址或存檔代碼；`commuter_journey` 的明信片是截 3D 畫面。圖一律不用參考庫的。外部專案沒有用到。

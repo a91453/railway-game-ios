@@ -213,6 +213,8 @@ struct ContentView: View {
                 .presentationDetents([.medium, .large])
         case .help:
             HelpView(language: session.language)
+        case .postcard:
+            PostcardSheet(session: session)
         }
     }
 
@@ -690,6 +692,8 @@ final class GameScreenState {
         case tourism
         /// The help guide (decision 177), from the game menu.
         case help
+        /// The network postcard (decision 215), from the game menu.
+        case postcard
 
         var id: Self { self }
 
@@ -698,7 +702,7 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard: false
             }
         }
     }
