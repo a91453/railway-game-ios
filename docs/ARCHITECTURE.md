@@ -7529,9 +7529,9 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 ### 216. 線號徽章與色盲友善色票
 
-2026-10-14，作者同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 4 名，原本在 §6「之後」）。號碼依工作登記 #231：main 214，215 是明信片，所以取 216；存檔版本 55 由區間閉塞（決策 212）保留，所以取 56；golden schema 不動。預覽給了徽章三種（A 色塊方牌、B 白底色條牌、C 色環圓牌）與色盲色票三組（甲 Okabe–Ito、乙 Paul Tol muted、丙 從現有色票挑 6 色），作者請 session 從玩家、開發、美術三方考慮自己定案：**徽章 B、色票甲（加一個淺灰）、自動線號照顏色的字母、開關只換畫面的顏色**。規則與理由寫在 `docs/UI_THEME.md`「線號徽章與色盲配色」與 `docs/MAP_LAYERS.md`（24.5、30）。
+2026-10-14，作者同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 4 名，原本在 §6「之後」）。號碼依工作登記 #231：main 214，215 是明信片，所以取 216；存檔版本原本取 56（55 由區間閉塞保留），區間閉塞還只有設計文件，合併 session 2026-10-14 對調，改取 55；golden schema 不動。預覽給了徽章三種（A 色塊方牌、B 白底色條牌、C 色環圓牌）與色盲色票三組（甲 Okabe–Ito、乙 Paul Tol muted、丙 從現有色票挑 6 色），作者請 session 從玩家、開發、美術三方考慮自己定案：**徽章 B、色票甲（加一個淺灰）、自動線號照顏色的字母、開關只換畫面的顏色**。規則與理由寫在 `docs/UI_THEME.md`「線號徽章與色盲配色」與 `docs/MAP_LAYERS.md`（24.5、30）。
 
-1. **線號是 GameCore 的欄位**（存檔版本 56）：`ServiceLine.code: LineCode?`，`LineCode` 是一到三個 `A`–`Z`、`0`–`9`；缺 key＝自動，解碼時拒絕不合格的。`GameWorld.setLineCode(_:to:)` 免費、沒有規則讀它，兩條線可以同一個線號（和同名一樣）。指令日誌多一種編輯 `setLineCode`。因為玩家要能改，所以不能只在畫面推導；只在畫面推導的話，玩家改的線號要另存在裝置上，換裝置或分享存檔就不見了，等於第二份遊戲狀態。
+1. **線號是 GameCore 的欄位**（存檔版本 55）：`ServiceLine.code: LineCode?`，`LineCode` 是一到三個 `A`–`Z`、`0`–`9`；缺 key＝自動，解碼時拒絕不合格的。`GameWorld.setLineCode(_:to:)` 免費、沒有規則讀它，兩條線可以同一個線號（和同名一樣）。指令日誌多一種編輯 `setLineCode`。因為玩家要能改，所以不能只在畫面推導；只在畫面推導的話，玩家改的線號要另存在裝置上，換裝置或分享存檔就不見了，等於第二份遊戲狀態。
 2. **自動線號**（GamePresentation `LineBadge.codes(for:)`）：照路線顏色的名稱，北捷有的照北捷（BL、R、G、O、BR、Y），其他照英文（PK、P、LB、LG、T、IN、GY、W）；20 個色票與 6 個自動色各有一個，其他顏色照色相。同一個字母的第二條起加數字（R2、R3），跳過玩家自己給的線號。參考 `Ci/` 的 `metroLineChipShortLabel` 是從路線名稱取字母或數字，這裡改成從顏色取：玩家的路線名常是中文（「板南線」取不出字母），顏色每條線都有。
 3. **徽章**（App `LineCodeBadge`、`MapArt.drawLineBadge`）：白底（`markerFill`）、1.5 點藏青外框、圓角＝高 × 0.22，左邊一格路線色，藏青粗圓體線號。顯示在路線列表（18 點，取代原本路線色圓圈上的白色編號，白字在淺色路線上讀不到）、路線面板的「線號」按鈕（14 點，點開輸入框，留空回到自動）、車站面板的路線標籤與即將進站、列車卡（`InspectorView`）的路線按鈕、跟車列、地圖上選取車站的名牌；地圖上站名下一排（第 30 層，12 點，最多四個）與每條路線最長那一段的中間（新的第 24.5 層，14／12 點）。
 4. **色盲友善色票**（設定 →「路線顏色」→「色盲友善配色」，裝置上的 `@AppStorage("linePalette")`）：打開後每條路線畫成八色之一（`LinePalette.safeColor(for:)`：Okabe–Ito 七色加 Paul Tol 的淺灰 `#BBBBBB`），依顏色的家族換（紅→朱紅、綠→藍綠……），遊戲的六個自動色換成六個不同的色。只換畫面（`Palette.lineColor` 讀這個設定，地圖、列車、面板都經過它），存檔裡的顏色不變，關掉就恢復；不同色的玩家路線可能換成同一色（20 → 8），靠線號分。八色每一對在三種色盲模擬下的 CIEDE2000 色差至少 10.9；現有 20 色有 30 對小於 10（表在 `UI_THEME.md`）。
@@ -7552,7 +7552,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **外部**：Okabe & Ito，*Color Universal Design*（2002）的七色（色碼，常用的公開色組）；Paul Tol，*Colour Schemes*（SRON/EPS/TN/09-002）的 `#BBBBBB`；Machado 等（2009）的色盲模擬矩陣（論文的數值）。都只取數值，沒有程式碼；程式是這個專案自己寫的。
 
-**測試**：`RenameAndColourTests`（線號存檔與拒絕不合格的、`testVersionFiftySixKeepsALinesCode` 與新 fixture `SaveFixtures/v56-line-code.json`）、`LineBadgeTests`（每個色票都有字母、北捷各色照色相取到同樣的字母、加數字、不撞玩家的線號、輸入轉換、安全色）、`CommandEditTests`（`setLineCode` 的日誌編碼）。
+**測試**：`RenameAndColourTests`（線號存檔與拒絕不合格的、`testVersionFiftyFiveKeepsALinesCode` 與新 fixture `SaveFixtures/v55-line-code.json`）、`LineBadgeTests`（每個色票都有字母、北捷各色照色相取到同樣的字母、加數字、不撞玩家的線號、輸入轉換、安全色）、`CommandEditTests`（`setLineCode` 的日誌編碼）。
 
 **沒有驗證的**：App 的畫面（Linux 不能建置 App，交給 CI 的 iOS build）；地圖上徽章很多時會不會太擠、色帶上的徽章位置在彎道上是否合適、深色地圖上 `#0072B2` 的路線（對深色地面 2.56）夠不夠清楚，都要在下一版 TestFlight 看。
 

@@ -1013,7 +1013,7 @@ extension ServiceLine: Codable {
         isRing = container.contains(.ring) ? try container.decode(Bool.self, forKey: .ring) : false
         outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
         color = container.contains(.color) ? try container.decode(LineColor.self, forKey: .color) : nil
-        // Decision 216 (save version 56): a code the player set.
+        // Decision 216 (save version 55): a code the player set.
         code = try container.decodeIfPresent(LineCode.self, forKey: .code)
         runs = container.contains(.runs) ? try container.decode([LineRun].self, forKey: .runs) : []
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)

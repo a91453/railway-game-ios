@@ -81,10 +81,10 @@ final class RenameAndColourTests: XCTestCase {
         XCTAssertEqual(world, before)
     }
 
-    /// Save version 56 (decision 216): a line's code, read back as it was.
-    func testVersionFiftySixKeepsALinesCode() throws {
+    /// Save version 55 (decision 216): a line's code, read back as it was.
+    func testVersionFiftyFiveKeepsALinesCode() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("SaveFixtures/v56-line-code.json")
+            .appendingPathComponent("SaveFixtures/v55-line-code.json")
         var (made, _, line) = try world()
         try made.setLineColor(line, to: LineColor.presets[8])
         try made.setLineCode(line, to: LineCode("BL"))
@@ -96,11 +96,11 @@ final class RenameAndColourTests: XCTestCase {
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 56)
+        XCTAssertEqual(object["saveVersion"] as? Int, 55)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertEqual(loaded.line(id: line)?.code, LineCode("BL"))
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 56,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+            .replacingOccurrences(of: #""saveVersion" : 55,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 }
