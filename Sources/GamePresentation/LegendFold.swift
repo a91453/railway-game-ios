@@ -12,8 +12,15 @@ public enum LegendFold {
 
     /// Whether the legend shows folded: as the player last left it, else
     /// folded on a short screen (a phone held sideways) and open on others.
-    public static func isFolded(stored: Int, compactHeight: Bool) -> Bool {
-        switch stored {
+    ///
+    /// Beside a card or panel that takes more than a third of the width (a
+    /// phone's, where the legend then stands in the middle of the map over
+    /// its stations, #593), folded whatever was stored, unless the player
+    /// opened it there (`openedBesideCard`, not stored: it folds again
+    /// beside the next card).
+    public static func isFolded(stored: Int, compactHeight: Bool, besideCard: Bool = false, openedBesideCard: Bool = false) -> Bool {
+        if besideCard { return !openedBesideCard }
+        return switch stored {
         case 1: true
         case 2: false
         default: compactHeight
