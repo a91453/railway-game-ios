@@ -93,7 +93,7 @@ final class StationActionTests: XCTestCase {
             session.addNetworkPlatform()
 
             XCTAssertEqual(session.world, world)
-            XCTAssertEqual(session.message?.text, "Not enough cash: this costs $ 10.00 and you have $ 9.99.")
+            XCTAssertEqual(session.message?.text, "Not enough cash to build station “Station 1” and its platform: it costs $ 10.00 and you have $ 9.99.")
             XCTAssertEqual(session.stationName, "Station 1")
         }
     }

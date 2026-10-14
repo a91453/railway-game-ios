@@ -325,8 +325,9 @@ private struct BuildConfirmation {
             clearance = 18
             // Decision 190: a grade is levelled first, for what relaying
             // the track costs; where it cannot be, ✓ says why when tapped.
+            // A new station's price is in it too.
             let levelling = session.networkPlatformLevelling
-            cost = levelling?.cost
+            cost = session.networkPlatformCost
             canConfirm = true
             kind = .platform
             caption = [session.platformSiteCaption(catchment, at: site), levelling?.caption(in: session.language)]

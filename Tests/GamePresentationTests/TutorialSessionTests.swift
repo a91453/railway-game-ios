@@ -508,7 +508,8 @@ final class TutorialSessionTests: XCTestCase {
             // building materials (decision 157), its crowded doors
             // (decision 169), its flexible dispatch (decision 172), its
             // keeping left (decision 202), its realistic operation
-            // (decision 207) or its block sections (decision 212).
+            // (decision 207), its block sections (decision 212) or its
+            // curve speed limits (decision 217).
             var expected = GameWorld.newGame(eventSeed: try XCTUnwrap(session.world.demandEvents?.seed))
             expected.setDisruptions(nil)
             expected.setBuildingMaterials(false)
@@ -518,6 +519,7 @@ final class TutorialSessionTests: XCTestCase {
             expected.setKeepLeft(false)
             expected.setRealisticOperation(false)
             expected.setBlockSections(false)
+            expected.setCurveSpeedLimits(false)
             expected.setTourism(nil)
             expected.setCityRequests(seed: nil)
             XCTAssertEqual(session.world, expected)

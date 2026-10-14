@@ -334,7 +334,7 @@ extension GameSession {
                     "\(line.name) 的列車 #\(train.rawValue) 正在跑班次，改停靠會結束班次。請等它跑完，或先讓它離開路線。"
                 ))
             } else {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                message = refusal(error)
             }
         }
     }
