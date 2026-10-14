@@ -413,14 +413,15 @@ final class RealWorldMapUITests: XCTestCase {
         return query.firstMatch
     }
 
-    /// Whether `element` can be touched. Only a copy with a frame on the
-    /// screen is asked, as in StartSaveFlowSmokeTests: asking one still
-    /// being laid out whether it is hittable fails the test outright
-    /// ("Activation point invalid" on the pause button, #622's pull request
-    /// gate).
+    /// Whether `element` can be touched. Only a copy with a frame that
+    /// reaches the screen is asked: asking one still being laid out whether
+    /// it is hittable fails the test outright ("Activation point invalid" on
+    /// the pause button, #622's pull request gate; StartSaveFlowSmokeTests
+    /// guards its menus the same way). A row partly below the screen's edge
+    /// is still asked (Taipei's, on a phone on its side), as before.
     private func touchable(_ element: XCUIElement) -> Bool {
         let frame = element.frame
-        guard !frame.isEmpty, XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
+        guard !frame.isEmpty, XCUIApplication().frame.intersects(frame) else { return false }
         return element.isHittable
     }
 }
