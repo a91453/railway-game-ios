@@ -805,22 +805,28 @@ extension TrainType {
     /// are named for their size or build ("大型捷運", "多門捷運"), the
     /// others for what they are ("磁浮列車", "自動接駁列車"). Only this text
     /// changes: a type is saved and replayed by its raw value.
+    /// Each type's name has a row in ``names``, by its code (decision 225);
+    /// a type without one is a mistake `TrainTypeNameTests` catches.
     public func title(in language: DisplayLanguage) -> String {
-        switch self {
-        case .a: language.text("Large metro", "大型捷運")
-        case .b: language.text("Medium metro", "中型捷運")
-        case .c: language.text("Light metro", "輕型捷運")
-        case .l: language.text("Linear-motor metro", "線性馬達捷運")
-        case .d: language.text("Multi-door metro", "多門捷運")
-        case .apm: language.text("Automated shuttle", "自動接駁列車")
-        case .maglev: language.text("Maglev train", "磁浮列車")
-        case .skyRail: language.text("Light monorail", "輕型單軌")
-        case .monorail: language.text("Monorail train", "單軌列車")
-        case .steam: language.text("Steam train", "蒸汽列車")
-        case .highSpeed: language.text("High-speed set", "高鐵列車")
-        case .emu3000: language.text("New Tze-Chiang", "新自強號")
-        }
+        guard let name = Self.names[rawValue] else { preconditionFailure("The train type \(rawValue) has no name.") }
+        return language.text(name.english, name.chinese)
     }
+
+    /// The names, by code: English, then Traditional Chinese.
+    static let names: [String: (english: String, chinese: String)] = [
+        "A": ("Large metro", "大型捷運"),
+        "B": ("Medium metro", "中型捷運"),
+        "C": ("Light metro", "輕型捷運"),
+        "L": ("Linear-motor metro", "線性馬達捷運"),
+        "D": ("Multi-door metro", "多門捷運"),
+        "APM": ("Automated shuttle", "自動接駁列車"),
+        "MAGLEV": ("Maglev train", "磁浮列車"),
+        "SKYRAIL": ("Light monorail", "輕型單軌"),
+        "MONORAIL": ("Monorail train", "單軌列車"),
+        "STEAM": ("Steam train", "蒸汽列車"),
+        "HSR": ("High-speed set", "高鐵列車"),
+        "EMU3000": ("New Tze-Chiang", "新自強號"),
+    ]
 }
 
 extension Train {
