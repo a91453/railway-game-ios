@@ -151,7 +151,8 @@ public struct TrainRoster: Equatable, Sendable {
         return text
     }
 
-    /// The roster of `day`: every train that ran a trip that day, and
+    /// The roster of `day`: every train that ran a trip that day (one
+    /// running past midnight on both days), and
     /// today also every train on a line or running a service, ordered by
     /// line (the world's order; trains on no line last) and then as the
     /// world lists them.
@@ -168,7 +169,12 @@ public struct TrainRoster: Equatable, Sendable {
         let codes = LineBadge.codes(for: world.lines)
         let lineOrder = Dictionary(uniqueKeysWithValues: world.lines.enumerated().map { ($0.element.id, $0.offset) })
         func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
-        let trips = world.tripLog.filter { (dayStart..<dayEnd).contains($0.sentOut.seconds) }
+        // The day's trips, and one sent out the day before that still ran
+        // into it (it is running, or arrived that day).
+        let trips = world.tripLog.filter { trip in
+            (dayStart..<dayEnd).contains(trip.sentOut.seconds)
+                || trip.sentOut.seconds < dayStart && (trip.arrival.map { $0.seconds >= dayStart } ?? true)
+        }
         // The network ran from the day's first trip.
         let opened = max(dayStart, trips.map(\.sentOut.seconds).min() ?? until)
         let span = max(0, until - opened)
@@ -222,11 +228,13 @@ public struct TrainRoster: Equatable, Sendable {
     /// The trips a train's own repeating timetable will run after `after`
     /// and before `before`: each later cycle, from its arrival at its first
     /// stop (where a trip in the log starts too) to its last stop's
-    /// arrival. A line's trains get their
+    /// arrival, going where the departure board says it goes: the first
+    /// place it turns round, or its last stop. A line's trains get their
     /// trips one at a time from the line, so theirs are not known ahead.
     static func plannedTrips(of train: Train, after: Int64, before: Int64) -> [(from: StationID, to: StationID, start: Int64, end: Int64, isEmptyRun: Bool)] {
         guard train.execution != nil, let period = train.timetablePeriod, period > 0,
-              let first = train.timetable.first, let last = train.timetable.last else { return [] }
+              let first = train.timetable.first, let last = train.timetable.last,
+              let to = train.trip(leaving: 0).map({ train.timetable[$0.upperBound].station }) else { return [] }
         var trips: [(from: StationID, to: StationID, start: Int64, end: Int64, isEmptyRun: Bool)] = []
         // The first cycle that starts after `after`.
         let gap = after - first.arrival.seconds
@@ -236,7 +244,7 @@ public struct TrainRoster: Equatable, Sendable {
             guard !overflow else { break }
             let start = first.arrival.seconds &+ shift
             guard start < before, start >= first.arrival.seconds else { break }
-            trips.append((first.station, last.station, start, last.arrival.seconds &+ shift, false))
+            trips.append((first.station, to, start, last.arrival.seconds &+ shift, false))
             cycle += 1
         }
         return trips

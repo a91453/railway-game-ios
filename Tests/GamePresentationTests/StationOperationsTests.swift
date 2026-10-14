@@ -9,6 +9,40 @@ final class StationOperationsTests: XCTestCase {
         try XCTUnwrap(world.stations.first { $0.name == "Central" }).id
     }
 
+    private static let track = TestLine(tiles: 7)
+
+    /// A and B on one track, and a train of its own on a timetable that
+    /// turns round at B and back at A (A → B → A), every hour, standing at
+    /// A to start its first cycle.
+    private static func ownRoundTrip() throws -> (world: GameWorld, train: TrainID, a: StationID, b: StationID) {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        try track.build(in: &world)
+        let a = try track.buildStation(named: "A", beside: 1, at: 1, in: &world)
+        let b = try track.buildStation(named: "B", beside: 3, at: 1, in: &world)
+        let own = try world.purchaseTrain(named: "Own").id
+        try world.placeTrain(own, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(own, to: 1024)
+        try world.setTrainTimetable(own, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: b, arrival: GameTime(minutes: 10), departure: GameTime(minutes: 11), reverses: true),
+            ScheduledStop(station: a, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 21), reverses: true),
+        ], repeatingEvery: 3_600)
+        try world.startTrainService(own)
+        world.setSpeed(.normal)
+        return (world, own, a, b)
+    }
+
+    /// A train whose timetable turns round (A → B → A) goes, from A, to B,
+    /// where it turns: as the departure board says, not "ends here" because
+    /// its timetable's last stop is A again.
+    func testATrainThatTurnsRoundGoesToWhereItTurns() throws {
+        let (world, own, a, _) = try Self.ownRoundTrip()
+        guard case .waitingAtStop(0, _)? = world.train(id: own)?.execution else { return XCTFail("it waits at A to start") }
+        let row = try XCTUnwrap(StationOperations(world: world, station: a, use: PlatformUse()).platforms.first { $0.train == own })
+        XCTAssertEqual(row.destination, "B")
+        XCTAssertEqual(row.trainText(lineName: nil, in: .english), "Own to B")
+    }
+
     func testThePlatformsAreNumberedAsThePanelNumbersThemAndShowTheTrainStandingThere() throws {
         var world = DemoWorld.make(in: .english)
         var use = PlatformUse()
@@ -55,6 +89,43 @@ final class StationOperationsTests: XCTestCase {
         use.record(start)
         XCTAssertEqual(use.use(of: platform, now: world.clock.now).sampled, 0, "a game loaded with an earlier clock starts again")
         XCTAssertEqual(use.use(of: platform, now: start.clock.now).sampled, 1)
+    }
+
+    /// The sampling, every game minute whether or not a station page is
+    /// open, asks only the trains wholly on an edge with a platform, and
+    /// notes the same platforms as asking every placed train: on the demo,
+    /// and on a track whose stations are on edges of their own, where a
+    /// train away from them is not asked.
+    func testPlatformUseAsksOnlyTrainsOnAPlatformsEdgeAndNotesTheSame() throws {
+        func every(_ world: GameWorld) -> Set<TrackPlatform> {
+            var platforms = Set<TrackPlatform>()
+            for train in world.trains where train.position != nil {
+                platforms.formUnion(world.trackPlatformsAlongWholeTrain(train.id))
+            }
+            return platforms
+        }
+        var demo = DemoWorld.make(in: .english)
+        for _ in 0..<240 {
+            try demo.advance(ticks: 1)
+            XCTAssertEqual(PlatformUse.platformsTaken(in: demo), every(demo))
+        }
+
+        var (world, own, _, _) = try Self.ownRoundTrip()
+        // A second train stands on the track past B, away from any platform.
+        let idle = try world.purchaseTrain(named: "Idle").id
+        try world.placeTrain(idle, at: Self.track.at(6, facingEast: true))
+        var asked = 0, placed = 0, seen = 0
+        for _ in 0..<60 {
+            try world.advance(ticks: 1)
+            let taken = PlatformUse.platformsTaken(in: world)
+            XCTAssertEqual(taken, every(world))
+            seen += taken.count
+            asked += PlatformUse.trainsAlongPlatformEdges(in: world).count
+            placed += world.trains.count { $0.position != nil }
+        }
+        XCTAssertNotNil(world.train(id: own)?.position)
+        XCTAssertGreaterThan(seen, 0, "it stands at A and B")
+        XCTAssertLessThan(asked, placed, "the train away from the platforms is not asked")
     }
 
     /// At a high speed a game minute is not sampled every minute: the page

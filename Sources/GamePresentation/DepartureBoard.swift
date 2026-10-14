@@ -179,12 +179,13 @@ public struct DepartureBoard: Equatable, Sendable {
 
     /// `rows`, one direction's soonest first, with each late train due
     /// within ``followWindowSeconds`` after another late train marked as
-    /// following it.
+    /// following it. The train ahead is the last one before it that calls
+    /// at the station: one that runs past is not waited for there.
     static func markingFollowers(_ rows: [Row]) -> [Row] {
         var rows = rows
         for index in rows.indices.dropFirst() {
-            let ahead = rows[index - 1]
-            guard rows[index].lateMinutes >= 1, !rows[index].passes, !rows[index].isBoarding,
+            guard let ahead = rows[..<index].last(where: { !$0.passes }),
+                  rows[index].lateMinutes >= 1, !rows[index].passes, !rows[index].isBoarding,
                   ahead.train != rows[index].train, ahead.lateMinutes >= 1,
                   rows[index].expected.seconds - ahead.expected.seconds <= followWindowSeconds
             else { continue }
@@ -213,12 +214,8 @@ public struct DepartureBoard: Equatable, Sendable {
         var rows: [Row] = []
         func destination(after index: Int) -> (station: StationID, endsHere: Bool) {
             // Where the trip goes: the next turn-round, or the last stop.
-            var j = index + 1
-            while j < timetable.count {
-                if timetable[j].reverses || j == timetable.count - 1 { return (timetable[j].station, false) }
-                j += 1
-            }
-            return (timetable[index].station, true)
+            guard index < timetable.count - 1, let trip = train.trip(leaving: index) else { return (timetable[index].station, true) }
+            return (timetable[trip.upperBound].station, false)
         }
         for cycle in execution.cycle...max(execution.cycle, lastCycle) {
             let shift = period.map { cycle * $0 } ?? 0
@@ -299,5 +296,33 @@ public struct DepartureBoard: Equatable, Sendable {
             }
         }
         return rows
+    }
+}
+
+extension Train {
+    /// The stops of the trip that leaves stop `index` of the timetable, as
+    /// the board reads it: from the last stop at or before it where the
+    /// train turns round (``ScheduledStop/reverses``), or the first stop,
+    /// to the next stop after it where the train turns round, or the last
+    /// stop. A timetable that turns round (A → B → A) is two trips, A → B
+    /// and B → A. At the last stop, the trip that ends there. `nil` for a
+    /// timetable of fewer than two stops or an index outside it.
+    func trip(leaving index: Int) -> ClosedRange<Int>? {
+        guard timetable.count > 1, timetable.indices.contains(index) else { return nil }
+        let from = min(index, timetable.count - 2)
+        let start = (0...from).last { timetable[$0].reverses } ?? 0
+        let end = (from + 1..<timetable.count).first { timetable[$0].reverses } ?? timetable.count - 1
+        return start...end
+    }
+
+    /// The trip the train is on (``trip(leaving:)``): the one leaving the
+    /// stop it waits at, or the stop it last left; between trips, the last
+    /// one of its timetable.
+    var currentTrip: ClosedRange<Int>? {
+        switch execution {
+        case .waitingAtStop(let stop, _)?: trip(leaving: stop)
+        case .travellingToStop(let stop, _)?: trip(leaving: max(0, stop - 1))
+        case nil: trip(leaving: timetable.count - 1)
+        }
     }
 }

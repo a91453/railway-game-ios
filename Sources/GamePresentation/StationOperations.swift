@@ -32,12 +32,33 @@ public struct PlatformUse: Equatable, Sendable {
         if let last, minute < last { self = PlatformUse() }
         guard minute != last else { return }
         last = minute
+        taken[minute] = Self.platformsTaken(in: world)
+        taken = taken.filter { $0.key > minute - Self.window }
+    }
+
+    /// The platforms a train stands along in `world`
+    /// (``GameWorld/trackPlatformsAlongWholeTrain(_:)``), asked only of
+    /// the trains that may stand along one (``trainsAlongPlatformEdges(in:)``).
+    static func platformsTaken(in world: GameWorld) -> Set<TrackPlatform> {
         var platforms = Set<TrackPlatform>()
-        for train in world.trains where train.position != nil {
+        for train in trainsAlongPlatformEdges(in: world) {
             platforms.formUnion(world.trackPlatformsAlongWholeTrain(train.id))
         }
-        taken[minute] = platforms
-        taken = taken.filter { $0.key > minute - Self.window }
+        return platforms
+    }
+
+    /// The trains wholly on an edge that has a platform: the only ones
+    /// ``GameWorld/trackPlatformsAlongWholeTrain(_:)`` finds a platform
+    /// for (its head on the platform's edge, its body not leaving it). The
+    /// sampling runs every game minute whether or not a station page is
+    /// open, so the trains between stations are not asked.
+    static func trainsAlongPlatformEdges(in world: GameWorld) -> [Train] {
+        let edges = Set(world.network.platforms.map(\.edge))
+        guard !edges.isEmpty else { return [] }
+        return world.trains.filter { train in
+            guard case .onEdge(let traversal, _)? = train.position, train.trailEdges.isEmpty else { return false }
+            return edges.contains(traversal.edge)
+        }
     }
 
     /// How many of the sampled minutes of the last hour before `now` had a
@@ -98,7 +119,8 @@ public struct StationOperations: Equatable, Sendable {
         public let line: LineID?
         public let lineColor: LineColor?
         public let cars: Int
-        /// The last stop of its trip; `nil` when it ends here or has none.
+        /// Where its trip goes (``DepartureBoard/Row/destination``); `nil`
+        /// when it ends here or has none.
         public let destination: String?
         /// Of the last hour, the share with a train standing at it (0 to
         /// 100), and how many minutes of it were seen; `nil` before any.
@@ -205,7 +227,7 @@ public struct StationOperations: Equatable, Sendable {
         self.crowding = MapProblems.Crowding(waiting: waiting)
 
         var standing: [TrackPlatform: TrainID] = [:]
-        for train in world.trains where train.position != nil {
+        for train in PlatformUse.trainsAlongPlatformEdges(in: world) {
             for platform in world.trackPlatformsAlongWholeTrain(train.id) where platform.station == station {
                 standing[platform] = standing[platform].map { min($0, train.id) } ?? train.id
             }
@@ -215,7 +237,9 @@ public struct StationOperations: Equatable, Sendable {
             let trainID = standing[platform]
             let train = trainID.flatMap { world.train(id: $0) }
             let line = trainID.flatMap { world.assignedLine(of: $0) }
-            let last = train?.timetable.last?.station
+            // Where its trip goes, as the departure board says: the next
+            // place it turns round, or its timetable's last stop.
+            let last = train.flatMap { train in train.currentTrip.map { train.timetable[$0.upperBound].station } }
             let seen = use.use(of: platform, now: now)
             return Platform(
                 number: index + 1,

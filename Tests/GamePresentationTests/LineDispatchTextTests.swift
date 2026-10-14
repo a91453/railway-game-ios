@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// TestFlight 60.1 ("assigned trains never leave"): the train card and the
@@ -35,6 +35,43 @@ final class LineDispatchTextTests: XCTestCase {
         XCTAssertEqual(world.trainPathStatusText(of: train, in: .traditionalChinese), "未放上軌道：先放到 Alpha")
         XCTAssertEqual(world.followBarInfo(of: train, in: .traditionalChinese)?.status, .held("未放上軌道：先放到 Alpha"))
         XCTAssertEqual(world.followBarInfo(of: train, in: .traditionalChinese)?.detail(in: .traditionalChinese), "Main　· 尚未發車：未放上軌道：先放到 Alpha")
+    }
+
+    /// The fleet overview reads every waiting train's status at each
+    /// redraw, and why its line holds it plans its trip: the session
+    /// works that out once a command or a game minute, the same as the
+    /// world's text.
+    func testTheSessionWorksOutWhyALineHoldsATrainOnceAMinute() throws {
+        var (world, _, train, _) = try lineWorld()
+        try world.assignTrain(train, to: Self.main)
+        try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let session = GameSession(world: world)
+        func same() {
+            XCTAssertEqual(session.trainPathStatusText(of: train), session.world.trainPathStatusText(of: train, in: session.language))
+        }
+        same()
+        same()
+        XCTAssertEqual(session.lineDispatchHoldsWorkedOut, 1, "read twice, worked out once")
+
+        // A tick within the same game minute keeps it; the next minute
+        // works it out again.
+        session.setSpeed(.normal)
+        let minute = session.world.clock.now.seconds / GameTime.secondsPerMinute
+        let commands = session.commandRevision
+        while session.world.clock.now.seconds / GameTime.secondsPerMinute == minute {
+            let tick = try XCTUnwrap(session.beginLoopTick())
+            XCTAssertTrue(session.finish(tick, with: .success(try GameSession.advanced(tick.world, by: 1, listening: false))))
+        }
+        XCTAssertEqual(session.commandRevision, commands)
+        same()
+        XCTAssertEqual(session.lineDispatchHoldsWorkedOut, 2)
+
+        // A command works it out again at once.
+        try session.performEdit { world throws(GameError) in
+            try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        }
+        same()
+        XCTAssertEqual(session.lineDispatchHoldsWorkedOut, 3)
     }
 
     func testATrainAwayFromTheFirstStopIsToldToBeSentThere() throws {
