@@ -25,6 +25,7 @@ extension GameSession {
         networkStart = nil
         networkEnd = nil
         networkEdgePoint = nil
+        networkDepotEnd = nil
         message = nil
     }
 
@@ -74,6 +75,15 @@ extension GameSession {
             suggestPlatformCars()
         case .remove, .passingLoop:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
+        case .depot:
+            // The nearest end of a track within reach: a node only one
+            // edge ends at.
+            networkDepotEnd = world.network.nodes
+                .filter { $0.ends.count == 1 && Self.squaredDistance($0.position.plan, point) <= reach * reach }
+                .min { (Self.squaredDistance($0.position.plan, point), $0.id.number) < (Self.squaredDistance($1.position.plan, point), $1.id.number) }?.id
+            if networkDepotEnd == nil {
+                message = StatusMessage(kind: .failure, text: DepotYardProblem.notAnEnd.text(in: language))
+            }
         }
     }
 
@@ -859,6 +869,17 @@ extension GameSession {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
             }
             return world.trackEdgeSummary(edge, in: language) ?? edge.displayText(in: language)
+        case .depot:
+            guard networkDepotEnd != nil else {
+                return language.text(
+                    "Tap the end of a track: \(networkDepotSidings) sidings for the longest train run on from it, with a depot.",
+                    "請點選軌道的盡頭：從那裡鋪出 \(networkDepotSidings) 股放得下最長列車的停車線與機廠。"
+                )
+            }
+            return networkDepotPreview?.problem ?? language.text(
+                "\(networkDepotSidings) sidings and a depot here. Choose it as a line's depot on the line panel.",
+                "在這裡鋪 \(networkDepotSidings) 股停車線與機廠。之後到路線面板替路線選這個機廠。"
+            )
         case .passingLoop:
             guard networkEdgePoint != nil else {
                 return language.text(
@@ -1018,6 +1039,15 @@ extension GameSession {
             if let loop = networkLoopPreview {
                 overlay.preview = loop.points
                 overlay.previewIsBuildable = loop.problem == nil
+            }
+        case .depot:
+            if let end = networkDepotEnd, let node = world.network.node(end) {
+                overlay.anchors = [node.position]
+            }
+            if let yard = networkDepotPreview, let first = yard.tracks.first {
+                overlay.preview = first
+                overlay.crossovers = Array(yard.tracks.dropFirst())
+                overlay.previewIsBuildable = yard.problem == nil
             }
         }
         return overlay

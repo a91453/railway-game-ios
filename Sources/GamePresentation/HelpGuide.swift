@@ -246,6 +246,15 @@ public enum HelpGuide {
             keywords: "single track passing loop double one train capacity signal 單線 會車 待避 雙線 一列 列車數 上限"
         ),
         HelpEntry(
+            "depot", .running,
+            question: ("What is a depot, and how do I build one?", "機廠是什麼？怎麼蓋？"),
+            answer: (
+                "A depot is where a line keeps its trains out of service: they leave it before the first train, go back after the last or when fewer trains are needed, and pay only upkeep while they stand there. To build one, open Network, choose Depot, tap the end of a track and choose how many sidings: they are laid with their turnouts and a depot with a platform on each. Or make a station no line stops at a depot on its station panel. Then open Lines, pick the line and choose its depot. A depot takes no passengers, and no line runs over its sidings. A line that runs to a timetable has no depot. On the map a train leaving shows a plate with the garage on the left, one going in the garage on the right; the fleet list and the line panel say how many stand In depot.",
+                "機廠是路線停放列車的地方：首班前出庫、收班後或需要的車變少時入庫，停在機廠只付保養費。要蓋機廠：打開「路網」，選「機廠」，點軌道的盡頭，選要幾股，就會鋪好停車線、道岔，和每股都有月台的機廠。也可以在沒有路線停靠的車站面板按「設為機廠」。然後打開「路線」，選這條路線，選它的所屬機廠。機廠不載客，路線也不能走它的停車線；照時刻表跑的路線不能指定機廠。地圖上，出庫的列車頭上有一塊車庫在左的小方牌，入庫的車庫在右；車隊清單和路線面板會寫幾列「在庫」。"
+            ),
+            keywords: "depot yard siding garage out of service pull out pull in 機廠 車庫 停車線 出庫 入庫 在庫 回送"
+        ),
+        HelpEntry(
             "unassignedTrain", .running,
             question: ("What do No line and No path ahead mean?", "「未配屬路線」和「前方沒有路徑」是什麼？"),
             answer: (

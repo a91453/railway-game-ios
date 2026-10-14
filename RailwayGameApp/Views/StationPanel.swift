@@ -53,6 +53,7 @@ struct StationPanel: View {
                         .accessibilityIdentifier("station.rename")
                     }
                     operationSection(station)
+                    depotSection
                     transferSection(station)
                     platformsSection(station)
                     realStationSection(station)
@@ -216,6 +217,30 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.operation")
         } footer: {
             Text(verbatim: mode.detail(in: session.language))
+        }
+    }
+
+    /// Decision 213: make the station a depot (decision 209), or an
+    /// ordinary one again, through `GameSession.setSelectedStationDepot(_:)`;
+    /// off limits, with why, while a line stops here or keeps its trains
+    /// here.
+    @ViewBuilder private var depotSection: some View {
+        if let depot = session.selectedStationDepotSwitch {
+            Section {
+                Button {
+                    session.setSelectedStationDepot(!depot.isDepot)
+                } label: {
+                    Label {
+                        Text(verbatim: depot.title(in: session.language))
+                    } icon: {
+                        Image("MapGlyphDepot").renderingMode(.template)
+                    }
+                }
+                .disabled(depot.problem != nil)
+                .accessibilityIdentifier("station.depot")
+            } footer: {
+                Text(verbatim: depot.problem ?? StationDepotSwitch.note(in: session.language))
+            }
         }
     }
 

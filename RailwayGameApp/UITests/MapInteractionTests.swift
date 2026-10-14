@@ -992,4 +992,33 @@ final class MapInteractionTests: XCTestCase {
                       "\(element.identifier) \(element.frame) must lie wholly in the details card \(card.frame) \(when)",
                       file: file, line: line)
     }
+
+    /// Decision 213: the network tool's fifth mode, Depot, shows how many
+    /// sidings to lay, within reach of a finger on a phone. Full lane only
+    /// (decision 199): the tool's logic is `DepotToolsTests` on Linux.
+    func testTheDepotModeOffersItsSidings() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        app.bringStartButtonIntoView(newGame)
+        newGame.tap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.appears(within: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10))
+        network.waitUntilSettled()
+        network.tap()
+        let depot = app.buttons["Depot"]
+        XCTAssertTrue(depot.appears(within: 10))
+        XCTAssertTrue(depot.becomesHittable(within: 10))
+        depot.tap()
+        let sidings = app.descendants(matching: .any)["network.depotSidings"].firstMatch
+        XCTAssertTrue(sidings.appears(within: 10), "The number of sidings")
+        XCTAssertTrue(sidings.becomesHittable(within: 10))
+    }
 }

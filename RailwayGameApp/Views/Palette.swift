@@ -237,6 +237,11 @@ enum MapGlyph: String {
     /// Decision 182: a typhoon blows over the station, the weather map's
     /// typhoon sign.
     case typhoon = "MapGlyphTyphoon"
+    /// Decision 213: a depot's garage (the station badge's), and the plate
+    /// of a train leaving it or entering it (`docs/UI_THEME.md` 機廠).
+    case depot = "MapGlyphDepot"
+    case depotOut = "MapGlyphDepotOut"
+    case depotIn = "MapGlyphDepotIn"
 
     var image: Image {
         Image(rawValue).renderingMode(.template)

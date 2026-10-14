@@ -130,3 +130,44 @@ private struct ChipFlow: Layout {
         return rows
     }
 }
+
+/// Decision 213 (`docs/UI_THEME.md` 機廠): a pale capsule with the depot's
+/// garage, saying a train or a line's trains stand in their depot, or are
+/// leaving or entering it: the fleet list, the train card and the line
+/// panel.
+struct DepotBadge: View {
+    let text: String
+    var glyph: MapGlyph = .depot
+
+    init(text: String, glyph: MapGlyph = .depot) {
+        self.text = text
+        self.glyph = glyph
+    }
+
+    init(_ state: TrainDepotState, language: DisplayLanguage) {
+        text = state.text(in: language)
+        switch state {
+        case .pullingOut: glyph = .depotOut
+        case .pullingIn: glyph = .depotIn
+        case .inDepot: glyph = .depot
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            glyph.image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 13, height: 13)
+                .accessibilityHidden(true)
+            Text(verbatim: text)
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(Theme.textSecondary)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(Theme.chip)
+        .clipShape(Capsule())
+        .accessibilityElement(children: .combine)
+    }
+}

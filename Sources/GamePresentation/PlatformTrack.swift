@@ -124,7 +124,11 @@ extension GameSession {
     /// ``platformTrackSideText(_:of:)``).
     public func edgeSideText(_ side: PlatformTrackSide, at point: NetworkEdgePoint) -> String {
         guard let geometry = world.trackGeometry(of: point.edge), point.distance >= 0, point.distance <= geometry.length else { return "" }
-        let way = geometry.location(at: point.distance).direction
+        return sideText(side, of: geometry.location(at: point.distance).direction)
+    }
+
+    /// The compass side `side` of a track running along `way` faces.
+    func sideText(_ side: PlatformTrackSide, of way: PlanVector) -> String {
         // y grows south on the map.
         let normal = side == .left ? PlanVector(dx: way.dy, dy: -way.dx) : PlanVector(dx: -way.dy, dy: way.dx)
         if abs(normal.dx) >= abs(normal.dy) {
@@ -197,15 +201,9 @@ extension GameSession {
               let far = platformTrackTurnout(from: edgeID, at: end, forward: true, reach: reach)
         else { return .failure(.noRoom) }
         func besides(_ distance: Int64) -> (position: WorldCoordinate, way: PlanVector) {
+            // The same parallel as a double track's and a depot's sidings.
             let location = geometry.location(at: distance)
-            let way = location.direction
-            let dx = Double(way.dx), dy = Double(way.dy)
-            let length = (dx * dx + dy * dy).squareRoot()
-            // Left of the way the edge runs, y growing south: (dy, -dx).
-            let sign: Double = side == .left ? 1 : -1
-            let scale = sign * Double(spacing) / length
-            let position = location.position
-            return (WorldCoordinate(x: position.x + Int64((dy * scale).rounded()), y: position.y + Int64((-dx * scale).rounded()), z: position.z), way)
+            return (DoubleTrack.beside(location.position, way: location.direction, side: side, distance: spacing), location.direction)
         }
         let first = besides(start), last = besides(end)
         // The near turnout's track leaves toward the stretch; at the far

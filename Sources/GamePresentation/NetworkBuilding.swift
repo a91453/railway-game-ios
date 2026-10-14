@@ -32,6 +32,9 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     /// A tap picks a place on single track for a passing loop (decision
     /// 204).
     case passingLoop
+    /// A tap picks the end of a track for a depot's sidings (decision
+    /// 213).
+    case depot
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
@@ -39,6 +42,7 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
         case .platform: language.text("Platform", "月台")
         case .remove: language.text("Remove", "拆除")
         case .passingLoop: language.text("Loop", "待避")
+        case .depot: language.text("Depot", "機廠")
         }
     }
 }

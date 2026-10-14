@@ -140,6 +140,7 @@ enum MapArt {
         lights: Double,
         plain: Bool,
         traffic: TrafficOverlay,
+        depotRuns: [TrainID: TrainDepotState] = [:],
         deadlock: Double = 1,
         pulse: Double? = nil,
         language: DisplayLanguage = .english,
@@ -148,8 +149,12 @@ enum MapArt {
     ) {
         let region = drawingRegion(projection)
         let referenceSize = projection.referenceSize
+        var plates: [(point: ScreenPoint, state: TrainDepotState)] = []
         for run in motion.runs {
             guard let head = run.head(at: progress) else { continue }
+            if let state = depotRuns[run.train], region.contains(x: head.point.x, y: head.point.y) {
+                plates.append((projection.screenPoint(worldX: head.point.x, worldY: head.point.y), state))
+            }
             let colour = Palette.trainColor(run.look, plain: plain)
             let isSelected = run.train == selectedTrainID
             let inView = region.contains(x: head.point.x, y: head.point.y)
@@ -177,7 +182,27 @@ enum MapArt {
                 isSelected: isSelected, isHighSpeed: run.isHighSpeed, projection: projection, in: context
             )
         }
+        // Layer 51, over the trains and under the waits.
+        for plate in plates {
+            drawDepotPlate(plate.state, over: plate.point, radius: trainHeadRadius(referenceSize), in: context)
+        }
         drawWaitMarks(traffic, deadlock: deadlock, pulse: pulse, language: language, projection: projection, in: context)
+    }
+
+    /// Decision 213 (`docs/UI_THEME.md` 機廠): a train leaving or entering
+    /// its depot has a small square plate over its head, navy with a white
+    /// edge and glyph, the garage on the left going out, on the right going
+    /// in; no words, no circle, so it reads apart from the waits' rings and
+    /// tags.
+    private static func drawDepotPlate(_ state: TrainDepotState, over head: ScreenPoint, radius: Double, in context: GraphicsContext) {
+        let side = max(12, radius * 2.6)
+        let rect = CGRect(x: head.x - side / 2, y: head.y - radius - 3 - side, width: side, height: side)
+        let plate = Path(roundedRect: rect, cornerRadius: 3)
+        context.fill(plate, with: .color(Palette.ink))
+        context.stroke(plate, with: .color(Palette.markerFill), lineWidth: 1.5)
+        var glyph = context.resolve((state == .pullingIn ? MapGlyph.depotIn : MapGlyph.depotOut).image)
+        glyph.shading = .color(Palette.markerFill)
+        context.draw(glyph, in: rect.insetBy(dx: side * 0.14, dy: side * 0.14))
     }
 
     // MARK: - Weather (decision 182)
@@ -1445,7 +1470,9 @@ enum MapArt {
         // can be visible while its station is just outside the viewport.
         guard badgeRect.insetBy(dx: -6, dy: -6).intersects(context.clipBoundingRect)
             || nameRect.intersects(context.clipBoundingRect) else { return }
-        let badge = Path(ellipseIn: badgeRect)
+        // Decision 213: a depot's badge is an arch, round above and square
+        // below, with the garage in it (`docs/UI_THEME.md` 機廠).
+        let badge = station.isDepot ? archPath(in: badgeRect) : Path(ellipseIn: badgeRect)
         context.fill(badge, with: .color(Palette.station))
         context.stroke(badge, with: .color(Palette.ink), lineWidth: 1.5)
         // Decision 168: a station a high-speed line calls at has a second
@@ -1458,7 +1485,11 @@ enum MapArt {
             context.stroke(ring, with: .color(Color(uiColor: .systemBackground)), lineWidth: 5)
             context.stroke(ring, with: .color(.accentColor), lineWidth: 3)
         }
-        drawStationSymbol(at: center, size: radius * 1.05, context: context)
+        if station.isDepot {
+            drawStationSymbol(.depot, at: ScreenPoint(x: center.x, y: center.y + radius * 0.06), size: radius * 1.1, context: context)
+        } else {
+            drawStationSymbol(at: center, size: radius * 1.05, context: context)
+        }
         if let name {
             // Decision 205: on the same pale plate as the names zoomed out
             // (``drawOverviewNames``), so it reads over a line or a town.
@@ -1592,8 +1623,23 @@ enum MapArt {
         }
     }
 
-    private static func drawStationSymbol(at center: ScreenPoint, size: Double, context: GraphicsContext) {
-        var symbol = context.resolve(MapGlyph.train.image)
+    /// An arch filling `rect`: a half circle on a square, its lower
+    /// corners rounded by 0.28 of the radius.
+    private static func archPath(in rect: CGRect) -> Path {
+        let radius = rect.width / 2, corner = radius * 0.28
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addArc(center: CGPoint(x: rect.midX, y: rect.midY), radius: radius, startAngle: .degrees(180), endAngle: .degrees(360), clockwise: false)
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - corner))
+        path.addQuadCurve(to: CGPoint(x: rect.maxX - corner, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + corner, y: rect.maxY))
+        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - corner), control: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+
+    private static func drawStationSymbol(_ glyph: MapGlyph = .train, at center: ScreenPoint, size: Double, context: GraphicsContext) {
+        var symbol = context.resolve(glyph.image)
         symbol.shading = .color(Palette.stationSymbol)
         let natural = symbol.size
         guard natural.width > 0, natural.height > 0 else { return }

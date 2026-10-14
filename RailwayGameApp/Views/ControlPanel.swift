@@ -498,6 +498,7 @@ private struct ActionButton: View {
         case .build: return session.networkPreview != nil
         case .platform, .remove: return session.networkEdgePoint != nil
         case .passingLoop: return session.networkLoopPreview.map { $0.problem == nil } ?? false
+        case .depot: return session.networkDepotPreview.map { $0.problem == nil } ?? false
         }
     }
 
@@ -519,6 +520,7 @@ private struct ActionButton: View {
         case .platform: session.addNetworkPlatform()
         case .remove: session.removeNetworkEdge()
         case .passingLoop: session.addPassingLoop()
+        case .depot: session.addDepotYard()
         }
     }
 
@@ -561,6 +563,10 @@ private struct ActionButton: View {
                 // Decision 204: the loop and its signal station, for what.
                 guard let cost = session.networkLoopPreview?.cost else { return session.language.text("Add Passing Loop", "加待避線") }
                 return session.language.text("Add Passing Loop · \(cost.moneyText)", "加待避線 · \(cost.moneyText)")
+            case .depot:
+                // Decision 213: the sidings and the depot, for what.
+                guard let cost = session.networkDepotPreview?.cost else { return session.language.text("Lay Depot Sidings", "鋪機廠停車線") }
+                return session.language.text("Lay Depot Sidings · \(cost.moneyText)", "鋪機廠停車線 · \(cost.moneyText)")
             }
         case .train:
             // Placing and sending both act on the selected train.
