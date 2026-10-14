@@ -54,6 +54,10 @@ struct MapView: View {
     /// Whether the player folded the layer's legend (TestFlight 59.1,
     /// ``LegendFold``): a device preference, not in the save.
     @AppStorage(LegendFold.key) private var legendFold = 0
+    /// Whether the player opened the legend while it stood beside a wide
+    /// card (``LegendFold/isFolded(stored:compactHeight:besideCard:openedBesideCard:)``);
+    /// forgotten when the card goes.
+    @State private var legendOpenedBesideCard = false
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     /// Decision 182: whether the map shows the time of day and the
     /// weather (the settings' switches, on the device).
@@ -175,6 +179,8 @@ struct MapView: View {
     /// Where the camera looks while it follows a train (the reference's
     /// eased `_trackCenter`); view state only.
     @State private var followCamera = FollowCamera()
+    /// The camera a game opened on, and when (``openCamera(viewport:clearOf:)``).
+    @State private var openedCamera: OpenedCamera?
 
     private var mapLayers: MapLayerPreferences {
         MapLayerPreferences(
@@ -218,8 +224,23 @@ struct MapView: View {
             let zoomGivesWay = session.tutorial == nil
                 && insets.trailing > viewport.width / 3
                 && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
+            // #593: beside such a card the legend would stand in the middle
+            // of the map, over its stations: it folds. Measured with the
+            // zoom buttons' fixed height, as above, not the column's, which
+            // folding changes.
+            let legendBesideCard = insets.trailing > viewport.width / 3
+                && viewport.height - screenEdges.bottom - 92 < screenEdges.top + trailingInsetDepth
             let zoomLimit: Double? = realWorld != nil && mapStyle != .openStreetMap ? baseMapZoomLimit : nil
-            let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport)).limited(toReferenceSize: zoomLimit)
+            // What the camera's own framing keeps its places clear of (#593,
+            // a player's report: the opening put a station under the zoom
+            // buttons): the screen's controls, the column at the top, and
+            // the buttons, legend and zoom buttons in the bottom corners.
+            // Only when the camera moves itself (opening a game, jumping to
+            // a station or a place); the player's pans and zooms are left
+            // as they are (#544).
+            let topClear = ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
+            let framing = topClear.clearing([bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }, viewport: viewport)
+            let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport, clearOf: framing)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
             // twenty times as they come on, not on every tick.
@@ -271,7 +292,8 @@ struct MapView: View {
                         // Only the traced station's: not the last one's while
                         // the next is worked out, nor once its panel closes.
                         journey: journeyTrace.flatMap { $0.station == tracedStationID ? $0 : nil },
-                        journeyProgress: journeyProgress
+                        journeyProgress: journeyProgress,
+                        drawsLabels: false
                     )
                     .equatable()
                     // Decision 182: the time of day over the ground, the
@@ -296,6 +318,18 @@ struct MapView: View {
                         language: session.language,
                         linePalette: linePalette,
                         camera: projection
+                    )
+                    .equatable()
+                    // The stations' names and waiting counts over the
+                    // trains (docs/MAP_LAYERS.md 55–57).
+                    MapLabelCanvas(
+                        world: session.world,
+                        camera: projection,
+                        layers: mapLayers,
+                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        labels: stationLabels,
+                        lineCodes: LineBadge.codes(for: session.world.lines),
+                        linePalette: linePalette
                     )
                     .equatable()
                     if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
@@ -507,8 +541,17 @@ struct MapView: View {
                                 isFlat: terrainMap?.isFlat ?? false,
                                 tracksLevel: terrainMap?.tracksLevel ?? false,
                                 isFolded: Binding(
-                                    get: { LegendFold.isFolded(stored: legendFold, compactHeight: verticalSizeClass == .compact) },
-                                    set: { legendFold = LegendFold.stored(folded: $0) }
+                                    get: {
+                                        LegendFold.isFolded(stored: legendFold, compactHeight: verticalSizeClass == .compact,
+                                                            besideCard: legendBesideCard, openedBesideCard: legendOpenedBesideCard)
+                                    },
+                                    set: { folded in
+                                        if legendBesideCard {
+                                            legendOpenedBesideCard = !folded
+                                        } else {
+                                            legendFold = LegendFold.stored(folded: folded)
+                                        }
+                                    }
                                 )
                             ) {
                                 stopPopTravelPlay()
@@ -679,6 +722,7 @@ struct MapView: View {
             .overlay(alignment: .topLeading) {
                 baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
                 cameraZoomReadout(projection.pointsPerUnit)
+                stationReadout(projection)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -688,7 +732,10 @@ struct MapView: View {
                 }
             }
             .onChange(of: viewport, initial: true) { _, size in
-                camera = camera?.resized(to: size) ?? openingCamera(viewport: size)
+                camera = camera?.resized(to: size) ?? openCamera(viewport: size, clearOf: framing)
+            }
+            .onChange(of: legendBesideCard) { _, beside in
+                if !beside { legendOpenedBesideCard = false }
             }
             .onChange(of: mapStyle) { _, _ in
                 // Another style's map (satellite imagery or the street
@@ -696,7 +743,7 @@ struct MapView: View {
                 baseMapZoomLimit = nil
             }
             .onChange(of: bounds) { _, _ in
-                camera = openingCamera(viewport: viewport)
+                camera = openCamera(viewport: viewport, clearOf: framing)
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
                 // A station chosen in the overview may be kilometres away.
@@ -705,7 +752,7 @@ struct MapView: View {
                 // While a train is followed the camera stays on it.
                 // Decision 106, later: "in view" is the map the screen's
                 // controls leave, and one under them moves to its middle.
-                keepSelectionClear(projection: projection, clear: clear, line: false)
+                keepSelectionClear(projection: projection, clear: framing, line: false)
             }
             // Decision 106, later: a line chosen in the lines panel, and the
             // selection when a panel opens over it, move into the map the
@@ -714,14 +761,14 @@ struct MapView: View {
             // that building makes or picks stays where the player looks.
             .onChange(of: session.selectedLineID) { _, _ in
                 guard screen.panel == .lines else { return }
-                keepSelectionClear(projection: projection, clear: clear, line: true)
+                keepSelectionClear(projection: projection, clear: framing, line: true)
             }
             // TestFlight 59.1: the details card opens and closes all through
             // building (the tool's card, a start tapped, Clear, Done); the
             // line the session keeps selected then zoomed the map out to its
             // whole length each time. Only the lines panel shows a line.
             .onChange(of: insets.trailing) { _, _ in
-                keepSelectionClear(projection: projection, clear: clear,
+                keepSelectionClear(projection: projection, clear: framing,
                                    line: screen.panel == .lines && session.selectedStation == nil)
             }
             .onChange(of: session.routePreview?.request) { _, _ in
@@ -729,14 +776,14 @@ struct MapView: View {
                 // into view when its middle is out of view.
                 if !session.isFollowingTrain, let preview = session.routePreview, let focus = preview.focus,
                    !projection.visibleRegion.contains(focus) {
-                    camera = projection.centered(on: focus)
+                    camera = projection.centered(on: focus, clearOf: framing)
                 }
             }
             .onChange(of: session.cameraRequest) { _, request in
                 // Decision 177: the station master's tap on advice that
                 // points at a place (the next town to extend to).
                 guard let request else { return }
-                camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y))
+                camera = projection.centered(on: WorldCoordinate(x: request.location.x, y: request.location.y), clearOf: framing)
             }
             // Decision 188, later fix: where the places the tutorial's
             // step has the player tap stand, which its card keeps clear of.
@@ -751,6 +798,17 @@ struct MapView: View {
                 // cleared `_trackCenter` does.
                 followCamera.reset()
                 centerOnFollowedTrain(projection: projection)
+            }
+            // The corners' buttons and legend are measured after the first
+            // layout: a camera that opened before then, and that nothing
+            // has moved since, opens again clear of them.
+            .onChange(of: framing) { _, framing in
+                guard let opened = openedCamera, camera == opened.camera, session.tool == .select,
+                      !session.isFollowingTrain, session.tutorial == nil,
+                      Date.now.timeIntervalSince(opened.at) < Self.openingSettles else { return }
+                let reopened = openingCamera(viewport: viewport, clearOf: framing)
+                openedCamera = OpenedCamera(camera: reopened, at: opened.at)
+                camera = reopened
             }
         }
         .onChange(of: TrafficKey(world: session.world), initial: true) { _, _ in
@@ -1045,10 +1103,24 @@ struct MapView: View {
     }
 
     /// The camera a game opens on (Stage E1): what it has built, or the
-    /// middle of its world.
-    private func openingCamera(viewport: ScreenSize) -> PlanCamera {
-        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world))
+    /// middle of its world, clear of the screen's controls (`framing`,
+    /// #593), balanced so it stays in the middle of the view.
+    private func openingCamera(viewport: ScreenSize, clearOf framing: ScreenInsets) -> PlanCamera {
+        PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: WorldRegion.opening(in: session.world), clearOf: framing.balanced)
     }
+
+    /// The opening camera, remembered as it was set, so that the corners'
+    /// controls measured just after can frame it again (``openedCamera``).
+    private func openCamera(viewport: ScreenSize, clearOf framing: ScreenInsets) -> PlanCamera {
+        let opened = openingCamera(viewport: viewport, clearOf: framing)
+        openedCamera = OpenedCamera(camera: opened, at: .now)
+        return opened
+    }
+
+    /// How long after a camera opens the corners' controls may still be
+    /// measured and frame it again: their first layout, not a legend opened
+    /// later by the player.
+    private static let openingSettles: TimeInterval = 2
 
     /// Whether the network tool previews a stretch, shown in the
     /// construction HUD at the top of the map.
@@ -1274,6 +1346,25 @@ struct MapView: View {
         }
     }
 
+    /// Where the stations are on the map, in its points ("x,y" each,
+    /// split by ";"), under UI tests only: the opening camera keeps them
+    /// clear of the corners' buttons (#593).
+    @ViewBuilder
+    private func stationReadout(_ projection: PlanCamera) -> some View {
+        if Self.readsBaseMap {
+            let points = session.world.stations.map { station in
+                let point = projection.screenPoint(of: station.location)
+                return "\(Int(point.x.rounded())),\(Int(point.y.rounded()))"
+            }
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.stations")
+                .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
+        }
+    }
+
     /// Where Apple's map says how it follows, under UI tests only.
     private var baseMapFollowingReport: (@MainActor (String) -> Void)? {
         guard Self.readsBaseMap else { return nil }
@@ -1337,9 +1428,8 @@ struct MapView: View {
     /// tutorial, whose steps point at places on the map, nor while a
     /// building tool is chosen, whose player is zoomed in on the track
     /// (TestFlight 59.1).
-    private func keepSelectionClear(projection: PlanCamera, clear: EdgeInsets, line: Bool) {
+    private func keepSelectionClear(projection: PlanCamera, clear free: ScreenInsets, line: Bool) {
         guard session.tool == .select, !session.isFollowingTrain, session.tutorial == nil else { return }
-        let free = ScreenInsets(top: clear.top, leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
         if line {
             guard let selected = session.selectedLine else { return }
             let stops = selected.stops.compactMap { session.world.station(id: $0) }
@@ -1368,6 +1458,18 @@ struct MapView: View {
         // it, it would describe another cell, as after a pan.
         if moved != projection { cellTooltip = nil; cityTooltip = nil; terrainTooltip = nil; sectionFlowTooltip = nil }
         camera = moved
+    }
+}
+
+/// The camera a game opened on, and when it was set.
+private struct OpenedCamera {
+    let camera: PlanCamera
+    let at: Date
+}
+
+extension ScreenFrame {
+    init(_ rect: CGRect) {
+        self.init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height)
     }
 }
 
@@ -1512,7 +1614,7 @@ private struct MapCanvas: View, Equatable {
     let flowVersion: Int
     /// Decision 182: how strongly the stations shine at night.
     let lights: Double
-    /// Decision 216: each line's code, for its badges (layers 24.5 and 30).
+    /// Decision 216: each line's code, for its badges (layers 24.5 and 55).
     let lineCodes: [LineID: String]
     /// Decision 216: compared so that the lines redraw in the new palette
     /// (``Palette/lineColor(_:custom:)`` reads it).
@@ -1521,6 +1623,9 @@ private struct MapCanvas: View, Equatable {
     /// each arc is drawn yet.
     let journey: JourneyTrace?
     let journeyProgress: Double
+    /// Whether the stations' names and waiting counts are drawn here; the
+    /// map draws them over the trains instead, in ``MapLabelCanvas``.
+    var drawsLabels = true
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
     /// so a tick that only moves them does not redraw it.
@@ -1550,6 +1655,7 @@ private struct MapCanvas: View, Equatable {
             && lhs.linePalette == rhs.linePalette
             && lhs.journey == rhs.journey
             && lhs.journeyProgress == rhs.journeyProgress
+            && lhs.drawsLabels == rhs.drawsLabels
     }
 
     var body: some View {
@@ -1557,7 +1663,7 @@ private struct MapCanvas: View, Equatable {
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
-        let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress
+        let routePreview = routePreview, journey = journey, journeyProgress = journeyProgress, drawsLabels = drawsLabels
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawMap(
@@ -1582,9 +1688,50 @@ private struct MapCanvas: View, Equatable {
                 lineCodes: lineCodes,
                 journey: journey,
                 journeyProgress: journeyProgress,
+                drawsLabels: drawsLabels,
                 in: context
             )
         }
+    }
+}
+
+/// The stations' names and waiting counts (docs/MAP_LAYERS.md 55–57), over
+/// the trains: a train stopped at a station never covers them. Redrawn
+/// when the camera, the stations, their lines or the counts change, never
+/// for a moving train.
+private struct MapLabelCanvas: View, Equatable {
+    let world: GameWorld
+    let camera: PlanCamera
+    let layers: MapLayerPreferences
+    let waitingCounts: [StationID: Int64]
+    let labels: StationLabels
+    let lineCodes: [LineID: String]
+    let linePalette: LinePalette
+
+    nonisolated static func == (lhs: MapLabelCanvas, rhs: MapLabelCanvas) -> Bool {
+        lhs.world.stations == rhs.world.stations
+            // The badges under the names: each line's stops and colour.
+            && lhs.world.lines.elementsEqual(rhs.world.lines) { $0.id == $1.id && $0.stops == $1.stops && $0.color == $1.color }
+            && lhs.world.geoAnchor == rhs.world.geoAnchor
+            && lhs.camera == rhs.camera
+            && lhs.layers == rhs.layers
+            && lhs.waitingCounts == rhs.waitingCounts
+            && lhs.labels == rhs.labels
+            && lhs.lineCodes == rhs.lineCodes
+            && lhs.linePalette == rhs.linePalette
+    }
+
+    var body: some View {
+        let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts
+        let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
+        return Canvas { context, size in
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
+            MapArt.drawStationLabels(
+                world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
+                lineCodes: lineCodes, projection: camera, in: context
+            )
+        }
+        .allowsHitTesting(false)
     }
 }
 

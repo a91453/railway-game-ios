@@ -50,9 +50,9 @@ enum MapArt {
         lineCodes: [LineID: String] = [:],
         journey: JourneyTrace? = nil,
         journeyProgress: Double = 1,
+        drawsLabels: Bool = true,
         in context: GraphicsContext
     ) {
-        let detail = projection.detail
         let bounds = WorldRegion(bounds: world.bounds)
         let land = polygon([
             screenPoint(bounds.minX, bounds.minY, projection),
@@ -111,33 +111,60 @@ enum MapArt {
         }
         // Decision 168: the stations a high-speed line calls at have a second ring.
         let fast = world.highSpeedStations
-        // Decision 216: the badges of the lines calling at each station,
-        // under its name.
-        let badges = detail == .full && layers.showsStationNames ? stationBadges(world, codes: lineCodes) : [:]
         for station in world.stations {
             drawPointStation(
                 station,
                 isSelected: station.id == selectedStationID,
                 isHighSpeed: fast.contains(station.id),
-                layers: layers,
-                badges: badges[station.id] ?? [],
                 projection: projection,
                 in: context
             )
         }
-        if detail != .full && layers.showsStationNames {
-            drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
+        if drawsLabels {
+            drawStationLabels(world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
+                              lineCodes: lineCodes, projection: projection, in: context)
+        }
+        if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
+        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
+        drawWaits(traffic, projection: projection, in: context)
+        // The trains and the rings round the waiting ones are drawn over
+        // this, by ``drawTrains``, in a canvas of their own (decision 182);
+        // and over them the stations' names and waiting counts
+        // (``drawStationLabels``, docs/MAP_LAYERS.md 55–57), unless
+        // `drawsLabels` draws them here (the track-drawing loupe).
+    }
+
+    /// The stations' names (with their lines' badges under them, decision
+    /// 216), the names zoomed out (decision 89) and the waiting counts and
+    /// crowded rings (decision 210): over the trains, so a train stopped at
+    /// a station never covers its name or count (docs/MAP_LAYERS.md 55–57).
+    static func drawStationLabels(
+        _ world: GameWorld,
+        layers: MapLayerPreferences,
+        waitingCounts: [StationID: Int64],
+        labels: StationLabels,
+        latitude: Double,
+        lineCodes: [LineID: String],
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
+        if layers.showsStationNames {
+            if projection.detail == .full {
+                // Decision 216: the badges of the lines calling at each
+                // station, under its name.
+                let badges = stationBadges(world, codes: lineCodes)
+                for station in world.stations {
+                    drawStationName(station, badges: badges[station.id] ?? [], projection: projection, in: context)
+                }
+            } else {
+                drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
+            }
         }
         // Decision 210: the waiting counts and crowded rings, over every
         // station and name, at a middle zoom too.
         if layers.showsWaitingCounts {
             drawStationProblems(world, waitingCounts: waitingCounts, projection: projection, in: context)
         }
-        if let overlay { drawNetworkOverlay(overlay, projection: projection, in: context) }
-        drawTrackNumbers(world, preview: routePreview, projection: projection, cached: edges, in: context)
-        drawWaits(traffic, projection: projection, in: context)
-        // The trains and the rings round the waiting ones are drawn over
-        // this, by ``drawTrains``, in a canvas of their own (decision 182).
     }
 
     // MARK: - Trains (decision 182)
@@ -1544,30 +1571,13 @@ enum MapArt {
         _ station: Station,
         isSelected: Bool,
         isHighSpeed: Bool,
-        layers: MapLayerPreferences,
-        badges: [(code: String, color: Color)] = [],
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
         let center = projection.screenPoint(of: station.location)
-        let radius = max(5, projection.referenceSize * 0.32)
+        let radius = stationRadius(projection)
         let badgeRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
-        // Resolving and measuring a name is the costly part, and every pan
-        // frame redraws: first rule out stations whose badge and name cannot
-        // reach the view. A caption2 character is under 24 points wide and a
-        // line under 48 high at the largest text size, so this bound needs no
-        // measuring.
-        let reach = max(radius + 6, Double(station.name.count) * 12)
-        let largest = CGRect(x: center.x - reach, y: center.y - radius - 20, width: reach * 2, height: radius * 2 + 20 + 48)
-        guard largest.intersects(context.clipBoundingRect) else { return }
-        let name = (projection.detail == .full && layers.showsStationNames)
-            ? context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink)) : nil
-        let nameSize = name?.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity)) ?? .zero
-        let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
-        // Include the measured label, not only the station's anchor: a name
-        // can be visible while its station is just outside the viewport.
-        guard badgeRect.insetBy(dx: -6, dy: -6).intersects(context.clipBoundingRect)
-            || nameRect.intersects(context.clipBoundingRect) else { return }
+        guard badgeRect.insetBy(dx: -6, dy: -6).intersects(context.clipBoundingRect) else { return }
         // Decision 214: a depot's badge is an arch, round above and square
         // below, with the garage in it (`docs/UI_THEME.md` 機廠).
         let badge = station.isDepot ? archPath(in: badgeRect) : Path(ellipseIn: badgeRect)
@@ -1588,22 +1598,43 @@ enum MapArt {
         } else {
             drawStationSymbol(at: center, size: radius * 1.05, context: context)
         }
-        if let name {
-            // Decision 205: on the same pale plate as the names zoomed out
-            // (``drawOverviewNames``), so it reads over a line or a town.
-            context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
-            context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
-            // Decision 216: the badges of its lines in a row under the
-            // name, at most four.
-            if !badges.isEmpty {
-                let shown = badges.prefix(4)
-                let height = 12.0, gap = 2.0
-                let widths = shown.map { lineBadgeWidth($0.code, height: height, in: context) }
-                var x = center.x - (widths.reduce(0, +) + gap * Double(widths.count - 1)) / 2
-                for (badge, badgeWidth) in zip(shown, widths) {
-                    drawLineBadge(badge.code, color: badge.color, in: CGRect(x: x, y: nameRect.maxY + 2, width: badgeWidth, height: height), context: context)
-                    x += badgeWidth + gap
-                }
+    }
+
+    /// A station's name under its badge, on its plate, and the badges of
+    /// its lines in a row under it (decision 216), zoomed in.
+    private static func drawStationName(
+        _ station: Station,
+        badges: [(code: String, color: Color)],
+        projection: some MapProjection,
+        in context: GraphicsContext
+    ) {
+        let center = projection.screenPoint(of: station.location)
+        let radius = stationRadius(projection)
+        // Resolving and measuring a name is the costly part, and every pan
+        // frame redraws: first rule out stations whose name cannot reach
+        // the view. A caption2 character is under 24 points wide and a line
+        // under 48 high at the largest text size, so this bound needs no
+        // measuring.
+        let reach = Double(station.name.count) * 12
+        let largest = CGRect(x: center.x - reach, y: center.y + radius, width: reach * 2, height: 4 + 48 + 14)
+        guard largest.intersects(context.clipBoundingRect) else { return }
+        let name = context.resolve(Text(verbatim: station.name).font(.caption2.weight(.semibold)).foregroundStyle(Palette.ink))
+        let nameSize = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
+        let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + radius + 4, width: nameSize.width, height: nameSize.height)
+        // Decision 205: on the same pale plate as the names zoomed out
+        // (``drawOverviewNames``), so it reads over a line or a town.
+        context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
+        context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
+        // Decision 216: the badges of its lines in a row under the name,
+        // at most four.
+        if !badges.isEmpty {
+            let shown = badges.prefix(4)
+            let height = 12.0, gap = 2.0
+            let widths = shown.map { lineBadgeWidth($0.code, height: height, in: context) }
+            var x = center.x - (widths.reduce(0, +) + gap * Double(widths.count - 1)) / 2
+            for (badge, badgeWidth) in zip(shown, widths) {
+                drawLineBadge(badge.code, color: badge.color, in: CGRect(x: x, y: nameRect.maxY + 2, width: badgeWidth, height: height), context: context)
+                x += badgeWidth + gap
             }
         }
     }
