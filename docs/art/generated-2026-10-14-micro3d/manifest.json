@@ -1,0 +1,1047 @@
+{
+  "schema_version": 1,
+  "generated_date": "2026-10-14",
+  "repository": "a91453/railway-game-ios",
+  "base_commit": "7f4a30a1295b6d0015d48fe9e72905dc4d2a48f8",
+  "previous_pack": "../generated-2026-10-13/manifest.json",
+  "generator": "image_gen",
+  "style": "微 3D：輕微等角透視、淺厚度、柔和光影、暖黃建物、藏青輪廓與綠松點綴",
+  "style_basis": "工作登記 #231 的 2026-10-13 Codex 微 3D 改版；本輪接續作者的較新偏好。",
+  "quota_remaining": null,
+  "asset_count": 24,
+  "total_bytes": 24632938,
+  "assets": [
+    {
+      "id": "building-house",
+      "name": "暖黃住宅",
+      "category": "building",
+      "usage": "住宅建造卡／建物面板",
+      "subject": "A small two-storey Taiwanese townhouse with warm-yellow walls, navy pitched roof, four broad navy windows in two rows, a recessed cream front door, a turquoise planter. Exactly one building, slight isometric view.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A small two-storey Taiwanese townhouse with warm-yellow walls, navy pitched roof, four broad navy windows in two rows, a recessed cream front door, a turquoise planter. Exactly one building, slight isometric view.",
+      "file": "png/building-house.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 952106,
+      "sha256": "334edfe00aff8f261cff628adfaa9b43c34f71a822b0a49fc8da4f54f096ca27",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        0,
+        1187,
+        1123
+      ],
+      "visible_alpha_bbox": [
+        228,
+        125,
+        1042,
+        1120
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1818,
+        0.0997,
+        0.1691,
+        0.1069
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-shop",
+      "name": "暖黃商店",
+      "category": "building",
+      "usage": "商店建造卡／租金面板",
+      "subject": "A single low-rise neighborhood shop with warm-yellow walls, a broad turquoise-and-cream striped awning, one large navy display window, a cream entrance, a completely blank sign panel. Simple friendly local storefront, no merchandise brands.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A single low-rise neighborhood shop with warm-yellow walls, a broad turquoise-and-cream striped awning, one large navy display window, a cream entrance, a completely blank sign panel. Simple friendly local storefront, no merchandise brands.",
+      "file": "png/building-shop.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1190634,
+      "sha256": "66dfb0039b72c670071e6ad26e719c892a2f817619dcc58eed3ca5c3a9e2191a",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        19,
+        1200,
+        1172
+      ],
+      "visible_alpha_bbox": [
+        84,
+        206,
+        1195,
+        1167
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.067,
+        0.1643,
+        0.047,
+        0.0694
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-office",
+      "name": "暖黃辦公樓",
+      "category": "building",
+      "usage": "辦公樓建造卡／就業面板",
+      "subject": "A compact eight-storey warm-yellow office block, eight clean horizontal rows of broad navy windows, cream rooftop cap, recessed turquoise entrance, one small planter. Readable silhouette, avoid many tiny window panes.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A compact eight-storey warm-yellow office block, eight clean horizontal rows of broad navy windows, cream rooftop cap, recessed turquoise entrance, one small planter. Readable silhouette, avoid many tiny window panes.",
+      "file": "png/building-office.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 984635,
+      "sha256": "73f107ace6afdffd296f172900488f8ab37c0ce0035987d4173599469d847169",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        28,
+        1220,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        302,
+        102,
+        970,
+        1150
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.2408,
+        0.0813,
+        0.2265,
+        0.0829
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-department-store",
+      "name": "暖黃百貨",
+      "category": "building",
+      "usage": "百貨建造卡／子公司面板",
+      "subject": "A broad warm-yellow department store with eight simple navy horizontal window bands, a cream covered entrance and a blank turquoise square plaque bearing a simple shopping-bag shape, no text. Calm clean geometry.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A broad warm-yellow department store with eight simple navy horizontal window bands, a cream covered entrance and a blank turquoise square plaque bearing a simple shopping-bag shape, no text. Calm clean geometry.",
+      "file": "png/building-department-store.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1191895,
+      "sha256": "6da051b0c43a51c0cf84af79b8c0b3370d7a5e7bcb6f7cf592d7210bc1d22f4f",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        31,
+        25,
+        1216,
+        1212
+      ],
+      "visible_alpha_bbox": [
+        103,
+        199,
+        1163,
+        1068
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0821,
+        0.1587,
+        0.0726,
+        0.1483
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選；實際窗帶少於 prompt 的八列，不可用來解釋樓層。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-hotel",
+      "name": "暖黃飯店",
+      "category": "building",
+      "usage": "飯店建造卡／住宿面板",
+      "subject": "A slim warm-yellow hotel tower with fourteen broad simple navy window bands, cream entrance canopy, a turquoise rooftop block and one planter. A generic hotel with no lettering or brands; miniature but not exaggerated cartoon proportions.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A slim warm-yellow hotel tower with fourteen broad simple navy window bands, cream entrance canopy, a turquoise rooftop block and one planter. A generic hotel with no lettering or brands; miniature but not exaggerated cartoon proportions.",
+      "file": "png/building-hotel.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 796998,
+      "sha256": "81c2cd3e013a92a58b97239b9d7079bba67aad895791732afe872190e5965457",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        57,
+        83,
+        1178,
+        1163
+      ],
+      "visible_alpha_bbox": [
+        321,
+        90,
+        951,
+        1161
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.256,
+        0.0718,
+        0.2416,
+        0.0742
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-amusement-park",
+      "name": "暖黃遊樂園",
+      "category": "building",
+      "usage": "遊樂園建造卡／觀光面板",
+      "subject": "A small compact amusement-park vignette: one warm-yellow Ferris wheel with six large cream gondolas outlined in navy, one turquoise looping rollercoaster track, one warm-yellow entrance booth. A few clear shapes, no ground plate, no crowds.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A small compact amusement-park vignette: one warm-yellow Ferris wheel with six large cream gondolas outlined in navy, one turquoise looping rollercoaster track, one warm-yellow entrance booth. A few clear shapes, no ground plate, no crowds.",
+      "file": "png/building-amusement-park.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1295075,
+      "sha256": "a59011767be7b5fb3f979d47a356b192b7ca0f5d2c4d2f8ca641e1bd1186a2ce",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        29,
+        1219,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        105,
+        134,
+        1214,
+        1124
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0837,
+        0.1069,
+        0.0319,
+        0.1037
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-marina",
+      "name": "暖黃遊艇港",
+      "category": "building",
+      "usage": "遊艇港建造卡／水岸觀光",
+      "subject": "A compact marina: warm-yellow waterfront clubhouse with cream roof, one simple turquoise pier, two cream sailboats with navy outlines and warm-yellow sails. No ocean backdrop or opaque ground, transparent space between separate objects.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A compact marina: warm-yellow waterfront clubhouse with cream roof, one simple turquoise pier, two cream sailboats with navy outlines and warm-yellow sails. No ocean backdrop or opaque ground, transparent space between separate objects.",
+      "file": "png/building-marina.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1141291,
+      "sha256": "6ecd668172c460abd625c0eded67ce3d006faa08a4e5b3f56f845527da3552cf",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        41,
+        39,
+        1223,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        48,
+        107,
+        1220,
+        1093
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0383,
+        0.0853,
+        0.0271,
+        0.1284
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "building-wharf",
+      "name": "暖黃碼頭",
+      "category": "building",
+      "usage": "碼頭建造卡／水岸建設",
+      "subject": "A small warm-yellow waterside terminal, broad cream curved canopy, a short turquoise jetty with navy railings, one tiny navy-outline cream passenger boat. Isolated compact wharf vignette, no sea background.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A small warm-yellow waterside terminal, broad cream curved canopy, a short turquoise jetty with navy railings, one tiny navy-outline cream passenger boat. Isolated compact wharf vignette, no sea background.",
+      "file": "png/building-wharf.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1082736,
+      "sha256": "500422ba5368953a955b090e534f40052734961fec46b4ea95633d21f6e39ec2",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        17,
+        1214,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        104,
+        214,
+        1176,
+        990
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0829,
+        0.1707,
+        0.0622,
+        0.2105
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "ops-depot",
+      "name": "列車機廠",
+      "category": "operations",
+      "usage": "機廠說明／車輛保養面板",
+      "subject": "A warm-yellow two-bay train depot shed with cream curved roof, one open navy doorway and one closed door, short turquoise rails entering the bays, one compact cream train cab visible. No extra buildings.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A warm-yellow two-bay train depot shed with cream curved roof, one open navy doorway and one closed door, short turquoise rails entering the bays, one compact cream train cab visible. No extra buildings.",
+      "file": "png/ops-depot.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1077099,
+      "sha256": "4f61fcea2387b0a4c2d00062da45dcf756f470149ec042a65255572019666606",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        43,
+        25,
+        1228,
+        1216
+      ],
+      "visible_alpha_bbox": [
+        109,
+        209,
+        1147,
+        1032
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0869,
+        0.1667,
+        0.0853,
+        0.177
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "ops-dispatch",
+      "name": "列車出入庫",
+      "category": "operations",
+      "usage": "機廠出入庫教學／營運說明",
+      "subject": "One cream-and-turquoise passenger train nose beside a small warm-yellow depot doorway, a broad turquoise curved outgoing arrow and a smaller warm-yellow incoming arrow separated spatially. A clear two-direction dispatch illustration, no labels.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: One cream-and-turquoise passenger train nose beside a small warm-yellow depot doorway, a broad turquoise curved outgoing arrow and a smaller warm-yellow incoming arrow separated spatially. A clear two-direction dispatch illustration, no labels.",
+      "file": "png/ops-dispatch.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1029972,
+      "sha256": "d7718f273142d0510187a27c301dac50a1614552a0c4e57018ba58c01bf06218",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        63,
+        23,
+        1212,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        69,
+        201,
+        1208,
+        1057
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.055,
+        0.1603,
+        0.0367,
+        0.1571
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "ops-double-track",
+      "name": "複線與待避",
+      "category": "operations",
+      "usage": "複線／待避線教學",
+      "subject": "A clean diagram-like miniature of two parallel turquoise railway tracks with cream sleepers, connected by one simple crossover, two small cream-and-yellow trains facing opposite directions. Slight shallow isometric depth, entire track fragment visible, no scenery.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A clean diagram-like miniature of two parallel turquoise railway tracks with cream sleepers, connected by one simple crossover, two small cream-and-yellow trains facing opposite directions. Slight shallow isometric depth, entire track fragment visible, no scenery.",
+      "file": "png/ops-double-track.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 866443,
+      "sha256": "2588cfc90a6631d36f26c6a034ec7045efd1a4ceb627f7f4bde8fdac2884b4a7",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        32,
+        45,
+        1240,
+        1204
+      ],
+      "visible_alpha_bbox": [
+        35,
+        267,
+        1237,
+        1089
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0279,
+        0.2129,
+        0.0136,
+        0.1316
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選；兩車朝向已用 image_gen 修正為相反。軌道幾何是裝飾示意，未接入 App。",
+      "recommended_min_points": 120,
+      "edit_prompt": "Edit ONLY the directions of the two trains in this railway illustration, keep the same navy, warm yellow, cream and turquoise micro-3D style, tracks, composition and transparent background. The upper/right train must keep its front facing DOWN-LEFT, as currently. Reverse the LOWER/LEFT train completely on its existing track, so its rounded driver cab, windshield and headlights face UP-RIGHT, away from the viewer; its plain tail is at the lower-left end. Two trains traveling in OPPOSITE directions. Keep both trains on their separate parallel tracks. Keep every part within the image with transparent margin. Do not add text or arrows. Preserve transparency.",
+      "edit_input_sha256": "9855921a4fd41bece137346d3b1860b3ebd94af850d65694cc53a2d0296872ac",
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "ops-maintenance",
+      "name": "列車保養",
+      "category": "operations",
+      "usage": "保養面板／機廠教學",
+      "subject": "A compact cream train cab with turquoise side stripe and two broad navy windows, a large warm-yellow wrench beside it, one small navy gear. Balanced coherent vignette with no hands or text.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A compact cream train cab with turquoise side stripe and two broad navy windows, a large warm-yellow wrench beside it, one small navy gear. Balanced coherent vignette with no hands or text.",
+      "file": "png/ops-maintenance.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 927417,
+      "sha256": "690fe9a0b3c5b1f12c7c52826a696939393896d6f351b530e71e66d3c9941971",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        49,
+        80,
+        1188,
+        1231
+      ],
+      "visible_alpha_bbox": [
+        139,
+        234,
+        1160,
+        1049
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1108,
+        0.1866,
+        0.075,
+        0.1635
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "passenger-queue",
+      "name": "月台排隊",
+      "category": "passenger",
+      "usage": "月台人潮／車門擁擠說明",
+      "subject": "Three simple rounded anonymous human figures waiting in a short orderly line beside a cream train doorway on a small warm-yellow platform fragment. One figure turquoise, one warm yellow, one cream, navy outlines. No detailed faces, no signage.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: Three simple rounded anonymous human figures waiting in a short orderly line beside a cream train doorway on a small warm-yellow platform fragment. One figure turquoise, one warm yellow, one cream, navy outlines. No detailed faces, no signage.",
+      "file": "png/passenger-queue.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1074466,
+      "sha256": "57057256c07e81e24bf35dae14f67198ed3ce09f61380e9d8138675a83f7d2fb",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        73,
+        1198,
+        1234
+      ],
+      "visible_alpha_bbox": [
+        77,
+        140,
+        1177,
+        1154
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0614,
+        0.1116,
+        0.0614,
+        0.0797
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "passenger-interchange",
+      "name": "旅客轉乘",
+      "category": "passenger",
+      "usage": "旅程追蹤／轉乘說明",
+      "subject": "Two small simplified cream train fronts at opposite sides, two anonymous rounded human figures walking between them along one broad turquoise curved arrow. Clear compact interchange vignette, navy contour, no map labels.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: Two small simplified cream train fronts at opposite sides, two anonymous rounded human figures walking between them along one broad turquoise curved arrow. Clear compact interchange vignette, navy contour, no map labels.",
+      "file": "png/passenger-interchange.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 802555,
+      "sha256": "3ada110f7e2701a760e9681e9cae39e738b8f0bfec0c6621471e1647b61a0a34",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        17,
+        41,
+        1227,
+        1221
+      ],
+      "visible_alpha_bbox": [
+        21,
+        211,
+        1223,
+        1073
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0167,
+        0.1683,
+        0.0247,
+        0.1443
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "passenger-accessibility",
+      "name": "無障礙乘車",
+      "category": "passenger",
+      "usage": "無障礙車站／旅客服務說明",
+      "subject": "One friendly simplified anonymous person using a warm-yellow wheelchair on a turquoise shallow ramp leading toward a cream train doorway. The wheels and ramp are clearly visible. Respectful plain human proportions, no facial detail or logos.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: One friendly simplified anonymous person using a warm-yellow wheelchair on a turquoise shallow ramp leading toward a cream train doorway. The wheels and ramp are clearly visible. Respectful plain human proportions, no facial detail or logos.",
+      "file": "png/passenger-accessibility.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1031838,
+      "sha256": "4a079cd917a64bd389d7dcd27ac920235ded573ce72d1f17138b251f18a95b90",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        103,
+        104,
+        1140,
+        1222
+      ],
+      "visible_alpha_bbox": [
+        154,
+        107,
+        1130,
+        1147
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1228,
+        0.0853,
+        0.0989,
+        0.0853
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "passenger-commute",
+      "name": "通勤旅客",
+      "category": "passenger",
+      "usage": "需求教學／居民與就業說明",
+      "subject": "Two simplified anonymous standing commuters, one holding a small warm-yellow briefcase and one wearing a turquoise backpack, beside a compact cream-and-turquoise train-front symbol. Rounded geometry, navy outlines, no faces or writing.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: Two simplified anonymous standing commuters, one holding a small warm-yellow briefcase and one wearing a turquoise backpack, beside a compact cream-and-turquoise train-front symbol. Rounded geometry, navy outlines, no faces or writing.",
+      "file": "png/passenger-commute.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1085974,
+      "sha256": "696497c86df50f702ec174f5ab06f21a12c3fb26fe41b78094160a12c1dc3a6a",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        85,
+        1222,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        105,
+        165,
+        1158,
+        1124
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0837,
+        0.1316,
+        0.0766,
+        0.1037
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "weather-clear",
+      "name": "晴天營運",
+      "category": "weather",
+      "usage": "天氣預報／晴天說明",
+      "subject": "A large warm-yellow sun disk with six broad rounded rays beside one small cream passenger train cab on a short turquoise rail fragment. Calm sunny-day emblem, no face on the sun, no sky background.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A large warm-yellow sun disk with six broad rounded rays beside one small cream passenger train cab on a short turquoise rail fragment. Calm sunny-day emblem, no face on the sun, no sky background.",
+      "file": "png/weather-clear.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 845474,
+      "sha256": "98ced7d4428207d2a9b173433e0d4cbc04651f8f7841195edd2f9dadc10953d0",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        21,
+        1216,
+        1230
+      ],
+      "visible_alpha_bbox": [
+        240,
+        138,
+        1130,
+        1145
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1914,
+        0.11,
+        0.0989,
+        0.0869
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "weather-rain",
+      "name": "雨天營運",
+      "category": "weather",
+      "usage": "天氣預報／雨天需求",
+      "subject": "A single broad cream rain cloud outlined in navy above three large separated turquoise raindrops, with a small warm-yellow umbrella and cream train cab below. Compact balanced rain-day vignette, no facial features.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A single broad cream rain cloud outlined in navy above three large separated turquoise raindrops, with a small warm-yellow umbrella and cream train cab below. Compact balanced rain-day vignette, no facial features.",
+      "file": "png/weather-rain.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 835498,
+      "sha256": "3033a91b3dbf5181781bb21a08b69a20bab6b593883a80848db2bfb04e5f668f",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        41,
+        1224,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        255,
+        83,
+        1030,
+        1162
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.2033,
+        0.0662,
+        0.1786,
+        0.0734
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "weather-typhoon",
+      "name": "颱風提醒",
+      "category": "weather",
+      "usage": "颱風停駛提醒／天氣教學",
+      "subject": "A large turquoise stylized spiral wind shape beside a cream train cab, one warm-yellow triangular alert marker with a plain navy exclamation shape. Wind and alert silhouettes dominate; no destruction, no map or wording.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A large turquoise stylized spiral wind shape beside a cream train cab, one warm-yellow triangular alert marker with a plain navy exclamation shape. Wind and alert silhouettes dominate; no destruction, no map or wording.",
+      "file": "png/weather-typhoon.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1173471,
+      "sha256": "c2e05d4e7f50dc3dfea4ebe213da408baba7fb1700cdb464193e791513ab8f61",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        17,
+        1211,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        89,
+        158,
+        1189,
+        1137
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.071,
+        0.126,
+        0.0518,
+        0.0933
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "weather-thunderstorm",
+      "name": "午後雷陣雨",
+      "category": "weather",
+      "usage": "天氣預報／雷陣雨說明",
+      "subject": "A rounded navy-and-cream cloud with one large warm-yellow lightning bolt and two turquoise raindrops above a small cream train cab. Clear thunderstorm icon vignette, no weather dial or text.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A rounded navy-and-cream cloud with one large warm-yellow lightning bolt and two turquoise raindrops above a small cream train cab. Clear thunderstorm icon vignette, no weather dial or text.",
+      "file": "png/weather-thunderstorm.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 868745,
+      "sha256": "6d6241fa805734a2ecbd422f3e5acd111680e4739f4bf1cb52ef051e7004c4c2",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        32,
+        1232,
+        1254
+      ],
+      "visible_alpha_bbox": [
+        205,
+        83,
+        1075,
+        1168
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1635,
+        0.0662,
+        0.1427,
+        0.0686
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "tourism-mountain",
+      "name": "山岳觀光",
+      "category": "tourism",
+      "usage": "山岳景點／季節需求說明",
+      "subject": "Two compact turquoise mountains with cream tops, a short navy railway fragment at the foot and one small warm-yellow-and-cream local train. Isolated mountain travel vignette, no sky or landscape background.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: Two compact turquoise mountains with cream tops, a short navy railway fragment at the foot and one small warm-yellow-and-cream local train. Isolated mountain travel vignette, no sky or landscape background.",
+      "file": "png/tourism-mountain.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 955007,
+      "sha256": "aabf37299f9ab8011ed780f95cf6720454034dc7c1aee8c9e79638465733ff75",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        84,
+        1158,
+        1188
+      ],
+      "visible_alpha_bbox": [
+        145,
+        170,
+        1155,
+        1025
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1156,
+        0.1356,
+        0.0789,
+        0.1826
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "tourism-hot-spring",
+      "name": "溫泉觀光",
+      "category": "tourism",
+      "usage": "溫泉景點／冬季需求說明",
+      "subject": "A small warm-yellow hot-spring lodge with cream roof next to a rounded turquoise pool rim, three broad cream steam curls outlined navy. A clear compact hot-spring vignette without people or writing.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A small warm-yellow hot-spring lodge with cream roof next to a rounded turquoise pool rim, three broad cream steam curls outlined navy. A clear compact hot-spring vignette without people or writing.",
+      "file": "png/tourism-hot-spring.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 963196,
+      "sha256": "a1803ea1b528ffbed61c471eaeb00781b0aa96e685a69b48ab753160dfaf4988",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        23,
+        1230,
+        1206
+      ],
+      "visible_alpha_bbox": [
+        164,
+        178,
+        1138,
+        1046
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1308,
+        0.1419,
+        0.0925,
+        0.1659
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選；實際蒸氣為兩條，不是 prompt 的三條；用途是溫泉示意。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "tourism-old-street",
+      "name": "老街觀光",
+      "category": "tourism",
+      "usage": "城鎮景點／老街觀光說明",
+      "subject": "Two small adjacent Taiwanese old-street storefronts with warm-yellow walls, navy tiled roof edges, cream doors and a short row of three plain warm-yellow hanging lanterns; a tiny turquoise railway travel motif. No characters or shop brands.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: Two small adjacent Taiwanese old-street storefronts with warm-yellow walls, navy tiled roof edges, cream doors and a short row of three plain warm-yellow hanging lanterns; a tiny turquoise railway travel motif. No characters or shop brands.",
+      "file": "png/tourism-old-street.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1279554,
+      "sha256": "f4efe4423061ddbd005b76d2dbad7a6ce476631ca0a73a5bf86922b2e319f772",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        0,
+        30,
+        1226,
+        1158
+      ],
+      "visible_alpha_bbox": [
+        108,
+        142,
+        1173,
+        1130
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.0861,
+        0.1132,
+        0.0646,
+        0.0989
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 120,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    },
+    {
+      "id": "tourism-souvenir",
+      "name": "名產店",
+      "category": "tourism",
+      "usage": "景點名產店／投資效果面板",
+      "subject": "A small warm-yellow souvenir stall with a turquoise-and-cream canopy and three simple gift boxes, one tied with a turquoise ribbon. Large shapes, blank sign, no food brands, no labels.",
+      "prompt": "Create ONE original transparent illustration asset for Along the Line (沿線), a Taiwanese railway and city management game. The style is a bright friendly miniature city model with a subtle micro-3D look: shallow extruded geometry, soft restrained ambient occlusion, gently rounded edges, slight isometric three-quarter view, large smooth matte color areas. Clean bold navy #262C57 contours, warm yellow #FFC86B as the dominant color for player-owned buildings, turquoise #12A08F details, cream #ECEEF6 and white #FFFFFF. This is original art, not a copy of a commercial game's asset. No photorealism, photographic textures, gritty surfaces, shiny plastic, dramatic shadows, hard glare, typography, words, letters, digits, logos, brand marks or watermark. A single compact coherent object or vignette centered on a square canvas. Truly transparent background, no surrounding landscape, no opaque backdrop. Leave at least 14% empty transparent padding on every edge. Use a few large shapes that stay clear at 120 px, avoid excessive detail. All objects must be fully inside the canvas. It is an illustration for a panel or tutorial, not a screenshot, not a game map, and not a tiny toolbar glyph. SUBJECT: A small warm-yellow souvenir stall with a turquoise-and-cream canopy and three simple gift boxes, one tied with a turquoise ribbon. Large shapes, blank sign, no food brands, no labels.",
+      "file": "png/tourism-souvenir.png",
+      "width": 1254,
+      "height": 1254,
+      "mode": "RGBA",
+      "bytes": 1180859,
+      "sha256": "2e55e42e80f7cccd64e8c6f0284f1c2c70707ed0063e1f199705cff3b8d1c730",
+      "alpha_range": [
+        0,
+        255
+      ],
+      "alpha_bbox": [
+        163,
+        104,
+        1126,
+        1190
+      ],
+      "visible_alpha_bbox": [
+        166,
+        108,
+        1123,
+        1185
+      ],
+      "visible_edges_clear": true,
+      "visible_padding_ratio": [
+        0.1324,
+        0.0861,
+        0.1045,
+        0.055
+      ],
+      "status": "candidate",
+      "review": "微 3D 候選原稿；未接入 App。需核對透視、輪廓、留白與小尺寸，圖中層數與軌道不定義遊戲規則。",
+      "recommended_min_points": 64,
+      "requested_padding_ratio": 0.14,
+      "requested_padding_met": false
+    }
+  ],
+  "successful_generation_calls": 25,
+  "source_references": {
+    "building": [
+      "Sources/GameCore/City/PlacedBuilding.swift",
+      "docs/UI_THEME.md"
+    ],
+    "operations": [
+      "Sources/GameCore/Railway/Depot.swift",
+      "docs/research/HSR_DEPOTS_2026-10-14.md"
+    ],
+    "passenger": [
+      "docs/ARCHITECTURE.md — 169 車門擁擠、220 旅程追蹤"
+    ],
+    "weather": [
+      "Sources/GameCore/Passenger/Weather.swift",
+      "Sources/GamePresentation/MapWeather.swift"
+    ],
+    "tourism": [
+      "Sources/GamePresentation/AttractionCatalog.swift",
+      "tools/tourism-spots/taiwan_attractions.json"
+    ]
+  }
+}
