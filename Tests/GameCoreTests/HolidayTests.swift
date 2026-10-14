@@ -265,6 +265,44 @@ final class HolidayTests: XCTestCase {
         }
     }
 
+    /// Taiwan's holidays are worked out for each year (decision 211), so a
+    /// lookup costs a year's days off: a passenger plan asks once, not for
+    /// every pair of stations, and takes about as long as with a country
+    /// whose holidays stay on the same days.
+    func testAPlanAsksForTodaysHolidayOnce() throws {
+        func world(_ country: String) throws -> GameWorld {
+            var world = GameWorld(
+                bounds: try WorldBounds(width: 131_072, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                clock: GameClock(now: GameTime(seconds: 10 * GameTime.secondsPerDay))
+            )
+            let track = TestLine(tiles: 121)
+            try track.build(in: &world)
+            var stops: [StationID] = []
+            for x in stride(from: 1, to: 121, by: 2) {
+                stops.append(try track.buildStation(named: "S\(x)", beside: x, at: 1, in: &world))
+            }
+            let line = try world.createLine(named: "L", stops: stops).id
+            try world.setLineServiceWindow(line, to: .allDay)
+            for (index, id) in stops.enumerated() {
+                try world.setStationDemand(id, to: StationDemand(kind: index % 2 == 0 ? .residential : .office, dailyTrips: 1_000))
+            }
+            world.setWeeklyDemand(true)
+            world.setDisruptions(Disruptions(level: .standard, country: country))
+            return world
+        }
+        func seconds(_ world: GameWorld) -> Double {
+            var best = Double.infinity
+            for _ in 0..<3 {
+                let start = Date()
+                XCTAssertNotNil(world.makePassengerPlan())
+                best = min(best, Date().timeIntervalSince(start))
+            }
+            return best
+        }
+        let taiwan = seconds(try world("TW")), china = seconds(try world("CN"))
+        XCTAssertLessThan(taiwan, china * 1.5 + 0.01, "Taiwan \(taiwan) s, China \(china) s")
+    }
+
     func testAHolidayReleasesMorePassengersThanTheSameDayWithout() throws {
         var with = try world(day: 44)
         var without = try world(nil, day: 44)
