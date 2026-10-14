@@ -222,11 +222,13 @@ public struct TrainRoster: Equatable, Sendable {
     /// The trips a train's own repeating timetable will run after `after`
     /// and before `before`: each later cycle, from its arrival at its first
     /// stop (where a trip in the log starts too) to its last stop's
-    /// arrival. A line's trains get their
+    /// arrival, going where the departure board says it goes: the first
+    /// place it turns round, or its last stop. A line's trains get their
     /// trips one at a time from the line, so theirs are not known ahead.
     static func plannedTrips(of train: Train, after: Int64, before: Int64) -> [(from: StationID, to: StationID, start: Int64, end: Int64, isEmptyRun: Bool)] {
         guard train.execution != nil, let period = train.timetablePeriod, period > 0,
-              let first = train.timetable.first, let last = train.timetable.last else { return [] }
+              let first = train.timetable.first, let last = train.timetable.last,
+              let to = train.trip(leaving: 0).map({ train.timetable[$0.upperBound].station }) else { return [] }
         var trips: [(from: StationID, to: StationID, start: Int64, end: Int64, isEmptyRun: Bool)] = []
         // The first cycle that starts after `after`.
         let gap = after - first.arrival.seconds
@@ -236,7 +238,7 @@ public struct TrainRoster: Equatable, Sendable {
             guard !overflow else { break }
             let start = first.arrival.seconds &+ shift
             guard start < before, start >= first.arrival.seconds else { break }
-            trips.append((first.station, last.station, start, last.arrival.seconds &+ shift, false))
+            trips.append((first.station, to, start, last.arrival.seconds &+ shift, false))
             cycle += 1
         }
         return trips

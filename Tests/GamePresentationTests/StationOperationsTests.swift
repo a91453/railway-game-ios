@@ -9,6 +9,40 @@ final class StationOperationsTests: XCTestCase {
         try XCTUnwrap(world.stations.first { $0.name == "Central" }).id
     }
 
+    private static let track = TestLine(tiles: 7)
+
+    /// A and B on one track, and a train of its own on a timetable that
+    /// turns round at B and back at A (A → B → A), every hour, standing at
+    /// A to start its first cycle.
+    private static func ownRoundTrip() throws -> (world: GameWorld, train: TrainID, a: StationID, b: StationID) {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        try track.build(in: &world)
+        let a = try track.buildStation(named: "A", beside: 1, at: 1, in: &world)
+        let b = try track.buildStation(named: "B", beside: 3, at: 1, in: &world)
+        let own = try world.purchaseTrain(named: "Own").id
+        try world.placeTrain(own, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(own, to: 1024)
+        try world.setTrainTimetable(own, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 0), departure: GameTime(minutes: 1)),
+            ScheduledStop(station: b, arrival: GameTime(minutes: 10), departure: GameTime(minutes: 11), reverses: true),
+            ScheduledStop(station: a, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 21), reverses: true),
+        ], repeatingEvery: 3_600)
+        try world.startTrainService(own)
+        world.setSpeed(.normal)
+        return (world, own, a, b)
+    }
+
+    /// A train whose timetable turns round (A → B → A) goes, from A, to B,
+    /// where it turns: as the departure board says, not "ends here" because
+    /// its timetable's last stop is A again.
+    func testATrainThatTurnsRoundGoesToWhereItTurns() throws {
+        let (world, own, a, _) = try Self.ownRoundTrip()
+        guard case .waitingAtStop(0, _)? = world.train(id: own)?.execution else { return XCTFail("it waits at A to start") }
+        let row = try XCTUnwrap(StationOperations(world: world, station: a, use: PlatformUse()).platforms.first { $0.train == own })
+        XCTAssertEqual(row.destination, "B")
+        XCTAssertEqual(row.trainText(lineName: nil, in: .english), "Own to B")
+    }
+
     func testThePlatformsAreNumberedAsThePanelNumbersThemAndShowTheTrainStandingThere() throws {
         var world = DemoWorld.make(in: .english)
         var use = PlatformUse()

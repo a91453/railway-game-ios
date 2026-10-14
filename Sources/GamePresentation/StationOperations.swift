@@ -98,7 +98,8 @@ public struct StationOperations: Equatable, Sendable {
         public let line: LineID?
         public let lineColor: LineColor?
         public let cars: Int
-        /// The last stop of its trip; `nil` when it ends here or has none.
+        /// Where its trip goes (``DepartureBoard/Row/destination``); `nil`
+        /// when it ends here or has none.
         public let destination: String?
         /// Of the last hour, the share with a train standing at it (0 to
         /// 100), and how many minutes of it were seen; `nil` before any.
@@ -215,7 +216,9 @@ public struct StationOperations: Equatable, Sendable {
             let trainID = standing[platform]
             let train = trainID.flatMap { world.train(id: $0) }
             let line = trainID.flatMap { world.assignedLine(of: $0) }
-            let last = train?.timetable.last?.station
+            // Where its trip goes, as the departure board says: the next
+            // place it turns round, or its timetable's last stop.
+            let last = train.flatMap { train in train.currentTrip.map { train.timetable[$0.upperBound].station } }
             let seen = use.use(of: platform, now: now)
             return Platform(
                 number: index + 1,

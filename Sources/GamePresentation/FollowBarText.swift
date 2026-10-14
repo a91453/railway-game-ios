@@ -7,9 +7,10 @@ import GameCore
 ///
 /// The name is the train's; the kind is the service it runs for (its line
 /// or pattern, ``GameWorld/assignedServiceName(of:in:)``); first and last
-/// are its timetable's first and last stops, with the first stop's
-/// departure and the last stop's arrival in the run it is on now (a
-/// repeating timetable's current cycle). The status is the site's
+/// are the first and last stops of the trip it is on (a timetable that
+/// turns round is a trip each way, ``Train/trip(leaving:)``), with the
+/// first stop's departure and the last stop's arrival in the run it is on
+/// now (a repeating timetable's current cycle). The status is the site's
 /// `setFollowStatus`: "Not departed" (`pre`, 尚未發車) before it leaves
 /// its first stop, "Arrived" (`done`, 已抵達) at its last stop, and nothing
 /// while it runs; a line's train on an empty run to an end of its line
@@ -100,9 +101,12 @@ extension GameWorld {
         let line = assignedLine(of: id)
         let kind = assignedServiceName(of: id, in: language)
         let held = line == nil ? nil : lineDispatchHoldText(of: id, in: language).map(FollowBarInfo.Status.held)
-        guard let first = train.timetable.first, let last = train.timetable.last, train.timetable.count > 1 else {
+        // The trip it is on, as the departure board reads it: a timetable
+        // that turns round is a trip each way; one not yet started, its first.
+        guard let trip = train.execution == nil && line == nil ? train.trip(leaving: 0) : train.currentTrip else {
             return FollowBarInfo(name: train.name, line: line, kind: kind, origin: nil, terminus: nil, departure: nil, arrival: nil, status: depotState(of: id).map(FollowBarInfo.Status.depot) ?? held ?? (line == nil ? .running : .notDeparted))
         }
+        let first = train.timetable[trip.lowerBound], last = train.timetable[trip.upperBound]
         let execution = train.execution
         let offset = (train.timetablePeriod ?? 0) &* (execution?.cycle ?? 0)
         let status: FollowBarInfo.Status

@@ -144,6 +144,8 @@ final class TrainRosterTests: XCTestCase {
         // 23:00 is the only cycle still to start today.
         XCTAssertEqual(planned.map(\.start), [23 * 3_600])
         XCTAssertEqual(planned.map(\.end), [23 * 3_600 + 20 * 60])
+        // It goes to B, where it turns, as the departure board says.
+        XCTAssertEqual(planned.map(\.routeText), ["A → B"])
         XCTAssertEqual(row.cells.compactMap(\.number), Array(1...row.cells.count))
         XCTAssertEqual(planned.first?.detailText(in: .english), "No. \(row.cells.count) · Planned")
         XCTAssertEqual(planned.first?.fare, .zero)
