@@ -397,9 +397,10 @@ private struct MapTutorialTarget: View {
 /// tool's options and the action button) shows: by itself when there is
 /// something to show (a tool other than Select, a selection) and not
 /// otherwise, so the map gets the screen; or as the player chose, until
-/// what it would show changes. During the tutorial (decision 188), which
-/// has no toggle, when its step points into it, or for a selection, and
-/// else as for a tool, so a phone's map steps keep the whole map. A
+/// what it would show changes. During the tutorial (decision 188), always
+/// when its step points into it (the toggle is hidden then); otherwise as
+/// the player chose, else for a selection, and else as for a tool, so a
+/// phone's map steps keep the whole map. A
 /// station selected while looking at the map shows its tag over it
 /// instead (decision 119), which opens the card.
 /// On a phone, track being drawn folds it (decision 136): the map's
@@ -442,6 +443,7 @@ private enum ControlDetails {
     static func isOpen(_ session: GameSession, choice: Bool?, foldsWhileDrawing: Bool) -> Bool {
         if let step = session.tutorial?.step {
             if step.usesDetailsCard { return true }
+            if let choice { return choice }
             // The station's tag is hidden in the tutorial.
             if session.tool == .select { return session.selectionText() != nil }
             return !foldsWhileDrawing
@@ -453,8 +455,8 @@ private enum ControlDetails {
     }
 }
 
-/// Shows or hides the details card, from the dock. Hidden during the
-/// tutorial, whose steps open the card when they need it.
+/// Shows or hides the details card, from the dock. Hidden on the
+/// tutorial's steps that point into the card, which keep it open.
 private struct ControlDetailsToggle: View {
     let isOpen: Bool
     let action: () -> Void
@@ -499,7 +501,10 @@ private struct ControlDock: View {
     var body: some View {
         HStack(spacing: 8) {
             ControlPanel(session: session, arrangement: .tools)
-            if session.tutorial == nil {
+            // In the tutorial, only on the steps that do not point into the
+            // card: on a phone on its side it covered a third of the map,
+            // with no way to hide it (a player's report on 59.1).
+            if session.tutorial?.step.usesDetailsCard != true {
                 ControlDetailsToggle(isOpen: isOpen, action: toggle)
                     .disabled(!canToggle)
             }
