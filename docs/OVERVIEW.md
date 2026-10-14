@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 54（機廠 L1，#548）；每個版本一個存檔 fixture，共 58 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 72，76 個情境 | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–214。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–215。141、150、203 曾保留但沒有使用（203 原留給死結修正，#518 改寫成決策 56 之後的修正）；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -396,3 +396,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 211 | 台灣的假日每年照規則算（紀念日及節日實施條例、農曆對照表） |
 | 213 | 沿真實路線描線建造 |
 | 214 | 機廠的建造工具與畫面 |
+| 215 | 路網明信片（直式海報，4:5，可分享） |
