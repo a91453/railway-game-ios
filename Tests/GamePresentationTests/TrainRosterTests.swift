@@ -75,6 +75,10 @@ final class TrainRosterTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(one.cells.last?.end ?? 0, roster.now)
         }
         XCTAssertTrue(roster.rows.allSatisfy { (1...100).contains($0.utilisation) })
+        // A line's train has no planned boxes, and says why in a word.
+        XCTAssertTrue(roster.rows.allSatisfy { $0.isDispatchedByLine && !$0.cells.contains { $0.state == .planned } })
+        XCTAssertEqual(one.dispatchText(in: .traditionalChinese), "依路線派車")
+        XCTAssertEqual(one.dispatchText(in: .english), "Dispatched by line")
         XCTAssertEqual(roster.summaryText(in: .english), "Today · 2 trains · average use \(roster.averageUtilisation!)%")
         XCTAssertEqual(roster.summaryText(in: .traditionalChinese), "今天 · 2 列 · 平均使用率 \(roster.averageUtilisation!)%")
     }
@@ -132,6 +136,8 @@ final class TrainRosterTests: XCTestCase {
         try world.advance(ticks: 22 * 60 + 30)
         let row = try XCTUnwrap(TrainRoster(world: world).rows.first)
         XCTAssertNil(row.line)
+        XCTAssertFalse(row.isDispatchedByLine)
+        XCTAssertNil(row.dispatchText(in: .english))
         let done = row.cells.filter { $0.state != .planned }
         let planned = row.cells.filter { $0.state == .planned }
         XCTAssertFalse(done.isEmpty)
@@ -171,7 +177,7 @@ final class TrainRosterTests: XCTestCase {
 
     /// On an iPhone held sideways, many trains take the short rows.
     func testManyRowsTakeTheShortRows() {
-        XCTAssertFalse(TrainRosterLayout.usesCompactRows(rows: 7, height: 300))
-        XCTAssertTrue(TrainRosterLayout.usesCompactRows(rows: 8, height: 300))
+        XCTAssertFalse(TrainRosterLayout.usesCompactRows(rows: 6, height: 300))
+        XCTAssertTrue(TrainRosterLayout.usesCompactRows(rows: 7, height: 300))
     }
 }

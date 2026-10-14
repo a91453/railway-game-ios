@@ -215,7 +215,7 @@ struct TrainRosterView: View {
 
     private func nameCell(_ row: TrainRoster.Row, compact: Bool) -> some View {
         HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 4) {
                     if let line = row.line, let code = row.lineCode {
                         LineCodeBadge(code: code, color: Palette.lineColor(line, custom: session.world.line(id: line)?.color), size: .small)
@@ -230,6 +230,13 @@ struct TrainRosterView: View {
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
+                    // Why a line's train has no planned boxes.
+                    if let note = row.dispatchText(in: language) {
+                        Text(verbatim: note)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -401,6 +408,7 @@ struct TrainRosterView: View {
 
     private func spoken(_ row: TrainRoster.Row) -> String {
         var parts = [row.name, TrainRoster.shortMoney(row.revenue), language.text("in use \(row.utilisation)%", "使用率 \(row.utilisation)%")]
+        if let note = row.dispatchText(in: language) { parts.append(note) }
         parts += row.cells.map { $0.spokenText(in: language) }
         return parts.joined(separator: "；")
     }
