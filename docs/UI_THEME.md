@@ -328,6 +328,13 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 - 現在的看板寫死 `Color.orange`（慢 N 分）與 `Color.green`（進站中），沒有走 `Theme`，實作時一起換掉。
 - 不用的：未來班用 `panelBorder` 虛線（對 `chip` 只有 1.29／1.50，看不到），改用 `textSecondary`。
 
+## 玩家看的文字
+
+作者 2026-10-14 定的規則（CLAUDE.md Workflow）：遊戲裡給玩家看的文字，中英文都一樣，只說這個按鈕或功能能幫玩家做什麼，一兩句就好。
+
+- 不寫：設計的理由、怎麼算出來的、內部單位或編號（例如「單位」、軌段 #3）、程式或函式庫的名字。這些寫在 `docs/ARCHITECTURE.md` 的決策裡。
+- 照舊保留：資料與授權的署名（例如 © OpenStreetMap、交通部 TDX，`DataSourceCredits`）。
+
 ## 刻意保留（程式碼裡標「Theme: kept」）
 
 ### 永久保留
