@@ -80,6 +80,7 @@ struct LinesPanel: View {
                         newLineRow
                         if let line = session.selectedLine {
                             trainsSection(line)
+                            depotSection(line)
                             stopsSection(line)
                             lineSection(line)
                             operatingSection(line)
@@ -105,6 +106,7 @@ struct LinesPanel: View {
                         linesSection
                         advancedSection
                         if let line = session.selectedLine {
+                            depotSection(line)
                             lineSection(line)
                             operatingSection(line)
                             stopsSection(line)
@@ -569,6 +571,46 @@ struct LinesPanel: View {
     }
 
     // MARK: - The selected line
+
+    /// Decision 214: the depot the line keeps its trains at (decision
+    /// 209), or none, with how many stand in it now; shown once there is a
+    /// depot to choose, or with Advanced unfolded to say how to get one.
+    @ViewBuilder
+    private func depotSection(_ line: ServiceLine) -> some View {
+        if let row = session.selectedLineDepotRow, row.current != nil || !row.choices.isEmpty || showsAdvanced {
+            let language = session.language
+            Section {
+                if row.choices.isEmpty {
+                    Text(verbatim: row.problem ?? "")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                } else {
+                    Picker(selection: Binding(get: { row.current }, set: { session.setSelectedLineDepot($0) })) {
+                        Text(verbatim: language.text("None: trains stay at the ends", "不用機廠：列車停在路線兩端")).tag(StationID?.none)
+                        ForEach(row.choices) { choice in
+                            Text(verbatim: "\(choice.name) · \(choice.distance)").tag(StationID?.some(choice.station))
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Depot", "所屬機廠"))
+                    }
+                    .accessibilityIdentifier("line.depot")
+                }
+                if row.inDepot > 0 {
+                    DepotBadge(text: language.text("\(row.inDepot) in depot", "在庫 \(row.inDepot) 列"))
+                        .accessibilityIdentifier("line.inDepot")
+                }
+            } header: {
+                Text(verbatim: language.text("Depot", "機廠"))
+            } footer: {
+                if !row.choices.isEmpty {
+                    Text(verbatim: language.text(
+                        "With a depot the line's trains leave it before the first train and go back after the last, paying only upkeep while they stand there.",
+                        "有機廠時，列車首班前出庫、收班後入庫，停在機廠只付保養費。"
+                    ))
+                }
+            }
+        }
+    }
 
     /// The selected line's last days (decision 179), and its fares, costs
     /// and why it loses money (decision 194).

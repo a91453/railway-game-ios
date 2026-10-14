@@ -40,6 +40,9 @@ public enum PlayerCommand: Hashable, Sendable {
     /// A passing loop with its signal station (``GameSession/addPassingLoop()``),
     /// as planned (decision 204).
     case addPassingLoop(PassingLoopPlan)
+    /// A depot's sidings and the depot (``GameSession/addDepotYard()``), as
+    /// planned (decision 214).
+    case buildDepotYard(DepotYardPlan)
     /// An edit from a panel or another tool (``Edit``).
     case edit(Edit)
 
@@ -168,6 +171,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildCrossover: "buildCrossover"
         case .addPlatformTrack: "addPlatformTrack"
         case .addPassingLoop: "addPassingLoop"
+        case .buildDepotYard: "buildDepotYard"
         case .edit(let edit): edit.name
         }
     }
@@ -226,6 +230,8 @@ extension GameSession {
         case .addPlatformTrack(let plan):
             outcome.platform = try build(plan, in: &world)
         case .addPassingLoop(let plan):
+            outcome.station = try build(plan, in: &world)
+        case .buildDepotYard(let plan):
             outcome.station = try build(plan, in: &world)
         case .edit(let edit):
             return try apply(edit, to: &world)
@@ -287,6 +293,7 @@ extension PlayerCommand: Codable {
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
         var passingLoop: PassingLoopPlan?
+        var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// The double track's parallel, as a `buildTrack` of its own.
         var parallel: PlayerCommand?
@@ -380,6 +387,9 @@ extension PlayerCommand: Codable {
         case "addPassingLoop":
             guard let plan = record.passingLoop else { throw invalid("a passing loop needs its plan") }
             self = .addPassingLoop(plan)
+        case "buildDepotYard":
+            guard let plan = record.depotYard else { throw invalid("a depot's sidings need their plan") }
+            self = .buildDepotYard(plan)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -445,6 +455,8 @@ extension PlayerCommand: Codable {
             record.platformTrack = plan
         case .addPassingLoop(let plan):
             record.passingLoop = plan
+        case .buildDepotYard(let plan):
+            record.depotYard = plan
         case .edit(let edit):
             record.edit = edit
         }

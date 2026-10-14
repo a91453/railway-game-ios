@@ -270,6 +270,7 @@ struct MapView: View {
                         lights: lights,
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
+                        depotRuns: session.world.depotRuns(),
                         reduceMotion: reduceMotion,
                         running: !session.world.clock.isPaused,
                         language: session.language,
@@ -1579,6 +1580,9 @@ private struct MapTrainCanvas: View, Equatable {
     /// Every train in the map's train colour (the passenger load layer).
     let plain: Bool
     let traffic: TrafficOverlay
+    /// Decision 214: the trains leaving or entering a depot, each with a
+    /// plate over its head (layer 51).
+    let depotRuns: [TrainID: TrainDepotState]
     /// A deadlocked train's mark beats (decision 64, later fix) unless the
     /// player reduces motion.
     let reduceMotion: Bool
@@ -1591,14 +1595,14 @@ private struct MapTrainCanvas: View, Equatable {
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
+            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic && lhs.depotRuns == rhs.depotRuns
             && lhs.reduceMotion == rhs.reduceMotion && lhs.running == rhs.running && lhs.language == rhs.language
             && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, reduceMotion = reduceMotion, running = running, language = language, camera = camera
+        let traffic = traffic, depotRuns = depotRuns, reduceMotion = reduceMotion, running = running, language = language, camera = camera
         // A deadlock beats even while paused; the other waits pulse while
         // the game runs (decision 210).
         let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
@@ -1612,6 +1616,7 @@ private struct MapTrainCanvas: View, Equatable {
                     lights: lights,
                     plain: plain,
                     traffic: traffic,
+                    depotRuns: depotRuns,
                     deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
                     pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
                     language: language,

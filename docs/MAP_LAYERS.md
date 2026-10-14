@@ -30,7 +30,7 @@
 | 27 | 列車的行車許可（交通管制） | `drawAuthorities` | |
 | 28 | 建造工具：城市建物的位置、玩家的建物、建物的預覽 | `drawCityBuildingSites`、`drawPlacedBuildings`、`drawBuildingOverlay` | |
 | 29 | 夜裡車站的燈 | `drawStationLights` | |
-| 30 | 車站（徽章、高鐵的第二圈、選取圈、站名）；機廠（`Station.isDepot`）換成拱門徽章（上圓下平）配 `MapGlyphDepot` | `drawPointStation` | 一站一站畫完，所以後面的站會蓋住前面站的站名。機廠徽章 2026-10-13 作者選定，還沒接程式 |
+| 30 | 車站（徽章、高鐵的第二圈、選取圈、站名）；機廠（`Station.isDepot`）換成拱門徽章（上圓下平）配 `MapGlyphDepot` | `drawPointStation` | 一站一站畫完，所以後面的站會蓋住前面站的站名。機廠徽章 2026-10-13 作者選定，決策 214 接上（`archPath`） |
 | 31 | 拉遠時的站名（帶底牌） | `drawOverviewNames` | |
 | 32 | 候車人數膠囊、擁擠站的量表環（決策 210） | `drawStationProblems` | 所有站與站名畫完才畫，不會被後面的站蓋住；中等縮放起就畫，數量有上限（`MapProblems`） |
 | 33 | 鋪軌的預覽線、錨點 | `drawNetworkOverlay` | |
@@ -38,7 +38,7 @@
 | 35 | 等待列車與擋住它的那段軌道、虛線 | `drawWaits` | |
 | 40 | 時間的色調（multiply，決策 182） | `MapView` 的 `Palette.tint` | 只蓋到上面這些，蓋不到列車 |
 | 50 | 列車（車身、車頭、夜燈） | `MapArt.drawTrains` → `drawTrain` | `MapTrainCanvas`：每一幀重畫 |
-| 51 | 出庫中、入庫中的小方牌：車頭上方、藏青底，`MapGlyphDepotOut`／`MapGlyphDepotIn` 用 `markerFill` 畫 | 還沒接程式（之後畫在列車之後、等待環之前） | 2026-10-13 作者選定。不用圓（避開等待環、量表環、高鐵的第二圈），不帶字（避開白底的等待小牌）；擠不下時先留等待與死結 |
+| 51 | 出庫中、入庫中的小方牌：車頭上方、藏青底，`MapGlyphDepotOut`／`MapGlyphDepotIn` 用 `markerFill` 畫 | `drawTrains` 的 `drawDepotPlate`（決策 214，`GameWorld.depotRuns()`）：畫在列車之後、等待環之前 | 2026-10-13 作者選定。不用圓（避開等待環、量表環、高鐵的第二圈），不帶字（避開白底的等待小牌）；擠不下時先留等待與死結 |
 | 52 | 等待環（遊戲在跑時往外擴散）、死結的警告、為何在等的小牌（決策 210） | `drawWaitMarks`、`drawWaitTag` | 最多 12 個環、6 張小牌，死結先 |
 | 60 | 天氣：壓暗、雨、閃電、颱風標記 | `MapWeatherLayer` → `drawWeather` | |
 | 61 | 鋪軌的放大鏡：同一個 `MapCanvas` 換成 3 倍近的相機，拖曳鋪軌時在一角（#522，一鍵雙線工具） | `MapView` 的 ZStack | 照這張表的 20–35 畫，配色跟著 `MapArt` |
