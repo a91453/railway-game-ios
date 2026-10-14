@@ -496,7 +496,7 @@ extension GameSession {
             let length = stretches.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
             let distance = NetworkBuilding.distanceText(length, in: language)
             var text = language.text(
-                "Traced the real railway for \(distance) (\(stretches.count) edges) for \(cost.moneyText).",
+                "Traced the real railway for \(distance) (\(stretches.count) pieces of track) for \(cost.moneyText).",
                 "沿真實鐵路鋪了 \(distance)（\(stretches.count) 段），花費 \(cost.moneyText)。"
             )
             if plan.stopped, let problem = plan.problem {

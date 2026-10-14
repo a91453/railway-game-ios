@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import XCTest
@@ -137,6 +138,31 @@ final class MapProblemsTests: XCTestCase {
         XCTAssertGreaterThan(reason.longestMinutes, 0)
         XCTAssertEqual(reason.text(in: .english), "No trains on Main")
         XCTAssertEqual(reason.text(in: .traditionalChinese), "Main沒有列車")
+    }
+
+    /// As many wait each way at a middle station: the reason names the
+    /// way out, toward the last stop.
+    func testOnATieTheWayOutIsNamed() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 100_000)
+        for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5)] {
+            try world.buildStation(named: name, at: TestLine.centre(x, 0))
+        }
+        try world.createLine(named: "Main", stops: [Self.alpha, Self.beta, StationID(rawValue: 3)])
+        try world.setStationDemand(Self.beta, to: StationDemand(kind: .residential, dailyTrips: 1_000))
+        world.setSpeed(.normal)
+        try world.advance(ticks: 2)
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        var records = try XCTUnwrap(object["passengers"] as? [[String: Any]])
+        let index = try XCTUnwrap(records.firstIndex { $0["station"] as? Int == 2 })
+        records[index]["waiting"] = [
+            ["count": 5, "destination": 1, "direction": "inbound", "line": 1, "since": 0],
+            ["count": 5, "destination": 3, "direction": "outbound", "line": 1, "since": 0],
+        ]
+        records[index]["released"] = 10
+        records[index]["arrived"] = 0
+        object["passengers"] = records
+        let tied = try JSONDecoder().decode(GameWorld.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(try XCTUnwrap(tied.stationWaitReason(of: Self.beta)).terminus, "Gamma")
     }
 
     func testWithATrainTheReasonSaysWhereToAndHowLong() throws {

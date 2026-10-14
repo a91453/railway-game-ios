@@ -57,6 +57,23 @@ final class StationOperationsTests: XCTestCase {
         XCTAssertEqual(use.use(of: platform, now: start.clock.now).sampled, 1)
     }
 
+    /// At a high speed a game minute is not sampled every minute: the page
+    /// names the minutes the samples span, not how many there are.
+    func testTheMinutesNamedAreThoseSpannedNotTheSamples() throws {
+        var world = DemoWorld.make(in: .english)
+        let station = try central(in: world)
+        var use = PlatformUse()
+        use.record(world)
+        let start = world.clock.now.seconds
+        while world.clock.now.seconds < start + 30 * 60 {
+            try world.advance(ticks: 1)
+        }
+        XCTAssertEqual(world.clock.now.seconds, start + 30 * 60)
+        use.record(world)
+        let row = try XCTUnwrap(StationOperations(world: world, station: station, use: use).platforms.first)
+        XCTAssertEqual(row.sampledMinutes, 31)
+    }
+
     func testBusynessSteps() {
         XCTAssertEqual(StationOperations.Busyness(percent: 0), .quiet)
         XCTAssertEqual(StationOperations.Busyness(percent: 49), .quiet)

@@ -41,11 +41,14 @@ public struct PlatformUse: Equatable, Sendable {
     }
 
     /// How many of the sampled minutes of the last hour before `now` had a
-    /// train at `platform`, and how many minutes were sampled.
-    public func use(of platform: TrackPlatform, now: GameTime) -> (taken: Int, sampled: Int) {
+    /// train at `platform`, how many minutes were sampled, and how many
+    /// minutes the samples span: at a high speed a step passes several
+    /// game minutes, and only one of them is sampled.
+    public func use(of platform: TrackPlatform, now: GameTime) -> (taken: Int, sampled: Int, minutes: Int) {
         let minute = Self.floorMinute(now.seconds)
         let recent = taken.filter { $0.key > minute - Self.window && $0.key <= minute }
-        return (recent.values.filter { $0.contains(platform) }.count, recent.count)
+        let minutes = recent.keys.min().map { Int(minute - $0 + 1) } ?? 0
+        return (recent.values.filter { $0.contains(platform) }.count, recent.count, minutes)
     }
 
     private static func floorMinute(_ seconds: Int64) -> Int64 {
@@ -224,7 +227,7 @@ public struct StationOperations: Equatable, Sendable {
                 cars: train?.cars ?? 0,
                 destination: last == nil || last == station ? nil : last.map { world.stationName($0) },
                 busyPercent: seen.sampled > 0 ? (seen.taken * 100 + seen.sampled / 2) / seen.sampled : nil,
-                sampledMinutes: seen.sampled
+                sampledMinutes: seen.minutes
             )
         }
 

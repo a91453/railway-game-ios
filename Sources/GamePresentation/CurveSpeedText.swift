@@ -30,7 +30,7 @@ extension GameWorld {
     /// with the curve limits off, for a train not running a service, and
     /// where no limit below its top speed holds.
     public func curveLimit(of id: TrainID) -> CurveLimitReading? {
-        guard curveSpeedLimits, let train = train(id: id), case .onEdge(let traversal, let offset)? = train.position,
+        guard curveSpeedLimits, let train = train(id: id), train.execution != nil, case .onEdge(let traversal, let offset)? = train.position,
               let edge = network.edge(traversal.edge) else { return nil }
         let along = traversal.direction == .forward ? offset : edge.length - offset
         if let here = edge.speedLimits.first(where: { $0.start <= along && along < $0.end }), here.speed < train.performance.topSpeed {

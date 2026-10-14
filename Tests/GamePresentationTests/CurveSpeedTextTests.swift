@@ -71,6 +71,16 @@ final class CurveSpeedTextTests: XCTestCase {
         XCTAssertTrue(readings.contains(CurveLimitReading(speed: 75, ahead: false)))
     }
 
+    /// A train standing on the curve that runs no service keeps to no
+    /// limit: there is no reading.
+    func testATrainRunningNoServiceHasNoReading() throws {
+        var (world, _, bend) = try world(limits: true)
+        let parked = try world.purchaseTrain(named: "Red").id
+        try world.placeTrain(parked, at: .onEdge(TrackTraversal(edge: bend, direction: .forward), offset: 4_096))
+        XCTAssertNil(world.train(id: parked)?.execution)
+        XCTAssertNil(world.curveLimit(of: parked))
+    }
+
     func testWithTheLimitsOffThereIsNoReading() throws {
         var (world, train, _) = try world(limits: false)
         for _ in 0..<300 {
