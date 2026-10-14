@@ -35,7 +35,7 @@ public struct RollingStockPricing: Hashable, Sendable {
 extension TrainType {
     /// This type's prices and running-cost weight (decision 180), from its
     /// row of the catalog (decision 225).
-    public var pricing: RollingStockPricing { spec.pricing }
+    public var pricing: RollingStockPricing { TrainTypeCatalog.builtIn[row].pricing }
 }
 
 /// The rules of decision 180 as plain functions of a type and a car count.

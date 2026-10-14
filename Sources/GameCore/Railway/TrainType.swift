@@ -34,7 +34,7 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     }
 
     /// Its code: what saves, golden scenarios and replays store.
-    public var rawValue: String { spec.code }
+    public var rawValue: String { TrainTypeCatalog.builtIn[row].code }
 
     /// Its row of the catalog.
     public var spec: TrainTypeSpec { TrainTypeCatalog.builtIn[row] }
@@ -83,29 +83,29 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public static let referenceDefault: TrainType = .b
 
     /// Passengers a car is rated for (`TRAIN_TYPES[type].ppc`).
-    public var ratedCapacityPerCar: Int64 { spec.ratedCapacityPerCar }
+    public var ratedCapacityPerCar: Int64 { TrainTypeCatalog.builtIn[row].ratedCapacityPerCar }
 
     /// Whether a train of this type takes up to 1.1 times what it is rated
     /// for (`METRO_TRAIN_OPERATIONAL_LOAD_FACTOR`): every type but the
     /// high-speed set, which never overloads (decision 168).
-    public var overloads: Bool { spec.overloads }
+    public var overloads: Bool { TrainTypeCatalog.builtIn[row].overloads }
 
     /// Doors on a car's platform side (gap: the reference has no doors).
-    public var doorsPerCar: Int64 { spec.doorsPerCar }
+    public var doorsPerCar: Int64 { TrainTypeCatalog.builtIn[row].doorsPerCar }
 
     /// How a train of this type runs, when the type has its own way
     /// (decision 153): the steam train's ``TrainPerformance/steam``, the
     /// high-speed set's ``TrainPerformance/highSpeed`` (`PERF_HSR`) and the
     /// EMU3000's ``TrainPerformance/emu3000``. Every other type runs as the
     /// train is set to.
-    public var performance: TrainPerformance? { spec.performance }
+    public var performance: TrainPerformance? { TrainTypeCatalog.builtIn[row].performance }
 
     /// Its family in the catalogue (decision 224).
-    public var family: TrainFamily { spec.family }
+    public var family: TrainFamily { TrainTypeCatalog.builtIn[row].family }
 
     /// Whether it is a high-speed set (decision 168): its family is high
     /// speed.
-    public var isHighSpeed: Bool { spec.family == .highSpeed }
+    public var isHighSpeed: Bool { TrainTypeCatalog.builtIn[row].family == .highSpeed }
 
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.
