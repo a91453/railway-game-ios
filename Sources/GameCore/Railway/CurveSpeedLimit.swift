@@ -53,6 +53,15 @@ public enum CurveSpeedLimit {
     static let steps: Int64 = 64
     /// How many stretches an edge is posted in.
     static let stretches: Int64 = 8
+    /// The least length of track a limit's curvature is the mean over:
+    /// 100 m.
+    public static let smoothing: Int64 = 100 * WorldCoordinate.unitsPerMetre
+
+    /// A curvature × 2^40 per world unit, for a radius in world units
+    /// (`nil`: straight or gentler than ``gentlest``, none).
+    static func bend(_ radius: Int64?) -> Int64 {
+        radius.map { (Int64(1) << 40) / max(1, $0) } ?? 0
+    }
 
     /// The limit, in km/h, for a curve of radius `metres`, or `nil` when it
     /// is at least ``highest``.
@@ -73,7 +82,9 @@ public enum CurveSpeedLimit {
     /// in order, apart and none at the same speed as the next it touches.
     /// Empty for a straight edge.
     ///
-    /// The curvature is read at `t = i ÷ 64`. The edge is posted in
+    /// The curvature is read at `t = i ÷ 64`, and each step's limit is set
+    /// by the mean curvature over ``smoothing`` about it (the whole edge, if
+    /// shorter). The edge is posted in
     /// ``stretches`` stretches of eight steps, as a real line posts one
     /// limit over a stretch rather than one for every few metres: each
     /// takes the lowest limit at its nine steps. Where a step lies along the
@@ -83,8 +94,8 @@ public enum CurveSpeedLimit {
         guard case .cubic(let c1, let c2) = curve, length > 0 else { return [] }
         let a = c1.vector(from: start), b = c2.vector(from: c1), c = end.vector(from: c2)
         let n = steps
-        let speeds = (0...n).map { i in speed(at: i, a: a, b: b, c: c) }
-        guard speeds.contains(where: { $0 != nil }) else { return [] }
+        let radii = (0...n).map { i in radius(at: i, a: a, b: b, c: c) }
+        guard radii.contains(where: { $0 != nil }) else { return [] }
         // The exact points at the steps, rounded, and the chords between.
         var reached: [Int64] = [0]
         var previous = start
@@ -101,6 +112,28 @@ public enum CurveSpeedLimit {
         let chords = reached[reached.count - 1]
         guard chords > 0 else { return [] }
         let along = reached.map { WideInteger.product($0, length).dividedRoundingDown(by: chords).int64 }
+        // Each piece's curvature (× 2^40 per world unit, the mean of its
+        // ends'), then each step's limit from the mean curvature over at
+        // least ``smoothing`` of the edge about the step: a short tight
+        // kink where two cubics meet does not set the limit of a whole
+        // curve, as the curve a real line is built to does not.
+        let bends = (0..<Int(n)).map { k in (bend(radii[k]) + bend(radii[k + 1])) / 2 }
+        let speeds = (0...Int(n)).map { i -> Int64? in
+            var (low, high) = (i, i)
+            while along[high] - along[low] < smoothing, low > 0 || high < Int(n) {
+                if low > 0 { low -= 1 }
+                if high < Int(n) { high += 1 }
+            }
+            var turned = WideInteger(0 as UInt64)
+            for k in low..<high {
+                turned = turned + WideInteger.product(bends[k], along[k + 1] - along[k])
+            }
+            let span = along[high] - along[low]
+            guard span > 0 else { return nil }
+            let mean = turned.dividedRoundingDown(by: span).int64
+            guard mean > 0 else { return nil }
+            return speed(radiusUnits: (Int64(1) << 40) / mean)
+        }
         var limits: [TrackSpeedLimit] = []
         let group = Int(n / stretches)
         for first in stride(from: 0, to: Int(n), by: group) {
@@ -125,6 +158,24 @@ public enum CurveSpeedLimit {
     /// most 2^42 and D2 2^37), keeping seven figures, and the scales are put
     /// back as powers of two.
     static func speed(at i: Int64, a: PlanVector, b: PlanVector, c: PlanVector) -> Int64? {
+        radius(at: i, a: a, b: b, c: c).flatMap(speed(radiusUnits:))
+    }
+
+    /// The limit for a radius of `units` world units, or `nil` when it is
+    /// at least ``highest``: V² = R ÷ 64 × kmhSquaredPerMetre ÷ 100.
+    static func speed(radiusUnits units: Int64) -> Int64? {
+        guard units < gentlest else { return nil }
+        return speed(squared: units * kmhSquaredPerMetre / (Int64(WorldCoordinate.unitsPerMetre) * 100))
+    }
+
+    /// The radius, in world units, from which a curve has no limit: where
+    /// its limit reaches ``highest``.
+    static let gentlest: Int64 = highest * highest * Int64(WorldCoordinate.unitsPerMetre) * 100 / kmhSquaredPerMetre + 1
+
+    /// The radius in world units at step `i` of the cubic whose control
+    /// polygon's pieces are `a`, `b` and `c`, or `nil` where it is straight
+    /// or no tighter than ``gentlest``.
+    static func radius(at i: Int64, a: PlanVector, b: PlanVector, c: PlanVector) -> Int64? {
         let n = steps
         let rest = n - i
         let d1 = PlanVector(dx: rest * rest * a.dx + 2 * rest * i * b.dx + i * i * c.dx,
@@ -135,25 +186,22 @@ public enum CurveSpeedLimit {
         let cross = abs(first.cross(second))
         let squared = first.dx * first.dx + first.dy * first.dy
         guard cross > 0, squared > 0 else { return nil }
-        // R (world units) = 3·|D1′|³·2^(2·shift1) ÷ |X′| ÷ (2M³·2^shift2),
-        // and V² = R ÷ 64 × kmhSquaredPerMetre ÷ 100.
+        // R (world units) = 3·|D1′|³·2^(2·shift1) ÷ |X′| ÷ (2M³·2^shift2).
         let cubed = WideInteger.product(squared, Int64(WideInteger(squared).squareRoot()))
-        var numerator = cubed.multiplied(by: 3 * kmhSquaredPerMetre)
-        // Beyond the highest limit there is nothing to work out (and the
-        // shifts below could overflow).
-        let ceiling = WideInteger.product(highest * highest, Int64(cross))
-            .multiplied(by: 2 * n * n * n * 64 * 100)
+        var numerator = cubed.multiplied(by: 3 as UInt64)
+        // Beyond the gentlest there is nothing to work out (and the shifts
+        // below could overflow).
+        let ceiling = WideInteger.product(gentlest, Int64(cross)).multiplied(by: 2 * n * n * n)
         var exponent = 2 * shift1 - shift2
         while exponent > 0 {
             numerator = numerator.shiftedLeft(by: 1)
             exponent -= 1
             if ceiling < numerator { return nil }
         }
-        let squaredSpeed = numerator.dividedRoundingDown(by: Int64(cross))
-            .dividedRoundingDown(by: 2 * n * n * n * 64 * 100)
+        let radius = numerator.dividedRoundingDown(by: Int64(cross)).dividedRoundingDown(by: 2 * n * n * n)
             .shiftedRight(by: Int(min(63, -exponent)))
-        guard squaredSpeed < WideInteger(highest * highest) else { return nil }
-        return speed(squared: squaredSpeed.int64)
+        guard radius < WideInteger(gentlest) else { return nil }
+        return radius.int64
     }
 
     /// `vector` halved until both components are within 2^24, and how many

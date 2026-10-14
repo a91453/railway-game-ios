@@ -185,6 +185,21 @@ final class CurveSpeedLimitTests: XCTestCase {
         XCTAssertEqual(CurveSpeedLimit.merged([], within: 1_000), [])
     }
 
+    /// The dispatch's request (2026-10-14): a short sharp kink, where a
+    /// drawn line bends most, does not set the limit by itself; the mean
+    /// curvature over 100 m does.
+    func testAShortSharpKinkIsSmoothedOverAHundredMetres() throws {
+        // 1 km, nearly straight but pulled hard sideways near its middle.
+        let (start, end) = (PlanPoint(x: 0, y: 0), PlanPoint(x: 64_000, y: 0))
+        let curve = TrackCurve.cubic(PlanPoint(x: 31_000, y: 6_000), PlanPoint(x: 33_000, y: 6_000))
+        let (_, found) = try limits(start, end, curve)
+        guard case .cubic(let c1, let c2) = curve else { return }
+        let a = c1.vector(from: start), b = c2.vector(from: c1), c = end.vector(from: c2)
+        let pointwise = try XCTUnwrap((0...64).compactMap { CurveSpeedLimit.speed(at: Int64($0), a: a, b: b, c: c) }.min())
+        let smoothed = try XCTUnwrap(found.map(\.speed).min())
+        XCTAssertGreaterThan(smoothed, pointwise, "the tightest point alone would post \(pointwise)")
+    }
+
     func testAnEdgeIsPostedInAtMostEightStretches() throws {
         // An S-curve whose radius changes all along.
         let (_, found) = try limits(PlanPoint(x: 0, y: 0), PlanPoint(x: 64_000, y: 12_800),
