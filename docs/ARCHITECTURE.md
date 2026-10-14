@@ -7460,6 +7460,41 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **沒有驗證的**：之後的年份，人事行政總處每年公告的調整（例如額外的彈性放假）。規則只照條例。
 
+### 213. 沿真實路線描線建造
+
+2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 2 名、§4 波次 2 第 8 項）。號碼依工作登記 #231：main 211，212 預留給區間閉塞，所以取 213。只改畫面（App 與 GamePresentation），GameCore、存檔版本、golden schema 不動。
+
+1. **選項**（`GameSession.networkTracesRealRailway`，預設關）：路網工具鋪設模式多一個「沿真實鐵路」開關，只在實景地圖與全島地圖、而且真實鐵路已讀進來時出現（`canTraceRealRailway`）。和「複線」互斥：描出來的是單線，要複線之後用複線或待避線工具加。
+2. **資料**：App 內附、已畫在底圖下的那份真實鐵路（`track_lines.geojson`，決策 50；有三段已照 OSM 重畫，ODbL 在 `DataSourceCredits`）。不另做 OSM 資料。投影和底圖、示範地圖相同（`RealWorldFrame.worldPosition`）。
+3. **路網**（`RealRailwayTraces`，每張地圖算一次）：世界範圍外 2 km 內碰得到的線；每條線的兩端，若離同一系統的另一條線 60 m 內，就接到那條線上最近的一點（支線從幹線分出、同一條線分成幾段）。兩點之間走最短的路（Dijkstra，節點是線的兩端與接點，幾百個）。不同系統不相接，所以台鐵不會跳到旁邊的捷運。
+4. **吸附**（`networkAnchor(at:reach:)`、`networkDragDraws(from:reach:)`）：打開時，點或拖曳附近沒有既有軌道、但在真實鐵路的觸控範圍內（至少 30 m）時，新節點放在線上最近的一點；從真實鐵路上開始的拖曳也會畫軌道（原本只有從起點或既有軌道開始才會）。既有軌道照舊優先。
+5. **描出來的形狀**（`tracePlan(from:to:)`）：兩端之間的真實中心線，加上兩端本身，照示範地圖的做法：每 5 m 重新取樣、前後 15 m 平均（`WorldPath.smoothed`）；高度用 `TrackRise`（決策 132），坡度上限 38‰（GameCore 的 40‰ 減一點，取整數後也不會超過），跨水面至少 5 m；邊用 `RealWorldDemo.TrackPlan`：三次曲線，節點處方向一致，離中心線 3 m 內、一段最長 960 m、轉角不超過 60°。端點在既有軌道上時沿那條軌道接出去（平順曲線打開時），高度照那條軌道；新的端點照工具的高度站在地面上。結構照工具的設定（預設自動）。
+6. **一個指令**（`PlayerCommand.buildTrackChain`）：一串 `TrackStretch`，每一段從前一段的終點節點開始；全部成功才換掉世界，一次復原就全部拿掉；指令紀錄寫成 `buildTrackChain`，每一段是一個 `buildTrack`（決策 193 的格式），可以在 Linux 重播。
+7. **停下來並說明**：預覽在世界的副本上一段一段蓋，GameCore 拒絕某一段（太陡、太靠近別的軌道、地還沒買、錢不夠……）或那一段彎得比 40 m 急時就停在前一段：預覽畫能蓋的部分、剩下的畫灰虛線，卡片寫「描到 3.2 公里處停下：原因」，按確定只蓋前面那部分。一段都不能蓋時就是一般的不能建造。
+   - **最小半徑**：GameCore 沒有曲線半徑的規則（只有接軌時轉角不超過 90°，決策 103），所以不新增規則。40 m（阿里山林鐵最急的彎）只用來擋住線圖的折角或兩條線接點拉出的髮夾彎。量法照參考 `Ci/` 的 `radiusAtPoint`（三點外接圓），每段取 16 點。
+   - **坡度**：整段找不到 38‰ 以內的高度（例如兩端都接在既有軌道上、高低差太大）時直接說明，不蓋。
+8. **畫面**（`MAP_LAYERS.md` 圖層 22.5，`MapArt.drawTraceableLines`）：打開時把可描的線畫成藏青細虛線（`Palette.ink` 75%），要描的那段加藏青寬光帶與實線，都在玩家的軌道（綠松）與路線色下面。外觀給了三種預覽（A 藏青細虛線、B 淡灰實線、C 藏青點線），作者 2026-10-14 請 session 以開發、美術、玩家三個角度綜合決定，定為 **A**：
+   - 開發：已實作、CI 綠，不必再改；只用現有的 `Palette.ink`，深色模式自動變淺色。
+   - 美術：藏青是 App 圖示的主色，和玩家的綠松軌道、暖黃車站、任何路線色都分得開；淺底 5.6:1、深底 8.2:1。
+   - 玩家：虛線讀起來是「還沒蓋、可以照著描」的導引；B 的淡灰實線在 Apple 地圖上容易被當成道路，C 的點線在手機上太碎、拉遠時糊成一片。
+   - 留意：鋪軌預覽「不能建造」也是虛線，但它是灰色、較粗（約為軌道寬的 0.12 倍），而且只出現在預覽那一段，和細藏青虛線分得開；實機若仍會混淆，再把不能建造的改成紅色。
+
+**參考**（`a91453/railway-reference-private` d3ebdf1）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `projectOntoShape`（把一點投影到線上，回傳沿線距離與垂直距離）、`Ci/` 的 `hsrRuntimeNearestPointOnSegment` | `RealRailwayTraces.nearest(to:on:within:)`、`snap(_:within:group:)` | 同樣的做法，在世界座標上算 |
+| 同一份的 `shapeSlice`（兩個沿線距離之間的一段，反向時倒過來）、`buildFollowRoute`（幾條線串起來） | `RealRailwayTraces.path(from:to:)` | 移植 |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` `makeTopology`、`shortestPath`（OSM 軌道的節點圖與 Dijkstra） | 同上的最短路 | 只取做法：遊戲的線沒有轉轍器資料，節點用線的兩端與接點，不用方向狀態 |
+| `Ci/` 的 `radiusAtPoint`（三點外接圓，海龍公式）、`MIN_TURN_ANGLE_DEG = 90` | `GameSession.tightestRadius(of:)`；轉角照舊（決策 103） | 移植量法；`MIN_CURVE_RADIUS_M`（依設計速度 300–1200 m）在參考裡沒有被用到，也會擋掉真實的台鐵彎道，沒有採用 |
+| `Ci/` 的 `METRO_OSM_LINE_CLICK_TOLERANCE_PX` 8–16 點 | `traceReach`：工具的 24 點觸控範圍，至少 30 m | 沿用工具既有的範圍 |
+| `Railway/site_archive_clean/data/track_style_layers.json` 的 `track-follow-*`（跟隨的那段加寬、加亮） | 吸附時的光帶 | 只取想法，顏色照遊戲的色票 |
+
+`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的（沒有沿既有路線畫線的互動）。參考庫沒有「拖曳時吸附到真實鐵路」的互動，也沒有鐵路的坡度上限，這兩件是這個專案自己的（坡度用 GameCore 的 40‰）。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。
+
+**測試**（`RealRailwayTracingTests`，Linux）：台北到板橋描線（偏一點的點也吸到線上、多段而且全程離真實線 12 m 內、長度約 7.2 km、蓋好一個指令、扣的錢等於預覽、頭尾相接、一次復原）；指令編碼；中間有一條橫過的軌道時停在它前面、說明原因、只蓋前段；關掉或空白地圖時照舊一段；拖曳從真實鐵路開始會畫軌道；曲線半徑的量法。
+
+**沒有驗證的**：App 的開關與疊層的樣子（Linux 不能建置 App，交給 CI 的 iOS build）；實機上拖曳長距離時預覽算得夠不夠快（Linux debug 建置台北到板橋 7 km 約半秒，release 與實機未量）；有地形的實景地圖上描山線的高度與結構。
 
 ### 214. 機廠的建造工具與畫面
 

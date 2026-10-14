@@ -77,6 +77,11 @@ enum MapArt {
             drawCatchmentRings(world, projection: projection, in: context)
         }
 
+        // Decision 213: the real lines the network tool traces, under the
+        // track (docs/MAP_LAYERS.md, 22.5).
+        if let overlay, !overlay.traceable.isEmpty {
+            drawTraceableLines(overlay, projection: projection, in: context)
+        }
         drawNetwork(world, projection: projection, cached: edges, in: context)
         if flowStrokes.isEmpty {
             drawLines(lines, world: world, projection: projection, cached: edges, in: context)
@@ -503,6 +508,25 @@ enum MapArt {
         }
     }
 
+    /// Decision 213: the real lines the network tool can trace, as thin
+    /// navy dashes (ink: light on a dark map), so they read as neither the
+    /// player's track (turquoise) nor a line's colour; the stretch it would
+    /// trace now lit by a wide soft navy band, under the stretch's preview.
+    private static func drawTraceableLines(_ overlay: NetworkOverlay, projection: some MapProjection, in context: GraphicsContext) {
+        // Cut to the view (a real line runs hundreds of kilometres, too many
+        // dashes to draw whole when close in): a dash may shift a little
+        // as a bend comes into the view's margin.
+        let dash = StrokeStyle(lineWidth: 1.6, lineCap: .butt, lineJoin: .round, dash: [6, 4])
+        for line in overlay.traceable {
+            context.stroke(polyline(line, projection: projection), with: .color(Palette.ink.opacity(0.75)), style: dash)
+        }
+        if overlay.tracedWay.count > 1 {
+            let way = polyline(overlay.tracedWay, projection: projection)
+            context.stroke(way, with: .color(Palette.ink.opacity(0.28)), style: StrokeStyle(lineWidth: 16, lineCap: .round, lineJoin: .round))
+            context.stroke(way, with: .color(Palette.ink), style: StrokeStyle(lineWidth: 3.6, lineCap: .round, lineJoin: .round))
+        }
+    }
+
     private static func drawNetworkOverlay(_ overlay: NetworkOverlay, projection: some MapProjection, in context: GraphicsContext) {
         let referenceSize = projection.referenceSize
         if overlay.highlight.count > 1 {
@@ -521,6 +545,12 @@ enum MapArt {
         }
         // The next stretch, and an X crossover's mirrored diagonal (or a
         // double track's parallel) and the double track's crossovers.
+        // Decision 213: the rest of a traced stretch after it stops, as a
+        // stretch that cannot be built.
+        if overlay.unbuilt.count > 1 {
+            let width = max(2, referenceSize * 0.12)
+            context.stroke(wholePolyline(overlay.unbuilt, projection: projection), with: .color(Color.gray), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round, dash: [max(2, referenceSize * 0.25), max(2, referenceSize * 0.2)]))
+        }
         for points in [overlay.preview, overlay.crossing] + overlay.crossovers where points.count > 1 {
             let line = polyline(points, projection: projection)
             let width = max(2, referenceSize * 0.12)

@@ -75,6 +75,15 @@ struct NetworkControls: View {
                 }
                 .toggleStyle(OnOffButtonToggleStyle())
                 .accessibilityIdentifier("network.double")
+                // Decision 213: on a real-world map, follow the real
+                // railway drawn under it.
+                if session.canTraceRealRailway {
+                    Toggle(isOn: $session.networkTracesRealRailway) {
+                        Text(verbatim: session.language.text("Trace real", "沿真實鐵路"))
+                    }
+                    .toggleStyle(OnOffButtonToggleStyle())
+                    .accessibilityIdentifier("network.trace")
+                }
                 Spacer(minLength: 0)
                 Button("Clear") {
                     session.clearNetworkDraft()
@@ -126,6 +135,14 @@ struct NetworkControls: View {
                     }
                     // Decision 204: the double track's crossovers where it
                     // joins the track there, or why there are none.
+                    // Decision 213: where a traced stretch stops, and why.
+                    if let note = preview.traceNote {
+                        Text(verbatim: note)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Theme.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("network.traceNote")
+                    }
                     if let note = preview.crossoverNote {
                         Text(verbatim: note)
                             .font(.footnote)

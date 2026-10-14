@@ -89,12 +89,15 @@ extension GameSession {
 
     /// Where a tap or a drag at `point` picks an end of the next stretch
     /// of track (see ``tapNetwork(at:reach:)``).
+    /// Tracing the real railway (decision 213), a new point near a real
+    /// line is on it.
     func networkAnchor(at point: PlanPoint, reach: Int64) -> NetworkAnchor {
-        networkSnapsToTrack
+        let free = NetworkAnchor.point(tracedPoint(near: point, reach: reach) ?? point)
+        return networkSnapsToTrack
             ? world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
                 ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
-                ?? .point(point)
-            : .point(point)
+                ?? free
+            : free
     }
 
     // MARK: - Building
@@ -128,11 +131,14 @@ extension GameSession {
         let key = NetworkPreviewMemo.Key(
             start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
-            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, worldRevision: worldRevision
+            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, traces: tracesRealRailway, worldRevision: worldRevision
         )
         if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
+        } else if let traced = tracePreview(from: start, to: end) {
+            // Decision 213: along the real line, when both ends are on one.
+            (traced, [])
         } else {
             // The double track's parallel is drawn as the crossover's
             // middle is: a second line.
@@ -150,6 +156,10 @@ extension GameSession {
     public func buildNetworkTrack() {
         if scissorsPlan() != nil {
             buildNetworkScissors()
+            return
+        }
+        // Decision 213: along the real line, when both ends are on one.
+        if let start = networkStart, let end = networkEnd, buildTracedTrack(from: start, to: end) {
             return
         }
         guard let start = networkStart, let end = networkEnd else {
@@ -997,6 +1007,13 @@ public struct NetworkOverlay: Hashable, Sendable {
     public var crossovers: [[WorldCoordinate]] = []
     /// Whether GameCore would build it.
     public var previewIsBuildable = false
+    /// The rest of a traced stretch after it stops (decision 213), drawn
+    /// as a stretch that cannot be built.
+    public var unbuilt: [WorldCoordinate] = []
+    /// The real lines the tool can trace, and the stretch of them it
+    /// would trace now (decision 213), drawn under the track.
+    public var traceable: [[WorldCoordinate]] = []
+    public var tracedWay: [WorldCoordinate] = []
     /// The centre line of what the platform or remove mode picked.
     public var highlight: [WorldCoordinate] = []
     public var highlightKind: Highlight = .removal
@@ -1014,6 +1031,8 @@ extension GameSession {
         var overlay = NetworkOverlay()
         switch networkMode {
         case .build:
+            overlay.traceable = traceableRealLines
+            if !overlay.traceable.isEmpty { overlay.tracedWay = networkTracedWay }
             if let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) {
                 overlay.anchors = [from, to]
             } else {
@@ -1024,6 +1043,7 @@ extension GameSession {
                 overlay.crossing = draft.crossing
                 overlay.crossovers = draft.preview.crossovers
                 overlay.previewIsBuildable = draft.preview.problem == nil
+                overlay.unbuilt = draft.preview.unbuilt
                 overlay.cleared = draft.preview.cleared.map(PlanRect.init)
             }
         case .platform:
@@ -1133,6 +1153,7 @@ struct NetworkPreviewMemo {
         let easesGrade: Bool
         let buildsDouble: Bool
         let doubleSide: PlatformTrackSide
+        let traces: Bool
         let worldRevision: Int
     }
 

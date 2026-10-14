@@ -99,6 +99,15 @@ public struct NetworkPreview: Hashable, Sendable {
     /// What the double track does about joining the track there: the
     /// crossovers it adds, or why it adds none; `nil` when it joins none.
     public var crossoverNote: String? = nil
+    /// How many edges a stretch traced along a real line has (decision
+    /// 213); `nil` for one stretch.
+    public var traced: Int? = nil
+    /// Where a traced stretch stops and why; `nil` when it reaches the
+    /// picked end.
+    public var traceNote: String? = nil
+    /// The rest of a traced stretch after it stops, drawn as one that
+    /// cannot be built.
+    public var unbuilt: [WorldCoordinate] = []
 }
 
 /// What a stretch of track the network tool would build costs, part by

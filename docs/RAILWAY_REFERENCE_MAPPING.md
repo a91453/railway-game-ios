@@ -1508,3 +1508,7 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有）中等縮放的候車膠囊、擁擠的量表環、等待環的擴散與原因小牌、數量上限 | `MapArt.drawStationProblems`、`drawCrowdedRing`、`drawWaitMarks`、`drawWaitTag`；`MapProblems` | gap → 原生 |
 
 沒有新的圖示，人形三階是現有的 `MapGlyphPerson`、`MapGlyphCrowd`、`MapGlyphFull`。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。
+
+## 沿真實路線描線建造（決策 213）
+
+參考庫 d3ebdf1。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 213 的「參考」：`Railway/site_archive_clean/index.html` 的 `projectOntoShape`、`shapeSlice`、`buildFollowRoute` 移植成 `RealRailwayTraces`；`rail-3d/physical/topology.js` 的最短路只取做法；`Ci/` 的 `radiusAtPoint` 移植成 `GameSession.tightestRadius(of:)`，`MIN_CURVE_RADIUS_M` 沒有採用；`track_style_layers.json` 的 `track-follow-*` 只取想法。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部專案沒有用到。

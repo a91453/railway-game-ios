@@ -374,8 +374,20 @@ public final class GameSession {
     /// Whether each stretch gets a second track beside it, 5 m apart
     /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
     /// way it is drawn.
-    public var networkBuildsDouble = false
+    public var networkBuildsDouble = false {
+        // Decision 213: a traced stretch is single track.
+        didSet { if networkBuildsDouble { networkTracesRealRailway = false } }
+    }
     public var networkDoubleSide: PlatformTrackSide = .left
+    /// Whether the next stretch follows the real railway under a
+    /// real-world map (decision 213, ``tracePlan(from:to:)``): ends snap
+    /// to the real lines, and the track between follows them.
+    public var networkTracesRealRailway = false {
+        didSet { if networkTracesRealRailway { networkBuildsDouble = false } }
+    }
+    /// The real lines of the map, projected once for each map (decision
+    /// 213, ``realRailwayTraces``).
+    @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
