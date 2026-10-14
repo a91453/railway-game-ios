@@ -48,8 +48,11 @@ final class LineDispatchTextTests: XCTestCase {
         XCTAssertEqual(session.world.lineDispatchHold(of: train), .awayFromFirstStop(firstStop: stops[0]))
         XCTAssertEqual(
             session.world.trainPathStatusText(of: train, in: .traditionalChinese),
-            "不在首站 Alpha：派它到首站，或開啟彈性發車"
+            "不在首站 Alpha：派它到首站"
         )
+        // No control turns flexible dispatch on: the text names only what
+        // the player can do.
+        XCTAssertEqual(session.world.trainPathStatusText(of: train, in: .english), "Not at the first stop Alpha: send it there")
 
         // With flexible dispatch the line runs it empty to an end instead.
         var flexible = session.world
@@ -107,6 +110,19 @@ final class LineDispatchTextTests: XCTestCase {
         let unused = try XCTUnwrap(world.lineUnusedTrains(ofTrain: second))
         XCTAssertEqual(unused.busiest, 1)
         XCTAssertEqual(unused.raised, TrainsInService(peak: 2, offPeak: 2, low: 0), "the quiet level keeps its 0")
+    }
+
+    /// A line run to a headway sets its trains by the headway, not by the
+    /// counts: running every train by the counts would change nothing, so
+    /// it is not offered.
+    func testALineRunToAHeadwayIsNotOfferedToRunMoreByTheCounts() throws {
+        var (world, _, first, second) = try lineWorld()
+        try world.assignTrain(first, to: Self.main)
+        try world.assignTrain(second, to: Self.main)
+        try world.setLineTrainsInService(Self.main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        XCTAssertNotNil(world.lineUnusedTrains(ofTrain: second), "by the counts it runs one of two")
+        try world.setLineTargetHeadways(Self.main, to: TargetHeadways(peak: 60, offPeak: 60, low: 60), pattern: nil)
+        XCTAssertNil(world.lineUnusedTrains(ofTrain: second))
     }
 
     func testTheTrainCardOffersTheLineMenuOnlyForAPlacedTrainWithoutALine() throws {

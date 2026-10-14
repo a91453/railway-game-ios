@@ -220,7 +220,8 @@ extension GameWorld {
         guard let most = counts.max(by: { a, b in
             if a.value != b.value { return a.value < b.value }
             if a.key.line != b.key.line { return a.key.line > b.key.line }
-            return a.key.direction == .outbound && b.key.direction == .inbound
+            // The larger is the one named: outbound on a tie.
+            return a.key.direction == .inbound && b.key.direction == .outbound
         }), let line = line(id: most.key.line) else { return nil }
         let hasTrains = !line.trains.isEmpty || line.patterns.contains { !$0.trains.isEmpty }
         let end = most.key.direction == .outbound ? line.stops.last : line.stops.first

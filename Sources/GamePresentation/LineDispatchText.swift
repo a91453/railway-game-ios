@@ -38,6 +38,10 @@ extension GameWorld {
     public func lineUnusedTrains(ofTrain id: TrainID) -> LineUnusedTrains? {
         guard let lineID = assignedLine(of: id), let line = line(id: lineID) else { return nil }
         let pattern = assignedPattern(of: id)
+        // A level run to a target headway takes its trains from the
+        // headway, not the counts: raising the counts would change nothing.
+        let targets = pattern.map { line.patterns[$0].targetHeadways } ?? line.targetHeadways
+        guard targets == .none else { return nil }
         let counts = pattern.map { line.patterns[$0].trainsInService } ?? line.trainsInService
         let assigned = (pattern.map { line.patterns[$0].trains } ?? line.trains).count
         let target = min(TrainsInService.maximum, line.isRing ? assigned + assigned % 2 : assigned)
@@ -58,8 +62,8 @@ extension GameWorld {
         case .awayFromFirstStop(let first):
             let name = stationName(first)
             return language.text(
-                "Not at the first stop \(name): send it there, or turn on flexible dispatch",
-                "不在首站 \(name)：派它到首站，或開啟彈性發車"
+                "Not at the first stop \(name): send it there",
+                "不在首站 \(name)：派它到首站"
             )
         case .noRoundTrip(let first):
             let name = stationName(first)
