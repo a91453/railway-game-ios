@@ -334,7 +334,7 @@ extension GameSession {
                     "\(line.name) 的 \(world.train(id: train)?.name ?? "列車") 正在跑班次。請等它跑完，或先讓它離開路線。"
                 ))
             } else {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                message = refusal(error)
             }
         }
     }

@@ -272,7 +272,7 @@ extension GameSession {
             if outcome.highSpeed { text += language.nowHighSpeedText(line.name) }
             message = StatusMessage(kind: changed > 0 || left.isEmpty ? .success : .failure, text: text)
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error, doing: .edit(.reformLine(line.id, type: type, cars: cars, language: language)))
         }
     }
 

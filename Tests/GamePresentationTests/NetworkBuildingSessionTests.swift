@@ -404,13 +404,13 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.b, reach: Self.reach)
             let preview = session.networkPreview
             XCTAssertNil(preview?.cost)
-            XCTAssertEqual(preview?.problem, "Not enough cash: this costs $ 4.00 and you have $ 3.00.")
+            XCTAssertEqual(preview?.problem, "Not enough cash: this costs $ 4 and you have $ 3.")
             XCTAssertEqual(preview?.points.count, 2, "the stretch is still drawn")
 
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, world, "no node without its edge")
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash: this costs $ 4.00 and you have $ 3.00."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash to lay this track: it costs $ 4 and you have $ 3.", fundsNeeded: Money(400)))
             XCTAssertEqual(session.networkStart, .point(Self.a), "the draft is kept")
         }
     }

@@ -206,6 +206,7 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertFalse(world.keepLeft, "its routes are as they were measured; its up line is laid west of the down line already (decision 202)")
         XCTAssertFalse(world.realisticOperation, "it runs the real timetable, whose times its trains keep to (decision 207)")
         XCTAssertFalse(world.blockSections, "with traffic control off, as measured; turning both on waits for its own measure (decision 212)")
+        XCTAssertFalse(world.curveSpeedLimits, "it runs the real timetable as measured (decision 217)")
     }
 
     /// Each line runs the same day again and again: the day's runs and
@@ -280,6 +281,54 @@ final class HighSpeedDemoTests: XCTestCase {
                 }
             }
         }
+    }
+
+    /// Decision 217 (the owner's condition): with the curve limits on, the
+    /// sets keep to the real day as well as they do with them off: no set
+    /// is ever later, over an hour and a half from 07:00. Where a real leg's time
+    /// fits only without the limits (the drawn curves tighter than the real
+    /// ones), the run does without them. The legs' margins (the least real
+    /// time against the least time with the limits) go to the log.
+    func testWithCurveLimitsTheSetsKeepToTheRealDayAsWell() throws {
+        var latest: [Bool: [TrainID: Int64]] = [:]
+        for limits in [false, true] {
+            var world = try Self.opened.get()
+            world.setCurveSpeedLimits(limits)
+            var worst: [TrainID: Int64] = [:]
+            for _ in 0..<90 {
+                try world.advance(ticks: 1)
+                for train in world.trains where train.execution != nil {
+                    worst[train.id] = max(worst[train.id] ?? 0, world.lateness(of: train.id) ?? 0)
+                }
+            }
+            latest[limits] = worst
+        }
+        let off = try XCTUnwrap(latest[false]), on = try XCTUnwrap(latest[true])
+        XCTAssertFalse(on.isEmpty)
+        for (train, late) in on {
+            XCTAssertLessThanOrEqual(late, off[train] ?? 0, "train \(train.rawValue)")
+        }
+
+        var (_, world, _) = try Self.built.get()
+        world.setCurveSpeedLimits(true)
+        var rows: [(String, Int64, Int64, Int64)] = []
+        for line in world.lines {
+            let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil), line.name)
+            for leg in journey.legs where leg.path.distance > 0 {
+                let real = line.runs.compactMap { run -> Int64? in
+                    let calls = run.calls
+                    guard let at = calls.firstIndex(of: leg.from), at + 1 < calls.count, calls[at + 1] == leg.to else { return nil }
+                    return run.times[at + 1].arrival - run.times[at].departure
+                }.min()
+                guard let real, let free = RunningCurve.leastSeconds(length: leg.path.distance, performance: line.performance) else { continue }
+                rows.append(("\(line.name) \(leg.from)→\(leg.to)", real, free, leg.seconds))
+            }
+        }
+        let report = rows.sorted { $0.1 - $0.3 < $1.1 - $1.3 }.map { row in
+            let note = row.3 > row.1 ? (row.2 > row.1 ? " (over even without the limits)" : " (fits only without the limits: relaxed)") : ""
+            return "\(row.0): real \(row.1) s, least \(row.2) s off, \(row.3) s with limits, margin \(row.1 - row.3) s\(note)"
+        }
+        FileHandle.standardError.write(Data(("curve limits, least margins first:\n" + report.joined(separator: "\n") + "\n").utf8))
     }
 
     /// The game starts with the money of a new game: what the track, the

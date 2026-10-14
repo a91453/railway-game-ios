@@ -181,7 +181,7 @@ extension GameSession {
                 return
             }
         } catch {
-            message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+            message = refusal(error)
             return
         }
         // Decision 193: the plan is the command; building it again on the

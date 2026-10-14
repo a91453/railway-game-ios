@@ -86,10 +86,11 @@ extension GameWorld {
     /// (`length >= 1`), or `nil` when its performance builds no curve for
     /// it: the least in which it builds one (Stage W2c); with realistic
     /// operation (decision 207) the least at its usual rates, and
-    /// ``recoveryMarginPercent`` more.
-    func plannedSeconds(length: Int64, line: ServiceLine) -> Int64? {
-        guard realisticOperation else { return RunningCurve.leastSeconds(length: length, performance: line.performance) }
-        guard let least = RunningCurve.leastSeconds(length: length, performance: line.performance.usualRates) else { return nil }
+    /// ``recoveryMarginPercent`` more. With ``curveSpeedLimits`` on
+    /// (decision 217), under `limits`, the curve speed limits of the leg.
+    func plannedSeconds(length: Int64, line: ServiceLine, limits: [TrackSpeedLimit] = []) -> Int64? {
+        guard realisticOperation else { return RunCurve.leastSeconds(length: length, performance: line.performance, limits: limits) }
+        guard let least = RunCurve.leastSeconds(length: length, performance: line.performance.usualRates, limits: limits) else { return nil }
         let margin = (least * Self.recoveryMarginPercent + 99) / 100
         return min(least + margin, RunningCurve.maximumSeconds)
     }

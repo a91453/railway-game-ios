@@ -55,8 +55,10 @@ extension GameWorld {
             let length: Int64
             let seconds: Int64
             let performance: TrainPerformance
+            /// Decision 217.
+            let limits: [TrackSpeedLimit]
         }
-        var curves: [CurveQuery: RunningCurve?] = [:]
+        var curves: [CurveQuery: RunCurve?] = [:]
         /// Each train's reservation in a ``ReservedTrack`` (see
         /// ``reservedTrack(of:memo:)``), for its last reservation asked about.
         var reserved: [TrainID: (reservation: [TrackResource], reserved: ReservedTrack)] = [:]
@@ -81,6 +83,8 @@ extension GameWorld {
             let keepLeft: Bool
             /// Decision 207: the legs' planned seconds.
             let realisticOperation: Bool
+            /// Decision 217: the legs' planned seconds.
+            let curveSpeedLimits: Bool
 
             init(_ world: GameWorld) {
                 network = world.network
@@ -90,6 +94,7 @@ extension GameWorld {
                 flexDispatch = world.flexDispatch
                 keepLeft = world.keepLeft
                 realisticOperation = world.realisticOperation
+                curveSpeedLimits = world.curveSpeedLimits
             }
         }
         /// The most of each it keeps: beyond it, it starts again.
@@ -97,7 +102,7 @@ extension GameWorld {
         private var key: Key?
         private var trafficParts = TrafficParts()
         private var paths = PathMemo()
-        private var curves: [DirectionMemo.CurveQuery: RunningCurve?] = [:]
+        private var curves: [DirectionMemo.CurveQuery: RunCurve?] = [:]
 
         static func == (_: Self, _: Self) -> Bool {
             true
@@ -115,6 +120,13 @@ extension GameWorld {
             memo.trafficParts = trafficParts
             memo.paths = paths
             memo.curves = curves
+        }
+
+        /// The curve kept for `query`, if one was: a curve depends on its
+        /// query alone, whatever the key (decision 217: a run under limits
+        /// is worth not building again).
+        func curve(for query: DirectionMemo.CurveQuery) -> RunCurve?? {
+            curves[query]
         }
 
         /// Keeps what `memo` worked out over a call of

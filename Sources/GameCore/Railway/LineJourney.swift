@@ -446,7 +446,7 @@ extension GameWorld {
             guard let path = chosen else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
-                guard let least = plannedSeconds(length: path.distance, line: line) else { return nil }
+                guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: placement, along: path, below: line.performance.topSpeed)) else { return nil }
                 legSeconds = least
             }
             let (total, overflow) = seconds.addingReportingOverflow(legSeconds)
@@ -478,7 +478,7 @@ extension GameWorld {
             guard let path = linePath(line, from: from, to: to, start: placement.position, length: placement.length, routes: routes) else { return nil }
             var legSeconds: Int64 = 0
             if path.distance > 0 {
-                guard let least = plannedSeconds(length: path.distance, line: line) else { return nil }
+                guard let least = plannedSeconds(length: path.distance, line: line, limits: speedLimits(from: placement, along: path, below: line.performance.topSpeed)) else { return nil }
                 legSeconds = least
             }
             let (total, overflow) = seconds.addingReportingOverflow(legSeconds)

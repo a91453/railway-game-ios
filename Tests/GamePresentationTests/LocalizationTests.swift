@@ -44,7 +44,7 @@ final class LocalizationTests: XCTestCase {
         }
         XCTAssertEqual(
             GameError.insufficientFunds(required: 50_000, available: 1_234).playerMessage(in: .traditionalChinese),
-            "餘額不足：需要 $ 500.00，目前只有 $ 12.34。"
+            "餘額不足：需要 $ 500，目前只有 $ 12。"
         )
         XCTAssertEqual(GameError.trackEdgeInUse(.edge(2)).playerMessage(in: .traditionalChinese), "這段軌道上有列車。請先把列車移出軌道。")
         XCTAssertEqual(GameError.trackNodeInUse(.node(2)).playerMessage(in: .traditionalChinese), "還有軌道接在這裡。請先拆除那段軌道。")
