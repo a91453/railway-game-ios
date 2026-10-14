@@ -55,7 +55,7 @@ final class TrafficControlTimingReportTests: XCTestCase {
             for e in loop.up.edges { kinds[e] = "uploop\(n)" }
         }
         for e in built.crossovers { kinds[e] = "crossover" }
-        for (n, yard) in built.yards.enumerated() { for e in yard.edges { kinds[e] = "yard\(n)" } }
+        for (n, yard) in built.sidings.enumerated() { for e in yard.edges { kinds[e] = "depot\(n)" } }
         let deadlocked = Set(world.deadlockedTrains())
         let names = world.stations.map(\.name)
         say("-- \(world.clock.now.minute / 60 % 24):\(String(format: "%02d", world.clock.now.minute % 60)) --")

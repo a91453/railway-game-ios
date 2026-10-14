@@ -26,11 +26,14 @@ import GameCore
 ///   real stations have side platforms and through tracks. Taichung has a
 ///   second loop beside each, for the sets that turn back there; Taipei and
 ///   Taichung a crossover beyond each end, where those sets go over to the
-///   other way's track. Each end has its platform on the down track and a
-///   yard of dead-end tracks either side of it, each with a platform, where
-///   the sets stand on the first night (``Yard``); with traffic control off
-///   a set coming in stops at the end's own platform, on any there, as
-///   before.
+///   other way's track. Each end has its platform on the down track.
+/// - Three depots stand where the real ones do (decision 221,
+///   ``realDepots``, from OpenStreetMap): Nangang's sidings beyond its
+///   station, Wuri's south of Taichung and Zuoying's north of its station,
+///   each a ladder of dead-end sidings beside the down track, one for each
+///   set that stands there at night (``Depot``). Every line keeps its sets
+///   in them: a set goes into the nearest when no run wants it for two
+///   hours, and comes out in time for its next run.
 /// - A station's platforms are staggered (decision 197), each
 ///   ``platformStagger`` beyond the one before, north to south: the down
 ///   through track's, the down loop's, the up loop's, the up through
@@ -65,7 +68,7 @@ import GameCore
 ///   a half to two hours late, at some 40 minutes of computing a game day. Off, a
 ///   set may still run into one going its own way ahead of it; on the real
 ///   timetable, with the expresses passing the all-stops sets at the loops,
-///   that is seldom. The yards, the crossovers and the staggered platforms
+///   that is seldom. The depots, the crossovers and the staggered platforms
 ///   are what traffic control would need when its rules allow it.
 public enum HighSpeedDemo {
     /// Cars of every set.
@@ -86,8 +89,8 @@ public enum HighSpeedDemo {
     /// How long the up track's ramps from the down track are, and the
     /// loops'.
     static let rampLength = 100.0 * RealWorldDemo.metre
-    /// How long each track of a yard takes to move a track's width out from
-    /// the one before.
+    /// How long each siding of a depot takes to move a track's width out
+    /// from the one before.
     static let yardStep = 60.0 * RealWorldDemo.metre
     /// How far beyond a turnback station's loops its crossovers begin, and
     /// how long they are.
@@ -192,21 +195,66 @@ public enum HighSpeedDemo {
         let point: WorldVector
     }
 
-    /// An end's yard: dead-end tracks either side of the down track beyond
-    /// the end's platform, each `yardStep` further out than the one before
-    /// and branching from it, the first from the down track, a track's width
-    /// apart, each with a platform beside the end's.
-    struct Yard {
-        /// Each side's tracks, the nearest first: east of the down track,
-        /// then west.
+    /// A real depot (decision 221): its name and where OpenStreetMap has
+    /// its yard tracks (`tools/hsr-depots/hsr_depots.json`, the centre of
+    /// each cluster; ODbL 1.0).
+    struct RealDepot {
+        let english: String
+        let chinese: String
+        let latitude: Double
+        let longitude: Double
+    }
+
+    /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
+    /// sidings beyond its station (towards Xizhi), Wuri's south of Taichung
+    /// and Zuoying's north of its station.
+    static let realDepots = [
+        RealDepot(english: "Nangang Depot", chinese: "南港機廠", latitude: 25.054203, longitude: 121.615057),
+        RealDepot(english: "Wuri Depot", chinese: "烏日機廠", latitude: 24.093566, longitude: 120.624164),
+        RealDepot(english: "Zuoying Depot", chinese: "左營機廠", latitude: 22.696992, longitude: 120.318536),
+    ]
+
+    /// The sidings a depot has beyond one for each set that stands there on
+    /// the first night: one to spare. Over a week the sets stand each night
+    /// where they stood the first.
+    static let spareSidings = 1
+
+    /// How long each siding of a depot runs beside the down track past its
+    /// ladder: a set's platform with a margin either side, and a ramp.
+    static let sidingRun = Double(platformLength) + 2 * RealWorldDemo.platformMargin + rampLength
+
+    /// A depot as laid out (decision 221): a ladder of dead-end sidings
+    /// beside the down track, on the side OpenStreetMap has the real one,
+    /// centred where it lies along the line. Each side's first siding
+    /// leaves the down track at ``entry``, each other from the one before
+    /// it a `yardStep` further in and a track's width further out; all run
+    /// beside the down track to ``deadEnd``, each with a platform for one
+    /// set before its end. One siding for each set that stands there at
+    /// night. A depot beyond the line's end (Nangang's) has sidings both
+    /// sides of the down track.
+    struct Depot {
+        let real: RealDepot
+        /// Where its sidings leave the down track and where they end, along
+        /// the down track's path.
+        let entry: Double
+        let deadEnd: Double
+        /// Each side's sidings, the nearest the down track first: east of
+        /// it (the down track's side), then west.
         let east: [RealWorldDemo.TrackPlan]
         let west: [RealWorldDemo.TrackPlan]
+        /// The station whose sets stand here, by index: the depot serves it
+        /// from that way.
+        let serving: [Int]
 
-        /// How many tracks a side needs for `sets` standing at the end at
-        /// night: the end's own platform takes one, the yard the rest, and
-        /// a track to spare on each side for the sets coming and going.
-        static func tracks(for sets: Int) -> Int {
-            (max(0, sets - 1) + 1) / 2 + 1
+        /// Whether the sidings run south of where they leave the down
+        /// track, so that a set leaves them northbound.
+        var southward: Bool { deadEnd > entry }
+
+        /// Where the platform of each siding lies along the down track's
+        /// path: before its dead end, a margin short of it.
+        var platform: ClosedRange<Double> {
+            let margin = RealWorldDemo.platformMargin, length = Double(HighSpeedDemo.platformLength)
+            return southward ? (deadEnd - margin - length)...(deadEnd - margin) : (deadEnd + margin)...(deadEnd + margin + length)
         }
     }
 
@@ -216,7 +264,7 @@ public enum HighSpeedDemo {
     /// Two tracks: ``plan``, the down track on the real alignment from
     /// Nangang's end to Zuoying's, and ``up``, the up track beside it,
     /// west of it as the real trains keep left, which leaves the down track
-    /// at ``junctions`` just beyond the ends' yards.
+    /// at ``junctions`` a ramp beyond the ends' platforms.
     struct Layout {
         let plan: RealWorldDemo.TrackPlan
         let up: RealWorldDemo.TrackPlan
@@ -240,8 +288,13 @@ public enum HighSpeedDemo {
         /// back reaches, from its north crossover to its south one: the
         /// track there is run both ways.
         let turnbackReach: [Int: ClosedRange<Double>]
-        /// The two ends' yards.
-        let yards: (north: Yard, south: Yard)
+        /// The real depots (decision 221), north to south.
+        let depots: [Depot]
+        /// The crossovers from the up track to the down track north of a
+        /// depot beside the line south of a station where sets turn back
+        /// (Wuri's): a set that came in northbound there runs south along
+        /// the up track and over to the down track to reach it.
+        let depotCrossovers: [RealWorldDemo.TrackPlan]
         let stops: [Stop]
         let platforms: [ClosedRange<Double>]
         let timetable: HighSpeedTimetable
@@ -302,14 +355,9 @@ public enum HighSpeedDemo {
 
             let ramp = HighSpeedDemo.rampLength, margin = RealWorldDemo.platformMargin, step = HighSpeedDemo.yardStep
             let reach = HighSpeedDemo.crossoverReach
-            // Each end's yard from a ramp beyond its platform's margin; the
-            // turnouts a ramp beyond the yards, the up track's ramps a ramp
-            // long.
-            let sides = (north: Yard.tracks(for: standing[0]), south: Yard.tracks(for: standing[last]))
-            let yardEnds = (north: platforms[0].upperBound + margin, south: platforms[last].lowerBound - margin)
-            let junctions = (
-                north: yardEnds.north + Double(sides.north) * step + ramp, south: yardEnds.south - Double(sides.south) * step - ramp
-            )
+            // The turnouts a ramp beyond each end's platform's margin, the up
+            // track's ramps a ramp long.
+            let junctions = (north: platforms[0].upperBound + margin + ramp, south: platforms[last].lowerBound - margin - ramp)
             self.junctions = junctions
             let upEnds = (north: junctions.north + ramp, south: junctions.south - ramp)
             // Each loop leaves its track a ramp before the platform's margin
@@ -326,16 +374,61 @@ public enum HighSpeedDemo {
                 let ends = outerEnds(station), turn = turns[station]!
                 return (turn.north ? [[ends.north - 2 * reach, ends.north - reach]] : []) + (turn.south ? [[ends.south + reach, ends.south + 2 * reach]] : [])
             }
-            // The yards' tracks end at the far margin of the ends' platforms.
-            let buffers = (north: platforms[0].lowerBound - margin, south: platforms[last].upperBound + margin)
-            let yardNodes = [buffers.north, buffers.south] + (0...sides.north).map { yardEnds.north + Double($0) * step }
-                + (0...sides.south).map { yardEnds.south - Double($0) * step }
+
+            // Decision 221: the depots, where OpenStreetMap has them along
+            // the line. The sets standing at a station at night stand in the
+            // depot nearest it along the line, one siding each.
+            let middles = platforms.map { ($0.lowerBound + $0.upperBound) / 2 }
+            let places = HighSpeedDemo.realDepots.map { depot -> (along: Double, side: Double) in
+                let point = WorldVector(frame.worldPosition(latitude: depot.latitude, longitude: depot.longitude))
+                let along = path.project(point)
+                return (along, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
+            }
+            var serving = places.map { _ in [Int]() }
+            for station in standing.indices where standing[station] > 0 {
+                let nearest = places.indices.min { abs(places[$0].along - middles[station]) < abs(places[$1].along - middles[station]) }!
+                serving[nearest].append(station)
+            }
+            // Where each depot's sidings leave the down track and end, and
+            // how many on each side.
+            let ladders = places.indices.compactMap { index -> (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])? in
+                let standingThere = serving[index].reduce(0) { $0 + standing[$1] }
+                guard standingThere > 0 else { return nil }
+                let sets = standingThere + HighSpeedDemo.spareSidings
+                let place = places[index], real = HighSpeedDemo.realDepots[index]
+                if place.along < platforms[0].lowerBound {
+                    // Beyond the north end: both sides of the down track,
+                    // running north from a ramp short of the platform.
+                    let east = (sets + 1) / 2, west = sets / 2
+                    let entry = platforms[0].lowerBound - margin - ramp
+                    return (real, entry, entry - Double(east) * step - HighSpeedDemo.sidingRun, east, west, serving[index])
+                }
+                // Beside the line: on the down track's side, east, where the
+                // real ones are; entered from the way of the stations it
+                // serves, and centred on the real one.
+                precondition(place.side < 0, "\(real.english) is not on the down track's side")
+                let away: Double = place.along > middles[serving[index][0]] ? 1 : -1
+                let extent = Double(sets) * step + HighSpeedDemo.sidingRun
+                return (real, place.along - away * extent / 2, place.along + away * extent / 2, sets, 0, serving[index])
+            }
+            // A depot south of a station between the ends, entered from its
+            // north (Wuri's): the crossover from the up track a reach and two
+            // before its entry.
+            let crossingInto = ladders.filter { $0.deadEnd > $0.entry && $0.serving.allSatisfy { between.contains($0) } }
+                .map { [$0.entry - 2 * reach, $0.entry - reach] }
+            func depotNodes(_ ladder: (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])) -> [Double] {
+                let way: Double = ladder.deadEnd > ladder.entry ? 1 : -1
+                let far = ladder.deadEnd - way * (2 * margin + Double(HighSpeedDemo.platformLength))
+                return (0...max(ladder.east, ladder.west)).map { ladder.entry + way * Double($0) * step } + [far, ladder.deadEnd]
+            }
+            var forced: [Double] = [0, path.length, junctions.north, upEnds.north, upEnds.south, junctions.south]
+            forced += between.flatMap { loopNodes(platforms[$0]) }
+            forced += outer.flatMap { [outerEnds($0).north, outerEnds($0).south] }
+            forced += turnbacks.flatMap { crossoverNodes($0).flatMap { $0 } }
+            forced += ladders.flatMap(depotNodes)
+            forced += crossingInto.flatMap { $0 }
             let plan = RealWorldDemo.TrackPlan(
-                path,
-                forced: [0, path.length, junctions.north, upEnds.north, upEnds.south, junctions.south] + yardNodes
-                    + between.flatMap { loopNodes(platforms[$0]) } + outer.flatMap { [outerEnds($0).north, outerEnds($0).south] }
-                    + turnbacks.flatMap { crossoverNodes($0).flatMap { $0 } },
-                avoiding: platforms, tolerance: HighSpeedDemo.tolerance, longestEdge: HighSpeedDemo.longestEdge
+                path, forced: forced, avoiding: platforms, tolerance: HighSpeedDemo.tolerance, longestEdge: HighSpeedDemo.longestEdge
             )
             self.plan = plan
             func index(_ distance: Double) -> Int {
@@ -373,27 +466,31 @@ public enum HighSpeedDemo {
             crossovers = Dictionary(uniqueKeysWithValues: turnbacks.map { station in
                 (station, crossoverNodes(station).map { RealWorldDemo.TrackPlan(beside: plan, at: $0.map(index), offsets: [offset, 0]) })
             })
-            // A yard's track `k` (from 1) on a side (`way` 1 west, -1 east):
-            // from the track before it, `k - 1` steps short of the platform's
-            // margin, out to its place a step on, and beside the down track's
-            // every node from there to the far margin of the end's platform.
-            func yard(count: Int, at end: Double, outward: Double, terminal: Int) -> Yard {
-                func track(_ k: Int, way: Double) -> RealWorldDemo.TrackPlan {
-                    let branch = index(end + outward * Double(count - k + 1) * step), out = index(end + outward * Double(count - k) * step)
-                    let beside = outward < 0 ? Array(out...terminal) : Array((terminal...out).reversed())
+            depotCrossovers = crossingInto.map { RealWorldDemo.TrackPlan(beside: plan, at: $0.map(index), offsets: [offset, 0]) }
+            // A depot's siding `k` (from 1) on a side (`way` 1 west, -1
+            // east): from the one before it (the first from the down track)
+            // `k - 1` steps in from the entry, out to its place a step on,
+            // and beside the down track's every node from there to the dead
+            // end; its nodes in order along the path.
+            depots = ladders.map { ladder in
+                let way: Double = ladder.deadEnd > ladder.entry ? 1 : -1
+                func siding(_ k: Int, side: Double) -> RealWorldDemo.TrackPlan {
+                    let branch = index(ladder.entry + way * Double(k - 1) * step), out = index(ladder.entry + way * Double(k) * step)
+                    let end = index(ladder.deadEnd)
+                    let beside = way > 0 ? Array(out...end) : Array((end...out).reversed())
                     let at = [branch] + beside
-                    let offsets = [way * Double(k - 1) * offset] + beside.map { _ in way * Double(k) * offset }
-                    // Nodes in order along the path.
-                    return outward < 0
+                    let offsets = [side * Double(k - 1) * offset] + beside.map { _ in side * Double(k) * offset }
+                    return way > 0
                         ? RealWorldDemo.TrackPlan(beside: plan, at: at, offsets: offsets)
                         : RealWorldDemo.TrackPlan(beside: plan, at: at.reversed(), offsets: offsets.reversed())
                 }
-                return Yard(east: (1...count).map { track($0, way: -1) }, west: (1...count).map { track($0, way: 1) })
+                return Depot(
+                    real: ladder.real, entry: ladder.entry, deadEnd: ladder.deadEnd,
+                    east: ladder.east > 0 ? (1...ladder.east).map { siding($0, side: -1) } : [],
+                    west: ladder.west > 0 ? (1...ladder.west).map { siding($0, side: 1) } : [],
+                    serving: ladder.serving
+                )
             }
-            yards = (
-                north: yard(count: sides.north, at: yardEnds.north, outward: 1, terminal: index(buffers.north)),
-                south: yard(count: sides.south, at: yardEnds.south, outward: -1, terminal: index(buffers.south))
-            )
         }
 
         /// The sets the timetable needs, every line's.
@@ -404,7 +501,7 @@ public enum HighSpeedDemo {
         /// Every piece of track beside the down track.
         private var pieces: [RealWorldDemo.TrackPlan] {
             [up] + loops.values.flatMap { [$0.down, $0.up] } + outerLoops.values.flatMap { [$0.down, $0.up] }
-                + crossovers.values.flatMap { $0 } + yards.north.east + yards.north.west + yards.south.east + yards.south.west
+                + crossovers.values.flatMap { $0 } + depotCrossovers + depots.flatMap { $0.east + $0.west }
         }
 
         /// What building it costs at `costs` (the prices of
@@ -416,13 +513,13 @@ public enum HighSpeedDemo {
             let track = (plan.lengths + pieces.flatMap(\.lengths)).map { length in
                 max(1, (length + ConstructionCosts.trackPricingLength - 1) / ConstructionCosts.trackPricingLength) * TrackStructure.surface.costFactor
             }.reduce(0, +) * costs.track.amount
-            let stations = Int64(stops.count) * costs.station.amount
+            let stations = Int64(stops.count + depots.count) * costs.station.amount
             return Money(track + stations + Int64(sets) * (costs.train.amount + Int64(cars - 1) * costs.car.amount))
         }
 
         /// Builds it: the down track, the up track from turnout to turnout,
-        /// the loops, the crossovers, the yards, the stations and their
-        /// platforms, and the lines.
+        /// the loops, the crossovers, the depots' sidings, the stations and
+        /// their platforms, the depots, and the lines.
         @discardableResult
         func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) -> Built {
             let down = try plan.build(in: &world)
@@ -455,22 +552,25 @@ public enum HighSpeedDemo {
                     crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges
                 }
             }
-            // Each yard track from the one before it (the first from the
-            // down track), at its branching node.
-            func build(_ side: [RealWorldDemo.TrackPlan], north: Bool) throws(GameError) -> [RealWorldDemo.Track] {
+            for crossover in depotCrossovers {
+                crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges
+            }
+            // Each siding from the one before it (the first from the down
+            // track), at its branching node: the first node along the path
+            // of a southward depot's sidings, the last of a northward one's.
+            func build(_ side: [RealWorldDemo.TrackPlan], southward: Bool) throws(GameError) -> [RealWorldDemo.Track] {
                 var tracks: [RealWorldDemo.Track] = []
                 for plan in side {
                     let from = tracks.last ?? down
-                    tracks.append(north
-                        ? try plan.build(in: &world, end: node(from, last(plan)))
-                        : try plan.build(in: &world, start: node(from, first(plan))))
+                    tracks.append(southward
+                        ? try plan.build(in: &world, start: node(from, first(plan)))
+                        : try plan.build(in: &world, end: node(from, last(plan))))
                 }
                 return tracks
             }
-            let yardTracks = (
-                north: try build(yards.north.east, north: true) + build(yards.north.west, north: true),
-                south: try build(yards.south.east, north: false) + build(yards.south.west, north: false)
-            )
+            let sidings = try depots.map { depot throws(GameError) in
+                (east: try build(depot.east, southward: depot.southward), west: try build(depot.west, southward: depot.southward))
+            }
             var ids: [StationID] = []
             var platformsOf: [Int: Built.Platforms] = [:]
             var ends: [Int: [TrackPlatform]] = [:]
@@ -496,23 +596,41 @@ public enum HighSpeedDemo {
                         outer: outer
                     )
                 } else {
-                    // An end: its own platform, then its yard's, the nearest
-                    // first, each side by turns.
-                    let yard = index == 0 ? yardTracks.north : yardTracks.south
-                    let half = yard.count / 2
-                    let order = (0..<half).flatMap { [yard[$0], yard[half + $0]] }
-                    var berths = [try platform(on: down)]
-                    for track in order { berths.append(try platform(on: track)) }
-                    ends[index] = berths
+                    // An end: its own platform.
+                    ends[index] = [try platform(on: down)]
                 }
                 ids.append(id)
             }
+            // Decision 221: each depot, a station by its sidings with a
+            // platform on each, the nearest the down track first, each side
+            // by turns.
+            var builtDepots: [Built.Depot] = []
+            for (depot, tracks) in zip(depots, sidings) {
+                let zone = depot.platform
+                var order: [RealWorldDemo.Track] = []
+                for k in 0..<max(tracks.east.count, tracks.west.count) {
+                    if k < tracks.east.count { order.append(tracks.east[k]) }
+                    if k < tracks.west.count { order.append(tracks.west[k]) }
+                }
+                let middle = plan.path.point(at: (depot.entry + depot.deadEnd) / 2)
+                let id = try world.buildStation(named: language.text(depot.real.english, depot.real.chinese), at: middle.plan).id
+                var berths: [TrackPlatform] = []
+                for track in order {
+                    let (edge, offset) = track.edge(at: zone.lowerBound, in: world)
+                    try world.addTrackPlatform(id, on: edge, from: offset, to: offset + HighSpeedDemo.platformLength)
+                    berths.append(TrackPlatform(station: id, edge: edge, start: offset, end: offset + HighSpeedDemo.platformLength))
+                }
+                try world.setStationDepot(id, to: true)
+                builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving))
+            }
             let turnouts = (north: plan.distances.firstIndex { abs($0 - junctions.north) < 1 }!, south: plan.distances.firstIndex { abs($0 - junctions.south) < 1 }!)
             let through = Through(down: down.edges, up: upTrack.edges, turnouts: turnouts)
-            try HighSpeedDemo.run(in: &world, language: language, timetable: timetable, stations: ids, platforms: platformsOf, ends: ends, through: through)
+            try HighSpeedDemo.run(
+                in: &world, language: language, timetable: timetable, stations: ids, platforms: platformsOf, ends: ends, through: through, depots: builtDepots
+            )
             return Built(
                 down: down, up: upTrack, loops: builtLoops.keys.sorted().map { builtLoops[$0]! }, outerLoops: builtOuter.keys.sorted().map { builtOuter[$0]! },
-                crossovers: crossoverEdges, yards: yardTracks.north + yardTracks.south
+                crossovers: crossoverEdges, depots: builtDepots, sidings: sidings.flatMap { $0.east + $0.west }
             )
         }
     }
@@ -566,12 +684,26 @@ public enum HighSpeedDemo {
             let outer: (down: TrackPlatform, up: TrackPlatform)?
         }
 
+        /// A depot as built (decision 221): its station, a berth on each
+        /// siding, the nearest the down track first, whether its sidings run
+        /// south, and the stations whose sets it keeps.
+        struct Depot {
+            let station: StationID
+            let berths: [TrackPlatform]
+            let southward: Bool
+            let serving: [Int]
+        }
+
         let down: RealWorldDemo.Track
         let up: RealWorldDemo.Track
         let loops: [(down: RealWorldDemo.Track, up: RealWorldDemo.Track)]
         let outerLoops: [(down: RealWorldDemo.Track, up: RealWorldDemo.Track)]
+        /// The turnback stations' crossovers and the crossover into Wuri's
+        /// depot.
         let crossovers: [TrackEdgeID]
-        let yards: [RealWorldDemo.Track]
+        let depots: [Depot]
+        /// Every depot's sidings.
+        let sidings: [RealWorldDemo.Track]
     }
 
     /// Where a station's platforms lie along `path`, staggered: centred on
@@ -602,7 +734,7 @@ public enum HighSpeedDemo {
     /// of a curve, a little shorter.
     static func run(
         in world: inout GameWorld, language: DisplayLanguage, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
-        ends: [Int: [TrackPlatform]], through: Through
+        ends: [Int: [TrackPlatform]], through: Through, depots: [Built.Depot]
     ) throws(GameError) {
         // Traffic control is off (see ``HighSpeedDemo``).
         try world.setTrafficControl(false)
@@ -635,8 +767,9 @@ public enum HighSpeedDemo {
                 // An express's leg passes stations whose loops may be the
                 // shorter way on the inside of a curve: it names its whole
                 // way along the through track. A set that is not on the way
-                // (one in an end's yard) goes to the nearest platform, its
-                // own way's through track's (see ``platformStagger``).
+                // (one just out of a depot, turned round at an end) goes to
+                // the nearest platform, its own way's through track's (see
+                // ``platformStagger``).
                 guard let south = platform(of: b, onDown: true) ?? endPlatform(of: b), let north = platform(of: a, onDown: false) ?? endPlatform(of: a),
                       let start = platform(of: a, onDown: true) ?? endPlatform(of: a), let end = platform(of: b, onDown: false) ?? endPlatform(of: b)
                 else { continue }
@@ -644,6 +777,9 @@ public enum HighSpeedDemo {
                 preferences.append(LineRoutePreference(from: to, to: from, tracks: through.northbound(from: end.edge, to: north.edge), platform: north))
             }
             try world.setLineRoutePreferences(line, to: preferences)
+            // Decision 221: every line keeps its sets in the depots, each
+            // going into the nearest.
+            try world.setLineDepots(line, to: depots.map(\.station))
             for set in timetableLine.overnight {
                 number += 1
                 let train = try world.purchaseTrain(named: language.text("THSR \(number)", "高鐵 \(number)")).id
@@ -654,30 +790,14 @@ public enum HighSpeedDemo {
                 placing[set.station, default: []].append((train, set.southbound, set.leaving))
             }
         }
-        // At midnight each set stands where its first run leaves, facing
-        // the way it goes: at an end the earliest to leave nearest the line;
-        // at a station between, the last to leave on the loops and the
-        // first on the through tracks, clear of the expresses before they
-        // come.
-        for station in placing.keys.sorted() {
-            let sets = placing[station]!.sorted { ($0.leaving, $0.train) < ($1.leaving, $1.train) }
-            if let berths = ends[station] {
-                for (set, berth) in zip(sets, berths) {
-                    try place(set.train, at: berth, southbound: set.southbound, in: &world)
-                }
-                continue
-            }
-            guard let p = platforms[station] else { continue }
-            var loops = [p.downLoop, p.upLoop] + (p.outer.map { [$0.down, $0.up] } ?? [])
-            var throughs = [p.down, p.up]
-            for set in sets.reversed() {
-                // The set's own way's track first.
-                func pick(_ berths: inout [TrackPlatform]) -> TrackPlatform? {
-                    let own = berths.firstIndex { ($0 == p.downLoop || $0 == p.down || $0 == p.outer?.down) == set.southbound } ?? 0
-                    return berths.isEmpty ? nil : berths.remove(at: own)
-                }
-                guard let berth = pick(&loops) ?? pick(&throughs) else { break }
-                try place(set.train, at: berth, southbound: set.southbound, in: &world)
+        // At midnight each set stands in the depot of the station its first
+        // run leaves, a siding each, facing the way out: the earliest to
+        // leave nearest the down track. Each leaves the depot in time for
+        // its run (decision 221).
+        for depot in depots {
+            let sets = depot.serving.flatMap { placing[$0] ?? [] }.sorted { ($0.leaving, $0.train) < ($1.leaving, $1.train) }
+            for (set, berth) in zip(sets, depot.berths) {
+                try place(set.train, at: berth, southbound: !depot.southward, in: &world)
             }
         }
     }
