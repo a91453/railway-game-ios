@@ -27,6 +27,7 @@
 		231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */; };
 		24BDC33BAEB05C1B78B39AE5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = FD2BB5E656E35262DF9997FA /* MapLibre */; };
 		2733FFE60203B4AA0059ECFD /* RailwayGameApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */; };
+		2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */; };
 		2955C8F1CA4B38DCACFCE92A /* chime-metro-motif.wav in Resources */ = {isa = PBXBuildFile; fileRef = 2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */; };
 		298E6F23EF908E81C6D9639F /* MapInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21275B6D1B1A72F75A29DA13 /* MapInteractionTests.swift */; };
 		2AB6C1070610AFCEB0DD27A0 /* RealWorldPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B68167398B13543EA8C564A /* RealWorldPicker.swift */; };
@@ -152,6 +153,7 @@
 		0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapConstructionHUD.swift; sourceTree = "<group>"; };
 		0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialTargets.swift; sourceTree = "<group>"; };
 		10BAAEA97DA689ABA4004F2A /* tmrt.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tmrt.json; sourceTree = "<group>"; };
+		10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPairDrawer.swift; sourceTree = "<group>"; };
 		10CD1930FBBEEDFCB26CC5A3 /* FollowBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowBar.swift; sourceTree = "<group>"; };
 		150E696C9936773A65399191 /* tra_station_info.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_station_info.json; sourceTree = "<group>"; };
 		17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinesPanel.swift; sourceTree = "<group>"; };
@@ -404,6 +406,7 @@
 				BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */,
 				24B425FF34AEB844CE2FA815 /* StationMasterView.swift */,
 				5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */,
+				10C54A651E2F6DD601FA3F15 /* StationPairDrawer.swift */,
 				6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */,
 				3934A6F628AA98414B2B952D /* Theme.swift */,
 				66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */,
@@ -701,6 +704,7 @@
 				8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */,
 				9A5C367B38AC3D80FBCE8038 /* StationMasterView.swift in Sources */,
 				F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */,
+				2829D526B58B594CFF039231 /* StationPairDrawer.swift in Sources */,
 				304C0785E22FB9116FD70174 /* StationPanel.swift in Sources */,
 				F86D215344F8BC5B6E8955AD /* Theme.swift in Sources */,
 				C1EFF57A2944814982E3D1E7 /* TickStable.swift in Sources */,
