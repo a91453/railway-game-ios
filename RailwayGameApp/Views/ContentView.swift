@@ -342,6 +342,10 @@ struct ContentView: View {
                             }
                         }
                     }
+                    // Decision 226: faded while a finger draws under them.
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
+                    .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
+                    .animation(.easeInOut(duration: 0.15), value: screen.isDrawingUnderTools)
                     .padding([.leading, .bottom], margin)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     .padding(.bottom, strip)
@@ -859,6 +863,16 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Decision 226: where the tools stand on the screen (global
+    /// coordinates; the column down a phone's leading edge, or the dock),
+    /// as the screen measured them; a finger drawing on the map compares
+    /// against it (``isDrawingUnderTools``).
+    var toolsFrame: CGRect = .zero
+    /// Decision 226: whether a finger drawing on the map (track, a
+    /// building, zones) is under the tools: they fade to 40% so the map
+    /// shows through, and come back when it lifts. The map sets it, only
+    /// when it changes.
+    var isDrawingUnderTools = false
     /// Where the tutorial's targets inside a panel beside the map stand on
     /// the screen (global coordinates): the panel's NavigationStack keeps
     /// their marks (``TutorialTargetBounds``) from the overlay, so they
