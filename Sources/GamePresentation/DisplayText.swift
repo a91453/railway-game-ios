@@ -554,7 +554,7 @@ extension GameError {
         case .noStationCommerce:
             language.text("This station has no shops.", "這個車站沒有商業。")
         case .depotInUse:
-            language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
+            language.text("A line keeps its trains at this depot: untick it on that line's depots first.", "有路線把列車停在這個機廠：先在那條路線的機廠清單取消勾選。")
         case .depotListedTwice:
             language.text("This depot is already one of the line's.", "這個機廠已經是這條路線的了。")
         case .depotBlocksLine:

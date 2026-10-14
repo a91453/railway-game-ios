@@ -577,12 +577,13 @@ struct LinesPanel: View {
 
     // MARK: - The selected line
 
-    /// Decision 214: the depot the line keeps its trains at (decision
-    /// 209), or none, with how many stand in it now; shown once there is a
-    /// depot to choose, or with Advanced unfolded to say how to get one.
+    /// Decision 214: the depots the line keeps its trains at (decision
+    /// 209), a checklist since a line may have several (decision 221), with
+    /// how many stand in them now; shown once there is a depot to choose,
+    /// or with Advanced unfolded to say how to get one.
     @ViewBuilder
     private func depotSection(_ line: ServiceLine) -> some View {
-        if let row = session.selectedLineDepotRow, row.current != nil || !row.choices.isEmpty || showsAdvanced {
+        if let row = session.selectedLineDepotRow, !row.chosen.isEmpty || !row.choices.isEmpty || showsAdvanced {
             let language = session.language
             Section {
                 if row.choices.isEmpty {
@@ -590,27 +591,42 @@ struct LinesPanel: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.textSecondary)
                 } else {
-                    Picker(selection: Binding(get: { row.current }, set: { session.setSelectedLineDepot($0) })) {
-                        Text(verbatim: language.text("None: trains stay at the ends", "不用機廠：列車停在路線兩端")).tag(StationID?.none)
-                        ForEach(row.choices) { choice in
-                            Text(verbatim: "\(choice.name) · \(choice.distance)").tag(StationID?.some(choice.station))
+                    ForEach(row.choices) { choice in
+                        Button {
+                            session.toggleSelectedLineDepot(choice.station)
+                        } label: {
+                            HStack(spacing: 10) {
+                                MapGlyph.depot.image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 18, height: 18)
+                                    .accessibilityHidden(true)
+                                Text(verbatim: choice.name)
+                                    .foregroundStyle(Theme.textPrimary)
+                                Spacer(minLength: 8)
+                                if choice.isChosen {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Theme.primary)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .contentShape(Rectangle())
                         }
-                    } label: {
-                        Text(verbatim: language.text("Depot", "所屬機廠"))
+                        .accessibilityAddTraits(choice.isChosen ? .isSelected : [])
+                        .accessibilityIdentifier("line.depot.\(choice.station.rawValue)")
                     }
-                    .accessibilityIdentifier("line.depot")
                 }
                 if row.inDepot > 0 {
                     DepotBadge(text: language.text("\(row.inDepot) in depot", "在庫 \(row.inDepot) 列"))
                         .accessibilityIdentifier("line.inDepot")
                 }
             } header: {
-                Text(verbatim: language.text("Depot", "機廠"))
+                Text(verbatim: language.text("Depots", "所屬機廠"))
             } footer: {
                 if !row.choices.isEmpty {
                     Text(verbatim: language.text(
-                        "With a depot the line's trains leave it before the first train and go back after the last, paying only upkeep while they stand there.",
-                        "有機廠時，列車首班前出庫、收班後入庫，停在機廠只付保養費。"
+                        "Tick the depots this line's trains go back to at night; standing there they pay only upkeep. With none ticked they stay at the line's ends.",
+                        "勾選這條線的列車晚上回哪些機廠，停在機廠只付保養費。都不勾時，列車停在路線兩端。"
                     ))
                 }
             }

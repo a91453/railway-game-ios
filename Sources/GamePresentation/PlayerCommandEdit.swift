@@ -100,6 +100,9 @@ extension PlayerCommand {
         case setLineFreight(LineID, Bool)
         /// The depot a line keeps its trains at, or none (decision 209).
         case setLineDepot(LineID, StationID?)
+        /// The depots a line keeps its trains at, none for none (decision
+        /// 221: the line panel's checklist).
+        case setLineDepots(LineID, [StationID])
 
         // MARK: Land and the city
         /// The site's land read in (decision 95), then the building.
@@ -279,6 +282,7 @@ extension GameSession {
         case .setLinePerformance(let id, let performance): try world.setLinePerformance(id, to: performance)
         case .setLineFreight(let id, let freight): try world.setLineFreight(id, to: freight)
         case .setLineDepot(let id, let depot): try world.setLineDepot(id, to: depot)
+        case .setLineDepots(let id, let depots): try world.setLineDepots(id, to: depots)
 
         case .placeBuilding(let kind, let point):
             // The site's land, read when it was picked, may have gone with an

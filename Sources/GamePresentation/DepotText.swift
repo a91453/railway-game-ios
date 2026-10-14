@@ -1,11 +1,12 @@
 import GameCore
 
 // The depot's panels and status (decision 214, on decision 209's depots):
-// the station panel's "Make a depot" switch, the line panel's choice of
-// depot, and what a train on its way to or from one, or standing in it,
-// shows in the follow bar, its card and the fleet list. Everything is read
-// from the world each time; the switches are `GameWorld` commands
-// (`setStationDepot`, `setLineDepot`) the command log keeps.
+// the station panel's "Make a depot" switch, the line panel's checklist of
+// depots (decision 221: a line may have several), and what a train on its
+// way to or from one, or standing in it, shows in the follow bar, its card
+// and the fleet list. Everything is read from the world each time; the
+// switches are `GameWorld` commands (`setStationDepot`, `setLineDepots`)
+// the command log keeps.
 
 /// Where a line's train stands with its depot (decision 209): on its way
 /// out to the line, on its way in, or standing there out of service.
@@ -84,21 +85,21 @@ public struct StationDepotSwitch: Hashable, Sendable {
     }
 }
 
-/// A depot a line may keep its trains at, for the line panel's choice.
+/// A depot a line may keep its trains at: a row of the line panel's
+/// checklist, ticked when the line uses it.
 public struct LineDepotChoice: Hashable, Sendable, Identifiable {
     public let station: StationID
     public let name: String
-    /// How far it stands from the nearer end of the line, as the crow
-    /// flies: "1.2 km".
-    public let distance: String
+    public let isChosen: Bool
 
     public var id: StationID { station }
 }
 
-/// The line panel's depot row: the line's depot, the depots it may
-/// choose, or why it has none to choose.
+/// The line panel's depots: every depot, nearest the line's ends first,
+/// each ticked when the line uses it, or why there is none to choose.
 public struct LineDepotRow: Hashable, Sendable {
-    public let current: StationID?
+    /// The line's depots, in the order it keeps them; empty for none.
+    public let chosen: [StationID]
     public let choices: [LineDepotChoice]
     /// Why the line cannot choose a depot: there is none yet. A line that
     /// runs to a timetable chooses one too (decision 221).
@@ -149,19 +150,34 @@ extension GameSession {
         return world.depotRow(of: line.id, in: language)
     }
 
-    /// Gives the selected line the depot `depot`, or none (decision 209).
-    public func setSelectedLineDepot(_ depot: StationID?) {
-        guard let line = selectedLine else {
+    /// Ticks depot `depot` for the selected line, or unticks it (decision
+    /// 221): the line keeps its trains at every ticked depot, nearest its
+    /// ends first, and at its ends with none ticked.
+    public func toggleSelectedLineDepot(_ depot: StationID) {
+        guard let line = selectedLine, let row = world.depotRow(of: line.id, in: language) else {
             message = StatusMessage(kind: .failure, text: language.text("Select a line first.", "請先選擇路線。"))
             return
         }
-        let depotName = depot.flatMap { world.station(id: $0)?.name } ?? ""
-        perform(.setLineDepot(line.id, depot)) { _, _, _ in
-            depot == nil
-                ? language.text("\(line.name)'s trains now stay at its ends.", "「\(line.name)」的列車現在停在路線兩端。")
-                : language.text(
+        var ticked = Set(row.chosen)
+        let adding = ticked.insert(depot).inserted
+        if !adding { ticked.remove(depot) }
+        let depots = row.choices.map(\.station).filter(ticked.contains)
+        let depotName = world.station(id: depot)?.name ?? ""
+        perform(.setLineDepots(line.id, depots)) { _, _, _ in
+            if depots.isEmpty {
+                return language.text("\(line.name)'s trains now stay at its ends.", "「\(line.name)」的列車現在停在路線兩端。")
+            }
+            if !adding {
+                return language.text("\(line.name)'s trains no longer go to the depot \(depotName).", "「\(line.name)」的列車不再回機廠「\(depotName)」。")
+            }
+            return depots.count == 1
+                ? language.text(
                     "\(line.name) now keeps its trains at the depot \(depotName): they leave it before the first train and go back after the last.",
                     "「\(line.name)」的列車現在停機廠「\(depotName)」：首班前出庫、收班後入庫。"
+                )
+                : language.text(
+                    "\(line.name)'s trains now go to the depot \(depotName) too: each goes back to the nearest.",
+                    "「\(line.name)」的列車現在也會回機廠「\(depotName)」：每列車回最近的那一個。"
                 )
         }
     }
@@ -175,12 +191,12 @@ extension GameWorld {
             found.map { "「\($0.name)」" }.joined(separator: language.text(", ", "、"))
         }
         if isDepot {
-            let using = lines.filter { $0.depot == id }
+            let using = lines.filter { $0.depots.contains(id) }
             guard using.isEmpty else {
                 let english = using.map(\.name).joined(separator: ", ")
                 return StationDepotSwitch(isDepot: true, problem: language.text(
-                    "\(english) \(using.count == 1 ? "keeps its" : "keep their") trains here: give \(using.count == 1 ? "it" : "them") another depot or none on the line panel first.",
-                    "\(names(using))把列車停在這裡：先到路線面板換一個機廠，或改成不用機廠。"
+                    "\(english) \(using.count == 1 ? "keeps its" : "keep their") trains here: untick it on the line panel first.",
+                    "\(names(using))把列車停在這裡：先到路線面板取消勾選這個機廠。"
                 ))
             }
             return StationDepotSwitch(isDepot: true, problem: nil)
@@ -210,7 +226,7 @@ extension GameWorld {
     }
 
     /// The depot row of line `id` (``LineDepotRow``): every depot, nearest
-    /// the line's ends first.
+    /// the line's ends first, by the crow's flight.
     func depotRow(of id: LineID, in language: DisplayLanguage) -> LineDepotRow? {
         guard let line = line(id: id) else { return nil }
         let inDepot = trainsInDepot(of: id)
@@ -223,14 +239,14 @@ extension GameWorld {
             return (depot, distance)
         }.sorted { ($0.distance, $0.station.id.rawValue) < ($1.distance, $1.station.id.rawValue) }
         guard !depots.isEmpty else {
-            return LineDepotRow(current: nil, choices: [], problem: language.text(
+            return LineDepotRow(chosen: line.depots, choices: [], problem: language.text(
                 "No depot yet: make a station no line stops at a depot on its panel, or lay sidings with the network tool's Depot.",
                 "還沒有機廠：在沒有路線停靠的車站面板按「設為機廠」，或用路網工具的「機廠」鋪停車線。"
             ), inDepot: inDepot)
         }
         return LineDepotRow(
-            current: line.depot,
-            choices: depots.map { LineDepotChoice(station: $0.station.id, name: $0.station.name, distance: NetworkBuilding.lengthText($0.distance, in: language)) },
+            chosen: line.depots,
+            choices: depots.map { LineDepotChoice(station: $0.station.id, name: $0.station.name, isChosen: line.depots.contains($0.station.id)) },
             problem: nil, inDepot: inDepot
         )
     }
