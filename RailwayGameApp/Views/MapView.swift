@@ -59,6 +59,9 @@ struct MapView: View {
     /// weather (the settings' switches, on the device).
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    /// Decision 216: the lines' colours, the player's or the
+    /// colour-blind-safe palette's; the canvases redraw when it changes.
+    @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// Decision 182: the trains' moves in the last tick, to draw them
     /// gliding to where they are, and a number that changes with them.
     @State private var trainMotion = TrainMotion()
@@ -251,7 +254,9 @@ struct MapView: View {
                         labels: stationLabels,
                         flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
                         flowVersion: flowStrokesVersion,
-                        lights: lights
+                        lights: lights,
+                        lineCodes: LineBadge.codes(for: session.world.lines),
+                        linePalette: linePalette
                     )
                     .equatable()
                     // Decision 182: the time of day over the ground, the
@@ -270,9 +275,11 @@ struct MapView: View {
                         lights: lights,
                         plain: mapLayers.popTravelMode == .sectionFlow,
                         traffic: traffic,
+                        depotRuns: session.world.depotRuns(),
                         reduceMotion: reduceMotion,
                         running: !session.world.clock.isPaused,
                         language: session.language,
+                        linePalette: linePalette,
                         camera: projection
                     )
                     .equatable()
@@ -312,7 +319,9 @@ struct MapView: View {
                                     labels: stationLabels,
                                     flowStrokes: mapLayers.popTravelMode == .sectionFlow ? flowStrokes : [],
                                     flowVersion: flowStrokesVersion,
-                                    lights: lights
+                                    lights: lights,
+                                    lineCodes: LineBadge.codes(for: session.world.lines),
+                                    linePalette: linePalette
                                 )
                                 .equatable()
                                 // Where the finger is.
@@ -1410,6 +1419,11 @@ private struct MapCanvas: View, Equatable {
     let flowVersion: Int
     /// Decision 182: how strongly the stations shine at night.
     let lights: Double
+    /// Decision 216: each line's code, for its badges (layers 24.5 and 30).
+    let lineCodes: [LineID: String]
+    /// Decision 216: compared so that the lines redraw in the new palette
+    /// (``Palette/lineColor(_:custom:)`` reads it).
+    let linePalette: LinePalette
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
     /// so a tick that only moves them does not redraw it.
@@ -1435,10 +1449,12 @@ private struct MapCanvas: View, Equatable {
             && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
             && lhs.lights == rhs.lights
+            && lhs.lineCodes == rhs.lineCodes
+            && lhs.linePalette == rhs.linePalette
     }
 
     var body: some View {
-        let lights = lights
+        let lights = lights, lineCodes = lineCodes
         let world = world, selectedTrainID = selectedTrainID, highlightedTrainID = highlightedTrainID
         let selectedStationID = selectedStationID, network = network, building = building, expansion = expansion, traffic = traffic, camera = camera, edges = edges, layers = layers, waitingCounts = waitingCounts, lines = lines
         let labels = labels, latitude = world.geoAnchor?.latitudeDegrees ?? 0, flowStrokes = flowStrokes
@@ -1464,6 +1480,7 @@ private struct MapCanvas: View, Equatable {
                 flowStrokes: flowStrokes,
                 latitude: latitude,
                 lights: lights,
+                lineCodes: lineCodes,
                 in: context
             )
         }
@@ -1579,6 +1596,9 @@ private struct MapTrainCanvas: View, Equatable {
     /// Every train in the map's train colour (the passenger load layer).
     let plain: Bool
     let traffic: TrafficOverlay
+    /// Decision 214: the trains leaving or entering a depot, each with a
+    /// plate over its head (layer 51).
+    let depotRuns: [TrainID: TrainDepotState]
     /// A deadlocked train's mark beats (decision 64, later fix) unless the
     /// player reduces motion.
     let reduceMotion: Bool
@@ -1587,18 +1607,20 @@ private struct MapTrainCanvas: View, Equatable {
     let running: Bool
     /// The tags' language (decision 210).
     let language: DisplayLanguage
+    /// Decision 216: the trains are in their lines' colours.
+    let linePalette: LinePalette
     let camera: PlanCamera
 
     nonisolated static func == (lhs: MapTrainCanvas, rhs: MapTrainCanvas) -> Bool {
         lhs.version == rhs.version && lhs.animating == rhs.animating && lhs.selectedTrainID == rhs.selectedTrainID
-            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic
+            && lhs.lights == rhs.lights && lhs.plain == rhs.plain && lhs.traffic == rhs.traffic && lhs.depotRuns == rhs.depotRuns
             && lhs.reduceMotion == rhs.reduceMotion && lhs.running == rhs.running && lhs.language == rhs.language
-            && lhs.camera == rhs.camera
+            && lhs.linePalette == rhs.linePalette && lhs.camera == rhs.camera
     }
 
     var body: some View {
         let motion = motion, animating = animating, selectedTrainID = selectedTrainID, lights = lights, plain = plain
-        let traffic = traffic, reduceMotion = reduceMotion, running = running, language = language, camera = camera
+        let traffic = traffic, depotRuns = depotRuns, reduceMotion = reduceMotion, running = running, language = language, camera = camera
         // A deadlock beats even while paused; the other waits pulse while
         // the game runs (decision 210).
         let beats = !reduceMotion && (traffic.waits.contains(where: \.isDeadlocked) || (running && !traffic.waits.isEmpty))
@@ -1612,6 +1634,7 @@ private struct MapTrainCanvas: View, Equatable {
                     lights: lights,
                     plain: plain,
                     traffic: traffic,
+                    depotRuns: depotRuns,
                     deadlock: TrafficOverlay.deadlockStrength(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion),
                     pulse: MapProblems.pulse(at: timeline.date.timeIntervalSinceReferenceDate, reduceMotion: reduceMotion, running: running),
                     language: language,

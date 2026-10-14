@@ -43,6 +43,8 @@ struct NetworkControls: View {
                 platformRemovals(showsPlace: false)
             case .passingLoop:
                 passingLoopOptions
+            case .depot:
+                depotOptions
             }
         }
     }
@@ -73,6 +75,15 @@ struct NetworkControls: View {
                 }
                 .toggleStyle(OnOffButtonToggleStyle())
                 .accessibilityIdentifier("network.double")
+                // Decision 213: on a real-world map, follow the real
+                // railway drawn under it.
+                if session.canTraceRealRailway {
+                    Toggle(isOn: $session.networkTracesRealRailway) {
+                        Text(verbatim: session.language.text("Trace real", "沿真實鐵路"))
+                    }
+                    .toggleStyle(OnOffButtonToggleStyle())
+                    .accessibilityIdentifier("network.trace")
+                }
                 Spacer(minLength: 0)
                 Button("Clear") {
                     session.clearNetworkDraft()
@@ -124,6 +135,14 @@ struct NetworkControls: View {
                     }
                     // Decision 204: the double track's crossovers where it
                     // joins the track there, or why there are none.
+                    // Decision 213: where a traced stretch stops, and why.
+                    if let note = preview.traceNote {
+                        Text(verbatim: note)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Theme.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("network.traceNote")
+                    }
                     if let note = preview.crossoverNote {
                         Text(verbatim: note)
                             .font(.footnote)
@@ -261,6 +280,34 @@ struct NetworkControls: View {
                 .pickerStyle(.segmented)
                 .font(.footnote)
                 .accessibilityIdentifier("network.loopSide")
+            }
+        }
+    }
+
+    // MARK: - Depot
+
+    /// Decision 214: how many sidings, and which side of the picked end
+    /// they fan out to, by compass (the inspector says what the tap picked
+    /// and why it cannot go there).
+    private var depotOptions: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Stepper(value: $session.networkDepotSidings, in: DepotYard.sidings) {
+                Text(verbatim: session.language.text("\(session.networkDepotSidings) sidings", "\(session.networkDepotSidings) 股停車線"))
+                    .font(.footnote)
+                    .monospacedDigit()
+            }
+            .accessibilityIdentifier("network.depotSidings")
+            if session.networkDepotSidings > 1, session.networkDepotEnd != nil {
+                Picker(selection: $session.networkDepotSide) {
+                    ForEach(PlatformTrackSide.allCases, id: \.self) { side in
+                        Text(verbatim: session.depotSideText(side) ?? "").tag(side)
+                    }
+                } label: {
+                    Text(verbatim: session.language.text("Side", "側"))
+                }
+                .pickerStyle(.segmented)
+                .font(.footnote)
+                .accessibilityIdentifier("network.depotSide")
             }
         }
     }

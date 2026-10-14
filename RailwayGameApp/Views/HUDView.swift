@@ -465,6 +465,17 @@ private struct GameMenu: View, Equatable {
                     }
                 }
                 .accessibilityIdentifier("menu.help")
+                // Decision 215: the network as a picture to share.
+                Button {
+                    screen.panel = .postcard
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Make a Postcard", "做明信片"))
+                    } icon: {
+                        Image(systemName: "photo.on.rectangle")
+                    }
+                }
+                .accessibilityIdentifier("menu.postcard")
                 // TestFlight 54.1: where to send a note, from the game.
                 Button {
                     reportProblem()

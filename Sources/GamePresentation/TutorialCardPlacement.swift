@@ -117,6 +117,11 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     public var map: Frame?
     /// The widest the card is laid out.
     public var maxWidth: Double
+    /// The tallest the card is measured: on a phone on its side
+    /// (``compactMaxHeight``) its explanation scrolls beyond it, so more of
+    /// the map shows (a player's report on 59.1: the card left too little
+    /// of the map to see what happened).
+    public var maxHeight: Double
 
     /// The card's distance from the screen's edges.
     static let margin: Double = 16
@@ -127,6 +132,9 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// The shortest a card is measured to leave the map free: the step's
     /// title, a few lines of its explanation and its buttons.
     static let minimumCardHeight: Double = 200
+    /// The tallest the open card is measured on a phone on its side: its
+    /// title, a line or two of its explanation, scrolling, and its buttons.
+    public static let compactMaxHeight: Double = 150
     /// The narrowest a card is measured to leave a band of the map free
     /// beside it.
     static let minimumCardWidth: Double = 240
@@ -140,7 +148,7 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// All in the screen's coordinates, as the app reads them.
     public init(
         target: Frame?, controls: [Frame], panels: [Frame] = [], backdrops: [Frame] = [], required: [Frame], sites: [Frame] = [],
-        map: Frame?, maxWidth: Double = 340
+        map: Frame?, maxWidth: Double = 340, maxHeight: Double = .infinity
     ) {
         self.target = target
         self.controls = controls
@@ -150,6 +158,7 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         self.sites = sites
         self.map = map
         self.maxWidth = maxWidth
+        self.maxHeight = maxHeight
     }
 
     /// The card's frame in `bounds`, which may have its origin elsewhere
@@ -159,12 +168,13 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         let margin = Self.margin
         let available = bounds.insetBy(dx: min(margin, bounds.width / 4), dy: min(margin, bounds.height / 4))
         let width = min(maxWidth, available.width)
-        var size = measure(Size(width: width, height: available.height))
+        let tallest = min(maxHeight, available.height)
+        var size = measure(Size(width: width, height: tallest))
         var best = placement(of: size, in: bounds, available: available)
         // With large text a card can be too tall to leave the map, or the
         // step's controls, free anywhere: measure it shorter, so its
         // explanation scrolls, and place it again if that does better.
-        let free = map.map { max(Self.minimumCardHeight, $0.height - Self.minimumFreeMap - Self.gap) }
+        let free = map.map { min(tallest, max(Self.minimumCardHeight, $0.height - Self.minimumFreeMap - Self.gap)) }
         if best.cost >= Self.mapCoveredCost, let free, free < size.height {
             let shorter = measure(Size(width: width, height: free))
             let retry = placement(of: shorter, in: bounds, available: available)
@@ -179,7 +189,7 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         // time, until a band of the map stays free beside it; tall, or
         // measured shorter as above.
         if best.cost >= Self.mapCoveredCost, let free {
-            let heights = [available.height, free]
+            let heights = [tallest, free]
             var narrow = width - 20
             while narrow >= Self.minimumCardWidth, best.cost >= Self.mapCoveredCost {
                 for height in heights {

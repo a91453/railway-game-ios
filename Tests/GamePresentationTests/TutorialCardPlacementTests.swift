@@ -425,6 +425,33 @@ final class TutorialCardPlacementTests: XCTestCase {
         }
     }
 
+    /// On a phone on its side the open card is measured no taller than
+    /// ``TutorialCardPlacement/compactMaxHeight``, its explanation
+    /// scrolling, so most of the map shows beside it (a player's report on
+    /// 59.1: the card left too little of the map to see what happened).
+    func testOnAPhoneOnItsSideTheCardIsShortSoTheMapShows() {
+        var proposals: [Size] = []
+        let card = { (proposal: Size) -> Size in
+            proposals.append(proposal)
+            return Self.lineStepCard(proposal)
+        }
+        let controls = Self.hud + Self.dock + [Self.zoomAlone, Self.layers]
+        let placement = TutorialCardPlacement(
+            target: Self.mapAlone, controls: controls, required: [], map: Self.mapAlone, maxWidth: 320,
+            maxHeight: TutorialCardPlacement.compactMaxHeight
+        )
+        let shown = placement.frame(in: Self.screen, measure: card)
+        XCTAssertFalse(proposals.isEmpty)
+        for proposal in proposals {
+            XCTAssertLessThanOrEqual(proposal.height, TutorialCardPlacement.compactMaxHeight)
+        }
+        XCTAssertLessThanOrEqual(shown.height, TutorialCardPlacement.compactMaxHeight)
+        XCTAssertTrue(placement.leavesStepFree(shown), "card \(shown)")
+        // Not on a phone held upright or an iPad: measured as tall as it needs.
+        let tall = TutorialCardPlacement(target: Self.mapAlone, controls: controls, required: [], map: Self.mapAlone, maxWidth: 320)
+        XCTAssertGreaterThan(tall.frame(in: Self.screen, measure: Self.lineStepCard).height, TutorialCardPlacement.compactMaxHeight)
+    }
+
     /// Folded, the card finds a free place on every screen of the tutorial.
     func testTheFoldedCardAlwaysFindsAFreePlace() {
         let screens: [TutorialCardPlacement] = [

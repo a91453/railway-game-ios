@@ -47,6 +47,8 @@ extension GameSession {
         if let start = networkStart, let at = planPoint(of: start), Self.distance(at, point) <= Double(reach) {
             return true
         }
+        // Decision 213: tracing, a drag that starts on a real line draws.
+        if tracedPoint(near: point, reach: reach) != nil { return true }
         guard networkSnapsToTrack else { return false }
         return world.trackNode(near: point, within: reach) != nil || world.trackEdgePoint(near: point, within: reach) != nil
     }

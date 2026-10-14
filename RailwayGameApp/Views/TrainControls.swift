@@ -199,6 +199,11 @@ struct TrainControls: View {
                         .padding(.top, 2)
                 }
             }
+            // Decision 214: in its depot, or on its way out or in.
+            if let depot = session.world.depotState(of: train.id) {
+                DepotBadge(depot, language: language)
+                    .accessibilityIdentifier("train.depot")
+            }
             if let service = session.world.trainServiceStatus(of: train.id, in: language) {
                 serviceStatus(service)
             }
@@ -214,6 +219,22 @@ struct TrainControls: View {
                 Label(wait, systemImage: "hourglass")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.warning)
+            }
+            // TestFlight 60.1: a line set to run fewer trains than it has
+            // leaves this one waiting; one tap runs them all.
+            if case .serviceFull? = session.world.lineDispatchHold(of: train.id),
+               let unused = session.world.lineUnusedTrains(ofTrain: train.id) {
+                Button {
+                    session.runAllAssignedTrains(ofTrain: train.id)
+                } label: {
+                    Label(
+                        session.language.text("Run \(unused.target) trains", "加開到 \(unused.target) 列"),
+                        systemImage: "plus.circle"
+                    )
+                    .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("train.runAllAssigned")
             }
             // Decision 196: what to do with a train that stands still.
             if let next = session.world.trainNextStepText(of: train.id, in: language) {
@@ -291,8 +312,7 @@ struct TrainControls: View {
     /// its own is given a line here, not only from the Lines panel.
     @ViewBuilder
     private var lineMenu: some View {
-        if let train = session.selectedTrain, train.execution == nil,
-           session.world.assignedLine(of: train.id) == nil, !session.world.lines.isEmpty {
+        if let train = session.selectedTrain, session.offersLineMenu(for: train.id) {
             LineAssignMenu(session: session, train: train.id, choices: session.lineMenuChoices, language: session.language)
                 .equatable()
         }

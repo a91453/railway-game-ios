@@ -25,6 +25,7 @@ extension GameSession {
         networkStart = nil
         networkEnd = nil
         networkEdgePoint = nil
+        networkDepotEnd = nil
         message = nil
     }
 
@@ -74,17 +75,29 @@ extension GameSession {
             suggestPlatformCars()
         case .remove, .passingLoop:
             networkEdgePoint = world.trackEdgePoint(near: point, within: reach)
+        case .depot:
+            // The nearest end of a track within reach: a node only one
+            // edge ends at.
+            networkDepotEnd = world.network.nodes
+                .filter { $0.ends.count == 1 && Self.squaredDistance($0.position.plan, point) <= reach * reach }
+                .min { (Self.squaredDistance($0.position.plan, point), $0.id.number) < (Self.squaredDistance($1.position.plan, point), $1.id.number) }?.id
+            if networkDepotEnd == nil {
+                message = StatusMessage(kind: .failure, text: DepotYardProblem.notAnEnd.text(in: language))
+            }
         }
     }
 
     /// Where a tap or a drag at `point` picks an end of the next stretch
     /// of track (see ``tapNetwork(at:reach:)``).
+    /// Tracing the real railway (decision 213), a new point near a real
+    /// line is on it.
     func networkAnchor(at point: PlanPoint, reach: Int64) -> NetworkAnchor {
-        networkSnapsToTrack
+        let free = NetworkAnchor.point(tracedPoint(near: point, reach: reach) ?? point)
+        return networkSnapsToTrack
             ? world.trackNode(near: point, within: reach).map { NetworkAnchor.node($0.id) }
                 ?? world.trackEdgePoint(near: point, within: reach).map(trackAnchor)
-                ?? .point(point)
-            : .point(point)
+                ?? free
+            : free
     }
 
     // MARK: - Building
@@ -118,11 +131,14 @@ extension GameSession {
         let key = NetworkPreviewMemo.Key(
             start: start, end: end, structure: networkStructure, height: networkHeight, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
-            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, worldRevision: worldRevision
+            buildsDouble: networkBuildsDouble, doubleSide: networkDoubleSide, traces: tracesRealRailway, worldRevision: worldRevision
         )
         if let memo = networkPreviewMemo, memo.key == key { return memo.preview }
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
+        } else if let traced = tracePreview(from: start, to: end) {
+            // Decision 213: along the real line, when both ends are on one.
+            (traced, [])
         } else {
             // The double track's parallel is drawn as the crossover's
             // middle is: a second line.
@@ -140,6 +156,10 @@ extension GameSession {
     public func buildNetworkTrack() {
         if scissorsPlan() != nil {
             buildNetworkScissors()
+            return
+        }
+        // Decision 213: along the real line, when both ends are on one.
+        if let start = networkStart, let end = networkEnd, buildTracedTrack(from: start, to: end) {
             return
         }
         guard let start = networkStart, let end = networkEnd else {
@@ -859,6 +879,17 @@ extension GameSession {
                 return language.text("Tap the track to remove.", "請點選要拆除的軌道。")
             }
             return world.trackEdgeSummary(edge, in: language) ?? edge.displayText(in: language)
+        case .depot:
+            guard networkDepotEnd != nil else {
+                return language.text(
+                    "Tap the end of a track: \(networkDepotSidings) sidings for the longest train run on from it, with a depot.",
+                    "請點選軌道的盡頭：從那裡鋪出 \(networkDepotSidings) 股放得下最長列車的停車線與機廠。"
+                )
+            }
+            return networkDepotPreview?.problem ?? language.text(
+                "\(networkDepotSidings) sidings and a depot here. Choose it as a line's depot on the line panel.",
+                "在這裡鋪 \(networkDepotSidings) 股停車線與機廠。之後到路線面板替路線選這個機廠。"
+            )
         case .passingLoop:
             guard networkEdgePoint != nil else {
                 return language.text(
@@ -976,6 +1007,13 @@ public struct NetworkOverlay: Hashable, Sendable {
     public var crossovers: [[WorldCoordinate]] = []
     /// Whether GameCore would build it.
     public var previewIsBuildable = false
+    /// The rest of a traced stretch after it stops (decision 213), drawn
+    /// as a stretch that cannot be built.
+    public var unbuilt: [WorldCoordinate] = []
+    /// The real lines the tool can trace, and the stretch of them it
+    /// would trace now (decision 213), drawn under the track.
+    public var traceable: [[WorldCoordinate]] = []
+    public var tracedWay: [WorldCoordinate] = []
     /// The centre line of what the platform or remove mode picked.
     public var highlight: [WorldCoordinate] = []
     public var highlightKind: Highlight = .removal
@@ -993,6 +1031,8 @@ extension GameSession {
         var overlay = NetworkOverlay()
         switch networkMode {
         case .build:
+            overlay.traceable = traceableRealLines
+            if !overlay.traceable.isEmpty { overlay.tracedWay = networkTracedWay }
             if let start = networkStart, let end = networkEnd, let (from, to) = endPositions(from: start, to: end, in: world) {
                 overlay.anchors = [from, to]
             } else {
@@ -1003,6 +1043,7 @@ extension GameSession {
                 overlay.crossing = draft.crossing
                 overlay.crossovers = draft.preview.crossovers
                 overlay.previewIsBuildable = draft.preview.problem == nil
+                overlay.unbuilt = draft.preview.unbuilt
                 overlay.cleared = draft.preview.cleared.map(PlanRect.init)
             }
         case .platform:
@@ -1018,6 +1059,15 @@ extension GameSession {
             if let loop = networkLoopPreview {
                 overlay.preview = loop.points
                 overlay.previewIsBuildable = loop.problem == nil
+            }
+        case .depot:
+            if let end = networkDepotEnd, let node = world.network.node(end) {
+                overlay.anchors = [node.position]
+            }
+            if let yard = networkDepotPreview, let first = yard.tracks.first {
+                overlay.preview = first
+                overlay.crossovers = Array(yard.tracks.dropFirst())
+                overlay.previewIsBuildable = yard.problem == nil
             }
         }
         return overlay
@@ -1103,6 +1153,7 @@ struct NetworkPreviewMemo {
         let easesGrade: Bool
         let buildsDouble: Bool
         let doubleSide: PlatformTrackSide
+        let traces: Bool
         let worldRevision: Int
     }
 

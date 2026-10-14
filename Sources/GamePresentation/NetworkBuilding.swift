@@ -32,6 +32,9 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
     /// A tap picks a place on single track for a passing loop (decision
     /// 204).
     case passingLoop
+    /// A tap picks the end of a track for a depot's sidings (decision
+    /// 213).
+    case depot
 
     public func title(in language: DisplayLanguage) -> String {
         switch self {
@@ -39,6 +42,7 @@ public enum NetworkToolMode: CaseIterable, Hashable, Sendable {
         case .platform: language.text("Platform", "月台")
         case .remove: language.text("Remove", "拆除")
         case .passingLoop: language.text("Loop", "待避")
+        case .depot: language.text("Depot", "機廠")
         }
     }
 }
@@ -95,6 +99,15 @@ public struct NetworkPreview: Hashable, Sendable {
     /// What the double track does about joining the track there: the
     /// crossovers it adds, or why it adds none; `nil` when it joins none.
     public var crossoverNote: String? = nil
+    /// How many edges a stretch traced along a real line has (decision
+    /// 213); `nil` for one stretch.
+    public var traced: Int? = nil
+    /// Where a traced stretch stops and why; `nil` when it reaches the
+    /// picked end.
+    public var traceNote: String? = nil
+    /// The rest of a traced stretch after it stops, drawn as one that
+    /// cannot be built.
+    public var unbuilt: [WorldCoordinate] = []
 }
 
 /// What a stretch of track the network tool would build costs, part by

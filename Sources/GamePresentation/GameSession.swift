@@ -90,6 +90,8 @@ public final class GameSession {
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
+    /// The depot's sidings at the picked end, kept likewise.
+    @ObservationIgnored var depotYardMemo: DepotYardMemo?
     /// The levelling of the platform's stretch, kept likewise (see
     /// ``networkPlatformLevelling``).
     @ObservationIgnored var platformLevellingMemo: PlatformLevellingMemo?
@@ -372,10 +374,27 @@ public final class GameSession {
     /// Whether each stretch gets a second track beside it, 5 m apart
     /// (decision 204, ``DoubleTrack``), on ``networkDoubleSide`` of the
     /// way it is drawn.
-    public var networkBuildsDouble = false
+    public var networkBuildsDouble = false {
+        // Decision 213: a traced stretch is single track.
+        didSet { if networkBuildsDouble { networkTracesRealRailway = false } }
+    }
     public var networkDoubleSide: PlatformTrackSide = .left
+    /// Whether the next stretch follows the real railway under a
+    /// real-world map (decision 213, ``tracePlan(from:to:)``): ends snap
+    /// to the real lines, and the track between follows them.
+    public var networkTracesRealRailway = false {
+        didSet { if networkTracesRealRailway { networkBuildsDouble = false } }
+    }
+    /// The real lines of the map, projected once for each map (decision
+    /// 213, ``realRailwayTraces``).
+    @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
+    /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
+    /// which side of the track's end they fan out to, and the end picked.
+    public var networkDepotSidings = DepotYard.defaultSidings
+    public var networkDepotSide: PlatformTrackSide = .left
+    public internal(set) var networkDepotEnd: TrackNodeID?
     /// Whether a stretch that climbs or falls eases into and out of its
     /// grade with vertical curves at both ends (the default, decision 164),
     /// where it fits under the steepest grade.
@@ -413,6 +432,7 @@ public final class GameSession {
             networkPreviewMemo = nil
             platformLevellingMemo = nil
             passingLoopMemo = nil
+            depotYardMemo = nil
         }
     }
 
@@ -1455,6 +1475,26 @@ public final class GameSession {
         }
     }
 
+    /// Sets the selected line's code (decision 216) through
+    /// `GameWorld.setLineCode(_:to:)`: `text` as ``LineBadge/code(from:)``
+    /// reads it, or the app's own for a blank one. Text that is no code
+    /// changes nothing and says why.
+    public func setSelectedLineCode(_ text: String) {
+        guard let line = requireSelectedLine() else { return }
+        let code = LineBadge.code(from: text)
+        guard code != nil || LineBadge.isBlank(text) else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "A line code is one to three letters A–Z or digits.",
+                "線號是一到三個英文字母或數字。"
+            ))
+            return
+        }
+        perform(.setLineCode(line.id, code)) { _, _, _ in
+            code.map { language.text("\(line.name) is now \($0.text).", "\(line.name) 的線號改為 \($0.text)。") }
+                ?? language.text("\(line.name) has its own code again.", "\(line.name) 改回自動線號。")
+        }
+    }
+
     /// Borrows one ``CompanyAccounts/loanStep`` through
     /// `GameWorld.borrow(_:)` (decision 67).
     public func borrowLoanStep() {
@@ -1952,6 +1992,15 @@ public final class GameSession {
                 opens = language.text(" \(line.name) opens at \(time).", "\(line.name) \(time) 開始營運。")
             } else {
                 opens = ""
+            }
+            // TestFlight 60.1: a line already running trains keeps its
+            // counts, so the new train would wait: say so, and how.
+            if started == 0, let unused = world.lineUnusedTrains(ofTrain: train.id) {
+                let now = unused.busiest
+                return text + opens + language.text(
+                    " \(service) is set to run \(now) \(now == 1 ? "train" : "trains"): tap Run \(unused.target) on the train card, or set it in the Lines panel.",
+                    "\(service) 只設定上線 \(now) 列：在列車卡按「加開到 \(unused.target) 列」，或在路線面板設定。"
+                )
             }
             guard started > 0 else { return text + opens }
             return text + opens + language.text(

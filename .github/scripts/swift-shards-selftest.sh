@@ -428,13 +428,24 @@ for path in Package.swift Sources/GameCore/World/GameWorld.swift Tests/GameCoreT
     failures=$((failures + 1))
   fi
 done
-# A part of a selection: the classes dealt out in turn, each in one part.
+# A part of a selection: each class in one part, heaviest first to the
+# lightest part (unweighted classes count the same, in name order).
 printf 'M.A/t1\nM.A/t2\nM.B/t\nM.C/t\nN.D/t\n' >"$work/parts.txt"
 parts="$(for k in 1 2; do SELECTED_TESTS='M.* D' SELECTED_PART="$k/2" SWIFT_TEST_LIST_FILE="$work/parts.txt" "$script" select selected | tr '\n' ' '; echo; done)"
 if [[ "$parts" == $'M.A/t1 M.A/t2 M.C/t \nM.B/t N.D/t ' ]]; then
   echo "ok   pass  selected parts split the classes"
 else
   echo "FAIL selected parts: $parts"
+  failures=$((failures + 1))
+fi
+# A weighted class (CLASS_WEIGHTS) fills a part of its own before the light
+# ones share the others, and the parts still split the selection exactly.
+printf 'M.A/t\nM.B/t\nM.C/t\nM.HighSpeedDemoTests/t1\nM.HighSpeedDemoTests/t2\nM.LineLossFixesTests/t\n' >"$work/weighted.txt"
+parts="$(for k in 1 2 3; do SELECTED_TESTS='M.*' SELECTED_PART="$k/3" SWIFT_TEST_LIST_FILE="$work/weighted.txt" "$script" select selected | tr '\n' ' '; echo; done)"
+if [[ "$parts" == $'M.HighSpeedDemoTests/t1 M.HighSpeedDemoTests/t2 \nM.LineLossFixesTests/t \nM.A/t M.B/t M.C/t ' ]]; then
+  echo "ok   pass  selected parts follow the classes' weights"
+else
+  echo "FAIL selected weighted parts: $parts"
   failures=$((failures + 1))
 fi
 SELECTED_TESTS='GoneTests' WHY='GoneTests has no tests' expect fail "a selected class that does not exist fails" "$script" run selected

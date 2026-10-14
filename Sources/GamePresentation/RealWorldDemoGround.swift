@@ -56,6 +56,8 @@ extension RealWorldDemo {
             world.setKeepLeft(false)
             // Decision 207: its timetables are as they were measured.
             world.setRealisticOperation(false)
+            // Decision 212: its traffic control takes whole legs as measured.
+            world.setBlockSections(false)
             // Decision 174: nor do tourists come to its sights.
             world.setTourism(nil)
             // Decision 183: nor does the city ask it for anything.
@@ -302,7 +304,9 @@ extension RealWorldDemo {
                     startNode = (node.point, ahead.dot(node.direction) >= 0 ? node.direction : node.direction.reversed)
                     flat.append(TrackRise.Level(0...0, at: Double(hostPlan.heights[index])))
                 }
-                let rise = TrackRise(path: path, ground: ground, water: water, levels: flat)
+                guard let rise = TrackRise(path: path, ground: ground, water: water, levels: flat) else {
+                    preconditionFailure("No grade reaches along a demo track \(Int(path.length / metre)) m long")
+                }
                 for (stop, span) in stations where levels[stop.station.id] == nil {
                     levels[stop.station.id] = Double(rise.node(at: span.lowerBound))
                 }
@@ -325,7 +329,9 @@ extension RealWorldDemo {
                     + loopEnds.filter { secondLoops.contains($0.0.station.name(in: .traditionalChinese)) }.map { ($0.0, $0.1, $0.2, -groundLoopOffset) }
                 for (stop, a, b, offset) in sides {
                     let loop = path.offset(from: a, to: b, by: offset, ramp: loopRamp)
-                    let loopRise = TrackRise(path: loop, ground: ground, water: water, levels: [TrackRise.Level(0...loop.length, at: Double(rise.node(at: a)))])
+                    guard let loopRise = TrackRise(path: loop, ground: ground, water: water, levels: [TrackRise.Level(0...loop.length, at: Double(rise.node(at: a)))]) else {
+                        preconditionFailure("No grade reaches along a demo loop")
+                    }
                     guard let start = plan.node(at: a), let end = plan.node(at: b) else { preconditionFailure("A loop's ends are not nodes") }
                     let zone = middlePlatform(of: loop)
                     pieces.append(Piece(
@@ -589,7 +595,9 @@ struct TrackRise {
     /// Each level stretch and the height it is laid at.
     let levels: [(range: ClosedRange<Double>, height: Double)]
 
-    init(path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level]) {
+    /// `nil` where no line within the grade keeps to `levels` (a traced
+    /// stretch's ends on track, decision 213); the demo's always have one.
+    init?(path: WorldPath, ground: (WorldVector) -> Double, water: (WorldVector) -> Bool, levels: [Level], grade: Double = RealWorldDemo.rulingGrade) {
         let count = max(1, Int((path.length / Self.spacing).rounded(.up)))
         let grid = (0...count).map { min(Double($0) * Self.spacing, path.length) }
         let ends = levels.flatMap { [$0.range.lowerBound, $0.range.upperBound] }.filter { (0...path.length).contains($0) }
@@ -616,7 +624,7 @@ struct TrackRise {
         }
         // How far each sample may rise or fall from the one before: none
         // within a level stretch.
-        var steps = [0.0] + zip(distances, distances.dropFirst()).map { RealWorldDemo.rulingGrade * ($1 - $0) }
+        var steps = [0.0] + zip(distances, distances.dropFirst()).map { grade * ($1 - $0) }
         for level in levels {
             for index in distances.indices.dropFirst() where level.range.contains(distances[index]) && level.range.contains(distances[index - 1]) {
                 steps[index] = 0
@@ -675,7 +683,7 @@ struct TrackRise {
                 tunnels.insert(nearest)
             }
         }
-        preconditionFailure("No grade reaches along a demo track \(Int(path.length / RealWorldDemo.metre)) m long")
+        return nil
     }
 
     /// Where no grade reaches.

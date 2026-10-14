@@ -110,11 +110,12 @@ extension GameWorld {
     }
 
     /// The trains of `line`'s `stream` that run a service, but those
-    /// running empty to the depot.
+    /// running empty to the depot. One pass over the trains, not a lookup
+    /// of each: it is asked every minute for every stream.
     func runningTrains(of line: ServiceLine, _ stream: DispatchStream) -> Int {
-        line.trains(of: stream).count { id in
-            guard let train = train(id: id), train.execution != nil else { return false }
-            return !isPullingIn(train, of: line)
+        let ids = Set(line.trains(of: stream))
+        return trains.count { train in
+            ids.contains(train.id) && train.execution != nil && !isPullingIn(train, of: line)
         }
     }
 

@@ -227,12 +227,12 @@ final class BlockSectionsTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
     }
 
-    /// Save version 55: the three services of
+    /// Save version 56: the three services of
     /// ``testATrainFollowingAnotherLeadsAThirdWithBlockSections()`` at 2:00,
     /// T2 following T1 and T3 following T2, a block at a time.
-    func testVersionFiftyFiveKeepsBlockSections() throws {
+    func testVersionFiftySixKeepsBlockSections() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("SaveFixtures/v55-block-sections.json")
+            .appendingPathComponent("SaveFixtures/v56-block-sections.json")
         var (made, trains) = try makeChain(blocks: true)
         try made.advance(ticks: 2)
         XCTAssertTrue(made.isFollowing(try XCTUnwrap(made.train(id: trains[1]))))
@@ -244,11 +244,11 @@ final class BlockSectionsTests: XCTestCase {
         }
         let data = try Data(contentsOf: url)
         let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object["saveVersion"] as? Int, 55)
+        XCTAssertEqual(object["saveVersion"] as? Int, 56)
         let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
         XCTAssertEqual(loaded, made)
         XCTAssertTrue(loaded.blockSections)
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 55,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+            .replacingOccurrences(of: #""saveVersion" : 56,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
 }

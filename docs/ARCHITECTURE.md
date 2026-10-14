@@ -3849,7 +3849,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 1. **點一下是看**：選取（沒有工具）時點到車站，細節卡不再自己打開（`ControlDetails.isOpen`：選取工具下選到車站時預設收起）；改在車站**下方**浮出小標籤（`MapStationTagView`，資料是 GamePresentation 的 `StationTag`）：停靠路線的顏色條（最多 4 條）、站名、候車人數（沒有人就不寫）與 ›。放在下方，因為決策 109 的狀態泡泡在車站上方；下方放不下就放上方，並避開地圖四邊的控制項。點選的若不是車站（列車、空地），照舊打開細節卡。
 2. **點標籤才打開細節卡**（`GameScreenState.detailsRequests` 加一，畫面把細節卡設為打開）。細節卡、地圖旁的面板打開時，或教學進行中（細節卡一直開著），標籤不出現。工具列的「顯示控制項」照舊能打開細節卡。
 3. **長按是改**：選取時在車站上按住 0.45 秒（`UILongPressGestureRecognizer`），選取那座車站（`GameSession.holdMap(at:reach:)`，找車站的方式和點一下相同）並打開車站面板（地圖旁滑出，決策 106），同時輕震一下。按住的地方沒有車站、或正在用工具、或路線面板開著時，長按不成立，那一下照舊是點擊（多久都算）。
-4. **長按一定有按鈕可以代替**：標籤右邊的鉛筆（`map.stationTag.edit`）同樣打開車站面板，VoiceOver 與切換控制不必長按。標籤本身的名字是站名與候車人數（`map.stationTag`）。
+4. **長按一定有按鈕可以代替**：標籤右邊的鉛筆（`map.stationTag.edit`）同樣打開車站面板，VoiceOver 與切換控制不必長按。後來（TestFlight 60.1，改名要點三次才能打字）：鉛筆打開面板時一併跳出車站更名，欄位已有鍵盤，選站後點一下就能打字（`GameScreenState.renamesStationOnOpen`）；長按仍只打開面板。更名的 alert 用 `TickStable` 包住，不隨每個 tick 重建（路線更名共用）。標籤本身的名字是站名與候車人數（`map.stationTag`）。
 
 **沒有做的**：列車的標籤（車次、下一站、誤點；列車在動，標籤要跟著）；長按時畫出腹地圈；把蓋好的東西拿起來移動（需要 GameCore 的新指令）。
 
@@ -6417,6 +6417,15 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 - **參考**：`Ci/` 的 `TUTORIAL_STEPS` 第 7–9 步打開路線資訊面板（`openUI` 選第一條有車站的線），圈出面板與其中一列（`#panel-line-info`、`#line-info-capacity-row`），這兩步照這個做法。參考沒有讀收支或虧損的步驟，內文是本專案寫的。外部專案沒有搜尋：參考的做法已經夠用。
 - `TutorialJourneyUITests` 一起改：第 17 步點 `entry.lines`，第 18 步按「下一步」，之後的步驟號碼加 2。
 
+**之後的修正（2026-10-14，玩家回報 59.1，iPhone 18 Pro：教學與互動卡片太大，看不到地圖上發生什麼；「卡在第 6 頁」）**：
+- 「11 頁、卡第 6 頁」是 54.1 的舊問題（橫拿時卡片蓋住路線面板），56.1 已修好；59.1 的教學有 21 步。這次修的是還剩下的「卡片太大」與「收合後不知道怎麼繼續」。
+- **收合的膠囊**：右邊加「點我看說明 ⌃」（英文 “Tap for help”），讓玩家知道點它會展開。等夠久或卡片顯示問題時，膠囊旁邊直接有「略過這一步」（和展開的卡片同一個 `tutorial.skipStep`，兩者不會同時出現）。原本只有展開的卡片上才有這個按鈕。
+- **手機橫拿時卡片變矮**：`TutorialCardPlacement.maxHeight`。手機橫拿（compact height）時是 `compactMaxHeight` 150 pt，說明文字在卡片裡捲動，標題、問題提示與按鈕一直看得到。原本量卡片時用整個可用高度，最矮也算 200 pt，約 250 pt 高的地圖只剩下一條。iPad 與直拿不變（`.infinity`）。
+- **詳細資料卡可以收起來**：教學中，步驟沒有指到詳細資料卡（`TutorialStep.usesDetailsCard` 為 false）時，工具列上顯示收合按鈕（`controls.toggle`），`ControlDetails.isOpen` 也照玩家的選擇。指到它的步驟照舊一定打開，也不顯示按鈕。
+- 其他蓋在地圖上的互動卡片：路線提示（決策 201）、待避線（決策 204）都是系統 alert，路線面板與詳細資料卡在手機橫拿時已經變窄（決策 106 的之後的修正）。這次沒有改。
+- 不做卡片拖曳（作者讓 session 決定，三方理由在 #562）：卡片變矮、膠囊一點就收、詳細資料卡可以收起，已經讓出地圖；拖過的位置要和 `TutorialCardPlacement` 的自動擺放、`TutorialCardFold` 的自動收合協調，還會和地圖拖曳搶手勢，也會讓卡片離開它圈選的目標。實機上仍不夠再另做。
+- **參考**：沒有查參考與外部專案：這是本專案既有版面的尺寸修正，不是新的 Stage。
+
 ### 189. OSM 底圖的標籤不壓在真實鐵道上
 
 2026-10-12，作者問「OSM 鐵路底圖是不是有斷掉，像是阿里山或高雄捷運紅線」，再問「你是遊戲開發者的話怎麼做」，交給這個 session 決定。號碼依工作登記 #231：決策 189（188 由教學重做 #433 保留）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
@@ -7460,6 +7469,175 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **沒有驗證的**：之後的年份，人事行政總處每年公告的調整（例如額外的彈性放假）。規則只照條例。
 
+### 212. 區間閉塞：長區間也能跟車、越行
+
+2026-10-14。NEXT_PRIORITIES §0 第 15 項。設計與試驗：[`research/BLOCK_SECTIONS_2026-10-13.md`](research/BLOCK_SECTIONS_2026-10-13.md)（作者授權 session 從開發、美術、玩家三個角度決定第 7 節的四題）。
+
+**為什麼**：決策 56 的跟車在高鐵的 30–180 km 區間幾乎跟不起來，高鐵示範打開行車控制時 191 班丟 97 班（決策 197 第 5 點；#513 之後本機 release 一整天 742.9 秒，丟班不變）。四個卡點：(A) 前車自己在跟車就不能當前車；(B) 只沿預設的路跟車；(C) 前車會停在後車的路上就不能跟；(D) 跟車中的列車幾乎每秒都延長授權。只拿掉 A 的試驗反而有 10–34 列死結、丟 150 班：後車「等著」前方的軌道（決策 56 第 6 點），擋住了在它前面要出發的車。
+
+**規則**（世界開關 `GameWorld.blockSections`，存成 `"blockSections": true`，缺 key＝關；關著時以下都不發生，結果逐位元不變）：
+
+1. **閉塞區段**：每條邊從 `from` 端起每 `GameWorld.blockLength` = 96,000 單位（1.5 km，新幹線數位 ATC 的軌道電路長度）一個分界，邊的兩端也是分界。道岔（三條以上的邊交會的節點）和它 `RailwayNetwork.junctionZone` 內不是分界：列車只在一般路段等，穿過站內道岔要一次拿到，不會停在道岔中間擋住要交叉過去的車（量測時左營停車股道就是這樣互等）。只由拓撲與整數里程決定，不存檔（`BlockSections.swift` 的 `blockBoundary(_:atOrBefore:)`、`blockBoundary(_:after:)`）。
+2. **授權停在分界**：跟車的授權原本到「第一段被別人持有的軌道之前 `followingGap`」，改成那裡之前最近的分界（`followingAuthority(_:free:)`）；至少拿到一個分界才發車。延長也一樣，所以前車的車尾每離開一個閉塞，後車才延長一次。
+3. **可以串成一串**：`isLeading` 不再要求前車整段拿到；前車自己在跟車時，算它「停靠時站的位置」要算到它的停靠點，不是它的授權終點（清掉複本的預約再算 `travelling`）。
+4. **跟車的列車不替前方佔位**：決策 56 第 6 點（`Claim`、`binds`）不適用，跟車中的列車只持有拿到的閉塞。第三列車可以插進前後車之間：同方向、會讓出的，後車改跟它；不是的，後車等。對向的車仍要整段拿到才出發，而它的路會經過後車持有的閉塞，所以拿不到。
+5. **排定的路與指定的路也能跟車**：`departService` 與 `goOn` 試排定的路（決策 59）、路線指定的路（決策 61）時用 `reserving(_:following:)`；拿不到授權才記進 `HeldRoute.whole`，批次判斷也用同樣的規則。
+6. **批次推進**：`canExtendAnyAuthority` 問「下一個分界之後 `followingGap`」是否空出來（`reachToExtend(_:beyond:)`），和第 2 點延長的條件相同，所以以分鐘推進與逐秒推進結果相同（`BlockSectionsTests`）。
+
+7. **改去別的月台**（決策 57 的補充）：`reservingDeparture` 照舊先找避開所有被持有軌道的路、整段拿；拿不到時，找只避開停著不動的車（沒有在行駛中，或 rate 為 0）的路，跟車走。台北往南港的車原本等一列停在南港停車股道上的閒置車，因為預設的路通到那條股道。
+
+**量測**（同一台 Linux 雲端容器、release，`TrafficControlTimingReportTests`，`TRAFFIC_TIMING_BLOCKS=1` 打開閉塞；過程與每一步的數字在設計文件第 6 節）：高鐵示範、真實時刻表、行車控制開，一整天：
+
+| | 計算秒數 | 丟班（191 班） | 死結（每小時最多） | 終點誤點中位數 |
+| --- | --- | --- | --- | --- |
+| 閉塞關（`main` a272c69） | 742.9 | 97 | 0 | 92／130／126 分 |
+| 閉塞開 | 1,121.4 | 46 | 2（隨即解開） | 59／67／107 分 |
+
+丟班減半、誤點少三到六成，但計算多了 51%（同時在跑的車多了）。`long-leg-traffic.json` 的世界 3 小時：關 4.14 秒、開 3.96 秒，死結與發車相同。
+
+**沒有做的**：依煞車曲線提前減速（幾何限速）；讓排定待避認得跟車中的列車（剩下的丟班多半是快車跟在各站停的車後面）；結果不變的延長捷徑。高鐵示範等這些做完再打開行車控制。
+
+**開關**：App 的新遊戲打開（`NewGame`），示範、挑戰、教學、平溪與劉銘傳劇本、實景示範關掉；高鐵示範這個 PR 不打開行車控制（量完另開 PR）。
+
+**存檔**：版本 56（55 是線號，決策 216）。只讀到 55 的 build 會丟掉這個 key，讓列車改回整段跟車，所以說存檔比它新。fixture `SaveFixtures/v56-block-sections.json`（`BlockSectionsTests.testVersionFiftySixKeepsBlockSections`，`BLOCK_SECTIONS_SAVE_NEW=1`）。
+
+**參考庫與外部專案**：
+- 參考庫（`d3ebdf1`）沒有閉塞、號誌或執行中的佔用狀態。`Railway/site_archive_clean/index.html` 的 `planSameDirectionOvertakes`（`need = 30 + v/b`）是排點時的越行，照舊由決策 59／60 負責；`BLOCK_GAP_KM` 已是 `followingGap`。對照表在設計文件第 3 節。
+- OpenTTD（GPL-2.0）、Simutrans 與 Simutrans-Extended（Artistic 1.0）、OSRD（LGPL-3.0）只參考想法：預約只到「安全等待位置」（這裡是閉塞分界），等待中的列車在那之外不持有任何東西。沒有複製程式。
+- 程式是這個專案自己的。
+
+**golden、replay、SaveFixtures**：開關都是關的，每一個值都不變。
+
+**驗證**：`BlockSectionsTests`（分界的手算值、道岔不是分界、三列串跟、逐分與逐秒相同、存讀與 v56 fixture）、`BlockSectionsSessionTests`（新遊戲開、示範與教學關）；既有的 `TrafficControlTests`、`FollowerDeadlockTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、golden、replay、`SavedGameTests` 照舊通過。
+
+### 213. 沿真實路線描線建造
+
+2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 2 名、§4 波次 2 第 8 項）。號碼依工作登記 #231：main 211，212 預留給區間閉塞，所以取 213。只改畫面（App 與 GamePresentation），GameCore、存檔版本、golden schema 不動。
+
+1. **選項**（`GameSession.networkTracesRealRailway`，預設關）：路網工具鋪設模式多一個「沿真實鐵路」開關，只在實景地圖與全島地圖、而且真實鐵路已讀進來時出現（`canTraceRealRailway`）。和「複線」互斥：描出來的是單線，要複線之後用複線或待避線工具加。
+2. **資料**：App 內附、已畫在底圖下的那份真實鐵路（`track_lines.geojson`，決策 50；有三段已照 OSM 重畫，ODbL 在 `DataSourceCredits`）。不另做 OSM 資料。投影和底圖、示範地圖相同（`RealWorldFrame.worldPosition`）。
+3. **路網**（`RealRailwayTraces`，每張地圖算一次）：世界範圍外 2 km 內碰得到的線；每條線的兩端，若離同一系統的另一條線 60 m 內，就接到那條線上最近的一點（支線從幹線分出、同一條線分成幾段）。兩點之間走最短的路（Dijkstra，節點是線的兩端與接點，幾百個）。不同系統不相接，所以台鐵不會跳到旁邊的捷運。
+4. **吸附**（`networkAnchor(at:reach:)`、`networkDragDraws(from:reach:)`）：打開時，點或拖曳附近沒有既有軌道、但在真實鐵路的觸控範圍內（至少 30 m）時，新節點放在線上最近的一點；從真實鐵路上開始的拖曳也會畫軌道（原本只有從起點或既有軌道開始才會）。既有軌道照舊優先。
+5. **描出來的形狀**（`tracePlan(from:to:)`）：兩端之間的真實中心線，加上兩端本身，照示範地圖的做法：每 5 m 重新取樣、前後 15 m 平均（`WorldPath.smoothed`）；高度用 `TrackRise`（決策 132），坡度上限 38‰（GameCore 的 40‰ 減一點，取整數後也不會超過），跨水面至少 5 m；邊用 `RealWorldDemo.TrackPlan`：三次曲線，節點處方向一致，離中心線 3 m 內、一段最長 960 m、轉角不超過 60°。端點在既有軌道上時沿那條軌道接出去（平順曲線打開時），高度照那條軌道；新的端點照工具的高度站在地面上。結構照工具的設定（預設自動）。
+6. **一個指令**（`PlayerCommand.buildTrackChain`）：一串 `TrackStretch`，每一段從前一段的終點節點開始；全部成功才換掉世界，一次復原就全部拿掉；指令紀錄寫成 `buildTrackChain`，每一段是一個 `buildTrack`（決策 193 的格式），可以在 Linux 重播。
+7. **停下來並說明**：預覽在世界的副本上一段一段蓋，GameCore 拒絕某一段（太陡、太靠近別的軌道、地還沒買、錢不夠……）或那一段彎得比 40 m 急時就停在前一段：預覽畫能蓋的部分、剩下的畫灰虛線，卡片寫「描到 3.2 公里處停下：原因」，按確定只蓋前面那部分。一段都不能蓋時就是一般的不能建造。
+   - **最小半徑**：GameCore 沒有曲線半徑的規則（只有接軌時轉角不超過 90°，決策 103），所以不新增規則。40 m（阿里山林鐵最急的彎）只用來擋住線圖的折角或兩條線接點拉出的髮夾彎。量法照參考 `Ci/` 的 `radiusAtPoint`（三點外接圓），每段取 16 點。
+   - **坡度**：整段找不到 38‰ 以內的高度（例如兩端都接在既有軌道上、高低差太大）時直接說明，不蓋。
+8. **畫面**（`MAP_LAYERS.md` 圖層 22.5，`MapArt.drawTraceableLines`）：打開時把可描的線畫成藏青細虛線（`Palette.ink` 75%），要描的那段加藏青寬光帶與實線，都在玩家的軌道（綠松）與路線色下面。外觀給了三種預覽（A 藏青細虛線、B 淡灰實線、C 藏青點線），作者 2026-10-14 請 session 以開發、美術、玩家三個角度綜合決定，定為 **A**：
+   - 開發：已實作、CI 綠，不必再改；只用現有的 `Palette.ink`，深色模式自動變淺色。
+   - 美術：藏青是 App 圖示的主色，和玩家的綠松軌道、暖黃車站、任何路線色都分得開；淺底 5.6:1、深底 8.2:1。
+   - 玩家：虛線讀起來是「還沒蓋、可以照著描」的導引；B 的淡灰實線在 Apple 地圖上容易被當成道路，C 的點線在手機上太碎、拉遠時糊成一片。
+   - 留意：鋪軌預覽「不能建造」也是虛線，但它是灰色、較粗（約為軌道寬的 0.12 倍），而且只出現在預覽那一段，和細藏青虛線分得開；實機若仍會混淆，再把不能建造的改成紅色。
+
+**參考**（`a91453/railway-reference-private` d3ebdf1）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/index.html` `projectOntoShape`（把一點投影到線上，回傳沿線距離與垂直距離）、`Ci/` 的 `hsrRuntimeNearestPointOnSegment` | `RealRailwayTraces.nearest(to:on:within:)`、`snap(_:within:group:)` | 同樣的做法，在世界座標上算 |
+| 同一份的 `shapeSlice`（兩個沿線距離之間的一段，反向時倒過來）、`buildFollowRoute`（幾條線串起來） | `RealRailwayTraces.path(from:to:)` | 移植 |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` `makeTopology`、`shortestPath`（OSM 軌道的節點圖與 Dijkstra） | 同上的最短路 | 只取做法：遊戲的線沒有轉轍器資料，節點用線的兩端與接點，不用方向狀態 |
+| `Ci/` 的 `radiusAtPoint`（三點外接圓，海龍公式）、`MIN_TURN_ANGLE_DEG = 90` | `GameSession.tightestRadius(of:)`；轉角照舊（決策 103） | 移植量法；`MIN_CURVE_RADIUS_M`（依設計速度 300–1200 m）在參考裡沒有被用到，也會擋掉真實的台鐵彎道，沒有採用 |
+| `Ci/` 的 `METRO_OSM_LINE_CLICK_TOLERANCE_PX` 8–16 點 | `traceReach`：工具的 24 點觸控範圍，至少 30 m | 沿用工具既有的範圍 |
+| `Railway/site_archive_clean/data/track_style_layers.json` 的 `track-follow-*`（跟隨的那段加寬、加亮） | 吸附時的光帶 | 只取想法，顏色照遊戲的色票 |
+
+`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的（沒有沿既有路線畫線的互動）。參考庫沒有「拖曳時吸附到真實鐵路」的互動，也沒有鐵路的坡度上限，這兩件是這個專案自己的（坡度用 GameCore 的 40‰）。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。
+
+**測試**（`RealRailwayTracingTests`，Linux）：台北到板橋描線（偏一點的點也吸到線上、多段而且全程離真實線 12 m 內、長度約 7.2 km、蓋好一個指令、扣的錢等於預覽、頭尾相接、一次復原）；指令編碼；中間有一條橫過的軌道時停在它前面、說明原因、只蓋前段；關掉或空白地圖時照舊一段；拖曳從真實鐵路開始會畫軌道；曲線半徑的量法。
+
+**沒有驗證的**：App 的開關與疊層的樣子（Linux 不能建置 App，交給 CI 的 iOS build）；實機上拖曳長距離時預覽算得夠不夠快（Linux debug 建置台北到板橋 7 km 約半秒，release 與實機未量）；有地形的實景地圖上描山線的高度與結構。
+
+### 214. 機廠的建造工具與畫面
+
+2026-10-14，作者 2026-10-13 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 1 名、§4 波次 2 第 3 項），接在決策 209 的機廠 L1 之後。號碼依 #231：決策 214（原登記 213，和描線建造 #558 撞號，改取 214）；存檔版本、golden schema 不動，GameCore 不動（只用決策 209 的 `setStationDepot`、`setLineDepot`、`Station.isDepot`、`ServiceLine.depot`）。圖示是作者選定的 #555（`MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`，`docs/UI_THEME.md` 機廠一節）。
+
+1. **停車線工具**（新檔 `Sources/GamePresentation/DepotYard.swift`；路網工具多一個模式「機廠」，`NetworkToolMode.depot`）：點一條軌道的盡頭（只有一條邊接著的節點），選幾股（1–6，預設 3）與往哪一側，一次鋪好：
+   - 第一股是原軌道直直延伸出去；其餘每一股從內側那一股的一個轉轍器分出，S 形曲線往外 `DepotYard.spacing`（5 m），再直走到底：一個往一側展開的梯形。轉轍器前、S 曲線與下一個轉轍器之間都留 `NetworkBuilding.minimumSpacing`（22 m）的直線，S 曲線長 `DepotYard.reach`（50 m，和岸式月台軌道一樣）。
+   - **平行鋪設的核心和一鍵雙線共用**：側邊的位置用 `DoubleTrack.beside`（端點沿法線推 5 m），往前用新的 `DoubleTrack.ahead`；月台軌道與待避線的 `sidingPlan` 原本自己算同一個法線偏移，改成也呼叫 `DoubleTrack.beside`（同一個公式、同樣的四捨五入，結果逐位元不變）。S 曲線照月台軌道的做法（`NetworkBuilding.curve`）。
+   - 同時蓋機廠：一個車站（名稱「機廠 N」），每股一個月台，都從最外一股的 S 曲線結束處到底，長度是公司最長的列車、至少 6 節（`passingLoopLength`，和待避線同一個）；最後 `setStationDepot(…, true)`。不設成封閉：面板上的開關和工具得到的機廠一樣。
+   - 一個指令（`PlayerCommand.buildDepotYard(DepotYardPlan)`，計畫裡是座標與曲線，重播照座標找回被轉轍器切開的邊），全成或全不成；放不下（出了地圖、太陡、撞到別的軌道）時 GameCore 拒絕，什麼都不蓋。預覽在世界的副本上蓋一次，算費用或原因，地圖畫出每一股（第一股是預覽線，其他股走 `crossovers`）。
+   - 實際的股間距：參考庫 `network.json` 裡台灣 OSM 的 955 條 `service=yard` 軌道，相鄰股（2.5–20 m 之間）的中心距中位數 4.8 m（四分位 3.9／6.3 m，482 條），和 5 m 一致。
+2. **車站面板**：「設為機廠／取消機廠」（`GameSession.setSelectedStationDepot`，指令日誌記成既有的 `.setStationDepot`）。按之前就說清楚不能按的原因（`StationDepotSwitch.problem`）：有路線停靠（寫出路線名，「先把這站從路線的停靠站拿掉」）、有路線把列車停在這裡（「先到路線面板換一個機廠」）。「設成機廠會讓路線開不通」（`depotBlocksLine`）要跑每條路線的行程，太貴，不在畫面每一幀算；按下去 GameCore 拒絕時，訊息改成寫出那條路線的名字。
+3. **路線面板**：「所屬機廠」選單（`selectedLineDepotRow`、`setSelectedLineDepot`）：「不用機廠」加上每個機廠與它離路線較近一端的直線距離，近的在前。照時刻表跑的路線（決策 133）不給選，寫明「依班次發車，不能指定機廠」；還沒有機廠時寫怎麼蓋。手機上：有機廠可選、或路線已有機廠時才顯示，否則收在「進階」裡。
+4. **狀態**（`TrainDepotState`，`GameWorld.depotState(of:)`）：空車回送（決策 172）的終點是機廠 =「入庫中」，起點是機廠 =「出庫中」，沒有服務、停在機廠的月台 =「在庫」。FollowBar 的狀態接在後面（「· 出庫中」，取代「回送中」）；列車卡與車隊清單加淡色膠囊（`DepotBadge`）；路線面板寫「在庫 N 列」（`trainsInDepot(of:)`）。地圖：機廠的徽章換成拱門形配 `MapGlyphDepot`（圖層 30）；出入庫的列車頭上一塊藏青小方牌（圖層 51，`GameWorld.depotRuns()`，沒有機廠的世界直接回空，不多花時間）。
+5. **說明頁**一則「機廠是什麼？怎麼蓋？」（`HelpGuide` 的 `depot`）。教學不加步驟。
+
+**參考**（`a91453/railway-reference-private`，`d3ebdf1`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/physical/topology.js` `shortestPath`（113 行：`allowYard=false` 時跳過 `service=yard`／`spur`） | 決策 209 已移植；這裡的工具蓋出來的停車線就是機廠的月台邊，照樣不給路線走 | 已移植（決策 209） |
+| 同目錄 `network.json`（OSM，ODbL）的 `service=yard` 軌道 | `DepotYard.spacing` = 5 m 的佐證（中位數 4.8 m） | 只量數值，沒有搬資料 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` 的 `edge(p, ux, uy)`（法線偏移） | `DoubleTrack.beside`（決策 204 已用），停車線也用 | 共用 |
+| 同目錄 `overtake-sidings.js`、`turnbacks.js`、`dispatch.json` | 無 | 待避與折返、派車表，沒有停車場的配置 |
+| `Railway/railway_game_reference_clean/` 的 `CmdBuildTrainDepot`（只有名稱） | 無 | 沒有規則或數值 |
+
+參考裡沒有「一次鋪 N 股停車線」的工具，梯形的配置與工具是這個專案自己的。外部專案沒有另外搜尋：OpenTTD 的車庫是一格的建物、Simutrans 的 depot 也是，都沒有停車線群的工具（一般知識）。
+
+**測試**：`DepotToolsTests`（點軌道盡頭鋪 3 股：兩個轉轍器、北邊 5 m 一股、每股一個月台、存檔來回；1 股與右側 6 股；點軌道中間不行；出了地圖整個不蓋；指令日誌記得到、重播一樣；一條路線用工具蓋的機廠：收班後「入庫中」→「在庫」→ 早上「出庫中」，路線面板的在庫數與 FollowBar；車站面板說明為何不能設、開不通時寫出路線名；路線面板沒有機廠與照班次跑的說明；說明頁）。`NetworkBuildingSessionTests` 的模式中文名多一個「機廠」。UI 測試 `MapInteractionTests.testTheDepotModeOffersItsSidings` 放 full lane（決策 199）。
+
+**沒有驗證的**：畫面（SwiftUI，只在 macOS CI 編譯）、實機外觀（拱門徽章、小方牌在深色地圖、在庫膠囊）、手機上路網模式五格的寬度。交通管制下機廠出入口的會車要在實機玩。
+
+### 215. 路網明信片
+
+2026-10-14，作者 2026-10-14 同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 3 名，原在 §6「之後」）。號碼依 #231：決策 215；GameCore、存檔版本、golden schema 都不動。
+
+1. **一鍵做一張可分享的圖**：遊戲選單「更多」裡的「做明信片」（`menu.postcard`）打開 `PostcardSheet`：上面是會分享出去的那張卡，下面是公司名稱、淺色／深色、「分享明信片」。分享鍵把圖（1200×1500 像素）交給系統的分享面板（`ShareLink`），玩家可以存到相簿、傳 LINE、貼 IG。
+2. **版面：C 直式海報**（4:5）。三種方案（A 站名牌標題列、B 郵票明信片、C 直式海報，`docs/art/postcard-2026-10-14/options.png`）給作者看，作者交由「玩家、開發者、美術三方考慮」選定 C：
+   - 玩家：直式在手機上最大，也正好是 IG、LINE 動態的比例；
+   - 開發：各部分上下堆疊，版面是幾個固定的框（`PostcardLayout`），Linux 測得到不重疊；
+   - 美術：標題是卡上最大的字，站長的圓章壓在地圖右下角，有人味但不擋路網。
+   - 參考庫的島嶼城市「分享圖」也是 1080×1350（4:5）、上圖下字、四格數字，結構相同（下面的對照表）。
+3. **卡上的內容**（`NetworkPostcard`，GamePresentation）：小字「ALONG THE LINE ・ 沿線」；公司名稱（遊戲裡沒有公司名，玩家在這裡寫，存在裝置上，`@AppStorage("postcard.companyName")`；去頭尾空白、換行變空白、最多 16 字，空的時候是「我的鐵道」）；遊戲日期・公司稱號（決策 181）；四格數字：路線數、車站數、路網長度、昨日旅客（`CompanyFigures`，和公司等級同一份）。
+4. **地圖**：用地圖本身的畫法（`MapArt.drawBase`、`drawMap`、`drawTrains`：地面、城市的建物、軌道、路線色帶、車站與站名底牌、列車逐節、玩家建物暖黃），不另畫一套。範圍是蓋好的東西（`WorldRegion.built`），至少 256 m 寬，四周留 8%；還沒蓋時是整張地圖。投影 `PostcardProjection` 把範圍塞進卡上的地圖框，最近不超過地圖最近的縮放（`MapScale.largestSize`）。不畫候車人數、擁擠環、服務範圍、等待：明信片是路網的樣子，不是問題清單。時間固定在白天（不加夜色）。
+5. **署名**：明信片不畫 Apple 地圖或 OSM 底圖（兩者是另外的 View，畫不進 `ImageRenderer` 的圖），只畫遊戲自己的地面。所以在實景地圖上只欠鐵道的署名，寫在地圖框下面：`DataSourceCredits.mapCorner(baseMap: false, railways: true)`（「鐵道：© OpenStreetMap · 交通部 TDX」）；自己的地圖不寫。之後若要把底圖畫進去（`MKMapSnapshotter`、MapLibre 的 snapshotter），署名改成 `baseMap: true` 那一行。
+6. **淺色與深色**：同一個版面，顏色全取 `Theme`（卡底 `panel`、字 `textPrimary`／`textSecondary`、小字 `primary`、數字格 `chip`）與 `Palette`（外框與地圖框 `ink`、地圖本身）。預設跟著手機的外觀，可以切換；`ImageRenderer` 照選的外觀畫。
+
+**參考**（`a91453/railway-reference-private`，`7888702`）：
+
+| 參考 | 本專案 | 分類 |
+| --- | --- | --- |
+| `Railway/island_city_reference_clean/source/js/g10.js` `makeShareImage`（1080×1350 畫布：上面 920 高的畫面，下面白底：島名 64 px、等級・年・大小一行 30 px、四格數字 220×120、腳註遊戲名） | `PostcardLayout`（400×500 點 ×3 = 1200×1500，同為 4:5）：上面標題、中間地圖、下面四格數字 2×2（右邊讓給站長圓章） | 版面結構與比例照搬，數值換成這個遊戲的；標題移到地圖上面（作者選的 C） |
+| 同目錄 `g11.js` `makeIdCard` 與「我的市長證」表單（名字最多 10 字，存在存檔 `S.mayorName`；`navigator.share({files})`，不支援時下載） | 公司名稱欄（最多 16 字，存在裝置上，不進存檔：GameCore 不動）；`ShareLink` 交給系統的分享面板 | 做法照搬；分享改用 iOS 的 |
+| `Railway/train_loop_reference_clean/source/index.html` 1662 行 `navigator.share({ text })` | 無 | 只分享文字 |
+| `Ci/` anycity 的「分享存檔」 | 無 | 是存檔代碼，不是圖；本專案的匯出存檔（`ExportedSave`）另有 |
+| `OpenWorld/reference_snapshot/play/src/game/device-notice.js` `navigator.share` | 無 | 分享網址 |
+| `Railway/commuter_journey_reference_clean/source/js/ui/PhotoJournal.js`（3D 畫面截圖存成明信片收集） | 無 | 截 3D 畫布；這裡的地圖是 Canvas，直接重畫 |
+
+`Simulator/`、`MapBuilder/`、`Railway/site_archive_clean/`、`Railway/railway_game_reference_clean/`、`Railway/city_world_reference/`、`Railway/street_scene_reference_clean/` 沒有做成圖分享的功能（`site_archive_clean` 的「行程分享」是網址）。圖一律不用參考庫的（art-style §7）：卡上只有遊戲自己的地圖與站長。外部專案沒有用到：`ImageRenderer`、`ShareLink` 是 iOS 16 起的系統 API。
+
+**測試**：`NetworkPostcardTests`（示範地圖的標題、日期・稱號、四格數字與公司等級一致、自己的地圖沒有署名；英文單複數；名稱去空白、截斷、空的給預設；實景地圖寫鐵道署名；地圖範圍包住整個路網、每站都在框裡；新地圖是整張；投影最近不超過最大縮放、來回換算；各部分都在卡內、字與數字互不重疊也不碰地圖與站長、只有站長圓章壓在地圖角上、輸出 1200×1500）。
+
+**沒有驗證的**：畫面與輸出的圖（SwiftUI、`ImageRenderer`，只在 macOS CI 編譯）；深色版 `ImageRenderer` 是否照選的外觀解析 `Theme`／`Palette` 的動態色、實機上分享到相簿與 LINE。沒有加 UI 測試：選單多一列、面板打開，留給實機看。
+
+### 216. 線號徽章與色盲友善色票
+
+2026-10-14，作者同意開工（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §13 第 4 名，原本在 §6「之後」）。號碼依工作登記 #231：main 214，215 是明信片，所以取 216；存檔版本原本取 56（55 由區間閉塞保留），區間閉塞還只有設計文件，合併 session 2026-10-14 對調，改取 55；golden schema 不動。預覽給了徽章三種（A 色塊方牌、B 白底色條牌、C 色環圓牌）與色盲色票三組（甲 Okabe–Ito、乙 Paul Tol muted、丙 從現有色票挑 6 色），作者請 session 從玩家、開發、美術三方考慮自己定案：**徽章 B、色票甲（加一個淺灰）、自動線號照顏色的字母、開關只換畫面的顏色**。規則與理由寫在 `docs/UI_THEME.md`「線號徽章與色盲配色」與 `docs/MAP_LAYERS.md`（24.5、30）。
+
+1. **線號是 GameCore 的欄位**（存檔版本 55）：`ServiceLine.code: LineCode?`，`LineCode` 是一到三個 `A`–`Z`、`0`–`9`；缺 key＝自動，解碼時拒絕不合格的。`GameWorld.setLineCode(_:to:)` 免費、沒有規則讀它，兩條線可以同一個線號（和同名一樣）。指令日誌多一種編輯 `setLineCode`。因為玩家要能改，所以不能只在畫面推導；只在畫面推導的話，玩家改的線號要另存在裝置上，換裝置或分享存檔就不見了，等於第二份遊戲狀態。
+2. **自動線號**（GamePresentation `LineBadge.codes(for:)`）：照路線顏色的名稱，北捷有的照北捷（BL、R、G、O、BR、Y），其他照英文（PK、P、LB、LG、T、IN、GY、W）；20 個色票與 6 個自動色各有一個，其他顏色照色相。同一個字母的第二條起加數字（R2、R3），跳過玩家自己給的線號。參考 `Ci/` 的 `metroLineChipShortLabel` 是從路線名稱取字母或數字，這裡改成從顏色取：玩家的路線名常是中文（「板南線」取不出字母），顏色每條線都有。
+3. **徽章**（App `LineCodeBadge`、`MapArt.drawLineBadge`）：白底（`markerFill`）、1.5 點藏青外框、圓角＝高 × 0.22，左邊一格路線色，藏青粗圓體線號。顯示在路線列表（18 點，取代原本路線色圓圈上的白色編號，白字在淺色路線上讀不到）、路線面板的「線號」按鈕（14 點，點開輸入框，留空回到自動）、車站面板的路線標籤與即將進站、列車卡（`InspectorView`）的路線按鈕、跟車列、地圖上選取車站的名牌；地圖上站名下一排（第 30 層，12 點，最多四個）與每條路線最長那一段的中間（新的第 24.5 層，14／12 點）。
+4. **色盲友善色票**（設定 →「路線顏色」→「色盲友善配色」，裝置上的 `@AppStorage("linePalette")`）：打開後每條路線畫成八色之一（`LinePalette.safeColor(for:)`：Okabe–Ito 七色加 Paul Tol 的淺灰 `#BBBBBB`），依顏色的家族換（紅→朱紅、綠→藍綠……），遊戲的六個自動色換成六個不同的色。只換畫面（`Palette.lineColor` 讀這個設定，地圖、列車、面板都經過它），存檔裡的顏色不變，關掉就恢復；不同色的玩家路線可能換成同一色（20 → 8），靠線號分。八色每一對在三種色盲模擬下的 CIEDE2000 色差至少 10.9；現有 20 色有 30 對小於 10（表在 `UI_THEME.md`）。
+5. **量法**：每一對顏色算 CIEDE2000 色差，色盲用 Machado、Oliveira、Fernandes（2009）嚴重度 1.0 的矩陣在線性 RGB 模擬紅色盲、綠色盲、藍黃色盲；灰階用 WCAG 相對亮度的比。腳本在 scratchpad（照 art-style §1 的做法，不進 repo），數字寫進 `UI_THEME.md`。
+
+**參考**（`a91453/railway-reference-private`，788870262e）：
+
+| 參考 | Swift | 分類 |
+| --- | --- | --- |
+| `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` 的 `PRESET_COLORS` | `LineColor.presets`（早已移植）、`LineBadge.namedCodes` 的 20 色 | 色碼沿用 |
+| 同檔 `metroLineChipShortLabel`、`flowDashboardGetLineBadgeText`（從名稱取線號、退回序號） | `LineBadge.codes(for:)` | 只取做法：改從顏色取（理由見第 2 點） |
+| 同檔 `getReadableChipTextColor`、`flowDashboardIsDarkLineColor`（依亮度挑黑白字） | 無 | 沒有採用：中間調的路線色兩種字都不到 4.5:1，改成白底藏青字 |
+| `Ci/reference_snapshot/lib/app-panels__q_926847d43df94762.css` `.station-line-chip`（14 px 高、9 px 字、800 粗、圓角 3）；`app-core__q_75828088c596bb4b.css` `.station-header-line-chip`（20 px、11 px） | `LineCodeBadge.Size`（14 點 9 點、18 點 11 點） | 取大小 |
+| `Railway/site_archive_clean/index.html` `drawTag`（地圖上的膠囊標籤，15 px、10 px 字、1.5 px 外框）、`abbrOf` | `MapArt.drawLineBadge` | 只取做法 |
+| `Railway/site_archive_clean/data/trtc.json`、`krtc.json`、`tmrt.json`、`tymc.json` 的線號與色碼（北捷 BL `#0070BD`、R `#E3002C`、G `#008659`、O `#F8B61C`、BR `#C48C31`、Y `#FFDB00`；高捷 KR、KO、C；中捷 TG；桃捷 A） | `LineBadge.automaticCode`、`LineBadgeTests` | 取字母的做法；色碼只用在測試 |
+
+色盲：參考庫沒有任何色盲的東西（搜尋 colorblind、protan、deutan、tritan、色盲都沒有）。`MapBuilder/`、`Simulator/`、`OpenWorld/`、`train_loop`、`island_city`、`street_scene` 沒有線號徽章。
+
+**外部**：Okabe & Ito，*Color Universal Design*（2002）的七色（色碼，常用的公開色組）；Paul Tol，*Colour Schemes*（SRON/EPS/TN/09-002）的 `#BBBBBB`；Machado 等（2009）的色盲模擬矩陣（論文的數值）。都只取數值，沒有程式碼；程式是這個專案自己寫的。
+
+**測試**：`RenameAndColourTests`（線號存檔與拒絕不合格的、`testVersionFiftyFiveKeepsALinesCode` 與新 fixture `SaveFixtures/v55-line-code.json`）、`LineBadgeTests`（每個色票都有字母、北捷各色照色相取到同樣的字母、加數字、不撞玩家的線號、輸入轉換、安全色）、`CommandEditTests`（`setLineCode` 的日誌編碼）。
+
+**沒有驗證的**：App 的畫面（Linux 不能建置 App，交給 CI 的 iOS build）；地圖上徽章很多時會不會太擠、色帶上的徽章位置在彎道上是否合適、深色地圖上 `#0072B2` 的路線（對深色地面 2.56）夠不夠清楚，都要在下一版 TestFlight 看。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
@@ -7484,6 +7662,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 立體鐵路（決策 30）：節點的高度在地面（0）上下 4096 以內；邊的高度沿水平里程依縱斷面變化（固定坡度，或兩端的拋物線豎曲線），最陡 40‰。結構物決定高度帶（地面 ±128、高架與橋 ≥ 0、隧道 ≤ 0）與費用倍數（1、3、4、5）。兩條邊在平面上相遇（共用節點 1024 以內除外）時高度差至少 512，否則拒絕；同一高度的交叉必須共用節點。同一高度（高差不到 512）的兩條邊中心線至少相距 256（4 公尺），沿軌道 32768 以內的兩點（同一個交會點分開的軌道）除外，否則拒絕（`trackTooClose`）；會留下這種邊對的拆邊也拒絕（`tracksWouldBeTooClose`，決策 52）。交通控制下，平面上不到 4 公尺而沿軌道超過 512 的兩段軌道互相妨礙，列車不能取得妨礙別的列車持有的軌道（決策 53）。隧道口是隧道與非隧道的邊相接的節點。車站可以在路網上平坦的一段邊上有月台；月台屬於鐵路網，同一條邊上的月台不重疊，兩端切開那條邊的 span，有月台的邊不能拆。
 - 路網上的營運（決策 31）：停站、時刻表、折返與重複、路線、派車與服務模式都在路網上（F3c 之前方格另有一套找月台、找路與移動，決策 51）。以車站為目的地的路（`TrainPath`：行進方向、停在最後一條的哪裡、精確距離）在路網上停在行進方向上月台的末端（停車位置），只考慮不比列車短的月台；總距離最短，同樣短時依邊的編號逐步決定。靠左行駛（決策 202，App 的新遊戲打開）時，每個沒走最左出口的轉轍器在選路時多算 50 m，所以雙線上兩個方向各走左邊那股；路線指定的進路與月台照舊。一段的秒數是路線的性能走完距離的最少整秒（決策 40）；寫實運轉（決策 207，App 的新遊戲打開）時只用正常加減速、加 4 % 恢復時間，列車照「離表定到站還剩幾秒」跑，誤點的車追得回來；停站依路線（沒設定 60 秒，寫實運轉時高鐵 110 秒，36–600 秒），每條路線記準點率（到終點晚 5 分鐘以內）。路網上列車的路可以停在最後一條邊的中段（`end`，只在有值時存檔）；路走完、車頭在該站月台上（車頭所在的邊）時停在該站，整列都在同一個月台上時整列停妥。服務正在使用的月台不能拆（`trainServiceActive`）。
 - 交通控制與進路預約（決策 32）：`GameWorld` 的新世界關閉交通控制，行為與之前完全相同；App 的新遊戲開啟。開啟時，列車出發、被派車或拿到新的路（手動的路、放置、反向）之前，一次取得從車尾到路的終點整列車會碰到的每個節點與 span（與佔用同一條規則，落在 span 分界上時兩邊都算），以及它接近的交會點（在交會點 1024 以內、而那裡另有不相通的邊）；任何一個被其他列車持有（佔用、限界或預約）就整個不取得，指令以 `trackReserved` 拒絕，服務原地等待（不折返）、每步重試，路線不派出那台列車。預約存檔；列車每次移動之後只留下它還需要的部分，車尾離開的軌道立刻釋放，走到路的終點時全部釋放（決策 55）。服務出發時路被行駛中、一定會讓出的前車持有，就跟車出發：只預約到前車持有的軌道之前 400 m（25,600 單位）、走到那裡停下，每一秒在出發之前延長，前車離開它的路之後取得剩下的全部（決策 56）；`unplaceTrain` 與關閉交通控制也清除它。服務出發的路被持有、又不能跟車時，改走同站另一個停車位置的避占用最短路：新借用的軌道不逆向還會開的列車的方向（執行中的服務從所在位置往後、有列車的路線整個計畫），最多長 400 m（決策 57）。只互相等待的列車是死結，每個整分鐘把其中一台服務送到途中某站的待避站，讓另一台先走，解不開時告訴玩家（決策 58）。立體交叉不共用資源。預約中的鐵軌不能拆，持有的邊不能加減月台，持有的交會點不能加邊。開啟時兩台列車需要同一段軌道就拒絕（`trainsShareTrack`）。
+- 區間閉塞（決策 212）：App 的新遊戲打開 `blockSections`（存檔版本 56；示範、挑戰、教學關掉）：交通控制下長邊每 1.5 km 一個閉塞分界（道岔與它的限界內不算），跟車的授權停在分界；跟車中的列車也能當前車、不替前方佔位；排定的路、指定的路與改去別的月台的路也能跟車。
 - 車站需求與乘客（決策 34）：車站可以有需求（五種類型之一：住宅、辦公、商業、觀光，以及決策 91 的公共設施，每天 0 到 1,000,000 個旅次）。每天的旅次分給同一條路線能到、自己有需求的車站（依它們的旅次，最大餘數法），再依一天的形狀與兩端類型的曲線分到 24 小時。每個整分鐘一開始，每一對依這一小時與下一小時內插釋出這一分鐘的份，保留不到一人的餘數；任何連續 1440 分鐘正好釋出一天的旅次。乘客在起點依路線、方向、迄點與釋出的分鐘成組排隊，先來的在前；一站最多 4000 人，放不下的離開（`overflowed`）。路線刪除或改停靠而不再載某一組時，那一組離開（`abandoned`）。每一站 `released = 等車 + overflowed + abandoned`。沒有需求時什麼都不發生。
 - 車種（決策 66）：列車可以設定車種（來源 `TRAIN_TYPES` 的九種，之後加上蒸汽（決策 153）、高鐵（決策 168）、EMU3000（決策 169），共 12 種），容量 = 節數 × 每節額定 × 1.1 四捨五入，門數決定上下車速度；沒有車種是標準車（每節 320／352、4 門）。畫面上的名稱是作者取的臺灣名稱：地鐵系列「大型、中型、輕型、線性馬達、多門捷運」，其他「自動接駁、磁浮、單軌、通用、高鐵、蒸汽列車」、輕型單軌、新自強號；沒有車種的列車叫通用列車（決策 171；代號不變，存檔不受影響）。
 - 每週需求（決策 68）：App 的新遊戲每天的旅次乘上來源的星期係數（週日起 0.84、1.04、1.02、1.02、1.04、1.12、0.92），週末依週末的時段曲線；第 0 天是星期一，每天正好釋出當天的旅次。
@@ -7531,44 +7710,3 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 公司評等與成就（決策 181）：沒有劇本的遊戲在目標面板看公司評等（0–1000 分，七項線性加總，營業比與準點率在 20 站以下依車站數打折，每 100 分一個職稱、960 分以上鐵道大亨）與下一步；38 項成就記在裝置上的 `achievements.data`，每天午夜檢查，示範地圖不算。GameCore 沒有動。
 
 **之後的修正**（查 bug，2026-10-12）：載客量圖層的 `.task(id:)` 鍵放了整個 `ServiceLine`，其中的 `lastDispatch`、`runDays` 每次發車都會變，圖層顯示時每幾個遊戲分鐘就重算一次 `SectionFlow`（全台灣時很重，而且 `Task.detached` 不跟著取消，舊的會疊著跑）。鍵現在和乘客計畫的鍵一樣，先清掉這幾個欄位。App 檔案只能靠 macOS CI 編譯。
-
-### 212. 區間閉塞：長區間也能跟車、越行
-
-2026-10-14。NEXT_PRIORITIES §0 第 15 項。設計與試驗：[`research/BLOCK_SECTIONS_2026-10-13.md`](research/BLOCK_SECTIONS_2026-10-13.md)（作者授權 session 從開發、美術、玩家三個角度決定第 7 節的四題）。
-
-**為什麼**：決策 56 的跟車在高鐵的 30–180 km 區間幾乎跟不起來，高鐵示範打開行車控制時 191 班丟 97 班（決策 197 第 5 點；#513 之後本機 release 一整天 742.9 秒，丟班不變）。四個卡點：(A) 前車自己在跟車就不能當前車；(B) 只沿預設的路跟車；(C) 前車會停在後車的路上就不能跟；(D) 跟車中的列車幾乎每秒都延長授權。只拿掉 A 的試驗反而有 10–34 列死結、丟 150 班：後車「等著」前方的軌道（決策 56 第 6 點），擋住了在它前面要出發的車。
-
-**規則**（世界開關 `GameWorld.blockSections`，存成 `"blockSections": true`，缺 key＝關；關著時以下都不發生，結果逐位元不變）：
-
-1. **閉塞區段**：每條邊從 `from` 端起每 `GameWorld.blockLength` = 96,000 單位（1.5 km，新幹線數位 ATC 的軌道電路長度）一個分界，邊的兩端也是分界。道岔（三條以上的邊交會的節點）和它 `RailwayNetwork.junctionZone` 內不是分界：列車只在一般路段等，穿過站內道岔要一次拿到，不會停在道岔中間擋住要交叉過去的車（量測時左營停車股道就是這樣互等）。只由拓撲與整數里程決定，不存檔（`BlockSections.swift` 的 `blockBoundary(_:atOrBefore:)`、`blockBoundary(_:after:)`）。
-2. **授權停在分界**：跟車的授權原本到「第一段被別人持有的軌道之前 `followingGap`」，改成那裡之前最近的分界（`followingAuthority(_:free:)`）；至少拿到一個分界才發車。延長也一樣，所以前車的車尾每離開一個閉塞，後車才延長一次。
-3. **可以串成一串**：`isLeading` 不再要求前車整段拿到；前車自己在跟車時，算它「停靠時站的位置」要算到它的停靠點，不是它的授權終點（清掉複本的預約再算 `travelling`）。
-4. **跟車的列車不替前方佔位**：決策 56 第 6 點（`Claim`、`binds`）不適用，跟車中的列車只持有拿到的閉塞。第三列車可以插進前後車之間：同方向、會讓出的，後車改跟它；不是的，後車等。對向的車仍要整段拿到才出發，而它的路會經過後車持有的閉塞，所以拿不到。
-5. **排定的路與指定的路也能跟車**：`departService` 與 `goOn` 試排定的路（決策 59）、路線指定的路（決策 61）時用 `reserving(_:following:)`；拿不到授權才記進 `HeldRoute.whole`，批次判斷也用同樣的規則。
-6. **批次推進**：`canExtendAnyAuthority` 問「下一個分界之後 `followingGap`」是否空出來（`reachToExtend(_:beyond:)`），和第 2 點延長的條件相同，所以以分鐘推進與逐秒推進結果相同（`BlockSectionsTests`）。
-
-7. **改去別的月台**（決策 57 的補充）：`reservingDeparture` 照舊先找避開所有被持有軌道的路、整段拿；拿不到時，找只避開停著不動的車（沒有在行駛中，或 rate 為 0）的路，跟車走。台北往南港的車原本等一列停在南港停車股道上的閒置車，因為預設的路通到那條股道。
-
-**量測**（同一台 Linux 雲端容器、release，`TrafficControlTimingReportTests`，`TRAFFIC_TIMING_BLOCKS=1` 打開閉塞；過程與每一步的數字在設計文件第 6 節）：高鐵示範、真實時刻表、行車控制開，一整天：
-
-| | 計算秒數 | 丟班（191 班） | 死結（每小時最多） | 終點誤點中位數 |
-| --- | --- | --- | --- | --- |
-| 閉塞關（`main` a272c69） | 742.9 | 97 | 0 | 92／130／126 分 |
-| 閉塞開 | 1,121.4 | 46 | 2（隨即解開） | 59／67／107 分 |
-
-丟班減半、誤點少三到六成，但計算多了 51%（同時在跑的車多了）。`long-leg-traffic.json` 的世界 3 小時：關 4.14 秒、開 3.96 秒，死結與發車相同。
-
-**沒有做的**：依煞車曲線提前減速（幾何限速）；讓排定待避認得跟車中的列車（剩下的丟班多半是快車跟在各站停的車後面）；結果不變的延長捷徑。高鐵示範等這些做完再打開行車控制。
-
-**開關**：App 的新遊戲打開（`NewGame`），示範、挑戰、教學、平溪與劉銘傳劇本、實景示範關掉；高鐵示範這個 PR 不打開行車控制（量完另開 PR）。
-
-**存檔**：版本 55。只讀到 54 的 build 會丟掉這個 key，讓列車改回整段跟車，所以說存檔比它新。fixture `SaveFixtures/v55-block-sections.json`（`BlockSectionsTests.testVersionFiftyFiveKeepsBlockSections`，`BLOCK_SECTIONS_SAVE_NEW=1`）。
-
-**參考庫與外部專案**：
-- 參考庫（`d3ebdf1`）沒有閉塞、號誌或執行中的佔用狀態。`Railway/site_archive_clean/index.html` 的 `planSameDirectionOvertakes`（`need = 30 + v/b`）是排點時的越行，照舊由決策 59／60 負責；`BLOCK_GAP_KM` 已是 `followingGap`。對照表在設計文件第 3 節。
-- OpenTTD（GPL-2.0）、Simutrans 與 Simutrans-Extended（Artistic 1.0）、OSRD（LGPL-3.0）只參考想法：預約只到「安全等待位置」（這裡是閉塞分界），等待中的列車在那之外不持有任何東西。沒有複製程式。
-- 程式是這個專案自己的。
-
-**golden、replay、SaveFixtures**：開關都是關的，每一個值都不變。
-
-**驗證**：`BlockSectionsTests`（分界的手算值、道岔不是分界、三列串跟、逐分與逐秒相同、存讀與 v55 fixture）、`BlockSectionsSessionTests`（新遊戲開、示範與教學關）；既有的 `TrafficControlTests`、`FollowerDeadlockTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、golden、replay、`SavedGameTests` 照舊通過。

@@ -40,8 +40,16 @@ public enum PlayerCommand: Hashable, Sendable {
     /// A passing loop with its signal station (``GameSession/addPassingLoop()``),
     /// as planned (decision 204).
     case addPassingLoop(PassingLoopPlan)
+    /// A depot's sidings and the depot (``GameSession/addDepotYard()``), as
+    /// planned (decision 214).
+    case buildDepotYard(DepotYardPlan)
     /// An edit from a panel or another tool (``Edit``).
     case edit(Edit)
+    /// Stretches one after another, each starting at the node the one
+    /// before ended at (its own start is then not read): the track the
+    /// network tool traces along a real line (decision 213,
+    /// ``GameSession/tracePlan(from:to:)``), all of it or none.
+    case buildTrackChain([TrackStretch])
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -168,7 +176,9 @@ public enum PlayerCommand: Hashable, Sendable {
         case .buildCrossover: "buildCrossover"
         case .addPlatformTrack: "addPlatformTrack"
         case .addPassingLoop: "addPassingLoop"
+        case .buildDepotYard: "buildDepotYard"
         case .edit(let edit): edit.name
+        case .buildTrackChain: "buildTrackChain"
         }
     }
 }
@@ -227,8 +237,18 @@ extension GameSession {
             outcome.platform = try build(plan, in: &world)
         case .addPassingLoop(let plan):
             outcome.station = try build(plan, in: &world)
+        case .buildDepotYard(let plan):
+            outcome.station = try build(plan, in: &world)
         case .edit(let edit):
             return try apply(edit, to: &world)
+        case .buildTrackChain(let stretches):
+            guard !stretches.isEmpty else { throw .invalidTrackGeometry }
+            var previous: TrackNodeID?
+            for stretch in stretches {
+                let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
+                outcome.track = built
+                previous = built.to
+            }
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -287,12 +307,15 @@ extension PlayerCommand: Codable {
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
         var passingLoop: PassingLoopPlan?
+        var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// The double track's parallel, as a `buildTrack` of its own.
         var parallel: PlayerCommand?
         /// The double track's crossovers, each a `buildTrack`; absent for
         /// none (and in logs from before them).
         var crossovers: [PlayerCommand]?
+        /// A chain's stretches, each a `buildTrack`.
+        var stretches: [PlayerCommand]?
     }
 
     public init(from decoder: any Decoder) throws {
@@ -380,12 +403,22 @@ extension PlayerCommand: Codable {
         case "addPassingLoop":
             guard let plan = record.passingLoop else { throw invalid("a passing loop needs its plan") }
             self = .addPassingLoop(plan)
+        case "buildDepotYard":
+            guard let plan = record.depotYard else { throw invalid("a depot's sidings need their plan") }
+            self = .buildDepotYard(plan)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
         case "removeTrack":
             guard let edge = record.edge else { throw invalid("needs its edge") }
             self = .removeTrack(.edge(edge))
+        case "buildTrackChain":
+            let stretches = try (record.stretches ?? []).map { command in
+                guard case .buildTrack(let stretch) = command else { throw invalid("a chain's piece is a stretch") }
+                return stretch
+            }
+            guard !stretches.isEmpty else { throw invalid("a chain needs its stretches") }
+            self = .buildTrackChain(stretches)
         default:
             throw invalid("unknown command")
         }
@@ -445,8 +478,12 @@ extension PlayerCommand: Codable {
             record.platformTrack = plan
         case .addPassingLoop(let plan):
             record.passingLoop = plan
+        case .buildDepotYard(let plan):
+            record.depotYard = plan
         case .edit(let edit):
             record.edit = edit
+        case .buildTrackChain(let stretches):
+            record.stretches = stretches.map(PlayerCommand.buildTrack)
         }
         try record.encode(to: encoder)
     }

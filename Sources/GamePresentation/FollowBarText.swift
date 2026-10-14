@@ -13,22 +13,32 @@ import GameCore
 /// `setFollowStatus`: "Not departed" (`pre`, 尚未發車) before it leaves
 /// its first stop, "Arrived" (`done`, 已抵達) at its last stop, and nothing
 /// while it runs; a line's train on an empty run to an end of its line
-/// (decision 172) says "Running empty" (回送中). Read from the world each time it is shown; never stored.
+/// (decision 172) says "Running empty" (回送中), or with a depot (decision
+/// 209) "Leaving depot" (出庫中) or "Entering depot" (入庫中), and one
+/// standing in its depot "In depot" (在庫; decision 214). Read from the world each time it is shown; never stored.
 public struct FollowBarInfo: Hashable, Sendable {
     public enum Status: Hashable, Sendable {
         case notDeparted
+        /// TestFlight 60.1: a line's train its line does not send out,
+        /// with why (``GameWorld/lineDispatchHoldText(of:in:)``).
+        case held(String)
         case running
         case arrived
         /// Decision 172: an empty run to one end of its line, with no
         /// passengers.
         case deadheading
+        /// Decision 209: an empty run out of a depot, into one, or a
+        /// train standing in one (``TrainDepotState``).
+        case depot(TrainDepotState)
 
         /// The site's status text, or `nil` while it runs.
         public func text(in language: DisplayLanguage) -> String? {
             switch self {
             case .notDeparted: language.text("Not departed", "尚未發車")
+            case .held(let reason): language.text("Not departed: \(reason)", "尚未發車：\(reason)")
             case .running: nil
             case .deadheading: language.text("Running empty", "回送中")
+            case .depot(let state): state.text(in: language)
             case .arrived: language.text("Arrived", "已抵達")
             }
         }
@@ -86,20 +96,25 @@ extension GameWorld {
         guard let train = train(id: id) else { return nil }
         let line = assignedLine(of: id)
         let kind = assignedServiceName(of: id, in: language)
+        let held = line == nil ? nil : lineDispatchHoldText(of: id, in: language).map(FollowBarInfo.Status.held)
         guard let first = train.timetable.first, let last = train.timetable.last, train.timetable.count > 1 else {
-            return FollowBarInfo(name: train.name, line: line, kind: kind, origin: nil, terminus: nil, departure: nil, arrival: nil, status: line == nil ? .running : .notDeparted)
+            return FollowBarInfo(name: train.name, line: line, kind: kind, origin: nil, terminus: nil, departure: nil, arrival: nil, status: depotState(of: id).map(FollowBarInfo.Status.depot) ?? held ?? (line == nil ? .running : .notDeparted))
         }
         let execution = train.execution
         let offset = (train.timetablePeriod ?? 0) &* (execution?.cycle ?? 0)
         let status: FollowBarInfo.Status
+        let depot = depotState(of: id)
         switch execution {
+        case _ where depot != nil:
+            status = .depot(depot ?? .inDepot)
         case _? where train.isDeadheading:
             status = .deadheading
         case nil where line != nil:
             // A line train gets its timetable only when dispatched, and
             // keeps the finished trip's until the next dispatch: with one
-            // and no execution, it has arrived.
-            status = .arrived
+            // and no execution, it has arrived, unless its line holds it
+            // (TestFlight 60.1).
+            status = held ?? .arrived
         case nil:
             status = .notDeparted
         case .waitingAtStop(let stop, _)? where stop == 0:

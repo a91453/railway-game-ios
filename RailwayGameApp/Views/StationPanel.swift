@@ -53,6 +53,7 @@ struct StationPanel: View {
                         .accessibilityIdentifier("station.rename")
                     }
                     operationSection(station)
+                    depotSection
                     transferSection(station)
                     platformsSection(station)
                     realStationSection(station)
@@ -95,8 +96,20 @@ struct StationPanel: View {
                 StatusBanner(session: session, announces: false)
             }
         }
+        .onAppear(perform: renameIfAsked)
+        .onChange(of: screen.renamesStationOnOpen) { _, _ in renameIfAsked() }
         .task(id: RidershipKey(world: session.world, station: session.selectedStationID)) {
             await workOutRidership()
+        }
+    }
+
+    /// Puts up the rename alert when the station tag's pencil opened the
+    /// panel (``GameScreenState/renamesStationOnOpen``).
+    private func renameIfAsked() {
+        guard screen.renamesStationOnOpen else { return }
+        screen.renamesStationOnOpen = false
+        if let station = session.selectedStation {
+            renaming = station.name
         }
     }
 
@@ -154,9 +167,9 @@ struct StationPanel: View {
 
     private func departureRow(_ row: DepartureBoard.Row, language: DisplayLanguage) -> some View {
         HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Palette.lineColor(row.line, custom: row.color))
-                .frame(width: 6, height: 28)
+            // Decision 216: the line's badge.
+            LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[row.line] ?? "", color: Palette.lineColor(row.line, custom: row.color), size: .small)
+                .frame(minWidth: 36, alignment: .leading)
             VStack(alignment: .leading, spacing: 1) {
                 Text(verbatim: row.trainName.isEmpty ? row.lineName : row.trainName)
                     .font(.subheadline.weight(.semibold))
@@ -216,6 +229,30 @@ struct StationPanel: View {
             .accessibilityIdentifier("station.operation")
         } footer: {
             Text(verbatim: mode.detail(in: session.language))
+        }
+    }
+
+    /// Decision 214: make the station a depot (decision 209), or an
+    /// ordinary one again, through `GameSession.setSelectedStationDepot(_:)`;
+    /// off limits, with why, while a line stops here or keeps its trains
+    /// here.
+    @ViewBuilder private var depotSection: some View {
+        if let depot = session.selectedStationDepotSwitch {
+            Section {
+                Button {
+                    session.setSelectedStationDepot(!depot.isDepot)
+                } label: {
+                    Label {
+                        Text(verbatim: depot.title(in: session.language))
+                    } icon: {
+                        Image("MapGlyphDepot").renderingMode(.template)
+                    }
+                }
+                .disabled(depot.problem != nil)
+                .accessibilityIdentifier("station.depot")
+            } footer: {
+                Text(verbatim: depot.problem ?? StationDepotSwitch.note(in: session.language))
+            }
         }
     }
 

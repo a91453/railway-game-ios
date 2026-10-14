@@ -1286,6 +1286,17 @@ V 實際放行 → T、U（保證不互穿）
 
 外部專案（只取想法，沒有程式碼或素材）：SimCity BuildIt（作者的截圖，商業遊戲）狀態泡泡裡的圓形圖示。
 
+## 機廠的圖示（2026-10-13，決策 209 的畫面）
+
+查 `a91453/railway-reference-private`：沒有 2D 的機廠圖示。`Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/catalog.json` 有彰化扇形車庫（`changhua-roundhouse`）、羅東林場檢車庫（`luodong-forest`）的 3D 模型，只讀清單，留給之後的 3D（art-style §7：只搬白模）。
+
+| 參考檔案 | 目標 | 方式 |
+| --- | --- | --- |
+| `Railway/site_archive_clean/rail-3d/assets/historic-buildings-v2/catalog.json`（彰化扇形車庫、羅東林場檢車庫） | — | 不用在 2D；留給 3D |
+| （參考沒有） | `MapGlyphDepot`、`MapGlyphDepotOut`、`MapGlyphDepotIn`；機廠的拱門徽章、出入庫的藏青方牌、在庫膠囊 | gap → 原生 |
+
+外部參考（只取想法，沒有素材）：北捷、中捷、高捷的乘客路網圖都不畫機廠，列車回廠時用文字（「不載客」）而不是圖示，所以遊戲照樣在面板寫「出庫中」「入庫中」，地圖上的方牌只是補充。
+
 ## 站長的角色（決策 122）
 
 查 `a91453/railway-reference-private` `435350d` 裡的人物與角色：只有 `Railway/city_world_reference/source/avatars/` 的八個 3D 人物（`casual-*`、`elder-*`、`student-*`、`jie`、`wen`，`.glb`，KTX2 貼圖，寫實），畫風與 App 圖示不合；其餘的來源沒有角色或吉祥物。
@@ -1497,3 +1508,15 @@ V 實際放行 → T、U（保證不互穿）
 | （參考沒有）中等縮放的候車膠囊、擁擠的量表環、等待環的擴散與原因小牌、數量上限 | `MapArt.drawStationProblems`、`drawCrowdedRing`、`drawWaitMarks`、`drawWaitTag`；`MapProblems` | gap → 原生 |
 
 沒有新的圖示，人形三階是現有的 `MapGlyphPerson`、`MapGlyphCrowd`、`MapGlyphFull`。外部專案：沒有搜尋到需要的，程式碼是這個專案自己寫的。
+
+## 沿真實路線描線建造（決策 213）
+
+參考庫 d3ebdf1。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 213 的「參考」：`Railway/site_archive_clean/index.html` 的 `projectOntoShape`、`shapeSlice`、`buildFollowRoute` 移植成 `RealRailwayTraces`；`rail-3d/physical/topology.js` 的最短路只取做法；`Ci/` 的 `radiusAtPoint` 移植成 `GameSession.tightestRadius(of:)`，`MIN_CURVE_RADIUS_M` 沒有採用；`track_style_layers.json` 的 `track-follow-*` 只取想法。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部專案沒有用到。
+
+## 路網明信片（決策 215）
+
+參考庫 7888702。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 215 的「參考」：`Railway/island_city_reference_clean/` 的 `makeShareImage`（g10.js，1080×1350 分享圖）給了版面的結構與 4:5 的比例，`makeIdCard`（g11.js）給了「玩家寫名字、做成圖、交給分享面板」的做法；`train_loop`、`OpenWorld/`、`Ci/` 的分享只是文字、網址或存檔代碼；`commuter_journey` 的明信片是截 3D 畫面。圖一律不用參考庫的。外部專案沒有用到。
+
+## 線號徽章與色盲友善色票（決策 216）
+
+參考庫 788870262e。對照表寫在 ARCHITECTURE 決策 216 的「參考」：`Ci/` 的 `PRESET_COLORS` 沿用、`metroLineChipShortLabel` 只取做法（改從顏色取線號）、`getReadableChipTextColor` 沒有採用（改白底藏青字）、`.station-line-chip` 取大小；`Railway/site_archive_clean/index.html` 的 `drawTag` 只取做法；`data/trtc.json` 等的台灣捷運線號與色碼只用在測試。色盲：參考庫沒有可用的。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部：Okabe–Ito 七色、Paul Tol 的淺灰、Machado 2009 的模擬矩陣，只取數值。

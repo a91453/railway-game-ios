@@ -90,7 +90,7 @@
 
 ## 5. 存檔、golden、replay
 
-- 存檔版本 **55**：`"blockSections"` 只在開著時寫。只讀到 54 的 build 會丟掉這個 key，讓列車改回整段跟車，所以要說存檔比它新。新 fixture `SaveFixtures/v55-block-sections.json`。
+- 存檔版本 **56**（55 給了線號，決策 216）：`"blockSections"` 只在開著時寫。只讀到 55 的 build 會丟掉這個 key，讓列車改回整段跟車，所以要說存檔比它新。新 fixture `SaveFixtures/v56-block-sections.json`。
 - 決策 **212**。
 - golden schema 不動。既有的 golden、`ReplayFixtures/`（包括 `long-leg-traffic.json`）、`SaveFixtures/` 開關都是關的，每一個值都不變。
 - 參考模型 `ReferenceTrafficControl.swift` 照同樣的規則加上開關，`traffic.following` campaign 多跑一組開關打開的 case。
