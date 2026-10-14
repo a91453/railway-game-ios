@@ -497,3 +497,48 @@ extension TrackEdgeID {
         }
     }
 }
+
+extension PlayerCommand {
+    /// What the command does, as a refusal for want of cash names it
+    /// (``GameError/insufficientFundsText(required:available:doing:in:)``):
+    /// "buy a train", 「買列車」. `nil` for a command that spends nothing,
+    /// or that a refusal need not name.
+    public func actionText(in language: DisplayLanguage) -> String? {
+        switch self {
+        case .buildTrack, .buildDoubleTrack, .buildTrackChain:
+            language.text("lay this track", "鋪這段軌道")
+        case .addPlatform(let addition):
+            switch addition.station {
+            case .new(let name, _, _):
+                language.text("build station “\(name)” and its platform", "建造車站「\(name)」與月台")
+            case .existing:
+                language.text("add this platform", "加這座月台")
+            }
+        case .buildCrossover:
+            language.text("build this crossover", "建這組渡線")
+        case .addPlatformTrack:
+            language.text("add this platform track", "加這條月台線")
+        case .addPassingLoop:
+            language.text("build this passing loop", "建這條待避線")
+        case .buildDepotYard:
+            language.text("build this depot", "建這座機廠")
+        case .removePlatform, .removeTrack:
+            nil
+        case .edit(let edit):
+            switch edit {
+            case .purchaseTrain: language.text("buy a train", "買列車")
+            case .setTrainCars: language.text("add cars", "加掛車廂")
+            case .setTrainType: language.text("change the train's type", "更換車型")
+            case .staffLine, .addLineTrains, .setLineTrains: language.text("add trains to the line", "為路線補列車")
+            case .reformLine: language.text("re-form the line's trains", "改編路線的列車")
+            case .placeBuilding: language.text("put up this building", "蓋這棟建物")
+            case .demolishBuilding: language.text("demolish this building", "拆除這棟建物")
+            case .buyMapTile: language.text("buy this land", "買下這塊地")
+            case .buildFreightYard: language.text("build a freight yard", "建貨場")
+            case .investInSouvenirShop: language.text("invest in the souvenir shop", "投資紀念品店")
+            case .repayLoan: language.text("repay the loan", "還款")
+            default: nil
+            }
+        }
+    }
+}

@@ -122,6 +122,12 @@ public struct GameWorld: Equatable, Sendable {
     /// in saves from before it; the app's new games turn it on. Set by
     /// ``setBlockSections(_:)`` only.
     public internal(set) var blockSections: Bool = false
+    /// Whether trains keep to the curve speed limits (decision 217): a
+    /// run brakes ahead of each curve's limit and accelerates once its tail
+    /// is out, and the lines plan their legs so. Off in a new world and in
+    /// saves from before it; the app's new games turn it on. Set by
+    /// ``setCurveSpeedLimits(_:)`` only.
+    public internal(set) var curveSpeedLimits: Bool = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -2544,6 +2550,7 @@ public struct GameWorld: Equatable, Sendable {
             // else happens in them.
             let second = start.secondOfMinute
             var span = min(remaining, minute - second)
+            solveRuns()
             if let event = nextServiceEvent(after: start) {
                 let (gap, overflow) = event.seconds.subtractingReportingOverflow(start.seconds)
                 span = overflow ? span : min(span, gap)
@@ -3558,16 +3565,30 @@ public struct GameWorld: Equatable, Sendable {
     /// none) in the least whole second it builds one for, running as fast
     /// as it can. `nil` when it builds none at all (see
     /// ``RunningCurve/leastSeconds(length:performance:)``): the train then
-    /// goes at its rate.
+    /// goes at its rate. With ``curveSpeedLimits`` on (decision 217) it
+    /// keeps to the limits ahead of it on its path (see
+    /// ``speedLimitsAhead(of:distance:)``), but on a line of real runs
+    /// never at the cost of its real time.
     ///
     /// - Precondition: `length >= 1`.
     func run(of train: Train, length: Int64, scheduled: Int64? = nil) -> ServiceRun? {
-        if let scheduled, (1...RunningCurve.maximumSeconds).contains(scheduled),
-           RunningCurve(length: length, duration: scheduled * 1000, performance: train.performance) != nil {
-            return ServiceRun(start: clock.now, length: length, seconds: scheduled)
+        var limits = speedLimitsAhead(of: train, distance: length)
+        if let scheduled, (1...RunningCurve.maximumSeconds).contains(scheduled) {
+            let duration = scheduled * 1000
+            // A real timetable (decision 133) is kept as well as without
+            // the limits: where its time does not fit under them, the real
+            // line's curves are gentler than the drawn ones (or the real
+            // trains faster than the game's), and the run does without.
+            if !limits.isEmpty, followsRealTimetable(train),
+               !RunCurve.fits(length: length, duration: duration, performance: train.performance, limits: limits) {
+                limits = []
+            }
+            if RunCurve.fits(length: length, duration: duration, performance: train.performance, limits: limits) {
+                return ServiceRun(start: clock.now, length: length, seconds: scheduled, limits: limits)
+            }
         }
-        return RunningCurve.leastSeconds(length: length, performance: train.performance)
-            .map { ServiceRun(start: clock.now, length: length, seconds: $0) }
+        return RunCurve.leastSeconds(length: length, performance: train.performance, limits: limits)
+            .map { ServiceRun(start: clock.now, length: length, seconds: $0, limits: limits) }
     }
 
     // The service adapters that change a train (Stage S5; the others are in
@@ -3690,7 +3711,7 @@ public struct GameWorld: Equatable, Sendable {
         var soonest: GameTime?
         for train in trains {
             guard case .travellingToStop? = train.execution, let run = train.times?.run, run.end > now,
-                  let curve = run.curve(for: train.performance)
+                  let curve = runCurve(of: run, for: train.performance)
             else { continue }
             let covered = run.distance(on: curve, from: run.start, to: now)
             // The least second in (now, end] by which the curve has come
@@ -3837,10 +3858,31 @@ public struct GameWorld: Equatable, Sendable {
         return { k in TrainMovement.distance(at: rate, fromSecond: second, toSecond: second + k) }
     }
 
+    /// Works out and keeps the curve of each run under curve limits that
+    /// has none yet (decision 217, ``ServiceRun/solving(for:)``): once, as
+    /// a step begins, rather than for every run a train is offered and
+    /// then not given.
+    mutating func solveRuns() {
+        for index in trains.indices {
+            guard let run = trains[index].times?.run, !run.limits.isEmpty else { continue }
+            let solved = run.solving(for: trains[index].performance)
+            trains[index].times?.run = solved
+        }
+    }
+
+    /// `run`'s curve for `performance` (see ``ServiceRun/curve(for:)``), as
+    /// the last call of ``advance(ticks:)`` kept it when it did (decision
+    /// 217: a run under curve limits takes a while to build).
+    public func runCurve(of run: ServiceRun, for performance: TrainPerformance) -> RunCurve? {
+        let query = DirectionMemo.CurveQuery(length: run.length, seconds: run.seconds, performance: performance, limits: run.limits)
+        if let known = routeMemo.curve(for: query) { return known }
+        return run.curve(for: performance)
+    }
+
     /// `run`'s curve for `performance` (see ``ServiceRun/curve(for:)``),
     /// kept in `memo`: a run's curve is asked of at every second it runs.
-    func curve(of run: ServiceRun, for performance: TrainPerformance, memo: inout DirectionMemo) -> RunningCurve? {
-        let query = DirectionMemo.CurveQuery(length: run.length, seconds: run.seconds, performance: performance)
+    func curve(of run: ServiceRun, for performance: TrainPerformance, memo: inout DirectionMemo) -> RunCurve? {
+        let query = DirectionMemo.CurveQuery(length: run.length, seconds: run.seconds, performance: performance, limits: run.limits)
         if let known = memo.curves[query] { return known }
         let curve = run.curve(for: performance)
         memo.curves[query] = .some(curve)
@@ -4176,7 +4218,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, flexDispatch, rollingStockEconomics, lineAccounts, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4279,6 +4321,7 @@ extension GameWorld: Codable {
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
         realisticOperation = try container.decodeIfPresent(Bool.self, forKey: .realisticOperation) ?? false
         blockSections = try container.decodeIfPresent(Bool.self, forKey: .blockSections) ?? false
+        curveSpeedLimits = try container.decodeIfPresent(Bool.self, forKey: .curveSpeedLimits) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4409,6 +4452,9 @@ extension GameWorld: Codable {
         }
         if blockSections {
             try container.encode(true, forKey: .blockSections)
+        }
+        if curveSpeedLimits {
+            try container.encode(true, forKey: .curveSpeedLimits)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)

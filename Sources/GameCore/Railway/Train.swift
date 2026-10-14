@@ -369,6 +369,10 @@ extension Train: Codable {
             )
         }
         // Stage W2c: the train's performance builds a curve for its run.
+        // Decision 217: a run under curve limits keeps its curve.
+        if let run = times?.run {
+            times?.run = run.solving(for: performance)
+        }
         if let run = times?.run, run.curve(for: performance) == nil {
             throw DecodingError.dataCorruptedError(
                 forKey: .times, in: container,
