@@ -133,13 +133,17 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(pencil.becomesHittable())
         pencil.tap()
 
-        let field = app.textFields["rename.field"]
-        XCTAssertTrue(field.appears(within: 5), "The pencil puts up the rename alert")
+        let alert = app.alerts["Rename Station"]
+        XCTAssertTrue(alert.appears(within: 5), "The pencil puts up the rename alert")
+        // The alert's UIKit field does not carry SwiftUI's identifier
+        // (`rename.field`): run 38525633704 found it only by its kind.
+        let field = alert.textFields.firstMatch
+        XCTAssertTrue(field.appears(within: 5))
         // No tap on the field: the keyboard is already its.
         app.typeText(" Plaza")
         XCTAssertEqual(field.value as? String, "Central Plaza")
-        app.alerts.buttons["Rename"].tap()
-        XCTAssertTrue(field.disappears(within: 5))
+        alert.buttons["Rename"].tap()
+        XCTAssertTrue(alert.disappears(within: 5))
         XCTAssertTrue(app.navigationBars.staticTexts["Central Plaza"].appears(within: 5),
                       "The station panel shows the new name")
     }
