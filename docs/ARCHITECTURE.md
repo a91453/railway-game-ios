@@ -7886,6 +7886,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - **喚醒**（`minutesUntilRunDepotMove`）：入庫與出庫的條件只在列車改變時，以及每班的「開車時刻 − 2 小時」「− 5 分 − 2 小時」「− 5 分 − 出庫時間」「最晚發車時刻過後」這幾個時刻改變，所以取其中最早的。一次推進等於逐分鐘推進（`RunDepotTests.testLongBatchesMatchSingleMinutes`，交通管制開與關）。
    - 決策 209 的其他規則照舊適用：停車線不給路線走、在庫的車不付能源與人事、每股每日 $400、「入庫中／出庫中／在庫」（決策 214）。
 3. **存檔 59**：一個機廠照舊寫 `"depot"`，兩個以上寫 `"depots"`（不能同時有，不能重複）；照班次跑的路線也可以有。舊存檔的 `"depot"` 讀成只有一個的清單。只讀到 58 的 build 會拒絕有班次又有機廠的路線，或丟掉第一個以外的機廠，所以升版。新的 fixture `SaveFixtures/v59-run-depots.json`（`RunDepotTests.testVersionFiftyNineKeepsTheDepots`，`RUN_DEPOT_SAVE_NEW=1`）。
+   - **存檔 61**（之後的修正，2026-10-14）：#611 以存檔 59 合併時，`main` 已到 60（行程紀錄，決策 223）。60 版的 build 讀到含 `"depots"`、標 60 的存檔，會照自己的格式讀進來，默默丟掉第二個以後的機廠，而不會說存檔比較新。所以格式從 61 起寫：`currentVersion` 61，60 到 61 不用轉換。`v59-run-depots.json` 照規則不動，新增 `v61-run-depots.json`（同一個世界）。59 與 60 都沒有進過 TestFlight，沒有玩家的存檔受影響。
 4. **不變**：沒有一個 golden、replay 有機廠，也沒有照班次跑又有機廠的路線；只有一個機廠的路線逐位元相同，所以 golden、replay、`SaveFixtures` 的值都不變。`GoldenScenario.swift` 只為了窮舉把錯誤名稱 `depotWithRuns` 換成 `depotListedTwice`，schema 不讀它。`DepotTests` 原本斷言「照班次跑的路線不能設機廠」，改成斷言現在可以（這是這個決策的行為改變）。
 
 **參考**（`a91453/railway-reference-private` 7888702）：參考的 `sched` 系統讓每班車在起站出現、在終站消失（`Railway/site_archive_clean/index.html`），沒有車組的過夜與入出庫；`rail-3d/physical/` 的 `dispatch.json`、`turnbacks.js` 也沒有（決策 209 已查過）。所以班次路線的入出庫規則是這個專案自己的。外部專案：OpenTTD（GPL-2.0）的「go to depot」命令只讀想法，沒有複製。
