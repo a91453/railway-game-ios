@@ -119,6 +119,14 @@ final class InsufficientFundsTests: XCTestCase {
 
     // MARK: - The figures
 
+    /// Building or raising a station's shops is named, as every other
+    /// purchase is.
+    func testTheShopsAreNamedInTheRefusal() {
+        let station = StationID(rawValue: 1)
+        XCTAssertEqual(PlayerCommand.edit(.buildStationCommerce(station)).actionText(in: .english), "build the station's shops")
+        XCTAssertEqual(PlayerCommand.edit(.upgradeStationCommerce(station)).actionText(in: .traditionalChinese), "升級車站商店")
+    }
+
     func testWholeDollarsUnlessRoundingHidesTheShortfall() {
         XCTAssertEqual(GameError.insufficientFunds(required: Money(20_000_000), available: Money(14_154_046)).playerMessage(in: .traditionalChinese),
                        "餘額不足：需要 $ 200,000，目前只有 $ 141,540。")

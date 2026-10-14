@@ -536,6 +536,8 @@ extension PlayerCommand {
             case .buyMapTile: language.text("buy this land", "買下這塊地")
             case .buildFreightYard: language.text("build a freight yard", "建貨場")
             case .investInSouvenirShop: language.text("invest in the souvenir shop", "投資紀念品店")
+            case .buildStationCommerce: language.text("build the station's shops", "蓋車站商店")
+            case .upgradeStationCommerce: language.text("upgrade the station's shops", "升級車站商店")
             case .repayLoan: language.text("repay the loan", "還款")
             default: nil
             }
