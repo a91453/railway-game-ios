@@ -164,12 +164,16 @@ final class ServicePropertyTests: XCTestCase {
     }
 
     /// Runs one service campaign and returns how often each event happened.
-    static func runServiceCampaign(_ name: String, repeating: Bool) throws -> [String: Int] {
+    /// `cases` runs only those case IDs of every seed (the IDs, and so each
+    /// case's operations and checks, are the full campaign's), so that one
+    /// campaign can be shared by two classes in two CI shards.
+    static func runServiceCampaign(_ name: String, repeating: Bool, cases: Range<Int> = 0..<30) throws -> [String: Int] {
         var counts: [String: Int] = [:]
         var digest = Digest()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let ran = try runCampaign(name, cases: 30) { c in
+            guard cases.contains(c.index) else { return }
             let (setup, operations) = try Self.generate(&c, operations: 120, repeating: repeating)
             c.note("setup: \(setup.summary), +\(setup.extraBalance), second \(setup.seconds), \(setup.speed)")
 
@@ -221,7 +225,8 @@ final class ServicePropertyTests: XCTestCase {
             digest.add(String(decoding: data, as: UTF8.self))
         }
         let summary = counts.keys.sorted().map { "\($0) \(counts[$0]!)" }.joined(separator: ", ")
-        print("[digest] \(name) \(digest.hex) (\(summary))")
+        let part = cases == 0..<30 ? "" : " cases \(cases.lowerBound)-\(cases.upperBound - 1)"
+        print("[digest] \(name)\(part) \(digest.hex) (\(summary))")
         assertVolume(ran == 30 * PropertySeeds.active.count, "every case should run")
         return counts
     }

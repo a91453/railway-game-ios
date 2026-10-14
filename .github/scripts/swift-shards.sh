@@ -197,20 +197,33 @@ set -euo pipefail
 # The slowest shards are now rest (865) and campaigns-1 (801), unchanged.
 # LineLossFixesTests is being made faster (about 30 s); campaigns-5 then
 # drops to about 390.
+# 2026-10-14, later: on a slow runner campaigns-3 took 1000 s of tests
+# (run 38533025112: LineDispatchPropertyTests 590, not 339; Economy 284,
+# ScheduledOvertakeTrackLast 125), its job about 19.6 of its 20 minutes.
+# LineDispatch alone swings from 322 to 590, so it keeps no large class
+# beside it: EconomyPropertyTests moves on to campaigns-12 (TrafficControl
+# 476 at most; 508 to 524 s of tests in all), about 800 s with it.
+# #571 made LineLossFixesTests about 38 s (231 before): campaigns-5 about
+# 450 s. campaigns-1, ServiceRepeatingPropertyTests alone, took up to 802 s
+# of tests (run 38521807996) and timed #571's first run out on a slow
+# runner. Its campaign now runs as two halves (cases 0 to 14 and 15 to 29
+# of every seed): the first stays in campaigns-1 (about 400 s), the second,
+# ServiceRepeatingSecondHalfPropertyTests, joins campaigns-6
+# (SaveMutationSecondHalfTests 272 to 450 s), about 850 s at most.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests" ;;
     campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
-    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests EconomyPropertyTests" ;;
+    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
     campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
-    campaigns-6) echo "SaveMutationSecondHalfTests" ;;
+    campaigns-6) echo "SaveMutationSecondHalfTests ServiceRepeatingSecondHalfPropertyTests" ;;
     campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
     campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
     campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
     campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests ReservationShortcutTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests EconomyPropertyTests" ;;
     campaigns-13) echo "BoardingPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
@@ -274,9 +287,9 @@ selected_pattern() {
 # class of 3 s or more is listed; any other class counts CLASS_WEIGHT_DEFAULT
 # (the 150 GamePresentation classes under 3 s took 0.5 s each on average).
 # Only the proportions matter: a stale or missing weight moves a class to
-# another part, never out of the selection. LineLossFixesTests is being made
-# faster (from about 230 s to about 30 s); lower it here once that merges.
-CLASS_WEIGHTS="HighSpeedDemoTests:387 LineLossFixesTests:231
+# another part, never out of the selection. LineLossFixesTests: 38 s locally
+# after #571 (231 s on those runs).
+CLASS_WEIGHTS="HighSpeedDemoTests:387 LineLossFixesTests:38
   NewGameSavePropertyTests:80 OnboardingTests:72 CommandLogTests:56
   RealWorldDemoTests:53 LineLossDiagnosisTests:52 RealWorldDemoGroundTests:17
   NewGameBalanceTests:16 RealWorldDataLoadTests:16 AchievementsTests:14
