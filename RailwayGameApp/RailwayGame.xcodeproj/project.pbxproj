@@ -118,6 +118,7 @@
 		D4406F2AAF216CFD720F2A34 /* rail-joint.wav in Resources */ = {isa = PBXBuildFile; fileRef = AD6E3ED548E183F6E79E0111 /* rail-joint.wav */; };
 		D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */ = {isa = PBXBuildFile; fileRef = 31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */; };
 		D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */ = {isa = PBXBuildFile; fileRef = 2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */; };
+		D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */; };
 		D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */; };
 		D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F0F5EA47E14A5423014B49B8 /* NotoSans-OFL.txt */; };
 		DC0C16D1A36913B68ED98526 /* FleetOverviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 611230C928D5D1A8F9224E8E /* FleetOverviewSheet.swift */; };
@@ -225,6 +226,7 @@
 		9E428A92A98C07A45636F5E3 /* trtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = trtc_times.json; sourceTree = "<group>"; };
 		A07E2BC9805D886DEE596859 /* ControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlPanel.swift; sourceTree = "<group>"; };
 		A0888B79097535628EEF865F /* RailwayGameUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RailwayGameUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainRosterView.swift; sourceTree = "<group>"; };
 		A1B80E3285C9871A9D98DECB /* krtc_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc_times.json; sourceTree = "<group>"; };
 		A23CAC8DC027701B44D9FEF2 /* StartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartView.swift; sourceTree = "<group>"; };
 		A66F0D046BFE66DC6D9329D2 /* CityView3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityView3D.swift; sourceTree = "<group>"; };
@@ -421,6 +423,7 @@
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				35B383D349E8080CFE435A11 /* TrainDiagramView.swift */,
 				6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */,
+				A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
 				1FC5AEB0936E154EABD2610F /* YearEndReport.swift */,
@@ -721,6 +724,7 @@
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */,
 				991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */,
+				D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,
 				231927FCE953BD76302D19BE /* TutorialTargets.swift in Sources */,
 				7044884A77678D3AA560B162 /* YearEndReport.swift in Sources */,
