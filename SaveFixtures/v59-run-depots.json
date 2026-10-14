@@ -1,0 +1,633 @@
+{
+  "saveVersion" : 59,
+  "world" : {
+    "accounts" : {
+      "days" : [
+        {
+          "day" : 0,
+          "energyCost" : 0,
+          "fareRevenue" : 0,
+          "maintenanceCost" : 500,
+          "operatingCost" : 18000,
+          "staffCost" : 0
+        }
+      ],
+      "entries" : [
+        {
+          "amount" : -3700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -3600,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -100,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 3600
+        },
+        {
+          "amount" : -3700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -3600,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -100,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 7200
+        },
+        {
+          "amount" : -3700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -3600,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -100,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 10800
+        },
+        {
+          "amount" : -3700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -3600,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -100,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 14400
+        },
+        {
+          "amount" : -3700,
+          "breakdown" : [
+            {
+              "amount" : 0,
+              "item" : "fareRevenue"
+            },
+            {
+              "amount" : -3600,
+              "item" : "operatingCost"
+            },
+            {
+              "amount" : -100,
+              "item" : "maintenanceCost"
+            }
+          ],
+          "crowding" : {
+            "crowdedStations" : 0,
+            "fullTrains" : 0,
+            "maxLoad" : 0,
+            "maxWaiting" : 0
+          },
+          "kind" : "hourlyNet",
+          "time" : 18000
+        }
+      ],
+      "mode" : "management",
+      "openedAt" : 18000,
+      "pending" : {
+        "departures" : 2,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 640,
+        "trainDistance" : 4096
+      }
+    },
+    "bounds" : {
+      "height" : 4096,
+      "width" : 12288
+    },
+    "clock" : {
+      "now" : 21180,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 965500,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "lines" : [
+      {
+        "deadheadDistance" : 4096,
+        "depots" : [
+          1,
+          5
+        ],
+        "id" : 1,
+        "name" : "Main",
+        "performance" : {
+          "acceleration" : 125,
+          "braking" : 100,
+          "topSpeed" : 1
+        },
+        "runs" : [
+          {
+            "from" : 0,
+            "times" : [
+              [
+                21600,
+                21600
+              ],
+              [
+                22200,
+                22200
+              ]
+            ],
+            "to" : 1
+          },
+          {
+            "from" : 1,
+            "times" : [
+              [
+                21600,
+                21600
+              ],
+              [
+                22200,
+                22200
+              ]
+            ],
+            "to" : 0
+          },
+          {
+            "from" : 0,
+            "times" : [
+              [
+                79200,
+                79200
+              ],
+              [
+                79800,
+                79800
+              ]
+            ],
+            "to" : 1
+          },
+          {
+            "from" : 1,
+            "times" : [
+              [
+                79200,
+                79200
+              ],
+              [
+                79800,
+                79800
+              ]
+            ],
+            "to" : 0
+          }
+        ],
+        "stops" : [
+          2,
+          4
+        ],
+        "trains" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 4,
+          "id" : 4,
+          "to" : 5
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "id" : 5,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "id" : 6,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "id" : 7,
+          "to" : 8
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 8,
+          "id" : 8,
+          "to" : 9
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 9,
+          "id" : 9,
+          "to" : 10
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 10,
+          "id" : 10,
+          "to" : 11
+        }
+      ],
+      "nextEdgeID" : 11,
+      "nextNodeID" : 12,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 512,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1536,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 2560,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 3584,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 4608,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 5632,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 6656,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 7680,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 9,
+          "x" : 8704,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 10,
+          "x" : 9728,
+          "y" : 1536,
+          "z" : 0
+        },
+        {
+          "id" : 11,
+          "x" : 10752,
+          "y" : 1536,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 1
+        },
+        {
+          "edge" : 2,
+          "end" : 512,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 512,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 5,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 512,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 7,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 4
+        },
+        {
+          "edge" : 8,
+          "end" : 512,
+          "start" : 0,
+          "station" : 4
+        },
+        {
+          "edge" : 9,
+          "end" : 1024,
+          "start" : 512,
+          "station" : 5
+        },
+        {
+          "edge" : 10,
+          "end" : 512,
+          "start" : 0,
+          "station" : 5
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 6,
+    "nextTrainID" : 3,
+    "stations" : [
+      {
+        "depot" : true,
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 1536,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Alpha",
+        "point" : {
+          "x" : 3584,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "Beta",
+        "point" : {
+          "x" : 5632,
+          "y" : 512
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "Gamma",
+        "point" : {
+          "x" : 7680,
+          "y" : 512
+        }
+      },
+      {
+        "depot" : true,
+        "id" : 5,
+        "name" : "East",
+        "point" : {
+          "x" : 9728,
+          "y" : 512
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "deadhead" : true,
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 1,
+        "movement" : {
+          "cursor" : 0,
+          "rate" : 1024
+        },
+        "name" : "T1",
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 3,
+            "offset" : 253
+          }
+        },
+        "times" : {
+          "arrival" : 21060,
+          "departure" : 21102,
+          "run" : {
+            "length" : 2048,
+            "seconds" : 125,
+            "start" : 21102
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 21060,
+            "departure" : 21102,
+            "station" : 1
+          },
+          {
+            "arrival" : 21227,
+            "departure" : 21227,
+            "station" : 2
+          }
+        ]
+      },
+      {
+        "deadhead" : true,
+        "execution" : {
+          "phase" : "travelling",
+          "stop" : 1
+        },
+        "id" : 2,
+        "movement" : {
+          "cursor" : 1,
+          "edges" : [
+            9,
+            8
+          ],
+          "rate" : 1024
+        },
+        "name" : "T2",
+        "position" : {
+          "onEdge" : {
+            "direction" : "backward",
+            "edge" : 9,
+            "offset" : 291
+          }
+        },
+        "times" : {
+          "arrival" : 21120,
+          "departure" : 21162,
+          "run" : {
+            "length" : 2048,
+            "seconds" : 125,
+            "start" : 21162
+          }
+        },
+        "timetable" : [
+          {
+            "arrival" : 21120,
+            "departure" : 21162,
+            "station" : 5
+          },
+          {
+            "arrival" : 21287,
+            "departure" : 21287,
+            "station" : 4
+          }
+        ]
+      }
+    ]
+  }
+}

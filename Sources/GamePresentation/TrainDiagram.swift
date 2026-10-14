@@ -86,6 +86,20 @@ public struct TrainDiagram: Equatable, Sendable {
         }
     }
 
+    /// A trip a train of the line actually ran (decision 223, point 5):
+    /// read from the trip log, so drawn from the day's first trip, not only
+    /// from when the diagram opened.
+    public struct Actual: Equatable, Sendable, Identifiable {
+        public let id: String
+        public let train: TrainID
+        /// An empty run, or into or out of the depot.
+        public let isEmptyRun: Bool
+        /// When it arrived at and left each call, in pieces as a planned
+        /// line is (``Trip/lines``); a trip still running goes on to where
+        /// its train is now.
+        public let lines: [[Point]]
+    }
+
     /// Two trips at a station together.
     public struct Mark: Equatable, Sendable, Identifiable {
         public enum Kind: String, Equatable, Sendable {
@@ -134,6 +148,9 @@ public struct TrainDiagram: Equatable, Sendable {
     public let now: Int64
     public let trips: [Trip]
     public let running: [Running]
+    /// The trips the line's trains actually ran in the time covered, as
+    /// the trip log keeps them (empty without it).
+    public let actual: [Actual]
     public let marks: [Mark]
 
     /// How far back and ahead of now a diagram is built: four hours each way.
@@ -211,6 +228,7 @@ extension TrainDiagram {
             running.append(Running(train: trainID, name: train.name, now: here, lateSeconds: late, expected: expected))
         }
         self.running = running
+        actual = Self.actualTrips(in: world.tripLog, line: id, rows: rows, from: from, to: to, now: now, running: running)
         marks = Self.marks(trips: trips, waits: world.isTrafficControlEnabled ? world.scheduledTrafficWaits() : [],
                            rows: rows, stations: stations, singleTrack: self.singleTrack, from: from, to: to)
     }
@@ -382,6 +400,31 @@ extension TrainDiagram {
         }
         finish()
         return lines
+    }
+
+    /// The trips of line `line` in `log` that reach into `from...to`, as
+    /// their trains ran them: each call's arrival and departure (a call
+    /// not left yet lasts until now); a trip still running goes on to
+    /// where its train is in `running`, unless that is round a ring.
+    static func actualTrips(in log: [TrainTrip], line: LineID, rows: Rows, from: Int64, to: Int64, now: Int64,
+                            running: [Running]) -> [Actual] {
+        let here = Dictionary(running.map { ($0.train, $0.now) }, uniquingKeysWith: { first, _ in first })
+        let half = Double(max(1, rows.stops.count + (rows.isRing ? 1 : 0) - 1)) / 2
+        var trips: [Actual] = []
+        for trip in log where trip.line == line {
+            let end = trip.arrival?.seconds ?? now
+            guard end >= from, trip.sentOut.seconds <= to else { continue }
+            let stops = trip.calls.map { call in
+                (station: call.station, arrival: call.arrival.seconds, departure: call.departure?.seconds ?? max(call.arrival.seconds, min(end, now)))
+            }
+            var lines = Self.lines(through: stops, rows: rows)
+            if trip.isRunning, let at = here[trip.train], let last = lines.last?.last, at.time >= last.time, abs(at.place - last.place) <= half {
+                lines[lines.count - 1].append(at)
+            }
+            guard !lines.isEmpty else { continue }
+            trips.append(Actual(id: "a\(trip.train.rawValue)|\(trip.sentOut.seconds)", train: trip.train, isEmptyRun: trip.isDeadhead, lines: lines))
+        }
+        return trips
     }
 
     /// The timetable's points still ahead of a train at `here`: the calls

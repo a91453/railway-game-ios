@@ -555,11 +555,8 @@ extension GameError {
             language.text("This station has no shops.", "這個車站沒有商業。")
         case .depotInUse:
             language.text("A line keeps its trains at this depot: give that line another depot first.", "有路線把列車停在這個機廠：先替那條路線換一個機廠。")
-        case .depotWithRuns:
-            language.text(
-                "A line that runs to a timetable sends its trains out at the timetable's times and has no depot.",
-                "照時刻表跑的路線依班次發車，不能指定機廠。"
-            )
+        case .depotListedTwice:
+            language.text("This depot is already one of the line's.", "這個機廠已經是這條路線的了。")
         case .depotBlocksLine:
             language.text(
                 "No line runs over a depot's sidings, and a line would then have no way along its stops.",
@@ -701,6 +698,16 @@ extension GameTime {
         let time = "\(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
         return language.text("\(date.text(in: language)) \(time)", "\(date.text(in: language))\(time)")
     }
+
+    /// The status board's shorter clock (decision 226), for when the
+    /// whole date leaves no room for one row: "Y2 May 12 (Sat) 08:40",
+    /// "2 年 5/12（六）08:40".
+    public func shortCalendarText(in language: DisplayLanguage) -> String {
+        let minuteOfDay = (minute % Self.minutesPerDay + Self.minutesPerDay) % Self.minutesPerDay
+        let time = "\(Self.twoDigits(minuteOfDay / 60)):\(Self.twoDigits(minuteOfDay % 60))"
+        let day = date.shortText(in: language)
+        return language.text("Y\(date.year) \(day) \(time)", "\(date.year) 年 \(day)\(time)")
+    }
 }
 
 extension GameClock {
@@ -719,7 +726,16 @@ extension GameClock {
     /// ``GameTime/calendarText(in:)``, with the seconds while they matter
     /// (see ``displayText(in:)``).
     public func calendarText(in language: DisplayLanguage) -> String {
-        let text = now.calendarText(in: language)
+        withSecondsWhileTheyMatter(now.calendarText(in: language))
+    }
+
+    /// ``GameTime/shortCalendarText(in:)`` as the HUD shows it, with the
+    /// seconds while they matter (decision 226).
+    public func shortCalendarText(in language: DisplayLanguage) -> String {
+        withSecondsWhileTheyMatter(now.shortCalendarText(in: language))
+    }
+
+    private func withSecondsWhileTheyMatter(_ text: String) -> String {
         guard !(now.isWholeMinute && (speed == .paused || speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)) else { return text }
         let seconds = now.secondOfMinute
         return "\(text):\(seconds < 10 ? "0" : "")\(seconds)"

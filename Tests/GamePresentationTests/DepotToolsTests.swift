@@ -244,9 +244,13 @@ final class DepotToolsTests: XCTestCase {
 
         let run = LineRun(from: 0, to: 1, times: [LineRunTime(arrival: 600, departure: 600), LineRunTime(arrival: 900, departure: 900)])
         try world.setLineRuns(main, to: [run])
+        // Decision 221: a line that runs to a timetable chooses a depot too.
+        let yard = try world.buildStation(named: "Yard", at: PlanPoint(x: 20_480, y: 12_288)).id
+        try world.setStationDepot(yard, to: true)
         let timed = GameSession(world: world, language: .traditionalChinese)
         timed.selectLine(main)
-        XCTAssertEqual(timed.selectedLineDepotRow?.problem, "照時刻表跑的路線依班次發車，不能指定機廠。")
+        XCTAssertNil(timed.selectedLineDepotRow?.problem)
+        XCTAssertEqual(timed.selectedLineDepotRow?.choices.map(\.station), [yard])
     }
 }
 

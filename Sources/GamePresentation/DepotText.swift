@@ -100,8 +100,8 @@ public struct LineDepotChoice: Hashable, Sendable, Identifiable {
 public struct LineDepotRow: Hashable, Sendable {
     public let current: StationID?
     public let choices: [LineDepotChoice]
-    /// Why the line cannot choose a depot: it runs to a timetable, or
-    /// there is no depot yet.
+    /// Why the line cannot choose a depot: there is none yet. A line that
+    /// runs to a timetable chooses one too (decision 221).
     public let problem: String?
     /// The line's trains standing in its depot now.
     public let inDepot: Int
@@ -214,12 +214,6 @@ extension GameWorld {
     func depotRow(of id: LineID, in language: DisplayLanguage) -> LineDepotRow? {
         guard let line = line(id: id) else { return nil }
         let inDepot = trainsInDepot(of: id)
-        if line.hasRuns {
-            return LineDepotRow(current: line.depot, choices: [], problem: language.text(
-                "A line that runs to a timetable sends its trains out at the timetable's times and has no depot.",
-                "照時刻表跑的路線依班次發車，不能指定機廠。"
-            ), inDepot: inDepot)
-        }
         let ends = [line.stops.first, line.stops.last].compactMap { $0.flatMap(station(id:))?.point }
         let depots = stations.filter(\.isDepot).map { depot -> (station: Station, distance: Int64) in
             let distance = ends.map { end -> Int64 in

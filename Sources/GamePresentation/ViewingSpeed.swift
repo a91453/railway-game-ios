@@ -234,6 +234,17 @@ public struct ViewingSpeed: Hashable, Sendable {
             : language.text("actual \(times)", "實際 \(times)")
     }
 
+    /// What the status board's dot beside the speed says when tapped
+    /// (decision 226), only while the game falls behind: "The game is
+    /// running at ×290, slower than ×600." / "遊戲現在只跑得到 ×290，比設定的
+    /// ×600 慢。"; `nil` otherwise, and then there is no dot.
+    public func lagText(in language: DisplayLanguage) -> String? {
+        guard isBehind, let actualTenths else { return nil }
+        let actual = Self.timesText(actualTenths)
+        let set = Self.timesText(speed.tenthsPerTick * 10)
+        return language.text("The game is running at \(actual), slower than \(set).", "遊戲現在只跑得到 \(actual)，比設定的 \(set) 慢。")
+    }
+
     /// "285 km/h", the followed train's speed, or `nil` following none.
     public var trainSpeedText: String? {
         trainKilometresPerHour.map { "\(Money($0).displayText) km/h" }

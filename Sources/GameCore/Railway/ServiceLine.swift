@@ -376,14 +376,20 @@ public struct ServiceLine: Identifiable, Hashable, Sendable {
     /// realistic operation a high-speed line's real dwell. Set by
     /// ``GameWorld/setLineDwell(_:seconds:)`` only.
     public internal(set) var dwellSeconds: Int64?
-    /// The depot the line keeps its trains at out of service (decision
-    /// 209): a station that is a depot (``Station/isDepot``). Its trains
-    /// run there empty when the line no longer needs them (after its
-    /// window closes, or when it runs fewer at a quieter time of day), and
-    /// out to the line again in time for their trips. `nil`, as for every
-    /// line before it, keeps them where their trips end. Set by
-    /// ``GameWorld/setLineDepot(_:to:)`` only; never on a line with runs.
-    public internal(set) var depot: StationID?
+    /// The depots the line keeps its trains at out of service (decision
+    /// 209): stations that are depots (``Station/isDepot``), none twice.
+    /// Its trains run empty to the one they reach soonest when the line no
+    /// longer needs them (after its window closes, or when it runs fewer at
+    /// a quieter time of day; on a line with runs, when no run leaves where
+    /// they stand for a while, decision 221), and out to the line again in
+    /// time for their trips. None, as for every line before it, keeps them
+    /// where their trips end. Set by ``GameWorld/setLineDepot(_:to:)`` and
+    /// ``GameWorld/setLineDepots(_:to:)`` only.
+    public internal(set) var depots: [StationID] = []
+
+    /// The line's first depot, or `nil` if it has none: its only one but
+    /// on a line given several (decision 221).
+    public var depot: StationID? { depots.first }
     /// Whether the line is a high-speed line (decision 168): a passenger
     /// line whose journeys are planned at high speed (``performance`` is
     /// ``TrainPerformance/isHighSpeed``, which the line menu's "High-speed
@@ -974,7 +980,7 @@ extension ServiceDay.Band: Codable {}
 extension ServiceLine: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, name, stops, performance, window, trainsInService, targetHeadways, trains, lastDispatch, patterns, ring, outerLastDispatch, routePreferences, color
-        case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, code
+        case runs, runDays, freight, deadheadDistance, dwellSeconds, depot, depots, code
     }
 
     /// Decodes a line, rejecting stops, a performance, a window, train counts or
@@ -1030,8 +1036,20 @@ extension ServiceLine: Codable {
             throw DecodingError.dataCorruptedError(forKey: .dwellSeconds, in: container, debugDescription: "Line \(id.rawValue)'s dwell must be \(Self.dwellRange.lowerBound) to \(Self.dwellRange.upperBound) seconds.")
         }
         // Decision 209 (save version 54): the line's depot, which the
-        // ``GameWorld`` decoder checks is one.
-        depot = try container.decodeIfPresent(StationID.self, forKey: .depot)
+        // ``GameWorld`` decoder checks is one. Decision 221 (save version
+        // 59): a line with several writes them as `"depots"`, one with one
+        // as before.
+        if let depot = try container.decodeIfPresent(StationID.self, forKey: .depot) {
+            guard !container.contains(.depots) else {
+                throw DecodingError.dataCorruptedError(forKey: .depots, in: container, debugDescription: "Line \(id.rawValue) has both \"depot\" and \"depots\".")
+            }
+            depots = [depot]
+        } else if let depots = try container.decodeIfPresent([StationID].self, forKey: .depots) {
+            guard depots.count > 1, Set(depots).count == depots.count else {
+                throw DecodingError.dataCorruptedError(forKey: .depots, in: container, debugDescription: "Line \(id.rawValue)'s \"depots\" are two or more, none twice.")
+            }
+            self.depots = depots
+        }
         guard Self.isStopList(stops) else {
             throw DecodingError.dataCorruptedError(
                 forKey: .stops, in: container, debugDescription: "Line \(id.rawValue) needs two stops or more, none twice in a row."
@@ -1120,7 +1138,11 @@ extension ServiceLine: Codable {
             try container.encode(deadheadDistance, forKey: .deadheadDistance)
         }
         try container.encodeIfPresent(dwellSeconds, forKey: .dwellSeconds)
-        try container.encodeIfPresent(depot, forKey: .depot)
+        if depots.count == 1 {
+            try container.encode(depots[0], forKey: .depot)
+        } else if depots.count > 1 {
+            try container.encode(depots, forKey: .depots)
+        }
         if hasRuns {
             try container.encode(runs, forKey: .runs)
             if runDays.contains(where: { $0 != nil }) {

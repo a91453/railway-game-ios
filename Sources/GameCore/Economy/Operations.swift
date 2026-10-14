@@ -416,7 +416,7 @@ extension GameWorld {
     /// a standard train for each train it plans to run (see
     /// ``FixedAssets``) that its trains out of the depot fall short of.
     private mutating func countDepotHour(assets: FixedAssets) {
-        for (line, counted) in zip(lines, assets.lines) where line.depot != nil {
+        for (line, counted) in zip(lines, assets.lines) where !line.depots.isEmpty {
             var parked = 0, resting: Int64 = 0
             for id in line.assignedTrains {
                 guard let train = train(id: id), isInDepot(train, of: line) else { continue }
