@@ -23,6 +23,7 @@
 | 20 | 世界邊界外的陰影、邊界線、還沒買的地（決策 123、160） | `MapArt.drawMap` 開頭、`drawMapExpansion` | `MapCanvas` 從這裡開始 |
 | 21 | 車站的服務範圍圈 | `drawCatchmentRings` | 圖層開關 |
 | 22 | 路堤、路塹的坡面 | `drawSlopes` | |
+| 22.5 | 可描的真實鐵路：藏青細虛線；吸附時要描的那段加一條藏青寬光帶與實線（決策 213） | `drawTraceableLines` | 只在路網工具鋪設、打開「沿真實鐵路」時畫；在玩家的軌道下面，不和綠松軌道、路線色搶；外觀等作者在三種預覽裡選定 |
 | 23 | 軌道（道床、中心線、高架、隧道） | `drawNetwork` → `drawEdge` | |
 | 24 | 路線的色帶（或區間流量，兩者擇一） | `drawLines`／`drawSectionFlow` | |
 | 25 | 轉乘群組的連線 | `drawTransfers` | |
@@ -33,7 +34,7 @@
 | 30 | 車站（徽章、高鐵的第二圈、選取圈、站名） | `drawPointStation` | 一站一站畫完，所以後面的站會蓋住前面站的站名 |
 | 31 | 拉遠時的站名（帶底牌） | `drawOverviewNames` | |
 | 32 | 候車人數膠囊、擁擠站的量表環（決策 210） | `drawStationProblems` | 所有站與站名畫完才畫，不會被後面的站蓋住；中等縮放起就畫，數量有上限（`MapProblems`） |
-| 33 | 鋪軌的預覽線、錨點 | `drawNetworkOverlay` | |
+| 33 | 鋪軌的預覽線、錨點；描線停下後剩下那段（灰虛線，決策 213） | `drawNetworkOverlay` | |
 | 34 | 軌段編號（決策 201） | `drawTrackNumbers` | |
 | 35 | 等待列車與擋住它的那段軌道、虛線 | `drawWaits` | |
 | 40 | 時間的色調（multiply，決策 182） | `MapView` 的 `Palette.tint` | 只蓋到上面這些，蓋不到列車 |
