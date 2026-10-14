@@ -239,11 +239,11 @@ extension GameWorld {
         // A train sent out for a trip reaches its end up to
         // ``waitingLead`` minutes before it: it is not surplus meanwhile.
         let soon = Self.time(clock.now, plusMinutes: Self.waitingLead)
-        let wanted = max(
+        let needed = max(
             wanted(line, stream, at: clock.now, memo: &memo)?.trains ?? 0,
             soon.flatMap { wanted(line, stream, at: $0, memo: &memo)?.trains } ?? 0
         )
-        let surplus = runningTrains(of: line, stream) + waiting.count > wanted
+        let surplus = runningTrains(of: line, stream) + waiting.count > needed
         for index in stranded + (surplus ? waiting.reversed() : []) {
             guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
