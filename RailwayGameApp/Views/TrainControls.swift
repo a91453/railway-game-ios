@@ -68,9 +68,18 @@ struct TrainControls: View {
                     headingPicker
                 } else {
                     HStack {
-                        Label(session.world.trainSpeedText(of: train.id), systemImage: "speedometer")
-                            .monospacedDigit()
-                            .accessibilityIdentifier("train.speed")
+                        VStack(alignment: .leading, spacing: 0) {
+                            Label(session.world.trainSpeedText(of: train.id), systemImage: "speedometer")
+                                .monospacedDigit()
+                                .accessibilityIdentifier("train.speed")
+                            // Decision 217.
+                            if let curve = session.world.curveLimit(of: train.id) {
+                                Text(verbatim: curve.text(in: session.language))
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .monospacedDigit()
+                            }
+                        }
                         Spacer()
                         Button {
                             if train.movement.rate > 0 { session.holdSelectedTrain() }

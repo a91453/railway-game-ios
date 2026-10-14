@@ -606,12 +606,19 @@ private struct ViewingReadout: View {
         let language = session.language
         let actual = viewing.actualText(in: language)
         let train = viewing.trainSpeedText
+        // Decision 217: the curve limit it keeps to, or brakes for.
+        let curve = session.followedTrainID.flatMap { session.world.curveLimit(of: $0) }?.text(in: language)
         if actual != nil || train != nil {
             VStack(alignment: .leading, spacing: 0) {
                 if let train {
                     Text(verbatim: train)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textPrimary)
+                }
+                if train != nil, let curve {
+                    Text(verbatim: curve)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 if let actual {
                     Text(verbatim: actual)
@@ -621,7 +628,7 @@ private struct ViewingReadout: View {
             }
             .monospacedDigit()
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
+            .accessibilityLabel(Text(verbatim: [viewing.accessibilityText(in: language), curve].compactMap { $0 }.joined(separator: language.text(". ", "，"))))
             .accessibilityIdentifier("hud.viewing")
         }
     }

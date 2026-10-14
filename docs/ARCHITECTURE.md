@@ -7717,6 +7717,8 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **效能**（release，高鐵示範從 07:00 跑 600 tick，限速強制打開是最壞的情況，示範本身關著）：1.24–1.33 秒 → 1.71–1.76 秒（約 +35 %）；讀檔不變（0.66–0.76 秒）。每秒移動只查表（callgrind：`travelShare` 約 0.1 %）；多出來的在發車時：建曲線一次（`solveRuns` 約 2 %）、最快秒數（`fastest` 約 2.4 %）、沿路徑收限速（約 1.4 %）。修之前是 6 倍（合併限速的 O(n²) 與每次重建曲線），改成掃描、每段行駛只建一次。
 
+**畫面**（第三個 PR，`Sources/GamePresentation/CurveSpeedText.swift`）：不畫限速牌。跟隨列（HUD 的速度下一行）與列車卡（速度下一行）寫「彎道限速 60 km/h」（車頭在限速段裡，或車尾還在行駛的限速段裡）或「前方彎道 60 km/h」（行駛前方 1 km 內有要減速的限速，`GameWorld.curveLimitLookahead`）；只寫低於列車最高速的，開關關著時不寫（`GameWorld.curveLimit(of:)`、`CurveLimitReading`）。VoiceOver 和速度一起讀。鋪軌放大鏡在開著限速時寫「半徑 300 公尺 · 可跑 75 km/h」（`NetworkPreview.radiusText(in:curveSpeedLimits:)`，用同一條規則；放大鏡讀的是單點最小半徑，邊上的限速是 100 m 平均，所以邊上的限速可能高一級）。
+
 10. **沒有做的**（之後）：道岔側向的固定限速（側線本身是曲線時已經照曲率限速）、節點上的折角、坡道對速度的影響、移動授權終點前依煞車曲線減速（#556 的區間閉塞也不做）、擺式列車（參考 `SPEED_ZONES` 的普悠瑪／太魯閣比一般車快 10–20 km/h）、交會改停站的可行判斷（`trafficStopBuildable`、`applyTrafficAnchor` 只有距離，照舊用 `RunningCurve`）、出發時車尾還在彎道裡的那段、發車時計算的快取（一次 `advance` 內重算排點；要把世界的快取改成跨呼叫保存才能省）。
 
 **參考**（`a91453/railway-reference-private`，`7888702`）：
