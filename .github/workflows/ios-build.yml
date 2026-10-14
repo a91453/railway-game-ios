@@ -242,11 +242,12 @@ jobs:
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
     # first boot's data migration (up to 14 minutes), the warm-up launch and
-    # the translation check (about a minute). 80 since the full lane's UI
-    # step got 60 (below): on 2026-10-13 the job reached 60 minutes with the
-    # step cut at 40, booting the Simulator now takes 4 to 6 minutes, and the
-    # string export up to 5.
-    timeout-minutes: 80
+    # the translation check (about a minute). 80 for the full lane (a
+    # schedule or a run by hand) since its UI step got 60 (below): on
+    # 2026-10-13 the job reached 60 minutes with the step cut at 40, booting
+    # the Simulator now takes 4 to 6 minutes, and the string export up to 5.
+    # A pull request's UI step stops at 25, so its job keeps 60.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 60 || 80 }}
     steps:
       # Depth 2: a pull request's checkout is the pull request merged into its
       # base, and the archivable-products check below compares the two.
