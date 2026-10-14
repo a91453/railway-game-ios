@@ -364,3 +364,62 @@ fixture 與期望值：
 | **合計** | **48** | **18** | **30** |
 
 另有 1 項經查證判定照設計（第五節最後），不計入。`main` 完整 lane 的 3 支紅由 #623、#624 處理，也不計入。「沒修」的 30 項中，F3（#627）與班次紀錄沒清（#630）已由別的 PR 修好。
+
+## 九、後續：剩下的項目（`claude/pr526-626-review-rest`）
+
+作者 2026-10-14 夜在這個 session 指示「把剩下的開新 PR 一次修完」。之後依遊戲規劃 session 的分法（作者同意）和「UI 先不碰，等等還會改」縮小範圍。這個 PR 疊在 #637、#635 上，62.1 發版後才合。GameCore 與 GamePresentation 的每一項都先寫測試，確認修正前會失敗。
+
+### 修了的
+
+GameCore：
+
+| 項 | 問題 | 測試 |
+| --- | --- | --- |
+| G3 | 排定交會的「改停站排得下嗎」與改停後的通過時刻，現在照彎道限速算。每個交會點記著它那一段的限速，以及在段上的距離 | `CurveSpeedRunTests.testAnOvertakeStopIsPlannedUnderTheLimits` |
+| G5 | 沒有路線帳時，車站商店算營收用的是那一天自己的假日與天氣（`scaledTrips(_:at:onDay:)`）。午夜結束的活動照舊已經不在 | `StationCommerceTests.testWithoutLineAccountsTheDaysOwnHolidayAndWeatherCount` |
+| G8 | 班次紀錄依列車排序，用二分搜尋找列車的最後一趟。修正前：2 萬筆的紀錄上 2,000 次上車 2.1 秒 | `TrainTripLogTests.testCreditingATripDoesNotWalkTheLog` |
+| G9 | 兩個假日落在同一個週末日，只補一天，和落在同一個平日一樣。遊戲自己的週曆上目前沒有年份受影響 | `HolidayTests.testTwoHolidaysOnOneWeekendDayMakeUpOneDay` |
+| F5 | 存檔 53–60 的新欄位明寫 `null` 時拒絕讀檔，和舊的路線、車站、帳的欄位一致。沒有 build 會寫 `null`，所以每個存檔照舊讀得進來 | `SavedGameTests.testTheNewerKeysRefuseAnExplicitNull` |
+| F6 | 判定不是 bug：玩家刪掉的路線或車站，仍留在今天的班次裡，所以檢查不能要求它們存在。加測試固定這個行為 | `TrainTripLogTests.testTripsOfARemovedLineAndStationStillLoad` |
+| C3 | 拆成兩半的 `ServiceRepeating` 測試，現在只算自己跑的 case。空的範圍會失敗 | 兩個類別在本機各跑一次通過；暫時改成空範圍時失敗（已還原） |
+
+GamePresentation（不改玩家文字，不動 `RailwayGameApp/`）：
+
+| 項 | 問題 | 測試 |
+| --- | --- | --- |
+| B5 | 會折返的時刻表，目的地照「下一個折返站或最後一站」算，和即將進站看板一致。**路線的列車也受影響**：路線的時刻表是來回一趟，所以列車卡與跟隨列原本寫「Alpha→Alpha」，第一站的月台列寫「到此為止」。現在顯示正在跑的那一段 | `StationOperationsTests.testATrainThatTurnsRoundGoesToWhereItTurns`、`TrainCardTests.testATripThatTurnsRoundRunsToWhereItTurns`、`TrainRosterTests`（新斷言） |
+| B8 | 看板上只通過不停的誤點車，不再讓後車標「前車誤點」。路線列車在兩趟之間不顯示列車卡（原本顯示上一趟的時刻） | `DepartureBoardTests.testTheStatusAndTheStruckThroughTime`（新列）、`TrainCardTests.testALineTrainBetweenTripsHasNoCard` |
+| B10 | 前一天開出、還在跑或今天才到的那一趟，也算在今天的運用表裡 | `TrainRosterTests.testATripRunningPastMidnightIsInTodaysRow` |
+| B6 | 月台使用紀錄只問整列停在有月台的邊上的列車，結果相同 | `StationOperationsTests.testPlatformUseAsksOnlyTrainsOnAPlatformsEdgeAndNotesTheSame` |
+| U4 | `GameSession.trainPathStatusText(of:)` 每分鐘或每個指令才重算一次。App 的車隊總覽改用它，是一行的改動，留給 UI 改版時一起換 | `LineDispatchTextTests.testTheSessionWorksOutWhyALineHoldsATrainOnceAMinute` |
+| B7 | 判定不是 bug：無限資金只在開新遊戲時設定，遊戲中沒有任何地方能打開 | — |
+
+CI：
+
+| 項 | 修正 |
+| --- | --- |
+| C8 | iOS 建置 job 的 80 分鐘上限只給完整 lane，PR 回到 60 分鐘 |
+
+### 轉出或延後的
+
+| 項 | 去向 | 原因 |
+| --- | --- | --- |
+| B1–B3 | 美術 session 外框第 3 步 | 那一步會重寫同一段取景與圖層。分支 `claude/rest-app` 留在本機，沒有推送 |
+| U9、U10 | UI 改完後 | 作者：UI 先不碰 |
+| U3、玩家文字那批、`DisplayText` 的「Node #／Track #」與錯誤訊息裡的 ID | UI 改完、#633 合併後 | 會改玩家看的字；`DisplayText.swift` 正在 #633 改 |
+| U8 | #633 | 同一個檔、同一個功能。另外查到 `DepotYard` 的 S 形岔線失敗分支目前走不到 |
+| C6 | UI 改完後 | 是 UI 測試 |
+| C5 | 不改 | 遊戲規劃 session 每次發版重寫那個檔，版號是刻意寫死的 |
+| C1、C2 | 合併 session | 分片由它管理；實際時間已經交給它 |
+
+### 驗證
+
+- **VERIFIED（本機 Linux，Swift 6.4.0）**：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 沒有警告。
+  - 每個新測試修正前都失敗（B6、U4 是 API 還不存在，所以是編譯失敗）。
+  - 修正後通過，GameCore：`SavedGameTests`、`HolidayTests`、`TrainTripLogTests`、`StationCommerceTests`、`CurveSpeedRunTests`、`ScheduledTrafficTests`、`DepotTests`、`RunDepotTests` 等。
+  - 修正後通過，GamePresentation：`DepartureBoardTests`、`LineDispatchTextTests`、`PopTravelTests`、`StationOperationsTests`、`TrainCardTests`、`TrainRosterTests`。
+  - 兩個 `ServiceRepeating` 類別各跑一次通過。
+- **UNVERIFIED LOCALLY — requires macOS/Xcode CI**：`ios-build.yml` 的 C8。
+- 其餘分片交給 CI。
+
