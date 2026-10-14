@@ -666,6 +666,16 @@ private struct ViewingReadout: View {
                 }
                 .accessibilityLabel(Text(verbatim: viewing.accessibilityText(in: language)))
                 .accessibilityIdentifier("hud.lag")
+            } else {
+                // The dot's place, kept while the game keeps up: a device
+                // that falls behind and catches up again in turn would
+                // otherwise widen and narrow the board, and the board then
+                // changes its layout (the shorter date) and moves the pause
+                // button under the finger (main 8c604e8's full lane, run
+                // 38625196256: the board's two layouts at 00:11 and 00:17).
+                Color.clear
+                    .frame(width: 16, height: 32)
+                    .accessibilityHidden(true)
             }
             if let train {
                 VStack(alignment: .leading, spacing: 0) {
