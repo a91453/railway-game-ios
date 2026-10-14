@@ -8081,6 +8081,10 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
    - 玩家：「手機太複雜」是最多人提的，蓋線前就看到兩站差在哪，少做錯的決定。
 4. **2A 車種型錄**：現有的車種資料就能做。
 5. **1C 營運概覽**：升遷路線與評分列車現在就能做。每趟結算那一格等決策 223 第 5 點的班次紀錄，在那之前不顯示，不放假資料。
+   - **資料已備**（2026-10-14，班次紀錄 session）：`Sources/GamePresentation/TripSettlements.swift` 的 `TripSettlements(world:limit:)`，讀 `tripLog`。
+     - 今天完成的班次 `completed`（不含回送與中斷）、準點 `onTime`／`onTimePercent`、票價合計 `fares`。
+     - 最新的幾趟 `entries`（最新的在前）：車名、線號、起訖、到站時刻、票價（`fareText`「+$13.4k」）、誤點分數（`lateText`「+6 分」）、章（`stampText`「準／誤」）。
+     - 每趟的金額是路線分到的票價。紀錄沒有每趟的成本，所以不會有預覽裡的負數；沒有紀錄時全是 0、`entries` 空的，畫面照「不放假資料」不顯示這一格。
 
 通則：
 - 每一個畫面一個 PR，只動 GamePresentation 與 App，GameCore 不動。
