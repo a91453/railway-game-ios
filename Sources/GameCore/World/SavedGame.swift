@@ -315,9 +315,14 @@
 ///     reads only an earlier version would drop it, and the operations
 ///     chart would lose the day so far, so it says the save is newer than
 ///     it instead.
+/// 61. Depots of lines with runs, again (decision 221): the format of 59,
+///     merged while 60 was already the current version, so a version 60
+///     build would have read it as its own and dropped every depot of a
+///     line after the first. From 61 a build before it says the save is
+///     newer instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 60
+    public static let currentVersion = 61
 
     public let world: GameWorld
 
@@ -476,6 +481,8 @@ extension SavedGame: Codable {
         // Version 58 to 59: a line's single `"depot"` reads as its only
         // depot, and a line with runs had none.
         // Version 59 to 60: a world without `"tripLog"` has kept no trips.
+        // Version 60 to 61: nothing to convert; a world from this version
+        // may carry a line's `"depots"`.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
