@@ -43,7 +43,7 @@ final class ErrorMessageTests: XCTestCase {
             .outOfBounds(point): "x 64 m, y 112 m is outside the map.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
-                "Not enough cash: this costs $ 500.00 and you have $ 12.34.",
+                "Not enough cash: this costs $ 500 and you have $ 12.",
             .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",
