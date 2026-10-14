@@ -397,7 +397,7 @@ final class RealWorldMapUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(10)
         var disabled: XCUIElement?
         repeat {
-            if let button = query.allElementsBoundByIndex.first(where: { $0.isHittable }) {
+            if let button = query.allElementsBoundByIndex.first(where: touchable) {
                 if button.isEnabled {
                     return button
                 }
@@ -411,5 +411,16 @@ final class RealWorldMapUITests: XCTestCase {
         }
         XCTFail("Button cannot be tapped: \(name)")
         return query.firstMatch
+    }
+
+    /// Whether `element` can be touched. Only a copy with a frame on the
+    /// screen is asked, as in StartSaveFlowSmokeTests: asking one still
+    /// being laid out whether it is hittable fails the test outright
+    /// ("Activation point invalid" on the pause button, #622's pull request
+    /// gate).
+    private func touchable(_ element: XCUIElement) -> Bool {
+        let frame = element.frame
+        guard !frame.isEmpty, XCUIApplication().frame.contains(CGPoint(x: frame.midX, y: frame.midY)) else { return false }
+        return element.isHittable
     }
 }
