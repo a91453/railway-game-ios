@@ -97,6 +97,23 @@ final class DepotToolsTests: XCTestCase {
         XCTAssertEqual(session.world, world)
     }
 
+    /// Every number of sidings, on either side, bends out from a track's
+    /// end: the S-curves run on ahead, so the plan never fails for want of
+    /// one. Were one ever refused, it says so, not "tap the end".
+    func testTheSidingsBendOutFromAnyEnd() throws {
+        let (world, _, _, end) = try world()
+        let session = session(world)
+        for sidings in DepotYard.sidings {
+            for side in PlatformTrackSide.allCases {
+                guard case .success(let plan) = session.depotYardPlan(from: end, sidings: sidings, side: side) else {
+                    return XCTFail("\(sidings) sidings on the \(side) side")
+                }
+                XCTAssertEqual(plan.branches.count, sidings - 1)
+            }
+        }
+        XCTAssertNotEqual(DepotYardProblem.cannotBend.text(in: .traditionalChinese), DepotYardProblem.notAnEnd.text(in: .traditionalChinese))
+    }
+
     /// No room past the world's edge: GameCore refuses, and nothing is
     /// built.
     func testSidingsThatDoNotFitAreRefusedWhole() throws {
@@ -178,6 +195,14 @@ final class DepotToolsTests: XCTestCase {
             try night.advance(ticks: 1)
         }
         XCTAssertEqual(night.trainsInDepot(of: main), 1)
+        // The badge counts the line's own depots only: given another one,
+        // the train standing in the first is not in the line's depot.
+        var moved = night
+        let other = try moved.buildStation(named: "Other", at: PlanPoint(x: 40_960, y: 12_288)).id
+        try moved.setStationDepot(other, to: true)
+        try moved.setLineDepots(main, to: [other])
+        XCTAssertEqual(moved.depotState(of: train), .inDepot)
+        XCTAssertEqual(moved.trainsInDepot(of: main), 0)
         XCTAssertEqual(night.followBarInfo(of: train, in: .traditionalChinese)?.status, .depot(.inDepot))
         XCTAssertEqual(night.followBarInfo(of: train, in: .traditionalChinese)?.detail(in: .traditionalChinese).hasSuffix("· 在庫"), true)
         XCTAssertEqual(TrainDepotState.pullingOut.text(in: .traditionalChinese), "出庫中")

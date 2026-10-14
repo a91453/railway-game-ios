@@ -53,11 +53,15 @@ extension GameWorld {
         return runs
     }
 
-    /// How many of line `id`'s trains stand in a depot now: the line
-    /// panel's "in depot" badge.
+    /// How many of line `id`'s trains stand in one of its depots now: the
+    /// line panel's "in depot" badge. A train left in a depot the line no
+    /// longer keeps is not counted.
     public func trainsInDepot(of id: LineID) -> Int {
-        guard line(id: id)?.depot != nil else { return 0 }
-        return trains.count { assignedLine(of: $0.id) == id && depotState(of: $0.id) == .inDepot }
+        guard let depots = line(id: id)?.depots, !depots.isEmpty else { return 0 }
+        return trains.count {
+            assignedLine(of: $0.id) == id && depotState(of: $0.id) == .inDepot
+                && stationsStoppedAt(by: $0.id).contains(where: depots.contains)
+        }
     }
 }
 
