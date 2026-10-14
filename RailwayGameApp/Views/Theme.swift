@@ -38,12 +38,6 @@ enum Theme {
     static let panel = dynamic(light: 0xFFFFFF, dark: 0x30376A)
     /// The edge of a ``panel``.
     static let panelBorder = dynamic(light: 0x262C57, dark: 0xECEEF6, lightAlpha: 0.14, darkAlpha: 0.16)
-    /// The outline of the solid tiles the screen's controls sit in over the
-    /// map (decision 226): the icon's navy on light (13.29:1 on ``panel``,
-    /// 11.47:1 on the map's ground); the secondary text's light grey on dark
-    /// (5.79:1, 6.89:1), as a navy outline would vanish on the dark map and
-    /// the text colour glared.
-    static let chromeOutline = dynamic(light: 0x262C57, dark: 0xB4B9D9)
     /// A faint fill for chips and icon tiles on a ``panel`` or glass; never
     /// under text that needs more than its own contrast with the panel.
     static let chip = dynamic(light: 0x262C57, dark: 0xECEEF6, lightAlpha: 0.06, darkAlpha: 0.08)
@@ -158,15 +152,6 @@ extension View {
         } else {
             self
         }
-    }
-
-    /// Decision 226: a solid tile behind this view, in `shape`, for the
-    /// controls that stay on the map: ``Theme/panel`` with a 1.5-point
-    /// ``Theme/chromeOutline``, the app icon's flat look. Text on it keeps
-    /// the contrast stated for ``Theme/panel``, which glass could not.
-    func chromeTile(in shape: some InsettableShape) -> some View {
-        background(Theme.panel, in: shape)
-            .overlay(shape.strokeBorder(Theme.chromeOutline, lineWidth: 1.5))
     }
 
     /// Glass behind this view, in `shape`, for the controls that float over

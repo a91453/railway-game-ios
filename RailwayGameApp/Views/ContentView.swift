@@ -564,17 +564,19 @@ private struct ControlDetailsToggle: View {
     }
 }
 
-/// Cash, time, speed and the game menu (``HUDView``) at the top of the
-/// screen (decision 106), as wide as what it shows; since decision 226 a
-/// row of solid tiles rather than one glass pill.
+/// Cash, time, speed and the game menu (``HUDView``) in one glass pill at
+/// the top of the screen (decision 106), as wide as what it shows.
+/// Decision 226 made it a row of solid tiles for a day; on a device the
+/// row was twice as tall and heavier than the pill (2026-10-15).
 private struct StatusPill: View {
     let session: GameSession
     let launcher: GameLauncher
 
     var body: some View {
-        // Decision 226: the board brings its own solid tiles, with the map
-        // showing between them; no glass behind the whole row.
         HUDView(session: session, launcher: launcher)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
@@ -589,9 +591,7 @@ private struct ControlDock: View {
     let toggle: () -> Void
 
     var body: some View {
-        // Decision 226: solid tiles by group, the map showing between them,
-        // instead of one glass dock.
-        HStack(spacing: ControlPanel.tileGap) {
+        HStack(spacing: 8) {
             ControlPanel(session: session, arrangement: .tools)
             // In the tutorial, only on the steps that do not point into the
             // card: on a phone on its side it covered a third of the map,
@@ -599,10 +599,11 @@ private struct ControlDock: View {
             if session.tutorial?.step.usesDetailsCard != true {
                 ControlDetailsToggle(isOpen: isOpen, action: toggle)
                     .disabled(!canToggle)
-                    .controlTile()
             }
         }
         .fixedSize()
+        .padding(8)
+        .glassBackground(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

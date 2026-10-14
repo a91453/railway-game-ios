@@ -61,20 +61,17 @@ struct ControlPanel: View {
     var body: some View {
         switch arrangement {
         case .tools:
-            HStack(spacing: Self.tileGap) {
-                HStack(spacing: 4) {
-                    BuildEntry(session: session)
-                    // Decision 104: the lines and the company's figures,
-                    // named, beside the tools.
-                    QuickEntries(session: session, vertical: false)
-                }
-                .controlTile()
+            // In the dock's one glass (``ContentView``), as before decision
+            // 226; Undo and Redo only while they can be used.
+            HStack(spacing: 8) {
+                BuildEntry(session: session)
+                    .dockEntryFrame()
+                // Decision 104: the lines and the company's figures, named,
+                // beside the tools.
+                QuickEntries(session: session, vertical: false)
                 if Self.showsEdits(session) {
-                    HStack(spacing: 4) {
-                        UndoButton(session: session)
-                        RedoButton(session: session)
-                    }
-                    .controlTile()
+                    UndoButton(session: session)
+                    RedoButton(session: session)
                 }
             }
         case .toolsColumn:
@@ -111,10 +108,21 @@ struct ControlPanel: View {
 }
 
 extension View {
-    /// Decision 226: a group of the screen's controls in its own solid tile.
+    /// Decision 226: a group of the screen's controls in its own glass
+    /// (since 2026-10-15; at first a solid tile with an outline).
     func controlTile() -> some View {
         padding(4)
-            .chromeTile(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    /// The thin frame round Build, and round the lines and the figures, in
+    /// the dock along the bottom (61.1's look).
+    func dockEntryFrame() -> some View {
+        padding(3)
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .strokeBorder(Theme.panelBorder, lineWidth: 1)
+            )
     }
 }
 
@@ -152,7 +160,8 @@ private struct QuickEntries: View {
     @Environment(GameScreenState.self) private var screen
 
     var body: some View {
-        // Decision 226: no frame of their own; the tile they sit in is it.
+        // In the column (decision 226) no frame of their own, the glass they
+        // sit in is it; in the dock a thin frame, as on 61.1.
         if vertical {
             VStack(spacing: 4) {
                 data
@@ -160,10 +169,11 @@ private struct QuickEntries: View {
             }
             .fixedSize(horizontal: true, vertical: false)
         } else {
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
                 lines
                 data
             }
+            .dockEntryFrame()
             .fixedSize(horizontal: false, vertical: true)
         }
     }

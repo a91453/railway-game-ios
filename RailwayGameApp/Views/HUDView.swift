@@ -27,44 +27,44 @@ struct HUDView: View {
     @State private var reportingProblem = false
 
     var body: some View {
-        // Decision 226: one row, a board across the top, as wide as what it
-        // shows; then one row with the shorter date ("2 年 5/12（六）08:40");
-        // only then do cash and time stack. With the largest text the time
-        // gets a row of its own rather than being cut short ("Day 2 ·
-        // 07…"), and the cash is never cut short ("$ 3,0…").
+        // One row in one glass pill, as wide as what it shows; then one row
+        // with the shorter date ("2 年 5/12（六）08:40", decision 226); only
+        // then do cash and time stack. With the largest text the time gets
+        // a row of its own rather than being cut short ("Day 2 · 07…"), and
+        // the cash is never cut short ("$ 3,0…").
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: Self.gap) {
-                tile { cash }
-                tile { time(short: false) }
-                tile { speed }
-                tile { bellAndMenu }
+            HStack(spacing: 16) {
+                cash
+                time(short: false)
+                speed
+                newsBell
+                gameMenu
             }
-            HStack(spacing: Self.gap) {
-                tile { cash }
-                tile { time(short: true) }
-                tile { speed }
-                tile { bellAndMenu }
+            HStack(spacing: 16) {
+                cash
+                time(short: true)
+                speed
+                newsBell
+                gameMenu
             }
-            HStack(spacing: Self.gap) {
-                tile {
-                    VStack(alignment: .leading, spacing: 2) {
-                        cash
-                        time(short: false)
-                    }
-                }
-                tile { speed }
-                tile { bellAndMenu }
-            }
-            VStack(alignment: .leading, spacing: Self.gap) {
-                HStack(spacing: Self.gap) {
-                    tile { cash }
-                    tile { speed }
-                    tile { bellAndMenu }
-                }
-                tile {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    cash
                     time(short: false)
-                        .minimumScaleFactor(0.75)
                 }
+                speed
+                newsBell
+                gameMenu
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    cash
+                    speed
+                    newsBell
+                    gameMenu
+                }
+                time(short: false)
+                    .minimumScaleFactor(0.75)
             }
         }
         .font(.subheadline.weight(.semibold))
@@ -117,18 +117,6 @@ struct HUDView: View {
         }
     }
 
-    /// The space between the tiles: the map shows through it.
-    private static let gap: CGFloat = 6
-
-    /// One solid tile of the board (decision 226).
-    private func tile(@ViewBuilder _ content: () -> some View) -> some View {
-        content()
-            .padding(.horizontal, 10)
-            .padding(.vertical, 3)
-            .frame(minHeight: 44)
-            .chromeTile(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
     /// Pause, the speed and, beside it, the dot or the followed train's speed.
     private var speed: some View {
         HStack(spacing: 6) {
@@ -137,13 +125,6 @@ struct HUDView: View {
         }
     }
 
-    /// The news and the game menu, which share a tile.
-    private var bellAndMenu: some View {
-        HStack(spacing: 10) {
-            newsBell
-            gameMenu
-        }
-    }
 
     /// Reads the autosaves to go back to (decision 192) and asks which.
     private func askGoBack() {
