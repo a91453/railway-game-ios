@@ -404,13 +404,13 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.b, reach: Self.reach)
             let preview = session.networkPreview
             XCTAssertNil(preview?.cost)
-            XCTAssertEqual(preview?.problem, "Not enough cash: this costs $ 4.00 and you have $ 3.00.")
+            XCTAssertEqual(preview?.problem, "Not enough cash: this costs $ 4 and you have $ 3.")
             XCTAssertEqual(preview?.points.count, 2, "the stretch is still drawn")
 
             session.buildNetworkTrack()
 
             XCTAssertEqual(session.world, world, "no node without its edge")
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash: this costs $ 4.00 and you have $ 3.00."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Not enough cash to lay this track: it costs $ 4 and you have $ 3.", fundsNeeded: Money(400)))
             XCTAssertEqual(session.networkStart, .point(Self.a), "the draft is kept")
         }
     }
@@ -806,8 +806,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
 
     func testTheToolsSettingsAndTheNetworkSummaryRead() async throws {
         let world = try makeLineWorld()
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 edge")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 1 track section")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 段軌道")
         await MainActor.run {
             let session = GameSession(world: world)
             XCTAssertEqual(session.networkHeightText(), "New nodes on the ground")

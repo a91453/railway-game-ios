@@ -113,6 +113,8 @@ extension GameWorld {
             // Decision 212: long legs cut into block sections, so trains
             // follow each other along them under traffic control.
             world.setBlockSections(true)
+            // Decision 217: trains brake ahead of a curve's speed limit.
+            world.setCurveSpeedLimits(true)
             // Decision 180: trains cost and weigh what their type and cars
             // do, and are sold back at 70 % of their books.
             world.setRollingStockEconomics(true)
@@ -256,6 +258,7 @@ public enum DemoWorld {
         world.setRealisticOperation(false)
         // Decision 212: its traffic control takes whole legs as measured.
         world.setBlockSections(false)
+        world.setCurveSpeedLimits(false)
         // Decision 174: nor are there sights.
         world.setTourism(nil)
         // Decision 183: nor the city's requests.

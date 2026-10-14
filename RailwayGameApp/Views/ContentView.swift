@@ -279,6 +279,19 @@ struct ContentView: View {
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
+                // Decision 224 (5B): the layers used most, under the pill,
+                // while not building (the tool rail has that edge then) and
+                // not in the tutorial, whose card points at the map.
+                .overlay(alignment: .topLeading) {
+                    if !showsRail, session.tutorial == nil {
+                        MapQuickLayerStrip(language: session.language) {
+                            screen.panel = .mapLayers
+                        }
+                        .padding(.top, pillDepth)
+                        .padding([.top, .leading], margin)
+                        .transition(.opacity)
+                    }
+                }
                 .overlay(alignment: .topLeading) {
                     if showsRail {
                         BuildToolRail(session: session, maxHeight: railHeight)

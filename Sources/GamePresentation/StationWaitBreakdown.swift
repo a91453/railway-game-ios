@@ -53,8 +53,8 @@ extension GameWorld {
         let waiting = groups.reduce(Int64(0)) { $0 + $1.count }
         guard waiting * 2 >= StationPassengers.capacity else { return nil }
         var note = language.text(
-            "Each person waits for one line and one way, and boards only a train that stops where they are going, so a crowded station can sit beside part-empty trains. The peak load is the fullest departure of the day. Run more trains on the busiest line above, or a line to where they are going.",
-            "每位乘客只等一條路線的一個方向，而且只上會停他目的地的車，所以車站擁擠時，列車仍可能沒坐滿。尖峰載客率是當天最滿的一班。請在上面候車最多的路線加開列車，或開一條到他們目的地的路線。"
+            "Passengers board only trains that stop where they are going, so trains can leave a crowded station part-empty. The peak load is the fullest departure of the day. Run more trains on the busiest line above, or a line to where they are going.",
+            "乘客只上會停目的地的車，所以車站擠、列車也可能沒坐滿。尖峰載客率是當天最滿的一班。請在上面候車最多的路線加開列車，或開一條到他們目的地的路線。"
         )
         if groups.contains(where: { serviceLevel(of: $0.line, at: clock.now) == nil }) {
             note += language.text(

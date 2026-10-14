@@ -39,6 +39,8 @@ struct StationPanel: View {
         NavigationStack {
             Form {
                 if let station = session.selectedStation {
+                    // Decision 224: the platforms and the weather, first.
+                    StationOperationsSection(session: session, station: station.id)
                     departureBoardSection(station)
                     Section {
                         Button {
@@ -587,8 +589,8 @@ struct StationPanel: View {
                     }
 
                     Text(verbatim: session.language.text(
-                        "~10 min walking radius · Generates ~\(estimatedTrips.formatted()) trips/day (40 trips / 100 residents)",
-                        "約 10 分鐘步行服務範圍 · 衍生約 \(estimatedTrips.formatted()) 旅次/日（每百人約 40 旅次）"
+                        "About a 10-minute walk · about \(estimatedTrips.formatted()) trips a day",
+                        "約 10 分鐘步行範圍 · 每日約 \(estimatedTrips.formatted()) 旅次"
                     ))
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
@@ -753,7 +755,7 @@ struct StationPanel: View {
         } footer: {
             Text(demand == nil
                 ? "Choose what kind of place the station serves. A station without ridership starts no trips and draws none."
-                : "A preset keeps the station's daily trips. They go to the stations its lines reach that have ridership, shared by their own daily trips.")
+                : "A preset keeps the station's daily trips; they travel to the stations its lines reach.")
         }
     }
 
@@ -869,7 +871,7 @@ struct StationPanel: View {
         } header: {
             Text("Passengers")
         } footer: {
-            Text("Everyone released here is waiting, riding, arrived, left a full station or gave up. Left behind counts the times a full train left people waiting.")
+            Text("Everyone who set out from here is waiting, riding, has arrived, or left a full station or gave up. Left behind counts the times a full train left people waiting.")
         }
     }
 }

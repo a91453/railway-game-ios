@@ -109,7 +109,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 文件 | 內容 | 狀態 |
 | --- | --- | --- |
 | `docs/UI_INTERFACES.md` | GamePresentation 與 App 之間的介面：教學步驟、目標識別碼、相機、圖層 | 現行，§2、§7、§8 有過時處 |
-| `docs/UI_THEME.md` | 色票、按鈕、地區外觀、地圖顏色、圖示 | 現行 |
+| `docs/UI_THEME.md` | 色票、按鈕、玩家看的文字、地區外觀、地圖顏色、圖示 | 現行 |
 | `docs/TESTFLIGHT_GITHUB_ACTIONS.md` | 發佈手冊 | 現行 |
 | `docs/XCODE_CLOUD_ONBOARDING.md` | Xcode Cloud（暫緩） | 擱置；技術前提已變（有 MapLibre、MapKit 與網路） |
 | `docs/RAILWAY_REFERENCE_MAPPING.md` | 參考庫逐函式對照 | 到決策 153 左右最完整，之後的對照寫在各決策與 PR 裡 |
@@ -406,3 +406,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 220 | 旅程追蹤：長按車站，地圖畫出這一站最多人往返的五站（藏青白邊弧線，第 25.5 層） |
 | 222 | 車站商業三級：便利商店 → 站內商店街 → 車站商場（規則、校準、畫面與美術方案，`docs/research/STATION_COMMERCE_2026-10-14.md`；程式在第二段，存檔 57） |
 | 223 | 航空 UI 借版型：列車卡、即將進站看板、列車運用表（列車卡 A、看板 B、運用表 A＋GameCore 班次紀錄；預覽 `docs/art/airline-ui-borrow-2026-10-14/`） |
+| 224 | 六個新畫面的原創排版：營運概覽、車種型錄、開新路線比較、車站營運頁、圖層開關、HUD（1C、2A、3B、4A、5B、6C，先做 4A；預覽 `docs/art/railway-ui-redesign-2026-10-14/`） |

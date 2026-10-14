@@ -7,20 +7,20 @@ final class DisplayTextTests: XCTestCase {
     /// track tiles are gone.
     func testNetworkSummaryCountsStationsAndEdges() throws {
         var world = try makeWorld(balance: 100_000)
-        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 edges")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "0 stations · 0 track sections")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 0 段軌道")
 
         try world.buildStation(named: "Central", at: PlanPoint(x: 512, y: 512))
         let west = try world.buildTrackNode(at: WorldCoordinate(x: 512, y: 1_536))
         let east = try world.buildTrackNode(at: WorldCoordinate(x: 1_536, y: 1_536))
         try world.buildTrackEdge(from: west, to: east)
-        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 edge")
+        XCTAssertEqual(world.networkSummary(in: .english), "1 station · 1 track section")
 
         try world.buildStation(named: "Harbor", at: PlanPoint(x: 3_584, y: 512))
         let far = try world.buildTrackNode(at: WorldCoordinate(x: 2_560, y: 1_536))
         try world.buildTrackEdge(from: east, to: far)
-        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 edges")
-        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 個軌段")
+        XCTAssertEqual(world.networkSummary(in: .english), "2 stations · 2 track sections")
+        XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "2 座車站 · 2 段軌道")
     }
 
     /// Stage F3d: the map's VoiceOver label gives how far the world reaches
@@ -43,7 +43,7 @@ final class ErrorMessageTests: XCTestCase {
             .outOfBounds(point): "x 64 m, y 112 m is outside the map.",
             .invalidName: "Enter a name.",
             .insufficientFunds(required: 50_000, available: 1_234):
-                "Not enough cash: this costs $ 500.00 and you have $ 12.34.",
+                "Not enough cash: this costs $ 500 and you have $ 12.",
             .unknownTrain(TrainID(rawValue: 3)): "There is no train #3.",
             .trainAlreadyPlaced(TrainID(rawValue: 3)): "Train #3 is already on the track.",
             .trainNotPlaced(TrainID(rawValue: 3)): "Train #3 is not on the track.",

@@ -355,7 +355,7 @@ struct MapView: View {
                             .clipShape(Circle())
                             .overlay { Circle().stroke(Palette.ink, lineWidth: 2) }
                             if let preview = session.networkPreview {
-                                Text(verbatim: preview.radiusText(in: session.language))
+                                Text(verbatim: preview.radiusText(in: session.language, curveSpeedLimits: session.world.curveSpeedLimits))
                                     .font(.caption.weight(.semibold))
                                     .monospacedDigit()
                                     .padding(.horizontal, 8)

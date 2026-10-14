@@ -330,11 +330,11 @@ extension GameSession {
         } catch {
             if case .trainServiceActive(let train) = error, line.trains.contains(train) {
                 message = StatusMessage(kind: .failure, text: language.text(
-                    "Train #\(train.rawValue) of \(line.name) is on one of its runs, which new stops end. Wait for it to finish, or take it off the line first.",
-                    "\(line.name) 的列車 #\(train.rawValue) 正在跑班次，改停靠會結束班次。請等它跑完，或先讓它離開路線。"
+                    "\(world.train(id: train)?.name ?? language.text("A train", "列車")) of \(line.name) is on a run. Wait for it to finish, or take it off the line first.",
+                    "\(line.name) 的 \(world.train(id: train)?.name ?? "列車") 正在跑班次。請等它跑完，或先讓它離開路線。"
                 ))
             } else {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                message = refusal(error)
             }
         }
     }

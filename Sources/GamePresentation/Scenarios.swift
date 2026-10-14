@@ -161,6 +161,7 @@ extension GameWorld {
         world.setRealisticOperation(false)
         // Decision 212: its traffic control takes whole legs as measured.
         world.setBlockSections(false)
+        world.setCurveSpeedLimits(false)
         // Decision 174: nor do tourists come to its sights.
         world.setTourism(nil)
         // Decision 183: nor does the city ask it for anything.
@@ -237,7 +238,7 @@ extension GameWorld {
             case .population(let target):
                 return counted(totalResidents(), target, language.text("Population", "城市人口"))
             case .tallBuildings(let target):
-                return counted(Int64(tallBuildingCount()), Int64(target), language.text("High-rises (D4)", "高樓（D4）"))
+                return counted(Int64(tallBuildingCount()), Int64(target), language.text("High-rises", "高樓"))
             case .annualNetProfit(let target):
                 let best = goalYears().map(\.income.netProfit).max() ?? .zero
                 return money(best, target, language.text("Net profit in a year", "年度淨利"))

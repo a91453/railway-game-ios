@@ -23,11 +23,11 @@ extension GameSession {
         } catch {
             if case .trainServiceActive(let train) = error, let line = world.assignedLine(of: train).flatMap(world.line(id:)) {
                 message = StatusMessage(kind: .failure, text: language.text(
-                    "Train #\(train.rawValue) of \(line.name) serves \(station.name). Take it off the line and stop its service first.",
-                    "\(line.name) 的列車 #\(train.rawValue) 服務 \(station.name)。請先讓它離開路線並停止服務。"
+                    "\(world.train(id: train)?.name ?? language.text("A train", "列車")) of \(line.name) serves \(station.name). Take it off the line and stop its service first.",
+                    "\(line.name) 的 \(world.train(id: train)?.name ?? "列車") 服務 \(station.name)。請先讓它離開路線並停止服務。"
                 ))
             } else {
-                message = StatusMessage(kind: .failure, text: error.playerMessage(in: language))
+                message = refusal(error)
             }
             return
         }

@@ -555,6 +555,8 @@ extension GameWorld {
         let tourismStars: [Int]
         /// Decision 207: the legs' planned seconds and the dwells.
         let realisticOperation: Bool
+        /// Decision 217: the legs' planned seconds under curve limits.
+        let curveSpeedLimits: Bool
     }
 
     /// Each sight's rating now, with its hotels (empty without tourism): a
@@ -579,7 +581,8 @@ extension GameWorld {
             economyMode: accounts.mode, fareRules: accounts.fareRules, fareBaseline: accounts.fareBaseline,
             day: demandDay, weeklyDemand: weeklyDemand, demandEvents: demandEvents, disruptions: disruptions,
             distanceDemand: distanceDemand, outsideConnections: outsideConnections, tourism: tourism,
-            tourismStars: tourismStars, realisticOperation: realisticOperation
+            tourismStars: tourismStars, realisticOperation: realisticOperation,
+            curveSpeedLimits: curveSpeedLimits
         )
     }
 
