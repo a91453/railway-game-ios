@@ -61,20 +61,16 @@ struct ControlPanel: View {
     var body: some View {
         switch arrangement {
         case .tools:
-            HStack(spacing: Self.tileGap) {
-                HStack(spacing: 4) {
-                    BuildEntry(session: session)
-                    // Decision 104: the lines and the company's figures,
-                    // named, beside the tools.
-                    QuickEntries(session: session, vertical: false)
-                }
-                .controlTile()
+            // In the dock's one glass (``ContentView``), as before decision
+            // 226; Undo and Redo only while they can be used.
+            HStack(spacing: 8) {
+                BuildEntry(session: session)
+                // Decision 104: the lines and the company's figures, named,
+                // beside the tools.
+                QuickEntries(session: session, vertical: false)
                 if Self.showsEdits(session) {
-                    HStack(spacing: 4) {
-                        UndoButton(session: session)
-                        RedoButton(session: session)
-                    }
-                    .controlTile()
+                    UndoButton(session: session)
+                    RedoButton(session: session)
                 }
             }
         case .toolsColumn:
@@ -111,10 +107,11 @@ struct ControlPanel: View {
 }
 
 extension View {
-    /// Decision 226: a group of the screen's controls in its own solid tile.
+    /// Decision 226: a group of the screen's controls in its own glass
+    /// (since 2026-10-15; at first a solid tile with an outline).
     func controlTile() -> some View {
         padding(4)
-            .chromeTile(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassBackground(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

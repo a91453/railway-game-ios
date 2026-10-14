@@ -44,8 +44,7 @@ struct BuildToolRail: View {
             .tutorialClip()
         }
         .frame(width: Self.width)
-        // Decision 226: a solid tile, as the rest of the screen's controls.
-        .chromeTile(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassBackground(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         // Offered only the room between the pill and the dock, from the top.
         .frame(maxHeight: maxHeight, alignment: .top)
     }
