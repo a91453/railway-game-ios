@@ -149,7 +149,14 @@ enum Palette {
     /// bar's dot: the one the player chose (`custom`, the line's
     /// ``LineColor``), or else one picked from the line's ID, as the lines
     /// panel always has.
+    ///
+    /// Decision 216: with the colour-blind-safe palette on (the settings'
+    /// ``LinePalette``, on the device), the safe colour nearest it
+    /// (``LinePalette/safeColor(for:)``), the same in light and dark.
     static func lineColor(_ id: LineID, custom: LineColor? = nil) -> Color {
+        if LinePalette.current == .colourBlindSafe {
+            return rgb(LinePalette.safeColor(for: custom?.rgb ?? LineBadge.automaticColor(of: id)))
+        }
         if let custom {
             return color(custom)
         }
@@ -179,10 +186,15 @@ enum Palette {
 
     /// A ``LineColor`` as a SwiftUI colour.
     static func color(_ line: LineColor) -> Color {
+        rgb(line.rgb)
+    }
+
+    /// A packed `0xRRGGBB` as a SwiftUI colour.
+    static func rgb(_ rgb: Int) -> Color {
         Color(
-            red: Double((line.rgb >> 16) & 0xFF) / 255,
-            green: Double((line.rgb >> 8) & 0xFF) / 255,
-            blue: Double(line.rgb & 0xFF) / 255
+            red: Double((rgb >> 16) & 0xFF) / 255,
+            green: Double((rgb >> 8) & 0xFF) / 255,
+            blue: Double(rgb & 0xFF) / 255
         )
     }
 
@@ -245,5 +257,15 @@ enum MapGlyph: String {
 
     var image: Image {
         Image(rawValue).renderingMode(.template)
+    }
+}
+
+extension LinePalette {
+    /// The palette the player chose in the settings (decision 216), kept on
+    /// the device: read where a line's colour is drawn, so every view and
+    /// canvas draws the same; views that must redraw when it changes keep
+    /// it with `@AppStorage(LinePalette.key)`.
+    static var current: LinePalette {
+        UserDefaults.standard.string(forKey: key).flatMap(LinePalette.init(rawValue:)) ?? .standard
     }
 }

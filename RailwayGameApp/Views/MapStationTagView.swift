@@ -55,11 +55,11 @@ struct MapStationTagView: View {
             } label: {
                 HStack(spacing: 8) {
                     if !tag.lines.isEmpty {
-                        HStack(spacing: 2) {
-                            ForEach(tag.lines.prefix(4), id: \.id) { line in
-                                Capsule()
-                                    .fill(Palette.lineColor(line.id, custom: line.color))
-                                    .frame(width: 5, height: 18)
+                        // Decision 216: the lines' badges, stacked.
+                        let codes = LineBadge.codes(for: session.world.lines)
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(tag.lines.prefix(3), id: \.id) { line in
+                                LineCodeBadge(code: codes[line.id] ?? "", color: Palette.lineColor(line.id, custom: line.color), size: .small)
                             }
                         }
                     }

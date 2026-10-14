@@ -47,6 +47,7 @@ enum MapArt {
         flowStrokes: [SectionFlow.Stroke] = [],
         latitude: Double = 0,
         lights: Double = 0,
+        lineCodes: [LineID: String] = [:],
         in context: GraphicsContext
     ) {
         let detail = projection.detail
@@ -84,7 +85,7 @@ enum MapArt {
         }
         drawNetwork(world, projection: projection, cached: edges, in: context)
         if flowStrokes.isEmpty {
-            drawLines(lines, world: world, projection: projection, cached: edges, in: context)
+            drawLines(lines, world: world, projection: projection, cached: edges, codes: lineCodes, in: context)
         } else {
             drawSectionFlow(flowStrokes, world: world, projection: projection, cached: edges, in: context)
         }
@@ -104,12 +105,16 @@ enum MapArt {
         }
         // Decision 168: the stations a high-speed line calls at have a second ring.
         let fast = world.highSpeedStations
+        // Decision 216: the badges of the lines calling at each station,
+        // under its name.
+        let badges = detail == .full && layers.showsStationNames ? stationBadges(world, codes: lineCodes) : [:]
         for station in world.stations {
             drawPointStation(
                 station,
                 isSelected: station.id == selectedStationID,
                 isHighSpeed: fast.contains(station.id),
                 layers: layers,
+                badges: badges[station.id] ?? [],
                 projection: projection,
                 in: context
             )
@@ -685,12 +690,16 @@ enum MapArt {
     /// a navy casing, drawn under every line, so it reads as the heavier
     /// line of the network (the app icon's thick navy outline) without
     /// moving the lines beside it.
-    private static func drawLines(_ lines: LineMap, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], in context: GraphicsContext) {
+    private static func drawLines(_ lines: LineMap, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], codes: [LineID: String] = [:], in context: GraphicsContext) {
         guard !lines.stretches.isEmpty else { return }
         let region = drawingRegion(projection)
         let width = lineWidth(projection)
         var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
         var drawn: [(path: Path, color: Color, isHighSpeed: Bool, inTunnel: Bool)] = []
+        // Decision 216: each line's longest piece on the screen, for its
+        // badge (layer 24.5).
+        var longest: [LineID: (points: [CGPoint], length: Double, color: Color)] = [:]
+        let view = context.clipBoundingRect
         // Decision 201: where a line runs one way only, arrows that way.
         var oneWay: [(points: [ScreenPoint], offset: Double, backward: Bool)] = []
         for stretch in lines.stretches {
@@ -710,6 +719,13 @@ enum MapArt {
             let middle = (stretch.start + end) / 2
             let inTunnel = drawing.edge.sectionSpans.first { $0.start <= middle && middle <= $0.end }?.kind == .tunnel
             drawn.append((path, color, stretch.isHighSpeed, inTunnel))
+            if !codes.isEmpty, !inTunnel {
+                let shifted = offsetPoints(points, by: stretch.offset * width).filter { view.contains($0) }
+                let length = polylineLength(shifted)
+                if length > (longest[stretch.line]?.length ?? 0) {
+                    longest[stretch.line] = (shifted, length, color)
+                }
+            }
         }
         let casing = width + max(4, width * 0.9)
         for stretch in drawn where stretch.isHighSpeed {
@@ -724,14 +740,15 @@ enum MapArt {
                 style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round)
             )
         }
+        drawRibbonBadges(longest, codes: codes, height: projection.detail == .full ? 14 : 12, in: context)
         guard projection.detail == .full else { return }
-        let view = context.clipBoundingRect.insetBy(dx: -width * 2, dy: -width * 2)
+        let arrowView = view.insetBy(dx: -width * 2, dy: -width * 2)
         let spacing = max(72, width * 16)
         for stretch in oneWay {
             for mark in PolylineMarks.marks(along: stretch.points, spacing: spacing, limit: 60) {
                 let shifted = PolylineMarks.shifted(mark, by: stretch.offset)
                 let point = cgPoint(shifted.point)
-                guard view.contains(point) else { continue }
+                guard arrowView.contains(point) else { continue }
                 drawArrow(at: point, angle: mark.angle + (stretch.backward ? .pi : 0), size: width * 0.75, in: context)
             }
         }
@@ -1478,6 +1495,7 @@ enum MapArt {
         isSelected: Bool,
         isHighSpeed: Bool,
         layers: MapLayerPreferences,
+        badges: [(code: String, color: Color)] = [],
         projection: some MapProjection,
         in context: GraphicsContext
     ) {
@@ -1525,7 +1543,115 @@ enum MapArt {
             // (``drawOverviewNames``), so it reads over a line or a town.
             context.fill(Path(roundedRect: nameRect.insetBy(dx: -2, dy: 0), cornerRadius: 3), with: .color(Palette.land.opacity(0.8)))
             context.draw(name, at: CGPoint(x: center.x, y: center.y + radius + 4), anchor: .top)
+            // Decision 216: the badges of its lines in a row under the
+            // name, at most four.
+            if !badges.isEmpty {
+                let shown = badges.prefix(4)
+                let height = 12.0, gap = 2.0
+                let widths = shown.map { lineBadgeWidth($0.code, height: height, in: context) }
+                var x = center.x - (widths.reduce(0, +) + gap * Double(widths.count - 1)) / 2
+                for (badge, badgeWidth) in zip(shown, widths) {
+                    drawLineBadge(badge.code, color: badge.color, in: CGRect(x: x, y: nameRect.maxY + 2, width: badgeWidth, height: height), context: context)
+                    x += badgeWidth + gap
+                }
+            }
         }
+    }
+
+    // MARK: - Line badges (decision 216)
+
+    /// The code and colour of each line calling at each station, in the
+    /// lines' order, for the badges under its name.
+    private static func stationBadges(_ world: GameWorld, codes: [LineID: String]) -> [StationID: [(code: String, color: Color)]] {
+        guard !codes.isEmpty else { return [:] }
+        var badges: [StationID: [(code: String, color: Color)]] = [:]
+        for line in world.lines {
+            guard let code = codes[line.id] else { continue }
+            let color = Palette.lineColor(line.id, custom: line.color)
+            var seen = Set<StationID>()
+            for stop in line.stops where seen.insert(stop).inserted {
+                badges[stop, default: []].append((code, color))
+            }
+        }
+        return badges
+    }
+
+    /// The font of a badge `height` points high: the code is 0.66 of it,
+    /// heavy and rounded (`docs/UI_THEME.md` 線號徽章).
+    private static func lineBadgeText(_ code: String, height: Double, in context: GraphicsContext) -> GraphicsContext.ResolvedText {
+        context.resolve(Text(verbatim: code).font(.system(size: height * 0.66, weight: .heavy, design: .rounded)).foregroundStyle(Palette.ink))
+    }
+
+    /// How wide a badge of `code` is drawn at `height`: the colour patch
+    /// (0.42 of the height), the code with 0.21 either side, at least 0.9.
+    private static func lineBadgeWidth(_ code: String, height: Double, in context: GraphicsContext) -> Double {
+        let text = lineBadgeText(code, height: height, in: context).measure(in: CGSize(width: 200, height: height))
+        return height * 0.42 + max(height * 0.9, text.width + height * 0.42)
+    }
+
+    /// A line's badge in `rect` (``LineCodeBadge`` on the map): white,
+    /// edged in navy, a patch of the line's colour at its left behind a
+    /// navy rule, the code in navy.
+    private static func drawLineBadge(_ code: String, color: Color, in rect: CGRect, context: GraphicsContext) {
+        let corner = rect.height * 0.22
+        let tag = Path(roundedRect: rect, cornerRadius: corner)
+        context.fill(tag, with: .color(Palette.markerFill))
+        let patch = rect.height * 0.42
+        var inner = context
+        inner.clip(to: tag)
+        inner.fill(Path(CGRect(x: rect.minX, y: rect.minY, width: patch, height: rect.height)), with: .color(color))
+        inner.fill(Path(CGRect(x: rect.minX + patch - 0.5, y: rect.minY, width: 1, height: rect.height)), with: .color(Palette.ink))
+        context.stroke(tag, with: .color(Palette.ink), lineWidth: 1.5)
+        context.draw(lineBadgeText(code, height: rect.height, in: context), at: CGPoint(x: rect.minX + patch + (rect.width - patch) / 2, y: rect.midY), anchor: .center)
+    }
+
+    /// Decision 216 (layer 24.5): each line's badge at the middle of its
+    /// longest piece on the screen, if the piece is three badges long; a
+    /// badge that would cover one already drawn is left out.
+    private static func drawRibbonBadges(
+        _ longest: [LineID: (points: [CGPoint], length: Double, color: Color)], codes: [LineID: String], height: Double, in context: GraphicsContext
+    ) {
+        var placed: [CGRect] = []
+        for (line, piece) in longest.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            guard let code = codes[line] else { continue }
+            let badgeWidth = lineBadgeWidth(code, height: height, in: context)
+            guard piece.length >= badgeWidth * 3, let middle = pointAlong(piece.points, at: piece.length / 2) else { continue }
+            let rect = CGRect(x: middle.x - badgeWidth / 2, y: middle.y - height / 2, width: badgeWidth, height: height)
+            guard !placed.contains(where: { $0.insetBy(dx: -2, dy: -2).intersects(rect) }) else { continue }
+            placed.append(rect)
+            drawLineBadge(code, color: piece.color, in: rect, context: context)
+        }
+    }
+
+    /// `points` moved about `distance` to their left, as
+    /// ``offsetPolyline(_:by:)`` draws them (each point along the step
+    /// through its neighbours: near enough to place a badge).
+    private static func offsetPoints(_ points: [CGPoint], by distance: Double) -> [CGPoint] {
+        guard distance != 0, points.count > 1 else { return points }
+        return points.indices.map { index in
+            let a = points[max(index - 1, 0)], b = points[min(index + 1, points.count - 1)]
+            let dx = b.x - a.x, dy = b.y - a.y
+            let length = max((dx * dx + dy * dy).squareRoot(), 0.0001)
+            return CGPoint(x: points[index].x + dy / length * distance, y: points[index].y - dx / length * distance)
+        }
+    }
+
+    private static func polylineLength(_ points: [CGPoint]) -> Double {
+        zip(points, points.dropFirst()).reduce(0) { $0 + hypot($1.1.x - $1.0.x, $1.1.y - $1.0.y) }
+    }
+
+    /// The point `distance` along `points`.
+    private static func pointAlong(_ points: [CGPoint], at distance: Double) -> CGPoint? {
+        var left = distance
+        for (a, b) in zip(points, points.dropFirst()) {
+            let step = hypot(b.x - a.x, b.y - a.y)
+            if step >= left, step > 0 {
+                let t = left / step
+                return CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
+            }
+            left -= step
+        }
+        return points.last
     }
 
     // MARK: - Problems at the stations (decision 210)

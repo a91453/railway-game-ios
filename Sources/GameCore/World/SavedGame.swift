@@ -283,9 +283,13 @@
 ///     that reads only an earlier version would drop the flags, and the
 ///     line would send its trains out of the depot and run passengers over
 ///     its sidings, so it says the save is newer than it instead.
+/// 55. Line codes (decision 216): a line can have its `"code"`, such as
+///     `"BL"`. A build that reads only an earlier version would drop it,
+///     and the line's badge would go back to the app's own code, so it says
+///     the save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 54
+    public static let currentVersion = 55
 
     public let world: GameWorld
 
@@ -434,6 +438,7 @@ extension SavedGame: Codable {
         // dwells a minute; a tally without `"trips"` counted none.
         // Version 53 to 54: a world without `"depot"` flags has no depot,
         // and its lines keep their trains where their trips end.
+        // Version 54 to 55: a line without `"code"` has the app's own.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }

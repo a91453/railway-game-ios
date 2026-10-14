@@ -31,6 +31,8 @@ struct SettingsView: View {
     /// Decision 182: the map's time of day and weather, on the device.
     @AppStorage(MapAmbienceSettings.dayNightKey) private var showsDayNight = true
     @AppStorage(MapAmbienceSettings.weatherKey) private var showsWeather = true
+    /// Decision 216: the lines' colours, on the device.
+    @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
 
     var body: some View {
         NavigationStack {
@@ -50,6 +52,7 @@ struct SettingsView: View {
                     Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
                 }
                 mapSection
+                lineColoursSection
                 if let session {
                     eventsSection(session)
                     secretarySection(session.language)
@@ -98,6 +101,23 @@ struct SettingsView: View {
             Text("Map")
         } footer: {
             Text("Day and night: the map darkens from dusk to dawn as the game's clock turns, and stations, trains and windows light up. Weather effects: rain and lightning on the map on a day of rain or storms, and a typhoon's sign at the stations it hits. With Reduce Motion on, the rain does not fall and nothing flashes.")
+        }
+    }
+
+    /// Decision 216: the colour-blind-safe palette for the lines.
+    private var lineColoursSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { linePalette == .colourBlindSafe },
+                set: { linePalette = $0 ? .colourBlindSafe : .standard }
+            )) {
+                Label("Colour-Blind Friendly Colours", systemImage: "eye")
+            }
+            .accessibilityIdentifier("settings.colourBlindLines")
+        } header: {
+            Text("Line Colours")
+        } footer: {
+            Text("Draws every line in one of eight colours that stay apart with red–green or blue–yellow colour blindness, the one nearest its own. Only the screen changes: the colours you chose are kept, and come back when this is off. Every line also shows its code, such as BL or R, on its badge.")
         }
     }
 

@@ -25,6 +25,12 @@ struct LinesPanel: View {
     /// The name being typed for the selected line, while its rename alert
     /// is up.
     @State private var renamingLine: String?
+    /// Decision 216: the code being typed for the selected line, while its
+    /// alert is up.
+    @State private var editingCode: String?
+    /// Decision 216: redraws the badges and colours when the line palette
+    /// changes.
+    @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
     /// How often a train should come, for the selected line's trains
     /// (decision 101).
     @State private var staffHeadway: Int64 = 10
@@ -165,6 +171,9 @@ struct LinesPanel: View {
                 language: session.language
             ) { name in
                 session.renameSelectedLine(to: name)
+            }
+            .lineCodeAlert(code: $editingCode, language: session.language) { code in
+                session.setSelectedLineCode(code)
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -516,29 +525,22 @@ struct LinesPanel: View {
         let status = session.world.lineStatusText(line.id, at: session.world.clock.now, in: session.language)
         let color = Palette.lineColor(line.id, custom: line.color)
         return HStack(spacing: 10) {
-            ZStack {
-                // Theme: kept for good. The badge is the line's own colour
-                // (the player's or the default), with white on it.
-                Circle()
-                    .fill(color)
-                    .frame(width: 28, height: 28)
-                if line.isRing {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
-                } else {
-                    Text(verbatim: "\(line.id.rawValue)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-            }
-            .accessibilityHidden(true)
+            // Decision 216: the line's code on its badge, where a disc of
+            // its colour with its number in white was (white did not read
+            // on the pale colours); a ring has its arrows by its name.
+            LineCodeBadge(code: LineBadge.codes(for: session.world.lines)[line.id] ?? "", color: color)
+                .frame(minWidth: 44, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
                 // Decision 168: a high-speed line's name carries a bolt.
                 HStack(spacing: 4) {
                     Text(line.name)
                         .font(.subheadline.weight(.semibold))
+                    if line.isRing {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.caption2.weight(.bold))
+                            .accessibilityLabel(Text(verbatim: session.language.text("Ring", "環狀")))
+                    }
                     if line.isHighSpeed {
                         Image(systemName: "bolt.fill")
                             .font(.caption2.weight(.bold))
@@ -657,10 +659,22 @@ struct LinesPanel: View {
                     }
                 }
                 .accessibilityIdentifier("line.rename")
+                // Decision 216: the line's code, typed in an alert.
+                let code = LineBadge.codes(for: session.world.lines)[line.id] ?? ""
+                Button {
+                    editingCode = line.code?.text ?? ""
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(verbatim: session.language.text("Code", "線號"))
+                        LineCodeBadge(code: code, color: Palette.lineColor(line.id, custom: line.color), size: .small)
+                    }
+                }
+                .accessibilityLabel(Text(verbatim: session.language.text("Line code \(code)", "線號 \(code)")))
+                .accessibilityIdentifier("line.code")
                 Spacer()
                 // Decision 184, later: a menu the ticks leave alone.
                 let language = session.language
-                TickStable(StableKey(line.id, line.color, language)) {
+                TickStable(StableKey(line.id, line.color, language, linePalette)) {
                     Menu {
                         Button {
                             session.setSelectedLineColor(nil)
@@ -1812,7 +1826,60 @@ private struct RenameAlert: ViewModifier {
     }
 }
 
+/// Decision 216: an alert to type a line's code in, shown while `code` is
+/// not `nil`; blank asks for the app's own code again. Kept out of the
+/// panel's redraw on every tick as ``RenameAlert`` is, so the field keeps
+/// its keyboard; `save` sets whichever line is selected when it is pressed.
+private struct LineCodeAlert: ViewModifier {
+    @Binding var code: String?
+    let language: DisplayLanguage
+    let save: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content.background {
+            TickStable(StableKey(code, language)) {
+                alert
+            }
+        }
+    }
+
+    private var alert: some View {
+        Color.clear.alert(
+            Text(verbatim: language.text("Line Code", "線號")),
+            isPresented: Binding(get: { code != nil }, set: { if !$0 { code = nil } })
+        ) {
+            TextField(text: Binding(get: { code ?? "" }, set: { code = $0 })) {
+                Text(verbatim: language.text("Automatic", "自動"))
+            }
+            .textInputAutocapitalization(.characters)
+            .autocorrectionDisabled()
+            .accessibilityIdentifier("lineCode.field")
+            Button {
+                if let typed = code { save(typed) }
+                code = nil
+            } label: {
+                Text(verbatim: language.text("Save", "儲存"))
+            }
+            Button(role: .cancel) {
+                code = nil
+            } label: {
+                Text(verbatim: language.text("Cancel", "取消"))
+            }
+        } message: {
+            Text(verbatim: language.text(
+                "One to three letters A–Z or digits, such as BL or R2. Leave it empty for a code from the line's colour.",
+                "一到三個英文字母或數字，例如 BL、R2。留空就依路線顏色自動給。"
+            ))
+        }
+    }
+}
+
 extension View {
+    /// Decision 216: a line code alert (see `LineCodeAlert`).
+    func lineCodeAlert(code: Binding<String?>, language: DisplayLanguage, save: @escaping (String) -> Void) -> some View {
+        modifier(LineCodeAlert(code: code, language: language, save: save))
+    }
+
     /// A rename alert (see `RenameAlert`).
     func renameAlert(title: String, name: Binding<String?>, language: DisplayLanguage,
                      rename: @escaping (String) -> Void) -> some View {

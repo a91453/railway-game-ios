@@ -1260,6 +1260,16 @@ public struct GameWorld: Equatable, Sendable {
         lines[index].color = color
     }
 
+    /// Sets line `id`'s code (decision 216), or `nil` for the app's own
+    /// from the line's colour. Free; no rule reads it. Two lines may have
+    /// the same code, as they may the same name.
+    ///
+    /// - Throws: ``GameError/unknownLine(_:)``.
+    public mutating func setLineCode(_ id: LineID, to code: LineCode?) throws(GameError) {
+        guard let index = lines.firstIndex(where: { $0.id == id }) else { throw .unknownLine(id) }
+        lines[index].code = code
+    }
+
     /// Sets the type of train `id`'s cars (the reference's `TRAIN_TYPES`),
     /// or `nil` for the standard car: what each car carries and how many
     /// doors it has (see ``TrainType``). Free, and only while the train is

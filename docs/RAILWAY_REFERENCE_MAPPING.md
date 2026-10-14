@@ -1516,3 +1516,7 @@ V 實際放行 → T、U（保證不互穿）
 ## 路網明信片（決策 215）
 
 參考庫 7888702。對照表與「沒有可用的」寫在 ARCHITECTURE 決策 215 的「參考」：`Railway/island_city_reference_clean/` 的 `makeShareImage`（g10.js，1080×1350 分享圖）給了版面的結構與 4:5 的比例，`makeIdCard`（g11.js）給了「玩家寫名字、做成圖、交給分享面板」的做法；`train_loop`、`OpenWorld/`、`Ci/` 的分享只是文字、網址或存檔代碼；`commuter_journey` 的明信片是截 3D 畫面。圖一律不用參考庫的。外部專案沒有用到。
+
+## 線號徽章與色盲友善色票（決策 216）
+
+參考庫 788870262e。對照表寫在 ARCHITECTURE 決策 216 的「參考」：`Ci/` 的 `PRESET_COLORS` 沿用、`metroLineChipShortLabel` 只取做法（改從顏色取線號）、`getReadableChipTextColor` 沒有採用（改白底藏青字）、`.station-line-chip` 取大小；`Railway/site_archive_clean/index.html` 的 `drawTag` 只取做法；`data/trtc.json` 等的台灣捷運線號與色碼只用在測試。色盲：參考庫沒有可用的。`MapBuilder/`、`Simulator/`、`OpenWorld/` 沒有可用的。外部：Okabe–Ito 七色、Paul Tol 的淺灰、Machado 2009 的模擬矩陣，只取數值。

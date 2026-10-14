@@ -123,6 +123,7 @@ final class CommandEditTests: XCTestCase {
             .createLine(name: "Main", stops: [station, StationID(rawValue: 5)], targets: TargetHeadways(peak: 10, offPeak: 15)),
             .createLine(name: "Branch", stops: [station], targets: nil), .duplicateLine(line, name: "Main - Fork"), .removeLine(line),
             .renameLine(line, name: "Main"), .setLineColor(line, LineColor(rgb: 0x3366CC)), .setLineColor(line, nil),
+            .setLineCode(line, LineCode("BL")), .setLineCode(line, nil),
             .setLineStops(line, [station]), .reverseLineStops(line), .setLineRoutes(line, [], pattern: nil),
             .setLineWindow(line, .allDay), .setLineRing(line, true), .setLineTrains(line, TrainsInService(peak: 3, offPeak: 2, low: 1), pattern: 0),
             .setLineTargets(line, TargetHeadways(peak: 10), pattern: nil), .addLinePattern(line, calls: [0, 3]), .removeLinePattern(line, index: 0),
@@ -136,7 +137,7 @@ final class CommandEditTests: XCTestCase {
         let entries = edits.enumerated().map { CommandLog.Entry(time: Int64($0.offset), action: .command(.edit($0.element))) }
         let data = try JSONEncoder().encode(entries)
         XCTAssertEqual(try JSONDecoder().decode([CommandLog.Entry].self, from: data), entries)
-        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 7, "each kind, seven of them twice")
+        XCTAssertEqual(Set(edits.map(\.name)).count, edits.count - 8, "each kind, eight of them twice")
         XCTAssertEqual(PlayerCommand.edit(.reverseTrain(train)).name, "reverseTrain")
 
         // A zone this build does not know: read back as not recorded.
