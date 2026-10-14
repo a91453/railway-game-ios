@@ -342,7 +342,8 @@ final class TrainControlTests: XCTestCase {
                 session.message,
                 StatusMessage(
                     kind: .failure,
-                    text: GameError.insufficientFunds(required: testCosts.train, available: Money(4_999)).playerMessage(in: .english)
+                    text: "Not enough cash to buy a train: it costs $ 50.00 and you have $ 49.99.",
+                    fundsNeeded: testCosts.train
                 )
             )
         }
