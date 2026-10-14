@@ -7540,14 +7540,25 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **規則**（世界開關 `GameWorld.blockSections`，存成 `"blockSections": true`，缺 key＝關；關著時以下都不發生，結果逐位元不變）：
 
-1. **閉塞區段**：每條邊從 `from` 端起每 `GameWorld.blockLength` = 96,000 單位（1.5 km，新幹線數位 ATC 的軌道電路長度）一個分界，邊的兩端也是分界。只由拓撲與整數里程決定，不存檔（`BlockSections.swift` 的 `blockBoundary(_:atOrBefore:)`、`blockBoundary(_:after:)`）。
+1. **閉塞區段**：每條邊從 `from` 端起每 `GameWorld.blockLength` = 96,000 單位（1.5 km，新幹線數位 ATC 的軌道電路長度）一個分界，邊的兩端也是分界。道岔（三條以上的邊交會的節點）和它 `RailwayNetwork.junctionZone` 內不是分界：列車只在一般路段等，穿過站內道岔要一次拿到，不會停在道岔中間擋住要交叉過去的車（量測時左營停車股道就是這樣互等）。只由拓撲與整數里程決定，不存檔（`BlockSections.swift` 的 `blockBoundary(_:atOrBefore:)`、`blockBoundary(_:after:)`）。
 2. **授權停在分界**：跟車的授權原本到「第一段被別人持有的軌道之前 `followingGap`」，改成那裡之前最近的分界（`followingAuthority(_:free:)`）；至少拿到一個分界才發車。延長也一樣，所以前車的車尾每離開一個閉塞，後車才延長一次。
 3. **可以串成一串**：`isLeading` 不再要求前車整段拿到；前車自己在跟車時，算它「停靠時站的位置」要算到它的停靠點，不是它的授權終點（清掉複本的預約再算 `travelling`）。
 4. **跟車的列車不替前方佔位**：決策 56 第 6 點（`Claim`、`binds`）不適用，跟車中的列車只持有拿到的閉塞。第三列車可以插進前後車之間：同方向、會讓出的，後車改跟它；不是的，後車等。對向的車仍要整段拿到才出發，而它的路會經過後車持有的閉塞，所以拿不到。
 5. **排定的路與指定的路也能跟車**：`departService` 與 `goOn` 試排定的路（決策 59）、路線指定的路（決策 61）時用 `reserving(_:following:)`；拿不到授權才記進 `HeldRoute.whole`，批次判斷也用同樣的規則。
 6. **批次推進**：`canExtendAnyAuthority` 問「下一個分界之後 `followingGap`」是否空出來（`reachToExtend(_:beyond:)`），和第 2 點延長的條件相同，所以以分鐘推進與逐秒推進結果相同（`BlockSectionsTests`）。
 
-**沒有做的**：C 的「前車要停的月台被佔時改去同一站的另一個月台」先不做，量完 A、B、D 再看（見量測）。依煞車曲線提前減速留給幾何限速。
+7. **改去別的月台**（決策 57 的補充）：`reservingDeparture` 照舊先找避開所有被持有軌道的路、整段拿；拿不到時，找只避開停著不動的車（沒有在行駛中，或 rate 為 0）的路，跟車走。台北往南港的車原本等一列停在南港停車股道上的閒置車，因為預設的路通到那條股道。
+
+**量測**（同一台 Linux 雲端容器、release，`TrafficControlTimingReportTests`，`TRAFFIC_TIMING_BLOCKS=1` 打開閉塞；過程與每一步的數字在設計文件第 6 節）：高鐵示範、真實時刻表、行車控制開，一整天：
+
+| | 計算秒數 | 丟班（191 班） | 死結（每小時最多） | 終點誤點中位數 |
+| --- | --- | --- | --- | --- |
+| 閉塞關（`main` a272c69） | 742.9 | 97 | 0 | 92／130／126 分 |
+| 閉塞開 | 1,121.4 | 46 | 2（隨即解開） | 59／67／107 分 |
+
+丟班減半、誤點少三到六成，但計算多了 51%（同時在跑的車多了）。`long-leg-traffic.json` 的世界 3 小時：關 4.14 秒、開 3.96 秒，死結與發車相同。
+
+**沒有做的**：依煞車曲線提前減速（幾何限速）；讓排定待避認得跟車中的列車（剩下的丟班多半是快車跟在各站停的車後面）；結果不變的延長捷徑。高鐵示範等這些做完再打開行車控制。
 
 **開關**：App 的新遊戲打開（`NewGame`），示範、挑戰、教學、平溪與劉銘傳劇本、實景示範關掉；高鐵示範這個 PR 不打開行車控制（量完另開 PR）。
 
@@ -7560,4 +7571,4 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **golden、replay、SaveFixtures**：開關都是關的，每一個值都不變。
 
-**驗證**：`BlockSectionsTests`（分界的手算值、三列串跟、逐分與逐秒相同、存讀與 v55 fixture）、`BlockSectionsSessionTests`（新遊戲開、示範與教學關）；既有的 `TrafficControlTests`、`FollowerDeadlockTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、golden、replay、`SavedGameTests` 照舊通過。
+**驗證**：`BlockSectionsTests`（分界的手算值、道岔不是分界、三列串跟、逐分與逐秒相同、存讀與 v55 fixture）、`BlockSectionsSessionTests`（新遊戲開、示範與教學關）；既有的 `TrafficControlTests`、`FollowerDeadlockTests`、`ReservationShortcutTests`、`ScheduledTrafficTests`、golden、replay、`SavedGameTests` 照舊通過。
