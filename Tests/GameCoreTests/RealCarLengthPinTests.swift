@@ -15,6 +15,9 @@ final class RealCarLengthPinTests: XCTestCase {
         var multiCar = 0
         for name in names {
             let data = try Data(contentsOf: SavedGameTests.fixtures.appendingPathComponent(name))
+            // The saves from before real car lengths (version 62 is theirs).
+            let version = (try JSONSerialization.jsonObject(with: data) as? [String: Any])?["saveVersion"] as? Int ?? 0
+            guard version < 62 else { continue }
             let world = try JSONDecoder().decode(SavedGame.self, from: data).world
             for train in world.trains {
                 XCTAssertEqual(train.length, Int64(train.cars - 1) * 1_024, "\(name): train \(train.id.rawValue)")

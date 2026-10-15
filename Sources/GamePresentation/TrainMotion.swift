@@ -173,6 +173,8 @@ public struct TrainMotion: Sendable {
         public let lag: Double
         /// From its head to its tail, in world units (0 for one car).
         public let length: Double
+        /// How far apart its cars stand, in world units (``Train/carPitch``).
+        public let carPitch: Double
         /// The way the head faces now, as GameCore says, in world units.
         public let heading: Point
 
@@ -248,7 +250,7 @@ public struct TrainMotion: Sendable {
             }
             runs.append(Run(
                 train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
-                trail: trail, lag: lag, length: Double(train.length), heading: heading
+                trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading
             ))
         }
         self.runs = runs
