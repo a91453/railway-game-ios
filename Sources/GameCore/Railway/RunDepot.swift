@@ -45,12 +45,20 @@ extension GameWorld {
 
     /// When each of `line`'s trains for `station` can take a run there,
     /// earliest first: now for those waiting there, and for those on their
-    /// way to end there, running a service or empty, their arrival.
+    /// way to end there, running a service or empty, their arrival. Under
+    /// traffic control that arrival is put back by how late the train runs
+    /// now (``lateness(of:)``): a train hours behind its timetable, held
+    /// for its route, is not there for the run it would have taken, and a
+    /// train out of the depot takes the run instead.
     private func runTrainsReady(of line: ServiceLine, at station: StationID) -> [Int64] {
         var times = runTrainsWaiting(of: line, at: station).map { _ in clock.now.seconds }
         for id in line.trains {
             guard let train = train(id: id), train.execution != nil, let last = train.timetable.last, last.station == station else { continue }
-            times.append(last.arrival.seconds)
+            var arrival = last.arrival.seconds
+            if isTrafficControlEnabled, let late = lateness(of: id), late > 0 {
+                arrival = arrival.addingReportingOverflow(late).overflow ? .max : arrival + late
+            }
+            times.append(arrival)
         }
         return times.sorted()
     }

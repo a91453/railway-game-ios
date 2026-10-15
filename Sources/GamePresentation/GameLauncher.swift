@@ -348,6 +348,15 @@ public final class GameLauncher {
         begin(DemoWorld.make(in: language), keepingAutosave: true, isDemo: true)
     }
 
+    /// Opens the demo map with the city's requests drawn from `seed`
+    /// (decision 183): the Debug app's `-city-requests`, for the UI test of
+    /// a request shown on the map (decision 246).
+    public func openDemo(cityRequestSeed seed: UInt32) {
+        var world = DemoWorld.make(in: language)
+        world.setCityRequests(seed: seed)
+        begin(world, keepingAutosave: true, isDemo: true)
+    }
+
     /// Opens a website screenshot scene (decision 165), paused at the
     /// moment it shows; only the Debug app's `-screenshot-scene` launch
     /// argument asks for one. The scene runs on to its moment off the main

@@ -99,7 +99,12 @@ struct RailwayGameApp: App {
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
         if DebugLaunch.isSet("-demo-layout") {
-            launcher.openDemo()
+            // Decision 246: with the city's requests, for their UI test.
+            if DebugLaunch.isSet("-city-requests") {
+                launcher.openDemo(cityRequestSeed: 1)
+            } else {
+                launcher.openDemo()
+            }
         }
         // Freeze the demo before its first frame so camera UI tests select
         // known train positions without racing the simulation's first tick.

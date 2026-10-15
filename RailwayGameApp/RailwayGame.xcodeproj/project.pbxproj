@@ -100,6 +100,7 @@
 		A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */ = {isa = PBXBuildFile; fileRef = CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */; };
 		AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAD6AED84A8DA58D17AC1C7 /* PopulationLegendView.swift */; };
 		AB37C6000B8F37326B3FBCD5 /* NewGameOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */; };
+		AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */; };
 		AEA94B60157383F2A9A1D826 /* thsr-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 86547460C77F513B1976E1A4 /* thsr-schedule.json */; };
 		AF80C7D3AA57530427081DFF /* StartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23CAC8DC027701B44D9FEF2 /* StartView.swift */; };
 		B2E315F0FCFC44707DC846E7 /* whoosh.wav in Resources */ = {isa = PBXBuildFile; fileRef = 58D2ECE334BAC4B7C9744680 /* whoosh.wav */; };
@@ -246,6 +247,7 @@
 		B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSaveFlowSmokeTests.swift; sourceTree = "<group>"; };
 		B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialJourneyUITests.swift; sourceTree = "<group>"; };
 		B8372106A7EF953548452B15 /* MapBuildConfirm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBuildConfirm.swift; sourceTree = "<group>"; };
+		B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapRequestMarks.swift; sourceTree = "<group>"; };
 		B9632F6F7D420675666B2F9E /* Map3DShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Map3DShaders.metal; sourceTree = "<group>"; };
 		BBBC6A819CE29EEBC4FD844A /* TimetableEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimetableEditor.swift; sourceTree = "<group>"; };
 		BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationLineChips.swift; sourceTree = "<group>"; };
@@ -410,6 +412,7 @@
 				0BB64062D209FDE3EC54BAE7 /* MapConstructionHUD.swift */,
 				8363C536E3BE341871325469 /* MapLayerSheet.swift */,
 				FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */,
+				B8DD4857B9833F971AD18592 /* MapRequestMarks.swift */,
 				AFA812528CA2F00BD6143418 /* MapStationTagView.swift */,
 				AD5081F4C37E2CEB7CCECB73 /* MapView.swift */,
 				81D550FDBEF9E69496D0BF4D /* MiniMapView.swift */,
@@ -725,6 +728,7 @@
 				BEF6C6FD0A62EBDEDD8E4244 /* MapConstructionHUD.swift in Sources */,
 				945BE0F504200741317CF54C /* MapLayerSheet.swift in Sources */,
 				DE4556F23627CF834FB636CD /* MapQuickLayerStrip.swift in Sources */,
+				AD539B90444E0B2C2F203078 /* MapRequestMarks.swift in Sources */,
 				7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */,
 				8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */,
 				EB5F149F1C5ED00E96A4BDB5 /* MiniMapView.swift in Sources */,

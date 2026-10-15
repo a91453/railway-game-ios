@@ -563,6 +563,9 @@ public final class GameSession {
     /// tap on advice that points at a place. The map view moves its camera
     /// when it changes. Never saved.
     public internal(set) var cameraRequest: CameraRequest?
+    /// The city's request the map points out (decision 246,
+    /// ``showRequestOnMap(_:)``); `nil` for none. Never saved.
+    public internal(set) var focusedRequestID: Int?
 
     /// The trains the player is looking at, whose arrivals ring at full
     /// volume (``SoundCue/arrival(watched:)``): the one the camera follows,
