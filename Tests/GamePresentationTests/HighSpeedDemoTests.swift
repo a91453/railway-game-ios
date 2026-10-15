@@ -32,13 +32,13 @@ final class HighSpeedDemoTests: XCTestCase {
         data: Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/taiwan_places.json"))
     )
 
-    private static let metre = Double(WorldCoordinate.unitsPerMetre)
+    static let metre = Double(WorldCoordinate.unitsPerMetre)
 
     /// The layout as the game builds it, then built on a world with just
     /// what it costs on top of a new game's money, and not run: the tracks,
     /// the stations and the sets as they stand at midnight. Built once for
     /// every test that needs it: it takes a minute in a debug build.
-    private static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks), Error> = Result {
+    static let built: Result<(layout: HighSpeedDemo.Layout, world: GameWorld, tracks: Tracks), Error> = Result {
         let layout = try HighSpeedDemo.Layout(railways: railways())
         var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
         let built = try layout.build(in: &world, language: .english)
@@ -61,6 +61,10 @@ final class HighSpeedDemoTests: XCTestCase {
         let crossovers: Set<TrackEdgeID>
         /// The depots' sidings (decision 221).
         let sidings: Set<TrackEdgeID>
+        /// The ends' tracks beside the down track (decision 228).
+        let ends: Set<TrackEdgeID>
+        /// Each station's loops, both ways', by its index.
+        let loopsOf: [Int: Set<TrackEdgeID>]
         /// The track run both ways: at the stations where sets turn back,
         /// everything from one crossover to the other (decision 197); the
         /// depots' sidings, and the track between each depot and the
@@ -80,6 +84,11 @@ final class HighSpeedDemoTests: XCTestCase {
             upLoops = Set((built.loops + built.outerLoops).flatMap(\.up.edges))
             crossovers = Set(built.crossovers)
             sidings = Set(built.sidings.flatMap(\.edges))
+            ends = Set(built.ends.flatMap(\.edges))
+            var loopsOf: [Int: Set<TrackEdgeID>] = [:]
+            for (station, loop) in zip(layout.loops.keys.sorted(), built.loops) { loopsOf[station, default: []].formUnion(loop.down.edges + loop.up.edges) }
+            for (station, loop) in zip(layout.outerLoops.keys.sorted(), built.outerLoops) { loopsOf[station, default: []].formUnion(loop.down.edges + loop.up.edges) }
+            self.loopsOf = loopsOf
             var bothWays = crossovers.union(sidings)
             var reaches = Array(layout.turnbackReach.values)
             for depot in layout.depots {
@@ -118,7 +127,7 @@ final class HighSpeedDemoTests: XCTestCase {
     }
 
     /// The demo as the game opens it, with the people round its stations.
-    private static let opened: Result<GameWorld, Error> = Result {
+    static let opened: Result<GameWorld, Error> = Result {
         try HighSpeedDemo.make(in: .english, railways: railways(), population: population, places: places)
     }
 
@@ -193,14 +202,17 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertEqual(Double(length(tracks.up)), Double(length(tracks.between)), accuracy: 30 * Self.metre)
         // A loop beside each track at each of the ten stations between the
         // ends, a second at Taichung, a crossover north of Taichung and one
-        // south of Taipei, where sets turn back, one south of Taichung into
-        // Wuri's depot, and the three depots' sidings: with them, the whole
-        // network.
+        // south of Taipei, where sets turn back, one north of Taipei, whose
+        // sets stand at night in Nangang's depot (decision 228), one south
+        // of Taichung into Wuri's depot, the three depots' sidings, and the
+        // ends' tracks beside the down track (decision 228): with them, the
+        // whole network.
         XCTAssertEqual(tracks.downLoops.count, 33)
         XCTAssertEqual(tracks.upLoops.count, 33)
-        XCTAssertEqual(tracks.crossovers.count, 3)
+        XCTAssertEqual(tracks.crossovers.count, 4)
         XCTAssertEqual(
-            tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.sidings.count,
+            tracks.down.count + tracks.up.count + tracks.downLoops.count + tracks.upLoops.count + tracks.crossovers.count + tracks.sidings.count
+                + tracks.ends.count,
             world.network.edges.count
         )
     }
@@ -309,31 +321,47 @@ final class HighSpeedDemoTests: XCTestCase {
     /// ways run through each other on what was one track): every leg of
     /// every line, as the game drives it, runs southbound on the down
     /// track (and its loops) only and northbound on the up track, but where
-    /// sets turn back; the all-stops sets call on the loops, and the
-    /// expresses never use them.
+    /// sets turn back. Every set calls on the loops, as at the real side
+    /// platforms, but the expresses at Taipei and Banqiao, whose island
+    /// platforms serve the through tracks too; an express passes a station
+    /// on its through track (decision 228).
     func testEveryLegKeepsToItsWaysTrack() throws {
         let (_, world, tracks) = try Self.built.get()
+        let stations = world.stations.filter { !$0.isDepot }.map(\.id)
         for (index, line) in world.lines.enumerated() {
             let journey = try XCTUnwrap(world.lineJourney(line.id, pattern: nil), line.name)
             XCTAssertEqual(journey.legs.count, 2 * (line.stops.count - 1), line.name)
             for leg in journey.legs {
                 let southbound = leg.to > leg.from
+                let (from, to) = (stations.firstIndex(of: line.stops[leg.from])!, stations.firstIndex(of: line.stops[leg.to])!)
+                let calling = (tracks.loopsOf[from] ?? []).union(tracks.loopsOf[to] ?? [])
                 for traversal in leg.path.traversals {
                     let place = "\(line.name), \(leg.from) to \(leg.to)"
                     XCTAssertFalse(tracks.isAgainst(traversal), place)
                     XCTAssertFalse((southbound ? tracks.northbound : tracks.southbound).contains(traversal.edge), "\(place): on the other way's track")
-                    if index > 0 { XCTAssertFalse(tracks.downLoops.union(tracks.upLoops).contains(traversal.edge), "\(place): an express on a loop") }
+                    if index > 0 {
+                        XCTAssertFalse(tracks.downLoops.union(tracks.upLoops).subtracting(calling).contains(traversal.edge), "\(place): an express on the loop of a station it passes")
+                    }
                 }
-                if index == 0, leg.to != 0, leg.to != 11, let last = leg.path.traversals.last {
-                    XCTAssertTrue((southbound ? tracks.downLoops : tracks.upLoops).contains(last.edge), "\(leg.from) to \(leg.to): stops on the loop")
-                }
+                guard to != 0, to != 11, index == 0 || !HighSpeedDemo.islandStations.contains(to), let last = leg.path.traversals.last else { continue }
+                XCTAssertTrue((southbound ? tracks.downLoops : tracks.upLoops).contains(last.edge), "\(line.name), \(leg.from) to \(leg.to): stops on the loop")
             }
         }
     }
 
+    /// Decision 228: the ends have their real stations' platform tracks
+    /// (`tools/hsr-platforms/hsr_platforms.json`, from OpenStreetMap):
+    /// Nangang six, Zuoying eight; the others four, and Taichung six.
+    func testItsStationsHaveTheRealPlatformTracks() throws {
+        let world = try Self.built.get().world
+        let counts = world.stations.filter { !$0.isDepot }.map { world.network.platforms(of: $0.id).count }
+        XCTAssertEqual(counts, [6, 4, 4, 4, 4, 4, 6, 4, 4, 4, 4, 8])
+    }
+
     /// Decision 217 (the owner's condition): with the curve limits on, the
     /// sets keep to the real day as well as they do with them off: no set
-    /// is ever later, over an hour and a half from 07:00. Where a real leg's time
+    /// is ever later (but by the seconds a set held up behind another
+    /// loses, decision 228), over an hour and a half from 07:00. Where a real leg's time
     /// fits only without the limits (the drawn curves tighter than the real
     /// ones), the run does without them. The legs' margins (the least real
     /// time against the least time with the limits) go to the log.
@@ -354,8 +382,10 @@ final class HighSpeedDemoTests: XCTestCase {
         }
         let off = try XCTUnwrap(latest[false]), on = try XCTUnwrap(latest[true])
         XCTAssertFalse(on.isEmpty)
+        // Decision 228: where a set is held up behind another, the two days
+        // part by some seconds.
         for (train, late) in on {
-            XCTAssertLessThanOrEqual(late, off[train] ?? 0, "train \(train.rawValue)")
+            XCTAssertLessThanOrEqual(late, (off[train] ?? 0) + GameTime.secondsPerMinute, "train \(train.rawValue)")
         }
 
         var (_, world, _) = try Self.built.get()
@@ -416,51 +446,6 @@ final class HighSpeedDemoTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(ways.south, 4, "sets on their way south")
         XCTAssertGreaterThanOrEqual(ways.north, 4, "and north")
-    }
-
-    /// The game as it runs, from 07:00 to half past seven the next morning,
-    /// every ten minutes: no set runs against its way's track, so no two
-    /// sets going opposite ways are ever on the same track (but where sets
-    /// turn back); both tracks are used all day; no set is more than a few
-    /// minutes late; no run is dropped; and the next morning's runs leave
-    /// again (decision 197). At 03:00 every set stands in a depot, on a
-    /// siding of its own, and none on a platform (decision 221).
-    func testItsSetsKeepToTheRealDay() throws {
-        var world = try Self.opened.get()
-        let tracks = try Self.built.get().tracks
-        world.setSpeed(.fast)
-        var seen = (down: 0, up: 0)
-        var latest: Int64 = 0
-        for _ in 0..<(6 * 24 + 3) {
-            try world.advance(ticks: 1)
-            if world.clock.now.minute == 1_440 + 3 * 60 {
-                var sidings: Set<TrackEdgeID> = []
-                for train in world.trains {
-                    XCTAssertTrue(world.standsInADepot(train), "\(train.name) is in a depot at 03:00")
-                    if case .onEdge(let traversal, _)? = train.position {
-                        XCTAssertTrue(sidings.insert(traversal.edge).inserted, "\(train.name): a siding of its own")
-                    }
-                }
-            }
-            for train in world.trains where train.execution != nil {
-                latest = max(latest, world.lateness(of: train.id) ?? 0)
-                guard case .onEdge(let traversal, _)? = train.position else { continue }
-                XCTAssertFalse(tracks.isAgainst(traversal), "\(train.name) at minute \(world.clock.now.minute)")
-                if tracks.southbound.contains(traversal.edge) { seen.down += 1 }
-                if tracks.northbound.contains(traversal.edge) { seen.up += 1 }
-            }
-        }
-        XCTAssertGreaterThan(seen.down, 500)
-        XCTAssertGreaterThan(seen.up, 500)
-        XCTAssertLessThan(latest, 5 * 60, "on the real timetable, a few minutes late at most")
-        XCTAssertEqual(world.clock.now.minute % 1_440, 7 * 60 + 30)
-        let now = world.clock.now.seconds - GameTime.secondsPerDay
-        for line in world.lines {
-            for (index, run) in line.runs.enumerated() {
-                let day: Int64 = run.times[0].departure + LineRun.latestDispatch < now ? 1 : 0
-                XCTAssertGreaterThanOrEqual(line.runDays[index] ?? -1, day, "\(line.name): the run leaving at \(run.times[0].departure / 60) min")
-            }
-        }
     }
 
     func testPeopleLiveRoundItsStationsAndTravelBetweenThem() throws {

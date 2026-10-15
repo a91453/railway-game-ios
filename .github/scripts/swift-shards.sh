@@ -255,6 +255,16 @@ set -euo pipefail
 # The classes taken from rest are GamePresentation's, whose files run the
 # presentation tier wherever their class runs, so no pull request's tier
 # changes.
+# 2026-10-15 (ARCHITECTURE decision 228): the high-speed demo's real day
+# runs minute by minute (so no two sets on one edge go unseen) and keeps
+# its sets apart, which takes a debug build about 480 s locally for the day
+# where it took 140 (main's HighSpeedDemoTests 567 s locally, 443 on CI:
+# about 0.78). The day's tests move to a class of their own,
+# HighSpeedDemoDayTests, with the demo built and opened again for it: about
+# 660 s locally, some 520 on CI. No shard has room for that (each is about
+# 700 s), so it is a shard of its own, campaigns-16: one job more. What
+# stays of HighSpeedDemoTests in campaigns-11 is about 530 s locally,
+# some 415 on CI, as before.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -272,10 +282,11 @@ classes_of() {
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests" ;;
     *) return 1 ;;
   esac
 }
-CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15)
+CAMPAIGN_SHARDS=(campaigns-1 campaigns-2 campaigns-3 campaigns-4 campaigns-5 campaigns-6 campaigns-7 campaigns-8 campaigns-9 campaigns-10 campaigns-11 campaigns-12 campaigns-13 campaigns-14 campaigns-15 campaigns-16)
 SHARDS=("${CAMPAIGN_SHARDS[@]}" rest)
 
 WORK=""
@@ -339,7 +350,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoTests:443
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:520 HighSpeedDemoTests:415
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395

@@ -55,6 +55,14 @@ public struct ServiceRun: Sendable {
         return run
     }
 
+    /// This run set off `seconds` later (decision 228): the same curve,
+    /// later by that much.
+    func delayed(by seconds: Int64) -> ServiceRun {
+        var run = ServiceRun(start: GameWorld.saturating(start, plus: seconds), length: length, seconds: self.seconds, limits: limits)
+        run.solved = solved
+        return run
+    }
+
     /// When the run is over: the train has covered ``length`` then, unless
     /// something held it up on the way.
     public var end: GameTime {

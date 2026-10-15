@@ -161,6 +161,30 @@ extension GameWorld {
         return nil
     }
 
+    /// Decision 228: the way from `start`, off `preference`'s walk, along
+    /// `path` (its way to the call's nearest platform) to where it first
+    /// takes a traversal of the walk, and on along the walk to its
+    /// platform: a train that leaves another platform than the one the
+    /// walk starts from keeps to its line's way from where it meets it.
+    /// `nil` when they never meet, or the walk has no tracks.
+    func joiningPreferredPath(from start: TrainPosition, preference: LineRoutePreference, length: Int64, along path: TrainPath) -> TrainPath? {
+        let platform = preference.platform
+        guard !preference.tracks.isEmpty, network.platforms.contains(platform), platform.length >= length,
+              case .onEdge(let current, let offset) = start, let currentEdge = network.edge(current.edge),
+              let lastEdge = network.edge(platform.edge),
+              let meeting = path.traversals.indices.lazy.compactMap({ i in preference.tracks.firstIndex(of: path.traversals[i]).map { (i, $0) } }).first
+        else { return nil }
+        let traversals = Array(path.traversals[...meeting.0]) + Array(preference.tracks[(meeting.1 + 1)...])
+        guard let last = traversals.last else { return nil }
+        let end = last.direction == .forward ? platform.end : lastEdge.length - platform.start
+        var distance = currentEdge.length - offset
+        for traversal in traversals.dropLast() {
+            guard let edge = network.edge(traversal.edge) else { return nil }
+            distance += edge.length
+        }
+        return TrainPath(traversals: traversals, end: end == lastEdge.length ? nil : end, distance: distance + end)
+    }
+
     func linePath(_ line: ServiceLine, from: Int, to: Int, start: TrainPosition, length: Int64, routes: [LineRoutePreference]) -> TrainPath? {
         routes.first(where: { $0.from == from && $0.to == to }).flatMap { preferredPath(from: start, preference: $0, length: length) }
             ?? path(from: start, toStation: line.stops[to], length: length)

@@ -168,6 +168,22 @@ extension GameWorld {
         }
     }
 
+    /// Decision 228: ``path(from:toStation:length:eligible:keepingLeft:memo:)``
+    /// keeping off the edges of `avoiding` where another way serves: each
+    /// counts ``standingPenalty`` longer in the search (the distance is the
+    /// way's own).
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, eligible: Set<Berth>, keepingLeft: Bool, avoiding edges: Set<TrackEdgeID>) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            networkPath(from: traversal, offset: offset, toStation: id, length: length,
+                        edgePenalty: Dictionary(uniqueKeysWithValues: edges.map { ($0, Self.standingPenalty) }), eligible: eligible, keepingLeft: keepingLeft)
+        }
+    }
+
+    /// How much longer an edge where a train stands counts for a way that
+    /// keeps off it (decision 228): a thousand kilometres.
+    static let standingPenalty: Int64 = 1_000_000 * WorldCoordinate.unitsPerMetre
+
     /// A place in the search for a berth: where the train starts, the start
     /// of a traversal it has just entered, or a berth.
     private enum BerthSearch: Hashable {
