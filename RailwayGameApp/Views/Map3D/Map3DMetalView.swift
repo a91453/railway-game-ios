@@ -40,6 +40,8 @@ final class Map3DMetalView: MTKView {
         let vertices: MTLBuffer
         let indices: MTLBuffer
         let indexCount: Int
+        /// Decision 232: its shadows, if it has any.
+        let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
         let minimum: Map3DPoint
         let maximum: Map3DPoint
     }
@@ -48,6 +50,10 @@ final class Map3DMetalView: MTKView {
     private let pipeline: MTLRenderPipelineState
     /// Decision 230: the same, each vertex through its car's instance.
     private let instancedPipeline: MTLRenderPipelineState
+    /// Decision 232: the ground shadows, blended over what is drawn,
+    /// tested against the depth but not writing it.
+    private let shadowPipeline: MTLRenderPipelineState
+    private let shadowDepthState: MTLDepthStencilState
     private let depthState: MTLDepthStencilState
     /// Decision 231: the surfaces' textures, one layer each.
     private let surfaces: MTLTexture
@@ -65,7 +71,9 @@ final class Map3DMetalView: MTKView {
               let library = device.makeDefaultLibrary(),
               let vertexFunction = library.makeFunction(name: "map3dVertex"),
               let fragmentFunction = library.makeFunction(name: "map3dFragment"),
-              let instancedFunction = library.makeFunction(name: "map3dInstancedVertex")
+              let instancedFunction = library.makeFunction(name: "map3dInstancedVertex"),
+              let shadowVertex = library.makeFunction(name: "map3dShadowVertex"),
+              let shadowFragment = library.makeFunction(name: "map3dShadowFragment")
         else { return nil }
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float3
@@ -97,17 +105,36 @@ final class Map3DMetalView: MTKView {
               let depthState = device.makeDepthStencilState(descriptor: depthDescriptor),
               let surfaces = makeSurfaces(device: device, queue: queue)
         else { return nil }
-        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline, depthState: depthState,
-                              surfaces: surfaces)
+        // Decision 232: what is drawn times one less the shadow's alpha,
+        // plus its tint times the alpha.
+        descriptor.vertexFunction = shadowVertex
+        descriptor.fragmentFunction = shadowFragment
+        descriptor.colorAttachments[0].isBlendingEnabled = true
+        descriptor.colorAttachments[0].rgbBlendOperation = .add
+        descriptor.colorAttachments[0].alphaBlendOperation = .add
+        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        descriptor.colorAttachments[0].sourceAlphaBlendFactor = .zero
+        descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
+        let shadowDepthDescriptor = MTLDepthStencilDescriptor()
+        shadowDepthDescriptor.depthCompareFunction = .lessEqual
+        shadowDepthDescriptor.isDepthWriteEnabled = false
+        guard let shadowPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+              let shadowDepthState = device.makeDepthStencilState(descriptor: shadowDepthDescriptor)
+        else { return nil }
+        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline,
+                              shadowPipeline: shadowPipeline, shadowDepthState: shadowDepthState, depthState: depthState, surfaces: surfaces)
     }
 
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
-        depthState: MTLDepthStencilState, surfaces: MTLTexture
+        shadowPipeline: MTLRenderPipelineState, shadowDepthState: MTLDepthStencilState, depthState: MTLDepthStencilState, surfaces: MTLTexture
     ) {
         self.queue = queue
         self.pipeline = pipeline
         self.instancedPipeline = instancedPipeline
+        self.shadowPipeline = shadowPipeline
+        self.shadowDepthState = shadowDepthState
         self.depthState = depthState
         self.surfaces = surfaces
         super.init(frame: .zero, device: device)
@@ -216,7 +243,12 @@ final class Map3DMetalView: MTKView {
         chunks = scene.chunks.compactMap { chunk in
             guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
             else { return nil }
-            return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, minimum: chunk.minimum, maximum: chunk.maximum)
+            var shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+            if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
+                shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
+            }
+            return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, shadows: shadows,
+                         minimum: chunk.minimum, maximum: chunk.maximum)
         }
     }
 
@@ -246,7 +278,8 @@ final class Map3DMetalView: MTKView {
             encoder.setFragmentBytes(base, length: bytes.count, index: 1)
         }
         var drawCalls = 0, triangles = 0
-        for chunk in chunks where Map3DCamera.sees(minimum: chunk.minimum, maximum: chunk.maximum, through: matrix) {
+        let visible = chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
+        for chunk in visible {
             encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
             encoder.drawIndexedPrimitives(type: .triangle, indexCount: chunk.indexCount, indexType: .uint32,
                                           indexBuffer: chunk.indices, indexBufferOffset: 0)
@@ -283,6 +316,24 @@ final class Map3DMetalView: MTKView {
                 }
             }
         }
+        // Decision 232: the ground shadows last, over everything drawn.
+        encoder.setRenderPipelineState(shadowPipeline)
+        encoder.setDepthStencilState(shadowDepthState)
+        for chunk in visible {
+            guard let shadows = chunk.shadows else { continue }
+            encoder.setVertexBuffer(shadows.vertices, offset: 0, index: 0)
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: shadows.indexCount, indexType: .uint32,
+                                          indexBuffer: shadows.indices, indexBufferOffset: 0)
+            drawCalls += 1
+            triangles += shadows.indexCount / 3
+        }
+        if let mesh = frame?.shadows, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
+            encoder.setVertexBuffer(vertices, offset: 0, index: 0)
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indices.count, indexType: .uint32,
+                                          indexBuffer: indices, indexBufferOffset: 0)
+            drawCalls += 1
+            triangles += mesh.triangleCount
+        }
         encoder.endEncoding()
         let gpuTimes = gpuTimes
         commands.addCompletedHandler { @Sendable buffer in
@@ -297,7 +348,8 @@ final class Map3DMetalView: MTKView {
     /// The uniforms the shaders read (`Map3DUniforms` in
     /// `Map3DShaders.metal`): the matrix, then the sun's way and light, the
     /// ambient light from the sky and from the ground, the fog's colour,
-    /// the eye and where the fog starts and ends. The keyframes' strengths
+    /// the eye and where the fog starts and ends, and the ground shadows'
+    /// strength (decision 232). The keyframes' strengths
     /// are three.js's; scaled here so the noon sun on a roof comes to about
     /// white, with the colours as they are (no tone mapping).
     private func uniformValues(_ matrix: Map3DMatrix) -> [Float] {
@@ -317,6 +369,7 @@ final class Map3DMetalView: MTKView {
             + [sky.0, sky.1, sky.2, 0]
             + [eye.x, eye.y, eye.z, 1]
             + [camera.distance * 1.6, far * 0.9, 0, 0]
+            + [Map3DShadow.strength(lighting), 0, 0, 0]
     }
 
     private static func rgb(_ colour: PopTravel.RGB) -> (Float, Float, Float) {

@@ -15,8 +15,8 @@ struct Map3DVertexIn {
     float3 texture [[attribute(3)]];
 };
 
-// Laid out as Map3DRenderer.uniforms writes it: a matrix, then seven
-// four-float rows.
+// Laid out as Map3DRenderer.uniforms writes it: a matrix, then eight
+// four-float rows (decision 232's shade last: the shadows' strength in x).
 struct Map3DUniforms {
     float4x4 viewProjection;
     float4 sunDirection;
@@ -26,6 +26,7 @@ struct Map3DUniforms {
     float4 fogColor;
     float4 eye;
     float4 fog;
+    float4 shade;
 };
 
 struct Map3DVertexOut {
@@ -88,4 +89,26 @@ fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUnif
     float3 lit = base * (ambient + uniforms.sunColor.rgb * sun);
     float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, distance(in.world, uniforms.eye.xyz));
     return float4(mix(lit, uniforms.fogColor.rgb, fog), 1.0);
+}
+
+// Decision 232: the soft shadows on the ground, drawn last over what is
+// already drawn, their darkness in the vertex's alpha. A cool dark tint
+// rather than black, faded with the fog like everything else.
+struct Map3DShadowOut {
+    float4 position [[position]];
+    float darkness;
+    float3 world;
+};
+
+vertex Map3DShadowOut map3dShadowVertex(Map3DVertexIn in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
+    Map3DShadowOut out;
+    out.position = uniforms.viewProjection * float4(in.position, 1.0);
+    out.darkness = in.color.a;
+    out.world = in.position;
+    return out;
+}
+
+fragment float4 map3dShadowFragment(Map3DShadowOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
+    float fog = smoothstep(uniforms.fog.x, uniforms.fog.y, distance(in.world, uniforms.eye.xyz));
+    return float4(0.10, 0.12, 0.20, in.darkness * uniforms.shade.x * (1.0 - fog));
 }

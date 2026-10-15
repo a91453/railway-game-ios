@@ -22,6 +22,9 @@ public struct Map3DScene: Sendable {
         public let column: Int
         public let row: Int
         public let mesh: Map3DMesh
+        /// Decision 232: the soft shadows on its ground, drawn after
+        /// everything else.
+        public let shadows: Map3DMesh
         public let minimum: Map3DPoint
         public let maximum: Map3DPoint
     }
@@ -169,6 +172,10 @@ extension Map3DScene {
         let region: WorldRegion
         let world: GameWorld
         var meshes: [ChunkKey: Map3DMesh] = [:]
+        var shadows: [ChunkKey: Map3DMesh] = [:]
+        /// The ground's heights at the 64 m grid's corners, in metres, by
+        /// row and column, as ``addGround()`` lays them.
+        var corners: [ChunkKey: Float] = [:]
 
         static let metre = Double(WorldCoordinate.unitsPerMetre)
 
@@ -247,10 +254,53 @@ extension Map3DScene {
         }
 
         func chunks() -> [Chunk] {
-            meshes.keys.sorted().compactMap { key in
-                guard let mesh = meshes[key], let bounds = mesh.bounds else { return nil }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, minimum: bounds.min, maximum: bounds.max)
+            Set(meshes.keys).union(shadows.keys).sorted().compactMap { key in
+                let mesh = meshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh()
+                let boxes = [mesh.bounds, shadows.bounds].compactMap { $0 }
+                guard let first = boxes.first else { return nil }
+                let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
+                let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
+                return Chunk(column: key.column, row: key.row, mesh: mesh, shadows: shadows, minimum: low, maximum: high)
             }
+        }
+
+        // MARK: Shadows (decision 232)
+
+        /// The height of the ground as the scene draws it at scene point
+        /// (`x`, `z`): the 64 m grid's corners, each square split from its
+        /// north-west corner to its south-east one as ``addGround()``'s
+        /// quads are.
+        mutating func drawnGround(x: Float, z: Float) -> Float {
+            let cell = Double(Land.cellLength)
+            let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
+            let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
+            let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
+            func corner(_ row: Int, _ column: Int) -> Float {
+                let key = ChunkKey(column: column, row: row)
+                if let known = corners[key] { return known }
+                let height = ground(x: Double(column) * cell, y: Double(row) * cell)
+                corners[key] = height
+                return height
+            }
+            let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
+            // a (0, 0), b (0, 1), c (1, 1), d (1, 0) in (fx, fy): the
+            // triangles a b c and a c d.
+            return fy >= fx ? a + fx * (c - b) + fy * (b - a) : a + fx * (d - a) + fy * (c - d)
+        }
+
+        /// `points` laid on the drawn ground, ``Map3DShadow/lift`` over it.
+        mutating func onGround(_ points: [Map3DPoint]) -> [Map3DPoint] {
+            points.map { Map3DPoint($0.x, drawnGround(x: $0.x, z: $0.z) + Map3DShadow.lift, $0.z) }
+        }
+
+        /// A soft shadow under a footprint `length` along `forward` and
+        /// `width` across, standing on `centre`, fading out over `spread`
+        /// metres round it.
+        mutating func addShadow(centre: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float,
+                                spread: Float, darkness: Float) {
+            let inner = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length, width: width))
+            let outer = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length + 2 * spread, width: width + 2 * spread))
+            shadows[key(of: centre), default: Map3DMesh()].addShadow(inner: inner, outer: outer, darkness: darkness)
         }
 
         // MARK: Ground
@@ -366,6 +416,7 @@ extension Map3DScene {
             case .viaduct, .bridge:
                 let deckColor = kind == .bridge ? Map3DPalette.bridge : Map3DPalette.concrete
                 let grounds = line.map { ground(at: $0) }
+                addDeckShadow(line, grounds: grounds)
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: Self.deckWidth, lift: -Self.bedDrop, depth: Self.girderDepth, top: Map3DPalette.ballast, side: deckColor,
                                    topPaint: Self.ballast, sidePaint: Self.concrete)
@@ -409,6 +460,21 @@ extension Map3DScene {
                                    top: Map3DPalette.railTop, side: Map3DPalette.rail)
                 }
             }
+        }
+
+        /// Decision 232: the deck's shadow on the ground under a viaduct
+        /// or bridge, wider the higher it stands.
+        mutating func addDeckShadow(_ line: [Map3DPoint], grounds: [Float]) {
+            let heights = zip(line, grounds).map { $0.y - $1 }
+            let height = heights.reduce(0, +) / Float(max(heights.count, 1))
+            guard height > 2 else { return }
+            let half = Self.deckWidth / 2, spread = min(5, 1.5 + height * 0.15)
+            let across = Map3DMesh.acrossDirections(line)
+            var rows: [[Map3DPoint]] = []
+            for (point, side) in zip(line, across) {
+                rows.append(onGround([-(half + spread), -half, half, half + spread].map { point + side * $0 }))
+            }
+            shadows[key(of: line[line.count / 2]), default: Map3DMesh()].addShadowStrip(rows, darkness: 0.26)
         }
 
         // MARK: Platforms
@@ -527,13 +593,10 @@ extension Map3DScene {
         mutating func addOpenGround(_ lot: CitySkyline.Lot, base: Map3DPoint, seed: (Int32, Int32)) {
             let half = Float(Double(Land.cellLength) / Self.metre / 2) - 0.5
             let park = lot.use == .park
-            mesh(at: base) { mesh in
-                mesh.addQuad(base + Map3DPoint(-half, 0.02, -half), base + Map3DPoint(-half, 0.02, half),
-                             base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
-                             color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
-                guard park else { return }
-                // Up to nine trees on a hashed 20 m grid (rail-3d's trees
-                // stand on a hashed 26 m grid).
+            // Up to nine trees on a hashed 20 m grid (rail-3d's trees
+            // stand on a hashed 26 m grid): where each stands and its size.
+            var trees: [(spot: Map3DPoint, size: Float)] = []
+            if park {
                 for i in -1...1 {
                     for j in -1...1 {
                         let salt = Int32(10 + (i + 1) * 3 + (j + 1))
@@ -541,12 +604,23 @@ extension Map3DScene {
                         let jitterX = (map3DRandom(seed.0, seed.1, salt: salt + 20) - 0.5) * 8
                         let jitterZ = (map3DRandom(seed.0, seed.1, salt: salt + 40) - 0.5) * 8
                         let spot = base + Map3DPoint(Float(i) * 20 + jitterX, 0, Float(j) * 20 + jitterZ)
-                        let size = 4 + map3DRandom(seed.0, seed.1, salt: salt + 60) * 3
-                        mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
-                        mesh.addBox(base: spot + Map3DPoint(0, size * 0.4, 0), length: size, width: size, height: size * 0.75,
-                                    top: Map3DPalette.crown, side: Map3DPalette.crown)
+                        trees.append((spot, 4 + map3DRandom(seed.0, seed.1, salt: salt + 60) * 3))
                     }
                 }
+            }
+            mesh(at: base) { mesh in
+                mesh.addQuad(base + Map3DPoint(-half, 0.02, -half), base + Map3DPoint(-half, 0.02, half),
+                             base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
+                             color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
+                for (spot, size) in trees {
+                    mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
+                    mesh.addBox(base: spot + Map3DPoint(0, size * 0.4, 0), length: size, width: size, height: size * 0.75,
+                                top: Map3DPalette.crown, side: Map3DPalette.crown)
+                }
+            }
+            // Decision 232: a round-ish shadow under each crown.
+            for (spot, size) in trees {
+                addShadow(centre: spot, length: size * 0.3, width: size * 0.3, spread: size * 0.55, darkness: 0.3)
             }
         }
 
@@ -613,6 +687,8 @@ extension Map3DScene {
                     }
                 }
             }
+            // Decision 232: one shadow round both rows.
+            addShadow(centre: base, forward: Map3DPoint(1, 0, 0), length: side - 1, width: 2 * depth + 1, spread: 3, darkness: 0.3)
         }
 
         /// A block of flats, offices or a tower: density 3 a slab of 7–16
@@ -646,6 +722,19 @@ extension Map3DScene {
                                 top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 }
             }
+            // Decision 232: the shadow round its foot, wider under a taller
+            // block.
+            let footprint = max(side - 4, 8)
+            switch density {
+            case ...2:
+                addShadow(centre: base, length: footprint * 0.8, width: footprint * 0.8, spread: 2.5, darkness: 0.32)
+            case 3:
+                let turned = r(2) < 0.5
+                addShadow(centre: base, forward: turned ? Map3DPoint(1, 0, 0) : Map3DPoint(0, 0, -1), length: footprint * 0.9,
+                          width: footprint * 0.45, spread: 3.5, darkness: 0.34)
+            default:
+                addShadow(centre: base, length: footprint, width: footprint, spread: 4.5, darkness: 0.36)
+            }
         }
 
         /// A factory: low, wide, with a lighter roof; corrugated metal
@@ -656,6 +745,7 @@ extension Map3DScene {
                 mesh.addBox(base: base, length: footprint, width: footprint * 0.7, height: 8, top: Map3DColor.rgb(0xDADDE0), side: walls,
                             topPaint: Self.metal, frontPaint: Self.metal, flankPaint: Self.metal)
             }
+            addShadow(centre: base, length: footprint, width: footprint * 0.7, spread: 2.5, darkness: 0.28)
         }
 
         // MARK: The player's buildings
@@ -679,6 +769,7 @@ extension Map3DScene {
                     mesh.addBox(base: base + Map3DPoint(0, height, 0), length: side - 2, width: side - 2, height: 0.4,
                                 top: Map3DPalette.playerRoof, side: Map3DPalette.playerRoof, topPaint: Self.roofing)
                 }
+                addShadow(centre: base, length: side, width: side, spread: 2.5, darkness: 0.32)
             }
         }
 
