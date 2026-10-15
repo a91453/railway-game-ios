@@ -235,12 +235,12 @@
         }
       }
     },
-    "Automatic physical path" : {
+    "Automatic route" : {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動選路（軌段與月台）"
+            "value": "自動選路"
           }
         }
       }

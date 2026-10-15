@@ -153,6 +153,9 @@ final class RoutePreviewTests: XCTestCase {
         session.previewRoute(from: 1, to: 0, pattern: nil)
         session.setSelectedLineRoute(from: 0, to: 1, preference: loop)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        // Words the player knows, not "physical path" (the PR #526–#626
+        // review).
+        XCTAssertEqual(session.message?.text, "Updated the tracks the line takes between these stops.")
         XCTAssertEqual(session.routePreviewRequest, .init(line: Self.main, pattern: nil, from: 0, to: 1), "the leg just picked")
         XCTAssertEqual(session.routePreview?.trackNumbers, [1, 4, 5, 6, 3], "as the line now runs it")
 
