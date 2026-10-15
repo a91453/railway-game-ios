@@ -126,7 +126,7 @@ extension PlanCamera {
     /// (`cover`): under a panel or control along an edge, along an axis
     /// where the framing leaves room (``smallestClearSpan``), or under a
     /// corner's control itself; not merely beside a corner's control, in
-    /// the band of the view the framing gives up to it (B1: a selected
+    /// the band of the view the framing gives up to it (the PR #526–#626 review: a selected
     /// station moved every time the details card opened or closed).
     public func hides(_ point: WorldCoordinate, under cover: MapCover) -> Bool {
         let screen = screenPoint(of: point)
@@ -137,7 +137,7 @@ extension PlanCamera {
         return cover.corners.contains { $0.standsInCorner(of: viewport) && $0.contains(screen) }
     }
 
-    /// Decision 106, later, and B1: the camera that brings `point` (the
+    /// Decision 106, later, and the PR #526–#626 review: the camera that brings `point` (the
     /// selected station) out from under `cover` into the middle of the
     /// part of the view its framing leaves, as near as the map's edges
     /// allow; `nil` when it is not hidden (``hides(_:under:)``), or when

@@ -1453,7 +1453,7 @@ struct MapView: View {
     /// for `line`, the selected line's stops) shows in the part of the map
     /// the screen's controls leave (`cover`'s framing), in its middle, when
     /// what covers the map hides it now (``PlanCamera/hides(_:under:)``:
-    /// under a control, not beside one, B1); a line is zoomed out to fit,
+    /// under a control, not beside one); a line is zoomed out to fit,
     /// never in. Not
     /// while a train is followed, whose camera stays on it, nor during the
     /// tutorial, whose steps point at places on the map, nor while a
@@ -1471,7 +1471,7 @@ struct MapView: View {
         } else if let station = session.selectedStation,
                   let moved = projection.keepingClear(WorldCoordinate(x: station.location.x, y: station.location.y), of: cover) {
             // Along an axis the framing leaves almost nothing of, the
-            // station keeps its place (B1).
+            // station keeps its place.
             camera = moved
         }
     }

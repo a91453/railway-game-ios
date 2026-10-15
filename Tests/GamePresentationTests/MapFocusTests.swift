@@ -115,7 +115,7 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(ScreenInsets(top: 40).clearing([outside, huge], viewport: phone), ScreenInsets(top: 40))
     }
 
-    /// B1: a phone on its side with a layer's legend open in the
+    /// A phone on its side with a layer's legend open in the
     /// bottom-trailing corner. The framing gives the legend the whole band
     /// of the view beside it; a selected station in that band, beside the
     /// legend and not under it, stays where it is (it was moved every time
@@ -145,7 +145,7 @@ final class MapFocusTests: XCTestCase {
         XCTAssertNil(moved.keepingClear(under, of: MapCover(edges: ScreenInsets(top: 40, trailing: 257), corners: [legend])))
     }
 
-    /// B1: where the framing leaves less than a fingertip down (the top
+    /// Where the framing leaves less than a fingertip down (the top
     /// column and the corners' controls on a short phone), a station keeps
     /// its height: one under a panel moves only across, one only under the
     /// top column does not move.
