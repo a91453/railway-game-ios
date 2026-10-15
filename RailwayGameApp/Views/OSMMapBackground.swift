@@ -551,6 +551,11 @@ enum BaseMapFiles {
     /// none.
     static let terrain = file("taiwan_terrain.pmtiles")
 
+    /// Decision 239: the 3D city preview's tiles round Kaohsiung and
+    /// Taichung Stations, for the 3D map's real buildings; `nil` if the
+    /// app has none.
+    static let city = file("city")
+
     private static func file(_ name: String) -> URL? {
         folder.map { $0.appendingPathComponent(name) }.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }

@@ -19,6 +19,11 @@ final class Map3DPreviewDump: XCTestCase {
             world = try newGameLine(through: [towns[0], towns[1]])
         case "taipei":
             world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
+        // Decision 239: the city tiles' own origins.
+        case "kaohsiung":
+            world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 22.6394, longitudeDegrees: 120.3024)!)
+        case "taichung":
+            world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 24.1371, longitudeDegrees: 120.6869)!)
         case "realdemo":
             let railways = try RealRailways(
                 lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
@@ -34,7 +39,11 @@ final class Map3DPreviewDump: XCTestCase {
         }
         let tiles = ProcessInfo.processInfo.environment["MAP3D_BASEMAP"] == "1"
             ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)) : nil
-        let scene = Map3DScene(world: world, baseMap: tiles)
+        let cityTiles = ProcessInfo.processInfo.environment["MAP3D_CITY"] == "1"
+            ? try ["kaohsiung", "taichung"].map { area in
+                try CityTileArea(manifest: resource("BaseMap/city/\(area)/manifest.json")) { try? resource("BaseMap/city/\(area)/\($0)") }
+            } : []
+        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in
             guard let crop else { return true }

@@ -9282,6 +9282,74 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 外部專案：沒有用到。
 
+### 239. 原生 3D 地圖第八步：高雄、台中車站周圍的真實建物
+
+作者 2026-10-15 問：「我在做真實高雄台中地圖不就一堆素材了，我可以直接改成我的風格套用就好了。」答案是可以：取真實房子的足跡、高度與用途，外觀用本專案自己的畫風畫。作者回「好啊，3D 資料都在 Website 資料夾」。
+
+資料是 3D 城市預覽的城市圖塊（決策 152、163），也就是網站 `/city/` 讀的那一份：
+- 範圍：高雄車站、臺中車站周圍各 1.5 × 1.5 km；
+- 建物：高雄 1,212 棟、臺中 1,404 棟；
+- 來源：Overture Maps 的建物，有用途；樓層 Overture 沒有的，由 `Web/CityView/tools/pipeline/taiwan.mjs` 依足跡估。
+
+1. **讀圖塊**（新檔 `CityTile.swift`，`CityTileArea`）：
+   - 把 `Web/CityView/src/shared/tileformat.js` 的 `decodeTile`（TKY1 第 7 版）移植成 Swift；
+   - 只留建物，道路面、街道設施、電線、招牌跳過；
+   - 讀不了的圖塊略過，不影響整區。
+   - 圖塊放在 App 的 `Resources/BaseMap/city/`（`areas.json` 加每區的 `manifest.json` 與 `t_*.bin`，2.6 MB）。這個資料夾本來就整個複製進 App，不必改 `project.yml`。
+2. **擺上地圖**：
+   - 圖塊的座標是自己原點的等距投影（`geo.js` 的 `makeProjection`），先換回經緯度；
+   - 再用 `RealWorldFrame.worldPosition(latitude:longitude:)` 放到世界上，和底圖的路（決策 234）、App 的 2D 地圖同一個投影。
+   - 實景地圖的範圍碰到這兩區才畫；空白地圖、台北等其他地方完全不變。
+3. **畫法**（`Map3DRealBuildings.swift`），每棟是足跡拉高：
+   - 外牆每一段一個面，屋頂用 earcut 切；中庭的洞照樣留。
+   - 依用途配決策 231 的牆面與決策 235 的配色：
+     - 透天店屋（413）：一樓店面或鐵捲門，樓上窗或陽台；
+     - 公寓（414）：一半一樓有店；
+     - 辦公、商店（401、404）：辦公玻璃；
+     - 工業（441）：鐵皮牆與鐵皮屋頂；
+     - 學校、醫院、機關（421、422）：學校的米白牆；
+     - 廟（454）：朱紅牆，單棟小於 900 m² 的加翹角四坡屋頂與燕尾脊；
+     - 車站、停車場（431）：混凝土。
+   - 車站的大屋頂（4,000 m² 以上或有天窗的 431，例如高雄車站）畫成薄薄的頂蓋，下面每 24 m 一根柱子，不是實心的一塊。
+   - 屋頂雜物：
+     - 小房子（30 × 16 m 以內）約一半有水塔、四分之一有鐵皮加蓋；
+     - 公寓、辦公、公共建物近看加樓梯間與冷氣（決策 235 的 `addRoofPlant`）。
+   - 遠近分級（決策 238）：遠版只少了屋頂機房，水塔與加蓋留著。
+   - 每棟有地面陰影（決策 232），頂蓋除外。
+4. **和遊戲的城市怎麼分**：
+   - 真實建物站到的 64 m 格不放城市的程序化建物；
+   - 軌道經過的格不畫真實建物，和城市建物相同。
+   - 城市建物是遊戲狀態的畫面（決策 74），真實建物只是畫面，GameCore 不動。
+5. **量測**（Linux 除錯版、以車站為錨點的空白實景新局、近版／遠版的三角形）：
+   - 高雄：37,460 → 77,413，遠版 33,600 → 65,203；
+   - 台中：47,492 → 85,987，遠版 36,994 → 73,317；
+   - 蓋場景的時間約多 0.5 秒（背景執行緒）。
+   - 比 #666 兩鎮地圖的 146,226 少，iPhone 的幀數 **UNVERIFIED**，要等 TestFlight。
+6. **選 A：照本專案的畫風**。B 的預覽在 `docs/art/map3d-real-buildings-2026-10-15/options.jpg`，是網站 3D 城市預覽那種單一灰色的量體。
+   - 玩家：A 的店面、窗、水塔一看就是台灣街道，B 像建築模型；兩者位置都是真的。
+   - 開發：兩案程式一樣，只差配色與牆面。
+   - 美術：A 和地圖其他地方（決策 231、235 的城市與玩家建物）同一個畫風；B 的灰在 F 台灣版＋的明亮調色盤裡突兀。
+   - 音樂：無。
+
+**缺口**：
+- 只有這兩區有真實建物；其他地方要用同一條管線（`tools/procedural-city/`）編出更多圖塊。
+- 樓層多半是估的（`taiwan.mjs` 的 `storeysOf`），還不跟遊戲城市的密度連動，也不會隨城市成長。
+- 圖塊裡的行道樹、路燈、電線桿、招牌還沒畫，要先在 Metal 加實例化繪製。
+
+**授權**：Overture Maps 建物（ODbL 1.0；台灣的足跡是 OpenStreetMap（ODbL）與 Shi 等人（CC BY 4.0））。`DataSourceCredits` 的 `overtureBuildings` 本來就列了，改寫成也提到 3D 地圖與城市圖塊；圖塊在公開的原始碼儲存庫，符合 ODbL 衍生資料庫的提供義務。
+
+**參考**（參考庫 `a91453/railway-reference-private` `b1e2bc0` 的 `Website/site/city/`，與本 repo 的 `Web/CityView/`，Procedural Tokyo 改的台灣版，MIT）：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `Website/site/city/tiles/{areas.json, kaohsiung/, taichung/}`：編好的圖塊（`manifest.json`、`t_*.bin`） | `RailwayGameApp/Resources/BaseMap/city/`，原樣（不含 `roads.json`、`rails.json`、`structures.json`） |
+| `Web/CityView/src/shared/tileformat.js` 的 `decodeTile`、`MAGIC`、`VERSION` | `CityTileArea.buildings(in:)`、`Reader`（只讀建物） |
+| `Web/CityView/src/shared/geo.js` 的 `makeProjection`（每度的公尺數） | `addRealBuildings` 的投影 |
+| `Web/CityView/tools/pipeline/taiwan.mjs` 的 `usageOf`（Overture 的用途 → PLATEAU 的代碼） | `RealKind(usage:)` |
+| `Web/CityView/src/world/meshing.js` 的 `category`、各類牆面與窗距（3.0–3.4 m） | 依用途配牆面；窗距沿用決策 231 的 3–3.4 m |
+
+外部專案：沒有用到（Procedural Tokyo 已是本 repo 的 `Web/CityView`，MIT，決策 152）。
+
 ### 243. 車款外觀：車身、腰帶、車頭的顏色與車頭形狀
 
 2026-10-15，遊戲規劃 session 派工。號碼依工作登記 #231：決策 243，存檔版本與 golden schema 不動。只動 GamePresentation 的資料與 App 的 2D 畫法；GameCore 的規則、存檔、golden、重播都不動。
