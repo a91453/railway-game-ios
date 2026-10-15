@@ -1551,3 +1551,11 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`：道床比軌頂低 0.35 m | `Map3DScene.railLift` 0.45 m | 道床頂比地面高 0.1 m，地面上的軌道才看得到道床 |
 
 逐層的比對（SHA-256 都不同，最像的那張相關係數最高 0.76）在 `docs/art/map3d-surfaces-2026-10-15/README.md`。外部專案沒有用到。
+
+續（參考庫 `0597415`，素材庫第二批）：
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `japan/assets/modern-optical-glazing-v1`、`modern-phone-glazing-v1`、`shop-interior-ramen-v1`、`shop-interior-tea-v1` | `shopOptical`、`shopPhone`、`shopEatery`、`shopTea` | 只取貨架，翻轉、模糊、調色，疊上 `glass-map` 的反光與 `plaster-map` 的牆，配上空白招牌帶與自己顏色的雨遮 |
+| `japan/assets/modern-upper-glazing-v1` | `flatBlinds` | 上半的百葉調亮，蓋在玻璃的上半 |
+| `modern-travel-glazing-v1`、`noren-tea-v1` | 沒有用 | 日文海報、日文字與標誌 |

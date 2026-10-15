@@ -657,8 +657,9 @@ extension Map3DScene {
                         // rolling shutter, the floors above windows (a
                         // grille or a balcony on a 透天厝), the flanks
                         // blank as row houses' walls are.
-                        let groundPaint = Map3DPaint.bays(shops ? .shopfront : .shutter, bay: 5.4, floors: 1)
-                        let upperPaint = flats ? Map3DPaint.bays(.flatWindows, bay: 3.2, floors: Int(floors) - 1)
+                        let shop = Self.pick(Map3DSurface.shops, r(9))
+                        let groundPaint = Map3DPaint.bays(shops ? shop : .shutter, bay: 5.4, floors: 1)
+                        let upperPaint = flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors) - 1)
                             : Map3DPaint.bays(r(8) < 0.55 ? .homeWindows : .homeBalcony, bay: 6, floors: Int(floors) - 1)
                         if arcade {
                             // The ground floor set back 3.4 m, dark; the
@@ -699,7 +700,10 @@ extension Map3DScene {
         mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, facade: Map3DSurface, seed: (Int32, Int32)) {
             let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
             let bay: Float = facade == .officeGlass ? 3 : 3.2
-            func windows(_ floors: Float) -> Map3DPaint { .bays(facade, bay: bay, floors: Int(floors)) }
+            // Flats' windows with or without blinds, and the podium's shop,
+            // picked by where the block stands.
+            let windowSurface = facade == .flatWindows ? Self.pick(Map3DSurface.flats, r(3)) : facade
+            func windows(_ floors: Float) -> Map3DPaint { .bays(windowSurface, bay: bay, floors: Int(floors)) }
             mesh(at: base) { mesh in
                 let footprint = max(side - 4, 8)
                 switch density {
@@ -715,7 +719,7 @@ extension Map3DScene {
                                 topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 default:
                     let floors = Float(18 + Int(r(1) * 23))
-                    let podium = facade == .officeGlass ? Map3DPaint.bays(.officeGlass, bay: 3, floors: 2) : Map3DPaint.bays(.shopfront, bay: 5.4, floors: 2)
+                    let podium = facade == .officeGlass ? Map3DPaint.bays(.officeGlass, bay: 3, floors: 2) : Map3DPaint.bays(Self.pick(Map3DSurface.shops, r(4)), bay: 5.4, floors: 2)
                     mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: Map3DPalette.roof, side: Map3DColor.shaded(walls, 0.9),
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
@@ -788,6 +792,11 @@ extension Map3DScene {
 
         static func pick(_ colors: [UInt32], _ seed: (Int32, Int32)) -> UInt32 {
             colors[min(colors.count - 1, Int(map3DRandom(seed.0, seed.1, salt: 9) * Float(colors.count)))]
+        }
+
+        /// One of `choices` by a share from 0 up to 1.
+        static func pick<Choice>(_ choices: [Choice], _ share: Float) -> Choice {
+            choices[min(choices.count - 1, max(0, Int(share * Float(choices.count))))]
         }
     }
 }

@@ -36,8 +36,8 @@ C 拉遠的樣子：`option-c-mid.jpg`。
 ## 貼圖怎麼做的
 
 `RailwayGameApp/Resources/Map3D/Map3DSurfaces.png`：
-- 512 × 3,328；
-- 13 層由上而下，順序同 `Map3DSurface`；
+- 512 × 4,608；
+- 18 層由上而下，順序同 `Map3DSurface`（第二批的 5 層在最後）；
 - 每層左半是顏色，右半是「跟著頂點色」的遮罩。
 
 做法：
@@ -76,5 +76,13 @@ C 拉遠的樣子：`option-c-mid.jpg`。
 | `flatWindows` | `sakura-front-glazing-interior-albedo` | 0.22 |
 | `officeGlass` | `sakura-front-glazing-interior-albedo` | 0.65 |
 | `metalSheet` | `steel-roughness` | 0.19 |
+
+| `shopOptical` | `sakura-front-glazing-interior-albedo` | 0.47 |
+| `shopPhone` | `sakura-front-glazing-interior-albedo` | 0.44 |
+| `shopEatery` | `sakura-front-glazing-interior-albedo` | 0.63 |
+| `shopTea` | `sakura-front-glazing-interior-albedo` | 0.61 |
+| `flatBlinds` | `main-sign-rectified` | 0.28 |
+
+最後 5 層是素材庫第二批（決策 231 續）：四種店面與百葉窗，預覽在 `shops.jpg`、`surfaces-shops.jpg`。
 
 `plaster` 最高：它主要是素材庫的灰泥質感，拿掉顏色、對比壓到約 2%，再混入磁磚橫縫與雨痕。
