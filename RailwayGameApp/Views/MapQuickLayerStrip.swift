@@ -4,7 +4,7 @@ import SwiftUI
 /// The layers used most, one tap each, under the status pill (ARCHITECTURE
 /// decision 224, option 5B, `docs/art/railway-ui-redesign-2026-10-14/s5-*.png`):
 /// station names, waiting counts, passenger load and population, each an
-/// icon over its name, navy when on, and More, which opens the full layer
+/// icon over its name, framed in teal when on, and More, which opens the full layer
 /// list. The same settings as the list (``StoredMapLayerSheet``), so each
 /// shows what the other changed.
 struct MapQuickLayerStrip: View {
@@ -50,16 +50,15 @@ struct MapQuickLayerStrip: View {
             .accessibilityIdentifier("map.quickLayer.more")
         }
         .padding(3)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Palette.ink, lineWidth: 1.5)
-        )
+        // Glass, as the status pill above it and the tools (decision 226,
+        // 2026-10-15): solid with a navy edge it was the one heavy piece
+        // left on the map.
+        .glassBackground(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    /// An icon over its name: navy with the panel's colour when on, the
-    /// secondary text colour when off, so the state shows without colour
-    /// too.
+    /// An icon over its name: teal on a light teal ground inside a teal
+    /// frame when on, the secondary text colour when off, so the state
+    /// shows by the frame too, not only by colour.
     private func cell(symbol: String, title: String, isOn: Bool) -> some View {
         VStack(spacing: 1) {
             Image(systemName: symbol)
@@ -70,9 +69,15 @@ struct MapQuickLayerStrip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .foregroundStyle(isOn ? Theme.panel : Theme.textSecondary)
+        .foregroundStyle(isOn ? Theme.primary : Theme.textSecondary)
         .frame(width: 46, height: 44)
-        .background(isOn ? Theme.textPrimary : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(isOn ? Theme.primary.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            if isOn {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Theme.primary, lineWidth: 1.5)
+            }
+        }
         .contentShape(Rectangle())
     }
 

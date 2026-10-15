@@ -251,7 +251,9 @@ struct ContentView: View {
             // map's own buttons at its leading foot (layers, map style)
             // stay above it, as they stood above the dock (a tap on the map
             // style menu reached the station master instead).
-            let dockBottom = toolsColumn ? StationMasterCorner.avatarSize + 2 * margin : dockSize.height
+            // The station master with its title under it, not the avatar
+            // alone: the layers button sat on the avatar's head (2026-10-15).
+            let dockBottom = toolsColumn ? StationMasterCorner.standingHeight + margin : dockSize.height
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = toolsColumn || dockSize.width + cardWidth + margin <= proxy.size.width
