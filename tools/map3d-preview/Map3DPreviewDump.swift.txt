@@ -1,0 +1,131 @@
+import Foundation
+@testable import GameCore
+@testable import GamePresentation
+import XCTest
+
+// tools/map3d-preview: copy into Tests/GamePresentationTests/ to use, and
+// delete it again before committing (it writes files and is not a test).
+// Writes a map's 3D scene for the WebGL preview (README.md beside it).
+final class Map3DPreviewDump: XCTestCase {
+    func testDump() throws {
+        guard let out = ProcessInfo.processInfo.environment["MAP3D_DUMP"] else { throw XCTSkip("no MAP3D_DUMP") }
+        let world: GameWorld
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("RailwayGameApp/Resources/")
+        func resource(_ path: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent(path)) }
+        switch ProcessInfo.processInfo.environment["MAP3D_WORLD"] {
+        case "towns":
+            let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+            world = try newGameLine(through: [towns[0], towns[1]])
+        case "taipei":
+            world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)!)
+        case "realdemo":
+            let railways = try RealRailways(
+                lines: resource("RealRailways/track_lines.geojson"), stations: resource("RealRailways/track_stations.geojson"),
+                names: resource("RealRailways/station_names.json"),
+                pingxiRuns: RealLineRuns(data: resource("RealRailways/tra_pingxi_runs.json")))
+            let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
+            let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
+            let frame = RealWorldFrame(anchor: RealWorldDemo.anchor, bounds: GameWorld.newGameBounds)
+            world = RealWorldDemo.make(in: .traditionalChinese, railways: railways, water: water.cells(frame: frame, bounds: GameWorld.newGameBounds),
+                                       steep: water.steepCells(frame: frame, bounds: GameWorld.newGameBounds), heights: heights)
+        default:
+            world = DemoWorld.make(in: .english)
+        }
+        let tiles = ProcessInfo.processInfo.environment["MAP3D_BASEMAP"] == "1"
+            ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped)) : nil
+        let scene = Map3DScene(world: world, baseMap: tiles)
+        let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
+        let chunks = scene.chunks.filter { chunk in
+            guard let crop else { return true }
+            return chunk.maximum.x > crop[0] - crop[2] && chunk.minimum.x < crop[0] + crop[2]
+                && chunk.maximum.z > crop[1] - crop[2] && chunk.minimum.z < crop[1] + crop[2]
+        }
+        var floats: [Float] = []
+        var indices: [UInt32] = []
+        // MAP3D_DETAIL=far: each chunk as the app draws it from afar
+        // (decision 238): its ground and track, then its city simplified.
+        let detailFar = ProcessInfo.processInfo.environment["MAP3D_DETAIL"] == "far"
+        for chunk in chunks {
+            // The vertices of both; the indices of the base and of the
+            // simplified city (afar), or all of the full mesh (near).
+            let vertices = detailFar ? chunk.mesh.vertices + chunk.far.vertices : chunk.mesh.vertices
+            let chunkIndices = detailFar
+                ? Array(chunk.mesh.indices.prefix(chunk.baseIndexCount)) + chunk.far.indices.map { $0 + UInt32(chunk.mesh.vertices.count) }
+                : chunk.mesh.indices
+            let base = UInt32(floats.count / 12)
+            for v in vertices {
+                let c = v.color
+                floats += [v.x, v.y, v.z, v.nx, v.ny, v.nz,
+                           Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
+            }
+            indices += chunkIndices.map { $0 + base }
+        }
+        var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
+        for chunk in chunks {
+            let base = UInt32(shadowFloats.count / 4)
+            for v in chunk.shadows.vertices { shadowFloats += [v.x, v.y, v.z, Float(v.color >> 24) / 255] }
+            shadowIndices += chunk.shadows.indices.map { $0 + base }
+        }
+        try shadowFloats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".svertices")) }
+        try shadowIndices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".sindices")) }
+        try floats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".vertices")) }
+        try indices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".indices")) }
+        // Stations, to aim the camera.
+        let stations = world.stations.map { s -> [String: Any] in
+            let p = scene.point(worldX: Double(s.point.x), worldY: Double(s.point.y), height: 0)
+            return ["name": s.name, "x": p.x, "z": p.z]
+        }
+        let cell = Double(Land.cellLength)
+        let low = CitySkyline(world: world).lots(in: scene.region).filter { ($0.use == .residential || $0.use == .commercial) && $0.density <= 2 }
+            .map { lot -> [String: Any] in
+                let p = scene.point(worldX: (Double(lot.column) + 0.5) * cell, worldY: (Double(lot.row) + 0.5) * cell, height: 0)
+                return ["x": p.x, "z": p.z, "d": lot.density, "shop": lot.use == .commercial]
+            }
+        // Uniforms as Map3DMetalView.uniformValues writes them, for a few
+        // cameras at noon.
+        let lighting = Map3DLighting(minute: 14 * 60)
+        func rgb(_ c: PopTravel.RGB) -> (Float, Float, Float) { (Float(c.red) / 255, Float(c.green) / 255, Float(c.blue) / 255) }
+        func uniforms(_ camera: Map3DCamera) -> [Float] {
+            let sun = rgb(lighting.sun), sky = rgb(lighting.sky), ground = rgb(lighting.ground)
+            let sunScale = lighting.sunStrength * 0.16, ambient = lighting.ambient * 0.5
+            func tinted(_ c: (Float, Float, Float), _ share: Float, _ scale: Float) -> [Float] {
+                [(1 + (c.0 - 1) * share) * scale, (1 + (c.1 - 1) * share) * scale, (1 + (c.2 - 1) * share) * scale, 0]
+            }
+            let eye = camera.eye, far = camera.depthRange.far
+            return camera.viewProjection.columns
+                + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
+                + [sun.0 * sunScale, sun.1 * sunScale, sun.2 * sunScale, 0]
+                + tinted(sky, 0.3, ambient) + tinted(ground, 0.5, ambient * 0.8)
+                + [sky.0, sky.1, sky.2, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6, far * 0.9, 0, 0]
+                + [Map3DShadow.strength(lighting), 0, 0, 0]
+        }
+        let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
+            .split(separator: ";").map { part in
+                let f = part.split(separator: ":").map(String.init)
+                return (f[0], Map3DPoint(Float(f[1])!, 0, Float(f[2])!), Float(f[3])!, Float(f[4])! * .pi / 180)
+            }
+        var views: [String: [Float]] = [:]
+        // What the app would draw from each camera (decision 238): the
+        // chunks in view, each in full or simplified.
+        var drawn: [String: Int] = [:], drawnInFull: [String: Int] = [:]
+        for (name, target, distance, heading) in presets {
+            let camera = Map3DCamera(target: target, distance: distance, heading: heading, viewport: (1600, 900))
+            views[name] = uniforms(camera)
+            drawnInFull[name] = scene.chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: camera.viewProjection) }
+                .reduce(0) { $0 + $1.mesh.triangleCount }
+            drawn[name] = scene.chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: camera.viewProjection) }
+                .reduce(0) { total, chunk in
+                    total + (camera.wantsDetail(minimum: chunk.minimum, maximum: chunk.maximum)
+                        ? chunk.mesh.triangleCount : chunk.baseIndexCount / 3 + chunk.far.triangleCount)
+                }
+        }
+        let uses = CitySkyline(world: world).lots(in: scene.region).filter { !$0.isOpenGround }
+            .map { lot -> [String: Any] in
+                let p = scene.point(worldX: (Double(lot.column) + 0.5) * cell, worldY: (Double(lot.row) + 0.5) * cell, height: 0)
+                return ["x": p.x, "z": p.z, "d": lot.density, "use": lot.use.rawValue]
+            }
+        try JSONSerialization.data(withJSONObject: ["drawn": drawn, "drawnInFull": drawnInFull, "uses": uses, "stations": stations, "low": Array(low.prefix(400)), "triangles": indices.count / 3, "views": views, "sky": [rgb(lighting.sky).0, rgb(lighting.sky).1, rgb(lighting.sky).2]])
+            .write(to: URL(fileURLWithPath: out + ".json"))
+    }
+}

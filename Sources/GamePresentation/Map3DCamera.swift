@@ -118,6 +118,36 @@ public struct Map3DCamera: Hashable, Sendable {
         return !outside.contains(true)
     }
 
+    // MARK: - Detail (decision 238)
+
+    /// From this distance out every chunk is drawn simplified: the city
+    /// is a field of roofs, its balconies and signs a few points each.
+    public static let detailDistance: Float = 1_600
+    /// How far from what the camera looks at, and from under the eye, a
+    /// chunk is drawn in full: at least this, more the farther the eye.
+    public static let detailReach: Float = 700
+
+    /// Whether the chunk from `minimum` to `maximum` is drawn in full
+    /// (``Map3DScene/Chunk/mesh``) rather than simplified
+    /// (``Map3DScene/Chunk/far``): the camera is close enough, and the
+    /// chunk is within reach of the target or of the ground under the eye.
+    /// As the reference's street scene does (`updateDetail` in
+    /// `Railway/street_scene_reference_clean/source/assets/scene.js`), a
+    /// chunk drawn in full (`wasDetailed`) keeps its detail until 1.14
+    /// times as far, and one drawn simplified gets it back only within
+    /// 0.86 times: no flicker at the line.
+    public func wantsDetail(minimum: Map3DPoint, maximum: Map3DPoint, wasDetailed: Bool = false) -> Bool {
+        let margin: Float = wasDetailed ? 1.14 : 0.86
+        guard distance <= Self.detailDistance * margin else { return false }
+        let reach = max(Self.detailReach, distance * 1.2) * margin
+        let eye = eye
+        for point in [target, Map3DPoint(eye.x, 0, eye.z)] {
+            let dx = point.x - min(max(point.x, minimum.x), maximum.x), dz = point.z - min(max(point.z, minimum.z), maximum.z)
+            if dx * dx + dz * dz <= reach * reach { return true }
+        }
+        return false
+    }
+
     // MARK: - Gestures
 
     /// Metres on the ground per point on the screen at the target.
