@@ -607,17 +607,17 @@ struct MapView: View {
                     let rowLayout = leadingRowFoot == nil
                         ? AnyLayout(HStackLayout(spacing: 8))
                         : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    // Decision 226, step 3: the map style is chosen in the
+                    // layer list, and the expansion starts among the
+                    // building tools (``BuildToolRail``); here only the way
+                    // out of it while choosing a tile, and the layer list's
+                    // own button while the strip does not show.
                     rowLayout {
                         if !showsLayerStrip {
                             mapLayersButton
                         }
-                        if let realWorld {
-                            mapStyleMenu(realWorld)
-                        }
-                        // Not while building: beside the tools' Done
-                        // button it was tapped by mistake (TestFlight 56.1).
-                        if session.showsMapExpansionButton {
-                            mapExpansionButton(viewport: viewport)
+                        if session.isChoosingMapTile {
+                            mapExpansionButton
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
@@ -762,6 +762,15 @@ struct MapView: View {
             }
             .onChange(of: bounds) { _, _ in
                 camera = openCamera(viewport: viewport, clearOf: framing)
+            }
+            // Decision 160: choosing a tile to buy shows the 3 × 3 tiles
+            // round the land owned, however the choosing started (the
+            // building tools since decision 226, step 3).
+            .onChange(of: session.isChoosingMapTile) { _, choosing in
+                guard choosing, let region = session.mapExpansionOverlay?.region else { return }
+                if session.followedTrain != nil { session.stopFollowingTrain() }
+                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
+                session.mapDidMove()
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
                 // A station chosen in the overview may be kilometres away.
@@ -1207,93 +1216,32 @@ struct MapView: View {
         }
     }
 
-    /// Chooses how Apple's map under a real-world game looks, and how
-    /// strongly Taiwan's real railways show on it where there are any.
-    private func mapStyleMenu(_ realWorld: RealWorldFrame) -> some View {
-        // Decision 184, later: drawn from these values alone, so a running
-        // game's ticks leave the open menu alone.
-        let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
-        let language = session.language
-        return TickStable(StableKey(mapStyle, trackStyle, showsRailways, language)) {
-            Menu {
-                Picker("Map Style", selection: $mapStyle) {
-                    ForEach(AppleMapStyle.allCases) { style in
-                        Text(style.title)
-                            .tag(style)
-                    }
-                }
-                if showsRailways {
-                    Picker(selection: $trackStyle) {
-                        ForEach(RealRailways.TrackStyle.allCases) { style in
-                            Text(verbatim: style.name(in: language))
-                                .tag(style)
-                        }
-                    } label: {
-                        Label("Real Railways", systemImage: "tram")
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("map.realRailways")
-                }
-                Button {
-                    screen.panel = .dataSources
-                } label: {
-                    Label("Data Sources", systemImage: "info.circle")
-                }
-                .accessibilityIdentifier("map.dataSources")
-            } label: {
-                Image(systemName: "map")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-                    .glassBackground(in: Circle(), interactive: true)
-            }
-            .accessibilityLabel("Map Style")
-            .accessibilityIdentifier("map.style")
-        }
-    }
-
-    /// Decision 160: starts choosing a tile of the map to buy, and shows
-    /// the land owned and the tiles for sale; again, stops. While choosing
-    /// it says so in words, in the accent colour, so the mode is not taken
-    /// for building (TestFlight 56.1).
-    private func mapExpansionButton(viewport: ScreenSize) -> some View {
+    /// Decision 160: while choosing a tile of the map to buy, the way out.
+    /// It says so in words, in the accent colour, so the mode is not taken
+    /// for building (TestFlight 56.1). The choosing starts among the
+    /// building tools (decision 226, step 3); the camera turns to the tiles
+    /// when it starts (`onChange(of: session.isChoosingMapTile)`).
+    private var mapExpansionButton: some View {
         Button {
-            if session.isChoosingMapTile {
-                session.stopChoosingMapTile()
-                return
-            }
-            session.startChoosingMapTile()
-            if let region = session.mapExpansionOverlay?.region {
-                if session.followedTrain != nil { session.stopFollowingTrain() }
-                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
-                session.mapDidMove()
-            }
+            session.stopChoosingMapTile()
         } label: {
-            if session.isChoosingMapTile {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus.square.dashed")
-                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
-                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
-                    Image(systemName: "xmark")
-                    Text(verbatim: session.language.text("Done", "結束"))
-                }
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(Theme.onAccent)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(Theme.accent, in: Capsule())
-                .contentShape(Capsule())
-            } else {
+            HStack(spacing: 8) {
                 Image(systemName: "plus.square.dashed")
-                    .font(.title3)
-                    .frame(width: 44, height: 44)
-                    .glassBackground(in: Circle(), interactive: true)
+                Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                Image(systemName: "xmark")
+                Text(verbatim: session.language.text("Done", "結束"))
             }
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(Theme.onAccent)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(Theme.accent, in: Capsule())
+            .contentShape(Capsule())
         }
-        .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
-            ? session.language.text("Stop expanding the map", "結束擴建地圖")
-            : session.language.text("Expand the map", "擴建地圖")))
+        .accessibilityLabel(Text(verbatim: session.language.text("Stop expanding the map", "結束擴建地圖")))
         .accessibilityIdentifier("map.expansion")
     }
 
@@ -2593,6 +2541,12 @@ private struct MapGestures: UIViewRepresentable {
 /// (``MapView``'s `@AppStorage` keys), so it can be presented from above
 /// both layouts (``ContentView``).
 struct StoredMapLayerSheet: View {
+    let session: GameSession
+    /// Opens the data sources (the map style's credits), in place of the
+    /// list.
+    let openDataSources: () -> Void
+    @AppStorage("realWorldMapStyle") private var mapStyle: AppleMapStyle = .openStreetMap
+    @AppStorage("realRailwayTrackStyle") private var trackStyle: RealRailways.TrackStyle = .faint
     @AppStorage("mapShowsStationNames") private var showsStationNames = true
     @AppStorage("mapShowsWaitingCounts") private var showsWaitingCounts = true
     @AppStorage("mapShowsCatchmentRings") private var showsCatchmentRings = true
@@ -2614,6 +2568,42 @@ struct StoredMapLayerSheet: View {
                 showsCatchmentRings = layers.showsCatchmentRings
                 popTravelModeName = layers.popTravelMode?.rawValue ?? ""
             }
-        ))
+        ), mapStyle: mapStyleSection)
+    }
+
+    /// Decision 226, step 3: how Apple's map under a real-world game looks,
+    /// and how strongly Taiwan's real railways show on it where there are
+    /// any, at the top of the list, where the map's round style menu was;
+    /// with the map's data sources. Nothing for a blank map.
+    private var mapStyleSection: AnyView? {
+        guard let realWorld = RealWorldFrame(world: session.world) else { return nil }
+        let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
+        let language = session.language
+        return AnyView(Section {
+            Picker("Map Style", selection: $mapStyle) {
+                ForEach(AppleMapStyle.allCases) { style in
+                    Text(style.title)
+                        .tag(style)
+                }
+            }
+            .accessibilityIdentifier("map.style")
+            if showsRailways {
+                Picker(selection: $trackStyle) {
+                    ForEach(RealRailways.TrackStyle.allCases) { style in
+                        Text(verbatim: style.name(in: language))
+                            .tag(style)
+                    }
+                } label: {
+                    Label("Real Railways", systemImage: "tram")
+                }
+                .accessibilityIdentifier("map.realRailways")
+            }
+            Button(action: openDataSources) {
+                Label("Data Sources", systemImage: "info.circle")
+            }
+            .accessibilityIdentifier("map.dataSources")
+        } header: {
+            Text("Map Style")
+        })
     }
 }

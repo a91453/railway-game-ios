@@ -391,22 +391,19 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
+        // Decision 226, step 3: the expansion starts among the building
+        // tools; on the map only its way out, while choosing.
         let expansion = app.buttons["map.expansion"]
-        XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
-
         let buildEntry = app.buttons["dock.build"]
-        XCTAssertTrue(buildEntry.appears(within: 10))
+        XCTAssertTrue(buildEntry.appears(within: 30))
+        XCTAssertFalse(expansion.exists, "No expansion button on the map until it starts")
         buildEntry.tap()
-        let network = app.buttons["tool.network"]
-        XCTAssertTrue(network.appears(within: 10))
-        network.waitUntilSettled()
-        XCTAssertTrue(expansion.disappears(within: 5), "No Expand the Map beside the building tools")
-        let done = app.buttons["tool.select"]
-        XCTAssertTrue(done.appears(within: 5))
-        done.tap()
-        XCTAssertTrue(expansion.appears(within: 5), "Back once the tools are put away")
-
-        expansion.tap()
+        let expand = app.buttons["tool.expandMap"]
+        XCTAssertTrue(expand.appears(within: 10), "A blank map can be expanded from the building tools")
+        expand.waitUntilSettled()
+        expand.tap()
+        XCTAssertTrue(app.buttons["tool.network"].disappears(within: 5), "Choosing a tile puts the tools away")
+        XCTAssertTrue(expansion.appears(within: 5), "The way out shows while choosing")
         XCTAssertEqual(expansion.label, "Stop expanding the map")
         // The camera fits the 3 × 3 tiles around the one owned, in the
         // middle: a third of the narrower side beside the middle is in the
@@ -426,7 +423,7 @@ final class MapInteractionTests: XCTestCase {
 
         expansion.tap()
         XCTAssertTrue(buy.disappears(within: 5), "Done leaves the expansion")
-        XCTAssertEqual(expansion.label, "Expand the map")
+        XCTAssertTrue(expansion.disappears(within: 5), "And its way out with it")
     }
 
     func testRotationKeepsTheCameraZoom() {

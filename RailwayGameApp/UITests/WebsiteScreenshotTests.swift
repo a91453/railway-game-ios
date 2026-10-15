@@ -55,9 +55,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
-        let expansion = app.buttons["map.expansion"]
-        XCTAssertTrue(expansion.appears(within: 30), "A blank map can be expanded")
-        expansion.tap()
+        // Among the building tools since decision 226, step 3.
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 30))
+        build.tap()
+        let expand = app.buttons["tool.expandMap"]
+        XCTAssertTrue(expand.appears(within: 10), "A blank map can be expanded")
+        expand.waitUntilSettled()
+        expand.tap()
         settle(seconds: 3)
         keep("map-expansion", app)
     }
