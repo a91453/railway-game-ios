@@ -12,10 +12,10 @@ final class RealRailwayTracingTests: XCTestCase {
 
     /// A real-world game at Taipei Main Station with the network tool
     /// laying track, tracing on, and the world points of two TRA stations.
-    private func taipei() throws -> (session: GameSession, taipei: PlanPoint, banqiao: PlanPoint) {
+    private func taipei(in language: DisplayLanguage = .traditionalChinese) throws -> (session: GameSession, taipei: PlanPoint, banqiao: PlanPoint) {
         let tra = try BundledRealData.station("臺北", in: "tra_sched")
         let world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor))
-        let session = GameSession(world: world, language: .traditionalChinese)
+        let session = GameSession(world: world, language: language)
         session.railways = try BundledRealData.railways()
         session.selectTool(.network)
         session.setNetworkMode(.build)
@@ -70,6 +70,20 @@ final class RealRailwayTracingTests: XCTestCase {
         if case .node? = session.networkStart {} else { XCTFail("the next stretch starts at its end") }
         session.undo()
         XCTAssertEqual(session.world, before)
+    }
+
+    /// The message after a trace says how far and for how much, in words
+    /// a player reads: no track-graph terms.
+    func testTheTracedMessageSaysHowFarAndForHowMuch() throws {
+        let (session, taipei, banqiao) = try taipei(in: .english)
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tapNetwork(at: banqiao, reach: reach)
+        let pieces = try XCTUnwrap(session.networkPreview?.traced)
+        session.buildNetworkTrack()
+        let text = try XCTUnwrap(session.message?.text)
+        XCTAssertTrue(text.hasPrefix("Traced the real railway for "), text)
+        XCTAssertTrue(text.contains("(\(pieces) pieces of track)"), text)
+        XCTAssertFalse(text.contains("edge"), text)
     }
 
     func testTheChainCodesAsItIs() throws {

@@ -185,7 +185,7 @@ struct RollingStockCatalogView: View {
     private func carsStepper(language: DisplayLanguage, riders: Int64) -> some View {
         Stepper(value: $shownCars, in: Train.minimumCars...Train.maximumCars) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: language.text("\(shownCars) cars", "\(shownCars) 節"))
+                Text(verbatim: language.text("\(shownCars) \(shownCars == 1 ? "car" : "cars")", "\(shownCars) 節"))
                     .font(.headline.monospacedDigit())
                 Text(verbatim: language.text("\(riders) riders", "共 \(riders) 人"))
                     .font(.caption)
