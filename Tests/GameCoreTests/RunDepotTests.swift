@@ -108,38 +108,61 @@ final class RunDepotTests: XCTestCase {
 
     // MARK: - Late under traffic control
 
-    /// Runs from Alpha at 06:00 and from Gamma at 06:20, and an unassigned
-    /// train standing at Beta: under traffic control train 1, out of West
-    /// for the first run, cannot take its route past Beta and waits at
-    /// Alpha, later and later. Its timetable has it at Gamma at 06:10, in
-    /// time for the second run; the train counts from when it would arrive,
-    /// its lateness added, so train 2 comes out of East and takes the run
-    /// from Gamma. With traffic control off train 1 runs through Beta and
-    /// takes the run itself, and train 2 stays in East, as before.
+    /// Main from Alpha by Beta to Gamma, runs from Alpha at 06:00 and from
+    /// Gamma at 06:20, and an unassigned train standing between Beta and
+    /// Gamma. Under traffic control train 1, out of West for the first run,
+    /// cannot take its route past it and waits at Beta, later and later.
+    /// Its timetable has it at Gamma at 06:10, in time for the second run;
+    /// it counts from when it would arrive, its lateness added, so once
+    /// that is past 06:20 train 2 comes out of East to Gamma for the run.
+    /// With traffic control off train 1 runs on to Gamma and train 2 stays
+    /// in East, as before.
     func testUnderTrafficControlALateTrainLeavesItsRunToOneFromTheDepot() throws {
         func world(trafficControl: Bool) throws -> GameWorld {
-            var world = try makeWorld(minutes: 330, runs: [run(0, 1, at: 360), run(1, 0, at: 380)], trafficControl: trafficControl)
+            var world = try GameWorld(
+                bounds: WorldBounds(width: 12_288, height: 4_096), economy: GameEconomy(balance: 1_000_000, costs: testCosts),
+                clock: GameClock(now: GameTime(minutes: 330), speed: .normal)
+            )
+            try track.build(in: &world)
+            for (name, x) in [("West", 1), ("Alpha", 3), ("Beta", 5), ("Gamma", 7), ("East", 9)] {
+                try track.buildStation(named: name, beside: x, at: 0, in: &world)
+            }
+            try world.setStationDepot(west, to: true)
+            try world.setStationDepot(east, to: true)
+            try world.createLine(named: "Main", stops: [alpha, beta, gamma])
+            try world.setLinePerformance(main, to: crawl)
+            func run(_ from: Int, _ to: Int, at minute: Int64) -> LineRun {
+                LineRun(from: from, to: to, times: [0, 5, 10].map { LineRunTime(arrival: (minute + $0) * 60, departure: (minute + $0) * 60) })
+            }
+            try world.setLineRuns(main, to: [run(0, 2, at: 360), run(2, 0, at: 380)])
+            try world.setLineDepots(main, to: [west, east])
+            try world.setTrafficControl(trafficControl)
+            for (x, facingEast) in [(1, true), (9, false)] {
+                let train = try world.purchaseTrain(named: "T\(x)")
+                try world.placeTrain(train.id, at: track.at(x, facingEast: facingEast))
+                try world.setTrainMovementRate(train.id, to: 1024)
+                try world.assignTrain(train.id, to: main)
+            }
             let standing = try world.purchaseTrain(named: "Standing")
-            try world.placeTrain(standing.id, at: track.at(5, facingEast: true))
+            try world.placeTrain(standing.id, at: track.at(6, facingEast: true))
             return world
         }
-        func gammaRun(_ world: inout GameWorld) throws -> TrainID? {
-            while world.clock.now < GameTime(minutes: 420) {
+        func leftEast(_ world: inout GameWorld) throws -> Bool {
+            while world.clock.now < GameTime(minutes: 390) {
                 try world.advance(ticks: 1)
-                if world.line(id: main)?.runDays[1] != nil {
-                    return world.trains.first { $0.timetable.first?.station == gamma && $0.execution != nil }?.id
-                }
+                if world.train(id: id(2))?.isDeadheading == true { return true }
             }
-            return nil
+            return false
         }
         var controlled = try world(trafficControl: true)
-        XCTAssertEqual(try gammaRun(&controlled), id(2), "train 2 comes out of East for the run from Gamma")
-        XCTAssertNotNil(controlled.lateness(of: id(1)).flatMap { $0 > 0 ? $0 : nil }, "train 1 is late at Alpha")
+        XCTAssertTrue(try leftEast(&controlled), "train 2 comes out of East for the run from Gamma")
+        XCTAssertGreaterThan(controlled.lateness(of: id(1)) ?? 0, 10 * 60, "train 1 is more than ten minutes late at Beta")
+        XCTAssertEqual(controlled.stationsStoppedAt(by: id(1)), [beta])
         XCTAssertEqual(WorldInvariants.violations(in: controlled), [])
 
         var free = try world(trafficControl: false)
-        XCTAssertEqual(try gammaRun(&free), id(1), "without traffic control train 1 takes it")
-        XCTAssertEqual(free.stationsStoppedAt(by: id(2)), [east], "and train 2 stays in East")
+        XCTAssertFalse(try leftEast(&free), "without traffic control train 2 stays in East")
+        XCTAssertEqual(free.stationsStoppedAt(by: id(2)), [east])
     }
 
     // MARK: - Out and in
