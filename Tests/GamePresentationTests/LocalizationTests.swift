@@ -28,14 +28,14 @@ final class LocalizationTests: XCTestCase {
             .invalidLineStops, .invalidTrainPerformance, .invalidServiceWindow, .invalidTrainsInService, .invalidServiceDay,
             .invalidHeadway, .trainOnLine(train), .trainNotOnLine(train), .invalidLinePattern, .unknownLinePattern(2),
             .invalidTrainLength, .unknownTrackNode(.node(7)), .unknownTrackEdge(.edge(3)),
-            .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep,
+            .invalidTrackGeometry, .trackNodeInUse(.node(2)), .trackEdgeInUse(.edge(2)), .trackTooSteep, .turnoutTooSteep,
             .invalidTrackStructure, .trackConflict(.edge(4)), .trackTooClose(.edge(6)), .tracksWouldBeTooClose(.edge(6), .edge(7)), .trackEdgeHasPlatform(.edge(5)), .invalidPlatform,
             .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .invalidStationDemand, .invalidFareRules,
             .buildingOverlaps(PlacedBuildingID(rawValue: 2)), .buildingOnTrack(.edge(3)), .buildingOnStation(StationID(rawValue: 1)),
             .unknownPlacedBuilding(PlacedBuildingID(rawValue: 4)), .invalidZoneArea,
             .invalidTerrain, .onWater(row: 3, column: 4), .needsShore, .onSteepSlope(row: 5, column: 6),
         ]
-        XCTAssertEqual(Set(errors).count, 55, "one of every case")
+        XCTAssertEqual(Set(errors).count, 56, "one of every case")
         for error in errors {
             let chinese = error.playerMessage(in: .traditionalChinese)
             XCTAssertNotEqual(chinese, error.playerMessage(in: .english), "\(error)")

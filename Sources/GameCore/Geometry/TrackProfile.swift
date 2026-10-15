@@ -70,6 +70,11 @@ public struct TrackProfile: Hashable, Sendable {
     /// The steepest grade track may have, up or down: 40 in 1000. A
     /// gameplay parameter of this game, not a claim about real railways.
     public static let maximumGrade = TrackGrade(rise: 40, run: 1_000)
+
+    /// The steepest grade a turnout may stand on, up or down: 25 in 1000
+    /// (decision 233). Track this steep or less can be split in the middle
+    /// of its steady grade (``GameWorld/splitTrackEdge(_:at:)``).
+    public static let maximumTurnoutGrade = TrackGrade(rise: 25, run: 1_000)
 }
 
 /// A stretch of an edge's vertical profile, for renderers: level, climbing,
