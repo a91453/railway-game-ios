@@ -30,8 +30,9 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | 變數 | 意思 |
 | --- | --- |
 | `MAP3D_DUMP` | 輸出檔的前綴（必填） |
-| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`realdemo`（瑞芳、平溪的實景示範） |
+| `MAP3D_WORLD` | `towns`（測試用兩鎮地圖）、`demo`（示範地圖）、`taipei`（台北車站的實景新局）、`kaohsiung`、`taichung`（兩個車站的實景新局）、`realdemo`（瑞芳、平溪的實景示範） |
 | `MAP3D_BASEMAP` | `1`：讀 App 的台灣底圖（決策 234） |
+| `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺 |
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
 | `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238），預設是完整的近版 |

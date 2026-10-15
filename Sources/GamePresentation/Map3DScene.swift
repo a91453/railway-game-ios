@@ -88,8 +88,9 @@ public struct Map3DScene: Sendable {
     /// The scene of `world`: what is built and ``margin`` round it, at most
     /// ``reach`` each way from its middle; on a map with nothing built, the
     /// ``reach`` round `focus` (world units), or round the map's middle.
+    /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil) {
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = []) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let mapRegion = WorldRegion(bounds: world.bounds)
         let built = WorldRegion.built(in: world)
@@ -121,10 +122,16 @@ public struct Map3DScene: Sendable {
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
+        // Decision 239: on a real-world map, the real buildings round
+        // Kaohsiung and Taichung Stations, and no city lot where they
+        // stand.
+        let frame = real == nil ? nil : RealWorldFrame(world: world)
         builder.target = .near
-        builder.addCity(city, clearOf: cleared, takenBy: taken)
+        let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: cleared) } ?? []
+        builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
         builder.target = .far
-        builder.addCity(city, clearOf: cleared, takenBy: taken)
+        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: cleared) }
+        builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
