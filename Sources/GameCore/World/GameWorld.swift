@@ -128,6 +128,12 @@ public struct GameWorld: Equatable, Sendable {
     /// saves from before it; the app's new games turn it on. Set by
     /// ``setCurveSpeedLimits(_:)`` only.
     public internal(set) var curveSpeedLimits: Bool = false
+    /// Whether a train bought or changed to a type takes the type's real
+    /// car length (decision 227, ``Train/carPitch``) rather than 16 m. Off
+    /// in a new world and in saves from before it; the app's new games turn
+    /// it on. It changes no train already bought. Set by
+    /// ``setRealCarLengths(_:)`` only.
+    public internal(set) var realCarLengths: Bool = false
     /// Whether a line sends its trains out from either end, and runs one
     /// that stands elsewhere empty to an end (decision 172); off, only from
     /// the first stop, as before. A new game turns it on.
@@ -1202,6 +1208,7 @@ public struct GameWorld: Equatable, Sendable {
             train.type = type
             train.performance = type.performance ?? .standard
         }
+        train.carPitch = Train.carPitch(of: type, real: realCarLengths)
         nextTrainID = nextID
         trains.append(train)
         acquireAsset(.train, owner: id, cost: price)
@@ -1381,6 +1388,16 @@ public struct GameWorld: Equatable, Sendable {
             }
         }
         trains[index].type = type
+        // Decision 227: the new type's cars, at its length in a world with
+        // real car lengths. The train is off the track, so no body moves.
+        trains[index].carPitch = Train.carPitch(of: type, real: realCarLengths)
+    }
+
+    /// Turns real car lengths on or off for the trains bought or changed
+    /// from now on (decision 227). Free, and no network command: a new game
+    /// turns it on, demos, challenges and the tutorial keep it off.
+    public mutating func setRealCarLengths(_ enabled: Bool) {
+        realCarLengths = enabled
     }
 
     /// Sells train `id` back (decision 180): it brings
@@ -4353,7 +4370,7 @@ extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, demandEvents, disruptions, townGrowth, accounts, geoAnchor
-        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
+        case land, landBlocks, landDemand, distanceDemand, doorCrowding, keepLeft, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion
     }
 
@@ -4457,6 +4474,7 @@ extension GameWorld: Codable {
         realisticOperation = container.contains(.realisticOperation) ? try container.decode(Bool.self, forKey: .realisticOperation) : false
         blockSections = container.contains(.blockSections) ? try container.decode(Bool.self, forKey: .blockSections) : false
         curveSpeedLimits = container.contains(.curveSpeedLimits) ? try container.decode(Bool.self, forKey: .curveSpeedLimits) : false
+        realCarLengths = try container.decodeIfPresent(Bool.self, forKey: .realCarLengths) ?? false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
@@ -4591,6 +4609,9 @@ extension GameWorld: Codable {
         }
         if curveSpeedLimits {
             try container.encode(true, forKey: .curveSpeedLimits)
+        }
+        if realCarLengths {
+            try container.encode(true, forKey: .realCarLengths)
         }
         if flexDispatch {
             try container.encode(true, forKey: .flexDispatch)

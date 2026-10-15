@@ -1,0 +1,60 @@
+{
+  "saveVersion" : 62,
+  "world" : {
+    "bounds" : {
+      "height" : 20480,
+      "width" : 204800
+    },
+    "clock" : {
+      "now" : 0,
+      "resumeSpeed" : "normal",
+      "speed" : "paused"
+    },
+    "economy" : {
+      "balance" : 999985000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "nextStationID" : 1,
+    "nextTrainID" : 4,
+    "realCarLengths" : true,
+    "stations" : [
+
+    ],
+    "trains" : [
+      {
+        "carPitch" : 1600,
+        "cars" : 12,
+        "id" : 1,
+        "name" : "THSR 101",
+        "performance" : {
+          "acceleration" : 1400,
+          "alternativeAcceleration" : 2000,
+          "alternativeBraking" : 2700,
+          "braking" : 1500,
+          "coast" : {
+            "deceleration" : 450,
+            "speedRatio" : 450
+          },
+          "topSpeed" : 300
+        },
+        "type" : "HSR"
+      },
+      {
+        "carPitch" : 1248,
+        "cars" : 4,
+        "id" : 2,
+        "name" : "Metro 1",
+        "type" : "B"
+      },
+      {
+        "carPitch" : 1280,
+        "id" : 3,
+        "name" : "Standard"
+      }
+    ]
+  }
+}

@@ -8,7 +8,8 @@ final class Map3DModelTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
-        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2)
+        // Decision 244: and the street furniture after the trains.
+        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + Map3DProp.allCases.count)
         for style in Map3DTrainStyle.all {
             for name in [style.name + "-cab", style.name + "-car"] {
                 guard let index = pack.index(of: name) else { return XCTFail(name) }
@@ -90,7 +91,9 @@ final class Map3DModelTests: XCTestCase {
         let scene = Map3DScene(world: world)
         let motion = TrainMotion(world: world, time: 0)
         let heights = Map3DTrains.Heights(world: world)
-        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length) }
+        // Decision 227: the cars stand their own length apart.
+        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
+        XCTAssertEqual(cars, 4)
         // The eye over the first car.
         let all = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: nil, eye: nil)
         let first = try XCTUnwrap(all.boxes.vertices.first?.position)

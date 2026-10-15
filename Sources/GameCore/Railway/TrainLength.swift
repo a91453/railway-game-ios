@@ -18,10 +18,29 @@ extension Train {
     public static let minimumCars = 1
     public static let maximumCars = 16
 
+    /// A standard car's length in a world with real car lengths
+    /// (decision 227): 20 m, as the map has drawn each car since
+    /// decision 205.
+    public static let realStandardCarLength: Int64 = 1_280
+
+    /// How far apart the cars of a train of `type` stand when it is bought
+    /// or changes type (decision 227): its type's real length (a standard
+    /// car's 20 m without a type) when `real`, otherwise ``carLength``.
+    public static func carPitch(of type: TrainType?, real: Bool) -> Int64 {
+        guard real else { return carLength }
+        return type?.carLength ?? realStandardCarLength
+    }
+
+    /// Whether a train's cars may stand `pitch` apart: ``carLength``, the
+    /// standard car's real length or one of the types' (decision 227).
+    static func isCarPitch(_ pitch: Int64) -> Bool {
+        pitch == carLength || pitch == realStandardCarLength || TrainType.allCases.contains { $0.carLength == pitch }
+    }
+
     /// The train's length, in world units: from its first car's centre
-    /// to its last car's, ``carLength`` for each car after the first. 0 for
+    /// to its last car's, ``carPitch`` for each car after the first. 0 for
     /// a train of one car.
     public var length: Int64 {
-        Int64(cars - 1) * Self.carLength
+        Int64(cars - 1) * carPitch
     }
 }

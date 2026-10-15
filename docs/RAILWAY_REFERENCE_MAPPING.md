@@ -1573,3 +1573,65 @@ V 實際放行 → T、U（保證不互穿）
 | `RKFAR` 的 `fillPoly`（面塗進網格角點） | `addArea` | 改成切到 64 m 地面三角形，再用 earcut 三角化 |
 
 參考庫沒有的：PMTiles 的讀取（照規格自己寫）、gzip 解壓（zlib 的 puff，zlib 授權）、有洞的多邊形三角化（mapbox/earcut 2.2.4，ISC）。
+
+## 3D 地圖的程序化建物（決策 235）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取）的 `Railway/procedural_assets_reference_clean/`（作者的素材庫；可以任意組合，跟原本不同就好，art-style §7）。只取規則與尺寸，幾何是本專案自己寫的。
+
+| 參考（`source/preview/` 下） | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| industrial 的 workshop、hangar、warehouse、boiler house、power station、compact office、container | `Map3DBuildings.swift` 的 `addFactory`、`addDoors` | 坡度、牆高、煙囪、貨櫃尺寸照用；藍色鐵皮是台灣的 |
+| city 的 clinic、police station、firehouse、rooftop air conditioner | `addClinic`、`addFireStation`、`addRoofPlant` | 樓層高與腰帶照用，去掉美式的石角、門階 |
+| japan 的 school gym、temple hall、shared generator 的 roof access house | 學校、`addTemple`、樓梯間與頂樓加蓋 | 廟的屋頂改成台灣的橘色琉璃瓦與燕尾脊 |
+
+## 3D 地圖的遠近分級（決策 238）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取）。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Railway/street_scene_reference_clean/source/assets/scene.js` `updateDetail`：建物群近、遠兩版，依鏡頭距離切換，1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`、`Map3DScene.Chunk.far` | 餘裕照用；距離改成 700 m 起、隨鏡頭距離放大，切換的單位是 512 m 的分塊 |
+| `Railway/procedural_assets_reference_clean/` japan 包的陽台、冷氣、blade sign 的尺寸 | `Map3DBuildings.addFrontDetail` | 尺寸照用，形狀是本專案自己的盒子 |
+
+## 3D 地圖的真實建物（決策 239）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取），與本 repo 的 `Web/CityView/`。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Website/site/city/tiles/`：高雄、臺中車站周圍的城市圖塊（TKY1 第 7 版） | `RailwayGameApp/Resources/BaseMap/city/` | 原樣複製 `areas.json`、`manifest.json`、`t_*.bin` |
+| `Web/CityView/src/shared/tileformat.js` `decodeTile` | `CityTileArea.buildings(in:)` | 只讀建物，其餘跳過 |
+| `Web/CityView/src/shared/geo.js` `makeProjection` | `Map3DScene.Builder.addRealBuildings` | 先換回經緯度，再用 `RealWorldFrame` 放上世界 |
+| `Web/CityView/tools/pipeline/taiwan.mjs` `usageOf` | `RealKind(usage:)` | 代碼照用，外觀是本專案的畫風（決策 231、235） |
+
+## 3D 地圖的地圖感（決策 241）
+
+參考庫 `a91453/railway-reference-private` `659e2a4`（2026-10-15 讀取）。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `city_map_reference_clean/source/rendering/theme-catalog.js`、`mapbox-palette.js`：六種配色，道路依等級分深淺與粗細 | `Map3DPalette.road`、`ground`、`water` | 只取做法；顏色換成遊戲 2D 地圖的藏青與淺色 |
+| `Web/CityView/tools/pipeline/taiwan.mjs` `SIDEWALK` | `Map3DScene.Builder.sidewalk(of:)` | 寬度照用 |
+
+## 3D 建物的牆面材質（決策 242）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Website/site/city/textures/` 的 `wall_concrete`、`wall_brick`、`wall_tile`、`wall_plaster`（Poly Haven，CC0 1.0） | `Map3DSurfaces.png` 第 18–21 層 | 只取灰階當底紋，對比壓低；接縫、繫桿孔、磁磚分格自己畫 |
+
+## 車款外觀（決策 243）
+
+| 參考 | 用在 | 怎麼用 |
+| --- | --- | --- |
+| `Web/CityView/src/world/trains.js` 的 `LIVERIES`（`hsr`、`emu3000`、玻璃色、預設不鏽鋼） | `TrainLivery.highSpeed`、`.emu3000`、`.metroC381` | 色值照搬 |
+| 參考庫 `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 各車的 `livery` 文字 | `TrainLivery.emu3000`、`.puyuma`、`.emu800` | 照描述（EMU3000 黑面罩、普悠瑪紅頭紅帶、EMU800 藍面板黃帶）取色，色值本專案的 |
+| 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
+| 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
+
+## 3D 地圖的街道設施（決策 244）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Web/CityView/src/world/props.js`：`poleGeometry`、`lightGeometry`、`blobTreeGeometry` | `Map3DProp.model()` | 尺寸照用，形狀是自己的低多邊形、遊戲配色 |
+| 參考庫 `OpenWorld/reference_snapshot/play/assets/bridge/`（淡江大橋零件） | 未用 | 是斜張公路橋，不是鐵路高架；留給地標 |
+

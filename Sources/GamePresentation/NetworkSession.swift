@@ -393,11 +393,11 @@ extension GameSession {
 
     /// The stretch of its edge the next platform would take: centred on
     /// the picked place, ``platformCars`` cars long (one car is
-    /// `Train.carLength`), moved along to stay on the edge, or the whole
-    /// edge if it is shorter.
+    /// ``GameWorld/platformCarLength``), moved along to stay on the edge, or
+    /// the whole edge if it is shorter.
     public var networkPlatformStretch: (edge: TrackEdgeID, start: Int64, end: Int64)? {
         guard networkMode == .platform, let point = networkEdgePoint, let edge = world.network.edge(point.edge) else { return nil }
-        let length = min(Int64(max(1, platformCars)) * Train.carLength, edge.length)
+        let length = min(Int64(max(1, platformCars)) * world.platformCarLength, edge.length)
         let start = min(max(0, point.distance - length / 2), edge.length - length)
         return (point.edge, start, start + length)
     }
@@ -1093,9 +1093,10 @@ extension GameSession {
         return language.text("New track on the ground", "新軌道：地面")
     }
 
-    /// How long the next platform is: "Platform for 4 cars · 64 m".
+    /// How long the next platform is: "Platform for 4 cars · 64 m" (80 m
+    /// with real car lengths, decision 227).
     public func platformLengthText() -> String {
-        let length = NetworkBuilding.lengthText(Int64(platformCars) * Train.carLength, in: language)
+        let length = NetworkBuilding.lengthText(Int64(platformCars) * world.platformCarLength, in: language)
         return language.text(
             "Platform for \(Train.carsText(platformCars, in: language)) · \(length)",
             "月台長 \(Train.carsText(platformCars, in: language)) · \(length)"
@@ -1175,4 +1176,12 @@ struct NetworkPreviewMemo {
 
     let key: Key
     let preview: (preview: NetworkPreview, crossing: [WorldCoordinate])?
+}
+
+extension GameWorld {
+    /// How long a car the platform tool counts in is (decision 227): a
+    /// standard car's 20 m with real car lengths, otherwise 16 m.
+    public var platformCarLength: Int64 {
+        realCarLengths ? Train.realStandardCarLength : Train.carLength
+    }
 }

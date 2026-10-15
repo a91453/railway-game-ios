@@ -421,4 +421,93 @@ final class SoundCueTests: XCTestCase {
             XCTAssertEqual(heard.count, 3, "no game to leave")
         }
     }
+    // MARK: - Decision 219, stage 2: the music steps aside at an interchange
+
+    /// From 800 m out the music goes down evenly in decibels, in half
+    /// decibel steps, to 6 dB down at 300 m and nearer.
+    func testTheMusicGoesDownSixDecibelsFrom800To300Metres() {
+        XCTAssertEqual(MusicDuck.gain(metresToStation: 1_500), 1)
+        XCTAssertEqual(MusicDuck.gain(metresToStation: 800), 1)
+        XCTAssertEqual(MusicDuck.gain(metresToStation: 550), pow(10, -3.0 / 20), accuracy: 1e-9)
+        XCTAssertEqual(MusicDuck.gain(metresToStation: 300), pow(10, -6.0 / 20), accuracy: 1e-9)
+        XCTAssertEqual(MusicDuck.gain(metresToStation: 0), pow(10, -6.0 / 20), accuracy: 1e-9)
+        var last = 1.0
+        for metres in stride(from: 900.0, through: 0, by: -10) {
+            let gain = MusicDuck.gain(metresToStation: metres)
+            XCTAssertLessThanOrEqual(gain, last, "\(metres) m")
+            last = gain
+        }
+        // In steps: about a dozen levels on the way in.
+        let levels = Set(stride(from: 900.0, through: 0, by: -1).map { MusicDuck.gain(metresToStation: $0) })
+        XCTAssertEqual(levels.count, 13)
+    }
+
+    /// Two lines call at West and East, so both ring the interchange
+    /// chime. Followed at 60×, the tram (already within 300 m of East)
+    /// takes the music down while it runs there and stands there, and it
+    /// comes back when following stops; at 600× it never goes down.
+    func testFollowingATrainIntoAnInterchangeAtSixtyTimesTakesTheMusicDown() async throws {
+        var world = try makeServiceWorld()
+        try world.createLine(named: "One", stops: [Self.west, Self.east])
+        try world.createLine(named: "Two", stops: [Self.west, Self.east])
+        world.setSpeed(.x60)
+        let interchange = world
+        await MainActor.run {
+            let session = GameSession(world: interchange)
+            var told: [Double] = []
+            session.duckMusic = { told.append($0) }
+            session.followTrain(Self.tram)
+            XCTAssertEqual(told.count, 1, "standing at West, an interchange")
+            XCTAssertEqual(told.last ?? 1, pow(10, -6.0 / 20), accuracy: 1e-9)
+            for _ in 0..<80 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            XCTAssertEqual(told.count, 1, "the level is told only when it changes")
+            session.stopFollowingTrain()
+            XCTAssertEqual(told.last, 1)
+
+            session.setSpeed(.normal)
+            session.followTrain(Self.tram)
+            session.advance(realElapsed: GameSession.tickInterval)
+            XCTAssertEqual(told.last, 1, "not at 600×")
+            XCTAssertEqual(told.count, 2)
+        }
+    }
+
+    /// A local station leaves the music alone, and so does a train nobody
+    /// follows.
+    func testALocalStationOrNoFollowedTrainLeavesTheMusicAlone() async throws {
+        var world = try makeServiceWorld()
+        world.setSpeed(.x60)
+        let local = world
+        await MainActor.run {
+            let session = GameSession(world: local)
+            var told: [Double] = []
+            session.duckMusic = { told.append($0) }
+            for _ in 0..<40 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            session.followTrain(Self.tram)
+            for _ in 0..<40 {
+                session.advance(realElapsed: GameSession.tickInterval)
+            }
+            XCTAssertEqual(told, [])
+        }
+    }
+
+    func testTheLauncherHandsItsMusicToEachGameAndRestoresItOnLeaving() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("SoundCueTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = SaveLibrary(directory: directory)
+        await MainActor.run {
+            let launcher = GameLauncher(library: library, language: .english)
+            var told: [Double] = []
+            launcher.duckMusic = { told.append($0) }
+            launcher.startNewGame()
+            XCTAssertEqual(told, [1])
+            XCTAssertNotNil(launcher.session?.duckMusic)
+            launcher.returnToStart()
+            XCTAssertEqual(told, [1, 1])
+        }
+    }
 }

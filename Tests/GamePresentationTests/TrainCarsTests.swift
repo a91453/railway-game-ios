@@ -10,9 +10,12 @@ final class TrainCarsTests: XCTestCase {
     private let spacing = Double(Train.carLength)
 
     func testTheCountComesFromTheBodyLength() {
-        XCTAssertEqual(TrainCars.count(length: 0), 1)
-        XCTAssertEqual(TrainCars.count(length: spacing), 2)
-        XCTAssertEqual(TrainCars.count(length: spacing * 5), 6)
+        XCTAssertEqual(TrainCars.count(length: 0, carPitch: spacing), 1)
+        XCTAssertEqual(TrainCars.count(length: spacing, carPitch: spacing), 2)
+        XCTAssertEqual(TrainCars.count(length: spacing * 5, carPitch: spacing), 6)
+        // Decision 227: a high-speed set of twelve 25 m cars.
+        let real = Double(TrainType.highSpeed.carLength)
+        XCTAssertEqual(TrainCars.count(length: real * 11, carPitch: real), 12)
     }
 
     func testAStraightTrainRunsFromHalfACarAheadBackOverItsBodyAndBeyond() {
