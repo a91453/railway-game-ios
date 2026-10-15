@@ -3,8 +3,9 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
-/// The app's settings: the music and the sound effects on or off
-/// (``GameAudio``), from the start screen and the game menu. Kept on the
+/// The app's settings: the music and the sound effects on or off, and
+/// their three volumes (``GameAudio``, decision 219), from the start
+/// screen and the game menu. Kept on the
 /// device, never in a save. Under them, from a game, that game's own
 /// settings (decision 154); the 3D city preview (decision 152); the app's
 /// version and a way to report a problem (decision 127).
@@ -39,20 +40,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Toggle(isOn: Binding(get: { audio.musicOn }, set: { audio.setMusicOn($0) })) {
-                        Label("Music", systemImage: "music.note")
-                    }
-                    .accessibilityIdentifier("settings.music")
-                    Toggle(isOn: Binding(get: { audio.soundsOn }, set: { audio.setSoundsOn($0) })) {
-                        Label("Sound Effects", systemImage: "speaker.wave.2")
-                    }
-                    .accessibilityIdentifier("settings.sounds")
-                } header: {
-                    Text("Sound")
-                } footer: {
-                    Text("Sound effects: a chime when a train arrives, a rail joint when track is built and a whoosh when you change tools. In silent mode the game makes no sound.")
-                }
+                soundSection
                 mapSection
                 lineColoursSection
                 if let session {
@@ -93,6 +81,60 @@ struct SettingsView: View {
                     .accessibilityIdentifier("settings.done")
                 }
             }
+        }
+    }
+
+    /// The music and the sounds on or off, and under each its volumes
+    /// (decision 219, stage 2): the music, the station chimes and the
+    /// other effects. Kept on the device, for every game.
+    private var soundSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Toggle(isOn: Binding(get: { audio.musicOn }, set: { audio.setMusicOn($0) })) {
+                Label("Music", systemImage: "music.note")
+            }
+            .accessibilityIdentifier("settings.music")
+            volumeSlider(.music, title: language.text("Music Volume", "音樂音量"), systemImage: "music.note.list")
+                .disabled(!audio.musicOn)
+            Toggle(isOn: Binding(get: { audio.soundsOn }, set: { audio.setSoundsOn($0) })) {
+                Label("Sound Effects", systemImage: "speaker.wave.2")
+            }
+            .accessibilityIdentifier("settings.sounds")
+            volumeSlider(.chimes, title: language.text("Station Chimes", "車站鈴聲"), systemImage: "bell")
+                .disabled(!audio.soundsOn)
+            volumeSlider(.effects, title: language.text("Other Effects", "其他音效"), systemImage: "hammer")
+                .disabled(!audio.soundsOn)
+        } header: {
+            Text("Sound")
+        } footer: {
+            Text(verbatim: language.text(
+                "Station chimes ring when a train arrives. Other effects: building, changing tools, income and warnings. In silent mode the game makes no sound.",
+                "車站鈴聲在列車到站時響。其他音效：建造、換工具、收入與警告。iPhone 在靜音模式時，遊戲不會發出聲音。"
+            ))
+        }
+    }
+
+    /// One of the three volumes, from silent to as loud as the game makes it.
+    private func volumeSlider(_ category: SoundCategory, title: String, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label {
+                Text(verbatim: title)
+            } icon: {
+                Image(systemName: systemImage)
+            }
+            Slider(
+                value: Binding(get: { audio.volumes.level(of: category) }, set: { audio.setVolume($0, of: category) }),
+                in: 0...1
+            ) {
+                Text(verbatim: title)
+            } minimumValueLabel: {
+                Image(systemName: "speaker.fill")
+                    .foregroundStyle(.secondary)
+            } maximumValueLabel: {
+                Image(systemName: "speaker.wave.3.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityIdentifier("settings.volume.\(category.rawValue)")
         }
     }
 

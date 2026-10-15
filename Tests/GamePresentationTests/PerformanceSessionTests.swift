@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Stage C3: choosing how trains and lines run (Stage W2c), the journeys
@@ -48,6 +48,20 @@ final class PerformanceSessionTests: XCTestCase {
         XCTAssertNil(PerformancePreset(matching: Self.crawl))
         // The DR1000 and diesel expresses run alike: the first is named.
         XCTAssertEqual(PerformancePreset(matching: .dieselRailcar), .dieselExpress)
+    }
+
+    /// Decision 236: the presets are the catalog's rows, each code once and
+    /// each named, the names and their rows the same set.
+    func testEveryRowOfThePerformanceCatalogIsAPresetWithAName() {
+        let codes = TrainPerformanceCatalog.builtIn.map(\.code)
+        XCTAssertEqual(Set(codes).count, codes.count, "a code is listed once")
+        XCTAssertEqual(PerformancePreset.allCases.map(\.code), codes)
+        XCTAssertEqual(Set(PerformancePreset.names.keys), Set(codes), "every row is named here, once")
+        for preset in PerformancePreset.allCases {
+            XCTAssertEqual(TrainPerformanceCatalog.spec(preset.code)?.performance, preset.performance)
+            XCTAssertTrue(preset.performance.isValid, preset.code)
+        }
+        XCTAssertNil(TrainPerformanceCatalog.spec("nothing"))
     }
 
     func testAPerformanceReadsAsItsNameSpeedAndRates() {

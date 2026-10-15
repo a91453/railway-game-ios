@@ -8,69 +8,79 @@ import GameCore
 // design speeds (`Ci/`: the line modal's 設计时速, `LINE_SPEED_ALL_NON_SG`).
 // Nothing here is a rule: GameCore checks every performance.
 
-/// The performances the app offers by name: GameCore's presets, each named
-/// after the train the Railway reference picks it for (`PERF_RULES`,
-/// `PERF_BY_TYPE`), and the metro game's.
-public enum PerformancePreset: CaseIterable, Hashable, Sendable {
-    case standard
-    case metro
-    case local
-    case ordinary
-    case semiExpress
-    case express
-    case emu3000
-    case pushPull
-    case taroko
-    case puyuma
-    case dieselExpress
-    case dieselRailcar
-    case forestRailway
-    case highSpeed
+/// The performances the app offers by name: the rows of GameCore's
+/// ``TrainPerformanceCatalog`` (decision 236), each named after the train
+/// the Railway reference picks it for (`PERF_RULES`, `PERF_BY_TYPE`), and
+/// the metro game's.
+public struct PerformancePreset: CaseIterable, Hashable, Sendable {
+    /// Its row in ``TrainPerformanceCatalog/builtIn``.
+    let row: Int
+
+    private init(row: Int) {
+        self.row = row
+    }
+
+    /// A row the catalog lists; traps on a code it does not.
+    private init(listed code: String) {
+        guard let row = TrainPerformanceCatalog.builtIn.firstIndex(where: { $0.code == code }) else {
+            preconditionFailure("No performance has the code \(code).")
+        }
+        self.row = row
+    }
+
+    /// Every preset, in the catalog's order.
+    public static let allCases: [PerformancePreset] = TrainPerformanceCatalog.builtIn.indices.map(PerformancePreset.init(row:))
+
+    public static let standard = PerformancePreset(listed: "standard")
+    public static let metro = PerformancePreset(listed: "metro")
+    public static let local = PerformancePreset(listed: "local")
+    public static let ordinary = PerformancePreset(listed: "ordinary")
+    public static let semiExpress = PerformancePreset(listed: "semiExpress")
+    public static let express = PerformancePreset(listed: "express")
+    public static let emu3000 = PerformancePreset(listed: "emu3000")
+    public static let pushPull = PerformancePreset(listed: "pushPull")
+    public static let taroko = PerformancePreset(listed: "taroko")
+    public static let puyuma = PerformancePreset(listed: "puyuma")
+    public static let dieselExpress = PerformancePreset(listed: "dieselExpress")
+    public static let dieselRailcar = PerformancePreset(listed: "dieselRailcar")
+    public static let forestRailway = PerformancePreset(listed: "forestRailway")
+    public static let highSpeed = PerformancePreset(listed: "highSpeed")
     /// The steam train of decision 153: this project's, not the
     /// reference's.
-    case steam
+    public static let steam = PerformancePreset(listed: "steam")
 
-    public var performance: TrainPerformance {
-        switch self {
-        case .standard: .standard
-        case .metro: .metro
-        case .local: .local
-        case .ordinary: .ordinary
-        case .semiExpress: .semiExpress
-        case .express: .express
-        case .emu3000: .emu3000
-        case .pushPull: .pushPull
-        case .taroko: .tiltingTaroko
-        case .puyuma: .tiltingPuyuma
-        case .dieselExpress: .dieselExpress
-        case .dieselRailcar: .dieselRailcar
-        case .forestRailway: .forestRailway
-        case .highSpeed: .highSpeed
-        case .steam: .steam
-        }
-    }
+    /// Its row's code.
+    public var code: String { TrainPerformanceCatalog.builtIn[row].code }
+
+    public var performance: TrainPerformance { TrainPerformanceCatalog.builtIn[row].performance }
 
     /// The train's name, as the reference's rules match it (`/區間/`,
-    /// `/自強/`, `/\(太/` and so on); the metro game's for ``metro``.
+    /// `/自強/`, `/\(太/` and so on); the metro game's for ``metro``. Each
+    /// row has one in ``names``, by its code; a row without one is a
+    /// mistake `PerformanceSessionTests` catches.
     public func title(in language: DisplayLanguage) -> String {
-        switch self {
-        case .standard: language.text("Standard", "標準")
-        case .metro: language.text("Metro", "捷運")
-        case .local: language.text("Local EMU", "區間車")
-        case .ordinary: language.text("Ordinary", "普快車")
-        case .semiExpress: language.text("Chu-Kuang / Fu-Hsing", "莒光／復興")
-        case .express: language.text("Tze-Chiang", "自強")
-        case .emu3000: "EMU3000"
-        case .pushPull: language.text("Push-pull Tze-Chiang", "推拉式自強")
-        case .taroko: language.text("Taroko", "太魯閣")
-        case .puyuma: language.text("Puyuma", "普悠瑪")
-        case .dieselExpress: language.text("Diesel Tze-Chiang", "柴聯自強")
-        case .dieselRailcar: language.text("DR1000 railcar", "DR1000")
-        case .forestRailway: language.text("Alishan Forest Railway", "阿里山林鐵")
-        case .highSpeed: language.text("High-speed rail", "高鐵")
-        case .steam: language.text("Steam train", "蒸汽列車")
-        }
+        guard let name = Self.names[code] else { preconditionFailure("The performance \(code) has no name.") }
+        return language.text(name.english, name.chinese)
     }
+
+    /// The names, by code: English, then Traditional Chinese.
+    static let names: [String: (english: String, chinese: String)] = [
+        "standard": ("Standard", "標準"),
+        "metro": ("Metro", "捷運"),
+        "local": ("Local EMU", "區間車"),
+        "ordinary": ("Ordinary", "普快車"),
+        "semiExpress": ("Chu-Kuang / Fu-Hsing", "莒光／復興"),
+        "express": ("Tze-Chiang", "自強"),
+        "emu3000": ("EMU3000", "EMU3000"),
+        "pushPull": ("Push-pull Tze-Chiang", "推拉式自強"),
+        "taroko": ("Taroko", "太魯閣"),
+        "puyuma": ("Puyuma", "普悠瑪"),
+        "dieselExpress": ("Diesel Tze-Chiang", "柴聯自強"),
+        "dieselRailcar": ("DR1000 railcar", "DR1000"),
+        "forestRailway": ("Alishan Forest Railway", "阿里山林鐵"),
+        "highSpeed": ("High-speed rail", "高鐵"),
+        "steam": ("Steam train", "蒸汽列車"),
+    ]
 
     /// The first preset, in the order above, that accelerates, brakes and
     /// coasts as `performance` does, whatever its top speed (a design speed
