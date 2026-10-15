@@ -26,8 +26,8 @@ extension EnvironmentValues {
     @Entry var mapLeadingRowFoot: CGFloat?
     /// Whether the layer strip shows under the status pill (decision 224's
     /// 5B): the map's round layers button opens the same list, so it shows
-    /// only while the strip does not (the tutorial, an iPad's building
-    /// tools; decision 226, 2026-10-15).
+    /// only while the strip does not (the tutorial, while building;
+    /// decision 226, 2026-10-15).
     @Entry var mapShowsLayerStrip = false
 }
 

@@ -263,13 +263,13 @@ struct ContentView: View {
             // between the pill and the dock.
             let showsRail = BuildToolRail.isShown(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
-            // Decision 224 (5B): the layer strip under the pill, not in the
-            // tutorial, and not while building where the building tools
-            // stand at the top of the leading edge (an iPad's); a phone's
-            // stand in its column, so there it stays (decision 226,
-            // 2026-10-15): the map's round layers button, which opened the
-            // same list, shows only while the strip does not.
-            let showsLayerStrip = (!showsRail || toolsColumn) && session.tutorial == nil
+            // Decision 224 (5B): the layer strip under the pill, while not
+            // building and not in the tutorial; on a phone the building
+            // tools need the height it takes (the column held Done below
+            // its fold with it, PR #644's gate). The map's round layers
+            // button, which opens the same list, shows only while the strip
+            // does not (decision 226, 2026-10-15).
+            let showsLayerStrip = !showsRail && session.tutorial == nil
             // Decision 226 (2026-10-15, the owner): the follow bar beside
             // the strip, in the row under the pill, rather than squeezed
             // between the tools and the card lower down.
@@ -326,8 +326,11 @@ struct ContentView: View {
                 // not in the tutorial, whose card points at the map.
                 .overlay(alignment: .topLeading) {
                     if showsTopRow {
-                        // As far as the card or a panel beside the map.
+                        // As far as the card or a panel beside the map, and
+                        // beside the building tools while they are out: they
+                        // reach up to the pill (the follow bar alone then).
                         let trailing = sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
+                        let leading = showsRail ? (toolsColumn ? dockSize.width : BuildToolRail.width + margin) : 0
                         HStack(alignment: .center, spacing: margin) {
                             if showsLayerStrip {
                                 MapQuickLayerStrip(language: session.language) {
@@ -341,10 +344,11 @@ struct ContentView: View {
                                 .transition(.move(edge: .top).combined(with: .opacity))
                             }
                         }
-                        .frame(maxWidth: max(0, proxy.size.width - trailing - 2 * margin), alignment: .leading)
+                        .frame(maxWidth: max(0, proxy.size.width - leading - trailing - 2 * margin), alignment: .leading)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
                         .padding(.top, pillDepth)
                         .padding([.top, .leading], margin)
+                        .padding(.leading, leading)
                         .transition(.opacity)
                     }
                 }
@@ -367,7 +371,7 @@ struct ContentView: View {
                             // Build under them.
                             ToolsColumn(
                                 session: session, isOpen: isOpen, canToggle: sidePanel == nil,
-                                railHeight: max(60, proxy.size.height - mapTop - strip - 2 * margin - 2 * ToolsColumn.tileDepth)
+                                railHeight: max(60, proxy.size.height - pillDepth - strip - 2 * margin - 2 * ToolsColumn.tileDepth)
                             ) {
                                 detailsChoice = !isOpen
                             }
