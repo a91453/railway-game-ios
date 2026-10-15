@@ -190,6 +190,9 @@ public struct RealDailySchedule: Hashable, Sendable {
     public struct Train: Hashable, Sendable {
         public let number: String
         public let stops: [Stop]
+        /// The model the data names (`carName`, the TRA's `自強(3000障)`),
+        /// when it names one (decision 240).
+        public var model: String? = nil
     }
 
     public let system: String
@@ -209,6 +212,7 @@ public struct RealDailySchedule: Hashable, Sendable {
         struct RawTrain: Decodable {
             let train: String
             let stops: [RawStop]
+            let carName: String?
         }
         struct RawFile: Decodable {
             let system: String
@@ -227,7 +231,7 @@ public struct RealDailySchedule: Hashable, Sendable {
                     departureSecond: $0.depSec,
                     stops: $0.stop ?? true
                 )
-            })
+            }, model: train.carName)
         }
     }
 

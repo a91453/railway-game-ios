@@ -133,15 +133,44 @@ public enum HighSpeedDemo {
     /// station names, north to south.
     static let stationNames = ["南港", "台北", "板橋", "桃園", "新竹", "苗栗", "台中", "彰化", "雲林", "嘉義", "台南", "左營"]
 
+    /// What the demo is built from (decision 240: the TRA demo is built
+    /// the same way, from its own).
+    static let spec = RealLineDemoSpec(
+        path: { railways, frame in
+            // The line's pieces, in the data's order, each beginning where
+            // the one before ends.
+            railways.lines.filter { $0.name == "高鐵" }.sorted { $0.id < $1.id }.flatMap { line in
+                line.points.map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) }
+            }
+        },
+        stationNames: stationNames,
+        stationIDPrefix: "thsr_sched|",
+        schedule: "thsr",
+        kinds: HighSpeedTimetable.kinds.map {
+            RealLineDemoSpec.Kind(
+                english: $0.english, chinese: $0.chinese, stops: $0.stops, models: nil,
+                type: .highSpeed, cars: cars, performance: .highSpeed, set: ("THSR", "高鐵")
+            )
+        },
+        endPlatformTracks: endPlatformTracks,
+        islandStations: islandStations,
+        depots: realDepots,
+        tolerance: tolerance,
+        longestEdge: longestEdge,
+        landAt: landAt,
+        opensAt: opensAt
+    )
+
     /// The world's frame: Taiwan's, as the whole-Taiwan game lays it.
     static var frame: RealWorldFrame {
         RealWorldFrame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds)
     }
 
-    /// Why the demo cannot be built from the real data.
+    /// Why the demo cannot be built from the real data (or the TRA demo,
+    /// decision 240).
     public enum Failure: Error, Hashable, Sendable {
         /// The railways have no High Speed Rail line, or not its twelve
-        /// stations.
+        /// stations (the TRA demo: not its line or stations).
         case noHighSpeedRail
         /// The railways have no day of High Speed Rail trains
         /// (`thsr-schedule.json`).
@@ -170,20 +199,30 @@ public enum HighSpeedDemo {
         in language: DisplayLanguage, railways: RealRailways, population: PopulationGrid? = nil, places: PlaceGrid? = nil,
         water: WaterGrid? = nil, coverage: CoverageGrid? = nil, eventSeed: UInt32 = 1
     ) throws(Failure) -> GameWorld {
-        let layout = try Layout(railways: railways)
+        try make(spec, in: language, railways: railways, population: population, places: places, water: water, coverage: coverage, eventSeed: eventSeed)
+    }
+
+    /// A demo of `spec`'s line (decision 240): built as the high-speed
+    /// demo is, and opened at `spec`'s minute of the first day.
+    static func make(
+        _ spec: RealLineDemoSpec, in language: DisplayLanguage, railways: RealRailways, population: PopulationGrid?, places: PlaceGrid?,
+        water: WaterGrid?, coverage: CoverageGrid?, eventSeed: UInt32
+    ) throws(Failure) -> GameWorld {
+        let layout = try Layout(railways: railways, spec: spec)
         var world = newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: eventSeed)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
-            // The first sets leave at 05:50. Until then nothing runs and no
-            // one is waiting, so the night passes before the land's people
-            // are read in; the game then opens an hour into the day.
+            // Until the first sets leave (the High Speed Rail's at 05:50)
+            // nothing runs and no one is waiting, so the night passes
+            // before the land's people are read in; the game then opens
+            // later in the morning.
             world.setSpeed(.fast)
-            try world.advance(ticks: Int(landAt / 10))
+            try world.advance(ticks: Int(spec.landAt / 10))
             GameSession.readLand(roundStationsOf: &world, population: population, places: places, water: water, coverage: coverage)
-            try world.advance(ticks: Int((opensAt - landAt) / 10))
+            try world.advance(ticks: Int((spec.opensAt - spec.landAt) / 10))
             world.setSpeed(.normal)
         } catch {
-            preconditionFailure("The high-speed demo no longer builds: \(error)")
+            preconditionFailure("The demo of \(spec.schedule) no longer builds: \(error)")
         }
         return world
     }
@@ -226,11 +265,15 @@ public enum HighSpeedDemo {
     /// A real depot (decision 221): its name and where OpenStreetMap has
     /// its yard tracks (`tools/hsr-depots/hsr_depots.json`, the centre of
     /// each cluster; ODbL 1.0).
-    struct RealDepot {
+    struct RealDepot: Sendable {
         let english: String
         let chinese: String
         let latitude: Double
         let longitude: Double
+        /// How far along the line, south, the demo lays its sidings from
+        /// where the real yard is (decision 240): beyond a station's own
+        /// tracks, or a curve, where the yard lies by them.
+        var shift: Double = 0
     }
 
     /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
@@ -273,6 +316,8 @@ public enum HighSpeedDemo {
         /// The station whose sets stand here, by index: the depot serves it
         /// from that way.
         let serving: [Int]
+        /// How long each siding's platform is (``RealLineDemoSpec/platformLength``).
+        let platformLength: Int64
 
         /// Whether the sidings run south of where they leave the down
         /// track, so that a set leaves them northbound.
@@ -281,7 +326,7 @@ public enum HighSpeedDemo {
         /// Where the platform of each siding lies along the down track's
         /// path: before its dead end, a margin short of it.
         var platform: ClosedRange<Double> {
-            let margin = RealWorldDemo.platformMargin, length = Double(HighSpeedDemo.platformLength)
+            let margin = RealWorldDemo.platformMargin, length = Double(platformLength)
             return southward ? (deadEnd - margin - length)...(deadEnd - margin) : (deadEnd + margin)...(deadEnd + margin + length)
         }
     }
@@ -334,30 +379,26 @@ public enum HighSpeedDemo {
         /// Where the up track leaves the down track by Nangang and joins it
         /// again by Zuoying, along the down track's path.
         let junctions: (north: Double, south: Double)
+        /// What it is built from (decision 240).
+        let spec: RealLineDemoSpec
 
-        init(railways: RealRailways) throws(Failure) {
+        init(railways: RealRailways, spec: RealLineDemoSpec = HighSpeedDemo.spec) throws(Failure) {
+            self.spec = spec
             let frame = HighSpeedDemo.frame
-            // The line's pieces, in the data's order, each beginning where
-            // the one before ends.
-            var points: [WorldVector] = []
-            for line in railways.lines.filter({ $0.name == "高鐵" }).sorted(by: { $0.id < $1.id }) {
-                for point in line.points {
-                    points.append(WorldVector(frame.worldPosition(latitude: point.latitude, longitude: point.longitude)))
-                }
-            }
-            let stops = HighSpeedDemo.stationNames.compactMap { name in
-                railways.stations.first { $0.id == "thsr_sched|\(name)" }.map {
+            let points = spec.path(railways, frame)
+            let stops = spec.stationNames.compactMap { name in
+                railways.stations.first { $0.id == "\(spec.stationIDPrefix)\(name)" }.map {
                     Stop(station: $0, point: WorldVector(frame.worldPosition(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)))
                 }
             }
-            guard points.count > 1, stops.count == HighSpeedDemo.stationNames.count else { throw .noHighSpeedRail }
-            guard let schedule = railways.operations?.schedule(forSystem: "thsr") else { throw .noTimetable }
+            guard points.count > 1, stops.count == spec.stationNames.count else { throw .noHighSpeedRail }
+            guard let schedule = railways.operations?.schedule(forSystem: spec.schedule) else { throw .noTimetable }
             let path = WorldPath(points)
-            let platforms = stops.map { HighSpeedDemo.platformZone(on: path, at: $0.point) }
+            let platforms = stops.map { HighSpeedDemo.platformZone(on: path, at: $0.point, length: spec.platformLength) }
             self.stops = stops
             self.platforms = platforms
             let timetable = HighSpeedTimetable(
-                schedule: schedule, names: HighSpeedDemo.stationNames, distances: platforms.map { ($0.lowerBound + $0.upperBound) / 2 }
+                schedule: schedule, names: spec.stationNames, distances: platforms.map { ($0.lowerBound + $0.upperBound) / 2 }, kinds: spec.kinds
             )
             self.timetable = timetable
             let last = platforms.count - 1
@@ -384,10 +425,10 @@ public enum HighSpeedDemo {
             // the line. The sets standing at a station at night stand in the
             // depot nearest it along the line, one siding each.
             let middles = platforms.map { ($0.lowerBound + $0.upperBound) / 2 }
-            let places = HighSpeedDemo.realDepots.map { depot -> (along: Double, side: Double) in
+            let places = spec.depots.map { depot -> (along: Double, side: Double) in
                 let point = WorldVector(frame.worldPosition(latitude: depot.latitude, longitude: depot.longitude))
                 let along = path.project(point)
-                return (along, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
+                return (along + depot.shift, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
             }
             var serving = places.map { _ in [Int]() }
             for station in standing.indices where standing[station] > 0 {
@@ -415,7 +456,7 @@ public enum HighSpeedDemo {
             // Decision 228: each end's tracks beside the down track, the
             // outermost on a side leaving it `reach` ramps from the
             // platform's margin.
-            let sides = (north: HighSpeedDemo.endTrackSides(HighSpeedDemo.endPlatformTracks.north), south: HighSpeedDemo.endTrackSides(HighSpeedDemo.endPlatformTracks.south))
+            let sides = (north: HighSpeedDemo.endTrackSides(spec.endPlatformTracks.north), south: HighSpeedDemo.endTrackSides(spec.endPlatformTracks.south))
             let endReach = (north: Double(max(sides.north.east, sides.north.west)), south: Double(max(sides.south.east, sides.south.west)))
             // The turnouts a ramp beyond each end's tracks, the up track's
             // ramps a ramp long.
@@ -443,30 +484,32 @@ public enum HighSpeedDemo {
                 let standingThere = serving[index].reduce(0) { $0 + standing[$1] }
                 guard standingThere > 0 else { return nil }
                 let sets = standingThere + HighSpeedDemo.spareSidings
-                let place = places[index], real = HighSpeedDemo.realDepots[index]
+                let place = places[index], real = spec.depots[index]
                 if place.along < platforms[0].lowerBound {
                     // Beyond the north end: both sides of the down track,
                     // running north from a ramp short of the platform.
                     let east = (sets + 1) / 2, west = sets / 2
                     let entry = platforms[0].lowerBound - margin - (endReach.north + 1) * ramp
-                    return (real, entry, entry - Double(east) * step - HighSpeedDemo.sidingRun, east, west, serving[index])
+                    return (real, entry, entry - Double(east) * step - spec.sidingRun, east, west, serving[index])
                 }
                 // Beside the line: on the down track's side, east, where the
                 // real ones are; entered from the way of the stations it
                 // serves, and centred on the real one.
                 precondition(place.side < 0, "\(real.english) is not on the down track's side")
                 let away: Double = place.along > middles[serving[index][0]] ? 1 : -1
-                let extent = Double(sets) * step + HighSpeedDemo.sidingRun
+                let extent = Double(sets) * step + spec.sidingRun
                 return (real, place.along - away * extent / 2, place.along + away * extent / 2, sets, 0, serving[index])
             }
             // A depot south of a station between the ends, entered from its
             // north (Wuri's): the crossover from the up track a reach and two
             // before its entry.
-            let crossingInto = ladders.filter { $0.deadEnd > $0.entry && $0.serving.allSatisfy { between.contains($0) } }
+            // Decision 240: also one that serves an end as well (the TRA
+            // demo's Yilan sidings keep Toucheng's sets too).
+            let crossingInto = ladders.filter { $0.deadEnd > $0.entry && $0.serving.contains { between.contains($0) } }
                 .map { [$0.entry - 2 * reach, $0.entry - reach] }
             func depotNodes(_ ladder: (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])) -> [Double] {
                 let way: Double = ladder.deadEnd > ladder.entry ? 1 : -1
-                let far = ladder.deadEnd - way * (2 * margin + Double(HighSpeedDemo.platformLength))
+                let far = ladder.deadEnd - way * (2 * margin + Double(spec.platformLength))
                 return (0...max(ladder.east, ladder.west)).map { ladder.entry + way * Double($0) * step } + [far, ladder.deadEnd]
             }
             var forced: [Double] = [0, path.length, junctions.north, upEnds.north, upEnds.south, junctions.south]
@@ -484,7 +527,7 @@ public enum HighSpeedDemo {
             forced += ladders.flatMap(depotNodes)
             forced += crossingInto.flatMap { $0 }
             let plan = RealWorldDemo.TrackPlan(
-                path, forced: forced, avoiding: platforms, tolerance: HighSpeedDemo.tolerance, longestEdge: HighSpeedDemo.longestEdge
+                path, forced: forced, avoiding: platforms, tolerance: spec.tolerance, longestEdge: spec.longestEdge
             )
             self.plan = plan
             func index(_ distance: Double) -> Int {
@@ -557,7 +600,8 @@ public enum HighSpeedDemo {
                     real: ladder.real, entry: ladder.entry, deadEnd: ladder.deadEnd,
                     east: ladder.east > 0 ? (1...ladder.east).map { siding($0, side: -1) } : [],
                     west: ladder.west > 0 ? (1...ladder.west).map { siding($0, side: 1) } : [],
-                    serving: ladder.serving
+                    serving: ladder.serving,
+                    platformLength: spec.platformLength
                 )
             }
         }
@@ -565,6 +609,12 @@ public enum HighSpeedDemo {
         /// The sets the timetable needs, every line's.
         var sets: Int {
             timetable.lines.reduce(0) { $0 + $1.sets }
+        }
+
+        /// The cars of every set the timetable needs, all lines' (decision
+        /// 240: each kind's own).
+        var setCars: [Int] {
+            zip(timetable.lines, spec.kinds).flatMap { line, kind in Array(repeating: kind.cars, count: line.sets) }
         }
 
         /// Every piece of track beside the down track.
@@ -589,7 +639,8 @@ public enum HighSpeedDemo {
                 max(1, (length + ConstructionCosts.trackPricingLength - 1) / ConstructionCosts.trackPricingLength) * TrackStructure.surface.costFactor
             }.reduce(0, +) * costs.track.amount
             let stations = Int64(stops.count + depots.count) * costs.station.amount
-            return Money(track + stations + Int64(sets) * (costs.train.amount + Int64(cars - 1) * costs.car.amount))
+            let trains = setCars.map { costs.train.amount + Int64($0 - 1) * costs.car.amount }.reduce(0, +)
+            return Money(track + stations + trains)
         }
 
         /// Builds it: the down track, the up track from turnout to turnout,
@@ -660,8 +711,8 @@ public enum HighSpeedDemo {
                 let id = try world.buildStation(named: stop.station.name(in: language), at: middle.plan).id
                 func platform(on track: RealWorldDemo.Track, shift: Int64 = 0) throws(GameError) -> TrackPlatform {
                     let (edge, offset) = track.edge(at: zone.lowerBound, in: world)
-                    try world.addTrackPlatform(id, on: edge, from: offset + shift, to: offset + shift + HighSpeedDemo.platformLength)
-                    return TrackPlatform(station: id, edge: edge, start: offset + shift, end: offset + shift + HighSpeedDemo.platformLength)
+                    try world.addTrackPlatform(id, on: edge, from: offset + shift, to: offset + shift + spec.platformLength)
+                    return TrackPlatform(station: id, edge: edge, start: offset + shift, end: offset + shift + spec.platformLength)
                 }
                 if let loop = builtLoops[index] {
                     var outer: (down: TrackPlatform, up: TrackPlatform)?
@@ -699,8 +750,8 @@ public enum HighSpeedDemo {
                 var berths: [TrackPlatform] = []
                 for track in order {
                     let (edge, offset) = track.edge(at: zone.lowerBound, in: world)
-                    try world.addTrackPlatform(id, on: edge, from: offset, to: offset + HighSpeedDemo.platformLength)
-                    berths.append(TrackPlatform(station: id, edge: edge, start: offset, end: offset + HighSpeedDemo.platformLength))
+                    try world.addTrackPlatform(id, on: edge, from: offset, to: offset + spec.platformLength)
+                    berths.append(TrackPlatform(station: id, edge: edge, start: offset, end: offset + spec.platformLength))
                 }
                 try world.setStationDepot(id, to: true)
                 builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving))
@@ -708,7 +759,7 @@ public enum HighSpeedDemo {
             let turnouts = (north: plan.distances.firstIndex { abs($0 - junctions.north) < 1 }!, south: plan.distances.firstIndex { abs($0 - junctions.south) < 1 }!)
             let through = Through(down: down, up: upTrack, loops: builtLoops, turnouts: turnouts)
             try HighSpeedDemo.run(
-                in: &world, language: language, timetable: timetable, stations: ids, platforms: platformsOf, ends: ends, through: through, depots: builtDepots
+                in: &world, language: language, spec: spec, timetable: timetable, stations: ids, platforms: platformsOf, ends: ends, through: through, depots: builtDepots
             )
             return Built(
                 down: down, up: upTrack, loops: builtLoops.keys.sorted().map { builtLoops[$0]! }, outerLoops: builtOuter.keys.sorted().map { builtOuter[$0]! },
@@ -834,8 +885,8 @@ public enum HighSpeedDemo {
     /// Where a station's platforms lie along `path`, staggered: centred on
     /// the point of the path nearest the station, moved in from either end
     /// of the path so it keeps clear of it.
-    static func platformZone(on path: WorldPath, at point: WorldVector) -> ClosedRange<Double> {
-        let half = Double(platformLength + 3 * platformStagger) / 2
+    static func platformZone(on path: WorldPath, at point: WorldVector, length: Int64 = platformLength) -> ClosedRange<Double> {
+        let half = Double(length + 3 * platformStagger) / 2
         let room = half + RealWorldDemo.platformMargin
         let middle = min(max(path.project(point), room), path.length - room)
         return (middle - half)...(middle + half)
@@ -859,7 +910,7 @@ public enum HighSpeedDemo {
     /// loop it passes where the loop is on the inside of a curve, a little
     /// shorter.
     static func run(
-        in world: inout GameWorld, language: DisplayLanguage, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
+        in world: inout GameWorld, language: DisplayLanguage, spec: RealLineDemoSpec = spec, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
         ends: [Int: [TrackPlatform]], through: Through, depots: [Built.Depot]
     ) throws(GameError) {
         // Traffic control is off (see ``HighSpeedDemo``).
@@ -871,8 +922,9 @@ public enum HighSpeedDemo {
         var number = 0
         for (kind, timetableLine) in timetable.lines.enumerated() {
             let stops = timetableLine.stops
+            let kindSpec = spec.kinds[kind]
             let line = try world.createLine(named: language.text(timetableLine.english, timetableLine.chinese), stops: stops.map { stations[$0] }).id
-            try world.setLinePerformance(line, to: .highSpeed)
+            try world.setLinePerformance(line, to: kindSpec.performance)
             try world.setLineRuns(line, to: timetableLine.runs)
             let calling = kind == 0
             // Decision 228: the sets call on the loops, as at the real
@@ -881,7 +933,7 @@ public enum HighSpeedDemo {
             // every track (``islandStations``), on the through tracks.
             func platform(of stop: Int, onDown: Bool) -> TrackPlatform? {
                 platforms[stop].map { platforms in
-                    let through = !calling && HighSpeedDemo.islandStations.contains(stop)
+                    let through = !calling && spec.islandStations.contains(stop)
                     return onDown ? (through ? platforms.down : platforms.downLoop) : (through ? platforms.up : platforms.upLoop)
                 }
             }
@@ -915,10 +967,10 @@ public enum HighSpeedDemo {
             try world.setLineDepots(line, to: depots.map(\.station))
             for set in timetableLine.overnight {
                 number += 1
-                let train = try world.purchaseTrain(named: language.text("THSR \(number)", "高鐵 \(number)")).id
-                try world.setTrainType(train, to: .highSpeed)
-                try world.setTrainCars(train, to: cars)
-                try world.setTrainPerformance(train, to: .highSpeed)
+                let train = try world.purchaseTrain(named: language.text("\(kindSpec.set.english) \(number)", "\(kindSpec.set.chinese) \(number)")).id
+                try world.setTrainType(train, to: kindSpec.type)
+                try world.setTrainCars(train, to: kindSpec.cars)
+                try world.setTrainPerformance(train, to: kindSpec.performance)
                 try world.assignTrain(train, to: line)
                 placing[set.station, default: []].append((train, set.southbound, set.leaving))
             }
