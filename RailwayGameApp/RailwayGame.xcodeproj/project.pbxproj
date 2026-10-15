@@ -176,6 +176,7 @@
 		2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebsiteScreenshotTests.swift; sourceTree = "<group>"; };
 		2AE542814E8BBB6793FFBF91 /* chime-metro-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro-motif.wav"; sourceTree = "<group>"; };
 		2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */ = {isa = PBXFileReference; path = taiwan_heights.dat; sourceTree = "<group>"; };
+		2C7E3045294CC098C802F9DA /* railway-game-ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "railway-game-ios"; path = ..; sourceTree = SOURCE_ROOT; };
 		319005DEFC37AC8A7F4BB927 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = taiwan_water.json; sourceTree = "<group>"; };
 		31AA7BB032ACE4E009B42AF1 /* station_names.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = station_names.json; sourceTree = "<group>"; };
@@ -270,7 +271,6 @@
 		D490F999E435A0570BE04635 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D4C0B07BD9AF82071392AB20 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		D8A3D706AFEA85A7941D8933 /* track_lines.geojson */ = {isa = PBXFileReference; path = track_lines.geojson; sourceTree = "<group>"; };
-		D8AC79563862A46CBDC952AE /* requests-wt */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "requests-wt"; path = ..; sourceTree = SOURCE_ROOT; };
 		DA79BA929F6262FB0DD353E2 /* BaseMap */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BaseMap; path = Resources/BaseMap; sourceTree = SOURCE_ROOT; };
 		DE2E4A53A2F134FC8BD9D4F7 /* NewsLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsLogView.swift; sourceTree = "<group>"; };
 		DF79937B71C73C05EB0285FF /* PerformanceMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMenu.swift; sourceTree = "<group>"; };
@@ -467,7 +467,7 @@
 		828A069B3EBF9E0D71CBF431 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				D8AC79563862A46CBDC952AE /* requests-wt */,
+				2C7E3045294CC098C802F9DA /* railway-game-ios */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
