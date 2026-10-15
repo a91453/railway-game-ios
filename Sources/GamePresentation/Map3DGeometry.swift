@@ -85,6 +85,20 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
     case officeGlass
     /// Corrugated metal: sheds and canopies.
     case metalSheet
+    /// Shops of four trades (decision 231, continued, the library's second
+    /// batch): a glasses shop, a phone shop, an eatery, a tea shop, each
+    /// with its own interior and awning.
+    case shopOptical
+    case shopPhone
+    case shopEatery
+    case shopTea
+    /// A bay of a block of flats with its blinds half down.
+    case flatBlinds
+
+    /// The shops a ground floor may be, and the windows a block of flats
+    /// may have; one is picked by where it stands.
+    public static let shops: [Map3DSurface] = [.shopfront, .shopOptical, .shopPhone, .shopEatery, .shopTea]
+    public static let flats: [Map3DSurface] = [.flatWindows, .flatBlinds]
 
     /// The side of each layer in the texture, in pixels.
     public static let side = 256
