@@ -545,6 +545,12 @@ public final class GameSession {
     /// The app's player, set by the launcher; `nil` plays nothing. Never
     /// saved.
     @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
+    /// Decision 219, stage 2: the factor on the music while the followed
+    /// train runs into an interchange (``MusicDuck``), told to the app
+    /// when it changes; `nil` tells no one.
+    @ObservationIgnored public var duckMusic: (@MainActor (Double) -> Void)?
+    /// The factor last told to ``duckMusic``.
+    @ObservationIgnored private var musicDuck = 1.0
 
     /// The last thing the player put up, which the map marks (decision
     /// 117, ``notePutUp(at:)``); `nil` before any. Never saved.
@@ -749,6 +755,7 @@ public final class GameSession {
         selectedBuildingID = nil
         selectedTrackEdge = nil
         followedTrainID = nil
+        updateMusicDuck()
         message = nil
     }
 
@@ -790,11 +797,23 @@ public final class GameSession {
     public func followTrain(_ id: TrainID) {
         guard let train = world.train(id: id), train.position != nil else { return }
         followedTrainID = id
+        updateMusicDuck()
     }
 
     /// Stops following (the follow bar's unfollow button).
     public func stopFollowingTrain() {
         followedTrainID = nil
+        updateMusicDuck()
+    }
+
+    /// Tells the app the factor on the music (``MusicDuck``) when it
+    /// changed: after a step, and when following starts or stops.
+    func updateMusicDuck() {
+        guard let duckMusic else { return }
+        let gain = MusicDuck.gain(following: followedTrain, in: world)
+        guard gain != musicDuck else { return }
+        musicDuck = gain
+        duckMusic(gain)
     }
 
     /// The train panel's follow button (the reference's `toggleTrainFollow`):
@@ -812,7 +831,7 @@ public final class GameSession {
     /// world or the selection.
     public func toggleFollowTrain(_ id: TrainID) {
         if isFollowing(id) {
-            followedTrainID = nil
+            stopFollowingTrain()
         } else {
             followTrain(id)
         }
@@ -1213,6 +1232,7 @@ public final class GameSession {
         if let playSound, let cue = SoundCue.arrivalCue(for: step.arrived, watched: watchedTrainIDs, speed: world.clock.speed, in: world) {
             playSound(cue)
         }
+        updateMusicDuck()
         // Decision 117: fares and rent settled within the step.
         noteIncome(since: lastEntry)
         retireCoveredShortfall()
@@ -1838,6 +1858,7 @@ public final class GameSession {
         // following one of them (`trackedTrainId` of a gone train).
         if removed != nil && followsLineTrain {
             followedTrainID = nil
+            updateMusicDuck()
         }
         selectedLineID = world.lines.first?.id
     }
