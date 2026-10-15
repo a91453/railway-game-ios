@@ -85,6 +85,13 @@ public final class GameLauncher {
         didSet { session?.playSound = playSound }
     }
 
+    /// The app's music, handed to every game it starts
+    /// (``GameSession/duckMusic``, decision 219); back to full when a game
+    /// starts or ends.
+    @ObservationIgnored public var duckMusic: (@MainActor (Double) -> Void)? {
+        didSet { session?.duckMusic = duckMusic }
+    }
+
     @ObservationIgnored let library: SaveLibrary
     /// Where the saves are written, one after another (decision 45,
     /// later): a save is encoded and written here, off the main thread,
@@ -617,6 +624,8 @@ public final class GameLauncher {
         // had no population.
         started.readLandRoundStations()
         started.playSound = playSound
+        started.duckMusic = duckMusic
+        duckMusic?(1)
         if let news { started.restoreNews(news) }
         if isDemo { started.news.isDemo = true }
         started.onTutorialCompleted = { [weak self] in self?.noteTutorialCompleted() }
@@ -826,6 +835,7 @@ public final class GameLauncher {
         let left = session != nil
         session?.stopGameLoop()
         session = nil
+        duckMusic?(1)
         message = nil
         refresh()
         if left {
