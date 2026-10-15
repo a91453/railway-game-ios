@@ -474,6 +474,27 @@ private struct DemoPicker: View {
                         launcher.openDemo()
                     }
                     .accessibilityIdentifier("demo.simple")
+                    // Decision 240: the Yilan Line running a weekday's real
+                    // trains, built as the high-speed demo is.
+                    StartButton(
+                        title: String(localized: "TRA Demo"),
+                        detail: launcher.isOpeningTRADemo
+                            ? String(localized: "Building the Yilan Line…")
+                            : launcher.isLoadingRealWorldData
+                            ? loadingDetail
+                            : String(localized: "The Taiwan Railway’s Yilan Line from Toucheng to Su’aoxin, built on its real alignment with a weekday’s real trains running"),
+                        systemImage: "tram.circle.fill",
+                        tone: .accent
+                    ) {
+                        if let railways = launcher.railways {
+                            Task { @MainActor in
+                                await launcher.openTRADemo(railways: railways)?.value
+                                dismiss()
+                            }
+                        }
+                    }
+                    .disabled(launcher.railways == nil || launcher.isOpeningTRADemo)
+                    .accessibilityIdentifier("demo.tra")
                 }
                 .frame(maxWidth: 420)
                 .padding()

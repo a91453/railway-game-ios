@@ -200,7 +200,34 @@ final class MapInteractionTests: XCTestCase {
         app.openDemo("demo.simple")
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 0.8)
+        // The camera opens again clear of the corner buttons once they are
+        // measured (#593): a hold at the map's middle three seconds in found
+        // no station under it, and the map does not start a hold off a
+        // station (main a0acef1's full lane, run 38798340562: held 756 ms
+        // at (437, 201), no panel). The stations' places, once they stand
+        // still half a second, give the one nearest the middle: Central.
+        let stations = app.descendants(matching: .any)["map.stations"].firstMatch
+        XCTAssertTrue(stations.appears(within: 10))
+        func places() -> [CGPoint] {
+            ((stations.value as? String) ?? "").split(separator: ";").compactMap { pair in
+                let xy = pair.split(separator: ",").compactMap { Double($0) }
+                return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+            }
+        }
+        var last = places()
+        let settle = Date().addingTimeInterval(10)
+        while Date() < settle {
+            Thread.sleep(forTimeInterval: 0.5)
+            let now = places()
+            if !now.isEmpty, now == last { break }
+            last = now
+        }
+        let middle = CGPoint(x: map.frame.width / 2, y: map.frame.height / 2)
+        guard let central = last.min(by: { hypot($0.x - middle.x, $0.y - middle.y) < hypot($1.x - middle.x, $1.y - middle.y) }) else {
+            XCTFail("The demo has stations")
+            return
+        }
+        map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 0.8)
         XCTAssertTrue(app.navigationBars["Central"].appears(within: 5), "The hold opens Central's panel")
         func traces() -> Bool { (map.value as? String)?.contains("Busiest trips:") == true }
         let deadline = Date().addingTimeInterval(10)
