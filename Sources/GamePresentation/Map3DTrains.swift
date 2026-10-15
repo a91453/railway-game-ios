@@ -79,6 +79,8 @@ public enum Map3DTrains {
     public struct Frame: Sendable {
         public var boxes = Map3DMesh()
         public var instances: [Map3DInstance] = []
+        /// Decision 232: each car's soft shadow on the bed under it.
+        public var shadows = Map3DMesh()
     }
 
     /// How far from the eye a car is drawn with its model, in metres;
@@ -121,6 +123,11 @@ public enum Map3DTrains {
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5
+                // Decision 232: a soft shadow on the bed under the car.
+                let bed = Map3DPoint(0, 0.05 - Map3DScene.Builder.bedDrop, 0)
+                frame.shadows.addShadow(
+                    inner: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length, width: carWidth),
+                    outer: Map3DMesh.footprint(centre: base + bed, forward: a - b, length: length + 1, width: carWidth + 1), darkness: 0.38)
                 if let models, let carModels, let eye, (base - eye).length < modelReach {
                     let ends = index == 0 || index == cars.count - 1
                     let model = ends ? carModels.head : carModels.middle

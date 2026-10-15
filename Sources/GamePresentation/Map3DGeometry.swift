@@ -356,6 +356,58 @@ public struct Map3DMesh: Sendable {
         }
     }
 
+    // MARK: Ground shadows (decision 232)
+
+    /// The four corners, seen from above, of a footprint standing on
+    /// `centre`, `length` along `forward` and `width` across it, in
+    /// ``addBox(base:forward:length:width:height:top:side:topPaint:frontPaint:flankPaint:capped:)``'s
+    /// order (front left, front right, back right, back left), at
+    /// `centre`'s height.
+    public static func footprint(centre: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float) -> [Map3DPoint] {
+        let along = Map3DPoint(forward.x, 0, forward.z).normalized ?? Map3DPoint(0, 0, -1)
+        let across = Map3DPoint(-along.z, 0, along.x)
+        let f = along * (length / 2), r = across * (width / 2)
+        return [centre + f - r, centre + f + r, centre - f + r, centre - f - r]
+    }
+
+    /// A soft shadow on the ground: `darkness` (0–1) over the four
+    /// `inner` corners, fading to nothing at the four `outer` ones (the
+    /// same corners pushed out). Black, its darkness in the colour's
+    /// alpha: the app draws it over what is already drawn.
+    public mutating func addShadow(inner: [Map3DPoint], outer: [Map3DPoint], darkness: Float) {
+        precondition(inner.count == 4 && outer.count == 4)
+        let base = UInt32(vertices.count)
+        let dark = Map3DShadow.color(darkness), clear = Map3DShadow.color(0)
+        for corner in inner { vertices.append(Map3DVertex(corner, normal: .up, color: dark)) }
+        for corner in outer { vertices.append(Map3DVertex(corner, normal: .up, color: clear)) }
+        indices += [base, base + 1, base + 2, base, base + 2, base + 3]
+        for i in UInt32(0)..<4 {
+            let j = (i + 1) % 4
+            indices += [base + i, base + 4 + i, base + 4 + j, base + i, base + 4 + j, base + j]
+        }
+    }
+
+    /// A soft shadow along a line: each of `rows` is four points across
+    /// it (the outer left, the left, the right, the outer right), the
+    /// middle two `darkness`, the outer two clear.
+    public mutating func addShadowStrip(_ rows: [[Map3DPoint]], darkness: Float) {
+        guard rows.count > 1 else { return }
+        let dark = Map3DShadow.color(darkness), clear = Map3DShadow.color(0)
+        let base = UInt32(vertices.count)
+        for row in rows {
+            precondition(row.count == 4)
+            for (index, point) in row.enumerated() {
+                vertices.append(Map3DVertex(point, normal: .up, color: index == 0 || index == 3 ? clear : dark))
+            }
+        }
+        for row in UInt32(0)..<UInt32(rows.count - 1) {
+            for strip in UInt32(0)..<3 {
+                let a = base + row * 4 + strip, b = a + 1, c = a + 5, d = a + 4
+                indices += [a, b, c, a, c, d]
+            }
+        }
+    }
+
     /// The level direction to the right of `line` at each point, averaged
     /// over the pieces on either side (a mitre, without lengthening it).
     static func acrossDirections(_ line: [Map3DPoint]) -> [Map3DPoint] {
@@ -371,6 +423,29 @@ public struct Map3DMesh: Sendable {
             fallback = direction
             return Map3DPoint(-direction.z, 0, direction.x)
         }
+    }
+}
+
+/// Decision 232: the soft shadows on the ground under what stands on it,
+/// so buildings, trees, viaducts and trains sit on the map instead of
+/// floating over it. They are drawn after everything else, darkening it
+/// by their alpha; no shadow map, and the sun's way does not move them.
+public enum Map3DShadow {
+    /// How far over the ground a shadow lies, in metres: clear of the
+    /// ground (and the plazas 0.03 over it) at the farthest the camera
+    /// goes.
+    public static let lift: Float = 0.08
+
+    /// Black with `darkness` (0–1) as its alpha.
+    public static func color(_ darkness: Float) -> UInt32 {
+        UInt32((min(max(darkness, 0), 1) * 255).rounded()) << 24
+    }
+
+    /// How dark shadows are under `lighting`, as a share of their own
+    /// darkness: full by day, fainter at night when there is no sun to
+    /// cast them.
+    public static func strength(_ lighting: Map3DLighting) -> Float {
+        1 - 0.6 * min(max(lighting.night, 0), 1)
     }
 }
 
