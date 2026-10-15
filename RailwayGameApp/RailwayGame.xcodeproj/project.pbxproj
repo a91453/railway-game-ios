@@ -60,6 +60,7 @@
 		61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F88DCCA78BB699F97926C9A /* AchievementsView.swift */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
 		6361F5D3D8B97DFA6D29B6F2 /* tra_track_sections.json in Resources */ = {isa = PBXBuildFile; fileRef = 95B22F52AC2B7370C697A499 /* tra_track_sections.json */; };
+		6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */; };
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
 		65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B383D349E8080CFE435A11 /* TrainDiagramView.swift */; };
@@ -203,6 +204,7 @@
 		6176ABC92A7FB39ABFE9BFB1 /* NewGameOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewGameOptionsView.swift; sourceTree = "<group>"; };
 		634F11070F2F2510BBBA5D96 /* chime-tourist-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist-motif.wav"; sourceTree = "<group>"; };
 		649A13DFCE7328AD6D549B82 /* RouteStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStrip.swift; sourceTree = "<group>"; };
+		6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-yilan-schedule.json"; sourceTree = "<group>"; };
 		66DEEFE5F63CD7DD3B715B3B /* TickStable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickStable.swift; sourceTree = "<group>"; };
 		68B0C0FD89F59C53A9685C67 /* sanying_times.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sanying_times.json; sourceTree = "<group>"; };
 		6A22BE1BF7A8EAABCEEAE25D /* StationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPanel.swift; sourceTree = "<group>"; };
@@ -372,6 +374,7 @@
 				F34F5FAD9996ED6204B4F23C /* tra_station_class.json */,
 				150E696C9936773A65399191 /* tra_station_info.json */,
 				95B22F52AC2B7370C697A499 /* tra_track_sections.json */,
+				6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */,
 				FAA79D875396E732FE48A605 /* tra.json */,
 				D8A3D706AFEA85A7941D8933 /* track_lines.geojson */,
 				BDC928DD3917E8959E2930DD /* track_stations.geojson */,
@@ -673,6 +676,7 @@
 				0F9E2782FAEA7F557182B7DA /* thsr_track.json in Resources */,
 				F720FC931D713539D1AF8CCC /* tmrt.json in Resources */,
 				BD4D73964A95133885864DC2 /* tmrt_times.json in Resources */,
+				6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */,
 				0CAEF26EBDE94052FA874ABE /* tra.json in Resources */,
 				61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */,
 				95294AB1D11D0C95F25EA89B /* tra_pingxi_runs.json in Resources */,

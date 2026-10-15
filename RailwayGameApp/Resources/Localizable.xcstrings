@@ -1663,6 +1663,36 @@
         }
       }
     },
+    "TRA Demo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台鐵示範"
+          }
+        }
+      }
+    },
+    "Building the Yilan Line…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在蓋宜蘭線…"
+          }
+        }
+      }
+    },
+    "The Taiwan Railway’s Yilan Line from Toucheng to Su’aoxin, built on its real alignment with a weekday’s real trains running" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台鐵宜蘭線頭城到蘇澳新，照真實路線蓋好，平日的真實班次已經在跑"
+          }
+        }
+      }
+    },
     "Railways already built and running: Taiwan’s real lines, or a simple one to try things on" : {
       "localizations" : {
         "zh-Hant" : {
