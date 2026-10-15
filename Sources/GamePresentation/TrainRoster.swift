@@ -184,6 +184,10 @@ public struct TrainRoster: Equatable, Sendable {
             let own = trips.filter { $0.train == train.id }
             let line = world.assignedLine(of: train.id) ?? own.last?.line
             guard !own.isEmpty || day == .today && (line != nil || train.execution != nil) else { continue }
+            // A trip that comes back to where it began (a line's round
+            // trip) is named by where it turns, as its planned trips are.
+            let turn = train.trip(leaving: 0).map { train.timetable[$0.upperBound].station }
+            func destination(_ trip: TrainTrip) -> StationID { trip.from == trip.to ? turn ?? trip.to : trip.to }
             var cells: [Cell] = []
             var number = 0
             var busy: Int64 = 0
@@ -205,7 +209,7 @@ public struct TrainRoster: Equatable, Sendable {
                     state = .running(lateMinutes: late > GameWorld.punctualSeconds ? late / GameTime.secondsPerMinute : 0)
                 }
                 if !trip.isDeadhead { number += 1 }
-                cells.append(Cell(number: trip.isDeadhead ? nil : number, from: name(trip.from), to: name(trip.to),
+                cells.append(Cell(number: trip.isDeadhead ? nil : number, from: name(trip.from), to: name(destination(trip)),
                                   start: trip.sentOut.seconds, end: end, fare: trip.fare, state: state, isEmptyRun: trip.isDeadhead))
                 busy += max(0, min(end, until) - max(trip.sentOut.seconds, opened))
             }

@@ -62,7 +62,7 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertEqual(one.cells.count, trips.count)
         XCTAssertEqual(one.cells.map(\.number), Array(1...trips.count))
         XCTAssertEqual(one.cells.map(\.start), trips.map(\.sentOut.seconds))
-        XCTAssertEqual(one.cells.first?.routeText, "A → A")
+        XCTAssertEqual(one.cells.first?.routeText, "A → B", "out to where it turns, not \"A → A\"")
         XCTAssertEqual(one.revenue, trips.reduce(.zero) { $0 + $1.fare })
         XCTAssertGreaterThan(one.revenue, .zero)
         XCTAssertEqual(one.revenue, one.cells.reduce(.zero) { $0 + $1.fare })
@@ -169,6 +169,19 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertEqual(yesterday.revenue + today.revenue, yesterday.cells.reduce(Money.zero) { $0 + $1.fare }
             + today.cells.dropFirst().reduce(Money.zero) { $0 + $1.fare }, "each fare counted on one day")
         XCTAssertEqual(today.revenue, today.cells.dropFirst().reduce(Money.zero) { $0 + $1.fare })
+    }
+
+    /// A line's trip runs out to the far end and back: its cell names
+    /// where it turns, as its planned trips, the train card and the
+    /// departure board do, not "West → West" (the PR #627–#646 review).
+    func testALoggedRoundTripNamesWhereItTurns() throws {
+        var world = DemoWorld.make(in: .english)
+        world.setLineAccounts(true)
+        try world.advance(ticks: 600)
+        let roster = TrainRoster(world: world)
+        let row = try XCTUnwrap(roster.rows.first { $0.name == "Train 1" })
+        let logged = try XCTUnwrap(row.cells.first { $0.state != .planned })
+        XCTAssertEqual([logged.from, logged.to], ["West", "East"])
     }
 
     /// Without the trip log (no line accounts) the trains are still listed
