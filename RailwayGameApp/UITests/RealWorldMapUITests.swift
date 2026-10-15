@@ -383,13 +383,18 @@ final class RealWorldMapUITests: XCTestCase {
             app.descendants(matching: .any)["map.populationTooltip"].exists,
             "The population grid's tooltip stays over the ✕ and ✓"
         )
+        // The map's own buttons: the layer strip's (decision 226, #644)
+        // or, where it does not show, the round layers button. Map style
+        // moved into the layer list (#645). At least one is there, so the
+        // check is never empty (the PR #627–#646 review).
+        let rounds = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.quickLayer.' OR identifier == 'map.layers'"))
+            .allElementsBoundByIndex.filter(\.exists)
+        XCTAssertFalse(rounds.isEmpty, "No layer buttons on the map")
         for (name, button) in [("✓", confirm), ("✕", app.buttons["map.build.cancel"])] {
-            for round in ["map.layers", "map.style"] {
-                let other = app.buttons[round]
-                guard other.exists else { continue }
+            for other in rounds {
                 XCTAssertFalse(
                     button.frame.intersects(other.frame),
-                    "The \(name) is over \(round): \(button.frame), \(other.frame)"
+                    "The \(name) is over \(other.identifier): \(button.frame), \(other.frame)"
                 )
             }
         }

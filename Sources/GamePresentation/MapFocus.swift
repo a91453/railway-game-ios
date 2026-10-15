@@ -113,6 +113,17 @@ public struct MapCover: Hashable, Sendable {
     public func framing(in viewport: ScreenSize) -> ScreenInsets {
         edges.clearing(corners, viewport: viewport)
     }
+
+    /// ``framing(in:)`` with the band under `row`'s top kept clear too, all
+    /// along the bottom: for the tiles for sale, shown when the map
+    /// expansion's pill, in `row`, starts to grow along the bottom (the PR
+    /// #627–#646 review: the tile below the land lay under its Done). A
+    /// row not standing in a corner (not laid out yet) adds nothing.
+    public func framing(above row: ScreenFrame, in viewport: ScreenSize) -> ScreenInsets {
+        var insets = framing(in: viewport)
+        if row.standsInCorner(of: viewport) { insets.bottom = max(insets.bottom, viewport.height - row.y) }
+        return insets
+    }
 }
 
 extension PlanCamera {
