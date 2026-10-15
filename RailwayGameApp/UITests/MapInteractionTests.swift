@@ -843,9 +843,12 @@ final class MapInteractionTests: XCTestCase {
         // began on the zoom buttons, never moved the card, and twice opened
         // the weather forecast instead (main 1678c8a's full lane, run
         // 38812528962: the switch stayed out of reach). The drag is made
-        // on the card's own list.
-        let card = app.scrollViews.matching(NSPredicate(format: "identifier BEGINSWITH 'details.scroll.'")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: card.exists ? card : nil), "Snap to track never came into reach")
+        // on the card itself, down its leading margin beside the rows: its
+        // scroll view is not exposed as one (a lookup of details.scroll.*
+        // found nothing in PR #686's run 38820870840), the card is.
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 5), "No details card")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: card), "Snap to track never came into reach")
         func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
         XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
