@@ -30,7 +30,7 @@ final class BuildingSessionTests: XCTestCase {
         let before = session.world
         XCTAssertFalse(session.placeBuilding(at: PlanPoint(x: 5_500, y: 5_000)))
         XCTAssertEqual(session.world, before)
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "That would stand on building #1."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "That would stand on another building."))
 
         session.undo()
         XCTAssertEqual(session.world.placedBuildings.map(\.kind), [.house])
@@ -107,7 +107,7 @@ final class BuildingSessionTests: XCTestCase {
         session.undo()
         XCTAssertEqual(session.world, before, "Undo puts it back")
         XCTAssertFalse(session.demolishBuilding(PlacedBuildingID(rawValue: 9)))
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "There is no building #9."))
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "That building is no longer there."))
     }
 
     func testDemolishingInFreePlayIsFreeAndReadsInChinese() throws {
@@ -317,7 +317,7 @@ final class BuildingSessionTests: XCTestCase {
 
         // A site where it cannot stand says why, and cannot be built.
         session.tapBuildingTool(at: PlanPoint(x: 22_600, y: 22_528), reach: 0)
-        XCTAssertEqual(session.buildingPreviewText, "That would stand on building #1.")
+        XCTAssertEqual(session.buildingPreviewText, "That would stand on another building.")
         XCTAssertEqual(session.buildingOverlay?.siteIsBuildable, false)
         XCTAssertNil(session.buildingPreview?.cost)
 

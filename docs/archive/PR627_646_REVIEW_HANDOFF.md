@@ -119,7 +119,7 @@ GamePresentation 的每一項都先寫了測試，確認修正前會失敗。
    - 測試：`NetworkBuildingSessionTests` 的三支（期望值改成新字，修正前失敗）。`TrackNodeID.displayText`（「Node #1」）只剩沒有被 App 用到的 `occupancyConflictTexts` 在用，沒改。
 7. **「physical path／軌段與月台」**（第一部分玩家文字）：
    - 路線面板的「Automatic physical path」改成「Automatic route／自動選路」（xcstrings 的鍵跟著改；UI 測試 `ToolbarSmokeTests.swift` 兩處跟著改）。
-   - 選了進路的訊息改成「Updated the tracks the line takes between these stops.／已更新路線在這兩站之間走的軌道。」
+   - 選了進路的訊息改成「Updated the tracks the line takes between these stops.／已更新路線在這兩站之間走的軌段。」（決策 201：地圖上的字是「軌段」；`RealWorldDemoTests` 檢查這一點）
    - 測試：`RoutePreviewTests.testTheSessionShowsTheLegJustPickedAndOnlyForTheSelectedLine` 新斷言（修正前失敗）。
 8. **跟隨列在折返站把下一趟寫成「行駛中」**（#641 的 B5，`FollowBarText.swift`）：
    - B5 讓起訖站改成正在跑的那一段，但狀態仍拿第 0 站與最後一站比較。停在折返站時顯示「B → A」卻沒有「尚未發車」，列車卡卻說還沒出發。
