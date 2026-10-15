@@ -109,7 +109,8 @@ public enum Map3DTrains {
         for run in motion.runs {
             guard let head = run.head(at: progress) else { continue }
             let body = run.body(at: progress)
-            let count = TrainCars.count(length: run.length)
+            // Decision 227: as many cars as stand its own car length apart.
+            let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
             let cars = TrainCars.cars(body: body, heading: head.heading, count: count, gap: gap)
             let (side, stripe) = colours(of: run.look, palette: palette)
             let carModels = run.look == .freight ? nil : models?.models(forType: heights.type(of: run.train))
