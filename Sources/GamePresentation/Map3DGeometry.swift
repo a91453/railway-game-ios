@@ -114,6 +114,15 @@ public struct Map3DMesh: Sendable {
         return (low, high)
     }
 
+    /// One triangle of the three vertices as they are, each keeping its own
+    /// colour.
+    public mutating func appendTriangle(_ corners: [Map3DVertex]) {
+        precondition(corners.count == 3)
+        let base = UInt32(vertices.count)
+        vertices += corners
+        indices += [base, base + 1, base + 2]
+    }
+
     public mutating func append(_ other: Map3DMesh) {
         let base = UInt32(vertices.count)
         vertices += other.vertices

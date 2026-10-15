@@ -41,6 +41,27 @@ vertex Map3DVertexOut map3dVertex(Map3DVertexIn in [[stage_in]], constant Map3DU
     return out;
 }
 
+// Decision 230: a car drawn with a train model, as Map3DInstance in
+// GamePresentation lays it out: the model's place in the scene, and the
+// line's colour, which a vertex takes in the share its alpha falls short of
+// one (a livery stripe).
+struct Map3DInstance {
+    float4x4 transform;
+    float4 stripe;
+};
+
+vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
+                                           const device Map3DInstance *instances [[buffer(2)]], uint instance [[instance_id]]) {
+    Map3DInstance car = instances[instance];
+    float4 world = car.transform * float4(in.position, 1.0);
+    Map3DVertexOut out;
+    out.position = uniforms.viewProjection * world;
+    out.color = mix(car.stripe.rgb, in.color.rgb, in.color.a);
+    out.normal = (car.transform * float4(in.normal, 0.0)).xyz;
+    out.world = world.xyz;
+    return out;
+}
+
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]]) {
     float3 normal = normalize(in.normal);
     float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
