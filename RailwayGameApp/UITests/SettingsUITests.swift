@@ -17,6 +17,10 @@ final class SettingsUITests: XCTestCase {
         let sounds = app.switches["settings.sounds"]
         XCTAssertTrue(music.appears(within: 10), "Missing the music switch")
         XCTAssertTrue(sounds.appears(within: 10), "Missing the sound effects switch")
+        // Decision 219, stage 2: the three volumes under the switches.
+        for volume in ["music", "chimes", "effects"] {
+            XCTAssertTrue(app.sliders["settings.volume.\(volume)"].exists, "Missing the \(volume) volume")
+        }
         let before = switchValue(sounds)
 
         XCTAssertTrue(flip(sounds, from: before), "The sound effects switch did not change")
