@@ -58,10 +58,12 @@ public enum TRADemo {
     static let kinds: [RealLineDemoSpec.Kind] = {
         let all = Array(0..<10), localExpress = [0, 2, 4, 7, 8, 9], yilanLuodong = [0, 4, 7, 9], jiaoxi = [0, 2, 4, 7, 9]
         return [
-            .init(english: "TRA Local", chinese: "台鐵 區間車", stops: all, models: models.local,
+            // The local expresses that turn back at Yilan or Luodong run as
+            // locals, with the same sets.
+            .init(english: "TRA Local", chinese: "台鐵 區間車", stops: all, models: models.local.union(models.localExpress),
                   type: nil, cars: 8, performance: .emu800, set: ("Local", "區間車")),
             .init(english: "TRA Local Express", chinese: "台鐵 區間快", stops: localExpress, models: models.localExpress,
-                  type: nil, cars: 8, performance: .emu800, set: ("Local Express", "區間快")),
+                  type: nil, cars: 8, performance: .emu800, set: ("Local Express", "區間快"), endToEnd: true),
             .init(english: "TRA EMU3000 (Yilan, Luodong)", chinese: "台鐵 EMU3000（宜蘭、羅東）", stops: yilanLuodong, models: models.emu3000,
                   type: .emu3000, cars: 12, performance: .emu3000, set: ("EMU3000", "EMU3000")),
             .init(english: "TRA EMU3000 (Jiaoxi, Yilan, Luodong)", chinese: "台鐵 EMU3000（礁溪、宜蘭、羅東）", stops: jiaoxi, models: models.emu3000,

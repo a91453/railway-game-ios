@@ -24,6 +24,11 @@ struct RealLineDemoSpec: Sendable {
         let cars: Int
         let performance: TrainPerformance
         let set: (english: String, chinese: String)
+        /// Whether it takes only the trains that run from one end to the
+        /// other (decision 240): an express line names its whole way along
+        /// the through tracks, which a set turned round between the ends
+        /// is not on; such a train goes on the all-stops line.
+        var endToEnd = false
     }
 
     /// The line's centre line, north to south, in the world of `frame`;
@@ -60,6 +65,9 @@ struct RealLineDemoSpec: Sendable {
     /// the first night (``HighSpeedDemo/spareSidings``): more where more
     /// sets wait there by day than stand there at night.
     var spareSidings = HighSpeedDemo.spareSidings
+    /// Whether traffic control is on (the high-speed demo's is off,
+    /// decision 228).
+    var trafficControl = false
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }

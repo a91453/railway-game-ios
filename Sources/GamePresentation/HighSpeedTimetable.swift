@@ -96,7 +96,8 @@ struct HighSpeedTimetable: Sendable {
             let called = Set(calls.map(\.station))
             var best: (cost: (Int, Int), kind: Int)?
             for (kind, line) in kinds.enumerated() where line.stops.contains(low) && line.stops.contains(high)
-                && line.models.map({ train.model.map($0.contains) ?? false }) ?? true {
+                && line.models.map({ train.model.map($0.contains) ?? false }) ?? true
+                && (!line.endToEnd || (low == line.stops.first && high == line.stops.last)) {
                 let between = Set(line.stops.filter { (low...high).contains($0) })
                 let added = between.subtracting(called).count, dropped = called.subtracting(between).count
                 let cost = (added + dropped, added)

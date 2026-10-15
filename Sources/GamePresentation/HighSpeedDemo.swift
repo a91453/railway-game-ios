@@ -932,8 +932,9 @@ public enum HighSpeedDemo {
         in world: inout GameWorld, language: DisplayLanguage, spec: RealLineDemoSpec = spec, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
         ends: [Int: [TrackPlatform]], through: Through, depots: [Built.Depot]
     ) throws(GameError) {
-        // Traffic control is off (see ``HighSpeedDemo``).
-        try world.setTrafficControl(false)
+        // Traffic control is off (see ``HighSpeedDemo``), unless the spec
+        // turns it on (decision 240).
+        try world.setTrafficControl(spec.trafficControl)
         func endPlatform(of stop: Int) -> TrackPlatform? {
             ends[stop]?.first
         }
