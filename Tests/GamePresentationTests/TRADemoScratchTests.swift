@@ -21,8 +21,8 @@ final class TRADemoScratchTests: XCTestCase {
         for _ in 0..<(24 * 60 + 30) {
             try world.advance(ticks: 1)
             let minute = world.clock.now.minute
-            if (11 * 60 + 32)...(11 * 60 + 47) ~= minute || (15 * 60 + 3)...(15 * 60 + 8) ~= minute {
-                for t in world.trains where (minute < 900 && t.name == "Local Express 11") || (minute >= 900 && (t.name == "Local 2" || t.name == "Local 3")) {
+            if (19 * 60 + 50)...(20 * 60 + 4) ~= minute || (23 * 60 + 38)...(23 * 60 + 46) ~= minute {
+                for t in world.trains where (minute < 1300 && t.name == "Local 1") || (minute >= 1300 && t.name == "Local 4") {
                     guard case .onEdge(let tr, let off)? = t.position else { continue }
                     let di = tracks.down.firstIndex(of: tr.edge)
                     let at = di.map { Int((layout.plan.distances[$0] + Double(off)) / 64) } ?? -1

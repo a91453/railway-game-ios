@@ -210,6 +210,8 @@ public enum HighSpeedDemo {
     ) throws(Failure) -> GameWorld {
         let layout = try Layout(railways: railways, spec: spec)
         var world = newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: eventSeed)
+        // Decision 240: the TRA demo's trains keep left (decision 202).
+        world.setKeepLeft(spec.keepLeft)
         do throws(GameError) {
             try layout.build(in: &world, language: language)
             // Until the first sets leave (the High Speed Rail's at 05:50)
@@ -700,8 +702,8 @@ public enum HighSpeedDemo {
             // Decision 228: each end's tracks from the down track, through
             // Nangang's to it again, Zuoying's to their ends.
             let builtEnds = (
-                north: try endTracks.north.enumerated().map { k, track throws(GameError) in do throws(GameError) { return try track.build(in: &world, start: node(down, first(track)), end: node(down, last(track))) } catch { print("DEBUGX north end", k, track.distances.map { Int($0 / 64) }, error); throw error } },
-                south: try endTracks.south.enumerated().map { k, track throws(GameError) in do throws(GameError) { return try track.build(in: &world, start: node(down, first(track))) } catch { print("DEBUGX south end", k, track.distances.map { Int($0 / 64) }, error); throw error } }
+                north: try endTracks.north.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track)), end: node(down, last(track))) },
+                south: try endTracks.south.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track))) }
             )
             for crossover in depotCrossovers {
                 crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges
@@ -932,9 +934,8 @@ public enum HighSpeedDemo {
         in world: inout GameWorld, language: DisplayLanguage, spec: RealLineDemoSpec = spec, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
         ends: [Int: [TrackPlatform]], through: Through, depots: [Built.Depot]
     ) throws(GameError) {
-        // Traffic control is off (see ``HighSpeedDemo``), unless the spec
-        // turns it on (decision 240).
-        try world.setTrafficControl(spec.trafficControl)
+        // Traffic control is off (see ``HighSpeedDemo``).
+        try world.setTrafficControl(false)
         func endPlatform(of stop: Int) -> TrackPlatform? {
             ends[stop]?.first
         }

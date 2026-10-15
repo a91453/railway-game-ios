@@ -65,9 +65,11 @@ struct RealLineDemoSpec: Sendable {
     /// the first night (``HighSpeedDemo/spareSidings``): more where more
     /// sets wait there by day than stand there at night.
     var spareSidings = HighSpeedDemo.spareSidings
-    /// Whether traffic control is on (the high-speed demo's is off,
-    /// decision 228).
-    var trafficControl = false
+    /// Whether trains keep left where two ways are nearly as short
+    /// (decision 202; the high-speed demo's is off, its routes as they were
+    /// measured): the TRA demo's empty runs to and from its sidings go
+    /// over to their way's own track.
+    var keepLeft = false
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }
