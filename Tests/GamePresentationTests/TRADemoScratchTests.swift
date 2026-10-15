@@ -29,7 +29,24 @@ final class TRADemoScratchTests: XCTestCase {
                     }
                 }
             }
-            if minute % 30 == 0, minute <= 1_440 {
+            if [10 * 60 + 30, 11 * 60 + 30, 13 * 60 + 45].contains(minute) {
+                for t in world.trains where (world.lateness(of: t.id) ?? 0) >= 600 {
+                    guard case .onEdge(let tr, let off)? = t.position else { continue }
+                    func kind(_ e: TrackEdgeID) -> String {
+                        if tracks.between.contains(e) || tracks.down.contains(e) { return "down" }
+                        if tracks.up.contains(e) { return "up" }
+                        if tracks.downLoops.contains(e) { return "downLoop" }
+                        if tracks.upLoops.contains(e) { return "upLoop" }
+                        if tracks.ends.contains(e) { return "end" }
+                        if tracks.sidings.contains(e) { return "siding" }
+                        if tracks.crossovers.contains(e) { return "crossover" }
+                        return "?"
+                    }
+                    let km = tracks.down.firstIndex(of: tr.edge).map { layout.plan.distances[$0] / 64_000 } ?? tracks.upInOrder.firstIndex(of: tr.edge).map { layout.up.distances[$0] / 64_000 } ?? -1
+                    print("STUCK \(minute / 60):\(minute % 60) \(t.name) \(kind(tr.edge)) \(tr.edge) \(tr.direction) off \(off) km \(km) exec \(String(describing: t.execution)) rem \(t.movement.remainingEdges.count) end \(String(describing: t.movement.end)) rate \(t.movement.rate) ahead \(t.movement.remainingEdges.prefix(3).map(kind))")
+                }
+            }
+            if minute % 60 == 0, minute <= 1_440 {
                 let lateNow = world.trains.compactMap { t -> String? in
                     guard let l = world.lateness(of: t.id), l >= 600 else { return nil }
                     let at = world.stationsStoppedAt(by: t.id).compactMap { world.station(id: $0)?.name }.first ?? "between"
