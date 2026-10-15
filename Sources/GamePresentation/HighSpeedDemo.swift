@@ -274,6 +274,11 @@ public enum HighSpeedDemo {
         /// where the real yard is (decision 240): beyond a station's own
         /// tracks, or a curve, where the yard lies by them.
         var shift: Double = 0
+        /// Whether a set leaves its sidings southbound (entered from the
+        /// south, running north) or northbound; `nil`, the way of the first
+        /// station it serves (decision 240: the TRA demo's Su'aoxin sidings
+        /// serve the stations north of it, but by way of Su'aoxin).
+        var leavesSouthbound: Bool? = nil
     }
 
     /// The High Speed Rail's depots the demo keeps its sets in: Nangang's
@@ -496,7 +501,7 @@ public enum HighSpeedDemo {
                 // real ones are; entered from the way of the stations it
                 // serves, and centred on the real one.
                 precondition(place.side < 0, "\(real.english) is not on the down track's side")
-                let away: Double = place.along > middles[serving[index][0]] ? 1 : -1
+                let away: Double = real.leavesSouthbound.map { $0 ? -1 : 1 } ?? (place.along > middles[serving[index][0]] ? 1 : -1)
                 let extent = Double(sets) * step + spec.sidingRun
                 return (real, place.along - away * extent / 2, place.along + away * extent / 2, sets, 0, serving[index])
             }
