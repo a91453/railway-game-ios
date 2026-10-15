@@ -14,7 +14,7 @@ final class TRADemoScratch2Tests: XCTestCase {
         let base = TRADemo.spec
         for (south, tol, edge) in [(3, 5.0, 2000.0), (4, 5.0, 2000.0), (5, 5.0, 2000.0), (6, 5.0, 2000.0)] {
             let spec = RealLineDemoSpec(path: base.path, stationNames: base.stationNames, stationIDPrefix: base.stationIDPrefix, schedule: base.schedule, kinds: base.kinds,
-                endTrackSides: (north: (east: south, west: 1), south: (east: south, west: 1)), islandStations: base.islandStations, depots: base.depots, tolerance: tol * 64, longestEdge: edge * 64, landAt: base.landAt, opensAt: base.opensAt)
+                endTrackSides: (north: (east: south, west: 1), south: (east: south, west: 1)), islandStations: base.islandStations, depots: base.depots, tolerance: tol * 64, longestEdge: edge * 64, landAt: base.landAt, opensAt: base.opensAt, rampsFollowTrack: true)
             let layout = try HighSpeedDemo.Layout(railways: railways, spec: spec)
             var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
             do { _ = try layout.build(in: &world, language: .english); print("ENDS south", south, tol, edge, "ok") } catch { print("ENDS south", south, tol, edge, error) }

@@ -566,7 +566,21 @@ public enum HighSpeedDemo {
                     return (1...count).map { k in
                         let out = side * Double(k) * offset, away = Double(k) * ramp
                         let distances = [zone.lowerBound - margin - away, zone.lowerBound - margin, zone.upperBound + margin] + (through ? [zone.upperBound + margin + away] : [])
-                        return RealWorldDemo.TrackPlan(beside: plan, at: distances.map(index), offsets: [0, out, out] + (through ? [0] : []))
+                        let offsets = [0, out, out] + (through ? [0] : [])
+                        guard spec.rampsFollowTrack else { return RealWorldDemo.TrackPlan(beside: plan, at: distances.map(index), offsets: offsets) }
+                        // Decision 240: on a curve a ramp's one edge would
+                        // cut across the curving down track; through each of
+                        // its nodes on the way out, it follows it.
+                        var at: [Int] = [], outs: [Double] = []
+                        for step in distances.indices.dropLast() {
+                            let (i, j) = (index(distances[step]), index(distances[step + 1]))
+                            for node in i..<j {
+                                let share = (plan.distances[node] - distances[step]) / (distances[step + 1] - distances[step])
+                                at.append(node)
+                                outs.append(offsets[step] + (offsets[step + 1] - offsets[step]) * share)
+                            }
+                        }
+                        return RealWorldDemo.TrackPlan(beside: plan, at: at + [index(distances[distances.count - 1])], offsets: outs + [offsets[offsets.count - 1]])
                     }
                 }
             }
@@ -681,8 +695,8 @@ public enum HighSpeedDemo {
             // Decision 228: each end's tracks from the down track, through
             // Nangang's to it again, Zuoying's to their ends.
             let builtEnds = (
-                north: try endTracks.north.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track)), end: node(down, last(track))) },
-                south: try endTracks.south.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track))) }
+                north: try endTracks.north.enumerated().map { k, track throws(GameError) in do throws(GameError) { return try track.build(in: &world, start: node(down, first(track)), end: node(down, last(track))) } catch { print("DEBUGX north end", k, track.distances.map { Int($0 / 64) }, error); throw error } },
+                south: try endTracks.south.enumerated().map { k, track throws(GameError) in do throws(GameError) { return try track.build(in: &world, start: node(down, first(track))) } catch { print("DEBUGX south end", k, track.distances.map { Int($0 / 64) }, error); throw error } }
             )
             for crossover in depotCrossovers {
                 crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges

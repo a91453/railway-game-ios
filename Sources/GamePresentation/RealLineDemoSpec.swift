@@ -52,6 +52,10 @@ struct RealLineDemoSpec: Sendable {
     /// (before the first set leaves) and the game opens at.
     let landAt: Int64
     let opensAt: Int64
+    /// Whether the ramps out to the ends' tracks follow the down track
+    /// through each of its nodes, as where the ends lie on a curve (the
+    /// TRA demo's): one edge from a node to the next.
+    var rampsFollowTrack = false
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }

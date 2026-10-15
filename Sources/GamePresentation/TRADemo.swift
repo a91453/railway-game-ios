@@ -41,8 +41,8 @@ public enum TRADemo {
     static let stationNames = ["頭城", "頂埔", "礁溪", "四城", "宜蘭", "二結", "中里", "羅東", "冬山", "蘇澳新"]
 
     /// How far beyond Toucheng and Su'aoxin the demo's track runs along the
-    /// real line, for the ends' tracks.
-    static let runOn = 1_500.0 * RealWorldDemo.metre
+    /// real line, for the ends' tracks and the north end's sidings.
+    static let runOn = (north: 3_000.0 * RealWorldDemo.metre, south: 1_500.0 * RealWorldDemo.metre)
 
     /// The real trains' models by kind, as the data names them.
     static let models = (
@@ -77,13 +77,18 @@ public enum TRADemo {
         ]
     }()
 
-    /// The yards the demo keeps its sets in: where OpenStreetMap has the
-    /// yard tracks beside Yilan and Su'aoxin stations (the centre of each
-    /// cluster of `service=yard` ways, read from the whole extract of
-    /// Taiwan, ODbL 1.0), the sidings laid beyond each station's tracks:
-    /// south of Yilan, north of Su'aoxin.
+    /// Where the demo keeps its sets. Two are real yards: where OpenStreetMap
+    /// has the yard tracks beside Yilan and Su'aoxin stations (the centre of
+    /// each cluster of `service=yard` ways, read from the whole extract of
+    /// Taiwan, ODbL 1.0), the sidings laid clear of the stations' own tracks
+    /// and of the curve north of Su'aoxin: south of Yilan, on the straight
+    /// north of Xinma. The third is the demo's own: OpenStreetMap has no
+    /// yard by Toucheng, where the real trains come from Taipei's depots;
+    /// sidings beyond the north end stand in for them, so its sets need not
+    /// run along the wrong track from Yilan's.
     static let depots = [
-        HighSpeedDemo.RealDepot(english: "Yilan Sidings", chinese: "宜蘭側線", latitude: 24.754210, longitude: 121.758450, shift: 1_500 * RealWorldDemo.metre),
+        HighSpeedDemo.RealDepot(english: "North End Sidings", chinese: "北端留置線", latitude: 24.867724, longitude: 121.829668),
+        HighSpeedDemo.RealDepot(english: "Yilan Sidings", chinese: "宜蘭側線", latitude: 24.754210, longitude: 121.758450, shift: 2_500 * RealWorldDemo.metre),
         HighSpeedDemo.RealDepot(english: "Su'aoxin Sidings", chinese: "蘇澳新側線", latitude: 24.610150, longitude: 121.827340, shift: -3_000 * RealWorldDemo.metre),
     ]
 
@@ -91,8 +96,7 @@ public enum TRADemo {
     static let spec = RealLineDemoSpec(
         path: { railways, frame in
             // The site's Yilan Line runs from Su'ao to Badu: north to south
-            // reversed, from `runOn` north of Toucheng to as far south of
-            // Su'aoxin.
+            // reversed, from `runOn` north of Toucheng to south of Su'aoxin.
             guard let line = railways.lines.first(where: { $0.name.hasPrefix("宜蘭線") }) else { return [] }
             let path = WorldPath(line.points.reversed().map { WorldVector(frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)) })
             func along(_ name: String) -> Double? {
@@ -101,13 +105,13 @@ public enum TRADemo {
                 }
             }
             guard let north = along("頭城"), let south = along("蘇澳新") else { return [] }
-            return path.points(from: max(0, north - runOn), to: min(path.length, south + runOn))
+            return path.points(from: max(0, north - runOn.north), to: min(path.length, south + runOn.south))
         },
         stationNames: stationNames,
         stationIDPrefix: "tra_sched|",
         schedule: schedule,
         kinds: kinds,
-        endTrackSides: (north: (east: 2, west: 1), south: (east: 2, west: 1)),
+        endTrackSides: (north: (east: 3, west: 1), south: (east: 4, west: 1)),
         // Jiaoxi, Yilan and Luodong: the expresses call on the through
         // tracks.
         islandStations: [2, 4, 7],
@@ -116,7 +120,9 @@ public enum TRADemo {
         longestEdge: 2_000 * RealWorldDemo.metre,
         // The first train leaves at 04:45.
         landAt: 4 * 60 + 30,
-        opensAt: 7 * 60
+        opensAt: 7 * 60,
+        // Toucheng and Su'aoxin stand on curves.
+        rampsFollowTrack: true
     )
 
     /// The demo: a new whole-Taiwan game with the Yilan Line built,
