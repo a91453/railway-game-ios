@@ -18,6 +18,12 @@ extension EnvironmentValues {
     /// drawn to the screen's edges, under the camera housing and the home
     /// indicator, and its banners, keys and buttons keep inside this.
     @Entry var mapSafeArea = EdgeInsets()
+    /// Decision 226: where the map's bottom-leading buttons (layers, map
+    /// style, expansion) stand when they share the bottom row with the
+    /// tools column and the station master: their foot this far above the
+    /// screen's edges, beside the column, rather than above the bottom
+    /// inset. `nil`: above it, as over the dock.
+    @Entry var mapLeadingRowFoot: CGFloat?
 }
 
 extension EdgeInsets {
@@ -132,6 +138,7 @@ struct MapView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
+    @Environment(\.mapLeadingRowFoot) private var leadingRowFoot
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
     @Environment(\.mapSafeArea) private var safeArea
     /// The height of the bottom-trailing buttons and key, with their margin.
@@ -607,10 +614,12 @@ struct MapView: View {
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.mapLeadingRowFrame = $0 }
                     .padding(12)
                     // Above the dock (decision 106), beside the tools
-                    // (decision 114).
-                    .padding(.bottom, clear.bottom)
+                    // (decision 114); on a phone's bottom row beside the
+                    // tools column (decision 226, 2026-10-15).
+                    .padding(.bottom, leadingRowFoot.map { screenEdges.bottom + $0 - 12 } ?? clear.bottom)
                     .padding(.leading, clear.leading)
                 }
                 // Decision 174, later: the sights while building, faint
