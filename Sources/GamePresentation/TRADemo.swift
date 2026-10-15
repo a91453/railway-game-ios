@@ -91,7 +91,7 @@ public enum TRADemo {
     static let depots = [
         HighSpeedDemo.RealDepot(english: "North End Sidings", chinese: "北端留置線", latitude: 24.867724, longitude: 121.829668),
         HighSpeedDemo.RealDepot(english: "Yilan Sidings", chinese: "宜蘭側線", latitude: 24.754210, longitude: 121.758450, shift: 2_500 * RealWorldDemo.metre),
-        HighSpeedDemo.RealDepot(english: "Su'aoxin Sidings", chinese: "蘇澳新側線", latitude: 24.610150, longitude: 121.827340, shift: -3_400 * RealWorldDemo.metre, leavesSouthbound: true),
+        HighSpeedDemo.RealDepot(english: "Su'aoxin Sidings", chinese: "蘇澳新側線", latitude: 24.610150, longitude: 121.827340, shift: -3_400 * RealWorldDemo.metre),
     ]
 
     /// What the demo is built from.
