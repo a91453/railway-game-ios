@@ -27,7 +27,8 @@ struct ContentView: View {
     @State private var screen = GameScreenState()
     /// How far down the status pill reaches, with its margin.
     @State private var pillDepth: CGFloat = 0
-    /// The layer strip's height, without its margin.
+    /// The height of the row under the status pill (the layer strip, the
+    /// follow bar), without its margin.
     @State private var stripHeight: CGFloat = 0
     /// How far Undo and Redo reach from the leading edge beside the tools
     /// column, with the column (decision 226).
@@ -247,12 +248,11 @@ struct ContentView: View {
             // tools are a column down the leading edge, not a dock along the
             // bottom; the map keeps its height. `dockSize` measures either.
             let toolsColumn = compactHeight && session.tutorial == nil
-            // With the column, the bottom is the station master's: the
-            // map's own buttons at its leading foot (layers, map style)
-            // stay above it, as they stood above the dock (a tap on the map
-            // style menu reached the station master instead).
-            // The station master with its title under it, not the avatar
-            // alone: the layers button sat on the avatar's head (2026-10-15).
+            // With the column, the bottom row is the column's foot, the
+            // map's own buttons (layers, map style, expansion) and the
+            // station master with its title, side by side
+            // (``EnvironmentValues/mapLeadingRowFoot``); what floats over
+            // the map (the build's ✓, banners) keeps above that row.
             let dockBottom = toolsColumn ? StationMasterCorner.standingHeight + margin : dockSize.height
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
@@ -264,11 +264,20 @@ struct ContentView: View {
             let showsRail = BuildToolRail.isShown(session)
             let railHeight = max(60, proxy.size.height - pillDepth - strip - dockSize.height - 2 * margin)
             // Decision 224 (5B): the layer strip under the pill, while not
-            // building and not in the tutorial. The map's top column (its
-            // banner, the follow bar, the construction readout) starts
-            // under it, not behind it.
+            // building and not in the tutorial; on a phone the building
+            // tools need the height it takes (the column held Done below
+            // its fold with it, PR #644's gate). The map's round layers
+            // button, which opens the same list, shows only while the strip
+            // does not (decision 226, 2026-10-15).
             let showsLayerStrip = !showsRail && session.tutorial == nil
-            let mapTop = pillDepth + (showsLayerStrip ? margin + stripHeight : 0)
+            // Decision 226 (2026-10-15, the owner): the follow bar beside
+            // the strip, in the row under the pill, rather than squeezed
+            // between the tools and the card lower down.
+            let followed = session.followedTrain
+            let showsTopRow = showsLayerStrip || followed != nil
+            // The map's top column (its banner, the construction readout)
+            // starts under that row, not behind it.
+            let mapTop = pillDepth + (showsTopRow ? margin + stripHeight : 0)
             // Decision 120: the map runs to the screen's edges, under the
             // camera housing and the home indicator, as Apple's Maps does;
             // the controls stay inside the safe area.
@@ -277,7 +286,9 @@ struct ContentView: View {
                     map
                         .environment(\.mapInsets, EdgeInsets(
                             top: mapTop,
-                            leading: toolsColumn ? dockSize.width : showsRail ? BuildToolRail.width + margin : 0,
+                            // Past Undo and Redo too when they show.
+                            leading: toolsColumn ? max(dockSize.width, ControlPanel.showsEdits(session) ? editsWidth : 0)
+                                : showsRail ? BuildToolRail.width + margin : 0,
                             bottom: dockBottom,
                             trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
                         ))
@@ -285,6 +296,12 @@ struct ContentView: View {
                         .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
+                        .environment(\.mapShowsLayerStrip, showsLayerStrip)
+                        // Decision 226 (2026-10-15, the owner): on a phone
+                        // the map's layers and expansion buttons stand on
+                        // the bottom row, beside the column's foot, not
+                        // above the station master.
+                        .environment(\.mapLeadingRowFoot, toolsColumn ? margin : nil)
                         .ignoresSafeArea(.container)
                 }
                 .overlay(alignment: .topLeading) {
@@ -308,13 +325,30 @@ struct ContentView: View {
                 // while not building (the tool rail has that edge then) and
                 // not in the tutorial, whose card points at the map.
                 .overlay(alignment: .topLeading) {
-                    if showsLayerStrip {
-                        MapQuickLayerStrip(language: session.language) {
-                            screen.panel = .mapLayers
+                    if showsTopRow {
+                        // As far as the card or a panel beside the map, and
+                        // beside the building tools while they are out: they
+                        // reach up to the pill (the follow bar alone then).
+                        let trailing = sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
+                        let leading = showsRail ? (toolsColumn ? dockSize.width : BuildToolRail.width + margin) : 0
+                        HStack(alignment: .center, spacing: margin) {
+                            if showsLayerStrip {
+                                MapQuickLayerStrip(language: session.language) {
+                                    screen.panel = .mapLayers
+                                }
+                            }
+                            if let followed {
+                                FollowBar(train: followed, session: session) {
+                                    session.stopFollowingTrain()
+                                }
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                            }
                         }
+                        .frame(maxWidth: max(0, proxy.size.width - leading - trailing - 2 * margin), alignment: .leading)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stripHeight = $0 }
                         .padding(.top, pillDepth)
                         .padding([.top, .leading], margin)
+                        .padding(.leading, leading)
                         .transition(.opacity)
                     }
                 }
@@ -383,7 +417,12 @@ struct ContentView: View {
                     // so it remembers what it has said.
                     // Beside the tools column, past Undo and Redo when they
                     // show (decision 226).
-                    let beside = dockSize.width + (toolsColumn && ControlPanel.showsEdits(session) ? editsWidth - dockSize.width : 0)
+                    // On a phone past the map's buttons too, which share the
+                    // bottom row (decision 226): its bubble opens over the
+                    // map, not over them.
+                    let rowEnd = toolsColumn && screen.mapLeadingRowFrame.width > 0
+                        ? screen.mapLeadingRowFrame.maxX - proxy.frame(in: .global).minX : 0
+                    let beside = max(dockSize.width + (toolsColumn && ControlPanel.showsEdits(session) ? editsWidth - dockSize.width : 0), rowEnd)
                     let isCovered = beside + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     if session.tutorial == nil, dockSize != .zero {
                         StationMasterCorner(
@@ -436,6 +475,7 @@ struct ContentView: View {
                 .animation(.easeInOut(duration: 0.2), value: toolsColumn)
                 .animation(.easeInOut(duration: 0.25), value: sidePanel)
                 .animation(.easeInOut(duration: 0.2), value: session.lineDraft.count >= 2)
+                .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
         }
     }
 
@@ -873,6 +913,10 @@ final class GameScreenState {
     /// buttons, a layer's key) stands on the screen, as the map measured
     /// it: the station master's bubble stops short of it.
     var mapCornerFrame: CGRect = .zero
+    /// Where the map's bottom-leading buttons stand on the screen, as the
+    /// map measured them: on a phone's bottom row the station master
+    /// stands past them (decision 226).
+    var mapLeadingRowFrame: CGRect = .zero
     /// Decision 226: where the tools stand on the screen (global
     /// coordinates; the column down a phone's leading edge, or the dock),
     /// as the screen measured them; a finger drawing on the map compares

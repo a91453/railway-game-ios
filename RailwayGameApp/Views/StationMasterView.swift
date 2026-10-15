@@ -64,8 +64,8 @@ struct StationMasterCorner: View {
     /// The avatar's side.
     static let avatarSize: CGFloat = 44
     /// How tall the avatar stands with the title under it (the title's
-    /// least height, 28, less the 3 they overlap): what the map's buttons
-    /// keep above.
+    /// least height, 28, less the 3 they overlap): the height of a phone's
+    /// bottom row, which what floats over the map keeps above.
     static let standingHeight: CGFloat = avatarSize + 28 - 3
 
     var body: some View {
