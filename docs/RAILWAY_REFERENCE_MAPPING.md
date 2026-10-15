@@ -1551,3 +1551,17 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`：道床比軌頂低 0.35 m | `Map3DScene.railLift` 0.45 m | 道床頂比地面高 0.1 m，地面上的軌道才看得到道床 |
 
 逐層的比對（SHA-256 都不同，最像的那張相關係數最高 0.76）在 `docs/art/map3d-surfaces-2026-10-15/README.md`。外部專案沒有用到。
+
+## 3D 地圖的實景地面（決策 234）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取）的 `Railway/location_modeler_reference_clean/source/js/app.js`（地圖資料到 3D 街區的工具，作者同一天加入）。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `RKVT.decode`：protobuf 與 MVT 指令 | `VectorTile.swift` | 照搬做法，改寫成 Swift |
+| `RKVT.fetchArea`：OpenMapTiles 的類別，隧道不要 | `Map3DBaseMap` | 讀 App 打包的 `taiwan.pmtiles`（決策 151），不從網路抓 OpenFreeMap |
+| `RKFAR` 的 `WID`、近景的 `motorway_link`、`WATERWAY` | `RoadKind.width(ramp:)`、`WaterwayKind.width` | 數值照搬（公尺） |
+| `RKFAR` 的道路帶與 `surf` 切段 | `addStrip`、`splits(from:to:)` | 多切三角形的對角線，離地 0.28–0.36 m |
+| `RKFAR` 的 `fillPoly`（面塗進網格角點） | `addArea` | 改成切到 64 m 地面三角形，再用 earcut 三角化 |
+
+參考庫沒有的：PMTiles 的讀取（照規格自己寫）、gzip 解壓（zlib 的 puff，zlib 授權）、有洞的多邊形三角化（mapbox/earcut 2.2.4，ISC）。

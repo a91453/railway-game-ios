@@ -78,7 +78,8 @@ public struct Map3DScene: Sendable {
     /// The scene of `world`: what is built and ``margin`` round it, at most
     /// ``reach`` each way from its middle; on a map with nothing built, the
     /// ``reach`` round `focus` (world units), or round the map's middle.
-    public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil) {
+    public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
+                baseMap: BaseMapTiles? = nil) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let mapRegion = WorldRegion(bounds: world.bounds)
         let built = WorldRegion.built(in: world)
@@ -96,11 +97,19 @@ public struct Map3DScene: Sendable {
 
         var builder = Builder(originX: originX, originY: originY, region: region, world: world)
         let snapshot = snapshot ?? world.railwaySnapshot()
-        builder.addGround()
+        // Decision 234: on a real-world map, the base map's water, cover
+        // and roads; the ground's own water then gives way to its finer
+        // shores.
+        var real: Map3DBaseMap?
+        if let baseMap, let frame = RealWorldFrame(world: world) {
+            real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY)
+        }
+        builder.addGround(water: real == nil)
+        let taken = real.map { builder.addBaseMap($0) } ?? []
         let cleared = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
-        builder.addCity(skyline ?? CitySkyline(world: world), clearOf: cleared)
+        builder.addCity(skyline ?? CitySkyline(world: world), clearOf: cleared, takenBy: taken)
         builder.addPlacedBuildings()
         chunks = builder.chunks()
     }
@@ -139,6 +148,30 @@ public enum Map3DPalette {
     public static let player = Map3DColor.rgb(0xFFC86B)
     public static let playerRoof = Map3DColor.rgb(0xFFE2A6)
     public static let playerRim = Map3DColor.rgb(0x26385C)
+
+    /// Decision 234: the base map's land cover, a little deeper than the
+    /// 2D map's (its `landcover` and `park`) so it reads on the lit
+    /// ground, and its roads as the 2D map's: the motorways and trunk
+    /// roads warm yellow, the rest white, plain (untextured) so they read
+    /// from afar.
+    static func cover(_ cover: Map3DBaseMap.Cover) -> UInt32 {
+        switch cover {
+        case .grass: rgb(0xCFE1B4)
+        case .sand: rgb(0xEDE4C6)
+        case .wetland: rgb(0xC3D9CF)
+        case .wood: rgb(0x9FC58B)
+        case .park: park
+        case .water: water
+        }
+    }
+
+    static func road(_ kind: Map3DBaseMap.RoadKind) -> UInt32 {
+        switch kind {
+        case .motorway, .trunk: rgb(0xFFD99A)
+        case .primary, .secondary, .tertiary: rgb(0xFFFFFF)
+        case .minor, .service: rgb(0xF7F6F2)
+        }
+    }
 
     /// Row house walls: `city_world_reference`'s shophouse palette (white
     /// 4, #F2E2D6 2, #E0D0C8 1, #D6C2B0 1) and four tile colours common in
@@ -306,8 +339,9 @@ extension Map3DScene {
         // MARK: Ground
 
         /// The ground: a grid of 64 m squares at the map's heights, the
-        /// water on it.
-        mutating func addGround() {
+        /// water on it unless `water` is false (the base map's water lies
+        /// on it instead, decision 234).
+        mutating func addGround(water drawsWater: Bool = true) {
             let cell = Double(Land.cellLength)
             let firstColumn = Int((region.minX / cell).rounded(.down)), lastColumn = Int((region.maxX / cell).rounded(.up)) - 1
             let firstRow = Int((region.minY / cell).rounded(.down)), lastRow = Int((region.maxY / cell).rounded(.up)) - 1
@@ -329,7 +363,7 @@ extension Map3DScene {
             for row in firstRow...lastRow {
                 for column in firstColumn...lastColumn {
                     let a = corner(row, column), b = corner(row + 1, column), c = corner(row + 1, column + 1), d = corner(row, column + 1)
-                    let water = world.isWater(row: row, column: column)
+                    let water = drawsWater && world.isWater(row: row, column: column)
                     let lift = Map3DPoint(0, water ? 0.05 : 0, 0)
                     let middle = (a + c) * 0.5
                     mesh(at: middle) {
@@ -548,11 +582,13 @@ extension Map3DScene {
         /// Every lot of the city in the scene, but those on cells the track
         /// runs through: row houses on low homes and shops, blocks for the
         /// rest, trees in the parks.
-        mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>) {
+        mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = []) {
             let cell = Double(Land.cellLength)
             for lot in skyline.lots(in: region) {
                 let x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
-                guard contains(x: x, y: y) else { continue }
+                // Decision 234: no lot where the real map has a road, water
+                // or a park.
+                guard contains(x: x, y: y), !taken.contains(ChunkKey(column: lot.column, row: lot.row)) else { continue }
                 let centre = point(x: x, y: y, height: 0)
                 let base = Map3DPoint(centre.x, ground(x: x, y: y), centre.z)
                 let side = Float(Double(lot.side) / Self.metre)

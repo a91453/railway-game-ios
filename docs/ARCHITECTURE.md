@@ -8927,6 +8927,61 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
    參考庫沒有轉轍器的坡度規則、沒有坡道切邊的高度規則、沒有坡道上的自動渡線：這三項是本專案自己的。外部專案：沒有用（規範數值見第 2 點的出處）。
 
+### 234. 原生 3D 地圖第五步：實景地圖的道路、河川與地面
+
+作者 2026-10-15 同意「先接上實景地圖」：3D 的實景地圖原本只有真實的地形高度與遊戲的 64 m 水格，看起來像一片空地上長出城鎮，認不出是哪裡。這一步讓 3D 場景讀 App 已經打包的台灣底圖 `taiwan.pmtiles`（決策 151，2D 地圖的 MapLibre 讀同一個檔），把道路、河川、海、湖、林地、草地與公園鋪在地面上。不加新資料，App 不變大。
+
+1. **在 Swift 讀底圖**（GamePresentation，Linux 測得到）：
+   - `PMTilesArchive`：PMTiles v3 的檔頭、根目錄與葉目錄、Hilbert 曲線的圖磚編號（照 `build_basemap.py` 的 `tile_id`，負數照 Python 的整數運算）。
+   - `Inflate`：gzip 解壓，從 zlib 的 puff.c（zlib 授權）改寫成 Swift；App 不用 Apple 的 Compression，Linux 才測得到。
+   - `VectorTile`：Mapbox Vector Tile 2.1，照參考庫 location modeler 的 `RKVT.decode`（最小的 protobuf 讀取、MoveTo／LineTo／ClosePath 的 zigzag 差分、只解要的圖層）。
+   - `BaseMapTiles`（公開）包住檔案；App 用 `Data(contentsOf:options: .alwaysMapped)` 映射，不整個讀進記憶體。只讀 zoom 14（有全部道路的那一級）、場景範圍內的圖磚（一片約 2.2 km 見方）。
+2. **`Map3DBaseMap`**：圖磚的要素換成場景的公尺座標（Web Mercator，和 `RealWorldFrame.worldPosition(latitude:longitude:)` 同一套，每片圖磚一個線性換算）。
+   - 圖層與類別照 OpenMapTiles：`water`（游泳池除外）、`landcover` 的 wood／grass／wetland／sand、`park`、`waterway` 的 river／canal／stream、`transportation` 的 motorway 到 service。隧道不畫（參考的做法）。
+   - 每片圖磚的要素只留在圖磚自己的範圍內（圖磚之間 64 單位的緩衝不重畫）。
+   - 道路寬度照 location modeler 遠景的 `WID`：快速道路 13、主要幹道 11、主要道路 9、次要 8、三級 7、一般 5、服務道路 3.5 m；匝道最多 7 m（它近景的 `motorway_link`）。河道寬度照它近景的 `WATERWAY`：河 14、運河 9、溪 2.5 m。
+3. **鋪在地面上**（`Map3DRealGround.swift`，`Map3DScene.Builder` 的延伸）：
+   - **面**：每個多邊形（外環加洞）一列一列、一格一格切成 64 m 格的兩個地面三角形（從西北角到東南角，和 `addGround()` 同一條對角線，Sutherland–Hodgman），每塊用 earcut 三角化，高度取那個地面三角形的平面（`drawnGround`）再加一點。整塊都在洞裡的（底圖的海是「台灣以外」，內陸圖磚的海整片都是洞）不畫。
+   - location modeler 的遠景是把面塗進地面網格的角點；這裡改成切到三角形，64 m 的格子也保得住公園的形狀。
+   - **線**：道路與河道是平的帶子，每段在穿過 64 m 格線與三角形對角線的地方切開（它的 `surf`），所以不會陷進地面；兩端各多畫半個寬度，轉彎與路口就接起來。
+   - **疊放高度**（公尺，地面之上）：草地 0.04、沙地 0.08、濕地 0.12、林地 0.16、公園 0.20、水 0.24；一般與服務道路 0.28、三級到主要道路 0.32、快速道路與主要幹道 0.36。地面陰影（決策 232）從 0.08 提高到 0.4，蓋在這些上面、軌道道床（`railLift` 0.45）下面。
+   - 有底圖時，地面不再畫遊戲 64 m 的水格（底圖的海岸線比較細）；水格照舊是 GameCore 的規則，不能蓋軌道的地方不變。
+4. **城市的建物讓路**：遊戲自己的城市（`CitySkyline`，每格一棟）在實景地圖上會蓋在真實的道路上。道路或河道的帶子進到某格建物的 20 m 見方內（加半個路寬）、或水面／公園／林地蓋住那一格一半以上，那一格就不畫建物。台北車站一帶大部分的格子都有路經過，所以建物剩不到一半（測試鎖住「少於一半、但不是零」）；真實的建物是下一步。
+5. **顏色**（四個角度選 D，其他的預覽在 `docs/art/map3d-real-ground-2026-10-15/options.jpg`）：
+   - A：淡暖灰、貼混凝土貼圖。B：深灰柏油（location modeler 的 `#62666d`）。C：同 D，但城市的建物不讓路。**D：白色道路、快速道路與主要幹道暖黃（`#FFD99A`，2D 的 `#FFE4B0` 深一點），不貼圖。**
+   - 玩家：D 從遠處就看得出路網，和 2D 地圖同一套顏色，切換時認得出是同一個地方；C 的大樓蓋在高架道路上，看起來是錯的。
+   - 開發：道路不貼圖，只是頂點色，沒有新的貼圖層；B 與 D 只差調色盤。
+   - 美術：B 的深灰在柔和明亮的調色盤裡太重；A 的灰在米綠的地面上幾乎看不見；D 與 2D 地圖、F 台灣版＋的白與暖黃一致。林地、草地、濕地、沙地照 2D 的 `landcover` 再深一點，在有光的地面上才看得出來。
+   - 音樂：無。
+6. **量測**（Linux 除錯版，`swift test`；不是 iPhone）：
+   - 台北車站一帶 3 km：三角形 59,632 → 51,354（建物讓路，少了）；建構 0.3 s → 1.0 s。
+   - 台北 12 km 見方（暫時把 `margin` 調到 6 km 量的）：194,314 → 550,445 個三角形；建構 1.5 s → 10.8 s（背景執行緒，畫面有轉圈）。
+   - 實景示範（瑞芳、平溪，12 km）：1,167,638 → 1,306,589；建構約 20 s → 22 s。
+   - iPhone 的幀數與建構時間 **UNVERIFIED**，要等 TestFlight（決策 229 的實機量測）。
+7. **出處**：資料來源畫面的「台灣的 OpenStreetMap 底圖」加一句 3D 地圖也用它；新的一項「earcut, puff」寫出兩者的著作權、授權，以及 ISC 要求的許可聲明全文（`DataSourceCredits.iscPermission`）。
+
+**參考**（參考庫 `a91453/railway-reference-private`，`Railway/location_modeler_reference_clean/source/js/app.js`）：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `RKVT.decode`（5259–5355）：protobuf、MVT 指令、只解要的圖層 | `VectorTile` |
+| `RKVT.fetchArea`（5393–5496）：OpenMapTiles 的類別、隧道不要 | `Map3DBaseMap.init`、`cover`、`roadKind`、`waterwayKind` |
+| `RKFAR.build` 的 `WID`（7122）、近景的 `ROAD.motorway_link`、`WATERWAY`（5886–5919） | `RoadKind.width(ramp:)`、`WaterwayKind.width`（公尺，不換算） |
+| `RKFAR` 的道路：平的四邊形、離地 0.3 m、照地面網格切段（7301–7319） | `addStrip`、`splits(from:to:)`（離地 0.28–0.36 m，另切對角線） |
+| `RKFAR` 的 `fillPoly` 把面塗進網格角點（7130–7151） | 沒有照搬：改成切到地面三角形（`addArea`），保住形狀 |
+| 地形：Terrarium 圖磚 | 沒有用：遊戲已有自己的高度（決策 124、151） |
+| 建物、屋頂、近景的距離場路面、標線 | 這一步沒有用，留給下一步 |
+
+外部專案：
+- earcut 2.2.4（https://github.com/mapbox/earcut，ISC，Copyright (c) 2016, Mapbox）：改寫成 Swift（`Earcut.swift`，不含 z-order 雜湊），授權全文在原始碼開頭與資料來源畫面。
+- puff 2.3（zlib 的 `contrib/puff`，zlib 授權，Mark Adler）：改寫成 Swift（`Inflate.swift`，標明已修改）。
+- 讀過、沒有用的：StrandedKitty/streets-gl（MIT，道路帶與貼地的做法同上）、OSM2World（目前 MIT，屋頂與路口，留給建物）、jeantimex/tokyo（MIT，決策 152 的網頁 3D 城市）。
+
+**缺口與之後**：
+- 橋沒有高度（底圖沒有 `layer`，橋畫在地面上，跨河時壓在水上）；隧道整條不畫。
+- 遠離軌道的地方地面是 0 m（決策 229 的已知限制：高度只在蓋過軌道的地方讀進來），道路與水跟著同一個地面。
+- 真實建物（下一步）：底圖刻意沒有建物。台灣的 Overture 建物幾乎就是 OSM（微軟、Google 的 AI 建物沒涵蓋台灣），只有約 3% 有高度；3D-GloBFP（CC BY 4.0）台灣 114 萬棟每棟都有估計高度；國土測繪中心的全國三維建物品質最好，但散布的授權要作者先向國土測繪中心確認。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

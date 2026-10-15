@@ -64,6 +64,19 @@ public enum DataSourceCredits {
     /// (decision 152), next to the page on the game's website (decision 163).
     static let cityViewNoticesURL = "https://www.alongthelinegame.com/city/NOTICES.txt"
     static let polyHavenURL = "https://polyhaven.com"
+    static let earcutURL = "https://github.com/mapbox/earcut"
+    static let puffURL = "https://github.com/madler/zlib/tree/develop/contrib/puff"
+    /// The ISC License's permission notice, which must come with every copy
+    /// of earcut (decision 234).
+    static let iscPermission = """
+        Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby \
+        granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE \
+        IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED \
+        WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, \
+        INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER \
+        IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR \
+        PERFORMANCE OF THIS SOFTWARE.
+        """
     static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
 
     /// The short credit shown on a real-world map while Taiwan's railways
@@ -246,8 +259,8 @@ public enum DataSourceCredits {
                         id: "taiwanBaseMap",
                         title: language.text("Taiwan’s OpenStreetMap base map", "台灣的 OpenStreetMap 底圖"),
                         detail: language.text(
-                            "The OpenStreetMap base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names, with labels in Noto Sans.",
-                            "台灣實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名，文字用 Noto Sans。"
+                            "The OpenStreetMap base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names, with labels in Noto Sans. The 3D map lays its sea, rivers, woods, parks and roads on the ground.",
+                            "台灣實景地圖的 OpenStreetMap 底圖（地圖樣式選單的「OSM」），不用網路也能顯示：海、河川、森林、公園、道路、行政界與地名，文字用 Noto Sans。3D 地圖把其中的海、河川、森林、公園與道路鋪在地面上。"
                         ),
                         notice: language.text(
                             "© OpenMapTiles © OpenStreetMap contributors. The map data is © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0; the tiles and the tool that makes them are in the game’s public repository under the same licence. The tiles’ layers follow the OpenMapTiles schema (CC BY 4.0). Noto Sans is © The Noto Project Authors, under the SIL Open Font License 1.1, which comes with the app.",
@@ -295,6 +308,26 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "MapLibre Native", url: mapLibreURL),
                             DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
+                        ]
+                    ),
+                    // Decision 234: what reads the base map's tiles and cuts
+                    // its shapes for the 3D map, ported into the game: ISC
+                    // asks for its notice in every copy; zlib's licence
+                    // asks for none in an app, but the origin is told.
+                    DataSourceCredit(
+                        id: "map3DGround",
+                        title: "earcut, puff",
+                        detail: language.text(
+                            "The software that lays the base map's roads, rivers, woods and parks on the 3D map's ground.",
+                            "把底圖的道路、河川、森林與公園鋪在 3D 地圖地面上的軟體。"
+                        ),
+                        notice: language.text(
+                            "earcut: Copyright (c) 2016, Mapbox, under the ISC License. puff: Copyright (C) 2002-2013 Mark Adler, under the zlib License. Both are altered from the originals.",
+                            "earcut：Copyright (c) 2016, Mapbox，依 ISC 授權使用。puff：Copyright (C) 2002-2013 Mark Adler，依 zlib 授權使用。兩者都經過修改。"
+                        ) + " " + iscPermission,
+                        links: [
+                            DataSourceCredit.Link(title: "earcut", url: earcutURL),
+                            DataSourceCredit.Link(title: "puff", url: puffURL),
                         ]
                     ),
                     // Decision 115: the steep slopes, worked out from the

@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 import GamePresentation
 import SwiftUI
@@ -64,7 +65,13 @@ struct Map3DPreviewScreen: View {
         }
         .task(id: Map3DSceneKey(world: session.world)) {
             let world = session.world
-            let built = await Task.detached(priority: .userInitiated) { Map3DScene(world: world) }.value
+            // Decision 234: on a real-world map, the base map's roads, rivers
+            // and cover, read from the file the 2D map draws.
+            let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
+            let built = await Task.detached(priority: .userInitiated) {
+                let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
+                return Map3DScene(world: world, baseMap: baseMap)
+            }.value
             scene = built
             sceneVersion &+= 1
         }

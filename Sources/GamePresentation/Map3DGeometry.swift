@@ -251,6 +251,31 @@ public struct Map3DMesh: Sendable {
                 texture: paint?.coordinates(corners, normal: normal))
     }
 
+    /// Triangles lying on the ground (decision 234): `triangles` index
+    /// `points`, three to a triangle in either turn, each turned to face up
+    /// and painted with `paint` as a top is.
+    public mutating func addFlat(_ points: [Map3DPoint], triangles: [Int], color: UInt32, paint: Map3DPaint? = nil) {
+        let layer = paint.map { Float($0.surface.rawValue) } ?? Map3DVertex.plain
+        var index = 0
+        while index + 2 < triangles.count {
+            var a = points[triangles[index]], b = points[triangles[index + 1]], c = points[triangles[index + 2]]
+            index += 3
+            guard var normal = (b - a).cross(c - a).normalized else { continue }
+            if normal.y < 0 {
+                swap(&b, &c)
+                normal = normal * -1
+            }
+            let corners = [a, b, c]
+            let texture = paint?.coordinates(corners, normal: normal)
+            let base = UInt32(vertices.count)
+            for (at, corner) in corners.enumerated() {
+                let place: (u: Float, v: Float) = texture?[at] ?? (0, 0)
+                vertices.append(Map3DVertex(corner, normal: normal, color: color, u: place.u, v: place.v, layer: layer))
+            }
+            indices += [base, base + 1, base + 2]
+        }
+    }
+
     /// The way a flat face `a b c d` (counter-clockwise seen from outside)
     /// looks, or `nil` when it has no area.
     static func normal(of corners: [Map3DPoint]) -> Map3DPoint? {
@@ -433,8 +458,9 @@ public struct Map3DMesh: Sendable {
 public enum Map3DShadow {
     /// How far over the ground a shadow lies, in metres: clear of the
     /// ground (and the plazas 0.03 over it) at the farthest the camera
-    /// goes.
-    public static let lift: Float = 0.08
+    /// goes, and over the real map's cover and roads (0.04–0.36,
+    /// decision 234), under the track's bed (``Map3DScene/railLift``).
+    public static let lift: Float = 0.4
 
     /// Black with `darkness` (0–1) as its alpha.
     public static func color(_ darkness: Float) -> UInt32 {
