@@ -8808,6 +8808,43 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：shader 與 `Map3DMetalView` 的編譯、PNG 的載入。
 - **UNVERIFIED**（要 TestFlight 實機）：畫面、幀時間與記憶體。
 
+**續（2026-10-15 下午）：素材庫第二批，四種店面與百葉窗**
+
+作者在素材庫加了 7 張圖（參考庫 `0597415`，`REFRESH_COMPARISON_2026-10-15.md`）。用了其中 5 張，不另取決策號。
+
+- **新的 5 層**（13 → 18 層，PNG 430 → 705 KB）：
+
+  | 層 | 素材庫的圖 | 改了什麼 |
+  | --- | --- | --- |
+  | `shopOptical` | `japan/assets/modern-optical-glazing-v1`、`glass-map`、`plaster-map` | 眼鏡店：只取貨架，左右翻轉，模糊，疊上玻璃的天空反光；藏青雨遮 |
+  | `shopPhone` | `modern-phone-glazing-v1`、`glass-map`、`plaster-map` | 手機店：同上；綠松雨遮 |
+  | `shopEatery` | `shop-interior-ramen-v1`、`glass-map`、`plaster-map` | 小吃店：取吧台與碗架，調暖；紅雨遮 |
+  | `shopTea` | `shop-interior-tea-v1`、`glass-map`、`plaster-map` | 茶行：取茶罐架；綠雨遮 |
+  | `flatBlinds` | `modern-upper-glazing-v1`（上半的百葉）、`glass-map`、`plaster-map` | 公寓窗，百葉拉下一半，調亮 |
+
+  每間店都有空白招牌帶與自己顏色的雨遮，沒有文字；內裝的小標籤縮到 256 px 已經看不清楚。
+- **場景**：
+  - 透天厝的店面、塔樓的裙樓，依位置在五種店面（原本的 `shopfront` 加四種）裡挑一種。
+  - 公寓與住宅大樓依位置挑有沒有百葉。
+  - 每次相同（`Map3DSurfaceTests`）。
+- **沒有用的**：
+  - `modern-travel-glazing-v1`：滿是日文旅遊海報（沖縄、北海道）；
+  - `noren-tea-v1`：日文字與標誌。
+  - art-style §7 不放品牌字與真實店招，台灣的街景也不該出現日文招牌。
+- **檢查**：
+  - 新 5 層和素材庫每一張的相關係數最高 0.63（`shopEatery`）。
+  - 原本 13 層的像素沒變。
+  - PNG 和素材庫的檔案都不同。
+- **四個角度**：
+  - 玩家：街上的店不再一模一樣，眼鏡行、手機行、小吃店、茶行都是台灣街上常見的。
+  - 開發：多 5 層、約 280 KB，draw call 與三角形不變。
+  - 美術：照「和目前美術一致」：內裝模糊、壓暗，只在拉近時看得出來，顏色是雨遮與招牌帶。
+  - 音樂：無。
+- **驗證**：
+  - Linux：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨，Map3D 測試 38 個通過。
+  - 預覽 `docs/art/map3d-surfaces-2026-10-15/shops.jpg`、`surfaces-shops.jpg` 用 WebGL 軟體算圖。
+  - 實機 UNVERIFIED。
+
 ### 232. 原生 3D 地圖第四步：接地陰影
 
 2026-10-15。作者：「接著做接地陰影」。這是決策 229 交接時留下的下一步。號碼依工作登記 #231：決策 232；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。

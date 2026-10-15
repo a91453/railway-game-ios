@@ -113,9 +113,9 @@ final class Map3DSurfaceTests: XCTestCase {
         let painted = Dictionary(grouping: vertices.compactMap(\.surface)) { $0 }.mapValues(\.count)
         // The ground and the track, the platforms, the city's walls and
         // roofs: every surface but the shops (no shops stand low on this
-        // map) is somewhere on it.
+        // map) is somewhere on it, flats with and without blinds.
         for surface in [Map3DSurface.grass, .paving, .ballast, .concrete, .roof, .plaster, .homeWindows, .homeBalcony, .shutter, .flatWindows,
-                        .officeGlass, .metalSheet] {
+                        .officeGlass, .metalSheet, .flatBlinds] {
             XCTAssertGreaterThan(painted[surface] ?? 0, 0, "\(surface)")
         }
         // The ground is grass but for the water; the rails stay plain.
@@ -138,6 +138,16 @@ final class Map3DSurfaceTests: XCTestCase {
             return Double(vertex.y) > ground + 0.05
         }
         XCTAssertGreaterThan(Double(above.count) / Double(tops.count), 0.9, "\(above.count) of \(tops.count) over the ground")
+    }
+
+    func testShopsAndFlatsAreOfEveryKind() throws {
+        // Decision 231 (continued): the towers' podiums are shops of every
+        // trade on the demo map, picked by where they stand, and the same
+        // every time.
+        let scene = Map3DScene(world: DemoWorld.make(in: .english))
+        let painted = Set(scene.chunks.flatMap(\.mesh.vertices).compactMap(\.surface))
+        for shop in Map3DSurface.shops { XCTAssertTrue(painted.contains(shop), "\(shop)") }
+        XCTAssertEqual(Map3DScene(world: DemoWorld.make(in: .english)).chunks.map(\.mesh.vertices), scene.chunks.map(\.mesh.vertices))
     }
 
     func testTrainsStayPlain() throws {
