@@ -614,8 +614,8 @@ private struct SpeedControl: View {
 /// is set to. Decision 226: how fast the game really runs is no longer
 /// written out, which made the board two rows on a phone; a `warning` dot
 /// says the device is falling behind, and tapped says by how much
-/// (``ViewingSpeed/lagText(in:)``). Nothing while paused, keeping up and
-/// following no train.
+/// (``ViewingSpeed/lagText(in:)``). While the game keeps up, the dot's
+/// place stays empty (#631); nothing else while following no train.
 private struct ViewingReadout: View {
     let session: GameSession
     @State private var showsLag = false
