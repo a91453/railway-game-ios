@@ -1593,3 +1593,12 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/street_scene_reference_clean/source/assets/scene.js` `updateDetail`：建物群近、遠兩版，依鏡頭距離切換，1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`、`Map3DScene.Chunk.far` | 餘裕照用；距離改成 700 m 起、隨鏡頭距離放大，切換的單位是 512 m 的分塊 |
 | `Railway/procedural_assets_reference_clean/` japan 包的陽台、冷氣、blade sign 的尺寸 | `Map3DBuildings.addFrontDetail` | 尺寸照用，形狀是本專案自己的盒子 |
 
+## 車款外觀（決策 243）
+
+| 參考 | 用在 | 怎麼用 |
+| --- | --- | --- |
+| `Web/CityView/src/world/trains.js` 的 `LIVERIES`（`hsr`、`emu3000`、玻璃色、預設不鏽鋼） | `TrainLivery.highSpeed`、`.emu3000`、`.metroC381` | 色值照搬 |
+| 參考庫 `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 各車的 `livery` 文字 | `TrainLivery.emu3000`、`.puyuma`、`.emu800` | 照描述（EMU3000 黑面罩、普悠瑪紅頭紅帶、EMU800 藍面板黃帶）取色，色值本專案的 |
+| 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
+| 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
+
