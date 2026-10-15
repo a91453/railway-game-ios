@@ -71,22 +71,20 @@ extension GameWorld {
         return index
     }
 
-    /// Decision 228 with decision 37: whether a train would be held up
-    /// (``heldUp(_:within:near:)``) within the `span` seconds from `start`
-    /// that the step is about to move the trains in one go. Where none is,
-    /// the span moves them as far as one second at a time would; where one
-    /// is, how far it gets depends on where the others are each second.
-    func spacingMayHold(from start: GameTime, within span: Int64, memo: inout DirectionMemo) -> Bool {
+    /// Decision 228 with decision 37: whether a train may be held up in
+    /// the `span` seconds the step is about to move the
+    /// trains in one go. Then how far it gets depends on where the others
+    /// are each second, so they move one second at a time. Whether it is
+    /// held then depends on how far the others have come, and how sure the
+    /// faster one is to catch it: so any train that a train would stop
+    /// short of anywhere along its way counts, not only one within the
+    /// span's reach. Without a line of real runs, or under traffic control,
+    /// never.
+    func spacingMayHold(within span: Int64) -> Bool {
+        guard span > 1 else { return false }
         let index = spacingIndex()
         guard !index.isEmpty else { return false }
-        // How far each train goes in the span; another may come that far
-        // toward it meanwhile, so it looks as far again as the farthest.
-        var travel: [(train: Train, distance: Int64)] = []
-        for train in trains where train.position != nil && train.movement.rate > 0 {
-            travel.append((train, travelShare(of: train, from: start, memo: &memo)(span)))
-        }
-        let farthest = travel.map(\.distance).max() ?? 0
-        return travel.contains { heldUp($0.train, within: (Int64.max / 4) + 0 * farthest, near: index) != nil }
+        return trains.contains { $0.position != nil && $0.movement.rate > 0 && heldUp($0, within: .max / 4, near: index) != nil }
     }
 
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.

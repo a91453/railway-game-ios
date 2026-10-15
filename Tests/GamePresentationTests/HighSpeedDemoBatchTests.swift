@@ -19,7 +19,6 @@ final class HighSpeedDemoBatchTests: XCTestCase {
             XCTAssertEqual(minutes.clock.now, seconds.clock.now)
             guard minutes.trains == seconds.trains else {
                 let differ = zip(minutes.trains, seconds.trains).filter { $0.0 != $0.1 }.map(\.0.name)
-                for (a, b) in zip(minutes.trains, seconds.trains) where a != b { print("DIFF", a.name, a.position as Any, a.movement.rate, a.execution as Any, "\n   vs", b.position as Any, b.movement.rate, b.execution as Any) }
                 return XCTFail("minute \(minute): \(differ.joined(separator: ", ")) differ")
             }
         }

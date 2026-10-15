@@ -2643,12 +2643,6 @@ public struct GameWorld: Equatable, Sendable {
                 if !trafficPlan(memo: &memo.directions).waits.isEmpty { span = 1 }
                 memo.directions.stepTraffic = traffic
             }
-            // Decision 228: a train held up behind another stops where one
-            // second at a time leaves it only one second at a time, as the
-            // one ahead moves on between them (decision 37).
-            if span > 1, moves[span] == nil, spacingMayHold(from: start, within: span, memo: &memo.directions) {
-                span = 1
-            }
             let beforeTraffic = traffic.waits.isEmpty ? nil : trains
             // Nothing has changed a train since the spans were tried.
             if let move = moves[span] {
@@ -2656,11 +2650,31 @@ public struct GameWorld: Equatable, Sendable {
                 if move.moved {
                     changed = true
                 }
-            } else if moveTrains(from: start, for: span, memo: &memo.directions) {
-                changed = true
-            }
-            if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span), memo: &memo.directions) {
-                changed = true
+                if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span), memo: &memo.directions) {
+                    changed = true
+                }
+            } else if span > 1, spacingMayHold(within: span) {
+                // Decision 228: a train held up behind another stops where
+                // one second at a time leaves it only one second at a time,
+                // as the one ahead moves on between them (decision 37).
+                // Nothing else happens within the span, so only the trains
+                // move second by second.
+                for second in 0..<span {
+                    let at = Self.saturating(start, plus: second)
+                    if moveTrains(from: at, for: 1, memo: &memo.directions) {
+                        changed = true
+                    }
+                    if dropRunsHeldUp(endingAt: Self.saturating(at, plus: 1), memo: &memo.directions) {
+                        changed = true
+                    }
+                }
+            } else {
+                if moveTrains(from: start, for: span, memo: &memo.directions) {
+                    changed = true
+                }
+                if dropRunsHeldUp(endingAt: Self.saturating(start, plus: span), memo: &memo.directions) {
+                    changed = true
+                }
             }
             clock.advance(basicSteps: span)
             remaining -= span
