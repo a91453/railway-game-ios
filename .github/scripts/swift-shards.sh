@@ -571,8 +571,11 @@ run_shard() {
     problems=1
   fi
   echo "Slowest classes:"
+  # awk, not head: head stops reading after five lines, and sort, still
+  # writing a long list (rest's), dies of SIGPIPE, which pipefail turns into
+  # a failed shard whose tests all passed.
   sed -n -E "s/^Test Case '([^.']+)\\.[^']*' passed \\(([0-9.]+) seconds\\)/\\2 \\1/p" "$log" |
-    awk '{ t[$2] += $1 } END { for (c in t) printf "%8.1fs  %s\n", t[c], c }' | sort -rn | head -5
+    awk '{ t[$2] += $1 } END { for (c in t) printf "%8.1fs  %s\n", t[c], c }' | sort -rn | awk 'NR <= 5'
   echo "::endgroup::"
 
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
