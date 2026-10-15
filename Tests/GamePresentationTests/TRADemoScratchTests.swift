@@ -21,13 +21,23 @@ final class TRADemoScratchTests: XCTestCase {
         for _ in 0..<(24 * 60 + 30) {
             try world.advance(ticks: 1)
             let minute = world.clock.now.minute
-            if (9 * 60 + 8)...(9 * 60 + 14) ~= minute {
-                for t in world.trains where t.name == "Tze-Chiang 29" || t.name == "Tze-Chiang 31" {
+            if (7 * 60 + 10)...(7 * 60 + 22) ~= minute || (23 * 60 + 14)...(23 * 60 + 22) ~= minute {
+                for t in world.trains where t.name == "Local 7" || t.name == "Local 2" {
                     guard case .onEdge(let tr, let off)? = t.position else { continue }
                     let di = tracks.down.firstIndex(of: tr.edge)
                     let at = di.map { Int((layout.plan.distances[$0] + Double(off)) / 64) } ?? -1
                     let ex = String(describing: t.execution)
                     let stopped = world.stationsStoppedAt(by: t.id).compactMap { world.station(id: $0)?.name }
+                    var kindOf = "?"
+                    if tracks.down.contains(tr.edge) { kindOf = "down" }
+                    if tracks.up.contains(tr.edge) { kindOf = "up" }
+                    if tracks.sidings.contains(tr.edge) { kindOf = "siding" }
+                    if tracks.crossovers.contains(tr.edge) { kindOf = "crossover" }
+                    if tracks.ends.contains(tr.edge) { kindOf = "end" }
+                    if tracks.downLoops.contains(tr.edge) { kindOf = "downLoop" }
+                    if tracks.upLoops.contains(tr.edge) { kindOf = "upLoop" }
+                    let ui = tracks.upInOrder.firstIndex(of: tr.edge).map { Int(layout.up.distances[$0] / 64) } ?? -1
+                    print("TRACE \(kindOf) up@\(ui)", terminator: " ")
                     print("TRACE \(minute / 60):\(minute % 60) \(t.name) edge \(tr.edge) down#\(String(describing: di)) at m \(at) \(tr.direction) end \(String(describing: t.movement.end)) rem \(t.movement.remainingEdges.count) \(ex) stopped \(stopped)")
                 }
             }

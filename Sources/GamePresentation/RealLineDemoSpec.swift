@@ -56,6 +56,10 @@ struct RealLineDemoSpec: Sendable {
     /// through each of its nodes, as where the ends lie on a curve (the
     /// TRA demo's): one edge from a node to the next.
     var rampsFollowTrack = false
+    /// The sidings a depot has beyond one for each set that stands there on
+    /// the first night (``HighSpeedDemo/spareSidings``): more where more
+    /// sets wait there by day than stand there at night.
+    var spareSidings = HighSpeedDemo.spareSidings
 
     /// Cars of the longest sets: every platform takes them.
     var cars: Int { kinds.map(\.cars).max() ?? 1 }

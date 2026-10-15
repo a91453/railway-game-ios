@@ -483,7 +483,7 @@ public enum HighSpeedDemo {
             let ladders = places.indices.compactMap { index -> (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])? in
                 let standingThere = serving[index].reduce(0) { $0 + standing[$1] }
                 guard standingThere > 0 else { return nil }
-                let sets = standingThere + HighSpeedDemo.spareSidings
+                let sets = standingThere + spec.spareSidings
                 let place = places[index], real = spec.depots[index]
                 if place.along < platforms[0].lowerBound {
                     // Beyond the north end: both sides of the down track,

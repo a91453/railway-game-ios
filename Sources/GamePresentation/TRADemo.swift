@@ -122,7 +122,9 @@ public enum TRADemo {
         landAt: 4 * 60 + 30,
         opensAt: 7 * 60,
         // Toucheng and Su'aoxin stand on curves.
-        rampsFollowTrack: true
+        rampsFollowTrack: true,
+        // By day more sets wait at the ends than stand there at night.
+        spareSidings: 4
     )
 
     /// The demo: a new whole-Taiwan game with the Yilan Line built,
