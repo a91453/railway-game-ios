@@ -1851,7 +1851,7 @@ public final class GameSession {
         if let preference { routes.append(preference) }
         let chosen = routes
         let done = perform(.setLineRoutes(line.id, chosen, pattern: pattern)) { _, _, _ in
-            language.text("Updated the service's physical path.", "已更新停站模式的軌段與月台。")
+            language.text("Updated the tracks the line takes between these stops.", "已更新路線在這兩站之間走的軌段。")
         }
         // Decision 201: the map shows the leg as the trains now take it.
         if done != nil { previewRoute(from: from, to: to, pattern: pattern) }

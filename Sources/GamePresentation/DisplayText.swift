@@ -253,12 +253,12 @@ extension GameError {
             language.text("Enter a name.", "請輸入名稱。")
         case .insufficientFunds(let required, let available):
             Self.insufficientFundsText(required: required, available: available, doing: nil, in: language)
-        case .unknownTrain(let id):
-            language.text("There is no train #\(id.rawValue).", "沒有列車 #\(id.rawValue)。")
-        case .trainAlreadyPlaced(let id):
-            language.text("Train #\(id.rawValue) is already on the track.", "列車 #\(id.rawValue) 已經在軌道上。")
-        case .trainNotPlaced(let id):
-            language.text("Train #\(id.rawValue) is not on the track.", "列車 #\(id.rawValue) 不在軌道上。")
+        case .unknownTrain:
+            language.text("That train is no longer there.", "那列車已經不在了。")
+        case .trainAlreadyPlaced:
+            language.text("That train is already on the track.", "這列車已經在軌道上。")
+        case .trainNotPlaced:
+            language.text("That train is not on the track.", "這列車不在軌道上。")
         case .invalidTrainPosition:
             language.text(
                 "A train can only be placed on the track, with track behind it for all its cars.",
@@ -280,29 +280,29 @@ extension GameError {
                 "A timetable's times cannot be negative or go back: each stop leaves no earlier than it arrives, and no later than the next stop arrives. A repeating timetable needs a stop, and a period long enough to start again without going back.",
                 "時刻表的時間不能是負數，也不能倒流：每一站的發車不早於到站，也不晚於下一站的到站。重複的時刻表至少要有一站，週期也要夠長，重新開始時時間才不會倒流。"
             )
-        case .unknownStation(let id):
-            language.text("There is no station #\(id.rawValue).", "沒有車站 #\(id.rawValue)。")
-        case .trainInService(let id):
+        case .unknownStation:
+            language.text("That station is no longer there.", "那個車站已經不在了。")
+        case .trainInService:
             language.text(
-                "Train #\(id.rawValue) is on the track or on a line. Take it off the line and the track first.",
-                "列車 #\(id.rawValue) 還在軌道或路線上。請先把它從路線與軌道上撤下。"
+                "That train is on the track or on a line. Take it off the line and the track first.",
+                "這列車還在軌道或路線上。請先把它從路線與軌道上撤下。"
             )
-        case .trainServiceActive(let id):
+        case .trainServiceActive:
             language.text(
-                "Train #\(id.rawValue) is running its timetable. Stop its service first.",
-                "列車 #\(id.rawValue) 正在依時刻表運行。請先停止它的服務。"
+                "That train is running its timetable. Stop its service first.",
+                "這列車正在依時刻表運行。請先停止它的服務。"
             )
-        case .trainServiceNotActive(let id):
-            language.text("Train #\(id.rawValue) is not running a timetable.", "列車 #\(id.rawValue) 沒有在依時刻表運行。")
-        case .noTimetable(let id):
-            language.text("Train #\(id.rawValue) has no timetable to run.", "列車 #\(id.rawValue) 沒有可執行的時刻表。")
-        case .trainNotAtFirstStop(let id):
+        case .trainServiceNotActive:
+            language.text("That train is not running a timetable.", "這列車沒有在依時刻表運行。")
+        case .noTimetable:
+            language.text("That train has no timetable to run.", "這列車沒有可執行的時刻表。")
+        case .trainNotAtFirstStop:
             language.text(
-                "Train #\(id.rawValue) must be stopped at its timetable's first station to start its service.",
-                "列車 #\(id.rawValue) 必須停在時刻表的第一站，才能開始服務。"
+                "That train must be stopped at its timetable's first station to start its service.",
+                "這列車必須停在時刻表的第一站，才能開始服務。"
             )
-        case .unknownLine(let id):
-            language.text("There is no line #\(id.rawValue).", "沒有路線 #\(id.rawValue)。")
+        case .unknownLine:
+            language.text("That line is no longer there.", "那條路線已經不在了。")
         case .invalidLineStops:
             language.text(
                 "A line calls at two stations or more, and not at the same station twice in a row. A ring calls at three or more, and not at the same station first and last.",
@@ -332,13 +332,13 @@ extension GameError {
             )
         case .invalidHeadway:
             language.text("A target headway must be between 2 minutes and 24 hours.", "目標班距須在 2 分鐘到 24 小時之間。")
-        case .trainOnLine(let id):
+        case .trainOnLine:
             language.text(
-                "Train #\(id.rawValue) runs for a line. Take it off the line first.",
-                "列車 #\(id.rawValue) 正在為路線服務。請先把它從路線移除。"
+                "That train runs for a line. Take it off the line first.",
+                "這列車正在為路線服務。請先把它從路線移除。"
             )
-        case .trainNotOnLine(let id):
-            language.text("Train #\(id.rawValue) is not on a line.", "列車 #\(id.rawValue) 不屬於任何路線。")
+        case .trainNotOnLine:
+            language.text("That train is not on a line.", "這列車不屬於任何路線。")
         case .invalidLineRoutePreference:
             language.text("Choose a route for a leg of this service.", "請為這個停站模式的路段選擇進路。")
         case .invalidLineRuns:
@@ -408,10 +408,10 @@ extension GameError {
                 "Without that track, two tracks nearby would run less than 4 m apart with no junction near. Remove one of them first.",
                 "拆掉這段軌道之後，附近兩段軌道之間會不到 4 公尺，又沒有相接的交會點。請先拆掉其中一條。"
             )
-        case .trackEdgeInLineRoute(let line):
+        case .trackEdgeInLineRoute:
             language.text(
-                "Line #\(line.rawValue)'s chosen path runs along that track. Clear the line's path first.",
-                "路線 #\(line.rawValue) 指定的進路經過這段軌道。請先清除該路線指定的進路。"
+                "A line's chosen path runs along that track. Clear the line's path first.",
+                "有路線指定的進路經過這段軌道。請先清除該路線指定的進路。"
             )
         case .trackEdgeHasPlatform:
             language.text(
@@ -423,15 +423,15 @@ extension GameError {
                 "A platform must lie on a level stretch of a single track and not overlap another platform.",
                 "月台必須位於同一段軌道的平坦區間，而且不能與其他月台重疊。"
             )
-        case .trackReserved(let id):
+        case .trackReserved:
             language.text(
-                "Train #\(id.rawValue)'s route runs over that track. Wait for it to pass.",
-                "列車 #\(id.rawValue) 的路線要經過這段軌道，請等它通過。"
+                "A train's route runs over that track. Wait for it to pass.",
+                "有列車的路線要經過這段軌道，請等它通過。"
             )
-        case .trainsShareTrack(let first, let second):
+        case .trainsShareTrack:
             language.text(
-                "Trains #\(first.rawValue) and #\(second.rawValue) need the same track, so traffic control can't be turned on. Move one of them first.",
-                "列車 #\(first.rawValue) 與 #\(second.rawValue) 需要同一段軌道，所以無法開啟交通控制。請先移動其中一台。"
+                "Two trains need the same track, so traffic control can't be turned on. Move one of them first.",
+                "有兩列車需要同一段軌道，所以無法開啟交通控制。請先移動其中一列。"
             )
         case .invalidStationDemand:
             // Money's text is only the digits, grouped by thousands.
@@ -470,14 +470,14 @@ extension GameError {
                 "\(Train.standardCarName(in: language)) is not available in this era.",
                 "這個年代還沒有\(Train.standardCarName(in: language))。"
             )
-        case .buildingOverlaps(let id):
-            language.text("That would stand on building #\(id.rawValue).", "這裡已經有建物 #\(id.rawValue)。")
+        case .buildingOverlaps:
+            language.text("That would stand on another building.", "這裡已經有建物。")
         case .buildingOnTrack:
             language.text("A building cannot stand on or right beside track.", "建物不能蓋在軌道上或緊貼軌道。")
-        case .buildingOnStation(let id):
-            language.text("A building cannot stand on station #\(id.rawValue).", "建物不能蓋在車站 #\(id.rawValue) 上。")
-        case .unknownPlacedBuilding(let id):
-            language.text("There is no building #\(id.rawValue).", "沒有建物 #\(id.rawValue)。")
+        case .buildingOnStation:
+            language.text("A building cannot stand on a station.", "建物不能蓋在車站上。")
+        case .unknownPlacedBuilding:
+            language.text("That building is no longer there.", "那棟建物已經不在了。")
         case .invalidZoneArea:
             language.text(
                 "Zone cells inside the map, at most \(Zoning.maximumSide) cells a side at a time.",
@@ -500,10 +500,10 @@ extension GameError {
             language.text("A viaduct or bridge stands at most 64 m above the ground.", "高架或橋離地面最多 64 公尺。")
         case .freightNotEnabled:
             language.text("This game has no freight.", "這局遊戲沒有貨運。")
-        case .freightFacilityExists(let id):
-            language.text("Station #\(id.rawValue) already has a freight yard.", "車站 #\(id.rawValue) 已經有貨運場。")
-        case .noFreightFacility(let id):
-            language.text("Station #\(id.rawValue) has no freight yard.", "車站 #\(id.rawValue) 沒有貨運場。")
+        case .freightFacilityExists:
+            language.text("That station already has a freight yard.", "這個車站已經有貨運場。")
+        case .noFreightFacility:
+            language.text("That station has no freight yard.", "這個車站沒有貨運場。")
         case .buildingMaterialsNotEnabled:
             language.text("This game has no building materials.", "這局遊戲沒有建材。")
         case .mapExpansionNotEnabled:

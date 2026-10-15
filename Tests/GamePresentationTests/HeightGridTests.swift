@@ -148,7 +148,7 @@ final class HeightGridTests: XCTestCase {
         let middle = GameWorld.newGameBounds.width / 2
         session.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
         let start = Int(Self.grid.height(at: PlanPoint(x: middle, y: middle), frame: RealWorldFrame(world: session.world)!).rounded())
-        XCTAssertEqual(session.networkDraftText(), "從新節點（地面海拔 \(start) 公尺）開始。請點終點，或從起點拖曳過去。")
+        XCTAssertEqual(session.networkDraftText(), "從新的一點（地面海拔 \(start) 公尺）開始。請點終點，或從起點拖曳過去。")
         session.tapNetwork(at: PlanPoint(x: middle + 8_192, y: middle), reach: 512)
         let end = Int(Self.grid.height(at: PlanPoint(x: middle + 8_192, y: middle), frame: RealWorldFrame(world: session.world)!).rounded())
         XCTAssertNotEqual(start, end, "128 m along a mountainside")
@@ -159,7 +159,7 @@ final class HeightGridTests: XCTestCase {
         blank.heights = Self.grid
         blank.selectTool(.network)
         blank.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
-        XCTAssertEqual(blank.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
+        XCTAssertEqual(blank.networkDraftText(), "從新的一點開始。請點終點，或從起點拖曳過去。")
 
         // Nor does a real-world map on flat ground (decision 198): its
         // track is level whatever the real heights.
@@ -167,7 +167,7 @@ final class HeightGridTests: XCTestCase {
         flat.heights = Self.grid
         flat.selectTool(.network)
         flat.tapNetwork(at: PlanPoint(x: middle, y: middle), reach: 512)
-        XCTAssertEqual(flat.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
+        XCTAssertEqual(flat.networkDraftText(), "從新的一點開始。請點終點，或從起點拖曳過去。")
     }
     /// A straight stretch is only its two ends, but the ground is surveyed
     /// every 16 m along it: a block between its ends must be read too, or

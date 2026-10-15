@@ -51,6 +51,29 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(GameError.invalidTrainLength.playerMessage(in: .traditionalChinese), "列車可以有 1 到 16 節車廂。")
     }
 
+    /// The PR #526–#626 review's player text: an error names no train,
+    /// station, line or building by its internal number ("Train #3"); the
+    /// player has just tapped the thing it is about.
+    func testNoErrorNamesAThingByItsNumber() {
+        let train = TrainID(rawValue: 3), station = StationID(rawValue: 4)
+        let errors: [GameError] = [
+            .unknownTrain(train), .trainAlreadyPlaced(train), .trainNotPlaced(train), .unknownStation(station),
+            .trainServiceActive(train), .trainServiceNotActive(train), .noTimetable(train), .trainNotAtFirstStop(train),
+            .unknownLine(LineID(rawValue: 5)), .trainOnLine(train), .trainNotOnLine(train), .trackEdgeInLineRoute(LineID(rawValue: 5)),
+            .trackReserved(train), .trainsShareTrack(TrainID(rawValue: 2), train), .buildingOverlaps(PlacedBuildingID(rawValue: 2)),
+            .buildingOnStation(station), .unknownPlacedBuilding(PlacedBuildingID(rawValue: 6)),
+            .freightFacilityExists(station), .noFreightFacility(station),
+        ]
+        for error in errors {
+            for language in [DisplayLanguage.english, .traditionalChinese] {
+                let text = error.playerMessage(in: language)
+                XCTAssertFalse(text.contains("#"), "\(error): \(text)")
+            }
+        }
+        XCTAssertEqual(GameError.trainAlreadyPlaced(train).playerMessage(in: .english), "That train is already on the track.")
+        XCTAssertEqual(GameError.freightFacilityExists(station).playerMessage(in: .traditionalChinese), "這個車站已經有貨運場。")
+    }
+
     func testTheMapAndTrainsReadInChinese() throws {
         var world = try makeWorld()
         try world.buildStation(named: "Central", at: PlanPoint(x: 2_560, y: 512))

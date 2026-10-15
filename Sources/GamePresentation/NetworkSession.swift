@@ -721,7 +721,7 @@ enum NetworkProblem: Error {
     func text(in language: DisplayLanguage) -> String {
         switch self {
         case .missingNode:
-            language.text("That node is gone. Tap the track again.", "那個節點已經不在了。請重新點選軌道。")
+            language.text("That end of the track is gone. Tap the track again.", "那個軌道端點已經不在了。請重新點選軌道。")
         case .tooClose:
             language.text(
                 "That point is too close to the other end: keep at least 22 m between them.",
@@ -734,8 +734,8 @@ enum NetworkProblem: Error {
             )
         case .slopedTurnout:
             language.text(
-                "A turnout goes on level track only, and this track climbs or falls. Start from a node at its end, or from level track.",
-                "轉轍器只能設在水平的軌道上，這段軌道有坡度。請從它端點的節點，或從水平的軌道接出。"
+                "A turnout goes on level track only, and this track climbs or falls. Start from its end, or from level track.",
+                "轉轍器只能設在水平的軌道上，這段軌道有坡度。請從它的端點，或從水平的軌道接出。"
             )
         }
     }
@@ -842,8 +842,8 @@ extension GameSession {
         case .build:
             guard let start = networkStart else {
                 return language.text(
-                    "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.",
-                    "請點軌道的起點：既有的節點、軌道上（在那裡設轉轍器），或任何地方建立新節點。"
+                    "Tap where the track starts: the end of a track, a track for a turnout there, or anywhere to start new track.",
+                    "請點軌道的起點：既有軌道的端點、軌道上（在那裡設轉轍器），或任何地方開始新的軌道。"
                 )
             }
             guard let end = networkEnd else {
@@ -905,11 +905,12 @@ extension GameSession {
 }
 
 extension NetworkAnchor {
-    /// "Node #3", or "a new node".
+    /// "the end of a track", or "a new point" (no internal numbers or
+    /// words for the player, the PR #526–#626 review).
     public func text(in language: DisplayLanguage) -> String {
         switch self {
-        case .node(let id): id.displayText(in: language)
-        case .point: language.text("a new node", "新節點")
+        case .node: language.text("the end of a track", "既有軌道的端點")
+        case .point: language.text("a new point", "新的一點")
         case .track(let point): language.text("a turnout on \(point.edge.displayText(in: language).lowercased())", "\(point.edge.displayText(in: language)) 上的新轉轍器")
         }
     }
@@ -1077,11 +1078,11 @@ extension GameSession {
     public func networkHeightText() -> String {
         let height = NetworkBuilding.lengthText(abs(networkHeight), in: language)
         if networkHeight > 0 {
-            return language.text("New nodes \(height) above the ground", "新節點：地面以上 \(height)")
+            return language.text("New track \(height) above the ground", "新軌道：地面以上 \(height)")
         } else if networkHeight < 0 {
-            return language.text("New nodes \(height) below the ground", "新節點：地面以下 \(height)")
+            return language.text("New track \(height) below the ground", "新軌道：地面以下 \(height)")
         }
-        return language.text("New nodes on the ground", "新節點：地面")
+        return language.text("New track on the ground", "新軌道：地面")
     }
 
     /// How long the next platform is: "Platform for 4 cars · 64 m".

@@ -1,3 +1,4 @@
+import Foundation
 import GameCore
 @testable import GamePresentation
 import XCTest
@@ -61,7 +62,7 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertEqual(one.cells.count, trips.count)
         XCTAssertEqual(one.cells.map(\.number), Array(1...trips.count))
         XCTAssertEqual(one.cells.map(\.start), trips.map(\.sentOut.seconds))
-        XCTAssertEqual(one.cells.first?.routeText, "A → A")
+        XCTAssertEqual(one.cells.first?.routeText, "A → B", "out to where it turns, not \"A → A\"")
         XCTAssertEqual(one.revenue, trips.reduce(.zero) { $0 + $1.fare })
         XCTAssertGreaterThan(one.revenue, .zero)
         XCTAssertEqual(one.revenue, one.cells.reduce(.zero) { $0 + $1.fare })
@@ -105,7 +106,9 @@ final class TrainRosterTests: XCTestCase {
 
     /// A trip sent out before midnight and still running after it is
     /// today's as well: a running train's row is not empty.
-    func testATripRunningPastMidnightIsInTodaysRow() throws {
+    /// A train of its own running a trip from before midnight into the
+    /// small hours.
+    private func pastMidnight() throws -> (GameWorld, TrainID) {
         var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
         try Self.track.build(in: &world)
         for (name, x) in [("A", 1), ("B", 3)] {
@@ -126,6 +129,11 @@ final class TrainRosterTests: XCTestCase {
         while world.clock.now.seconds < GameTime.secondsPerDay + 5 * 60 {
             try world.advance(ticks: 1)
         }
+        return (world, own)
+    }
+
+    func testATripRunningPastMidnightIsInTodaysRow() throws {
+        let (world, own) = try pastMidnight()
         let trip = try XCTUnwrap(world.trips(of: own).last)
         XCTAssertTrue(trip.isRunning)
         XCTAssertLessThan(trip.sentOut.seconds, GameTime.secondsPerDay, "sent out before midnight")
@@ -138,6 +146,42 @@ final class TrainRosterTests: XCTestCase {
         // Yesterday's roster has it too, where it began.
         let yesterday = try XCTUnwrap(TrainRoster(world: world, day: .yesterday).rows.first { $0.train == own })
         XCTAssertEqual(yesterday.cells.last?.start, trip.sentOut.seconds)
+    }
+
+    /// The fares of a trip from before midnight were booked yesterday:
+    /// today's row shows the trip but does not count them again (the PR
+    /// #627–#646 review).
+    func testATripFromBeforeMidnightCountsItsFaresOnlyYesterday() throws {
+        let (running, own) = try pastMidnight()
+        // The trip as if riders had paid 500 on it before midnight.
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(SavedGame(world: running))) as? [String: Any])
+        var world = try XCTUnwrap(json["world"] as? [String: Any])
+        var log = try XCTUnwrap(world["tripLog"] as? [[String: Any]])
+        log[log.count - 1]["fare"] = 500
+        world["tripLog"] = log
+        json["world"] = world
+        let read = try JSONDecoder().decode(SavedGame.self, from: JSONSerialization.data(withJSONObject: json)).world
+        XCTAssertEqual(read.trips(of: own).last?.fare, Money(500))
+
+        let yesterday = try XCTUnwrap(TrainRoster(world: read, day: .yesterday).rows.first { $0.train == own })
+        let today = try XCTUnwrap(TrainRoster(world: read).rows.first { $0.train == own })
+        XCTAssertEqual(today.cells.first?.fare, Money(500), "the cell still shows what the trip took")
+        XCTAssertEqual(yesterday.revenue + today.revenue, yesterday.cells.reduce(Money.zero) { $0 + $1.fare }
+            + today.cells.dropFirst().reduce(Money.zero) { $0 + $1.fare }, "each fare counted on one day")
+        XCTAssertEqual(today.revenue, today.cells.dropFirst().reduce(Money.zero) { $0 + $1.fare })
+    }
+
+    /// A line's trip runs out to the far end and back: its cell names
+    /// where it turns, as its planned trips, the train card and the
+    /// departure board do, not "West → West" (the PR #627–#646 review).
+    func testALoggedRoundTripNamesWhereItTurns() throws {
+        var world = DemoWorld.make(in: .english)
+        world.setLineAccounts(true)
+        try world.advance(ticks: 600)
+        let roster = TrainRoster(world: world)
+        let row = try XCTUnwrap(roster.rows.first { $0.name == "Train 1" })
+        let logged = try XCTUnwrap(row.cells.first { $0.state != .planned })
+        XCTAssertEqual([logged.from, logged.to], ["West", "East"])
     }
 
     /// Without the trip log (no line accounts) the trains are still listed

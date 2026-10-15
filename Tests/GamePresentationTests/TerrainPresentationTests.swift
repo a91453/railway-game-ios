@@ -303,7 +303,7 @@ final class TerrainPresentationTests: XCTestCase {
         session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row + 4_096), reach: 16)
         XCTAssertEqual(
             session.networkPreview?.problem,
-            "A turnout goes on level track only, and this track climbs or falls. Start from a node at its end, or from level track."
+            "A turnout goes on level track only, and this track climbs or falls. Start from its end, or from level track."
         )
     }
 

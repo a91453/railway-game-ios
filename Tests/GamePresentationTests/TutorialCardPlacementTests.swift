@@ -488,6 +488,52 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertEqual(moved, Frame(x: atOrigin.x + 40, y: atOrigin.y + 30, width: atOrigin.width, height: atOrigin.height))
     }
 
+    /// The folded card with a long title and large text, wider than
+    /// a phone held upright. Laid out at its own width it ran past the
+    /// screen; it is cut to the screen less the margins.
+    func testAFoldedCardIsNeverWiderThanTheScreen() {
+        let upright = Frame(x: 0, y: 0, width: 375, height: 667)
+        let placement = TutorialCardPlacement(target: nil, controls: [], required: [], map: nil)
+        // A card that keeps its own width, whatever it is offered (the
+        // folded card did: `fixedSize`).
+        let stubborn = placement.frame(in: upright) { _ in Size(width: 520, height: 52) }
+        XCTAssertLessThanOrEqual(stubborn.width, upright.width - 32)
+        XCTAssertGreaterThanOrEqual(stubborn.minX, upright.minX)
+        XCTAssertLessThanOrEqual(stubborn.maxX, upright.maxX)
+
+        // The folded card offered the screen's width, its title cut short.
+        let longTitle = { (proposal: Size) in Size(width: min(520, proposal.width), height: 52) }
+        let folded = placement.folded.frame(in: upright, measure: longTitle)
+        XCTAssertEqual(folded.width, upright.width - 32)
+        XCTAssertGreaterThanOrEqual(folded.minX, upright.minX)
+        XCTAssertLessThanOrEqual(folded.maxX, upright.maxX)
+        // On a wide screen it keeps its whole title, wider than the open
+        // card's 340.
+        let tablet = Frame(x: 0, y: 0, width: 1_024, height: 768)
+        XCTAssertEqual(placement.folded.frame(in: tablet, measure: longTitle).width, 520)
+        XCTAssertEqual(placement.frame(in: tablet, measure: longTitle).width, 340)
+    }
+
+    /// The folded card is one line: it is never measured narrower to
+    /// leave the map free, as the open card is.
+    func testTheFoldedCardIsNotNarrowedForTheMap() {
+        // A card over the whole of a map it leaves no band of.
+        let placement = TutorialCardPlacement(target: Self.screen, controls: [], required: [], map: Self.screen, maxWidth: 2_000)
+        let wide = { (proposal: Size) in Size(width: min(700, proposal.width), height: min(330, proposal.height)) }
+        var openOffered: [Size] = []
+        _ = placement.frame(in: Self.screen) { proposal in
+            openOffered.append(proposal)
+            return wide(proposal)
+        }
+        XCTAssertGreaterThan(openOffered.count, 1, "the open card is measured again, shorter or narrower")
+        var foldedOffered: [Size] = []
+        _ = placement.folded.frame(in: Self.screen) { proposal in
+            foldedOffered.append(proposal)
+            return wide(proposal)
+        }
+        XCTAssertEqual(foldedOffered, [Size(width: Self.screen.width - 32, height: Self.screen.height - 32)])
+    }
+
     /// No target on screen: the middle.
     func testWithoutATargetTheCardIsInTheMiddle() {
         let placement = TutorialCardPlacement(target: nil, controls: Self.hud, required: [], map: nil)

@@ -176,7 +176,7 @@ final class LineLossFixesTests: XCTestCase {
         let far = try world.buildStation(named: "Far Depot", at: PlanPoint(x: first.point.x + 40_000, y: first.point.y)).id
         try world.setStationDepot(far, to: true)
         try world.setLineDepot(Self.line, to: far)
-        XCTAssertEqual(world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depot: "Far Depot"))
+        XCTAssertEqual(world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depots: ["Far Depot"]))
         let near = try world.buildStation(named: "Near Depot", at: PlanPoint(x: first.point.x + 2_000, y: first.point.y)).id
         try world.setStationDepot(near, to: true)
         let fix = try XCTUnwrap(world.lineLossFix(.emptyRuns, on: Self.line))
@@ -187,11 +187,39 @@ final class LineLossFixesTests: XCTestCase {
         session.applyLineLossFix(fix, to: Self.line)
         XCTAssertEqual(session.message?.kind, .success)
         XCTAssertEqual(session.world.line(id: Self.line)?.depot, near)
-        XCTAssertEqual(session.world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depot: "Near Depot"))
-        session.applyLineLossFix(.keepTrainsAtEnds(depot: "Near Depot"), to: Self.line)
+        XCTAssertEqual(session.world.line(id: Self.line)?.depots, [near, far], "the far one stays, for trains already in it")
+        XCTAssertEqual(session.world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depots: ["Near Depot", "Far Depot"]))
+        session.applyLineLossFix(.keepTrainsAtEnds(depots: ["Near Depot", "Far Depot"]), to: Self.line)
         XCTAssertNil(session.world.line(id: Self.line)?.depot)
-        XCTAssertEqual(editNames(session), ["setLineDepot", "setLineDepot"])
+        XCTAssertEqual(editNames(session), ["setLineDepots", "setLineDepot"])
         XCTAssertNil(session.world.lineLossFix(.emptyRuns, on: Self.line))
+    }
+
+    /// Decision 221: a line with several depots keeps them all when a
+    /// nearer one is added, and keeping the trains at the ends names every
+    /// depot it stops using (the PR #627–#646 review).
+    func testALineWithSeveralDepotsKeepsThemWhenANearerOneIsAdded() throws {
+        var world = try lineBetweenTwoTowns()
+        let first = try XCTUnwrap(world.line(id: Self.line)?.stops.first.flatMap { world.station(id: $0) })
+        let east = try world.buildStation(named: "East Depot", at: PlanPoint(x: first.point.x + 40_000, y: first.point.y)).id
+        let west = try world.buildStation(named: "West Depot", at: PlanPoint(x: first.point.x - 40_000, y: first.point.y)).id
+        for depot in [east, west] { try world.setStationDepot(depot, to: true) }
+        try world.setLineDepots(Self.line, to: [east, west])
+        XCTAssertEqual(world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depots: ["East Depot", "West Depot"]))
+        XCTAssertEqual(
+            LineLossFix.keepTrainsAtEnds(depots: ["East Depot", "West Depot"]).question(on: "Main", in: .traditionalChinese),
+            "要讓「Main」的列車不再進出機廠「East Depot」「West Depot」嗎？列車改在路線兩端過夜，不用空車來回，但整天都要付能源與人事費。"
+        )
+        // Nearer than either.
+        let near = try world.buildStation(named: "Near Depot", at: PlanPoint(x: first.point.x + 2_000, y: first.point.y)).id
+        try world.setStationDepot(near, to: true)
+        let fix = try XCTUnwrap(world.lineLossFix(.emptyRuns, on: Self.line))
+        XCTAssertEqual(fix, .useNearerDepot(near, name: "Near Depot"))
+        let session = GameSession(world: world)
+        session.applyLineLossFix(fix, to: Self.line)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.line(id: Self.line)?.depots, [near, east, west])
+        XCTAssertEqual(session.world.lineLossFix(.emptyRuns, on: Self.line), .keepTrainsAtEnds(depots: ["Near Depot", "East Depot", "West Depot"]))
     }
 
     func testTheMemoKeepsAFixForEachReason() throws {

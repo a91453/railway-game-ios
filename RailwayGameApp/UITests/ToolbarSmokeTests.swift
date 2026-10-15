@@ -100,9 +100,9 @@ final class LineRoutePreferenceUITests: XCTestCase {
         dismissMessage(in: app)
         bringIntoView(route, in: app)
         route.tap()
-        let automatic = app.buttons["Automatic physical path"]
+        let automatic = app.buttons["Automatic route"]
         tapMenuAction(automatic, in: app)
-        let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Automatic physical path"), object: route)
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Automatic route"), object: route)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
     }
 

@@ -348,7 +348,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "Build Track did not build")
     }
 
-    func testZoomButtonsRemainUsableWithoutPinching() {
+    func testZoomButtonsRemainUsableWithoutPinching() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -361,16 +361,35 @@ final class MapInteractionTests: XCTestCase {
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
-        // maximum zoom. The tap is tried twice, like the anchor's in the
-        // test above: on a slow Simulator a touch was lost and the map never
-        // moved (full lane run 38458089903, its screen recording); a second
-        // tap at the maximum does nothing.
+        // maximum zoom. On a slow Simulator a touch was lost and the map
+        // never moved (full lane run 38458089903, its screen recording):
+        // the tap is tried again only when the camera's zoom (`map.camera`)
+        // has not changed, so a step that grows less than double is not
+        // made up by a second one (the PR #526–#626 review, C6).
         func atMaximum() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
                              timeout: 10) == .completed
         }
+        let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(zoom.appears(within: 10))
+        // The opening camera may frame the game again as its layout
+        // settles: read the zoom once it has kept still for two seconds.
+        var settled = zoom.value as? String
+        for _ in 0..<10 {
+            let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)
+            guard XCTWaiter().wait(for: [changed], timeout: 2) == .completed else { break }
+            settled = zoom.value as? String
+        }
+        let before = try XCTUnwrap(settled.flatMap(Double.init))
+        func moved() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)],
+                             timeout: 10) == .completed
+        }
         zoomIn.tap()
-        if !atMaximum() { zoomIn.tap() }
+        if !moved() { zoomIn.tap() }
+        XCTAssertTrue(moved(), "Zoom in did not move the camera")
+        let after = try XCTUnwrap((zoom.value as? String).flatMap(Double.init))
+        XCTAssertEqual(after / before, 2, accuracy: 0.001, "A step doubles the size: \(before) to \(after)")
         XCTAssertTrue(atMaximum(), "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
@@ -381,7 +400,7 @@ final class MapInteractionTests: XCTestCase {
     /// beside the building tools' Done, and buying a tile then looked like
     /// building. It is not shown while the tools are out; choosing a tile
     /// says so on the button; the pill buys in words, not with a build's ✓.
-    func testTheMapExpansionIsNotMistakenForBuilding() {
+    func testTheMapExpansionIsNotMistakenForBuilding() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -408,17 +427,30 @@ final class MapInteractionTests: XCTestCase {
 
         expansion.tap()
         XCTAssertEqual(expansion.label, "Stop expanding the map")
-        // The camera fits the 3 × 3 tiles around the one owned, in the
-        // middle: a third of the narrower side beside the middle is in the
-        // tile to its right, which is for sale. Not the tile below: on a
-        // phone on its side the expansion's pill (with its Done) stands
-        // over it since the tools became a column (#626; main bf12187's
-        // full lane, run 38641908091, tapped Done at (437, 301)).
+        // The tile below the one owned: on a phone
+        // on its side the expansion's pill (with its Done) stood over it
+        // since the tools became a column (#626; main bf12187's full lane,
+        // run 38641908091, tapped Done at (437, 301)). The camera now
+        // shows the tiles for sale above the pill (the PR #627–#646
+        // review), so a tap there chooses the tile.
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
-        let frame = map.frame
-        let beside = min(frame.width, frame.height) / 3
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5 + beside / frame.width, dy: 0.5)).tap()
+        let tiles = app.descendants(matching: .any)["map.expansion.tiles"].firstMatch
+        XCTAssertTrue(tiles.appears(within: 10))
+        let centres = ((tiles.value as? String) ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        XCTAssertFalse(centres.isEmpty, "Tiles for sale: \(String(describing: tiles.value))")
+        // The lowest; in a row of several, the middle one (the land's
+        // column). Run 38672710744: one tile below, at (437, 281).
+        let bottom = try XCTUnwrap(centres.map(\.y).max())
+        let row = centres.filter { abs($0.y - bottom) < 1 }.sorted { $0.x < $1.x }
+        let below = row[row.count / 2]
+        let origin = map.frame.origin
+        let target = CGPoint(x: origin.x + below.x, y: origin.y + below.y)
+        XCTAssertFalse(expansion.frame.contains(target), "The tile below the land is under the pill: \(target), \(expansion.frame)")
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: target.x, dy: target.y)).tap()
         let buy = app.buttons["map.expansion.buy"]
         XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
         XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")

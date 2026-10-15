@@ -630,7 +630,7 @@ struct MapView: View {
                         // Not among the building tools either: a phone held
                         // sideways has no height for a fifth (decision 226).
                         if session.showsMapExpansionButton {
-                            mapExpansionButton(viewport: viewport)
+                            mapExpansionButton(viewport: viewport, cover: cover)
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
@@ -754,6 +754,7 @@ struct MapView: View {
                 baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
                 cameraZoomReadout(projection.pointsPerUnit)
                 stationReadout(projection)
+                expansionTileReadout(projection)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -1224,7 +1225,7 @@ struct MapView: View {
     /// the land owned and the tiles for sale; again, stops. While choosing
     /// it says so in words, in the accent colour, so the mode is not taken
     /// for building (TestFlight 56.1).
-    private func mapExpansionButton(viewport: ScreenSize) -> some View {
+    private func mapExpansionButton(viewport: ScreenSize, cover: MapCover) -> some View {
         Button {
             if session.isChoosingMapTile {
                 session.stopChoosingMapTile()
@@ -1233,7 +1234,10 @@ struct MapView: View {
             session.startChoosingMapTile()
             if let region = session.mapExpansionOverlay?.region {
                 if session.followedTrain != nil { session.stopFollowingTrain() }
-                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
+                // Clear of the screen's controls and above the pill, which
+                // grows along the bottom (the PR #627–#646 review).
+                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region,
+                                    clearOf: cover.framing(above: ScreenFrame(bottomLeadingFrame), in: viewport))
                 session.mapDidMove()
             }
         } label: {
@@ -1364,6 +1368,26 @@ struct MapView: View {
                 .allowsHitTesting(false)
                 .accessibilityElement()
                 .accessibilityIdentifier("map.stations")
+                .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
+        }
+    }
+
+    /// Where the tiles for sale are while choosing one, in the map's
+    /// points (the middle of each, "x,y" split by ";"), under UI tests
+    /// only: they show clear of the expansion's pill (the PR #627–#646
+    /// review).
+    @ViewBuilder
+    private func expansionTileReadout(_ projection: PlanCamera) -> some View {
+        if Self.readsBaseMap, let tiles = session.mapExpansionOverlay?.forSale, session.isChoosingMapTile {
+            let points = tiles.map { tile in
+                let point = projection.screenPoint(worldX: Double(tile.area.minX + tile.area.maxX) / 2, worldY: Double(tile.area.minY + tile.area.maxY) / 2)
+                return "\(Int(point.x.rounded())),\(Int(point.y.rounded()))"
+            }
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.expansion.tiles")
                 .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
         }
     }
@@ -2615,7 +2639,10 @@ struct StoredMapLayerSheet: View {
         guard let realWorld = RealWorldFrame(world: session.world) else { return nil }
         let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
         let language = session.language
-        return AnyView(Section {
+        // Decision 184, later: drawn from these values alone, so a running
+        // game's ticks leave an open picker menu alone (the sheet reads
+        // the world, and is drawn again every tick).
+        return AnyView(TickStable(StableKey(mapStyle, trackStyle, showsRailways, language)) { Section {
             Picker("Map Style", selection: $mapStyle) {
                 ForEach(AppleMapStyle.allCases) { style in
                     Text(style.title)
@@ -2640,6 +2667,6 @@ struct StoredMapLayerSheet: View {
             .accessibilityIdentifier("map.dataSources")
         } header: {
             Text("Map Style")
-        })
+        } })
     }
 }

@@ -988,7 +988,7 @@ struct LinesPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Menu {
-                            Button("Automatic physical path") {
+                            Button("Automatic route") {
                                 session.setSelectedLineRoute(from: pair.0, to: pair.1, preference: nil, pattern: pattern)
                             }
                             ForEach(choices.indices, id: \.self) { choice in
@@ -998,7 +998,7 @@ struct LinesPanel: View {
                                 .accessibilityIdentifier("line.route.choice.\(pattern ?? -1).\(pair.0).\(pair.1).\(choice)")
                             }
                             Menu {
-                                Button("Automatic physical path") {
+                                Button("Automatic route") {
                                     session.previewRoute(from: pair.0, to: pair.1, pattern: pattern, choice: .automatic)
                                 }
                                 ForEach(choices.indices, id: \.self) { choice in
@@ -1013,7 +1013,7 @@ struct LinesPanel: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(verbatim: leg)
                                 if let selectedText { Text(selectedText).font(.caption) }
-                                else { Text("Automatic physical path").font(.caption) }
+                                else { Text("Automatic route").font(.caption) }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())

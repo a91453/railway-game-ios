@@ -34,7 +34,7 @@ final class LineDispatchTextTests: XCTestCase {
         XCTAssertEqual(world.trainPathStatusText(of: train, in: .english), "Not on the track: place it at Alpha first")
         XCTAssertEqual(world.trainPathStatusText(of: train, in: .traditionalChinese), "未放上軌道：先放到 Alpha")
         XCTAssertEqual(world.followBarInfo(of: train, in: .traditionalChinese)?.status, .held("未放上軌道：先放到 Alpha"))
-        XCTAssertEqual(world.followBarInfo(of: train, in: .traditionalChinese)?.detail(in: .traditionalChinese), "Main　· 尚未發車：未放上軌道：先放到 Alpha")
+        XCTAssertEqual(world.followBarInfo(of: train, in: .traditionalChinese)?.detail(in: .traditionalChinese), "Main　· 未放上軌道：先放到 Alpha")
     }
 
     /// The fleet overview reads every waiting train's status at each
@@ -134,6 +134,49 @@ final class LineDispatchTextTests: XCTestCase {
         XCTAssertEqual(later.world.line(id: Self.main)?.trainsInService, TrainsInService(peak: 2, offPeak: 2, low: 2))
         XCTAssertNil(later.world.lineUnusedTrains(ofTrain: second))
         XCTAssertNotEqual(later.world.lineDispatchHold(of: second), .serviceFull(running: 1, planned: 1))
+    }
+
+    /// The PR #526–#626 review, U3: a line the player set to run fewer
+    /// trains at this time of day than at its busiest says so, not that
+    /// the headway or the track limits it; and the follow bar says why
+    /// once, without "Not departed" before it.
+    func testALevelSetLowNowIsNamedAsTheLinesOwnSetting() throws {
+        let (world, stops, first, second) = try lineWorld()
+        let session = GameSession(world: world)
+        session.selectStation(stops[0])
+        session.selectTrain(first)
+        session.placeSelectedTrain()
+        session.assignTrain(first, toLine: Self.main)
+        var running = session.world
+        for _ in 0..<60 where running.train(id: first)?.execution == nil || running.stationsStoppedAt(by: first).contains(stops[0]) {
+            try running.advance(ticks: 1)
+        }
+        let later = GameSession(world: running)
+        later.selectStation(stops[0])
+        later.selectTrain(second)
+        later.placeSelectedTrain()
+        later.assignTrain(second, toLine: Self.main)
+        let now = try XCTUnwrap(later.world.serviceLevel(of: Self.main, at: later.world.clock.now))
+        var counts = TrainsInService(peak: 2, offPeak: 2, low: 2)
+        switch now {
+        case .peak: counts.peak = 1
+        case .offPeak: counts.offPeak = 1
+        case .low: counts.low = 1
+        }
+        try later.performEdit { world throws(GameError) in try world.setLineTrainsInService(Self.main, to: counts) }
+        XCTAssertNil(later.world.lineUnusedTrains(ofTrain: second), "the busiest level runs both")
+        XCTAssertEqual(later.world.lineDispatchHold(of: second), .serviceFull(running: 1, planned: 1))
+        XCTAssertEqual(later.world.trainPathStatusText(of: second, in: .english), "The line is set to run 1 train at this time of day")
+        XCTAssertEqual(later.world.trainPathStatusText(of: second, in: .traditionalChinese), "路線這個時段設定只開 1 列")
+        XCTAssertEqual(
+            later.world.followBarInfo(of: second, in: .traditionalChinese)?.status.text(in: .traditionalChinese),
+            "路線這個時段設定只開 1 列"
+        )
+
+        // Stopped, the bar says so once.
+        var stopped = later.world
+        try stopped.setTrainMovementRate(second, to: 0)
+        XCTAssertEqual(stopped.followBarInfo(of: second, in: .traditionalChinese)?.status.text(in: .traditionalChinese), "列車已暫停：按「恢復列車」")
     }
 
     func testALevelSetLowerOnPurposeIsNeitherCountedNorRaised() throws {

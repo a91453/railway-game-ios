@@ -113,7 +113,7 @@ final class RouteEditingSessionTests: XCTestCase {
         session.reverseSelectedLine()
 
         XCTAssertEqual(session.world, world)
-        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "列車 #\(train.rawValue) 正在為路線服務。請先把它從路線移除。"))
+        XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "這列車正在為路線服務。請先把它從路線移除。"))
         XCTAssertEqual(session.undoCount, 0)
     }
 

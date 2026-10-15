@@ -72,6 +72,26 @@ final class MapFocusTests: XCTestCase {
         XCTAssertEqual(ScreenInsets(trailing: 300).clearing([zoom], viewport: phone).trailing, 300)
     }
 
+    /// The PR #627–#646 review: choosing a tile to buy shows the tiles
+    /// for sale above the map expansion's pill, which grows along the
+    /// bottom from the bottom-leading corner once choosing starts; a
+    /// narrow row there would otherwise push in only the side, and the
+    /// tile below the land lay under the pill's Done.
+    func testTheTilesForSaleShowAboveTheExpansionsRow() {
+        let row = ScreenFrame(x: 60, y: 260, width: 56, height: 100)
+        let cover = MapCover(edges: ScreenInsets(top: 40, leading: 48), corners: [row])
+        XCTAssertEqual(cover.framing(in: phone).bottom, 0, "the row pushes in the side")
+        let framing = cover.framing(above: row, in: phone)
+        XCTAssertEqual(framing.bottom, 112)
+        XCTAssertEqual(framing.leading, cover.framing(in: phone).leading)
+        let tiles = WorldRegion(minX: 120_000, minY: 120_000, maxX: 140_000, maxY: 140_000)
+        let camera = PlanCamera(bounds: map, viewport: phone, showing: tiles, clearOf: framing)
+        let bottom = camera.screenPoint(of: WorldCoordinate(x: 130_000, y: 140_000))
+        XCTAssertLessThanOrEqual(bottom.y, row.y, "the bottom tiles end above the row")
+        // A row not laid out yet pushes nothing more.
+        XCTAssertEqual(cover.framing(above: ScreenFrame(x: 0, y: 0, width: 0, height: 0), in: phone), cover.framing(in: phone))
+    }
+
     /// #593: a game opens with what it has built clear of the corners'
     /// controls, so no station is under the zoom buttons.
     func testTheOpeningCameraKeepsTheFocusClearOfTheControls() {
