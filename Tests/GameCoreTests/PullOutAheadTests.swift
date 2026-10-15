@@ -120,12 +120,17 @@ final class PullOutAheadTests: XCTestCase {
     }
 
     /// One call for the whole hour ends exactly where minute by minute
-    /// does.
-    func testLongBatchesMatchSingleMinutes() throws {
+    /// does, and where second by second does.
+    func testLongBatchesMatchSingleMinutesAndSeconds() throws {
         var batched = try world(performance: .standard)
-        var single = batched
+        var minutes = batched
+        var seconds = batched
         try batched.advance(ticks: 60)
-        for _ in 0..<60 { try single.advance(ticks: 1) }
-        XCTAssertEqual(batched, single)
+        for _ in 0..<60 { try minutes.advance(ticks: 1) }
+        XCTAssertEqual(batched, minutes)
+        seconds.setSpeed(.x10)
+        for _ in 0..<3_600 { try seconds.advance(ticks: 1) }
+        seconds.setSpeed(.normal)
+        XCTAssertEqual(batched, seconds)
     }
 }
