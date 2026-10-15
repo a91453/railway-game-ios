@@ -2643,6 +2643,12 @@ public struct GameWorld: Equatable, Sendable {
                 if !trafficPlan(memo: &memo.directions).waits.isEmpty { span = 1 }
                 memo.directions.stepTraffic = traffic
             }
+            // Decision 228: a train held up behind another stops where one
+            // second at a time leaves it only one second at a time, as the
+            // one ahead moves on between them (decision 37).
+            if span > 1, moves[span] == nil, spacingMayHold(from: start, within: span, memo: &memo.directions) {
+                span = 1
+            }
             let beforeTraffic = traffic.waits.isEmpty ? nil : trains
             // Nothing has changed a train since the spans were tried.
             if let move = moves[span] {

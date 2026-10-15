@@ -71,6 +71,24 @@ extension GameWorld {
         return index
     }
 
+    /// Decision 228 with decision 37: whether a train would be held up
+    /// (``heldUp(_:within:near:)``) within the `span` seconds from `start`
+    /// that the step is about to move the trains in one go. Where none is,
+    /// the span moves them as far as one second at a time would; where one
+    /// is, how far it gets depends on where the others are each second.
+    func spacingMayHold(from start: GameTime, within span: Int64, memo: inout DirectionMemo) -> Bool {
+        let index = spacingIndex()
+        guard !index.isEmpty else { return false }
+        // How far each train goes in the span; another may come that far
+        // toward it meanwhile, so it looks as far again as the farthest.
+        var travel: [(train: Train, distance: Int64)] = []
+        for train in trains where train.position != nil && train.movement.rate > 0 {
+            travel.append((train, travelShare(of: train, from: start, memo: &memo)(span)))
+        }
+        let farthest = travel.map(\.distance).max() ?? 0
+        return travel.contains { heldUp($0.train, within: (Int64.max / 4) + 0 * farthest, near: index) != nil }
+    }
+
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.
     func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID)? {
         guard !isTrafficControlEnabled, distance > 0, case .onEdge(let traversal, let offset)? = train.position,
