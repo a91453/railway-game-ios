@@ -21,7 +21,8 @@ public struct FollowBarInfo: Hashable, Sendable {
     public enum Status: Hashable, Sendable {
         case notDeparted
         /// TestFlight 60.1: a line's train its line does not send out,
-        /// with why (``GameWorld/lineDispatchHoldText(of:in:)``).
+        /// with why (``GameWorld/lineDispatchHoldText(of:in:)``), shown
+        /// as the status itself.
         case held(String)
         case running
         case arrived
@@ -36,7 +37,9 @@ public struct FollowBarInfo: Hashable, Sendable {
         public func text(in language: DisplayLanguage) -> String? {
             switch self {
             case .notDeparted: language.text("Not departed", "尚未發車")
-            case .held(let reason): language.text("Not departed: \(reason)", "尚未發車：\(reason)")
+            // The reason says what holds it and what to do, once (the
+            // PR #526–#626 review, U3: "Not departed: Stopped: …").
+            case .held(let reason): reason
             case .running: nil
             case .deadheading: language.text("Running empty", "回送中")
             case .depot(let state): state.text(in: language)

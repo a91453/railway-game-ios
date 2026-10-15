@@ -49,6 +49,21 @@ extension GameWorld {
         return unused.busiest < target ? unused : nil
     }
 
+    /// Whether the service train `id` runs for is set by the player to run
+    /// `planned` trains at this time of day, fewer than at its busiest
+    /// level (the PR #526–#626 review, U3): the counts, not a target
+    /// headway or the track, keep it to `planned`.
+    private func isSetLowNow(ofTrain id: TrainID, planned: Int) -> Bool {
+        guard let lineID = assignedLine(of: id), let line = line(id: lineID),
+              let level = serviceLevel(of: lineID, at: clock.now) else { return false }
+        let pattern = assignedPattern(of: id)
+        let targets = pattern.map { line.patterns[$0].targetHeadways } ?? line.targetHeadways
+        guard targets[level] == nil else { return false }
+        let counts = pattern.map { line.patterns[$0].trainsInService } ?? line.trainsInService
+        let busiest = ServiceLevel.allCases.map { counts[$0] }.max() ?? 0
+        return counts[level] == planned && planned < busiest
+    }
+
     /// Why line train `id` is not sent out (``lineDispatchHold(of:)``), in
     /// words that say what to do, or `nil` when nothing holds it.
     public func lineDispatchHoldText(of id: TrainID, in language: DisplayLanguage) -> String? {
@@ -76,6 +91,12 @@ extension GameWorld {
                 return language.text(
                     "The line runs only \(planned) \(planned == 1 ? "train" : "trains") now: run \(unused.target)",
                     "路線只開 \(planned) 列：加開到 \(unused.target) 列"
+                )
+            }
+            if isSetLowNow(ofTrain: id, planned: planned) {
+                return language.text(
+                    "The line is set to run \(planned) \(planned == 1 ? "train" : "trains") at this time of day",
+                    "路線這個時段設定只開 \(planned) 列"
                 )
             }
             return language.text(
