@@ -104,7 +104,8 @@ extension GameWorld {
             for index in waiting.suffix(waiting.count - wanted).reversed() {
                 guard let trip = emptyRun(of: line, for: trains[index], to: line.depots) else { continue }
                 if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
-                   case .held = reservingDeparture(leaving, memo: &memo.directions) {
+                   case .held = reservingDeparture(leaving, memo: &memo.directions),
+                   runDepotMoveAhead(leaving, memo: &memo.directions) == nil {
                     continue
                 }
                 return (index, trip)
@@ -201,7 +202,7 @@ extension GameWorld {
             guard Self.runsWithoutTrains(soon.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: ready) > 0 else { continue }
             if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
                case .held = reservingDeparture(leaving, memo: &memo.directions),
-               pullingOutAhead(leaving, memo: &memo.directions) == nil {
+               runDepotMoveAhead(leaving, memo: &memo.directions) == nil {
                 continue
             }
             return (index, trip)
@@ -211,14 +212,13 @@ extension GameWorld {
 
     // MARK: - Ahead of trains still far off
 
-    /// Whether `train` waits to set off out of a depot of a line with runs
-    /// (decision 221): an empty run at its first stop, standing in one of
-    /// its line's depots.
-    func isLeavingRunDepot(_ train: Train) -> Bool {
-        guard train.isDeadheading, case .waitingAtStop(0, _)? = train.execution,
+    /// Whether `train` waits at its first stop to run empty out of a depot
+    /// of its line, a line with runs, or into one (decision 221).
+    func isRunDepotMove(_ train: Train) -> Bool {
+        guard train.isDeadheading, case .waitingAtStop(0, _)? = train.execution, let last = train.timetable.last,
               let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) })
         else { return false }
-        return line.depots.contains { isStopped(train, at: $0) }
+        return line.depots.contains(last.station) || line.depots.contains { isStopped(train, at: $0) }
     }
 
     /// How far a train of `performance` runs while it brakes from its top
@@ -232,54 +232,63 @@ extension GameWorld {
         return scaleOverflow ? .max : scaled / (9 * performance.braking)
     }
 
-    /// `leaving`, a train setting off out of a depot of a line with runs
-    /// (decision 221) under traffic control whose route other trains hold,
-    /// with its route taken ahead of the trains still coming along it, and
-    /// those trains with their reservations cut back to follow it (Stage
-    /// U2); or `nil`. Every train that holds, fouls or waits for track of
-    /// the route must be on its way to a call (moving, rate above 0), its
-    /// body clear of the route, at least its braking distance (see
-    /// ``brakingDistance(of:)``) and ``followingGap`` short of the first
-    /// track of the route along its own, and `leaving` must lead it there
-    /// (see ``isLeading(_:onto:for:)``): same way, and standing at its
-    /// call off the other's route. Its default route is tried, then the
-    /// shortest to a berth of the same station (decision 57) clear of the
-    /// trains standing and of where those on their way will stand when
-    /// they come to the end of their routes.
-    func pullingOutAhead(_ leaving: Train, memo: inout DirectionMemo) -> (train: Train, cut: [Train])? {
-        guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = leaving.execution else { return nil }
-        let moving = Set(trains.filter { train in
-            guard train.id != leaving.id, case .travellingToStop? = train.execution else { return false }
+    /// `moving`, a train running empty out of a depot of a line with runs
+    /// or into one (decision 221) under traffic control whose route other
+    /// trains hold, with its route taken before the trains still coming
+    /// along it get there, and those trains with their reservations cut
+    /// back to wait for it (Stage U2); or `nil`. Every train that holds,
+    /// fouls or waits for track of the route must be on its way to a call
+    /// (moving, rate above 0), its body clear of the route, and at least its
+    /// braking distance (see ``brakingDistance(of:)``) and ``followingGap``
+    /// short of the first track of the route along its own; and where
+    /// `moving` stands when its route ends must be off that train's route.
+    /// Its default route is tried, then the shortest to a berth of the same
+    /// station (decision 57) clear of the trains standing and of where those
+    /// on their way will stand when they come to the end of their routes.
+    func runDepotMoveAhead(_ moving: Train, memo: inout DirectionMemo) -> (train: Train, cut: [Train])? {
+        guard isTrafficControlEnabled, case .travellingToStop(let stop, let cycle)? = moving.execution else { return nil }
+        let onTheirWay = Set(trains.filter { train in
+            guard train.id != moving.id, case .travellingToStop? = train.execution else { return false }
             return train.movement.rate > 0
         }.map(\.id))
-        if let ahead = pullingOut(leaving, aheadOf: moving, memo: &memo) { return ahead }
+        if let ahead = runDepotMove(moving, aheadOf: onTheirWay, memo: &memo) { return ahead }
         // Another berth: where none of them will stand when it gets there.
         var arrived = self
-        for train in trains where moving.contains(train.id) {
-            var there = train
-            there.reservation = []
-            let end = travelling(there, distance: routeLength(of: train))
-            there.position = end.position
-            there.movement.cursor = end.cursor
-            arrived = arrived.replacing(there)
+        for train in trains where onTheirWay.contains(train.id) {
+            arrived = arrived.replacing(standingAtTheEnd(of: train))
         }
         var arrivedMemo = DirectionMemo()
-        let blocked = arrived.blockedTrack(except: leaving.id, holders: arrived.trackHolders(memo: &arrivedMemo))
-        guard let alternative = arrived.alternativeRoute(of: leaving, to: leaving.timetable[stop].station, avoiding: blocked, memo: &arrivedMemo)
+        let blocked = arrived.blockedTrack(except: moving.id, holders: arrived.trackHolders(memo: &arrivedMemo))
+        guard let alternative = arrived.alternativeRoute(of: moving, to: moving.timetable[stop].station, avoiding: blocked, memo: &arrivedMemo)
         else { return nil }
-        return pullingOut(rerouted(leaving, along: alternative, stop: stop, cycle: cycle), aheadOf: moving, memo: &memo)
+        return runDepotMove(rerouted(moving, along: alternative, stop: stop, cycle: cycle), aheadOf: onTheirWay, memo: &memo)
     }
 
-    /// See ``pullingOutAhead(_:memo:)``: `candidate` along the route it has.
-    private func pullingOut(_ candidate: Train, aheadOf moving: Set<TrainID>, memo: inout DirectionMemo) -> (train: Train, cut: [Train])? {
+    /// `train` standing where its route ends, holding nothing ahead.
+    private func standingAtTheEnd(of train: Train) -> Train {
+        var there = train
+        there.reservation = []
+        let end = travelling(there, distance: routeLength(of: train))
+        there.position = end.position
+        there.movement.cursor = end.cursor
+        return there
+    }
+
+    /// See ``runDepotMoveAhead(_:memo:)``: `candidate` along the route it
+    /// has.
+    private func runDepotMove(_ candidate: Train, aheadOf onTheirWay: Set<TrainID>, memo: inout DirectionMemo) -> (train: Train, cut: [Train])? {
         guard routeStretches(of: candidate).moves else { return nil }
         let cover = envelopeCover(of: candidate)
         var taken = candidate
         taken.reservation = Set(cover.resources).sorted()
+        // Where it stands when its route ends.
+        let there = standingAtTheEnd(of: taken)
+        var standing = Set(occupied(there))
+        standing.formUnion(foulingNodes(covering: bodyStretches(of: there)))
         var world = replacing(taken)
         var cut: [Train] = []
         for other in trains where other.id != candidate.id && other.position != nil && network.fouls(held(other), cover.contains) {
-            guard moving.contains(other.id), world.isLeading(taken, onto: envelopeCover(of: other), for: other) else { return nil }
+            guard onTheirWay.contains(other.id), !network.fouls(standing, envelopeCover(of: other).contains) else { return nil }
             let envelopes = authorityEnvelopes(of: other)
             let clear = world.clearOfBlocked(world.blockedTrack(except: other.id, among: [candidate.id], holders: world.trackHolders(memo: &memo)))
             guard clear.base(envelopes.base) else { return nil }
@@ -288,9 +297,9 @@ extension GameWorld {
             guard !overflow, free >= needed else { return nil }
             let authority = followingAuthority(envelopes, free: free)
             guard authority >= 1 else { return nil }
-            var following = other
-            following.reservation = authorityEnvelope(envelopes, to: authority).sorted()
-            cut.append(following)
+            var waiting = other
+            waiting.reservation = authorityEnvelope(envelopes, to: authority).sorted()
+            cut.append(waiting)
         }
         guard !cut.isEmpty else { return nil }
         for train in cut {

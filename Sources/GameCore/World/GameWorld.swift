@@ -3503,9 +3503,9 @@ public struct GameWorld: Equatable, Sendable {
             if case .granted(let train) = reserving(preferred, following: blockSections, memo: &memo.directions) { granted = train } else { whole.append(preferred) }
         }
         let train: Train
-        // Decision 221's later fix: out of a depot of a line with runs,
-        // ahead of the trains still far off, at a whole minute or when it
-        // is first due.
+        // Decision 221's later fix: out of a depot of a line with runs or
+        // into one, before the trains still far off get there, at a whole
+        // minute or when it is first due.
         var cut: [Train] = []
         if let granted {
             train = granted
@@ -3514,8 +3514,8 @@ public struct GameWorld: Equatable, Sendable {
             case .granted(let granted):
                 train = granted
             case .held:
-                guard now.isWholeMinute || due == now, isLeavingRunDepot(trains[index]),
-                      let ahead = pullingOutAhead(moved, memo: &memo.directions)
+                guard now.isWholeMinute || due == now, isRunDepotMove(trains[index]),
+                      let ahead = runDepotMoveAhead(moved, memo: &memo.directions)
                 else {
                     held.append(HeldRoute(candidate: moved, whole: whole))
                     return false
