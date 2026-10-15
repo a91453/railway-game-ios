@@ -387,7 +387,9 @@ extension GameSession {
         }
 
         // GameCore's answer, edge by edge, on the copy; an edge whose curve
-        // turns tighter than the tool lays stops it first.
+        // turns tighter than the tool lays stops it first. Cash does not
+        // stop it (decision 245): the preview weighs the whole price.
+        draft = draft.pricingCopy()
         var built = 0
         var problem: String?
         var previous: TrackNodeID?
@@ -452,11 +454,12 @@ extension GameSession {
             TrackGeometry(from: stretch.from, to: stretch.to, curve: stretch.curve)?.points ?? [stretch.from, stretch.to]
         }
         let built = Array(plan.stretches.prefix(plan.buildable))
-        var draft = world
+        var draft = world.pricingCopy()
         var cost: Money?
         if !built.isEmpty, (try? apply(.buildTrackChain(built), to: &draft)) != nil {
-            cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
+            cost = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
         }
+        let shortfall = cost.flatMap { shortfallText($0, doing: .buildTrackChain(built)) }
         let length = built.compactMap { TrackGeometry(from: $0.from, to: $0.to, curve: $0.curve)?.length }.reduce(0, +)
         let shown = built.isEmpty ? points.flatMap { $0 } : points.prefix(plan.buildable).flatMap { $0 }
         let first = plan.stretches.first, last = built.last
@@ -466,7 +469,7 @@ extension GameSession {
             startHeight: first?.from.z ?? 0, endHeight: (last ?? first)?.to.z ?? 0,
             joinsStart: isJoined(start), joinsEnd: !plan.stopped && isJoined(end),
             cost: built.isEmpty ? nil : cost,
-            problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : nil,
+            problem: built.isEmpty ? (plan.problem ?? language.text("This stretch cannot be traced.", "這段無法描線。")) : shortfall,
             cleared: built.isEmpty ? [] : world.placedBuildings(clearedIn: draft)
         )
         preview.traced = built.count

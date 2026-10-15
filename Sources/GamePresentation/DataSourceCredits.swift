@@ -213,17 +213,18 @@ public enum DataSourceCredits {
                     // cover, which sets what buying out a city building
                     // costs. Overture's buildings theme is ODbL 1.0; in
                     // Taiwan its footprints are OpenStreetMap's and Shi et
-                    // al.'s (CC BY 4.0), each credited as it asks.
+                    // al.'s (CC BY 4.0), each credited as it asks. Decision
+                    // 239: the 3D map's real buildings are its footprints.
                     DataSourceCredit(
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings of the 3D city preview round Kaohsiung and Taichung Stations are its footprints too.",
-                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍 3D 城市預覽的建物也是它的足跡。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, from the footprints of Overture Maps’ buildings (release 2026-09-23.1): it sets what buying out the city’s buildings costs, so a car park costs little and a dense block a lot. The buildings round Kaohsiung and Taichung Stations, in the 3D city preview and the 3D map, are its footprints too.",
+                            "台灣與澎湖實景地圖上真實建物佔地的比例，取自 Overture Maps 建物的足跡（2026-09-23.1 版）：決定收購城市建物的費用，停車場便宜、密集的街區貴。高雄車站與臺中車站周圍的建物（3D 城市預覽與 3D 地圖）也是它的足跡。"
                         ),
                         notice: language.text(
-                            "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file the game derives from them is available under the same licence from the source repository.",
-                            "Overture Maps Foundation（overturemaps.org），依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔以相同授權提供，可從原始碼儲存庫取得。"
+                            "Overture Maps Foundation (overturemaps.org), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file and the city tiles the game derives from them are available under the same licence from the source repository.",
+                            "Overture Maps Foundation（overturemaps.org），依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔與城市圖塊以相同授權提供，可從原始碼儲存庫取得。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),

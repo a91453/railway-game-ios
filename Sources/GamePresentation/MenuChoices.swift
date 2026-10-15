@@ -81,7 +81,7 @@ extension GameSession {
                 return MenuChoice(
                     id: PlatformTrackPlacement(layout: layout, side: side),
                     title: "\(layout.title(in: language)) · \(platformTrackSideText(side, of: platform))",
-                    detail: preview.cost.map { language.text("Costs \($0.moneyText)", "費用 \($0.moneyText)") } ?? preview.problem
+                    detail: preview.problem ?? preview.cost.map { language.text("Costs \($0.moneyText)", "費用 \($0.moneyText)") }
                 )
             }
         }

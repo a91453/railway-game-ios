@@ -280,10 +280,10 @@ extension GameSession {
         case .failure(let problem):
             return (nil, problem.text(in: language))
         case .success(let plan):
-            var draft = world
+            // Decision 245: its whole price, weighed against the cash.
             do throws(GameError) {
-                _ = try build(plan, in: &draft)
-                return (Money(world.economy.balance.amount - draft.economy.balance.amount), nil)
+                let cost = try priced { world throws(GameError) in try build(plan, in: &world) }.cost
+                return (cost, shortfallText(cost, doing: .addPlatformTrack(plan)))
             } catch {
                 return (nil, error.playerMessage(in: language))
             }

@@ -191,8 +191,9 @@ extension GameSession {
                 return
             }
             // The crossovers where it joins the track there, planned on a
-            // copy with both built.
-            var draft = prepared
+            // copy with both built; one cash never stops (decision 245), so
+            // they are the preview's, and a refusal prices them all.
+            var draft = prepared.pricingCopy()
             var stretches: [PlayerCommand.TrackStretch] = []
             if let main = try? plan.build(in: &draft, structure: networkStructure, heights: heights),
                let beside = try? parallel.build(in: &draft, structure: networkStructure, heights: heights) {
@@ -255,6 +256,9 @@ extension GameSession {
         var longSection: TrackLongSection?
         var crossovers: [[WorldCoordinate]] = []
         var crossoverOutcome = DoubleTrack.CrossoverOutcome.none
+        // Decision 245: built where cash never stops it, so the cost is
+        // all of it, and the cash in hand is weighed against that.
+        draft = draft.pricingCopy()
         let unbuilt = draft
         do throws(GameError) {
             let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
@@ -270,8 +274,9 @@ extension GameSession {
                 crossoverOutcome = found.outcome
                 if case .refused(let error) = found.outcome { throw error }
             }
-            cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
-            problem = nil
+            let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            cost = total
+            problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
         } catch {
             cost = nil
             problem = networkBuildsDouble && parallel == nil ? Self.noParallelText(in: language) : error.playerMessage(in: language)
@@ -393,11 +398,11 @@ extension GameSession {
 
     /// The stretch of its edge the next platform would take: centred on
     /// the picked place, ``platformCars`` cars long (one car is
-    /// `Train.carLength`), moved along to stay on the edge, or the whole
-    /// edge if it is shorter.
+    /// ``GameWorld/platformCarLength``), moved along to stay on the edge, or
+    /// the whole edge if it is shorter.
     public var networkPlatformStretch: (edge: TrackEdgeID, start: Int64, end: Int64)? {
         guard networkMode == .platform, let point = networkEdgePoint, let edge = world.network.edge(point.edge) else { return nil }
-        let length = min(Int64(max(1, platformCars)) * Train.carLength, edge.length)
+        let length = min(Int64(max(1, platformCars)) * world.platformCarLength, edge.length)
         let start = min(max(0, point.distance - length / 2), edge.length - length)
         return (point.edge, start, start + length)
     }
@@ -496,8 +501,8 @@ extension GameSession {
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
-        if let levelling, let level = levelling.legs.dropFirst(levelling.levelLeg).first {
-            middle = PlanPoint(x: (level.from.x + level.to.x) / 2, y: (level.from.y + level.to.y) / 2)
+        if let levelling, let level = Self.platformMiddle(levelling) {
+            middle = level
         }
         let chosen = platformStationID.flatMap { world.station(id: $0) }
         let name = stationName
@@ -1093,9 +1098,10 @@ extension GameSession {
         return language.text("New track on the ground", "新軌道：地面")
     }
 
-    /// How long the next platform is: "Platform for 4 cars · 64 m".
+    /// How long the next platform is: "Platform for 4 cars · 64 m" (80 m
+    /// with real car lengths, decision 227).
     public func platformLengthText() -> String {
-        let length = NetworkBuilding.lengthText(Int64(platformCars) * Train.carLength, in: language)
+        let length = NetworkBuilding.lengthText(Int64(platformCars) * world.platformCarLength, in: language)
         return language.text(
             "Platform for \(Train.carsText(platformCars, in: language)) · \(length)",
             "月台長 \(Train.carsText(platformCars, in: language)) · \(length)"
@@ -1175,4 +1181,12 @@ struct NetworkPreviewMemo {
 
     let key: Key
     let preview: (preview: NetworkPreview, crossing: [WorldCoordinate])?
+}
+
+extension GameWorld {
+    /// How long a car the platform tool counts in is (decision 227): a
+    /// standard car's 20 m with real car lengths, otherwise 16 m.
+    public var platformCarLength: Int64 {
+        realCarLengths ? Train.realStandardCarLength : Train.carLength
+    }
 }
