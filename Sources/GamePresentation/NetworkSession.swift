@@ -191,8 +191,9 @@ extension GameSession {
                 return
             }
             // The crossovers where it joins the track there, planned on a
-            // copy with both built.
-            var draft = prepared
+            // copy with both built; one cash never stops (decision 245), so
+            // they are the preview's, and a refusal prices them all.
+            var draft = prepared.pricingCopy()
             var stretches: [PlayerCommand.TrackStretch] = []
             if let main = try? plan.build(in: &draft, structure: networkStructure, heights: heights),
                let beside = try? parallel.build(in: &draft, structure: networkStructure, heights: heights) {
@@ -255,6 +256,9 @@ extension GameSession {
         var longSection: TrackLongSection?
         var crossovers: [[WorldCoordinate]] = []
         var crossoverOutcome = DoubleTrack.CrossoverOutcome.none
+        // Decision 245: built where cash never stops it, so the cost is
+        // all of it, and the cash in hand is weighed against that.
+        draft = draft.pricingCopy()
         let unbuilt = draft
         do throws(GameError) {
             let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
@@ -270,8 +274,9 @@ extension GameSession {
                 crossoverOutcome = found.outcome
                 if case .refused(let error) = found.outcome { throw error }
             }
-            cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
-            problem = nil
+            let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+            cost = total
+            problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
         } catch {
             cost = nil
             problem = networkBuildsDouble && parallel == nil ? Self.noParallelText(in: language) : error.playerMessage(in: language)
@@ -496,8 +501,8 @@ extension GameSession {
             }
         }
         var middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
-        if let levelling, let level = levelling.legs.dropFirst(levelling.levelLeg).first {
-            middle = PlanPoint(x: (level.from.x + level.to.x) / 2, y: (level.from.y + level.to.y) / 2)
+        if let levelling, let level = Self.platformMiddle(levelling) {
+            middle = level
         }
         let chosen = platformStationID.flatMap { world.station(id: $0) }
         let name = stationName

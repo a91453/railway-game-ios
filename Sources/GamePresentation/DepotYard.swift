@@ -203,10 +203,10 @@ extension GameSession {
         case .failure(let problem):
             return DepotYardPreview(cost: nil, problem: problem.text(in: language), tracks: [])
         case .success(let plan):
-            var draft = world
+            // Decision 245: its whole price, weighed against the cash.
             do throws(GameError) {
-                _ = try build(plan, in: &draft)
-                return DepotYardPreview(cost: Money(world.economy.balance.amount - draft.economy.balance.amount), problem: nil, tracks: plan.points)
+                let cost = try priced { world throws(GameError) in try build(plan, in: &world) }.cost
+                return DepotYardPreview(cost: cost, problem: shortfallText(cost, doing: .buildDepotYard(plan)), tracks: plan.points)
             } catch {
                 return DepotYardPreview(cost: nil, problem: error.playerMessage(in: language), tracks: plan.points)
             }

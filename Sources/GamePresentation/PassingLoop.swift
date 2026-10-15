@@ -117,10 +117,10 @@ extension GameSession {
             let points = curves.indices.flatMap { index in
                 TrackGeometry(from: ends[index], to: ends[index + 1], curve: curves[index])?.points ?? [ends[index], ends[index + 1]]
             }
-            var draft = world
+            // Decision 245: its whole price, weighed against the cash.
             do throws(GameError) {
-                _ = try build(plan, in: &draft)
-                return PassingLoopPreview(cost: Money(world.economy.balance.amount - draft.economy.balance.amount), problem: nil, points: points)
+                let cost = try priced { world throws(GameError) in try build(plan, in: &world) }.cost
+                return PassingLoopPreview(cost: cost, problem: shortfallText(cost, doing: .addPassingLoop(plan)), points: points)
             } catch {
                 return PassingLoopPreview(cost: nil, problem: error.playerMessage(in: language), points: points)
             }

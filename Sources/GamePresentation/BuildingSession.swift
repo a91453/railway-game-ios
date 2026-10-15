@@ -320,14 +320,15 @@ extension GameSession {
     public var buildingPreview: BuildingPreview? {
         guard tool == .building, buildingMode == .build, let site = buildingSite else { return nil }
         let kind = buildingKind
-        var draft = world
+        // Decision 245: its whole price, weighed against the cash.
+        var draft = world.pricingCopy()
         let cost: Money?, problem: String?
         var movingIn: (residents: Int64, jobs: Int64) = (0, 0)
         do throws(GameError) {
             let placed = try draft.placeBuilding(kind, at: site)
             cost = placed.cost
             movingIn = (placed.residents, placed.jobs)
-            problem = nil
+            problem = shortfallText(placed.cost, doing: .edit(.placeBuilding(kind, at: site)))
         } catch {
             cost = nil
             problem = error.playerMessage(in: language)

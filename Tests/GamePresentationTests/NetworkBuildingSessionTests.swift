@@ -393,7 +393,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
     }
 
     /// When GameCore refuses the edge, the new nodes go too: the build is
-    /// all or nothing, and the preview says why with no cost.
+    /// all or nothing, and the preview says why, with what it costs
+    /// (decision 245).
     func testARefusedBuildLeavesNoNewNode() async throws {
         // Four tiles of track cost 400; there are 300.
         let world = try makeNetworkWorld(balance: 300)
@@ -403,8 +404,8 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.a, reach: Self.reach)
             session.tapNetwork(at: Self.b, reach: Self.reach)
             let preview = session.networkPreview
-            XCTAssertNil(preview?.cost)
-            XCTAssertEqual(preview?.problem, "Not enough cash: this costs $ 4 and you have $ 3.")
+            XCTAssertEqual(preview?.cost, Money(400), "✓ shows the price")
+            XCTAssertEqual(preview?.problem, "Not enough cash to lay this track: it costs $ 4 and you have $ 3.")
             XCTAssertEqual(preview?.points.count, 2, "the stretch is still drawn")
 
             session.buildNetworkTrack()
@@ -760,7 +761,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             session.tapNetwork(at: Self.a, reach: Self.reach)
             session.tapNetwork(at: Self.b, reach: Self.reach)
             // 4,096 long: 4 lengths at 100, more than the 300 there is.
-            XCTAssertNil(session.networkPreview?.cost)
+            XCTAssertEqual(session.networkPreview?.cost, 400)
             XCTAssertNotNil(session.networkPreview?.problem)
             XCTAssertEqual(session.networkOverlay?.previewIsBuildable, false)
 
