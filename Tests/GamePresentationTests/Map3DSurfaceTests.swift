@@ -122,7 +122,30 @@ final class Map3DSurfaceTests: XCTestCase {
         // only on parks, farms and banks); the water and rails plain too.
         XCTAssertTrue(vertices.filter { $0.color == Map3DPalette.ground || $0.color == Map3DPalette.water || $0.color == Map3DPalette.railTop }
             .allSatisfy { $0.surface == nil })
-        XCTAssertTrue(vertices.allSatisfy { $0.layer == Map3DVertex.plain || Map3DSurface(rawValue: Int($0.layer)) != nil })
+        XCTAssertTrue(vertices.allSatisfy { $0.layer == Map3DVertex.plain || $0.surface != nil })
+        // Decision 242: homes faced with tiles and grit, offices and
+        // schools with concrete and tiles; only on walls a surface tints.
+        let faced = Set(vertices.compactMap(\.detail))
+        XCTAssertTrue(faced.isSuperset(of: [.brickTile, .mosaicTile, .terrazzo]), "\(faced)")
+        XCTAssertTrue(faced.isSubset(of: Set(Map3DSurface.materials)))
+    }
+
+    func testAMaterialRidesUnderItsSurface() {
+        // Decision 242: the shader finds the materials from layer 18 on, in
+        // this order (Map3DShaders.metal's firstMaterial, detailRepeat).
+        XCTAssertEqual(Map3DSurface.materials.map(\.rawValue), [18, 19, 20, 21])
+        XCTAssertEqual(Map3DSurface.materials.map(\.detailRepeat), [3.6, 1.8, 1.8, 1.8])
+        XCTAssertEqual(Map3DSurface.allCases.count, 22)
+        let paint = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 4).on(.brickTile)
+        XCTAssertEqual(paint.layer, Float(Map3DSurface.flatWindows.rawValue + 64 * 20))
+        XCTAssertEqual(paint.on(nil).layer, Float(Map3DSurface.flatWindows.rawValue))
+        var mesh = Map3DMesh()
+        mesh.addBox(base: .zero, length: 10, width: 8, height: 12, top: 1, side: 2, frontPaint: paint, flankPaint: Map3DPaint.tile(.plaster, 4))
+        let front = mesh.vertices.filter { $0.surface == .flatWindows }
+        XCTAssertFalse(front.isEmpty)
+        XCTAssertTrue(front.allSatisfy { $0.detail == .brickTile })
+        XCTAssertTrue(mesh.vertices.filter { $0.surface == .plaster }.allSatisfy { $0.detail == nil })
+        XCTAssertTrue(mesh.vertices.filter { $0.surface == nil }.allSatisfy { $0.detail == nil })
     }
 
     func testTheBedStandsOverTheGround() throws {

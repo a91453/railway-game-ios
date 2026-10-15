@@ -182,7 +182,8 @@ extension Map3DScene.Builder {
         let floors = 3 + Int(r(3) * 2)
         let height = 3.6 * Float(floors)
         let wing: Float = 10
-        let windows = Map3DPaint.bays(.flatWindows, bay: 3.6, floors: floors)
+        // Decision 242: classrooms faced with 二丁掛, as Taiwan's schools are.
+        let windows = Map3DPaint.bays(.flatWindows, bay: 3.6, floors: floors).on(.brickTile)
         let north = Map3DPoint(0, 0, -1), east = Map3DPoint(1, 0, 0)
         let backBlock = base - north * (wing / 2 - lot / 2), sideBlock = base - east * (lot / 2 - wing / 2) + north * (wing / 2)
         // The rest of the lot: the gym along its south side, the field.
@@ -233,7 +234,9 @@ extension Map3DScene.Builder {
         let forward = r(6) < 0.5 ? Map3DPoint(0, 0, -1) : Map3DPoint(1, 0, 0)
         let ground: Float = 4.4, upper: Float = 3.2
         let height = ground + upper * Float(floors - 1)
+        // Decision 242: the floors above in small tiles or fair-faced concrete.
         let upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(7)), bay: 3.2, floors: floors - 1)
+            .on(r(8) < 0.5 ? .mosaicTile : .formConcrete)
         let far = isFar
         mesh(at: base) { mesh in
             mesh.addBox(base: base, forward: forward, length: length, width: width, height: ground, top: Map3DPalette.roof, side: Map3DPalette.stone,
@@ -257,7 +260,7 @@ extension Map3DScene.Builder {
         let length: Float = 14, width = min(lot * 0.7, 24)
         let far = isFar
         mesh(at: base) { mesh in
-            let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 2)
+            let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 2).on(.brickTile)
             mesh.addBox(base: base, forward: forward, length: length, width: width, height: 4.4, top: Map3DPalette.roof,
                         side: Map3DColor.rgb(0xC9746A), frontPaint: .bays(.shutter, bay: 4.6, floors: 1), flankPaint: Self.plaster, capped: false)
             mesh.addBox(base: base + Map3DPoint(0, 4.4, 0), forward: forward, length: length, width: width, height: 6.6, top: Map3DPalette.roof,

@@ -48,6 +48,9 @@ final class Map3DMetalView: MTKView {
         var detailed = false
         /// Decision 232: its shadows, if it has any.
         let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        /// Decision 244: its street furniture's instances, sorted by model,
+        /// and where each model's run of them starts.
+        let props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
         let minimum: Map3DPoint
         let maximum: Map3DPoint
     }
@@ -257,8 +260,21 @@ final class Map3DMetalView: MTKView {
             if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
                 far = (farVertices, farIndices, chunk.far.indices.count)
             }
+            var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
+            let sorted = chunk.props.sorted { $0.model < $1.model }
+            if let instances = makeBuffer(sorted.flatMap(\.floats)) {
+                var runs: [(model: Int, first: Int, count: Int)] = []
+                for (index, instance) in sorted.enumerated() {
+                    if let last = runs.last, last.model == instance.model {
+                        runs[runs.count - 1].count += 1
+                    } else {
+                        runs.append((instance.model, index, 1))
+                    }
+                }
+                props = (instances, runs)
+            }
             return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
-                         far: far, shadows: shadows, minimum: chunk.minimum, maximum: chunk.maximum)
+                         far: far, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum)
         }
     }
 
@@ -346,6 +362,22 @@ final class Map3DMetalView: MTKView {
                     drawCalls += 1
                     triangles += models.pack.models[model].triangleCount * count
                     first = last + 1
+                }
+            }
+        }
+        // Decision 244: the street furniture of the chunks drawn in full,
+        // one draw call a model and chunk.
+        if let models {
+            encoder.setRenderPipelineState(instancedPipeline)
+            for chunk in visible where chunk.detailed {
+                guard let props = chunk.props else { continue }
+                for run in props.runs where run.model < models.buffers.count {
+                    encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
+                    encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                                           instanceCount: run.count)
+                    drawCalls += 1
+                    triangles += models.pack.models[run.model].triangleCount * run.count
                 }
             }
         }

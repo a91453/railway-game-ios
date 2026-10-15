@@ -334,8 +334,12 @@ extension XCUIApplication {
         // A panel beside the map on a phone on its side is short, and a
         // line's list there runs to some 23 screens (main's e48285f): long
         // drags until the row exists, then short ones that cannot carry it
-        // past the band.
-        for _ in 0..<(list == nil ? 16 : 40) {
+        // past the band. The settings reached the report's attach switch
+        // after 15 of 16 drags (main c4134e8's full lane), and a later run
+        // lost 5 of its 16 to the list's bottom edge, where the touch fell
+        // on the scroll edge's own view and nothing moved (main 27b1dde,
+        // run 38773737363): 24 leaves room for both.
+        for _ in 0..<(list == nil ? 24 : 40) {
             if element.exists {
                 let place = element.frame
                 if place.minY >= top, place.maxY <= bottom, element.isHittable { return true }

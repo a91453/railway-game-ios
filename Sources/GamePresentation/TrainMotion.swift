@@ -165,6 +165,8 @@ public struct TrainMotion: Sendable {
         public let train: TrainID
         public let look: TrainLook
         public let isHighSpeed: Bool
+        /// How its model is painted (decision 243).
+        public let livery: TrainLivery
         /// The track from the train's head now back over the track it
         /// covered in the last tick, then back along its body as it was.
         public let trail: Trail
@@ -250,6 +252,7 @@ public struct TrainMotion: Sendable {
             }
             runs.append(Run(
                 train: train.id, look: looks[train.id] ?? .plain, isHighSpeed: train.type?.isHighSpeed == true,
+                livery: TrainLivery.of(type: train.type, performance: train.performance),
                 trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading
             ))
         }

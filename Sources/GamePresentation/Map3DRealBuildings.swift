@@ -100,41 +100,45 @@ extension Map3DScene.Builder {
         var wall: UInt32, roof = Map3DPalette.roof, roofPaint: Map3DPaint? = Self.roofing
         var groundFloor: Float = 0, groundPaint: Map3DPaint?, upperPaint: Map3DPaint?
         let upperFloors = max(1, storeys - 1)
+        // Decision 242: the material each kind is faced with.
+        let homeFacing = Self.homeMaterial(r(5))
         switch kind {
         case .shophouse:
             wall = Self.pickWall(seed)
             groundFloor = min(3.8, height / 2)
             groundPaint = .bays(r(1) < 0.75 ? Self.pick(Map3DSurface.shops, r(2)) : .shutter, bay: 5.4, floors: 1)
-            upperPaint = storeys <= 5 ? .bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: upperFloors)
-                : .bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: upperFloors)
+            upperPaint = (storeys <= 5 ? Map3DPaint.bays(r(3) < 0.45 ? .homeBalcony : .homeWindows, bay: 6, floors: upperFloors)
+                : Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: upperFloors)).on(homeFacing)
         case .flats:
             wall = Self.pickWall(seed)
             if r(1) < 0.5 {
                 groundFloor = min(4.2, height / 3)
                 groundPaint = .bays(Self.pick(Map3DSurface.shops, r(2)), bay: 5.4, floors: 1)
             }
-            upperPaint = .bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: groundFloor > 0 ? upperFloors : storeys)
+            upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(3)), bay: 3.2, floors: groundFloor > 0 ? upperFloors : storeys).on(homeFacing)
         case .office:
-            wall = Self.pick(Map3DPalette.officeWalls, seed)
+            let concrete = r(6) < 0.4
+            wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Self.pick(Map3DPalette.officeWalls, seed)
             groundFloor = min(4.6, height / 3)
             groundPaint = .bays(r(1) < 0.5 ? .officeGlass : Self.pick(Map3DSurface.shops, r(2)), bay: r(1) < 0.5 ? 3 : 5.4, floors: 1)
-            upperPaint = .bays(.officeGlass, bay: 3, floors: upperFloors)
+            upperPaint = Map3DPaint.bays(.officeGlass, bay: 3, floors: upperFloors).on(concrete ? .formConcrete : nil)
         case .industry:
             wall = Self.pick(Map3DPalette.shedWalls, seed)
             roof = Self.pick(Map3DPalette.tinRoofs, r(4))
             roofPaint = Self.metal
             upperPaint = Self.metal
         case .civic:
-            wall = Map3DPalette.schoolWalls
-            upperPaint = .bays(.flatWindows, bay: 3.4, floors: storeys)
+            let concrete = r(6) < 0.5
+            wall = concrete ? Self.pick(Map3DPalette.concreteWalls, seed) : Map3DPalette.schoolWalls
+            upperPaint = Map3DPaint.bays(.flatWindows, bay: 3.4, floors: storeys).on(concrete ? .formConcrete : .brickTile)
         case .temple:
             wall = Map3DPalette.templeWall
             roof = Map3DPalette.templeRoof
             roofPaint = nil
-            upperPaint = Self.plaster
+            upperPaint = Self.plaster.on(.terrazzo)
         case .transport:
-            wall = Map3DPalette.concrete
-            upperPaint = Self.concrete
+            wall = Self.pick(Map3DPalette.concreteWalls, seed)
+            upperPaint = Self.concrete.on(.formConcrete)
         }
         // A temple of a single hall under its hipped roof, the walls lower.
         let hipped = kind == .temple && polygons.count == 1 && area < 900 && box.width > 4
