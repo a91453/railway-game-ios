@@ -56,6 +56,7 @@ struct RailwayGameApp: App {
         let audio = GameAudio(plays: plays)
         let launcher = RailwayGameApp.makeLauncher()
         launcher.playSound = { audio.play($0) }
+        launcher.duckMusic = { audio.duckMusic($0) }
         _audio = State(initialValue: audio)
         _launcher = State(initialValue: launcher)
     }

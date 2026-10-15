@@ -59,6 +59,7 @@ extension RealWorldDemo {
             // Decision 212: its traffic control takes whole legs as measured.
             world.setBlockSections(false)
             world.setCurveSpeedLimits(false)
+            world.setRealCarLengths(false)
             // Decision 174: nor do tourists come to its sights.
             world.setTourism(nil)
             // Decision 183: nor does the city ask it for anything.

@@ -80,7 +80,7 @@ final class Map3DShadowTests: XCTestCase {
         let scene = Map3DScene(world: world)
         let motion = TrainMotion(world: world, time: 0)
         let frame = Map3DTrains.frame(motion, progress: 1, heights: Map3DTrains.Heights(world.railwaySnapshot()), in: scene, models: nil, eye: nil)
-        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length) }
+        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
         XCTAssertEqual(frame.shadows.triangleCount, cars * 10)
         // Under the cars, just over the bed's top: the rail less 0.3 m,
         // where the cars' boxes start 0.3 m over the rail.
