@@ -71,11 +71,17 @@ public struct DepotYardPlan: Hashable, Sendable, Codable {
 enum DepotYardProblem: Error {
     /// The tap is not at the end of a track.
     case notAnEnd
+    /// A siding's S-curve out of the one inside it cannot be laid. Its
+    /// shape is fixed and runs on ahead, so `NetworkBuilding.curve` takes
+    /// it wherever the track ends; the case says so if it ever does not.
+    case cannotBend
 
     func text(in language: DisplayLanguage) -> String {
         switch self {
         case .notAnEnd:
             language.text("Tap the end of a track: the sidings run on from it.", "請點選軌道的盡頭：停車線從那裡接著鋪出去。")
+        case .cannotBend:
+            language.text("The sidings cannot curve out from here: try the other side or fewer sidings.", "停車線在這裡彎不出去：換另一邊，或少鋪幾股。")
         }
     }
 }
@@ -116,7 +122,7 @@ extension GameSession {
         for k in 1..<max(count, 1) {
             let from = at(turnout(k), siding: k - 1), bend = at(turnout(k) + DepotYard.reach, siding: k)
             guard let curve = NetworkBuilding.curve(from: from.plan, leaving: way, to: bend.plan, leaving: way.reversed) else {
-                return .failure(.notAnEnd)
+                return .failure(.cannotBend)
             }
             branches.append(.init(turnout: from, bend: bend, curve: curve, end: at(far, siding: k)))
         }

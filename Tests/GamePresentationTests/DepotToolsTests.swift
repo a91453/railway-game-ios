@@ -6,7 +6,7 @@ import XCTest
 /// Decision 214: the depot's tool and panels on decision 209's depots. Tap
 /// the end of a track, and sidings fan out from it with a depot that has a
 /// platform on each; the station panel makes a station a depot, saying why
-/// not; the line panel chooses its depot; a train shows it is leaving,
+/// not; the line panel ticks its depots; a train shows it is leaving,
 /// entering or standing in it.
 ///
 /// A straight track from west (x 1024) to east (x 16384) along y 8192,
@@ -97,6 +97,23 @@ final class DepotToolsTests: XCTestCase {
         XCTAssertEqual(session.world, world)
     }
 
+    /// Every number of sidings, on either side, bends out from a track's
+    /// end: the S-curves run on ahead, so the plan never fails for want of
+    /// one. Were one ever refused, it says so, not "tap the end".
+    func testTheSidingsBendOutFromAnyEnd() throws {
+        let (world, _, _, end) = try world()
+        let session = session(world)
+        for sidings in DepotYard.sidings {
+            for side in PlatformTrackSide.allCases {
+                guard case .success(let plan) = session.depotYardPlan(from: end, sidings: sidings, side: side) else {
+                    return XCTFail("\(sidings) sidings on the \(side) side")
+                }
+                XCTAssertEqual(plan.branches.count, sidings - 1)
+            }
+        }
+        XCTAssertNotEqual(DepotYardProblem.cannotBend.text(in: .traditionalChinese), DepotYardProblem.notAnEnd.text(in: .traditionalChinese))
+    }
+
     /// No room past the world's edge: GameCore refuses, and nothing is
     /// built.
     func testSidingsThatDoNotFitAreRefusedWhole() throws {
@@ -156,10 +173,10 @@ final class DepotToolsTests: XCTestCase {
         let row = try XCTUnwrap(session.selectedLineDepotRow)
         XCTAssertNil(row.problem)
         let depot = try XCTUnwrap(row.choices.first).station
-        session.setSelectedLineDepot(depot)
+        session.toggleSelectedLineDepot(depot)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         XCTAssertEqual(session.world.line(id: main)?.depot, depot)
-        XCTAssertEqual(session.selectedLineDepotRow?.current, depot)
+        XCTAssertEqual(session.selectedLineDepotRow?.chosen, [depot])
 
         // The session pauses the game it opens.
         var running = session.world
@@ -178,6 +195,14 @@ final class DepotToolsTests: XCTestCase {
             try night.advance(ticks: 1)
         }
         XCTAssertEqual(night.trainsInDepot(of: main), 1)
+        // The badge counts the line's own depots only: given another one,
+        // the train standing in the first is not in the line's depot.
+        var moved = night
+        let other = try moved.buildStation(named: "Other", at: PlanPoint(x: 40_960, y: 12_288)).id
+        try moved.setStationDepot(other, to: true)
+        try moved.setLineDepots(main, to: [other])
+        XCTAssertEqual(moved.depotState(of: train), .inDepot)
+        XCTAssertEqual(moved.trainsInDepot(of: main), 0)
         XCTAssertEqual(night.followBarInfo(of: train, in: .traditionalChinese)?.status, .depot(.inDepot))
         XCTAssertEqual(night.followBarInfo(of: train, in: .traditionalChinese)?.detail(in: .traditionalChinese).hasSuffix("· 在庫"), true)
         XCTAssertEqual(TrainDepotState.pullingOut.text(in: .traditionalChinese), "出庫中")
@@ -255,6 +280,57 @@ final class DepotToolsTests: XCTestCase {
 }
 
 extension DepotToolsTests {
+    /// Decision 221: the line panel ticks several depots. The list stands
+    /// nearest the line's ends first, the line keeps its ticked depots in
+    /// that order, unticking the last leaves its trains at its ends, a
+    /// station is held as long as any line ticks it, and every tick is one
+    /// edit the command log replays.
+    func testTheLinePanelTicksSeveralDepots() throws {
+        var (world, west, east, _) = try world()
+        let main = try world.createLine(named: "Main", stops: [west, east]).id
+        // Far first, so its number is lower than Near's.
+        let far = try world.buildStation(named: "Far", at: PlanPoint(x: 30_720, y: 12_288)).id
+        let near = try world.buildStation(named: "Near", at: PlanPoint(x: 14_336, y: 10_240)).id
+        try world.setStationDepot(far, to: true)
+        try world.setStationDepot(near, to: true)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.selectLine(main)
+        let row = try XCTUnwrap(session.selectedLineDepotRow)
+        XCTAssertEqual(row.choices.map(\.station), [near, far])
+        XCTAssertEqual(row.choices.map(\.isChosen), [false, false])
+        XCTAssertEqual(row.chosen, [])
+
+        session.toggleSelectedLineDepot(far)
+        XCTAssertEqual(session.message?.text, "「Main」的列車現在停機廠「Far」：首班前出庫、收班後入庫。")
+        session.toggleSelectedLineDepot(near)
+        XCTAssertEqual(session.message?.text, "「Main」的列車現在也會回機廠「Near」：每列車回最近的那一個。")
+        XCTAssertEqual(session.world.line(id: main)?.depots, [near, far])
+        XCTAssertEqual(session.selectedLineDepotRow?.choices.map(\.isChosen), [true, true])
+        guard case .command(.edit(.setLineDepots(main, [near, far])))? = session.commandLog.entries.last?.action else {
+            return XCTFail("logged as the edit")
+        }
+
+        // Its second depot is held as well as its first.
+        session.selectStation(far)
+        XCTAssertEqual(session.selectedStationDepotSwitch?.problem, "「Main」把列車停在這裡：先到路線面板取消勾選這個機廠。")
+        session.selectLine(main)
+
+        session.toggleSelectedLineDepot(near)
+        XCTAssertEqual(session.message?.text, "「Main」的列車不再回機廠「Near」。")
+        XCTAssertEqual(session.world.line(id: main)?.depots, [far])
+        session.toggleSelectedLineDepot(far)
+        XCTAssertEqual(session.message?.text, "「Main」的列車現在停在路線兩端。")
+        XCTAssertEqual(session.world.line(id: main)?.depots, [])
+        XCTAssertEqual(session.selectedLineDepotRow?.choices.map(\.isChosen), [false, false])
+
+        let report = try JSONDecoder().decode(
+            CommandLogReport.self, from: session.commandLogReport(version: "0.5.0", build: "57", data: [:]).encoded()
+        )
+        let replay = try CommandLogReplay(report)
+        XCTAssertNil(replay.stopped?.reason)
+        XCTAssertEqual(replay.session.world, session.world)
+    }
+
     func testTheHelpPageHasADepotEntry() {
         XCTAssertTrue(HelpGuide.entries(matching: "機廠").contains { $0.id == "depot" })
         XCTAssertTrue(HelpGuide.entries(matching: "depot sidings").contains { $0.id == "depot" })
