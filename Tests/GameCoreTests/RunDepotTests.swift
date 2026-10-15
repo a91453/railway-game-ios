@@ -106,6 +106,42 @@ final class RunDepotTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    // MARK: - Late under traffic control
+
+    /// Runs from Alpha at 06:00 and from Gamma at 06:20, and an unassigned
+    /// train standing at Beta: under traffic control train 1, out of West
+    /// for the first run, cannot take its route past Beta and waits at
+    /// Alpha, later and later. Its timetable has it at Gamma at 06:10, in
+    /// time for the second run; the train counts from when it would arrive,
+    /// its lateness added, so train 2 comes out of East and takes the run
+    /// from Gamma. With traffic control off train 1 runs through Beta and
+    /// takes the run itself, and train 2 stays in East, as before.
+    func testUnderTrafficControlALateTrainLeavesItsRunToOneFromTheDepot() throws {
+        func world(trafficControl: Bool) throws -> GameWorld {
+            var world = try makeWorld(minutes: 330, runs: [run(0, 1, at: 360), run(1, 0, at: 380)], trafficControl: trafficControl)
+            let standing = try world.purchaseTrain(named: "Standing")
+            try world.placeTrain(standing.id, at: track.at(5, facingEast: true))
+            return world
+        }
+        func gammaRun(_ world: inout GameWorld) throws -> TrainID? {
+            while world.clock.now < GameTime(minutes: 420) {
+                try world.advance(ticks: 1)
+                if world.line(id: main)?.runDays[1] != nil {
+                    return world.trains.first { $0.timetable.first?.station == gamma && $0.execution != nil }?.id
+                }
+            }
+            return nil
+        }
+        var controlled = try world(trafficControl: true)
+        XCTAssertEqual(try gammaRun(&controlled), id(2), "train 2 comes out of East for the run from Gamma")
+        XCTAssertNotNil(controlled.lateness(of: id(1)).flatMap { $0 > 0 ? $0 : nil }, "train 1 is late at Alpha")
+        XCTAssertEqual(WorldInvariants.violations(in: controlled), [])
+
+        var free = try world(trafficControl: false)
+        XCTAssertEqual(try gammaRun(&free), id(1), "without traffic control train 1 takes it")
+        XCTAssertEqual(free.stationsStoppedAt(by: id(2)), [east], "and train 2 stays in East")
+    }
+
     // MARK: - Out and in
 
     /// Each train runs out of its depot a few minutes before 06:00 to the
