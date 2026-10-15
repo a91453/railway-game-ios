@@ -1534,3 +1534,20 @@ V 實際放行 → T、U（保證不互穿）
 
 參考庫沒有的（本專案自己寫的）：依車站自動選鈴聲的規則（`StationChime`）、到站車站的判定、高速時的動機與速度規則（`SoundCue.arrivalCue`）、《沿線》樂譜格式與檢查（`score.py`）、清單（`manifest.json`）、觀光鈴的旋律。
 
+
+## 3D 地圖的貼圖（決策 231）
+
+參考庫 `a91453/railway-reference-private` `54998e9`（2026-10-15 讀取）。作者同一天加了素材庫 `Railway/procedural_assets_reference_clean/`，並說它的圖片「都可以用 但不能跟原圖一模一樣 需有稍微修改 結合其他檔案的圖片也沒關係」（art-style §7）。
+
+| 參考（`procedural_assets_reference_clean/source/preview/` 下） | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `city/assets/generated-brown-earth-tile`、`asphalt_albedo` | `Map3DSurfaces.png` 的 `grass` 層 | 只留亮度，模糊、五階，對比約 2% |
+| `city/assets/sidewalk_albedo`、`industrial/assets/concrete-reference-albedo` | `paving` | 只留接縫與每塊鋪面的平均亮度，轉 90° |
+| `industrial/assets/old-concrete-v2_albedo`、`generated-brown-earth-tile`、`japan/assets/concrete-map` | `ballast`、`concrete`、`roof` | 混合、模糊、低對比；枕木與模板接縫自己畫 |
+| `japan/assets/plaster-map`、`cream-tile-normal`、`old-concrete-v2_albedo` | `plaster`，以及立面各層的牆 | 三張混合，對比約 2% |
+| `japan/assets/glass-map`、`blue-metal-normal`、`steel_albedo`、`sakura-front-glazing-interior-albedo`（只取模糊的貨架） | `homeWindows`、`homeBalcony`、`shopfront`、`shutter`、`flatWindows`、`officeGlass`、`metalSheet` | 改色、翻轉、轉向後，配上自己畫的窗、鐵窗、雨遮、陽台、招牌帶、鐵捲門、門 |
+| 同一個素材庫的招牌、海報、販賣機 | 沒有用 | 有真實品牌與日文店名（art-style §7） |
+| 同一個素材庫的 3D 模型與 `MODEL_CATALOG.json` | 只看做法 | 一樓店面、雨遮、窗與樓板的位置；不搬幾何（決策 230） |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`：道床比軌頂低 0.35 m | `Map3DScene.railLift` 0.45 m | 道床頂比地面高 0.1 m，地面上的軌道才看得到道床 |
+
+逐層的比對（SHA-256 都不同，最像的那張相關係數最高 0.76）在 `docs/art/map3d-surfaces-2026-10-15/README.md`。外部專案沒有用到。

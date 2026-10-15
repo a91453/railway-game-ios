@@ -113,8 +113,11 @@ public enum Map3DTrains {
             let carModels = run.look == .freight ? nil : models?.models(forType: heights.type(of: run.train))
             for (index, car) in cars.enumerated() {
                 guard let front = car.first, let back = car.last else { continue }
-                let a = scene.point(worldX: front.x, worldY: front.y, height: heights.height(of: run.train, x: front.x, y: front.y))
-                let b = scene.point(worldX: back.x, worldY: back.y, height: heights.height(of: run.train, x: back.x, y: back.y))
+                // On the rails, which stand ``Map3DScene/railLift`` over the
+                // track's height (decision 231).
+                let lift = Map3DPoint(0, Map3DScene.railLift, 0)
+                let a = scene.point(worldX: front.x, worldY: front.y, height: heights.height(of: run.train, x: front.x, y: front.y)) + lift
+                let b = scene.point(worldX: back.x, worldY: back.y, height: heights.height(of: run.train, x: back.x, y: back.y)) + lift
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5

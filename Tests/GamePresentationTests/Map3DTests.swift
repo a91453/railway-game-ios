@@ -159,12 +159,13 @@ final class Map3DTests: XCTestCase {
             XCTAssertTrue(chunk.mesh.vertices.allSatisfy { $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
             XCTAssertLessThanOrEqual(chunk.minimum.x, chunk.maximum.x)
         }
-        // Rails along the middle of every edge, at the rail's height.
+        // Rails along the middle of every edge, at the rail's height, lifted
+        // so the bed shows over the ground (decision 231).
         let colours = scene.chunks.flatMap(\.mesh.vertices).filter { $0.color == Map3DPalette.railTop }
         for alignment in world.railwaySnapshot().edges {
             let middle = alignment.geometry.location(at: alignment.geometry.length / 2).position
             let point = scene.point(middle)
-            XCTAssertTrue(colours.contains { abs($0.x - point.x) < 20 && abs($0.z - point.z) < 20 && abs($0.y - point.y) < 0.01 },
+            XCTAssertTrue(colours.contains { abs($0.x - point.x) < 20 && abs($0.z - point.z) < 20 && abs($0.y - (point.y + Map3DScene.railLift)) < 0.01 },
                           "a rail by edge \(alignment.edge.id)")
         }
         // Both towns stand: some houses' walls.
@@ -224,6 +225,6 @@ final class Map3DTests: XCTestCase {
         // A body box and a band box a car, five faces each.
         XCTAssertEqual(mesh.triangleCount, cars * 2 * 10)
         let bounds = try XCTUnwrap(mesh.bounds)
-        XCTAssertEqual(bounds.max.y, Map3DTrains.carHeight, accuracy: 0.01, "on the ground's level track")
+        XCTAssertEqual(bounds.max.y, Map3DTrains.carHeight + Map3DScene.railLift, accuracy: 0.01, "on the rails of the ground's level track")
     }
 }

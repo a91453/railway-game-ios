@@ -42,6 +42,7 @@
 		3F4E6EB1D04071F2D7E13A02 /* WebsiteScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A99E6EF4AC0C447E9D16F0E /* WebsiteScreenshotTests.swift */; };
 		3FA9D3B90B7D1F9CBC07E2FE /* trtc_codes.json in Resources */ = {isa = PBXBuildFile; fileRef = 905E65E0102E822A86C5ECF8 /* trtc_codes.json */; };
 		44DB05AFB29842D0B2DC04C0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D490F999E435A0570BE04635 /* ContentView.swift */; };
+		47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */ = {isa = PBXBuildFile; fileRef = 70170091E76358BF8886BB8E /* Map3DSurfaces.png */; };
 		4936E4C3E4EF4FA3E29C6989 /* MapArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92B62C199B3DE4F7602175F /* MapArt.swift */; };
 		4BD9A2C2F541EB4CE36CA67B /* sanying.json in Resources */ = {isa = PBXBuildFile; fileRef = 92FBF87A0B909AF9C100FC70 /* sanying.json */; };
 		4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */ = {isa = PBXBuildFile; fileRef = CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */; };
@@ -208,6 +209,7 @@
 		6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainLoadBar.swift; sourceTree = "<group>"; };
 		6F88DCCA78BB699F97926C9A /* AchievementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementsView.swift; sourceTree = "<group>"; };
 		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
+		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
 		787EB9DDCEED2E78C0E0E237 /* FinanceTrendCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinanceTrendCharts.swift; sourceTree = "<group>"; };
 		79941FA523AF01C8B9E74433 /* BuildToolRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildToolRail.swift; sourceTree = "<group>"; };
@@ -451,6 +453,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		5983417AAC9DD4A270355DFB /* Map3D */ = {
+			isa = PBXGroup;
+			children = (
+				70170091E76358BF8886BB8E /* Map3DSurfaces.png */,
+			);
+			path = Map3D;
+			sourceTree = "<group>";
+		};
 		828A069B3EBF9E0D71CBF431 /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -524,6 +534,7 @@
 				B3A6A45B19F662183005E4CB /* Audio */,
 				A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */,
 				8382CA8983A43BE4B8E22C4F /* Licenses */,
+				5983417AAC9DD4A270355DFB /* Map3D */,
 				4129AFF36D68297713804A78 /* RealRailways */,
 				2F8768290831E1C1F09B9C81 /* RealWorld */,
 			);
@@ -624,6 +635,7 @@
 				CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */,
 				8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */,
 				D7C2F05C8F97660E0404A588 /* Localizable.xcstrings in Resources */,
+				47D7D11A0F4705BFD3BE7E6A /* Map3DSurfaces.png in Resources */,
 				68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */,
 				D9A96F6DD6A7A5B69078119E /* NotoSans-OFL.txt in Resources */,
 				1E9DD55C059CAB8D682CA656 /* afr.json in Resources */,

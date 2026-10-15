@@ -9,9 +9,11 @@ import GameCore
 // origin the scene picks (``Map3DScene/origin``) so a map 500 km wide keeps
 // its precision in `Float`. Right-handed: x × y = z.
 
-/// One corner of a triangle: where it is, which way its face looks, and its
-/// colour. Laid out as Metal reads it: 28 bytes, three floats of position
-/// at 0, three of normal at 12, and four bytes of colour (red first) at 24.
+/// One corner of a triangle: where it is, which way its face looks, its
+/// colour and its texture. Laid out as Metal reads it: 40 bytes, three
+/// floats of position at 0, three of normal at 12, four bytes of colour
+/// (red first) at 24, and three floats of texture at 28: where in its
+/// layer (`u`, `v`, in repeats) and the layer (decision 231).
 public struct Map3DVertex: Hashable, Sendable {
     public var x: Float
     public var y: Float
@@ -21,8 +23,16 @@ public struct Map3DVertex: Hashable, Sendable {
     public var nz: Float
     /// Red in the low byte, then green, blue and alpha.
     public var color: UInt32
+    public var u: Float
+    public var v: Float
+    /// The ``Map3DSurface`` layer, or ``Map3DVertex/plain`` for the
+    /// colour alone.
+    public var layer: Float
 
-    public init(_ position: Map3DPoint, normal: Map3DPoint, color: UInt32) {
+    /// No texture: the colour alone.
+    public static let plain: Float = -1
+
+    public init(_ position: Map3DPoint, normal: Map3DPoint, color: UInt32, u: Float = 0, v: Float = 0, layer: Float = Map3DVertex.plain) {
         x = position.x
         y = position.y
         z = position.z
@@ -30,9 +40,112 @@ public struct Map3DVertex: Hashable, Sendable {
         ny = normal.y
         nz = normal.z
         self.color = color
+        self.u = u
+        self.v = v
+        self.layer = layer
     }
 
     public var position: Map3DPoint { Map3DPoint(x, y, z) }
+
+    /// The surface it is painted with, or `nil` for the colour alone.
+    public var surface: Map3DSurface? { layer < 0 ? nil : Map3DSurface(rawValue: Int(layer)) }
+}
+
+/// Decision 231: the textures of the 3D map, one layer each of the app's
+/// `Map3DSurfaces.png`, in this order. Each is made from the reference
+/// asset library's images, changed and mixed (the owner, 2026-10-15), and
+/// tints with the vertex's colour where its mask says so: walls keep the
+/// palette's colours, glass and shutters keep their own.
+public enum Map3DSurface: Int, CaseIterable, Sendable {
+    /// Soft spots on the ground and in parks.
+    case grass
+    /// Platforms and plazas: square pavers.
+    case paving
+    /// Track bed: gravel, a concrete sleeper every 0.6 m, made for a 5 m
+    /// bed (the sleepers 2.1 m long in its middle).
+    case ballast
+    /// Viaducts, piers, portals, platform walls: formwork joints.
+    case concrete
+    /// Flat roofs.
+    case roof
+    /// Blank walls: the sides of row houses.
+    case plaster
+    /// A 透天厝 floor: a window behind an iron grille, an awning, an air
+    /// conditioner.
+    case homeWindows
+    /// A 透天厝 floor with a balcony.
+    case homeBalcony
+    /// A shop's ground floor: signboard, glass, goods.
+    case shopfront
+    /// A ground floor closed by a rolling shutter (鐵捲門).
+    case shutter
+    /// A bay of a block of flats: one window.
+    case flatWindows
+    /// A bay of an office's curtain wall.
+    case officeGlass
+    /// Corrugated metal: sheds and canopies.
+    case metalSheet
+
+    /// The side of each layer in the texture, in pixels.
+    public static let side = 256
+}
+
+/// How a face takes its ``Map3DSurface``: how many metres one repeat
+/// covers, or how many whole bays and floors the face holds.
+public struct Map3DPaint: Hashable, Sendable {
+    public enum Fit: Hashable, Sendable {
+        /// One repeat every `width` metres across and `height` up. A face
+        /// looking up repeats over the map's east and south, so tops side
+        /// by side run on without a seam.
+        case tile(width: Float, height: Float)
+        /// Whole bays across the face, as many `bay`-metre bays as fit and
+        /// at least one, and `floors` up it: windows meet the corners and
+        /// the floors.
+        case bays(bay: Float, floors: Int)
+    }
+
+    public var surface: Map3DSurface
+    public var fit: Fit
+
+    public init(_ surface: Map3DSurface, _ fit: Fit) {
+        self.surface = surface
+        self.fit = fit
+    }
+
+    public static func tile(_ surface: Map3DSurface, _ size: Float) -> Map3DPaint {
+        Map3DPaint(surface, .tile(width: size, height: size))
+    }
+
+    public static func bays(_ surface: Map3DSurface, bay: Float, floors: Int) -> Map3DPaint {
+        Map3DPaint(surface, .bays(bay: bay, floors: max(1, floors)))
+    }
+
+    /// Where each of `corners` (one flat face, facing `normal`) falls in
+    /// the layer.
+    func coordinates(_ corners: [Map3DPoint], normal: Map3DPoint) -> [(u: Float, v: Float)] {
+        if abs(normal.y) > 0.7 {
+            let (width, height): (Float, Float)
+            switch fit {
+            case let .tile(w, h): (width, height) = (w, h)
+            case let .bays(bay, _): (width, height) = (bay, bay)
+            }
+            return corners.map { ($0.x / width, $0.z / height) }
+        }
+        // A wall: across it to the right as seen from outside, and up.
+        let right = Map3DPoint.up.cross(normal).normalized ?? Map3DPoint(1, 0, 0)
+        let across = corners.map { $0.dot(right) }
+        let low = across.min() ?? 0, bottom = corners.map(\.y).min() ?? 0
+        switch fit {
+        case let .tile(width, height):
+            return zip(across, corners).map { (($0 - low) / width, ($1.y - bottom) / height) }
+        case let .bays(bay, floors):
+            let wide = (across.max() ?? 0) - low, high = (corners.map(\.y).max() ?? 0) - bottom
+            let count = max(1, (wide / bay).rounded())
+            return zip(across, corners).map {
+                (wide > 0 ? ($0 - low) / wide * count : 0, high > 0 ? ($1.y - bottom) / high * Float(floors) : 0)
+            }
+        }
+    }
 }
 
 /// A point or direction in the 3D map's space, in metres.
@@ -130,12 +243,26 @@ public struct Map3DMesh: Sendable {
     }
 
     /// A flat four-cornered face, `a b c d` counter-clockwise seen from
-    /// the side it faces.
-    public mutating func addQuad(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint, color: UInt32) {
-        guard let normal = (b - a).cross(d - a).normalized ?? (c - b).cross(a - b).normalized else { return }
+    /// the side it faces, painted with `paint` when there is one.
+    public mutating func addQuad(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint, color: UInt32, paint: Map3DPaint? = nil) {
+        let corners = [a, b, c, d]
+        guard let normal = Self.normal(of: corners) else { return }
+        addQuad(corners, normal: normal, color: color, layer: paint.map { Float($0.surface.rawValue) },
+                texture: paint?.coordinates(corners, normal: normal))
+    }
+
+    /// The way a flat face `a b c d` (counter-clockwise seen from outside)
+    /// looks, or `nil` when it has no area.
+    static func normal(of corners: [Map3DPoint]) -> Map3DPoint? {
+        (corners[1] - corners[0]).cross(corners[3] - corners[0]).normalized
+            ?? (corners[2] - corners[1]).cross(corners[0] - corners[1]).normalized
+    }
+
+    private mutating func addQuad(_ corners: [Map3DPoint], normal: Map3DPoint, color: UInt32, layer: Float?, texture: [(u: Float, v: Float)]?) {
         let base = UInt32(vertices.count)
-        for corner in [a, b, c, d] {
-            vertices.append(Map3DVertex(corner, normal: normal, color: color))
+        for (index, corner) in corners.enumerated() {
+            let place: (u: Float, v: Float) = texture?[index] ?? (0, 0)
+            vertices.append(Map3DVertex(corner, normal: normal, color: color, u: place.u, v: place.v, layer: layer ?? Map3DVertex.plain))
         }
         indices += [base, base + 1, base + 2, base, base + 2, base + 3]
     }
@@ -143,10 +270,15 @@ public struct Map3DMesh: Sendable {
     /// A box standing on `base` (the middle of its floor), `length` along
     /// `forward` (a level direction), `width` across it and `height` up;
     /// the top in `top`, the sides in `side` shaded by the way they face.
-    /// No floor: nothing looks at it from below.
+    /// No floor: nothing looks at it from below; no top either when it is
+    /// not `capped` (a lower part another box stands on). Decision 231:
+    /// painted on top with `topPaint`, on the front and back (facing along
+    /// `forward`) with `frontPaint`, and on the two flanks with
+    /// `flankPaint`.
     public mutating func addBox(
         base: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float, height: Float,
-        top: UInt32, side: UInt32
+        top: UInt32, side: UInt32, topPaint: Map3DPaint? = nil, frontPaint: Map3DPaint? = nil, flankPaint: Map3DPaint? = nil,
+        capped: Bool = true
     ) {
         guard length > 0, width > 0, height > 0,
               let along = Map3DPoint(forward.x, 0, forward.z).normalized else { return }
@@ -154,31 +286,72 @@ public struct Map3DMesh: Sendable {
         let f = along * (length / 2), r = across * (width / 2), h = Map3DPoint(0, height, 0)
         let corners = [base + f - r, base + f + r, base - f + r, base - f - r] // front left, front right, back right, back left
         let up = corners.map { $0 + h }
-        addQuad(up[0], up[3], up[2], up[1], color: top)
+        if capped { addQuad(up[0], up[3], up[2], up[1], color: top, paint: topPaint) }
         // Each side, counter-clockwise from outside: ground, ground, top, top.
         let sides: [(Int, Int, Float)] = [(1, 0, 0.92), (2, 1, 0.80), (3, 2, 0.70), (0, 3, 0.86)]
-        for (from, to, shade) in sides {
-            addQuad(corners[from], corners[to], up[to], up[from], color: Map3DColor.shaded(side, shade))
+        for (index, (from, to, shade)) in sides.enumerated() {
+            addQuad(corners[from], corners[to], up[to], up[from], color: Map3DColor.shaded(side, shade),
+                    paint: index.isMultiple(of: 2) ? frontPaint : flankPaint)
         }
     }
 
     /// A strip `width` wide following `line` at its heights plus `lift`,
     /// facing up: ballast, a rail, a deck. Its sides along the line hang
-    /// `depth` down when `depth` is more than 0.
+    /// `depth` down when `depth` is more than 0. Decision 231: the top
+    /// painted with `topPaint` along the line, the middle of its width
+    /// at the middle of the layer (so a 3.4 m bed shows the middle of the
+    /// ballast's 5 m), and the sides with `sidePaint`.
     public mutating func addRibbon(
-        along line: [Map3DPoint], width: Float, offset: Float = 0, lift: Float = 0, depth: Float = 0, top: UInt32, side: UInt32? = nil
+        along line: [Map3DPoint], width: Float, offset: Float = 0, lift: Float = 0, depth: Float = 0, top: UInt32, side: UInt32? = nil,
+        topPaint: Map3DPaint? = nil, sidePaint: Map3DPaint? = nil
     ) {
         guard line.count > 1 else { return }
         let across = Self.acrossDirections(line)
         let half = width / 2
         let left = line.indices.map { line[$0] + across[$0] * (offset - half) + Map3DPoint(0, lift, 0) }
         let right = line.indices.map { line[$0] + across[$0] * (offset + half) + Map3DPoint(0, lift, 0) }
+        // How far along the line each point is, in metres.
+        var travelled: [Float] = [0]
+        for index in 1..<line.count {
+            let step = line[index] - line[index - 1]
+            travelled.append(travelled[index - 1] + Map3DPoint(step.x, 0, step.z).length)
+        }
+        func repeats(_ paint: Map3DPaint) -> (across: Float, along: Float) {
+            switch paint.fit {
+            case let .tile(width, height): (width, height)
+            case let .bays(bay, _): (bay, bay)
+            }
+        }
+        let topLayer = topPaint.map { Float($0.surface.rawValue) }, sideLayer = sidePaint.map { Float($0.surface.rawValue) }
         for index in 0..<(line.count - 1) {
-            addQuad(left[index], right[index], right[index + 1], left[index + 1], color: top)
+            let corners = [left[index], right[index], right[index + 1], left[index + 1]]
+            if let normal = Self.normal(of: corners) {
+                var texture: [(u: Float, v: Float)]?
+                if let topPaint {
+                    let size = repeats(topPaint)
+                    let low = 0.5 - half / size.across, high = 0.5 + half / size.across
+                    let start = travelled[index] / size.along, end = travelled[index + 1] / size.along
+                    texture = [(low, start), (high, start), (high, end), (low, end)]
+                }
+                addQuad(corners, normal: normal, color: top, layer: topLayer, texture: texture)
+            }
             if depth > 0, let side {
                 let drop = Map3DPoint(0, -depth, 0)
-                addQuad(right[index + 1], right[index], right[index] + drop, right[index + 1] + drop, color: Map3DColor.shaded(side, 0.82))
-                addQuad(left[index], left[index + 1], left[index + 1] + drop, left[index] + drop, color: Map3DColor.shaded(side, 0.72))
+                var rightTexture: [(u: Float, v: Float)]?, leftTexture: [(u: Float, v: Float)]?
+                if let sidePaint {
+                    let size = repeats(sidePaint)
+                    let start = travelled[index] / size.across, end = travelled[index + 1] / size.across, up = depth / size.along
+                    rightTexture = [(end, up), (start, up), (start, 0), (end, 0)]
+                    leftTexture = [(start, up), (end, up), (end, 0), (start, 0)]
+                }
+                let rightSide = [corners[2], corners[1], corners[1] + drop, corners[2] + drop]
+                let leftSide = [corners[0], corners[3], corners[3] + drop, corners[0] + drop]
+                if let normal = Self.normal(of: rightSide) {
+                    addQuad(rightSide, normal: normal, color: Map3DColor.shaded(side, 0.82), layer: sideLayer, texture: rightTexture)
+                }
+                if let normal = Self.normal(of: leftSide) {
+                    addQuad(leftSide, normal: normal, color: Map3DColor.shaded(side, 0.72), layer: sideLayer, texture: leftTexture)
+                }
             }
         }
     }
