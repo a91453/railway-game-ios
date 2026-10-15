@@ -298,9 +298,16 @@ public struct RealRailways: Sendable {
         public var id: String { "\(system.id)|\(chinese)" }
 
         /// Its English name from the site's `i18n/stations.json`; the
-        /// Chinese one where the site has none.
+        /// Chinese one where the site has none. Two names the data tells
+        /// apart by a suffix (中壢 "Zhongli_Taoyuan", 中里 "Zhongli_Yilan")
+        /// show it in brackets: "Zhongli (Yilan)".
         public func name(in language: DisplayLanguage) -> String {
-            language.text(english ?? chinese, chinese)
+            language.text(english.map(Self.shown) ?? chinese, chinese)
+        }
+
+        static func shown(_ english: String) -> String {
+            guard let cut = english.firstIndex(of: "_") else { return english }
+            return "\(english[..<cut]) (\(english[english.index(after: cut)...].replacingOccurrences(of: "_", with: " ")))"
         }
 
         /// Where a game's map starting at it lies.
@@ -347,7 +354,7 @@ public struct RealRailways: Sendable {
     /// screen), never dropped silently.
     public let loadIssues: [RealDataLoadIssue]
     /// ``stations`` by ``stationKey(_:)`` of their Chinese and English
-    /// names: indices in the site's order.
+    /// names (the data's and the one shown): indices in the site's order.
     private let stationIndicesByKey: [String: [Int]]
 
     /// The railways in the site's `track_lines.geojson`,
@@ -410,7 +417,7 @@ public struct RealRailways: Sendable {
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
         var byKey: [String: [Int]] = [:]
         for (index, station) in stations.enumerated() {
-            for key in Set([station.chinese, station.english].compactMap { $0 }.map(Self.stationKey)).sorted() where !key.isEmpty {
+            for key in Set([station.chinese, station.english, station.english.map(Station.shown)].compactMap { $0 }.map(Self.stationKey)).sorted() where !key.isEmpty {
                 byKey[key, default: []].append(index)
             }
         }

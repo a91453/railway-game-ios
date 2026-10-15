@@ -462,7 +462,7 @@ private struct DemoPicker: View {
                             }
                         }
                     }
-                    .disabled(launcher.railways == nil || launcher.isOpeningHighSpeedDemo)
+                    .disabled(launcher.railways == nil || launcher.isOpeningADemo)
                     .accessibilityIdentifier("demo.highSpeed")
                     StartButton(
                         title: String(localized: "Simple Demo"),
@@ -493,7 +493,7 @@ private struct DemoPicker: View {
                             }
                         }
                     }
-                    .disabled(launcher.railways == nil || launcher.isOpeningTRADemo)
+                    .disabled(launcher.railways == nil || launcher.isOpeningADemo)
                     .accessibilityIdentifier("demo.tra")
                 }
                 .frame(maxWidth: 420)

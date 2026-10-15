@@ -103,6 +103,17 @@ final class RealRailwayGameplayTests: XCTestCase {
         XCTAssertEqual(far.realStationDetails(of: id), [])
     }
 
+    /// Two stations the data tells apart by a suffix (中壢 "Zhongli_Taoyuan",
+    /// 中里 "Zhongli_Yilan") are named for players as a place, the suffix in
+    /// brackets; no English station name shows an underscore.
+    func testNoStationNameShowsTheDatasSuffix() throws {
+        let railways = try BundledRealData.railways()
+        let names = railways.stations.map { $0.name(in: .english) }
+        XCTAssertEqual(names.filter { $0.contains("_") }, [])
+        XCTAssertTrue(names.contains("Zhongli (Yilan)"))
+        XCTAssertTrue(names.contains("Zhongli (Taoyuan)"))
+    }
+
     func testPlatformLengthDefaultsFromTheTRAStationGrade() throws {
         let session = GameSession(world: .newGame(), language: .english)
         session.railways = try BundledRealData.railways()
