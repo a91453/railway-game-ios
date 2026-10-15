@@ -28,6 +28,28 @@ extension Map3DScene.Builder {
         }
     }
 
+    /// Decision 241: the sidewalks under the roads, over every cover, and
+    /// the centre lines over every road.
+    static let sidewalkLift: Float = 0.26
+    static let centreLineLift: Float = 0.38
+
+    /// The sidewalk each side of a road, in metres: the 3D city preview's
+    /// (`Web/CityView/tools/pipeline/taiwan.mjs`, `SIDEWALK`); none on a
+    /// lane, a service road or a motorway.
+    static func sidewalk(of road: Map3DBaseMap.RoadKind) -> Float {
+        switch road {
+        case .trunk, .primary, .secondary: 3
+        case .tertiary: 2
+        case .motorway, .minor, .service: 0
+        }
+    }
+
+    /// Whether a road gets a yellow centre line: a two-way road of
+    /// Taiwan's (a motorway's carriageways are apart, a ramp runs one way).
+    static func hasCentreLine(_ road: Map3DBaseMap.Road) -> Bool {
+        !road.isRamp && [.trunk, .primary, .secondary, .tertiary].contains(road.kind)
+    }
+
     /// Half a city lot's side: a road or water this near a lot's middle
     /// (in both directions) takes the lot.
     static let lotReach: Float = 20
@@ -45,11 +67,22 @@ extension Map3DScene.Builder {
             addStrip(waterway.points, bounds: waterway.bounds, width: waterway.kind.width,
                      lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, taking: &taken)
         }
+        // Decision 241: the sidewalks first, a strip wider than the road
+        // under it, so both edges show and they close at the junctions.
+        for road in map.roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
+            addStrip(road.points, bounds: road.bounds, width: road.kind.width(ramp: false) + 2 * Self.sidewalk(of: road.kind),
+                     lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, taking: &taken)
+        }
         for kind in Map3DBaseMap.RoadKind.allCases {
             for road in map.roads where road.kind == kind {
                 addStrip(road.points, bounds: road.bounds, width: kind.width(ramp: road.isRamp), lift: Self.lift(of: kind),
                          color: Map3DPalette.road(kind), paint: nil, taking: &taken)
             }
+        }
+        var lines = Set<Map3DScene.ChunkKey>()
+        for road in map.roads where Self.hasCentreLine(road) {
+            addStrip(road.points, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
+                     taking: &lines)
         }
         return taken
     }
