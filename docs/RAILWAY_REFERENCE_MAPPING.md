@@ -1613,3 +1613,12 @@ V 實際放行 → T、U（保證不互穿）
 | `city_map_reference_clean/source/rendering/theme-catalog.js`、`mapbox-palette.js`：六種配色，道路依等級分深淺與粗細 | `Map3DPalette.road`、`ground`、`water` | 只取做法；顏色換成遊戲 2D 地圖的藏青與淺色 |
 | `Web/CityView/tools/pipeline/taiwan.mjs` `SIDEWALK` | `Map3DScene.Builder.sidewalk(of:)` | 寬度照用 |
 
+## 車款外觀（決策 243）
+
+| 參考 | 用在 | 怎麼用 |
+| --- | --- | --- |
+| `Web/CityView/src/world/trains.js` 的 `LIVERIES`（`hsr`、`emu3000`、玻璃色、預設不鏽鋼） | `TrainLivery.highSpeed`、`.emu3000`、`.metroC381` | 色值照搬 |
+| 參考庫 `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 各車的 `livery` 文字 | `TrainLivery.emu3000`、`.puyuma`、`.emu800` | 照描述（EMU3000 黑面罩、普悠瑪紅頭紅帶、EMU800 藍面板黃帶）取色，色值本專案的 |
+| 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
+| 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
+
