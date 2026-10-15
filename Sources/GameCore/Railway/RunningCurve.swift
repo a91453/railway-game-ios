@@ -121,6 +121,18 @@ public struct TrainPerformance: Hashable, Sendable {
     /// m/s²), and braked gently (1.2 km/h a second). The references have no
     /// steam train; the values are this project's.
     public static let steam = TrainPerformance(acceleration: 400, braking: 1200, topSpeed: 40)
+    /// Taipei Metro's C371 and C381 cars (decision 237): 1.0 m/s² to start
+    /// and 1.0 m/s² of service braking (3.6 km/h a second each), 80 km/h in
+    /// service (90 by design); the two types' published figures are the
+    /// same. ``metro`` brakes at their emergency 1.3 m/s².
+    public static let metroC381 = TrainPerformance(acceleration: 3600, braking: 3600, topSpeed: 80)
+    /// The Taiwan Railway's EMU800 and EMU900 local trains (decision 237):
+    /// 130 km/h in service (140 by design). They start at 0.7 m/s² to
+    /// 50 km/h, then 0.4 to 110 and 0.2 to 130: 130 km/h in 89.3 seconds,
+    /// so one rate that takes as long is 1.456 km/h a second (estimated:
+    /// a curve here has one rate). Service braking 1.2 m/s² (4.32 km/h a
+    /// second), the EMU800's; the EMU900's is not published.
+    public static let emu800 = TrainPerformance(acceleration: 1456, braking: 4320, topSpeed: 130)
 
     /// Whether a train or line may have this performance (Stage W2c): every
     /// rate and the top speed in `1...RunningCurve.maximumRate`, and a coast

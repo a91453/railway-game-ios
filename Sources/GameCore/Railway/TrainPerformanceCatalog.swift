@@ -39,6 +39,10 @@ public enum TrainPerformanceCatalog {
         .init(code: "forestRailway", performance: .forestRailway),
         .init(code: "highSpeed", performance: .highSpeed),
         .init(code: "steam", performance: .steam),
+        // Decision 237: real models. TEMU1000 and TEMU2000 are the Taroko and
+        // Puyuma rows above, and the 700T the high-speed row (`PERF_HSR`).
+        .init(code: "metroC381", performance: .metroC381),
+        .init(code: "emu800", performance: .emu800),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

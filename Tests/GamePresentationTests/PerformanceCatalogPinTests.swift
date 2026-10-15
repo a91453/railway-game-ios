@@ -50,7 +50,9 @@ final class PerformanceCatalogPinTests: XCTestCase {
     ]
 
     func testEveryPresetKeepsItsNamesAndNumbersInItsOrder() {
-        XCTAssertEqual(PerformancePreset.allCases.count, Self.pinned.count)
+        // Decision 237 added rows after these: the first fifteen stay as
+        // they were.
+        XCTAssertGreaterThanOrEqual(PerformancePreset.allCases.count, Self.pinned.count)
         for (preset, pin) in zip(PerformancePreset.allCases, Self.pinned) {
             XCTAssertEqual(preset.title(in: .english), pin.english)
             XCTAssertEqual(preset.title(in: .traditionalChinese), pin.chinese, pin.english)
