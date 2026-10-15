@@ -1,0 +1,201 @@
+{
+ "source": "© OpenStreetMap contributors, ODbL 1.0 (osmtoday.com asia/taiwan.pbf)",
+ "stations": [
+  {
+   "station": "南港",
+   "tracks": 6,
+   "platforms": [
+    {
+     "way": 706686411,
+     "name": null,
+     "side": -43.7
+    },
+    {
+     "way": 706686410,
+     "name": null,
+     "side": -23.3
+    },
+    {
+     "way": 710690883,
+     "name": null,
+     "side": -5.3
+    }
+   ]
+  },
+  {
+   "station": "台北",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 584167409,
+     "name": "1月台 (高鐵)",
+     "side": -10.7
+    },
+    {
+     "way": 584167411,
+     "name": "2月台 (高鐵)",
+     "side": 3.9
+    },
+    {
+     "way": 741259905,
+     "name": null,
+     "side": 16.9
+    }
+   ]
+  },
+  {
+   "station": "板橋",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 706686408,
+     "name": null,
+     "side": -13.4
+    }
+   ]
+  },
+  {
+   "station": "桃園",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 591532544,
+     "name": "北上月台",
+     "side": -18.3
+    },
+    {
+     "way": 591532543,
+     "name": "南下月台",
+     "side": 13.9
+    }
+   ]
+  },
+  {
+   "station": "新竹",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 327760132,
+     "name": "2月台（北上月台）",
+     "side": -18.0
+    },
+    {
+     "way": 327760134,
+     "name": "1月台（南下月台）",
+     "side": 10.9
+    }
+   ]
+  },
+  {
+   "station": "苗栗",
+   "tracks": 4,
+   "platforms": []
+  },
+  {
+   "station": "台中",
+   "tracks": 6,
+   "platforms": [
+    {
+     "way": 619247350,
+     "name": "2月台",
+     "side": -18.6
+    },
+    {
+     "way": 619247349,
+     "name": "1月台",
+     "side": 12.4
+    }
+   ]
+  },
+  {
+   "station": "彰化",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 608034392,
+     "name": "二月台",
+     "side": -17.0
+    },
+    {
+     "way": 608034393,
+     "name": "一月台",
+     "side": 13.5
+    }
+   ]
+  },
+  {
+   "station": "雲林",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 607932982,
+     "name": null,
+     "side": -14.7
+    },
+    {
+     "way": 607932985,
+     "name": null,
+     "side": 10.3
+    }
+   ]
+  },
+  {
+   "station": "嘉義",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 566725621,
+     "name": null,
+     "side": -18.7
+    },
+    {
+     "way": 566725623,
+     "name": null,
+     "side": 13.0
+    }
+   ]
+  },
+  {
+   "station": "台南",
+   "tracks": 4,
+   "platforms": [
+    {
+     "way": 266850909,
+     "name": null,
+     "side": -17.0
+    },
+    {
+     "way": 706622432,
+     "name": null,
+     "side": 14.2
+    }
+   ]
+  },
+  {
+   "station": "左營",
+   "tracks": 8,
+   "platforms": [
+    {
+     "way": 501199067,
+     "name": "第三月台",
+     "side": -22.3
+    },
+    {
+     "way": 501199070,
+     "name": "第二月台",
+     "side": -6.6
+    },
+    {
+     "way": 501199071,
+     "name": "第一月台",
+     "side": 10.8
+    },
+    {
+     "way": 1316259246,
+     "name": null,
+     "side": 13.9
+    }
+   ]
+  }
+ ]
+}

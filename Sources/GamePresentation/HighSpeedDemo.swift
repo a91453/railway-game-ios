@@ -26,7 +26,9 @@ import GameCore
 ///   real stations have side platforms and through tracks. Taichung has a
 ///   second loop beside each, for the sets that turn back there; Taipei and
 ///   Taichung a crossover beyond each end, where those sets go over to the
-///   other way's track. Each end has its platform on the down track.
+///   other way's track. Each end has the real station's platform tracks
+///   (decision 228, ``endPlatformTracks``, from OpenStreetMap): Nangang
+///   six, Zuoying eight, the down track's and tracks beside it.
 /// - Three depots stand where the real ones do (decision 221,
 ///   ``realDepots``, from OpenStreetMap): Nangang's sidings beyond its
 ///   station, Wuri's south of Taichung and Zuoying's north of its station,
@@ -50,11 +52,13 @@ import GameCore
 ///   of its line between its ends, so each kind is a line of its own; each
 ///   line has its positioning runs and its own sets, at midnight where its
 ///   first runs leave.
-/// - Every leg says where it runs (``run(in:language:timetable:stations:platforms:ends:through:)``):
+/// - Every leg says where it runs (``run(in:language:timetable:stations:platforms:ends:through:depots:)``):
 ///   southbound on the down track, northbound on the up track, so each way
 ///   keeps to its own track and the trains of the two ways meet only where
-///   a set turns back. The all-stops sets stop on the loops; the expresses
-///   keep to the through tracks and pass them there.
+///   a set turns back. Every set calls on the loops, as at the real side
+///   platforms, but the expresses at Taipei and Banqiao, whose island
+///   platforms serve the through tracks (``islandStations``); an express
+///   passes a station on its through track (decision 228).
 /// - Its trains are high-speed sets (`TrainType.highSpeed`, twelve cars
 ///   rated 80 each), planned at `PERF_HSR`; the lines are high-speed lines
 ///   (decision 168), so their stations draw the people round them and their
@@ -65,11 +69,13 @@ import GameCore
 ///   that stops on its way; an express's way runs 30 to 180 km past
 ///   stations where other sets stand, so it seldom leaves on time, and on
 ///   the real day 97 of the 191 runs were dropped and the rest ran one and
-///   a half to two hours late, at some 40 minutes of computing a game day. Off, a
-///   set may still run into one going its own way ahead of it; on the real
-///   timetable, with the expresses passing the all-stops sets at the loops,
-///   that is seldom. The depots, the crossovers and the staggered platforms
-///   are what traffic control would need when its rules allow it.
+///   a half to two hours late, at some 40 minutes of computing a game day.
+///   Off, the sets of real runs keep apart by decision 228's rules: a set
+///   takes a platform no other is due on while it is there, stops behind
+///   the set ahead, waits for one coming the other way on the track they
+///   share, and lets a faster one pass at a station. The depots, the
+///   crossovers and the staggered platforms are what traffic control would
+///   need when its rules allow it.
 public enum HighSpeedDemo {
     /// Cars of every set.
     static let cars = 12
@@ -100,6 +106,28 @@ public enum HighSpeedDemo {
     /// any stretch of the line, the offset times the way it turns, at most
     /// a right angle on the High Speed Rail.
     static let platformStagger = Int64(10 * WorldCoordinate.unitsPerMetre)
+
+    /// How many platform tracks each end has (decision 228): the real
+    /// stations' from OpenStreetMap (`tools/hsr-platforms/hsr_platforms.json`,
+    /// ODbL 1.0): Nangang's six tracks between three island platforms,
+    /// Zuoying's six beside its three of its eight. One is the down
+    /// track's; the others lie beside it, ``endTrackSides``.
+    static let endPlatformTracks = (north: 6, south: 8)
+
+    /// The stations between the ends whose real platforms are islands
+    /// serving every track (`tools/hsr-platforms/hsr_platforms.json`):
+    /// Taipei and Banqiao, by index. The others have side platforms beside
+    /// their loops and through tracks without (decision 228).
+    static let islandStations: Set<Int> = [1, 2]
+
+    /// How many of an end's tracks beside the down track lie on each side
+    /// of it (decision 228): east first, then west, nested, the outermost
+    /// leaving the down track a ramp before the one inside it. Nangang's
+    /// run through and join the down track again beyond the platform, by
+    /// its depot; Zuoying's end with the line, past the platform.
+    static func endTrackSides(_ tracks: Int) -> (east: Int, west: Int) {
+        (tracks / 2, (tracks - 1) / 2)
+    }
 
     /// How the stations are numbered by the real data: the High Speed Rail's
     /// station names, north to south.
@@ -288,6 +316,11 @@ public enum HighSpeedDemo {
         /// back reaches, from its north crossover to its south one: the
         /// track there is run both ways.
         let turnbackReach: [Int: ClosedRange<Double>]
+        /// Each end's tracks beside the down track (decision 228), east
+        /// then west, each with a platform: Nangang's from a ramp south of
+        /// its platform to a ramp north of it, Zuoying's from a ramp north of
+        /// its platform to past it, where they end.
+        let endTracks: (north: [RealWorldDemo.TrackPlan], south: [RealWorldDemo.TrackPlan])
         /// The real depots (decision 221), north to south.
         let depots: [Depot]
         /// The crossovers from the up track to the down track north of a
@@ -347,6 +380,30 @@ public enum HighSpeedDemo {
                     turns[line.stops[station]] = (turn.north || north, turn.south || south)
                 }
             }
+            // Decision 221: the depots, where OpenStreetMap has them along
+            // the line. The sets standing at a station at night stand in the
+            // depot nearest it along the line, one siding each.
+            let middles = platforms.map { ($0.lowerBound + $0.upperBound) / 2 }
+            let places = HighSpeedDemo.realDepots.map { depot -> (along: Double, side: Double) in
+                let point = WorldVector(frame.worldPosition(latitude: depot.latitude, longitude: depot.longitude))
+                let along = path.project(point)
+                return (along, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
+            }
+            var serving = places.map { _ in [Int]() }
+            for station in standing.indices where standing[station] > 0 {
+                let nearest = places.indices.min { abs(places[$0].along - middles[station]) < abs(places[$1].along - middles[station]) }!
+                serving[nearest].append(station)
+            }
+            // Decision 228: a station between the ends whose sets stand at
+            // night in the depot beyond Nangang (Taipei's) turns them north
+            // there and back: a crossover beyond its north end, so a set on
+            // its down side goes over to the up track at once rather than
+            // north along the down track to Nangang.
+            for (index, place) in places.enumerated() where place.along < platforms[0].lowerBound {
+                for station in serving[index] where station != 0 && station != last {
+                    turns[station] = (true, turns[station]?.south ?? false)
+                }
+            }
             let turnbacks = Set(turns.keys)
             let between = Array(platforms.indices.dropFirst().dropLast())
             // A turnback station with more sets at night than its loops
@@ -355,9 +412,14 @@ public enum HighSpeedDemo {
 
             let ramp = HighSpeedDemo.rampLength, margin = RealWorldDemo.platformMargin, step = HighSpeedDemo.yardStep
             let reach = HighSpeedDemo.crossoverReach
-            // The turnouts a ramp beyond each end's platform's margin, the up
-            // track's ramps a ramp long.
-            let junctions = (north: platforms[0].upperBound + margin + ramp, south: platforms[last].lowerBound - margin - ramp)
+            // Decision 228: each end's tracks beside the down track, the
+            // outermost on a side leaving it `reach` ramps from the
+            // platform's margin.
+            let sides = (north: HighSpeedDemo.endTrackSides(HighSpeedDemo.endPlatformTracks.north), south: HighSpeedDemo.endTrackSides(HighSpeedDemo.endPlatformTracks.south))
+            let endReach = (north: Double(max(sides.north.east, sides.north.west)), south: Double(max(sides.south.east, sides.south.west)))
+            // The turnouts a ramp beyond each end's tracks, the up track's
+            // ramps a ramp long.
+            let junctions = (north: platforms[0].upperBound + margin + (endReach.north + 1) * ramp, south: platforms[last].lowerBound - margin - (endReach.south + 1) * ramp)
             self.junctions = junctions
             let upEnds = (north: junctions.north + ramp, south: junctions.south - ramp)
             // Each loop leaves its track a ramp before the platform's margin
@@ -375,20 +437,6 @@ public enum HighSpeedDemo {
                 return (turn.north ? [[ends.north - 2 * reach, ends.north - reach]] : []) + (turn.south ? [[ends.south + reach, ends.south + 2 * reach]] : [])
             }
 
-            // Decision 221: the depots, where OpenStreetMap has them along
-            // the line. The sets standing at a station at night stand in the
-            // depot nearest it along the line, one siding each.
-            let middles = platforms.map { ($0.lowerBound + $0.upperBound) / 2 }
-            let places = HighSpeedDemo.realDepots.map { depot -> (along: Double, side: Double) in
-                let point = WorldVector(frame.worldPosition(latitude: depot.latitude, longitude: depot.longitude))
-                let along = path.project(point)
-                return (along, (point - path.point(at: along)).dot(path.tangent(at: along).normal))
-            }
-            var serving = places.map { _ in [Int]() }
-            for station in standing.indices where standing[station] > 0 {
-                let nearest = places.indices.min { abs(places[$0].along - middles[station]) < abs(places[$1].along - middles[station]) }!
-                serving[nearest].append(station)
-            }
             // Where each depot's sidings leave the down track and end, and
             // how many on each side.
             let ladders = places.indices.compactMap { index -> (real: RealDepot, entry: Double, deadEnd: Double, east: Int, west: Int, serving: [Int])? in
@@ -400,7 +448,7 @@ public enum HighSpeedDemo {
                     // Beyond the north end: both sides of the down track,
                     // running north from a ramp short of the platform.
                     let east = (sets + 1) / 2, west = sets / 2
-                    let entry = platforms[0].lowerBound - margin - ramp
+                    let entry = platforms[0].lowerBound - margin - (endReach.north + 1) * ramp
                     return (real, entry, entry - Double(east) * step - HighSpeedDemo.sidingRun, east, west, serving[index])
                 }
                 // Beside the line: on the down track's side, east, where the
@@ -425,6 +473,14 @@ public enum HighSpeedDemo {
             forced += between.flatMap { loopNodes(platforms[$0]) }
             forced += outer.flatMap { [outerEnds($0).north, outerEnds($0).south] }
             forced += turnbacks.flatMap { crossoverNodes($0).flatMap { $0 } }
+            // Decision 228: the ends' tracks' nodes, `k` ramps out for the
+            // `k`th on a side.
+            func endNodes(_ zone: ClosedRange<Double>, northward: Bool, reach: Double) -> [Double] {
+                let nodes = (1...Int(reach)).map { zone.lowerBound - margin - Double($0) * ramp } + [zone.lowerBound - margin, zone.upperBound + margin]
+                return northward ? nodes : nodes + (1...Int(reach)).map { zone.upperBound + margin + Double($0) * ramp }
+            }
+            forced += endNodes(platforms[0], northward: false, reach: endReach.north)
+            forced += endNodes(platforms[last], northward: true, reach: endReach.south)
             forced += ladders.flatMap(depotNodes)
             forced += crossingInto.flatMap { $0 }
             let plan = RealWorldDemo.TrackPlan(
@@ -459,6 +515,19 @@ public enum HighSpeedDemo {
                     up: RealWorldDemo.TrackPlan(beside: plan, at: at, offsets: [offset, 3 * offset, 3 * offset, offset])
                 ))
             })
+            // Decision 228: the ends' tracks, the `k`th on a side `k`
+            // tracks' widths out (east is the down track's left: negative).
+            func ends(_ zone: ClosedRange<Double>, sides: (east: Int, west: Int), through: Bool) -> [RealWorldDemo.TrackPlan] {
+                [(sides.east, -1.0), (sides.west, 1.0)].flatMap { count, side -> [RealWorldDemo.TrackPlan] in
+                    guard count > 0 else { return [] }
+                    return (1...count).map { k in
+                        let out = side * Double(k) * offset, away = Double(k) * ramp
+                        let distances = [zone.lowerBound - margin - away, zone.lowerBound - margin, zone.upperBound + margin] + (through ? [zone.upperBound + margin + away] : [])
+                        return RealWorldDemo.TrackPlan(beside: plan, at: distances.map(index), offsets: [0, out, out] + (through ? [0] : []))
+                    }
+                }
+            }
+            endTracks = (north: ends(platforms[0], sides: sides.north, through: true), south: ends(platforms[last], sides: sides.south, through: false))
             turnbackReach = Dictionary(uniqueKeysWithValues: turnbacks.map { station in
                 let nodes = crossoverNodes(station).flatMap { $0 } + [outerEnds(station).north, outerEnds(station).south]
                 return (station, nodes.min()!...nodes.max()!)
@@ -505,6 +574,7 @@ public enum HighSpeedDemo {
             pieces += outerLoops.values.flatMap { [$0.down, $0.up] }
             pieces += crossovers.values.flatMap { $0 }
             pieces += depotCrossovers
+            pieces += endTracks.north + endTracks.south
             pieces += depots.flatMap { $0.east + $0.west }
             return pieces
         }
@@ -557,6 +627,12 @@ public enum HighSpeedDemo {
                     crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges
                 }
             }
+            // Decision 228: each end's tracks from the down track, through
+            // Nangang's to it again, Zuoying's to their ends.
+            let builtEnds = (
+                north: try endTracks.north.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track)), end: node(down, last(track))) },
+                south: try endTracks.south.map { track throws(GameError) in try track.build(in: &world, start: node(down, first(track))) }
+            )
             for crossover in depotCrossovers {
                 crossoverEdges += try crossover.build(in: &world, start: node(upTrack, first(crossover)), end: node(down, last(crossover))).edges
             }
@@ -601,8 +677,9 @@ public enum HighSpeedDemo {
                         outer: outer
                     )
                 } else {
-                    // An end: its own platform.
-                    ends[index] = [try platform(on: down)]
+                    // An end: a platform on the down track and one on each of
+                    // its tracks beside it (decision 228).
+                    ends[index] = [try platform(on: down)] + (try (index == 0 ? builtEnds.north : builtEnds.south).map { track throws(GameError) in try platform(on: track) })
                 }
                 ids.append(id)
             }
@@ -629,49 +706,89 @@ public enum HighSpeedDemo {
                 builtDepots.append(Built.Depot(station: id, berths: berths, southward: depot.southward, serving: depot.serving))
             }
             let turnouts = (north: plan.distances.firstIndex { abs($0 - junctions.north) < 1 }!, south: plan.distances.firstIndex { abs($0 - junctions.south) < 1 }!)
-            let through = Through(down: down.edges, up: upTrack.edges, turnouts: turnouts)
+            let through = Through(down: down, up: upTrack, loops: builtLoops, turnouts: turnouts)
             try HighSpeedDemo.run(
                 in: &world, language: language, timetable: timetable, stations: ids, platforms: platformsOf, ends: ends, through: through, depots: builtDepots
             )
             return Built(
                 down: down, up: upTrack, loops: builtLoops.keys.sorted().map { builtLoops[$0]! }, outerLoops: builtOuter.keys.sorted().map { builtOuter[$0]! },
-                crossovers: crossoverEdges, depots: builtDepots, sidings: sidings.flatMap { $0.east + $0.west }
+                crossovers: crossoverEdges, depots: builtDepots, sidings: sidings.flatMap { $0.east + $0.west }, ends: builtEnds.north + builtEnds.south
             )
         }
     }
 
-    /// The two through tracks' edges in order, north to south, for an
-    /// express's way along them; `turnouts` are the down track's nodes
-    /// where the up track leaves and joins it, by their place along it.
+    /// The two through tracks and the loops beside them, for an express's
+    /// way along them (decision 228): along the through track, and onto a
+    /// station's loop only where it calls; `turnouts` are the down track's
+    /// nodes where the up track leaves and joins it, by their place along
+    /// it.
     struct Through {
-        let down: [TrackEdgeID]
-        let up: [TrackEdgeID]
+        let down: RealWorldDemo.Track
+        let up: RealWorldDemo.Track
+        /// The loops of the stations between the ends, by station.
+        let loops: [Int: (down: RealWorldDemo.Track, up: RealWorldDemo.Track)]
         let turnouts: (north: Int, south: Int)
 
-        /// Southbound along the down track, from the edge of `start` to
-        /// that of `end`.
-        func southbound(from start: TrackEdgeID, to end: TrackEdgeID) -> [TrackTraversal] {
-            guard let i = down.firstIndex(of: start), let j = down.firstIndex(of: end) else { return [] }
-            return down[i...j].map { TrackTraversal(edge: $0, direction: .forward) }
+        /// The edges of `track` from `a` to `b` along the path, north to
+        /// south.
+        private func piece(_ track: RealWorldDemo.Track, from a: Double, to b: Double) -> ArraySlice<TrackEdgeID> {
+            let d = track.plan.distances
+            guard let i = track.edges.indices.first(where: { d[$0] >= a - 1 }),
+                  let j = track.edges.indices.last(where: { d[$0 + 1] <= b + 1 }), i <= j else { return [] }
+            return track.edges[i...j]
+        }
+
+        /// Southbound from `start` to `end`, each a platform on the down
+        /// track or on a down loop: off the loop it starts on, along the
+        /// down track, and onto the loop it ends on.
+        func southbound(from start: TrackPlatform, to end: TrackPlatform) -> [TrackTraversal] {
+            var edges: [TrackEdgeID] = []
+            let from: Double
+            if let loop = loops.values.first(where: { $0.down.edges.contains(start.edge) })?.down {
+                edges += loop.edges[loop.edges.firstIndex(of: start.edge)!...]
+                from = loop.plan.distances[loop.plan.distances.count - 1]
+            } else {
+                guard let i = down.edges.firstIndex(of: start.edge) else { return [] }
+                from = down.plan.distances[i]
+            }
+            if let loop = loops.values.first(where: { $0.down.edges.contains(end.edge) })?.down {
+                edges += piece(down, from: from, to: loop.plan.distances[0])
+                edges += loop.edges[...loop.edges.firstIndex(of: end.edge)!]
+            } else {
+                guard let j = down.edges.firstIndex(of: end.edge) else { return [] }
+                edges += piece(down, from: from, to: down.plan.distances[j + 1])
+            }
+            return edges.map { TrackTraversal(edge: $0, direction: .forward) }
         }
 
         /// Northbound from `start` to `end`: from Zuoying's platform on the
-        /// down track up to the south turnout first, then along the up
-        /// track, and on the down track again from the north turnout to
+        /// down track up to the south turnout first, or off the up loop it
+        /// starts on; then along the up track; and onto the up loop it ends
+        /// on, or on the down track again from the north turnout to
         /// Nangang's platform.
-        func northbound(from start: TrackEdgeID, to end: TrackEdgeID) -> [TrackTraversal] {
+        func northbound(from start: TrackPlatform, to end: TrackPlatform) -> [TrackTraversal] {
             var edges: [TrackEdgeID] = []
-            let first: Int
-            if let i = down.firstIndex(of: start) {
-                edges += down[turnouts.south...i].reversed()
-                first = up.count - 1
+            let from: Double
+            if let loop = loops.values.first(where: { $0.up.edges.contains(start.edge) })?.up {
+                edges += loop.edges[...loop.edges.firstIndex(of: start.edge)!].reversed()
+                from = loop.plan.distances[0]
+            } else if let i = down.edges.firstIndex(of: start.edge) {
+                edges += down.edges[turnouts.south...i].reversed()
+                from = up.plan.distances[up.plan.distances.count - 1]
             } else {
-                guard let i = up.firstIndex(of: start) else { return [] }
-                first = i
+                guard let i = up.edges.firstIndex(of: start.edge) else { return [] }
+                from = up.plan.distances[i + 1]
             }
-            let last = down.contains(end) ? 0 : up.firstIndex(of: end) ?? 0
-            edges += up[last...first].reversed()
-            if let j = down.firstIndex(of: end) { edges += down[j..<turnouts.north].reversed() }
+            if let loop = loops.values.first(where: { $0.up.edges.contains(end.edge) })?.up {
+                edges += piece(up, from: loop.plan.distances[loop.plan.distances.count - 1], to: from).reversed()
+                edges += loop.edges[loop.edges.firstIndex(of: end.edge)!...].reversed()
+            } else if let j = down.edges.firstIndex(of: end.edge) {
+                edges += piece(up, from: up.plan.distances[0], to: from).reversed()
+                edges += down.edges[j..<turnouts.north].reversed()
+            } else {
+                guard let j = up.edges.firstIndex(of: end.edge) else { return [] }
+                edges += piece(up, from: up.plan.distances[j], to: from).reversed()
+            }
             return edges.map { TrackTraversal(edge: $0, direction: .backward) }
         }
     }
@@ -709,6 +826,9 @@ public enum HighSpeedDemo {
         let depots: [Depot]
         /// Every depot's sidings.
         let sidings: [RealWorldDemo.Track]
+        /// The ends' tracks beside the down track (decision 228),
+        /// Nangang's then Zuoying's.
+        let ends: [RealWorldDemo.Track]
     }
 
     /// Where a station's platforms lie along `path`, staggered: centred on
@@ -733,10 +853,11 @@ public enum HighSpeedDemo {
     /// other's, against its trains. The all-stops line names the platforms
     /// it calls at between the ends, on the down track's loop southbound
     /// and the up track's northbound (the legs into the two ends name none:
-    /// a set takes the nearest free platform there). An express names its
-    /// whole way along the through track (``Through``): only its platform,
-    /// and it would take a loop it passes where the loop is on the inside
-    /// of a curve, a little shorter.
+    /// a set takes a free platform there, decision 228). An express names
+    /// its whole way (``Through``): along the through track, and onto a
+    /// loop only where it calls; only its platform, and it would take a
+    /// loop it passes where the loop is on the inside of a curve, a little
+    /// shorter.
     static func run(
         in world: inout GameWorld, language: DisplayLanguage, timetable: HighSpeedTimetable, stations: [StationID], platforms: [Int: Built.Platforms],
         ends: [Int: [TrackPlatform]], through: Through, depots: [Built.Depot]
@@ -754,8 +875,15 @@ public enum HighSpeedDemo {
             try world.setLinePerformance(line, to: .highSpeed)
             try world.setLineRuns(line, to: timetableLine.runs)
             let calling = kind == 0
+            // Decision 228: the sets call on the loops, as at the real
+            // stations' side platforms beside their through tracks; but the
+            // expresses at Taipei and Banqiao, whose island platforms serve
+            // every track (``islandStations``), on the through tracks.
             func platform(of stop: Int, onDown: Bool) -> TrackPlatform? {
-                platforms[stop].map { onDown ? (calling ? $0.downLoop : $0.down) : (calling ? $0.upLoop : $0.up) }
+                platforms[stop].map { platforms in
+                    let through = !calling && HighSpeedDemo.islandStations.contains(stop)
+                    return onDown ? (through ? platforms.down : platforms.downLoop) : (through ? platforms.up : platforms.upLoop)
+                }
             }
             var preferences: [LineRoutePreference] = []
             for (from, to) in zip(stops.indices, stops.indices.dropFirst()) {
@@ -778,8 +906,8 @@ public enum HighSpeedDemo {
                 guard let south = platform(of: b, onDown: true) ?? endPlatform(of: b), let north = platform(of: a, onDown: false) ?? endPlatform(of: a),
                       let start = platform(of: a, onDown: true) ?? endPlatform(of: a), let end = platform(of: b, onDown: false) ?? endPlatform(of: b)
                 else { continue }
-                preferences.append(LineRoutePreference(from: from, to: to, tracks: through.southbound(from: start.edge, to: south.edge), platform: south))
-                preferences.append(LineRoutePreference(from: to, to: from, tracks: through.northbound(from: end.edge, to: north.edge), platform: north))
+                preferences.append(LineRoutePreference(from: from, to: to, tracks: through.southbound(from: start, to: south), platform: south))
+                preferences.append(LineRoutePreference(from: to, to: from, tracks: through.northbound(from: end, to: north), platform: north))
             }
             try world.setLineRoutePreferences(line, to: preferences)
             // Decision 221: every line keeps its sets in the depots, each

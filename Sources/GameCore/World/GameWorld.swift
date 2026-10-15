@@ -3120,11 +3120,21 @@ public struct GameWorld: Equatable, Sendable {
     /// W2c, see ``resumeRun(_:at:)``). Returns whether any service changed.
     private mutating func runServices(at now: GameTime, unroutable: inout Set<TrainID>, held: inout [HeldRoute], memo: inout DispatchMemo) -> Bool {
         var changed = false
+        // Decision 228: where trains stand as the phase begins (a train only
+        // leaves them in it).
+        let standing = standingEdges()
         for index in trains.indices where trains[index].execution != nil {
             if stepDwell(index, at: now, memo: &memo) {
                 changed = true
             }
             if departService(index, at: now, unroutable: &unroutable, held: &held, memo: &memo) {
+                changed = true
+            }
+            // Decision 228: to a free platform, when a train stands on its
+            // own. Its run is kept: a longer way ends with a short run from
+            // a stand.
+            if let path = freePlatformOnTheWay(of: trains[index], standing: standing, memo: &memo.directions.paths) {
+                follow(path, &trains[index])
                 changed = true
             }
             if resumeRun(index, at: now) {
@@ -3504,6 +3514,9 @@ public struct GameWorld: Equatable, Sendable {
                 return false
             }
         }
+        // Decision 228: not yet, while the platform it is bound for is
+        // still taken when it would arrive.
+        if waitsForPlatform(train) { return false }
         setOff(index, as: train)
         // Counted the way the train went: a preferred platform can take it
         // on from a berth where the default way would arrive at once.
@@ -3565,7 +3578,13 @@ public struct GameWorld: Equatable, Sendable {
             if let path = pathIntoDepot(call, from: start, for: train, memo: &memo) {
                 return (path, nil)
             }
-            return path(from: start, toStation: call, length: train.length, memo: &memo).map { ($0, nil) }
+            guard let nearest = path(from: start, toStation: call, length: train.length, memo: &memo) else { return nil }
+            // Decision 228: with traffic control off, a free platform first.
+            if let next = train.call(after: stop, cycle: cycle),
+               let free = freePlatformPath(nearest, from: start, toStation: call, for: train, next: next, memo: &memo) {
+                return (free, nil)
+            }
+            return (nearest, nil)
         } ?? .noRoute
     }
 
@@ -3575,7 +3594,17 @@ public struct GameWorld: Equatable, Sendable {
         guard let next = train.call(after: stop, cycle: cycle),
               let preference = routePreference(for: train, from: stop, to: next.stop) else { return nil }
         return leaving(train, stop: stop, cycle: cycle) { start, _ in
-            preferredPath(from: start, preference: preference, length: train.length, memo: &memo).map { ($0, nil) }
+            var preferred = preferredPath(from: start, preference: preference, length: train.length, memo: &memo)
+            // Decision 228: with traffic control off, a train of real runs
+            // off its walk joins it where its own way meets it.
+            if preferred == nil, !isTrafficControlEnabled, followsRealTimetable(train),
+               let nearest = path(from: start, toStation: preference.platform.station, length: train.length, memo: &memo) {
+                preferred = joiningPreferredPath(from: start, preference: preference, length: train.length, along: nearest)
+            }
+            guard let preferred else { return nil }
+            // Decision 228: with traffic control off, its way to a free
+            // platform when another train is due on the one it names.
+            return (freePlatformPath(preferred, from: start, toStation: preference.platform.station, for: train, next: next, memo: &memo) ?? preferred, nil)
         }
     }
 
@@ -3621,7 +3650,9 @@ public struct GameWorld: Equatable, Sendable {
         // scheduled departure to the scheduled arrival (never negative).
         // Decision 207: with realistic operation, the time left to the
         // scheduled arrival, so a late train makes up its margin.
-        let scheduled = realisticOperation
+        // Decision 228: so does a train of real runs with traffic control
+        // off, which another train held up on its way.
+        let scheduled = realisticOperation || (!isTrafficControlEnabled && followsRealTimetable(train))
             ? secondsToScheduledArrival(of: train, stop: next.stop, cycle: next.cycle)
             : train.scheduledArrival(of: next.stop, cycle: next.cycle).seconds - train.scheduledDeparture(of: stop, cycle: cycle).seconds
         moved.times = ServiceTimes(
@@ -3860,6 +3891,9 @@ public struct GameWorld: Equatable, Sendable {
     /// ``authority(of:memo:)``).
     private mutating func moveTrains(from start: GameTime, for span: Int64, memo: inout DirectionMemo) -> Bool {
         var moved = false
+        // Decision 228: the trains near each other's ways, once a step.
+        memo.spacing = spacingIndex()
+        defer { memo.spacing = nil }
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
@@ -3910,6 +3944,14 @@ public struct GameWorld: Equatable, Sendable {
                 left = overflow ? .max : sum
             }
             guard left > run.length - run.distance(on: curve, from: run.start, to: end) else { continue }
+            // Decision 228: a train of real runs, held up by the train ahead
+            // with traffic control off, keeps its run, later by the time it
+            // lost: it goes on at its pace once it can.
+            if !isTrafficControlEnabled, followsRealTimetable(trains[index]), let late = runDelay(run, curve: curve, covered: run.length - left, at: end) {
+                trains[index].times?.run = run.delayed(by: late)
+                dropped = true
+                continue
+            }
             trains[index].times?.run = nil
             dropped = true
         }
@@ -3977,7 +4019,10 @@ public struct GameWorld: Equatable, Sendable {
     /// ``travelling(_:distance:)`` with the train's movement authority kept
     /// in `memo` (see ``authority(of:memo:)``).
     func travelling(_ train: Train, distance: Int64, memo: inout DirectionMemo) -> (position: TrainPosition, cursor: Int) {
-        let distance = authority(of: train, memo: &memo).map { min(distance, $0.left) } ?? distance
+        var distance = authority(of: train, memo: &memo).map { min(distance, $0.left) } ?? distance
+        // Decision 228: without traffic control, a train of real runs stops
+        // behind the one ahead.
+        if let clear = clearAhead(of: train, within: distance, near: memo.spacing) { distance = clear }
         let movement = train.movement
         switch train.position! {
         case .onEdge(let traversal, let offset):

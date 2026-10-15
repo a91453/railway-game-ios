@@ -102,6 +102,41 @@ extension GameWorld {
                 return (index, trip)
             }
         }
+        return makingWay(of: line)
+    }
+
+    /// Decision 228: with traffic control off, a train of `line` waiting
+    /// without a service at a station that another train is on its way to,
+    /// to the platform it stands on, goes into the depot it reaches soonest
+    /// when it would still stand there as that one arrives (see
+    /// ``runLeaving(of:at:readyAt:)``): it makes way for it, and comes out
+    /// again in time for its run. The first such train in ID order.
+    private func makingWay(of line: ServiceLine) -> (index: Int, trip: LineTrip)? {
+        guard !isTrafficControlEnabled else { return nil }
+        let now = clock.now.seconds
+        // Where the trains on their way to a call stop, and when the first
+        // of them arrives there.
+        var bound: [TrackEdgeID: (station: StationID, arrival: Int64)] = [:]
+        for other in trains {
+            guard case .travellingToStop(let stop, let cycle)? = other.execution else { continue }
+            var last = other.movement.edges.last
+            if last == nil, case .onEdge(let traversal, _)? = other.position { last = traversal.edge }
+            guard let last else { continue }
+            let at = other.scheduledArrival(of: stop, cycle: cycle).seconds
+            if at < bound[last]?.arrival ?? .max { bound[last] = (other.timetable[stop].station, at) }
+        }
+        guard !bound.isEmpty else { return nil }
+        for id in line.trains {
+            guard let index = trains.firstIndex(where: { $0.id == id }) else { continue }
+            let train = trains[index]
+            guard train.execution == nil, train.placement != nil, train.movement.rate > 0 else { continue }
+            let edges = Set(bodyStretches(of: train).map(\.traversal.edge))
+            guard let station = stationsStoppedAt(by: id).first, self.station(id: station)?.isDepot == false, !isInDepot(train, of: line),
+                  let arrival = edges.compactMap({ edge in bound[edge].flatMap { $0.station == station ? $0.arrival : nil } }).min(),
+                  (runLeaving(of: train, at: station, readyAt: now) ?? .max) > arrival - Self.platformClearance,
+                  let trip = emptyRun(of: line, for: train, to: line.depots) else { continue }
+            return (index, trip)
+        }
         return nil
     }
 
