@@ -59,6 +59,19 @@ public enum DayNight {
 
         /// Whether anything is laid over the map or lit.
         public var isVisible: Bool { strength > 0 || lights > 0 }
+
+        /// What the tint does to a colour under it, channel by channel
+        /// (the map multiplies by ``colour`` at ``strength``): `1 − strength
+        /// + strength × colour`, white with no tint. For what is drawn over
+        /// the trains and so over the tint, but darkens with the map at
+        /// night: the stations' names.
+        public var multiplier: Colour {
+            Colour(
+                red: 1 - strength + strength * colour.red,
+                green: 1 - strength + strength * colour.green,
+                blue: 1 - strength + strength * colour.blue
+            )
+        }
     }
 
     /// Dawn's warm orange.

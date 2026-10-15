@@ -251,14 +251,19 @@ struct MapView: View {
             // Only when the camera moves itself (opening a game, jumping to
             // a station or a place); the player's pans and zooms are left
             // as they are (#544).
-            let topClear = ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing)
-            let framing = topClear.clearing([bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }, viewport: viewport)
+            let cover = MapCover(
+                edges: ScreenInsets(top: max(clear.top, topColumnDepth), leading: clear.leading, bottom: clear.bottom, trailing: clear.trailing),
+                corners: [bottomLeadingFrame, bottomTrailingFrame].map { ScreenFrame($0) }
+            )
+            let framing = cover.framing(in: viewport)
             let projection = (camera?.resized(to: viewport) ?? openingCamera(viewport: viewport, clearOf: framing)).limited(toReferenceSize: zoomLimit)
             // Decision 182: the time of day, and how strongly the night's
             // lights shine, in twentieths so that the canvases are redrawn
             // twenty times as they come on, not on every tick.
             let tint = showsDayNight ? DayNight.tint(at: session.world.clock.now) : .day
             let lights = DayNight.step(tint.lights)
+            // Once for the map and its loupe, not once for each canvas.
+            let waitingCounts = MapLayers.waitingPassengerCounts(in: session.world)
 
             VStack(spacing: 0) {
                 ZStack {
@@ -293,7 +298,7 @@ struct MapView: View {
                         camera: projection,
                         edges: edges,
                         layers: mapLayers,
-                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        waitingCounts: waitingCounts,
                         lines: lineMap,
                         routePreview: session.routePreview,
                         labels: stationLabels,
@@ -334,17 +339,23 @@ struct MapView: View {
                     )
                     .equatable()
                     // The stations' names and waiting counts over the
-                    // trains (docs/MAP_LAYERS.md 55–57).
+                    // trains (docs/MAP_LAYERS.md 55–57), and the network
+                    // tool's preview and the tracks' numbers over them;
+                    // darkened with the map at night, as under the tint.
                     MapLabelCanvas(
                         world: session.world,
                         camera: projection,
                         layers: mapLayers,
-                        waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                        waitingCounts: waitingCounts,
                         labels: stationLabels,
                         lineCodes: LineBadge.codes(for: session.world.lines),
-                        linePalette: linePalette
+                        linePalette: linePalette,
+                        network: session.networkOverlay,
+                        routePreview: session.routePreview,
+                        edges: edges
                     )
                     .equatable()
+                    .colorMultiply(Palette.dimming(tint))
                     if showsWeather, mapWeather.sky != .clear || !mapWeather.typhoonStations.isEmpty {
                         MapWeatherLayer(
                             weather: mapWeather,
@@ -375,7 +386,7 @@ struct MapView: View {
                                     camera: projection.loupe(at: finger, size: ScreenSize(width: side, height: side), magnification: 3),
                                     edges: edges,
                                     layers: mapLayers,
-                                    waitingCounts: MapLayers.waitingPassengerCounts(in: session.world),
+                                    waitingCounts: waitingCounts,
                                     lines: lineMap,
                                     routePreview: session.routePreview,
                                     labels: stationLabels,
@@ -770,7 +781,7 @@ struct MapView: View {
                 // While a train is followed the camera stays on it.
                 // Decision 106, later: "in view" is the map the screen's
                 // controls leave, and one under them moves to its middle.
-                keepSelectionClear(projection: projection, clear: framing, line: false)
+                keepSelectionClear(projection: projection, cover: cover, line: false)
             }
             // Decision 106, later: a line chosen in the lines panel, and the
             // selection when a panel opens over it, move into the map the
@@ -779,14 +790,14 @@ struct MapView: View {
             // that building makes or picks stays where the player looks.
             .onChange(of: session.selectedLineID) { _, _ in
                 guard screen.panel == .lines else { return }
-                keepSelectionClear(projection: projection, clear: framing, line: true)
+                keepSelectionClear(projection: projection, cover: cover, line: true)
             }
             // TestFlight 59.1: the details card opens and closes all through
             // building (the tool's card, a start tapped, Clear, Done); the
             // line the session keeps selected then zoomed the map out to its
             // whole length each time. Only the lines panel shows a line.
             .onChange(of: insets.trailing) { _, _ in
-                keepSelectionClear(projection: projection, clear: framing,
+                keepSelectionClear(projection: projection, cover: cover,
                                    line: screen.panel == .lines && session.selectedStation == nil)
             }
             .onChange(of: session.routePreview?.request) { _, _ in
@@ -1456,26 +1467,28 @@ struct MapView: View {
 
     /// Decision 106, later: moves the camera so the selected station (or,
     /// for `line`, the selected line's stops) shows in the part of the map
-    /// the screen's controls leave (`clear`), in its middle, when it does
-    /// not show there now; a line is zoomed out to fit, never in. Not
+    /// the screen's controls leave (`cover`'s framing), in its middle, when
+    /// what covers the map hides it now (``PlanCamera/hides(_:under:)``:
+    /// under a control, not beside one); a line is zoomed out to fit,
+    /// never in. Not
     /// while a train is followed, whose camera stays on it, nor during the
     /// tutorial, whose steps point at places on the map, nor while a
     /// building tool is chosen, whose player is zoomed in on the track
     /// (TestFlight 59.1).
-    private func keepSelectionClear(projection: PlanCamera, clear free: ScreenInsets, line: Bool) {
+    private func keepSelectionClear(projection: PlanCamera, cover: MapCover, line: Bool) {
         guard session.tool == .select, !session.isFollowingTrain, session.tutorial == nil else { return }
         if line {
             guard let selected = session.selectedLine else { return }
             let stops = selected.stops.compactMap { session.world.station(id: $0) }
                 .map { WorldCoordinate(x: $0.location.x, y: $0.location.y) }
             guard let region = WorldRegion(enclosing: stops),
-                  !stops.allSatisfy({ projection.showsClear($0, of: free) }) else { return }
-            camera = projection.showing(region, clearOf: free)
-        } else if let station = session.selectedStation {
-            let point = WorldCoordinate(x: station.location.x, y: station.location.y)
-            if !projection.showsClear(point, of: free) {
-                camera = projection.centered(on: point, clearOf: free)
-            }
+                  stops.contains(where: { projection.hides($0, under: cover) }) else { return }
+            camera = projection.showing(region, clearOf: cover.framing(in: projection.viewport))
+        } else if let station = session.selectedStation,
+                  let moved = projection.keepingClear(WorldCoordinate(x: station.location.x, y: station.location.y), of: cover) {
+            // Along an axis the framing leaves almost nothing of, the
+            // station keeps its place.
+            camera = moved
         }
     }
 
@@ -1657,14 +1670,17 @@ private struct MapCanvas: View, Equatable {
     /// each arc is drawn yet.
     let journey: JourneyTrace?
     let journeyProgress: Double
-    /// Whether the stations' names and waiting counts are drawn here; the
-    /// map draws them over the trains instead, in ``MapLabelCanvas``.
+    /// Whether the stations' names and waiting counts, the network tool's
+    /// preview and the tracks' numbers are drawn here; the map draws them
+    /// over the trains instead, in ``MapLabelCanvas``.
     var drawsLabels = true
 
     /// The trains are drawn over it, by ``MapTrainCanvas`` (decision 182),
     /// so a tick that only moves them does not redraw it.
     nonisolated static func == (lhs: MapCanvas, rhs: MapCanvas) -> Bool {
-        lhs.world.bounds == rhs.world.bounds
+        // Drawn only with the names (``MapLabelCanvas`` otherwise).
+        let labelsMatch = !lhs.drawsLabels || (lhs.waitingCounts == rhs.waitingCounts && lhs.labels == rhs.labels)
+        return lhs.world.bounds == rhs.world.bounds
             && lhs.world.stations == rhs.world.stations
             && lhs.world.network == rhs.world.network
             && lhs.world.placedBuildings == rhs.world.placedBuildings
@@ -1679,10 +1695,9 @@ private struct MapCanvas: View, Equatable {
             && lhs.camera == rhs.camera
             && lhs.edges == rhs.edges
             && lhs.layers == rhs.layers
-            && lhs.waitingCounts == rhs.waitingCounts
+            && labelsMatch
             && lhs.lines == rhs.lines
             && lhs.routePreview == rhs.routePreview
-            && lhs.labels == rhs.labels
             && lhs.flowVersion == rhs.flowVersion
             && lhs.lights == rhs.lights
             && lhs.lineCodes == rhs.lineCodes
@@ -1730,9 +1745,11 @@ private struct MapCanvas: View, Equatable {
 }
 
 /// The stations' names and waiting counts (docs/MAP_LAYERS.md 55–57), over
-/// the trains: a train stopped at a station never covers them. Redrawn
-/// when the camera, the stations, their lines or the counts change, never
-/// for a moving train.
+/// the trains: a train stopped at a station never covers them; and over
+/// them, as before, the network tool's preview and the tracks' numbers
+/// (``MapArt/drawBuildMarks``). Redrawn when the camera, the stations,
+/// their lines, the counts, the track or the preview change, never for a
+/// moving train.
 private struct MapLabelCanvas: View, Equatable {
     let world: GameWorld
     let camera: PlanCamera
@@ -1741,6 +1758,9 @@ private struct MapLabelCanvas: View, Equatable {
     let labels: StationLabels
     let lineCodes: [LineID: String]
     let linePalette: LinePalette
+    let network: NetworkOverlay?
+    let routePreview: RoutePreview?
+    let edges: [TrackEdgeID: MapEdgeDrawing]
 
     nonisolated static func == (lhs: MapLabelCanvas, rhs: MapLabelCanvas) -> Bool {
         lhs.world.stations == rhs.world.stations
@@ -1753,17 +1773,23 @@ private struct MapLabelCanvas: View, Equatable {
             && lhs.labels == rhs.labels
             && lhs.lineCodes == rhs.lineCodes
             && lhs.linePalette == rhs.linePalette
+            && lhs.world.network == rhs.world.network
+            && lhs.network == rhs.network
+            && lhs.routePreview == rhs.routePreview
+            && lhs.edges == rhs.edges
     }
 
     var body: some View {
         let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts
         let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
+        let network = network, routePreview = routePreview, edges = edges
         return Canvas { context, size in
             context.clip(to: Path(CGRect(origin: .zero, size: size)))
             MapArt.drawStationLabels(
                 world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
                 lineCodes: lineCodes, projection: camera, in: context
             )
+            MapArt.drawBuildMarks(world, network: network, routePreview: routePreview, projection: camera, cached: edges, in: context)
         }
         .allowsHitTesting(false)
     }

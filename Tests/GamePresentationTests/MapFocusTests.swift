@@ -114,9 +114,81 @@ final class MapFocusTests: XCTestCase {
         let huge = ScreenFrame(x: 300, y: 100, width: 434, height: 272)
         XCTAssertEqual(ScreenInsets(top: 40).clearing([outside, huge], viewport: phone), ScreenInsets(top: 40))
     }
+
+    /// A phone on its side with a layer's legend open in the
+    /// bottom-trailing corner. The framing gives the legend the whole band
+    /// of the view beside it; a selected station in that band, beside the
+    /// legend and not under it, stays where it is (it was moved every time
+    /// the details card opened or closed).
+    func testAStationBesideACornersControlStaysWhereItIs() throws {
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 131_072, y: 131_072))
+        let legend = ScreenFrame(x: 500, y: 200, width: 222, height: 160)
+        let cover = MapCover(edges: ScreenInsets(top: 40), corners: [legend])
+        let framing = cover.framing(in: phone)
+        XCTAssertEqual(framing, ScreenInsets(top: 40, leading: 0, bottom: 0, trailing: 234))
+
+        let beside = camera.world(at: ScreenPoint(x: 600, y: 120))
+        // What the map did: in the legend's band, so moved.
+        XCTAssertFalse(camera.showsClear(beside, of: framing))
+        XCTAssertFalse(camera.hides(beside, under: cover))
+        XCTAssertNil(camera.keepingClear(beside, of: cover))
+
+        // Under the legend itself it moves into the middle of the map the
+        // framing leaves.
+        let under = camera.world(at: ScreenPoint(x: 600, y: 300))
+        XCTAssertTrue(camera.hides(under, under: cover))
+        let moved = try XCTUnwrap(camera.keepingClear(under, of: cover))
+        XCTAssertEqual(moved.screenPoint(of: under).x, 250, accuracy: 1)
+        XCTAssertEqual(moved.screenPoint(of: under).y, 206, accuracy: 1)
+        // Once there, opening or closing the card again leaves it.
+        XCTAssertNil(moved.keepingClear(under, of: cover))
+        XCTAssertNil(moved.keepingClear(under, of: MapCover(edges: ScreenInsets(top: 40, trailing: 257), corners: [legend])))
+    }
+
+    /// Where the framing leaves less than a fingertip down (the top
+    /// column and the corners' controls on a short phone), a station keeps
+    /// its height: one under a panel moves only across, one only under the
+    /// top column does not move.
+    func testATinyClearBoxKeepsTheStationAlongThatAxis() throws {
+        let camera = PlanCamera(bounds: map, viewport: phone).centered(on: WorldCoordinate(x: 131_072, y: 131_072))
+        let cover = MapCover(edges: ScreenInsets(top: 200, bottom: 140, trailing: 274))
+        let framing = cover.framing(in: phone)
+
+        let underPanel = camera.world(at: ScreenPoint(x: 600, y: 250))
+        let moved = try XCTUnwrap(camera.keepingClear(underPanel, of: cover))
+        XCTAssertEqual(moved.screenPoint(of: underPanel).x, 230, accuracy: 1)
+        XCTAssertEqual(moved.screenPoint(of: underPanel).y, 250, accuracy: 1)
+        // What the map did: down into the 32-point strip between them.
+        XCTAssertEqual(camera.centered(on: underPanel, clearOf: framing).screenPoint(of: underPanel).y, 216, accuracy: 1)
+
+        let underColumn = camera.world(at: ScreenPoint(x: 300, y: 100))
+        XCTAssertFalse(camera.showsClear(underColumn, of: framing))
+        XCTAssertNil(camera.keepingClear(underColumn, of: cover))
+
+        // Insets that leave nothing down: the map moved it to the view's
+        // middle, under the top column; it keeps its height.
+        let crowded = MapCover(edges: ScreenInsets(top: 200, bottom: 200, trailing: 274))
+        XCTAssertEqual(camera.centered(on: underPanel, clearOf: crowded.framing(in: phone)).screenPoint(of: underPanel).y, 186, accuracy: 1)
+        let kept = try XCTUnwrap(camera.keepingClear(underPanel, of: crowded))
+        XCTAssertEqual(kept.screenPoint(of: underPanel).y, 250, accuracy: 1)
+        XCTAssertEqual(kept.centerY, camera.centerY, accuracy: 0.001)
+
+        // A station out of the view comes into it: to the view's middle
+        // along the axis with no room.
+        let away = camera.world(at: ScreenPoint(x: 300, y: 900))
+        XCTAssertTrue(camera.hides(away, under: cover))
+        let brought = try XCTUnwrap(camera.keepingClear(away, of: cover))
+        XCTAssertEqual(brought.screenPoint(of: away).x, 230, accuracy: 1)
+        XCTAssertEqual(brought.screenPoint(of: away).y, 186, accuracy: 1)
+    }
 }
 
 private extension PlanCamera {
+    func world(at point: ScreenPoint) -> WorldCoordinate {
+        let position = worldPosition(at: point)
+        return WorldCoordinate(x: Int64(position.x.rounded()), y: Int64(position.y.rounded()))
+    }
+
     func worldDistanceDouble(_ points: Double) -> Double {
         points / pointsPerUnit
     }
