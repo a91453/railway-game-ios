@@ -1,11 +1,13 @@
 import GamePresentation
+import ImageIO
 import MetalKit
 import os
 import UIKit
 
 /// ARCHITECTURE decision 229: the native 3D map drawn with Metal. It only
 /// uploads and draws what GamePresentation works out (``Map3DScene``,
-/// ``Map3DTrains``, ``Map3DCamera``, ``Map3DLighting``): one pipeline for the
+/// ``Map3DTrains``, ``Map3DCamera``, ``Map3DLighting``) and the surfaces'
+/// textures (decision 231): one pipeline for the
 /// still scene a buffer per chunk, the chunks out of view skipped, the
 /// trains one buffer made each frame. It also measures itself (frames a
 /// second, the CPU's and the GPU's time a frame), since the step before the
@@ -47,6 +49,8 @@ final class Map3DMetalView: MTKView {
     /// Decision 230: the same, each vertex through its car's instance.
     private let instancedPipeline: MTLRenderPipelineState
     private let depthState: MTLDepthStencilState
+    /// Decision 231: the surfaces' textures, one layer each.
+    private let surfaces: MTLTexture
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
     private var cpuTimes: [Double] = []
@@ -73,6 +77,9 @@ final class Map3DMetalView: MTKView {
         vertexDescriptor.attributes[2].format = .uchar4Normalized
         vertexDescriptor.attributes[2].offset = 24
         vertexDescriptor.attributes[2].bufferIndex = 0
+        vertexDescriptor.attributes[3].format = .float3
+        vertexDescriptor.attributes[3].offset = 28
+        vertexDescriptor.attributes[3].bufferIndex = 0
         vertexDescriptor.layouts[0].stride = MemoryLayout<Map3DVertex>.stride
         let descriptor = MTLRenderPipelineDescriptor()
         descriptor.vertexFunction = vertexFunction
@@ -87,19 +94,22 @@ final class Map3DMetalView: MTKView {
         guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
         descriptor.vertexFunction = instancedFunction
         guard let instancedPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
-              let depthState = device.makeDepthStencilState(descriptor: depthDescriptor)
+              let depthState = device.makeDepthStencilState(descriptor: depthDescriptor),
+              let surfaces = makeSurfaces(device: device, queue: queue)
         else { return nil }
-        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline, depthState: depthState)
+        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline, depthState: depthState,
+                              surfaces: surfaces)
     }
 
     private init(
         device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
-        depthState: MTLDepthStencilState
+        depthState: MTLDepthStencilState, surfaces: MTLTexture
     ) {
         self.queue = queue
         self.pipeline = pipeline
         self.instancedPipeline = instancedPipeline
         self.depthState = depthState
+        self.surfaces = surfaces
         super.init(frame: .zero, device: device)
         colorPixelFormat = .bgra8Unorm
         depthStencilPixelFormat = .depth32Float
@@ -111,6 +121,75 @@ final class Map3DMetalView: MTKView {
     @available(*, unavailable)
     required init(coder: NSCoder) {
         fatalError("init(coder:) is not used")
+    }
+
+    /// Decision 231: `Map3DSurfaces.png` as one array of layers with their
+    /// mipmaps. The file is RGB, since Xcode premultiplies a PNG's alpha
+    /// when it copies it: each layer's colour on the left and its tint mask
+    /// on the right, put together here. Without the file every layer is
+    /// mid grey and tints fully, so every face shows its colour alone.
+    private static func makeSurfaces(device: MTLDevice, queue: MTLCommandQueue) -> MTLTexture? {
+        let side = Map3DSurface.side, count = Map3DSurface.allCases.count
+        var levels = 1
+        while side >> levels > 0 { levels += 1 }
+        let descriptor = MTLTextureDescriptor()
+        descriptor.textureType = .type2DArray
+        descriptor.pixelFormat = .rgba8Unorm
+        descriptor.width = side
+        descriptor.height = side
+        descriptor.arrayLength = count
+        descriptor.mipmapLevelCount = levels
+        descriptor.usage = .shaderRead
+        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
+        let layerBytes = side * side * 4
+        let pixels = surfacePixels(side: side, count: count)
+            ?? [UInt8]((0..<(side * side * count)).flatMap { _ in [UInt8(128), 128, 128, 255] })
+        pixels.withUnsafeBytes { bytes in
+            guard let base = bytes.baseAddress else { return }
+            for layer in 0..<count {
+                texture.replace(region: MTLRegionMake2D(0, 0, side, side), mipmapLevel: 0, slice: layer,
+                                withBytes: base + layer * layerBytes, bytesPerRow: side * 4, bytesPerImage: layerBytes)
+            }
+        }
+        if let commands = queue.makeCommandBuffer(), let blit = commands.makeBlitCommandEncoder() {
+            blit.generateMipmaps(for: texture)
+            blit.endEncoding()
+            commands.commit()
+        }
+        return texture
+    }
+
+    /// The layers of `Map3DSurfaces.png`, RGBA, one after another, or
+    /// `nil` when the file is missing or not `count` layers of `side`.
+    private static func surfacePixels(side: Int, count: Int) -> [UInt8]? {
+        guard let url = Bundle.main.url(forResource: "Map3DSurfaces", withExtension: "png"),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+              image.width == 2 * side, image.height == side * count,
+              let space = CGColorSpace(name: CGColorSpace.sRGB)
+        else { return nil }
+        let width = image.width, height = image.height
+        var strip = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = strip.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn else { return nil }
+        // Each layer's colour, with its mask's red as the alpha.
+        var layers = [UInt8](repeating: 0, count: side * side * 4 * count)
+        for row in 0..<(side * count) {
+            for x in 0..<side {
+                let colour = (row * width + x) * 4, mask = (row * width + side + x) * 4, to = (row * side + x) * 4
+                layers[to] = strip[colour]
+                layers[to + 1] = strip[colour + 1]
+                layers[to + 2] = strip[colour + 2]
+                layers[to + 3] = strip[mask]
+            }
+        }
+        return layers
     }
 
     /// Four samples a pixel smooth the thin rails; every iPhone and iPad
@@ -160,6 +239,7 @@ final class Map3DMetalView: MTKView {
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depthState)
         encoder.setCullMode(.none)
+        encoder.setFragmentTexture(surfaces, index: 0)
         uniforms.withUnsafeBytes { bytes in
             guard let base = bytes.baseAddress else { return }
             encoder.setVertexBytes(base, length: bytes.count, index: 1)

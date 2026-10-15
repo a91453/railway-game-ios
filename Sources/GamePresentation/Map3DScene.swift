@@ -34,6 +34,12 @@ public struct Map3DScene: Sendable {
     public static let reach: Double = 6_000
     /// What is shown round what is built, in metres.
     public static let margin: Double = 1_500
+    /// How far above the track's height the rails' tops are drawn, in
+    /// metres, the trains with them (decision 231). The game lays track on
+    /// the ground at the ground's height; drawn there, the bed 0.35 m below
+    /// the rails was under the ground and the plazas, and only the rails'
+    /// tops showed. Lifted, the bed's top stands 0.1 m over the ground.
+    public static let railLift: Float = 0.45
 
     /// The world point (in world units) at the scene's origin.
     public let originX: Double
@@ -187,6 +193,18 @@ extension Map3DScene {
         /// How finely track is laid between its samples, in metres.
         static let trackStep: Double = 16
 
+        // Decision 231: how each part is painted, and the metres one
+        // repeat covers. The ballast's sleepers lie every 0.6 m, four to a
+        // repeat, on a 5 m bed (a 3.4 m bed shows its middle).
+        static let grass = Map3DPaint.tile(.grass, 40)
+        static let bank = Map3DPaint.tile(.grass, 8)
+        static let ballast = Map3DPaint(.ballast, .tile(width: 5, height: 2.4))
+        static let concrete = Map3DPaint.tile(.concrete, 6)
+        static let paving = Map3DPaint.tile(.paving, 4)
+        static let roofing = Map3DPaint.tile(.roof, 8)
+        static let plaster = Map3DPaint.tile(.plaster, 4)
+        static let metal = Map3DPaint.tile(.metalSheet, 4)
+
         init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld) {
             self.originX = originX
             self.originY = originY
@@ -201,6 +219,9 @@ extension Map3DScene {
         func point(_ c: WorldCoordinate) -> Map3DPoint {
             point(x: Double(c.x), y: Double(c.y), height: Double(c.z))
         }
+
+        /// Up by ``Map3DScene/railLift``: where track is drawn.
+        static let lifted = Map3DPoint(0, Map3DScene.railLift, 0)
 
         /// The ground's height at world point (`x`, `y`), in metres: the
         /// map's ground (decision 151), or 0 where it has none.
@@ -261,7 +282,10 @@ extension Map3DScene {
                     let water = world.isWater(row: row, column: column)
                     let lift = Map3DPoint(0, water ? 0.05 : 0, 0)
                     let middle = (a + c) * 0.5
-                    mesh(at: middle) { $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground) }
+                    mesh(at: middle) {
+                        $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground,
+                                   paint: water ? nil : Self.grass)
+                    }
                 }
             }
         }
@@ -283,7 +307,7 @@ extension Map3DScene {
                         cleared.insert(ChunkKey(column: Int((Double(coordinate.x) / cell).rounded(.down)), row: Int((Double(coordinate.y) / cell).rounded(.down))))
                     }
                     guard line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
-                    let points = line.map(point)
+                    let points = line.map { point($0) + Self.lifted }
                     for piece in Self.pieces(of: points) {
                         addTrackPiece(piece, kind: span.kind)
                     }
@@ -343,7 +367,8 @@ extension Map3DScene {
                 let deckColor = kind == .bridge ? Map3DPalette.bridge : Map3DPalette.concrete
                 let grounds = line.map { ground(at: $0) }
                 mesh(at: middle) { mesh in
-                    mesh.addRibbon(along: line, width: Self.deckWidth, lift: -Self.bedDrop, depth: Self.girderDepth, top: Map3DPalette.ballast, side: deckColor)
+                    mesh.addRibbon(along: line, width: Self.deckWidth, lift: -Self.bedDrop, depth: Self.girderDepth, top: Map3DPalette.ballast, side: deckColor,
+                                   topPaint: Self.ballast, sidePaint: Self.concrete)
                     // A pier every 32 m along the piece (rail-3d `PIER_M`).
                     var travelled: Float = 0, nextPier: Float = Self.pierSpacing / 2
                     for index in 1..<line.count {
@@ -356,7 +381,7 @@ extension Map3DScene {
                             let height = top.y - Self.bedDrop - Self.girderDepth - foot
                             if height > 0.5 {
                                 mesh.addBox(base: Map3DPoint(top.x, foot, top.z), forward: b - a, length: Self.pierAlong, width: Self.pierAcross,
-                                            height: height, top: deckColor, side: deckColor)
+                                            height: height, top: deckColor, side: deckColor, frontPaint: Self.concrete, flankPaint: Self.concrete)
                             }
                             nextPier += Self.pierSpacing
                         }
@@ -369,9 +394,11 @@ extension Map3DScene {
                 let bank = kind == .embankment ? Map3DPalette.embankment : Map3DPalette.ballast
                 mesh(at: middle) { mesh in
                     if kind == .embankment {
-                        mesh.addRibbon(along: line, width: Self.bedBottom + min(depth, 4.7) * 2, lift: -Self.bedDrop - 0.05, depth: depth, top: bank, side: bank)
+                        mesh.addRibbon(along: line, width: Self.bedBottom + min(depth, 4.7) * 2, lift: -Self.bedDrop - 0.05, depth: depth, top: bank, side: bank,
+                                       topPaint: Self.bank, sidePaint: Self.bank)
                     }
-                    mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: min(depth, 0.6), top: Map3DPalette.ballast, side: Map3DPalette.ballast)
+                    mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: min(depth, 0.6), top: Map3DPalette.ballast, side: Map3DPalette.ballast,
+                                   topPaint: Self.ballast, sidePaint: Self.concrete)
                 }
             }
             // The rails, their middles half a rail outside the gauge.
@@ -395,7 +422,7 @@ extension Map3DScene {
             let others = snapshot.edges.map { ($0.edge.id, $0.geometry.points.map(point)) }
             for (index, platform) in platforms.enumerated() {
                 guard platform.points.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
-                let line = platform.points.map(point)
+                let line = platform.points.map { point($0) + Self.lifted }
                 let across = Map3DMesh.acrossDirections(line)[line.count / 2]
                 let middle = middles[index]
                 var side: Float = -1, width = Self.platformWidth
@@ -419,11 +446,11 @@ extension Map3DScene {
                 let offset = side * (Self.platformEdge + width / 2)
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
-                                   top: Map3DPalette.platform, side: Map3DPalette.platform)
+                                   top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (Self.platformEdge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
                     mesh.addRibbon(along: line, width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
-                                   top: Map3DPalette.canopy, side: Map3DPalette.canopy)
+                                   top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
                 }
             }
         }
@@ -438,14 +465,14 @@ extension Map3DScene {
                 let forward = Map3DPoint(Float(direction.dx), 0, Float(direction.dy))
                 guard let along = forward.normalized else { continue }
                 let across = Map3DPoint(-along.z, 0, along.x)
-                let base = point(node.position) + Map3DPoint(0, -Self.bedDrop, 0)
+                let base = point(node.position) + Self.lifted + Map3DPoint(0, -Self.bedDrop, 0)
                 mesh(at: base) { mesh in
                     for side: Float in [-1, 1] {
                         mesh.addBox(base: base + across * (side * 3.6), forward: along, length: 1.2, width: 1.6, height: 6.4,
-                                    top: Map3DPalette.portal, side: Map3DPalette.portal)
+                                    top: Map3DPalette.portal, side: Map3DPalette.portal, frontPaint: Self.concrete, flankPaint: Self.concrete)
                     }
                     mesh.addBox(base: base + Map3DPoint(0, 5.6, 0), forward: along, length: 1.2, width: 8.8, height: 1.4,
-                                top: Map3DPalette.portal, side: Map3DPalette.portal)
+                                top: Map3DPalette.portal, side: Map3DPalette.portal, frontPaint: Self.concrete, flankPaint: Self.concrete)
                 }
             }
         }
@@ -473,7 +500,8 @@ extension Map3DScene {
                     let half = Float(cell / Self.metre / 2) - 1
                     mesh(at: base) { mesh in
                         mesh.addQuad(base + Map3DPoint(-half, 0.03, -half), base + Map3DPoint(-half, 0.03, half),
-                                     base + Map3DPoint(half, 0.03, half), base + Map3DPoint(half, 0.03, -half), color: Map3DPalette.plaza)
+                                     base + Map3DPoint(half, 0.03, half), base + Map3DPoint(half, 0.03, -half), color: Map3DPalette.plaza,
+                                     paint: Self.paving)
                     }
                     continue
                 }
@@ -482,16 +510,16 @@ extension Map3DScene {
                     if lot.density <= 2 {
                         addRowHouses(base: base, side: side, density: lot.density, shops: lot.use == .commercial, seed: seed)
                     } else {
-                        addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), seed: seed)
+                        addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), facade: .flatWindows, seed: seed)
                     }
                 case .office:
-                    addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.officeWalls, seed), seed: seed)
+                    addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.officeWalls, seed), facade: .officeGlass, seed: seed)
                 case .industrial:
                     addShed(base: base, side: side, walls: Self.pick(Map3DPalette.industrialWalls, seed))
                 case .civic:
-                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.civicWalls, seed), seed: seed)
+                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.civicWalls, seed), facade: .flatWindows, seed: seed)
                 default:
-                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.leisureWalls, seed), seed: seed)
+                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.leisureWalls, seed), facade: .flatWindows, seed: seed)
                 }
             }
         }
@@ -502,7 +530,7 @@ extension Map3DScene {
             mesh(at: base) { mesh in
                 mesh.addQuad(base + Map3DPoint(-half, 0.02, -half), base + Map3DPoint(-half, 0.02, half),
                              base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
-                             color: park ? Map3DPalette.park : Map3DPalette.farm)
+                             color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
                 guard park else { return }
                 // Up to nine trees on a hashed 20 m grid (rail-3d's trees
                 // stand on a hashed 26 m grid).
@@ -551,20 +579,30 @@ extension Map3DScene {
                         let front = Map3DPoint(0, 0, facing) // the way the house faces
                         let rowMiddle = base + Map3DPoint(middleX, 0, facing * (depth / 2 + 0.5))
                         let arcade = shops && r(5) < 0.8
+                        // Decision 231: the ground floor a shop or a
+                        // rolling shutter, the floors above windows (a
+                        // grille or a balcony on a 透天厝), the flanks
+                        // blank as row houses' walls are.
+                        let groundPaint = Map3DPaint.bays(shops ? .shopfront : .shutter, bay: 5.4, floors: 1)
+                        let upperPaint = flats ? Map3DPaint.bays(.flatWindows, bay: 3.2, floors: Int(floors) - 1)
+                            : Map3DPaint.bays(r(8) < 0.55 ? .homeWindows : .homeBalcony, bay: 6, floors: Int(floors) - 1)
                         if arcade {
                             // The ground floor set back 3.4 m, dark; the
                             // floors above over the arcade.
                             mesh.addBox(base: rowMiddle - front * 1.7, forward: front, length: depth - 3.4, width: width - 0.1,
-                                        height: groundFloor, top: Map3DPalette.arcade, side: Map3DPalette.arcade)
-                            mesh.addBox(base: rowMiddle + Map3DPoint(0, groundFloor, 0), forward: front, length: depth, width: width - 0.1,
-                                        height: height - groundFloor, top: Map3DPalette.roof, side: wall)
+                                        height: groundFloor, top: Map3DPalette.arcade, side: Map3DPalette.arcade,
+                                        frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
                         } else {
-                            mesh.addBox(base: rowMiddle, forward: front, length: depth, width: width - 0.1, height: height,
-                                        top: Map3DPalette.roof, side: wall)
+                            mesh.addBox(base: rowMiddle, forward: front, length: depth, width: width - 0.1, height: groundFloor,
+                                        top: Map3DPalette.roof, side: wall, frontPaint: groundPaint, flankPaint: Self.plaster, capped: false)
                         }
+                        mesh.addBox(base: rowMiddle + Map3DPoint(0, groundFloor, 0), forward: front, length: depth, width: width - 0.1,
+                                    height: height - groundFloor, top: Map3DPalette.roof, side: wall,
+                                    topPaint: Self.roofing, frontPaint: upperPaint, flankPaint: Self.plaster)
                         // A parapet's rim and a water tank on the roof.
                         mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
-                                    height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95))
+                                    height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
+                                    topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
                         if r(6) < 0.6 {
                             let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
                             mesh.addBox(base: rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4), forward: front,
@@ -579,34 +617,44 @@ extension Map3DScene {
 
         /// A block of flats, offices or a tower: density 3 a slab of 7–16
         /// floors, density 4 a two-floor podium under a tower of 18–40.
-        mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, seed: (Int32, Int32)) {
+        /// Decision 231: every side windows of `facade`, a bay to each
+        /// 3.2 m (an office's curtain wall 3 m) and floor; a tower's podium
+        /// shops, or glass under offices.
+        mutating func addBlock(base: Map3DPoint, side: Float, density: Int, walls: UInt32, facade: Map3DSurface, seed: (Int32, Int32)) {
             let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
+            let bay: Float = facade == .officeGlass ? 3 : 3.2
+            func windows(_ floors: Float) -> Map3DPaint { .bays(facade, bay: bay, floors: Int(floors)) }
             mesh(at: base) { mesh in
                 let footprint = max(side - 4, 8)
                 switch density {
                 case ...2:
                     let floors = Float(3 + Int(r(1) * 4))
                     mesh.addBox(base: base, length: footprint * 0.8, width: footprint * 0.8, height: 3.8 + 3.2 * (floors - 1),
-                                top: Map3DPalette.roof, side: walls)
+                                top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 case 3:
                     let floors = Float(7 + Int(r(1) * 10))
                     let turned = r(2) < 0.5
                     mesh.addBox(base: base, forward: turned ? Map3DPoint(1, 0, 0) : Map3DPoint(0, 0, -1),
-                                length: footprint * 0.9, width: footprint * 0.45, height: 4.6 + 3.2 * (floors - 1), top: Map3DPalette.roof, side: walls)
+                                length: footprint * 0.9, width: footprint * 0.45, height: 4.6 + 3.2 * (floors - 1), top: Map3DPalette.roof, side: walls,
+                                topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 default:
                     let floors = Float(18 + Int(r(1) * 23))
-                    mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: Map3DPalette.roof, side: Map3DColor.shaded(walls, 0.9))
+                    let podium = facade == .officeGlass ? Map3DPaint.bays(.officeGlass, bay: 3, floors: 2) : Map3DPaint.bays(.shopfront, bay: 5.4, floors: 2)
+                    mesh.addBox(base: base, length: footprint, width: footprint, height: 9, top: Map3DPalette.roof, side: Map3DColor.shaded(walls, 0.9),
+                                topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
-                                top: Map3DPalette.roof, side: walls)
+                                top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
                 }
             }
         }
 
-        /// A factory: low, wide, with a lighter roof.
+        /// A factory: low, wide, with a lighter roof; corrugated metal
+        /// (decision 231).
         mutating func addShed(base: Map3DPoint, side: Float, walls: UInt32) {
             let footprint = max(side - 6, 8)
             mesh(at: base) { mesh in
-                mesh.addBox(base: base, length: footprint, width: footprint * 0.7, height: 8, top: Map3DColor.rgb(0xDADDE0), side: walls)
+                mesh.addBox(base: base, length: footprint, width: footprint * 0.7, height: 8, top: Map3DColor.rgb(0xDADDE0), side: walls,
+                            topPaint: Self.metal, frontPaint: Self.metal, flankPaint: Self.metal)
             }
         }
 
@@ -622,12 +670,14 @@ extension Map3DScene {
                 let base = Map3DPoint(centre.x, ground(x: x, y: y), centre.z)
                 let side = Float(Double(building.kind.side) / Self.metre) - 2
                 let height = 1.5 + 3.5 * Float(building.kind.floors)
+                let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: Int(building.kind.floors))
                 mesh(at: base) { mesh in
-                    mesh.addBox(base: base, length: side, width: side, height: height, top: Map3DPalette.playerRoof, side: Map3DPalette.player)
+                    mesh.addBox(base: base, length: side, width: side, height: height, top: Map3DPalette.playerRoof, side: Map3DPalette.player,
+                                frontPaint: windows, flankPaint: windows)
                     mesh.addBox(base: base + Map3DPoint(0, height, 0), length: side, width: side, height: 0.6,
                                 top: Map3DPalette.playerRim, side: Map3DPalette.playerRim)
                     mesh.addBox(base: base + Map3DPoint(0, height, 0), length: side - 2, width: side - 2, height: 0.4,
-                                top: Map3DPalette.playerRoof, side: Map3DPalette.playerRoof)
+                                top: Map3DPalette.playerRoof, side: Map3DPalette.playerRoof, topPaint: Self.roofing)
                 }
             }
         }

@@ -8630,6 +8630,114 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：instanced pipeline 與 shader 的編譯。
 - **UNVERIFIED**（要 TestFlight 實機）：畫面與幀時間。
 
+### 231. 原生 3D 地圖第三步：素材庫的圖改過之後當貼圖
+
+2026-10-15。作者把 3D 交給新的 session（「接手3d的任務」），並在參考庫加了素材庫 `Railway/procedural_assets_reference_clean/`：「裡面圖片素材都可以用 但不能跟原圖一模一樣 需有稍微修改 結合其他檔案的圖片也沒關係」。這條寫進 art-style §7。號碼依工作登記 #231：決策 231；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**做了什麼**：3D 地圖的地面、軌道、月台、建物加上貼圖。全部在一張 PNG、一個 pipeline，沒有多出 draw call。
+
+1. **貼圖**（`RailwayGameApp/Resources/Map3D/Map3DSurfaces.png`，約 430 KB）：13 層，每層 256 × 256。
+   - 每層的左半是顏色，右半是「跟著頂點色」的遮罩。
+   - 遮罩白：那個像素是一個亮度（中灰 = ×1），乘上頂點色。牆、地面照舊是調色盤的顏色，F 台灣版＋的配色不變。
+   - 遮罩黑：那個像素保留自己的顏色，例如玻璃、鐵捲門、窗框。
+   - 檔案是 RGB、沒有 alpha：Xcode 複製 PNG 時會把 alpha 預乘進顏色，遮罩黑的地方顏色就沒了。App 載入時再把兩半合成 RGBA。
+2. **GamePresentation**：
+   - `Map3DVertex` 從 28 bytes 變 40 bytes，多了貼圖座標 `u`、`v` 與層 `layer`；`-1` 是只用顏色（列車照舊）。
+   - `Map3DSurface` 是 13 層的順序。
+   - `Map3DPaint` 決定一個面怎麼貼：
+     - `tile`：每幾公尺重複一次。朝上的面照地圖的東、南方向貼，相鄰的頂面接得起來。
+     - `bays`：整數個開間、整數層樓，窗剛好碰到牆角與樓板。
+   - `addQuad`、`addBox`（頂、前後、兩側各自的貼法，可以不加蓋）、`addRibbon`（沿線貼；道床的寬度取貼圖的中段）。
+3. **場景**（`Map3DScene`）：
+   - 地面、公園：`grass`，40 m 一次；水不貼。
+   - 道床：`ballast`，枕木每 0.6 m；路堤：`grass`。
+   - 高架的梁、橋墩、洞口、月台側面：`concrete`。
+   - 月台面、廣場：`paving`；雨棚頂：`metalSheet`。
+   - 透天厝：
+     - 一樓：店面 `shopfront` 或鐵捲門 `shutter`。
+     - 樓上：住家的鐵窗 `homeWindows` 或陽台 `homeBalcony`，依位置各半；公寓是 `flatWindows`。
+     - 兩側是 `plaster`，像連棟透天厝的側牆。
+     - 原本一整個盒子，改成一樓與樓上兩段，窗才會對齊樓層。
+   - 大樓：`flatWindows`；辦公樓：`officeGlass`；塔樓的裙樓：店面或玻璃。
+   - 工廠：`metalSheet`。
+   - 玩家建物：暖黃，加上 `flatWindows`。
+4. **軌道墊高 0.45 m**（`Map3DScene.railLift`）：
+   - 遊戲把地面上的軌道放在地面高度。決策 229 照那個高度畫，比軌頂低 0.35 m 的道床被地面與廣場（+0.03 m）蓋住了，只看得到一點軌頂。
+   - 現在軌道、月台、洞口和列車一起高 0.45 m，道床頂比地面高 0.1 m，枕木看得到。
+   - 只是畫的位置，遊戲的軌道高度不變。
+5. **App**：
+   - `Map3DShaders.metal`：頂點多讀一個 `float3`（u、v、層），fragment 從 `texture2d_array` 取樣（repeat、mipmap、8 倍異向性過濾），依遮罩混合。
+   - `Map3DMetalView`：載入 PNG，合成 13 層，產生 mipmap。缺檔時每層都是中灰，畫面等於只用顏色。
+
+**每一層用了素材庫的哪幾張、怎麼改**（路徑在 `Railway/procedural_assets_reference_clean/source/preview/` 下；每一層至少兩張合在一起，顏色全部拿掉改成亮度，除了列出的自畫部分以外都經過縮放、移位、模糊或分階）：
+
+| 層 | 素材庫的圖 | 改了什麼 |
+| --- | --- | --- |
+| `grass` | `city/assets/generated-brown-earth-tile`、`city/assets/asphalt_albedo` | 模糊、分成五階的柔和斑點，對比約 2% |
+| `paving` | `city/assets/sidewalk_albedo`（左半，轉 90°）、`industrial/assets/concrete-reference-albedo` | 只留鋪面的接縫與每塊的平均亮度，接縫壓暗 |
+| `ballast` | `industrial/assets/old-concrete-v2_albedo`、`generated-brown-earth-tile`、`japan/assets/concrete-map` | 碎石顆粒；枕木自己畫（2.1 m 長、每 0.6 m） |
+| `concrete` | `old-concrete-v2_albedo`、`concrete-reference-albedo` | 模糊、對比約 3.5%；模板接縫自己畫 |
+| `roof` | `concrete-map`、`old-concrete-v2_albedo` | 模糊、對比約 1.4% |
+| `plaster` | `japan/assets/plaster-map`、`japan/assets/cream-tile-normal`（取上下的斜率當磁磚橫縫）、`old-concrete-v2_albedo`（雨痕） | 三張混合，對比約 2% |
+| `homeWindows` | `plaster-map`（牆的質感）、`japan/assets/glass-map`（右半，壓暗、偏藍）、`japan/assets/blue-metal-normal`（雨遮的浪板） | 鐵窗、冷氣室外機、樓板帶自己畫 |
+| `homeBalcony` | `plaster-map`、`glass-map` | 陽台、欄杆、盆栽、落地窗框自己畫 |
+| `shopfront` | `plaster-map`、`glass-map`、`japan/assets/sakura-front-glazing-interior-albedo`（只取下緣模糊的貨架，左右翻轉、調暖） | 空白招牌帶、門框自己畫，沒有任何文字 |
+| `shutter` | `plaster-map`、`blue-metal-normal`（轉 90°，當鐵捲門的橫條） | 捲門箱、側門自己畫 |
+| `flatWindows` | `plaster-map`、`glass-map` | 鋁窗框、窗台自己畫 |
+| `officeGlass` | `plaster-map`、`glass-map`、`japan/assets/steel_albedo`（直框） | 層間的實牆帶自己畫 |
+| `metalSheet` | `blue-metal-normal`、`old-concrete-v2_albedo`（髒污） | 浪板的波紋自己畫 |
+
+**沒有用的**：招牌、海報、販賣機。它們有真實品牌（可口可樂、Asahi、KIRIN）或日文店名，art-style §7 不放品牌字與真實店招；地圖的距離也看不清楚。素材庫的 3D 模型照舊只學做法（決策 230）。
+
+**檢查「不能跟原圖一模一樣」**：
+- PNG 和素材庫 139 張 PNG 的 SHA-256 都不同。
+- 每一層和素材庫每一張（縮成 256，加上轉 90°、左右、上下翻轉）比亮度的相關係數，1 是同一張圖。最高是 `plaster` 對 `plaster-neutral-map` 的 0.76：它主要是灰泥的質感，拿掉顏色、對比壓到約 2%，再混入磁磚橫縫與雨痕。其他層都在 0.65 以下。
+- 素材庫是作者自己做的，作者不希望別人拿走（作者 2026-10-15）。所以只用 Pillow、NumPy 的程式在本機處理，沒有上傳到任何外部的生成工具。產生貼圖的腳本放在 scratchpad，沒有進 repo（art-style §3 的做法），步驟寫在 `docs/art/map3d-surfaces-2026-10-15/README.md`。
+
+**四個角度**：
+- 玩家：拉近時看得出透天厝的鐵窗、陽台、鐵捲門與店面，辦公樓是帷幕牆，軌道有枕木。拉遠時貼圖淡掉，看起來仍是原本的顏色。
+- 開發：沒有新依賴；一張 430 KB 的圖、一個貼圖陣列，draw call 不變。頂點多 12 bytes；透天厝分成一樓與樓上兩段，三角形也多了（決策 229 的量法）：
+
+  | 場景 | 三角形（決策 229 → 這次） | 頂點＋索引 |
+  | --- | --: | --: |
+  | 示範地圖 | 118,446 → 126,934 | 8.1 → 11.7 MB |
+  | 兩鎮之間的第一條線 | 104,924 → 126,628 | 7.1 → 11.7 MB |
+
+  仍在畫風定案的手機經驗值內（一個畫面 30–50 萬個三角形）。Linux 測試鎖住頂點格式、檔案的層數、開間與樓層、場景各部分的貼法、道床在地面上、列車不貼。
+- 美術：照 F 台灣版＋的「霧面模型」：貼圖很淡，乘在頂點色上，顏色還是調色盤的；細節（窗、鐵窗、浪板、枕木）從素材庫的圖改過、混合而來，整體看起來和素材庫的任何一張都不一樣。
+- 音樂：無。
+
+**其他選擇**（預覽在 `docs/art/map3d-surfaces-2026-10-15/options.jpg`、`option-c-mid.jpg`）：
+- A. 不貼（現在的 `main`）：最便宜，但拉近時建物只是色塊，透天厝不像透天厝。
+- C. 照片感：同一套圖，對比放大 3.5 倍。拉近較「真」，但地面變成迷彩、淺色牆被洗白，正上方的建造地圖也變雜。和畫風定案「不用照片質感」相反。
+- 不加貼圖座標、在 shader 裡依世界座標投影：不用改頂點格式，但窗會被牆角與樓板切斷。
+- 圖集（一張大圖分格）代替貼圖陣列：格與格之間的 mipmap 會滲色，重複貼時要另外處理邊界。
+
+**參考與外部**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 素材庫 `procedural_assets_reference_clean/source/preview/` 的 13 張圖（上表） | `Map3DSurfaces.png` 的 13 層 |
+| 同上 `MODEL_CATALOG.json` 的街道與立面模型 | 只看做法：一樓店面、上方雨遮、窗與樓板的位置 |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js`（道床比軌頂低 0.35 m，決策 229） | `railLift` 讓道床頂高出地面 0.1 m |
+
+外部專案：沒有用。只查了 Metal 的 `constexpr sampler` 能不能寫 `max_anisotropy`（SPIRV-Cross 產生的 MSL 有這個寫法）。
+
+**缺口**：
+- 夜景的窗戶亮燈（決策 229 的下一步 5）：遮罩之外還要一個「會亮的窗」的層。
+- 屋頂加蓋、招牌、冷氣機的立體版本：現在只在貼圖上。
+- 遠近分級：現在靠 mipmap，遠處的窗變成牆色略暗。
+- 地面的路塹仍然被 64 m 的地面格蓋住（決策 229 的缺口）。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4，以 `main` `a10d758` 為底）：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨。
+  - `Map3DSurfaceTests` 9 個、`Map3DTests` 16 個、`Map3DModelTests` 7 個通過。`Map3DTests` 有兩個值照軌道墊高改了：軌頂與車頂各高 `railLift`。
+  - XcodeGen 2.46.0 重新產生的專案只多了這張 PNG。
+  - 預覽：把場景從 Swift 輸出，用 WebGL 照同一個 shader 在 Chromium（軟體算圖）畫出來，和 Metal 的算式相同，但不是 Metal 本身。
+- **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：shader 與 `Map3DMetalView` 的編譯、PNG 的載入。
+- **UNVERIFIED**（要 TestFlight 實機）：畫面、幀時間與記憶體。
+
 ### 233. 坡道上的轉轍器
 
 玩家回報（TestFlight，實景地圖，2026-10-15）：用複線工具一次鋪兩條爬坡的軌道（193 m 一帶），想在兩條之間拉一段 32 m 的渡線，被拒絕：「轉轍器只能設在水平的軌道上」。兩條坡度相同，真實鐵路也會在坡道上設轉轍器。原因是 GameCore 的 `splitTrackEdge(_:at:)` 只切水平的邊（決策 204 續三第 1 點也因此在坡道上不加渡線）。
