@@ -1573,3 +1573,14 @@ V 實際放行 → T、U（保證不互穿）
 | `RKFAR` 的 `fillPoly`（面塗進網格角點） | `addArea` | 改成切到 64 m 地面三角形，再用 earcut 三角化 |
 
 參考庫沒有的：PMTiles 的讀取（照規格自己寫）、gzip 解壓（zlib 的 puff，zlib 授權）、有洞的多邊形三角化（mapbox/earcut 2.2.4，ISC）。
+
+## 3D 地圖的程序化建物（決策 235）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取）的 `Railway/procedural_assets_reference_clean/`（作者的素材庫；可以任意組合，跟原本不同就好，art-style §7）。只取規則與尺寸，幾何是本專案自己寫的。
+
+| 參考（`source/preview/` 下） | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| industrial 的 workshop、hangar、warehouse、boiler house、power station、compact office、container | `Map3DBuildings.swift` 的 `addFactory`、`addDoors` | 坡度、牆高、煙囪、貨櫃尺寸照用；藍色鐵皮是台灣的 |
+| city 的 clinic、police station、firehouse、rooftop air conditioner | `addClinic`、`addFireStation`、`addRoofPlant` | 樓層高與腰帶照用，去掉美式的石角、門階 |
+| japan 的 school gym、temple hall、shared generator 的 roof access house | 學校、`addTemple`、樓梯間與頂樓加蓋 | 廟的屋頂改成台灣的橘色琉璃瓦與燕尾脊 |
+

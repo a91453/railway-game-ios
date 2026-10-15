@@ -290,6 +290,22 @@ public struct Map3DMesh: Sendable {
         }
     }
 
+    /// Decision 235: a flat face through `corners` (three or more, counter-clockwise seen
+    /// from the side it faces), cut as a fan from the first.
+    public mutating func addFacet(_ corners: [Map3DPoint], color: UInt32, paint: Map3DPaint? = nil) {
+        guard corners.count >= 3, let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { return }
+        let layer = paint.map { Float($0.surface.rawValue) } ?? Map3DVertex.plain
+        let texture = paint?.coordinates(corners, normal: normal)
+        let base = UInt32(vertices.count)
+        for (index, corner) in corners.enumerated() {
+            let place: (u: Float, v: Float) = texture?[index] ?? (0, 0)
+            vertices.append(Map3DVertex(corner, normal: normal, color: color, u: place.u, v: place.v, layer: layer))
+        }
+        for index in 1..<UInt32(corners.count - 1) {
+            indices += [base, base + index, base + index + 1]
+        }
+    }
+
     /// The way a flat face `a b c d` (counter-clockwise seen from outside)
     /// looks, or `nil` when it has no area.
     static func normal(of corners: [Map3DPoint]) -> Map3DPoint? {
