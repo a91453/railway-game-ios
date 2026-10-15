@@ -72,16 +72,37 @@ vertex Map3DVertexOut map3dInstancedVertex(Map3DVertexIn in [[stage_in]], consta
     return out;
 }
 
+// Decision 242: the materials (Map3DSurface.materials, from layer 18 on)
+// and how many metres one repeat of each covers (detailRepeat).
+constant uint firstMaterial = 18;
+constant float detailRepeat[4] = {3.6, 1.8, 1.8, 1.8};
+
 // Decision 231: where a texel's alpha (its mask) is 1 it is a brightness
 // around mid grey that scales the vertex's colour (walls keep the
 // palette's colours); where 0 it keeps its own colour (glass, shutters).
+// Decision 242: a vertex's layer may also name a material (in steps of
+// 64), a fine grey pattern laid in the scene's metres over the tinted
+// part, fading out from 200 m to 600 m away.
 fragment float4 map3dFragment(Map3DVertexOut in [[stage_in]], constant Map3DUniforms &uniforms [[buffer(1)]],
                               texture2d_array<float> surfaces [[texture(0)]]) {
     constexpr sampler repeating(address::repeat, filter::linear, mip_filter::linear, max_anisotropy(8));
     float3 base = in.color;
     if (in.layer >= 0.0) {
-        float4 texel = surfaces.sample(repeating, in.surfaceAt, uint(in.layer + 0.5));
-        base = mix(texel.rgb, base * texel.rgb * 2.0, texel.a);
+        uint packed = uint(in.layer + 0.5);
+        float4 texel = surfaces.sample(repeating, in.surfaceAt, packed % 64u);
+        float3 tinted = base * texel.rgb * 2.0;
+        uint material = packed / 64u;
+        if (material > 0u) {
+            uint layer = material - 1u;
+            float metres = detailRepeat[min(layer - firstMaterial, 3u)];
+            float3 facing = normalize(in.normal);
+            float2 at = abs(facing.y) > 0.7 ? in.world.xz
+                : float2(dot(in.world, normalize(cross(float3(0.0, 1.0, 0.0), facing))), in.world.y);
+            float near = 1.0 - smoothstep(200.0, 600.0, distance(in.world, uniforms.eye.xyz));
+            float detail = surfaces.sample(repeating, at / metres, layer).r * 2.0;
+            tinted *= mix(1.0, detail, near);
+        }
+        base = mix(texel.rgb, tinted, texel.a);
     }
     float3 normal = normalize(in.normal);
     float sun = max(dot(normal, uniforms.sunDirection.xyz), 0.0);
