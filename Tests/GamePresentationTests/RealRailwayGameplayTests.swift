@@ -106,11 +106,28 @@ final class RealRailwayGameplayTests: XCTestCase {
     func testPlatformLengthDefaultsFromTheTRAStationGrade() throws {
         let session = GameSession(world: .newGame(), language: .english)
         session.railways = try BundledRealData.railways()
-        // estLenByTier [378, 330, 307, 270, 188] m in 16 m cars, at most 16.
+        // estLenByTier [378, 330, 307, 270, 188] m in the 20 m cars a new
+        // game builds platforms in (real car lengths), at most 16.
         XCTAssertEqual(session.realPlatformCars(forStationNamed: "台北", at: nil), 16, "特等 378 m")
-        XCTAssertEqual(session.realPlatformCars(forStationNamed: "猴硐", at: nil), 16, "三等 270 m")
-        XCTAssertEqual(session.realPlatformCars(forStationNamed: "三坑", at: nil), 11, "簡易 188 m: 11 cars")
+        XCTAssertEqual(session.realPlatformCars(forStationNamed: "猴硐", at: nil), 13, "三等 270 m: 13 cars")
+        XCTAssertEqual(session.realPlatformCars(forStationNamed: "三坑", at: nil), 9, "簡易 188 m: 9 cars")
         XCTAssertNil(session.realPlatformCars(forStationNamed: "Station 1", at: nil))
+    }
+
+    /// With real car lengths (a new game's default, decision 227) the
+    /// platform tool builds in 20 m cars, so the suggested length counts in
+    /// those cars too: a platform comes out no longer than the real one.
+    func testARealPlatformIsNoLongerThanTheRealOneWithRealCarLengths() throws {
+        var world = GameWorld.newGame()
+        world.setRealCarLengths(true)
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        for (name, metres) in [("台北", Int64(378)), ("猴硐", 270), ("三坑", 188)] {
+            let cars = try XCTUnwrap(session.realPlatformCars(forStationNamed: name, at: nil))
+            XCTAssertLessThanOrEqual(
+                Int64(cars) * session.world.platformCarLength, metres * WorldCoordinate.unitsPerMetre, name)
+        }
+        XCTAssertEqual(session.realPlatformCars(forStationNamed: "三坑", at: nil), 9, "簡易 188 m: 9 cars of 20 m")
     }
 
     /// A real station's length is suggested only for that station: the
@@ -124,7 +141,7 @@ final class RealRailwayGameplayTests: XCTestCase {
         session.railways = try BundledRealData.railways()
         session.platformStationID = real
         session.suggestPlatformCars()
-        XCTAssertEqual(session.platformCars, 11)
+        XCTAssertEqual(session.platformCars, 9)
         session.platformStationID = other
         session.suggestPlatformCars()
         XCTAssertEqual(session.platformCars, 4)

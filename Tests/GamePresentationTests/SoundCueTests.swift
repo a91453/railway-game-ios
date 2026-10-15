@@ -474,6 +474,27 @@ final class SoundCueTests: XCTestCase {
         }
     }
 
+    /// An edit between steps (paused, or before the next tick) that takes
+    /// the followed train out of service brings the music back at once,
+    /// not at the next step.
+    func testStoppingTheFollowedTrainBringsTheMusicBackAtOnce() async throws {
+        var world = try makeServiceWorld()
+        try world.createLine(named: "One", stops: [Self.west, Self.east])
+        try world.createLine(named: "Two", stops: [Self.west, Self.east])
+        world.setSpeed(.x60)
+        let interchange = world
+        await MainActor.run {
+            let session = GameSession(world: interchange)
+            var told: [Double] = []
+            session.duckMusic = { told.append($0) }
+            session.followTrain(Self.tram)
+            XCTAssertEqual(told.last ?? 1, pow(10, -6.0 / 20), accuracy: 1e-9)
+            session.selectTrain(Self.tram)
+            session.stopSelectedTrainService()
+            XCTAssertEqual(told.last, 1, "out of service, no station ahead")
+        }
+    }
+
     /// A local station leaves the music alone, and so does a train nobody
     /// follows.
     func testALocalStationOrNoFollowedTrainLeavesTheMusicAlone() async throws {

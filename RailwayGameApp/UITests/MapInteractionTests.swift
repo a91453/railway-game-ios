@@ -1200,12 +1200,13 @@ final class MapInteractionTests: XCTestCase {
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let line = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.1")).firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list), "Line 1's row must come into reach")
+        // The list runs on under the bar (#659): a row counts as in reach only below it.
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list, below: bar.frame.maxY), "Line 1's row must come into reach")
         line.tap()
 
         let depots = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot."))
         let depot = depots.firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot, in: list), "The line's depots must come into reach")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot, in: list, below: bar.frame.maxY), "The line's depots must come into reach")
         XCTAssertTrue(depot.becomesHittable(within: 10))
         XCTAssertEqual(depots.count, 2, "Both depots are listed")
         let ticked = depot.isSelected

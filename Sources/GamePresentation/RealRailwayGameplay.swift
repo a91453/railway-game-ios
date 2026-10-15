@@ -123,7 +123,9 @@ extension GameSession {
     /// long enough for by default: a TRA station's grade gives the median
     /// platform length of its tier (`tra_platforms.json` `estLenByTier`,
     /// tiers as `index.html` gives them: 特等 0, 一等 1, 二等 2, 三等 3, any
-    /// other grade 4), in whole cars (``Train/carLength``, 16 m), within
+    /// other grade 4), in whole cars of the length the platform tool builds
+    /// in (``GameWorld/platformCarLength``: 20 m with real car lengths,
+    /// otherwise 16 m), so it is never longer than the real one, within
     /// ``Train/minimumCars`` to ``Train/maximumCars``. `nil` for a station
     /// that is no graded TRA station.
     public func realPlatformCars(forStationNamed name: String, at point: PlanPoint?) -> Int? {
@@ -131,7 +133,7 @@ extension GameSession {
               let tra = realTRAStationName(of: name, at: point),
               let grade = data.stationClass(forStation: tra),
               let metres = data.estimatedPlatformLength(for: grade) else { return nil }
-        let cars = Int(metres * Double(WorldCoordinate.unitsPerMetre) / Double(Train.carLength))
+        let cars = Int(metres * Double(WorldCoordinate.unitsPerMetre) / Double(world.platformCarLength))
         return min(max(cars, Train.minimumCars), Train.maximumCars)
     }
 
