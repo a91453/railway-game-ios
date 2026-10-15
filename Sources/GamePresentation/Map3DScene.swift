@@ -21,7 +21,17 @@ public struct Map3DScene: Sendable {
     public struct Chunk: Sendable {
         public let column: Int
         public let row: Int
+        /// Everything in the chunk at its full detail: its ground, track
+        /// and roads (the first ``baseIndexCount`` indices), then its city.
         public let mesh: Map3DMesh
+        /// Decision 238: how many of ``mesh``'s indices are its ground,
+        /// track, roads and the player's buildings, drawn at every
+        /// distance; the city's buildings follow them.
+        public let baseIndexCount: Int
+        /// Decision 238: the city's buildings simplified, drawn instead of
+        /// the rest of ``mesh`` when the chunk is far from the camera
+        /// (``Map3DCamera/wantsDetail(minimum:maximum:)``).
+        public let far: Map3DMesh
         /// Decision 232: the soft shadows on its ground, drawn after
         /// everything else.
         public let shadows: Map3DMesh
@@ -109,7 +119,13 @@ public struct Map3DScene: Sendable {
         let cleared = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
-        builder.addCity(skyline ?? CitySkyline(world: world), clearOf: cleared, takenBy: taken)
+        // Decision 238: the city twice, in full and simplified for afar.
+        let city = skyline ?? CitySkyline(world: world)
+        builder.target = .near
+        builder.addCity(city, clearOf: cleared, takenBy: taken)
+        builder.target = .far
+        builder.addCity(city, clearOf: cleared, takenBy: taken)
+        builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
     }
@@ -181,9 +197,6 @@ public enum Map3DPalette {
         (rgb(0xE8D8B8), 1), (rgb(0xC9D3D6), 1), (rgb(0xD9B9A2), 1), (rgb(0xBFC8B4), 1),
     ]
     static let officeWalls: [UInt32] = [rgb(0xAEBFCC), rgb(0xC2CCD4), rgb(0x9FB3C2)]
-    static let industrialWalls: [UInt32] = [rgb(0xB9BEB4), rgb(0xA8B2A8), rgb(0xC6C2B4)]
-    static let civicWalls: [UInt32] = [rgb(0xE6D9BF), rgb(0xDCCFB5)]
-    static let leisureWalls: [UInt32] = [rgb(0xB9D9D0), rgb(0xE4CDB8)]
 
     private static func rgb(_ hex: UInt32) -> UInt32 { Map3DColor.rgb(hex) }
 }
@@ -206,6 +219,17 @@ extension Map3DScene {
         let world: GameWorld
         var meshes: [ChunkKey: Map3DMesh] = [:]
         var shadows: [ChunkKey: Map3DMesh] = [:]
+        /// Decision 238: what is being built, and so where it goes: the
+        /// ground and track drawn at every distance, or the city in full
+        /// or simplified. The city's shadows are made once, in full.
+        enum Target {
+            case base, near, far
+        }
+        var target = Target.base
+        var nearMeshes: [ChunkKey: Map3DMesh] = [:]
+        var farMeshes: [ChunkKey: Map3DMesh] = [:]
+        /// Whether what is being built is the simplified city.
+        var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
         /// row and column, as ``addGround()`` lays them.
         var corners: [ChunkKey: Float] = [:]
@@ -283,17 +307,26 @@ extension Map3DScene {
         }
 
         mutating func mesh(at scene: Map3DPoint, _ build: (inout Map3DMesh) -> Void) {
-            build(&meshes[key(of: scene), default: Map3DMesh()])
+            let key = key(of: scene)
+            switch target {
+            case .base: build(&meshes[key, default: Map3DMesh()])
+            case .near: build(&nearMeshes[key, default: Map3DMesh()])
+            case .far: build(&farMeshes[key, default: Map3DMesh()])
+            }
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).sorted().compactMap { key in
-                let mesh = meshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh()
-                let boxes = [mesh.bounds, shadows.bounds].compactMap { $0 }
+            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).sorted().compactMap { key in
+                var mesh = meshes[key] ?? Map3DMesh()
+                let baseIndexCount = mesh.indices.count
+                mesh.append(nearMeshes[key] ?? Map3DMesh())
+                let far = farMeshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh()
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds].compactMap { $0 }
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
-                return Chunk(column: key.column, row: key.row, mesh: mesh, shadows: shadows, minimum: low, maximum: high)
+                return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, shadows: shadows,
+                             minimum: low, maximum: high)
             }
         }
 
@@ -331,6 +364,7 @@ extension Map3DScene {
         /// metres round it.
         mutating func addShadow(centre: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float,
                                 spread: Float, darkness: Float) {
+            guard !isFar else { return }
             let inner = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length, width: width))
             let outer = onGround(Map3DMesh.footprint(centre: centre, forward: forward, length: length + 2 * spread, width: width + 2 * spread))
             shadows[key(of: centre), default: Map3DMesh()].addShadow(inner: inner, outer: outer, darkness: darkness)
@@ -616,12 +650,14 @@ extension Map3DScene {
                     }
                 case .office:
                     addBlock(base: base, side: side, density: lot.density, walls: Self.pick(Map3DPalette.officeWalls, seed), facade: .officeGlass, seed: seed)
+                // Decision 235: factories, schools, clinics, temples and
+                // malls from the asset library's rules.
                 case .industrial:
-                    addShed(base: base, side: side, walls: Self.pick(Map3DPalette.industrialWalls, seed))
+                    addFactory(base: base, side: side, seed: seed)
                 case .civic:
-                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.civicWalls, seed), facade: .flatWindows, seed: seed)
+                    addCivic(base: base, side: side, density: lot.density, seed: seed)
                 default:
-                    addBlock(base: base, side: side, density: min(lot.density, 2), walls: Self.pick(Map3DPalette.leisureWalls, seed), facade: .flatWindows, seed: seed)
+                    addLeisure(base: base, side: side, seed: seed)
                 }
             }
         }
@@ -629,6 +665,7 @@ extension Map3DScene {
         mutating func addOpenGround(_ lot: CitySkyline.Lot, base: Map3DPoint, seed: (Int32, Int32)) {
             let half = Float(Double(Land.cellLength) / Self.metre / 2) - 0.5
             let park = lot.use == .park
+            let far = isFar
             // Up to nine trees on a hashed 20 m grid (rail-3d's trees
             // stand on a hashed 26 m grid): where each stands and its size.
             var trees: [(spot: Map3DPoint, size: Float)] = []
@@ -649,7 +686,9 @@ extension Map3DScene {
                              base + Map3DPoint(half, 0.02, half), base + Map3DPoint(half, 0.02, -half),
                              color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
                 for (spot, size) in trees {
-                    mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
+                    if !far {
+                        mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
+                    }
                     mesh.addBox(base: spot + Map3DPoint(0, size * 0.4, 0), length: size, width: size, height: size * 0.75,
                                 top: Map3DPalette.crown, side: Map3DPalette.crown)
                 }
@@ -669,6 +708,7 @@ extension Map3DScene {
             let depth = min(16, side / 2 - 1)
             guard depth > 4 else { return }
             let flats = density >= 2
+            let far = isFar
             mesh(at: base) { mesh in
                 for facing: Float in [-1, 1] {
                     // From the west end along the row.
@@ -695,8 +735,9 @@ extension Map3DScene {
                         // blank as row houses' walls are.
                         let shop = Self.pick(Map3DSurface.shops, r(9))
                         let groundPaint = Map3DPaint.bays(shops ? shop : .shutter, bay: 5.4, floors: 1)
+                        let balconies = !flats && r(8) >= 0.55
                         let upperPaint = flats ? Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(10)), bay: 3.2, floors: Int(floors) - 1)
-                            : Map3DPaint.bays(r(8) < 0.55 ? .homeWindows : .homeBalcony, bay: 6, floors: Int(floors) - 1)
+                            : Map3DPaint.bays(balconies ? .homeBalcony : .homeWindows, bay: 6, floors: Int(floors) - 1)
                         if arcade {
                             // The ground floor set back 3.4 m, dark; the
                             // floors above over the arcade.
@@ -710,14 +751,34 @@ extension Map3DScene {
                         mesh.addBox(base: rowMiddle + Map3DPoint(0, groundFloor, 0), forward: front, length: depth, width: width - 0.1,
                                     height: height - groundFloor, top: Map3DPalette.roof, side: wall,
                                     topPaint: Self.roofing, frontPaint: upperPaint, flankPaint: Self.plaster)
-                        // A parapet's rim and a water tank on the roof.
-                        mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
-                                    height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
-                                    topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
+                        // Decision 238: near, what stands out of the front
+                        // and the parapet's rim; afar, only the roof's tank
+                        // or room, which read from far off.
+                        if !far {
+                            Self.addFrontDetail(&mesh, front: rowMiddle + front * (depth / 2), facing: front, width: width,
+                                                groundFloor: groundFloor, upper: upper, floors: Int(floors), wall: wall,
+                                                balconies: balconies, sign: shops, r: r)
+                            mesh.addBox(base: rowMiddle + Map3DPoint(0, height, 0), forward: front, length: depth, width: width - 0.1,
+                                        height: 0.7, top: Map3DPalette.roof, side: Map3DColor.shaded(wall, 0.95),
+                                        topPaint: Self.roofing, frontPaint: Self.plaster, flankPaint: Self.plaster)
+                        }
                         if r(6) < 0.6 {
                             let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
                             mesh.addBox(base: rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4), forward: front,
                                         length: 1.6, width: 1.6, height: 2.2, top: tank, side: tank)
+                        } else if r(6) < 0.85, width > 4 {
+                            // Decision 235: a sheet-steel room on the roof
+                            // (頂樓加蓋) over the back half, under a low gable
+                            // (the japan pack's shutter garage and shed
+                            // roofs: 2.4 m walls, a 20° pitch).
+                            let shack = rowMiddle + Map3DPoint(0, height + 0.7, 0) - front * (depth / 4)
+                            let roof = Self.pick(Map3DPalette.tinRoofs, r(11))
+                            mesh.addBox(base: shack, forward: front, length: depth / 2 - 0.4, width: width - 0.8, height: 2.4,
+                                        top: roof, side: Map3DColor.shaded(Map3DPalette.shedWalls[0], 0.95), frontPaint: Self.metal,
+                                        flankPaint: Self.metal, capped: false)
+                            mesh.addGableRoof(base: shack + Map3DPoint(0, 2.4, 0), forward: front, length: depth / 2 - 0.4, width: width - 0.8,
+                                              rise: (width - 0.8) / 2 * 0.36, overhang: 0.3, color: roof, gable: Map3DPalette.shedWalls[0],
+                                              paint: Self.metal)
                         }
                         x += width
                         number += 1
@@ -740,6 +801,7 @@ extension Map3DScene {
             // picked by where the block stands.
             let windowSurface = facade == .flatWindows ? Self.pick(Map3DSurface.flats, r(3)) : facade
             func windows(_ floors: Float) -> Map3DPaint { .bays(windowSurface, bay: bay, floors: Int(floors)) }
+            let far = isFar
             mesh(at: base) { mesh in
                 let footprint = max(side - 4, 8)
                 switch density {
@@ -753,6 +815,22 @@ extension Map3DScene {
                     mesh.addBox(base: base, forward: turned ? Map3DPoint(1, 0, 0) : Map3DPoint(0, 0, -1),
                                 length: footprint * 0.9, width: footprint * 0.45, height: 4.6 + 3.2 * (floors - 1), top: Map3DPalette.roof, side: walls,
                                 topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                    // Decision 235: a stair house and air conditioners on top;
+                    // decision 238: near, a balcony along each long side
+                    // on every floor.
+                    if !far {
+                        let along = turned ? Map3DPoint(1, 0, 0) : Map3DPoint(0, 0, -1)
+                        Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 4.6 + 3.2 * (floors - 1), 0), forward: along,
+                                          length: footprint * 0.9, width: footprint * 0.45, r: r, salt: 30)
+                        let across = Map3DPoint(-along.z, 0, along.x)
+                        for floor in 1..<Int(floors) {
+                            for side: Float in [-1, 1] {
+                                mesh.addBox(base: base + across * (side * (footprint * 0.225 + 0.5)) + Map3DPoint(0, 4.6 + 3.2 * Float(floor - 1), 0),
+                                            forward: along, length: footprint * 0.9 - 2, width: 1, height: 1.05,
+                                            top: Map3DColor.shaded(walls, 0.97), side: Map3DColor.shaded(walls, 0.93))
+                            }
+                        }
+                    }
                 default:
                     let floors = Float(18 + Int(r(1) * 23))
                     let podium = facade == .officeGlass ? Map3DPaint.bays(.officeGlass, bay: 3, floors: 2) : Map3DPaint.bays(Self.pick(Map3DSurface.shops, r(4)), bay: 5.4, floors: 2)
@@ -760,6 +838,10 @@ extension Map3DScene {
                                 topPaint: Self.roofing, frontPaint: podium, flankPaint: podium)
                     mesh.addBox(base: base + Map3DPoint(0, 9, 0), length: footprint * 0.55, width: footprint * 0.55, height: 3.3 * floors,
                                 top: Map3DPalette.roof, side: walls, topPaint: Self.roofing, frontPaint: windows(floors), flankPaint: windows(floors))
+                    if !far {
+                        Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 9 + 3.3 * floors, 0), forward: Map3DPoint(0, 0, -1),
+                                          length: footprint * 0.55, width: footprint * 0.55, r: r, salt: 30)
+                    }
                 }
             }
             // Decision 232: the shadow round its foot, wider under a taller
@@ -775,17 +857,6 @@ extension Map3DScene {
             default:
                 addShadow(centre: base, length: footprint, width: footprint, spread: 4.5, darkness: 0.36)
             }
-        }
-
-        /// A factory: low, wide, with a lighter roof; corrugated metal
-        /// (decision 231).
-        mutating func addShed(base: Map3DPoint, side: Float, walls: UInt32) {
-            let footprint = max(side - 6, 8)
-            mesh(at: base) { mesh in
-                mesh.addBox(base: base, length: footprint, width: footprint * 0.7, height: 8, top: Map3DColor.rgb(0xDADDE0), side: walls,
-                            topPaint: Self.metal, frontPaint: Self.metal, flankPaint: Self.metal)
-            }
-            addShadow(centre: base, length: footprint, width: footprint * 0.7, spread: 2.5, darkness: 0.28)
         }
 
         // MARK: The player's buildings

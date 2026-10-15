@@ -7840,6 +7840,20 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 6. **其他選項**（留給作者）：一條總音量加三條（像 `AudioSys`，但和現有開關重複）；滑桿改成 0／25／50／75／100% 五段；「其他音效」再分成建造與介面兩條。沒選的理由在 PR。
 7. **沒有驗證的**：滑桿在 iPhone 與 iPad 上的手感、調小的鈴聲在配樂上是否還聽得到，要 TestFlight 實機；`GameAudio` 與設定頁只能靠 macOS CI 編譯。
 
+**之後：第二階段之二（跟隨列車進大站時配樂讓位）**（2026-10-15，遊戲規劃 session 派工）：號碼依 #231 都不動，寫成這個決策的續篇；GameCore、存檔版本、golden、replay 都不動。研究文件 §2.8 的後半。
+
+1. **什麼時候**：跟隨列車（決策 195）、速度 60 倍以下，而且列車正開往或停在一個響「都會轉運」鈴（`StationChime.metro`）的車站。其他時候係數是 1。
+2. **降多少**（GamePresentation 的 `MusicDuck`）：照參考庫 `MetroPlatformAmbience` 的距離分段，800 m 以外不動；800 m 到 300 m 之間，以分貝為單位均勻往下降；300 m 以內與停站時降滿 6 dB（約 0.5 倍）。每 0.5 dB 一階，進站途中只變十幾次，App 在兩階之間用 0.5 秒淡過去。停站結束、列車開往下一站（不是轉運站，或還在 800 m 外）時回到 1。
+3. **距離**：服務給列車的路徑終點就是月台（`TrainMovement`），所以用列車沿軌道剩下的路（`pathDistanceLeft`：所在的邊剩下的長度，加上 `remainingEdges`，到最後一條邊的 `end`）。沒有剩下的路時當作已在月台。
+4. **怎麼傳到 App**：`GameSession.duckMusic`（像 `playSound`，由 `GameLauncher` 交給每一局）。每一步之後，以及開始、停止跟隨時重算，只有值改變時才通知。進一局、回開始畫面時回到 1。`GameAudio` 把它乘在音樂本來的音量 × 玩家的音樂音量（上一個續篇）上，不另開設定。
+5. **四方理由**：
+   - 玩家：跟著車進大站時，聽得到月台的到站鈴，有進站的感覺；不跟車、或快轉時，配樂照舊。
+   - 開發：只動 GamePresentation 與 App；判斷與曲線是純函式，在 Linux 上測（`SoundCueTests`）；只在值改變時通知，不會每一步都動 UI。
+   - 美術：沒有新畫面。
+   - 音樂：配樂讓位給到站鈴，兩者不再打架；6 dB 只是讓位、不是靜音，60 倍以下才做，避免配樂一直上上下下。
+6. **其他選項**（留給作者）：觀光站也讓位（目前只看轉運站，照研究文件）；降 9 dB 或 3 dB；用 smoothstep 曲線而不是分貝線性；離站時等列車開出 75 m 才回來。
+7. **沒有驗證的**：實機上 6 dB 夠不夠讓鈴聲出來、0.5 秒的淡入淡出聽起來順不順，要 TestFlight。
+
 ### 220. 旅程追蹤：長按車站，畫出這一站最多人往返的五站
 
 2026-10-14，遊戲規劃 session 派工、作者同意（`docs/research/NEXT_PRIORITIES_2026-10-12.md` §5 第 7 項、§13 第 6 名）。號碼依工作登記 #231：main 219，未釋出的登記到 219，所以取 220。第一版只做車站，路線之後再加。GameCore、存檔版本、golden、replay 都不動。
@@ -8484,6 +8498,56 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 左手拿手機時，「建設」在不在拇指範圍內；
 - 看板的字在 Liquid Glass 上的對比。
 
+### 227. 各車種的真實車長
+
+2026-10-15，遊戲規劃 session 派工（NEXT_PRIORITIES §6「各車種的實際車長」、§14 第 15 名）。號碼依工作登記 #231（合併 session 2026-10-14 預留）：決策 227、存檔版本 62，golden schema 不動。設計：`docs/research/REAL_CAR_LENGTH_2026-10-14.md`。
+
+1. **每種車型有自己的車長**（車型表 `TrainTypeCatalog` 的新欄 `carLength`，世界單位，每公尺 64）：連結器間距，取中間車。
+
+| 車型 | 車長 | 單位 | 來源 |
+| --- | --: | --: | --- |
+| 大型捷運 A | 22.0 m | 1,408 | 中國地鐵 A 型車（GB 50157），參考的車型命名所本 |
+| 中型捷運 B | 19.5 m | 1,248 | B 型車 |
+| 輕型捷運 C | 19.0 m | 1,216 | C 型車 |
+| 線性馬達捷運 L | 16.5 m | 1,056 | 線性馬達小型車（大阪、廣州） |
+| 多門捷運 D | 20.0 m | 1,280 | 推估 |
+| 自動接駁列車 APM | 12.5 m | 800 | 推估 |
+| 磁浮列車 | 15.0 m | 960 | 推估（中低速磁浮） |
+| 輕型單軌 | 12.0 m | 768 | 推估 |
+| 單軌列車 | 15.0 m | 960 | 推估（跨座式單軌） |
+| 蒸汽列車 | 8.0 m | 512 | 推估（四輪客車） |
+| 高鐵列車 | 25.0 m | 1,600 | 700T 中間車 |
+| 新自強號 EMU3000 | 20.3 m | 1,299 | 參考庫 `fleet/catalog.json` 的 `emu3000-mid` `pitchM` |
+| 沒有車型的標準車 | 20.0 m | 1,280 | 和地圖上每節畫的 20 m 相同（決策 205） |
+
+2. **列車記得自己的車長**（`Train.carPitch`）：`Train.length` = （節數 − 1）× `carPitch`，GameCore 其他用到長度的規則（月台停不停得下、車身佔的軌道、預約、彎道限速延長一個車長、交會、越行、路線容量、機廠股道）全部自動跟上，一個呼叫端都沒改。`carPitch` 在**買車**與**改車型**時依世界開關定：開著取車型的 `carLength`（標準車 1,280），關著 1,024；改節數不變；開關之後改變不回頭改已經有的列車。列車在軌道上時不能改車型，所以車身佔的軌道永遠對得上讀檔檢查。
+3. **世界開關** `GameWorld.realCarLengths`（`setRealCarLengths(_:)`，免費，不是網路指令）：App 的新遊戲打開；示範地圖、挑戰、教學、`GameWorld` 的新世界與舊存檔關掉（和決策 217 的開關在同樣的地方，都在買任何列車之前）。第一版沒有設定介面。
+4. **存檔**（版本 62）：世界的 `"realCarLengths": true`、列車的 `"carPitch"` 都只在有值時寫（`carPitch` 只在不是 1,024 時），所以**舊存檔讀進來逐位元相同**，每一列車都是 16 m。`carPitch` 必須是 1,024、1,280 或某個車型的車長，否則讀不進來。只讀到 61 的 build 會丟掉 `carPitch`，存著的車身就對不上，所以升版。新 fixture `SaveFixtures/v62-real-car-length.json`。
+5. **畫面**：
+   - 蓋月台的節數在開著的世界用 20 m 一節（`GameWorld.platformCarLength`），月台卡照舊寫「月台長 4 節 · 80 m」；
+   - 2D 地圖逐節畫的節數改用列車自己的車長（`TrainMotion.Run.carPitch`，`TrainCars.count(length:carPitch:)`）；
+   - 長編組停不進短月台時，列車卡照舊寫「月台太短，容不下所有車廂」，用的是真實長度。
+   - **給原生 3D（Map3D，另一個 session）**：要讀的是 `TrainMotion.Run.carPitch`（或 `Train.carPitch`），把它傳給 `TrainCars.count(length:carPitch:)`。`Map3DTrains.swift` 現在呼叫的 `count(length:)` 預設 16 m，照舊編得過，但真實車長的列車節數會算錯。這個 PR 沒有改 Map3D 的檔。
+
+**不變的證明**：
+- `RealCarLengthPinTests` 在改之前的第一個 commit 寫好：版本 62 之前的每一份存檔 fixture，每一列車讀進來都是 16 m 一節、寫出來沒有 `carPitch`；在一般的新世界買的每種車都是 16 m。
+- 之後只加了一行，把新的 v62 fixture 排除在外，因為它本來就是真實車長。
+- `GoldenScenarios/`、`ReplayFixtures/` 沒有改動；`SaveFixtures/` 只多了 v62。
+
+**四方**：
+- 玩家：月台和列車的比例對了，長編組停不進短月台時看得出原因；舊存檔照常讀，行為不變。
+- 開發：只在列車上加一個欄位、買車與改車型兩處設值；開關保護 golden、replay、存檔。
+- 美術：2D 逐節畫法讀真實長度；原生 3D 要讀的欄位寫在上面第 5 點。
+- 音樂：無。
+
+**沒選的做法**（設計文件 §6）：
+- 世界算長度：約 40 個呼叫端要改，開關一改，軌道上的列車長度就變。
+- 直接改常數：36 份 fixture 的車身與停靠位置全變。
+
+**測試**：
+- `RealCarLengthTests`：每種車型的車長；只在開著的世界買車與改車型才取真實車長，關掉後已有的列車不變；12 節高鐵停不進 12 × 16 m 的月台、停得進 12 × 25 m 的；只在有值時存檔、錯的車長讀不進來；版本 62 的 fixture。
+- `TrainCarsTests` 多一行 12 節高鐵；`SavedGameTests` 的目前版本 61 → 62。
+
 ### 228. 高鐵示範的列車不再疊在一起：真實的月台股道數、到站找空股道、交通管制關著時的行車間隔
 
 2026-10-15。作者 62.1 的回報（高鐵示範，左營站，第 1 天 20:24）：「紫色列車跟綠色怎麼在同一軌上還有重疊？」派工 session_01AaAj4wvJMxJQuLWAoYu6S8 派出。號碼依 #231：決策 228（227 保留給真實車長）；存檔版本、golden schema 不動。
@@ -9055,6 +9119,70 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 遠離軌道的地方地面是 0 m（決策 229 的已知限制：高度只在蓋過軌道的地方讀進來），道路與水跟著同一個地面。
 - 真實建物（下一步）：底圖刻意沒有建物。台灣的 Overture 建物幾乎就是 OSM（微軟、Google 的 AI 建物沒涵蓋台灣），只有約 3% 有高度；3D-GloBFP（CC BY 4.0）台灣 114 萬棟每棟都有估計高度；國土測繪中心的全國三維建物品質最好，但散布的授權要作者先向國土測繪中心確認。
 
+### 235. 原生 3D 地圖第六步：素材庫的程序化建物
+
+作者 2026-10-15 問「接著做什麼 導入隨機生成導入素材庫嗎」。原本 3D 城市的工廠只是一個方盒子，學校、醫院、景點都是同一種方塊樓。這一步讀素材庫 `Railway/procedural_assets_reference_clean/` 的 industrial、city、japan 三包產生器，把規則改寫成 Swift，讓每種用地有自己的建物。
+
+照作者的規則（art-style §7）：
+- 模型可以任意組合，只要跟原本不同；
+- 盡量維持現有畫風。
+
+所以只取尺寸、比例、屋頂形式、配色這些規則，幾何全部自己寫。原模型每棟 1,000–22,000 個三角形，這裡每塊用地 700 個以內，同一塊用地每次畫出來都一樣（以格子位置為種子，`map3DRandom`）。
+
+1. **新的形狀**（`Map3DShapes.swift`，加上 `Map3DMesh.addFacet`）：
+   - 雙坡屋頂（`addGableRoof`，簷口外挑，山牆另一色）；
+   - 四坡屋頂（`addHipRoof`，`sweep` 把四角翹起，給廟用）；
+   - 鋸齒屋頂（`addSawtoothRoof`，玻璃面朝前，採北光）；
+   - 拱頂（`addBarrelRoof`，拋物線分 6 段）；
+   - 圓柱（`addCylinder`，儲槽、水塔）。
+2. **工廠**（`addFactory`，取代原本的 `addShed`），用地鋪混凝土場地，四選一：
+   - 雙坡鐵皮廠房：坡度 12–19°，取自 industrial 的 maintenance workshop、small hangar；
+   - 鋸齒廠房；
+   - 拱頂倉庫加貨櫃：牆高 5.5 m、拱高為跨距的五分之一，取自 warehouse；
+   - 紅磚老廠：30° 屋頂、方形煙囪 16–24 m、兩座儲槽，取自 boiler house、power station。
+   - 前三種前面有兩層的辦公室，女兒牆下一圈藍色飾帶，取自 compact factory office。
+   - 鐵捲門（`addDoors`）。
+3. **公共建築**（`addCivic`）：
+   - 學校（45%）：兩棟 3–4 層的教室圍著操場，跑道、草地，加一座拱頂體育館（japan 的 school gym：牆高 8 m）。
+   - 診所或機關（40%）：石材的一樓、腰帶、白磁磚的樓上、門口雨遮、屋頂機房與冷氣（city 的 clinic、police station）。
+   - 消防隊（15%）：一樓鐵捲門、望樓（city 的 firehouse）。
+4. **景點與遊憩**（`addLeisure`）：
+   - 廟（55%）：花崗石台基、朱紅的牆、兩重四坡屋頂翹角、紅色燕尾脊；台基夠大（24 m 以上）時加前殿與香爐。取 japan temple hall 深簷的四坡屋頂做法，尺寸、兩重屋頂、橘色琉璃瓦與燕尾是本專案自己的台灣樣式。
+   - 商場（45%）：一樓店面、彩色招牌帶、玻璃中庭、屋頂機房。
+5. **屋頂的雜物**：
+   - 透天厝：約四分之一的屋頂不放水塔，改加一間鐵皮屋（頂樓加蓋）：牆 2.4 m、20° 雙坡。
+   - 公寓與大樓：加樓梯間與一到三台冷氣主機（city 的 rooftop air conditioner、japan 的 roof access house）。
+6. **顏色**（四個角度選 A，B 的預覽在 `docs/art/map3d-buildings-2026-10-15/options.jpg`）：
+   - A：工廠與加蓋多半是台灣常見的藍色鐵皮（`#5F8BC0`、`#6F9AC9`），其餘取素材庫的灰、褪色與鏽色鐵皮再調亮；廟是朱紅牆、橘色琉璃瓦、紅燕尾。
+   - B：全部灰色鐵皮，廟用 japan 包的灰瓦與灰泥牆。
+   - 玩家：藍鐵皮與紅廟一眼看得出是台灣，也分得出哪裡是工業區、哪裡是廟。
+   - 開發：兩案只差調色盤，程式一樣。
+   - 美術：B 跟日本街景一樣灰，在 F 台灣版＋的明亮調色盤裡太暗；A 的藍與橘和玩家建物的暖黃、地圖的白路都不衝突。
+   - 音樂：無。
+7. **量測**（Linux 除錯版的場景）：
+   - 兩鎮的地圖：三角形 126,628 → 146,226；
+   - 示範地圖：126,934 → 142,682；
+   - 約多 15%。
+   - iPhone 上的幀數 **UNVERIFIED**，要等 TestFlight。
+
+**參考**（參考庫 `a91453/railway-reference-private`，`Railway/procedural_assets_reference_clean/source/preview/` 下）：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `industrial/assets/createModel-Bnk90sOm.js`（maintenance workshop）、`B9EEHs0I`（small hangar）：坡度 16°、19°，捲門 | `addFactory` 的雙坡廠房、`addDoors` |
+| `industrial/assets/createModel-OCiZ-reo.js`（warehouse）：牆 5.55、拱頂 | 拱頂倉庫、`addBarrelRoof` |
+| `industrial/assets/createIndustrialBoilerHouse-*.js`、`createModel-pyE_yEfj.js`（power station）：30°–38° 磚造廠房、方煙囪 | 紅磚老廠 |
+| `industrial/assets/createModel-DXYWwHGD.js`（compact factory office）：藍色飾帶 `#244e86` | 工廠的辦公室（飾帶改成 `#4A72A8`） |
+| `industrial/assets/createModel-CIYEkEvy.js`（shipping container）：2.438 × 6.058 × 2.591 | 倉庫場地的貨櫃（尺寸照用） |
+| `city/assets/createModel-Ccgf2Cx7.js`（clinic）、`SvnnzOfi`（police）：一樓 4.3、腰帶、樓上約 3 m、女兒牆、屋頂機房 | `addClinic`、`addRoofPlant` |
+| `city/assets/createModel-BABj8RwK.js`（firehouse）：捲門 4.36 × 3.54 | `addFireStation` |
+| `japan/assets/createModel-1HKqrewr.js`（school gym）：13.8 × 26、牆 8 m、拱頂 | 學校的體育館 |
+| `japan/assets/createModel-CDFBb8kJ.js`（temple hall）：深簷的四坡瓦頂 | `addTemple` 的 `addHipRoof`（尺寸、兩重屋頂、翹角與燕尾是本專案自己的台灣樣式） |
+| `japan/assets/createModel-Fiy4x0Zp.js`：roof access house 1.2–3.2 × 1.2–2.8 × 1.9–2.4、shed／gable 屋頂 | 樓梯間、頂樓加蓋 |
+| 樹、路燈、販賣機、車輛 | 這一步沒有用：數量多，要先有實例化繪製，下一步 |
+
+外部專案：沒有用到（形狀是本專案自己寫的）。
+
 ### 236. 內容目錄的下一段：性能預設是一張內建資料表
 
 2026-10-15，遊戲規劃 session 派工（NEXT_PRIORITIES §14.4 第 5 項的前半，「真實車款的性能數值」的前提）。號碼依工作登記 #231：決策 236，存檔版本與 golden schema 不動。照決策 225 的做法。
@@ -9104,55 +9232,55 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **參考**：參考庫（`a91453/railway-reference-private`，`Railway/site_archive_clean/index.html` 的 `PERF_RULES`、`PERF_BY_TYPE`）沒有 C381、EMU800／900、700T 的性能，只有已經移植的那些；`rail-3d/assets/blender-map-v1/` 有這幾款的 3D 模型（`c381.bin`、`emu800.bin`、`700t.bin`），之後外觀用。數字來自上表的公開規格。
 
-### 227. 各車種的真實車長
+### 238. 原生 3D 地圖第七步：遠近分級
 
-2026-10-15，遊戲規劃 session 派工（NEXT_PRIORITIES §6「各車種的實際車長」、§14 第 15 名）。號碼依工作登記 #231（合併 session 2026-10-14 預留）：決策 227、存檔版本 62，golden schema 不動。設計：`docs/research/REAL_CAR_LENGTH_2026-10-14.md`。
+作者 2026-10-15：「我最低已經限制 iOS 17，三角形可以多一點吧」，四個角度同意就做。iOS 17 最舊的機型是 iPhone XS／XR（A12），它定了上限；決策 229 的手機預算（一個畫面 30–50 萬個三角形）就是照它估的。要多一點細節又不超過預算，做法是近處多、遠處少。
 
-1. **每種車型有自己的車長**（車型表 `TrainTypeCatalog` 的新欄 `carLength`，世界單位，每公尺 64）：連結器間距，取中間車。
+1. **分塊多一份遠版**（`Map3DScene.Chunk`）：
+   - `mesh` 照舊是完整的近版：前 `baseIndexCount` 個索引是地面、道路、軌道、月台與玩家的建物，之後是城市建物。讀 `mesh` 的程式與測試都不用改。
+   - 新的 `far` 是城市建物的遠版。
+   - 遠處的分塊畫 `mesh` 的前段，再畫 `far`。
+   - 建構時城市建兩次（`Builder.target`：`.near`、`.far`）；陰影只在近版那次做。
+2. **近版多的**（`Map3DScene.addRowHouses`、`addBlock`，`Map3DBuildings.addFrontDetail`）：
+   - 透天厝：有陽台的每層一個陽台（深 1 m、高 1.05 m），其餘一半的樓層一台冷氣（0.8 × 0.35 × 0.55 m），店家七成有直立招牌（2.4–3.2 m）。尺寸取自素材庫 japan 包（陽台 0.95–1.05 m、冷氣 0.8 m、blade sign）。
+   - 公寓（7–16 層的板樓）：長邊每層一條陽台帶。
+3. **遠版拿掉的**：
+   - 立面的陽台、冷氣、招牌，女兒牆；
+   - 屋頂機房與冷氣主機；
+   - 廠房的鐵捲門、貨櫃、辦公室的飾帶；
+   - 診所的腰帶與雨遮；
+   - 廟的燕尾脊、前殿的脊、香爐；
+   - 公園的樹幹（樹冠留著）。
+   - 透天厝屋頂的水塔與鐵皮加蓋留著：每個 10–16 個三角形，卻是遠看最像台灣的地方。
+4. **什麼時候畫近版**（`Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`，在 GamePresentation，Linux 測試；Metal 只照它挑，決策 229 續）：
+   - 鏡頭在 1.6 km 以內（`detailDistance`）；
+   - 分塊離鏡頭看的點，或離眼睛正下方的地面，在 `max(700 m, 距離 × 1.2)` 以內。
+   - 邊界留一段餘裕，照參考庫街景的做法（`street_scene_reference_clean/source/assets/scene.js` 的 `updateDetail`：近版超過 1.14 倍才換遠版，遠版進到 0.86 倍才換回近版），所以拖曳時不會在線上來回閃。
+   - Metal 的每個分塊記住上一幀畫的是哪一版。
+5. **量測**（同一個場景，「全用近版」→「分級」；細節見 `docs/art/map3d-detail-levels-2026-10-15/`）：
+   - 兩鎮的地圖：拉近（140 m、950 m）不變；2.2 km 從 115,876 降到 49,700；整張從 223,456 降到 108,750。
+   - 瑞芳實景示範的整張：523,192 → 481,762。它幾乎都是地面與軌道，這一步沒分級，是下一個要減的地方。
+   - iPhone 上的幀數 **UNVERIFIED**，要等 TestFlight。
+6. **四個角度**：
+   - 玩家：拉近看得到陽台、冷氣、招牌；拉遠更順，最舊的 iPhone XS 也有餘裕。
+   - 開發：內容都在 GamePresentation，Metal 只多一個「畫哪一段」的判斷；城市建兩次，建構時間多約一半，在背景執行緒。
+   - 美術：畫風定案時就要求的遠近分級（`docs/art/3d-style-2026-10-13/README.md`：拉近才長出鐵窗與招牌）；遠版留下藍水塔與鐵皮加蓋，遠看仍是台灣。
+   - 音樂：無。
+   - 沒有別的方案要比：遠近分級是畫風定案時就寫下的做法，這裡只決定兩版的內容與距離。
+7. **預覽工具**：決策 231–238 的預覽圖都是同一組工具做的，原本只在 session 的暫存區。這一步把它放進 `tools/map3d-preview/`：
+   - 輸出場景的測試範本，可輸出近版或遠版、每個鏡頭畫多少三角形；
+   - WebGL 頁、Playwright 腳本；
+   - 說明。
+   之後的 session 都能做前後對照。
 
-| 車型 | 車長 | 單位 | 來源 |
-| --- | --: | --: | --- |
-| 大型捷運 A | 22.0 m | 1,408 | 中國地鐵 A 型車（GB 50157），參考的車型命名所本 |
-| 中型捷運 B | 19.5 m | 1,248 | B 型車 |
-| 輕型捷運 C | 19.0 m | 1,216 | C 型車 |
-| 線性馬達捷運 L | 16.5 m | 1,056 | 線性馬達小型車（大阪、廣州） |
-| 多門捷運 D | 20.0 m | 1,280 | 推估 |
-| 自動接駁列車 APM | 12.5 m | 800 | 推估 |
-| 磁浮列車 | 15.0 m | 960 | 推估（中低速磁浮） |
-| 輕型單軌 | 12.0 m | 768 | 推估 |
-| 單軌列車 | 15.0 m | 960 | 推估（跨座式單軌） |
-| 蒸汽列車 | 8.0 m | 512 | 推估（四輪客車） |
-| 高鐵列車 | 25.0 m | 1,600 | 700T 中間車 |
-| 新自強號 EMU3000 | 20.3 m | 1,299 | 參考庫 `fleet/catalog.json` 的 `emu3000-mid` `pitchM` |
-| 沒有車型的標準車 | 20.0 m | 1,280 | 和地圖上每節畫的 20 m 相同（決策 205） |
+**參考**：
 
-2. **列車記得自己的車長**（`Train.carPitch`）：`Train.length` = （節數 − 1）× `carPitch`，GameCore 其他用到長度的規則（月台停不停得下、車身佔的軌道、預約、彎道限速延長一個車長、交會、越行、路線容量、機廠股道）全部自動跟上，一個呼叫端都沒改。`carPitch` 在**買車**與**改車型**時依世界開關定：開著取車型的 `carLength`（標準車 1,280），關著 1,024；改節數不變；開關之後改變不回頭改已經有的列車。列車在軌道上時不能改車型，所以車身佔的軌道永遠對得上讀檔檢查。
-3. **世界開關** `GameWorld.realCarLengths`（`setRealCarLengths(_:)`，免費，不是網路指令）：App 的新遊戲打開；示範地圖、挑戰、教學、`GameWorld` 的新世界與舊存檔關掉（和決策 217 的開關在同樣的地方，都在買任何列車之前）。第一版沒有設定介面。
-4. **存檔**（版本 62）：世界的 `"realCarLengths": true`、列車的 `"carPitch"` 都只在有值時寫（`carPitch` 只在不是 1,024 時），所以**舊存檔讀進來逐位元相同**，每一列車都是 16 m。`carPitch` 必須是 1,024、1,280 或某個車型的車長，否則讀不進來。只讀到 61 的 build 會丟掉 `carPitch`，存著的車身就對不上，所以升版。新 fixture `SaveFixtures/v62-real-car-length.json`。
-5. **畫面**：
-   - 蓋月台的節數在開著的世界用 20 m 一節（`GameWorld.platformCarLength`），月台卡照舊寫「月台長 4 節 · 80 m」；
-   - 2D 地圖逐節畫的節數改用列車自己的車長（`TrainMotion.Run.carPitch`，`TrainCars.count(length:carPitch:)`）；
-   - 長編組停不進短月台時，列車卡照舊寫「月台太短，容不下所有車廂」，用的是真實長度。
-   - **給原生 3D（Map3D，另一個 session）**：要讀的是 `TrainMotion.Run.carPitch`（或 `Train.carPitch`），把它傳給 `TrainCars.count(length:carPitch:)`。`Map3DTrains.swift` 現在呼叫的 `count(length:)` 預設 16 m，照舊編得過，但真實車長的列車節數會算錯。這個 PR 沒有改 Map3D 的檔。
+| 參考 | → 目標 |
+| --- | --- |
+| `Railway/street_scene_reference_clean/source/assets/scene.js` 的 `updateDetail`：每個建物群近、遠兩版，依鏡頭到群的距離切換（90 m，地標 1.8 倍），1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail`（距離改成 700 m 起、隨鏡頭距離放大，因為這裡的鏡頭在 60 m–12 km）、Metal 的 `detailed` |
+| `procedural_assets_reference_clean` japan 包的陽台（0.95–1.05 m）、冷氣（0.8 m）、blade sign | `addFrontDetail` |
 
-**不變的證明**：
-- `RealCarLengthPinTests` 在改之前的第一個 commit 寫好：版本 62 之前的每一份存檔 fixture，每一列車讀進來都是 16 m 一節、寫出來沒有 `carPitch`；在一般的新世界買的每種車都是 16 m。
-- 之後只加了一行，把新的 v62 fixture 排除在外，因為它本來就是真實車長。
-- `GoldenScenarios/`、`ReplayFixtures/` 沒有改動；`SaveFixtures/` 只多了 v62。
-
-**四方**：
-- 玩家：月台和列車的比例對了，長編組停不進短月台時看得出原因；舊存檔照常讀，行為不變。
-- 開發：只在列車上加一個欄位、買車與改車型兩處設值；開關保護 golden、replay、存檔。
-- 美術：2D 逐節畫法讀真實長度；原生 3D 要讀的欄位寫在上面第 5 點。
-- 音樂：無。
-
-**沒選的做法**（設計文件 §6）：
-- 世界算長度：約 40 個呼叫端要改，開關一改，軌道上的列車長度就變。
-- 直接改常數：36 份 fixture 的車身與停靠位置全變。
-
-**測試**：
-- `RealCarLengthTests`：每種車型的車長；只在開著的世界買車與改車型才取真實車長，關掉後已有的列車不變；12 節高鐵停不進 12 × 16 m 的月台、停得進 12 × 25 m 的；只在有值時存檔、錯的車長讀不進來；版本 62 的 fixture。
-- `TrainCarsTests` 多一行 12 節高鐵；`SavedGameTests` 的目前版本 61 → 62。
+外部專案：沒有用到。
 
 ## 目前規則摘要
 
