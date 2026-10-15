@@ -14,11 +14,46 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// stations short of building materials.
     case freight
 
+    /// The demo map with two depots, one beyond West and one beyond East,
+    /// and Line 1 keeping its trains at the west one (decision 221): the
+    /// line panel's depot checklist, for its UI test. The high-speed demo
+    /// has depots too, but takes minutes to build on a test runner.
+    case depots
+
     /// The scene's world, its clock paused at the moment to show.
     public func make(in language: DisplayLanguage) -> GameWorld {
         switch self {
         case .freight: Self.freightWorld(in: language)
+        case .depots: Self.depotsWorld(in: language)
         }
+    }
+
+    // MARK: - Depots
+
+    /// How far beyond West and East, and to the south, each depot stands.
+    private static let depotOffset: Int64 = 4 * 1_024
+
+    private static func depotsWorld(in language: DisplayLanguage) -> GameWorld {
+        var world = DemoWorld.make(in: language)
+        do throws(GameError) {
+            guard let line1 = world.lines.first, let westID = line1.stops.first, let eastID = line1.stops.last,
+                  let west = world.station(id: westID)?.point, let east = world.station(id: eastID)?.point
+            else { throw .unknownLine(LineID(rawValue: 1)) }
+            let westDepot = try world.buildStation(
+                named: language.text("West Depot", "西機廠"), at: PlanPoint(x: west.x - depotOffset, y: west.y + depotOffset)
+            ).id
+            let eastDepot = try world.buildStation(
+                named: language.text("East Depot", "東機廠"), at: PlanPoint(x: east.x + depotOffset, y: east.y + depotOffset)
+            ).id
+            try world.setStationDepot(westDepot, to: true)
+            try world.setStationDepot(eastDepot, to: true)
+            try world.setLineDepots(line1.id, to: [westDepot])
+        } catch {
+            preconditionFailure("The depots screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
     }
 
     // MARK: - Freight

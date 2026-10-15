@@ -307,12 +307,15 @@ extension GameSession {
         guard let (from, to) = endPositions(from: start, to: end, in: world) else {
             return .failure(.missingNode)
         }
-        // A turnout splits the track, and GameCore splits level track only:
-        // say so, rather than its general refusal (decision 190).
+        // A turnout splits the track, and GameCore splits it only on a
+        // steady grade no steeper than a turnout may stand on (decision
+        // 233): say which, rather than its general refusal (decision 190).
         for anchor in [start, end] {
-            if case .track(let point) = anchor, let edge = world.network.edge(point.edge), let geometry = world.trackGeometry(of: point.edge),
-               geometry.startHeight != geometry.endHeight || edge.profile != .uniform {
-                return .failure(.slopedTurnout)
+            if case .track(let point) = anchor, let edge = world.network.edge(point.edge), let geometry = world.trackGeometry(of: point.edge) {
+                guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade) else { return .failure(.steepTurnout) }
+                guard point.distance >= edge.profile.startTransition, point.distance <= geometry.length - edge.profile.endTransition else {
+                    return .failure(.turnoutOnVerticalCurve)
+                }
             }
         }
         let isNewPoint: (NetworkAnchor) -> Bool = { if case .node = $0 { false } else { true } }
@@ -714,9 +717,12 @@ enum NetworkProblem: Error {
     case tooClose
     /// A turn of more than 90° from the track joined to the other end.
     case tooSharp
-    /// A turnout on track that climbs or falls, which GameCore cannot
-    /// split.
-    case slopedTurnout
+    /// A turnout on track steeper than
+    /// ``TrackProfile/maximumTurnoutGrade`` (decision 233).
+    case steepTurnout
+    /// A turnout on a vertical curve, where GameCore does not split the
+    /// track (decision 233).
+    case turnoutOnVerticalCurve
 
     func text(in language: DisplayLanguage) -> String {
         switch self {
@@ -732,10 +738,12 @@ enum NetworkProblem: Error {
                 "That turns too sharply: from the track it continues, new track may turn at most 90° toward the other end.",
                 "小於最小轉彎半徑：從相接的軌道朝另一端，新的軌道最多只能轉 90 度。"
             )
-        case .slopedTurnout:
+        case .steepTurnout:
+            GameError.turnoutTooSteep.playerMessage(in: language)
+        case .turnoutOnVerticalCurve:
             language.text(
-                "A turnout goes on level track only, and this track climbs or falls. Start from its end, or from level track.",
-                "轉轍器只能設在水平的軌道上，這段軌道有坡度。請從它的端點，或從水平的軌道接出。"
+                "A turnout can't stand where the track's grade is changing, near this end of the slope. Pick a point farther along, or start from its end.",
+                "軌道坡度正在變化的地方不能設轉轍器，這裡靠近坡道的端點。請選遠一點的位置，或從端點接出。"
             )
         }
     }

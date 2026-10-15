@@ -388,6 +388,11 @@ extension GameError {
                 "That track would be too steep. Track may climb or fall at most 40 in 1000; make it longer or the height difference smaller.",
                 "這段軌道太陡了。坡度最多是千分之 40；請把軌道加長，或縮小高度差。"
             )
+        case .turnoutTooSteep:
+            language.text(
+                "A turnout can stand on a grade of at most 25 in 1000, and this track is steeper. Start from its end, or from gentler track.",
+                "轉轍器最多只能設在千分之 25 的坡度上，這段軌道比它陡。請從它的端點，或從較平緩的軌道接出。"
+            )
         case .invalidTrackStructure:
             language.text(
                 "That structure can't carry track at those heights: surface track stays within 2 m of the ground, viaducts and bridges above it, tunnels below it.",

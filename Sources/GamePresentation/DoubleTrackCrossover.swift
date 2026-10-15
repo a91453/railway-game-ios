@@ -10,9 +10,10 @@ import GameCore
 // reach the track the stretch joined. It is part of the same command, so
 // all of it is built or none.
 //
-// Where there is no room for one (the stretch too short, or on a grade,
-// since GameCore splits level track only), the double track is built
-// without it and the message says so. Neither reference has a tool that
+// Where there is no room for one (the stretch too short, or steeper than a
+// turnout may stand on, decision 233), the double track is built without it
+// and the message says so. On a grade the crossover stands on the steady
+// grade, past the vertical curve at that end. Neither reference has a tool that
 // adds a crossover (`Simulator/` has crossover pieces to place by hand,
 // `MapBuilder/` none): this is native.
 
@@ -31,7 +32,7 @@ extension DoubleTrack {
         case none
         /// Built at this many ends.
         case built(Int)
-        /// Wanted at an end but no room there (too short, a grade, or
+        /// Wanted at an end but no room there (too short, too steep, or
         /// GameCore refused its way).
         case noRoom
         /// GameCore refused it for want of money: the double track is not
@@ -54,24 +55,31 @@ extension GameSession {
         let atStart = needsCrossover(main.start, in: before) && !parallel.start.isNode
         let atEnd = needsCrossover(main.end, in: before) && !parallel.end.isNode
         guard atStart || atEnd else { return ([], .none) }
+        // Decision 233: a turnout stands on a slope no steeper than
+        // GameCore allows it, on the steady grade past any vertical curve.
         guard let mainGeometry = world.trackGeometry(of: mainEdge), let parallelGeometry = world.trackGeometry(of: parallelEdge),
-              mainGeometry.isLevel, parallelGeometry.isLevel,
-              world.network.edge(mainEdge)?.profile == .uniform, world.network.edge(parallelEdge)?.profile == .uniform
+              let mainProfile = world.network.edge(mainEdge)?.profile, let parallelProfile = world.network.edge(parallelEdge)?.profile,
+              mainGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade),
+              parallelGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade)
         else { return ([], .noRoom) }
         // Where each crossover meets each track, as positions: the first one
         // built splits the edges, so the second finds its places again.
-        let margin = DoubleTrack.crossoverMargin, far = margin + DoubleTrack.crossoverReach
-        let wanted = (atStart ? 1 : 0) + (atEnd ? 1 : 0)
-        guard parallelGeometry.length >= Int64(wanted) * far + NetworkBuilding.minimumSpacing,
-              mainGeometry.length >= Int64(wanted) * far + NetworkBuilding.minimumSpacing
+        // Each is `margin` in from the end, or from where the vertical curve
+        // there ends if that is farther.
+        let reach = DoubleTrack.crossoverReach
+        let startMargin = max(DoubleTrack.crossoverMargin, mainProfile.startTransition, parallelProfile.startTransition)
+        let endMargin = max(DoubleTrack.crossoverMargin, mainProfile.endTransition, parallelProfile.endTransition)
+        let wanted = (atStart ? startMargin + reach : 0) + (atEnd ? endMargin + reach : 0)
+        guard parallelGeometry.length >= wanted + NetworkBuilding.minimumSpacing,
+              mainGeometry.length >= wanted + NetworkBuilding.minimumSpacing
         else { return ([], .noRoom) }
         var pairs: [(onParallel: WorldCoordinate, onMain: WorldCoordinate)] = []
         if atStart {
-            pairs.append((parallelGeometry.location(at: far).position, mainGeometry.location(at: margin).position))
+            pairs.append((parallelGeometry.location(at: startMargin + reach).position, mainGeometry.location(at: startMargin).position))
         }
         if atEnd {
-            pairs.append((parallelGeometry.location(at: parallelGeometry.length - far).position,
-                          mainGeometry.location(at: mainGeometry.length - margin).position))
+            pairs.append((parallelGeometry.location(at: parallelGeometry.length - endMargin - reach).position,
+                          mainGeometry.location(at: mainGeometry.length - endMargin).position))
         }
         var draft = world
         var stretches: [PlayerCommand.TrackStretch] = []
@@ -131,8 +139,8 @@ extension GameSession {
         case .refused: ""
         case .noRoom:
             language.text(
-                " The second track is not joined to the track it meets: no room for a crossover (too short, or on a grade). Add one by hand.",
-                "第二條沒有接上既有軌道：放不下渡線（太短或有坡度），請手動加渡線。"
+                " The second track is not joined to the track it meets: no room for a crossover (too short, or too steep). Add one by hand.",
+                "第二條沒有接上既有軌道：放不下渡線（太短或太陡），請手動加渡線。"
             )
         }
     }
@@ -150,9 +158,4 @@ extension NetworkAnchor {
     var isNode: Bool {
         if case .node = self { true } else { false }
     }
-}
-
-extension TrackGeometry {
-    /// Whether it runs at one height end to end.
-    var isLevel: Bool { startHeight == endHeight }
 }
