@@ -84,7 +84,7 @@ public enum TRADemo {
     /// south of Yilan, north of Su'aoxin.
     static let depots = [
         HighSpeedDemo.RealDepot(english: "Yilan Sidings", chinese: "宜蘭側線", latitude: 24.754210, longitude: 121.758450, shift: 1_500 * RealWorldDemo.metre),
-        HighSpeedDemo.RealDepot(english: "Su'aoxin Sidings", chinese: "蘇澳新側線", latitude: 24.610150, longitude: 121.827340, shift: -1_100 * RealWorldDemo.metre),
+        HighSpeedDemo.RealDepot(english: "Su'aoxin Sidings", chinese: "蘇澳新側線", latitude: 24.610150, longitude: 121.827340, shift: -3_000 * RealWorldDemo.metre),
     ]
 
     /// What the demo is built from.
@@ -107,7 +107,7 @@ public enum TRADemo {
         stationIDPrefix: "tra_sched|",
         schedule: schedule,
         kinds: kinds,
-        endPlatformTracks: (north: 4, south: 6),
+        endPlatformTracks: (north: 4, south: 4),
         // Jiaoxi, Yilan and Luodong: the expresses call on the through
         // tracks.
         islandStations: [2, 4, 7],

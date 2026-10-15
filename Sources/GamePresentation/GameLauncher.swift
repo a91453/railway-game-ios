@@ -410,6 +410,39 @@ public final class GameLauncher {
         }
     }
 
+    /// Whether ``openTRADemo(railways:)`` is building its game.
+    public private(set) var isOpeningTRADemo = false
+
+    /// Opens ``TRADemo`` (decision 240): the Yilan Line, Toucheng to
+    /// Su'aoxin, running a weekday's real trains. Built off the main actor
+    /// as the high-speed demo is (``openHighSpeedDemo(railways:)``), with
+    /// the start screen showing meanwhile (``isOpeningTRADemo``). Returns
+    /// the task, or `nil` while one is being built already. A game the
+    /// player starts meanwhile stays.
+    @discardableResult
+    public func openTRADemo(railways: RealRailways) -> Task<Void, Never>? {
+        guard !isOpeningTRADemo else { return nil }
+        isOpeningTRADemo = true
+        let (language, population, places, water, coverage) = (language, population, places, water, coverage)
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) {
+                try? TRADemo.make(
+                    in: language, railways: railways, population: population, places: places, water: water, coverage: coverage,
+                    eventSeed: .random(in: .min ... .max)
+                )
+            }.value
+            isOpeningTRADemo = false
+            guard let world else {
+                message = StatusMessage(kind: .failure, text: language.text(
+                    "The Yilan Line could not be built from the real-world data.", "無法用實景資料蓋出宜蘭線。"
+                ))
+                return
+            }
+            guard session == nil else { return }
+            begin(world, keepingAutosave: true, isDemo: true)
+        }
+    }
+
     /// The people and jobs of a new game's map with its middle at `anchor`
     /// (Phase 6a–6b, ``LandImport``), off its water (decision 105), or
     /// `nil` without the app's population or where no one in it lives or

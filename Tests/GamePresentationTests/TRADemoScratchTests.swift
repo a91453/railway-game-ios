@@ -4,32 +4,59 @@ import Foundation
 import XCTest
 
 final class TRADemoScratchTests: XCTestCase {
-    func testPrint() throws {
+    func testDay() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         func file(_ name: String) throws -> Data { try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealRailways/\(name)")) }
         let railways = try RealRailways(
             lines: file("track_lines.geojson"), stations: file("track_stations.geojson"), names: file("station_names.json"),
             operations: RealRailwayOperations(systems: [:], timetables: [:], schedules: ["tra-yilan": file("tra-yilan-schedule.json")])
         )
-        let base = TRADemo.spec
-        for south in [2, 3, 4, 5] {
-            let spec = RealLineDemoSpec(path: base.path, stationNames: base.stationNames, stationIDPrefix: base.stationIDPrefix, schedule: base.schedule, kinds: base.kinds,
-                endPlatformTracks: (north: 4, south: south), islandStations: base.islandStations, depots: base.depots, tolerance: base.tolerance, longestEdge: base.longestEdge, landAt: base.landAt, opensAt: base.opensAt)
-            let layout = try HighSpeedDemo.Layout(railways: railways, spec: spec)
-            var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
-            do { _ = try layout.build(in: &world, language: .english); print("south", south, "ok") } catch { print("south", south, error) }
-        }
         let layout = try HighSpeedDemo.Layout(railways: railways, spec: TRADemo.spec)
-        print("path km", layout.plan.path.length / 64_000, "platforms", layout.platforms.map { Int($0.lowerBound / 64) })
-        for line in layout.timetable.lines {
-            print(line.chinese, "runs", line.runs.count, "positioning", line.positioning, "sets", line.sets, "overnight", line.overnight.map { $0.station })
+        var built = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
+        let tracks = HighSpeedDemoTests.Tracks(layout: layout, built: try layout.build(in: &built, language: .english))
+        var world = try TRADemo.make(in: .english, railways: railways)
+        var overlaps = 0, against: [String] = [], late: [String: Int64] = [:], firstOverlaps: [String] = []
+        for _ in 0..<(24 * 60 + 30) {
+            try world.advance(ticks: 1)
+            let minute = world.clock.now.minute
+            if minute <= 1_440 + 3 * 60 {
+                for o in HighSpeedDemoDayTests.overlaps(in: world) {
+                    overlaps += 1
+                    if firstOverlaps.count < 15 {
+                        let names = [o.trains.0, o.trains.1].map { world.train(id: $0)?.name ?? "?" }
+                        let station = world.network.platforms.first { $0.edge == o.edge }.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                        firstOverlaps.append("\(minute / 60 % 24):\(minute % 60) \(names) at \(station) \(o.length / 64) m")
+                    }
+                }
+            }
+            if minute % 30 == 0, minute <= 1_440 {
+                let lateNow = world.trains.compactMap { t -> String? in
+                    guard let l = world.lateness(of: t.id), l >= 600 else { return nil }
+                    let at = world.stationsStoppedAt(by: t.id).compactMap { world.station(id: $0)?.name }.first ?? "between"
+                    return "\(t.name)(\(l / 60)m@\(at))"
+                }
+                print("HOUR \(minute / 60):\(minute % 60) late>10:", lateNow.count, lateNow.prefix(8))
+            }
+            for train in world.trains where train.execution != nil {
+                late[train.name] = max(late[train.name] ?? 0, world.lateness(of: train.id) ?? 0)
+                guard case .onEdge(let traversal, _)? = train.position else { continue }
+                if tracks.isAgainst(traversal), against.count < 10 { against.append("\(train.name) at \(minute / 60 % 24):\(minute % 60)") }
+            }
         }
-        for depot in layout.depots { print(depot.real.chinese, "entry", Int(depot.entry / 64), "end", Int(depot.deadEnd / 64), "serving", depot.serving, "sidings", depot.east.count, depot.west.count) }
-        print("loops", layout.loops.keys.sorted(), "outer", layout.outerLoops.keys.sorted(), "crossovers", layout.crossovers.keys.sorted())
-        print("down edges", layout.plan.distances.count - 1, "edge130 at m", layout.plan.distances.count > 130 ? Int(layout.plan.distances[129] / 64) : -1, layout.plan.distances.count > 130 ? Int(layout.plan.distances[130] / 64) : -1)
-        print("junctions", Int(layout.junctions.north / 64), Int(layout.junctions.south / 64), "turnback", layout.turnbackReach.mapValues { (Int($0.lowerBound / 64), Int($0.upperBound / 64)) })
-        var world = HighSpeedDemo.newWorld(paying: layout.cost(at: ConstructionCosts.newGame), eventSeed: 1)
-        _ = try layout.build(in: &world, language: .traditionalChinese)
-        print("trains", world.trains.count, "lines", world.lines.count, "stations", world.stations.count)
+        print("overlaps", overlaps, firstOverlaps)
+        print("against", against)
+        print("late (min)", late.sorted { $0.value > $1.value }.prefix(12).map { "\($0.key) \($0.value / 60)" })
+        let now = world.clock.now.seconds - GameTime.secondsPerDay
+        var missed: [String] = []
+        for line in world.lines {
+            for (index, run) in line.runs.enumerated() {
+                let day: Int64 = run.times[0].departure + LineRun.latestDispatch < now ? 1 : 0
+                if (line.runDays[index] ?? -1) < day { missed.append("\(line.name) \(run.times[0].departure / 60)") }
+            }
+        }
+        print("missed runs", missed.count, missed.prefix(10))
+        var night: [String] = []
+        print("in depots now", world.trains.filter { world.standsInADepot($0) }.count, "of", world.trains.count, night)
+        night = []
     }
 }
