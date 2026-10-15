@@ -1593,3 +1593,14 @@ V 實際放行 → T、U（保證不互穿）
 | `Railway/street_scene_reference_clean/source/assets/scene.js` `updateDetail`：建物群近、遠兩版，依鏡頭距離切換，1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`、`Map3DScene.Chunk.far` | 餘裕照用；距離改成 700 m 起、隨鏡頭距離放大，切換的單位是 512 m 的分塊 |
 | `Railway/procedural_assets_reference_clean/` japan 包的陽台、冷氣、blade sign 的尺寸 | `Map3DBuildings.addFrontDetail` | 尺寸照用，形狀是本專案自己的盒子 |
 
+## 3D 地圖的真實建物（決策 239）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取），與本 repo 的 `Web/CityView/`。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Website/site/city/tiles/`：高雄、臺中車站周圍的城市圖塊（TKY1 第 7 版） | `RailwayGameApp/Resources/BaseMap/city/` | 原樣複製 `areas.json`、`manifest.json`、`t_*.bin` |
+| `Web/CityView/src/shared/tileformat.js` `decodeTile` | `CityTileArea.buildings(in:)` | 只讀建物，其餘跳過 |
+| `Web/CityView/src/shared/geo.js` `makeProjection` | `Map3DScene.Builder.addRealBuildings` | 先換回經緯度，再用 `RealWorldFrame` 放上世界 |
+| `Web/CityView/tools/pipeline/taiwan.mjs` `usageOf` | `RealKind(usage:)` | 代碼照用，外觀是本專案的畫風（決策 231、235） |
+
