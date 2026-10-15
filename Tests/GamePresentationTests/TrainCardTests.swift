@@ -92,6 +92,23 @@ final class TrainCardTests: XCTestCase {
         XCTAssertEqual(world.followBarInfo(of: own, in: .english).map { [$0.origin, $0.terminus] }, ["B", "A"])
     }
 
+    /// At the stop where it turns round the train waits to leave on the
+    /// trip back: the follow bar says it has not left, as the card does,
+    /// not that it is running (the PR #627–#646 review).
+    func testAtTheTurnTheFollowBarSaysTheTripBackHasNotLeft() throws {
+        var (world, own) = try ownRoundTrip()
+        for _ in 0..<3_600 {
+            if case .waitingAtStop(1, _)? = world.train(id: own)?.execution { break }
+            try world.advance(ticks: 1)
+        }
+        guard case .waitingAtStop(1, _)? = world.train(id: own)?.execution else { return XCTFail("it waits at B") }
+        let card = try XCTUnwrap(world.trainCard(of: own, in: .english))
+        XCTAssertFalse(card.hasDeparted)
+        let bar = try XCTUnwrap(world.followBarInfo(of: own, in: .english))
+        XCTAssertEqual([bar.origin, bar.terminus], ["B", "A"])
+        XCTAssertEqual(bar.status, .notDeparted)
+    }
+
     /// Between two trips a line's train keeps the finished trip's
     /// timetable: it is on no trip, so it has no card ("Left 300 min ago"
     /// was the trip before), and the inspector says what it waits for.

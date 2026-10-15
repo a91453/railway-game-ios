@@ -127,7 +127,9 @@ extension GameWorld {
             status = held ?? .arrived
         case nil:
             status = .notDeparted
-        case .waitingAtStop(let stop, _)? where stop == 0:
+        case .waitingAtStop(let stop, _)? where stop == trip.lowerBound:
+            // At the first stop of the trip it is on: the timetable's, or
+            // where it turns round to run back.
             status = .notDeparted
         case .waitingAtStop(let stop, _)? where stop == train.timetable.count - 1 && train.timetablePeriod == nil:
             status = .arrived
