@@ -269,10 +269,13 @@ set -euo pipefail
 # go now moves the trains second by second where a set may be held up, as
 # sixty one-second steps do (decision 37): HighSpeedDemoDayTests takes
 # about 760 s locally where it took 401, TRADemoDayTests 185 where it took
-# 162, so campaigns-16 is about 950 s locally, some 740 on CI.
-# HighSpeedDemoBatchTests, which checks that, opens the same demo as
-# HighSpeedDemoTests, so it goes with it to campaigns-11 (769 s locally),
-# about 55 s more there: the two shards end level.
+# 162 (CI runs these about as fast as a local debug build: 395 and 164 on
+# main's #684 run). Together they passed campaigns-16's 20 minutes (run
+# 38822987126), so TRADemoDayTests goes to campaigns-12, the shortest
+# shard (492 s on that run), and campaigns-16 keeps the high-speed day
+# alone (some 13 minutes of tests). HighSpeedDemoBatchTests, which checks
+# that, opens the same demo as HighSpeedDemoTests, so it goes with it to
+# campaigns-11 (8m42s with it on run 38822987126).
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -286,11 +289,11 @@ classes_of() {
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests HighSpeedDemoBatchTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests TRADemoDayTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests" ;;
     *) return 1 ;;
   esac
 }
@@ -358,7 +361,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:600 HighSpeedDemoBatchTests:55 HighSpeedDemoTests:415
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:780 HighSpeedDemoBatchTests:55 HighSpeedDemoTests:415
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395
