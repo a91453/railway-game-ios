@@ -48,6 +48,10 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
     /// The steam train of decision 153: this project's, not the
     /// reference's.
     public static let steam = PerformancePreset(listed: "steam")
+    /// Taipei Metro's C371 and C381 (decision 237).
+    public static let metroC381 = PerformancePreset(listed: "metroC381")
+    /// The Taiwan Railway's EMU800 and EMU900 (decision 237).
+    public static let emu800 = PerformancePreset(listed: "emu800")
 
     /// Its row's code.
     public var code: String { TrainPerformanceCatalog.builtIn[row].code }
@@ -80,6 +84,8 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
         "forestRailway": ("Alishan Forest Railway", "阿里山林鐵"),
         "highSpeed": ("High-speed rail", "高鐵"),
         "steam": ("Steam train", "蒸汽列車"),
+        "metroC381": ("Taipei Metro C371 / C381", "北捷 C371／C381"),
+        "emu800": ("EMU800 / EMU900 local", "EMU800／900 區間車"),
     ]
 
     /// The first preset, in the order above, that accelerates, brakes and
