@@ -8,7 +8,8 @@ final class Map3DModelTests: XCTestCase {
     private let pack = Map3DModelPack.standard
 
     func testEveryStyleHasACabAndAMiddleCarOfTheRightSize() {
-        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2)
+        // Decision 244: and the street furniture after the trains.
+        XCTAssertEqual(pack.models.count, Map3DTrainStyle.all.count * 2 + Map3DProp.allCases.count)
         for style in Map3DTrainStyle.all {
             for name in [style.name + "-cab", style.name + "-car"] {
                 guard let index = pack.index(of: name) else { return XCTFail(name) }

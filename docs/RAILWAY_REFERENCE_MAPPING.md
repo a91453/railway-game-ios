@@ -1619,3 +1619,10 @@ V 實際放行 → T、U（保證不互穿）
 | --- | --- | --- |
 | `Website/site/city/textures/` 的 `wall_concrete`、`wall_brick`、`wall_tile`、`wall_plaster`（Poly Haven，CC0 1.0） | `Map3DSurfaces.png` 第 18–21 層 | 只取灰階當底紋，對比壓低；接縫、繫桿孔、磁磚分格自己畫 |
 
+## 3D 地圖的街道設施（決策 244）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Web/CityView/src/world/props.js`：`poleGeometry`、`lightGeometry`、`blobTreeGeometry` | `Map3DProp.model()` | 尺寸照用，形狀是自己的低多邊形、遊戲配色 |
+| 參考庫 `OpenWorld/reference_snapshot/play/assets/bridge/`（淡江大橋零件） | 未用 | 是斜張公路橋，不是鐵路高架；留給地標 |
+
