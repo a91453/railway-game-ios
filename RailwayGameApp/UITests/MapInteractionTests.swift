@@ -348,7 +348,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [built], timeout: 10), .completed, "Build Track did not build")
     }
 
-    func testZoomButtonsRemainUsableWithoutPinching() {
+    func testZoomButtonsRemainUsableWithoutPinching() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -361,16 +361,35 @@ final class MapInteractionTests: XCTestCase {
         let zoomOut = app.buttons["Zoom out"]
         XCTAssertTrue(zoomIn.appears(within: 10))
         // A step doubles the size (Stage E1): 32 points per 16 m to 64, the
-        // maximum zoom. The tap is tried twice, like the anchor's in the
-        // test above: on a slow Simulator a touch was lost and the map never
-        // moved (full lane run 38458089903, its screen recording); a second
-        // tap at the maximum does nothing.
+        // maximum zoom. On a slow Simulator a touch was lost and the map
+        // never moved (full lane run 38458089903, its screen recording):
+        // the tap is tried again only when the camera's zoom (`map.camera`)
+        // has not changed, so a step that grows less than double is not
+        // made up by a second one (the PR #526–#626 review, C6).
         func atMaximum() -> Bool {
             XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == false"), object: zoomIn)],
                              timeout: 10) == .completed
         }
+        let zoom = app.descendants(matching: .any)["map.camera"].firstMatch
+        XCTAssertTrue(zoom.appears(within: 10))
+        // The opening camera may frame the game again as its layout
+        // settles: read the zoom once it has kept still for two seconds.
+        var settled = zoom.value as? String
+        for _ in 0..<10 {
+            let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)
+            guard XCTWaiter().wait(for: [changed], timeout: 2) == .completed else { break }
+            settled = zoom.value as? String
+        }
+        let before = try XCTUnwrap(settled.flatMap(Double.init))
+        func moved() -> Bool {
+            XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", settled ?? ""), object: zoom)],
+                             timeout: 10) == .completed
+        }
         zoomIn.tap()
-        if !atMaximum() { zoomIn.tap() }
+        if !moved() { zoomIn.tap() }
+        XCTAssertTrue(moved(), "Zoom in did not move the camera")
+        let after = try XCTUnwrap((zoom.value as? String).flatMap(Double.init))
+        XCTAssertEqual(after / before, 2, accuracy: 0.001, "A step doubles the size: \(before) to \(after)")
         XCTAssertTrue(atMaximum(), "64 points per 16 m is the maximum zoom")
         XCTAssertTrue(zoomOut.isEnabled)
         zoomOut.tap()
