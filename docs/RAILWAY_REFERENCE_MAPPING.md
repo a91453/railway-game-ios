@@ -1619,3 +1619,12 @@ V 實際放行 → T、U（保證不互穿）
 | --- | --- | --- |
 | `Website/site/city/textures/` 的 `wall_concrete`、`wall_brick`、`wall_tile`、`wall_plaster`（Poly Haven，CC0 1.0） | `Map3DSurfaces.png` 第 18–21 層 | 只取灰階當底紋，對比壓低；接縫、繫桿孔、磁磚分格自己畫 |
 
+## 車款外觀（決策 243）
+
+| 參考 | 用在 | 怎麼用 |
+| --- | --- | --- |
+| `Web/CityView/src/world/trains.js` 的 `LIVERIES`（`hsr`、`emu3000`、玻璃色、預設不鏽鋼） | `TrainLivery.highSpeed`、`.emu3000`、`.metroC381` | 色值照搬 |
+| 參考庫 `Railway/site_archive_clean/memories/tainan-2026-09-12/fleet/catalog.json` 各車的 `livery` 文字 | `TrainLivery.emu3000`、`.puyuma`、`.emu800` | 照描述（EMU3000 黑面罩、普悠瑪紅頭紅帶、EMU800 藍面板黃帶）取色，色值本專案的 |
+| 參考庫沒有太魯閣的塗裝 | `TrainLivery.taroko` | 本專案的（gap） |
+| 外部 | 檢查腳本用 `colorspacious`（MIT）算色盲模擬，只在 scratchpad，不進 repo | — |
+

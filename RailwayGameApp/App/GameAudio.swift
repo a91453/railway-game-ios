@@ -25,6 +25,9 @@ final class GameAudio {
     private(set) var soundsOn: Bool
     /// The player's three volumes (decision 219, stage 2).
     private(set) var volumes: SoundVolumes
+    /// Decision 219, stage 2: the factor on the music while a followed
+    /// train runs into an interchange (``MusicDuck``); 1 otherwise.
+    @ObservationIgnored private var musicDuck = 1.0
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -94,8 +97,21 @@ final class GameAudio {
         volumes.setLevel(level, of: category)
         defaults.set(volumes.level(of: category), forKey: SoundVolumes.key(for: category))
         if category == .music {
-            music?.volume = volumes.volume(Self.musicVolume, for: .music)
+            music?.volume = musicLevel
         }
+    }
+
+    /// Takes the music down by `gain` (``MusicDuck``), fading there over
+    /// half a second, or brings it back with 1.
+    func duckMusic(_ gain: Double) {
+        guard gain != musicDuck else { return }
+        musicDuck = gain
+        music?.setVolume(musicLevel, fadeDuration: 0.5)
+    }
+
+    /// What the music plays at: its own volume, the player's and the duck.
+    private var musicLevel: Float {
+        volumes.volume(Self.musicVolume, for: .music) * Float(musicDuck)
     }
 
     /// Follows the app in and out of the foreground: the music plays only
@@ -152,7 +168,7 @@ final class GameAudio {
     private func updateMusic() {
         if plays && musicOn && isActive {
             if music == nil {
-                music = Self.player(named: "music-loop", extension: "caf", volume: volumes.volume(Self.musicVolume, for: .music))
+                music = Self.player(named: "music-loop", extension: "caf", volume: musicLevel)
                 music?.numberOfLoops = -1
             }
             music?.play()

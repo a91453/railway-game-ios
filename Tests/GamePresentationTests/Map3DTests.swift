@@ -221,10 +221,35 @@ final class Map3DTests: XCTestCase {
         let motion = TrainMotion(world: world, time: 0)
         XCTAssertFalse(motion.runs.isEmpty)
         let mesh = Map3DTrains.mesh(motion, progress: 1, heights: Map3DTrains.Heights(world.railwaySnapshot()), in: scene)
-        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length) }
+        let cars = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
         // A body box and a band box a car, five faces each.
         XCTAssertEqual(mesh.triangleCount, cars * 2 * 10)
         let bounds = try XCTUnwrap(mesh.bounds)
         XCTAssertEqual(bounds.max.y, Map3DTrains.carHeight + Map3DScene.railLift, accuracy: 0.01, "on the rails of the ground's level track")
+    }
+}
+
+extension Map3DTests {
+    /// Decision 227: a train of real cars (a standard car's 20 m) is drawn
+    /// with as many cars as it has, not as many 16 m cars as its length
+    /// holds.
+    func testATrainOfRealCarsShowsItsOwnCars() throws {
+        let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
+        var start = GameWorld.newGame()
+        start.setRealCarLengths(true)
+        var world = try newGameLine(through: [towns[0], towns[1]], in: start)
+        let id = try XCTUnwrap(world.trains.first?.id)
+        try world.advance(ticks: 30)
+        let train = try XCTUnwrap(world.trains.first { $0.id == id })
+        XCTAssertNotEqual(train.carPitch, Train.carLength)
+        let motion = TrainMotion(world: world, time: 0)
+        let run = try XCTUnwrap(motion.runs.first { $0.train == id })
+        let cars = TrainCars.count(length: run.length, carPitch: run.carPitch)
+        XCTAssertNotEqual(cars, TrainCars.count(length: run.length), "16 m cars would be more")
+        let scene = Map3DScene(world: world)
+        let frame = Map3DTrains.frame(motion, progress: 1, heights: Map3DTrains.Heights(world.railwaySnapshot()), in: scene, models: nil, eye: nil)
+        // A shadow of five faces under each car.
+        let all = motion.runs.reduce(0) { $0 + TrainCars.count(length: $1.length, carPitch: $1.carPitch) }
+        XCTAssertEqual(frame.shadows.triangleCount, all * 10)
     }
 }

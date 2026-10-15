@@ -38,6 +38,14 @@
 //   EMU3000 express run (``TrainPerformance/emu3000``: 135 km/h).
 // - The prices and running-cost weights (decision 180) are this project's
 //   (gap): the references have no price list for rolling stock.
+// - The car lengths (decision 227) are coupler pitches, a middle car's: the
+//   EMU3000's 20.3 m is the owner's fleet catalogue (`fleet/catalog.json`,
+//   `emu3000-mid` `pitchM`); the high-speed set's 25 m the 700T's middle
+//   car; A 22 m, B 19.5 m and C 19 m China's standard metro car types
+//   (GB 50157) the reference's types are named after; L 16.5 m the
+//   linear-motor metros (Osaka, Guangzhou); D 20 m, the APM's 12.5 m, sky
+//   rail's 12 m, maglev and monorail 15 m and the steam train's four-wheeled
+//   coach 8 m are estimates from cars of their kind.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -78,10 +86,14 @@ public struct TrainTypeSpec: Hashable, Sendable {
     public let performance: TrainPerformance?
     /// What it costs to buy and to run (decision 180).
     public let pricing: RollingStockPricing
+    /// How far apart its cars stand, centre to centre, in world units, in a
+    /// world with real car lengths (decision 227): the type's real coupler
+    /// pitch, a middle car's.
+    public let carLength: Int64
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
-        performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64
+        performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64)
     ) {
         self.code = code
         self.family = family
@@ -91,6 +103,12 @@ public struct TrainTypeSpec: Hashable, Sendable {
         self.overloads = overloads
         self.performance = performance
         pricing = RollingStockPricing(firstDollars: firstDollars, carDollars: carDollars, operatingPermille: operatingPermille)
+        carLength = Self.worldUnits(metres: carMetres.0, tenths: carMetres.1)
+    }
+
+    /// `metres.tenths` metres in world units (64 a metre), to the nearest.
+    static func worldUnits(metres: Int64, tenths: Int64) -> Int64 {
+        ((metres * 10 + tenths) * WorldCoordinate.unitsPerMetre + 5) / 10
     }
 }
 
@@ -100,29 +118,29 @@ public enum TrainTypeCatalog {
     /// them.
     public static let builtIn: [TrainTypeSpec] = [
         .init(code: "A", family: .metro, offer: .referenceMain, capacity: 310, doors: 5, overloads: true,
-              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000),
+              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000, carMetres: (22, 0)),
         .init(code: "B", family: .metro, offer: .referenceMain, capacity: 260, doors: 4, overloads: true,
-              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000),
+              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000, carMetres: (19, 5)),
         .init(code: "C", family: .metro, offer: .referenceMain, capacity: 200, doors: 4, overloads: true,
-              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000),
+              performance: nil, firstDollars: 150_000, carDollars: 40_000, operatingPermille: 1_000, carMetres: (19, 0)),
         .init(code: "L", family: .metro, offer: .referenceExtra, capacity: 243, doors: 3, overloads: true,
-              performance: nil, firstDollars: 90_000, carDollars: 25_000, operatingPermille: 700),
+              performance: nil, firstDollars: 90_000, carDollars: 25_000, operatingPermille: 700, carMetres: (16, 5)),
         .init(code: "D", family: .metro, offer: .referenceExtra, capacity: 230, doors: 5, overloads: true,
-              performance: nil, firstDollars: 120_000, carDollars: 35_000, operatingPermille: 1_300),
+              performance: nil, firstDollars: 120_000, carDollars: 35_000, operatingPermille: 1_300, carMetres: (20, 0)),
         .init(code: "APM", family: .metro, offer: .referenceExtra, capacity: 138, doors: 2, overloads: true,
-              performance: nil, firstDollars: 110_000, carDollars: 30_000, operatingPermille: 800),
+              performance: nil, firstDollars: 110_000, carDollars: 30_000, operatingPermille: 800, carMetres: (12, 5)),
         .init(code: "MAGLEV", family: .special, offer: .referenceExtra, capacity: 240, doors: 3, overloads: true,
-              performance: nil, firstDollars: 600_000, carDollars: 150_000, operatingPermille: 1_800),
+              performance: nil, firstDollars: 600_000, carDollars: 150_000, operatingPermille: 1_800, carMetres: (15, 0)),
         .init(code: "SKYRAIL", family: .special, offer: .referenceExtra, capacity: 140, doors: 2, overloads: true,
-              performance: nil, firstDollars: 170_000, carDollars: 50_000, operatingPermille: 1_000),
+              performance: nil, firstDollars: 170_000, carDollars: 50_000, operatingPermille: 1_000, carMetres: (12, 0)),
         .init(code: "MONORAIL", family: .special, offer: .referenceExtra, capacity: 224, doors: 2, overloads: true,
-              performance: nil, firstDollars: 160_000, carDollars: 45_000, operatingPermille: 1_000),
+              performance: nil, firstDollars: 160_000, carDollars: 45_000, operatingPermille: 1_000, carMetres: (15, 0)),
         .init(code: "STEAM", family: .railway, offer: .eraOnly, capacity: 50, doors: 2, overloads: true,
-              performance: .steam, firstDollars: 80_000, carDollars: 20_000, operatingPermille: 1_400),
+              performance: .steam, firstDollars: 80_000, carDollars: 20_000, operatingPermille: 1_400, carMetres: (8, 0)),
         .init(code: "HSR", family: .highSpeed, offer: .added, capacity: 80, doors: 2, overloads: false,
-              performance: .highSpeed, firstDollars: 900_000, carDollars: 120_000, operatingPermille: 2_000),
+              performance: .highSpeed, firstDollars: 900_000, carDollars: 120_000, operatingPermille: 2_000, carMetres: (25, 0)),
         .init(code: "EMU3000", family: .railway, offer: .added, capacity: 45, doors: 2, overloads: true,
-              performance: .emu3000, firstDollars: 260_000, carDollars: 55_000, operatingPermille: 1_200),
+              performance: .emu3000, firstDollars: 260_000, carDollars: 55_000, operatingPermille: 1_200, carMetres: (20, 3)),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

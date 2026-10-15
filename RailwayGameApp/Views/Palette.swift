@@ -136,6 +136,10 @@ enum Palette {
     /// inside an ``ink`` line, where it was the accent's teal, the track's
     /// colour.
     static let trainSelection = station
+    /// Decision 243: the navy edge of the line's band along a painted
+    /// train, in both maps (inside the body, on its white or silver): a
+    /// pale line colour (white, yellow) still shows on it.
+    static let liveryBandEdge = rgb(0x262C57)
 
     // Transit Semantic Colors
     static let metroBlue = dynamic(light: (0.07, 0.45, 0.88), dark: (0.24, 0.60, 1.00))

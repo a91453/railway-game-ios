@@ -75,6 +75,12 @@ public struct Train: Identifiable, Hashable, Sendable {
     /// the standard car every newly bought train has. Set by
     /// ``GameWorld/setTrainType(_:to:)`` while the train is unplaced.
     public internal(set) var type: TrainType?
+    /// How far apart its cars stand, centre to centre, in world units
+    /// (decision 227): ``carLength`` (16 m), as every train before real car
+    /// lengths, or its type's real length, set when it is bought or changes
+    /// type in a world with ``GameWorld/realCarLengths``. A train on the
+    /// track never changes it, so its body keeps to the track it holds.
+    public internal(set) var carPitch: Int64
     /// The edges the train's body lies over behind the edge its head is on
     /// (Stage S3), nearest first: every edge the body reaches into, up to
     /// and including the one its tail is on (see ``length``). Empty for a
@@ -127,6 +133,7 @@ public struct Train: Identifiable, Hashable, Sendable {
         self.times = nil
         self.cars = 1
         self.type = nil
+        self.carPitch = Self.carLength
         self.trailEdges = []
         self.reservation = []
         self.performance = .standard
@@ -196,7 +203,7 @@ extension Train {
 
 extension Train: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, position, movement, timetable, period, execution, times, cars, type, trail, trailEdges, reservation, performance, trafficVisits, deadhead, standingAside
+        case id, name, position, movement, timetable, period, execution, times, cars, type, carPitch, trail, trailEdges, reservation, performance, trafficVisits, deadhead, standingAside
     }
 
     /// Decodes a train.
@@ -278,6 +285,14 @@ extension Train: Codable {
         times = container.contains(.times) ? try container.decode(ServiceTimes.self, forKey: .times) : nil
         cars = container.contains(.cars) ? try container.decode(Int.self, forKey: .cars) : Self.minimumCars
         type = container.contains(.type) ? try container.decode(TrainType.self, forKey: .type) : nil
+        // Decision 227 (save version 62): written only when not 16 m.
+        carPitch = try container.decodeIfPresent(Int64.self, forKey: .carPitch) ?? Self.carLength
+        guard Self.isCarPitch(carPitch) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .carPitch, in: container,
+                debugDescription: "Train \(id.rawValue)'s cars are \(carPitch) apart, which is no car's length."
+            )
+        }
         let gridTrail = container.contains(.trail) ? try container.decode([LegacyGrid.Cell].self, forKey: .trail) : []
         guard gridTrail.isEmpty else {
             throw DecodingError.dataCorruptedError(
@@ -400,6 +415,9 @@ extension Train: Codable {
             try container.encode(cars, forKey: .cars)
         }
         try container.encodeIfPresent(type, forKey: .type)
+        if carPitch != Self.carLength {
+            try container.encode(carPitch, forKey: .carPitch)
+        }
         if !trailEdges.isEmpty {
             try container.encode(trailEdges.map { $0.networkNumber }, forKey: .trailEdges)
         }
