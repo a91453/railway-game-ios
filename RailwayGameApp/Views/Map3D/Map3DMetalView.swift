@@ -5,7 +5,7 @@ import UIKit
 
 /// ARCHITECTURE decision 229: the native 3D map drawn with Metal. It only
 /// uploads and draws what GamePresentation works out (``Map3DScene``,
-/// ``Map3DTrains``, ``Map3DCamera``, ``Map3DLighting``): one pipeline, the
+/// ``Map3DTrains``, ``Map3DCamera``, ``Map3DLighting``): one pipeline for the
 /// still scene a buffer per chunk, the chunks out of view skipped, the
 /// trains one buffer made each frame. It also measures itself (frames a
 /// second, the CPU's and the GPU's time a frame), since the step before the
@@ -28,8 +28,10 @@ final class Map3DMetalView: MTKView {
 
     var camera = Map3DCamera()
     var lighting = Map3DLighting(minute: 12 * 60)
-    /// The trains for this frame.
-    var trains: (@MainActor () -> Map3DMesh)?
+    /// The trains for this frame, seen from the eye given.
+    var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
+    /// Decision 230: the train models, and a buffer of each one's vertices.
+    private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
 
     private struct Chunk {
@@ -42,6 +44,8 @@ final class Map3DMetalView: MTKView {
 
     private let queue: MTLCommandQueue
     private let pipeline: MTLRenderPipelineState
+    /// Decision 230: the same, each vertex through its car's instance.
+    private let instancedPipeline: MTLRenderPipelineState
     private let depthState: MTLDepthStencilState
     private var chunks: [Chunk] = []
     private let gpuTimes = OSAllocatedUnfairLock(initialState: [Double]())
@@ -56,7 +60,8 @@ final class Map3DMetalView: MTKView {
         guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue(),
               let library = device.makeDefaultLibrary(),
               let vertexFunction = library.makeFunction(name: "map3dVertex"),
-              let fragmentFunction = library.makeFunction(name: "map3dFragment")
+              let fragmentFunction = library.makeFunction(name: "map3dFragment"),
+              let instancedFunction = library.makeFunction(name: "map3dInstancedVertex")
         else { return nil }
         let vertexDescriptor = MTLVertexDescriptor()
         vertexDescriptor.attributes[0].format = .float3
@@ -79,15 +84,21 @@ final class Map3DMetalView: MTKView {
         let depthDescriptor = MTLDepthStencilDescriptor()
         depthDescriptor.depthCompareFunction = .less
         depthDescriptor.isDepthWriteEnabled = true
-        guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
+        guard let pipeline = try? device.makeRenderPipelineState(descriptor: descriptor) else { return nil }
+        descriptor.vertexFunction = instancedFunction
+        guard let instancedPipeline = try? device.makeRenderPipelineState(descriptor: descriptor),
               let depthState = device.makeDepthStencilState(descriptor: depthDescriptor)
         else { return nil }
-        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, depthState: depthState)
+        return Map3DMetalView(device: device, queue: queue, pipeline: pipeline, instancedPipeline: instancedPipeline, depthState: depthState)
     }
 
-    private init(device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, depthState: MTLDepthStencilState) {
+    private init(
+        device: MTLDevice, queue: MTLCommandQueue, pipeline: MTLRenderPipelineState, instancedPipeline: MTLRenderPipelineState,
+        depthState: MTLDepthStencilState
+    ) {
         self.queue = queue
         self.pipeline = pipeline
+        self.instancedPipeline = instancedPipeline
         self.depthState = depthState
         super.init(frame: .zero, device: device)
         colorPixelFormat = .bgra8Unorm
@@ -105,10 +116,20 @@ final class Map3DMetalView: MTKView {
     /// Four samples a pixel smooth the thin rails; every iPhone and iPad
     /// takes four.
     private static let samples = 4
+    /// An instance's bytes (`Map3DInstance` in `Map3DShaders.metal`): a
+    /// matrix and a colour.
+    private static let instanceStride = 80
 
     override func layoutSubviews() {
         super.layoutSubviews()
         camera.viewport = (Float(max(bounds.width, 1)), Float(max(bounds.height, 1)))
+    }
+
+    /// Decision 230: draws the trains near the eye with `pack`'s models.
+    func useModels(_ pack: Map3DModelPack) {
+        let buffers = pack.models.compactMap { makeBuffer($0.vertices) }
+        guard buffers.count == pack.models.count else { return }
+        models = (pack, buffers)
     }
 
     /// Draws `scene` from now on.
@@ -152,12 +173,35 @@ final class Map3DMetalView: MTKView {
             drawCalls += 1
             triangles += chunk.indexCount / 3
         }
-        if let mesh = trains?(), !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
+        let frame = trains?(camera.eye)
+        if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
             encoder.setVertexBuffer(vertices, offset: 0, index: 0)
             encoder.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indices.count, indexType: .uint32,
                                           indexBuffer: indices, indexBufferOffset: 0)
             drawCalls += 1
             triangles += mesh.triangleCount
+        }
+        // Decision 230: the cars near the eye, one draw call a model, every
+        // car of it an instance.
+        if let instances = frame?.instances, !instances.isEmpty, let models {
+            let sorted = instances.sorted { $0.model < $1.model }
+            if let buffer = makeBuffer(sorted.flatMap(\.floats)) {
+                encoder.setRenderPipelineState(instancedPipeline)
+                var first = 0
+                while first < sorted.count {
+                    let model = sorted[first].model
+                    var last = first
+                    while last + 1 < sorted.count, sorted[last + 1].model == model { last += 1 }
+                    let count = last - first + 1
+                    encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
+                    encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertices.count,
+                                           instanceCount: count)
+                    drawCalls += 1
+                    triangles += models.pack.models[model].triangleCount * count
+                    first = last + 1
+                }
+            }
         }
         encoder.endEncoding()
         let gpuTimes = gpuTimes

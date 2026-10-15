@@ -24,25 +24,37 @@ public enum Map3DTrains {
     /// ``RailwaySnapshot/Train/body`` in world units.
     public struct Heights: Sendable {
         let bodies: [TrainID: [WorldCoordinate]]
+        /// Each train's type code (``TrainTypeSpec/code``), `""` for none
+        /// (decision 230: which model it is drawn with).
+        let types: [TrainID: String]
 
         public init(_ snapshot: RailwaySnapshot) {
             var bodies: [TrainID: [WorldCoordinate]] = [:]
             for train in snapshot.trains { bodies[train.id] = [train.head.position] + train.body }
             self.bodies = bodies
+            types = [:]
         }
 
         public init() {
             bodies = [:]
+            types = [:]
         }
 
-        /// The bodies of `world`'s trains now, without the rest of a
-        /// snapshot (each tick's, on the main actor).
+        /// The bodies and types of `world`'s trains now, without the rest of
+        /// a snapshot (each tick's, on the main actor).
         public init(world: GameWorld) {
             var bodies: [TrainID: [WorldCoordinate]] = [:]
+            var types: [TrainID: String] = [:]
             for train in world.trains where train.position != nil {
                 bodies[train.id] = world.bodyPath(of: train.id)
+                types[train.id] = train.type?.spec.code ?? ""
             }
             self.bodies = bodies
+            self.types = types
+        }
+
+        func type(of id: TrainID) -> String {
+            types[id] ?? ""
         }
 
         /// The height of train `id`'s body nearest world point (`x`, `y`),
@@ -62,12 +74,35 @@ public enum Map3DTrains {
         }
     }
 
+    /// A frame's trains: the cars drawn with a model (one instance each,
+    /// decision 230) and the rest as boxes.
+    public struct Frame: Sendable {
+        public var boxes = Map3DMesh()
+        public var instances: [Map3DInstance] = []
+    }
+
+    /// How far from the eye a car is drawn with its model, in metres;
+    /// farther, it is a box (the art direction's near and far levels).
+    public static let modelReach: Float = 900
+
     /// Every car of every train in `motion` at `progress` (0 where they were
-    /// at the last tick, 1 where they are), in `scene`'s space.
+    /// at the last tick, 1 where they are), in `scene`'s space, as boxes.
     public static func mesh(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene, palette: LinePalette = .standard
     ) -> Map3DMesh {
-        var mesh = Map3DMesh()
+        frame(motion, progress: progress, heights: heights, in: scene, models: nil, eye: nil, palette: palette).boxes
+    }
+
+    /// Every car of every train in `motion` at `progress`, in `scene`'s
+    /// space: within ``modelReach`` of `eye`, a car of a type `models` has
+    /// is an instance of its model (the head car's model at both ends, the
+    /// last one turned round; the middle cars' between); the rest, and a
+    /// freight train, boxes.
+    public static func frame(
+        _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
+        models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard
+    ) -> Frame {
+        var frame = Frame()
         let gap = Double(carGap) * Double(WorldCoordinate.unitsPerMetre)
         for run in motion.runs {
             guard let head = run.head(at: progress) else { continue }
@@ -75,26 +110,56 @@ public enum Map3DTrains {
             let count = TrainCars.count(length: run.length)
             let cars = TrainCars.cars(body: body, heading: head.heading, count: count, gap: gap)
             let (side, stripe) = colours(of: run.look, palette: palette)
-            for car in cars {
+            let carModels = run.look == .freight ? nil : models?.models(forType: heights.type(of: run.train))
+            for (index, car) in cars.enumerated() {
                 guard let front = car.first, let back = car.last else { continue }
-                let middleX = (front.x + back.x) / 2, middleY = (front.y + back.y) / 2
-                let height = heights.height(of: run.train, x: middleX, y: middleY)
-                let a = scene.point(worldX: front.x, worldY: front.y, height: height)
-                let b = scene.point(worldX: back.x, worldY: back.y, height: height)
+                let a = scene.point(worldX: front.x, worldY: front.y, height: heights.height(of: run.train, x: front.x, y: front.y))
+                let b = scene.point(worldX: back.x, worldY: back.y, height: heights.height(of: run.train, x: back.x, y: back.y))
                 let length = (a - b).length
                 guard length > 1 else { continue }
                 let base = (a + b) * 0.5
-                mesh.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: length, width: carWidth, height: carHeight - 0.3,
-                            top: roof, side: side)
+                if let models, let carModels, let eye, (base - eye).length < modelReach {
+                    let ends = index == 0 || index == cars.count - 1
+                    let model = ends ? carModels.head : carModels.middle
+                    // The last car is the head car's model turned round.
+                    let turned = index == cars.count - 1 && cars.count > 1
+                    frame.instances.append(instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
+                                                    stripe: stripe ?? band))
+                    continue
+                }
+                frame.boxes.addBox(base: base + Map3DPoint(0, 0.3, 0), forward: a - b, length: length, width: carWidth,
+                                   height: carHeight - 0.3, top: roof, side: side)
                 if let stripe {
                     // The band under the windows, a hand's breadth proud of the
                     // body so it never flickers into it.
-                    mesh.addBox(base: base + Map3DPoint(0, 1.0, 0), forward: a - b, length: length + 0.04, width: carWidth + 0.04, height: 0.45,
-                                top: stripe, side: stripe)
+                    frame.boxes.addBox(base: base + Map3DPoint(0, 1.0, 0), forward: a - b, length: length + 0.04,
+                                       width: carWidth + 0.04, height: 0.45, top: stripe, side: stripe)
                 }
             }
         }
-        return mesh
+        return frame
+    }
+
+    /// Model `model` stood on the rail from `back` to `front` (scene
+    /// points at the rail's height), stretched along to fit, its front at
+    /// `front`.
+    static func instance(of model: Map3DModelPack.Model, index: Int, from back: Map3DPoint, to front: Map3DPoint, stripe: UInt32) -> Map3DInstance {
+        let along = front - back
+        let forward = along.normalized ?? Map3DPoint(0, 0, -1)
+        let left = Map3DPoint(forward.z, 0, -forward.x).normalized ?? Map3DPoint(-1, 0, 0)
+        let up = forward.cross(left)
+        let stretch = model.length > 0 ? along.length / model.length : 1
+        let middle = (model.minimum.x + model.maximum.x) / 2
+        let origin = (front + back) * 0.5 - forward * (middle * stretch)
+        let x = forward * stretch
+        let transform: [Float] = [
+            x.x, x.y, x.z, 0,
+            left.x, left.y, left.z, 0,
+            up.x, up.y, up.z, 0,
+            origin.x, origin.y, origin.z, 1,
+        ]
+        func channel(_ shift: UInt32) -> Float { Float((stripe >> shift) & 0xFF) / 255 }
+        return Map3DInstance(model: index, transform: transform, stripe: (channel(0), channel(8), channel(16)))
     }
 
     /// A train's body colour and the band's, if any.

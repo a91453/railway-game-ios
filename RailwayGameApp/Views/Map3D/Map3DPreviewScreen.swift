@@ -124,9 +124,9 @@ final class Map3DTrainFeed {
         self.palette = palette
     }
 
-    func mesh(in scene: Map3DScene) -> Map3DMesh {
+    func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint) -> Map3DTrains.Frame {
         let progress = motion.isMoving ? motion.progress(at: Date().timeIntervalSinceReferenceDate) : 1
-        return Map3DTrains.mesh(motion, progress: progress, heights: heights, in: scene, palette: palette)
+        return Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette)
     }
 }
 
@@ -142,6 +142,9 @@ private struct Map3DView: UIViewRepresentable {
         Coordinator()
     }
 
+    /// Decision 230: the train models, made in code once.
+    static let models: Map3DModelPack? = Map3DModelPack.standard
+
     func makeUIView(context: Context) -> UIView {
         guard let view = Map3DMetalView.make() else {
             let label = UILabel()
@@ -151,6 +154,9 @@ private struct Map3DView: UIViewRepresentable {
             return label
         }
         context.coordinator.view = view
+        if let models = Self.models {
+            view.useModels(models)
+        }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
@@ -170,8 +176,8 @@ private struct Map3DView: UIViewRepresentable {
         let first = context.coordinator.shownVersion == nil
         context.coordinator.shownVersion = sceneVersion
         view.show(scene)
-        let feed = feed
-        view.trains = { feed.mesh(in: scene) }
+        let feed = feed, models = Map3DView.models
+        view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
         if first {
             // Open over the middle of what is built, the whole of it in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
