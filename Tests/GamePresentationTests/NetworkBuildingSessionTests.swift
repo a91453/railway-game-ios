@@ -279,10 +279,10 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: a node, the track for a turnout there, or anywhere for a new node.")
+            XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: the end of a track, a track for a turnout there, or anywhere to start new track.")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkStart, .point(Self.a))
-            XCTAssertEqual(session.networkDraftText(), "From a new node. Tap where it ends, or drag there from the start.")
+            XCTAssertEqual(session.networkDraftText(), "From a new point. Tap where it ends, or drag there from the start.")
             XCTAssertNil(session.networkPreview)
             session.tapNetwork(at: Self.b, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "A new stretch of track")
@@ -301,7 +301,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
             XCTAssertEqual(session.message, StatusMessage(kind: .success, text: "Built Track #1: 64 m, automatic: surface 64 m, for $ 4."))
             XCTAssertEqual(session.networkStart, .node(.node(2)), "the next stretch starts where this one ended")
             XCTAssertNil(session.networkEnd)
-            XCTAssertEqual(session.networkDraftText(), "From Node #2. Tap where it ends, or drag there from the start.")
+            XCTAssertEqual(session.networkDraftText(), "From the end of a track. Tap where it ends, or drag there from the start.")
         }
     }
 
@@ -723,9 +723,9 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有的節點、軌道上（在那裡設轉轍器），或任何地方建立新節點。")
+            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有軌道的端點、軌道上（在那裡設轉轍器），或任何地方開始新的軌道。")
             session.tapNetwork(at: Self.a, reach: Self.reach)
-            XCTAssertEqual(session.networkDraftText(), "從新節點開始。請點終點，或從起點拖曳過去。")
+            XCTAssertEqual(session.networkDraftText(), "從新的一點開始。請點終點，或從起點拖曳過去。")
             session.tapNetwork(at: Self.b, reach: Self.reach)
             XCTAssertEqual(session.networkPreview?.text(in: .traditionalChinese), "64 公尺 · $ 4")
             session.buildNetworkTrack()
@@ -810,11 +810,11 @@ final class NetworkBuildingSessionTests: XCTestCase {
         XCTAssertEqual(world.networkSummary(in: .traditionalChinese), "0 座車站 · 1 段軌道")
         await MainActor.run {
             let session = GameSession(world: world)
-            XCTAssertEqual(session.networkHeightText(), "New nodes on the ground")
+            XCTAssertEqual(session.networkHeightText(), "New track on the ground")
             session.networkHeight = 512
-            XCTAssertEqual(session.networkHeightText(), "New nodes 8 m above the ground")
+            XCTAssertEqual(session.networkHeightText(), "New track 8 m above the ground")
             session.networkHeight = -1_024
-            XCTAssertEqual(session.networkHeightText(), "New nodes 16 m below the ground")
+            XCTAssertEqual(session.networkHeightText(), "New track 16 m below the ground")
             XCTAssertEqual(session.platformLengthText(), "Platform for 4 cars · 64 m")
             session.platformCars = 1
             XCTAssertEqual(session.platformLengthText(), "Platform for 1 car · 16 m")
@@ -822,7 +822,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
             session.networkHeight = -1_024
-            XCTAssertEqual(session.networkHeightText(), "新節點：地面以下 16 公尺")
+            XCTAssertEqual(session.networkHeightText(), "新軌道：地面以下 16 公尺")
             XCTAssertEqual(session.platformLengthText(), "月台長 4 節車廂 · 64 公尺")
         }
     }
