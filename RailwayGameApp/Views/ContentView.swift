@@ -558,7 +558,10 @@ private struct ControlDetailsToggle: View {
             // attribution, a different thing (decision 123).
             Image(systemName: "sidebar.trailing")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 40, height: 40)
+                // As wide as the tools under it in the phone's column, so
+                // the column's pieces are one width (2026-10-15); 40 in the
+                // dock, which offers it no more.
+                .frame(minWidth: 40, maxWidth: .infinity, minHeight: 40)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")
