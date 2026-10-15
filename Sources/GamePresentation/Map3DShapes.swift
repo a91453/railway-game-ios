@@ -68,6 +68,29 @@ extension Map3DMesh {
         }
     }
 
+    /// An arched (barrel) roof over a `length` × `width` shed, its arch
+    /// across `forward`, `rise` high at the crown: `segments` flat strips
+    /// along the shed, and the two arched ends in `end`.
+    public mutating func addBarrelRoof(base: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), length: Float, width: Float, rise: Float,
+                                       segments: Int = 6, color: UInt32, end: UInt32, paint: Map3DPaint? = nil) {
+        guard segments >= 2, length > 0, width > 0, rise > 0, let along = Map3DPoint(forward.x, 0, forward.z).normalized else { return }
+        let across = Map3DPoint(-along.z, 0, along.x)
+        let f = along * (length / 2)
+        // The arch from the left wall over to the right one: a parabola.
+        let arch = (0...segments).map { index -> Map3DPoint in
+            let t = Float(index) / Float(segments) * 2 - 1
+            return base + across * (t * width / 2) + Map3DPoint(0, rise * (1 - t * t), 0)
+        }
+        for index in 0..<segments {
+            let a = arch[index], b = arch[index + 1]
+            let shade = 0.78 + 0.2 * Float(index) / Float(segments - 1)
+            addFacet([a - f, b - f, b + f, a + f], color: Map3DColor.shaded(color, shade), paint: paint)
+        }
+        // The ends, fans from the middle of the walls' top.
+        addFacet([base + f] + arch.map { $0 + f }, color: Map3DColor.shaded(end, 0.9))
+        addFacet([base - f] + arch.reversed().map { $0 - f }, color: Map3DColor.shaded(end, 0.75))
+    }
+
     /// An upright cylinder of `sides` faces standing on `base`: a tank, a
     /// chimney, a water tower's drum. Capped with `top` unless `capped` is
     /// false.

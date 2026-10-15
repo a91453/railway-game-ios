@@ -9019,6 +9019,70 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 遠離軌道的地方地面是 0 m（決策 229 的已知限制：高度只在蓋過軌道的地方讀進來），道路與水跟著同一個地面。
 - 真實建物（下一步）：底圖刻意沒有建物。台灣的 Overture 建物幾乎就是 OSM（微軟、Google 的 AI 建物沒涵蓋台灣），只有約 3% 有高度；3D-GloBFP（CC BY 4.0）台灣 114 萬棟每棟都有估計高度；國土測繪中心的全國三維建物品質最好，但散布的授權要作者先向國土測繪中心確認。
 
+### 235. 原生 3D 地圖第六步：素材庫的程序化建物
+
+作者 2026-10-15 問「接著做什麼 導入隨機生成導入素材庫嗎」。原本 3D 城市的工廠只是一個方盒子，學校、醫院、景點都是同一種方塊樓。這一步讀素材庫 `Railway/procedural_assets_reference_clean/` 的 industrial、city、japan 三包產生器，把規則改寫成 Swift，讓每種用地有自己的建物。
+
+照作者的規則（art-style §7）：
+- 模型可以任意組合，只要跟原本不同；
+- 盡量維持現有畫風。
+
+所以只取尺寸、比例、屋頂形式、配色這些規則，幾何全部自己寫。原模型每棟 1,000–22,000 個三角形，這裡每塊用地 700 個以內，同一塊用地每次畫出來都一樣（以格子位置為種子，`map3DRandom`）。
+
+1. **新的形狀**（`Map3DShapes.swift`，加上 `Map3DMesh.addFacet`）：
+   - 雙坡屋頂（`addGableRoof`，簷口外挑，山牆另一色）；
+   - 四坡屋頂（`addHipRoof`，`sweep` 把四角翹起，給廟用）；
+   - 鋸齒屋頂（`addSawtoothRoof`，玻璃面朝前，採北光）；
+   - 拱頂（`addBarrelRoof`，拋物線分 6 段）；
+   - 圓柱（`addCylinder`，儲槽、水塔）。
+2. **工廠**（`addFactory`，取代原本的 `addShed`），用地鋪混凝土場地，四選一：
+   - 雙坡鐵皮廠房：坡度 12–19°，取自 industrial 的 maintenance workshop、small hangar；
+   - 鋸齒廠房；
+   - 拱頂倉庫加貨櫃：牆高 5.5 m、拱高為跨距的五分之一，取自 warehouse；
+   - 紅磚老廠：30° 屋頂、方形煙囪 16–24 m、兩座儲槽，取自 boiler house、power station。
+   - 前三種前面有兩層的辦公室，女兒牆下一圈藍色飾帶，取自 compact factory office。
+   - 鐵捲門（`addDoors`）。
+3. **公共建築**（`addCivic`）：
+   - 學校（45%）：兩棟 3–4 層的教室圍著操場，跑道、草地，加一座拱頂體育館（japan 的 school gym：牆高 8 m）。
+   - 診所或機關（40%）：石材的一樓、腰帶、白磁磚的樓上、門口雨遮、屋頂機房與冷氣（city 的 clinic、police station）。
+   - 消防隊（15%）：一樓鐵捲門、望樓（city 的 firehouse）。
+4. **景點與遊憩**（`addLeisure`）：
+   - 廟（55%）：花崗石台基、朱紅的牆、兩重四坡屋頂翹角、紅色燕尾脊；台基夠大（24 m 以上）時加前殿與香爐。取 japan temple hall 深簷的四坡屋頂做法，尺寸、兩重屋頂、橘色琉璃瓦與燕尾是本專案自己的台灣樣式。
+   - 商場（45%）：一樓店面、彩色招牌帶、玻璃中庭、屋頂機房。
+5. **屋頂的雜物**：
+   - 透天厝：約四分之一的屋頂不放水塔，改加一間鐵皮屋（頂樓加蓋）：牆 2.4 m、20° 雙坡。
+   - 公寓與大樓：加樓梯間與一到三台冷氣主機（city 的 rooftop air conditioner、japan 的 roof access house）。
+6. **顏色**（四個角度選 A，B 的預覽在 `docs/art/map3d-buildings-2026-10-15/options.jpg`）：
+   - A：工廠與加蓋多半是台灣常見的藍色鐵皮（`#5F8BC0`、`#6F9AC9`），其餘取素材庫的灰、褪色與鏽色鐵皮再調亮；廟是朱紅牆、橘色琉璃瓦、紅燕尾。
+   - B：全部灰色鐵皮，廟用 japan 包的灰瓦與灰泥牆。
+   - 玩家：藍鐵皮與紅廟一眼看得出是台灣，也分得出哪裡是工業區、哪裡是廟。
+   - 開發：兩案只差調色盤，程式一樣。
+   - 美術：B 跟日本街景一樣灰，在 F 台灣版＋的明亮調色盤裡太暗；A 的藍與橘和玩家建物的暖黃、地圖的白路都不衝突。
+   - 音樂：無。
+7. **量測**（Linux 除錯版的場景）：
+   - 兩鎮的地圖：三角形 126,628 → 146,226；
+   - 示範地圖：126,934 → 142,682；
+   - 約多 15%。
+   - iPhone 上的幀數 **UNVERIFIED**，要等 TestFlight。
+
+**參考**（參考庫 `a91453/railway-reference-private`，`Railway/procedural_assets_reference_clean/source/preview/` 下）：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `industrial/assets/createModel-Bnk90sOm.js`（maintenance workshop）、`B9EEHs0I`（small hangar）：坡度 16°、19°，捲門 | `addFactory` 的雙坡廠房、`addDoors` |
+| `industrial/assets/createModel-OCiZ-reo.js`（warehouse）：牆 5.55、拱頂 | 拱頂倉庫、`addBarrelRoof` |
+| `industrial/assets/createIndustrialBoilerHouse-*.js`、`createModel-pyE_yEfj.js`（power station）：30°–38° 磚造廠房、方煙囪 | 紅磚老廠 |
+| `industrial/assets/createModel-DXYWwHGD.js`（compact factory office）：藍色飾帶 `#244e86` | 工廠的辦公室（飾帶改成 `#4A72A8`） |
+| `industrial/assets/createModel-CIYEkEvy.js`（shipping container）：2.438 × 6.058 × 2.591 | 倉庫場地的貨櫃（尺寸照用） |
+| `city/assets/createModel-Ccgf2Cx7.js`（clinic）、`SvnnzOfi`（police）：一樓 4.3、腰帶、樓上約 3 m、女兒牆、屋頂機房 | `addClinic`、`addRoofPlant` |
+| `city/assets/createModel-BABj8RwK.js`（firehouse）：捲門 4.36 × 3.54 | `addFireStation` |
+| `japan/assets/createModel-1HKqrewr.js`（school gym）：13.8 × 26、牆 8 m、拱頂 | 學校的體育館 |
+| `japan/assets/createModel-CDFBb8kJ.js`（temple hall）：深簷的四坡瓦頂 | `addTemple` 的 `addHipRoof`（尺寸、兩重屋頂、翹角與燕尾是本專案自己的台灣樣式） |
+| `japan/assets/createModel-Fiy4x0Zp.js`：roof access house 1.2–3.2 × 1.2–2.8 × 1.9–2.4、shed／gable 屋頂 | 樓梯間、頂樓加蓋 |
+| 樹、路燈、販賣機、車輛 | 這一步沒有用：數量多，要先有實例化繪製，下一步 |
+
+外部專案：沒有用到（形狀是本專案自己寫的）。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
