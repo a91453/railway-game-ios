@@ -47,6 +47,21 @@ extension GameWorld {
         economy.unlimitedFunds = on
     }
 
+    /// The cash a ``pricingCopy()`` holds: more than anything costs.
+    public static let pricingBalance = Money(1 << 60)
+
+    /// A copy of this world holding ``pricingBalance`` (decision 245), to
+    /// measure what a command costs in all: a command of several steps is
+    /// refused at the first step the cash left after the others does not
+    /// cover, saying only that step's price. Its balance before less its
+    /// balance after is the whole price; with unlimited funds, nothing.
+    /// Only for measuring and throwing away: the game never plays on it.
+    public func pricingCopy() -> GameWorld {
+        var copy = self
+        copy.economy.fundForPricing()
+        return copy
+    }
+
     /// Sets the network's fare rules. From then on fares change demand
     /// (see ``FareRules/demandFactor(fare:)``) while the company is managed.
     /// Free.

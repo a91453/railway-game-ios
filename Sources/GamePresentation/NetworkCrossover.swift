@@ -130,14 +130,17 @@ extension GameSession {
             return (NetworkPreview(curve: .straight, profile: .uniform, points: [from, to], length: 0, startHeight: from.z, endHeight: to.z,
                                    joinsStart: false, joinsEnd: false, cost: nil, problem: problem.text(in: language)), [])
         case .success(let plan):
-            var draft = world
+            // Decision 245: its whole price, weighed against the cash.
+            var draft = world.pricingCopy()
             var cost: Money?
             var problem: String?
             var edges: [TrackEdgeID] = []
             do throws(GameError) {
                 if let built = try build(plan, in: &draft, structure: networkStructure) {
                     edges = built
-                    cost = Money(world.economy.balance.amount - draft.economy.balance.amount)
+                    let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
+                    cost = total
+                    problem = shortfallText(total, doing: .buildCrossover(plan, structure: networkStructure))
                 } else {
                     problem = ScissorsProblem.tooShallow.text(in: language)
                 }
@@ -181,7 +184,7 @@ extension GameSession {
                 return
             }
         } catch {
-            message = refusal(error)
+            message = refusal(error, doing: .buildCrossover(plan, structure: networkStructure))
             return
         }
         // Decision 193: the plan is the command; building it again on the

@@ -270,6 +270,12 @@ extension GameSession {
         return edges[levelling.levelLeg]
     }
 
+    /// Where ``addNetworkPlatform()`` puts a new station on the stretch
+    /// `levelling` lays: the middle of its level leg.
+    static func platformMiddle(_ levelling: PlatformLevelling) -> PlanPoint? {
+        levelling.legs.dropFirst(levelling.levelLeg).first.map { PlanPoint(x: ($0.from.x + $0.to.x) / 2, y: ($0.from.y + $0.to.y) / 2) }
+    }
+
     /// The level stretch ``networkPlatformStretch`` would become, built on
     /// a copy, with what levelling it costs, or why it cannot be levelled.
     /// `nil` where the stretch is level already or nothing is picked. The
@@ -289,11 +295,16 @@ extension GameSession {
         case .failure(let problem):
             preview = PlatformLevellingPreview(grade: grade, length: stretch.end - stretch.start, cost: nil, problem: problem.text(in: language))
         case .success(let levelling):
+            // Decision 245: what it costs even where the cash would not
+            // pay for it; ✓'s price says so with the station's.
+            draft = draft.pricingCopy()
             do throws(GameError) {
                 _ = try build(levelling, in: &draft)
+                let site = Self.platformMiddle(levelling)
                 preview = PlatformLevellingPreview(
                     grade: grade, length: levelling.end - levelling.start,
-                    cost: Money(world.economy.balance.amount - draft.economy.balance.amount), problem: nil
+                    cost: Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount), problem: nil,
+                    stationClearing: site.map { draft.clearingCost(of: draft.placedBuildings(inTheWayOf: [$0])) }
                 )
             } catch {
                 preview = PlatformLevellingPreview(
@@ -316,6 +327,9 @@ public struct PlatformLevellingPreview: Hashable, Sendable {
     public let length: Int64
     public let cost: Money?
     public let problem: String?
+    /// What clearing a new station's place on the level stretch costs,
+    /// once levelled (decision 245, ``GameSession/networkPlatformCost``).
+    var stationClearing: Money? = nil
 }
 
 struct PlatformLevellingMemo {

@@ -26,14 +26,22 @@ extension GameSession {
     /// free. `nil` when nothing is picked, it costs nothing, or the
     /// stretch cannot be levelled.
     public var networkPlatformCost: Money? {
-        guard let site = platformSitePlanPoint else { return nil }
+        guard platformSitePlanPoint != nil, let stretch = networkPlatformStretch,
+              let geometry = world.trackGeometry(of: stretch.edge) else { return nil }
         var total = Money.zero
+        // The new station stands at the middle of the platform, on the
+        // level stretch once levelled, and clears what stands there then
+        // (decision 245: ✓'s price is what is paid).
+        var clearing: Money
+        let middle = geometry.location(at: (stretch.start + stretch.end) / 2).position.plan
+        clearing = world.clearingCost(of: world.placedBuildings(inTheWayOf: [middle]))
         if let levelling = networkPlatformLevelling {
             guard let cost = levelling.cost else { return nil }
             total = total + cost
+            clearing = levelling.stationClearing ?? clearing
         }
         if platformStationID.flatMap({ world.station(id: $0) }) == nil {
-            total = total + world.economy.costs.station + world.clearingCost(of: world.placedBuildings(inTheWayOf: [site]))
+            total = total + world.economy.costs.station + clearing
         }
         return total > .zero ? total : nil
     }

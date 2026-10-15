@@ -111,6 +111,12 @@ public struct GameEconomy: Hashable, Sendable {
         balance = balance + amount
     }
 
+    /// Sets the balance to ``GameWorld/pricingBalance`` for
+    /// ``GameWorld/pricingCopy()``.
+    mutating func fundForPricing() {
+        balance = GameWorld.pricingBalance
+    }
+
     /// Moves the balance by a settlement's `amount`, either way; it may go
     /// below zero (the reference settles running costs with
     /// `allowNegativeBalance`; G1c, ARCHITECTURE decision 36). With

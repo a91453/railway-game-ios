@@ -135,4 +135,35 @@ final class UnlimitedFundsTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(SavedGame(world: JSONDecoder().decode(SavedGame.self, from: data).world)), Data(String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 51,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
     }
+
+    /// Decision 245: a pricing copy holds cash for anything, so a command of
+    /// several steps runs through, and what it took is its whole price;
+    /// the world refuses the second step with the cash the first left.
+    /// With unlimited funds, nothing. The copy is the world but for its
+    /// balance.
+    func testAPricingCopyMeasuresTheWholePrice() throws {
+        let start = try world(balance: 1_500, unlimited: false)
+        let copy = start.pricingCopy()
+        XCTAssertEqual(copy.economy.balance, GameWorld.pricingBalance)
+        XCTAssertFalse(copy.economy.unlimitedFunds)
+        var back = copy
+        back.economy = start.economy
+        XCTAssertEqual(back, start, "only the balance differs")
+
+        func stationAndTrain(_ world: inout GameWorld) throws(GameError) {
+            try world.buildStation(named: "A", at: PlanPoint(x: 1_024, y: 1_024))
+            _ = try world.purchaseTrain(named: "T")
+        }
+        var real = start
+        XCTAssertThrowsError(try stationAndTrain(&real)) { error in
+            XCTAssertEqual(error as? GameError, .insufficientFunds(required: 5_000, available: 500), "the step's price, against what the first step left")
+        }
+        var priced = copy
+        try stationAndTrain(&priced)
+        XCTAssertEqual(GameWorld.pricingBalance - priced.economy.balance, Money(6_000), "the station and the train")
+
+        var free = try world(balance: 1_500).pricingCopy()
+        try stationAndTrain(&free)
+        XCTAssertEqual(free.economy.balance, GameWorld.pricingBalance, "unlimited funds pay nothing")
+    }
 }

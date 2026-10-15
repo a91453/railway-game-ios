@@ -2125,27 +2125,64 @@ public final class GameSession {
 
     /// The status line for `error`, which refused `command` on ``world``
     /// (left as it was). A refusal for want of cash names what `command`
-    /// does (``PlayerCommand/actionText(in:)``) and says the cash the
-    /// player has, not what a step part of the way through the command
-    /// had left: a new station's platform on a grade is levelled first,
-    /// so GameCore's refusal of the station counts the cash after the
-    /// levelling. What it takes is that step's price and all paid before
-    /// it, and the refusal goes once the cash covers it
+    /// does (``PlayerCommand/actionText(in:)``), and says the whole
+    /// command's price against the cash the player has (decision 245),
+    /// not one step's price against what the steps before it left:
+    /// GameCore builds a command step by step on a copy of the world, and
+    /// refuses the first step the cash left does not cover. The price is
+    /// `command` run again on a ``GameWorld/pricingCopy()``; refused there
+    /// too, for something other than cash, that is what the line says.
+    /// Without a command it is that step's price and all paid before it.
+    /// The refusal goes once the cash covers it
     /// (``StatusMessage/fundsNeeded``).
     func refusal(_ error: GameError, doing command: PlayerCommand? = nil) -> StatusMessage {
         guard case .insufficientFunds(let required, let available) = error else {
             return StatusMessage(kind: .failure, text: error.playerMessage(in: language))
         }
         let balance = world.economy.balance
-        let spent = max(0, balance.amount - available.amount)
-        let (needed, overflow) = required.amount.addingReportingOverflow(spent)
-        let total = overflow ? Money(.max) : Money(needed)
+        let total: Money
+        if let command {
+            do throws(GameError) {
+                total = try priced { world throws(GameError) in _ = try apply(command, to: &world) }.cost
+            } catch {
+                return refusal(error)
+            }
+        } else {
+            let spent = max(0, balance.amount - available.amount)
+            let (needed, overflow) = required.amount.addingReportingOverflow(spent)
+            total = overflow ? Money(.max) : Money(needed)
+        }
         return StatusMessage(
             kind: .failure,
             text: GameError.insufficientFundsText(
                 required: total, available: balance, doing: command?.actionText(in: language), in: language
             ),
             fundsNeeded: total
+        )
+    }
+
+    /// `build` run on a ``GameWorld/pricingCopy()`` of `base` (``world``
+    /// unless given), which cash never stops (decision 245): the copy as
+    /// built, what `build` returned, and what it cost in all. A preview
+    /// builds on it, so its price is the whole build's even where the cash
+    /// in hand would stop it part of the way (``shortfallText(_:doing:)``
+    /// says so). Throws what refused `build` for anything else.
+    func priced<Result>(
+        on base: GameWorld? = nil, _ build: (inout GameWorld) throws(GameError) -> Result
+    ) throws(GameError) -> (draft: GameWorld, result: Result, cost: Money) {
+        var draft = (base ?? world).pricingCopy()
+        let result = try build(&draft)
+        return (draft, result, Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount))
+    }
+
+    /// Why the cash in hand does not pay `cost`, the price of what
+    /// `action` (``PlayerCommand/actionText(in:)``) does in all, or `nil`
+    /// when it does (decision 245): a preview's problem, as the refusal
+    /// will say it (``refusal(_:doing:)``).
+    func shortfallText(_ cost: Money, doing action: PlayerCommand?) -> String? {
+        guard !world.economy.canAfford(cost) else { return nil }
+        return GameError.insufficientFundsText(
+            required: cost, available: world.economy.balance, doing: action?.actionText(in: language), in: language
         )
     }
 
