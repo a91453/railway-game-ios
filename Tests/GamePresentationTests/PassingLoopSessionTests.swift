@@ -29,6 +29,15 @@ final class PassingLoopSessionTests: XCTestCase {
         return session
     }
 
+    /// With real car lengths (decision 227) and no train bought yet, the
+    /// shortest loop still holds six of the 20 m cars the company will buy.
+    func testTheShortestLoopHoldsSixCarsOfTheLengthTrainsWillHave() throws {
+        var (world, _, _) = try world()
+        XCTAssertEqual(session(world).passingLoopLength, 6 * Train.carLength)
+        world.setRealCarLengths(true)
+        XCTAssertEqual(session(world).passingLoopLength, 6 * Train.realStandardCarLength)
+    }
+
     func testATapOnSingleTrackAddsALoopAndASignalStation() throws {
         let (world, _, _) = try world()
         let session = session(world)

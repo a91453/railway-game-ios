@@ -39,15 +39,16 @@ extension PassingLoopPlan {
     /// How far each turnout stands from the loop's end: the S-curve out to
     /// the loop, as a side platform's (``PlatformTrackLayout/reach``).
     public static let reach = PlatformTrackLayout.side.reach
-    /// The shortest loop: six cars (96 m).
+    /// The shortest loop: six cars (96 m, or 120 m with real car lengths).
     public static let minimumCars = 6
 }
 
 extension GameSession {
     /// How long a passing loop is: the longest train the company has, at
-    /// least ``PassingLoopPlan/minimumCars`` cars.
+    /// least ``PassingLoopPlan/minimumCars`` cars of the length the
+    /// company's trains are bought in (``GameWorld/platformCarLength``).
     public var passingLoopLength: Int64 {
-        max(world.trains.map(\.length).max() ?? 0, Int64(PassingLoopPlan.minimumCars) * Train.carLength)
+        max(world.trains.map(\.length).max() ?? 0, Int64(PassingLoopPlan.minimumCars) * world.platformCarLength)
     }
 
     /// The loop centred on `point` (moved along to stay on its edge), on
