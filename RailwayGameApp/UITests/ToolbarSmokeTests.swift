@@ -147,17 +147,27 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
-        if control.exists {
-            control.tap()
-        } else {
-            toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
+        func tapSwitch() {
+            if control.exists {
+                control.tap()
+            } else {
+                toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
+            }
         }
+        tapSwitch()
         // Twenty seconds: as a job's first test, on a cold Simulator with
         // the real-world demo, one lookup took 10 to 20 seconds, and the
         // switch's value was first read 17 seconds after the tap (run
         // 38441429093); the same steps in the next test took a second.
-        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
+        // A touch that reached the switch can still leave it as it was: one
+        // held 390 ms on the switch's own view and nothing turned (PR #659's
+        // run 38729482700, the app's trace). Not turned after ten seconds,
+        // and still not on a fresh look, the switch is tapped once more.
+        let flipped = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle) }
+        if XCTWaiter.wait(for: [flipped()], timeout: 10) != .completed, (toggle.value as? String == "1") != shown {
+            tapSwitch()
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped()], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
