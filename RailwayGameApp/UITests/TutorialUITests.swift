@@ -306,7 +306,17 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
         if !card.exists {
+            // A done step moves on by itself, and the next step's pill
+            // replaces this one (the card is rebuilt for each step): a touch
+            // on the pill as it is replaced is cancelled and opens nothing
+            // (main 6e86506's full lane, run 38709237236, the app's trace).
+            // Once it has come to rest, the pill is tapped again.
+            folded.waitUntilSettled()
             folded.tap()
+            if !card.appears(within: 3), folded.exists {
+                folded.waitUntilSettled()
+                folded.tap()
+            }
             XCTAssertTrue(card.appears(within: 10), "The folded card did not open", file: file, line: line)
         }
     }
