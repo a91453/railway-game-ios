@@ -165,7 +165,7 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         self.maxHeight = maxHeight
     }
 
-    /// This placement for the card folded to its title (U10): as wide as
+    /// This placement for the card folded to its title: as wide as
     /// its words, up to the bounds' width less the margins and never wider
     /// (a long title is cut short), and never measured shorter or narrower.
     public var folded: TutorialCardPlacement {

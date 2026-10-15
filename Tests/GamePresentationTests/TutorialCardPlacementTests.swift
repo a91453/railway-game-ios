@@ -488,7 +488,7 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertEqual(moved, Frame(x: atOrigin.x + 40, y: atOrigin.y + 30, width: atOrigin.width, height: atOrigin.height))
     }
 
-    /// U10: the folded card with a long title and large text, wider than
+    /// The folded card with a long title and large text, wider than
     /// a phone held upright. Laid out at its own width it ran past the
     /// screen; it is cut to the screen less the margins.
     func testAFoldedCardIsNeverWiderThanTheScreen() {
