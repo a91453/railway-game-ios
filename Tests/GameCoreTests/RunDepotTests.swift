@@ -150,6 +150,19 @@ final class RunDepotTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: world), [])
     }
 
+    /// With line accounts the runs into and out of the depots are in the
+    /// trip log as empty runs (decision 223), as on a line without runs.
+    func testTheRunsIntoAndOutOfTheDepotsAreLogged() throws {
+        var world = try makeWorld()
+        world.setLineAccounts(true)
+        try world.advance(ticks: 8 * 60)
+        let trips = world.trips(of: id(1))
+        XCTAssertTrue(trips.contains { $0.isDeadhead && $0.from == west }, "out of West: \(trips)")
+        XCTAssertTrue(trips.contains { $0.isDeadhead && $0.to == east }, "into East: \(trips)")
+        XCTAssertTrue(trips.contains { !$0.isDeadhead && $0.from == alpha && $0.to == gamma }, "the run")
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
     /// A train whose next run leaves where it waits within two hours stays
     /// there: here it reaches Gamma at about 06:10 and leaves it at 07:00.
     func testATrainThatTurnsRoundSoonStays() throws {

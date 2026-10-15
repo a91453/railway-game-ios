@@ -240,13 +240,18 @@ extension GameWorld {
 
     /// `candidate`, a service setting off for stop `stop` (of cycle
     /// `cycle`), along `alternative` instead, on a run for its time there.
-    private func rerouted(_ candidate: Train, along alternative: TrainPath, stop: Int, cycle: Int64) -> Train {
+    func rerouted(_ candidate: Train, along alternative: TrainPath, stop: Int, cycle: Int64) -> Train {
         var rerouted = candidate
         follow(alternative, &rerouted)
         let previousStop = stop == 0 ? candidate.timetable.count - 1 : stop - 1
         let previousCycle = stop == 0 ? cycle - 1 : cycle
-        let scheduled = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
-            - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
+        // As on its own way (decision 207): with realistic operation the
+        // time left to the scheduled arrival, so a late train makes up its
+        // margin.
+        let scheduled = realisticOperation
+            ? secondsToScheduledArrival(of: candidate, stop: stop, cycle: cycle)
+            : candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+                - candidate.scheduledDeparture(of: previousStop, cycle: previousCycle).seconds
         let reroutedRun = run(of: rerouted, length: alternative.distance, scheduled: scheduled)
         rerouted.times?.run = reroutedRun
         return rerouted

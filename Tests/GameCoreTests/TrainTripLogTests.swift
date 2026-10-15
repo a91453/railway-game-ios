@@ -222,6 +222,10 @@ final class TrainTripLogTests: XCTestCase {
         try refuses({ $0[0]["calls"] = [] as [Any] }, "no calls")
         try refuses({ $0[$0.count - 1]["train"] = 99 }, "a train never bought")
         try refuses({ $0[0]["fare"] = -100 }, "a negative fare")
+        // Beyond the caps the line's takings keep: the next riders would
+        // overflow the sum and stop the game.
+        try refuses({ $0[0]["fare"] = Int64.max }, "a fare beyond the cap")
+        try refuses({ $0[0]["boarded"] = Int64.max }, "riders beyond the cap")
     }
 
     /// A save of version 60: the two lines run past midnight, so the log

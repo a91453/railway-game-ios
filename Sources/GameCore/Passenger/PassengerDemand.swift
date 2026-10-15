@@ -598,6 +598,9 @@ extension GameWorld {
     /// game.
     func makePassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
         if passengerRoutingMode == .network { return makeNetworkPassengerPlan(memo: &memo) }
+        // Once for the plan: a Taiwanese holiday is worked out from the
+        // year's days off (decision 211), too much for every pair.
+        let weekend = isDemandWeekend
         let firstCalls = lines.map { line in
             var calls: [StationID: Int] = [:]
             // Decision 155: nobody rides a freight line.
@@ -640,7 +643,7 @@ extension GameWorld {
                 flows.append(PassengerPlan.Flow(origin: record.station,
                     record: passengers.firstIndex(where: { $0.station == record.station })!,
                     destination: destination.station, trip: trip, choices: []))
-                var hours = Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: isDemandWeekend)
+                var hours = Self.hourly(trips, from: origin.kind, to: destination.demand!.kind, weekend: weekend)
                 if extra > 0 { hours = zip(hours, tourists.hourly(from: record.station, to: destination.station)).map { $0 + $1 } }
                 hourly += hours
             }
@@ -653,6 +656,8 @@ extension GameWorld {
     /// crowded costs under the plan's own daily loads (see
     /// ``PassengerCrowding``).
     private func makeNetworkPassengerPlan(memo: inout PassengerRouteMemo) -> PassengerPlan? {
+        // Once for the plan, as in `makePassengerPlan(memo:)`.
+        let weekend = isDemandWeekend
         // Decision 168: a high-speed station is also a place intercity
         // trips go to and set out from, whether or not its own catchment
         // has people (`pull` is 0 then: the others' ordinary trips are
@@ -742,7 +747,7 @@ extension GameWorld {
             flows.append(PassengerPlan.Flow(origin: draft.origin, record: draft.record,
                 destination: draft.destination.station,
                 trip: PassengerTrip(line: first.line, direction: first.direction), choices: choices))
-            var hours = Self.hourly(draft.ordinary, from: draft.kind, to: draft.destination.demand!.kind, weekend: isDemandWeekend)
+            var hours = Self.hourly(draft.ordinary, from: draft.kind, to: draft.destination.demand!.kind, weekend: weekend)
             if draft.trips > draft.ordinary {
                 hours = zip(hours, tourists.hourly(from: draft.origin, to: draft.destination.station)).map { $0 + $1 }
             }

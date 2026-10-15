@@ -169,6 +169,18 @@ final class RealisticOperationTests: XCTestCase {
         XCTAssertLessThan(lateRun, planned)
     }
 
+    /// A late train that takes another way to its next stop (with block
+    /// sections, round a train standing in its way) makes up its margin
+    /// as on its own way.
+    func testALateTrainOnAnotherWayMakesUpItsMarginToo() throws {
+        let (world, onTime, late) = try departing(realistic: true)
+        let planned = onTime.timetable[1].arrival.seconds - onTime.timetable[0].departure.seconds
+        let path = try XCTUnwrap(world.path(from: try XCTUnwrap(late.position), toStation: b))
+        let fastest = try XCTUnwrap(RunningCurve.leastSeconds(length: path.distance, performance: .highSpeed))
+        XCTAssertEqual(world.rerouted(onTime, along: path, stop: 1, cycle: 0).times?.run?.seconds, planned)
+        XCTAssertEqual(world.rerouted(late, along: path, stop: 1, cycle: 0).times?.run?.seconds, max(fastest, planned - 40))
+    }
+
     func testOffALateTrainArrivesAsLate() throws {
         let (world, onTime, late) = try departing(realistic: false)
         let planned = onTime.timetable[1].arrival.seconds - onTime.timetable[0].departure.seconds
