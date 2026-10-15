@@ -427,7 +427,7 @@ final class MapInteractionTests: XCTestCase {
 
         expansion.tap()
         XCTAssertEqual(expansion.label, "Stop expanding the map")
-        // The tile below the one owned, the bottom row's middle: on a phone
+        // The tile below the one owned: on a phone
         // on its side the expansion's pill (with its Done) stood over it
         // since the tools became a column (#626; main bf12187's full lane,
         // run 38641908091, tapped Done at (437, 301)). The camera now
@@ -442,9 +442,11 @@ final class MapInteractionTests: XCTestCase {
             return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
         }
         XCTAssertFalse(centres.isEmpty, "Tiles for sale: \(String(describing: tiles.value))")
+        // The lowest; in a row of several, the middle one (the land's
+        // column). Run 38672710744: one tile below, at (437, 281).
         let bottom = try XCTUnwrap(centres.map(\.y).max())
         let row = centres.filter { abs($0.y - bottom) < 1 }.sorted { $0.x < $1.x }
-        let below = try XCTUnwrap(row.count == 3 ? row[1] : nil, "The bottom row: \(row)")
+        let below = row[row.count / 2]
         let origin = map.frame.origin
         let target = CGPoint(x: origin.x + below.x, y: origin.y + below.y)
         XCTAssertFalse(expansion.frame.contains(target), "The tile below the land is under the pill: \(target), \(expansion.frame)")
