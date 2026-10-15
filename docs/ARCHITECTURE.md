@@ -9602,6 +9602,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 | 參考庫 `OpenWorld/reference_snapshot/play/src/world/bridge-blender-visual.js`、`tamkang-bridge.js` | 確認橋梁零件是淡江大橋，這一步不用 |
 
 外部專案：沒有用到（GLB 讀取器查過 cgltf、GLTFKit2、GLTFSceneKit、SwiftGLTF：沒有能在 Linux 跑的純 Swift 版本，下一步改成在電腦上轉檔）。
+
 ### 245. 建造的總價：預覽與「餘額不足」都說整個動作的價錢
 
 玩家回報（2026-10-15）：實景地圖鋪 609 m 的軌道，現金 $128,480，警告卻寫「餘額不足：需要 $124,397，目前只有 $19,256。」，✓ 上也沒有價錢，蓋下去才知道遠不止那個數。
