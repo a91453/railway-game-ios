@@ -531,11 +531,21 @@ public struct GameWorld: Equatable, Sendable {
     /// first part's length); one that would end past its part's rounded
     /// end moves back to end there, its length kept.
     ///
+    /// On a slope (decision 233) the cut must fall on the edge's steady
+    /// grade, not on a vertical curve, and the grade must be no steeper
+    /// than ``TrackProfile/maximumTurnoutGrade``. The new node takes the
+    /// edge's height at the cut (``TrackGeometry/height(at:)``, a whole
+    /// unit); the first part keeps the edge's vertical curve at its `from`
+    /// end, the second the one at its `to` end, so both run on at the
+    /// edge's grade, within the rounding of the node's height.
+    ///
     /// - Throws, checked in this order: ``GameError/unknownTrackEdge(_:)``;
-    ///   ``GameError/invalidTrackGeometry`` for an edge that is not level
-    ///   (a split of a slope is not yet supported), a cut less than
-    ///   ``minimumSplitPiece`` from either end, an edge in a spacing
-    ///   exemption, or parts that would not be edges or not join as it did;
+    ///   ``GameError/invalidTrackGeometry`` for a cut less than
+    ///   ``minimumSplitPiece`` from either end or on a vertical curve, an
+    ///   edge in a spacing exemption, or parts that would not be edges,
+    ///   would be steeper than ``TrackProfile/maximumGrade`` or not join as
+    ///   it did; ``GameError/turnoutTooSteep`` for an edge steeper than
+    ///   ``TrackProfile/maximumTurnoutGrade``;
     ///   ``GameError/trackReserved(_:)`` for the lowest numbered train that
     ///   stands on the edge, has its body on it, will enter it along its
     ///   path or has reserved some of it; ``GameError/trackEdgeHasPlatform(_:)``
@@ -553,11 +563,13 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func splitTrackEdge(_ id: TrackEdgeID, at distance: Int64) throws(GameError) -> TrackNodeID {
         guard let edge = network.edge(id), let geometry = network.geometry(of: id),
               let start = network.node(edge.from), let end = network.node(edge.to) else { throw .unknownTrackEdge(id) }
-        guard start.position.z == end.position.z, edge.profile == .uniform,
-              distance >= Self.minimumSplitPiece, distance <= geometry.length - Self.minimumSplitPiece,
+        guard distance >= Self.minimumSplitPiece, distance <= geometry.length - Self.minimumSplitPiece,
               !network.spacingExemptions.contains(where: { $0.contains(id) }),
-              let cut = Self.split(edge.curve, from: start.position.plan, to: end.position.plan, near: distance)
+              let cut = Self.split(edge.curve, from: start.position.plan, to: end.position.plan, near: distance),
+              // Decision 233: on the steady grade, never on a vertical curve.
+              cut.chainage >= edge.profile.startTransition, cut.chainage <= geometry.length - edge.profile.endTransition
         else { throw .invalidTrackGeometry }
+        guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumTurnoutGrade) else { throw .turnoutTooSteep }
         if let train = trains.first(where: { train in
             if case .onEdge(let traversal, _)? = train.position, traversal.edge == id { return true }
             return train.trailEdges.contains(id) || train.movement.remainingEdges.contains(id)
@@ -577,11 +589,19 @@ public struct GameWorld: Equatable, Sendable {
         }) {
             throw .trackEdgeInLineRoute(line.id)
         }
-        let middle = WorldCoordinate(x: cut.point.x, y: cut.point.y, z: start.position.z)
+        // Decision 233: the new node at the edge's height there, rounded as
+        // the profile rounds it; the first part keeps the vertical curve at
+        // the `from` end, the second the one at the `to` end, so each runs
+        // on at the edge's steady grade. A part left level keeps none.
+        let middle = WorldCoordinate(x: cut.point.x, y: cut.point.y, z: geometry.height(at: cut.chainage))
+        let firstProfile = middle.z == start.position.z ? TrackProfile.uniform : TrackProfile(startTransition: edge.profile.startTransition)
+        let secondProfile = middle.z == end.position.z ? TrackProfile.uniform : TrackProfile(endTransition: edge.profile.endTransition)
         guard isInWorld(middle), !network.hasNode(at: middle),
               cut.first.controlPoints.allSatisfy(bounds.contains), cut.second.controlPoints.allSatisfy(bounds.contains),
-              let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first),
-              let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second)
+              let firstGeometry = TrackGeometry(from: start.position, to: middle, curve: cut.first, profile: firstProfile),
+              let secondGeometry = TrackGeometry(from: middle, to: end.position, curve: cut.second, profile: secondProfile),
+              firstGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade),
+              secondGeometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade)
         else { throw .invalidTrackGeometry }
         // Decision 160: each part is sampled afresh, so it is checked on the
         // company's own ground as an edge built is.
@@ -607,13 +627,13 @@ public struct GameWorld: Equatable, Sendable {
             throw .trackConflict(other)
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
-        let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: .uniform, structure: edge.structure,
+        let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: firstProfile, structure: edge.structure,
                                   sections: firstSections, geometry: firstGeometry, next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
-        let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: .uniform, structure: edge.structure,
+        let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
                                    sections: secondSections, geometry: secondGeometry, next: secondNext)
         // Spacing along the ways of the network with both parts: alone,
         // neither reaches the junction where the edge parted from track

@@ -126,6 +126,9 @@ public enum GameError: Error, Hashable, Sendable {
     /// The edge would be steeper than ``TrackProfile/maximumGrade``
     /// somewhere (Stage S4).
     case trackTooSteep
+    /// A turnout would stand on track steeper than
+    /// ``TrackProfile/maximumTurnoutGrade`` (decision 233).
+    case turnoutTooSteep
     /// The edge's structure cannot carry track at the heights of its ends
     /// (Stage S4; see ``TrackStructure/allows(height:)``).
     case invalidTrackStructure

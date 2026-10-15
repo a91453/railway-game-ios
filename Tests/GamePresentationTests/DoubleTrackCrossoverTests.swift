@@ -96,6 +96,74 @@ final class DoubleTrackCrossoverTests: XCTestCase {
         XCTAssertNotNil(route)
     }
 
+    // MARK: - On a grade (decision 233)
+
+    func testADoubleTrackUpAGradeGetsItsCrossoverOnTheSteadyGrade() throws {
+        // 384 m on from the track's end, climbing 6 m: eased, 20.8‰ on the
+        // steady grade between the vertical curves.
+        let (session, west) = try sessionOnTheTrack()
+        session.networkHeight = 384
+        session.tapNetwork(at: PlanPoint(x: 29_696, y: 8_192), reach: 16)
+        let draft = try XCTUnwrap(session.networkDraftPreview)
+        XCTAssertNil(draft.preview.problem, draft.preview.problem ?? "")
+        XCTAssertNotEqual(draft.preview.startHeight, draft.preview.endHeight, "on a grade")
+        XCTAssertEqual(draft.preview.crossovers.count, 1)
+        XCTAssertEqual(draft.preview.crossoverNote, "A crossover joins the second track to the track it meets.")
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let world = session.world
+        XCTAssertEqual(world.network.edges.count, 6)
+        XCTAssertTrue(try secondTrackReaches(west, from: WorldCoordinate(x: 29_696, y: 7_872, z: 384), in: world))
+        // Its turnouts stand on the slope, past the vertical curve.
+        let sloped = world.network.nodes.filter { $0.ends.count == 3 }
+        XCTAssertEqual(sloped.count, 2)
+        XCTAssertTrue(sloped.allSatisfy { $0.position.z > 0 && $0.position.z < 384 }, "\(sloped.map(\.position))")
+    }
+
+    func testACrossoverIsDrawnBetweenTwoTracksOnAGrade() throws {
+        // The player's report: two tracks side by side up the same slope,
+        // 6 m over 384 m (15.6‰), and a crossover drawn between them.
+        var world = try makeWorld(width: 40_960, height: 16_384, balance: 10_000_000, speed: .paused)
+        var ends: [TrackNodeID] = []
+        for y: Int64 in [8_192, 7_872] {
+            let low = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: y))
+            let high = try world.buildTrackNode(at: WorldCoordinate(x: 25_600, y: y, z: 384))
+            try world.buildTrackEdge(from: low, to: high, structure: .elevated)
+            ends += [low, high]
+        }
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: 8_192), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 12_288, y: 7_872), reach: 16)
+        XCTAssertTrue(session.networkPicksCrossover)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNil(preview.problem, preview.problem ?? "")
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertEqual(session.world.network.edges.count, 2 + 2 + 1)
+        // From the first track's foot over to the second track's top.
+        let foot = try XCTUnwrap(session.world.network.node(ends[0])?.ends.first?.edge)
+        XCTAssertNotNil(session.world.route(from: .onEdge(TrackTraversal(edge: foot, direction: .forward), offset: 0), to: ends[3]))
+    }
+
+    func testACrossoverOnTooSteepAGradeSaysTheLimit() throws {
+        // 12 m over 384 m: 31.3‰, steeper than a turnout may stand on.
+        var world = try makeWorld(width: 40_960, height: 16_384, balance: 10_000_000, speed: .paused)
+        for y: Int64 in [8_192, 7_872] {
+            let low = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: y))
+            let high = try world.buildTrackNode(at: WorldCoordinate(x: 25_600, y: y, z: 768))
+            try world.buildTrackEdge(from: low, to: high, structure: .elevated)
+        }
+        let session = GameSession(world: world)
+        session.selectTool(.network)
+        session.tapNetwork(at: PlanPoint(x: 9_216, y: 8_192), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 12_288, y: 7_872), reach: 16)
+        XCTAssertEqual(
+            session.networkPreview?.problem,
+            "A turnout can stand on a grade of at most 25 in 1000, and this track is steeper. Start from its end, or from gentler track."
+        )
+    }
+
     func testTooShortForACrossoverBuildsTheDoubleTrackAndSaysSo() throws {
         let (session, _) = try sessionOnTheTrack()
         // 64 m: less than 22 m + 50 m + 22 m.
@@ -105,7 +173,7 @@ final class DoubleTrackCrossoverTests: XCTestCase {
         XCTAssertTrue(draft.preview.crossovers.isEmpty)
         XCTAssertEqual(
             draft.preview.crossoverNote,
-            "The second track is not joined to the track it meets: no room for a crossover (too short, or on a grade). Add one by hand."
+            "The second track is not joined to the track it meets: no room for a crossover (too short, or too steep). Add one by hand."
         )
         session.buildNetworkTrack()
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")

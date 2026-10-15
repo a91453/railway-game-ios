@@ -148,14 +148,98 @@ final class TrackSplitTests: XCTestCase {
             try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(1), direction: .forward), offset: 100))
             try world.setTrainContinuation(train, along: [TrackTraversal(edge: .edge(2), direction: .forward)])
         }
-        // A sloping edge is not yet split.
-        var sloped = try makeWorld(width: 40_960, height: 20_480, balance: 1_000_000)
-        let low = try sloped.buildTrackNode(at: west)
-        let high = try sloped.buildTrackNode(at: WorldCoordinate(x: right.x, y: right.y, z: 64))
-        try sloped.buildTrackEdge(from: low, to: high)
-        let before = sloped
-        XCTAssertThrowsGameError(try sloped.splitTrackEdge(.edge(1), at: 4_096), .invalidTrackGeometry)
-        XCTAssertEqual(sloped, before)
+        // Decision 233: a slope steeper than a turnout may stand on.
+        var steep = try slope(rise: 512)
+        let before = steep
+        XCTAssertThrowsGameError(try steep.splitTrackEdge(.edge(1), at: 4_096), .turnoutTooSteep)
+        XCTAssertEqual(steep, before)
+        // On a vertical curve.
+        var curved = try slope(rise: 256, profile: TrackProfile(startTransition: 2_048, endTransition: 2_048))
+        let unchanged = curved
+        XCTAssertThrowsGameError(try curved.splitTrackEdge(.edge(1), at: 1_024), .invalidTrackGeometry)
+        XCTAssertThrowsGameError(try curved.splitTrackEdge(.edge(1), at: 16_384 - 1_024), .invalidTrackGeometry)
+        XCTAssertEqual(curved, unchanged)
+    }
+
+    // MARK: - On a slope (decision 233)
+
+    /// One elevated edge, `.edge(1)`, 16,384 units (256 m) long from
+    /// `west` at height 0 up `rise`, with `profile`.
+    private func slope(rise: Int64, profile: TrackProfile = .uniform) throws -> GameWorld {
+        var world = try makeWorld(width: 40_960, height: 20_480, balance: 1_000_000)
+        let low = try world.buildTrackNode(at: west)
+        let high = try world.buildTrackNode(at: WorldCoordinate(x: right.x, y: right.y, z: rise))
+        try world.buildTrackEdge(from: low, to: high, profile: profile, structure: .elevated)
+        return world
+    }
+
+    func testASteadySlopeSplitsIntoTwoAtTheSameGrade() throws {
+        // 256 up over 16,384: 15.6‰.
+        var world = try slope(rise: 256)
+        let node = try world.splitTrackEdge(.edge(1), at: 4_096)
+        XCTAssertEqual(world.network.node(node)?.position, WorldCoordinate(x: 6_144, y: 10_240, z: 64), "on the slope, at its height")
+        let first = try XCTUnwrap(world.trackGeometry(of: .edge(2))), second = try XCTUnwrap(world.trackGeometry(of: .edge(3)))
+        XCTAssertEqual(first.length, 4_096)
+        XCTAssertEqual(second.length, 12_288)
+        XCTAssertEqual([first.startHeight, first.endHeight, second.startHeight, second.endHeight], [0, 64, 64, 256])
+        XCTAssertEqual(first.steepestGrade, TrackGrade(rise: 1, run: 64))
+        XCTAssertEqual(second.steepestGrade, TrackGrade(rise: 1, run: 64))
+        XCTAssertEqual(world.network.edge(.edge(2))?.structure, .elevated)
+        XCTAssertEqual(exits(of: .edge(2), at: node, in: world), [.edge(3)])
+
+        // A train runs up through it.
+        let train = try world.purchaseTrain(named: "T").id
+        try world.placeTrain(train, at: .onEdge(TrackTraversal(edge: .edge(2), direction: .forward), offset: 0))
+        try world.setTrainContinuation(train, along: [TrackTraversal(edge: .edge(3), direction: .forward)])
+        try world.setTrainMovementRate(train, to: 30_000)
+        world.setSpeed(.normal)
+        try world.advance(ticks: 1)
+        guard case .onEdge(let traversal, _)? = world.train(id: train)?.position else { return XCTFail("placed") }
+        XCTAssertEqual(traversal.edge, .edge(3))
+
+        // And a turnout branches from the new node, on the level.
+        let branchEnd = try world.buildTrackNode(at: WorldCoordinate(x: 14_336, y: 14_336, z: 64))
+        let branch = try world.buildTrackEdge(
+            from: node, to: branchEnd, curve: .cubic(PlanPoint(x: 8_192, y: 10_240), PlanPoint(x: 10_240, y: 14_336)), structure: .elevated)
+        XCTAssertEqual(Set(exits(of: .edge(2), at: node, in: world)), [.edge(3), branch])
+
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(world)), world)
+    }
+
+    func testACutBetweenWholeHeightsRoundsAndKeepsTheGradeClose() throws {
+        // 4,097 along: 64.016 up, rounded to 64.
+        var world = try slope(rise: 256)
+        let node = try world.splitTrackEdge(.edge(1), at: 4_097)
+        XCTAssertEqual(world.network.node(node)?.position.z, 64)
+        let first = try XCTUnwrap(world.trackGeometry(of: .edge(2))), second = try XCTUnwrap(world.trackGeometry(of: .edge(3)))
+        XCTAssertEqual(first.length + second.length, 16_384)
+        // Each part's grade within a thousandth (1‰) of the edge's.
+        for part in [first, second] {
+            let grade = part.steepestGrade
+            let difference = abs(grade.rise * 64 - grade.run) * 1_000
+            XCTAssertLessThanOrEqual(difference, grade.run * 64, "\(grade)")
+        }
+    }
+
+    func testASplitOnTheSteadyGradeBetweenVerticalCurvesKeepsThem() throws {
+        let profile = TrackProfile(startTransition: 2_048, endTransition: 2_048)
+        var world = try slope(rise: 256, profile: profile)
+        let original = try XCTUnwrap(world.trackGeometry(of: .edge(1)))
+        try world.splitTrackEdge(.edge(1), at: 8_192)
+        XCTAssertEqual(world.network.edge(.edge(2))?.profile, TrackProfile(startTransition: 2_048))
+        XCTAssertEqual(world.network.edge(.edge(3))?.profile, TrackProfile(endTransition: 2_048))
+        let first = try XCTUnwrap(world.trackGeometry(of: .edge(2))), second = try XCTUnwrap(world.trackGeometry(of: .edge(3)))
+        XCTAssertEqual(first.endHeight, original.height(at: 8_192))
+        // The parts follow the edge's profile, within the unit each rounds to.
+        for distance in stride(from: Int64(0), through: 16_384, by: 256) {
+            let height = distance <= 8_192 ? first.height(at: distance) : second.height(at: distance - 8_192)
+            XCTAssertLessThanOrEqual(abs(height - original.height(at: distance)), 1, "at \(distance)")
+        }
+        XCTAssertEqual(first.steepestGrade, original.steepestGrade)
+        XCTAssertEqual(second.steepestGrade, original.steepestGrade)
+        // The cut may fall exactly where a curve ends.
+        var atEnd = try slope(rise: 256, profile: profile)
+        try atEnd.splitTrackEdge(.edge(1), at: 2_048)
     }
 
     func testALinesChosenPathKeepsItsTrack() throws {

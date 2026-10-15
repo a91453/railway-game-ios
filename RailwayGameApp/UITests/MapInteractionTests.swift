@@ -1143,6 +1143,45 @@ final class MapInteractionTests: XCTestCase {
                       file: file, line: line)
     }
 
+    /// Decision 221: the line panel lists a line's depots with a tick
+    /// each, within reach of a finger, and a tap ticks or unticks one. The
+    /// depots scene (`ScreenshotScene.depots`) is the demo map with two
+    /// depots, Line 1 at the west one. Full lane only (decision 199): what
+    /// the list holds and what a tap does is `DepotToolsTests` on Linux.
+    func testTheLinePanelTicksALinesDepot() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-screenshot-scene", "depots", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The scene opens")
+
+        let lines = app.buttons["entry.lines"]
+        XCTAssertTrue(lines.appears(within: 10))
+        lines.waitUntilSettled()
+        lines.tap()
+        let bar = app.navigationBars["Lines"].firstMatch
+        XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
+        bar.waitUntilSettled()
+        // Drags on the panel's own list, beside the map (`ToolbarSmokeTests`).
+        let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
+        let line = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.trainsRow.1")).firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(line, in: list), "Line 1's row must come into reach")
+        line.tap()
+
+        let depots = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.depot."))
+        let depot = depots.firstMatch
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(depot, in: list), "The line's depots must come into reach")
+        XCTAssertTrue(depot.becomesHittable(within: 10))
+        XCTAssertEqual(depots.count, 2, "Both depots are listed")
+        let ticked = depot.isSelected
+        depot.tap()
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == %@", NSNumber(value: !ticked)), object: depot)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 10), .completed, "A tap must \(ticked ? "untick" : "tick") the depot")
+    }
+
     /// Decision 214: the network tool's fifth mode, Depot, shows how many
     /// sidings to lay, within reach of a finger on a phone. Full lane only
     /// (decision 199): the tool's logic is `DepotToolsTests` on Linux.

@@ -33,4 +33,25 @@ final class ScreenshotSceneTests: XCTestCase {
         XCTAssertTrue(world.stations.contains { world.isShortOfMaterials($0.id) }, "a station is short of building materials")
         XCTAssertTrue(world.lines.filter { !$0.isFreight }.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
     }
+
+    /// The depots scene: the demo map with two depots, Line 1 keeping its
+    /// trains at the west one, so the line panel lists both, nearest first,
+    /// and ticks the west one.
+    func testTheDepotsSceneGivesLineOneTwoDepotsToTick() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.openScreenshotScene(.depots).value
+        let session = try XCTUnwrap(launcher.session, "the launcher plays the scene")
+        XCTAssertEqual(session.world.clock.speed, .paused)
+        let depots = session.world.stations.filter(\.isDepot)
+        XCTAssertEqual(depots.map(\.name), ["西機廠", "東機廠"])
+        let line = try XCTUnwrap(session.world.lines.first)
+        XCTAssertEqual(line.depots, [depots[0].id])
+        session.selectLine(line.id)
+        let row = try XCTUnwrap(session.selectedLineDepotRow)
+        XCTAssertEqual(row.choices.map(\.name), ["西機廠", "東機廠"])
+        XCTAssertEqual(row.choices.map(\.isChosen), [true, false])
+        XCTAssertTrue(session.world.lines.allSatisfy { !$0.assignedTrains.isEmpty }, "the demo's lines still run")
+    }
 }

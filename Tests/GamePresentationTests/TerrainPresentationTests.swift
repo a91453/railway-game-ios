@@ -293,17 +293,37 @@ final class TerrainPresentationTests: XCTestCase {
         return (dx * dx + dy * dy).squareRoot()
     }
 
-    /// A turnout on track that climbs: the network tool says GameCore
-    /// splits level track only, rather than its general refusal.
-    func testATurnoutOnAGradeSaysWhy() throws {
+    /// A turnout on track that climbs gently (decision 233): the branch
+    /// leaves the middle of the slope, at its height there.
+    func testATurnoutOnAGentleGradeBranchesFromTheSlope() throws {
         let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
         session.buildNetworkTrack()
+        let slope = try XCTUnwrap(session.world.trackGeometry(of: XCTUnwrap(session.world.network.edges.first?.id)))
+        XCTAssertNotEqual(slope.startHeight, slope.endHeight)
         session.clearNetworkDraft()
         session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row), reach: 16)
         session.tapNetwork(at: PlanPoint(x: 9_216, y: Self.row + 4_096), reach: 16)
+        XCTAssertNil(session.networkPreview?.problem, session.networkPreview?.problem ?? "")
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let turnout = try XCTUnwrap(session.world.network.nodes.first { $0.ends.count == 3 })
+        XCTAssertTrue((slope.startHeight + 1..<slope.endHeight).contains(turnout.position.z), "\(turnout.position)")
+    }
+
+    /// Where the track's grade is still changing, near the end of an eased
+    /// slope, the network tool says why rather than GameCore's general
+    /// refusal.
+    func testATurnoutOnAVerticalCurveSaysWhy() throws {
+        let session = preview(try world(columns: [10, 15]), from: 1_024, to: 17_408)
+        session.buildNetworkTrack()
+        let edge = try XCTUnwrap(session.world.network.edges.first)
+        XCTAssertGreaterThan(edge.profile.startTransition, 2_048, "eased")
+        session.clearNetworkDraft()
+        session.tapNetwork(at: PlanPoint(x: 2_560, y: Self.row), reach: 16)
+        session.tapNetwork(at: PlanPoint(x: 4_096, y: Self.row + 4_096), reach: 16)
         XCTAssertEqual(
             session.networkPreview?.problem,
-            "A turnout goes on level track only, and this track climbs or falls. Start from its end, or from level track."
+            "A turnout can't stand where the track's grade is changing, near this end of the slope. Pick a point farther along, or start from its end."
         )
     }
 
