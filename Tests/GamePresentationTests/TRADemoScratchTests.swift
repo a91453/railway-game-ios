@@ -42,8 +42,12 @@ final class TRADemoScratchTests: XCTestCase {
                         if tracks.crossovers.contains(e) { return "crossover" }
                         return "?"
                     }
-                    let km = tracks.down.firstIndex(of: tr.edge).map { layout.plan.distances[$0] / 64_000 } ?? tracks.upInOrder.firstIndex(of: tr.edge).map { layout.up.distances[$0] / 64_000 } ?? -1
-                    print("STUCK \(minute / 60):\(minute % 60) \(t.name) \(kind(tr.edge)) \(tr.edge) \(tr.direction) off \(off) km \(km) exec \(String(describing: t.execution)) rem \(t.movement.remainingEdges.count) end \(String(describing: t.movement.end)) rate \(t.movement.rate) ahead \(t.movement.remainingEdges.prefix(3).map(kind))")
+                    var km: Double = -1
+                    if let i = tracks.down.firstIndex(of: tr.edge) { km = layout.plan.distances[i] / 64_000 }
+                    if let i = tracks.upInOrder.firstIndex(of: tr.edge) { km = layout.up.distances[i] / 64_000 }
+                    let exec: String = String(describing: t.execution)
+                    let ahead: [String] = t.movement.remainingEdges.prefix(3).map { kind($0) }
+                    print("STUCK \(minute / 60):\(minute % 60) \(t.name) \(kind(tr.edge)) \(tr.edge) \(tr.direction) off \(off) km \(km) exec \(exec) rem \(t.movement.remainingEdges.count) end \(String(describing: t.movement.end)) rate \(t.movement.rate) ahead \(ahead)")
                 }
             }
             if minute % 60 == 0, minute <= 1_440 {
