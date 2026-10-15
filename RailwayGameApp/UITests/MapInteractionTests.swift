@@ -134,7 +134,9 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(map.appears(within: 10))
         let stations = app.descendants(matching: .any)["map.stations"].firstMatch
         XCTAssertTrue(stations.appears(within: 10))
-        let buttons = [app.buttons["Zoom in"], app.buttons["Zoom out"], app.buttons["map.layers"]]
+        // The layer strip's More, where the round layers button was until
+        // decision 226 (2026-10-15) left the list one way in.
+        let buttons = [app.buttons["Zoom in"], app.buttons["Zoom out"], app.buttons["map.quickLayer.more"]]
         for button in buttons { XCTAssertTrue(button.appears(within: 10), "\(button)") }
         // The buttons are measured after the first layout, and the camera
         // opens again clear of them: give it the time.
@@ -553,8 +555,10 @@ final class MapInteractionTests: XCTestCase {
         }
         XCTAssertTrue(resume.appears(within: 5), "Pause must pause the game")
 
-        let layersButton = app.buttons["map.layers"]
-        XCTAssertTrue(layersButton.appears(within: 10), "Map layers button must be visible on the map")
+        // The layer strip's More opens the list (decision 226, 2026-10-15:
+        // the round layers button only while the strip does not show).
+        let layersButton = app.buttons["map.quickLayer.more"]
+        XCTAssertTrue(layersButton.appears(within: 10), "The layer strip's More must be visible over the map")
         layersButton.tap()
 
         let stationNamesToggle = app.switches["layer.stationNames"]
@@ -629,7 +633,7 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(pause.appears(within: 10))
         pause.tap()
 
-        let layersButton = app.buttons["map.layers"]
+        let layersButton = app.buttons["map.quickLayer.more"]
         XCTAssertTrue(layersButton.appears(within: 10))
         layersButton.tap()
 

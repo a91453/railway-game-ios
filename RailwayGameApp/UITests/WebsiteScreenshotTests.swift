@@ -174,7 +174,7 @@ final class WebsiteScreenshotTests: XCTestCase {
             done.tap()
             settle()
         }
-        let layers = app.buttons["map.layers"]
+        let layers = app.buttons["map.quickLayer.more"]
         layers.waitUntilSettled()
         layers.tap()
         // The layer is the last of the sheet's rows, below long notes: the

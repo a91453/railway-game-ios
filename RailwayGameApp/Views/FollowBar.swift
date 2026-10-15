@@ -19,89 +19,63 @@ struct FollowBar: View {
     var body: some View {
         let language = session.language
         let info = session.world.followBarInfo(of: train.id, in: language)
-        HStack(spacing: 9) {
-            // Decision 216: the train's line by its badge; a dot when it
-            // runs on none.
-            if let line = info?.line {
-                LineCodeBadge(
-                    code: LineBadge.codes(for: session.world.lines)[line] ?? "",
-                    color: Palette.lineColor(line, custom: session.world.line(id: line)?.color),
-                    size: .small
-                )
-            } else {
-                Circle()
-                    .fill(Palette.train)
-                    .frame(width: 9, height: 9)
-            }
-
-            Text(verbatim: train.name)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.textPrimary)
-                .monospacedDigit()
-
-            // Decision 223: a train on a trip shows its times with the
-            // arrival struck through when late, a status in words and, on
-            // a wide screen, the trip's bar.
-            let card = session.world.trainCard(of: train.id, in: language)
-            if let detail = info?.detail(in: language, times: card == nil), !detail.isEmpty {
-                Text(verbatim: detail)
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-            }
-            if let card {
-                if horizontalSizeClass == .regular {
-                    TrainTripProgressBar(progress: card.progress, height: 6, marker: 16)
-                        .frame(width: 72)
-                }
-                HStack(spacing: 3) {
-                    Text(verbatim: card.departure.clockText + "–")
+        let card = session.world.trainCard(of: train.id, in: language)
+        // Decision 226 (2026-10-15): beside the layer strip, the room left
+        // before the details card, which says the trip in full: the widest
+        // of these that fits, the name never broken over lines, down to the
+        // badge, the speeds and the stop.
+        ViewThatFits(in: .horizontal) {
+            row {
+                badge(info)
+                name
+                if let detail = info?.detail(in: language, times: card == nil), !detail.isEmpty {
+                    Text(verbatim: detail)
+                        .font(.footnote.monospacedDigit())
                         .foregroundStyle(Theme.textPrimary)
-                    LateTimeText(scheduled: card.arrival.clockText, expected: card.isLate ? card.expectedArrival.clockText : nil)
-                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
                 }
-                .font(.footnote.monospacedDigit())
-                .lineLimit(1)
-                .fixedSize()
-                TrainStatusCapsule(card: card, language: language)
-            }
-
-            Spacer(minLength: 4)
-
-            // Decision 195: real time or ten times it, one tap each, through
-            // the speed the speed menu sets; following stops without
-            // changing it back.
-            let clock = session.world.clock
-            ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
-                let isCurrent = !clock.isPaused && clock.speed == speed
-                Button {
-                    session.setSpeed(speed)
-                } label: {
-                    Text(verbatim: speed.label(in: language))
-                        .font(.caption.weight(.bold))
-                        .monospacedDigit()
+                if let card {
+                    if horizontalSizeClass == .regular {
+                        TrainTripProgressBar(progress: card.progress, height: 6, marker: 16)
+                            .frame(width: 72)
+                    }
+                    times(card)
+                    TrainStatusCapsule(card: card, language: language)
                 }
-                .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
-                .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
-                .accessibilityAddTraits(isCurrent ? .isSelected : [])
-                .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+                speeds
+                unfollow(short: false)
             }
-
-            Button {
-                onUnfollow()
-            } label: {
-                Text(verbatim: unfollowText)
-                    .font(.caption.weight(.bold))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .background(Theme.error, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .foregroundStyle(Theme.onError)
+            row {
+                badge(info)
+                name
+                if let card {
+                    times(card)
+                    TrainStatusCapsule(card: card, language: language)
+                }
+                speeds
+                unfollow(short: true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(verbatim: unfollowText))
-            .accessibilityIdentifier("train.unfollow")
+            row {
+                badge(info)
+                name
+                speeds
+                unfollow(short: true)
+            }
+            row {
+                badge(info)
+                speeds
+                unfollow(short: true)
+            }
         }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func row(@ViewBuilder _ content: () -> some View) -> some View {
+        HStack(spacing: 9) {
+            content()
+        }
+        .fixedSize()
         .padding(.horizontal, 13)
         .padding(.vertical, 6)
         .glassBackground(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -109,8 +83,92 @@ struct FollowBar: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(Theme.panelBorder, lineWidth: 1)
         )
-        .padding(.horizontal, 12)
-        .accessibilityElement(children: .contain)
+    }
+
+    /// Decision 216: the train's line by its badge; a dot when it runs on
+    /// none.
+    @ViewBuilder
+    private func badge(_ info: FollowBarInfo?) -> some View {
+        if let line = info?.line {
+            LineCodeBadge(
+                code: LineBadge.codes(for: session.world.lines)[line] ?? "",
+                color: Palette.lineColor(line, custom: session.world.line(id: line)?.color),
+                size: .small
+            )
+        } else {
+            Circle()
+                .fill(Palette.train)
+                .frame(width: 9, height: 9)
+        }
+    }
+
+    private var name: some View {
+        Text(verbatim: train.name)
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(Theme.textPrimary)
+            .monospacedDigit()
+            .lineLimit(1)
+    }
+
+    /// Decision 223: the trip's times, the arrival struck through when late.
+    private func times(_ card: TrainCard) -> some View {
+        HStack(spacing: 3) {
+            Text(verbatim: card.departure.clockText + "–")
+                .foregroundStyle(Theme.textPrimary)
+            LateTimeText(scheduled: card.arrival.clockText, expected: card.isLate ? card.expectedArrival.clockText : nil)
+                .foregroundStyle(Theme.textPrimary)
+        }
+        .font(.footnote.monospacedDigit())
+        .lineLimit(1)
+    }
+
+    /// Decision 195: real time or ten times it, one tap each, through the
+    /// speed the speed menu sets; following stops without changing it back.
+    private var speeds: some View {
+        let language = session.language
+        let clock = session.world.clock
+        return ForEach(FollowBarInfo.speedShortcuts, id: \.self) { speed in
+            let isCurrent = !clock.isPaused && clock.speed == speed
+            Button {
+                session.setSpeed(speed)
+            } label: {
+                Text(verbatim: speed.label(in: language))
+                    .font(.caption.weight(.bold))
+                    .monospacedDigit()
+            }
+            .buttonStyle(FollowSpeedButtonStyle(isCurrent: isCurrent))
+            .accessibilityLabel(Text(verbatim: speed.accessibilityName(in: language)))
+            .accessibilityAddTraits(isCurrent ? .isSelected : [])
+            .accessibilityIdentifier("follow.speed.\(speed.rawValue)")
+        }
+    }
+
+    /// The stop, in words where there is room, else a cross.
+    private func unfollow(short: Bool) -> some View {
+        Button {
+            onUnfollow()
+        } label: {
+            Group {
+                if short {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.heavy))
+                        .frame(width: 26, height: 26)
+                        .background(Theme.error, in: Circle())
+                } else {
+                    Text(verbatim: unfollowText)
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(Theme.error, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+            .foregroundStyle(Theme.onError)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: unfollowText))
+        .accessibilityIdentifier("train.unfollow")
     }
 
     /// The site's `取消跟隨` ("Stop following" in its translations).

@@ -24,6 +24,11 @@ extension EnvironmentValues {
     /// screen's edges, beside the column, rather than above the bottom
     /// inset. `nil`: above it, as over the dock.
     @Entry var mapLeadingRowFoot: CGFloat?
+    /// Whether the layer strip shows under the status pill (decision 224's
+    /// 5B): the map's round layers button opens the same list, so it shows
+    /// only while the strip does not (the tutorial, an iPad's building
+    /// tools; decision 226, 2026-10-15).
+    @Entry var mapShowsLayerStrip = false
 }
 
 extension EdgeInsets {
@@ -139,6 +144,7 @@ struct MapView: View {
     /// What floats over the map (``EnvironmentValues/mapInsets``).
     @Environment(\.mapInsets) private var insets
     @Environment(\.mapLeadingRowFoot) private var leadingRowFoot
+    @Environment(\.mapShowsLayerStrip) private var showsLayerStrip
     @Environment(\.mapTrailingInsetDepth) private var trailingInsetDepth
     @Environment(\.mapSafeArea) private var safeArea
     /// The height of the bottom-trailing buttons and key, with their margin.
@@ -510,18 +516,12 @@ struct MapView: View {
                 .clipped()
                 .overlay(alignment: .top) {
                     // One column down the top of the map, so none covers
-                    // another: the status banner, the train follow bar when
-                    // active, then the construction HUD while a stretch is previewed,
+                    // another: the status banner (the follow bar stands in
+                    // the row above, ``ContentView``, decision 226), then
+                    // the construction HUD while a stretch is previewed,
                     // or else the traffic key at the leading edge.
                     VStack(spacing: 0) {
                         StatusBanner(session: session)
-                        if let train = session.followedTrain {
-                            FollowBar(train: train, session: session) {
-                                session.stopFollowingTrain()
-                            }
-                            .padding(.top, 8)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                        }
                         if showsConstructionHUD, let preview = session.networkPreview {
                             MapConstructionHUD(preview: preview, language: session.language)
                                 .padding(.top, 12)
@@ -602,8 +602,15 @@ struct MapView: View {
                     .animation(.easeInOut(duration: 0.2), value: trailingInsetDepth)
                 }
                 .overlay(alignment: .bottomLeading) {
-                    HStack(spacing: 8) {
-                        mapLayersButton
+                    // On a phone's bottom row, one above the other beside the
+                    // station master (decision 226, 2026-10-15, the owner).
+                    let rowLayout = leadingRowFoot == nil
+                        ? AnyLayout(HStackLayout(spacing: 8))
+                        : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    rowLayout {
+                        if !showsLayerStrip {
+                            mapLayersButton
+                        }
                         if let realWorld {
                             mapStyleMenu(realWorld)
                         }
