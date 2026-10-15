@@ -1,25 +1,11 @@
+import Foundation
+
 // Decision 235: the shapes the city's buildings are put together from,
 // beyond the box: pitched and hipped roofs, sawtooth roofs, cylinders
 // (tanks, chimneys, towers). Each is a handful of faces: the 3D map draws
 // thousands of buildings at once.
 
 extension Map3DMesh {
-    /// A flat face through `corners` (three or more, counter-clockwise seen
-    /// from the side it faces), cut as a fan from the first.
-    public mutating func addFacet(_ corners: [Map3DPoint], color: UInt32, paint: Map3DPaint? = nil) {
-        guard corners.count >= 3, let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { return }
-        let layer = paint.map { Float($0.surface.rawValue) } ?? Map3DVertex.plain
-        let texture = paint?.coordinates(corners, normal: normal)
-        let base = UInt32(vertices.count)
-        for (index, corner) in corners.enumerated() {
-            let place: (u: Float, v: Float) = texture?[index] ?? (0, 0)
-            vertices.append(Map3DVertex(corner, normal: normal, color: color, u: place.u, v: place.v, layer: layer))
-        }
-        for index in 1..<UInt32(corners.count - 1) {
-            indices += [base, base + index, base + index + 1]
-        }
-    }
-
     /// A pitched roof over a `length` × `width` box whose walls stop at
     /// `base` (the middle of the box's top): the ridge along `forward`,
     /// `rise` above the eaves, the eaves `overhang` past the walls all
