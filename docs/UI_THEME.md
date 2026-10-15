@@ -158,6 +158,7 @@ PR：#187（配色與 HUD）、#190／#192（地圖為主的玻璃版面）、#1
 | `house`、`shop`、`office`、`wharf`、`marina`、`departmentStore`、`hotel`、`amusementPark` | 玩家建物（14 點以上；小一點的建物在 16 m ≥ 6 點時畫成 14 點的徽章，決策 205），建築工具的種類按鈕 | 建物上 `buildingGlyph`（#262C57）；按鈕上跟著按鈕的字色 | 建物上 8.69（對 `playerBuilding`） |
 | `train` | 路線示意條的列車（路線色的圓上） | 白 | 跟路線色 |
 | `typhoon` | 颱風經過的車站（決策 182）：`land` 圓、`ink` 外框，圖示 `ink` | `ink` | 11.47／9.64 |
+| `request`（旗子） | 城市委託指著的地方（決策 246）：`Theme.panel` 圓、2 點 `primary` 外框，圖示 `primary`；「在地圖上看」指出的那件換成 `primary` 圓、圖示 `onPrimary`，新車站的委託再加 800 m 的虛線圈（`primary` 10% 底）；狀態列按鈕的圖示 `primary`，有可承接的新委託時 `warning`，件數徽章 `primary` 底 `onPrimary` 字 | `primary`／`onPrimary` | 5.50／6.03（`primary` 對 `panel`）；`warning` 5.86／6.33 |
 
 ### 看得見問題的標記（決策 210）
 

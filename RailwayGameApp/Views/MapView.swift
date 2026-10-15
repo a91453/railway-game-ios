@@ -668,6 +668,10 @@ struct MapView: View {
                 .overlay(alignment: .topLeading) {
                     MapAttractionMarks(session: session, camera: projection, viewport: viewport, insets: clear)
                 }
+                // Decision 246: where the city's requests point.
+                .overlay(alignment: .topLeading) {
+                    MapRequestMarks(session: session, camera: projection, viewport: viewport, insets: clear)
+                }
                 // Decision 119: the station selected, looked at.
                 .overlay(alignment: .topLeading) {
                     MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear)

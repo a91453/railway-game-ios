@@ -263,6 +263,8 @@ enum MapGlyph: String {
     case warningSolid = "MapGlyphWarningSolid"
     /// A sight's rating (decision 174).
     case star = "MapGlyphStar"
+    /// Decision 246: where a city's request points, a flag.
+    case request = "MapGlyphRequest"
     /// Decision 182: a typhoon blows over the station, the weather map's
     /// typhoon sign.
     case typhoon = "MapGlyphTyphoon"

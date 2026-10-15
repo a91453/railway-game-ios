@@ -53,6 +53,38 @@ final class MapInteractionTests: XCTestCase {
         }
     }
 
+    /// Decision 246 (a player's report: no guide to where a city's request
+    /// is): the status bar's button opens the requests, and "Show on map"
+    /// takes the camera to where one points, flagged, with its card.
+    func testARequestShownOnTheMapIsFlaggedThere() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-city-requests", "-ui-testing-paused",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let requests = app.buttons["hud.requests"]
+        XCTAssertTrue(requests.appears(within: 5), "the status bar's requests button")
+        requests.tap()
+        let show = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'requests.show.'")).firstMatch
+        XCTAssertTrue(app.buttons["goals.done"].appears(within: 5), "the requests open")
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(show), "a request's Show on map never came into reach")
+        show.tap()
+        let flag = app.buttons["map.request.focus"]
+        XCTAssertTrue(flag.appears(within: 5), "the request is flagged on the map")
+        XCTAssertTrue(flag.becomesHittable(within: 5))
+        // The camera went there: the flag stands near the map's middle.
+        let middle = CGPoint(x: map.frame.midX, y: map.frame.midY)
+        XCTAssertLessThan(abs(flag.frame.midX - middle.x), map.frame.width * 0.3, "flag at \(flag.frame), map \(map.frame)")
+        XCTAssertLessThan(abs(flag.frame.midY - middle.y), map.frame.height * 0.3, "flag at \(flag.frame), map \(map.frame)")
+        let card = app.descendants(matching: .any)["map.request.card"].firstMatch
+        XCTAssertTrue(card.appears(within: 5), "its card says how far it has come")
+        app.buttons["map.request.card.close"].tap()
+        XCTAssertTrue(card.disappears(within: 5))
+    }
+
     /// TestFlight 56.1: a train tapped with no tool chosen can be followed
     /// from the details card, as from the train tool.
     func testTheDetailsCardFollowsATappedTrain() {
