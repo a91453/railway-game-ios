@@ -20,6 +20,8 @@ struct SettingsView: View {
     var session: GameSession? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var cityViewArea: CityViewArea?
+    /// Decision 229: whether the game's own 3D map is open.
+    @State private var showsMap3D = false
     /// Whether the game's website is open (decision 163), in Safari's view
     /// in the app.
     @State private var showsWebsite = false
@@ -57,12 +59,20 @@ struct SettingsView: View {
                     eventsSection(session)
                     secretarySection(session.language)
                 }
+                if let session {
+                    map3DSection(session)
+                }
                 previewSection
                 aboutSection
             }
             .listStyle(.insetGrouped)
             .fullScreenCover(item: $cityViewArea) { area in
                 CityView3D(area: area, close: { cityViewArea = nil })
+            }
+            .fullScreenCover(isPresented: $showsMap3D) {
+                if let session {
+                    Map3DPreviewScreen(session: session, close: { showsMap3D = false })
+                }
             }
             .sheet(isPresented: $showsHelp) {
                 HelpView(language: .app)
@@ -207,6 +217,28 @@ struct SettingsView: View {
             Text(verbatim: language.text(
                 "The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log. Applies to every game on this device.",
                 "颱風預警、目標達成、現金轉為負債、挑戰剩不到 7 天時，遊戲會自動暫停。每 30 天有一張月報，和上個月比較；月報一定會記在新聞紀錄裡。套用到這台裝置上的每一局。"
+            ))
+        }
+    }
+
+    /// Decision 229, step 1: this game's railway and town in native 3D.
+    private func map3DSection(_ session: GameSession) -> some View {
+        let language = DisplayLanguage.app
+        return Section {
+            Button {
+                showsMap3D = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("3D Map of This Game", "這一局的 3D 地圖"))
+                } icon: {
+                    Image(systemName: "view.3d")
+                }
+            }
+            .accessibilityIdentifier("settings.map3D")
+        } footer: {
+            Text(verbatim: language.text(
+                "See your own railway, trains and town in 3D. Pinch closer and the map tilts. The number in the corner shows how smoothly it runs on this device.",
+                "用 3D 看你自己的鐵路、列車與城鎮。兩指拉近，地圖就會傾斜。角落的數字是這台裝置跑起來的流暢度。"
             ))
         }
     }

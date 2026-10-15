@@ -8470,6 +8470,98 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 左手拿手機時，「建設」在不在拇指範圍內；
 - 看板的字在 Liquid Glass 上的對比。
 
+### 229. 原生 3D 地圖第一步：Metal，讀遊戲狀態，先在實機量
+
+2026-10-15。作者：「我不想做網頁 我想做原生的」（NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」）。這取代 `docs/research/3D_DIRECTION_STUDY.md` §1 第 6 點的建議（在 WKWebView 裡用網頁畫 3D）。網站的 3D 城市（決策 152、163）照舊留在網站，App 的 3D 從這裡開始是原生的。號碼依工作登記 #231：決策 229（228 由高鐵示範疊車登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
+
+**引擎**：自己寫 Metal（MetalKit 的 `MTKView`）。
+
+| 選項 | 為什麼沒選或選了 |
+| --- | --- |
+| **Metal（選定）** | iOS 17 就能用 instancing、自訂頂點格式、一個 pipeline 畫全部。正好是畫風定案要的做法（`docs/art/3d-style-2026-10-13/README.md` 效能估計：頂點色、整個城市一個材質、依分塊合併、人車用 instancing、遠近分級）。沒有新的依賴 |
+| RealityKit | iOS 17 沒有 `LowLevelMesh`（iOS 18）也沒有 GPU instancing（`MeshInstancesComponent`，iOS 26）；要拉高最低版本，或在 iOS 17 上一棟一個 entity。它預設的 PBR 光線也和扁平的微縮模型感相反 |
+| SceneKit | Apple 2025 年起只做維護（soft-deprecated），不再加新功能 |
+| WKWebView 裡的網頁 3D | 作者不要 |
+
+四個角度：
+- 玩家：3D 是自己蓋的鐵路與城鎮，不是示範畫面；拉近就傾斜，和 2D 地圖是同一張圖。
+- 開發：幾何全部在 GamePresentation 用純 Swift 算，Linux 上測得到；App 只上傳與畫。沒有新依賴，最低版本不變。
+- 美術：照 F 台灣版＋的骨架：頂點色、透天厝、騎樓、水塔、玩家建物暖黃加藏青屋頂邊（README 提到要用形狀分開玩家建物與城市辦公樓）。
+- 音樂：無。
+
+**做了什麼**（第一步：讀遊戲狀態的原型，從設定的「這一局的 3D 地圖」打開）：
+
+1. **GamePresentation**（純 Swift，Linux 測試 `Map3DTests`）：
+   - `Map3DGeometry.swift`：頂點格式（28 bytes：位置、法線、RGBA）、方塊與沿線帶狀面、4×4 矩陣、rail-3d 的 `randomAt` 雜湊。
+   - `Map3DScene.swift`：從 `GameWorld` 推導靜態場景，依 512 m 分塊合併成一個網格。內容：
+     - 地面：64 m 一格，高度讀 `groundHeight`；水域。
+     - 軌道：依 `sectionSpans` 分路基、路堤、高架、橋、隧道。隧道不畫，洞口畫一個門框。
+     - 橋墩：每 32 m 一座。
+     - 月台：島式或側式用啟發式判斷，有雨棚。
+     - 城市：低密度的住宅與商業是兩排背對背的透天厝，高密度是板樓與塔樓；工廠、公共、遊憩各一種；公園有樹。
+     - 玩家建物。
+   - 範圍：已建設的區域加 1.5 km，每邊最多 6 km。全台灣地圖不會一次做成一個場景。
+   - `Map3DTrains.swift`：每一幀的車廂。位置照 2D 地圖的 `TrainMotion` 與 `TrainCars`（決策 182、205），高度讀列車的 `bodyPath`。白車身加路線色帶。
+   - `Map3DCamera.swift`：
+     - 鏡頭看著地上一點。2,400 m 以外正上方；拉近到 300 m 傾斜 55°（rail-3d 的預設俯角），中間沿距離的對數做 smoothstep。
+     - 拖曳、兩指縮放、兩指旋轉；分塊的視錐剔除。
+     - `Map3DLighting`：一天的天空、太陽、環境光，照參考庫街景「微縮」風格的關鍵幀。
+2. **App**（`RailwayGameApp/Views/Map3D/`）：
+   - `Map3DMetalView`：`MTKView` 子類別。一個 pipeline、4× MSAA；看得到的分塊各一次 draw call，列車每幀一個 buffer。
+   - 自己量：每秒幀數、CPU 與 GPU 每幀時間（中位數）、draw call、三角形。
+   - `Map3DShaders.metal`：太陽＋天空到地面的半球環境光＋距離霧。
+   - `Map3DPreviewScreen`：全螢幕、關閉鈕。右上角是幀數，點一下展開細節。
+3. **入口**：設定頁（從遊戲打開時）的「這一局的 3D 地圖」。不動 `MapView.swift`、`ContentView.swift`。
+
+**量到的**（Linux 雲端容器，release，以 `main` `9a88ef0` 為底）：
+
+| 場景 | 範圍 | 分塊 | 三角形 | 頂點＋索引 | 建構時間 |
+| --- | --- | --: | --: | --: | --: |
+| 示範地圖 | 3.4 × 3.4 km | 64 | 118,446 | 8.1 MB | 0.04 秒 |
+| 兩鎮之間的第一條線 | 7.2 × 6.7 km | 210 | 104,924 | 7.1 MB | 0.03 秒 |
+
+在畫風定案寫的手機經驗值內：一個畫面 300 個 draw call 以內、30–50 萬個三角形以內。
+
+**參考與外部**：
+
+| 參考 | 用到這裡的 |
+| --- | --- |
+| `Railway/site_archive_clean/rail-3d/integration/rail-structures.js` | 道床頂 3.4 m、底 4.6 m、比軌頂低 0.35 m；高架橋面 5 m、梁深 1.8 m；橋墩 1.6 × 2.2 m；鋼軌寬 0.14、高 0.2 m。軌距改成台鐵的 1,067 mm（rail-3d 用 1,435） |
+| 同上 `map3d.js` | 橋墩每 32 m（`PIER_M`） |
+| 同上 `geo.js` `randomAt` | 原樣移植成 `map3DRandom`，測試對照 Node 的值 |
+| 同上 `integration/formations.js`、`assets/blender-map-v1/` 的網格範圍 | 車寬 2.9 m、車高 3.65 m（EMU3000 與通勤車） |
+| `Railway/city_world_reference/source/assets/world-DCb11kLR.js`（`pickType`、`floorsFor`、`widthFor`、騎樓、牆色） | 透天厝寬 4.4–6.6 m、2–4 層（權重 3:4:1）、一樓 3.8–4.3 m、樓上 3.4–3.7 m；公寓 6.5–12.5 m、3–6 層；騎樓退縮；牆色權重白 4、#F2E2D6 2、#E0D0C8 1、#D6C2B0 1 |
+| 同上 `build-2kUI5-ha.js` `waterTank()`、`parapet()` | 屋頂女兒牆與水塔（做成方塊） |
+| `Railway/street_scene_reference_clean/source/assets/scene.js` 的微縮風格關鍵幀 | `Map3DLighting` 的天空、太陽、環境光、夜晚 |
+| `Railway/island_city_reference_clean/source/js/g41.js` `bake` | 依分塊合併靜態網格的做法 |
+
+外部專案：
+- 搜尋了 Swift／Metal 的城市或地圖 renderer。[ImmersiveMap](https://github.com/artembobkin/ImmersiveMap)（MIT，iOS 18、向量圖磚地圖）不合用。Metal by Example 的 instancing 範例只取想法。
+- 程式是本專案自己寫的，沒有新依賴。
+- 參考庫的 `Math.random()` 一律換成依位置的雜湊。
+
+**缺口**（參考庫沒有，或這一步沒做）：
+- 傾斜的規則與擋住列車的建物變透明：參考庫靠 MapLibre 的相機，沒有可移植的。
+- 月台的實際尺寸與位置：遊戲裡月台在軌道中心線上，沒有左右；這裡用啟發式。
+- 站房、廟、夜市、人車、窗戶與夜景燈光、雷雨、移軸：之後。
+- 路塹會被 64 m 的地面格蓋住：地面不隨軌道切開。
+- 背面剔除先關掉：第一版不冒繞序錯了整片看不見的險。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；
+  - `Map3DTests` 16 個測試通過：幾何的法線朝外、雜湊對照 Node、相機的方向與傾斜、視錐剔除、場景的軌道與城市、決定論、高架的橋墩、列車站在軌道上；
+  - XcodeGen 2.46.0 重新產生的專案只多了這三個檔案。
+- **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：App 與 Metal shader 的編譯。
+- **UNVERIFIED**（要 TestFlight 實機）：畫面對不對、幀時間、記憶體、耗電。這一步就是為了在實機上量這些。
+
+**下一步**：
+1. 實機量完之後，把 `Map3DCamera` 接進 `MapView` 的縮放，真正做到「拉近就傾斜」。建造時照舊正上方。
+2. 遠近分級：遠處只畫盒子、屋頂、水塔。
+3. 列車與站房用程式生成：參考庫的模型只學做法、不搬幾何（作者 2026-10-15，art-style §7）。
+4. 人車改用 instancing。
+5. 夜景與雷雨。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。
