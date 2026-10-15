@@ -4,11 +4,16 @@ import SwiftUI
 /// Sheet controlling map overlay visibility and display options.
 struct MapLayerSheet: View {
     @Binding var layers: MapLayerPreferences
+    /// A real-world map's style, at the top (decision 226, step 3).
+    var mapStyle: AnyView?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
+                if let mapStyle {
+                    mapStyle
+                }
                 Section {
                     Toggle(isOn: $layers.showsStationNames) {
                         Label("Station Names", systemImage: "character.textbox")

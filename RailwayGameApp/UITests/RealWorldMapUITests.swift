@@ -24,16 +24,15 @@ final class RealWorldMapUITests: XCTestCase {
 
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 15), "The game starts")
-        let style = app.buttons["map.style"]
-        XCTAssertTrue(style.appears(within: 10), "Only a real-world map has a map style menu")
-        XCTAssertTrue(app.buttons["Zoom in"].exists)
+        XCTAssertTrue(app.buttons["Zoom in"].appears(within: 10))
 
         // Keep the live clock from rebuilding the native menus (the map
         // style's and the game's) while XCTest targets their actions, as in
         // the start and save flow: pause before opening either.
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
-        tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
-        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
+        // Decision 226, step 3: the map style is the layer list's first
+        // section, only for a real-world map.
+        chooseSatellite(in: app)
         XCTAssertTrue(map.appears(within: 10))
 
         tappable(app.buttons.matching(identifier: "hud.menu"), name: "hud.menu").tap()
@@ -42,7 +41,8 @@ final class RealWorldMapUITests: XCTestCase {
         let continueButton = tappable(app.buttons.matching(identifier: "start.continue"), name: "start.continue")
         XCTAssertTrue(continueButton.label.contains("Real-world map"), "The autosave is a real-world map's: \(continueButton.label)")
         continueButton.tap()
-        XCTAssertTrue(app.buttons["map.style"].appears(within: 15), "Continuing keeps the real-world map")
+        // Apple's map under the game's, as satellite was chosen.
+        XCTAssertTrue(app.descendants(matching: .any)["map.base"].firstMatch.appears(within: 15), "Continuing keeps the real-world map")
     }
 
     /// Stage V4e: the real-world demo runs under traffic control, and the
@@ -122,8 +122,7 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60), "The demo starts")
         // Paused, so the live clock does not rebuild the style menu.
         tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Pause")), name: "Pause").tap()
-        tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
-        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
+        chooseSatellite(in: app)
 
         let base = app.descendants(matching: .any)["map.base"].firstMatch
         XCTAssertTrue(base.appears(within: 30), "Apple's map is under the game's")
@@ -159,7 +158,24 @@ final class RealWorldMapUITests: XCTestCase {
         newGame.tap()
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
         XCTAssertTrue(app.buttons["Zoom in"].appears(within: 10))
+        // Decision 226, step 3: the style is in the layer list, and not
+        // there for a blank map.
+        let more = app.buttons["map.quickLayer.more"]
+        XCTAssertTrue(more.appears(within: 10))
+        more.tap()
+        XCTAssertTrue(app.switches["layer.stationNames"].appears(within: 10), "The layer list opens")
         XCTAssertFalse(app.buttons["map.style"].exists)
+    }
+
+    /// Opens the layer list (the strip's More), chooses Satellite as the
+    /// map style, its first section on a real-world map (decision 226,
+    /// step 3), and closes the list.
+    private func chooseSatellite(in app: XCUIApplication) {
+        tappable(app.buttons.matching(identifier: "map.quickLayer.more"), name: "map.quickLayer.more").tap()
+        tappable(app.buttons.matching(identifier: "map.style"), name: "map.style").tap()
+        tappable(app.buttons.matching(NSPredicate(format: "label == %@", "Satellite")), name: "Satellite").tap()
+        tappable(app.buttons.matching(identifier: "layer.done"), name: "layer.done").tap()
+        XCTAssertTrue(app.buttons["layer.done"].disappears(within: 5), "The layer list closes")
     }
 
     /// The start screen scrolls (decision 106), so with any text size,

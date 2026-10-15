@@ -196,7 +196,9 @@ struct ContentView: View {
         case .fleet:
             FleetOverviewSheet(session: session)
         case .mapLayers:
-            StoredMapLayerSheet()
+            StoredMapLayerSheet(session: session) {
+                screen.panel = .dataSources
+            }
         case .dataSources:
             DataSourcesView(launcher: launcher)
         case .settings:
