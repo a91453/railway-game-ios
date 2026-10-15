@@ -145,7 +145,7 @@ extension Map3DScene.Builder {
         let wallBottom: Float = canopy ? max(0, eaves - 1.4) : 0
         if canopy {
             wall = Map3DPalette.railTop
-            roof = Map3DPalette.platform
+            roof = Map3DPalette.tankSteel
             upperPaint = nil
         }
         let far = isFar

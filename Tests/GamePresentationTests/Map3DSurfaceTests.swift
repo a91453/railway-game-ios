@@ -118,9 +118,10 @@ final class Map3DSurfaceTests: XCTestCase {
                         .officeGlass, .metalSheet, .flatBlinds] {
             XCTAssertGreaterThan(painted[surface] ?? 0, 0, "\(surface)")
         }
-        // The ground is grass but for the water; the rails stay plain.
-        XCTAssertTrue(vertices.filter { $0.color == Map3DPalette.ground }.allSatisfy { $0.surface == .grass })
-        XCTAssertTrue(vertices.filter { $0.color == Map3DPalette.water || $0.color == Map3DPalette.railTop }.allSatisfy { $0.surface == nil })
+        // Decision 241: the ground plain, as the 2D map's land (grass
+        // only on parks, farms and banks); the water and rails plain too.
+        XCTAssertTrue(vertices.filter { $0.color == Map3DPalette.ground || $0.color == Map3DPalette.water || $0.color == Map3DPalette.railTop }
+            .allSatisfy { $0.surface == nil })
         XCTAssertTrue(vertices.allSatisfy { $0.layer == Map3DVertex.plain || Map3DSurface(rawValue: Int($0.layer)) != nil })
     }
 

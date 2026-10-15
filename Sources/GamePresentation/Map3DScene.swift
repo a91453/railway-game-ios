@@ -143,10 +143,15 @@ public struct Map3DScene: Sendable {
 /// The 3D map's colours (F 台灣版＋): soft, bright and a little warm; the
 /// player's buildings the warm yellow of the 2D map (decision 205).
 public enum Map3DPalette {
-    public static let ground = Map3DColor.rgb(0xDDE4CF)
-    public static let water = Map3DColor.rgb(0x8FC6E6)
-    public static let park = Map3DColor.rgb(0xAFD38F)
-    public static let farm = Map3DColor.rgb(0xD8D9A2)
+    /// Decision 241: the ground and parks of the game's 2D map
+    /// (`BaseMapStyle`'s light look: land #ECEEF6, park #D2E8C4), a little
+    /// deeper and cooler so they read under the warm sun; the water a
+    /// clearer blue than the 2D map's #C3CEEA, so a river never reads as
+    /// one of the navy roads, and the farms a softer green.
+    public static let ground = Map3DColor.rgb(0xD9DFEF)
+    public static let water = Map3DColor.rgb(0x92C4E6)
+    public static let park = Map3DColor.rgb(0xB5D6A2)
+    public static let farm = Map3DColor.rgb(0xD6DEB4)
     public static let plaza = Map3DColor.rgb(0xD9D4C8)
     public static let ballast = Map3DColor.rgb(0xA39B8E)
     public static let embankment = Map3DColor.rgb(0x9DB07E)
@@ -159,7 +164,7 @@ public enum Map3DPalette {
     public static let platformEdge = Map3DColor.rgb(0xF2C94C)
     /// Taiwanese station signs' blue, on the canopies.
     public static let canopy = Map3DColor.rgb(0x2F6DB5)
-    public static let roof = Map3DColor.rgb(0xCBC7BF)
+    public static let roof = Map3DColor.rgb(0xC4C8D6)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
@@ -174,27 +179,37 @@ public enum Map3DPalette {
 
     /// Decision 234: the base map's land cover, a little deeper than the
     /// 2D map's (its `landcover` and `park`) so it reads on the lit
-    /// ground, and its roads as the 2D map's: the motorways and trunk
-    /// roads warm yellow, the rest white, plain (untextured) so they read
-    /// from afar.
+    /// ground. Decision 241: the 2D map's own colours, deepened alike.
     static func cover(_ cover: Map3DBaseMap.Cover) -> UInt32 {
         switch cover {
-        case .grass: rgb(0xCFE1B4)
-        case .sand: rgb(0xEDE4C6)
-        case .wetland: rgb(0xC3D9CF)
-        case .wood: rgb(0x9FC58B)
+        case .grass: rgb(0xD1E3C4)
+        case .sand: rgb(0xE9E1CA)
+        case .wetland: rgb(0xC8D5E3)
+        case .wood: rgb(0xA6CA98)
         case .park: park
         case .water: water
         }
     }
 
+    /// Decision 241: the roads drawn as a city map draws them (the
+    /// reference's `city_map_reference_clean` ink look, deepest for the
+    /// biggest), in the game's navy rather than its black: the motorways
+    /// the navy of the app's text, the main roads its map shadow, lanes
+    /// its accent. Plain (untextured) so they read from afar.
     static func road(_ kind: Map3DBaseMap.RoadKind) -> UInt32 {
         switch kind {
-        case .motorway, .trunk: rgb(0xFFD99A)
-        case .primary, .secondary, .tertiary: rgb(0xFFFFFF)
-        case .minor, .service: rgb(0xF7F6F2)
+        case .motorway, .trunk: rgb(0x3A4272)
+        case .primary, .secondary: rgb(0x4E5682)
+        case .tertiary: rgb(0x5E6690)
+        case .minor, .service: rgb(0x8E95B6)
         }
     }
+
+    /// Decision 241: the sidewalks, the light grey of the 2D map's road
+    /// casing, paved.
+    public static let sidewalk = Map3DColor.rgb(0xC9CEDF)
+    /// Taiwan's yellow centre line, the platform edge's yellow.
+    public static let centreLine = platformEdge
 
     /// Row house walls: `city_world_reference`'s shophouse palette (white
     /// 4, #F2E2D6 2, #E0D0C8 1, #D6C2B0 1) and four tile colours common in
@@ -408,8 +423,8 @@ extension Map3DScene {
                     let lift = Map3DPoint(0, water ? 0.05 : 0, 0)
                     let middle = (a + c) * 0.5
                     mesh(at: middle) {
-                        $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground,
-                                   paint: water ? nil : Self.grass)
+                        // Decision 241: the ground plain, as the 2D map's land.
+                        $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: water ? Map3DPalette.water : Map3DPalette.ground)
                     }
                 }
             }
