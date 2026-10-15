@@ -152,6 +152,16 @@ final class Map3DRealGroundTests: XCTestCase {
             XCTAssertTrue(painted.contains(color), String(color, radix: 16))
             XCTAssertFalse(colors(plain).contains(color), String(color, radix: 16))
         }
+        // Decision 241: paved sidewalks along the main roads, and the
+        // yellow centre line down the two-way ones (not a lane's, not a
+        // motorway's).
+        XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.sidewalk, Map3DPalette.centreLine]))
+        XCTAssertEqual(Map3DScene.Builder.sidewalk(of: .primary), 3)
+        XCTAssertEqual(Map3DScene.Builder.sidewalk(of: .minor), 0)
+        XCTAssertTrue(Map3DScene.Builder.lift(of: .water) < Map3DScene.Builder.sidewalkLift)
+        XCTAssertTrue(Map3DScene.Builder.sidewalkLift < Map3DScene.Builder.lift(of: .service))
+        XCTAssertTrue(Map3DScene.Builder.lift(of: .motorway) < Map3DScene.Builder.centreLineLift)
+        XCTAssertTrue(Map3DScene.Builder.centreLineLift < Map3DShadow.lift)
         // Parks and ponds the city's own open lots also have.
         XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.cover(.park), Map3DPalette.cover(.water)]))
         // The real streets take most of the city's lots round the station:

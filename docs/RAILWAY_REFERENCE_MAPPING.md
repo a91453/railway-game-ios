@@ -1604,3 +1604,12 @@ V 實際放行 → T、U（保證不互穿）
 | `Web/CityView/src/shared/geo.js` `makeProjection` | `Map3DScene.Builder.addRealBuildings` | 先換回經緯度，再用 `RealWorldFrame` 放上世界 |
 | `Web/CityView/tools/pipeline/taiwan.mjs` `usageOf` | `RealKind(usage:)` | 代碼照用，外觀是本專案的畫風（決策 231、235） |
 
+## 3D 地圖的地圖感（決策 241）
+
+參考庫 `a91453/railway-reference-private` `659e2a4`（2026-10-15 讀取）。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `city_map_reference_clean/source/rendering/theme-catalog.js`、`mapbox-palette.js`：六種配色，道路依等級分深淺與粗細 | `Map3DPalette.road`、`ground`、`water` | 只取做法；顏色換成遊戲 2D 地圖的藏青與淺色 |
+| `Web/CityView/tools/pipeline/taiwan.mjs` `SIDEWALK` | `Map3DScene.Builder.sidewalk(of:)` | 寬度照用 |
+
