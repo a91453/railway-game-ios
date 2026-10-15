@@ -240,9 +240,11 @@ struct CityRequestsSection: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("requests.decline.\(row.id)")
-                if let location = row.location {
+                if row.location != nil {
                     Button {
-                        session.lookAt(location)
+                        // Decision 246: pointed out there, ringed, with
+                        // its card.
+                        session.showRequestOnMap(row.id)
                         dismiss()
                     } label: {
                         Label {
@@ -252,6 +254,7 @@ struct CityRequestsSection: View {
                         }
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityIdentifier("requests.show.\(row.id)")
                 }
             }
             .font(.caption)

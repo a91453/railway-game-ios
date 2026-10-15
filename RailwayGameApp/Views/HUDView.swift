@@ -37,6 +37,7 @@ struct HUDView: View {
                 cash
                 time(short: false)
                 speed
+                requestsButton
                 newsBell
                 gameMenu
             }
@@ -44,6 +45,7 @@ struct HUDView: View {
                 cash
                 time(short: true)
                 speed
+                requestsButton
                 newsBell
                 gameMenu
             }
@@ -53,6 +55,7 @@ struct HUDView: View {
                     time(short: false)
                 }
                 speed
+                requestsButton
                 newsBell
                 gameMenu
             }
@@ -60,6 +63,7 @@ struct HUDView: View {
                 HStack(spacing: 10) {
                     cash
                     speed
+                    requestsButton
                     newsBell
                     gameMenu
                 }
@@ -274,6 +278,40 @@ struct HUDView: View {
         .accessibilityLabel("Game time \(text)")
         .accessibilityHint(Text(verbatim: language.text("Shows the forecast of the next seven days.", "顯示未來七天的預報。")))
         .accessibilityIdentifier("hud.time")
+    }
+
+    /// Decision 246: the city's requests, one tap from the status bar,
+    /// with the number in hand; tinted while offers wait that the company
+    /// has room for. Only in a game with them.
+    @ViewBuilder
+    private var requestsButton: some View {
+        if let held = session.cityRequestsInHand {
+            let offers = session.hasCityRequestOffers
+            Button {
+                screen.panel = .goals
+            } label: {
+                MapGlyph.request.image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                    .foregroundStyle(offers ? Theme.warning : Theme.primary)
+                    .frame(width: 34, height: 32)
+                    .overlay(alignment: .topTrailing) {
+                        if held > 0 {
+                            Text(verbatim: "\(held)")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Theme.onPrimary)
+                                .padding(.horizontal, 4)
+                                .background(Capsule().fill(Theme.primary))
+                                .offset(x: 4, y: -2)
+                        }
+                    }
+            }
+            .buttonStyle(TouchTargetButtonStyle(size: CGSize(width: 34, height: 32)))
+            .accessibilityLabel(Text(verbatim: session.language.text("City requests", "委託案")))
+            .accessibilityValue(Text(verbatim: session.cityRequestsButtonValue))
+            .accessibilityIdentifier("hud.requests")
+        }
     }
 
     /// The news log's bell (decision 175), with the number of items not
