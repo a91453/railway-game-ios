@@ -194,7 +194,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
         let list = bar.exists
             ? app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
             : nil
-        guard app.dragUntilWhollyOnScreen(row, in: list) else {
+        guard app.dragUntilWhollyOnScreen(row, in: list, below: bar.exists ? bar.frame.maxY : nil) else {
             recordRouteUI("row never came into view", in: app)
             XCTFail("\(row) never lay wholly on screen")
             return
@@ -270,13 +270,23 @@ extension XCUIElement {
     /// not wait for a turning layout or tools sliding in, and a tap found
     /// while they move lands where the element was (PR #326's runs: on the
     /// map beside the overview, and 5 pt left of the train tool).
+    ///
+    /// The frame must hold for half a second before `isHittable` is asked.
+    /// A screen turned from one side to the other keeps every frame where
+    /// it was in the app's own coordinates while the turn is still drawn:
+    /// two frames a quarter of a second apart agreed, and `isHittable`
+    /// asked mid-turn failed the test outright ("Activation point invalid";
+    /// the tutorial's Skip on an iPad, main 2ec70b2's full lane, run
+    /// 38720199489).
     func waitUntilSettled(timeout: TimeInterval = 5) {
         XCTAssertTrue(appears(within: timeout), "Missing \(self)")
         var last = frame
+        var steady = 0
         for _ in 0..<Int(timeout * 4) {
             Thread.sleep(forTimeInterval: 0.25)
             let now = frame
-            if now == last, isHittable { return }
+            steady = now == last ? steady + 1 : 0
+            if steady >= 2, isHittable { return }
             last = now
         }
         XCTFail("\(self) did not settle")
@@ -300,9 +310,14 @@ extension XCUIApplication {
     /// How far a `swipeUp()` flings a list depends on the synthesized
     /// event's timing; each drag here holds before lifting, so the list
     /// moves by the drag's length and does not fling.
-    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil) -> Bool {
+    /// `below`: the bottom of a bar the list scrolls under, which the
+    /// element must clear too. The Lines panel's list runs on under its
+    /// navigation bar: a row "wholly on screen" there lay behind the bar,
+    /// and the tap went to its one uncovered corner and opened no menu
+    /// (main 2ec70b2's full lane, run 38720199489).
+    func dragUntilWhollyOnScreen(_ element: XCUIElement, in list: XCUIElement? = nil, below: CGFloat? = nil) -> Bool {
         let area = list.map(\.frame) ?? frame
-        let top = list == nil ? frame.minY + 140 : area.minY + 8
+        let top = max(list == nil ? frame.minY + 140 : area.minY + 8, (below ?? -.infinity) + 8)
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
         // A form's rows are inset 16 pt from the list's sides.
         let x = list == nil ? area.midX : area.minX + 8
