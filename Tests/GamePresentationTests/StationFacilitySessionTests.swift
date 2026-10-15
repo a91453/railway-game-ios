@@ -53,7 +53,7 @@ final class StationFacilitySessionTests: XCTestCase {
             XCTAssertEqual(session.selectedTrain?.position, .onEdge(TrackTraversal(edge: .edge(3), direction: .forward), offset: 1_024))
             XCTAssertEqual(session.selectedTrain?.trailEdges, [])
             session.setSelectedTrainCars(3)
-            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "Train #1 is already on the track."))
+            XCTAssertEqual(session.message, StatusMessage(kind: .failure, text: "That train is already on the track."))
 
             // To Central: along edge 4, then all of edge 5, so both cars
             // stand on its platform.

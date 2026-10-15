@@ -79,7 +79,7 @@ final class TrafficControlSessionTests: XCTestCase {
             XCTAssertFalse(session.world.isTrafficControlEnabled)
             XCTAssertEqual(session.message, StatusMessage(
                 kind: .failure,
-                text: "Trains #1 and #2 need the same track, so traffic control can't be turned on. Move one of them first."
+                text: "Two trains need the same track, so traffic control can't be turned on. Move one of them first."
             ))
         }
     }
@@ -208,7 +208,7 @@ final class TrafficControlSessionTests: XCTestCase {
             session.sendSelectedTrain()
             XCTAssertEqual(session.world, world)
             XCTAssertEqual(session.message, StatusMessage(
-                kind: .failure, text: "Train #2's route runs over that track. Wait for it to pass."
+                kind: .failure, text: "A train's route runs over that track. Wait for it to pass."
             ))
         }
     }
