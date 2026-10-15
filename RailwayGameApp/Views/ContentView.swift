@@ -251,7 +251,9 @@ struct ContentView: View {
             // map's own buttons at its leading foot (layers, map style)
             // stay above it, as they stood above the dock (a tap on the map
             // style menu reached the station master instead).
-            let dockBottom = toolsColumn ? StationMasterCorner.avatarSize + 2 * margin : dockSize.height
+            // The station master with its title under it, not the avatar
+            // alone: the layers button sat on the avatar's head (2026-10-15).
+            let dockBottom = toolsColumn ? StationMasterCorner.standingHeight + margin : dockSize.height
             // The card runs down to the screen's bottom edge, or stops above
             // the dock where both would not fit side by side.
             let besideDock = toolsColumn || dockSize.width + cardWidth + margin <= proxy.size.width
@@ -556,7 +558,10 @@ private struct ControlDetailsToggle: View {
             // attribution, a different thing (decision 123).
             Image(systemName: "sidebar.trailing")
                 .font(.subheadline.weight(.bold))
-                .frame(width: 40, height: 40)
+                // As wide as the tools under it in the phone's column, so
+                // the column's pieces are one width (2026-10-15); 40 in the
+                // dock, which offers it no more.
+                .frame(minWidth: 40, maxWidth: .infinity, minHeight: 40)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isOpen))
         .accessibilityLabel(isOpen ? "Hide Controls" : "Show Controls")

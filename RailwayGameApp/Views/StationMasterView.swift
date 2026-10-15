@@ -63,6 +63,10 @@ struct StationMasterCorner: View {
     private static let speakingTime = Duration.seconds(7)
     /// The avatar's side.
     static let avatarSize: CGFloat = 44
+    /// How tall the avatar stands with the title under it (the title's
+    /// least height, 28, less the 3 they overlap): what the map's buttons
+    /// keep above.
+    static let standingHeight: CGFloat = avatarSize + 28 - 3
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
