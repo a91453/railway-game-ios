@@ -54,11 +54,6 @@ struct BuildToolRail: View {
             ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
                 toolButton(tool, compact: compact)
             }
-            // Decision 226, step 3: buying land is building too; not in the
-            // tutorial, which never offered it.
-            if session.buysMap, session.tutorial == nil {
-                expansionButton(compact: compact)
-            }
             if !compact {
                 Divider()
                     .padding(.horizontal, 6)
@@ -84,21 +79,6 @@ struct BuildToolRail: View {
         .accessibilityIdentifier("tool.\(tool)")
         .accessibilityAddTraits(isActive ? .isSelected : [])
         .tutorialTarget(TutorialTarget(tool: tool))
-    }
-
-    /// Decision 160, from among the building tools since decision 226,
-    /// step 3: starts choosing a tile of the map to buy, which puts the
-    /// tools away (the map's pill ends it, ``MapView``).
-    private func expansionButton(compact: Bool) -> some View {
-        Button {
-            UITestTrace.action("tool.expandMap")
-            session.startChoosingMapTile()
-        } label: {
-            label("plus.square.dashed", session.language.text("Land", "擴地"), isActive: false, compact: compact)
-        }
-        .buttonStyle(ThemeSelectableButtonStyle(isActive: false))
-        .accessibilityLabel(Text(verbatim: session.language.text("Expand the map", "擴建地圖")))
-        .accessibilityIdentifier("tool.expandMap")
     }
 
     /// Back to looking at the map. Selected while no tool is chosen, which

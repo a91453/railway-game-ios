@@ -608,16 +608,18 @@ struct MapView: View {
                         ? AnyLayout(HStackLayout(spacing: 8))
                         : AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
                     // Decision 226, step 3: the map style is chosen in the
-                    // layer list, and the expansion starts among the
-                    // building tools (``BuildToolRail``); here only the way
-                    // out of it while choosing a tile, and the layer list's
+                    // layer list; here the expansion, and the layer list's
                     // own button while the strip does not show.
                     rowLayout {
                         if !showsLayerStrip {
                             mapLayersButton
                         }
-                        if session.isChoosingMapTile {
-                            mapExpansionButton
+                        // Not while building: beside the tools' Done
+                        // button it was tapped by mistake (TestFlight 56.1).
+                        // Not among the building tools either: a phone held
+                        // sideways has no height for a fifth (decision 226).
+                        if session.showsMapExpansionButton {
+                            mapExpansionButton(viewport: viewport)
                         }
                     }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.mapArea)) } action: { bottomLeadingFrame = $0 }
@@ -762,15 +764,6 @@ struct MapView: View {
             }
             .onChange(of: bounds) { _, _ in
                 camera = openCamera(viewport: viewport, clearOf: framing)
-            }
-            // Decision 160: choosing a tile to buy shows the 3 × 3 tiles
-            // round the land owned, however the choosing started (the
-            // building tools since decision 226, step 3).
-            .onChange(of: session.isChoosingMapTile) { _, choosing in
-                guard choosing, let region = session.mapExpansionOverlay?.region else { return }
-                if session.followedTrain != nil { session.stopFollowingTrain() }
-                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
-                session.mapDidMove()
             }
             .onChange(of: session.selectedStation?.id) { _, _ in
                 // A station chosen in the overview may be kilometres away.
@@ -1216,32 +1209,49 @@ struct MapView: View {
         }
     }
 
-    /// Decision 160: while choosing a tile of the map to buy, the way out.
-    /// It says so in words, in the accent colour, so the mode is not taken
-    /// for building (TestFlight 56.1). The choosing starts among the
-    /// building tools (decision 226, step 3); the camera turns to the tiles
-    /// when it starts (`onChange(of: session.isChoosingMapTile)`).
-    private var mapExpansionButton: some View {
+    /// Decision 160: starts choosing a tile of the map to buy, and shows
+    /// the land owned and the tiles for sale; again, stops. While choosing
+    /// it says so in words, in the accent colour, so the mode is not taken
+    /// for building (TestFlight 56.1).
+    private func mapExpansionButton(viewport: ScreenSize) -> some View {
         Button {
-            session.stopChoosingMapTile()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.square.dashed")
-                Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
-                Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
-                Image(systemName: "xmark")
-                Text(verbatim: session.language.text("Done", "結束"))
+            if session.isChoosingMapTile {
+                session.stopChoosingMapTile()
+                return
             }
-            .font(.subheadline.weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .foregroundStyle(Theme.onAccent)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .background(Theme.accent, in: Capsule())
-            .contentShape(Capsule())
+            session.startChoosingMapTile()
+            if let region = session.mapExpansionOverlay?.region {
+                if session.followedTrain != nil { session.stopFollowingTrain() }
+                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region)
+                session.mapDidMove()
+            }
+        } label: {
+            if session.isChoosingMapTile {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.square.dashed")
+                    Text(verbatim: session.language.text("Expanding the map", "正在擴建地圖"))
+                    Divider().frame(height: 18).overlay(Theme.onAccent.opacity(0.4))
+                    Image(systemName: "xmark")
+                    Text(verbatim: session.language.text("Done", "結束"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(Theme.onAccent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(Theme.accent, in: Capsule())
+                .contentShape(Capsule())
+            } else {
+                Image(systemName: "plus.square.dashed")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
+            }
         }
-        .accessibilityLabel(Text(verbatim: session.language.text("Stop expanding the map", "結束擴建地圖")))
+        .accessibilityLabel(Text(verbatim: session.isChoosingMapTile
+            ? session.language.text("Stop expanding the map", "結束擴建地圖")
+            : session.language.text("Expand the map", "擴建地圖")))
         .accessibilityIdentifier("map.expansion")
     }
 
