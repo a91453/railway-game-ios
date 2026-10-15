@@ -35,6 +35,10 @@ public struct Map3DScene: Sendable {
         /// Decision 232: the soft shadows on its ground, drawn after
         /// everything else.
         public let shadows: Map3DMesh
+        /// Decision 244: its street furniture, drawn as instances of
+        /// ``Map3DModelPack/standard``'s models when the chunk is drawn in
+        /// full.
+        public let props: [Map3DInstance]
         public let minimum: Map3DPoint
         public let maximum: Map3DPoint
     }
@@ -118,6 +122,8 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? []
         let cleared = builder.addTrack(snapshot)
+        // Decision 244: no street furniture where the track runs.
+        builder.removeProps(on: cleared)
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
@@ -251,6 +257,8 @@ extension Map3DScene {
             case base, near, far
         }
         var target = Target.base
+        /// Decision 244: the street furniture, by chunk.
+        var props: [ChunkKey: [Map3DInstance]] = [:]
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
@@ -351,7 +359,7 @@ extension Map3DScene {
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }
                 return Chunk(column: key.column, row: key.row, mesh: mesh, baseIndexCount: baseIndexCount, far: far, shadows: shadows,
-                             minimum: low, maximum: high)
+                             props: props[key] ?? [], minimum: low, maximum: high)
             }
         }
 

@@ -69,6 +69,24 @@ final class Map3DPreviewDump: XCTestCase {
                            Float(c & 0xFF) / 255, Float((c >> 8) & 0xFF) / 255, Float((c >> 16) & 0xFF) / 255, v.u, v.v, v.layer]
             }
             indices += chunkIndices.map { $0 + base }
+            // Decision 244: the street furniture, near, each instance's
+            // model moved into place (the app draws them as instances).
+            guard !detailFar else { continue }
+            for prop in chunk.props {
+                let model = Map3DModelPack.standard.models[prop.model], t = prop.transform
+                let first = UInt32(floats.count / 12)
+                for v in model.vertices {
+                    let p = Map3DPoint(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12], t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
+                                       t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14])
+                    let n = (Map3DPoint(t[0] * v.nx + t[4] * v.ny + t[8] * v.nz, t[1] * v.nx + t[5] * v.ny + t[9] * v.nz,
+                                        t[2] * v.nx + t[6] * v.ny + t[10] * v.nz).normalized) ?? Map3DPoint(0, 1, 0)
+                    let c = v.color, share = Float(c >> 24) / 255
+                    func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
+                    floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
+                               mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, -1]
+                }
+                indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
+            }
         }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
         for chunk in chunks {

@@ -35,6 +35,6 @@ rm Tests/GamePresentationTests/Map3DPreviewDump.swift
 | `MAP3D_CITY` | `1`：讀高雄、台中車站周圍的城市圖塊（決策 239；要和 `MAP3D_BASEMAP=1` 一起用） |
 | `MAP3D_VIEWS` | 鏡頭，`名字:x:z:距離:方向角度` 以 `;` 分開，座標是場景的公尺 |
 | `MAP3D_CROP` | `x:z:半徑`：只輸出這一圈內的分塊（大場景會讓瀏覽器記憶體不夠） |
-| `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238），預設是完整的近版 |
+| `MAP3D_DETAIL` | `far`：輸出遠處看到的簡化版城市（決策 238），預設是完整的近版（近版連街道設施一起，決策 244：每個實例展開成網格） |
 
 前後對照：在 `main` 的 worktree 與分支上各跑一次同樣的鏡頭，再把兩張上下拼起來（`docs/art/*/` 的圖都是上半 `main`、下半新版）。

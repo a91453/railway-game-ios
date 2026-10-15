@@ -84,6 +84,7 @@ extension Map3DScene.Builder {
             addStrip(road.points, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
                      taking: &lines)
         }
+        addStreetProps(map)
         return taken
     }
 
@@ -317,3 +318,135 @@ extension Map3DScene.Builder {
         return (Map3DBaseMap.Point(x: a.x + dx * t0, z: a.z + dz * t0), Map3DBaseMap.Point(x: a.x + dx * t1, z: a.z + dz * t1))
     }
 }
+
+// MARK: - Street furniture (decision 244)
+
+extension Map3DScene.Builder {
+    /// What stands along a road of a kind, and how: a prop every `spacing`
+    /// metres, `offset` metres out from the road's middle (on both sides,
+    /// or on alternate sides), as Taiwan's streets have them.
+    struct PropRule {
+        let prop: Map3DProp
+        let spacing: Double
+        let bothSides: Bool
+        let offset: (Double) -> Double
+    }
+
+    static func propRules(_ kind: Map3DBaseMap.RoadKind) -> [PropRule] {
+        let sidewalk = Double(Self.sidewalk(of: kind))
+        switch kind {
+        case .trunk, .primary, .secondary:
+            return [PropRule(prop: .tree, spacing: 14, bothSides: true) { $0 / 2 + sidewalk * 0.6 },
+                    PropRule(prop: .lamp, spacing: 36, bothSides: false) { $0 / 2 + 0.5 }]
+        case .tertiary:
+            return [PropRule(prop: .lamp, spacing: 36, bothSides: false) { $0 / 2 + 0.5 }]
+        case .minor:
+            return [PropRule(prop: .pole, spacing: 38, bothSides: false) { $0 / 2 + 0.6 }]
+        case .motorway, .service:
+            return []
+        }
+    }
+
+    /// The models' places in ``Map3DModelPack/standard``.
+    static let propModels: [Map3DProp: Int] = Dictionary(uniqueKeysWithValues: Map3DProp.allCases.compactMap { prop in
+        Map3DModelPack.standard.index(of: prop.modelName).map { (prop, $0) }
+    })
+
+    /// Trees, lights and poles along `map`'s roads (not on ramps, nor
+    /// within 9 m of a junction, where they would stand in the other
+    /// road), each tile's share on its own ground, the same every time.
+    mutating func addStreetProps(_ map: Map3DBaseMap) {
+        let junctions = Self.junctions(of: map.roads)
+        func nearJunction(_ x: Double, _ z: Double) -> Bool {
+            let column = Int((x / 32).rounded(.down)), row = Int((z / 32).rounded(.down))
+            for dr in -1...1 {
+                for dc in -1...1 {
+                    for point in junctions[Self.junctionKey(column + dc, row + dr)] ?? [] where (point.x - x) * (point.x - x) + (point.z - z) * (point.z - z) < 81 {
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+        for road in map.roads where !road.isRamp && road.points.count >= 2 {
+            let rules = Self.propRules(road.kind)
+            guard !rules.isEmpty else { continue }
+            let width = Double(road.kind.width(ramp: false))
+            let start = road.points[0]
+            let phase = Double(map3DRandom(Int32(truncatingIfNeeded: Int(start.x.rounded())), Int32(truncatingIfNeeded: Int(start.z.rounded())), salt: 70))
+            var travelled = 0.0
+            for index in 1..<road.points.count {
+                let a = road.points[index - 1], b = road.points[index]
+                let dx = b.x - a.x, dz = b.z - a.z
+                let length = (dx * dx + dz * dz).squareRoot()
+                defer { travelled += length }
+                guard length > 0.01 else { continue }
+                let along = (x: dx / length, z: dz / length)
+                // Left of the way along is (z, −x) in x east, z south.
+                let left = (x: along.z, z: -along.x)
+                for rule in rules {
+                    let first = phase * rule.spacing
+                    var place = ((travelled - first) / rule.spacing).rounded(.up) * rule.spacing + first
+                    while place < travelled + length {
+                        defer { place += rule.spacing }
+                        let t = place - travelled
+                        let centre = (x: a.x + along.x * t, z: a.z + along.z * t)
+                        // The tile's own share of the road.
+                        guard centre.x >= road.bounds.minX, centre.x < road.bounds.maxX, centre.z >= road.bounds.minZ, centre.z < road.bounds.maxZ
+                        else { continue }
+                        let number = Int((place / rule.spacing).rounded())
+                        for side: Double in rule.bothSides ? [1, -1] : [number % 2 == 0 ? 1 : -1] {
+                            let out = rule.offset(width) * side
+                            let x = centre.x + left.x * out, z = centre.z + left.z * out
+                            let seed = (Int32(truncatingIfNeeded: Int((x * 2).rounded())), Int32(truncatingIfNeeded: Int((z * 2).rounded())))
+                            // Now and then a gap, as a real street has.
+                            guard map3DRandom(seed.0, seed.1, salt: 71) >= (rule.prop == .tree ? 0.18 : 0.08), !nearJunction(x, z),
+                                  let model = Self.propModels[rule.prop] else { continue }
+                            let foot = Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + Self.sidewalkLift, Float(z))
+                            // Its left, where a light's arm reaches, toward the road.
+                            let forward = side > 0 ? Map3DPoint(Float(-along.x), 0, Float(-along.z)) : Map3DPoint(Float(along.x), 0, Float(along.z))
+                            let scale: Float = rule.prop == .tree ? 0.8 + 0.45 * map3DRandom(seed.0, seed.1, salt: 72) : 1
+                            let tint = rule.prop == .tree ? Self.pick(Map3DProp.greens, map3DRandom(seed.0, seed.1, salt: 73)) : Map3DColor.rgb(0xFFFFFF)
+                            props[key(of: foot), default: []].append(.prop(model, at: foot, forward: forward, scale: scale, tint: tint))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The road points two or more roads share (the junctions), by 32 m
+    /// square.
+    static func junctions(of roads: [Map3DBaseMap.Road]) -> [Int64: [Map3DBaseMap.Point]] {
+        var counts: [Int64: (point: Map3DBaseMap.Point, roads: Int)] = [:]
+        for road in roads {
+            var seen = Set<Int64>()
+            for point in road.points {
+                let key = Int64((point.x * 2).rounded()) << 32 ^ Int64((point.z * 2).rounded()) & 0xFFFF_FFFF
+                guard seen.insert(key).inserted else { continue }
+                counts[key, default: (point, 0)].roads += 1
+            }
+        }
+        var squares: [Int64: [Map3DBaseMap.Point]] = [:]
+        for (_, entry) in counts where entry.roads >= 2 {
+            squares[junctionKey(Int((entry.point.x / 32).rounded(.down)), Int((entry.point.z / 32).rounded(.down))), default: []].append(entry.point)
+        }
+        return squares
+    }
+
+    static func junctionKey(_ column: Int, _ row: Int) -> Int64 {
+        Int64(column) << 32 ^ (Int64(row) & 0xFFFF_FFFF)
+    }
+
+    /// No street furniture on the 64 m cells in `cleared` (the track's).
+    mutating func removeProps(on cleared: Set<Map3DScene.ChunkKey>) {
+        guard !cleared.isEmpty else { return }
+        for (key, instances) in props {
+            props[key] = instances.filter { instance in
+                let x = Double(instance.transform[12]), z = Double(instance.transform[14])
+                return !cleared.contains(Map3DScene.ChunkKey(column: gridCell(x, origin: originX), row: gridCell(z, origin: originY)))
+            }
+        }
+    }
+}
+
