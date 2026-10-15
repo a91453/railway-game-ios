@@ -107,7 +107,7 @@ public enum TRADemo {
         stationIDPrefix: "tra_sched|",
         schedule: schedule,
         kinds: kinds,
-        endPlatformTracks: (north: 4, south: 4),
+        endTrackSides: (north: (east: 2, west: 1), south: (east: 2, west: 1)),
         // Jiaoxi, Yilan and Luodong: the expresses call on the through
         // tracks.
         islandStations: [2, 4, 7],

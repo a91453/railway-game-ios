@@ -152,7 +152,7 @@ public enum HighSpeedDemo {
                 type: .highSpeed, cars: cars, performance: .highSpeed, set: ("THSR", "高鐵")
             )
         },
-        endPlatformTracks: endPlatformTracks,
+        endTrackSides: (endTrackSides(endPlatformTracks.north), endTrackSides(endPlatformTracks.south)),
         islandStations: islandStations,
         depots: realDepots,
         tolerance: tolerance,
@@ -456,7 +456,7 @@ public enum HighSpeedDemo {
             // Decision 228: each end's tracks beside the down track, the
             // outermost on a side leaving it `reach` ramps from the
             // platform's margin.
-            let sides = (north: HighSpeedDemo.endTrackSides(spec.endPlatformTracks.north), south: HighSpeedDemo.endTrackSides(spec.endPlatformTracks.south))
+            let sides = spec.endTrackSides
             let endReach = (north: Double(max(sides.north.east, sides.north.west)), south: Double(max(sides.south.east, sides.south.west)))
             // The turnouts a ramp beyond each end's tracks, the up track's
             // ramps a ramp long.

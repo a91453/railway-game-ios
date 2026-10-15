@@ -36,8 +36,10 @@ struct RealLineDemoSpec: Sendable {
     /// The scheduled system whose day it runs (`thsr`).
     let schedule: String
     let kinds: [Kind]
-    /// How many platform tracks each end has, the down track's among them.
-    let endPlatformTracks: (north: Int, south: Int)
+    /// How many platform tracks each end has beside the down track's, on
+    /// each side of it (``HighSpeedDemo/endTrackSides(_:)`` for the high-speed
+    /// demo).
+    let endTrackSides: (north: (east: Int, west: Int), south: (east: Int, west: Int))
     /// The stations between the ends where the expresses call on the
     /// through tracks, by index (island platforms serving every track).
     let islandStations: Set<Int>
