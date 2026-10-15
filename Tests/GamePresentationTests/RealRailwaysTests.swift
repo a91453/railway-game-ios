@@ -356,7 +356,7 @@ final class RealRailwaysTests: XCTestCase {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "population", "map", "cityView"])
             let credits = sections.flatMap(\.credits)
-            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "copernicusDEM", "proceduralTokyo", "polyHaven"])
+            XCTAssertEqual(credits.map(\.id), ["tdx", "traOpenData", "openStreetMap", "operators", "worldPop", "overtureBuildings", "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "map3DGround", "copernicusDEM", "proceduralTokyo", "polyHaven"])
             for credit in credits {
                 XCTAssertFalse(credit.title.isEmpty || credit.detail.isEmpty || credit.notice.isEmpty, credit.id)
                 for link in credit.links {
@@ -387,6 +387,12 @@ final class RealRailwaysTests: XCTestCase {
                 XCTAssertTrue(baseMap.notice.contains(part), part)
             }
             XCTAssertTrue(baseMap.links.contains { $0.url.hasSuffix("Resources/Licenses/NotoSans-OFL.txt") })
+            // Decision 234: the ported earcut's ISC notice in full, and
+            // puff's origin.
+            let ground = try XCTUnwrap(credits.first { $0.id == "map3DGround" })
+            for part in ["Copyright (c) 2016, Mapbox", "ISC", "Mark Adler", "zlib", "provided that the above copyright notice and this permission notice appear in all copies"] {
+                XCTAssertTrue(ground.notice.contains(part), part)
+            }
         }
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .english), "Railways: MOTC TDX, © OpenStreetMap contributors")
         XCTAssertEqual(DataSourceCredits.railwaysOnMap(in: .traditionalChinese), "鐵道：交通部 TDX、© OpenStreetMap 貢獻者")
