@@ -9182,6 +9182,56 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **參考**：參考庫（`a91453/railway-reference-private`，`Railway/site_archive_clean/index.html` 的 `PERF_RULES`、`PERF_BY_TYPE`）沒有 C381、EMU800／900、700T 的性能，只有已經移植的那些；`rail-3d/assets/blender-map-v1/` 有這幾款的 3D 模型（`c381.bin`、`emu800.bin`、`700t.bin`），之後外觀用。數字來自上表的公開規格。
 
+### 238. 原生 3D 地圖第七步：遠近分級
+
+作者 2026-10-15：「我最低已經限制 iOS 17，三角形可以多一點吧」，四個角度同意就做。iOS 17 最舊的機型是 iPhone XS／XR（A12），它定了上限；決策 229 的手機預算（一個畫面 30–50 萬個三角形）就是照它估的。要多一點細節又不超過預算，做法是近處多、遠處少。
+
+1. **分塊多一份遠版**（`Map3DScene.Chunk`）：
+   - `mesh` 照舊是完整的近版：前 `baseIndexCount` 個索引是地面、道路、軌道、月台與玩家的建物，之後是城市建物。讀 `mesh` 的程式與測試都不用改。
+   - 新的 `far` 是城市建物的遠版。
+   - 遠處的分塊畫 `mesh` 的前段，再畫 `far`。
+   - 建構時城市建兩次（`Builder.target`：`.near`、`.far`）；陰影只在近版那次做。
+2. **近版多的**（`Map3DScene.addRowHouses`、`addBlock`，`Map3DBuildings.addFrontDetail`）：
+   - 透天厝：有陽台的每層一個陽台（深 1 m、高 1.05 m），其餘一半的樓層一台冷氣（0.8 × 0.35 × 0.55 m），店家七成有直立招牌（2.4–3.2 m）。尺寸取自素材庫 japan 包（陽台 0.95–1.05 m、冷氣 0.8 m、blade sign）。
+   - 公寓（7–16 層的板樓）：長邊每層一條陽台帶。
+3. **遠版拿掉的**：
+   - 立面的陽台、冷氣、招牌，女兒牆；
+   - 屋頂機房與冷氣主機；
+   - 廠房的鐵捲門、貨櫃、辦公室的飾帶；
+   - 診所的腰帶與雨遮；
+   - 廟的燕尾脊、前殿的脊、香爐；
+   - 公園的樹幹（樹冠留著）。
+   - 透天厝屋頂的水塔與鐵皮加蓋留著：每個 10–16 個三角形，卻是遠看最像台灣的地方。
+4. **什麼時候畫近版**（`Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`，在 GamePresentation，Linux 測試；Metal 只照它挑，決策 229 續）：
+   - 鏡頭在 1.6 km 以內（`detailDistance`）；
+   - 分塊離鏡頭看的點，或離眼睛正下方的地面，在 `max(700 m, 距離 × 1.2)` 以內。
+   - 邊界留一段餘裕，照參考庫街景的做法（`street_scene_reference_clean/source/assets/scene.js` 的 `updateDetail`：近版超過 1.14 倍才換遠版，遠版進到 0.86 倍才換回近版），所以拖曳時不會在線上來回閃。
+   - Metal 的每個分塊記住上一幀畫的是哪一版。
+5. **量測**（同一個場景，「全用近版」→「分級」；細節見 `docs/art/map3d-detail-levels-2026-10-15/`）：
+   - 兩鎮的地圖：拉近（140 m、950 m）不變；2.2 km 從 115,876 降到 49,700；整張從 223,456 降到 108,750。
+   - 瑞芳實景示範的整張：523,192 → 481,762。它幾乎都是地面與軌道，這一步沒分級，是下一個要減的地方。
+   - iPhone 上的幀數 **UNVERIFIED**，要等 TestFlight。
+6. **四個角度**：
+   - 玩家：拉近看得到陽台、冷氣、招牌；拉遠更順，最舊的 iPhone XS 也有餘裕。
+   - 開發：內容都在 GamePresentation，Metal 只多一個「畫哪一段」的判斷；城市建兩次，建構時間多約一半，在背景執行緒。
+   - 美術：畫風定案時就要求的遠近分級（`docs/art/3d-style-2026-10-13/README.md`：拉近才長出鐵窗與招牌）；遠版留下藍水塔與鐵皮加蓋，遠看仍是台灣。
+   - 音樂：無。
+   - 沒有別的方案要比：遠近分級是畫風定案時就寫下的做法，這裡只決定兩版的內容與距離。
+7. **預覽工具**：決策 231–238 的預覽圖都是同一組工具做的，原本只在 session 的暫存區。這一步把它放進 `tools/map3d-preview/`：
+   - 輸出場景的測試範本，可輸出近版或遠版、每個鏡頭畫多少三角形；
+   - WebGL 頁、Playwright 腳本；
+   - 說明。
+   之後的 session 都能做前後對照。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| `Railway/street_scene_reference_clean/source/assets/scene.js` 的 `updateDetail`：每個建物群近、遠兩版，依鏡頭到群的距離切換（90 m，地標 1.8 倍），1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail`（距離改成 700 m 起、隨鏡頭距離放大，因為這裡的鏡頭在 60 m–12 km）、Metal 的 `detailed` |
+| `procedural_assets_reference_clean` japan 包的陽台（0.95–1.05 m）、冷氣（0.8 m）、blade sign | `addFrontDetail` |
+
+外部專案：沒有用到。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

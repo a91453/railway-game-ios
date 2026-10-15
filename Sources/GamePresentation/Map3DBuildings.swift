@@ -41,6 +41,8 @@ extension Map3DPalette {
     static let granite = rgbColor(0xD3CDC1)
     /// Plant on the roofs: air conditioners, stair houses' doors.
     static let plant = rgbColor(0xA7A39A)
+    /// The japan pack's outdoor air conditioner (`#e9e7df`).
+    static let acUnit = rgbColor(0xE9E7DF)
     static let signs: [UInt32] = [rgbColor(0xD9534A), rgbColor(0x3E7CC0), rgbColor(0xF0B847), rgbColor(0x4FA36B)]
 
     fileprivate static func rgbColor(_ hex: UInt32) -> UInt32 { Map3DColor.rgb(hex) }
@@ -74,6 +76,7 @@ extension Map3DScene.Builder {
                          base + Map3DPoint(half, 0.03, half), base + Map3DPoint(half, 0.03, -half), color: Map3DPalette.concrete, paint: Self.concrete)
         }
         let kind = Int(r(1) * 4)
+        let far = isFar
         mesh(at: base) { mesh in
             switch kind {
             case 0:
@@ -84,7 +87,7 @@ extension Map3DScene.Builder {
                 let pitch = (12 + r(9) * 7) * Float.pi / 180
                 mesh.addGableRoof(base: hall + Map3DPoint(0, height, 0), forward: forward, length: hallLength, width: hallWidth,
                                   rise: hallWidth / 2 * tanf(pitch), overhang: 0.5, color: roof, gable: wall, paint: Self.metal)
-                Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 1 + Int(r(10) * 2), height: 4.4)
+                if !far { Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 1 + Int(r(10) * 2), height: 4.4) }
             case 1:
                 // A sawtooth hall, its glazing to the north light.
                 let height = 6 + r(8) * 1.5
@@ -92,7 +95,7 @@ extension Map3DScene.Builder {
                             frontPaint: Self.metal, flankPaint: Self.metal, capped: false)
                 mesh.addSawtoothRoof(base: hall + Map3DPoint(0, height, 0), forward: forward, length: hallLength, width: hallWidth,
                                      teeth: max(3, Int(hallLength / 7)), rise: 2.4, color: roof, glazing: Map3DPalette.glazing, paint: Self.metal)
-                Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 2, height: 4.2)
+                if !far { Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 2, height: 4.2) }
             case 2:
                 // An arched warehouse (its walls 5.5 m, the crown a fifth of
                 // the span higher) with containers in the yard.
@@ -101,8 +104,8 @@ extension Map3DScene.Builder {
                             frontPaint: Self.metal, flankPaint: Self.metal, capped: false)
                 mesh.addBarrelRoof(base: hall + Map3DPoint(0, height, 0), forward: forward, length: hallLength + 0.6, width: hallWidth + 0.4,
                                    rise: hallWidth * 0.2, color: roof, end: wall, paint: Self.metal)
-                Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 1, height: 5.2)
-                for index in 0..<(1 + Int(r(11) * 3)) {
+                if !far { Self.addDoors(&mesh, on: hall, forward: forward, length: hallLength, width: hallWidth, count: 1, height: 5.2) }
+                for index in 0..<(far ? 0 : 1 + Int(r(11) * 3)) {
                     let spot = base + forward * (lot / 2 - 4) + across * (Float(index) * 3 - 3) * (r(7) < 0.5 ? 1 : -1)
                     let color = Self.pick(Map3DPalette.containers, r(Int32(12 + index)))
                     mesh.addBox(base: spot, forward: forward, length: 6.06, width: 2.44, height: 2.59, top: Map3DColor.shaded(color, 1.05), side: color)
@@ -132,8 +135,10 @@ extension Map3DScene.Builder {
                 let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 2)
                 mesh.addBox(base: office, forward: forward, length: 8, width: 11, height: 6.4, top: Map3DPalette.roof, side: Map3DPalette.tileWhite,
                             topPaint: Self.roofing, frontPaint: windows, flankPaint: windows)
-                mesh.addBox(base: office + Map3DPoint(0, 6.4, 0), forward: forward, length: 8.1, width: 11.1, height: 0.5,
-                            top: Map3DPalette.roof, side: Map3DPalette.trimBlue)
+                if !far {
+                    mesh.addBox(base: office + Map3DPoint(0, 6.4, 0), forward: forward, length: 8.1, width: 11.1, height: 0.5,
+                                top: Map3DPalette.roof, side: Map3DPalette.trimBlue)
+                }
             }
         }
         shadows.append((hall, hallLength, hallWidth))
@@ -229,12 +234,14 @@ extension Map3DScene.Builder {
         let ground: Float = 4.4, upper: Float = 3.2
         let height = ground + upper * Float(floors - 1)
         let upperPaint = Map3DPaint.bays(Self.pick(Map3DSurface.flats, r(7)), bay: 3.2, floors: floors - 1)
+        let far = isFar
         mesh(at: base) { mesh in
             mesh.addBox(base: base, forward: forward, length: length, width: width, height: ground, top: Map3DPalette.roof, side: Map3DPalette.stone,
                         frontPaint: .bays(.shopfront, bay: 5.4, floors: 1), flankPaint: Self.plaster, capped: false)
             mesh.addBox(base: base + Map3DPoint(0, ground, 0), forward: forward, length: length, width: width, height: height - ground,
                         top: Map3DPalette.roof, side: Map3DPalette.tileWhite, topPaint: Self.roofing, frontPaint: upperPaint, flankPaint: upperPaint)
             // The band over the ground storey, the canopy over the door.
+            guard !far else { return }
             mesh.addBox(base: base + Map3DPoint(0, ground - 0.4, 0), forward: forward, length: length + 0.3, width: width + 0.3, height: 0.4,
                         top: Map3DPalette.stone, side: Map3DPalette.stone)
             let across = Map3DPoint(-forward.z, 0, forward.x)
@@ -248,6 +255,7 @@ extension Map3DScene.Builder {
     mutating func addFireStation(base: Map3DPoint, lot: Float, r: (Int32) -> Float) {
         let forward = Map3DPoint(0, 0, -1)
         let length: Float = 14, width = min(lot * 0.7, 24)
+        let far = isFar
         mesh(at: base) { mesh in
             let windows = Map3DPaint.bays(.flatWindows, bay: 3.2, floors: 2)
             mesh.addBox(base: base, forward: forward, length: length, width: width, height: 4.4, top: Map3DPalette.roof,
@@ -257,7 +265,9 @@ extension Map3DScene.Builder {
             // The hose tower.
             mesh.addBox(base: base + Map3DPoint(width / 2 - 2, 0, length / 2 - 2), length: 3.4, width: 3.4, height: 18, top: Map3DPalette.roof,
                         side: Map3DColor.rgb(0xC9746A))
-            Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 11, 0), forward: forward, length: length, width: width, r: r, salt: 50)
+            if !far {
+                Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 11, 0), forward: forward, length: length, width: width, r: r, salt: 50)
+            }
         }
         addShadow(centre: base, forward: forward, length: length, width: width, spread: 3, darkness: 0.32)
     }
@@ -285,6 +295,7 @@ extension Map3DScene.Builder {
         let hasFrontHall = terrace >= 24
         let mainHall = hasFrontHall ? base - forward * (terrace / 2 - hallLength / 2 - 1) : base
         let frontHall = base + forward * (terrace / 2 - 4.5)
+        let far = isFar
         mesh(at: base) { mesh in
             mesh.addBox(base: base, forward: forward, length: terrace, width: terrace, height: 0.6, top: Map3DPalette.granite,
                         side: Map3DColor.shaded(Map3DPalette.granite, 0.9), topPaint: Self.paving)
@@ -300,13 +311,14 @@ extension Map3DScene.Builder {
                             width: hallLength * 0.6, rise: 2.8, overhang: 1.4, sweep: 1.1, color: Map3DPalette.templeRoof, paint: Self.roofing)
             // The ridge, red, its ends swept up like a swallow's tail (燕尾).
             let ridgeLength = max(2, hallWidth * 0.7 + 2.8 - hallLength * 0.6 - 2.8)
-            Self.addSwallowtailRidge(&mesh, middle: mainHall + floor + Map3DPoint(0, 10.8, 0), along: Map3DPoint(1, 0, 0), length: ridgeLength + 2)
+            if !far { Self.addSwallowtailRidge(&mesh, middle: mainHall + floor + Map3DPoint(0, 10.8, 0), along: Map3DPoint(1, 0, 0), length: ridgeLength + 2) }
             // The front hall, lower, one roof.
             guard hasFrontHall else { return }
             mesh.addBox(base: frontHall + floor, forward: forward, length: 6, width: hallWidth * 0.9, height: 4.4, top: Map3DPalette.templeWall,
                         side: Map3DPalette.templeWall, capped: false)
             mesh.addHipRoof(base: frontHall + floor + Map3DPoint(0, 4.4, 0), forward: Map3DPoint(1, 0, 0), length: hallWidth * 0.9, width: 6,
                             rise: 2.4, overhang: 1.5, sweep: 0.9, color: Map3DPalette.templeRoof, paint: Self.roofing)
+            guard !far else { return }
             Self.addSwallowtailRidge(&mesh, middle: frontHall + floor + Map3DPoint(0, 6.8, 0), along: Map3DPoint(1, 0, 0),
                                      length: max(2, hallWidth * 0.9 - 6) + 2)
             // The incense burner in the courtyard between them.
@@ -346,6 +358,7 @@ extension Map3DScene.Builder {
         let floors = 3 + Int(r(3) * 3)
         let height = 4.6 * Float(floors)
         let sign = Self.pick(Map3DPalette.signs, r(4))
+        let far = isFar
         mesh(at: base) { mesh in
             let shops = Map3DPaint.bays(Self.pick(Map3DSurface.shops, r(5)), bay: 5.4, floors: 1)
             mesh.addBox(base: base, forward: forward, length: size, width: size, height: 4.6, top: Map3DPalette.roof, side: Map3DPalette.tileWhite,
@@ -357,9 +370,39 @@ extension Map3DScene.Builder {
                         top: sign, side: sign)
             mesh.addBox(base: base + forward * (size / 2), forward: forward, length: 3, width: size * 0.3, height: height - 3,
                         top: Map3DPalette.glazing, side: Map3DPalette.glazing, frontPaint: .bays(.officeGlass, bay: 3, floors: floors))
-            Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, height, 0), forward: forward, length: size, width: size, r: r, salt: 60)
+            if !far {
+                Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, height, 0), forward: forward, length: size, width: size, r: r, salt: 60)
+            }
         }
         addShadow(centre: base, forward: forward, length: size, width: size, spread: 4, darkness: 0.34)
+    }
+
+    // MARK: Fronts (decision 238)
+
+    /// What stands out of a row house's front, near only: a balcony on
+    /// each upper floor of a 透天厝 with balconies, an air conditioner
+    /// under some windows of the rest, and a blade sign on a shop (the
+    /// japan pack's balconies 0.95–1.05 m deep, its air conditioners
+    /// 0.8 m, its blade signs).
+    static func addFrontDetail(_ mesh: inout Map3DMesh, front: Map3DPoint, facing: Map3DPoint, width: Float, groundFloor: Float,
+                               upper: Float, floors: Int, wall: UInt32, balconies: Bool, sign: Bool, r: (Int32) -> Float) {
+        let across = Map3DPoint(-facing.z, 0, facing.x)
+        for floor in 1..<max(1, floors) {
+            let level = Map3DPoint(0, groundFloor + upper * Float(floor - 1), 0)
+            if balconies {
+                mesh.addBox(base: front + facing * 0.5 + level, forward: facing, length: 1, width: width - 0.8, height: 1.05,
+                            top: Map3DColor.shaded(wall, 0.97), side: Map3DColor.shaded(wall, 0.93))
+            } else if r(Int32(20 + floor)) < 0.5 {
+                let side: Float = r(Int32(30 + floor)) < 0.5 ? -1 : 1
+                mesh.addBox(base: front + facing * 0.2 + across * (side * width / 4) + level + Map3DPoint(0, 0.5, 0), forward: facing,
+                            length: 0.35, width: 0.8, height: 0.55, top: Map3DPalette.acUnit, side: Map3DPalette.acUnit)
+            }
+        }
+        if sign, r(12) < 0.7 {
+            let height: Float = floors >= 3 ? 3.2 : 2.4
+            mesh.addBox(base: front + facing * 0.45 + across * (width / 2 - 0.5) + Map3DPoint(0, groundFloor + 0.3, 0), forward: facing,
+                        length: 0.7, width: 0.25, height: height, top: Map3DPalette.tileWhite, side: pick(Map3DPalette.signs, r(13)))
+        }
     }
 
     // MARK: Roofs

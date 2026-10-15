@@ -1584,3 +1584,12 @@ V 實際放行 → T、U（保證不互穿）
 | city 的 clinic、police station、firehouse、rooftop air conditioner | `addClinic`、`addFireStation`、`addRoofPlant` | 樓層高與腰帶照用，去掉美式的石角、門階 |
 | japan 的 school gym、temple hall、shared generator 的 roof access house | 學校、`addTemple`、樓梯間與頂樓加蓋 | 廟的屋頂改成台灣的橘色琉璃瓦與燕尾脊 |
 
+## 3D 地圖的遠近分級（決策 238）
+
+參考庫 `a91453/railway-reference-private` `b1e2bc0`（2026-10-15 讀取）。
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Railway/street_scene_reference_clean/source/assets/scene.js` `updateDetail`：建物群近、遠兩版，依鏡頭距離切換，1.14／0.86 的餘裕 | `Map3DCamera.wantsDetail(minimum:maximum:wasDetailed:)`、`Map3DScene.Chunk.far` | 餘裕照用；距離改成 700 m 起、隨鏡頭距離放大，切換的單位是 512 m 的分塊 |
+| `Railway/procedural_assets_reference_clean/` japan 包的陽台、冷氣、blade sign 的尺寸 | `Map3DBuildings.addFrontDetail` | 尺寸照用，形狀是本專案自己的盒子 |
+
