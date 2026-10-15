@@ -68,9 +68,12 @@ struct Map3DPreviewScreen: View {
             // Decision 234: on a real-world map, the base map's roads, rivers
             // and cover, read from the file the 2D map draws.
             let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
+            // Decision 239: and the real buildings round Kaohsiung and
+            // Taichung Stations.
+            let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
             let built = await Task.detached(priority: .userInitiated) {
                 let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
-                return Map3DScene(world: world, baseMap: baseMap)
+                return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [])
             }.value
             scene = built
             sceneVersion &+= 1

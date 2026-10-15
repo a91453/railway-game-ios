@@ -226,12 +226,12 @@ enum MapArt {
             if projection.detail == .full {
                 // Decision 205: close up, its cars. A tail may still be
                 // visible when its head is offscreen.
-                let cars = TrainCars.count(length: run.length)
+                let cars = TrainCars.count(length: run.length, carPitch: run.carPitch)
                 let reach = run.length + run.lag + TrainCars.drawnCarLength * Double(cars)
                 guard region.expanded(by: reach).contains(x: head.point.x, y: head.point.y) else { continue }
                 drawCars(
                     TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: cars),
-                    colour: colour, isSelected: isSelected, isHighSpeed: run.isHighSpeed, projection: projection, in: context
+                    colour: colour, livery: run.livery, painted: !plain, isSelected: isSelected, projection: projection, in: context
                 )
                 continue
             }
@@ -1093,19 +1093,26 @@ enum MapArt {
 
     /// Decision 205: a train close up, car by car (``TrainCars``), each car
     /// in its colour with a navy joint between, the whole cased in
-    /// ``Palette/ink`` and the leading car's nose rounded (pointed for a
-    /// high-speed set, decision 168: the shape is the difference). The
-    /// nose is its head: no dot. Selected, a warm yellow edge inside a navy
-    /// line round it, where the selection was the track's teal.
+    /// ``Palette/ink`` and the leading car's nose its model's shape
+    /// (decision 243: pointed for a high-speed set, decision 168, round or
+    /// flat). The nose is its head: no dot. Selected, a warm yellow edge
+    /// inside a navy line round it, where the selection was the track's
+    /// teal. Painted (decision 243), a model's cars are its body's colour
+    /// with a band of the line's `colour` edged in navy along them, and its
+    /// nose its cab's colour; a train of no model is all its line's colour.
     private static func drawCars(
-        _ cars: [[TrainMotion.Point]], colour: Color, isSelected: Bool, isHighSpeed: Bool,
+        _ cars: [[TrainMotion.Point]], colour: Color, livery: TrainLivery, painted: Bool, isSelected: Bool,
         projection: some MapProjection, in context: GraphicsContext
     ) {
         guard let leading = cars.first, leading.count > 1 else { return }
         let width = max(3, trainWidth(projection.referenceSize))
         // The nose's shape stands on the first car, this far back from its
         // front, in world units.
-        let noseLength = (isHighSpeed ? width * 1.2 : width / 2) / projection.pointsPerUnit
+        let noseLength = switch livery.nose {
+        case .pointed: width * 1.2 / projection.pointsPerUnit
+        case .round: width / 2 / projection.pointsPerUnit
+        case .flat: width / 4 / projection.pointsPerUnit
+        }
         let front = TrainMotion.Trail(leading)
         guard let tip = front.point(at: 0), let base = front.point(at: noseLength),
               let along = front.direction(at: noseLength) else { return }
@@ -1124,9 +1131,18 @@ enum MapArt {
         var across = CGVector(dx: -(ahead.y - basePoint.y), dy: ahead.x - basePoint.x)
         let size = (across.dx * across.dx + across.dy * across.dy).squareRoot()
         across = size > 0 ? CGVector(dx: across.dx / size * width / 2, dy: across.dy / size * width / 2) : .zero
-        let nose: Path = isHighSpeed
-            ? polygon([tipPoint, CGPoint(x: basePoint.x + across.dx, y: basePoint.y + across.dy), CGPoint(x: basePoint.x - across.dx, y: basePoint.y - across.dy)])
-            : Path(ellipseIn: CGRect(x: basePoint.x - width / 2, y: basePoint.y - width / 2, width: width, height: width))
+        let nose: Path = switch livery.nose {
+        case .pointed:
+            polygon([tipPoint, CGPoint(x: basePoint.x + across.dx, y: basePoint.y + across.dy), CGPoint(x: basePoint.x - across.dx, y: basePoint.y - across.dy)])
+        case .round:
+            Path(ellipseIn: CGRect(x: basePoint.x - width / 2, y: basePoint.y - width / 2, width: width, height: width))
+        case .flat:
+            polygon([
+                CGPoint(x: basePoint.x + across.dx, y: basePoint.y + across.dy), CGPoint(x: tipPoint.x + across.dx, y: tipPoint.y + across.dy),
+                CGPoint(x: tipPoint.x - across.dx, y: tipPoint.y - across.dy), CGPoint(x: basePoint.x - across.dx, y: basePoint.y - across.dy),
+            ])
+        }
+        let body = painted ? livery.body.map(Palette.rgb) : nil
         // The way the tail ends, on the screen, so each casing squares it off
         // half its own extra width beyond the last car.
         let tail = TrainMotion.Trail(shortened.last ?? leading)
@@ -1152,10 +1168,15 @@ enum MapArt {
         let joint = 1.5 / projection.pointsPerUnit
         for (index, car) in shortened.enumerated() {
             let trail = TrainMotion.Trail(car)
-            let kept = trail.points(from: 0, to: trail.length - (index == shortened.count - 1 ? 0 : joint))
-            context.stroke(trainPolyline(kept, projection: projection), with: .color(colour), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+            let kept = trainPolyline(trail.points(from: 0, to: trail.length - (index == shortened.count - 1 ? 0 : joint)), projection: projection)
+            context.stroke(kept, with: .color(body ?? colour), style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round))
+            guard body != nil else { continue }
+            // Decision 243: the line's band, edged in navy so that a pale
+            // line colour still shows on a white or silver body.
+            context.stroke(kept, with: .color(Palette.liveryBandEdge), style: StrokeStyle(lineWidth: width * 0.4 + 1, lineCap: .butt, lineJoin: .round))
+            context.stroke(kept, with: .color(colour), style: StrokeStyle(lineWidth: width * 0.4, lineCap: .butt, lineJoin: .round))
         }
-        context.fill(nose, with: .color(colour))
+        context.fill(nose, with: .color(body == nil ? colour : livery.cab.map(Palette.rgb) ?? colour))
     }
 
     private static func drawCatchmentRings(_ world: GameWorld, projection: some MapProjection, in context: GraphicsContext) {

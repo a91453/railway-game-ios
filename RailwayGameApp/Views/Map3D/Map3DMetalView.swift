@@ -40,8 +40,17 @@ final class Map3DMetalView: MTKView {
         let vertices: MTLBuffer
         let indices: MTLBuffer
         let indexCount: Int
+        /// Decision 238: how many of the indices are its ground, track and
+        /// roads, and its city simplified for afar, if it has a city.
+        let baseIndexCount: Int
+        let far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        /// Whether it was drawn in full last frame (decision 238's margin).
+        var detailed = false
         /// Decision 232: its shadows, if it has any.
         let shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+        /// Decision 244: its street furniture's instances, sorted by model,
+        /// and where each model's run of them starts.
+        let props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
         let minimum: Map3DPoint
         let maximum: Map3DPoint
     }
@@ -247,8 +256,25 @@ final class Map3DMetalView: MTKView {
             if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
                 shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
             }
-            return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, shadows: shadows,
-                         minimum: chunk.minimum, maximum: chunk.maximum)
+            var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
+            if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
+                far = (farVertices, farIndices, chunk.far.indices.count)
+            }
+            var props: (instances: MTLBuffer, runs: [(model: Int, first: Int, count: Int)])?
+            let sorted = chunk.props.sorted { $0.model < $1.model }
+            if let instances = makeBuffer(sorted.flatMap(\.floats)) {
+                var runs: [(model: Int, first: Int, count: Int)] = []
+                for (index, instance) in sorted.enumerated() {
+                    if let last = runs.last, last.model == instance.model {
+                        runs[runs.count - 1].count += 1
+                    } else {
+                        runs.append((instance.model, index, 1))
+                    }
+                }
+                props = (instances, runs)
+            }
+            return Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
+                         far: far, shadows: shadows, props: props, minimum: chunk.minimum, maximum: chunk.maximum)
         }
     }
 
@@ -278,13 +304,36 @@ final class Map3DMetalView: MTKView {
             encoder.setFragmentBytes(base, length: bytes.count, index: 1)
         }
         var drawCalls = 0, triangles = 0
-        let visible = chunks.filter { Map3DCamera.sees(minimum: $0.minimum, maximum: $0.maximum, through: matrix) }
+        let camera = camera
+        var visible: [Chunk] = []
+        for index in chunks.indices {
+            // Decision 238: in full near the camera, whether in view or not,
+            // so the margin holds.
+            chunks[index].detailed = camera.wantsDetail(minimum: chunks[index].minimum, maximum: chunks[index].maximum,
+                                                        wasDetailed: chunks[index].detailed)
+            if Map3DCamera.sees(minimum: chunks[index].minimum, maximum: chunks[index].maximum, through: matrix) {
+                visible.append(chunks[index])
+            }
+        }
         for chunk in visible {
-            encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
-            encoder.drawIndexedPrimitives(type: .triangle, indexCount: chunk.indexCount, indexType: .uint32,
-                                          indexBuffer: chunk.indices, indexBufferOffset: 0)
-            drawCalls += 1
-            triangles += chunk.indexCount / 3
+            // Decision 238: the city in full near the camera; afar, the
+            // ground and track, then the city simplified.
+            let detailed = chunk.detailed
+            let count = detailed ? chunk.indexCount : chunk.baseIndexCount
+            if count > 0 {
+                encoder.setVertexBuffer(chunk.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: count, indexType: .uint32,
+                                              indexBuffer: chunk.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += count / 3
+            }
+            if !detailed, let far = chunk.far {
+                encoder.setVertexBuffer(far.vertices, offset: 0, index: 0)
+                encoder.drawIndexedPrimitives(type: .triangle, indexCount: far.indexCount, indexType: .uint32,
+                                              indexBuffer: far.indices, indexBufferOffset: 0)
+                drawCalls += 1
+                triangles += far.indexCount / 3
+            }
         }
         let frame = trains?(camera.eye)
         if let mesh = frame?.boxes, !mesh.isEmpty, let vertices = makeBuffer(mesh.vertices), let indices = makeBuffer(mesh.indices) {
@@ -313,6 +362,22 @@ final class Map3DMetalView: MTKView {
                     drawCalls += 1
                     triangles += models.pack.models[model].triangleCount * count
                     first = last + 1
+                }
+            }
+        }
+        // Decision 244: the street furniture of the chunks drawn in full,
+        // one draw call a model and chunk.
+        if let models {
+            encoder.setRenderPipelineState(instancedPipeline)
+            for chunk in visible where chunk.detailed {
+                guard let props = chunk.props else { continue }
+                for run in props.runs where run.model < models.buffers.count {
+                    encoder.setVertexBuffer(models.buffers[run.model], offset: 0, index: 0)
+                    encoder.setVertexBuffer(props.instances, offset: run.first * Self.instanceStride, index: 2)
+                    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[run.model].vertices.count,
+                                           instanceCount: run.count)
+                    drawCalls += 1
+                    triangles += models.pack.models[run.model].triangleCount * run.count
                 }
             }
         }

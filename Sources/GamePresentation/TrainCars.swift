@@ -2,7 +2,8 @@ import GameCore
 
 /// A train's cars as the map draws them close up (ARCHITECTURE decision 205).
 ///
-/// GameCore stands a train's cars ``Train/carLength`` (16 m) apart and its
+/// GameCore stands a train's cars ``Train/carPitch`` apart (16 m, or since
+/// decision 227 its type's real length) and its
 /// body runs from the first car's centre to the last's (``Train/length``),
 /// so a train drawn along it looked short and fat: a four-car train 48 m
 /// long and nearly 5 m wide. The map draws each car ``drawnCarLength``
@@ -16,9 +17,12 @@ public enum TrainCars {
     public static let drawnCarLength = 20.0 * Double(WorldCoordinate.unitsPerMetre)
 
     /// How many cars a train of `length` (``Train/length``, world units
-    /// from its first car's centre to its last's) has.
-    public static func count(length: Double) -> Int {
-        max(1, Int((length / Double(Train.carLength)).rounded()) + 1)
+    /// from its first car's centre to its last's) has, its cars
+    /// `carPitch` apart (``Train/carPitch``, ``TrainMotion/Run/carPitch``;
+    /// decision 227). 16 m when not given, as every train before real car
+    /// lengths.
+    public static func count(length: Double, carPitch: Double = Double(Train.carLength)) -> Int {
+        max(1, Int((length / carPitch).rounded()) + 1)
     }
 
     /// The cars of a train whose `body` (head first, the first car's centre

@@ -322,7 +322,7 @@
 ///     newer instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 61
+    public static let currentVersion = 62
 
     public let world: GameWorld
 
@@ -483,6 +483,8 @@ extension SavedGame: Codable {
         // Version 59 to 60: a world without `"tripLog"` has kept no trips.
         // Version 60 to 61: nothing to convert; a world from this version
         // may carry a line's `"depots"`.
+        // Version 61 to 62: a world without `"realCarLengths"` buys trains
+        // of 16 m cars, and a train without `"carPitch"` has them.
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
