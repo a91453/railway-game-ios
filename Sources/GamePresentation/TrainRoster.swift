@@ -216,7 +216,8 @@ public struct TrainRoster: Equatable, Sendable {
                                       end: planned.end, fare: .zero, state: .planned, isEmptyRun: false))
                 }
             }
-            let revenue = own.reduce(Money.zero) { $0 + $1.fare }
+            // A trip from the day before had its fares booked that day.
+            let revenue = own.filter { $0.sentOut.seconds >= dayStart }.reduce(Money.zero) { $0 + $1.fare }
             let utilisation = span > 0 ? Int(min(100, busy * 100 / span)) : 0
             rows.append((line.flatMap { lineOrder[$0] } ?? Int.max, index,
                          Row(train: train.id, name: train.name, line: line, lineCode: line.flatMap { codes[$0] },
