@@ -42,6 +42,8 @@ public struct Map3DModelPack: Sendable {
             models.append(Map3DTrainBuilder(style: style, cab: true).model(named: style.name + "-cab"))
             models.append(Map3DTrainBuilder(style: style, cab: false).model(named: style.name + "-car"))
         }
+        // Decision 244: and the street furniture.
+        models += Map3DProp.allCases.map { $0.model() }
         self.models = models
     }
 
@@ -334,23 +336,7 @@ struct Map3DTrainBuilder {
         builder.addKit()
         // Into the model's frame: x stays the front, the left is −z, up is y;
         // three vertices to a triangle, each with the triangle's normal.
-        var vertices: [Map3DVertex] = []
-        let mesh = builder.mesh
-        vertices.reserveCapacity(mesh.indices.count)
-        for start in stride(from: 0, to: mesh.indices.count, by: 3) {
-            let corners = (0..<3).map { mesh.vertices[Int(mesh.indices[start + $0])] }
-            let points = corners.map { Map3DPoint($0.x, -$0.z, $0.y) }
-            guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
-            for (corner, point) in zip(corners, points) {
-                vertices.append(Map3DVertex(point, normal: normal, color: corner.color))
-            }
-        }
-        var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
-        for v in vertices {
-            low = Map3DPoint(min(low.x, v.x), min(low.y, v.y), min(low.z, v.z))
-            high = Map3DPoint(max(high.x, v.x), max(high.y, v.y), max(high.z, v.z))
-        }
-        return Map3DModelPack.Model(name: name, vertices: vertices, minimum: low, maximum: high)
+        return Map3DModelPack.Model.flat(named: name, from: builder.mesh)
     }
 }
 

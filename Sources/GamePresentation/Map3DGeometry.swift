@@ -26,7 +26,8 @@ public struct Map3DVertex: Hashable, Sendable {
     public var u: Float
     public var v: Float
     /// The ``Map3DSurface`` layer, or ``Map3DVertex/plain`` for the
-    /// colour alone.
+    /// colour alone. Decision 242: plus 64 × (its material's layer + 1)
+    /// when the face has a material (``Map3DPaint/detail``).
     public var layer: Float
 
     /// No texture: the colour alone.
@@ -48,7 +49,12 @@ public struct Map3DVertex: Hashable, Sendable {
     public var position: Map3DPoint { Map3DPoint(x, y, z) }
 
     /// The surface it is painted with, or `nil` for the colour alone.
-    public var surface: Map3DSurface? { layer < 0 ? nil : Map3DSurface(rawValue: Int(layer)) }
+    public var surface: Map3DSurface? { layer < 0 ? nil : Map3DSurface(rawValue: Int(layer) % Map3DPaint.detailStep) }
+
+    /// Decision 242: the material under its surface, or `nil`.
+    public var detail: Map3DSurface? {
+        layer < 0 ? nil : Map3DSurface(rawValue: Int(layer) / Map3DPaint.detailStep - 1)
+    }
 }
 
 /// Decision 231: the textures of the 3D map, one layer each of the app's
@@ -94,6 +100,17 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
     case shopTea
     /// A bay of a block of flats with its blinds half down.
     case flatBlinds
+    /// Decision 242: the materials, each a fine pattern in grey around
+    /// mid grey that the shader lays over a wall in the scene's metres
+    /// (``Map3DSurface/detailRepeat``) and fades out with distance.
+    /// 清水模: fair-faced concrete, 1.8 × 0.9 m panels with six tie holes.
+    case formConcrete
+    /// 二丁掛: Taiwan's long facing tiles in running bond.
+    case brickTile
+    /// 馬賽克磚: small square tiles, each its own shade.
+    case mosaicTile
+    /// 洗石子: washed grit, a dividing groove every 0.9 m.
+    case terrazzo
 
     /// The shops a ground floor may be, and the windows a block of flats
     /// may have; one is picked by where it stands.
@@ -102,6 +119,16 @@ public enum Map3DSurface: Int, CaseIterable, Sendable {
 
     /// The side of each layer in the texture, in pixels.
     public static let side = 256
+
+    /// Decision 242: the materials, in the order the shader's
+    /// `detailRepeat` lists them.
+    public static let materials: [Map3DSurface] = [.formConcrete, .brickTile, .mosaicTile, .terrazzo]
+
+    /// How many metres one repeat of a material covers: the concrete's
+    /// panels 1.8 × 0.9 m, the tiles at their real size.
+    public var detailRepeat: Float {
+        self == .formConcrete ? 3.6 : 1.8
+    }
 }
 
 /// How a face takes its ``Map3DSurface``: how many metres one repeat
@@ -120,11 +147,29 @@ public struct Map3DPaint: Hashable, Sendable {
 
     public var surface: Map3DSurface
     public var fit: Fit
+    /// Decision 242: the material the wall is made of, under its windows
+    /// and doors (where the surface's mask tints), or `nil`.
+    public var detail: Map3DSurface?
 
-    public init(_ surface: Map3DSurface, _ fit: Fit) {
+    public init(_ surface: Map3DSurface, _ fit: Fit, detail: Map3DSurface? = nil) {
         self.surface = surface
         self.fit = fit
+        self.detail = detail
     }
+
+    /// The same paint over `material`.
+    public func on(_ material: Map3DSurface?) -> Map3DPaint {
+        Map3DPaint(surface, fit, detail: material)
+    }
+
+    /// What a vertex's ``Map3DVertex/layer`` holds: the surface, and the
+    /// material in steps of ``detailStep``.
+    public var layer: Float {
+        Float(surface.rawValue + (detail.map { ($0.rawValue + 1) * Self.detailStep } ?? 0))
+    }
+
+    /// Decision 242: the material's place in a vertex's layer.
+    public static let detailStep = 64
 
     public static func tile(_ surface: Map3DSurface, _ size: Float) -> Map3DPaint {
         Map3DPaint(surface, .tile(width: size, height: size))
@@ -261,7 +306,7 @@ public struct Map3DMesh: Sendable {
     public mutating func addQuad(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint, color: UInt32, paint: Map3DPaint? = nil) {
         let corners = [a, b, c, d]
         guard let normal = Self.normal(of: corners) else { return }
-        addQuad(corners, normal: normal, color: color, layer: paint.map { Float($0.surface.rawValue) },
+        addQuad(corners, normal: normal, color: color, layer: paint.map { $0.layer },
                 texture: paint?.coordinates(corners, normal: normal))
     }
 
@@ -269,7 +314,7 @@ public struct Map3DMesh: Sendable {
     /// `points`, three to a triangle in either turn, each turned to face up
     /// and painted with `paint` as a top is.
     public mutating func addFlat(_ points: [Map3DPoint], triangles: [Int], color: UInt32, paint: Map3DPaint? = nil) {
-        let layer = paint.map { Float($0.surface.rawValue) } ?? Map3DVertex.plain
+        let layer = paint.map { $0.layer } ?? Map3DVertex.plain
         var index = 0
         while index + 2 < triangles.count {
             var a = points[triangles[index]], b = points[triangles[index + 1]], c = points[triangles[index + 2]]
@@ -294,7 +339,7 @@ public struct Map3DMesh: Sendable {
     /// from the side it faces), cut as a fan from the first.
     public mutating func addFacet(_ corners: [Map3DPoint], color: UInt32, paint: Map3DPaint? = nil) {
         guard corners.count >= 3, let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { return }
-        let layer = paint.map { Float($0.surface.rawValue) } ?? Map3DVertex.plain
+        let layer = paint.map { $0.layer } ?? Map3DVertex.plain
         let texture = paint?.coordinates(corners, normal: normal)
         let base = UInt32(vertices.count)
         for (index, corner) in corners.enumerated() {
@@ -377,7 +422,7 @@ public struct Map3DMesh: Sendable {
             case let .bays(bay, _): (bay, bay)
             }
         }
-        let topLayer = topPaint.map { Float($0.surface.rawValue) }, sideLayer = sidePaint.map { Float($0.surface.rawValue) }
+        let topLayer = topPaint.map { $0.layer }, sideLayer = sidePaint.map { $0.layer }
         for index in 0..<(line.count - 1) {
             let corners = [left[index], right[index], right[index + 1], left[index + 1]]
             if let normal = Self.normal(of: corners) {
