@@ -679,7 +679,12 @@ extension RealRailways {
         let operations = RealRailwayOperations(
             systems: systems,
             timetables: timetables,
-            schedules: ["thsr": { try file("thsr-schedule", "json") }]
+            schedules: [
+                "thsr": { try file("thsr-schedule", "json") },
+                // Decision 240: a weekday of the Yilan Line, Toucheng to
+                // Su'aoxin, for the TRA demo.
+                TRADemo.schedule: { try file("\(TRADemo.schedule)-schedule", "json") },
+            ]
         )
         let transfers = read("station_transfers", "json").flatMap { data in
             parse("station_transfers.json") { try RealStationTransfers(data: data) }

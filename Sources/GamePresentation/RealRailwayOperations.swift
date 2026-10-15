@@ -143,7 +143,8 @@ public struct RealRailwayOperations: Sendable {
     /// `systems` is each system's `<key>.json` by key; `timetables` each
     /// system's `<key>_times.json` (keyed by `<key>` or `<key>_times`),
     /// read when first needed; `schedules` a scheduled system's day of
-    /// trains (`thsr`: `thsr-schedule.json`).
+    /// trains (`thsr`: `thsr-schedule.json`; `tra-yilan`:
+    /// `tra-yilan-schedule.json`, decision 240).
     public init(
         systems systemsData: [String: Data],
         timetables: [String: @Sendable () throws -> Data] = [:],

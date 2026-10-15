@@ -75,37 +75,59 @@ struct HighSpeedTimetable: Sendable {
     /// those three calls), 60 as nine-stop and 58 as five-stop (19 drop a
     /// call at Tainan). A train calling at a station its line does not is
     /// timed as it was, without that call.
-    init(schedule: RealDailySchedule, names: [String], distances: [Double]) {
-        // The real trains, each as its calls by station index.
-        typealias Call = (station: Int, arrival: Int64, departure: Int64)
-        var trains: [[[Call]]] = Self.kinds.map { _ in [] }
+    ///
+    /// Decision 240: `kinds` are the demo's lines (the TRA demo's are its
+    /// own); a kind with models takes only the trains of those models. A
+    /// stop a train passes is timed at its passing time when the data has
+    /// one (the TRA's), as the High Speed Rail's has none.
+    init(schedule: RealDailySchedule, names: [String], distances: [Double], kinds: [RealLineDemoSpec.Kind] = HighSpeedDemo.spec.kinds) {
+        // The real trains, each as its calls by station index, and the
+        // seconds it passes the stations it does not call at.
+        var trains: [[Train]] = kinds.map { _ in [] }
         for train in schedule.trains {
             let calls: [Call] = train.stops.filter(\.stops).compactMap { stop in
                 names.firstIndex(of: stop.name).map { (station: $0, arrival: Int64(stop.arrivalSecond), departure: Int64(stop.departureSecond)) }
             }
+            var passes: [Int: Int64] = [:]
+            for stop in train.stops where !stop.stops {
+                if let station = names.firstIndex(of: stop.name) { passes[station] = Int64(stop.arrivalSecond) }
+            }
             guard calls.count >= 2, let low = calls.map(\.station).min(), let high = calls.map(\.station).max() else { continue }
             let called = Set(calls.map(\.station))
             var best: (cost: (Int, Int), kind: Int)?
-            for (kind, line) in Self.kinds.enumerated() where line.stops.contains(low) && line.stops.contains(high) {
+            for (kind, line) in kinds.enumerated() where line.stops.contains(low) && line.stops.contains(high)
+                && line.models.map({ train.model.map($0.contains) ?? false }) ?? true
+                && (!line.endToEnd || (low == line.stops.first && high == line.stops.last)) {
                 let between = Set(line.stops.filter { (low...high).contains($0) })
                 let added = between.subtracting(called).count, dropped = called.subtracting(between).count
                 let cost = (added + dropped, added)
                 if best.map({ cost < $0.cost }) ?? true { best = (cost, kind) }
             }
-            if let kind = best?.kind { trains[kind].append(calls) }
+            if let kind = best?.kind { trains[kind].append(Train(calls: calls, passes: passes)) }
         }
-        lines = Self.kinds.enumerated().map { kind, line in
-            Self.line(line, trains: trains[kind], distances: distances)
+        lines = kinds.enumerated().map { kind, line in
+            Self.line((line.english, line.chinese, line.stops), trains: trains[kind], distances: distances)
         }
     }
 
+    /// A real train's call at a station, by index.
+    private typealias Call = (station: Int, arrival: Int64, departure: Int64)
+
+    /// A real train: its calls, and when it passes the stations it does not
+    /// call at, where the data says (decision 240).
+    private struct Train {
+        let calls: [Call]
+        let passes: [Int: Int64]
+    }
+
     /// One line's runs, positioning runs and sets.
-    private static func line(_ kind: (english: String, chinese: String, stops: [Int]), trains: [[(station: Int, arrival: Int64, departure: Int64)]], distances: [Double]) -> Line {
+    private static func line(_ kind: (english: String, chinese: String, stops: [Int]), trains: [Train], distances: [Double]) -> Line {
         let stops = kind.stops
         // A real train as a run of the line: its times at every stop of the
-        // line between its ends, a stop it passes timed between its calls
-        // either side by distance.
-        func run(of calls: [(station: Int, arrival: Int64, departure: Int64)]) -> LineRun {
+        // line between its ends, a stop it passes timed when it passes, or
+        // between its calls either side by distance.
+        func run(of train: Train) -> LineRun {
+            let calls = train.calls
             let first = calls[0], last = calls[calls.count - 1]
             let southbound = first.station < last.station
             let from = stops.firstIndex(of: first.station)!, to = stops.firstIndex(of: last.station)!
@@ -113,6 +135,9 @@ struct HighSpeedTimetable: Sendable {
                 let station = stops[index]
                 if let call = calls.first(where: { $0.station == station }) {
                     return LineRunTime(arrival: call.arrival, departure: call.departure)
+                }
+                if let passing = train.passes[station] {
+                    return LineRunTime(arrival: passing, departure: passing)
                 }
                 let before = calls.last { southbound ? $0.station < station : $0.station > station }!
                 let after = calls.first { southbound ? $0.station > station : $0.station < station }!
