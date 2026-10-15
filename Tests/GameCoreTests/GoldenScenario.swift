@@ -1276,6 +1276,8 @@ extension StepOutcome: Codable {
             self = try .rejected(.trackEdgeInUse(.edge(container.decode(Int.self, forKey: .edge))))
         case "trackTooSteep":
             self = .rejected(.trackTooSteep)
+        case "turnoutTooSteep":
+            self = .rejected(.turnoutTooSteep)
         case "invalidTrackStructure":
             self = .rejected(.invalidTrackStructure)
         case "trackConflict":
@@ -1510,6 +1512,8 @@ extension StepOutcome: Codable {
             try encodeEdge(edge)
         case .rejected(.trackTooSteep):
             try container.encode("trackTooSteep", forKey: .result)
+        case .rejected(.turnoutTooSteep):
+            try container.encode("turnoutTooSteep", forKey: .result)
         case .rejected(.invalidTrackStructure):
             try container.encode("invalidTrackStructure", forKey: .result)
         case .rejected(.trackConflict(let edge)):
