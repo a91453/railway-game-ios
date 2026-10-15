@@ -754,6 +754,7 @@ struct MapView: View {
                 baseMapReadout(shown: realWorld != nil && mapStyle != .openStreetMap)
                 cameraZoomReadout(projection.pointsPerUnit)
                 stationReadout(projection)
+                expansionTileReadout(projection)
             }
             .onChange(of: isZoning) { _, zoning in
                 // Decision 98: zoning shows the zones.
@@ -1367,6 +1368,26 @@ struct MapView: View {
                 .allowsHitTesting(false)
                 .accessibilityElement()
                 .accessibilityIdentifier("map.stations")
+                .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
+        }
+    }
+
+    /// Where the tiles for sale are while choosing one, in the map's
+    /// points (the middle of each, "x,y" split by ";"), under UI tests
+    /// only: they show clear of the expansion's pill (the PR #627–#646
+    /// review).
+    @ViewBuilder
+    private func expansionTileReadout(_ projection: PlanCamera) -> some View {
+        if Self.readsBaseMap, let tiles = session.mapExpansionOverlay?.forSale, session.isChoosingMapTile {
+            let points = tiles.map { tile in
+                let point = projection.screenPoint(worldX: Double(tile.area.minX + tile.area.maxX) / 2, worldY: Double(tile.area.minY + tile.area.maxY) / 2)
+                return "\(Int(point.x.rounded())),\(Int(point.y.rounded()))"
+            }
+            Color.clear
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("map.expansion.tiles")
                 .accessibilityValue(Text(verbatim: points.joined(separator: ";")))
         }
     }

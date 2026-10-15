@@ -400,7 +400,7 @@ final class MapInteractionTests: XCTestCase {
     /// beside the building tools' Done, and buying a tile then looked like
     /// building. It is not shown while the tools are out; choosing a tile
     /// says so on the button; the pill buys in words, not with a build's ✓.
-    func testTheMapExpansionIsNotMistakenForBuilding() {
+    func testTheMapExpansionIsNotMistakenForBuilding() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -427,17 +427,28 @@ final class MapInteractionTests: XCTestCase {
 
         expansion.tap()
         XCTAssertEqual(expansion.label, "Stop expanding the map")
-        // The camera fits the 3 × 3 tiles around the one owned, in the
-        // middle: a third of the narrower side beside the middle is in the
-        // tile to its right, which is for sale. Not the tile below: on a
-        // phone on its side the expansion's pill (with its Done) stands
-        // over it since the tools became a column (#626; main bf12187's
-        // full lane, run 38641908091, tapped Done at (437, 301)).
+        // The tile below the one owned, the bottom row's middle: on a phone
+        // on its side the expansion's pill (with its Done) stood over it
+        // since the tools became a column (#626; main bf12187's full lane,
+        // run 38641908091, tapped Done at (437, 301)). The camera now
+        // shows the tiles for sale above the pill (the PR #627–#646
+        // review), so a tap there chooses the tile.
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
-        let frame = map.frame
-        let beside = min(frame.width, frame.height) / 3
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5 + beside / frame.width, dy: 0.5)).tap()
+        let tiles = app.descendants(matching: .any)["map.expansion.tiles"].firstMatch
+        XCTAssertTrue(tiles.appears(within: 10))
+        let centres = ((tiles.value as? String) ?? "").split(separator: ";").compactMap { pair -> CGPoint? in
+            let xy = pair.split(separator: ",").compactMap { Double($0) }
+            return xy.count == 2 ? CGPoint(x: xy[0], y: xy[1]) : nil
+        }
+        XCTAssertFalse(centres.isEmpty, "Tiles for sale: \(String(describing: tiles.value))")
+        let bottom = try XCTUnwrap(centres.map(\.y).max())
+        let row = centres.filter { abs($0.y - bottom) < 1 }.sorted { $0.x < $1.x }
+        let below = try XCTUnwrap(row.count == 3 ? row[1] : nil, "The bottom row: \(row)")
+        let origin = map.frame.origin
+        let target = CGPoint(x: origin.x + below.x, y: origin.y + below.y)
+        XCTAssertFalse(expansion.frame.contains(target), "The tile below the land is under the pill: \(target), \(expansion.frame)")
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: target.x, dy: target.y)).tap()
         let buy = app.buttons["map.expansion.buy"]
         XCTAssertTrue(buy.appears(within: 5), "A pill to buy the tile chosen")
         XCTAssertTrue(buy.label.hasPrefix("Buy tile, $"), "The pill says what it buys: \(buy.label)")

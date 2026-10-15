@@ -105,7 +105,8 @@ GamePresentation 的每一項都先寫了測試，確認修正前會失敗。
 3. **擴地時鏡頭沒避開控制項，下方那格在膠囊（含「結束」）底下**（#626、#644 之後，`MapView.swift` 的 `mapExpansionButton`）：
    - 3×3 格用整個畫面取景，沒有 `clearOf`。#638 改成點右邊那格繞過。
    - 現在用 `MapCover.framing(above:in:)`：控制項的取景，再加上擴地那一排頂端以下的整條底邊（膠囊開始選格後會沿著底邊變長）。
-   - 測試：`MapFocusTests.testTheTilesForSaleShowAboveTheExpansionsRow`（修正前 API 不存在，編譯失敗）。App 的那一行 **UNVERIFIED LOCALLY**。
+   - 測試：`MapFocusTests.testTheTilesForSaleShowAboveTheExpansionsRow`（修正前 API 不存在，編譯失敗）。
+   - UI 測試 `MapInteractionTests.testTheMapExpansionIsNotMistakenForBuilding` 改回點「土地正下方那格」：App 在 UI 測試時把待售格子的位置寫在 `map.expansion.tiles`（和 `map.stations` 一樣只在 UI 測試時有），測試讀出最下排的中間那格，先確認它不在膠囊底下再點。#638 的「點右邊那格」在鏡頭改了之後點不到格子（`only_testing` 第一次的紅燈）。
 4. **地圖樣式選單在遊戲執行時每個 tick 重建**（#645，`StoredMapLayerSheet.mapStyleSection`）：
    - 原本圓形選單包在 `TickStable` 裡（決策 184 之後，TestFlight 54.1：打開的選單重建會捲回頂端、丟點擊）。搬進圖層清單時拿掉了，而清單讀 `session.world`，每 100 ms 重繪。
    - 現在整個 Section 再包回 `TickStable`，鍵是樣式、軌道樣式、有沒有真實鐵路、語言。
