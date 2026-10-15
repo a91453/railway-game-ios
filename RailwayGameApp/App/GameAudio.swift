@@ -10,7 +10,9 @@ import SwiftUI
 /// high speed. The music loops while the
 /// app is in the foreground; the sounds play for the session's cues
 /// (``SoundCue``). The player turns either off in the game menu, and the
-/// choice is kept on the device, never in a save.
+/// choice is kept on the device, never in a save. Decision 219, stage 2:
+/// under the switches, three volumes (``SoundVolumes``): the music, the
+/// station chimes and the other effects, also kept on the device.
 ///
 /// The audio session is ambient: the game mixes with whatever else is
 /// playing, and the ring/silent switch silences it.
@@ -21,6 +23,8 @@ final class GameAudio {
     private(set) var musicOn: Bool
     /// Whether the sounds play.
     private(set) var soundsOn: Bool
+    /// The player's three volumes (decision 219, stage 2).
+    private(set) var volumes: SoundVolumes
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var music: AVAudioPlayer?
@@ -56,6 +60,7 @@ final class GameAudio {
         self.plays = plays
         musicOn = defaults.object(forKey: Key.music) as? Bool ?? true
         soundsOn = defaults.object(forKey: Key.sounds) as? Bool ?? true
+        volumes = SoundVolumes(stored: { defaults.object(forKey: $0) })
         // A call, an alarm or another app can stop the music while the app
         // stays active (a call declined from its banner): pick it up again
         // when iOS says the interruption is over. The observer lives as
@@ -81,6 +86,16 @@ final class GameAudio {
     func setSoundsOn(_ on: Bool) {
         soundsOn = on
         defaults.set(on, forKey: Key.sounds)
+    }
+
+    /// Sets one of the three volumes (decision 219, stage 2); the music
+    /// follows at once, a sound from its next play.
+    func setVolume(_ level: Double, of category: SoundCategory) {
+        volumes.setLevel(level, of: category)
+        defaults.set(volumes.level(of: category), forKey: SoundVolumes.key(for: category))
+        if category == .music {
+            music?.volume = volumes.volume(Self.musicVolume, for: .music)
+        }
     }
 
     /// Follows the app in and out of the foreground: the music plays only
@@ -115,7 +130,9 @@ final class GameAudio {
         if let feedback = Self.feedback(for: cue) {
             haptic = HapticPulse(feedback: feedback, serial: (haptic?.serial ?? 0) &+ 1)
         }
-        guard soundsOn else {
+        // Decision 219, stage 2: a volume at nothing plays nothing.
+        let volume = volumes.volume(Self.baseVolume(of: cue), for: cue.category)
+        guard soundsOn, volume > 0 else {
             lastPlayed[spaced] = now
             return
         }
@@ -127,6 +144,7 @@ final class GameAudio {
             // The others' chime would only echo it.
             lastPlayed[.arrival(watched: false)] = now
         }
+        player.volume = volume
         player.currentTime = 0
         player.play()
     }
@@ -134,7 +152,7 @@ final class GameAudio {
     private func updateMusic() {
         if plays && musicOn && isActive {
             if music == nil {
-                music = Self.player(named: "music-loop", extension: "caf", volume: 0.45)
+                music = Self.player(named: "music-loop", extension: "caf", volume: volumes.volume(Self.musicVolume, for: .music))
                 music?.numberOfLoops = -1
             }
             music?.play()
@@ -143,10 +161,12 @@ final class GameAudio {
         }
     }
 
-    /// Decision 219: the file is the cue's (``SoundCue/resource``): the
-    /// station's chime, or its motif at high speed.
-    private func loadSound(_ cue: SoundCue) -> [AVAudioPlayer] {
-        let volume: Float = switch cue {
+    /// The music's own volume, before the player's (decision 219, stage 2).
+    private static let musicVolume: Float = 0.45
+
+    /// A cue's own volume, before the player's (decision 219, stage 2).
+    private static func baseVolume(of cue: SoundCue) -> Float {
+        switch cue {
         case .arrival(true, _, _): 0.55
         case .arrival(false, _, _): 0.2
         case .track: 0.7
@@ -156,8 +176,14 @@ final class GameAudio {
         case .refused: 0.5
         case .warning: 0.45
         }
+    }
+
+    /// Decision 219: the file is the cue's (``SoundCue/resource``): the
+    /// station's chime, or its motif at high speed. Each play sets its
+    /// volume.
+    private func loadSound(_ cue: SoundCue) -> [AVAudioPlayer] {
         let file = cue.resource
-        let players = (0..<3).compactMap { _ in Self.player(named: file.name, extension: file.extension, volume: volume) }
+        let players = (0..<3).compactMap { _ in Self.player(named: file.name, extension: file.extension, volume: Self.baseVolume(of: cue)) }
         sounds[cue] = players
         return players
     }

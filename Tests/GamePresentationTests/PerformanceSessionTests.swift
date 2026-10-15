@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Stage C3: choosing how trains and lines run (Stage W2c), the journeys
@@ -33,12 +33,12 @@ final class PerformanceSessionTests: XCTestCase {
     // MARK: - Presets and text
 
     func testThePresetsAreTheReferencesTrainsByName() {
-        XCTAssertEqual(PerformancePreset.allCases.count, 15)
+        XCTAssertEqual(PerformancePreset.allCases.count, 17)
         XCTAssertEqual(PerformancePreset.metro.performance, .metro)
         XCTAssertEqual(PerformancePreset.taroko.performance, .tiltingTaroko)
         XCTAssertEqual(
             PerformancePreset.allCases.map { $0.title(in: .traditionalChinese) },
-            ["標準", "捷運", "區間車", "普快車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵", "蒸汽列車"]
+            ["標準", "捷運", "區間車", "普快車", "莒光／復興", "自強", "EMU3000", "推拉式自強", "太魯閣", "普悠瑪", "柴聯自強", "DR1000", "阿里山林鐵", "高鐵", "蒸汽列車", "北捷 C371／C381", "EMU800／900 區間車"]
         )
         XCTAssertEqual(PerformancePreset.designSpeeds, [60, 80, 90, 100, 120, 140, 150, 160, 180, 200])
         // A design speed changes only the top speed: still the metro.
@@ -48,6 +48,35 @@ final class PerformanceSessionTests: XCTestCase {
         XCTAssertNil(PerformancePreset(matching: Self.crawl))
         // The DR1000 and diesel expresses run alike: the first is named.
         XCTAssertEqual(PerformancePreset(matching: .dieselRailcar), .dieselExpress)
+    }
+
+    /// Decision 237: the real models' rows, at their published figures (the
+    /// EMU800's one rate is estimated), each read as itself, whatever its
+    /// design speed.
+    func testTheRealModelsRunAsPublished() {
+        XCTAssertEqual(PerformancePreset.metroC381.performance, TrainPerformance(acceleration: 3_600, braking: 3_600, topSpeed: 80))
+        XCTAssertEqual(PerformancePreset.emu800.performance, TrainPerformance(acceleration: 1_456, braking: 4_320, topSpeed: 130))
+        for preset in [PerformancePreset.metroC381, .emu800] {
+            XCTAssertEqual(PerformancePreset(matching: preset.performance), preset)
+            XCTAssertEqual(PerformancePreset(matching: preset.performance.withTopSpeed(90)), preset)
+            XCTAssertFalse(preset.performance.isHighSpeed)
+        }
+        XCTAssertEqual(TrainPerformance.metroC381.displayText(in: .traditionalChinese), "北捷 C371／C381 · 80 km/h · 3.6 / 3.6 km/h/s")
+        XCTAssertEqual(TrainPerformance.emu800.displayText(in: .english), "EMU800 / EMU900 local · 130 km/h · 1.456 / 4.32 km/h/s")
+    }
+
+    /// Decision 236: the presets are the catalog's rows, each code once and
+    /// each named, the names and their rows the same set.
+    func testEveryRowOfThePerformanceCatalogIsAPresetWithAName() {
+        let codes = TrainPerformanceCatalog.builtIn.map(\.code)
+        XCTAssertEqual(Set(codes).count, codes.count, "a code is listed once")
+        XCTAssertEqual(PerformancePreset.allCases.map(\.code), codes)
+        XCTAssertEqual(Set(PerformancePreset.names.keys), Set(codes), "every row is named here, once")
+        for preset in PerformancePreset.allCases {
+            XCTAssertEqual(TrainPerformanceCatalog.spec(preset.code)?.performance, preset.performance)
+            XCTAssertTrue(preset.performance.isValid, preset.code)
+        }
+        XCTAssertNil(TrainPerformanceCatalog.spec("nothing"))
     }
 
     func testAPerformanceReadsAsItsNameSpeedAndRates() {
