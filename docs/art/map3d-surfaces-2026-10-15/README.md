@@ -76,7 +76,6 @@ C 拉遠的樣子：`option-c-mid.jpg`。
 | `flatWindows` | `sakura-front-glazing-interior-albedo` | 0.22 |
 | `officeGlass` | `sakura-front-glazing-interior-albedo` | 0.65 |
 | `metalSheet` | `steel-roughness` | 0.19 |
-
 | `shopOptical` | `sakura-front-glazing-interior-albedo` | 0.47 |
 | `shopPhone` | `sakura-front-glazing-interior-albedo` | 0.44 |
 | `shopEatery` | `sakura-front-glazing-interior-albedo` | 0.63 |
