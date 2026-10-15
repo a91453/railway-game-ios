@@ -100,6 +100,10 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// train is set to.
     public var performance: TrainPerformance? { TrainTypeCatalog.builtIn[row].performance }
 
+    /// How far apart its cars stand in a world with real car lengths, in
+    /// world units (decision 227).
+    public var carLength: Int64 { TrainTypeCatalog.builtIn[row].carLength }
+
     /// Its family in the catalogue (decision 224).
     public var family: TrainFamily { TrainTypeCatalog.builtIn[row].family }
 

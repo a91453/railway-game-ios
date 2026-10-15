@@ -226,7 +226,7 @@ enum MapArt {
             if projection.detail == .full {
                 // Decision 205: close up, its cars. A tail may still be
                 // visible when its head is offscreen.
-                let cars = TrainCars.count(length: run.length)
+                let cars = TrainCars.count(length: run.length, carPitch: run.carPitch)
                 let reach = run.length + run.lag + TrainCars.drawnCarLength * Double(cars)
                 guard region.expanded(by: reach).contains(x: head.point.x, y: head.point.y) else { continue }
                 drawCars(
