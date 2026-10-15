@@ -117,8 +117,8 @@ extension LineTally: Codable {
         maintenanceCost = try container.decode(Money.self, forKey: .maintenanceCost)
         energyCost = try container.decode(Money.self, forKey: .energyCost)
         staffCost = try container.decode(Money.self, forKey: .staffCost)
-        trips = try container.decodeIfPresent(Int64.self, forKey: .trips) ?? 0
-        lateTrips = try container.decodeIfPresent(Int64.self, forKey: .lateTrips) ?? 0
+        trips = container.contains(.trips) ? try container.decode(Int64.self, forKey: .trips) : 0
+        lateTrips = container.contains(.lateTrips) ? try container.decode(Int64.self, forKey: .lateTrips) : 0
     }
 
     public func encode(to encoder: any Encoder) throws {

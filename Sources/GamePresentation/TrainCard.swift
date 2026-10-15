@@ -8,7 +8,8 @@ import GameCore
 ///
 /// The trip is the train's timetable as it runs now: a line's train gets
 /// one for each trip it is sent on, and a repeating timetable's trip is its
-/// current cycle. Read from the world each time it is shown; never stored.
+/// current cycle; a timetable that turns round is a trip each way, to the
+/// next place it turns round (``Train/trip(leaving:)``). Read from the world each time it is shown; never stored.
 public struct TrainCard: Hashable, Sendable {
     public let origin: String
     public let terminus: String
@@ -117,15 +118,19 @@ public struct TrainCard: Hashable, Sendable {
 
 extension GameWorld {
     /// The train card of train `id` (see ``TrainCard``), or `nil` for an
-    /// unknown train or one without a trip of two stops or more.
+    /// unknown train or one without a trip of two stops or more. A train
+    /// on no trip now (between a line's trips, which keeps the finished
+    /// trip's timetable, or not started) has none either: its times would
+    /// be the trip before.
     public func trainCard(of id: TrainID, in language: DisplayLanguage) -> TrainCard? {
-        guard let train = train(id: id), train.timetable.count > 1,
-              let first = train.timetable.first, let last = train.timetable.last,
+        guard let train = train(id: id), let execution = train.execution, let trip = train.currentTrip,
               let info = followBarInfo(of: id, in: language)
         else { return nil }
-        let timetable = train.timetable
-        let execution = train.execution
-        let offset = (train.timetablePeriod ?? 0) &* (execution?.cycle ?? 0)
+        // A timetable that turns round (A → B → A) is a trip each way, as
+        // the departure board reads it: the card shows the one it is on.
+        let timetable = Array(train.timetable[trip])
+        let first = timetable[0], last = timetable[timetable.count - 1]
+        let offset = (train.timetablePeriod ?? 0) &* execution.cycle
         let now = clock.now
         // The straight line between each stop and the next.
         let legs: [Int64] = zip(timetable, timetable.dropFirst()).map { a, b in
@@ -138,12 +143,14 @@ extension GameWorld {
         var remaining: Int64
         var next: Int?
         switch execution {
-        case .waitingAtStop(let stop, _)?:
+        case .waitingAtStop(let at, _):
+            let stop = at - trip.lowerBound
             let done = legs.prefix(stop).reduce(0, +)
             progress = total > 0 ? Double(done) / Double(total) : Double(stop) / Double(legs.count)
             remaining = legs.dropFirst(stop).reduce(0, +)
             next = stop + 1 < timetable.count ? stop + 1 : nil
-        case .travellingToStop(let stop, _)?:
+        case .travellingToStop(let at, _):
+            let stop = at - trip.lowerBound
             let before = max(0, stop - 1)
             var fraction = 0.0
             var runLeft = legs.indices.contains(before) ? legs[before] : 0
@@ -157,11 +164,6 @@ extension GameWorld {
             progress = total > 0 ? done / Double(total) : (Double(before) + fraction) / Double(legs.count)
             remaining = runLeft + legs.dropFirst(stop).reduce(0, +)
             next = stop
-        case nil:
-            // Between trips: the finished trip's timetable, done.
-            progress = info.status == .notDeparted ? 0 : 1
-            remaining = info.status == .notDeparted ? total : 0
-            next = nil
         }
         let late = max(0, lateness(of: id) ?? 0)
         let lateMinutes = late / GameTime.secondsPerMinute
@@ -172,16 +174,15 @@ extension GameWorld {
         }
         let hasDeparted: Bool
         switch execution {
-        case .waitingAtStop(let stop, _)?: hasDeparted = stop > 0
-        case .travellingToStop?: hasDeparted = true
-        case nil: hasDeparted = info.status != .notDeparted
+        case .waitingAtStop(let stop, _): hasDeparted = stop > trip.lowerBound
+        case .travellingToStop: hasDeparted = true
         }
         return TrainCard(
             origin: stationName(first.station),
             terminus: stationName(last.station),
             departure: GameTime(seconds: first.departure.seconds &+ offset),
             arrival: GameTime(seconds: last.arrival.seconds &+ offset),
-            lateMinutes: execution == nil ? 0 : lateMinutes,
+            lateMinutes: lateMinutes,
             hasDeparted: hasDeparted,
             progress: min(1, max(0, progress)),
             remainingMetres: max(0, remaining),

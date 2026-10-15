@@ -1020,7 +1020,7 @@ extension ServiceLine: Codable {
         outerLastDispatch = container.contains(.outerLastDispatch) ? try container.decode(GameTime.self, forKey: .outerLastDispatch) : nil
         color = container.contains(.color) ? try container.decode(LineColor.self, forKey: .color) : nil
         // Decision 216 (save version 55): a code the player set.
-        code = try container.decodeIfPresent(LineCode.self, forKey: .code)
+        code = container.contains(.code) ? try container.decode(LineCode.self, forKey: .code) : nil
         runs = container.contains(.runs) ? try container.decode([LineRun].self, forKey: .runs) : []
         runDays = container.contains(.runDays) ? try container.decode([Int64?].self, forKey: .runDays) : Array(repeating: nil, count: runs.count)
         // Decision 155 (save version 38): a freight line has `"freight": true`.
@@ -1031,7 +1031,7 @@ extension ServiceLine: Codable {
             throw DecodingError.dataCorruptedError(forKey: .deadheadDistance, in: container, debugDescription: "Line \(id.rawValue)'s empty running is a positive distance, or not written.")
         }
         // Decision 207 (save version 53): a dwell the player set.
-        dwellSeconds = try container.decodeIfPresent(Int64.self, forKey: .dwellSeconds)
+        dwellSeconds = container.contains(.dwellSeconds) ? try container.decode(Int64.self, forKey: .dwellSeconds) : nil
         if let dwellSeconds, !Self.dwellRange.contains(dwellSeconds) {
             throw DecodingError.dataCorruptedError(forKey: .dwellSeconds, in: container, debugDescription: "Line \(id.rawValue)'s dwell must be \(Self.dwellRange.lowerBound) to \(Self.dwellRange.upperBound) seconds.")
         }
@@ -1039,12 +1039,14 @@ extension ServiceLine: Codable {
         // ``GameWorld`` decoder checks is one. Decision 221 (save version
         // 59): a line with several writes them as `"depots"`, one with one
         // as before.
-        if let depot = try container.decodeIfPresent(StationID.self, forKey: .depot) {
+        if container.contains(.depot) {
+            let depot = try container.decode(StationID.self, forKey: .depot)
             guard !container.contains(.depots) else {
                 throw DecodingError.dataCorruptedError(forKey: .depots, in: container, debugDescription: "Line \(id.rawValue) has both \"depot\" and \"depots\".")
             }
             depots = [depot]
-        } else if let depots = try container.decodeIfPresent([StationID].self, forKey: .depots) {
+        } else if container.contains(.depots) {
+            let depots = try container.decode([StationID].self, forKey: .depots)
             guard depots.count > 1, Set(depots).count == depots.count else {
                 throw DecodingError.dataCorruptedError(forKey: .depots, in: container, debugDescription: "Line \(id.rawValue)'s \"depots\" are two or more, none twice.")
             }

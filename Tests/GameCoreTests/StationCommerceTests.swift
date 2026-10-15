@@ -180,6 +180,22 @@ final class StationCommerceTests: XCTestCase {
         XCTAssertEqual(world.stationCommercePeople(of: b, onDay: day), 0, "B has no trips of its own")
     }
 
+    /// Without line accounts the shops count the trips of the day they
+    /// settle, with that day's holiday and weather: the day's takings are
+    /// settled at the next midnight, when the clock is already a day on.
+    func testWithoutLineAccountsTheDaysOwnHolidayAndWeatherCount() throws {
+        var world = try build(accounts: false)
+        world.setDisruptions(Disruptions(level: .standard, country: "TW", seed: 3))
+        let today = world.dayIndex(of: world.clock.now)
+        let holiday = try XCTUnwrap(world.holiday(onDay: today), "New Year's holiday")
+        XCTAssertGreaterThan(holiday.boost, 0)
+        let demand = try XCTUnwrap(world.stationDemand(of: a))
+        let day = try XCTUnwrap((today + 1...today + 30).first { world.holiday(onDay: $0) == nil })
+        let trips = world.weeklyDemand ? demand.trips(onDay: day) : demand.dailyTrips
+        let network = 1_000 * (1_000 - world.weatherDrop(onDay: day)) / 1_000
+        XCTAssertEqual(world.stationCommercePeople(of: a, onDay: day), 2 * ((trips * 1_000 * network + 500_000) / 1_000_000))
+    }
+
     /// A world without shops writes no row and no new key: as before.
     func testNoShopsNoRow() throws {
         var world = try build()

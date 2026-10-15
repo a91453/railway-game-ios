@@ -194,6 +194,55 @@ final class TrainTripLogTests: XCTestCase {
         XCTAssertTrue(trip.isValid)
     }
 
+    /// The log keeps today's and yesterday's trips of a line or station the
+    /// player has since removed: a save holding them loads, so the log's
+    /// check does not ask that its stations and lines still exist (the
+    /// screens look them up as they may be gone).
+    func testTripsOfARemovedLineAndStationStillLoad() throws {
+        var world = try build()
+        try world.advance(ticks: 600)
+        XCTAssertTrue(world.tripLog.contains { $0.line == second && $0.calls.contains { $0.station == c } })
+        try world.removeLine(second)
+        try world.removeStation(c)
+        XCTAssertNil(world.station(id: c))
+        XCTAssertTrue(world.tripLog.contains { $0.line == second && $0.calls.contains { $0.station == c } }, "kept")
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: data).world, world)
+        XCTAssertEqual(WorldInvariants.violations(in: world), [])
+    }
+
+    /// Riders credited to a train's running trip find it without walking
+    /// the log: on a log of 20,000 trips of other trains, crediting takes
+    /// about as long as on a short one (the log is ordered by train).
+    func testCreditingATripDoesNotWalkTheLog() throws {
+        var world = try build()
+        let one = TrainID(rawValue: 1)
+        while world.trips(of: one).last?.isRunning != true {
+            try world.advance(ticks: 1)
+        }
+        var padded = world
+        let template = try XCTUnwrap(world.trips(of: one).last)
+        for train in 1_000..<21_000 {
+            var trip = TrainTrip(
+                train: TrainID(rawValue: train), line: template.line, from: template.from, to: template.to,
+                scheduledDeparture: template.scheduledDeparture, scheduledArrival: template.scheduledArrival,
+                isDeadhead: false, calls: template.calls
+            )
+            trip.arrival = template.calls[0].arrival
+            padded.tripLog.append(trip)
+        }
+        func seconds(_ world: GameWorld) -> Double {
+            var world = world
+            let start = Date()
+            for _ in 0..<2_000 {
+                world.creditTrip(of: one, fare: Money(100), boarded: 1)
+            }
+            return Date().timeIntervalSince(start)
+        }
+        let short = seconds(world), long = seconds(padded)
+        XCTAssertLessThan(long, short * 5 + 0.01, "short \(short) s, long \(long) s")
+    }
+
     /// A log that breaks its rules is refused: out of order, two trips of
     /// a train running, calls out of time, or a train never bought.
     func testABrokenLogIsRefused() throws {

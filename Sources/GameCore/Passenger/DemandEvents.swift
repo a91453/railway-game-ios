@@ -157,8 +157,13 @@ extension GameWorld {
     /// its own: 1000, or 1000 + the largest boost running there
     /// (`metroEventDemandMultiplier`, `1 + max(boost)`).
     public func demandMultiplier(at id: StationID) -> Int64 {
+        demandMultiplier(at: id, onDay: dayIndex(of: clock.now))
+    }
+
+    /// The same on game day `day`, of the events kept now: one that ended
+    /// at the last midnight is gone.
+    func demandMultiplier(at id: StationID, onDay day: Int64) -> Int64 {
         guard let schedule = demandEvents else { return 1_000 }
-        let day = dayIndex(of: clock.now)
         return 1_000 + schedule.events.reduce(0) { $1.station == id && $1.isActive(onDay: day) ? max($0, $1.boost) : $0 }
     }
 

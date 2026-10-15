@@ -210,7 +210,10 @@ enum TaiwanHolidays {
             }
             take(madeUp, .springFestival)
         }
-        for holiday in single where week.isWeekend(holiday.day) {
+        // Two on one weekend day make up one, as two on one working day
+        // give one.
+        var madeUpFor: Set<Int64> = []
+        for holiday in single where week.isWeekend(holiday.day) && madeUpFor.insert(holiday.day).inserted {
             let step: Int64 = week.weekday(holiday.day) == 6 ? -1 : 1
             var day = holiday.day + step
             while !isFree(day) {

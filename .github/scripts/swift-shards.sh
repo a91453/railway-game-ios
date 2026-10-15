@@ -218,23 +218,60 @@ set -euo pipefail
 # ScheduledTrafficTests (45 s) and TurnbackTests (32 s) to campaigns-14
 # (5:32 to 7:44); rest drops to about 820 s. FlexDispatchPropertyTests
 # (160 s) stays: the self-test's plans use it as a class no campaign names.
+# 2026-10-14, after #627: campaigns-6 (SaveMutationSecondHalf 478,
+# ServiceRepeatingSecondHalf 395) took up to 873 s of tests and 1060 s of job
+# (run 38634945104), campaigns-12 up to 810 s and rest up to 836 s, all
+# within three minutes of the limit once the build (up to 2.3 minutes) and
+# the job's start are added. Rebalanced on the slowest time of each class in
+# the five full runs of main 38634945104, 38634446023, 38631310379,
+# 38625192268 and 38615317464 (a shard's sum of those maxima: what a slow
+# runner takes for all of it). No shard goes over 715 s (12 minutes), and
+# the two halves of each split campaign stay in different shards:
+#   campaigns-1   ServiceRepeating 390, ScheduledTraffic 260, WSM 65      715
+#   campaigns-2   Service 398, VerticalRailway 217, NetworkSection 50,
+#                 SingleTrackCapacity 24 (TurnbackProperty to -13)       690
+#   campaigns-3   LineDispatch 602, IdleTrainDeadlock 48,
+#                 LineRoutePreference 24 (no large class beside it)       675
+#   campaigns-4   unchanged                                               672
+#   campaigns-5   SaveMutationSecondHalf 478, ScheduledOvertakeTrack 165,
+#                 LineLossFixes 31                                        674
+#   campaigns-6   ServiceRepeatingSecondHalf 395, Economy 288             683
+#   campaigns-7   LinePattern 401, NetworkService 289                     689
+#   campaigns-8   GoldenScenario 333, ScheduledOvertakeTrackMiddle 175,
+#                 Timetable 168, NewGameBalance 17, ScreenshotScene 14    708
+#   campaigns-9   SaveMutation 359, EconomySecondHalf 350                 708
+#   campaigns-10  PassengerPlanKey 405, ReservationShortcut 154, and from
+#                 rest NetworkPostcard 63, StationCommerceCard 18,
+#                 LineLossDiagnosis 13                                    653
+#   campaigns-11  unchanged                                               711
+#   campaigns-12  TrafficControl 475, ScheduledOvertakeTrackFinal 177,
+#                 the three small GamePresentation classes 47             699
+#   campaigns-13  Boarding 624, TurnbackProperty 33                       657
+#   campaigns-14  ServiceLine 487, Onboarding 77, CommandLog 59 (from
+#                 rest), ScheduledTrafficTests 46, Turnback 32            701
+#   campaigns-15  TrafficFollowing 434, ScheduledOvertakeTrackLast 128,
+#                 NewGameSave 87, RealWorldDemo 56                        705
+#   rest          the other classes                                       703
+# The classes taken from rest are GamePresentation's, whose files run the
+# presentation tier wherever their class runs, so no pull request's tier
+# changes.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "ServiceRepeatingPropertyTests WorldStateMachineTests IdleTrainDeadlockTests" ;;
-    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests TurnbackPropertyTests" ;;
-    campaigns-3) echo "LineDispatchPropertyTests ScheduledOvertakeTrackLastPropertyTests" ;;
+    campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
+    campaigns-2) echo "ServicePropertyTests VerticalRailwayPropertyTests NetworkSectionPropertyTests SingleTrackCapacityPropertyTests" ;;
+    campaigns-3) echo "LineDispatchPropertyTests IdleTrainDeadlockTests LineRoutePreferencePropertyTests" ;;
     campaigns-4) echo "OccupiedRoutingPropertyTests ContinuousTrackPropertyTests PassengerPropertyTests KernelDifferentialTests DeadlockPropertyTests" ;;
-    campaigns-5) echo "ScheduledTrafficPropertyTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
-    campaigns-6) echo "SaveMutationSecondHalfTests ServiceRepeatingSecondHalfPropertyTests" ;;
-    campaigns-7) echo "LinePatternPropertyTests SaveMutationTests" ;;
-    campaigns-8) echo "LineRoutePreferencePropertyTests NetworkServicePropertyTests TimetablePropertyTests ScheduledOvertakeTrackMiddlePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
-    campaigns-9) echo "EconomySecondHalfPropertyTests GoldenScenarioTests" ;;
-    campaigns-10) echo "ScheduledOvertakeTrackFinalPropertyTests PassengerPlanKeyTests ReservationShortcutTests" ;;
+    campaigns-5) echo "SaveMutationSecondHalfTests ScheduledOvertakeTrackPropertyTests LineLossFixesTests" ;;
+    campaigns-6) echo "ServiceRepeatingSecondHalfPropertyTests EconomyPropertyTests" ;;
+    campaigns-7) echo "LinePatternPropertyTests NetworkServicePropertyTests" ;;
+    campaigns-8) echo "GoldenScenarioTests ScheduledOvertakeTrackMiddlePropertyTests TimetablePropertyTests ScreenshotSceneTests NewGameBalanceTests" ;;
+    campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
+    campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests EconomyPropertyTests" ;;
-    campaigns-13) echo "BoardingPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests ScheduledTrafficTests TurnbackTests" ;;
-    campaigns-15) echo "TrafficFollowingPropertyTests RealWorldDemoTests NewGameSavePropertyTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
+    campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
+    campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
     *) return 1 ;;
   esac
 }
@@ -290,23 +327,57 @@ selected_pattern() {
 }
 
 # Seconds of tests per class, for dealing a selection out into parts
-# (selected_part): the slower of runs 38525866535 (a pull request's three
-# presentation parts), 38524235458 and 38521807996 (main), 2026-10-14. Every
-# class of 3 s or more is listed; any other class counts CLASS_WEIGHT_DEFAULT
-# (the 150 GamePresentation classes under 3 s took 0.5 s each on average).
-# Only the proportions matter: a stale or missing weight moves a class to
-# another part, never out of the selection. LineLossFixesTests: 38 s locally
-# after #571 (231 s on those runs).
-CLASS_WEIGHTS="HighSpeedDemoTests:387 LineLossFixesTests:38
-  NewGameSavePropertyTests:80 OnboardingTests:72 CommandLogTests:56
-  RealWorldDemoTests:53 LineLossDiagnosisTests:52 RealWorldDemoGroundTests:17
-  NewGameBalanceTests:16 RealWorldDataLoadTests:16 AchievementsTests:14
-  MonthlyReportTests:13 ScreenshotSceneTests:13 NewGameCampaignTests:12
-  NewsSessionTests:12 FreightSessionTests:10 LinePanelMemoTests:8
-  RealWorldExpansionTests:7 SparseCityLandTests:7 CompanyRankTests:6
-  PingxiChallengeTests:6 StationDemandSessionTests:6 WholeTaiwanTests:5
-  DepartureBoardTests:4 TrafficOverlayTests:4 TutorialSessionTests:4
-  WaterGridTests:4 WebsiteTimelineTests:4 HolidayTextTests:3 LandImportTests:3"
+# (selected_part): the slowest of each class in the five full runs of main
+# the balance note above names, 2026-10-14. Every class of 3 s or more, in
+# either module, is listed: a partial tier is not only GamePresentation's
+# classes, as a fixture directory or an edited test file adds GameCore ones
+# (GoldenScenarioTests 333 s, ReservationShortcutTests 154 s), which with the
+# default weight once counted like a class of a second and could load one
+# part with minutes more than the others. Any other class counts
+# CLASS_WEIGHT_DEFAULT (the 239 classes under 3 s took 0.5 s each on
+# average). Only the proportions matter: a stale or missing weight moves a
+# class to another part, never out of the selection.
+CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
+  ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
+  TrafficControlPropertyTests:475 HighSpeedDemoTests:443
+  TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
+  LinePatternPropertyTests:401 ServicePropertyTests:398
+  ServiceRepeatingSecondHalfPropertyTests:395
+  ServiceRepeatingPropertyTests:390 SaveMutationTests:359
+  EconomySecondHalfPropertyTests:350 GoldenScenarioTests:333
+  NetworkServicePropertyTests:289 EconomyPropertyTests:288
+  ScheduledTrafficSecondHalfPropertyTests:268
+  ScheduledTrafficPropertyTests:260 VerticalRailwayPropertyTests:217
+  ScheduledOvertakeTrackFinalPropertyTests:177
+  ScheduledOvertakeTrackMiddlePropertyTests:175 TimetablePropertyTests:168
+  ScheduledOvertakeTrackPropertyTests:165 ContinuousTrackPropertyTests:165
+  KernelDifferentialTests:163 FlexDispatchPropertyTests:161
+  ReservationShortcutTests:154 DeadlockPropertyTests:135
+  PassengerPropertyTests:132 ScheduledOvertakeTrackLastPropertyTests:128
+  NewGameSavePropertyTests:87 OccupiedRoutingPropertyTests:78
+  OnboardingTests:77 WorldStateMachineTests:65 NetworkPostcardTests:63
+  CommandLogTests:59 RealWorldDemoTests:56 NetworkSectionPropertyTests:50
+  IdleTrainDeadlockTests:48 ScheduledTrafficTests:46 LineAccountsTests:35
+  TurnbackPropertyTests:33 TurnbackTests:32 LineLossFixesTests:31
+  ReplayFixtureTests:28 CityRequestsTests:26 LoadJourneyCacheTests:25
+  LineRoutePreferencePropertyTests:24 SingleTrackCapacityPropertyTests:24
+  StationCommerceCardTests:18 NewGameBalanceTests:17
+  RealWorldDemoGroundTests:17 LoadTrackCheckIndexTests:17
+  RealWorldDataLoadTests:16 MonthlyReportTests:14 ScreenshotSceneTests:14
+  AchievementsTests:14 CityGrowthTests:13 NewsSessionTests:13
+  LineLossDiagnosisTests:13 NewGameCampaignTests:12 TrainTripLogTests:12
+  TownGrowthTests:10 FreightSessionTests:10 ScheduledOvertakeTrackTests:10
+  StationOperationsTests:9 PassengerTransferTests:9 EconomyAccountsTests:9
+  LinePanelMemoTests:8 CurveSpeedRunTests:8 ReferenceWorldGoldenTests:8
+  SparseCityLandTests:8 RealWorldExpansionTests:7 LoadFoulingIndexTests:7
+  LineRoutePreferenceTests:7 PingxiChallengeTests:6 RunDepotTests:6
+  StationDemandSessionTests:6 SavedGameTests:6 CompanyRankTests:6
+  DeadlockTests:6 LineDispatchTests:5 DepartureBoardTests:5
+  TrafficControlTests:5 TrainWhereTextTests:5 TrackCheckShortcutTests:4
+  WholeTaiwanTests:4 WaterGridTests:4 ContinuousTrackTests:4 BuildingTests:4
+  BlockSectionsTests:4 TutorialSessionTests:4 LandDemandTests:4
+  TrafficOverlayTests:4 WebsiteTimelineTests:4 HighSpeedTests:4
+  HolidayTextTests:4 BoardingTests:3 LandImportTests:3"
 CLASS_WEIGHT_DEFAULT=1
 
 # With SELECTED_PART=k/n, the test IDs on stdin of the k-th of n parts. Each

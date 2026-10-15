@@ -236,10 +236,14 @@ final class PopTravelTests: XCTestCase {
         XCTAssertGreaterThan(timetable.count, 1)
         XCTAssertEqual(running.name, "T1")
         XCTAssertEqual(running.kind, "Main")
+        // The line's round trip is a trip each way: out to Gamma, where it
+        // turns round, as the departure board says.
+        let turn = try XCTUnwrap(timetable.indices.dropFirst().first { timetable[$0].reverses })
         XCTAssertEqual(running.origin, world.station(id: timetable[0].station)?.name)
-        XCTAssertEqual(running.terminus, world.station(id: timetable[timetable.count - 1].station)?.name)
+        XCTAssertEqual(running.terminus, "Gamma")
+        XCTAssertEqual(world.station(id: timetable[turn].station)?.name, "Gamma")
         XCTAssertEqual(running.departure, timetable[0].departure.clockText)
-        XCTAssertEqual(running.arrival, timetable[timetable.count - 1].arrival.clockText)
+        XCTAssertEqual(running.arrival, timetable[turn].arrival.clockText)
         let detail = running.detail(in: .english)
         XCTAssertTrue(detail.hasPrefix("Main　\(running.origin ?? "")→\(running.terminus ?? "")　"), detail)
         XCTAssertNil(world.followBarInfo(of: TrainID(rawValue: 99), in: .english))

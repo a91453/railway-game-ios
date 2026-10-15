@@ -189,9 +189,23 @@ extension GameWorld {
     /// (decision 179), as the screens that read it sit beside them.
     private var recordsTrips: Bool { lineAccounts != nil }
 
-    /// The index of train `id`'s last trip in the log, or `nil`.
+    /// The index of train `id`'s last trip in the log, or `nil`: the one
+    /// before the first of a later train, found by halving, since the log
+    /// is ordered by train (it is asked whenever riders board).
     private func lastTripIndex(of id: TrainID) -> Int? {
-        tripLog.lastIndex { $0.train == id }
+        let next = firstTripIndex(after: id)
+        return next > 0 && tripLog[next - 1].train == id ? next - 1 : nil
+    }
+
+    /// The index of the first trip in the log of a train after `id`, or
+    /// the log's end.
+    private func firstTripIndex(after id: TrainID) -> Int {
+        var (low, high) = (0, tripLog.count)
+        while low < high {
+            let middle = (low + high) / 2
+            if tripLog[middle].train > id { high = middle } else { low = middle + 1 }
+        }
+        return low
     }
 
     /// The index of train `id`'s running trip, or `nil`.
@@ -220,7 +234,7 @@ extension GameWorld {
                 scheduledArrival: train.scheduledArrival(of: last, cycle: cycle),
                 isDeadhead: train.isDeadheading, calls: [call]
             )
-            slot = tripLog.firstIndex { $0.train > train.id } ?? tripLog.count
+            slot = firstTripIndex(after: train.id)
             tripLog.insert(trip, at: slot)
         } else {
             // A trip from before the log was kept (an older save) is not

@@ -4374,13 +4374,13 @@ extension GameWorld: Codable {
         distanceDemand = try container.decodeIfPresent(Bool.self, forKey: .distanceDemand) ?? false
         doorCrowding = try container.decodeIfPresent(Bool.self, forKey: .doorCrowding) ?? false
         keepLeft = try container.decodeIfPresent(Bool.self, forKey: .keepLeft) ?? false
-        realisticOperation = try container.decodeIfPresent(Bool.self, forKey: .realisticOperation) ?? false
-        blockSections = try container.decodeIfPresent(Bool.self, forKey: .blockSections) ?? false
-        curveSpeedLimits = try container.decodeIfPresent(Bool.self, forKey: .curveSpeedLimits) ?? false
+        realisticOperation = container.contains(.realisticOperation) ? try container.decode(Bool.self, forKey: .realisticOperation) : false
+        blockSections = container.contains(.blockSections) ? try container.decode(Bool.self, forKey: .blockSections) : false
+        curveSpeedLimits = container.contains(.curveSpeedLimits) ? try container.decode(Bool.self, forKey: .curveSpeedLimits) : false
         flexDispatch = try container.decodeIfPresent(Bool.self, forKey: .flexDispatch) ?? false
         rollingStockEconomics = try container.decodeIfPresent(Bool.self, forKey: .rollingStockEconomics) ?? false
         lineAccounts = try container.decodeIfPresent(LineAccounts.self, forKey: .lineAccounts)
-        tripLog = try container.decodeIfPresent([TrainTrip].self, forKey: .tripLog) ?? []
+        tripLog = container.contains(.tripLog) ? try container.decode([TrainTrip].self, forKey: .tripLog) : []
         tourism = try container.decodeIfPresent(Tourism.self, forKey: .tourism)
         cityRequests = try container.decodeIfPresent(CityRequests.self, forKey: .cityRequests)
         outsideConnections = try container.decodeIfPresent(Bool.self, forKey: .outsideConnections) ?? false

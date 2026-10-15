@@ -97,7 +97,9 @@ extension GameWorld {
             return stationFlow(id, onDay: day)?.people ?? 0
         }
         guard let demand = stationDemand(of: id) else { return 0 }
-        let trips = scaledTrips(weeklyDemand ? demand.trips(onDay: day) : demand.dailyTrips, at: id)
+        // Day `day`'s holiday and weather: its takings are settled at the
+        // next midnight, a day on.
+        let trips = scaledTrips(weeklyDemand ? demand.trips(onDay: day) : demand.dailyTrips, at: id, onDay: day)
         return min(2 * max(0, trips), StationCommerceDay.maximumPeople)
     }
 

@@ -97,9 +97,47 @@ final class TrainRosterTests: XCTestCase {
             XCTAssertFalse(row.cells.contains { $0.state == .planned })
         }
         for row in today.rows {
-            XCTAssertTrue(row.cells.allSatisfy { $0.start >= today.dayStart })
+            // Today's, or one that ran into today.
+            XCTAssertTrue(row.cells.allSatisfy { $0.start >= today.dayStart || $0.end >= today.dayStart })
         }
         XCTAssertGreaterThan(yesterday.rows[0].cells.count, today.rows[0].cells.count)
+    }
+
+    /// A trip sent out before midnight and still running after it is
+    /// today's as well: a running train's row is not empty.
+    func testATripRunningPastMidnightIsInTodaysRow() throws {
+        var world = try makeWorld(width: 8_192, height: 4_096, balance: 1_000_000)
+        try Self.track.build(in: &world)
+        for (name, x) in [("A", 1), ("B", 3)] {
+            _ = try Self.track.buildStation(named: name, beside: x, at: 1, in: &world)
+        }
+        let own = try world.purchaseTrain(named: "Own").id
+        try world.placeTrain(own, at: Self.track.at(1, facingEast: true))
+        try world.setTrainMovementRate(own, to: 1024)
+        // Each cycle starts at ten to the hour and is back twenty minutes later.
+        try world.setTrainTimetable(own, to: [
+            ScheduledStop(station: a, arrival: GameTime(minutes: 50), departure: GameTime(minutes: 51)),
+            ScheduledStop(station: b, arrival: GameTime(minutes: 60), departure: GameTime(minutes: 61), reverses: true),
+            ScheduledStop(station: a, arrival: GameTime(minutes: 70), departure: GameTime(minutes: 71), reverses: true),
+        ], repeatingEvery: 3_600)
+        try world.startTrainService(own)
+        world.setLineAccounts(true)
+        world.setSpeed(.normal)
+        while world.clock.now.seconds < GameTime.secondsPerDay + 5 * 60 {
+            try world.advance(ticks: 1)
+        }
+        let trip = try XCTUnwrap(world.trips(of: own).last)
+        XCTAssertTrue(trip.isRunning)
+        XCTAssertLessThan(trip.sentOut.seconds, GameTime.secondsPerDay, "sent out before midnight")
+
+        let row = try XCTUnwrap(TrainRoster(world: world).rows.first { $0.train == own })
+        XCTAssertEqual(row.cells.first?.start, trip.sentOut.seconds)
+        XCTAssertEqual(row.cells.first?.state, .running(lateMinutes: 0))
+        XCTAssertEqual(row.cells.first?.number, 1)
+        XCTAssertGreaterThan(row.utilisation, 0)
+        // Yesterday's roster has it too, where it began.
+        let yesterday = try XCTUnwrap(TrainRoster(world: world, day: .yesterday).rows.first { $0.train == own })
+        XCTAssertEqual(yesterday.cells.last?.start, trip.sentOut.seconds)
     }
 
     /// Without the trip log (no line accounts) the trains are still listed
@@ -144,6 +182,8 @@ final class TrainRosterTests: XCTestCase {
         // 23:00 is the only cycle still to start today.
         XCTAssertEqual(planned.map(\.start), [23 * 3_600])
         XCTAssertEqual(planned.map(\.end), [23 * 3_600 + 20 * 60])
+        // It goes to B, where it turns, as the departure board says.
+        XCTAssertEqual(planned.map(\.routeText), ["A → B"])
         XCTAssertEqual(row.cells.compactMap(\.number), Array(1...row.cells.count))
         XCTAssertEqual(planned.first?.detailText(in: .english), "No. \(row.cells.count) · Planned")
         XCTAssertEqual(planned.first?.fare, .zero)

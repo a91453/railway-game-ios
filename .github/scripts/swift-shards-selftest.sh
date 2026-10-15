@@ -448,6 +448,21 @@ else
   echo "FAIL selected weighted parts: $parts"
   failures=$((failures + 1))
 fi
+
+# GameCore classes a fixture directory adds to the GamePresentation tests are
+# weighted too: the golden scenarios fill a part of their own, not the part
+# of the light classes.
+printf '%s\n' GameCoreTests.GoldenScenarioTests/t1 GameCoreTests.GoldenScenarioTests/t2 \
+  GameCoreTests.ReservationShortcutTests/t GamePresentationTests.HighSpeedDemoTests/t \
+  GamePresentationTests.A/t GamePresentationTests.B/t GamePresentationTests.C/t >"$work/fixture-parts.txt"
+parts="$(for k in 1 2 3; do SELECTED_TESTS='GamePresentationTests.* GoldenScenarioTests ReservationShortcutTests' SELECTED_PART="$k/3" \
+  SWIFT_TEST_LIST_FILE="$work/fixture-parts.txt" "$script" select selected | tr '\n' ' '; echo; done)"
+if [[ "$parts" == $'GamePresentationTests.HighSpeedDemoTests/t \nGameCoreTests.GoldenScenarioTests/t1 GameCoreTests.GoldenScenarioTests/t2 \nGameCoreTests.ReservationShortcutTests/t GamePresentationTests.A/t GamePresentationTests.B/t GamePresentationTests.C/t ' ]]; then
+  echo "ok   pass  selected parts weigh the GameCore classes a fixture adds"
+else
+  echo "FAIL selected parts with GameCore classes: $parts"
+  failures=$((failures + 1))
+fi
 SELECTED_TESTS='GoneTests' WHY='GoneTests has no tests' expect fail "a selected class that does not exist fails" "$script" run selected
 SELECTED_TESTS='UnitTests GamePresentationTests.*' expect pass "a selection runs exactly its tests" "$script" run selected
 SELECTED_TESTS='GamePresentationTests.*' SELECTED_PART=1/2 expect pass "a part of a selection runs exactly its tests" "$script" run selected

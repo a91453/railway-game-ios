@@ -271,4 +271,24 @@ final class CurveSpeedRunTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(time, try XCTUnwrap(arrivals[false]?[id]))
         }
     }
+
+    /// Planning an overtake (decision 217, item 8): a stop is added on a
+    /// leg only where its runs fit under the limits. T3 (S1 to D) passes S2
+    /// and runs on through the bow: from S2 the bow's limit makes the
+    /// least time without limits too short.
+    func testAnOvertakeStopIsPlannedUnderTheLimits() throws {
+        for limits in [false, true] {
+            let (world, trains, _) = try makeChain(limits: limits)
+            let train = try XCTUnwrap(world.train(id: trains[2]))
+            let points = try XCTUnwrap(world.trafficPoints(of: train, cycle: 0))
+            let service = GameWorld.TrafficService(train: train, points: points)
+            let s2 = try XCTUnwrap(world.stations.first { $0.name == "S2" }?.id)
+            let j = try XCTUnwrap(points.firstIndex { $0.station == s2 && !$0.calls })
+            let b = try XCTUnwrap(points.indices.first { $0 > j && points[$0].calls })
+            let distance = points[(j + 1)...b].reduce(Int64(0)) { $0 + $1.distance }
+            let least = try XCTUnwrap(RunningCurve.leastSeconds(length: distance, performance: train.performance))
+            XCTAssertEqual(world.trafficStopBuildable(service, at: j, departure: points[b].arrival - least), !limits,
+                           limits ? "too short under the bow's limit" : "just fits without limits")
+        }
+    }
 }
