@@ -265,6 +265,12 @@ set -euo pipefail
 # 700 s), so it is a shard of its own, campaigns-16: one job more. What
 # stays of HighSpeedDemoTests in campaigns-11 is about 530 s locally,
 # some 415 on CI, as before.
+# Later (the #647–#682 review, decision 228 later): a minute moved in one
+# go now moves the trains second by second where a set may be held up, as
+# sixty one-second steps do (decision 37): the day takes about 840 s
+# locally where it took 401, some 650 on CI. HighSpeedDemoBatchTests, which
+# checks that, opens the same demo, so it shares campaigns-16 and its demo:
+# about 55 s more.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -282,7 +288,7 @@ classes_of() {
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
     campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests HighSpeedDemoBatchTests" ;;
     *) return 1 ;;
   esac
 }
@@ -350,7 +356,7 @@ selected_pattern() {
 # class to another part, never out of the selection.
 CLASS_WEIGHTS="BoardingPropertyTests:624 LineDispatchPropertyTests:602
   ServiceLinePropertyTests:487 SaveMutationSecondHalfTests:478
-  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:520 HighSpeedDemoTests:415
+  TrafficControlPropertyTests:475 HighSpeedDemoDayTests:650 HighSpeedDemoBatchTests:55 HighSpeedDemoTests:415
   TrafficFollowingPropertyTests:434 PassengerPlanKeyTests:405
   LinePatternPropertyTests:401 ServicePropertyTests:398
   ServiceRepeatingSecondHalfPropertyTests:395

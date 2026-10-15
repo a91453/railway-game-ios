@@ -8629,6 +8629,14 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - `testItsTrackIsTheRealAlignmentsLength`：渡線 3 → 4，網路多了端點的股道。
 - `testWithCurveLimitsTheSetsKeepToTheRealDayAsWell`：開關曲線限速，兩天的等待不同，容許 1 分鐘。
 - `testOverlapReport`（只在 `HSR_OVERLAP_REPORT=1` 時跑）：印上面兩張表與每組車的誤點。
+
+**後來（#647–#682 的審查）：整批推進與逐秒推進要一樣（決策 37）**：
+- 問題：`advance` 把沒有事件的秒數合成一個 span 一起移動，`clearAhead` 只看 span 開始時其他車的位置。高鐵示範用 `.normal` 每次推一分鐘、和用 `.x10` 每分鐘推 60 次一秒，第 3 分鐘 THSR 4 的位置就不同（#660 之前 240 分鐘都一樣）。遊戲速度不同結果就不同；`CommandLog` 把連續的 advance 合成一筆，問題回報的重播也重建不出裝置上的世界。
+- 現在：`spacingMayHold(within:)` 為真（有真實班次的路線、交通管制關著，而且有列車在它前方的路上會停在某列車之前）時，這個 span 裡只有列車逐秒移動（每秒 `moveTrains` 一秒、`dropRunsHeldUp` 一次），其他的事照 span 做。只看「這個 span 走得到的距離內」會不會被擋不夠：對向車與後方較快的車在 span 裡越來越近，逐秒時中途才擋（試過，第 5、6 分鐘仍有差）。
+- 代價：高鐵示範一天的 `HighSpeedDemoDayTests` 在本機 debug 從 401 秒變 840 秒（每分鐘一次 `advance` 時幾乎都逐秒）；其他世界不變。另一個做法是整個 advance 迴圈逐秒（1106 秒），沒採用。
+- 測試：`HighSpeedDemoBatchTests.testAMinuteInOneStepIsSixtyOneSecondSteps`（`campaigns-16`）：30 分鐘，每分鐘比較兩個世界的列車。修正前第 3 分鐘就不同。
+- 四個角度：玩家：任何速度玩出來都一樣，回報的重播可信；開發：決策 37 的規則回來了，代價只在有真實班次、交通管制關著的世界；美術：無；音樂：無。
+
 ### 229. 原生 3D 地圖第一步：Metal，讀遊戲狀態，先在實機量
 
 2026-10-15。作者：「我不想做網頁 我想做原生的」（NEXT_PRIORITIES §0 第 14 項「同一張地圖拉近就傾斜」）。這取代 `docs/research/3D_DIRECTION_STUDY.md` §1 第 6 點的建議（在 WKWebView 裡用網頁畫 3D）。網站的 3D 城市（決策 152、163）照舊留在網站，App 的 3D 從這裡開始是原生的。號碼依工作登記 #231：決策 229（228 由高鐵示範疊車登記）；存檔版本、golden schema 不動。GameCore 不動，存檔、golden、replay 都不變。
