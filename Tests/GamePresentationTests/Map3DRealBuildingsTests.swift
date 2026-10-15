@@ -97,6 +97,46 @@ final class Map3DRealBuildingsTests: XCTestCase {
         }
     }
 
+    /// A scene that takes only the area's north or south half still
+    /// stands its buildings, as one taking its east or west half does.
+    func testAnAreaHalfInTheSceneNorthOrSouthStillStands() throws {
+        let area = try Self.area("kaohsiung")
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 22.6394, longitudeDegrees: 120.3024))
+        let world = GameWorld.newGame(anchor: anchor)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let m = Double(WorldCoordinate.unitsPerMetre), x = frame.middleX, y = frame.middleY
+        let halves = [
+            "north": WorldRegion(minX: x - 2_000 * m, minY: y - 2_000 * m, maxX: x + 2_000 * m, maxY: y + 300 * m),
+            "south": WorldRegion(minX: x - 2_000 * m, minY: y - 300 * m, maxX: x + 2_000 * m, maxY: y + 2_000 * m),
+            "west": WorldRegion(minX: x - 2_000 * m, minY: y - 2_000 * m, maxX: x + 300 * m, maxY: y + 2_000 * m),
+            "east": WorldRegion(minX: x - 300 * m, minY: y - 2_000 * m, maxX: x + 2_000 * m, maxY: y + 2_000 * m),
+        ]
+        for (name, region) in halves.sorted(by: { $0.key < $1.key }) {
+            var builder = Map3DScene.Builder(originX: x, originY: y, region: region, world: world)
+            XCTAssertFalse(builder.addRealBuildings([area], frame: frame, clearOf: []).isEmpty, name)
+        }
+    }
+
+    /// A real building looks the same wherever the scene's origin falls
+    /// (the middle of what is built moves as track is laid): its colours
+    /// and faces come from where it stands on the map.
+    func testARealBuildingsLookDoesNotMoveWithTheScenesOrigin() {
+        let world = GameWorld.newGame()
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        func look(shift: Float) -> [UInt32] {
+            var builder = Map3DScene.Builder(originX: Double(shift) * m, originY: Double(shift / 2) * m, region: WorldRegion(bounds: world.bounds), world: world)
+            builder.target = .near
+            let ring = [Map3DPoint(0, 0, 0), Map3DPoint(8, 0, 0), Map3DPoint(8, 0, 14), Map3DPoint(0, 0, 14)]
+                .map { $0 - Map3DPoint(shift, 0, shift / 2) }
+            builder.addRealBuilding([[ring]], ground: 0, height: 12, storeys: 4, kind: .shophouse)
+            return builder.nearMeshes.values.flatMap(\.vertices).map { $0.color &+ UInt32($0.layer + 2) }
+        }
+        let home = look(shift: 0)
+        for shift: Float in [137, 777, 1_003, 2_531, 4_099] {
+            XCTAssertEqual(look(shift: shift), home, "origin moved \(shift) m")
+        }
+    }
+
     func testAKaohsiungMapStandsOnItsRealBuildings() throws {
         let tiles = try Self.base.get()
         // Every area the app's folder lists, as the 3D map reads them.

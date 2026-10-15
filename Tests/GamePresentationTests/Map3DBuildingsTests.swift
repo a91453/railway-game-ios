@@ -100,6 +100,29 @@ final class Map3DBuildingsTests: XCTestCase {
         }
     }
 
+    /// A clinic's shadow lies under the clinic, its long side along the
+    /// building's, and the canopy over its door stands out in front.
+    func testAClinicsShadowAndCanopyFollowItsFootprint() throws {
+        let world = GameWorld.newGame()
+        for facing: Float in [0.3, 0.7] {
+            var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
+            builder.target = .near
+            let lot: Float = 60
+            // r(6) < 0.5 faces north (along z), otherwise east (along x).
+            builder.addClinic(base: Map3DPoint(100, 0, 100), lot: lot, floors: 4, r: { $0 == 6 ? facing : 0.3 })
+            let length = lot * (0.6 + 0.3 * 0.2), width = lot * (0.4 + 0.3 * 0.15)
+            let inner = Array(try XCTUnwrap(builder.shadows.values.first).vertices.prefix(4))
+            let along = facing < 0.5 ? inner.map(\.z) : inner.map(\.x), across = facing < 0.5 ? inner.map(\.x) : inner.map(\.z)
+            XCTAssertEqual(along.max()! - along.min()!, length, accuracy: 0.01, "facing \(facing)")
+            XCTAssertEqual(across.max()! - across.min()!, width, accuracy: 0.01, "facing \(facing)")
+            // The canopy, 3.2 m up: in front of the face, not inside.
+            let canopy = builder.nearMeshes.values.flatMap(\.vertices).filter { $0.y > 3.3 && $0.y < 3.6 && $0.color == Map3DPalette.plant }
+            XCTAssertFalse(canopy.isEmpty, "facing \(facing)")
+            let out = canopy.map { facing < 0.5 ? 100 - $0.z : $0.x - 100 }
+            XCTAssertGreaterThanOrEqual(out.min()!, length / 2 - 0.01, "facing \(facing): the canopy is inside the clinic")
+        }
+    }
+
     func testTheTownsHaveFactoriesSchoolsAndRoofRooms() throws {
         let towns = Land.townCentres(seed: 1, in: GameWorld.newGameBounds)
         let world = try newGameLine(through: [towns[0], towns[1]])

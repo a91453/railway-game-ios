@@ -55,8 +55,11 @@ public struct Map3DScene: Sendable {
     /// metres, the trains with them (decision 231). The game lays track on
     /// the ground at the ground's height; drawn there, the bed 0.35 m below
     /// the rails was under the ground and the plazas, and only the rails'
-    /// tops showed. Lifted, the bed's top stands 0.1 m over the ground.
-    public static let railLift: Float = 0.45
+    /// tops showed. Lifted, the bed's top stands 0.5 m over the ground,
+    /// over the real map's cover, roads and the shadows (up to
+    /// ``Map3DShadow/lift``, 0.4 m), which would otherwise paint over the
+    /// ballast where track crosses a road or a park.
+    public static let railLift: Float = 0.85
 
     /// The world point (in world units) at the scene's origin.
     public let originX: Double

@@ -248,11 +248,11 @@ extension Map3DScene.Builder {
             mesh.addBox(base: base + Map3DPoint(0, ground - 0.4, 0), forward: forward, length: length + 0.3, width: width + 0.3, height: 0.4,
                         top: Map3DPalette.stone, side: Map3DPalette.stone)
             let across = Map3DPoint(-forward.z, 0, forward.x)
-            mesh.addBox(base: base + forward * (width / 2 + 0.7) + Map3DPoint(0, 3.2, 0), forward: across, length: length * 0.4, width: 1.4,
+            mesh.addBox(base: base + forward * (length / 2 + 0.7) + Map3DPoint(0, 3.2, 0), forward: across, length: length * 0.4, width: 1.4,
                         height: 0.35, top: Map3DPalette.plant, side: Map3DPalette.trimBlue)
             Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, height, 0), forward: forward, length: length, width: width, r: r, salt: 40)
         }
-        addShadow(centre: base, forward: forward, length: width, width: length, spread: 3, darkness: 0.33)
+        addShadow(centre: base, forward: forward, length: length, width: width, spread: 3, darkness: 0.33)
     }
 
     mutating func addFireStation(base: Map3DPoint, lot: Float, r: (Int32) -> Float) {
