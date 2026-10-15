@@ -38,8 +38,12 @@ agent（MIT，`be8993b`，授權全文在同目錄的 `LICENSE`）。保留的�
 ```sh
 swift build -c release -Xswiftc -enable-testing --build-tests
 BALANCE_REPORT=30 swift test -c release --skip-build \
-  --filter BalanceReportTests/testALineBetweenTwoTowns
+  --filter 'BalanceReportTests/testALineBetweenTwoTowns$'
 ```
+
+`--filter` 是正規表示式：不加 `$` 的話，`testALineBetweenTwoTowns` 也會跑
+`testALineBetweenTwoTownsWithMaterials`。量過（2026-10-15，Linux 雲端容器，4 核心）：第一次 release
+build 約 9 分鐘；之後兩鎮之間的線 10 天不到 4 秒。
 
 | 報告 | 環境變數 | 量什麼 |
 | --- | --- | --- |

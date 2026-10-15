@@ -238,7 +238,7 @@ ACE-Step 的輸出是音訊，最多當編曲的參考。
 - 16 個 repository 的授權檔與上面引用的行號；
 - ACE-Step HF 模型卡的授權與商用句子；
 - `economy-balance` §2 列的測試類別、環境變數、`swift-shards.sh` 的 shard 分配，都在 `b498425` 查過存在。
-- §2 的 release 指令實際跑過一次，見 PR 的說明。
+- §2 的 release 指令實際跑過：`swift build -c release -Xswiftc -enable-testing --build-tests` 552 秒；`BALANCE_REPORT=10 … --filter 'BalanceReportTests/testALineBetweenTwoTowns$'` 3.4 秒，印出兩鎮之間的線（造價 $1,228,400，第 8 天回收 101%）。
 
 **UNVERIFIED**：
 - 沒有執行任何模型，這個容器沒有 GPU。
