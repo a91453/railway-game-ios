@@ -1613,3 +1613,9 @@ V 實際放行 → T、U（保證不互穿）
 | `city_map_reference_clean/source/rendering/theme-catalog.js`、`mapbox-palette.js`：六種配色，道路依等級分深淺與粗細 | `Map3DPalette.road`、`ground`、`water` | 只取做法；顏色換成遊戲 2D 地圖的藏青與淺色 |
 | `Web/CityView/tools/pipeline/taiwan.mjs` `SIDEWALK` | `Map3DScene.Builder.sidewalk(of:)` | 寬度照用 |
 
+## 3D 建物的牆面材質（決策 242）
+
+| 參考 | 本專案 | 怎麼改 |
+| --- | --- | --- |
+| `Website/site/city/textures/` 的 `wall_concrete`、`wall_brick`、`wall_tile`、`wall_plaster`（Poly Haven，CC0 1.0） | `Map3DSurfaces.png` 第 18–21 層 | 只取灰階當底紋，對比壓低；接縫、繫桿孔、磁磚分格自己畫 |
+
