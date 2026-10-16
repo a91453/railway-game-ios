@@ -169,7 +169,14 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.cover(.park), Map3DPalette.cover(.water)]))
         // The real streets take most of the city's lots round the station:
         // a building never stands on a road.
-        func lots(_ scene: Map3DScene) -> Int { scene.chunks.reduce(0) { $0 + $1.shadows.triangleCount } }
+        // (Their shadows, which are black; the street lights' pools,
+        // decision 229 續, carry their light's colour.)
+        func lots(_ scene: Map3DScene) -> Int {
+            scene.chunks.reduce(0) { total, chunk in
+                total + stride(from: 0, to: chunk.shadows.indices.count, by: 3)
+                    .filter { chunk.shadows.vertices[Int(chunk.shadows.indices[$0])].color & 0x00FF_FFFF == 0 }.count
+            }
+        }
         XCTAssertLessThan(lots(real), lots(plain) / 2)
         XCTAssertGreaterThan(lots(real), 0)
         // The same every time; and a blank map is as it was.

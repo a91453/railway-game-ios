@@ -95,9 +95,10 @@ public struct Map3DScene: Sendable {
     /// The scene of `world`: what is built and ``margin`` round it, at most
     /// ``reach`` each way from its middle; on a map with nothing built, the
     /// ``reach`` round `focus` (world units), or round the map's middle.
-    /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings.
+    /// On a real-world map, `baseMap`'s ground and `cityTiles`' buildings,
+    /// and `heights`' ground where the world has not read its own.
     public init(world: GameWorld, snapshot: RailwaySnapshot? = nil, skyline: CitySkyline? = nil, focus: (x: Double, y: Double)? = nil,
-                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = []) {
+                baseMap: BaseMapTiles? = nil, cityTiles: [CityTileArea] = [], heights: HeightGrid? = nil) {
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let mapRegion = WorldRegion(bounds: world.bounds)
         let built = WorldRegion.built(in: world)
@@ -113,7 +114,7 @@ public struct Map3DScene: Sendable {
         originX = middle.x.rounded()
         originY = middle.y.rounded()
 
-        var builder = Builder(originX: originX, originY: originY, region: region, world: world)
+        var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 234: on a real-world map, the base map's water, cover
         // and roads; the ground's own water then gives way to its finer
@@ -127,6 +128,8 @@ public struct Map3DScene: Sendable {
         let cleared = builder.addTrack(snapshot)
         // Decision 244: no street furniture where the track runs.
         builder.removeProps(on: cleared)
+        // Decision 229 續: the street lights' pools, seen at night.
+        builder.addLampPools()
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
@@ -246,6 +249,52 @@ extension Map3DScene {
         static func < (a: ChunkKey, b: ChunkKey) -> Bool { (a.row, a.column) < (b.row, b.column) }
     }
 
+    /// The heights file's ground at the 64 m grid's corners round a
+    /// region, each rounded to whole metres as a block reads them
+    /// (``HeightGrid/ground(of:frame:)``), and between them blended as
+    /// GameCore blends a block's corners.
+    struct FileGround {
+        let firstRow: Int
+        let firstColumn: Int
+        let rows: Int
+        let columns: Int
+        let heights: [Float]
+
+        init(_ grid: HeightGrid, frame: RealWorldFrame, region: WorldRegion) {
+            let cell = Double(Land.cellLength)
+            firstRow = Int((region.minY / cell).rounded(.down)) - 1
+            firstColumn = Int((region.minX / cell).rounded(.down)) - 1
+            rows = Int((region.maxY / cell).rounded(.up)) + 2 - firstRow
+            columns = Int((region.maxX / cell).rounded(.up)) + 2 - firstColumn
+            // Web Mercator puts a point's latitude by its y alone and its
+            // longitude by its x alone.
+            let firstColumn = firstColumn
+            let longitudes = (0..<columns).map { frame.coordinate(worldX: Double(firstColumn + $0) * cell, worldY: 0).longitude }
+            let firstRow = firstRow, rows = rows
+            var reader = HeightGrid.Reader(grid)
+            var heights: [Float] = []
+            heights.reserveCapacity(rows * columns)
+            for row in 0..<rows {
+                let latitude = frame.coordinate(worldX: 0, worldY: Double(firstRow + row) * cell).latitude
+                reader.forgetRows(above: reader.row(at: latitude))
+                for longitude in longitudes {
+                    heights.append(Float(reader.height(latitude: latitude, longitude: longitude).rounded()))
+                }
+            }
+            self.heights = heights
+        }
+
+        /// The height at world point (`x`, `y`), in metres.
+        func height(x: Double, y: Double) -> Float {
+            let cell = Double(Land.cellLength)
+            let gx = x / cell - Double(firstColumn), gy = y / cell - Double(firstRow)
+            let column = min(max(Int(gx.rounded(.down)), 0), columns - 2), row = min(max(Int(gy.rounded(.down)), 0), rows - 2)
+            let fx = Float(min(max(gx - Double(column), 0), 1)), fy = Float(min(max(gy - Double(row), 0), 1))
+            func at(_ r: Int, _ c: Int) -> Float { heights[(row + r) * columns + column + c] }
+            return at(0, 0) * (1 - fx) * (1 - fy) + at(0, 1) * fx * (1 - fy) + at(1, 0) * (1 - fx) * fy + at(1, 1) * fx * fy
+        }
+    }
+
     struct Builder {
         let originX: Double
         let originY: Double
@@ -305,11 +354,16 @@ extension Map3DScene {
         static let plaster = Map3DPaint.tile(.plaster, 4)
         static let metal = Map3DPaint.tile(.metalSheet, 4)
 
-        init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld) {
+        /// The heights file's ground round the region, for the blocks the
+        /// world has not read yet; `nil` without the file or off the Earth.
+        let fileGround: FileGround?
+
+        init(originX: Double, originY: Double, region: WorldRegion, world: GameWorld, heights: HeightGrid? = nil) {
             self.originX = originX
             self.originY = originY
             self.region = region
             self.world = world
+            fileGround = heights.flatMap { grid in RealWorldFrame(world: world).map { FileGround(grid, frame: $0, region: region) } }
         }
 
         func point(x: Double, y: Double, height: Double) -> Map3DPoint {
@@ -324,10 +378,17 @@ extension Map3DScene {
         static let lifted = Map3DPoint(0, Map3DScene.railLift, 0)
 
         /// The ground's height at world point (`x`, `y`), in metres: the
-        /// map's ground (decision 151), or 0 where it has none.
+        /// map's ground (decision 151); where the world has not read it
+        /// (it reads a 1,024 m block only where track comes), the heights
+        /// file's, the same heights the block will read, so the blocks
+        /// read and those not meet without a cliff; 0 m without the file.
+        /// Past the world's edge, the ground at the edge.
         func ground(x: Double, y: Double) -> Float {
-            let plan = PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
-            return Float(Double(world.groundHeight(at: plan) ?? 0) / Self.metre)
+            let bounds = world.bounds
+            let plan = PlanPoint(x: min(max(Int64(x.rounded()), 0), bounds.width - 1),
+                                 y: min(max(Int64(y.rounded()), 0), bounds.height - 1))
+            if let height = world.groundHeight(at: plan) { return Float(Double(height) / Self.metre) }
+            return fileGround?.height(x: Double(plan.x), y: Double(plan.y)) ?? 0
         }
 
         func ground(at scene: Map3DPoint) -> Float {

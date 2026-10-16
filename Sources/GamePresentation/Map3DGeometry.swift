@@ -32,6 +32,13 @@ public struct Map3DVertex: Hashable, Sendable {
 
     /// No texture: the colour alone.
     public static let plain: Float = -1
+    /// No texture, and lit from within at night (a street light's head):
+    /// the shader adds its colour as light, as much as the city's lights
+    /// are on (``Map3DLighting/lights``).
+    public static let glowing: Float = -2
+
+    /// Whether the vertex is lit from within at night.
+    public var glows: Bool { layer < -1.5 }
 
     public init(_ position: Map3DPoint, normal: Map3DPoint, color: UInt32, u: Float = 0, v: Float = 0, layer: Float = Map3DVertex.plain) {
         x = position.x
@@ -484,6 +491,29 @@ public struct Map3DMesh: Sendable {
         for i in UInt32(0)..<4 {
             let j = (i + 1) % 4
             indices += [base + i, base + 4 + i, base + 4 + j, base + i, base + 4 + j, base + j]
+        }
+    }
+
+    /// The vertices added since `start` lit from within at night
+    /// (``Map3DVertex/glowing``), keeping their colour.
+    public mutating func makeGlowing(from start: Int) {
+        for index in start..<vertices.count { vertices[index].layer = Map3DVertex.glowing }
+    }
+
+    /// Night light on the ground (a street light's pool): `colour` at
+    /// `strength` (0–1) at `centre`, fading to nothing at the `ring`
+    /// round it. Drawn with the shadows: a colour in a shadow vertex is
+    /// light, shown as much as the city's lights are on, where a shadow
+    /// is black.
+    public mutating func addPool(centre: Map3DPoint, ring: [Map3DPoint], colour: UInt32, strength: Float) {
+        guard ring.count >= 3 else { return }
+        let base = UInt32(vertices.count)
+        let rgb = colour & 0x00FF_FFFF
+        vertices.append(Map3DVertex(centre, normal: .up, color: rgb | UInt32((min(max(strength, 0), 1) * 255).rounded()) << 24))
+        for point in ring { vertices.append(Map3DVertex(point, normal: .up, color: rgb)) }
+        let count = UInt32(ring.count)
+        for index in UInt32(0)..<count {
+            indices += [base, base + 1 + (index + 1) % count, base + 1 + index]
         }
     }
 

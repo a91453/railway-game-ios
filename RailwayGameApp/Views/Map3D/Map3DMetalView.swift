@@ -414,27 +414,25 @@ final class Map3DMetalView: MTKView {
     /// `Map3DShaders.metal`): the matrix, then the sun's way and light, the
     /// ambient light from the sky and from the ground, the fog's colour,
     /// the eye and where the fog starts and ends, and the ground shadows'
-    /// strength (decision 232). The keyframes' strengths
-    /// are three.js's; scaled here so the noon sun on a roof comes to about
-    /// white, with the colours as they are (no tone mapping).
+    /// strength (decision 232) and how far the city's lights are on, then
+    /// the night windows' rules (decision 229 續). The lights are
+    /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
+    /// `nightWindowRows`), worked out in GamePresentation.
     private func uniformValues(_ matrix: Map3DMatrix) -> [Float] {
-        let sun = Self.rgb(lighting.sun), sky = Self.rgb(lighting.sky), ground = Self.rgb(lighting.ground)
-        let sunScale = lighting.sunStrength * 0.16
-        let ambient = lighting.ambient * 0.5
-        func tinted(_ colour: (Float, Float, Float), _ share: Float, _ scale: Float) -> [Float] {
-            [(1 + (colour.0 - 1) * share) * scale, (1 + (colour.1 - 1) * share) * scale, (1 + (colour.2 - 1) * share) * scale, 0]
-        }
+        let sky = Self.rgb(lighting.sky)
+        func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         let eye = camera.eye
         let far = camera.depthRange.far
         return matrix.columns
             + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
-            + [sun.0 * sunScale, sun.1 * sunScale, sun.2 * sunScale, 0]
-            + tinted(sky, 0.3, ambient)
-            + tinted(ground, 0.5, ambient * 0.8)
+            + padded(lighting.sunLight)
+            + padded(lighting.skyLight)
+            + padded(lighting.groundLight)
             + [sky.0, sky.1, sky.2, 0]
             + [eye.x, eye.y, eye.z, 1]
             + [camera.distance * 1.6, far * 0.9, 0, 0]
-            + [Map3DShadow.strength(lighting), 0, 0, 0]
+            + [Map3DShadow.strength(lighting), lighting.lights, 0, 0]
+            + Map3DLighting.nightWindowRows
     }
 
     private static func rgb(_ colour: PopTravel.RGB) -> (Float, Float, Float) {

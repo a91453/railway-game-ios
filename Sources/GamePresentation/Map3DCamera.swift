@@ -206,17 +206,25 @@ public struct Map3DLighting: Hashable, Sendable {
         let ambient: Float, sunStrength: Float, night: Float
     }
 
+    /// The owner on TestFlight (2026-10-16): "晚上 3D 是不是偏暗？" Without
+    /// three.js's tone mapping and the reference's lamps the reference's
+    /// night came to a fifth of white on the ground. The city's own lights
+    /// came first (``lights``: street lights, their pools, lit windows);
+    /// then the night and dusk keys' ambient light is raised a little
+    /// (0.58 → 0.75, dusk 0.72 → 1) and the moon lights the night
+    /// (strength 1, the cool `sun` colour), so the ground and roads read at
+    /// night at about 40 % of noon, still blue (`Map3DNightAndGroundTests`).
     static let keys: [Key] = [
-        Key(hour: 0, zenith: 0x06141C, sky: 0x163742, sun: 0x9FD0D8, ground: 0x2C4A52, ambient: 0.58, sunStrength: 0, night: 1),
-        Key(hour: 5, zenith: 0x0E1C2A, sky: 0x2C4553, sun: 0xF4BD92, ground: 0x3E5560, ambient: 0.6, sunStrength: 0, night: 1),
+        Key(hour: 0, zenith: 0x06141C, sky: 0x163742, sun: 0x9FD0D8, ground: 0x2C4A52, ambient: 0.75, sunStrength: 1, night: 1),
+        Key(hour: 5, zenith: 0x0E1C2A, sky: 0x2C4553, sun: 0xF4BD92, ground: 0x3E5560, ambient: 0.75, sunStrength: 1, night: 1),
         Key(hour: 6.5, zenith: 0x6F89B3, sky: 0xF0C1A0, sun: 0xFFB98A, ground: 0x958071, ambient: 1, sunStrength: 1, night: 0.35),
         Key(hour: 8, zenith: 0x86ACD6, sky: 0xE4E3D8, sun: 0xFFE2BC, ground: 0xA69986, ambient: 1.2, sunStrength: 2.3, night: 0),
         Key(hour: 12, zenith: 0x78A5D6, sky: 0xDDE6E8, sun: 0xFFF1DC, ground: 0xA79987, ambient: 1.3, sunStrength: 2.6, night: 0),
         Key(hour: 15.5, zenith: 0x86A9CF, sky: 0xF4D4AC, sun: 0xFFBF78, ground: 0xC39F80, ambient: 1.2, sunStrength: 2.85, night: 0),
         Key(hour: 17.5, zenith: 0x8494B8, sky: 0xF6BB8C, sun: 0xFFB276, ground: 0xA47C63, ambient: 1, sunStrength: 1.9, night: 0.12),
-        Key(hour: 18.5, zenith: 0x38466E, sky: 0xD88A74, sun: 0xFF9C78, ground: 0x5F5F74, ambient: 0.72, sunStrength: 0.35, night: 0.7),
-        Key(hour: 20, zenith: 0x0A1824, sky: 0x1E3F4B, sun: 0x9FD0D8, ground: 0x2F4D56, ambient: 0.58, sunStrength: 0, night: 1),
-        Key(hour: 24, zenith: 0x06141C, sky: 0x163742, sun: 0x9FD0D8, ground: 0x2C4A52, ambient: 0.58, sunStrength: 0, night: 1),
+        Key(hour: 18.5, zenith: 0x38466E, sky: 0xD88A74, sun: 0xFF9C78, ground: 0x5F5F74, ambient: 1, sunStrength: 0.35, night: 0.7),
+        Key(hour: 20, zenith: 0x0A1824, sky: 0x1E3F4B, sun: 0x9FD0D8, ground: 0x2F4D56, ambient: 0.75, sunStrength: 1, night: 1),
+        Key(hour: 24, zenith: 0x06141C, sky: 0x163742, sun: 0x9FD0D8, ground: 0x2C4A52, ambient: 0.75, sunStrength: 1, night: 1),
     ]
 
     /// The light at `minute` of the day (wrapped into a day).
@@ -259,5 +267,93 @@ public struct Map3DLighting: Hashable, Sendable {
     public init(at time: GameTime) {
         let seconds = time.seconds % GameTime.secondsPerDay
         self.init(minute: Double(seconds < 0 ? seconds + GameTime.secondsPerDay : seconds) / 60)
+    }
+
+    // MARK: The light the shaders use
+
+    // The keyframes' strengths are three.js's; scaled here so the noon sun
+    // on a roof comes to about white, with the colours as they are (no
+    // tone mapping). `Map3DMetalView` hands these to `Map3DShaders.metal`
+    // as they are (decision 229's rule 3: worked out here, tested on Linux).
+
+    /// The sun's (or the moon's) light, red, green and blue.
+    public var sunLight: SIMD3<Float> { Self.rgb(sun) * (sunStrength * 0.16) }
+    /// The ambient light from the sky, on what faces up.
+    public var skyLight: SIMD3<Float> { Self.tinted(sky, share: 0.3, scale: ambient * 0.5) }
+    /// The ambient light from the ground, on what faces down.
+    public var groundLight: SIMD3<Float> { Self.tinted(ground, share: 0.5, scale: ambient * 0.5 * 0.8) }
+
+    /// A surface of `colour` (0–1 a channel) facing `normal` as the
+    /// fragment shader lights it, before the fog.
+    public func lit(_ colour: SIMD3<Float>, normal: Map3DPoint) -> SIMD3<Float> {
+        let facing = normal.normalized ?? .up
+        let toSun = max(facing.dot(sunDirection), 0)
+        let share = facing.y * 0.5 + 0.5
+        let ambient = groundLight + (skyLight - groundLight) * share
+        return colour * (ambient + sunLight * toSun)
+    }
+
+    // MARK: The city's lights at night
+
+    /// How far the city's lights are on, 0 by day to 1 at night: street
+    /// lights, their pools on the ground and lit windows. They come on
+    /// while the dusk is still light (`Web/CityView/src/world/environment.js`:
+    /// "they come on while it is still light").
+    public var lights: Float { min(max(night * 1.4, 0), 1) }
+
+    /// The light a street light's head gives at night, added to its lit
+    /// colour (the shader's glowing vertices, ``Map3DVertex/glowing``).
+    public func lampGlow(_ colour: SIMD3<Float>) -> SIMD3<Float> { colour * (1.3 * lights) }
+
+    /// `Map3DUniforms.nightWindows` in `Map3DShaders.metal`, its
+    /// ``nightWindowRowCount`` rows: for each ``Map3DSurface`` layer in
+    /// order, two to a row, the share of its
+    /// windows lit at night and how bright its own colour may be to be
+    /// lit (glass is dark; a shop's goods and signs are lit whole).
+    public static let nightWindowRowCount = 12
+    public static let nightWindowRows: [Float] = {
+        var values: [Float] = []
+        for surface in Map3DSurface.allCases {
+            let rule = Map3DNightWindows.rule(surface)
+            values += [rule.share, rule.brightest]
+        }
+        precondition(values.count <= nightWindowRowCount * 4, "the shader's nightWindows holds 24 layers")
+        return values + Array(repeating: 0, count: nightWindowRowCount * 4 - values.count)
+    }()
+}
+
+/// Decision 229 續 (2026-10-16): which windows light up at night. A window
+/// is the glass of a bay on one floor of a face (``Map3DPaint/bays``):
+/// lit or not by a hash of the bay, the floor and the face, so the same
+/// windows are lit every night and none flickers. Shops are lit more
+/// often than offices, offices than homes, after this repository's 3D
+/// city view (`Web/CityView/src/world/materials.js`, MIT: `onRate`
+/// shop 0.75, office 0.32, home 0.22, a building's own busyness, warm
+/// bulbs `mix((1, 0.6, 0.3), (1, 0.82, 0.6))`); homes and offices here a
+/// little more often, so a town's blocks still show at night.
+public enum Map3DNightWindows {
+    /// The share of `surface`'s windows lit (before a face's busyness,
+    /// 0.5–1.6 times), and the brightest its own colour may be (0–1
+    /// luminance) to count as glass.
+    public static func rule(_ surface: Map3DSurface) -> (share: Float, brightest: Float) {
+        switch surface {
+        case .shopfront, .shopOptical, .shopPhone, .shopEatery, .shopTea: (0.75, 1)
+        case .officeGlass: (0.4, 0.45)
+        case .homeWindows, .homeBalcony, .flatWindows, .flatBlinds: (0.35, 0.45)
+        case .grass, .paving, .ballast, .concrete, .roof, .plaster, .shutter, .metalSheet,
+             .formConcrete, .brickTile, .mosaicTile, .terrazzo: (0, 0)
+        }
+    }
+}
+
+extension Map3DLighting {
+    /// `colour` as 0–1 a channel.
+    public static func rgb(_ colour: PopTravel.RGB) -> SIMD3<Float> {
+        SIMD3(Float(colour.red), Float(colour.green), Float(colour.blue)) / 255
+    }
+
+    /// White `share` of the way to `colour`, times `scale`.
+    static func tinted(_ colour: PopTravel.RGB, share: Float, scale: Float) -> SIMD3<Float> {
+        (SIMD3<Float>(repeating: 1) + (rgb(colour) - SIMD3<Float>(repeating: 1)) * share) * scale
     }
 }

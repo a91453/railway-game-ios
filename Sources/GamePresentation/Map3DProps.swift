@@ -42,8 +42,12 @@ public enum Map3DProp: String, CaseIterable, Sendable {
             let steel = Map3DColor.rgb(0x9AA0A8)
             mesh.addCylinder(base: .zero, radius: 0.09, height: 8.6, sides: 6, top: steel, side: steel)
             mesh.addBox(base: Map3DPoint(0, 8.5, -1.05), forward: Map3DPoint(0, 0, -1), length: 2.1, width: 0.1, height: 0.1, top: steel, side: steel)
+            // The head, lit from within at night in a warm white (the
+            // sodium and LED lights of Taiwan's streets).
+            let head = mesh.vertices.count
             mesh.addBox(base: Map3DPoint(0, 8.48, -2.25), forward: Map3DPoint(0, 0, -1), length: 0.75, width: 0.3, height: 0.12,
-                        top: steel, side: Map3DColor.rgb(0xF4F1E6))
+                        top: Self.lampLight, side: Self.lampLight)
+            mesh.makeGlowing(from: head)
         case .pole:
             let concrete = Map3DColor.rgb(0xC9C8C2), steel = Map3DColor.rgb(0x7D838B)
             mesh.addCylinder(base: .zero, radius: 0.15, height: 10.2, sides: 6, top: concrete, side: concrete)
@@ -80,6 +84,17 @@ public enum Map3DProp: String, CaseIterable, Sendable {
         }
     }
 
+    /// A street light's light: its head, and its pool on the ground.
+    public static let lampLight = Map3DColor.rgb(0xFFE3B0)
+    /// How far a street light's head is from its foot, along its left
+    /// (the way its arm reaches).
+    static let lampReach: Float = 2.25
+    /// Ten level directions round a circle, for a light's pool.
+    static let poolRing: [Map3DPoint] = (0..<10).map { index in
+        let angle = Float(index) * 2 * Float.pi / 10
+        return Map3DPoint(cosf(angle), 0, sinf(angle))
+    }
+
     /// The street trees' greens, one picked for each tree.
     public static let greens: [UInt32] = [0x6FA85A, 0x5E9A52, 0x7FB566, 0x669E4E, 0x88B86A].map(Map3DColor.rgb)
 }
@@ -95,7 +110,7 @@ extension Map3DModelPack.Model {
             let points = corners.map { Map3DPoint($0.x, -$0.z, $0.y) }
             guard let normal = (points[1] - points[0]).cross(points[2] - points[0]).normalized else { continue }
             for (corner, point) in zip(corners, points) {
-                vertices.append(Map3DVertex(point, normal: normal, color: corner.color))
+                vertices.append(Map3DVertex(point, normal: normal, color: corner.color, layer: corner.glows ? Map3DVertex.glowing : Map3DVertex.plain))
             }
         }
         var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
