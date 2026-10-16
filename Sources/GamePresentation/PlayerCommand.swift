@@ -572,7 +572,13 @@ extension PlayerCommand {
         case .buildDepotYard:
             language.text("build this depot", "建這座機廠")
         case .autoService(let plan):
-            plan.newLine == nil ? language.text("add a train", "加開一列車") : language.text("open this line with a train", "開這條線並配一列車")
+            if plan.newLine != nil {
+                language.text("open this line with a train", "開這條線並配一列車")
+            } else if plan.trains == 0 {
+                language.text("build this passing loop", "建這條待避線")
+            } else {
+                language.text("add a train", "加開一列車")
+            }
         case .removePlatform, .removeTrack:
             nil
         case .edit(let edit):
