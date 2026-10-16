@@ -59,6 +59,23 @@ final class Map3DPreviewDump: XCTestCase {
         // MAP3D_DETAIL=far: each chunk as the app draws it from afar
         // (decision 238): its ground and track, then its city simplified.
         let detailFar = ProcessInfo.processInfo.environment["MAP3D_DETAIL"] == "far"
+        // An instance's model moved into place (the app draws them as
+        // instances).
+        func expand(_ prop: Map3DInstance) {
+            let model = Map3DModelPack.standard.models[prop.model], t = prop.transform
+            let first = UInt32(floats.count / 12)
+            for v in model.vertices {
+                let p = Map3DPoint(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12], t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
+                                   t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14])
+                let n = (Map3DPoint(t[0] * v.nx + t[4] * v.ny + t[8] * v.nz, t[1] * v.nx + t[5] * v.ny + t[9] * v.nz,
+                                    t[2] * v.nx + t[6] * v.ny + t[10] * v.nz).normalized) ?? Map3DPoint(0, 1, 0)
+                let c = v.color, share = Float(c >> 24) / 255
+                func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
+                floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
+                           mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : -1]
+            }
+            indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
+        }
         for chunk in chunks {
             // The vertices of both; the indices of the base and of the
             // simplified city (afar), or all of the full mesh (near).
@@ -76,21 +93,24 @@ final class Map3DPreviewDump: XCTestCase {
             // Decision 244: the street furniture, near, each instance's
             // model moved into place (the app draws them as instances).
             guard !detailFar else { continue }
-            for prop in chunk.props {
-                let model = Map3DModelPack.standard.models[prop.model], t = prop.transform
-                let first = UInt32(floats.count / 12)
-                for v in model.vertices {
-                    let p = Map3DPoint(t[0] * v.x + t[4] * v.y + t[8] * v.z + t[12], t[1] * v.x + t[5] * v.y + t[9] * v.z + t[13],
-                                       t[2] * v.x + t[6] * v.y + t[10] * v.z + t[14])
-                    let n = (Map3DPoint(t[0] * v.nx + t[4] * v.ny + t[8] * v.nz, t[1] * v.nx + t[5] * v.ny + t[9] * v.nz,
-                                        t[2] * v.nx + t[6] * v.ny + t[10] * v.nz).normalized) ?? Map3DPoint(0, 1, 0)
-                    let c = v.color, share = Float(c >> 24) / 255
-                    func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
-                    floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
-                               mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : -1]
+            for prop in chunk.props { expand(prop) }
+        }
+        // Decision 256: MAP3D_LIFE=x:z:distance, the people and vehicles a
+        // camera that far from that target draws at 10:00:00 of a clock,
+        // each moved into place; MAP3D_BUSY=1 as if every station were busy.
+        if let life = ProcessInfo.processInfo.environment["MAP3D_LIFE"].map({ $0.split(separator: ":").map { Float(String($0))! } }) {
+            var activity = Map3DStreetLife.Activity(world: world)
+            if ProcessInfo.processInfo.environment["MAP3D_BUSY"] == "1" {
+                for spot in scene.streetLife.spots {
+                    guard let station = spot.station else { continue }
+                    activity.platform[station] = Map3DStreetLife.platformCrowd(waiting: 400, platforms: 2)
+                    activity.front[station] = Map3DStreetLife.frontCrowd(trips: 8_000)
                 }
-                indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
             }
+            let frame = scene.streetLife.frame(target: Map3DPoint(life[0], 0, life[1]), distance: life[2], time: 36_000, detail: .full,
+                                               activity: activity)
+            print("MAP3D_LIFE people \(frame.people) vehicles \(frame.vehicles) models \(Set(frame.instances.map(\.model)).count)")
+            frame.instances.forEach(expand)
         }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
         for chunk in chunks {

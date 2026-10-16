@@ -98,6 +98,7 @@ struct Map3DPreviewScreen: View {
                 Group {
                     Text(verbatim: String(format: "CPU %.1f ms · GPU %.1f ms", stats.cpuMilliseconds, stats.gpuMilliseconds))
                     Text(verbatim: "\(stats.drawCalls) draws · \(stats.triangles.formatted()) triangles")
+                    Text(verbatim: "\(stats.people) people · \(stats.vehicles) vehicles · \(stats.streetDetail)")
                 }
                 .font(.caption.monospacedDigit())
             }
@@ -137,11 +138,23 @@ final class Map3DTrainFeed {
     private var motion = TrainMotion()
     private var heights = Map3DTrains.Heights()
     private var palette: LinePalette = .standard
+    /// Decision 256: the stations' crowds, as the world's passengers say.
+    private var activity = Map3DStreetLife.Activity()
 
     func update(world: GameWorld, palette: LinePalette) {
         motion = TrainMotion(world: world, previous: motion, time: Date().timeIntervalSinceReferenceDate)
         heights = Map3DTrains.Heights(world: world)
         self.palette = palette
+        activity = Map3DStreetLife.Activity(world: world)
+    }
+
+    /// Decision 256: the people and vehicles of `scene` now, round the
+    /// camera's target; standing still with Reduce Motion on.
+    func streetLife(in scene: Map3DScene, camera: Map3DCamera, detail: Map3DStreetDetail) -> Map3DStreetLife.Frame {
+        // A day's seconds, so the clock stays precise as a Float.
+        let time = Date().timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86_400)
+        return scene.streetLife.frame(target: camera.target, distance: camera.distance, time: time,
+                                      still: UIAccessibility.isReduceMotionEnabled, detail: detail, activity: activity)
     }
 
     func frame(in scene: Map3DScene, models: Map3DModelPack?, eye: Map3DPoint) -> Map3DTrains.Frame {
@@ -198,6 +211,7 @@ private struct Map3DView: UIViewRepresentable {
         view.show(scene)
         let feed = feed, models = Map3DView.models
         view.trains = { eye in feed.frame(in: scene, models: models, eye: eye) }
+        view.streetLife = { camera, detail in feed.streetLife(in: scene, camera: camera, detail: detail) }
         if first {
             // Open over the middle of what is built, the whole of it in view.
             let width = Float((scene.region.maxX - scene.region.minX) / Double(WorldCoordinate.unitsPerMetre))
