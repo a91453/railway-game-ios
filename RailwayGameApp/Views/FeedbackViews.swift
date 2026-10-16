@@ -45,7 +45,9 @@ struct BuildPulseMark: View {
             Task { @MainActor in
                 // A frame at the start first, so the change animates.
                 try? await Task.sleep(for: .milliseconds(16))
-                withAnimation(.easeOut(duration: 0.9)) { phase = 1 }
+                // Decision 253: with Reduce Motion the check only fades,
+                // in half the time.
+                withAnimation(MotionRule.builtRing.running(reduceMotion: reduceMotion)?.animation) { phase = 1 }
             }
         }
     }

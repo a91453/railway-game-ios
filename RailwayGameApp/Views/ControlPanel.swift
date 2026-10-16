@@ -692,11 +692,14 @@ struct StatusBanner: View {
     /// banner does; a panel's beside it shows the same message and stays
     /// quiet, so VoiceOver reads it once (decision 184, later).
     var announces = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
             if let message = session.message {
                 banner(for: message)
+                    // Decision 253: in from the top, out faster.
+                    .transition(.card(from: .top, reduceMotion: reduceMotion))
             }
         }
         // By the serial, not the message: the same text posted again (a
@@ -724,6 +727,8 @@ struct StatusBanner: View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
         let tintColor = isSuccess ? Theme.success : Theme.warning
+        // Read here: the animators' closures run off the main actor.
+        let reduceMotion = self.reduceMotion
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.subheadline.weight(.bold))
@@ -754,11 +759,19 @@ struct StatusBanner: View {
                 .strokeBorder(tintColor.opacity(0.5), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
-        // The same message again, or a newer one, bumps the banner rather
-        // than stacking another (the reference's `notify()`).
+        // The same message again, or a newer one, moves the banner rather
+        // than stacking another (the reference's `notify()`). Decision 253:
+        // good news bumps it a little; a refusal shakes it sideways
+        // (``RefusalShake``); with Reduce Motion neither.
         .phaseAnimator([false, true], trigger: session.messageSerial) { banner, isBumped in
-            banner.scaleEffect(isBumped ? 1.04 : 1)
-        } animation: { _ in .spring(duration: 0.25, bounce: 0.5) }
+            banner.scaleEffect(isBumped && isSuccess && !reduceMotion ? 1.04 : 1)
+        } animation: { _ in MotionRule.confirm.animation }
+        .keyframeAnimator(initialValue: 0.0, trigger: session.messageSerial) { banner, progress in
+            banner.offset(x: isSuccess || reduceMotion ? 0 : RefusalShake.offset(at: progress))
+        } keyframes: { _ in
+            MoveKeyframe(0.0)
+            LinearKeyframe(1.0, duration: MotionRule.refuse.seconds)
+        }
         .padding(10)
     }
 }

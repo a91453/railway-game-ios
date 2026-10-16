@@ -595,12 +595,14 @@ private struct StartButton: View {
 
 private struct CardTapButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            // Decision 253: with Reduce Motion it only dims.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1.0)
             .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1.0) : 0.5)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
     }
 }
 
