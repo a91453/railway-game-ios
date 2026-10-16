@@ -155,7 +155,9 @@ needs OSM data reads the same extract.
   workflows' files.
   A pull request runs a short gate list of UI tests,
   and the iPad tutorial tests only when it touches the tutorial's own files;
-  the full lane runs every UI test and the iPad tutorial tests (the
+  the full lane runs every UI test, its iPhone tests split over two jobs
+  (`FULL_LANE_SECOND_JOB` names the second's classes), and the iPad
+  tutorial tests (the
   missing-button proof nightly and on request) on `main` after a merge, at
   most every three hours (`ios-full-lane.yml` starts it unless `main`'s
   newest commit already had one or one ran in the last three hours; its
