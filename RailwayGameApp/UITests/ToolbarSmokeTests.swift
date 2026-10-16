@@ -597,14 +597,23 @@ final class ShellLayoutUITests: XCTestCase {
         // third run dragged the whole panel and met no row).
         let board = app.descendants(matching: .any)["station.board"].firstMatch
         let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
-        let listed = boardShown && app.dragUntilWhollyOnScreen(row, in: list)
-        if !listed {
+        func attach(_ name: String) {
             let hierarchy = XCTAttachment(string: app.debugDescription)
-            hierarchy.name = boardShown ? "No train on the station's board" : "No board in the station's panel"
+            hierarchy.name = name
             hierarchy.lifetime = .keepAlways
             add(hierarchy)
         }
+        attach(boardShown ? "The station's board" : "No board in the station's panel")
         XCTAssertTrue(boardShown, "The station's panel has its board")
+        // Its trains lie just under its head: wait for one there, as the
+        // demo's first trains come at 06:00 (the fourth run dragged past
+        // the board to the panel's foot and met none).
+        let due = Date().addingTimeInterval(60)
+        while !row.exists, Date() < due {
+            Thread.sleep(forTimeInterval: 1)
+        }
+        let listed = row.exists && app.dragUntilWhollyOnScreen(row, in: list)
+        if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
         let rows = app.descendants(matching: .any).matching(identifier: "station.board.row").allElementsBoundByIndex
         for row in rows where row.exists && row.frame.height > 0 {
