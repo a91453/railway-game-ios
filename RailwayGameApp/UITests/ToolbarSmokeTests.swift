@@ -344,7 +344,6 @@ extension XCUIApplication {
         let bottom = list == nil ? frame.maxY - 120 : area.maxY - 8
         // A form's rows are inset 16 pt from the list's sides.
         let x = list == nil ? area.midX : area.minX + 8
-        let band = top...max(top, bottom)
         // A panel beside the map on a phone on its side is short, and a
         // line's list there runs to some 23 screens (main's e48285f): long
         // drags until the row exists, then short ones that cannot carry it
@@ -360,12 +359,12 @@ extension XCUIApplication {
                 // Above the band: move the list down. Each drag is shorter
                 // than the band less a row, so a row cannot jump over it.
                 if place.minY < top {
-                    drag(in: area, at: x, from: 0.45, to: 0.65, within: band)
+                    drag(in: area, at: x, from: 0.45, to: 0.65)
                     continue
                 }
-                drag(in: area, at: x, from: 0.75, to: 0.5, within: band)
+                drag(in: area, at: x, from: 0.75, to: 0.5)
             } else {
-                drag(in: area, at: x, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15, within: band)
+                drag(in: area, at: x, from: list == nil ? 0.75 : 0.9, to: list == nil ? 0.5 : 0.15)
             }
         }
         return false
@@ -373,19 +372,11 @@ extension XCUIApplication {
 
     /// Drags vertically down `area` at `x` between two heights given as
     /// fractions of it, and holds before lifting, so a list does not fling.
-    /// Both ends are kept within `band`, when given, the part of the list clear of its
-    /// bars and edges: on a phone on its side three quarters of the screen
-    /// lies below a sheet's band, and a drag begun there fell on the scroll
-    /// edge's own view and moved nothing (main 27b1dde, run 38773737363).
-    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat, within band: ClosedRange<CGFloat>? = nil) {
+    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat) {
         let origin = coordinate(withNormalizedOffset: .zero)
         let x = x - frame.minX
-        func height(_ fraction: CGFloat) -> CGFloat {
-            let y = area.minY + area.height * fraction
-            return (band.map { min(max(y, $0.lowerBound), $0.upperBound) } ?? y) - frame.minY
-        }
-        let start = origin.withOffset(CGVector(dx: x, dy: height(from)))
-        let end = origin.withOffset(CGVector(dx: x, dy: height(to)))
+        let start = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * from))
+        let end = origin.withOffset(CGVector(dx: x, dy: area.minY - frame.minY + area.height * to))
         start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
     }
 
