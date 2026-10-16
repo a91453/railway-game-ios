@@ -153,7 +153,7 @@ struct StartView: View {
             // Stable across localizations for the UI smoke tests.
             .accessibilityIdentifier("start.newGame")
             // Decision 177: the difficulty, the cash and the rules of the
-            // new game (decision 256: simple or realistic), kept from one
+            // new game (decision 258: simple or realistic), kept from one
             // game to the next.
             Button {
                 showsNewGameOptions = true

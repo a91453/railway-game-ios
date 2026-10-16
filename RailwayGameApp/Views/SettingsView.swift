@@ -183,7 +183,7 @@ struct SettingsView: View {
         // with them on keeps them, and its result is not kept).
         let fixed = session.eventsAreFixed
         let levels: [DisruptionLevel?] = fixed ? [current] : [nil, .light, .standard]
-        // Decision 256: the rules the game began with, which stay.
+        // Decision 258: the rules the game began with, which stay.
         let rules = NewGameRules(of: session.world)
         return Section {
             LabeledContent {

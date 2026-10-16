@@ -44,7 +44,7 @@ extension GameWorld {
     /// as its railway grows, each growing towns of its own from
     /// `eventSeed`.
     ///
-    /// Decision 256: its `rules` are realistic, every rule below on, unless
+    /// Decision 258: its `rules` are realistic, every rule below on, unless
     /// simple (``NewGameRules``), as the app's new games are.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
@@ -454,7 +454,7 @@ public enum DemoWorld {
     }
 }
 
-/// The rules a new game plays by (ARCHITECTURE decision 256, after decision
+/// The rules a new game plays by (ARCHITECTURE decision 258, after decision
 /// 254): simple, the app's default, or realistic, every rule a new game has.
 ///
 /// Simple turns off what a new player need not learn first, as the tutorial
@@ -622,7 +622,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     public var ground = Ground.real
     /// Decision 200: standard unless chosen unlimited.
     public var funds = Funds.standard
-    /// Decision 256: simple unless chosen realistic, options kept from
+    /// Decision 258: simple unless chosen realistic, options kept from
     /// before it included.
     public var rules = NewGameRules.simple
 
@@ -655,7 +655,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     }
 
     /// Turns `world`'s disruptions, building materials, outside
-    /// connections, funds and rules (decision 256: simple rules have no
+    /// connections, funds and rules (decision 258: simple rules have no
     /// weather or building materials, whatever the options say) to these
     /// options. Free, and nothing else changes.
     public func apply(to world: inout GameWorld) {
@@ -692,7 +692,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         case (.standard, .simple): language.text("Holidays raise the traffic in full; no weather or typhoons.", "假日讓客流完整增加；沒有天氣與颱風。")
         }
         var rules: [String] = []
-        // Decision 256: simple rules have none, which their explanation says.
+        // Decision 258: simple rules have none, which their explanation says.
         if !buildingMaterials && self.rules == .realistic { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }

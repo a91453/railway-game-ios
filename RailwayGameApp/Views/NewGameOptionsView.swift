@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// The new game's options (decision 177), after A-Train's difficulty choice:
-/// the rules, simple or realistic (decision 256);
+/// the rules, simple or realistic (decision 258);
 /// easy, standard or expert, with the cash each starts with; how much the
 /// holidays and weather disturb the traffic; whether building materials,
 /// the towns beyond the map's edge and buying the map are on; a real-world
@@ -43,7 +43,7 @@ struct NewGameOptionsView: View {
                 } header: {
                     Text(verbatim: language.text("Difficulty", "難度"))
                 }
-                // Decision 256: simple rules unless chosen realistic.
+                // Decision 258: simple rules unless chosen realistic.
                 Section {
                     Picker(selection: options.rules) {
                         ForEach(NewGameRules.allCases, id: \.self) { rules in
@@ -98,7 +98,7 @@ struct NewGameOptionsView: View {
                     ))
                 }
                 Section {
-                    // Decision 256: simple rules have none.
+                    // Decision 258: simple rules have none.
                     Toggle(language.text("Building materials", "建材供應"), isOn: toggle(\.buildingMaterials))
                         .disabled(launcher.newGameOptions.rules == .simple)
                     Toggle(language.text("Outside connections", "外部連接"), isOn: toggle(\.outsideConnections))

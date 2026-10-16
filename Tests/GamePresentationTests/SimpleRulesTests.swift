@@ -3,7 +3,7 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// ARCHITECTURE decision 256: a new game's rules, simple (the app's
+/// ARCHITECTURE decision 258: a new game's rules, simple (the app's
 /// default) or realistic (every rule a new game had before).
 final class SimpleRulesTests: XCTestCase {
     /// Simple turns off the rules a new player need not learn first and
