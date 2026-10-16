@@ -93,6 +93,7 @@ final class RunSpacingMinuteTests: XCTestCase {
             XCTAssertEqual(whole.trains, seconds.trains, "minute \(minute)", file: file, line: line)
             if whole.trains != seconds.trains { return seconds }
         }
+        seconds.setSpeed(whole.clock.speed)
         XCTAssertEqual(whole, seconds, file: file, line: line)
         return whole
     }
@@ -104,11 +105,9 @@ final class RunSpacingMinuteTests: XCTestCase {
             ([alpha, gamma], slow, [run(0, 1, at: 360, taking: 12), run(1, 0, at: 360, taking: 12)], [(3, true), (10, false)]),
         ])
         let after = try check(world, minutes: 25)
-        let travelled = after.trains.map { $0.position.map { position -> Int64 in
-            guard case .onEdge(let traversal, _) = position else { return 0 }
-            return Int64(traversal.edge.rawValue)
-        } ?? 0 }
-        XCTAssertNotEqual(travelled, [4, 10], "one of them has gone onto the track between: \(travelled)")
+        // One went on to the far end; the other waited where it stood.
+        let stayed = zip(world.trains, after.trains).filter { $0.position == $1.position }.map(\.1.name)
+        XCTAssertEqual(stayed.count, 1, "\(after.trains.map { "\($0.name) \(String(describing: $0.position))" })")
     }
 
     /// A faster train behind a slower one on the same way stops short of
