@@ -204,12 +204,15 @@ struct RealWorldPicker: View {
                             placeButton(place)
                         }
                     } label: {
+                        // On the label, not the group: a list's disclosure
+                        // group passes its identifier to every row in it,
+                        // which hid the places' own ("place.tra-taipei").
                         Text(verbatim: launcher.language.text(
                             "\(group.name(in: launcher.language)) (\(group.places.count))",
                             "\(group.name(in: launcher.language))（\(group.places.count)）"
                         ))
+                        .accessibilityIdentifier("placeGroup.\(group.id)")
                     }
-                    .accessibilityIdentifier("placeGroup.\(group.id)")
                 }
                 // Decision 88: one map of the whole of Taiwan, for lines from
                 // one end of it to the other, after Taiwan's places (which
