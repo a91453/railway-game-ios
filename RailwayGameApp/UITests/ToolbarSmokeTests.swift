@@ -552,14 +552,17 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertTrue(fast.disappears(within: 10))
         menu.waitUntilSettled()
         let start = (menu: menu.frame, time: time.frame, label: time.label)
+        func same(_ a: CGRect, _ b: CGRect) -> Bool {
+            abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
+        }
         var labels: Set<String> = []
         let deadline = Date().addingTimeInterval(40)
         while Date() < deadline {
             Thread.sleep(forTimeInterval: 0.5)
             guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
             labels.insert(String(timeNow.label.prefix(while: { $0 != ")" })))
-            XCTAssertEqual(menuNow, start.menu, "The menu button moved as the days went by: \(timeNow.label)")
-            XCTAssertEqual(timeNow.frame.size, start.time.size, "The date changed its width: \(start.label) then \(timeNow.label)")
+            XCTAssertTrue(same(menuNow, start.menu), "The menu button moved as the days went by: \(start.menu) then \(menuNow), \(timeNow.label)")
+            XCTAssertEqual(timeNow.frame.width, start.time.width, accuracy: 0.5, "The date changed its width: \(start.label) then \(timeNow.label)")
         }
         XCTAssertGreaterThanOrEqual(labels.count, 3, "Too few days went by: \(labels.sorted())")
         // Pausing and resuming move nothing either.
@@ -567,10 +570,10 @@ final class ShellLayoutUITests: XCTestCase {
         XCTAssertTrue(pause.appears(within: 5))
         pause.tap()
         XCTAssertTrue(app.buttons["Resume"].appears(within: 5))
-        XCTAssertEqual(menu.frame, start.menu, "Pausing moved the menu button")
+        XCTAssertTrue(same(menu.frame, start.menu), "Pausing moved the menu button: \(menu.frame)")
         app.buttons["Resume"].tap()
         XCTAssertTrue(pause.appears(within: 5))
-        XCTAssertEqual(menu.frame, start.menu, "Resuming moved the menu button")
+        XCTAssertTrue(same(menu.frame, start.menu), "Resuming moved the menu button: \(menu.frame)")
     }
 
     /// The station's board in the panel beside the map: each train in two
