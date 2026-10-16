@@ -593,13 +593,18 @@ final class ShellLayoutUITests: XCTestCase {
             add(hierarchy)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
-        let listed = app.dragUntilWhollyOnScreen(row, in: list)
+        // The board's section first, so a failure shows what it holds (the
+        // third run dragged the whole panel and met no row).
+        let board = app.descendants(matching: .any)["station.board"].firstMatch
+        let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
+        let listed = boardShown && app.dragUntilWhollyOnScreen(row, in: list)
         if !listed {
             let hierarchy = XCTAttachment(string: app.debugDescription)
-            hierarchy.name = "No train on the station's board"
+            hierarchy.name = boardShown ? "No train on the station's board" : "No board in the station's panel"
             hierarchy.lifetime = .keepAlways
             add(hierarchy)
         }
+        XCTAssertTrue(boardShown, "The station's panel has its board")
         XCTAssertTrue(listed, "The board lists a train")
         let rows = app.descendants(matching: .any).matching(identifier: "station.board.row").allElementsBoundByIndex
         for row in rows where row.exists && row.frame.height > 0 {
