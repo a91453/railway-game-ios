@@ -1,16 +1,14 @@
 {
   "n700st-cab": {
     "ao": "n700st-cab-ao.png",
-    "aoChannel": 0,
-    "colour": "n700st-cab.jpg",
+    "aoChannel": 1,
     "file": "n700st-cab.glb",
     "fit": false,
     "front": "+x"
   },
   "n700st-car": {
     "ao": "n700st-car-ao.png",
-    "aoChannel": 0,
-    "colour": "n700st-car.jpg",
+    "aoChannel": 1,
     "file": "n700st-car.glb",
     "fit": false,
     "front": "+x"

@@ -96,6 +96,11 @@ public final class GameSession {
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
+    /// Decision 264: what opening the drafted line costs, worked out once
+    /// for each draft and world.
+    @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
+    /// Decision 264: the selected line's shortfall of places to pass.
+    @ObservationIgnored var passingShortfallMemo: PassingShortfallMemo?
     /// The depot's sidings at the picked end, kept likewise.
     @ObservationIgnored var depotYardMemo: DepotYardMemo?
     /// The levelling of the platform's stretch, kept likewise (see
@@ -453,6 +458,7 @@ public final class GameSession {
             platformLevellingMemo = nil
             passingLoopMemo = nil
             depotYardMemo = nil
+            lineOpeningMemo = nil
         }
     }
 
@@ -490,6 +496,10 @@ public final class GameSession {
     public internal(set) var tutorial: Tutorial? {
         didSet { noteTutorialStepToResume() }
     }
+    /// Whether new lines wait for the player to buy their trains, under
+    /// simple rules too (decision 264): the tutorial's game, which teaches
+    /// it. Never saved.
+    public internal(set) var staffsLinesByHand = false
     /// The tutorial the player skipped, kept to be taken up again at the
     /// same step from the game menu (``resumeTutorial()``; decision 188,
     /// later fix, TestFlight 54.1), or `nil`. Never saved; the launcher
@@ -1858,7 +1868,22 @@ public final class GameSession {
         let real = realLine(calling: stops).flatMap { match in
             realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
         }
-        let made = perform(.createLine(name: Self.suggestedLineName(for: world, in: language), stops: stops, targets: real?.targets)) { outcome, _, _ in
+        // Decision 264: under simple rules the line comes with its first
+        // train, and the passing loop its single track needs.
+        let name = Self.suggestedLineName(for: world, in: language)
+        if runsLinesForThePlayer, let plan = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {
+            let balance = world.economy.balance
+            let made = perform(.autoService(plan)) { outcome, _, world in
+                guard let id = outcome.line?.id else { return "" }
+                return Self.autoServiceText(plan, outcome: outcome, line: id, cost: Money(balance.amount - world.economy.balance.amount), in: world, language: language)
+            }
+            if let created = made?.line?.id {
+                selectedLineID = created
+                clearLineDraft()
+            }
+            return
+        }
+        let made = perform(.createLine(name: name, stops: stops, targets: real?.targets)) { outcome, _, _ in
             let name = outcome.line?.name ?? ""
             var detail = ""
             if let real {
@@ -2715,7 +2740,7 @@ public final class GameSession {
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number
     /// upward that no existing line uses.
-    private static func suggestedLineName(for world: GameWorld, in language: DisplayLanguage) -> String {
+    static func suggestedLineName(for world: GameWorld, in language: DisplayLanguage) -> String {
         suggestedName(language.text("Line", "路線"), from: world.lines.count + 1, taken: Set(world.lines.map(\.name)))
     }
 

@@ -139,6 +139,11 @@ public enum LineBuilder {
 /// sharing the first's single track. Counts the player's commands: each
 /// call to the world a tap or a confirmation would make.
 public struct CurvedOpening: Sendable {
+    /// Decision 264: whether the lines are opened through a session, as
+    /// the app's line panel opens them under simple rules (a train and the
+    /// passing loop it needs come with each); otherwise each line's train
+    /// is bought and placed by hand.
+    public let auto: Bool
     public private(set) var commands = 0
     public private(set) var edges: [TrackEdgeID] = []
     public private(set) var stations: [StationID] = []
@@ -150,7 +155,9 @@ public struct CurvedOpening: Sendable {
         let heading: (Double, Double)
     }
 
-    public init() {}
+    public init(auto: Bool = false) {
+        self.auto = auto
+    }
 
     /// Four cars of the longest real car (25 m), so any type fits.
     public static let platform: Int64 = 4 * 25 * WorldCoordinate.unitsPerMetre
@@ -205,6 +212,26 @@ public struct CurvedOpening: Sendable {
     /// A line calling at `stops`, all day, one train of four cars whose
     /// head is at the far end of the first stop's platform on `traversal`.
     public mutating func openLine(_ world: inout GameWorld, stops: [StationID], on traversal: TrackTraversal) throws {
+        if auto {
+            // A session is the main actor's: the reports, GameSim and the
+            // tests play on the main thread.
+            var opened = world, commands = commands
+            MainActor.assumeIsolated {
+                let session = GameSession(world: opened)
+                for stop in stops {
+                    session.selectStation(stop)
+                    commands += 1
+                    session.addSelectedStationToLineDraft()
+                }
+                commands += 2
+                session.createLineFromDraft()
+                session.setSelectedLineAllDay(true)
+                opened = session.world
+            }
+            world = opened
+            self.commands = commands
+            return
+        }
         let platform = Self.platform
         let line = try command { try world.createLine(named: "Line \(world.lines.count + 1)", stops: stops).id }
         try command { try world.setLineServiceWindow(line, to: .allDay) }
@@ -275,17 +302,22 @@ public struct Policy {
 
     /// The tutorial's opening (decision 254): a curved line from the first
     /// town to the second on day 0.
-    public static func twoTowns(_ towns: [PlanPoint]) -> Policy {
+    /// With `auto`, the lines are opened as the app opens them under
+    /// simple rules (decision 264, ``CurvedOpening/auto``).
+    public static func twoTowns(_ towns: [PlanPoint], auto: Bool = false) -> Policy {
         Policy(name: "two-towns", actions: [
-            Action(day: 0) { world, memory in try memory.opening.openFirstLine(&world, from: towns[0], to: towns[1]) },
+            Action(day: 0) { world, memory in
+                memory.opening = CurvedOpening(auto: auto)
+                try memory.opening.openFirstLine(&world, from: towns[0], to: towns[1])
+            },
         ])
     }
 
     /// ``twoTowns(_:)`` and on day 3 the track run on to the third town,
     /// with a second line sharing the first's single track (the opening
     /// CoreLoopBaselineReportTests measures, decision 254 §1.2).
-    public static func thirdTown(_ towns: [PlanPoint]) -> Policy {
-        Policy(name: "third-town", actions: twoTowns(towns).actions + [
+    public static func thirdTown(_ towns: [PlanPoint], auto: Bool = false) -> Policy {
+        Policy(name: "third-town", actions: twoTowns(towns, auto: auto).actions + [
             Action(day: 3) { world, memory in try memory.opening.extend(&world, to: towns[2]) },
         ])
     }
@@ -500,6 +532,10 @@ public enum RulePreset: String, CaseIterable, Sendable {
     case noTrafficControl = "no-traffic-control"
     /// Decision 258: the app's default, ``NewGameRules/simple``.
     case simpleRules = "simple-rules"
+    /// Decision 264: simple rules, the lines opened as the app opens them,
+    /// each with its train and the passing loop it needs
+    /// (``CurvedOpening/auto``).
+    case autoService = "auto-service"
 
     /// How the comparison table names it.
     public var title: String {
@@ -512,6 +548,7 @@ public enum RulePreset: String, CaseIterable, Sendable {
         case .simple: "Simple: − 207, 212, 217, 172, 169, 180"
         case .noTrafficControl: "Simple and − traffic control (32)"
         case .simpleRules: "Simple rules (258): − 207, 212, 217, 169, 180, 156, weather"
+        case .autoService: "Simple rules, lines opened with their trains and loops (264)"
         }
     }
 
@@ -519,7 +556,7 @@ public enum RulePreset: String, CaseIterable, Sendable {
     public func apply(to world: inout GameWorld) throws {
         switch self {
         case .newGame: break
-        case .simpleRules: NewGameRules.simple.apply(to: &world)
+        case .simpleRules, .autoService: NewGameRules.simple.apply(to: &world)
         case .noCurveLimits: world.setCurveSpeedLimits(false)
         case .noBlockSections: world.setBlockSections(false)
         case .noRealisticOperation: world.setRealisticOperation(false)

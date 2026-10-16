@@ -25,6 +25,7 @@ import XCTest
 ///    town (on the far side of the first), curving on from the first
 ///    line's track, and a second line calls at all three with a train of
 ///    its own, so the two share the first line's single track.
+@MainActor
 final class CoreLoopBaselineReportTests: XCTestCase {
     func testANewPlayersOpening() throws {
         guard let value = ProcessInfo.processInfo.environment["CORE_LOOP_REPORT"] else {
@@ -55,7 +56,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         let towns = Land.townCentres(seed: 1, in: world.bounds)
         // Decision 261: the opening is the shared policy, played a minute
         // at a time; its due actions run as each day begins.
-        var player = PolicyPlayer(world: world, policy: .thirdTown(towns), byMinute: true)
+        var player = PolicyPlayer(world: world, policy: .thirdTown(towns, auto: preset == .autoService), byMinute: true)
         var firstFare: Int64?
         var balances: [Int64: Int64] = [:]
         var faresDayOne: Int64 = 0
