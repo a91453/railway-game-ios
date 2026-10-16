@@ -162,7 +162,7 @@ private final class TutorialJourney {
         arrive(at: 12)
         // The lines panel slides in before the map beside it is tapped.
         XCTAssertTrue(app.buttons["line.draft.pick"].appears(within: 10), failure("the lines panel did not open"))
-        Thread.sleep(forTimeInterval: 1)
+        app.buttons["line.draft.pick"].waitUntilSettled()
         check(map: firstStation, "the first station")
         tap(firstStation)
         check(map: secondStation, "the second station")
@@ -426,7 +426,7 @@ private final class TutorialJourney {
         let length = right - left
 
         var obstacles: [CGRect] = []
-        for identifier in ["map.layers", "Zoom out", "Zoom in", "map.style", "map.expansion", "hud.menu"] {
+        for identifier in ["map.layers", "Zoom out", "Zoom in", "map.expansion", "hud.menu"] {
             let button = app.buttons[identifier]
             if button.exists { obstacles.append(button.frame) }
         }

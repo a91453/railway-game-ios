@@ -165,7 +165,9 @@ final class TutorialUITests: XCTestCase {
         XCTAssertFalse(app.buttons["map.build.confirm"].exists, "A ✓ is left over")
 
         // The card settles after the panel slides in.
-        Thread.sleep(forTimeInterval: 1)
+        pick.waitUntilSettled()
+        if card.exists { card.waitUntilStill() }
+        if folded.exists { folded.waitUntilStill() }
         if card.exists {
             XCTAssertFalse(card.frame.intersects(pick.frame), "The tutorial card covers Pick on Map: card \(card.frame), button \(pick.frame)")
         }
@@ -208,7 +210,8 @@ final class TutorialUITests: XCTestCase {
         let create = app.buttons["map.build.confirm"]
         XCTAssertTrue(create.appears(within: 10), "No ✓ on the map")
         XCTAssertTrue(waitForHittable(create), "The ✓ on the map cannot be tapped")
-        Thread.sleep(forTimeInterval: 1)
+        create.waitUntilSettled()
+        if card.exists { card.waitUntilStill() }
         if card.exists {
             XCTAssertFalse(card.frame.intersects(create.frame), "The tutorial card covers the ✓")
         }

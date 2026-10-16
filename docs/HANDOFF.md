@@ -152,11 +152,12 @@
 | 線 | session | branch／PR | 範圍與順序 | 動 GameCore | 備註 |
 | --- | --- | --- | --- | :-: | --- |
 | 單線對頭永遠卡死 | session_0162V1LTnnJubXXTaNkZUKQx | `claude/single-line-deadlock-fix` | 兩條線共用單線、沒有待避處時，行車控制下兩列車對頭永遠卡死（`CORE_LOOP_2026-10-16.md` §1.2 的種子 1）。先寫會失敗的測試，再修根因。golden、SaveFixtures、ReplayFixtures 不動 | 是 | 決策 255。CI 名額向合併協調拿 |
-| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | `claude/simple-rules`，#725（決策 258） | 決策 254 §7 的第 1→2→4→5 個 PR：簡單規則當預設 → 開線自動配車＋自動交會 → 關卡框架與第 1–3 關 → 第 4–10 關 | 否 | 第 2 個要等死結修正合併；第 6 個（關卡判定進 GameCore）先不做，第 5 個合併後由遊戲規劃判斷 |
-| 核心玩法：回饋 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/core-loop-feedback`，#724（決策 256） | 決策 254 §7 的第 3 個 PR：站上的「+$12」、目標打勾、城鎮長大的環、目標旋律 | 否 | 照 `motion` skill 與三條音量 |
+| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | #725 已合併（決策 258）；第 2 個 PR 待開 | 決策 254 §7 的第 1→2→4→5 個 PR。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：第 2 個 PR：簡單規則下自動加待避線、自動配車，用決策 204 的 `PassingLoopPlan`；寫實規則下，#736 的提早折返（決策 255）發生時，路線卡說明「在 A 提早折返」，站長多一個「在這裡加待避線」按鈕（同一個 `PassingLoopPlan`）；不改 `Deadlock.swift`。第 4 個 PR：教學、關卡、「進階」只留一個狀態——解鎖狀態決定有沒有工具；教學的步驟引擎與 `TutorialCardPlacement` 變成第 1、2 關的引導，舊的教學入口收掉；「進階」只在已解鎖的工具裡替手機再收一層；自由模式與沙盒全部解鎖 | 否 | 第 2 個要等 #736 合併；第 6 個（關卡判定進 GameCore）先不做 |
+| 核心玩法：回饋 → 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | #724（決策 256）；`claude/game-sim`，#740（決策 260） | 回饋第一批做完後接開發工具（NEXT_PRIORITIES §16）：`GameSim` → `Policy` → 文件數字檢查。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：`Policy` 不另寫開局腳本，從 `BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests` 抽出來，四支改用它、數字一字不差；保留各自長處（經濟指標、三種玩法並列、規則組合比較、實景擴張），任何玩法 × 任何規則 × 任何地圖，同一種報告表格，`GameSim` 用名字跑；文件數字檢查先放進 `tools/golden-checks/` 或 `.github/scripts/` | 否（`GameSim` 加 executable target，CI 跑完整 tier） | 關卡的目標天數用 `Policy` 量 |
 | 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
 | 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」；2026-10-16 作者本人在那個 session 回「四方決定要不要繼續」，結論是繼續（派工 session 確認） |
 | 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
+| 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/game-sim`（決策 260） | HANDOFF §7.4 的第 1、3、4 項，一次一個 PR：無頭模擬 `GameSim`（`HeadlessGame`）→ 腳本化試玩 `Policy` 與異常清單 → 文件數字一致性檢查 | 否 | 排在核心玩法第 4 個 PR（關卡）之前；`Policy` 做好後告訴 session_01Q48iRY9H6EmeUL8NPyfiDW 怎麼用 |
 
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
@@ -529,7 +530,7 @@
 | 事項 | 來源 | 狀態 |
 | --- | --- | --- |
 | 高鐵示範快轉只有約八成速度（一個 tick 123 ms，間隔 100 ms） | 決策 248、#709 | 排在核心玩法之後 |
-| 高鐵的長進路／閉塞區間死結、台南—左營交會 | #669，機廠 session session_01YNBmv76sfS8gJUnyRKEqHV（不再接新工作） | 沒有人接。機廠出庫已由 #678 處理；B 方案（`claude/hsr-depot-exit-priority`）量測失敗、放棄，紀錄在 #685 |
+| 高鐵的長進路／閉塞區間死結、台南—左營交會 | #669，機廠 session session_01YNBmv76sfS8gJUnyRKEqHV（不再接新工作） | 沒有人接。機廠出庫已由 #678 處理；B 方案（`claude/hsr-depot-exit-priority`）量測失敗、放棄，紀錄在 #685。決策 255（單線提早折返）**沒有**解這一項：高鐵是單向的班次（決策 133），時刻表不會回到同一站，不會用到折返 |
 | §15.3 的內容：觀光列車、支線劇本、掛機模式、「這版新增」卡片、台灣節慶、各站到站鈴、3D 拉近傾斜與駕駛艙視角、花錢的地方＋新台幣＋分時電價＋車站容量、股票 | NEXT_PRIORITIES §15 | 排在核心玩法之後；各站到站鈴等測試者回報 |
 | 3D：擋住列車的建物變透明、深度閃爍、道具穿模、真的台灣車與站房 | F 台灣版＋「定案前要補」 | 3D 生活感那條線之後 |
 
@@ -558,41 +559,7 @@
 
 ### 7.1 小 bug 與效能（舊審查交接留下的）
 
-**接手**：審查回報清理 session（session_01FUXNvfnNmoSMf58pgakpsF，第 2 節）做完它那 19 項後，接著做這一批。也可以由派工 session 另開 session。
-**方向**：照原本的規則，先寫一個在 main 會失敗的測試再修；「待查」的先確認是不是 bug，是刻意的就在原決策寫一句理由，然後結案。
-
-| 項目 | 出處 | 位置 |
-| --- | --- | --- |
-| 車隊總覽、列車控制每次都重算 `world.trainPathStatusText`，沒用 session 每分鐘快取的版本（U4） | PR526_626 §9 | `FleetOverviewSheet.swift:298`、`TrainControls.swift:208` |
-| 描線時 `networkTracedWay` 每次重繪都跑一次最短路徑（U7） | PR526_626 §5 | `RealRailwayTracing.swift:580` |
-| 「前車誤點」沒寫自己誤點幾分（B8 剩下一件） | PR526_626 §5 | `DepartureBoard.swift:88` |
-| 無限資金時，描線、機廠岔線、待避線、鋪軌的完成訊息寫「$0」（價錢是用餘額差算的） | PR526_626 §5 | `DepotYard.swift:233`、`PassingLoop.swift:151`、`NetworkSession.swift:212`、`RealRailwayTracing.swift:554` |
-| 指令日誌滿 5,000 筆、起點往後移之後，復原歷史沒有跟著截 | PR401_525 §5 | `CommandLog.swift:99–106` |
-| 閒置快轉跨過午夜時，飯店住客用的是預估值，不是當天實際人數 | PR401_525 §5 | `Tourism.swift:452` |
-| 待避線的號誌站名可能重複（編號時把所有封閉車站都算進去） | PR401_525 §5 | `PassingLoop.swift:74` |
-| `LineLossFix.isAffordable` 不看無限資金（只剩測試在用） | PR401_525 §5 | — |
-| 載客量圖層對固定班次的路線，兩個方向、全天都用同一個容量 | PR319_400 §4-5 | SectionFlow 用 `lineHeadway`，沒看 `line.runs` |
-| 貨運列車載貨中被減節，載貨百分比會超過 100%（條的長度有封頂）（待查） | PR319_400 §4-6 | `barFraction` |
-| 解除配屬的貨運列車，車上還有貨時被當成客車顯示 | PR319_400 §4-7 | `Freight.swift:507` |
-| 建物讀土地的範圍 64 m，小於遊樂園的半對角線約 79 m | PR319_400 §4-8 | `BuildingSession.swift:210` |
-| 空車回送算進發車數與座位（待查：可能是刻意的） | PR319_400 §4-9 | — |
-| 月報的「創新高」只比票收和乘客，沒算貨運 | PR319_400 §4-10 | `MonthlyReportText.swift:193–195` |
-| 名產店沒檢查是否在已買的地圖區塊 | PR319_400 §4-10 | `Tourism.swift:392` |
-| 縮放鈕讓位在 iPad 也會觸發，開 VoiceOver 時沒有別的縮放方式 | PR200_290 §4-3 | `MapView.swift:237` |
-| 拖曳鋪軌時，邊緣捲動區用整張地圖量，被卡片蓋住 | PR200_290 §4-4 | `MapView.swift:2540` |
-| 地價圖層不畫只因臨水而加價的空格（待查：可能是刻意的） | PR200_290 §4-6 | — |
-| 手機上只選了起點時，地圖上沒有 ✕ 可以取消（待查：設計選擇） | PR200_290 §8 | — |
-| 城市需求幾乎沒有工作時，某些夜晚完全不成長（待查） | PR200_290 §9 | — |
-| 成長動畫在很窄的時間窗裡，仍把讀進來的土地當成新建物（待查） | PR200_290 §10 | — |
-| 城市建物關閉時，出售建物的人可能搬進別棟的方塊（待查） | PR200_290 §10 | — |
-| 固定班次只服務部分方向時，另一方向的乘客一直等（待查） | PR200_290 §10 | — |
-| 匯入的存檔會解鎖成就（要升存檔版本，先在 #231 取號） | 決策 200 | NEXT_PRIORITIES §2 只提一句 |
-| 描真實鐵路（決策 213）的總價沒有自己的測試 | 決策 245 | — |
-| `tools/meshy/meshy.mjs pack` 整個覆寫 index.json，會丟掉 N700ST 的 colour、aoChannel、fit | PR319_400 §6-1 | `tools/meshy/meshy.mjs:103` |
-| 官網 3D 頁的設定用中文名稱存，瀏覽器換語言就不見 | PR319_400 §6-2 | `Web/CityView/src/main.js:395–413` |
-| ARCHITECTURE 裡決策 240 排在 249 後面（只是順序） | PR647_684 §4 | 約第 10325 行 |
-| 把 `BoardingPropertyTests`（624 秒）、`LineDispatchPropertyTests`（602 秒）各拆成兩半 | PR647_684 §9 | `.github/scripts/swift-shards.sh` |
-| iPad CI 偶爾「Unable to find a device」：xcodebuild 前先跑 `-showdestinations` | PR200_290 §2 | 之後沒再出現；再出現時才做 |
+審查回報清理 session（session_01FUXNvfnNmoSMf58pgakpsF）已經把這 30 項逐項分好類，每一項的去向寫在 `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第十一節的「第二批」：現在修的（#735、#737、#738、#739）、刻意設計已在原決策補「後來」結案的，以及延後等穩定的（附原因、建議做法、影響範圍）。清單只留那一份。
 
 ### 7.2 遊戲功能的後續（決策與研究裡寫了「之後」的）
 
@@ -651,7 +618,7 @@
 
 | 項目 | 出處 |
 | --- | --- |
-| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump） | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
+| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump）——決策 260，`claude/game-sim` | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
 | 3D 截圖時一起輸出每幀時間與 draw call 的 JSON | GAME_AI_TOOLS §3.2 |
 | 腳本化玩法框架（`Policy`）＋自動試玩，列出異常 | GAME_AI_TOOLS §3.3、MOTION_3D_TOOLS §5 |
 | 文件數字一致性檢查：存檔版本、golden schema、golden 個數（OVERVIEW 現在是手動補的） | GAME_AI_TOOLS §3.4 |

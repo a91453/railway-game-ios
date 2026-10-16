@@ -700,6 +700,19 @@ struct MapView: View {
                     BuildPulseMark(pulse: session.buildPulse, camera: projection)
                         .mask { attribution.fill() }
                 }
+                // Decision 256: towns grown a step, fares over the stations,
+                // a goal met.
+                .overlay(alignment: .topLeading) {
+                    TownGrowthRings(pulse: session.townPulse, camera: projection)
+                        .mask { attribution.fill() }
+                }
+                .overlay(alignment: .topLeading) {
+                    FareFloatMarks(session: session, camera: projection)
+                        .mask { attribution.fill() }
+                }
+                .overlay {
+                    GoalMetCheck(pulse: session.goalPulse, language: session.language)
+                }
                 // After the map's own accessibility element, which ignores
                 // what lies inside it: the tooltips are read on their own.
                 // And after the other overlays, so the legend and the zoom

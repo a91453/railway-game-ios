@@ -82,6 +82,7 @@
 		823389D4FCA1A54E1DDAB274 /* FeedbackViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */; };
 		830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8A6A623CDA7792FB18C0A2 /* Palette.swift */; };
 		86EB45BA9705BF6B815B4D1B /* ntalrt.json in Resources */ = {isa = PBXBuildFile; fileRef = C604A41EF44E46BC47C90819 /* ntalrt.json */; };
+		8A77E1AFF3E0508D9C8C15CA /* goal-met.wav in Resources */ = {isa = PBXBuildFile; fileRef = F9D622682F53E544329A323C /* goal-met.wav */; };
 		8AB926BA8AD3CB2CFD7351DC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A0EEF6BF7DEFF9BA44F2679A /* InfoPlist.strings */; };
 		8C1EFE8C1F4019116280DB94 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD5081F4C37E2CEB7CCECB73 /* MapView.swift */; };
 		8D4B39BDE96607C94B4FF902 /* StationLineChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6257E295DFF1BD2CE12B37 /* StationLineChips.swift */; };
@@ -289,6 +290,7 @@
 		F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialOverlay.swift; sourceTree = "<group>"; };
 		F655E31850005DBAC32D5142 /* OSMMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSMMapBackground.swift; sourceTree = "<group>"; };
 		F7E81C097849391C73D31AF5 /* krtc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = krtc.json; sourceTree = "<group>"; };
+		F9D622682F53E544329A323C /* goal-met.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "goal-met.wav"; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 		FEAD664FAAE1ADFB437DDCA2 /* PostcardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostcardView.swift; sourceTree = "<group>"; };
 		FEC1E505164102E63F407C64 /* MapQuickLayerStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapQuickLayerStrip.swift; sourceTree = "<group>"; };
@@ -507,6 +509,7 @@
 				634F11070F2F2510BBBA5D96 /* chime-tourist-motif.wav */,
 				52449D8DCD618CC726CACDDE /* chime-tourist.wav */,
 				825875E22D08C0197C0EC180 /* coins.wav */,
+				F9D622682F53E544329A323C /* goal-met.wav */,
 				37971520DEDE438F5E6272D6 /* music-loop.caf */,
 				AD6E3ED548E183F6E79E0111 /* rail-joint.wav */,
 				E4631B47557CC9944903820E /* refused.wav */,
@@ -652,6 +655,7 @@
 				70A9168E29FD6A6696023F5C /* chime-tourist-motif.wav in Resources */,
 				CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */,
 				CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */,
+				8A77E1AFF3E0508D9C8C15CA /* goal-met.wav in Resources */,
 				B4C21D76AC6D8C7F15D03E7A /* krtc.json in Resources */,
 				789C9FAADEA0419549125729 /* krtc_times.json in Resources */,
 				54DD975F68392FD1FBC6829C /* music-loop.caf in Resources */,

@@ -63,6 +63,56 @@ one place only (2026-10-02, the author's decision):
   pull requests do not bump the golden schema and do not add ARCHITECTURE
   decisions; when a task needs one, say so in the pull request instead.
 
+The three agents the author uses, and what each takes (2026-10-16, the
+author's decision; a one-week trial starting from about 60, 25 and 15
+percent of the work, adjusted by the work accepted, the rework, and the
+author's time spent coordinating):
+
+- **Claude Code**: the core and its integration. Everything above, features
+  that span GameCore, GamePresentation and the App, hard bugs, and the
+  resident roles in `docs/HANDOFF.md` (planning, merge coordination,
+  dispatch). Only the merge coordination session merges, for every agent's
+  pull requests.
+- **Codex**: independent engineering and a second review. A complete,
+  checkable task with its own files: a panel or screen a written
+  specification describes, UI and regression tests, CI scripts, `tools/`
+  and data scripts. On request, an independent review of a risky Claude
+  pull request (train control, saves, game time, economy): look for
+  counterexamples (old saves, two trains, loops, pause and resume) and for
+  tests written to pass rather than to check behaviour. Findings go back to
+  the pull request's author to fix; Codex does not push to that branch.
+- **Antigravity (Gemini)**: what the player sees and does. Clickable
+  prototypes of a play flow, small 3D scenes and train or street work in
+  `Web/CityView`, viewers that check existing assets, and checks of the
+  screens against photos or recordings. `Web/CityView` does not read game
+  state, so a prototype there is not the feature in the game; the native
+  work is a separate task. On a Mac it may also run the App in Xcode and
+  the iOS Simulator and report what it saw.
+
+How they work together:
+
+- One writer per set of files at a time. Several agents may analyse or
+  review the same work, but only the one that claimed the files in #231
+  changes them, on its own branch (and its own working directory when
+  agents share a computer).
+- One priority list (`docs/research/NEXT_PRIORITIES_2026-10-12.md`) and one
+  handoff file (`docs/HANDOFF.md`) for every agent. Read `docs/HANDOFF.md`
+  before starting; work left half done is written there in the agent's last
+  pull request, not only in its own conversation.
+- Mark who made a pull request: Codex branches start with `codex/` and its
+  commits end with `Agent: Codex`; Antigravity branches start with
+  `gemini/` and its commits end with `Agent: Antigravity`. Merge
+  coordination finds the author of a failing commit by this trailer (Claude
+  Code's commits carry `Claude-Session:`) and hands the failure to the
+  author, who passes it to that agent.
+- Comments on GitHub are posted as the author's account: never write
+  `@claude` there, since every mention starts `claude.yml`, billed to the
+  API key.
+- Every pull request says what changed, which files, which checks ran and
+  where (**VERIFIED**), what was not checked (**UNVERIFIED**), and where
+  the next agent picks up. Linux tests passing is not the App working on
+  the Simulator, and neither is a device.
+
 The tutorial and map camera interfaces that the app's tutorial screens and
 the large map are built against, the names of the controls the tutorial
 outlines, and who changes which file while they are built in parallel:

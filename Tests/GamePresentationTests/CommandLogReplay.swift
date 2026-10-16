@@ -30,17 +30,18 @@ struct CommandLogReplay {
         try Data(contentsOf: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld/\(name)"))
     }
 
-    /// The bundled data, read once and only when a report needs it.
-    static let population = Result { try PopulationGrid(data: bundled("taiwan_population.json")) }
-    static let places = Result { try PlaceGrid(data: bundled("taiwan_places.json")) }
-    static let water = Result { try WaterGrid(data: bundled("taiwan_water.json")) }
-    static let heights = Result { try HeightGrid(data: bundled("taiwan_heights.dat")) }
-    static let coverage = Result { try CoverageGrid(data: bundled("taiwan_coverage.dat")) }
+    /// The bundled data, read once and only when a report needs it
+    /// (decision 260: through the headless game's reader).
+    static let realWorld = RealWorldFiles(folder: root.appendingPathComponent("RailwayGameApp/Resources/RealWorld"))
 
     /// Replays `report`, at most `limit` entries.
     init(_ report: CommandLogReport, limit: Int? = nil) throws {
-        session = GameSession(world: report.start.world)
-        try install(report.startData)
+        let game = HeadlessGame(world: report.start.world)
+        session = game.session
+        // The device's session paused for events and logged it: replay as
+        // it ran.
+        session.pausesForImportantEvents = true
+        try game.install(report.startData, from: Self.realWorld)
         for (file, digest) in report.data.sorted(by: { $0.key < $1.key }) {
             guard let ours = try? Self.bundled(file) else {
                 warnings.append("\(file): not in this checkout")
@@ -50,62 +51,13 @@ struct CommandLogReplay {
                 warnings.append("\(file): the report's app read another version (\(digest), here \(CommandLogReport.digest(of: ours)))")
             }
         }
+        // Decision 260: each entry as the headless game replays it.
         for (index, entry) in report.entries.enumerated().prefix(limit ?? .max) {
-            if let reason = try step(entry) {
+            if let reason = try game.step(entry, realWorld: Self.realWorld) {
                 stopped = (index, reason)
                 return
             }
             replayed += 1
         }
-    }
-
-    /// Gives the session the data `data` says the device's had.
-    private func install(_ data: RealWorldDataSet) throws {
-        if data.population, session.population == nil { session.population = try Self.population.get() }
-        if data.places, session.places == nil { session.places = try Self.places.get() }
-        if data.water, session.water == nil { session.water = try Self.water.get() }
-        if data.heights, session.heights == nil { session.heights = try Self.heights.get() }
-        if data.coverage, session.coverage == nil { session.coverage = try Self.coverage.get() }
-    }
-
-    /// Replays `entry`; why it cannot, if it cannot.
-    private func step(_ entry: CommandLog.Entry) throws -> String? {
-        guard session.world.clock.now.seconds == entry.time else {
-            return "the game time is \(session.world.clock.now.seconds) s, the device's was \(entry.time) s"
-        }
-        switch entry.action {
-        case .command(let command):
-            let outcome = session.perform(command) { _, _, _ in "" }
-            if (outcome == nil) != entry.refused {
-                return "\(command.name) was \(entry.refused ? "refused" : "made") on the device, not here: \(session.message?.text ?? "")"
-            }
-        case .advance(let ticks):
-            session.advance(ticks: ticks)
-        case .setSpeed(let speed):
-            session.setSpeed(speed)
-        case .pause:
-            // A pause the device's session made by itself for an event
-            // (decision 175), the replay's has made at the same tick.
-            if session.world.clock.isPaused, session.isPausedForEvent { break }
-            guard !session.world.clock.isPaused else { return "already paused" }
-            session.togglePause()
-        case .resume:
-            guard session.world.clock.isPaused else { return "not paused" }
-            session.togglePause()
-        case .undo:
-            guard session.canUndo else { return "nothing to undo" }
-            session.undo()
-        case .redo:
-            guard session.canRedo else { return "nothing to redo" }
-            session.redo()
-        case .readLandRoundStations(let data):
-            try install(data)
-            session.readLandRoundStations()
-        case .readLand(let reach, let point):
-            session.readLand(within: reach, of: point)
-        case .unrecorded(let caller):
-            return "\(caller) changed the world with no recorded command"
-        }
-        return nil
     }
 }

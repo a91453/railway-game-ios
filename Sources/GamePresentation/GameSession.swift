@@ -406,6 +406,11 @@ public final class GameSession {
     /// The real lines of the map, projected once for each map (decision
     /// 213, ``realRailwayTraces``).
     @ObservationIgnored var realRailwayTracesMemo: (key: RealRailwayTracesKey, traces: RealRailwayTraces)?
+    /// The real line ``networkTracedWay`` last found, and between which
+    /// points: the map reads it at every redraw.
+    @ObservationIgnored var tracedWayMemo: (key: TracedWayKey, way: [WorldCoordinate])?
+    /// How many times ``networkTracedWay`` was worked out (for the tests).
+    @ObservationIgnored var tracedWaysWorkedOut = 0
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,
@@ -576,6 +581,16 @@ public final class GameSession {
     /// (decision 117, ``noteIncome(since:)``); `nil` before any. Never
     /// saved.
     public internal(set) var incomePulse: IncomePulse?
+    /// Decision 256: the fares the last step took, by station, which the
+    /// map floats over them (``FareFloatBoard``); `nil` before any. Never
+    /// saved.
+    public internal(set) var farePulse: FarePulse?
+    /// Decision 256: the goals the last step met, which the map checks off
+    /// with a tune; `nil` before any. Never saved.
+    public internal(set) var goalPulse: GoalPulse?
+    /// Decision 256: the towns the last midnight grew a step, which the
+    /// map rings; `nil` before any. Never saved.
+    public internal(set) var townPulse: TownGrowthPulse?
     /// Where the map is asked to look (decision 177): the station master's
     /// tap on advice that points at a place. The map view moves its camera
     /// when it changes. Never saved.
@@ -1260,6 +1275,8 @@ public final class GameSession {
         noteIncome(since: lastEntry)
         retireCoveredShortfall()
         noteDayLoss(since: dayBefore)
+        // Decision 256: fares over the stations, goals met, towns grown.
+        noteActions(since: worldBefore)
         if let closed = world.accounts.years.last?.year, closed != closedBefore {
             yearEndYear = closed
         }
