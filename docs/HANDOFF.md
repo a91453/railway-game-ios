@@ -19,7 +19,7 @@
 | --- | --- | --- | --- |
 | 遊戲規劃（決策） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17，對話太長交接） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
 | 合併協調 | session_01QoA24EvFCFbmbcM1EwaZT7（2026-10-16 起；前任 session_016sNs4eeZwga9hz1CCHkpmX。作者本人確認授權前只巡查、不合併） | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
-| 派工（玩家回報與 bug） | session_01AaAj4wvJMxJQuLWAoYu6S8 | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
+| 派工（玩家回報與 bug） | session_01MJ7sdeid5DAFjSVbTkmdi3（2026-10-16 起；前任 session_01AaAj4wvJMxJQuLWAoYu6S8） | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
 ### 1.1 遊戲規劃
