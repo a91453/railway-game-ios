@@ -383,11 +383,9 @@ final class CommandLogTests: XCTestCase {
     /// did, and comes to the same world.
     func testARealMapsReportReplaysWithTheBundledData() throws {
         let session = GameSession(world: GameWorld.newWholeTaiwanGame())
-        session.population = try CommandLogReplay.population.get()
-        session.places = try CommandLogReplay.places.get()
-        session.water = try CommandLogReplay.water.get()
-        session.heights = try CommandLogReplay.heights.get()
-        session.coverage = try CommandLogReplay.coverage.get()
+        try CommandLogReplay.realWorld.install(
+            RealWorldDataSet(population: true, places: true, water: true, heights: true, coverage: true), in: session
+        )
         session.readLandRoundStations()
         // Changhua, on the plain.
         let frame = RealWorldFrame(anchor: WholeTaiwan.anchor, bounds: WholeTaiwan.bounds)

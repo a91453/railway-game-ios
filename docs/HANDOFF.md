@@ -157,6 +157,7 @@
 | 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
 | 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」；2026-10-16 作者本人在那個 session 回「四方決定要不要繼續」，結論是繼續（派工 session 確認） |
 | 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
+| 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/game-sim`（決策 260） | HANDOFF §7.4 的第 1、3、4 項，一次一個 PR：無頭模擬 `GameSim`（`HeadlessGame`）→ 腳本化試玩 `Policy` 與異常清單 → 文件數字一致性檢查 | 否 | 排在核心玩法第 4 個 PR（關卡）之前；`Policy` 做好後告訴 session_01Q48iRY9H6EmeUL8NPyfiDW 怎麼用 |
 
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
 
@@ -651,7 +652,7 @@
 
 | 項目 | 出處 |
 | --- | --- |
-| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump） | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
+| 無頭模擬入口 `GameSim`（指令：new-game、load、apply、advance、dump）——決策 260，`claude/game-sim` | GAME_AI_TOOLS §3.1、MOTION_3D_TOOLS §4 |
 | 3D 截圖時一起輸出每幀時間與 draw call 的 JSON | GAME_AI_TOOLS §3.2 |
 | 腳本化玩法框架（`Policy`）＋自動試玩，列出異常 | GAME_AI_TOOLS §3.3、MOTION_3D_TOOLS §5 |
 | 文件數字一致性檢查：存檔版本、golden schema、golden 個數（OVERVIEW 現在是手動補的） | GAME_AI_TOOLS §3.4 |

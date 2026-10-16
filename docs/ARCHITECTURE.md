@@ -10244,6 +10244,48 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **沒有採用**：B 把教學改成第一關、其他關卡放進挑戰（第 1 關之後容易斷掉）；C 自由模式裡依人次解鎖（沒有短目標，平衡最難，要升存檔）；關掉行車控制（列車疊在一起像 bug）。預覽留在 CORE_LOOP §5.1。
 
+### 260. 沒有畫面的遊戲：`GameSim` 指令列與 `HeadlessGame`
+
+2026-10-16，遊戲規劃 session 派工（NEXT_PRIORITIES §16「接下來」第 1 項、HANDOFF §7.4、`docs/research/GAME_AI_TOOLS_2026-10-15.md` §3.1）。號碼依工作登記 #231：main 上 254，未釋出的登記最大 259，取 260。GameCore 的規則、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動。
+
+**為什麼**：以前無頭跑 GameCore 只能寫報告測試。報告測試印 Markdown，不能讀任意存檔，也不輸出 JSON；問題回報的指令紀錄（決策 193）只能在測試裡重播。關卡（決策 254 §7 第 4 個 PR）的目標天數要用自動試玩量，需要一個從指令列就能開局、走時間、讀數字的入口。
+
+**做法**：
+1. **`HeadlessGame`**（GamePresentation，`HeadlessGame.swift`）：包一個 `GameSession`，所以指令和裝置走同一條路。
+   - 開局：`newGame(seed:buysMap:)` 是 App 的空白新遊戲；`load` 讀 App 寫的存檔（經 `SaveLibrary`，照樣遷移），或問題回報（從紀錄的起點）。
+   - `apply`：問題回報或紀錄條目照裝置的遊戲時間重播；指令清單（`PlayerCommand` 的 JSON）在現在依序做，拒絕的照算、繼續做。
+   - `advance(seconds:)`：用世界自己的速度，一天一段地走；暫停中的遊戲先恢復。工具用的 session 不因目標達成、月報而自己暫停；重播時照裝置，會暫停。
+   - `summary`：`HeadlessSummary`，錢（整美元）、前一天的車資與旅次、列車狀態（`unplaced`／`idle`／`atStop`／`running`）、路線、車站的運量與等車人數、死結的列車（`deadlockedTrains`）、挑戰目標。
+2. **`RealWorldFiles`**：App 的實景資料資料夾，每個檔只讀一次。測試的 `CommandLogReplay` 改成用 `HeadlessGame.step` 與它重播，兩邊只有一份重播的程式。
+3. **`HeadlessCommandLine`**（GamePresentation）與 **`GameSim`**（新的 executable target，`Sources/GameSim/main.swift`，只負責讀寫檔與終端機）：
+   - 操作：`new-game`、`load`、`apply`、`advance`、`dump`、`save`，用 `then` 串起來；
+   - 每個操作印一行 JSON 收據（`op`、`ok`、`result` 或 `error`）；
+   - 不認得的操作、選項或多出來的字，就拒絕，並列出可以用的；
+   - `--state FILE` 讓遊戲在兩次執行之間接著走（存成 App 讀得懂的存檔）；`--data DIR` 給讀實景土地的紀錄用。
+   - 不用 MCP：Claude Code 的 Bash 就是呼叫端，包 MCP 要加 SDK 依賴。
+
+```sh
+swift run GameSim new-game --seed 1 then advance --days 3 then dump --sections economy,trains,deadlock
+swift run GameSim --state /tmp/game.json load report.json then apply report.json then dump
+```
+
+**參考**：參考庫沒有無頭入口（`Ci/` 的 `docs/debugging_desyncs.md` 只有存檔加指令紀錄，決策 193 已經照做）。外部只取做法：godot-mcp（MIT）的「一個操作加 JSON 進、JSON 出」，Unreal_mcp（MIT）的「每個指令回收據、拒絕不認得的參數」。沒有複製程式碼，程式是本專案自己的；沒有新的依賴。
+
+**四方**：
+- 玩家：間接。玩家回報的存檔和指令紀錄可以直接量，修得更快；關卡的天數量過再定。
+- 開發：平衡、問題回報、文件數字與自動試玩都用同一個入口。
+- 美術：無。
+- 音樂：無。
+
+**沒有採用**：
+- 只寫成測試（`swift test --filter`）：不能從指令列讀任意存檔、串操作；
+- 包成 MCP server：要加 SDK 依賴；
+- 直接對 `GameWorld` 套指令、不經 session：重播會和裝置走不同的路，複合動作（決策 254 §7 第 2 個 PR 的自動配車）也拿不到。
+
+**下一步**（HANDOFF §7.4）：
+- `Policy` 腳本化試玩：在 `HeadlessGame` 上跑固定的玩法 N 天，列出死結、零旅次、破產、列車停住。給關卡 session 量目標天數。
+- 文件數字一致性檢查。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

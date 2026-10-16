@@ -441,3 +441,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 252 | 台鐵車款擴充：EMU100、莒光號（E200／E500／R100／R200 牽引）、海風號 |
 | 253 | 介面動態的規則：一種動作一條規則（`MotionRule`，GamePresentation），減少動態效果只留淡入淡出；第一批套用在建造的回饋（被拒絕改成左右搖）、選取與面板、教學卡片，加 `motion` skill（改寫自 LottieFiles，MIT；存檔不動） |
 | 254 | 核心玩法的方向：10 個入門關卡（一關一個目標、1–3 顆星、過關解鎖工具）、新遊戲預設簡單規則（寫實是選項；單線多一列車自動加待避線）、每個動作都有回報；量測 `CoreLoopBaselineReportTests`（只在要求時跑）；`docs/research/CORE_LOOP_2026-10-16.md`（存檔不動） |
+| 260 | 沒有畫面的遊戲：`swift run GameSim`（new-game、load、apply、advance、dump、save，用 `then` 串，每步一行 JSON 收據，不認得的選項就拒絕）；`HeadlessGame`、`HeadlessSummary`（GamePresentation），測試的指令紀錄重播也改用它（存檔不動） |
