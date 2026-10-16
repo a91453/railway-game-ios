@@ -5698,6 +5698,13 @@ GameCore、存檔、golden、replay 都不變（只讀 `TownGrowth.Place` 已有
 
 **之後的修正**（玩家回報，TestFlight 54.1，2026-10-13）：玩家分不清站長和鈴鐺：兩者都打開新聞紀錄。現在**新聞紀錄只從 HUD 的鈴鐺開**：站長說話時再點頭像只收起泡泡；點泡泡時，有地點的建議（`cameraTarget`）照決策 177 把地圖移過去，跟某座車站有關的建議（`stationFull`、`stationCrowded`、`underserved`、`townGrew`、`materialsShort`）把地圖移到那座車站、選取工具時並選取它（建設工具時不動選取，以免改到列車工具的目的地），其他的只收起泡泡。上面「開啟」一條的後兩種開法因此取消。`StationMasterAdvice` 不改（只讀它的案例）；`StationMasterView` 不再讀 `GameScreenState`。
 
+**後來**（67.1，存檔小修，2026-10-16）：**匯出的存檔帶著新聞紀錄**。資料夾裡的存檔照舊把新聞放在旁檔（`*.news.json`），但匯出（分享）只送出一個檔案，新聞就丟了。現在 `SaveLibrary.exportFile(for:news:at:)` 在存檔檔最外層多一個可省略的 `"news"`（`NewsLog` 照它自己的編碼），匯入（`importSave`）用 `decodeWithNews` 讀回並交給新的一局。
+- **不升存檔版本**：`"news"` 在 `SavedGame`（`"game"`）外面，`saveVersion` 不變；之前的 build 的 `SaveFile`／`Header` 用 `JSONDecoder` 解碼，不認得的鍵直接略過，所以舊 build 照樣讀得到新匯出的檔（只是沒有新聞）。資料夾裡的存檔寫法完全不變（沒有 `"news"` 鍵）。
+- 新聞讀不回來（欄位壞了）時略過它，不擋讀檔。
+- 四個角度：玩家——把存檔傳到另一台裝置，這局的新聞紀錄也跟著過去；開發——一個可省略的欄位，不動 GameCore、不升版本，舊 build 不受影響；美術：沒有畫面變化；音樂：無。
+- 另一個做法（沒採用）：匯出成 zip（存檔＋旁檔）。要多一個解壓的路徑，舊 build 也讀不了。
+- 測試：`SaveRecoveryTests`（匯出再匯入新聞相同；沒有新聞或新聞壞了照樣讀；用之前 build 的 `SaveFile`／`Header` 形狀解碼新格式不會失敗、存檔版本不變）。
+
 ### 176. 財務趨勢圖：經濟面板最上方的「趨勢」區
 
 2026-10-12（作者睡覺期間派工）。問題：帳只有全公司合計，玩家看不到票收、成本、利潤、旅客數一天天往上。只改 presentation：GameCore、存檔版本、golden schema 都不動。
@@ -6539,6 +6546,16 @@ full 以下各檔選到的測試**取聯集**（改 GamePresentation 又加一�
 **測試**：`AutosaveSlotsTests`（輪替與最舊的先走、新聞旁檔一起走；最新的不是槽；只認 `autosave-<數字>.json`；搬最新的進槽；相對時間逐值對照參考的四捨五入；定時存檔沒變就不佔槽；繼續讀最新的、其他列在 `olderAutosaves`；在遊戲裡回去並反悔；在開始畫面回去；新遊戲留最新、刪其他、讀不到的留著；舊版只有 `autosave.json` 照樣繼續）。既有的 `GameLauncherTests`、`SaveLibraryTests`、`BackgroundSaveTests`、`SaveNamingTests`、`ReleaseUIFixesTests` 不改。App 的畫面（SwiftUI）只能靠 macOS CI 編譯與實機確認。
 
 **還沒做**：雲端備份；輪替的份數與間隔可以在設定裡改（`SettingsView` 由 #463 佔用，之後再加）。
+
+**後來**（67.1，存檔小修，2026-10-16）：「繼續」讀不了最新的自動存檔時，自動退回下一份。
+- 「讀不了」指檔頭正常（清單列得出來、`problem == nil`），但世界解不回來，或被 GameCore 的驗證拒絕（`SaveError.damaged`）。檔頭就讀不了的（別的 App、較新的版本）照舊不列為「繼續」的候選。
+- `continueGame()` 依「繼續」的順序（最新的在前）把讀得到檔頭的自動存檔逐份試讀，用第一份讀得回來的；檔案讀寫失敗（`.fileSystem`）不退回，照舊報錯。退回時狀態列說「最新的存檔讀不了，已從 14:20 的存檔繼續。」／"The newest save could not be loaded. Continued from the save of 14:20."（裝置的時鐘，`SaveLibrary.clockText`）。這句以 `failure` 顯示，在畫面上停得比成功訊息久。
+- 每一份都讀不了，才在開始畫面說「所有自動存檔都讀不了。」／"None of the autosaves can be loaded."，不開局。
+- **壞的那份不刪**：退回就是「回到之前」，最新的 `autosave.json` 照舊搬成下一份輪替的，讀得回來的那份寫成新的 `autosave.json`；壞的輪替檔留在原處。之後依輪替規則（超過 5 份時最舊的先走；另開一局時只留可能是最新的兩份）才會清掉，和其他自動存檔一樣。
+- 從清單點某一份自動存檔（`load(_:at:)`）照舊只讀那一份，壞了就報「這個存檔已損壞」，不退回。
+- 四個角度：玩家——存檔壞了不會整局不見，也知道回到了什麼時候；開發——只動 `GameLauncher`，候選與輪替沿用既有規則，壞檔留著可附在問題回報；美術——沒有新畫面，只有一句狀態列文字；音樂：無。
+- 另一個做法（沒採用）：讀不了時先問玩家要不要退回。多一個對話框，而玩家幾乎都會選「要」。
+- 測試：`SaveRecoveryTests`（最新與一份輪替都壞時退回第三份、兩種語言的訊息、壞檔留著、下次「繼續」接退回的那局；全部壞時的錯誤且一份都不刪；最新的讀得到時不說話）。
 
 ### 193. 指令日誌：問題回報附上存檔與指令，在 Linux 重播
 

@@ -887,8 +887,8 @@ private struct ExportedSave: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .json) { save in
-            let world = await save.session.worldToSave
-            return SentTransferredFile(try SaveLibrary.exportFile(for: world, at: Date()))
+            let (world, news) = await (save.session.worldToSave, save.session.news)
+            return SentTransferredFile(try SaveLibrary.exportFile(for: world, news: news, at: Date()))
         }
     }
 }
