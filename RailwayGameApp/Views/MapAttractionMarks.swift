@@ -23,18 +23,25 @@ struct MapAttractionMarks: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if (session.tool == .select) != isPassive, let sights = session.world.tourism?.attractions {
-                ForEach(sights, id: \.id) { sight in
+                // Decision 250: a mark that would lie on a better-rated
+                // one waits until the map is brought closer.
+                let shown = SightMarks.shown(sights.compactMap { sight -> SightMarks.Mark? in
                     let at = camera.screenPoint(of: sight.point)
-                    if at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
-                       at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) {
-                        mark(sight)
-                            .opacity(isPassive ? 0.5 : 1)
-                            .allowsHitTesting(!isPassive)
-                            .accessibilityHidden(isPassive)
-                            .fixedSize()
-                            .frame(width: 0, height: 0, alignment: .center)
-                            .position(x: at.x, y: at.y)
-                    }
+                    guard at.x > Double(insets.leading), at.x < viewport.width - Double(insets.trailing),
+                          at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
+                    return SightMarks.Mark(id: sight.id, stars: session.world.stars(of: sight), x: at.x, y: at.y)
+                })
+                // Only the marks shown, not every sight: the whole of Taiwan
+                // has 214, and this is worked out again as the world moves.
+                ForEach(sights.filter { shown.contains($0.id) }, id: \.id) { sight in
+                    let at = camera.screenPoint(of: sight.point)
+                    mark(sight)
+                        .opacity(isPassive ? 0.5 : 1)
+                        .allowsHitTesting(!isPassive)
+                        .accessibilityHidden(isPassive)
+                        .fixedSize()
+                        .frame(width: 0, height: 0, alignment: .center)
+                        .position(x: at.x, y: at.y)
                 }
             }
         }
@@ -49,6 +56,9 @@ struct MapAttractionMarks: View {
         let open = session.world.attractionStation(of: sight.id) != nil
         let text = "\(sight.name(in: session.language)) \(session.world.starsText(of: sight))"
         return Button {
+            // Decision 250 (a player's report): the panel opens at this
+            // sight's row.
+            screen.sightFocus = sight.id
             screen.panel = .tourism
         } label: {
             HStack(spacing: 3) {

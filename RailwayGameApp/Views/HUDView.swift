@@ -609,6 +609,7 @@ private struct GameMenu: View, Equatable {
         case .tourism:
             // Decision 174: a game with sights shows them.
             Button {
+                screen.sightFocus = nil
                 screen.panel = .tourism
             } label: {
                 Label {
