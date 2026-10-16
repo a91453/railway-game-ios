@@ -233,4 +233,76 @@ final class TRADemoTests: XCTestCase {
         XCTAssertFalse(launcher.isOpeningTRADemo)
         XCTAssertEqual(launcher.session?.world.stations.count, 13, "the game is open: ten stations and three depots")
     }
+
+    // MARK: - The map (decision 249)
+
+    /// The owner, 2026-10-16, of the TRA demo's double track near the
+    /// Lanyang Bridge: "明明是雙線，但快車跟慢車一起顯示好擠，也看不出來是
+    /// 單線或雙線". Away from the stations, each track's lines are drawn off
+    /// it on the side away from the other track, so the two tracks' lines
+    /// stand apart with the two beds between them; each track's lines span
+    /// at most ``LineMap/sharedWidth`` (eight lines, half a width each, 4);
+    /// and its arrows are drawn once, on the track, clear of every line.
+    func testADoubleTracksTwoWaysStandApartOnTheTRADemo() throws {
+        let world = try Self.built.get().world
+        XCTAssertEqual(world.lines.count, 8)
+        let map = LineMap(world: world)
+        let platformEdges = Set(world.network.platforms.map(\.edge))
+        let byEdge = Dictionary(grouping: map.stretches, by: \.edge)
+        // Each way's lines together are at most 4 widths wide, and those
+        // ridden one way are off the track on the left of their way.
+        for stretches in byEdge.values {
+            for stretch in stretches {
+                let over = stretches.filter { $0.start < stretch.end && stretch.start < $0.end }
+                for side in [1.0, -1.0] {
+                    let span = over.filter { $0.offset * side > 0 && $0.way != .both }.map(\.width).reduce(0, +)
+                    XCTAssertLessThanOrEqual(span, LineMap.widestShared + 1e-9, "\(stretch.edge): \(over.count) lines")
+                }
+                guard stretch.way != .both else { continue }
+                XCTAssertGreaterThanOrEqual(abs(stretch.offset) - stretch.width / 2, LineMap.trackClearance - 1e-9, "\(stretch)")
+                XCTAssertEqual(stretch.offset > 0, stretch.way == .forward, "\(stretch)")
+            }
+        }
+        // Away from the stations, the other track nearby, ridden the other
+        // way, lies on the side away from the lines.
+        let metre = Double(WorldCoordinate.unitsPerMetre)
+        var geometries: [TrackEdgeID: TrackGeometry] = [:]
+        for arrow in map.oneWay { geometries[arrow.edge] = world.trackGeometry(of: arrow.edge) }
+        func travel(_ arrow: LineMap.OneWay, _ geometry: TrackGeometry) -> (x: Double, y: Double) {
+            let first = geometry.points[0], last = geometry.points[geometry.points.count - 1]
+            let sign = arrow.way == .forward ? 1.0 : -1.0
+            return (Double(last.x - first.x) * sign, Double(last.y - first.y) * sign)
+        }
+        var checked = 0
+        for arrow in map.oneWay where !platformEdges.contains(arrow.edge) {
+            guard let geometry = geometries[arrow.edge] else { continue }
+            let location = geometry.location(at: (arrow.start + arrow.end) / 2)
+            let here = (x: Double(location.position.x), y: Double(location.position.y))
+            let way = travel(arrow, geometry)
+            let length = (way.x * way.x + way.y * way.y).squareRoot()
+            // The lines' side: the left of the way they are ridden.
+            let left = (x: way.y / length, y: -way.x / length)
+            for other in map.oneWay where other.edge != arrow.edge {
+                guard let otherGeometry = geometries[other.edge] else { continue }
+                let otherWay = travel(other, otherGeometry)
+                guard otherWay.x * way.x + otherWay.y * way.y < 0 else { continue }
+                for point in otherGeometry.points {
+                    let x = Double(point.x) - here.x, y = Double(point.y) - here.y
+                    guard x * x + y * y < 144 * metre * metre else { continue }
+                    XCTAssertLessThanOrEqual(x * left.x + y * left.y, 0.5 * metre, "\(arrow): its lines lie over \(other.edge), the other track")
+                    checked += 1
+                }
+            }
+        }
+        XCTAssertGreaterThan(checked, 0, "the demo has double track away from its stations")
+        // Arrows: on the track, once, clear of the lines.
+        XCTAssertFalse(map.oneWay.isEmpty)
+        XCTAssertLessThan(LineMap.arrowSize * 0.95, LineMap.trackClearance, "an arrow spans less than the clearance either side")
+        for arrow in map.oneWay {
+            let over = map.stretches.filter { $0.edge == arrow.edge && $0.start < arrow.end && arrow.start < $0.end }
+            XCTAssertFalse(over.isEmpty)
+            XCTAssertTrue(over.allSatisfy { $0.way == arrow.way }, "\(arrow)")
+            XCTAssertTrue(over.allSatisfy { abs($0.offset) - $0.width / 2 >= LineMap.trackClearance - 1e-9 }, "\(arrow)")
+        }
+    }
 }

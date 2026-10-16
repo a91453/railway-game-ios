@@ -738,36 +738,33 @@ enum MapArt {
     /// a tunnel, faded as the track is. Decision 168: a high-speed line has
     /// a navy casing, drawn under every line, so it reads as the heavier
     /// line of the network (the app icon's thick navy outline) without
-    /// moving the lines beside it.
+    /// moving the lines beside it. Decision 249: a line ridden one way only
+    /// beside its track on the left of that way, so a double track's two
+    /// ways stand apart with the beds between them; many lines on a track
+    /// narrower; and the arrows once on the track, not across the lines.
     private static func drawLines(_ lines: LineMap, world: GameWorld, projection: some MapProjection, cached: [TrackEdgeID: MapEdgeDrawing], codes: [LineID: String] = [:], in context: GraphicsContext) {
         guard !lines.stretches.isEmpty else { return }
         let region = drawingRegion(projection)
         let width = lineWidth(projection)
         var drawings: [TrackEdgeID: MapEdgeDrawing] = [:]
-        var drawn: [(path: Path, color: Color, isHighSpeed: Bool, inTunnel: Bool)] = []
+        var drawn: [(path: Path, color: Color, width: Double, isHighSpeed: Bool, inTunnel: Bool)] = []
         // Decision 216: each line's longest piece on the screen, for its
         // badge (layer 24.5).
         var longest: [LineID: (points: [CGPoint], length: Double, color: Color)] = [:]
         let view = context.clipBoundingRect
-        // Decision 201: where a line runs one way only, arrows that way.
-        var oneWay: [(points: [ScreenPoint], offset: Double, backward: Bool)] = []
         for stretch in lines.stretches {
             guard let drawing = drawings[stretch.edge] ?? cached[stretch.edge] ?? world.network.edge(stretch.edge).flatMap({ MapEdgeDrawing(edge: $0, world: world) }) else { continue }
             drawings[stretch.edge] = drawing
             guard region.intersects(drawing.bounds) else { continue }
             let end = min(stretch.end, drawing.geometry.length)
             guard stretch.start < end else { continue }
-            let screen = drawing.geometry.points(from: stretch.start, to: end).map { projection.screenPoint(of: $0) }
-            let points = screen.map { cgPoint($0) }
+            let points = drawing.geometry.points(from: stretch.start, to: end).map { cgPoint(projection.screenPoint(of: $0)) }
             let path = offsetPolyline(points, by: stretch.offset * width)
-            if stretch.way != .both {
-                oneWay.append((screen, stretch.offset * width, stretch.way == .backward))
-            }
             let color = Palette.lineColor(stretch.line, custom: stretch.color)
             // Decision 124: in an automatic edge's tunnel too.
             let middle = (stretch.start + end) / 2
             let inTunnel = drawing.edge.sectionSpans.first { $0.start <= middle && middle <= $0.end }?.kind == .tunnel
-            drawn.append((path, color, stretch.isHighSpeed, inTunnel))
+            drawn.append((path, color, stretch.width * width, stretch.isHighSpeed, inTunnel))
             if !codes.isEmpty, !inTunnel {
                 let shifted = offsetPoints(points, by: stretch.offset * width).filter { view.contains($0) }
                 let length = polylineLength(shifted)
@@ -776,29 +773,33 @@ enum MapArt {
                 }
             }
         }
-        let casing = width + max(4, width * 0.9)
         for stretch in drawn where stretch.isHighSpeed {
             context.stroke(
                 stretch.path, with: .color(stretch.inTunnel ? Palette.ink.opacity(0.5) : Palette.ink),
-                style: StrokeStyle(lineWidth: casing, lineCap: .butt, lineJoin: .round)
+                style: StrokeStyle(lineWidth: stretch.width + max(4, stretch.width * 0.9), lineCap: .butt, lineJoin: .round)
             )
         }
         for stretch in drawn {
             context.stroke(
                 stretch.path, with: .color(stretch.inTunnel ? stretch.color.opacity(0.5) : stretch.color),
-                style: StrokeStyle(lineWidth: width, lineCap: .butt, lineJoin: .round)
+                style: StrokeStyle(lineWidth: stretch.width, lineCap: .butt, lineJoin: .round)
             )
         }
         drawRibbonBadges(longest, codes: codes, height: projection.detail == .full ? 14 : 12, in: context)
         guard projection.detail == .full else { return }
+        // Decision 201: where a track's lines run one way only, arrows that
+        // way, on the track (decision 249).
         let arrowView = view.insetBy(dx: -width * 2, dy: -width * 2)
         let spacing = max(72, width * 16)
-        for stretch in oneWay {
-            for mark in PolylineMarks.marks(along: stretch.points, spacing: spacing, limit: 60) {
-                let shifted = PolylineMarks.shifted(mark, by: stretch.offset)
-                let point = cgPoint(shifted.point)
+        for oneWay in lines.oneWay {
+            guard let drawing = drawings[oneWay.edge], region.intersects(drawing.bounds) else { continue }
+            let end = min(oneWay.end, drawing.geometry.length)
+            guard oneWay.start < end else { continue }
+            let points = drawing.geometry.points(from: oneWay.start, to: end).map { projection.screenPoint(of: $0) }
+            for mark in PolylineMarks.marks(along: points, spacing: spacing, limit: 60) {
+                let point = cgPoint(mark.point)
                 guard arrowView.contains(point) else { continue }
-                drawArrow(at: point, angle: mark.angle + (stretch.backward ? .pi : 0), size: width * 0.75, in: context)
+                drawArrow(at: point, angle: mark.angle + (oneWay.way == .backward ? .pi : 0), size: width * LineMap.arrowSize, in: context)
             }
         }
     }
