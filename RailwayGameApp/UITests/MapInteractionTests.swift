@@ -259,7 +259,14 @@ final class MapInteractionTests: XCTestCase {
         // (`rename.field`): run 38525633704 found it only by its kind.
         let field = alert.textFields.firstMatch
         XCTAssertTrue(field.appears(within: 5))
-        // No tap on the field: the keyboard is already its.
+        // No tap on the field: the keyboard is already its. It comes to the
+        // field a moment after the alert does: typed at once, the letters
+        // went nowhere and the name stayed "Central" (main 3b45ba3's full
+        // lane, run 38831761775). So the test waits, still without a tap,
+        // until the field has the keyboard; a field that never gets it is
+        // the regression this test is for.
+        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"), object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [focused], timeout: 5), .completed, "The rename field takes the keyboard by itself")
         app.typeText(" Plaza")
         XCTAssertEqual(field.value as? String, "Central Plaza")
         alert.buttons["Rename"].tap()
