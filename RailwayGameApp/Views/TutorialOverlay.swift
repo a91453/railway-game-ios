@@ -222,6 +222,12 @@ private struct TutorialCardSlot: View {
     @State private var waitedForSkip = false
     /// Compact height: a phone, held on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// How the card settles as it opens or folds (decision 253).
+    private var settle: MotionRule {
+        MotionRule.pop.running(reduceMotion: reduceMotion) ?? .pop
+    }
 
     /// Whether the step waits for Next, so the chapter's choice does not
     /// carry into it.
@@ -276,19 +282,35 @@ private struct TutorialCardSlot: View {
         let hint = session.tutorialHint
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
         TutorialCardLayout(placement: isFolded ? sized.folded : sized) {
-            if isFolded {
-                FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
-                    UITestTrace.action("tutorial.unfold")
-                    choose(folded: false)
+            // One view the layout places, open or folded: the one shown
+            // takes the other's place at once (two would share their
+            // buttons' identifiers), then settles (decision 253).
+            ZStack {
+                if isFolded {
+                    FoldedTutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
+                        UITestTrace.action("tutorial.unfold")
+                        choose(folded: false)
+                    }
+                } else {
+                    TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
+                        UITestTrace.action("tutorial.fold")
+                        choose(folded: true)
+                    }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
+                        updateFold { $0.cardPlaced(at: TutorialCardPlacement.Frame(frame), by: sized, mayFold: mayFold) }
+                    }
                 }
-            } else {
-                TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips) {
-                    UITestTrace.action("tutorial.fold")
-                    choose(folded: true)
-                }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                    updateFold { $0.cardPlaced(at: TutorialCardPlacement.Frame(frame), by: sized, mayFold: mayFold) }
-                }
+            }
+            // Decision 253: opening or folding, the card grows from a
+            // little smaller at its top and fades up (``MotionRule/pop``);
+            // with Reduce Motion it only fades, in half the time.
+            .keyframeAnimator(initialValue: 1.0, trigger: isFolded) { card, shown in
+                card
+                    .scaleEffect(reduceMotion ? 1 : 0.94 + 0.06 * shown, anchor: .top)
+                    .opacity(0.4 + 0.6 * min(shown, 1))
+            } keyframes: { _ in
+                MoveKeyframe(0.0)
+                SpringKeyframe(1.0, duration: settle.seconds, spring: settle.spring)
             }
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }

@@ -17,6 +17,7 @@ struct ContentView: View {
     /// Saves the game and goes back to the start screen (Stage C4).
     let launcher: GameLauncher
     @Environment(GameAudio.self) private var audio
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 175: the secretary room's settings, kept on the device.
     @AppStorage(SecretarySettings.pauseKey) private var pausesForImportantEvents = true
     @AppStorage(SecretarySettings.monthlyKey) private var monthlyReportMode = MonthlyReportMode.openAndPause.rawValue
@@ -334,7 +335,8 @@ struct ContentView: View {
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                            // Decision 253: in from its edge, out faster.
+                            .transition(.card(from: .trailing, reduceMotion: reduceMotion))
                     }
                 }
                 // Decision 224 (5B): the layers used most, under the pill,
@@ -357,7 +359,7 @@ struct ContentView: View {
                                 FollowBar(train: followed, session: session) {
                                     session.stopFollowingTrain()
                                 }
-                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .transition(.card(from: .top, reduceMotion: reduceMotion))
                             }
                         }
                         .frame(maxWidth: max(0, proxy.size.width - leading - trailing - 2 * margin), alignment: .leading)
@@ -493,15 +495,18 @@ struct ContentView: View {
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
                             .padding(.bottom, strip + margin)
-                            .transition(.move(edge: .trailing))
+                            .transition(.card(from: .trailing, fades: false, reduceMotion: reduceMotion))
                     }
                 }
-                .animation(.easeInOut(duration: 0.2), value: isOpen)
-                .animation(.easeInOut(duration: 0.2), value: showsRail)
-                .animation(.easeInOut(duration: 0.2), value: toolsColumn)
-                .animation(.easeInOut(duration: 0.25), value: sidePanel)
-                .animation(.easeInOut(duration: 0.2), value: session.lineDraft.count >= 2)
-                .animation(.easeInOut(duration: 0.2), value: session.followedTrain?.id)
+                // Decision 253: the rest of the screen makes room as one
+                // change; with Reduce Motion at once, the cards and panels
+                // only fading.
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: isOpen)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: showsRail)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: toolsColumn)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: sidePanel)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.lineDraft.count >= 2)
+                .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.followedTrain?.id)
         }
     }
 

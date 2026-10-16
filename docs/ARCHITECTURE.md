@@ -10103,6 +10103,103 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **參考**：見 `docs/RAILWAY_REFERENCE_MAPPING.md`「台鐵車款擴充（決策 252）」。
 
+### 253. 介面動態的規則：一種動作一條規則，「減少動態效果」只有一個答案
+
+2026-10-16。作者看過 `docs/research/MOTION_3D_TOOLS_2026-10-16.md` 之後，要把 LottieFiles motion-design-skill 改寫成 SwiftUI。條件有兩個：
+- 要實際用上，不能只多一份文件；
+- 第一批做三處：建造成功與失敗的回饋；選取車站、列車與切換面板；教學卡片的展開、收合，以及「減少動態效果」。
+
+號碼依工作登記 #231：main 上最大是 252，還沒釋出的登記沒有更大的，取 253。只改畫面（GamePresentation 與 App），GameCore、存檔版本、golden schema 都不動。
+
+**原因**（main 1c040ef）：
+- App 裡的動畫各自決定秒數與彈簧：0.15、0.2、0.25 秒，bounce 0.3、0.4、0.5 都有。
+- 卡片與面板進來、離開一樣長，兩端都平滑。
+- 狀態訊息不管是成功還是被拒絕，都用 bounce 0.5 跳一下，「減少動態效果」打開時也跳。
+- 細節卡、面板、跟隨列、名牌在減少動態效果時照樣滑動、縮放。
+- 教學卡片打開或收合是一下子換掉，沒有過渡。
+
+**做法**：
+1. **規則在 GamePresentation**：`MotionRule`（`InterfaceMotion.swift`，Linux 測試 `InterfaceMotionTests`）。每條規則有秒數、曲線（減速、加速、兩端平滑、彈簧加 bounce）、會不會移動、會不會淡入淡出。共八條：
+
+   | 規則 | 秒 | 曲線 | 用在 |
+   | --- | --: | --- | --- |
+   | `press` | 0.15 | 減速 | 按鈕按下 |
+   | `change` | 0.2 | 兩端平滑 | 原地的變化，版面讓位 |
+   | `cardIn` | 0.28 | 減速 | 卡片、面板進來 |
+   | `cardOut` | 0.2 | 加速 | 卡片、面板離開 |
+   | `pop` | 0.25 | 彈簧 0.2 | 名牌、建造的 ✓ ✕、教學卡片打開或收合 |
+   | `confirm` | 0.25 | 彈簧 0.2 | 好消息跳一下 |
+   | `refuse` | 0.36 | 兩端平滑 | 被拒絕時左右搖 |
+   | `builtRing` | 0.9 | 減速 | 蓋好的環（決策 117） |
+
+   - **減少動態效果**：`reduced`。不滑、不縮放、不彈、不搖；淡入淡出留著，時間減半，不用彈簧；只有移動的動作直接發生（`nil`）。
+   - **被拒絕的搖動**：`RefusalShake`，左右三次，±6 點，一次比一次小，停在原位，不用彈簧。
+2. **App**（`Theme.swift`）：
+   - `MotionRule.animation`：把規則轉成 SwiftUI 的動畫。
+   - `layout(reduceMotion:)`：版面讓位的動畫。減少動態效果時是 `nil`，版面直接讓位。
+   - `AnyTransition.card(from:fades:reduceMotion:)`：從邊上進來用 `cardIn`、離開用 `cardOut`；減少動態效果時只淡入淡出。
+   - `AnyTransition.pop(from:anchor:reduceMotion:)`：小東西冒出來；減少動態效果時只淡入淡出。
+   - 這兩個轉場自己帶動畫，所以版面不動時卡片照樣淡入。
+3. **建造的回饋**：
+   - 狀態訊息（`StatusBanner`）：從上面進來、比較快離開；好消息跳一下（`confirm`，bounce 從 0.5 改成 0.2）；被拒絕時左右搖（`refuse`），不再和好消息用同一個動作；減少動態效果時都不動。
+   - 建造的 ✓ ✕ 泡泡（`MapBuildConfirm`）用 `pop`。
+   - 蓋好的環（`BuildPulseMark`）用 `builtRing`；減少動態效果時勾只淡出，時間減半。
+4. **選取與面板**：
+   - 車站名牌（`MapStationTagView`）用 `pop`。
+   - 細節卡、跟隨列、地圖旁的面板（`ContentView`）用 `card`。
+   - 旁邊版面讓位的六個 `.animation` 都改用 `change`（地圖旁的面板原本是 0.25 秒）。
+5. **教學卡片**（`TutorialOverlay`）：
+   - 打開或收合時，新的那張從 94% 長回來、從上緣長、淡入（`pop`）；減少動態效果時只淡入。
+   - 換的那一下不加轉場：收合與打開的卡片都有 `tutorial.progress`、`tutorial.skipStep`，同時在畫面上，UI 測試會找到兩個。而且自訂的 `TutorialCardLayout` 只放第一個子 View。
+   - 所以外面包一個 `ZStack`，用 `keyframeAnimator` 讓換上的那張長回來。#707 的「手指按下就打開」不變。
+6. **按鈕按下**（`Theme.swift` 的兩種按鈕樣式、開始畫面的卡片按鈕）用 `press`；減少動態效果時只變淡，不縮小。
+7. **skill**：`.claude/skills/motion/`。
+   - 內容：規則表、改寫的原則、減少動態效果、寫法上的陷阱、不採用的部分、怎麼檢查。
+   - LottieFiles 的 MIT 授權全文放在同一個資料夾的 `LICENSE`。
+8. **沒改的**：地圖上的動畫，例如等待環、天氣、號誌閃動、列車、收入的數字飄動。前三個已經照減少動態效果做（決策 182、210）。路線條上的點是等速，因為它跟著時間走。
+
+**四方**：
+- 玩家：
+  - 同一種東西每次動得一樣；
+  - 被拒絕時是搖頭，不是像成功一樣跳；
+  - 卡片進來快、離開更快，不擋手；
+  - 打開「減少動態效果」的玩家看到東西淡入淡出，不會滑來滑去或彈跳。
+- 開發：
+  - 秒數與彈簧在一個地方，有 Linux 測試（進比出長、只有小東西回彈、減少動態效果只留淡入淡出、搖動的形狀）；
+  - App 只用 `.card`、`.pop`、`layout(reduceMotion:)`，不用自己處理減少動態效果；
+  - 不加套件。
+- 美術：
+  - 回彈小（bounce 0.2）、時間短，配扁平的畫風；
+  - 不加陰影、模糊、粒子、彩帶（LottieFiles 的「背景層」不採用）。
+- 音樂：無（蓋好的音效照舊，決策 117）。
+
+**沒選的**（預覽在 `docs/art/motion-rules-2026-10-16/`）：
+- B：照現在各自決定。
+- C：SwiftUI 內建的 `.bouncy`、`.smooth`、`.snappy`。都是 0.5 秒，比手機的表慢一倍，卡片要半秒才到位。
+- D：減少動態效果時全部直接出現。這是參考庫的做法（`island_city_reference_clean` 的 `.card-in{transition:none}`、`street_scene_reference_clean` 的 0.01 毫秒）。LottieFiles 與 Apple 都建議留著淡入淡出，東西出現或消失才看得出來。
+- 「深色模式降低動態強度」：先不做，等實機看過。
+
+**參考**：
+
+| 來源 | 對應 |
+| --- | --- |
+| LottieFiles motion-design-skill `f9a8a04`（MIT）的 `SKILL.md`：Duration Table、Enter > Exit、Weight Classification | `MotionRule` 的秒數與曲線，`InterfaceMotionTests` 的範圍 |
+| 同上 `patterns/state-feedback.md`：Error Shake（±10–15 px、2–3 次、300–400 毫秒、不回彈）、Checkmark Success | `RefusalShake`（±6 點、3 次、0.36 秒：手機上的訊息比網頁窄，振幅取小）、`confirm` |
+| 同上 `director/context-adaptation.md`：prefers-reduced-motion 的對照表 | `MotionRule.reduced`、`layout(reduceMotion:)` |
+| 參考庫 `Railway/island_city_reference_clean/source/css/app.css` 的 `.sheet`：0.34 秒、`cubic-bezier(.2,.9,.25,1)`、往上 28 px 加淡入 | `cardIn`（0.28 秒減速，從邊上滑進來加淡入），時間接近 |
+| 參考庫 `island_city`、`street_scene`、`train_loop` 的 `prefers-reduced-motion` | 沒採用（方案 D），理由見上 |
+
+外部專案除了 LottieFiles 沒有用到。沒有搬程式碼：LottieFiles 是文字，參考庫是 CSS，對 SwiftUI。
+
+**測試**：`InterfaceMotionTests`（5 個）：
+- 進比出長 30–50%；
+- 秒數在表的範圍內；
+- 只有小東西回彈；
+- 減少動態效果只留淡入淡出、時間減半以上；
+- 搖動停在原位、三次、一次比一次小。
+
+畫面上的動作要在 Simulator 或實機上看（UNVERIFIED LOCALLY）。這次不加 UI 測試：動畫的形狀 Simulator 也答不了，而 UI 測試已經用 `appears(within:)`、`becomesHittable(within:)` 等東西停下。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

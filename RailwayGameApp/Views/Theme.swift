@@ -1,3 +1,4 @@
+import GamePresentation
 import SwiftUI
 import UIKit
 
@@ -86,6 +87,7 @@ enum Theme {
 /// colour alone. Flat, like the icon.
 struct ThemeSelectableButtonStyle: ButtonStyle {
     let isActive: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -94,9 +96,10 @@ struct ThemeSelectableButtonStyle: ButtonStyle {
             .foregroundStyle(isActive ? Theme.onPrimary : Theme.textPrimary)
             .background(isActive ? Theme.primary : Color.clear, in: shape)
             .overlay(shape.strokeBorder(isActive ? Color.clear : Theme.panelBorder, lineWidth: 1))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            // Decision 253: with Reduce Motion it only dims.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
             .contentShape(shape)
     }
 }
@@ -111,6 +114,7 @@ struct ThemeProminentButtonStyle: ButtonStyle {
     /// tile of the map, so it is not taken for a build's ✓.
     var isPurchase = false
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
@@ -120,9 +124,9 @@ struct ThemeProminentButtonStyle: ButtonStyle {
             .padding(.horizontal, 14)
             .foregroundStyle(isEnabled ? text : Theme.textSecondary)
             .background(isEnabled ? fill : Theme.panelBorder, in: shape)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(MotionRule.press.running(reduceMotion: reduceMotion)?.animation, value: configuration.isPressed)
             .contentShape(shape)
     }
 }
@@ -164,5 +168,62 @@ extension View {
         } else {
             background(.regularMaterial, in: shape)
         }
+    }
+}
+
+// Decision 253: the interface's motion rules (``MotionRule``,
+// GamePresentation) as SwiftUI animations and transitions.
+
+extension MotionRule {
+    /// The rule as a SwiftUI animation.
+    var animation: Animation {
+        switch curve {
+        case .decelerate: .easeOut(duration: seconds)
+        case .accelerate: .easeIn(duration: seconds)
+        case .standard: .easeInOut(duration: seconds)
+        case .spring(let bounce): .spring(duration: seconds, bounce: bounce)
+        }
+    }
+
+    /// The rule as a spring, for a keyframe: its own, or one that does not
+    /// pass its mark.
+    var spring: Spring {
+        if case .spring(let bounce) = curve { return Spring(duration: seconds, bounce: bounce) }
+        return Spring(duration: seconds, bounce: 0)
+    }
+
+    /// The animation of the layout round what comes and goes (a view's
+    /// `.animation(_:value:)`): none with Reduce Motion on, so nothing
+    /// slides; the transitions (``AnyTransition/card(from:fades:reduceMotion:)``,
+    /// ``AnyTransition/pop(from:anchor:reduceMotion:)``) carry their own
+    /// fade.
+    func layout(reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : animation
+    }
+}
+
+extension AnyTransition {
+    /// A card or panel standing at `edge` (decision 253): it slides in from
+    /// there, fading in if `fades` (``MotionRule/cardIn``), and slides back
+    /// faster (``MotionRule/cardOut``). With Reduce Motion it only fades.
+    static func card(from edge: Edge, fades: Bool = true, reduceMotion: Bool) -> AnyTransition {
+        if reduceMotion {
+            return .asymmetric(
+                insertion: .opacity.animation(MotionRule.cardIn.reduced?.animation),
+                removal: .opacity.animation(MotionRule.cardOut.reduced?.animation)
+            )
+        }
+        let slide: AnyTransition = fades ? .move(edge: edge).combined(with: .opacity) : .move(edge: edge)
+        return .asymmetric(
+            insertion: slide.animation(MotionRule.cardIn.animation),
+            removal: slide.animation(MotionRule.cardOut.animation)
+        )
+    }
+
+    /// A small thing popping up from `scale` at `anchor` (decision 253,
+    /// ``MotionRule/pop``). With Reduce Motion it only fades.
+    static func pop(from scale: CGFloat = 0.8, anchor: UnitPoint = .center, reduceMotion: Bool) -> AnyTransition {
+        if reduceMotion { return .opacity.animation(MotionRule.pop.reduced?.animation) }
+        return .scale(scale: scale, anchor: anchor).combined(with: .opacity).animation(MotionRule.pop.animation)
     }
 }
