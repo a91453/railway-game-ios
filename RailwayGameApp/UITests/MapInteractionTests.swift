@@ -1318,7 +1318,9 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(mark.becomesHittable(within: 10))
         mark.tap()
         XCTAssertTrue(app.buttons["tourism.done"].appears(within: 10), "The sights did not open")
-        let row = app.descendants(matching: .any)["tourism.row.\(id)"].firstMatch
+        // The row's name: its star, which carries the row's identifier too,
+        // is hidden from VoiceOver and never hittable (PR #713's run).
+        let row = app.staticTexts.matching(identifier: "tourism.row.\(id)").firstMatch
         XCTAssertTrue(row.appears(within: 10), "The sight's row is not in the panel")
         XCTAssertTrue(row.becomesHittable(within: 10), "The panel did not open at the sight's row")
     }
