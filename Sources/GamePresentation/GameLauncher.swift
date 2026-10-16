@@ -357,6 +357,46 @@ public final class GameLauncher {
         begin(world, keepingAutosave: true, isDemo: true)
     }
 
+    /// Opens the demo map run on to `time` ("HH:MM") of its first day,
+    /// paused there when `paused`: only the Debug app's `-demo-at` launch
+    /// argument asks for it, so that a UI test which needs the morning's
+    /// trains opens on them instead of waiting for the clock (the demo
+    /// opens at midnight; its trains set off at 06:00). The world runs on
+    /// off the main actor, as a screenshot scene does. Returns `nil` for a
+    /// time that is not one.
+    @discardableResult
+    public func openDemo(at time: String, paused: Bool) -> Task<Void, Never>? {
+        guard let seconds = Self.secondOfDay(time) else { return nil }
+        let language = language
+        return Task {
+            let world = await Task.detached(priority: .userInitiated) {
+                var world = DemoWorld.make(in: language)
+                do throws(GameError) {
+                    // .fast is ten minutes a tick, .x10 one second.
+                    world.setSpeed(.fast)
+                    try world.advance(ticks: Int(seconds / 600))
+                    world.setSpeed(.x10)
+                    try world.advance(ticks: Int(seconds % 600))
+                } catch {
+                    preconditionFailure("The demo no longer runs on to \(time): \(error)")
+                }
+                world.setSpeed(.normal)
+                if paused { world.setSpeed(.paused) }
+                return world
+            }.value
+            self.begin(world, keepingAutosave: true, isDemo: true)
+        }
+    }
+
+    /// The second of the day "HH:MM" names, or `nil`.
+    static func secondOfDay(_ time: String) -> Int64? {
+        let parts = time.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2, parts.allSatisfy({ $0.count == 2 }), let hour = Int64(parts[0]), let minute = Int64(parts[1]),
+              (0..<24).contains(hour), (0..<60).contains(minute)
+        else { return nil }
+        return hour * 3_600 + minute * 60
+    }
+
     /// Opens a website screenshot scene (decision 165), paused at the
     /// moment it shows; only the Debug app's `-screenshot-scene` launch
     /// argument asks for one. The scene runs on to its moment off the main

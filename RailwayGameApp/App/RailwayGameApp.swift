@@ -99,8 +99,14 @@ struct RailwayGameApp: App {
         // A Debug build launched with -demo-layout opens the demo map at
         // once (Release builds open it from the start screen).
         if DebugLaunch.isSet("-demo-layout") {
-            // Decision 246: with the city's requests, for their UI test.
-            if DebugLaunch.isSet("-city-requests") {
+            if let time = DebugLaunch.value(of: "-demo-at") {
+                // Run on to that time ("HH:MM") off the main actor, and
+                // paused there with -ui-testing-paused: a UI test that
+                // needs the morning's trains opens on them instead of
+                // waiting for the clock.
+                launcher.openDemo(at: time, paused: DebugLaunch.isSet("-ui-testing-paused"))
+            } else if DebugLaunch.isSet("-city-requests") {
+                // Decision 246: with the city's requests, for their UI test.
                 launcher.openDemo(cityRequestSeed: 1)
             } else {
                 launcher.openDemo()

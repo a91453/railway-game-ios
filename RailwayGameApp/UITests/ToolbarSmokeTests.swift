@@ -470,7 +470,7 @@ extension XCUIApplication {
 /// lane (decision 199).
 @MainActor
 final class ShellLayoutUITests: XCTestCase {
-    private func launch() -> XCUIApplication {
+    private func launch(_ extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             // Straight into the demo: at this size the start screen's Demo
@@ -478,7 +478,7 @@ final class ShellLayoutUITests: XCTestCase {
             // first run, 38844484023).
             "-ui-testing", "-demo-layout", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW",
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
-        ]
+        ] + extra
         app.launch()
         return app
     }
@@ -531,14 +531,16 @@ final class ShellLayoutUITests: XCTestCase {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = [
-            "-ui-testing", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            // Two minutes before midnight, so the first day goes by at once.
+            "-ui-testing", "-demo-layout", "-demo-at", "23:58", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL",
         ]
         app.launch()
         defer { app.terminate() }
         let menu = app.buttons["hud.menu"]
         let time = app.buttons["hud.time"]
-        menu.waitUntilSettled(timeout: 15)
+        // The demo runs on to 23:58 before the map opens.
+        menu.waitUntilSettled(timeout: 60)
         XCTAssertTrue(time.appears(within: 10))
         // The fastest speed: a day in about 15 seconds where the device
         // keeps up.
@@ -555,8 +557,13 @@ final class ShellLayoutUITests: XCTestCase {
             abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
         }
         var labels: Set<String> = []
+        // Opened at 23:58, the next date comes at once; then watched for 20
+        // seconds of the new day (the Simulator keeps up with about a day
+        // and a half in 50: run 38866488755 saw two dates, the by-hand run
+        // 38888496446 at 23:58 never a third).
+        let watched = Date().addingTimeInterval(20)
         let deadline = Date().addingTimeInterval(50)
-        while Date() < deadline {
+        while Date() < deadline, labels.count < 2 || Date() < watched {
             Thread.sleep(forTimeInterval: 0.5)
             guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
             labels.insert(String(timeNow.label.prefix(while: { $0 != ")" })))
@@ -582,10 +589,16 @@ final class ShellLayoutUITests: XCTestCase {
     /// TestFlight report: "1／2:／5／5", "17／分").
     func testTheStationBoardsTimesKeepToOneLine() {
         continueAfterFailure = false
-        let app = launch()
+        // The demo opens at midnight; its trains set off at 06:00 and only
+        // then come on the board. Waiting for the clock found none due at
+        // 05:19, 07:20 and 16:07 (runs 38866705071, 38873835534,
+        // 38861445072): the demo opens run on to 07:00 instead, paused, when
+        // every station's board lists trains (DemoAtTests).
+        let app = launch(["-demo-at", "07:00", "-ui-testing-paused"])
         defer { app.terminate() }
         let map = app.descendants(matching: .any)["map"].firstMatch
-        XCTAssertTrue(map.appears(within: 10))
+        // The demo runs on to 07:00 before the map opens.
+        XCTAssertTrue(map.appears(within: 60))
         // As MapInteractionTests' hold: the station nearest the middle once
         // the stations stand still.
         let stations = app.descendants(matching: .any)["map.stations"].firstMatch
@@ -609,28 +622,9 @@ final class ShellLayoutUITests: XCTestCase {
             XCTFail("The demo has stations")
             return
         }
-        // The demo opens at midnight; its trains set off at 06:00 and only
-        // then come on the board (at 05:19 it listed none, run 38866705071).
-        // So it waits for 07:00, the morning's busiest trains, then pauses
-        // and the board holds them: running on, the full lane's run read it
-        // at 16:07 and found none due (main 84a792e, run 38861445072). The
-        // hour is the status pill's last "HH:MM".
         let clock = app.descendants(matching: .any)["hud.time"].firstMatch
         XCTAssertTrue(clock.appears(within: 10))
-        func hour() -> Int? {
-            guard let label = try? clock.snapshot().label, let colon = label.lastIndex(of: ":") else { return nil }
-            return Int(String(label[..<colon].reversed().prefix { $0.isNumber }.reversed()))
-        }
-        let morning = Date().addingTimeInterval(120)
-        while (hour() ?? 0) < 7, Date() < morning {
-            Thread.sleep(forTimeInterval: 0.25)
-        }
-        let pause = app.buttons.matching(NSPredicate(format: "label IN %@", ["Pause", "暫停"])).firstMatch
-        XCTAssertTrue(pause.appears(within: 5), "The pause button")
-        pause.tap()
-        let resume = app.buttons.matching(NSPredicate(format: "label IN %@", ["Resume", "繼續"])).firstMatch
-        XCTAssertTrue(resume.appears(within: 5), "The game pauses")
-        XCTAssertTrue((7...9).contains(hour() ?? -1), "Paused in the morning, trains due: \(String(describing: try? clock.snapshot().label))")
+        XCTAssertTrue((try? clock.snapshot().label)?.contains("07:00") ?? false, "Paused at 07:00: \(String(describing: try? clock.snapshot().label))")
         // The board's own identifier is carried by every row under it, so
         // each train is found by its time and its minutes, which keep theirs
         // (the fifth run's hierarchy: rows read "station.board").
@@ -639,7 +633,7 @@ final class ShellLayoutUITests: XCTestCase {
         // slid in (the first run looked at once and found none). With the
         // clock running, a hold was once taken for a tap: it picked the
         // station and showed its tag, and no panel came (run 38848806364).
-        // So it holds again, up to three times.
+        // So it holds again, up to three times (the clock is paused now).
         var list: XCUIElement?
         for _ in 0..<3 where list == nil {
             map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 1.2)
@@ -672,25 +666,22 @@ final class ShellLayoutUITests: XCTestCase {
             let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
-        // Whether a train is due at the station just then depends on how the
-        // demo's trains run: at 07:17 its board listed one, at 07:20 and at
-        // 07:27 in other runs none (runs 38871334760, 38873835534, main
-        // 878adaf's full lane 38878787559). So, the board in view, time runs
-        // three seconds at a time (half an hour of the game), paused between,
-        // until the board lists a train. A single look and one long run
-        // missed it: the look saw a row for a moment, and the run was skipped.
+        // The clock is paused at 07:00, when every station's board lists
+        // trains (DemoAtTests): the rows only have to be drawn. A row once
+        // showed for a moment and was gone at the next look (#712), so one
+        // sighting counts.
         var listed = false
-        let looking = Date().addingTimeInterval(150)
+        let due = Date().addingTimeInterval(5)
         repeat {
-            Thread.sleep(forTimeInterval: 1)
             if time.exists {
                 listed = true
                 break
             }
-            if resume.exists { resume.tap() }
-            Thread.sleep(forTimeInterval: 3)
-            if pause.exists { pause.tap() }
-        } while Date() < looking
+            Thread.sleep(forTimeInterval: 0.5)
+        } while Date() < due
+        // Not dragged into view: a label inside a row read as one is never
+        // hittable, and the drag would hunt for it (the sixth run). The
+        // board's head is in view, and its first trains under it.
         if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
         // A time or a count of minutes on one line is wider than tall and a
