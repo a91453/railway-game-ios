@@ -1478,6 +1478,14 @@ struct LinesPanel: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.draft.stops")
+                // Decision 260: under simple rules, the train and the
+                // passing loop the line opens with, and their price.
+                if let opening = session.lineOpeningPreview {
+                    Text(verbatim: opening.text(in: language))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("line.draft.opening")
+                }
             }
             Button {
                 session.createLineFromDraft()

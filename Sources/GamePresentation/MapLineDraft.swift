@@ -17,6 +17,8 @@ public struct MapLineDraft: Equatable, Sendable {
     public let caption: String
     /// Whether the ✓ can create the line: two stops or more.
     public let canCreate: Bool
+    /// Decision 260: what opening it costs and brings under simple rules.
+    public var opening: LineOpeningPreview? = nil
 }
 
 /// A station on the map that can join the selected line (decision 196,
@@ -49,7 +51,11 @@ extension GameSession {
         } else {
             caption = ""
         }
-        return MapLineDraft(calls: calls, picked: picked, anchor: anchor, caption: caption, canCreate: canCreate)
+        let opening = canCreate ? lineOpeningPreview : nil
+        return MapLineDraft(
+            calls: calls, picked: picked, anchor: anchor,
+            caption: opening.map { caption + "\n" + $0.text(in: language) } ?? caption, canCreate: canCreate, opening: opening
+        )
     }
 
     /// The selected station, when the selected line does not call at it

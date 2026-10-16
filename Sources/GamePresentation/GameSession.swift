@@ -96,6 +96,9 @@ public final class GameSession {
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
+    /// Decision 260: what opening the drafted line costs, worked out once
+    /// for each draft and world.
+    @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
     /// The depot's sidings at the picked end, kept likewise.
     @ObservationIgnored var depotYardMemo: DepotYardMemo?
     /// The levelling of the platform's stretch, kept likewise (see
@@ -448,6 +451,7 @@ public final class GameSession {
             platformLevellingMemo = nil
             passingLoopMemo = nil
             depotYardMemo = nil
+            lineOpeningMemo = nil
         }
     }
 
@@ -2717,7 +2721,7 @@ public final class GameSession {
 
     /// "Line N" (or "路線 N") with the lowest N from the next line number
     /// upward that no existing line uses.
-    private static func suggestedLineName(for world: GameWorld, in language: DisplayLanguage) -> String {
+    static func suggestedLineName(for world: GameWorld, in language: DisplayLanguage) -> String {
         suggestedName(language.text("Line", "路線"), from: world.lines.count + 1, taken: Set(world.lines.map(\.name)))
     }
 

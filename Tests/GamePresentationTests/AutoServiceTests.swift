@@ -117,6 +117,47 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertEqual(session.world.lines[1].stops, [c, a, loop.id, b])
     }
 
+    /// The draft's preview says what opening it brings and costs, and the
+    /// line opens for that price.
+    func testThePreviewNamesTheTrainAndTheLoopAndTheirPrice() throws {
+        let (world, a, b, _) = try stations()
+        let session = GameSession(world: world)
+        for stop in [a, b] {
+            session.selectStation(stop)
+            session.addSelectedStationToLineDraft()
+        }
+        let preview = try XCTUnwrap(session.lineOpeningPreview)
+        XCTAssertTrue(preview.train)
+        XCTAssertTrue(preview.loop)
+        XCTAssertTrue(preview.text(in: .traditionalChinese).hasPrefix("含一列車與一處待避線 · "))
+        XCTAssertEqual(session.mapLineDraft?.opening, preview)
+        let balance = session.world.economy.balance
+        session.createLineFromDraft()
+        XCTAssertEqual(Money(balance.amount - session.world.economy.balance.amount), preview.cost)
+    }
+
+    /// A line whose single track is shorter than 2 km opens with its train
+    /// and no loop: its trains are seldom between the stations.
+    func testAShortLineOpensWithoutALoop() throws {
+        var world = GameWorld.newGame(rules: .simple)
+        world.setTourism(nil)
+        let middle = PlanPoint(x: world.bounds.width / 2, y: world.bounds.height / 2)
+        let platform = Int64(4) * world.platformCarLength
+        let span = 1_200 * WorldCoordinate.unitsPerMetre
+        let west = try world.buildTrackNode(at: WorldCoordinate(x: middle.x, y: middle.y))
+        let east = try world.buildTrackNode(at: WorldCoordinate(x: middle.x + span, y: middle.y))
+        let edge = try world.buildTrackEdge(from: west, to: east)
+        let a = try world.buildStation(named: "A", at: PlanPoint(x: middle.x + platform, y: middle.y)).id
+        try world.addTrackPlatform(a, on: edge, from: platform / 2, to: platform + platform / 2)
+        let b = try world.buildStation(named: "B", at: PlanPoint(x: middle.x + span - platform, y: middle.y)).id
+        try world.addTrackPlatform(b, on: edge, from: span - platform - platform / 2, to: span - platform / 2)
+        let session = GameSession(world: world)
+        draftLine([a, b], in: session)
+        let line = try XCTUnwrap(session.world.lines.first)
+        XCTAssertEqual(line.stops, [a, b])
+        XCTAssertEqual(line.trains.count, 1)
+    }
+
     /// Over the demo's Line 1, whose trains stand at both its ends, a new
     /// line still opens; its train waits off the track, and the message
     /// says why.

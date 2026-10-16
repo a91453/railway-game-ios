@@ -42,6 +42,42 @@ public struct AutoService: Hashable, Sendable, Codable {
     /// The most cars a train it buys has: four, the first line's in the
     /// balance tests (decision 137), when the platforms are long enough.
     public static let maximumCars = 4
+
+    /// The shortest single-track leg a new line gets a passing loop on
+    /// before its first train: 2 km. A shorter leg's trains are seldom
+    /// between the stations, so the loop would be money spent for little;
+    /// "Add a Train" builds one there when it is asked for.
+    public static let shortestLoopLeg: Int64 = 2_000 * WorldCoordinate.unitsPerMetre
+}
+
+/// What opening the drafted line does under simple rules (decision 260):
+/// its price, and whether a train and a passing loop come with it.
+public struct LineOpeningPreview: Equatable, Sendable {
+    public let cost: Money
+    public let train: Bool
+    public let loop: Bool
+
+    /// "With a train and a passing loop · $ 1,234,000", for the line panel
+    /// and the map's ✓.
+    public func text(in language: DisplayLanguage) -> String {
+        let what = switch (train, loop) {
+        case (true, true): language.text("With a train and a passing loop", "含一列車與一處待避線")
+        case (true, false): language.text("With a train", "含一列車")
+        case (false, true): language.text("With a passing loop", "含一處待避線")
+        case (false, false): language.text("No train yet", "還沒有列車")
+        }
+        return what + " · " + cost.moneyText
+    }
+}
+
+struct LineOpeningMemo {
+    struct Key: Equatable {
+        let stops: [StationID]
+        let worldRevision: Int
+    }
+
+    let key: Key
+    let preview: LineOpeningPreview?
 }
 
 extension GameSession {
@@ -73,9 +109,30 @@ extension GameSession {
         }
         return AutoService(
             newLine: AutoService.NewLine(name: name, stops: stops, targets: targets), line: nil,
-            loops: passingLoopsNeeded(for: line.id, trains: 1, readyFor: 2, in: scratch), trains: 1,
+            loops: passingLoopsNeeded(for: line.id, trains: 1, readyFor: 2, shortestLeg: AutoService.shortestLoopLeg, in: scratch), trains: 1,
             cars: Self.autoServiceCars(for: line.id, in: scratch), language: language
         )
+    }
+
+    /// What opening the drafted line (``lineDraftStops``) would cost and
+    /// bring under simple rules, as ``createLineFromDraft()`` would open it;
+    /// `nil` unless the game runs its lines for the player and the draft
+    /// has two stops. Worked out once for each draft and world.
+    public var lineOpeningPreview: LineOpeningPreview? {
+        guard runsLinesForThePlayer else { return nil }
+        let stops = lineDraftStops
+        guard stops.count >= 2 else { return nil }
+        _ = world
+        let key = LineOpeningMemo.Key(stops: stops, worldRevision: worldRevision)
+        if let memo = lineOpeningMemo, memo.key == key { return memo.preview }
+        var preview: LineOpeningPreview?
+        if let plan = autoServicePlan(creating: Self.suggestedLineName(for: world, in: language), stops: stops, targets: nil).flatMap(feasible),
+           let priced = try? priced({ world throws(GameError) in try apply(plan, to: &world) }) {
+            let trains = priced.result.line.map(\.trains.count) ?? 0
+            preview = LineOpeningPreview(cost: priced.cost, train: trains > 0, loop: priced.result.number > 0)
+        }
+        lineOpeningMemo = LineOpeningMemo(key: key, preview: preview)
+        return preview
     }
 
     /// `plan` as it can run now: whole, or without its loops when they
@@ -193,7 +250,7 @@ extension GameSession {
     /// The passing loop line `id` needs in `world` to run `trains` of its
     /// own (decision 260), with room for `readyFor` trains in all on its
     /// single track, as a plan on this session's track (which `world`
-    /// shares), or none.
+    /// shares), or none. Only legs at least `shortestLeg` long take one.
     ///
     /// A line's single-track legs carry its own trains and those of every
     /// line that runs over the same track. Trains on single track pass
@@ -202,7 +259,9 @@ extension GameSession {
     /// goes in the middle of its longest single-track leg that another
     /// line shares, or else its longest: one a tap, so a line grows a loop
     /// with each train it needs one for. Rings are left to the player.
-    func passingLoopsNeeded(for id: LineID, trains wanted: Int, readyFor: Int = 0, in world: GameWorld) -> [PassingLoopPlan] {
+    func passingLoopsNeeded(
+        for id: LineID, trains wanted: Int, readyFor: Int = 0, shortestLeg: Int64 = 0, in world: GameWorld
+    ) -> [PassingLoopPlan] {
         guard let line = world.line(id: id), !line.isRing, let journey = world.lineJourney(id),
               let tracks = world.lineTrackCounts(id) else { return [] }
         let legs = Self.legEdges(of: journey)
@@ -230,7 +289,7 @@ extension GameSession {
             if aShared != bShared { return aShared }
             return a.leg.path.distance > b.leg.path.distance
         }
-        for leg in ordered {
+        for leg in ordered where leg.leg.path.distance >= shortestLeg {
             if let plan = passingLoopPlan(along: leg.edges) { return [plan] }
         }
         return []
