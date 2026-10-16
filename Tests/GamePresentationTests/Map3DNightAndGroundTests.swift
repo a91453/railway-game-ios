@@ -107,6 +107,50 @@ final class Map3DNightAndGroundTests: XCTestCase {
         XCTAssertTrue(scene.chunks.flatMap(\.shadows.vertices).allSatisfy { $0.color & 0x00FF_FFFF == 0 || $0.color & 0x00FF_FFFF == Map3DProp.lampLight & 0x00FF_FFFF })
     }
 
+    /// The light on a roof turns from the sun to the moon without a step at
+    /// 18:00 (and back at 06:00): on main the roof's green fell from 0.334
+    /// to 0.274 between 17:59:59 and 18:00.
+    func testARoofsLightHasNoStepAtDawnOrDusk() {
+        let grey = SIMD3<Float>(repeating: 0.6)
+        for minute in [360.0, 1_080.0] {
+            let before = Map3DLighting(minute: minute - 0.01).lit(grey, normal: .up)
+            let after = Map3DLighting(minute: minute).lit(grey, normal: .up)
+            XCTAssertEqual(before.y, after.y, accuracy: 0.01, "a roof at \(minute - 0.01) and \(minute) minutes")
+        }
+    }
+
+    /// A chunk's box holds its street trees, lights and poles too: the
+    /// renderer leaves out a chunk whose box is off screen, and a box of
+    /// the ground and buildings alone cut off a 10 m pole's top while it
+    /// was still in view.
+    func testAChunksBoxHoldsItsProps() throws {
+        let tiles = try BaseMapTiles(data: Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
+        let scene = Map3DScene(world: world, baseMap: tiles)
+        let pack = Map3DModelPack.standard
+        var checked = 0, outside: [String] = []
+        for chunk in scene.chunks {
+            for instance in chunk.props {
+                let model = pack.models[instance.model], t = instance.transform
+                for x in [model.minimum.x, model.maximum.x] {
+                    for y in [model.minimum.y, model.maximum.y] {
+                        for z in [model.minimum.z, model.maximum.z] {
+                            let p = Map3DPoint(t[0] * x + t[4] * y + t[8] * z + t[12], t[1] * x + t[5] * y + t[9] * z + t[13], t[2] * x + t[6] * y + t[10] * z + t[14])
+                            let inside = (chunk.minimum.x - 0.01...chunk.maximum.x + 0.01).contains(p.x)
+                                && (chunk.minimum.y - 0.01...chunk.maximum.y + 0.01).contains(p.y)
+                                && (chunk.minimum.z - 0.01...chunk.maximum.z + 0.01).contains(p.z)
+                            if !inside, outside.count < 5 { outside.append("\(model.name) \(p) outside \(chunk.minimum)…\(chunk.maximum)") }
+                        }
+                    }
+                }
+                checked += 1
+            }
+        }
+        XCTAssertGreaterThan(checked, 100)
+        XCTAssertTrue(outside.isEmpty, "\(outside)")
+    }
+
     func testShopsAreLitMoreOftenThanOfficesAndOfficesThanHomes() {
         let rows = Map3DLighting.nightWindowRows
         XCTAssertEqual(rows.count, Map3DLighting.nightWindowRowCount * 4, "as many as the shader's rows")

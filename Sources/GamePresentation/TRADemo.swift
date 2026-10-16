@@ -29,9 +29,10 @@ import GameCore
 /// - Each line has its own sets, of the real model: the locals' EMU800s
 ///   (decision 237), the EMU3000s, the Puyumas, the Tarokos, and the other
 ///   expresses as push-pull sets.
-/// - The sets stand at night in two depots by the real yards OpenStreetMap
-///   has beside Yilan and Su'aoxin stations, the sidings laid just beyond
-///   each station's own tracks.
+/// - The sets stand at night in three depots: two by the real yards
+///   OpenStreetMap has beside Yilan and Su'aoxin stations, the sidings laid
+///   just beyond each station's own tracks, and the demo's own sidings
+///   beyond the north end (``depots``).
 /// - Traffic control is off, as in the high-speed demo (decision 228).
 public enum TRADemo {
     /// The scheduled system whose day it runs: `tra-yilan-schedule.json`.

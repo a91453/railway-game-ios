@@ -324,7 +324,12 @@ public struct SaveLibrary: Sendable {
     /// 192), before the player goes back to an earlier one and the latest
     /// is written over: going back can be undone. The file is moved, not
     /// written again. Does nothing when there is no latest autosave.
-    public func keepLatestAutosaveInSlot() throws(SaveError) {
+    ///
+    /// The slot named `sparing` (the one being gone back to) is not
+    /// deleted to make room: until the game gone back to is autosaved as
+    /// the latest, it may be the only one of that game that can be read
+    /// (Continue falling back past damaged ones, decision 192, later).
+    public func keepLatestAutosaveInSlot(sparing: String? = nil) throws(SaveError) {
         let latest = url(of: Self.autosaveFile)
         guard FileManager.default.fileExists(atPath: latest.path) else { return }
         let name = Self.slotFile(nextSlot())
@@ -334,7 +339,7 @@ public struct SaveLibrary: Sendable {
             throw .fileSystem
         }
         try? FileManager.default.moveItem(at: url(of: Self.newsFile(of: Self.autosaveFile)), to: url(of: Self.newsFile(of: name)))
-        pruneSlots()
+        pruneSlots(sparing: sparing.flatMap(Self.slotNumber))
     }
 
     /// Keeps the newest autosave as a save of the player's own before
@@ -516,12 +521,17 @@ public struct SaveLibrary: Sendable {
     }
 
     /// Deletes the autosaves taken in turn beyond ``autosaveSlots``, the
-    /// lowest numbers (the oldest taken) first, with their news logs.
-    /// Returns their file names.
+    /// lowest numbers (the oldest taken) first, with their news logs, but
+    /// for slot `spared`. Returns their file names.
     @discardableResult
-    private func pruneSlots() -> [String] {
+    private func pruneSlots(sparing spared: Int? = nil) -> [String] {
         let numbers = slotNumbers()
-        let removed = numbers.dropLast(Self.autosaveSlots).map(Self.slotFile)
+        var kept = Array(numbers.suffix(Self.autosaveSlots))
+        if let spared, numbers.contains(spared), !kept.contains(spared), !kept.isEmpty {
+            kept.removeFirst()
+            kept.append(spared)
+        }
+        let removed = numbers.filter { !kept.contains($0) }.map(Self.slotFile)
         for name in removed {
             try? FileManager.default.removeItem(at: url(of: name))
             try? FileManager.default.removeItem(at: url(of: Self.newsFile(of: name)))

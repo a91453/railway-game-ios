@@ -244,9 +244,15 @@ public struct TrainMotion: Sendable {
             let heading = size > 0 ? Point(x: Double(head.direction.dx) / size, y: Double(head.direction.dy) / size) : Point(x: 1, y: 0)
             var trail = Trail(body)
             var lag = 0.0
+            // Through a call, the new path's edges entered so far; GameCore
+            // keeps a path whose last edge has been entered as none, so the
+            // edge the train is on is added too (a one-edge path, from one
+            // station to the next, is spent within the tick).
+            var entered = Array(train.movement.edges.prefix(train.movement.cursor))
+            if case .onEdge(let now, _) = position, entered.last != now.edge { entered.append(now.edge) }
             if let before = previous?.samples[train.id],
                let covered = Self.covered(from: before.position, along: before.ahead, to: position, in: world)
-                ?? Self.covered(from: before.position, along: before.ahead + train.movement.edges.prefix(train.movement.cursor), to: position, in: world) {
+                ?? Self.covered(from: before.position, along: before.ahead + entered, to: position, in: world) {
                 let glide = Trail(covered.reversed())
                 if glide.length > 0, glide.length <= Self.longestGlide {
                     trail = Trail(Array(covered.reversed()) + before.body.dropFirst())

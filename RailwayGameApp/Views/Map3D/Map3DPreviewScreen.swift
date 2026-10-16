@@ -79,6 +79,9 @@ struct Map3DPreviewScreen: View {
                 return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
                                   heights: heights)
             }.value
+            // A newer world or the heights file started another build: a
+            // cancelled one may finish after it and must not replace it.
+            guard !Task.isCancelled else { return }
             scene = built
             sceneVersion &+= 1
         }

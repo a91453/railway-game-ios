@@ -252,16 +252,23 @@ public struct Map3DLighting: Hashable, Sendable {
         night = a.night + (b.night - a.night) * t
         // The sun rises in the east at 06:00, stands high in the south at
         // noon and sets in the west at 18:00; at night the moon lights the
-        // scene from overhead, a little to the south.
+        // scene from overhead, a little to the south. Within half an hour of
+        // 06:00 and 18:00 the light turns from the one to the other, so a
+        // roof does not brighten or darken in a step as the sun sets.
         let dayShare = (hour - 6) / 12
-        if dayShare > 0, dayShare < 1 {
-            let angle = Float.pi * dayShare
-            let elevation = max(sinf(angle), 0.08) * 1.15
-            sunDirection = Map3DPoint(cosf(angle), elevation, 0.45 * sinf(angle)).normalized ?? .up
-        } else {
-            sunDirection = Map3DPoint(0.2, 1, 0.3).normalized ?? .up
-        }
+        let angle = Float.pi * min(max(dayShare, 0), 1)
+        let elevation = max(sinf(angle), 0.08) * 1.15
+        let sunLight = Map3DPoint(cosf(angle), elevation, 0.45 * sinf(angle)).normalized ?? .up
+        let moonLight = Map3DPoint(0.2, 1, 0.3).normalized ?? .up
+        let fromEdge = min(abs(hour - 6), abs(hour - 18)) / Self.lightTurnHours
+        let isDay = dayShare > 0 && dayShare < 1
+        let sunShare = fromEdge >= 1 ? (isDay ? 1 : 0) : 0.5 + (isDay ? 0.5 : -0.5) * fromEdge
+        sunDirection = (sunLight * sunShare + moonLight * (1 - sunShare)).normalized ?? .up
     }
+
+    /// How long before and after sunrise and sunset the light takes to
+    /// turn from the sun to the moon or back, in hours, half each side.
+    static let lightTurnHours: Float = 0.5
 
     /// The light at game time `time`.
     public init(at time: GameTime) {

@@ -357,4 +357,22 @@ public struct Map3DInstance: Sendable {
     public var floats: [Float] {
         transform + [stripe.0, stripe.1, stripe.2, 1]
     }
+
+    /// The box in scene space round its model of `pack` as placed, or
+    /// `nil` for a model `pack` does not have.
+    func bounds(in pack: Map3DModelPack) -> (min: Map3DPoint, max: Map3DPoint)? {
+        guard pack.models.indices.contains(model), transform.count == 16 else { return nil }
+        let shape = pack.models[model], t = transform
+        var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
+        for x in [shape.minimum.x, shape.maximum.x] {
+            for y in [shape.minimum.y, shape.maximum.y] {
+                for z in [shape.minimum.z, shape.maximum.z] {
+                    let p = Map3DPoint(t[0] * x + t[4] * y + t[8] * z + t[12], t[1] * x + t[5] * y + t[9] * z + t[13], t[2] * x + t[6] * y + t[10] * z + t[14])
+                    low = Map3DPoint(min(low.x, p.x), min(low.y, p.y), min(low.z, p.z))
+                    high = Map3DPoint(max(high.x, p.x), max(high.y, p.y), max(high.z, p.z))
+                }
+            }
+        }
+        return (low, high)
+    }
 }
