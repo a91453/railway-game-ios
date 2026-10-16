@@ -503,6 +503,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | 參考 | 行為 | Swift（E2） | 倍率 | 分類 |
 | --- | --- | --- | --- | --- |
 | `Ci` `CITIES`（53 座：`name`、`center: [lat, lng]`、`zoom`、`pop`、`districts`） | 開局的城市 | `RealWorldPlace.ciCities`：依原本的順序，`center` 換成 `GeoAnchor`；名字改成台灣用語的繁體，加上英文 | 1e-7° | faithful（座標逐一比對）；`zoom` 不用（開局的相機照 E1），`pop`、`districts` 留給 Phase 5、6 |
+| `city_map_reference_clean` `source/data/city-catalog.json`（535 個城市的 `center`） | 城市中心（決策 262） | `RealWorldPlace.mainStations`：塔什干、喀土穆、三蘭港、基多、喀布爾、阿必尚、阿克拉、庫馬西、雅溫德、坎帕拉、吉達 11 個找不到車站座標的城市用它的 `center`；其他 116 個用 Wikidata 的車站，和它的 `center` 比過距離 | 1e-7° | faithful（11 個城市）；檢查用（其他）；參考庫日本有 9 個大城市與東京都各市、韓國 8 個城市的中心，但沒有車站座標（gap） |
 | `Railway` `data/tra.json`（OpenStreetMap 的台鐵車站，`lines[].stations[]` 的 `name`、`lat`、`lon`） | 台灣的真實車站 | `RealWorldPlace.taiwan`：基隆、臺北、桃園、新竹、臺中、嘉義、臺南、高雄、宜蘭、花蓮、臺東，每個站名第一次出現的點 | 1e-7° | faithful（座標逐一比對）；挑哪幾站是這裡的 |
 | `Ci` `startGameAnyCity(cityKey, {lng, lat})`、`fetchAnycityManifest`、`registerAnycityFromManifest`（`center` 或 `bbox` 的中心） | 任意地點開局 | `RealWorldPicker`：清單或搜尋把地圖移過去，玩家拖到想要的中心，「在這裡建造」→ `GameLauncher.startNewGame(at:)` | — | 部分 faithful：選點的 `anycity-ui.js`、`anycity-bbox-map.js` 不在快照裡（gap）；搜尋用 Apple 的 `MKLocalSearch`；只存中心 |
 | `Ci` `anycity-virtual-island`（`lng: 0, lat: 0`，creative） | 不在真實地點的城市 | 空白地圖：`GameWorld.geoAnchor == nil`，開始畫面的「新遊戲」 | — | 對應：空白地圖不放在地球上 |
