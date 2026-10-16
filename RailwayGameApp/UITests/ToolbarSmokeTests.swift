@@ -556,21 +556,28 @@ final class ShellLayoutUITests: XCTestCase {
             XCTFail("The demo has stations")
             return
         }
-        // The demo opens at midnight and its trains start at 06:00: the
-        // board lists the next three hours, so it waits for 04:00 (the
-        // second run found an empty board). The hour is the status pill's
-        // last "HH:MM".
+        // The demo opens at midnight and its trains start at 06:00; the
+        // board lists the next three hours. So it waits for 05:00, then
+        // pauses, and the board holds those first trains: running on, the
+        // full lane's run read it at 16:07 and found none due (main
+        // 84a792e, run 38861445072). The hour is the status pill's last
+        // "HH:MM".
         let clock = app.descendants(matching: .any)["hud.time"].firstMatch
         XCTAssertTrue(clock.appears(within: 10))
         func hour() -> Int? {
             guard let label = try? clock.snapshot().label, let colon = label.lastIndex(of: ":") else { return nil }
             return Int(String(label[..<colon].reversed().prefix { $0.isNumber }.reversed()))
         }
-        let morning = Date().addingTimeInterval(90)
-        while !(4...20).contains(hour() ?? -1), Date() < morning {
-            Thread.sleep(forTimeInterval: 1)
+        let morning = Date().addingTimeInterval(120)
+        while (hour() ?? 0) < 5, Date() < morning {
+            Thread.sleep(forTimeInterval: 0.25)
         }
-        XCTAssertTrue((4...20).contains(hour() ?? -1), "The clock reaches the trains' hours: \(String(describing: try? clock.snapshot().label))")
+        let pause = app.buttons.matching(NSPredicate(format: "label IN %@", ["Pause", "暫停"])).firstMatch
+        XCTAssertTrue(pause.appears(within: 5), "The pause button")
+        pause.tap()
+        let resume = app.buttons.matching(NSPredicate(format: "label IN %@", ["Resume", "繼續"])).firstMatch
+        XCTAssertTrue(resume.appears(within: 5), "The game pauses")
+        XCTAssertTrue((5...8).contains(hour() ?? -1), "Paused in the morning, the first trains due: \(String(describing: try? clock.snapshot().label))")
         // The board's own identifier is carried by every row under it, so
         // each train is found by its time and its minutes, which keep theirs
         // (the fifth run's hierarchy: rows read "station.board").
@@ -601,8 +608,8 @@ final class ShellLayoutUITests: XCTestCase {
         let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
         if !boardShown { attach("No board in the station's panel") }
         XCTAssertTrue(boardShown, "The station's panel has its board")
-        // Its trains lie just under its head, from 06:00.
-        let due = Date().addingTimeInterval(60)
+        // Its trains lie just under its head.
+        let due = Date().addingTimeInterval(15)
         while !time.exists, Date() < due {
             Thread.sleep(forTimeInterval: 1)
         }
