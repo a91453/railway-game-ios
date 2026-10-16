@@ -322,7 +322,7 @@ public final class GameLauncher {
     public func recordChallengeResult(at date: Date = Date()) {
         guard let session, records.record(session.world, at: date),
               let record = session.world.scenario.flatMap({ records.best[$0.scenario.id] }) else { return }
-        session.message = StatusMessage(kind: .failure, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
+        session.message = StatusMessage(kind: .success, text: language.text("New best! \(record.text(in: language))", "刷新紀錄！\(record.text(in: language))"))
     }
 
     /// Unlocks the achievements `session`'s world meets (decision 181),
@@ -669,8 +669,9 @@ public final class GameLauncher {
                 guard library.newestAutosave()?.id != entry.id else {
                     return (world, news, false, fellBackTo)
                 }
-                // A damaged latest passed over is moved, not deleted.
-                try library.keepLatestAutosaveInSlot()
+                // A damaged latest passed over is moved, not deleted; the
+                // one gone back to stays until it is the latest.
+                try library.keepLatestAutosaveInSlot(sparing: entry.id)
                 return (world, news, true, fellBackTo)
             }
             guard let (world, news, wentBack, fellBackTo) = loaded else {

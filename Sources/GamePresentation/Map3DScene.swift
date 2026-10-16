@@ -413,12 +413,15 @@ extension Map3DScene {
         }
 
         func chunks() -> [Chunk] {
-            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).sorted().compactMap { key in
+            Set(meshes.keys).union(shadows.keys).union(nearMeshes.keys).union(farMeshes.keys).union(props.keys).sorted().compactMap { key in
                 var mesh = meshes[key] ?? Map3DMesh()
                 let baseIndexCount = mesh.indices.count
                 mesh.append(nearMeshes[key] ?? Map3DMesh())
                 let far = farMeshes[key] ?? Map3DMesh(), shadows = shadows[key] ?? Map3DMesh()
-                let boxes = [mesh.bounds, far.bounds, shadows.bounds].compactMap { $0 }
+                // The props too: the renderer leaves out a chunk whose box
+                // is off screen, which cut off a pole's top still in view.
+                let propBoxes = (props[key] ?? []).compactMap { $0.bounds(in: .standard) }
+                let boxes = [mesh.bounds, far.bounds, shadows.bounds].compactMap { $0 } + propBoxes
                 guard let first = boxes.first else { return nil }
                 let low = boxes.reduce(first.min) { Map3DPoint(min($0.x, $1.min.x), min($0.y, $1.min.y), min($0.z, $1.min.z)) }
                 let high = boxes.reduce(first.max) { Map3DPoint(max($0.x, $1.max.x), max($0.y, $1.max.y), max($0.z, $1.max.z)) }

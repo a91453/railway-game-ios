@@ -132,6 +132,44 @@ final class TrainMotionTests: XCTestCase {
         XCTAssertEqual(jumps, 0, "it jumps only where it turns back (\(throughCalls) glides through calls)")
     }
 
+    /// The same with a station at every tile: a train that leaves a call
+    /// and enters its new path's only edge within the tick has a path
+    /// GameCore keeps as none, and still glides on (on main it jumped 50
+    /// times).
+    func testATrainGlidesOnThroughACallOntoAOneEdgePath() throws {
+        var world = try makeWorld(width: 65_536, height: 4_096, balance: 1_000_000, speed: .x60)
+        let track = TestLine(tiles: 61, row: 1)
+        try track.build(in: &world)
+        var stops: [StationID] = []
+        for x in 1...59 {
+            stops.append(try track.buildStation(named: "S\(x)", beside: x, at: 0, in: &world))
+        }
+        let main = try world.createLine(named: "Main", stops: stops).id
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T1")
+        try world.placeTrain(train.id, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train.id, to: 4_096)
+        try world.assignTrain(train.id, to: main)
+
+        var motion = TrainMotion(world: world, time: 0)
+        var throughCalls = 0, jumps = 0, spent = 0
+        for tick in 1...600 {
+            let was = try XCTUnwrap(world.train(id: train.id))
+            try world.advance(ticks: 1)
+            motion = TrainMotion(world: world, previous: motion, time: Double(tick) / 10)
+            let now = try XCTUnwrap(world.train(id: train.id))
+            let run = try XCTUnwrap(motion.runs.first)
+            guard case .onEdge(let from, let a)? = was.position, case .onEdge(let to, let b)? = now.position, from != to || a != b else { continue }
+            let turned = from.edge == to.edge && from.direction != to.direction
+            if run.lag > 0, was.execution != now.execution { throughCalls += 1 }
+            if now.movement.edges.isEmpty, was.execution != now.execution { spent += 1 }
+            if run.lag == 0, !turned { jumps += 1 }
+        }
+        XCTAssertGreaterThan(spent, 5, "paths are spent within a tick")
+        XCTAssertEqual(jumps, 0, "it jumps only where it turns back (\(throughCalls) glides through calls)")
+    }
+
     /// The camera following a train looks at its head where its glide
     /// draws it, frame by frame (decision 182, later).
     func testTheFollowedHeadIsWhereItsGlideIs() throws {

@@ -75,6 +75,32 @@ final class SaveRecoveryTests: XCTestCase {
         }
     }
 
+    /// Continue falling back to the oldest slot, with five slots taken:
+    /// moving the damaged latest into a slot made room by deleting the
+    /// oldest, the very one just loaded, and every autosave left could not
+    /// be read until the next was written. The next oldest goes instead.
+    @MainActor
+    func testContinueKeepsTheSlotItFellBackTo() async throws {
+        let library = SaveLibrary(directory: directory)
+        for slot in 1...5 {
+            try library.saveAutosaveSlot(world(after: slot), at: date(Double(slot) * 900))
+        }
+        try library.save(world(after: 6), as: .autosave, at: date(6 * 900))
+        for name in ["autosave.json", "autosave-2.json", "autosave-3.json", "autosave-4.json", "autosave-5.json"] {
+            try damageWorld(in: name)
+        }
+        let launcher = GameLauncher(library: library, language: .english)
+        launcher.continueGame()
+        XCTAssertEqual(launcher.session?.world, try world(after: 1), "the one autosave that loads")
+        // Before the game is autosaved again.
+        let names = library.autosaves().map(\.id)
+        XCTAssertTrue(names.contains("autosave-1.json"), "the slot gone back to is kept: \(names)")
+        XCTAssertEqual(names.filter { $0 != "autosave.json" }.count, 5, "still five slots: \(names)")
+        XCTAssertTrue(names.contains("autosave-6.json"), "the damaged latest is kept: \(names)")
+        await launcher.savesWritten()
+        XCTAssertEqual(try library.load(XCTUnwrap(library.autosaves().first)), try world(after: 1), "Continue goes on with it next time")
+    }
+
     @MainActor
     func testContinueReportsWhenNoAutosaveLoads() throws {
         let library = SaveLibrary(directory: directory)

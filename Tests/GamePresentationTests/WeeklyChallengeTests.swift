@@ -224,4 +224,29 @@ final class WeeklyChallengeTests: XCTestCase {
         XCTAssertEqual(library.entries().count, 1, "the records file is not a save")
         XCTAssertEqual(launcher.records.file.deletingLastPathComponent().standardizedFileURL, directory.standardizedFileURL)
     }
+
+    /// A new best says so as good news, not as a failure (#699 turned it
+    /// red, kept on screen as long as an error).
+    @MainActor
+    func testANewBestIsGoodNews() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("NewBest-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 16_384, height: 8_192), economy: GameEconomy(balance: 1_000_000), clock: GameClock(speed: .normal)
+        )
+        world.setEconomyMode(.management)
+        try world.startScenario(Scenario(id: "custom.1", goals: [.equity(Money(1))], goldDays: 1, silverDays: 5, deadlineDays: 9))
+        try world.advance(ticks: 1_441)
+        guard case .completed(let day, _)? = world.scenario?.outcome else { return XCTFail("the challenge is completed") }
+        var completion = DayAccount(day: day)
+        completion.fareTrips = 3
+        world.accounts.days = [completion]
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.importSave(try SaveLibrary.encode(world, at: monday))
+        let session = try XCTUnwrap(launcher.session)
+        session.message = nil
+        launcher.recordChallengeResult(at: monday)
+        XCTAssertEqual(session.message?.text.hasPrefix("New best!"), true, "\(String(describing: session.message))")
+        XCTAssertEqual(session.message?.kind, .success)
+    }
 }

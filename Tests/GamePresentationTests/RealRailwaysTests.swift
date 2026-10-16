@@ -367,6 +367,9 @@ final class RealRailwaysTests: XCTestCase {
             let openStreetMap = try XCTUnwrap(credits.first { $0.id == "openStreetMap" })
             XCTAssertTrue(openStreetMap.notice.contains("© OpenStreetMap"))
             XCTAssertTrue(openStreetMap.notice.contains("ODbL"))
+            // Only the TRA demo's Yilan and Su'aoxin sidings stand where
+            // OpenStreetMap's yards are; its north end's are the demo's own.
+            XCTAssertTrue(openStreetMap.detail.contains(language.text("Yilan and Su'aoxin sidings", "宜蘭、蘇澳新側線")), openStreetMap.detail)
             XCTAssertTrue(openStreetMap.links.contains { $0.url == "https://opendatacommons.org/licenses/odbl/1-0/" })
             XCTAssertTrue(credits.first { $0.id == "tdx" }?.links.contains { $0.url == "https://data.gov.tw/license" } == true)
             let worldPop = try XCTUnwrap(credits.first { $0.id == "worldPop" })
