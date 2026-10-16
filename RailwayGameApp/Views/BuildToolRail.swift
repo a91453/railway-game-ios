@@ -7,7 +7,9 @@ import SwiftUI
 /// which goes back to looking at the map (the Select tool). The dock's
 /// Build entry (``BuildEntry``) opens it; there is no Select button in
 /// the dock any more, as a tap on the map selects whenever no tool is
-/// chosen. Shown throughout the tutorial, whose steps point at the tools.
+/// chosen. In the tutorial too only while building (decision 226, later:
+/// the tutorial uses the game's own controls; its first step points at
+/// Build).
 struct BuildToolRail: View {
     let session: GameSession
     /// The most height the rail may take: between the status pill and the
@@ -21,7 +23,7 @@ struct BuildToolRail: View {
     /// Whether the rail shows.
     @MainActor
     static func isShown(_ session: GameSession) -> Bool {
-        session.tool != .select || session.tutorial != nil
+        ScreenTools.showsBuildingTools(tool: session.tool)
     }
 
     /// The column with names under the icons where it fits, else the icons
@@ -95,8 +97,7 @@ struct BuildToolButtons: View {
         .tutorialTarget(TutorialTarget(tool: tool))
     }
 
-    /// Back to looking at the map. Selected while no tool is chosen, which
-    /// only shows during the tutorial (the rail is hidden otherwise).
+    /// Back to looking at the map.
     private var doneButton: some View {
         let isActive = session.tool == .select
         return Button {
@@ -117,9 +118,9 @@ struct BuildToolButtons: View {
 
 /// The dock's way into building (decision 114): opens the tools at the
 /// map's edge (``BuildToolRail``), starting with the track network, and,
-/// pressed again, closes them and goes back to looking at the map. Not
-/// in the tutorial, whose steps wait for a tool to stay chosen (as
-/// decision 104's second tap).
+/// pressed again, closes them and goes back to looking at the map. In the
+/// tutorial only on its step that asks for that (Done's), as its other
+/// steps wait for a tool to stay chosen (as decision 104's second tap).
 struct BuildEntry: View {
     let session: GameSession
 
@@ -128,7 +129,7 @@ struct BuildEntry: View {
         Button {
             if !isActive {
                 session.selectTool(.network)
-            } else if session.tutorial == nil {
+            } else if session.tutorial.map({ $0.step.goal == .chooseTool(.select) }) ?? true {
                 session.selectTool(.select)
             }
         } label: {
@@ -142,5 +143,6 @@ struct BuildEntry: View {
         )))
         .accessibilityIdentifier("dock.build")
         .accessibilityAddTraits(isActive ? .isSelected : [])
+        .tutorialTarget(.buildEntry)
     }
 }

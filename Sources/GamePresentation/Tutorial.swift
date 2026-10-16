@@ -36,6 +36,10 @@ public enum TutorialTarget: String, CaseIterable, Hashable, Sendable {
     case trainTool = "tool.train"
     /// The building tool (city building P0-A, decision 92).
     case buildingTool = "tool.building"
+    /// Build, which opens the building tools with the network tool chosen
+    /// (decision 114; decision 226, later: the tutorial uses the game's own
+    /// controls, so its first step points here, not at the tools).
+    case buildEntry = "dock.build"
     /// The train tool's Buy button.
     case buyTrain = "train.buy"
     /// The lines panel's Buy … and Start Service, for a line without
@@ -487,14 +491,16 @@ extension Tutorial {
         // Reference step 0, "开始建线": the reference opens its line builder.
         TutorialStep(
             id: "build.network", chapter: .track,
-            targets: [.networkTool],
+            // Decision 226, later: Build, as in the game; it opens the
+            // building tools with Network chosen.
+            targets: [.buildEntry],
             goal: .chooseTool(.network),
             // No setup: the first step changes neither the world nor the clock.
             panel: .closed,
-            title: ("Tap Network", "點「路網」"),
+            title: ("Tap Build", "點「建設」"),
             body: (
-                "Your goal: a line that earns its first fares. Track and stations are built with Network.",
-                "目標：蓋一條賺到第一筆車資的路線。軌道和車站都用「路網」蓋。"
+                "Your goal: a line that earns its first fares. Track and stations are under Build.",
+                "目標：蓋一條賺到第一筆車資的路線。軌道和車站都在「建設」裡蓋。"
             )
         ),
         // No reference step: the guide's "缩放地图" (the mouse wheel zooms)
@@ -586,8 +592,24 @@ extension Tutorial {
             goal: .buildStation(2),
             title: ("Tap ✓ for the second station", "按 ✓ 蓋第二座車站"),
             body: (
-                "Next, a line joins the two.",
-                "接下來用路線把兩站連起來。"
+                "Two stations: enough for a line.",
+                "兩座車站，就能開一條路線。"
+            )
+        ),
+        // Reference step 10, "控制模拟". Leaving the building tools resumes
+        // the clock the network tool paused (decision 99). Decision 226,
+        // later: before the line, as in the game, where Lines is beside
+        // Build only once the building tools are put away (on a phone held
+        // sideways they take Lines' place in the column).
+        TutorialStep(
+            id: "build.done", chapter: .stations,
+            targets: [.selectTool],
+            goal: .chooseTool(.select),
+            panel: .closed,
+            title: ("Tap Done to stop building", "點「完成」結束建造"),
+            body: (
+                "Time runs again. Next, a line joins your two stations.",
+                "時間會繼續走。接著用路線把兩站連起來。"
             )
         ),
         // Reference step 4, ending the line's construction. The lines
@@ -641,24 +663,16 @@ extension Tutorial {
                 "選多久來一班車，列車會自動買好、依序發車。"
             )
         ),
-        // Reference step 10, "控制模拟". Leaving the building tools resumes
-        // the clock the network tool paused (decision 99).
-        TutorialStep(
-            id: "build.done", chapter: .service,
-            targets: [.selectTool],
-            goal: .chooseTool(.select),
-            panel: .closed,
-            title: ("Tap Done to stop building", "點「完成」結束建造"),
-            body: (
-                "Time runs again, and your trains set off.",
-                "時間會繼續走，列車就出發了。"
-            )
-        ),
-        // Passed when Done set time running, as it usually does.
+        // Passed while time runs, as it usually does once Done set it
+        // running before the line (decision 226, later).
         TutorialStep(
             id: "time.play", chapter: .service,
             targets: [.speedControl],
             goal: .timeRuns,
+            // The lines panel closes, as Done closed it when it came after
+            // the line (decision 226, later), so the next steps show the map
+            // and the cash and Lines is tapped again to read the line's card.
+            panel: .closed,
             title: ("Tap \u{25B6}\u{FE0E} to run time", "按 \u{25B6}\u{FE0E} 讓時間走"),
             body: (
                 "Trains and passengers move only while time runs.",
@@ -671,6 +685,8 @@ extension Tutorial {
             id: "first.fare", chapter: .service,
             targets: [.cash, .speedControl],
             goal: .earnFare,
+            // Closed here too: the time step is usually passed over.
+            panel: .closed,
             title: ("Wait for your first fares", "等第一筆車資進帳"),
             body: (
                 "Trains run from 06:00. Fares come in each hour; a faster speed gets there sooner.",

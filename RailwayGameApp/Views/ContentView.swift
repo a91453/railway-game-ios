@@ -250,11 +250,12 @@ struct ContentView: View {
             let isOpen = sidePanel == nil && ControlDetails.isOpen(
                 session, choice: detailsChoice, foldsWhileDrawing: verticalSizeClass == .compact
             )
-            // Decision 226: on a phone held sideways (out of the tutorial,
-            // whose steps point where its controls have always been), the
-            // tools are a column down the leading edge, not a dock along the
-            // bottom; the map keeps its height. `dockSize` measures either.
-            let toolsColumn = compactHeight && session.tutorial == nil
+            // Decision 226: on a phone held sideways the tools are a column
+            // down the leading edge, not a dock along the bottom; the map
+            // keeps its height. `dockSize` measures either. In the tutorial
+            // too (decision 226, later: its steps point at the game's own
+            // controls, not a dock it alone had).
+            let toolsColumn = compactHeight
             // With the column, the bottom row is the column's foot, the
             // map's own buttons (layers, map style, expansion) and the
             // station master with its title, side by side
@@ -653,8 +654,9 @@ private struct StatusPill: View {
 
 /// Build, the lines and the company's figures, and Undo
 /// (``ControlPanel``'s tools), in a dock at the bottom of the screen
-/// (decision 106; an iPad, and the tutorial), with the button that shows or
-/// hides the details card.
+/// (decision 106; a regular height: an iPad, the tutorial too since
+/// decision 226's later change), with the button that shows or hides the
+/// details card.
 private struct ControlDock: View {
     let session: GameSession
     let isOpen: Bool
@@ -720,10 +722,14 @@ private struct ToolsColumn: View {
     private func groups(compact: Bool) -> some View {
         VStack(alignment: .center, spacing: ControlPanel.tileGap) {
             // The card's toggle stays on top while building too: a chosen
-            // tool keeps the card open, and folding it shows the map.
-            ControlDetailsToggle(isOpen: isOpen, action: toggle)
-                .disabled(!canToggle)
-                .controlTile()
+            // tool keeps the card open, and folding it shows the map. Not
+            // on the tutorial's steps that point into the card, which keep
+            // it open, as in the dock.
+            if session.tutorial?.step.usesDetailsCard != true {
+                ControlDetailsToggle(isOpen: isOpen, action: toggle)
+                    .disabled(!canToggle)
+                    .controlTile()
+            }
             if BuildToolRail.isShown(session) {
                 BuildToolButtons(session: session)
                     .controlTile()
