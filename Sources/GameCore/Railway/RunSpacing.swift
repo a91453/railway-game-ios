@@ -8,6 +8,10 @@
 // on at its pace later rather than from a stand. Every other train runs as
 // before, so worlds without such lines are unchanged.
 
+/// The traversals of a train's way, in order, where each begins from its
+/// head, those its body is on, and their edges (``GameWorld/way(of:)``).
+typealias SpacingWay = (order: [TrackTraversal], starts: [TrackTraversal: Int64], body: Set<TrackTraversal>, edges: Set<TrackEdgeID>)
+
 extension GameWorld {
     /// How far along their ways trains are looked at for one coming the
     /// other way (decision 228): as many edges as that.
@@ -54,6 +58,12 @@ extension GameWorld {
         heldUp(train, within: distance, near: index)?.clear
     }
 
+    /// ``clearAhead(of:within:near:)`` with the trains' ways kept in `ways`
+    /// (see ``heldUp(_:within:near:ways:)``).
+    func clearAhead(of train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay]) -> Int64? {
+        heldUp(train, within: distance, near: index, ways: &ways)?.clear
+    }
+
     /// By edge, the trains whose body is on it or whose way leads over it
     /// within ``oncomingLookahead`` edges (decision 228): where they can be
     /// as they move on, for ``clearAhead(of:within:near:)`` to look at only
@@ -89,6 +99,22 @@ extension GameWorld {
 
     /// ``clearAhead(of:within:near:)``, and the train it stops short of.
     func heldUp(_ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]? = nil) -> (clear: Int64, by: TrainID)? {
+        var ways: [TrainID: SpacingWay] = [:]
+        return heldUp(train, within: distance, near: index, ways: &ways)
+    }
+
+    /// ``heldUp(_:within:near:)`` with the trains' ways (``way(of:)``) kept
+    /// in `ways` by train: a way depends on its train alone, so one worked
+    /// out stays right until that train moves, and the caller drops it then.
+    func heldUp(
+        _ train: Train, within distance: Int64, near index: [TrackEdgeID: [TrainID]]?, ways: inout [TrainID: SpacingWay]
+    ) -> (clear: Int64, by: TrainID)? {
+        func way(of train: Train) -> SpacingWay {
+            if let known = ways[train.id] { return known }
+            let found = self.way(of: train)
+            ways[train.id] = found
+            return found
+        }
         guard !isTrafficControlEnabled, distance > 0, case .onEdge(let traversal, let offset)? = train.position,
               network.edge(traversal.edge) != nil, followsRealTimetable(train) else { return nil }
         // Nothing to do when no other train is near its way.
@@ -121,6 +147,20 @@ extension GameWorld {
                 if part.traversal == traversal, part.to <= offset { continue }
                 let gap = max(0, start + part.from)
                 if gap < distance, gap < clear?.clear ?? .max { clear = (gap, other.id) }
+            }
+            // The rest needs its way where it meets this one's within
+            // `distance` (the body and the traversals ahead of it closer
+            // than that, the first in `mine.order`): none of those edges on
+            // its way, nothing below can apply.
+            let reach = mine.order.prefix { (starts[$0] ?? .max) < distance }.map(\.edge)
+            if !reach.isEmpty {
+                var theirEdges = Set(other.trailEdges)
+                theirEdges.insert(head.edge)
+                theirEdges.formUnion(other.movement.remainingEdges.prefix(Self.oncomingLookahead))
+                for part in bodyStretches(of: other) { theirEdges.insert(part.traversal.edge) }
+                guard reach.contains(where: theirEdges.contains) else { continue }
+            } else {
+                continue
             }
             let theirs = way(of: other)
             // Still leaving its platform: short of where it joins the way of
@@ -156,7 +196,7 @@ extension GameWorld {
     /// from its head (those its body is on behind it, at 0 or less), up to
     /// ``oncomingLookahead`` edges ahead; those its body is on; and their
     /// edges.
-    private func way(of train: Train) -> (order: [TrackTraversal], starts: [TrackTraversal: Int64], body: Set<TrackTraversal>, edges: Set<TrackEdgeID>) {
+    private func way(of train: Train) -> SpacingWay {
         var order: [TrackTraversal] = []
         var starts: [TrackTraversal: Int64] = [:]
         for part in bodyStretches(of: train) where starts[part.traversal] == nil {

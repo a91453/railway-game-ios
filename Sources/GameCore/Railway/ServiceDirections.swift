@@ -30,6 +30,9 @@ extension GameWorld {
         /// step began (see ``GameWorld/spacingIndex()``): where they can be
         /// in the step.
         var spacing: [TrackEdgeID: [TrainID]]?
+        /// Decision 228: the trains' ways while they move in one step,
+        /// each dropped when its train moves (``GameWorld/heldUp(_:within:near:ways:)``).
+        var ways: [TrainID: SpacingWay] = [:]
         /// V3 (decision 59): the last scheduled-traffic plan worked out,
         /// with what it was derived from, and the plan an advance's step
         /// keeps for all its decisions.
