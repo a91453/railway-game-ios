@@ -14,8 +14,9 @@ struct BuildToolRail: View {
     /// dock. Past it the rail scrolls.
     let maxHeight: CGFloat
 
-    /// The column's width.
-    static let width: CGFloat = 72
+    /// The column's width: as wide as the phone's tools column
+    /// (``ToolColumn``).
+    static let width: CGFloat = ToolColumnStyle.width
 
     /// Whether the rail shows.
     @MainActor
@@ -50,20 +51,33 @@ struct BuildToolRail: View {
     }
 
     private func column(compact: Bool) -> some View {
-        VStack(spacing: compact ? 4 : 6) {
+        BuildToolButtons(session: session)
+            .padding(ToolColumnStyle.tilePadding)
+            .environment(\.toolColumnStyle, ToolColumnStyle(compact: compact))
+    }
+}
+
+/// The building tools and Done, one under the other, in the size the
+/// column they stand in gives them (``ToolColumnStyle``): the rail beside
+/// the map (``BuildToolRail``), or a group of the phone's tools column.
+struct BuildToolButtons: View {
+    let session: GameSession
+    @Environment(\.toolColumnStyle) private var column
+
+    var body: some View {
+        VStack(spacing: ToolColumnStyle.buttonSpacing) {
             ForEach(ConstructionTool.networkTools.filter { $0 != .select }, id: \.self) { tool in
-                toolButton(tool, compact: compact)
+                toolButton(tool)
             }
-            if !compact {
+            if column?.compact != true {
                 Divider()
                     .padding(.horizontal, 6)
             }
-            doneButton(compact: compact)
+            doneButton
         }
-        .padding(compact ? 4 : 6)
     }
 
-    private func toolButton(_ tool: ConstructionTool, compact: Bool) -> some View {
+    private func toolButton(_ tool: ConstructionTool) -> some View {
         let isActive = session.tool == tool
         return Button {
             // A tool chosen again stays chosen: Done, or Build in the dock,
@@ -71,7 +85,7 @@ struct BuildToolRail: View {
             UITestTrace.action("tool.\(tool)")
             session.selectTool(tool)
         } label: {
-            label(tool.systemImage, tool.title(in: session.language), isActive: isActive, compact: compact)
+            TabLabel(systemImage: tool.systemImage, title: tool.title(in: session.language), isActive: isActive)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
         .accessibilityLabel(tool.accessibilityName)
@@ -83,13 +97,13 @@ struct BuildToolRail: View {
 
     /// Back to looking at the map. Selected while no tool is chosen, which
     /// only shows during the tutorial (the rail is hidden otherwise).
-    private func doneButton(compact: Bool) -> some View {
+    private var doneButton: some View {
         let isActive = session.tool == .select
         return Button {
             UITestTrace.action("tool.select")
             session.selectTool(.select)
         } label: {
-            label("xmark", session.language.text("Done", "完成"), isActive: isActive, compact: compact)
+            TabLabel(systemImage: "xmark", title: session.language.text("Done", "完成"), isActive: isActive)
         }
         .buttonStyle(ThemeSelectableButtonStyle(isActive: isActive))
         .accessibilityLabel(Text(verbatim: session.language.text("Done building", "完成建設")))
@@ -98,19 +112,6 @@ struct BuildToolRail: View {
         .accessibilityIdentifier("tool.select")
         .accessibilityAddTraits(isActive ? .isSelected : [])
         .tutorialTarget(TutorialTarget(tool: .select))
-    }
-
-    @ViewBuilder
-    private func label(_ systemImage: String, _ title: String, isActive: Bool, compact: Bool) -> some View {
-        if compact {
-            // 32 points and the style's 4 above and below: four buttons in
-            // the room a phone held sideways leaves.
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .frame(minWidth: 48, maxWidth: .infinity, minHeight: 32)
-        } else {
-            TabLabel(systemImage: systemImage, title: title, isActive: isActive)
-        }
     }
 }
 

@@ -54,8 +54,14 @@ struct StationOperationsSection: View {
 
 /// A platform seen from above (decision 224): its number on a warm disc, the
 /// track in the map's teal with the train standing there drawn car by car
-/// in its line's colour, and on the right where the train goes and how
-/// busy the platform has been, in words as well as a bar.
+/// in its line's colour, and under it where the train goes and how busy
+/// the platform has been, in words as well as a bar.
+///
+/// Decision 224, later (TestFlight, the station card on a phone held
+/// sideways): the words are under the track, not beside it, so the track
+/// and the bar do not squeeze them into a word a line ("空著", "0", "%");
+/// where even that line is short, the bar gives way, then the minutes
+/// seen, and a number never breaks.
 private struct PlatformTrackRow: View {
     let row: StationOperations.Platform
     let lineName: String?
@@ -63,25 +69,26 @@ private struct PlatformTrackRow: View {
     let language: DisplayLanguage
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             Text(verbatim: "\(row.number)")
                 .font(.caption.weight(.heavy))
                 .foregroundStyle(Theme.onAccent)
                 .frame(width: 24, height: 24)
                 .background(Theme.accent, in: Circle())
                 .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 1.5))
-            ZStack(alignment: .leading) {
-                Capsule().fill(Palette.track).frame(height: 6)
-                Capsule().fill(Palette.trackCentre).frame(height: 1.5)
-                if row.train != nil {
-                    TrainSideView(color: row.line == nil ? Palette.train : Palette.lineColor(row.line!, custom: row.lineColor),
-                                  cars: min(max(row.cars, 1), 6))
-                        .padding(.leading, 6)
+            VStack(alignment: .leading, spacing: 3) {
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.track).frame(height: 6)
+                    Capsule().fill(Palette.trackCentre).frame(height: 1.5)
+                    if row.train != nil {
+                        TrainSideView(color: row.line == nil ? Palette.train : Palette.lineColor(row.line!, custom: row.lineColor),
+                                      cars: min(max(row.cars, 1), 6))
+                            .padding(.leading, 6)
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, minHeight: 28)
-            .accessibilityHidden(true)
-            VStack(alignment: .trailing, spacing: 3) {
+                .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
+                .clipped()
+                .accessibilityHidden(true)
                 HStack(spacing: 4) {
                     if let code, let line = row.line {
                         LineCodeBadge(code: code, color: Palette.lineColor(line, custom: row.lineColor), size: .small)
@@ -91,31 +98,44 @@ private struct PlatformTrackRow: View {
                         .foregroundStyle(row.train == nil ? Theme.textSecondary : Theme.textPrimary)
                         .lineLimit(1)
                 }
-                if let busy = row.busyness, let text = row.busyText(in: language) {
-                    HStack(spacing: 4) {
-                        GeometryReader { proxy in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.chip)
-                                Capsule().fill(color(busy)).frame(width: proxy.size.width * Double(row.busyPercent ?? 0) / 100)
-                            }
-                        }
-                        .frame(width: 44, height: 6)
-                        Text(verbatim: text)
-                            .font(.caption2.weight(.bold).monospacedDigit())
-                            .foregroundStyle(Theme.textPrimary)
-                        Text(verbatim: busy.text(in: language))
-                            .font(.caption2.weight(.bold))
-                            .padding(.horizontal, 5)
-                            .background(color(busy), in: Capsule())
-                            .foregroundStyle(busy == .packed ? Theme.onError : Theme.onPrimary)
+                if let busy = row.busyness, let text = row.busyText(in: language), let percent = row.busyPercent {
+                    ViewThatFits(in: .horizontal) {
+                        busyLine(busy, text: text, percent: percent, bar: true)
+                        busyLine(busy, text: text, percent: percent, bar: false)
+                        busyLine(busy, text: "\(percent)%", percent: percent, bar: false)
                     }
                 }
             }
-            .frame(maxWidth: 170, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: accessibilityText))
         .accessibilityIdentifier("station.operations.platform.\(row.number)")
+    }
+
+    /// How busy the platform has been: the bar (where it fits), the share
+    /// and its word, each on one line.
+    private func busyLine(_ busy: StationOperations.Busyness, text: String, percent: Int, bar: Bool) -> some View {
+        HStack(spacing: 4) {
+            if bar {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.chip)
+                        Capsule().fill(color(busy)).frame(width: proxy.size.width * Double(percent) / 100)
+                    }
+                }
+                .frame(width: 44, height: 6)
+            }
+            Text(verbatim: text)
+                .font(.caption2.weight(.bold).monospacedDigit())
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize()
+            Text(verbatim: busy.text(in: language))
+                .font(.caption2.weight(.bold))
+                .padding(.horizontal, 5)
+                .background(color(busy), in: Capsule())
+                .foregroundStyle(busy == .packed ? Theme.onError : Theme.onPrimary)
+                .fixedSize()
+        }
     }
 
     private func color(_ busy: StationOperations.Busyness) -> Color {
