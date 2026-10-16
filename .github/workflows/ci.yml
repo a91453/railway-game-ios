@@ -23,6 +23,10 @@ name: CI
 # then). A push to main and a manual run always run every shard
 # (swift-shards.sh decide).
 #
+# On a pull request the gate also waits for the same commit's iOS App Build
+# run and is red when that run fails (decision 265), so the one check main's
+# branch rule requires covers the Xcode build and the UI test gate too.
+#
 # The workflow always starts, so the "Swift CI (gate)" check always reports
 # (but on a cancelled push run of main, see the gate job):
 # on a pull request or a push to main that changes nothing the package builds
@@ -216,7 +220,10 @@ jobs:
     # (decision 187).
     if: ${{ always() && !(cancelled() && github.event_name == 'push') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    # A pull request's gate also waits for its iOS App Build run (below):
+    # the macOS queue (up to about 35 minutes on 2026-10-16) and the build
+    # job's own 60-minute limit.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 120 || 5 }}
     steps:
       # Only the script; the verdict is swift-shards.sh gate, which the
       # self-test checks.
@@ -232,3 +239,19 @@ jobs:
           TIER: ${{ needs.changes.outputs.tier }}
           CURRENT: ${{ needs.swift-current.result }}
         run: .github/scripts/swift-shards.sh gate
+
+      # On a pull request the gate is also red until ios-build.yml's run of
+      # the same commit has passed (decision 265): main's branch rule
+      # requires this check alone, and a pull request merged automatically
+      # or by hand as soon as it turned green went in before its Xcode build
+      # and UI tests had finished (#746, 2026-10-16). A change the app cannot
+      # see has no iOS run and passes at once. After a failed iOS run is
+      # re-run and passes, re-run this gate too (Re-run failed jobs). Pushes
+      # to main and manual runs do not wait: their full lane is
+      # ios-full-lane.yml's.
+      - name: Wait for this change's iOS App Build
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/swift-shards.sh ios-gate

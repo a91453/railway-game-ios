@@ -140,7 +140,11 @@ needs OSM data reads the same extract.
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
   several apply. The label `full-ci` runs every shard (add it, then re-run
-  the pull request's run). Pull requests and pushes to `main` that change
+  the pull request's run). On a pull request the gate also waits for the
+  same commit's `ios-build.yml` run and is red when that run fails
+  (decision 265), so a pull request set to merge automatically waits for
+  its Xcode build and UI tests; after a failed iOS run is re-run and passes,
+  re-run the gate too (Re-run failed jobs). Pull requests and pushes to `main` that change
   nothing the package builds or tests skip the Swift jobs, and the `Swift CI
   (gate)` job always reports (but on a cancelled push run of `main`, decision
   187); `main`'s branch rule requires that job, so never rename it. Pushes
@@ -163,7 +167,9 @@ needs OSM data reads the same extract.
   most every three hours (`ios-full-lane.yml` starts it unless `main`'s
   newest commit already had one or one ran in the last three hours; its
   schedule is only a fallback, GitHub runs it hours late or not at all),
-  nightly and by hand, and its red result does not block a pull request),
+  nightly and by hand (by hand only for the commit a release will use and
+  to bisect a red full lane, not after every merge: decision 265), and its
+  red result does not block a pull request),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
   catalog, the String Catalog or the localized Info.plist strings), `testflight.yml`

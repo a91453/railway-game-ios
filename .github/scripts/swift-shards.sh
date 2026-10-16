@@ -18,6 +18,8 @@
 #   swift-shards.sh decide           ci.yml's change detection: whether the
 #                                    Swift jobs run, the tier, the matrix
 #   swift-shards.sh gate             the "Swift CI (gate)" verdict
+#   swift-shards.sh ios-gate         a pull request's gate waits for its
+#                                    iOS App Build run (ios_gate below)
 #
 # Shards (a test ID is `Module.Class/method`, as `swift test list` prints it):
 #   campaigns-1 .. campaigns-15   the long property, differential and mutation
@@ -1151,6 +1153,63 @@ ci_gate() {
   fi
 }
 
+# A pull request's gate also waits for ios-build.yml on the same commit
+# (decision 265). main's branch rule requires only "Swift CI (gate)", so
+# without this a pull request set to merge automatically, or merged by hand
+# as soon as the gate turned green, went into main before its Xcode build
+# and UI tests had finished: on 2026-10-16 #746 merged six minutes before
+# its iOS run failed (RealWorldMapUITests), and #753 three minutes after it
+# opened. Passes when the newest pull request run of ios-build.yml for
+# HEAD_SHA passed or skipped, or when there is none (a change the app cannot
+# see: that workflow's paths-ignore). The two runs start from the same
+# event, so one that is coming is already listed; an empty list is looked
+# at once more after a poll before it counts as none. A run by hand
+# (workflow_dispatch) is not the pull request's. Waits while the run is
+# queued or running (ci.yml's timeout bounds it); a run that failed, was
+# cancelled or did not start fails the gate. The API failing IOS_GATE_TRIES
+# times in a row fails it too: green must mean the iOS run was seen.
+ios_gate() {
+  local poll="${IOS_GATE_POLL_SECONDS:-30}" tries="${IOS_GATE_TRIES:-10}"
+  local errors=0 empty=0 run status conclusion url
+  [[ -n "${GITHUB_REPOSITORY:-}" ]] || die "GITHUB_REPOSITORY is not set."
+  [[ "${HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]] || die "HEAD_SHA is not a commit ('${HEAD_SHA:-}')."
+  while true; do
+    if ! run="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ios-build.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=20" \
+      --jq '[.workflow_runs[]] | sort_by(.run_number) | last // empty | "\(.status) \(.conclusion // "-") \(.html_url)"')"; then
+      errors=$((errors + 1))
+      (( errors < tries )) || die "Could not list the iOS App Build runs of $HEAD_SHA ($errors tries)."
+      echo "::warning::Could not list the iOS App Build runs; trying again in $poll s."
+      sleep "$poll"
+      continue
+    fi
+    errors=0
+    if [[ -z "$run" ]]; then
+      if (( empty == 0 )); then
+        empty=1
+        sleep "$poll"
+        continue
+      fi
+      echo "No iOS App Build run for $HEAD_SHA: the change is one the app cannot see."
+      return 0
+    fi
+    read -r status conclusion url <<<"$run"
+    if [[ "$status" != completed ]]; then
+      echo "iOS App Build is $status ($url); looking again in $poll s."
+      sleep "$poll"
+      continue
+    fi
+    case "$conclusion" in
+      success | skipped)
+        echo "iOS App Build passed ($conclusion): $url"
+        return 0
+        ;;
+      *)
+        die "iOS App Build did not pass ($conclusion): $url. After a re-run of it passes, re-run this gate (Re-run failed jobs)."
+        ;;
+    esac
+  done
+}
+
 case "${1:-}" in
   run)
     [[ $# -eq 2 ]] || die "usage: $0 run <shard>"
@@ -1191,7 +1250,10 @@ case "${1:-}" in
   gate)
     ci_gate
     ;;
+  ios-gate)
+    ios_gate
+    ;;
   *)
-    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate"
+    die "usage: $0 run <shard> | select <shard> | shards | classes | matrix | relevant | push-base | plan | decide | gate | ios-gate"
     ;;
 esac

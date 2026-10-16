@@ -11019,6 +11019,57 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
 - 教學那一局仍然手動配車，第 4 個 PR 把教學搬進第 1、2 關時，改成照新的開線流程。
 - 3 列以上的同一條線：每次加開只蓋一處，交會處不夠時，下一次加開才會再蓋。
 
+### 265. PR 的 gate 等同一個 commit 的 iOS App Build；full lane 不在每批合併後手動跑
+
+2026-10-16。作者：「不用凍結了 但也先不要開工我要做pr review 跟ci優化」；遊戲規劃 session_01V1xd3H9vNkuZoSA3czNfGm 派工給 CI 優化 session。號碼依工作登記 #231：決策 265；存檔版本、golden schema 不動。GameCore、App、測試都不動，存檔、golden、replay 也都不變。量測與其他方案見 `docs/research/CI_MEASURE_2026-10-16.md`。
+
+**問題**：
+- `main` 的 branch rule 只要求 `Swift CI (gate)`。PR 開著自動合併，或 gate 一綠就手動合併時，Xcode build 和 UI 測試還沒跑完，PR 就已經進了 `main`。
+- 2026-10-16 的兩個例子：
+  - #746 在 gate 綠後 6 秒自動合併，6 分鐘後它的 iOS run（38940806603）才紅，`RealWorldMapUITests` 壞了，到 #748 才發現。
+  - #753 開了 3 分鐘就合併，它的 iOS run 10 分鐘後才跑完。
+- 決策 187 已經規定「合併前確認 iOS 綠」，但這條規則擋不了自動合併。
+
+**規則**：
+1. **PR 的 gate 等 iOS**（`ci.yml` 的 gate，`swift-shards.sh ios-gate`）：
+   - gate 先做原本的 Swift 判定。PR 上再加一步：找同一個 head commit 最新的 `ios-build.yml` PR run（按 run 號），等它跑完。結果是成功或跳過（決策 187「同一份改動已通過」）才綠；失敗、取消、沒有啟動都紅。
+   - 沒有 iOS run 的改動（`ios-build.yml` 的 `paths-ignore`：文件、測試、fixture、工具、其他 workflow）直接綠。兩個 workflow 由同一個事件建立，所以要跑的 iOS run 在 gate 查的時候已經在列表裡；保險起見，空的列表會隔一次輪詢再查一次。
+   - 手動的 run（`workflow_dispatch`）不算 PR 的。
+   - API 連續失敗 10 次就紅：綠燈一定代表確實看過 iOS 的結果。
+   - gate 的上限：PR 120 分鐘（macOS 排隊最久約 35 分，加上 build job 自己的 60 分鐘）；push 與手動仍是 5 分鐘，不等 iOS（`main` 的 full lane 由 `ios-full-lane.yml` 啟動）。
+   - job 名稱 `Swift CI (gate)` 不變，所以 branch rule 不用改，自動合併也會等。
+   - 自測（`swift-shards-selftest.sh`）用假的 `gh` 涵蓋：
+     - 綠：成功、跳過、排隊或執行中之後成功、沒有 run、第二次查才出現的 run、API 偶爾失敗；
+     - 紅：失敗、取消、沒有啟動、第二次查才出現而失敗、API 一直失敗、沒有 commit、沒有 repo 名稱。
+2. **iOS 重跑之後要重跑 gate**：iOS 失敗、重跑通過之後，gate 不會自己重判；對 CI 那一輪按 Re-run failed jobs。gate 的錯誤訊息會這樣寫。
+3. **full lane 的頻率**（`docs/HANDOFF.md` §1.2）：
+   - 合併之後由 `ios-full-lane.yml` 自己啟動，最多每三小時一次。合併協調不再在每批合併後手動跑 `ios-build.yml`。
+   - 手動只跑兩種：發版前要用的 HEAD，以及 full lane 紅了、要二分的 commit。
+   - 量到的：67 小時跑了 42 次，只有 7 次是 `ios-full-lane.yml` 啟動的，佔全部 macOS 用量的 34%。
+
+**四方**：
+- 玩家：UI 測試紅掉的改動不會再進 `main`，也就不會進 TestFlight；發版前的 HEAD 一定有自己的 full lane，涵蓋範圍不變。
+- 開發：一個必要檢查就包含 Swift、Xcode build 與 UI gate，合併協調不必另外看 iOS。代價有二：
+  - App 的 PR 等 iOS 時，gate 多佔一台 Linux，約 20 分鐘；Linux 平均只用約 10 台（上限 40），三天內排隊最多 8.4 分。
+  - full lane 才有的測試壞掉，最多約三小時才知道。
+- 美術：無。
+- 音樂：無。
+
+**沒有採用**（其他選項留在研究文件第 3 節）：
+- 把 iOS 的 job 也設成必要檢查：要作者改 branch rule。而且 `ios-build.yml` 對 `paths-ignore` 的 PR 不會啟動，必要檢查會永遠停在等待。
+- 在 repo 設定關掉自動合併：要作者改設定，也擋不住手動提早合併。
+- App 內容相同就沿用上一輪 full lane：這三天 44 對相鄰的 full lane，App 內容都不同。
+- 分片逾時上限從 20 分改成 25 分：先不改，下次重新分配分片時一起看。
+
+**參考庫與外部專案**：參考庫沒有 CI。「必要檢查等另一個 workflow」是常見做法（例如 merge queue，或用 `workflow_run` 回報），這裡沒有取用任何程式；用的是 GitHub REST API 的 workflow runs 列表，也沒有新的依賴。
+
+**沒有驗證的**：
+- 已驗證（Linux）：
+  - YAML 與 actionlint、shellcheck；
+  - 分片自測；
+  - 對真的 API 跑 `ios-gate`：#746 的 commit 紅、#753 的綠、只改文件的 #747 沒有 iOS run 而綠。
+- 要在 GitHub 上跑過才知道：PR 上的等待、120 分鐘上限、自動合併真的會等。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

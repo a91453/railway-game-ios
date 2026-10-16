@@ -18,7 +18,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 存檔版本 | 63（每整分鐘決定行車間隔，#702，決策 248）；每個版本一個存檔 fixture，共 67 個 | `SavedGame.currentVersion`、`SaveFixtures/` |
 | golden | schema 74（車站商業，#595），`GoldenScenarios/` 裡 77 個 JSON | `GoldenScenarios/` |
 | replay | 9 個指令紀錄（含問題回報轉成的 `problem-report-blank-map.json`，#468；長區段行車控制 `long-leg-traffic.json`，#480） | `ReplayFixtures/` |
-| 決策 | 1–217、219–264（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
+| 決策 | 1–217、219–265（218 沒有使用：越行寫進了決策 212，#556、#589）。141、150、203 曾保留但沒有使用；之後的號碼以工作登記 #231 為準 | `docs/ARCHITECTURE.md`，索引在第 9 節 |
 | App 版本 | 0.5.0 | `RailwayGameApp/project.yml` |
 | 平台與語言 | iPhone（只橫拿）、iPad；繁體中文、英文。日文已移除（#171） | — |
 | 程式規模 | GameCore 90 檔 3.3 萬行、GamePresentation 115 檔 3.1 萬行、App 61 檔 1.9 萬行、測試 292 檔 8.1 萬行 | — |
@@ -125,6 +125,7 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | STATION_COMMERCE_2026-10-14 | 現行 | 決策 222：車站商業三級的規則、數字校準、畫面與美術方案；第二段（GameCore，存檔 57）照第 6 節做 |
 | RAILWAY_SOUND_2026-10-14 | 現行 | 決策 219：鐵道聲音的四階段計畫（產製流程與三種到站鈴 → 逐站鈴聲 → 分軌配樂 → 工作坊）；各階段開工前照 #231 登記 |
 | GAP_RESEARCH_2026-10-12 | 部分過時 | 參考遊戲比較（§2）仍有效；優先順序已併進 NEXT_PRIORITIES；§5 教學由決策 188 取代；§4.6 CI 由決策 187 取代 |
+| CI_MEASURE_2026-10-16 | 現行 | 決策 265：三天的 run 量測（runner 用量、排隊、各 job 時間、full lane）、方案 A–C 與要作者決定的事 |
 | CI_INCIDENT_2026-10-12 | 歷史 | 4A 已由決策 187 實作；4B 在 NEXT_PRIORITIES §10 第 11 題；4C（自架 runner、Xcode Cloud、第三方 macOS runner）待作者決定，記在 HANDOFF 第 3 節 |
 | TUTORIAL_REDO_SPEC、TUTORIAL_REDO_AUDIT | 歷史 | 決策 188；P1、P2 列在 NEXT_PRIORITIES |
 | DISRUPTION_STUDY | 部分有效 | 方案 B 已由決策 154、162 實作；方案 A（老化、故障、檢修）與 C（停駛）仍是提案，併進機廠的研究 |
@@ -451,3 +452,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 262 | 實景地圖的城市：日本 21、韓國 7 與各國大城市（都會區 500 萬以上：聯合國 2025 或 Demographia；有地鐵的首都；有地鐵的最大城），共 191 個起點，用主要車站（Wikidata）；清單依國家（4 個以上）與地區分組、大城市在前、可收合、可搜尋（存檔不動） |
 | 263 | 空白地圖的道路用種子產生：主要道路每 4–6 格一條、其餘街或巷、少數地塊合成街廓；軌道優先（地面上越過畫平交道，高架下照常畫、避開橋墩，避開路堤、路塹與月台）；透天厝沿街排、正面朝街（存檔不動；預覽 `docs/art/map3d-seeded-streets-2026-10-16/`） |
 | 264 | 開線自動配車、自動交會：簡單規則下開線就配一列車、單線 2 公里以上先蓋待避線（決策 204 的 `PassingLoopPlan`）、路線卡「加開一列車」、開線前看得到總價；兩種規則都有：共用單線沒有地方交會時，站長與路線卡說明並可一鍵加待避線，擋路的列車先放回路線起點（`AutoService`，GameCore、存檔不動） |
+| 265 | PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build 跑完，紅了就紅（`swift-shards.sh ios-gate`），自動合併與提早合併都不會搶在 UI 測試前；full lane 合併後由 `ios-full-lane.yml` 每三小時最多一次，手動只跑發版的 HEAD 與二分（量測：`docs/research/CI_MEASURE_2026-10-16.md`） |
