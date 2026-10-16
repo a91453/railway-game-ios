@@ -57,7 +57,7 @@ final class ToolbarSmokeTests: XCTestCase {
                 XCTFail("Missing toolbar button: \(query)")
                 return
             }
-            XCTAssertTrue(button.isHittable, "Toolbar button cannot be tapped: \(query)")
+            XCTAssertTrue(button.becomesHittable(), "Toolbar button cannot be tapped: \(query)")
             button.tap()
         }
     }
@@ -216,7 +216,7 @@ final class LineRoutePreferenceUITests: XCTestCase {
             return
         }
         XCTAssertTrue(button.isEnabled)
-        XCTAssertTrue(button.isHittable)
+        XCTAssertTrue(button.becomesHittable())
         let frame = button.frame
         XCTAssertGreaterThan(frame.width, 0)
         XCTAssertGreaterThan(frame.height, 0)
@@ -298,6 +298,21 @@ extension XCUIElement {
             last = now
         }
         XCTFail("\(self) did not settle")
+    }
+
+    /// Waits until the element's frame is the same twice in a row, a
+    /// quarter of a second apart, for an element that is not itself a
+    /// control (a card, a panel): what a fixed second's sleep used to wait
+    /// for after something slid in.
+    func waitUntilStill(timeout: TimeInterval = 5) {
+        var last = frame
+        for _ in 0..<Int(timeout * 4) {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = frame
+            if now == last { return }
+            last = now
+        }
+        XCTFail("\(self) did not stop moving")
     }
 }
 
