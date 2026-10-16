@@ -50,10 +50,12 @@ final class BalanceReportTests: XCTestCase {
         Self.applyRealisticOperationSwitch(&world)
         let encoder = JSONEncoder()
         var rows = ["| Day | Balance | Fares | Operating profit | Tourism and shops | Lines' fares | Lines' costs | Trains | Sights |", "| --: | --: | --: | --: | --: | --: | --: | --: | --: |"]
-        try world.advance(ticks: 1)
-        var lowest = world.economy.balance.amount
+        var player = try reportPlayer(world)
+        try player.advance(ticks: 1)
+        var lowest = player.world.economy.balance.amount
         for day in 1...days {
-            try world.advance(ticks: 1_440)
+            try player.playDay()
+            world = player.world
             let report = world.financeReport(.day).previous
             let tallies = world.lines.compactMap { world.lineYesterday($0.id) }
             let lineFares = tallies.reduce(Int64(0)) { $0 + $1.fareRevenue.amount }
@@ -70,6 +72,7 @@ final class BalanceReportTests: XCTestCase {
             }
         }
         print("### A year with every switch on (lowest balance \(dollars(lowest)))\n" + rows.joined(separator: "\n"))
+        print("\n" + PlayReport.table([PlayReport(label: "Two lines", player: player)], title: "A year with every switch on"))
     }
 
     /// The first line with the company's buildings (decision 130): once the
@@ -642,12 +645,16 @@ final class BalanceReportTests: XCTestCase {
             "| Day | Balance | Fares | Operating profit | Tax | Recovered | Trips a day | Catchment people | D1 / D2 / D3 / D4 / stock | Fullest D3 | Land value avg / max | Service | Homes / shops / work demand | City residents / shop jobs / work jobs |",
             "| --: | --: | --: | --: | --: | --: | --: | --: | --- | --: | --- | --- | --- | --- |",
         ]
-        try world.advance(ticks: 1)
+        // Decision 261: the days played by the shared player.
+        var player = try reportPlayer(world)
+        try player.advance(ticks: 1)
         for day in 1...days {
-            try world.advance(ticks: 1_440)
-            lines.append(row(world, day: day, stops: stops, cost: cost))
+            try player.playDay()
+            lines.append(row(player.world, day: day, stops: stops, cost: cost))
         }
+        world = player.world
         print(lines.joined(separator: "\n"))
+        print("\n" + PlayReport.table([PlayReport(label: title, player: player)], title: title))
     }
 
     private func row(_ world: GameWorld, day: Int, stops: [StationID], cost: Money) -> String {
