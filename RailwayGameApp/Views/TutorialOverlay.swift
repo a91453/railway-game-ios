@@ -281,6 +281,8 @@ private struct TutorialCardSlot: View {
     var body: some View {
         let hint = session.tutorialHint
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
+        // Read here: the animator's closures run off the main actor.
+        let reduceMotion = self.reduceMotion, settle = self.settle
         TutorialCardLayout(placement: isFolded ? sized.folded : sized) {
             // One view the layout places, open or folded: the one shown
             // takes the other's place at once (two would share their

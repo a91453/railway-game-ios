@@ -727,6 +727,8 @@ struct StatusBanner: View {
         let isSuccess = message.kind == .success
         let kindName = isSuccess ? String(localized: "Done") : String(localized: "Problem")
         let tintColor = isSuccess ? Theme.success : Theme.warning
+        // Read here: the animators' closures run off the main actor.
+        let reduceMotion = self.reduceMotion
         return HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(.subheadline.weight(.bold))
