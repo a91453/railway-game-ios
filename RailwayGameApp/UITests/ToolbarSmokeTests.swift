@@ -557,11 +557,13 @@ final class ShellLayoutUITests: XCTestCase {
             abs(a.minX - b.minX) < 0.5 && abs(a.minY - b.minY) < 0.5 && abs(a.width - b.width) < 0.5 && abs(a.height - b.height) < 0.5
         }
         var labels: Set<String> = []
-        // Until three dates have been seen: opened at 23:58, the second
-        // comes at once and the third about a day later (opened at
-        // midnight, 50 seconds saw two, run 38866488755).
+        // Opened at 23:58, the next date comes at once; then watched for 20
+        // seconds of the new day (the Simulator keeps up with about a day
+        // and a half in 50: run 38866488755 saw two dates, the by-hand run
+        // 38888496446 at 23:58 never a third).
+        let watched = Date().addingTimeInterval(20)
         let deadline = Date().addingTimeInterval(50)
-        while Date() < deadline, labels.count < 3 {
+        while Date() < deadline, labels.count < 2 || Date() < watched {
             Thread.sleep(forTimeInterval: 0.5)
             guard let menuNow = try? menu.snapshot().frame, let timeNow = try? time.snapshot() else { continue }
             labels.insert(String(timeNow.label.prefix(while: { $0 != ")" })))
