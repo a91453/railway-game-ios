@@ -24,6 +24,10 @@ public enum StationMasterAdvice: Hashable, Sendable {
     case stationFull(station: StationID, name: String)
     /// A line has no train, so no one rides it.
     case lineWithoutTrains(line: LineID, name: String)
+    /// Decision 264: a line shares single track with another line's trains
+    /// and has no place for them to pass, so a train turns back early
+    /// (decision 255) or they stand.
+    case noPlaceToPass(line: LineID, name: String)
     /// Decision 194, later: the line that lost most over its report's
     /// days, and the first reason why (``GameWorld/worstLosingLine()``).
     case lineLosing(line: LineID, name: String, reason: LineLossReason.Kind)
@@ -133,6 +137,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// (decision 194, later).
     public var line: LineID? {
         if case .lineLosing(let line, _, _) = self { return line }
+        // Decision 264: its card has the passing loop's button.
+        if case .noPlaceToPass(let line, _) = self { return line }
         return nil
     }
 
@@ -190,6 +196,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 self = .lineWithoutTrains(line: line, name: world.line(id: line)?.name ?? "")
                 return
             }
+        }
+        // Decision 264: trains that cannot pass on shared single track.
+        if let line = world.firstLineWithoutPlaceToPass() {
+            self = .noPlaceToPass(line: line.id, name: line.name)
+            return
         }
         // Decision 194, later: after the urgent worries, the line that
         // loses most and why. A short first line losing money has been told
@@ -486,6 +497,11 @@ public enum StationMasterAdvice: Hashable, Sendable {
                 "\(name) has no trains yet. Open Lines and give it one.",
                 "「\(name)」還沒有列車。打開路線幫它配車。"
             )
+        case .noPlaceToPass(_, let name):
+            language.text(
+                "\(name)'s trains have no place to pass on the single track they share with another line. Tap to add a passing loop.",
+                "「\(name)」和別條線共用單線，列車沒有地方交會。點一下加待避線。"
+            )
         case .lineLosing(_, let name, let reason):
             Self.lineLosingText(name, reason, in: language)
         case .stationCrowded(_, let name):
@@ -616,7 +632,7 @@ public enum StationMasterAdvice: Hashable, Sendable {
     /// next step.
     public var isWorry: Bool {
         switch self {
-        case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
+        case .inDebt, .inDebtShortLine, .firstLineLosing, .stationFull, .lineWithoutTrains, .noPlaceToPass, .lineLosing, .stationCrowded, .underserved, .materialsShort, .shortSteamTrains,
              .typhoonComing, .sightUnreachable: true
         case .buildTrack, .buildStation, .buildSecondStation, .createLine, .townGrew, .holidayComing, .holidayOver, .scenarioWelcome,
              .goalMet, .scenarioCompleted, .festivalComing, .fuelSpell, .touristsComing, .newCityRequests: false

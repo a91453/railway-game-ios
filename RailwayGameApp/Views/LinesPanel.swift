@@ -1138,11 +1138,44 @@ struct LinesPanel: View {
     @ViewBuilder
     private func trainsSection(_ line: ServiceLine) -> some View {
         if !line.isRing {
+            // Decision 264: trains that cannot pass on single track shared
+            // with another line, and the one tap that mends it.
+            if let shortfall = session.selectedLinePassingShortfall {
+                passingShortfallSection(shortfall)
+            }
             if line.trains.isEmpty {
                 staffSection(line)
             } else {
                 headwaySection(line)
             }
+        }
+    }
+
+    /// Decision 264: the line shares single track with another line's
+    /// trains and has no place for them to pass.
+    private func passingShortfallSection(_ shortfall: PassingPlaceShortfall) -> some View {
+        let language = session.language
+        return Section {
+            Label {
+                Text(verbatim: session.passingShortfallText(shortfall))
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.warning)
+            .accessibilityIdentifier("line.passingShortfall")
+            Button {
+                session.addPassingLoopToSelectedLine()
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Add a Passing Loop Here", "在這裡加待避線"))
+                } icon: {
+                    Image(systemName: "arrow.triangle.branch")
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("line.addPassingLoop")
         }
     }
 
@@ -1160,6 +1193,23 @@ struct LinesPanel: View {
             Text(verbatim: language.text("Now: ", "目前：") + memo.trainsRowText(line.id, of: session))
                 .font(.subheadline.monospacedDigit())
                 .accessibilityIdentifier("line.headway.now")
+            // Decision 264: under simple rules, one more train in one tap,
+            // with the passing loop it needs.
+            if session.runsLinesForThePlayer {
+                Button {
+                    session.addTrainToSelectedLine()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Add a Train", "加開一列車"))
+                    } icon: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .accessibilityIdentifier("line.addTrain")
+            }
             if let shortfall {
                 Label {
                     Text(verbatim: shortfall.warning(in: language))
@@ -1461,6 +1511,14 @@ struct LinesPanel: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("line.draft.stops")
+                // Decision 264: under simple rules, the train and the
+                // passing loop the line opens with, and their price.
+                if let opening = session.lineOpeningPreview {
+                    Text(verbatim: opening.text(in: language))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("line.draft.opening")
+                }
             }
             Button {
                 session.createLineFromDraft()
