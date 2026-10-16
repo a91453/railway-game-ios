@@ -294,3 +294,48 @@ Session：https://claude.ai/code/session_01EsozfWmDmXd6Tp2f4fzExd（2026-10-16�
 | **合計（這一輪新發現）** | **14** | **6** | **8** |
 
 另有判定不成立的項目（第五節），不計入。
+
+## 十一、清理：現在修的、延後（等穩定）的、已經不成立的（2026-10-16）
+
+審查回報清理 session（session_01FUXNvfnNmoSMf58pgakpsF，派工 session_01AaAj4wvJMxJQuLWAoYu6S8 開出）在 main 8cef1a4 逐項重看第四節。作者 2026-10-16 說：「牽涉小的話現在修，牽涉大等穩定再修」。
+
+分類的標準：
+- **小**：只動 App 或 GamePresentation、局部、不改存檔與 GameCore 行為、不動 golden／replay。
+- **大**：動 GameCore 規則、存檔格式、效能架構、跨畫面的版面、要美術方案的、3D 渲染管線，或必須先在 Simulator／裝置上確認問題存在的。
+- 拿不準的歸大。
+
+### 現在修了
+
+| 項目 | PR | 玩家感受到的改變 |
+| --- | --- | --- |
+| 「升級為複線」在部分已是複線的路段上 | #728 | 預覽直接說「這段路有一部分已經是複線」，請玩家選「只有這一段」。以前只說「軌道形狀不合」；第二條在另一側時甚至會蓋成三條。 |
+| 沒有道岔的環形軌道升級成複線（原本「沒證實」） | #728 | 用六段的環線證實了：以前一樣只說「軌道形狀不合」，不會在同一點放兩個渡線，世界也不變。現在說「這是沒有道岔的環線」，請玩家一段一段升級。 |
+| UI 測試裡的固定等待（`sleep(1)`、出現後立刻問 `isHittable`、先 `swipeUp()` 再找） | #730 | 沒有。測試比較不會亂紅。 |
+| #680 從清單底邊開始拖（上兩輪第 10 項） | #730 | 沒有。拖曳的兩端夾在清單帶裡。 |
+| `map.style`（上兩輪第 5 項） | #730 | 沒有。 |
+
+### 延後（等穩定）
+
+| 項目 | 為什麼延後 | 建議做法 | 預估影響範圍 |
+| --- | --- | --- | --- |
+| 破產倒數時狀態列變寬（#711，決策 251） | 需要美術方案。牽涉 iPhone 和 iPad 的狀態列排法，也牽涉 `showsSeconds` 在 600 倍以上時的整分縮回。 | 美術 session 決定倒數放哪裡。可以疊在金額下方，或做成獨立的小膠囊。再把「破產倒數 9／30 天」兩種位數、兩種語言都加進 `StatusBarWidths` 的最寬文字，`HUDView.balance` 用 `WidestTextRoom` 保留空間。 | `HUDView.swift`、`StatusBarWidths.swift` 與測試、`ShellLayoutUITests` 的寬度斷言、`docs/UI_THEME.md` |
+| 景點標記的計算量（#701，`MapAttractionMarks.swift`） | 效能架構，而且還沒量到實際卡頓。 | 先在全島地圖用 Instruments 量。如果真的慢，把每個景點的星等與服務車站，按 `worldRevision` 記在 GamePresentation：建物或車站改變才重算。`hotelsNear` 改成用格子索引，不要掃所有建物。 | `MapAttractionMarks.swift`、`TourismText.swift`、新的記憶結構與 Linux 測試 |
+| 3D 牆面的亮窗（#690，`Map3DShaders.metal` 的 `plane [[flat]]`） | 3D 渲染管線，要在裝置上看。 | 在 vertex 端讓同一面牆的四個頂點帶一樣的 `plane`（建模時寫進 instance 資料），或在 fragment 用 `floor(plane/4 + 0.5)` 避開整數邊界。改完在 iPhone 上拍同一角度前後對照。 | `Map3DShaders.metal`、`Map3DModels.swift`（牆的頂點資料）、`Map3DTests` |
+| 3D 地圖開著時跳出月底報表（#697） | 要先在 Simulator 上確認 sheet 是不是真的被吃掉。報表的時機牽涉月報、年報、挑戰結束三種。 | `ContentView` 的三個 `onChange`（月底、年底、挑戰結束）在 `screen.showsMap3D` 時先不設 `screen.panel`。加一個 `onChange(of: screen.showsMap3D)`：關掉 3D 時，如果有 `pendingReport` 就打開（和現有「關掉面板後 0.5 秒」同一套）。另外加一支 UI 測試：開 3D、快轉過月底、關 3D，看報表有沒有出來。 | `ContentView.swift`、一支新 UI 測試（full lane） |
+| `TutorialJourneyUITests` 115（第二次縮小之後的 `sleep(1)`） | 等的是地圖鏡頭的縮放動畫，App 沒有給 UI 測試讀得到的狀態。要改 App。 | UI 測試時讓地圖的 accessibility value 帶鏡頭比例（和 `map.stations` 一樣只在 `-ui-testing` 時有）。測試等它連續兩次一樣。 | `MapView.swift`（只在 UI 測試時）、`TutorialJourneyUITests`、iPad 教學 job |
+| #638 Advanced 開關的 accessibility frame（上兩輪第 3 項） | 要在 Simulator 上看。如果框真的不對，VoiceOver 也會受影響，要改側欄的版面。 | 用 Accessibility Inspector 看開關的框和畫出來的位置是否一致。不一致的話，把 `Toggle` 從 `LabeledContent` 換成 label 和開關分開的 `HStack`，讓框跟著開關。 | 設定頁或側欄的 `Toggle`、`ToolbarSmokeTests` 第 149 行附近 |
+| #659 Advanced 開關 390 ms 的觸控沒反應（上兩輪第 9 項） | 要在 Simulator 上看 view 的 identity 有沒有在觸控中改變。玩家的點擊也可能被吃掉。 | 和上一項一起看。如果是重建，就把開關所在的區塊用穩定的 `id` 包起來。 | 同上 |
+| #638 月台測試依賴真實地形（上兩輪第 4 項，`RealWorldMapUITests`） | 要重新設計測試的地點，牽涉實景地圖的鏡頭和資料，不是局部改動。 | 讓測試讀 App 在 UI 測試時寫出的「平地位置」（像 `map.expansion.tiles`），或改用 demo 地圖測月台工具，把實景地圖的部分留給只看能不能打開的測試。 | `RealWorldMapUITests`、可能加一個 UI 測試專用的 accessibility value |
+| #657 坡道上切開軌道的錯誤訊息（上兩輪第 7 項） | 要把 GameCore 算切點高度的函式公開，讓工具共用。是 GameCore 的 API 改動。 | 把 GameCore 算切點 chainage 的函式改成 `public`。工具改用它來判斷「轉轍器不能在變坡處」。行為不變，golden 不動。 | `Sources/GameCore/Railway/`（只改可見性）、GamePresentation 的切軌工具與測試 |
+| 3D 深度精度（反向 Z，上兩輪第 11 項） | 3D 渲染管線，要在裝置上看。 | 投影矩陣改成反向 Z（near→1、far→0），深度比較改成 `greater`，深度格式維持 `depth32Float`。 | `Map3D` 的 renderer、shader、相機 |
+| CI 用 Swift 6.4.1，hook 和 CLAUDE.md 寫 6.4.0（上兩輪第 17 項） | 會改到每個平行 session 的開機環境（重新下載工具鏈）。現在很多 session 同時在跑，等穩定再一起換。 | `session-start.sh` 的版本改成 6.4.1。CLAUDE.md、`install-swift-linux.sh` 註解裡的 6.4.0 一起改。下載網址已確認存在（`swift-6.4.1-RELEASE`）。 | `.claude/hooks/session-start.sh`、`CLAUDE.md`、`.github/scripts/install-swift-linux.sh` 的註解 |
+| #632 拖曳時工具變淡卡住（剩極少見的情況） | 上一輪已經修了換工具和開面板的情況。剩下的是地圖 view 在拖曳中被拆掉，重現要 Simulator。 | 在地圖 `UIViewRepresentable` 的 `dismantleUIView` 把 `isDrawingUnderTools` 改回 false。 | `MapView.swift`、`ContentView.swift` |
+| 沒在用的 String Catalog key | 要在 Xcode 匯出才查得到，Linux 上做不到。 | 在 macOS 上用 Xcode 的「Export Localizations」，看標成 stale 的 key，一次清掉。 | `Localizable.xcstrings` |
+
+### 不成立或保留
+
+- 上兩輪第 1、2、8、12、14、16 項：已經修好（見第四節的表）。
+- 第 6 項 `unknownLinePattern` 的「pattern #3」：和別處的「停站模式 N」一致，保留。
+- 第 13 項 3D 預覽的統計只有英文：刻意的（決策 229），保留。
+- 第 15 項 `RunSpacing.catches` 用 `Double`：實際上是決定性的，保留。
+- 這一輪 `TutorialJourneyUITests` 444 的 `sleep(1)`：在 main 上已經不在了（現在那裡是點擊後的 0.5 秒，屬於點擊本身的節奏）。
