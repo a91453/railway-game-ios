@@ -128,6 +128,8 @@ public struct Map3DScene: Sendable {
         let cleared = builder.addTrack(snapshot)
         // Decision 244: no street furniture where the track runs.
         builder.removeProps(on: cleared)
+        // Decision 229 續: the street lights' pools, seen at night.
+        builder.addLampPools()
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.

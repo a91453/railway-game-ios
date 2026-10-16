@@ -87,16 +87,21 @@ final class Map3DPreviewDump: XCTestCase {
                     let c = v.color, share = Float(c >> 24) / 255
                     func mix(_ own: UInt32, _ tint: Float) -> Float { tint + (Float(own) / 255 - tint) * share }
                     floats += [p.x, p.y, p.z, n.x, n.y, n.z, mix(c & 0xFF, prop.stripe.0), mix((c >> 8) & 0xFF, prop.stripe.1),
-                               mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, -1]
+                               mix((c >> 16) & 0xFF, prop.stripe.2), 0, 0, v.glows ? Map3DVertex.glowing : -1]
                 }
                 indices += (0..<UInt32(model.vertices.count)).map { $0 + first }
             }
         }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
         for chunk in chunks {
-            let base = UInt32(shadowFloats.count / 4)
-            for v in chunk.shadows.vertices { shadowFloats += [v.x, v.y, v.z, Float(v.color >> 24) / 255] }
-            shadowIndices += chunk.shadows.indices.map { $0 + base }
+            let base = shadowFloats.count / 7
+            // Position, then the colour (black for a shadow, a light's
+            // pool otherwise) and its alpha.
+            for v in chunk.shadows.vertices {
+                shadowFloats += [v.x, v.y, v.z, Float(v.color & 0xFF) / 255, Float((v.color >> 8) & 0xFF) / 255,
+                                 Float((v.color >> 16) & 0xFF) / 255, Float(v.color >> 24) / 255]
+            }
+            shadowIndices += chunk.shadows.indices.map { $0 + UInt32(base) }
         }
         try shadowFloats.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".svertices")) }
         try shadowIndices.withUnsafeBytes { try Data($0).write(to: URL(fileURLWithPath: out + ".sindices")) }
@@ -125,7 +130,7 @@ final class Map3DPreviewDump: XCTestCase {
                 + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
                 + padded(lighting.sunLight) + padded(lighting.skyLight) + padded(lighting.groundLight)
                 + [sky.0, sky.1, sky.2, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6, far * 0.9, 0, 0]
-                + [Map3DShadow.strength(lighting), 0, 0, 0]
+                + [Map3DShadow.strength(lighting), lighting.lights, 0, 0] + Map3DLighting.nightWindowRows
         }
         let presets: [(String, Map3DPoint, Float, Float)] = (ProcessInfo.processInfo.environment["MAP3D_VIEWS"] ?? "close:0:0:140:35;mid:0:0:420:-25;far:0:0:1300:0")
             .split(separator: ";").map { part in

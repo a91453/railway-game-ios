@@ -36,13 +36,14 @@ final class Map3DNightAndGroundTests: XCTestCase {
             let ground = Self.luminance(light.lit(Self.ground, normal: .up))
             let road = Self.luminance(light.lit(Self.primaryRoad, normal: .up))
             let park = Self.luminance(light.lit(Self.park, normal: .up))
-            // A wall facing the camera's side, away from the moon.
+            // A wall facing the camera's side, away from the moon (its lit
+            // windows show the rest of the building).
             let wall = Self.luminance(light.lit(Self.whiteWall, normal: Map3DPoint(0, 0, -1)))
             let hour = minute / 60
             XCTAssertGreaterThanOrEqual(ground, 0.33, "the ground at \(hour) h")
             XCTAssertGreaterThanOrEqual(ground - road, 0.15, "a road stands out from the ground at \(hour) h")
             XCTAssertGreaterThanOrEqual(ground - park, 0.02, "a park stands out from the ground at \(hour) h")
-            XCTAssertGreaterThanOrEqual(wall, 0.25, "a wall at \(hour) h")
+            XCTAssertGreaterThanOrEqual(wall, 0.22, "a wall at \(hour) h")
         }
     }
 
@@ -53,6 +54,74 @@ final class Map3DNightAndGroundTests: XCTestCase {
             let ground = light.lit(Self.ground, normal: .up)
             XCTAssertLessThanOrEqual(Self.luminance(ground), noon * 0.6, "the night is darker than the day")
             XCTAssertGreaterThan(ground.z, ground.x, "a blue night")
+        }
+    }
+
+    // MARK: - The city's lights
+
+    func testTheCitysLightsAreOnAtNightAndOffByDay() {
+        for minute: Double in [21 * 60, 0, 3 * 60] {
+            let light = Map3DLighting(minute: minute)
+            XCTAssertEqual(light.lights, 1, "\(minute / 60) h")
+            XCTAssertGreaterThan(Self.luminance(light.lampGlow(Self.colour(0xFFE3B0))), 0.8, "a street light shines")
+        }
+        XCTAssertGreaterThan(Map3DLighting(minute: 18 * 60 + 30).lights, 0.9, "on while the dusk is still light")
+        for minute: Double in [8 * 60, 12 * 60, 15 * 60] {
+            let light = Map3DLighting(minute: minute)
+            XCTAssertEqual(light.lights, 0, "\(minute / 60) h")
+            XCTAssertEqual(light.lampGlow(Self.colour(0xFFE3B0)), .zero)
+        }
+    }
+
+    func testAStreetLightsHeadGlowsAndNothingElseOfIt() throws {
+        let pack = Map3DModelPack.standard
+        let lamp = pack.models[try XCTUnwrap(pack.index(of: Map3DProp.lamp.modelName))]
+        let glowing = lamp.vertices.filter(\.glows)
+        XCTAssertFalse(glowing.isEmpty)
+        // The head, out on the arm (+y) at the top (+z, model space).
+        XCTAssertTrue(glowing.allSatisfy { $0.z > 8.4 && $0.y > 1.8 }, "only the head")
+        XCTAssertTrue(lamp.vertices.filter { $0.z < 8 }.allSatisfy { !$0.glows }, "not the mast")
+        for model in ["prop-tree", "prop-pole"] {
+            XCTAssertFalse(pack.models[try XCTUnwrap(pack.index(of: model))].vertices.contains(where: \.glows), model)
+        }
+    }
+
+    func testEveryStreetLightCastsAPoolUnderItsHead() throws {
+        let tiles = try BaseMapTiles(data: Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().appendingPathComponent("RailwayGameApp/Resources/BaseMap/taiwan.pmtiles"), options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
+        let scene = Map3DScene(world: world, baseMap: tiles)
+        let lamp = try XCTUnwrap(Map3DModelPack.standard.index(of: Map3DProp.lamp.modelName))
+        let lamps = scene.chunks.flatMap(\.props).filter { $0.model == lamp }
+        // A pool's middle: a coloured shadow vertex that is not clear.
+        let pools = scene.chunks.flatMap(\.shadows.vertices).filter { $0.color & 0x00FF_FFFF != 0 && $0.color >> 24 > 0 }
+        XCTAssertGreaterThan(lamps.count, 100)
+        XCTAssertEqual(pools.count, lamps.count, "one pool a light")
+        // Each under its own head: 2.25 m out from its foot, toward the road.
+        for instance in lamps.prefix(50) {
+            let t = instance.transform
+            let head = Map3DPoint(t[12] + t[4] * 2.25, 0, t[14] + t[6] * 2.25)
+            XCTAssertTrue(pools.contains { abs($0.x - head.x) < 0.01 && abs($0.z - head.z) < 0.01 }, "a pool under \(head)")
+        }
+        // Shadows stay black: only the pools carry a colour.
+        XCTAssertTrue(scene.chunks.flatMap(\.shadows.vertices).allSatisfy { $0.color & 0x00FF_FFFF == 0 || $0.color & 0x00FF_FFFF == Map3DProp.lampLight & 0x00FF_FFFF })
+    }
+
+    func testShopsAreLitMoreOftenThanOfficesAndOfficesThanHomes() {
+        let rows = Map3DLighting.nightWindowRows
+        XCTAssertEqual(rows.count, Map3DLighting.nightWindowRowCount * 4, "as many as the shader's rows")
+        for surface in Map3DSurface.allCases {
+            let rule = Map3DNightWindows.rule(surface)
+            XCTAssertEqual(rows[surface.rawValue * 2], rule.share, "\(surface)")
+            XCTAssertEqual(rows[surface.rawValue * 2 + 1], rule.brightest, "\(surface)")
+        }
+        let shop = Map3DNightWindows.rule(.shopEatery).share, office = Map3DNightWindows.rule(.officeGlass).share
+        let home = Map3DNightWindows.rule(.homeWindows).share
+        XCTAssertGreaterThan(shop, office)
+        XCTAssertGreaterThan(office, home)
+        XCTAssertGreaterThan(home, 0)
+        for dark in [Map3DSurface.shutter, .plaster, .roof, .concrete, .formConcrete] {
+            XCTAssertEqual(Map3DNightWindows.rule(dark).share, 0, "\(dark) has no windows to light")
         }
     }
 

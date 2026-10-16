@@ -414,9 +414,10 @@ final class Map3DMetalView: MTKView {
     /// `Map3DShaders.metal`): the matrix, then the sun's way and light, the
     /// ambient light from the sky and from the ground, the fog's colour,
     /// the eye and where the fog starts and ends, and the ground shadows'
-    /// strength (decision 232). The lights are `Map3DLighting`'s
-    /// (`sunLight`, `skyLight`, `groundLight`), worked out in
-    /// GamePresentation.
+    /// strength (decision 232) and how far the city's lights are on, then
+    /// the night windows' rules (decision 229 續). The lights are
+    /// `Map3DLighting`'s (`sunLight`, `skyLight`, `groundLight`, `lights`,
+    /// `nightWindowRows`), worked out in GamePresentation.
     private func uniformValues(_ matrix: Map3DMatrix) -> [Float] {
         let sky = Self.rgb(lighting.sky)
         func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
@@ -430,7 +431,8 @@ final class Map3DMetalView: MTKView {
             + [sky.0, sky.1, sky.2, 0]
             + [eye.x, eye.y, eye.z, 1]
             + [camera.distance * 1.6, far * 0.9, 0, 0]
-            + [Map3DShadow.strength(lighting), 0, 0, 0]
+            + [Map3DShadow.strength(lighting), lighting.lights, 0, 0]
+            + Map3DLighting.nightWindowRows
     }
 
     private static func rgb(_ colour: PopTravel.RGB) -> (Float, Float, Float) {

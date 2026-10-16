@@ -347,6 +347,36 @@ extension Map3DScene.Builder {
         }
     }
 
+    /// The pools of the street lights' light on the ground under their
+    /// heads, seen as much as the city's lights are on
+    /// (``Map3DMesh/addPool``): after the lights on the track are gone.
+    mutating func addLampPools() {
+        guard let lamp = Self.propModels[.lamp] else { return }
+        for key in props.keys.sorted() {
+            for instance in props[key] ?? [] where instance.model == lamp {
+                addLampPool(instance)
+            }
+        }
+    }
+
+    private mutating func addLampPool(_ instance: Map3DInstance) {
+        let t = instance.transform
+        let foot = Map3DPoint(t[12], t[13], t[14])
+        // The model's +y is the light's left, where its arm reaches
+        // (`Map3DInstance.prop`).
+        guard let left = Map3DPoint(t[4], 0, t[6]).normalized else { return }
+        let under = foot + left * Map3DProp.lampReach
+        let ring = Map3DProp.poolRing.map { under + $0 * Self.lampPoolRadius }
+        shadows[key(of: foot), default: Map3DMesh()].addPool(centre: onGround([under])[0], ring: onGround(ring), colour: Map3DProp.lampLight,
+                                                              strength: Self.lampPoolStrength)
+    }
+
+    /// How far a street light's pool reaches, in metres, and how strong it
+    /// is at its middle (`Web/CityView/src/world/lamplight.js`'s street
+    /// lamps light about a lamp's height round them).
+    static let lampPoolRadius: Float = 9
+    static let lampPoolStrength: Float = 0.55
+
     /// The models' places in ``Map3DModelPack/standard``.
     static let propModels: [Map3DProp: Int] = Dictionary(uniqueKeysWithValues: Map3DProp.allCases.compactMap { prop in
         Map3DModelPack.standard.index(of: prop.modelName).map { (prop, $0) }
