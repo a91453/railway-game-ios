@@ -11070,6 +11070,22 @@ swift run GameSim --data RailwayGameApp/Resources/RealWorld new-game --place tra
   - 對真的 API 跑 `ios-gate`：#746 的 commit 紅、#753 的綠、只改文件的 #747 沒有 iOS run 而綠。
 - 要在 GitHub 上跑過才知道：PR 上的等待、120 分鐘上限、自動合併真的會等。
 
+**之後的修正**（2026-10-16，CI 優化第二個 PR）：`ios-build.yml` 兩處，App、測試、存檔都不動。
+1. **手動的 `only_testing` run 不做翻譯檢查**：翻譯檢查器的自測、Xcode 字串匯出、繁中比對這三步都跳過。
+   - 手動 run 是用來修某一支 UI 測試的；PR 與 full lane 照舊會檢查翻譯。
+   - 10-14 到 10-16 的 94 次手動 run，匯出共花了 283 macOS 分鐘，和這些 run 的 UI 測試本身（301 分鐘）差不多。
+   - run 38929483452 在慢的 runner 上匯出超過 15 分鐘，整輪變紅，但它要測的兩個 class 都過了。
+2. **`SettingsUITests` 移到 full lane 的第二個 iPhone job**（`FULL_LANE_SECOND_JOB`）：
+   - 拆成兩個 job 後的 10 次 full lane，第一個 job 35–44 分，第二個 25–38 分。第一個多了專案檢查與翻譯匯出，開機也比較慢，合計約多 5 分。
+   - `SettingsUITests` 是 279–349 秒。移過去之後，估計兩個 job 都約 31–39 分，full lane 的牆鐘少約 4 分。實際的數字看合併後的 full lane。
+- **四方**：
+  - 玩家：無；
+  - 開發：手動 run 每次快約 3 分，也不會再因為和要測的東西無關的匯出逾時而紅；full lane 早約 4 分有結果，macOS 用量不變；
+  - 美術：無；
+  - 音樂：無。
+- **放棄的覆蓋**：無。手動 run 本來就只測指定的 UI 測試；翻譯在 PR 與 full lane 上照舊檢查。
+- **沒有驗證的**：actionlint 只報 `macos-26` 這個標籤不認得，那是它的版本比 runner 舊，原本就有。跳過與分配的實際效果，要看這個 PR 自己的 iOS run 和合併後的 full lane。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

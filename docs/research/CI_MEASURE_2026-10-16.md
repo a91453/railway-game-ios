@@ -124,7 +124,7 @@
 
 每個方案都附玩家、開發、美術、音樂四方各一行。作者 2026-10-14 起由 session 自己決定；作者保留的事項另外列出。
 
-### A. PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build（PR #1，決策 265 第 1 點）
+### A. PR 的 `Swift CI (gate)` 等同一個 commit 的 iOS App Build（#756，決策 265 第 1 點，已合併）
 
 - **做法**：gate 在 Swift 判定之後加一步 `swift-shards.sh ios-gate`。
   - 找同一個 head commit 最新的 `ios-build.yml` PR run，等它跑完；成功或跳過才綠。
@@ -141,7 +141,7 @@
   - **只靠規則（決策 187 已經寫了「合併前確認 iOS 綠」）**：今晚證明規則擋不住。
 - **代價**：iOS 失敗、重跑通過之後，要再對 CI 的那一輪按 Re-run failed jobs，gate 才會重新判。gate 的訊息會這樣寫。
 
-### B. 手動 run 不做翻譯匯出；full lane 的第二個 job 多跑 `SettingsUITests`（PR #2）
+### B. 手動 run 不做翻譯匯出；full lane 的第二個 job 多跑 `SettingsUITests`（第二個 PR，決策 265 的之後的修正）
 
 - **做法**：
   - `only_testing` 的 run 跳過翻譯檢查的三步。這類 run 是為了修某一支 UI 測試，翻譯在 PR 和 full lane 都還會檢查。每次約省 3 分。
@@ -152,7 +152,7 @@
   - 美術：無。
   - 音樂：無。
 
-### C. full lane 不在每批合併後手動跑（HANDOFF §1.2，隨 PR #1 的文件）
+### C. full lane 不在每批合併後手動跑（HANDOFF §1.2，隨 #756 合併）
 
 - **做法**：
   - 合併後由 `ios-full-lane.yml` 自己啟動（最多每三小時一次，main 的 push 會觸發，另有排程補位）；
