@@ -31,17 +31,17 @@ struct MapAttractionMarks: View {
                           at.y > Double(insets.top) + 40, at.y < viewport.height - Double(insets.bottom) else { return nil }
                     return SightMarks.Mark(id: sight.id, stars: session.world.stars(of: sight), x: at.x, y: at.y)
                 })
-                ForEach(sights, id: \.id) { sight in
+                // Only the marks shown, not every sight: the whole of Taiwan
+                // has 214, and this is worked out again as the world moves.
+                ForEach(sights.filter { shown.contains($0.id) }, id: \.id) { sight in
                     let at = camera.screenPoint(of: sight.point)
-                    if shown.contains(sight.id) {
-                        mark(sight)
-                            .opacity(isPassive ? 0.5 : 1)
-                            .allowsHitTesting(!isPassive)
-                            .accessibilityHidden(isPassive)
-                            .fixedSize()
-                            .frame(width: 0, height: 0, alignment: .center)
-                            .position(x: at.x, y: at.y)
-                    }
+                    mark(sight)
+                        .opacity(isPassive ? 0.5 : 1)
+                        .allowsHitTesting(!isPassive)
+                        .accessibilityHidden(isPassive)
+                        .fixedSize()
+                        .frame(width: 0, height: 0, alignment: .center)
+                        .position(x: at.x, y: at.y)
                 }
             }
         }
