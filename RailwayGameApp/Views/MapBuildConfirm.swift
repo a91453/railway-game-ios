@@ -314,6 +314,22 @@ private struct BuildConfirmation {
             confirm = { _ = session.buyChosenMapTile() }
             return
         }
+        // Decision 247: the track card's upgrade, where the track was
+        // tapped, with its whole price.
+        if session.tool == .select, let preview = session.trackUpgradePreview, let point = session.selectedPoint {
+            start = nil
+            flaggedEnd = nil
+            anchor = point
+            clearance = 18
+            cost = preview.cost
+            canConfirm = preview.problem == nil && preview.cost != nil
+            kind = .track
+            caption = preview.problem ?? preview.note
+            showsCatchment = false
+            cancel = { session.cancelTrackUpgrade() }
+            confirm = { session.buildTrackUpgrade() }
+            return
+        }
         switch session.tool {
         case .network where session.networkMode == .platform:
             // Decision 108: the place picked for a platform, and who lives

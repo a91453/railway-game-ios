@@ -112,7 +112,7 @@ extension GameSession {
     /// A single crossover from the track at `from` to the track at `to`,
     /// leaving each along it toward the other: the curve the network tool
     /// lays between two places on two tracks.
-    private func crossoverStretch(from: WorldCoordinate, to: WorldCoordinate, in world: GameWorld) -> PlayerCommand.TrackStretch? {
+    func crossoverStretch(from: WorldCoordinate, to: WorldCoordinate, in world: GameWorld) -> PlayerCommand.TrackStretch? {
         guard let start = world.trackEdgePoint(near: from.plan, within: 16), let end = world.trackEdgePoint(near: to.plan, within: 16),
               start.edge != end.edge,
               let first = world.position(of: .track(start), height: 0), let last = world.position(of: .track(end), height: 0),
