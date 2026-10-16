@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Goal met",
+  "source": "Decision 256: the metro chime's rising C5 E5 G5 C6 (scores/chime-metro.score.json), plucked a sixteenth apart at 125 bpm and landing on a bell; hand written, kept to the chime rules",
+  "tempo": 125,
+  "beatsPerBar": 4,
+  "length": 2400,
+  "motif": 3,
+  "fadeOut": 480,
+  "tracks": [
+    {
+      "voice": "pluck",
+      "gain": 80,
+      "pan": 0,
+      "notes": [
+        {"pitch": 72, "start": 0, "length": 240, "velocity": 90},
+        {"pitch": 76, "start": 240, "length": 240, "velocity": 100},
+        {"pitch": 79, "start": 480, "length": 240, "velocity": 110},
+        {"pitch": 84, "start": 720, "length": 1680, "velocity": 120}
+      ]
+    },
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 84, "start": 720, "length": 1680, "velocity": 120}
+      ]
+    }
+  ]
+}

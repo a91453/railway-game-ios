@@ -6,7 +6,8 @@ Instructions for Claude Code sessions in this repository.
 
 A native iPhone / iPad railway and city management game (long-term goal: gameplay
 depth close to the A-Train series). Current status, doc map and decision
-index: `docs/OVERVIEW.md`; the one priority list:
+index: `docs/OVERVIEW.md`; who is doing what, what the owner said to leave
+alone, and every handoff: `docs/HANDOFF.md`; the one priority list:
 `docs/research/NEXT_PRIORITIES_2026-10-12.md`; stage history: `docs/ROADMAP.md`.
 Later stages port the owner's web transport game (docs/WEB_REFERENCE_STUDY.md)
 and may also absorb implementation and data from the owner's
@@ -315,6 +316,12 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (`send_message` to that session, or ask the user). Comment again when the
   PR opens, the scope changes, it merges, or it is dropped (release its
   numbers). Only comment; never edit the issue's body.
+- Handoffs live on `main`, in `docs/HANDOFF.md` (owner, 2026-10-16). Read it
+  before starting; when a session stops with work half done, left for later
+  or passed to another session, write that into `docs/HANDOFF.md` (or the
+  decision's next step, with a line there pointing to it) in its last pull
+  request. A handoff only in a `send_message`, a pull request's description
+  or an #231 comment is lost to the next session.
 - Sessions comment on GitHub as the owner's account, so never write
   `@claude` in an issue, comment or review unless you mean to start
   `claude.yml`: every mention is a run billed to the API key.
