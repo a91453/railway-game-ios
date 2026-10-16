@@ -22,7 +22,7 @@ final class RealWorldMapUITests: XCTestCase {
         let taipei = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
         XCTAssertTrue(app.scrollUntilShown(taipei, in: app.collectionViews.firstMatch), "Missing button: place.tra-taipei")
         XCTAssertEqual(taipei.label, "Taipei", "The references' places are listed")
-        taipei.tap()
+        app.tapMiddle(of: taipei)
 
         tappable(app.buttons.matching(identifier: "realWorld.start"), name: "realWorld.start").tap()
 
