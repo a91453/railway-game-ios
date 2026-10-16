@@ -1972,7 +1972,7 @@ W2 要接上真實車速與以秒計的停站（ROADMAP 的 Stage W；[對照文
 
 第二版內部 TestFlight（0.2.0）之前，App 加上繁體中文（台灣用語）。英文保留為來源語言，跟著系統語言切換。只換畫面文字，不改任何規則或存檔。
 
-- **語言從哪裡來**：iOS 在啟動時依使用者的語言設定，從 App 有的語系（`en`、`zh-Hant`）選一個；App 讀 `Bundle.main.preferredLocalizations.first`，換成 `DisplayLanguage` 交給 `GameSession`。String Catalog 用的也是同一個語系，所以兩邊的文字一致。使用者在設定改語言時 iOS 會重新啟動 App，所以 `GameSession.language` 是 `let`。
+- **語言從哪裡來**：iOS 在啟動時依使用者的語言設定，從 App 有的語系（`en`、`zh-Hant`）選一個；App 讀 `Bundle.main.preferredLocalizations.first`，換成 `DisplayLanguage` 交給 `GameSession`。String Catalog 用的也是同一個語系，所以兩邊的文字一致。使用者在設定改語言時 iOS 會重新啟動 App，所以 `GameSession.language` 是 `let`。開始畫面的語言選單（決策 257）寫的是同一個設定，下次啟動才生效。
 - **GamePresentation（Linux 上測試）**：
   - `DisplayLanguage`（`english`、`traditionalChinese`）；`init(localization:)` 把任何 `zh` 開頭的識別碼對到繁體中文，其他都是英文。
   - 每個產生文字的函式都明確接收語言（`playerMessage(in:)`、`tileSummary(at:in:)`、`displayText(in:)` 等），沒有全域狀態，文字仍是世界與語言的純函數，兩種語言都在 Linux 上測試。
@@ -2258,7 +2258,7 @@ Stage C 的測試輔助：每次開 App 都要重蓋路網，是實機測試成�
 **App**：
 
 - **開始畫面**（`StartView`）：繼續（顯示存檔的遊戲時間、現金與規模，以及存檔時間）、新遊戲、示範地圖、存檔清單（點一下讀取、滑動刪除；讀不進來的寫出原因）、匯入（「檔案」App）。
-- **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡是一個打開「設定」的按鈕。
+- **語言**：參考的首頁有語言選單；iOS 的每個 App 的語言在「設定」裡，所以這裡原本是一個打開「設定」的按鈕。決策 257 改成 App 內的語言選單。
 - **遊戲選單**（HUD）：儲存遊戲、匯出存檔（分享時才寫出檔案）、回到開始畫面（先自動存檔）。
 - **`-demo-layout` 啟動參數**：仍然只有 Debug 有，`release-archive.yml` 確認 Release 的執行檔不含它（參數名太短，Swift 把 15 位元組以內的字串放在程式碼裡而不是二進位的資料裡，直接找不到；所以改找 Debug 專用的 `DebugLaunch.marker`，`ios-build.yml` 也確認 Debug 的 App 找得到它）；示範地圖本身在 Release 由開始畫面開啟。
 
@@ -10292,6 +10292,36 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 決策 254 §4 剩下的回報：過關的星星與一顆星一個音、解鎖新工具時按鈕跳一下。這些屬於第 4 個 PR（關卡框架），可以沿用 `GoalMetCheck` 的做法，旋律照 `scores/goal-met.score.json` 的寫法加進 `TUNES`。
 - 沒有路線帳的舊存檔，站上不冒車資。要補的話，從 `LineAccounts` 以外的地方讀每站的車資，畫面層就做得到。
 
+### 257. 開始畫面的語言選單：App 內選語言，下次開啟生效
+
+作者回報（2026-10-16，TestFlight）：「語言跳出去設定後好像又沒有可選擇選項了，之前還有英文。」
+
+**查到的**（origin/main 5e3699c）：
+- 打包設定沒有變：`knownRegions` 有 `en`、`zh-Hant`，兩個 `.lproj/InfoPlist.strings` 與 `Localizable.xcstrings`（`sourceLanguage` 為 `en`）都在，專案與這些檔案自 #622 之後沒有改過；`59bda878` 只刪了 13 個沒用的 key，不影響語系。
+- iOS 的規則：設定裡 App 頁面的「偏好的語言」那一列，只有在裝置的偏好語言清單有兩種以上時才出現。裝置只留一種語言時（例如只留繁體中文），那一列就不見了，玩家沒有地方選英文。原本的「Language」按鈕只打開設定，所以等於沒有作用。
+
+**做法**：
+1. 開始畫面的「Language」改成選單（`start.language`）：「跟隨 iPhone」、「English」、「繁體中文」；兩種語言各用自己的文字寫，看不懂目前語言的玩家也找得到。
+2. 選擇寫進 App 自己的 `AppleLanguages`（和 iOS 設定寫的是同一個值）；「跟隨 iPhone」把它拿掉。iOS 在 App 啟動時讀它，所以下次開啟才換；換了的話跳出提示，請玩家從多工畫面關掉遊戲再開。目前的選擇只從 App 自己的設定讀（不看裝置與啟動參數），由 `LanguageChoice`（GamePresentation）把選擇和 `AppleLanguages` 互換。
+3. CI 檢查打包出來的 App 同時有 `en.lproj`、`zh-Hant.lproj` 的 `InfoPlist.strings` 與 `zh-Hant.lproj/Localizable.strings`（`.github/scripts/check-app-localizations.sh`）：`ios-build.yml` 查 Debug 的模擬器 App，`release-archive.yml` 查 Release 的封存。
+
+**四方**：
+- 玩家：不用先到 iOS 設定加第二種語言，開始畫面就能選；選完知道要重開。
+- 開發：只動 App 與 GamePresentation（Linux 測試）；GameCore、存檔、golden 都不動；`DisplayLanguage.app` 照舊讀 iOS 選的語系，所以 String Catalog 與程式內文字一定一致。
+- 美術：沿用原本的膠囊按鈕與地球圖示，選單用系統的樣子。
+- 音樂：無。
+
+**沒選的**：
+- 不重開就立刻換：String Catalog 的文字由 iOS 在啟動時決定語系，立刻換只會換掉程式內的那一半，畫面會中英混雜。
+- 保留打開設定並加一行說明：玩家得先到「一般 → 語言與地區」加第二種語言，步驟太多，而且回報的正是這裡找不到。
+- 用 `exit()` 自動關掉 App：Apple 的規範不讓 App 自己結束。
+
+**測試**：
+- Linux：`LanguageChoiceTests`（每個選擇寫的 `AppleLanguages`、從 iOS 設定寫的值讀回選擇、選單名稱、什麼時候提示重開）。
+- UI：`StartSaveFlowSmokeTests.testLanguageOpensTheGamesLanguageMenu`（選單有三個選項、點得到），跑在完整測試（決策 199），不進 gate。
+
+**參考**：參考庫 `Ci` 的首頁有語言選單（`home.language`），網頁版立刻換語言；iOS 的語系在啟動時決定，所以只沿用「首頁就能選」的做法。外部專案沒有用到。
+
 ### 258. 簡單規則當新遊戲的預設，寫實是選項
 
 2026-10-16。決策 254 的第一步（CORE_LOOP §3、§7 第 1 個 PR）。號碼依工作登記 #231：main 上最大是 254；255（死結修正）、256（回饋第一批）、257（語言選單）已登記，取 258（原登記 256，和回饋第一批同時登記，照先後改號）。GameCore、存檔版本、golden schema 都不動。
@@ -10492,3 +10522,122 @@ swift run GameSim --state /tmp/game.json load report.json then apply report.json
     | OpenStreetMap 整包檔（ODbL） | `tools/tra-yards/find_tra_yards.py` → `TRADemo.depots` 的宜蘭、蘇澳新 |
     外部專案：沒有取用。程式碼是本專案自己的。
 13. **沒有驗證的**：實機上的開啟時間與畫面（`openTRADemo` 照高鐵示範在背景建）、示範選單在 iPhone 橫放時的捲動（新按鈕放在「簡單示範」之後，UI 測試點的按鈕位置不變）；macOS CI 編譯 App。
+
+### 259. 3D 地圖的行人、機車、汽車：拉近才出現，人數跟著旅客與城鎮
+
+2026-10-16。作者：「之前想要的 3D 跟現在實作的還是有點差異」，附了一張目標畫面：明亮的台灣街景，廟埕站滿人，路上有機車、汽車，騎樓有貨物。這張圖就是 F 台灣版＋（`docs/art/3d-style-2026-10-13/ftwplus-street.jpg`）的「＋」。遊戲規劃 session 派工，分四步，一次一個 PR：①行人與車輛（這一步）②店面與生活細節 ③廟埕與牌樓 ④主地圖拉近就變成傾斜的 3D。號碼依工作登記 #231：原本取 256，撞號後由規劃 session 排定為 259。存檔版本、golden schema 不動；GameCore 不動。
+
+1. **模型**（`Sources/GamePresentation/Map3DStreetLife.swift` 的 `Map3DStreetModel`，放進 `Map3DModelPack.standard` 街道設施之後）。都是本專案自己的方塊造型，平塗、頂點色：
+   - **行人**：1.68 m，兩種姿勢（站著、跨步），走路時一步換一次。上衣與袖子是實例的顏色（alpha 0），十種亮色；褲子、膚色、頭髮固定。每個 70 個三角形。
+   - **機車**：1.8 m，車身是實例的顏色（七種）。騎士穿藍衣、戴白色安全帽；載兩人的那種，後座穿紅衣、戴暖黃安全帽。
+   - **汽車**：轎車 4.4 m、廂型車 4.6 m，比例照本 repo `Web/CityView/src/world/traffic.js` 的 sedan 與 van。車身是實例的顏色：白、銀最多，其次紅、深灰、藍，以及計程車的黃。
+   - 車燈和尾燈用 `Map3DVertex.glowing` 標記（決策 229 續），晚上會亮。
+2. **在哪裡**：蓋場景時一起算好，存在 `Map3DScene.streetLife`。
+   - **車道**（`Lane`）：
+     - 實景地圖：底圖的每條道路，切在自己的圖磚範圍內，每 16 m 貼一次地面。
+     - 沒有底圖的地圖：城市地塊之間的 64 m 格線。只取旁邊有建物、不碰軌道的那幾段。
+       - 這些街道也畫出來，照實景地圖三級道路的畫法（決策 241）：藏青路面寬 7 m、黃色中線、兩側各 2 m 的人行道，任何距離都畫。原本車會像停在空地上（遊戲規劃 session 看預覽時指出）。
+     - 車速照 `traffic.js`：速限 × 0.8（巷弄 × 0.6），限制在 4.5–15 m/s。台灣的速限：幹道 70、主要到三級 50、巷弄 40、高速公路 100。
+     - 車量：每 100 m 每個方向，幹道與主要道路 4 台、次要 3.2、三級 2.4、巷弄 1.2、高速公路 3。再乘 0.25 + 0.75 × 城鎮熱度。服務道路沒有車。
+     - 高速公路沒有機車；幹道只在城鎮熱度 0.5 以上才有機車。
+   - **人**（`Spot`）：
+     - 月台上：人數照候車人數。雨棚改成只蓋月台中間的五分之三（台鐵多數月台是這樣），否則從上面看不到候車的人。
+     - 車站外（月台離軌道那一側再外 5 m）：人數照一天的旅次。
+     - 店面前：透天厝店面兩排的前面、塔樓裙樓四周。
+     - 廟前的廟埕。
+     - 實景道路的人行道兩側。
+     - 種子都依世界的位置取（`map3DRandom`），鋪軌讓場景原點移動時，人和車不會跳。
+3. **人數與車數怎麼依遊戲變化**（GamePresentation，Linux 測試）：
+   - 都用 `shown = 上限 × (1 − e^(−量 ÷ 尺度))`：沒有就是 0，一開始增加得快，永遠不超過上限。生意好看得出來，但不會塞滿畫面。
+   - **月台**：每個月台的候車人數（車站總候車 ÷ 月台數），尺度 150，上限 36 人。
+   - **車站外**：昨天與今天到目前為止，取經過人次（`stationFlow` 的 `people`）較多的那天，尺度 6,000，上限 58 人，再加 2 人。
+   - **城鎮熱度** `townLevel`：周圍 9 格（64 m）的住戶加工作，`1 − e^(−n ÷ 2,400)`。實景道路的車量與人行道人數用它。程序化城市用地塊的密度。
+   - 店面前每 40 m 有 3 + 2 × 密度人。廟埕 12 人。
+   - **晚上**（`Map3DLighting.lights`）：店面與人行道最少剩一半。車站、廟照舊（#690 交接的建議）。
+4. **每一幀**（`Map3DStreetLife.frame`）：
+   - 每個人、每台車的位置只由時鐘和自己的種子算出，什麼都不存。
+     - 人在自己那段路上來回走，速度 0.98–1.5 m/s，照參考庫街景的 `walkSpeed`。
+     - 站著的人朝向路線的橫方向（月台、店面、廟）。
+     - 同一條車道、同一方向的車都同速、等距，間隔至少 9 m，所以不會撞在一起。車靠右；機車再往路邊靠 1.1 m。
+     - 車到道路兩端的 4 m 內會縮小進出。
+   - **只在拉近時畫**：
+     - 鏡頭距離 500 m 內才有人，1,300 m 內才有車。
+     - 只畫目標點周圍一圈內的：人是 120 + 0.7 × 距離，車是 200 + 0.8 × 距離。最外 15% 的那一圈慢慢縮小到消失。
+     - 從最近的地點與道路開始，畫到上限為止。
+   - **減少動態效果**打開時，大家停在原地，不走、不跨步（motion skill §3「不自動循環播放」）。列車照常跑，因為那是遊戲狀態。
+5. **App**（`Map3DMetalView`、`Map3DPreviewScreen`）：
+   - 每幀把實例依模型排序，每種模型一次 draw call，用列車的 `map3dInstancedVertex`。著色器沒有改。
+   - 實例寫進三個預先開好的緩衝區，輪流用（`DispatchSemaphore(3)`），不是每幀新開一個。這是決策 229–244 交接的建議。
+   - 車站人數 `Activity` 在列車變動時（`onChange(of: trains)`）和列車一起更新。
+   - 右上角的細節多一行：人數、車數、目前的份量。
+6. **效能與降級**：
+   - 份量 `Map3DStreetDetail`，三級：
+     - `full`：1,400 人、400 台；
+     - `reduced`：500 人、150 台；
+     - `off`：不畫。
+   - 開始時依 GPU 決定：Apple 8 以上（A15、iPhone 13 起）是 `full`；Apple 5–7（A12–A14）是 `reduced`；更舊的是 `off`。
+   - 畫面上有人或車、而且連續三個半秒低於目標幀數的 75%（60 fps → 45）時，降一級。這一次開啟中不再升回去。
+
+   量測（Linux release，每幀；兩鎮地圖的車站旁、台北車站的空白實景新局）：
+
+   | 場景 | 份量 | 鏡頭距離 | 人 | 車 | 多的 draw call | 多的三角形 | CPU |
+   | --- | --- | --: | --: | --: | --: | --: | --: |
+   | 兩鎮 | full | 150 m | 935 | 297 | 6 | 108,520 | 0.50 ms |
+   | 兩鎮 | full | 300 m | 1,392 | 400 | 6 | 155,540 | 0.62 ms |
+   | 兩鎮 | full | 1,200 m | 0 | 400 | 4 | 58,650 | 0.08 ms |
+   | 兩鎮 | reduced | 300 m | 500 | 150 | 6 | 56,150 | 0.22 ms |
+   | 台北 | full | 150 m | 346 | 326 | 6 | 72,030 | 0.49 ms |
+   | 台北 | full | 300 m | 467 | 400 | 6 | 92,190 | 0.53 ms |
+   | 台北 | reduced | 300 m | 467 | 150 | 6 | 55,090 | 0.26 ms |
+
+   - 最多多 6 次 draw call、約 16 萬個三角形，在決策 229 的預算內（300 次 draw call、30–50 萬個三角形）。
+   - 每幀的 CPU 在 Linux 上 0.6 ms 以內；iPhone 上沒量過。
+   - 場景建構多約 0.01–0.03 秒：兩鎮 123 條車道、368 個地點；台北 802 條車道。
+   - 實機的幀數 **UNVERIFIED**，等作者在 TestFlight 回報。右上角的細節會顯示人數、車數與份量。
+
+**四方**（選「方塊人＋機車＋汽車都上，人數跟著遊戲」；前後對照與份量少的預覽在 `docs/art/map3d-street-life-2026-10-16/`）：
+- 玩家：
+  - 拉近就看到月台上候車的人、站前的人潮，路上有機車和汽車，台灣街頭的樣子；
+  - 車站生意越好，月台與站前的人越多，一眼看得出經營的成果；
+  - 從遠處看（建造時），這些都不畫，不擋路網。
+- 開發：
+  - 規則全在 GamePresentation，有 Linux 測試；GameCore、存檔、golden 不動；
+  - 沿用列車與街道設施的實例化繪製，著色器不動；
+  - 位置每幀用式子算，不存狀態，沒有亂數。
+- 美術：
+  - 方塊人、平塗、遊戲的配色，照 F 台灣版＋的比例：行人 1.68 m、機車、白色安全帽；
+  - 一個人 70 個三角形。美術 session 的示意圖一個人 500–700 個，手機放不下那麼多；
+  - 衣服、車身每個實例換色，畫面熱鬧但不亂。
+- 音樂：無。之後可以加街頭的環境音，例如機車聲、廟口人聲（缺口）。
+
+另外考慮過、沒有選的：
+- **只放人、不放車**：作者的目標畫面一半是機車和汽車，台灣街頭的辨識度一半在機車。
+- **讀參考庫 `street-agents.glb` 的模型**：作者否決過照搬模型（決策 230、art-style §7）。它的人一個約 1,600 個三角形，比這裡多 20 倍。
+- **移植網站 `traffic.js` 的跟車與紅綠燈**：要每幀模擬、保存狀態。第一步先用不會撞車的等速等距，跟車、紅綠燈、路口轉彎列為缺口。
+
+**參考**：
+
+| 參考 | → 目標 |
+| --- | --- |
+| 參考庫 `Railway/street_scene_reference_clean/source/models/street-agents.glb`（只量節點範圍：`person_torso` 0.35×0.66、`person_legs` 0.61、`car__car_body` 1.83×4.35） | `Map3DStreetModel.model()` 的比例；形狀是自己的方塊 |
+| 參考庫 `.../source/assets/scene.js`：`walkSpeed: range(.98, 1.5)`、`height: range(1.48, 1.88)`、`maxSpeed = speedLimit × range(.86, 1)` | 行人 0.98–1.5 m/s、身高 0.88–1.12 倍；同一條車道同速 |
+| 本 repo `Web/CityView/src/world/traffic.js`（MIT）：`TYPES` 的 sedan、van 尺寸；`LANE` 3 m；台灣靠右（`keep`）；`speed = clamp(maxspeed × (minor ? .6 : .8) ÷ 3.6, 4.5, 15)` | `Map3DStreetModel.car`／`.van`、`Lane` 的靠右與車速 |
+| 美術 session 的 F 台灣版＋ 交接（2026-10-16）：行人與機車的比例、白色安全帽、遠近門檻 150–400 m 的建議 | 模型比例、人只在 500 m 內 |
+| #690 交接：晚上人少一點，車站、廟例外；車燈用 glowing | `thinsAtNight`、車燈 |
+
+外部專案：沒有用到。程式碼是本專案自己的。
+
+**缺口**（參考庫沒有，或這一步沒做）：
+- 跟車、紅綠燈、路口轉彎：車到道路端點就縮小消失。
+- OSM 的單行道：底圖的 z14 沒有 oneway，雙向分隔的道路兩邊都畫成雙向。
+- 人車的地面陰影、車燈照在路面的光。
+- 人和建物、行道樹的碰撞：人只走在自己那條線上。
+- 雨天撐傘、平交道前排隊、公車：之後。
+
+**驗證**：
+- **VERIFIED**（Linux，Swift 6.4）：
+  - `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；
+  - `Map3DStreetLifeTests` 12 個測試通過：模型大小、人數規則、降級、兩鎮的車道（路面畫在車輪下）與車站、拉近才有、減少動態、車靠右且不相撞、雨棚留出月台兩端、台北的道路、晚上人少；
+  - `Map3DModelTests`、`Map3DPropsTests`、`Map3DTests` 通過。
+- **UNVERIFIED LOCALLY**（要 macOS／Xcode CI）：`Map3DMetalView`、`Map3DPreviewScreen` 的編譯。
+- **UNVERIFIED**（要 TestFlight 實機）：畫面、幀數，以及舊機型降級是否生效。

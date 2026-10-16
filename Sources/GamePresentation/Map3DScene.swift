@@ -67,6 +67,8 @@ public struct Map3DScene: Sendable {
     /// The part of the world the scene covers, in world units.
     public let region: WorldRegion
     public let chunks: [Chunk]
+    /// Decision 259: where its people walk and its vehicles drive.
+    public let streetLife: Map3DStreetLife
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -141,12 +143,15 @@ public struct Map3DScene: Sendable {
         builder.target = .near
         let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: cleared) } ?? []
         builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
+        // Decision 259: with no base map, the streets between the lots.
+        if real == nil { builder.addGridStreets(builder.builtLots, clearOf: cleared) }
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: cleared) }
         builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
         builder.target = .base
         builder.addPlacedBuildings()
         chunks = builder.chunks()
+        streetLife = builder.streetLife
     }
 }
 
@@ -311,6 +316,10 @@ extension Map3DScene {
         var target = Target.base
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
+        /// Decision 259: where people walk and vehicles drive, and the
+        /// city's built lots (by 64 m cell) and their density.
+        var streetLife = Map3DStreetLife()
+        var builtLots: [ChunkKey: Int] = [:]
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
@@ -678,15 +687,30 @@ extension Map3DScene {
                     if blocked(-1), !blocked(1) { side = 1 }
                 }
                 let offset = side * (Self.platformEdge + width / 2)
+                // Decision 259: its waiting crowd, and the station's
+                // passengers outside.
+                addStationLife(line: line, offset: offset, width: width, station: platform.platform.station)
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (Self.platformEdge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
-                    mesh.addRibbon(along: line, width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
+                    // Decision 259: the canopy over the middle three fifths,
+                    // as most of TRA's are, so the ends show who waits.
+                    mesh.addRibbon(along: Self.middle(of: line, share: 0.6), width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
                                    top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
                 }
             }
+        }
+
+        /// The middle `share` of `line`, by length.
+        static func middle(of line: [Map3DPoint], share: Float) -> [Map3DPoint] {
+            guard let path = Map3DStreetLife.Path(line) else { return line }
+            let from = path.length * (1 - share) / 2, to = path.length - from
+            var points = [path.at(from).point]
+            for (point, distance) in zip(path.points, path.distances) where distance > from && distance < to { points.append(point) }
+            points.append(path.at(to).point)
+            return points
         }
 
         // MARK: Tunnel portals
@@ -741,6 +765,7 @@ extension Map3DScene {
                     }
                     continue
                 }
+                if target == .near { builtLots[ChunkKey(column: lot.column, row: lot.row)] = lot.density }
                 switch lot.use {
                 case .residential, .commercial:
                     if lot.density <= 2 {
@@ -890,6 +915,13 @@ extension Map3DScene {
             }
             // Decision 232: one shadow round both rows.
             addShadow(centre: base, forward: Map3DPoint(1, 0, 0), length: side - 1, width: 2 * depth + 1, spread: 3, darkness: 0.3)
+            // Decision 259: shoppers along the shops' fronts.
+            if shops {
+                for facing: Float in [-1, 1] {
+                    let out = facing * (depth + 1.7)
+                    addShopLife(from: base + Map3DPoint(-side / 2 + 1, 0.05, out), to: base + Map3DPoint(side / 2 - 1, 0.05, out), density: density)
+                }
+            }
         }
 
         /// A block of flats, offices or a tower: density 3 a slab of 7–16
@@ -948,6 +980,14 @@ extension Map3DScene {
                         Self.addRoofPlant(&mesh, on: base + Map3DPoint(0, 9 + 3.3 * floors, 0), forward: Map3DPoint(0, 0, -1),
                                           length: footprint * 0.55, width: footprint * 0.55, r: r, salt: 30)
                     }
+                }
+            }
+            // Decision 259: shoppers round a tower's shops.
+            if density >= 4, facade != .officeGlass {
+                let half = max(side - 4, 8) / 2 + 1.7
+                for (a, b) in [((-1, -1), (1, -1)), ((1, -1), (1, 1)), ((1, 1), (-1, 1)), ((-1, 1), (-1, -1))] as [((Float, Float), (Float, Float))] {
+                    addShopLife(from: base + Map3DPoint(a.0 * half, 0.05, a.1 * half), to: base + Map3DPoint(b.0 * half, 0.05, b.1 * half),
+                                density: density)
                 }
             }
             // Decision 232: the shadow round its foot, wider under a taller

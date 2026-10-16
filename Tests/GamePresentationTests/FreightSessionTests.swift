@@ -116,6 +116,49 @@ final class FreightSessionTests: XCTestCase {
         XCTAssertNil(empty.waitingText(in: .english))
     }
 
+    /// Handoff §7.1 (PR319_400 §4-7): a freight train taken off its line
+    /// keeps its cargo until the next whole hour, and for that hour its
+    /// load read "riding 0" against a passenger capacity. While it has
+    /// cargo on board its load is tons.
+    func testAFreightTrainTakenOffItsLineWithCargoStillSaysTons() throws {
+        let track = TestLine(tiles: 7)
+        let alpha = StationID(rawValue: 1), gamma = StationID(rawValue: 2), main = LineID(rawValue: 1)
+        var world = try GameWorld(
+            bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: 100_000_000, costs: testCosts)
+        )
+        try track.build(in: &world)
+        try track.buildStation(named: "Alpha", beside: 1, at: 0, in: &world)
+        try track.buildStation(named: "Gamma", beside: 5, at: 0, in: &world)
+        try world.setLand([LandCell(row: 0, column: 0, use: .industrial, residents: 0, jobs: 40_000)])
+        world.setEconomyMode(.management)
+        world.enableFreight()
+        try world.buildFreightFacility(at: alpha)
+        try world.buildFreightFacility(at: gamma)
+        try world.createLine(named: "Goods", stops: [alpha, gamma])
+        try world.setLinePerformance(main, to: TrainPerformance(acceleration: 125, braking: 100, topSpeed: 1))
+        try world.setLineServiceWindow(main, to: .allDay)
+        try world.setLineFreight(main, to: true)
+        try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
+        let train = try world.purchaseTrain(named: "T").id
+        try world.placeTrain(train, at: track.at(1, facingEast: true))
+        try world.setTrainMovementRate(train, to: 1_024)
+        try world.assignTrain(train, to: main)
+        world.setSpeed(.normal)
+        for _ in 0..<(12 * 60) where world.cargoOnBoard(of: train) == 0 {
+            try world.advance(ticks: 1)
+        }
+        let tons = world.cargoOnBoard(of: train)
+        XCTAssertGreaterThan(tons, 0, "loaded at Alpha")
+
+        try world.unassignTrain(train)
+        XCTAssertFalse(world.isFreightTrain(train), "on no line")
+        XCTAssertEqual(world.cargoOnBoard(of: train), tons, "the cargo is still on board")
+        let load = try XCTUnwrap(world.trainLoadInfo(of: train))
+        XCTAssertTrue(load.isFreight)
+        XCTAssertEqual(load.passengerCount, tons)
+        XCTAssertEqual(world.loadText(of: train, in: .english), "\(tons) t aboard · \(load.percentage)%")
+    }
+
     /// Building materials (decision 156): a new game has them; the station
     /// panel's text and the session's command to send them.
     func testBuildingMaterialsText() throws {
