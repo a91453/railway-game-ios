@@ -10275,6 +10275,11 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **參考**：參考庫沒有死結的偵測或解除（決策 58 已記）；`Railway/site_archive_clean/rail-3d/physical/turnbacks.js` 只有阿里山的排定折返（站名清單），不是調度。外部只看想法：OpenTTD（GPL-2.0，不抄程式）的 path signal 預約整條路、單向閉塞，在沒有待避的單線上一樣會塞住，它沒有自動折返；真實鐵路的「區間折返」是調度員的做法。程式是本專案自己的。
 
+**下一步**（也記在 `docs/HANDOFF.md` 第 5 節）：
+- 列車面板還沒說「在 A 提早折返」：玩家只看得到第二條線沒到 B。之後可在 `routeWaitText` 加一句，兩種語言。
+- 高鐵的長進路／閉塞區間死結（#669）不在這裡：班次是單向的，用不到折返。
+- 決策 254 方向 2 的自動加待避線，才能讓第二條線全程跑到 B。
+
 **驗證**：VERIFIED（Linux，Swift 6.4）：`SharedSingleTrackTests`（main 上失敗：第 6 分鐘起死結；修正後一天內不卡，兩列車都繼續停靠）、`DeadlockTests`、`DeadlockPropertyTests`、`IdleTrainDeadlockTests`、`FollowerDeadlockTests`、`SingleTrackCapacityTests`、`GoldenScenarioTests`、`SavedGameTests`、`ReplayFixtureTests`；`CoreLoopBaselineReportTests` 的數字見 CORE_LOOP §1.2 的補記。
 
 ## 目前規則摘要
