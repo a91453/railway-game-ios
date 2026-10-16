@@ -18,7 +18,7 @@
 | 角色 | 現在的 session | 做什麼 | 交接 |
 | --- | --- | --- | --- |
 | 遊戲規劃（決策） | session_01V1xd3H9vNkuZoSA3czNfGm（2026-10-16 起；前任 session_018D6gYU1yiZMtxSmNNU1K17，對話太長交接） | 從玩家、開發、美術、音樂四個角度決定優先順序與設計，開實作 session 並派工，寫 TestFlight 的 What to Test，維護 NEXT_PRIORITIES、PLAYER_FEEDBACK 與這份 | 第 1.1 節 |
-| 合併協調 | session_016sNs4eeZwga9hz1CCHkpmX | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
+| 合併協調 | session_01QoA24EvFCFbmbcM1EwaZT7（2026-10-16 起；前任 session_016sNs4eeZwga9hz1CCHkpmX。作者本人確認授權前只巡查、不合併） | 照批次規則合併、發 GameCore CI 名額、看 main 的 CI 與 full lane、發版前檢查 | 第 1.2 節 |
 | 派工（玩家回報與 bug） | session_01AaAj4wvJMxJQuLWAoYu6S8 | 收作者轉來的回報與 bug，開修正 session | 第 1.3 節 |
 | 每日 Threads 開發日誌 | 排程「每日 Threads 開發日誌」（台灣時間每天 21:43）觸發遊戲規劃，由它開寫作 session；換遊戲規劃 session 時，排程要改到新 session | 寫當天的串文草稿，用 SendUserFile 交給作者；不 commit、不發布 | 派工單照 2026-10-14、10-15、10-16 的寫作 session |
 
@@ -577,7 +577,6 @@
 | 高鐵的長進路／閉塞區間死結、台南—左營交會 | #669，機廠 session session_01YNBmv76sfS8gJUnyRKEqHV（不再接新工作） | 沒有人接。機廠出庫已由 #678 處理；B 方案（`claude/hsr-depot-exit-priority`）量測失敗、放棄，紀錄在 #685。決策 255（單線提早折返）**沒有**解這一項：高鐵是單向的班次（決策 133），時刻表不會回到同一站，不會用到折返 |
 | §15.3 的內容：觀光列車、支線劇本、掛機模式、「這版新增」卡片、台灣節慶、各站到站鈴、3D 拉近傾斜與駕駛艙視角、花錢的地方＋新台幣＋分時電價＋車站容量、股票 | NEXT_PRIORITIES §15 | 排在核心玩法之後；各站到站鈴等測試者回報 |
 | 3D：擋住列車的建物變透明、深度閃爍、道具穿模、真的台灣車與站房 | F 台灣版＋「定案前要補」 | 3D 生活感那條線之後 |
-| `MapInteractionTests.testTheTrainToolCardKeepsItsLayoutWhileTheTrainStopsAndStarts` 在 main 45fcde4 的 full lane 紅過一次（run 38933058668） | 審查清理 session 查過：問題在測試，不是 App 退步。快照裡找不到 `details.scroll.middle／whole`，測試就改拿前 8 個 identifier 當版面的 key，列車卡的「準點」膠囊出現或消失時 key 跟著變，被誤判成換了版面 | 發版後開 UI 測試 PR：查清楚 `details.scroll.*` 為什麼不在快照裡（`.tutorialClip()`、mask、`accessibilityElement(children: .contain)`），讓測試回到真的比較版面 |
 
 ## 6. 留在遠端、沒有合併的 branch
 
