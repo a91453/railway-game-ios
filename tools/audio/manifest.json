@@ -102,6 +102,19 @@
       "endLevel": 0.0
     },
     {
+      "file": "goal-met.wav",
+      "score": "tools/audio/scores/goal-met.score.json",
+      "scoreSha256": "243768f321dde792d5e5d2fe4e88cac02286987c70d395784a489afa7eedc9be",
+      "kind": "tune",
+      "sha256": "8271f29ffc74f157d1a7736f776ead04b9c76295899fd0a25047a8891fdfeafc",
+      "frames": 57600,
+      "seconds": 1.2,
+      "peakDbfs": -4.44,
+      "rmsDbfs": -17.76,
+      "largestStep": 0.13644,
+      "endLevel": 0.0
+    },
+    {
       "file": "music-loop.caf",
       "kind": "music",
       "synth": "make_game_audio.py music()",

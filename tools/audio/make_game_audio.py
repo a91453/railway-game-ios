@@ -12,7 +12,9 @@ the same on every run.
 Decision 219: the station chimes are played from scores of 《沿線》
 (`scores/*.score.json`, checked by `score.py`): the local chime (the
 station chime above), the metro interchange chime and the tourist chime,
-each also as its motif, the first notes alone, for high speed. Every file
+each also as its motif, the first notes alone, for high speed. Decision
+256: the goal-met tune is played from its score too (`scores/goal-met`,
+kept to the chime rules), as a whole only. Every file
 is listed in `manifest.json` with its source, SHA-256, peak, RMS and its
 loop seam or end.
 
@@ -254,6 +256,12 @@ CHIMES = [
     ("chime-tourist", "chime-tourist.wav", "chime-tourist-motif.wav"),
 ]
 
+# Decision 256: the tunes, by score: (score, file). Played whole, at the
+# chimes' peak; no motif.
+TUNES = [
+    ("goal-met", "goal-met.wav"),
+]
+
 
 def sha256(path):
     with open(path, "rb") as file:
@@ -330,6 +338,9 @@ def manifest(out_dir):
             source["mmlSha256"] = sha256(os.path.join(ROOT, mml))
         by_file[full] = dict(source, kind="chime")
         by_file[short] = dict(source, kind="motif")
+    for name, file in TUNES:
+        path = os.path.join(HERE, "scores", f"{name}.score.json")
+        by_file[file] = {"score": relative(path), "scoreSha256": sha256(path), "kind": "tune"}
     for file in sorted(os.listdir(out_dir)):
         entry = {"file": file}
         if file in by_file:
@@ -379,6 +390,8 @@ def main(out_dir):
         sheet = scores.load(os.path.join(HERE, "scores", f"{name}.score.json"))
         write_wav(os.path.join(out_dir, full), chime(sheet))
         write_wav(os.path.join(out_dir, short), motif(sheet))
+    for name, file in TUNES:
+        write_wav(os.path.join(out_dir, file), chime(scores.load(os.path.join(HERE, "scores", f"{name}.score.json"))))
     write_wav(os.path.join(out_dir, "whoosh.wav"), normalized(whoosh(1.0), 0.6))
     joint = np.zeros(int(0.35 * SR))
     a = clack()

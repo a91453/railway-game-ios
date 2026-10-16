@@ -1,6 +1,6 @@
 /// Which of the settings' three volumes a sound follows (decision 219,
 /// stage 2): the music, the stations' arrival chimes, or the other sound
-/// effects (building, tools, income, refusals, warnings).
+/// effects (building, tools, income, refusals, warnings, goals met).
 public enum SoundCategory: String, CaseIterable, Hashable, Sendable {
     case music
     case chimes
@@ -13,7 +13,7 @@ extension SoundCue {
     public var category: SoundCategory {
         switch self {
         case .arrival: .chimes
-        case .track, .transition, .built, .income, .refused, .warning: .effects
+        case .track, .transition, .built, .income, .refused, .warning, .goalMet: .effects
         }
     }
 }

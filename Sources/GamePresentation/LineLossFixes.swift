@@ -55,11 +55,6 @@ public enum LineLossFix: Hashable, Sendable {
         return .zero
     }
 
-    /// Whether a balance of `balance` pays for it.
-    public func isAffordable(with balance: Money) -> Bool {
-        cost <= .zero || balance >= cost
-    }
-
     /// The button: "Take off a train", "Add 2 trains · $ 9,000,000"…
     public func title(in language: DisplayLanguage) -> String {
         switch self {

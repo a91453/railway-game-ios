@@ -29,6 +29,9 @@ public enum SoundCue: Hashable, Sendable {
     /// A new worry in the news log (decision 184: debt, a deadline, a
     /// typhoon, a town short of materials): two short bells.
     case warning
+    /// A challenge's goal or a city's request was met (decision 256): a
+    /// short rising tune on the metro chime's phrase.
+    case goalMet
 
     /// When each train in service last arrived at a call, as its service
     /// times record it (`ServiceTimes/arrival`), and whether it stands at
@@ -155,6 +158,7 @@ public enum SoundCue: Hashable, Sendable {
         case .income: ("coins", "wav")
         case .refused: ("refused", "wav")
         case .warning: ("warning", "wav")
+        case .goalMet: ("goal-met", "wav")
         }
     }
 }

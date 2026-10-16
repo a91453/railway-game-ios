@@ -154,7 +154,8 @@ final class DepartureBoardTests: XCTestCase {
             row("d", train: 4, away: 9 * 3600 + 41 * 60),
         ])
         XCTAssertEqual(marked.map(\.followsLateTrain), [false, true, false, false])
-        XCTAssertEqual(marked[1].status.text(in: .traditionalChinese), "前車誤點")
+        XCTAssertEqual(marked[1].status.text(in: .traditionalChinese), "前車誤點 4 分", "its own lateness too")
+        XCTAssertEqual(marked[1].status.text(in: .english), "4 min late, train ahead")
         XCTAssertEqual(marked[1].status, .lateBehind(minutes: 4))
         XCTAssertEqual(marked[2].status, .late(minutes: 2), "27 minutes behind a late train is late on its own")
 
