@@ -3930,7 +3930,8 @@ public struct GameWorld: Equatable, Sendable {
         var moved = false
         // Decision 228: the trains near each other's ways, once a step.
         memo.spacing = spacingIndex()
-        defer { memo.spacing = nil }
+        memo.ways = [:]
+        defer { memo.spacing = nil; memo.ways = [:] }
         for index in trains.indices {
             let movement = trains[index].movement
             guard let position = trains[index].position, movement.rate > 0 else { continue }
@@ -3956,6 +3957,7 @@ public struct GameWorld: Equatable, Sendable {
                 trains[index].movement.cursor = travel.cursor
             }
             releasePassedTrack(index)
+            memo.ways[trains[index].id] = nil
             moved = true
         }
         return moved
@@ -4059,7 +4061,7 @@ public struct GameWorld: Equatable, Sendable {
         var distance = authority(of: train, memo: &memo).map { min(distance, $0.left) } ?? distance
         // Decision 228: without traffic control, a train of real runs stops
         // behind the one ahead.
-        if let clear = clearAhead(of: train, within: distance, near: memo.spacing) { distance = clear }
+        if let clear = clearAhead(of: train, within: distance, near: memo.spacing, ways: &memo.ways) { distance = clear }
         let movement = train.movement
         switch train.position! {
         case .onEdge(let traversal, let offset):
