@@ -37,8 +37,9 @@
 **三句話**：
 
 - **動態設計那 15 個，大多是同一招**：把每一格寫成 `seek(t)` 的 HTML，用無頭瀏覽器截圖，再用 ffmpeg 接起來。官網的 `render.js` 已經在做這件事，所以它們能帶來的是**做法與品味的規則**，不是新的能力。最值得拿的是兩個不綁函式庫的 skill：LottieFiles 的動畫原則（可以用在 App 的 SwiftUI），以及 animate 的「先分鏡、自訂畫風、音樂用程式寫」。
-- **App Store 的預覽影片這些工具都做不了**：Apple 審核準則 2.3.4 規定預覽只能是 App 本身的螢幕錄影，最多加旁白與文字。錄影要在 macOS 模擬器或實機上做，Linux 容器做不到。這些工具適合官網影片、社群短片、TestFlight 的新功能短片。
+- **App Store 的預覽影片這些工具都做不了**：Apple 審核準則 2.3.4 規定預覽只能是 App 本身的螢幕錄影，最多加旁白與文字。錄影要在 macOS 模擬器或實機上做，Linux 容器做不到；但 `website-screenshots.yml` 已經在 GitHub Actions 的 macOS 上開模擬器截官網的圖，同一條路加上 `xcrun simctl io <裝置> recordVideo` 就能錄實機畫面（UNVERIFIED，沒有試）。這些工具適合官網影片、社群短片、TestFlight 的新功能短片，也可以替錄好的畫面加字卡。
 - **3D 生成模型做不出 App 要的模型**：它們輸出幾十萬面、帶 PBR 貼圖的網格，而 App 的渲染器是頂點色、一個材質、程式建模（決策 230 否決過「縮面重上色搬進來」）。地標（例如 101）照決策 230、235 的做法用程式組合比較好；AI 最多產生形體參考。官網的 GLB 已經有 Meshy。
+- **清單外更值得做的是處理已經有的模型**（2026-10-16 補，第 3.3 節）：glTF-Transform 與 meshoptimizer（都是 MIT）在這個容器就能把 GLB 解開、減面、烘成頂點色，接上決策 244 留下的「GLB 轉檔」。要作者同意 `tools/` 多兩個 npm 依賴。
 
 ## 1. 怎麼查的
 
@@ -170,9 +171,37 @@
   - 地標先照決策 230、235 用程式組合。例如台北 101 是 8 節重複的斗形量體，程式做比 AI 生成乾淨（AI 生成的建築邊角軟、面有雜訊）。
   - AI 生成只拿來做形體參考或粗模。要做的話，**TripoSR**（程式與權重都是 MIT、預設就輸出頂點色、能用 CPU 跑，`run.py:52`、`run.py:97-99`）最合，可以在本機處理自己拍的照片，不用上傳。它要 torch 等幾 GB 的工具依賴，要作者同意。
   - 官網的 GLB 照舊用 Meshy。
+  - 已經有的 GLB 要轉進 App，用第 3.3 節的 glTF-Transform 與 meshoptimizer。
 - **MCP for Blender**：決策 244 的「在電腦上轉檔」如果要在作者的 Mac 上用 Blender 做，可以考慮它。但要關遙測（`DISABLE_TELEMETRY=true`），不用它的 `generate_3d` 走騰訊的路線，也要注意 `execute_blender_code` 會跑任意 Python。同樣的事用一支 Blender 腳本也做得到。
 
-### 3.3 Tripo（農場流程第 3 步）
+### 3.3 清單外：glTF-Transform 與 meshoptimizer（2026-10-16 補）
+
+作者轉來另一個 AI 的分析，建議這兩個清單外的專案。查過，比清單上的 3D 生成工具更貼近目前的需求：決策 244 留下的「GLB 轉檔與地標」要的是**處理已經有的模型**，不是再多一個生成器。
+
+| 專案 | 是什麼 | 授權 | 能在這個容器跑嗎 |
+| --- | --- | --- | --- |
+| [donmccurdy/glTF-Transform](https://github.com/donmccurdy/glTF-Transform)（npm `@gltf-transform/core` 4.5.1） | 讀寫、檢查、合併、減面、去重、焊接 GLB 的 Node 函式庫與 CLI | MIT（npm 的 `license`） | 可以：純 Node，容器有 Node 22 |
+| [zeux/meshoptimizer](https://github.com/zeux/meshoptimizer)（npm `meshoptimizer` 1.3.0、`gltfpack` 1.3.0） | 減面、頂點快取與索引最佳化、meshopt 壓縮的編解碼 | MIT（npm 的 `license`） | 可以：npm 版是 WASM |
+
+**為什麼合**：
+- 決策 244 的「外部專案」寫過：GLB 讀取器（cgltf、GLTFKit2、GLTFSceneKit、SwiftGLTF）沒有能在 Linux 跑的純 Swift 版本，所以「下一步改成在電腦上轉檔」。glTF-Transform 在這個容器就能跑，不需要作者的電腦或 Blender。
+- 參考庫的角色 GLB 本身就是 glTF-Transform 4.5 輸出的，帶 `EXT_meshopt_compression`、`KHR_mesh_quantization`、`KHR_texture_basisu`（PHASE6C_BUILDINGS_STUDY 第 508 行、PHASE8_ASSET_INVENTORY §2.1）。要解開正是這兩個工具。
+- 流程可以全部離線、放在 `tools/`：讀 GLB → 解 meshopt 與量化 → 減面 → 取樣貼圖烘成每個面的頂點色 → 量化到 `Palette` → 輸出 Metal 渲染器的 40 bytes 頂點格式（決策 231）。最後兩步要自己寫；App 不讀 GLB，也不加套件。
+- 不要只把壓縮的 GLB 放進 App：渲染器讀不了。
+
+**限制**：仍受決策 230（作者否決過「縮面、重上色就搬進來」的列車）與 art-style §7 約束。所以先用在程式建模不划算的少量物件（廟宇裝飾、攤位、雕像、小地標），列車、軌道、月台、成排透天厝照舊程式產生。
+
+**第一次驗證**：挑一座車站、一棟建物、一個街景物件跑完整個流程，比較外觀、三角形數、材質數、記憶體與實機每幀時間（決策 229 的量測）。有收益才擴大。
+
+**要作者同意**：`tools/` 多兩個 npm 依賴（MIT，只在工具裡，App 不帶）。
+
+**四個角度**：
+- 玩家：地標與小物件多了，城市更有台灣的樣子。
+- 開發：在雲端容器就能轉檔，不用作者的 Mac；輸出照現有的頂點格式，渲染器不改。
+- 美術：顏色量化到調色盤，和程式建模的物件同一個畫風；不合的就不放。
+- 音樂：無。
+
+### 3.4 Tripo（農場流程第 3 步）
 
 - **條款**（archive.org 快照，「Last updated: July 11, 2025」）：
   - §5.2.1：免費使用者的輸入與輸出「Tripo retains all rights」；
@@ -222,7 +251,7 @@
 | --- | --- | --- |
 | 1 用 MCP 把 Claude Code 接上 Unity 與 Blender | 沒有引擎可接；Bash 加 `swift test` 就是橋 | 不適用，GAME_AI_TOOLS §3.1 取代它 |
 | 2 一頁的設計文件 | ARCHITECTURE 的決策、`docs/research/`、工作登記 #231、四個角度的理由，比一頁更嚴 | 已經做到 |
-| 3 用 Tripo 生成模型 | Meshy（決策 161）、程式建模的列車（決策 230） | 不需要（第 3.3 節） |
+| 3 用 Tripo 生成模型 | Meshy（決策 161）、程式建模的列車（決策 230） | 不需要（第 3.4 節） |
 | 4 用 Blender 整理 | 沒用 Blender；模型是程式產生或 Meshy，用預覽圖檢查 | 不適用 |
 | 5 一次一個系統 | 「小而少的改動」、一個工作一個 PR | 已經做到 |
 | 6 **Opus 用自動駕駛試玩，先列出所有 bug 再修** | 一部分：`ChallengeReportTests`（沒有玩家、幾個種子、三種玩法）、`BalanceReportTests`、性質測試的 `WorldInvariants.violations(in:)`、`HighSpeedDemoDayTests`（一天裡的重疊、逆行、誤點）、`WebsiteTimelineTests`（跑一年） | **值得補**：見下 |
@@ -251,6 +280,7 @@
 | Stable Fast 3D | 登記、「Powered by Stability AI」的標示、營收 100 萬美元的門檻 | 不要：TripoSR 授權更乾淨 |
 | TRELLIS.2 | 租 24 GB 以上的 GPU、自己寫頂點色匯出 | 不要：品質最好，但成本與 nvdiffrast 的授權都不划算 |
 | Tripo 付費方案 | 第二個付費的 3D 服務 | 不要：Meshy 已經在用 |
+| glTF-Transform、meshoptimizer（清單外） | `tools/` 多兩個 MIT 的 npm 依賴 | **建議同意**：決策 244 的 GLB 轉檔在雲端容器就能做（第 3.3 節） |
 | 付費的旁白服務（ElevenLabs、Cartesia 等，影片工具常用） | 帳號與條款 | 官網影片目前沒有旁白；要的話先看本地的 Kokoro-82M（Apache-2.0，沒有查它的訓練資料） |
 
 ## 7. 驗證
