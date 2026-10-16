@@ -65,6 +65,11 @@ final class HeadlessGameTests: XCTestCase {
         XCTAssertEqual(goals.outcome, "completed")
     }
 
+    func testANewGameIsTheAppsUnderItsRules() {
+        XCTAssertEqual(HeadlessGame.newGame(seed: 4).world, GameWorld.newGame(eventSeed: 4, rules: .simple), "simple, as the app")
+        XCTAssertEqual(HeadlessGame.newGame(seed: 4, rules: .realistic).world, GameWorld.newGame(eventSeed: 4))
+    }
+
     func testASaveFileRoundTrips() throws {
         let game = try lineGame()
         _ = game.advance(seconds: GameTime.secondsPerHour)
@@ -127,6 +132,7 @@ final class HeadlessGameTests: XCTestCase {
                 return error.description
             }
         }
+        XCTAssertEqual(refusal(["new-game", "--speed", "2"]), "new-game does not take --speed; it takes --buys-map, --rules, --seed")
         XCTAssertEqual(refusal(["advance", "--weeks", "2"]), "advance does not take --weeks; it takes --days, --hours, --minutes, --seconds")
         XCTAssertTrue(refusal(["fly"]).hasPrefix("unknown operation fly; known: new-game, load"))
         XCTAssertEqual(refusal(["load"]), "load needs a file")

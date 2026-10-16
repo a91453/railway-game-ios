@@ -38,10 +38,11 @@ public final class HeadlessGame {
 
     // MARK: - Starting
 
-    /// A new game as the app starts one on a blank map (``GameWorld/newGame(anchor:bounds:balance:eventSeed:land:water:steep:buysMap:)``)
-    /// with `seed`'s towns and events.
-    public static func newGame(seed: UInt32, buysMap: Bool = false) -> HeadlessGame {
-        HeadlessGame(world: .newGame(eventSeed: seed, buysMap: buysMap))
+    /// A new game as the app starts one on a blank map (``GameWorld/newGame(anchor:bounds:balance:eventSeed:land:water:steep:buysMap:rules:)``)
+    /// with `seed`'s towns and events, under `rules` (decision 258: the
+    /// app's new games are simple unless the player chooses realistic).
+    public static func newGame(seed: UInt32, buysMap: Bool = false, rules: NewGameRules = .simple) -> HeadlessGame {
+        HeadlessGame(world: .newGame(eventSeed: seed, buysMap: buysMap, rules: rules))
     }
 
     /// The game in `data`: a save file the app wrote (``SaveLibrary``),

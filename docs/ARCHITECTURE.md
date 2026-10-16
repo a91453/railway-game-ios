@@ -10279,7 +10279,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 
 **做法**：
 1. **`HeadlessGame`**（GamePresentation，`HeadlessGame.swift`）：包一個 `GameSession`，所以指令和裝置走同一條路。
-   - 開局：`newGame(seed:buysMap:)` 是 App 的空白新遊戲；`load` 讀 App 寫的存檔（經 `SaveLibrary`，照樣遷移），或問題回報（從紀錄的起點）。
+   - 開局：`newGame(seed:buysMap:rules:)` 是 App 的空白新遊戲，預設和 App 一樣是簡單規則（決策 258），`--rules realistic` 是寫實；`load` 讀 App 寫的存檔（經 `SaveLibrary`，照樣遷移），或問題回報（從紀錄的起點）。
    - `apply`：問題回報或紀錄條目照裝置的遊戲時間重播；指令清單（`PlayerCommand` 的 JSON）在現在依序做，拒絕的照算、繼續做。
    - `advance(seconds:)`：用世界自己的速度，一天一段地走；暫停中的遊戲先恢復。工具用的 session 不因目標達成、月報而自己暫停；重播時照裝置，會暫停。
    - `summary`：`HeadlessSummary`，錢（整美元）、前一天的車資與旅次、列車狀態（`unplaced`／`idle`／`atStop`／`running`）、路線、車站的運量與等車人數、死結的列車（`deadlockedTrains`）、挑戰目標。

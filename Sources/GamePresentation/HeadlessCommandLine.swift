@@ -24,7 +24,7 @@ public struct HeadlessCommandLine {
     }
 
     public static let operations: [Operation] = [
-        Operation(name: "new-game", options: ["seed": true, "buys-map": false], takesFile: false, summary: "a new blank-map game; --seed N (1), --buys-map"),
+        Operation(name: "new-game", options: ["seed": true, "buys-map": false, "rules": true], takesFile: false, summary: "a new blank-map game; --seed N (1), --rules simple|realistic (simple, as the app), --buys-map"),
         Operation(name: "load", options: [:], takesFile: true, summary: "a save file, or a problem report's command log from its start"),
         Operation(name: "apply", options: [:], takesFile: true, summary: "a problem report's log, a list of log entries, or a list of commands"),
         Operation(name: "advance", options: ["days": true, "hours": true, "minutes": true, "seconds": true], takesFile: false, summary: "let game time run; --days, --hours, --minutes, --seconds add up"),
@@ -155,7 +155,14 @@ public struct HeadlessCommandLine {
         switch step.name {
         case "new-game":
             let seed = try step.options["seed"].map { try number($0, "seed", UInt32.self) } ?? 1
-            let started = HeadlessGame.newGame(seed: seed, buysMap: step.options["buys-map"] != nil)
+            var rules = NewGameRules.simple
+            if let name = step.options["rules"] {
+                guard let chosen = NewGameRules(rawValue: name) else {
+                    throw HeadlessGameError("unknown rules \(name); known: \(NewGameRules.allCases.map(\.rawValue).joined(separator: ", "))")
+                }
+                rules = chosen
+            }
+            let started = HeadlessGame.newGame(seed: seed, buysMap: step.options["buys-map"] != nil, rules: rules)
             game = started
             return started.summary([.economy])
         case "load":
