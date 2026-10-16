@@ -35,6 +35,7 @@
   - 發版前要收工時，叫 session「做完再停」，不要叫它把做一半的東西留給之後（作者 2026-10-16：「記得不要暫停讓他們做完」「不要限制 可以任意開 pr 但就是收工」）。
   - session 停下來，不一定是因為發版。重開之前先問派工 session，或讀那個 session 自己的紀錄。語言選單是作者說「先不要動」才停的（第 3 節）。
   - 給實作 session 的派工單要對照 art-style §7 的現行規則：參考庫的模型「任意組合、成品跟原本不同」，不是「能搬就搬」。
+  - 同時開好幾個 session，它們會在幾分鐘內登記同一個決策號（2026-10-16：三個都登記 256）。派工單裡直接寫好號碼；或開完之後看一次 #231，照登記先後重排並留言。
 
 ### 1.2 合併協調
 
@@ -151,19 +152,19 @@
 | 線 | session | branch／PR | 範圍與順序 | 動 GameCore | 備註 |
 | --- | --- | --- | --- | :-: | --- |
 | 單線對頭永遠卡死 | session_0162V1LTnnJubXXTaNkZUKQx | `claude/single-line-deadlock-fix` | 兩條線共用單線、沒有待避處時，行車控制下兩列車對頭永遠卡死（`CORE_LOOP_2026-10-16.md` §1.2 的種子 1）。先寫會失敗的測試，再修根因。golden、SaveFixtures、ReplayFixtures 不動 | 是 | 決策 255。CI 名額向合併協調拿 |
-| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | 開工時登記 | 決策 254 §7 的第 1→2→4→5 個 PR：簡單規則當預設 → 開線自動配車＋自動交會 → 關卡框架與第 1–3 關 → 第 4–10 關 | 否 | 第 2 個要等死結修正合併；第 6 個（關卡判定進 GameCore）先不做，第 5 個合併後由遊戲規劃判斷 |
-| 核心玩法：回饋 | session_011Z9h1X1GcZZ3i1EKEEjDZj | 開工時登記 | 決策 254 §7 的第 3 個 PR：站上的「+$12」、目標打勾、城鎮長大的環、目標旋律 | 否 | 照 `motion` skill 與三條音量 |
-| 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | 開工時登記 | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
+| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | `claude/simple-rules`，#725（決策 258） | 決策 254 §7 的第 1→2→4→5 個 PR：簡單規則當預設 → 開線自動配車＋自動交會 → 關卡框架與第 1–3 關 → 第 4–10 關 | 否 | 第 2 個要等死結修正合併；第 6 個（關卡判定進 GameCore）先不做，第 5 個合併後由遊戲規劃判斷 |
+| 核心玩法：回饋 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/core-loop-feedback`，#724（決策 256） | 決策 254 §7 的第 3 個 PR：站上的「+$12」、目標打勾、城鎮長大的環、目標旋律 | 否 | 照 `motion` skill 與三條音量 |
+| 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
+| 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」，2026-10-16 派工 session 再問，作者交給四個角度決定，決定繼續 |
+| 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
 
 ## 3. 作者說「先不要動」或還在等作者的事
 
 | 事項 | 狀態 | 在哪裡 |
 | --- | --- | --- |
-| 開始畫面的語言選單（裝置只設一種語言時，換不到英文） | 作者說「語言這件先不要動」（經派工 session 轉達，2026-10-16）。程式已寫好一個 commit，沒開 PR。原本用的決策 247 已被複線化用掉，重開時要另外取號 | branch `claude/in-app-language`（bf0b621），session_01UUcjVERB4CaVtdcbR3BWgJ |
 | 航空遊戲手感借到鐵道 | 研究完、沒寫程式，在等作者決定要不要做。提了五項：①停站時的車廂座位圖 ②每趟結果蓋章（空位多、客滿） ③地圖上的到站收入飄字 ④選車型時標「剛好／太大／不夠」 ⑤路線卡兩端站的需求燈。③和核心玩法回饋的「+$12」重疊，做回饋的 session 已經在做。遊戲規劃建議排在核心玩法之後 | session_01NoAXS67jevFRE5XRz37tcF |
 | 高鐵示範的誤點 | 作者 2026-10-15：「沒差先誤點再看怎麼調整」。#660 之後誤點中位數約 7 分、最多 27 分，作者接受；調整方向記在 #660 的留言 | #660 |
 | iPhone 左欄縮回 56 點後，iPad 建造欄還是 72 點 | #721 的 session 說「iPad 72 點是作者比較後決定的」，但這句不是經派工轉達的，沒有確認。如果不是作者說的，iPad 也要縮 | #721（已合併） |
-| 審查回報了、沒修的 19 項（#685–#711 這輪 8 項，加前兩輪剩下的 11 項） | 派工問過作者 67.1 之後要不要派，作者還沒回。例：已經是複線的路段也出現「升級為複線」、破產倒數時狀態列變寬（交給美術）、景點的計算量、月底報表和 3D 地圖同時開、UI 測試裡的固定等待 | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節 |
 | 複線的最短相隔距離要不要再縮 | 作者 2026-10-14 在手機上問的。那個 session 停在權限確認，沒有回答 | session_01Mtv1QDk434KcMtFHWw67SM |
 
 ## 4. 3D 地圖
@@ -535,7 +536,7 @@
 
 | branch | 是什麼 | 處理 |
 | --- | --- | --- |
-| `claude/in-app-language` | 語言選單（第 3 節） | 保留 |
+| `claude/in-app-language` | 語言選單（第 2 節，進行中） | 保留 |
 | `claude/hsr-depot-exit-priority` | 機廠出庫優先的 B 方案，量測失敗 | 紀錄在 #685，可以刪 |
 | `claude/hud-width-proof`、`claude/claude-key-check`、`claude/basemap-align-repro`、`claude/details-card-repro`、`claude/bughunt3-app-proof` | 只用來證明或重現的暫時 commit（「not for merge」「Repro only」「Proof only」） | 可以刪 |
 | `claude/review-u9-u10` | U9、U10，已由 #646 那一輪 cherry-pick 進 main | 可以刪 |
