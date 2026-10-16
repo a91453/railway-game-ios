@@ -177,8 +177,14 @@ extension GameSession {
     /// Returns how many were left off because the berth was held and how
     /// many because they were too long (decision 194, later: the line
     /// card's "run more trains" buys only those its headway lacks).
+    ///
+    /// Decision 264: `orAtTheFarEnd`, a train whose berth is held is placed
+    /// where the line's trips start the other way, at its last stop, when
+    /// that is free: flexible dispatch (decision 172) sends it out from
+    /// there.
     static func addTrains(
-        _ count: Int, of type: TrainType?, cars: Int, to id: LineID, in world: inout GameWorld, language: DisplayLanguage
+        _ count: Int, of type: TrainType?, cars: Int, to id: LineID, in world: inout GameWorld, language: DisplayLanguage,
+        orAtTheFarEnd: Bool = false
     ) throws(GameError) -> (held: Int, unfit: Int) {
         guard let journey = world.lineJourney(id) else { throw .unknownLine(id) }
         // Trains left off the track: the berth held under traffic
@@ -200,8 +206,14 @@ extension GameSession {
                 try Self.placeAtStart(train.id, of: journey, in: &placed)
                 world = placed
             } catch {
-                if case .trackReserved = error { held += 1 } else { unfit += 1 }
-                continue
+                var far = world
+                if case .trackReserved = error, orAtTheFarEnd, let back = Self.farEndJourney(of: id, in: world),
+                   (try? Self.placeAtStart(train.id, of: back, in: &far)) != nil {
+                    world = far
+                } else {
+                    if case .trackReserved = error { held += 1 } else { unfit += 1 }
+                    continue
+                }
             }
             try world.assignTrain(train.id, to: id, pattern: nil)
         }
@@ -219,6 +231,19 @@ extension GameSession {
     /// puts a new train: placed on the berth of its journey's start, held
     /// there to be sent out. Throws what placing it throws.
     static func placeAtStart(_ id: TrainID, of journey: LineJourney, in world: inout GameWorld) throws(GameError) {
+        try placeAtStartOnly(id, of: journey, in: &world)
+    }
+
+    /// Line `id`'s journey the other way round, from its last stop: where a
+    /// train starts its trips from that end (decision 264). `nil` for a ring.
+    static func farEndJourney(of id: LineID, in world: GameWorld) -> LineJourney? {
+        guard world.line(id: id)?.isRing == false else { return nil }
+        var reversed = world
+        guard (try? reversed.reverseLineStops(id)) != nil else { return nil }
+        return reversed.lineJourney(id)
+    }
+
+    private static func placeAtStartOnly(_ id: TrainID, of journey: LineJourney, in world: inout GameWorld) throws(GameError) {
         try world.placeTrain(id, at: journey.start)
         if case .onEdge(let traversal, let offset) = journey.start,
            let edge = world.network.edge(traversal.edge), offset < edge.length {

@@ -102,6 +102,8 @@ final class RealWorldDemoTests: XCTestCase {
         let (railways, world) = try Self.built.get()
         let session = GameSession(world: world, language: .english)
         session.railways = railways
+        // Decision 264: the line staffed by hand, as this test plays it.
+        session.staffsLinesByHand = true
         let ids = try ["瑞芳", "十分"].map { name in try XCTUnwrap(world.stations.first { $0.name == name }?.id) }
         for id in ids {
             session.selectStation(id)

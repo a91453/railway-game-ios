@@ -92,6 +92,13 @@ public struct Map3DTrainStyle: Sendable {
     public var lift: Float = 0.05
     public var tuck: Float
     public var cap: Float
+    /// The nose's shoulder wing bulge and cockpit canopy ridge (the N700ST
+    /// "Dual Supreme Wing" and raised canopy fairing), and how far the side
+    /// stripes dive toward the nose tip.
+    public var wing: Float = 0
+    public var shoulder: Float = 0.66
+    public var canopy: Float = 0
+    public var dive: Float = 0
     /// The body's colour, the skirt's and how high the skirt reaches.
     public var body: UInt32 = Map3DColor.rgb(0xF2F3F1)
     public var skirt: UInt32 = Map3DColor.rgb(0x9AA0A4)
@@ -99,6 +106,7 @@ public struct Map3DTrainStyle: Sendable {
     /// The band in the line's colour, and a thin dark line, if any.
     public var band: ClosedRange<Float>
     public var line: ClosedRange<Float>?
+    public var lineColour: UInt32 = Map3DTrainStyle.darkLine
     /// The windows: their heights, the distance between their middles and
     /// their width, in metres.
     public var windows: ClosedRange<Float>
@@ -108,16 +116,22 @@ public struct Map3DTrainStyle: Sendable {
     /// a long nose), and their width.
     public var doors: Int
     public var doorWidth: Float = 1.3
-    /// The windscreen: where it starts along the nose (0 at the body, 1 at
-    /// the tip) and how high it reaches down.
+    /// The windscreen: where it starts and stops along the nose (0 at the
+    /// body, 1 at the tip), how high it reaches down, and what share of the
+    /// width it spans.
     public var screenFrom: Float
+    public var screenTo: Float = 0.92
     public var screenDown: Float
+    public var screenAcross: Float = 1.0
 
     static let glass = Map3DColor.rgb(0x26313D)
     static let doorColour = Map3DColor.rgb(0x5D6670)
     static let darkLine = Map3DColor.rgb(0x2A3340)
+    static let navyLine = Map3DColor.rgb(0x2B3356)
     static let roofColour = Map3DColor.rgb(0xC5C9CD)
     static let under = Map3DColor.rgb(0x474B51)
+    static let lampHousing = Map3DColor.rgb(0x49505A)
+    static let headlamp = Map3DColor.rgb(0xFFF4D6)
 
     /// The styles, from what the reference's trains measure and this
     /// project's own city view (`trains.js` `EMU3000_STOCK`, `HSR_STOCK`).
@@ -129,12 +143,19 @@ public struct Map3DTrainStyle: Sendable {
         // The EMU3000 (trains.js EMU3000_STOCK): a long sloping nose, white,
         // a thin dark line under the windows; one door a side at the end.
         Map3DTrainStyle(name: "express", halfWidth: 1.455, floor: 0.53, roof: 3.49, nose: 5.4, drop: 1.15, lift: 0.18, tuck: 0.3, cap: 0.46,
+                        wing: 0.03, shoulder: 0.72, dive: 0.08,
                         band: 0.40...0.44, line: 0.70...0.726, windows: 0.47...0.70, windowPitch: 1.35, windowWidth: 0.7, doors: 1,
-                        doorWidth: 1.0, screenFrom: 0.15, screenDown: 0.62),
-        // High speed (trains.js HSR_STOCK): a 9 m duck-bill nose.
+                        doorWidth: 1.0, screenFrom: 0.15, screenTo: 0.55, screenDown: 0.62, screenAcross: 0.78),
+        // High speed (trains.js HSR_STOCK, THSR N700ST / 700T): a 9 m
+        // Dual Supreme Wing duck-bill nose, raised cockpit canopy, tall
+        // warm-grey skirt, orange and navy bands sweeping down the nose,
+        // shoulder headlamps, and plug doors at the car ends.
         Map3DTrainStyle(name: "highSpeed", halfWidth: 1.45, floor: 0.62, roof: 3.75, nose: 9, drop: 1.78, lift: 0.1, tuck: 0.34, cap: 0.56,
-                        band: 0.38...0.50, line: 0.50...0.566, windows: 0.56...0.78, windowPitch: 1.0, windowWidth: 0.5, doors: 1,
-                        doorWidth: 0.85, screenFrom: 0.10, screenDown: 0.64),
+                        wing: 0.06, shoulder: 0.64, canopy: 0.24, dive: 0.14,
+                        body: Map3DColor.rgb(0xF6F6F4), skirt: Map3DColor.rgb(0x8F959B), skirtTop: 0.28,
+                        band: 0.38...0.50, line: 0.50...0.566, lineColour: navyLine,
+                        windows: 0.58...0.76, windowPitch: 1.0, windowWidth: 0.5, doors: 2,
+                        doorWidth: 0.85, screenFrom: 0.12, screenTo: 0.42, screenDown: 0.72, screenAcross: 0.64),
         // A metro car: wider, a flat front, four doors a side.
         Map3DTrainStyle(name: "metro", halfWidth: 1.55, floor: 0.55, roof: 3.6, nose: 1.0, drop: 0.22, tuck: 0.04, cap: 0.2,
                         band: 0.34...0.41, line: nil, windows: 0.45...0.82, windowPitch: 1.9, windowWidth: 1.3, doors: 4,
@@ -163,34 +184,55 @@ struct Map3DTrainBuilder {
 
     // MARK: The shell
 
+    static func ease(_ x: Float) -> Float {
+        let v = min(1, max(0, x))
+        return v * v * (3 - 2 * v)
+    }
+
     /// `trains.js` `shellRing`: the section at `along` metres, `t` along the
     /// nose (0 at the body, 1 at the tip). Each point with its height's
-    /// share of the section, for the livery.
+    /// share of the section, for the livery. On a high-speed cab nose, the
+    /// centre crown rises into the cockpit canopy dome before dropping across
+    /// the windscreen, while the outer shoulders carry the N700 Dual Supreme
+    /// Wing ridges.
     func ring(at along: Float, t: Float) -> [(point: Map3DPoint, share: Float)] {
-        func ease(_ x: Float) -> Float { let v = min(1, max(0, x)); return v * v * (3 - 2 * v) }
-        let halfWidth = style.halfWidth * (1 - style.tuck * ease((t - 0.45) / 0.55))
-        let top = style.roof - style.drop * ease(t), bottom = style.floor + style.lift * ease((t - 0.6) / 0.4)
-        let cap = 1 - style.cap * ease((t - 0.88) / 0.12)
+        let halfWidth = style.halfWidth * (1 - style.tuck * Self.ease((t - 0.45) / 0.55))
+        let top = style.roof - style.drop * Self.ease(t), bottom = style.floor + style.lift * Self.ease((t - 0.6) / 0.4)
+        let cap = 1 - style.cap * Self.ease((t - 0.88) / 0.12)
         let middle = (top + bottom) / 2, half = (top - bottom) / 2 * cap
-        let low = 2 / (8.5 - 5.6 * ease(t)), up = 2 / (4.6 - 2.3 * ease(t))
+        let low = 2 / (8.5 - 5.6 * Self.ease(t)), up = 2 / (4.6 - 2.3 * Self.ease(t))
         return (0..<Self.ringPoints).map { k in
             let a = -Float.pi / 2 + 2 * Float.pi * Float(k) / Float(Self.ringPoints)
             let c = cosf(a), s = sinf(a)
-            let y = middle + (s < 0 ? -1 : 1) * powf(abs(s), s < 0 ? low : up) * half
-            let across = (c < 0 ? -1 : 1) * powf(abs(c), low) * halfWidth * cap
-            return (Map3DPoint(along, y, across), (y - style.floor) / (style.roof - style.floor))
+            var y = middle + (s < 0 ? -1 : 1) * powf(abs(s), s < 0 ? low : up) * half
+            let sectionShare = (y - bottom) / max(0.01, top - bottom)
+            if t > 0, s > 0, style.canopy > 0 || style.wing > 0 {
+                let dome = style.canopy * sinf(Float.pi * min(1, t / 0.50)) * expf(-powf(c / 0.48, 2)) * s
+                let cheek = style.wing * 1.4 * 4 * t * (1 - t) * expf(-powf((abs(c) - 0.76) / 0.20, 2)) * s
+                y = min(style.roof, y + (dome + cheek) * cap)
+            }
+            let d = (sectionShare - style.shoulder) / 0.14
+            let wingBulge = t > 0 && style.wing > 0 ? style.wing * 4 * t * (1 - t) * expf(-d * d) : 0
+            let across = (c < 0 ? -1 : 1) * min(style.halfWidth, (powf(abs(c), low) * halfWidth + wingBulge) * cap)
+            let share = min(1, max(0, (y - bottom) / max(0.01, top - bottom)))
+            return (Map3DPoint(along, y, across), share)
         }
     }
 
-    /// The paint of the shell at `share` of the height, `t` along the nose.
-    func paint(share: Float, t: Float, front: Bool) -> UInt32 {
-        if share < style.skirtTop { return style.skirt }
-        // The windscreen: the nose's upper part from screenFrom on, and on a
-        // flat front, its face above screenDown.
-        if cab, (t > style.screenFrom && t < 0.92 && share > style.screenDown) || (front && style.nose < 2 && share > style.screenDown && share < 0.92) {
+    /// The paint of the shell at `share` of the height, `t` along the nose,
+    /// and `across` metres from the centre line.
+    func paint(share: Float, t: Float, across: Float = 0, front: Bool) -> UInt32 {
+        let skirtLimit = t > 0 ? max(0.10, style.skirtTop * (1 - 0.45 * t)) : style.skirtTop
+        if share < skirtLimit { return style.skirt }
+        // The windscreen: the cockpit canopy's upper-central window between
+        // screenFrom and screenTo, or on a flat front, its face above screenDown.
+        let inScreenSpan = t > style.screenFrom && t < style.screenTo && share > style.screenDown
+            && abs(across) <= style.halfWidth * style.screenAcross
+        let inFlatFront = front && style.nose < 2 && share > style.screenDown && share < 0.92
+        if cab, inScreenSpan || inFlatFront {
             return Map3DTrainStyle.glass
         }
-        if share > 0.9 { return Map3DTrainStyle.roofColour }
+        if share > 0.9, t <= style.screenFrom { return Map3DTrainStyle.roofColour }
         return style.body
     }
 
@@ -209,14 +251,18 @@ struct Map3DTrainBuilder {
             rings.append((half, 0))
         }
         let sections = rings.map { ring(at: $0.along, t: $0.t) }
-        let axisHeight = (style.floor + style.roof) / 2
+        let topIndex = Self.ringPoints / 2
         for i in 0..<(sections.count - 1) {
+            let midY = (sections[i][0].point.y + sections[i][topIndex].point.y
+                + sections[i + 1][0].point.y + sections[i + 1][topIndex].point.y) / 4
+            let centre = Map3DPoint((rings[i].along + rings[i + 1].along) / 2, midY, 0)
             for k in 0..<Self.ringPoints {
                 let j = (k + 1) % Self.ringPoints
                 let a = sections[i][k], b = sections[i][j], c = sections[i + 1][j], d = sections[i + 1][k]
                 let t0 = rings[i].t, t1 = rings[i + 1].t
-                let corners = [(a, t0), (b, t0), (c, t1), (d, t1)].map { ($0.0.point, paint(share: $0.0.share, t: $0.1, front: false)) }
-                let centre = Map3DPoint((rings[i].along + rings[i + 1].along) / 2, axisHeight, 0)
+                let corners = [(a, t0), (b, t0), (c, t1), (d, t1)].map {
+                    ($0.0.point, paint(share: $0.0.share, t: $0.1, across: $0.0.point.z, front: false))
+                }
                 addTriangle(corners[0], corners[1], corners[2], outFrom: centre)
                 addTriangle(corners[0], corners[2], corners[3], outFrom: centre)
             }
@@ -225,14 +271,16 @@ struct Map3DTrainBuilder {
         for (index, front) in [(0, false), (sections.count - 1, true)] {
             let section = sections[index]
             let middle = section.reduce(Map3DPoint.zero) { $0 + $1.point * (1 / Float(Self.ringPoints)) }
-            let share = section.reduce(Float(0)) { $0 + $1.share } / Float(Self.ringPoints)
+            let share: Float = front && cab && style.nose > 2 ? 0.5 : section.reduce(Float(0)) { $0 + $1.share } / Float(Self.ringPoints)
             let t = rings[index].t
-            let centreColour = paint(share: share, t: t, front: front && cab)
+            let centreColour = paint(share: share, t: t, across: 0, front: front && cab)
             let outside = middle + Map3DPoint(front ? -1 : 1, 0, 0)
             for k in 0..<Self.ringPoints {
                 let j = (k + 1) % Self.ringPoints
-                addTriangle((middle, centreColour), (section[k].point, paint(share: section[k].share, t: t, front: front && cab)),
-                            (section[j].point, paint(share: section[j].share, t: t, front: front && cab)), outFrom: outside)
+                addTriangle((middle, centreColour),
+                            (section[k].point, paint(share: section[k].share, t: t, across: section[k].point.z, front: front && cab)),
+                            (section[j].point, paint(share: section[j].share, t: t, across: section[j].point.z, front: front && cab)),
+                            outFrom: outside)
             }
         }
     }
@@ -248,14 +296,23 @@ struct Map3DTrainBuilder {
 
     // MARK: Windows, doors, bands
 
-    /// How far out the body's side stands at `share` of its height, on the
-    /// straight part of the car.
-    func side(at share: Float) -> Float {
-        let section = ring(at: 0, t: 0).filter { $0.point.z > 0 }.sorted { $0.share < $1.share }
-        guard let above = section.firstIndex(where: { $0.share >= share }), above > 0 else { return style.halfWidth }
+    /// Interpolates both vertical height `y` and lateral flank position `z` on
+    /// the ring polygon at `share` (`0...1`), so panels and nose stripes follow
+    /// the exact cross-section facet without cutting through it.
+    func flank(at share: Float, along: Float = 0, t: Float = 0) -> (y: Float, z: Float) {
+        let section = ring(at: along, t: t).filter { $0.point.z > 0 }.sorted { $0.share < $1.share }
+        guard let above = section.firstIndex(where: { $0.share >= share }), above > 0 else {
+            if let first = section.first, share <= first.share { return (first.point.y, first.point.z) }
+            if let last = section.last { return (last.point.y, last.point.z) }
+            return (height(at: share), style.halfWidth)
+        }
         let a = section[above - 1], b = section[above]
         let s = b.share > a.share ? (share - a.share) / (b.share - a.share) : 0
-        return a.point.z + (b.point.z - a.point.z) * s
+        return (a.point.y + (b.point.y - a.point.y) * s, a.point.z + (b.point.z - a.point.z) * s)
+    }
+
+    func side(at share: Float, along: Float = 0, t: Float = 0) -> Float {
+        flank(at: share, along: along, t: t).z
     }
 
     func height(at share: Float) -> Float { style.floor + share * (style.roof - style.floor) }
@@ -280,23 +337,80 @@ struct Map3DTrainBuilder {
         }
     }
 
+    /// Sweeps a side stripe forward from `along0` onto the cab nose up to
+    /// `along1`, following the nose rings and dropping by `dive * ease(t)`.
+    mutating func addNoseStripe(from along0: Float, to along1: Float, shares: ClosedRange<Float>, dive: Float, proud: Float, colour: UInt32) {
+        guard along1 > along0, style.nose > 0 else { return }
+        let noseStart = style.length / 2 - style.nose
+        let steps = 8
+        for step in 0..<steps {
+            let u0 = Float(step) / Float(steps), u1 = Float(step + 1) / Float(steps)
+            let x0 = along0 + (along1 - along0) * u0, x1 = along0 + (along1 - along0) * u1
+            let t0 = min(1, max(0, (x0 - noseStart) / style.nose)), t1 = min(1, max(0, (x1 - noseStart) / style.nose))
+            let drop0 = dive * Self.ease(t0), drop1 = dive * Self.ease(t1)
+            let low0 = shares.lowerBound - drop0, high0 = shares.upperBound - drop0
+            let low1 = shares.lowerBound - drop1, high1 = shares.upperBound - drop1
+            let pLow0 = flank(at: low0, along: x0, t: t0), pHigh0 = flank(at: high0, along: x0, t: t0)
+            let pLow1 = flank(at: low1, along: x1, t: t1), pHigh1 = flank(at: high1, along: x1, t: t1)
+            for sign: Float in [-1, 1] {
+                let a = Map3DPoint(x0, pLow0.y + proud * 0.25, sign * (pLow0.z + proud))
+                let b = Map3DPoint(x1, pLow1.y + proud * 0.25, sign * (pLow1.z + proud))
+                let c = Map3DPoint(x1, pHigh1.y + proud * 0.25, sign * (pHigh1.z + proud))
+                let d = Map3DPoint(x0, pHigh0.y + proud * 0.25, sign * (pHigh0.z + proud))
+                let inside = Map3DPoint((x0 + x1) / 2, (pLow0.y + pHigh1.y) / 2, 0)
+                addTriangle((a, colour), (b, colour), (c, colour), outFrom: inside)
+                addTriangle((a, colour), (c, colour), (d, colour), outFrom: inside)
+            }
+        }
+    }
+
+    /// Adds the N700ST / express shoulder headlamp housings and glowing LED
+    /// lenses on the cab nose's Dual Supreme Wing shoulder ridges.
+    mutating func addNoseHeadlamps() {
+        guard cab, style.nose > 4 else { return }
+        let noseStart = style.length / 2 - style.nose
+        let x0 = noseStart + style.nose * 0.46, x1 = noseStart + style.nose * 0.62
+        addNoseStripe(from: x0, to: x1, shares: 0.60...0.70, dive: 0.04, proud: 0.022, colour: Map3DTrainStyle.lampHousing)
+        let glowStart = mesh.vertices.count
+        addNoseStripe(from: x0 + 0.14, to: x1 - 0.10, shares: 0.62...0.68, dive: 0.04, proud: 0.028, colour: Map3DTrainStyle.headlamp)
+        mesh.makeGlowing(from: glowStart)
+    }
+
     mutating func addLivery() {
         let half = style.length / 2
         let back = -half + 0.5, front = half - (cab ? style.nose : 0) - 0.3
         guard front > back else { return }
         // The band in the line's colour, and the dark line, the whole body
-        // long; the doors stand over them.
+        // long; on a long-nosed cab they sweep and dive along the nose too.
         addPanels(along: back, to: front, shares: style.band, proud: 0.01, colour: Self.lineColour)
-        if let line = style.line { addPanels(along: back, to: front, shares: line, proud: 0.012, colour: Map3DTrainStyle.darkLine) }
-        // Doors: evenly spaced along the straight body.
-        let count = max(1, style.doors)
+        if let line = style.line { addPanels(along: back, to: front, shares: line, proud: 0.012, colour: style.lineColour) }
+        if cab, style.nose > 2 {
+            let noseEnd = half - style.nose * 0.14
+            addNoseStripe(from: front, to: noseEnd, shares: style.band, dive: style.dive, proud: 0.011, colour: Self.lineColour)
+            if let line = style.line {
+                addNoseStripe(from: front, to: noseEnd, shares: line, dive: style.dive, proud: 0.013, colour: style.lineColour)
+            }
+            addNoseHeadlamps()
+        }
+        // Doors: on a long-nosed cab car, one less door stands behind the nose;
+        // on a two-door high-speed middle car, the plug doors sit near the ends.
+        let count = cab && style.nose > 4 ? max(1, style.doors - 1) : max(1, style.doors)
         let span = front - back
-        let doorCentres = (0..<count).map { i -> Float in
-            count == 1 ? (cab ? back + style.doorWidth : front - style.doorWidth) : back + span * (Float(i) + 0.5) / Float(count)
+        let doorCentres: [Float]
+        if count == 1 {
+            doorCentres = [cab ? back + style.doorWidth : front - style.doorWidth]
+        } else if style.name == "highSpeed" && count == 2 {
+            doorCentres = [back + style.doorWidth * 1.1, front - style.doorWidth * 1.1]
+        } else {
+            doorCentres = (0..<count).map { back + span * (Float($0) + 0.5) / Float(count) }
         }
         for centre in doorCentres {
             addPanels(along: centre - style.doorWidth / 2, to: centre + style.doorWidth / 2,
                       shares: style.skirtTop...style.windows.upperBound, proud: 0.025, colour: Map3DTrainStyle.doorColour)
+            if style.name == "highSpeed" {
+                addPanels(along: centre - style.doorWidth * 0.24, to: centre + style.doorWidth * 0.24,
+                          shares: style.windows, proud: 0.028, colour: Map3DTrainStyle.glass)
+            }
         }
         // Windows at their pitch, clear of the doors.
         var at = back + style.windowPitch / 2
@@ -322,6 +436,24 @@ struct Map3DTrainBuilder {
         for z in [back + 2.4, front - 2.4] where length > 6 {
             mesh.addBox(base: Map3DPoint(z, 0, 0), forward: forward, length: 2.8, width: style.halfWidth * 1.45, height: 0.75,
                         top: Map3DTrainStyle.under, side: Map3DTrainStyle.under)
+        }
+        if style.name == "highSpeed" {
+            // Shinkansen roof: smooth continuous cable shrouds along the crown
+            // and one low-profile aerodynamic pantograph fairing, stopping
+            // clear of the cab nose.
+            let runTo = cab ? half - style.nose - 0.6 : front - 0.6
+            let runFrom = back + 0.6
+            let runLength = max(2.4, runTo - runFrom), runMid = (runFrom + runTo) / 2
+            let shroudSide = Map3DColor.shaded(style.body, 0.94)
+            for lateral: Float in [-0.72, 0.72] {
+                mesh.addBox(base: Map3DPoint(runMid, style.roof - 0.04, lateral), forward: forward,
+                            length: runLength, width: 0.26, height: 0.16, top: style.body, side: shroudSide)
+            }
+            let pantoX = cab ? runFrom + 1.8 : runMid
+            mesh.addBox(base: Map3DPoint(pantoX, style.roof - 0.02, 0), forward: forward,
+                        length: min(2.8, runLength * 0.6), width: style.halfWidth * 1.12, height: 0.3,
+                        top: Map3DTrainStyle.roofColour, side: Map3DColor.shaded(Map3DTrainStyle.roofColour, 0.92))
+            return
         }
         // The air-conditioning boxes along the roof.
         let units = max(1, Int((length - 1.2) / 4.5))

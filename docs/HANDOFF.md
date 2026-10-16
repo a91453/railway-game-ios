@@ -154,7 +154,7 @@
 | 線 | session | branch／PR | 範圍與順序 | 動 GameCore | 備註 |
 | --- | --- | --- | --- | :-: | --- |
 | 單線對頭永遠卡死 | session_0162V1LTnnJubXXTaNkZUKQx | `claude/single-line-deadlock-fix` | 兩條線共用單線、沒有待避處時，行車控制下兩列車對頭永遠卡死（`CORE_LOOP_2026-10-16.md` §1.2 的種子 1）。先寫會失敗的測試，再修根因。golden、SaveFixtures、ReplayFixtures 不動 | 是 | 決策 255。CI 名額向合併協調拿 |
-| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | #725 已合併（決策 258）；第 2 個 PR 待開 | 決策 254 §7 的第 1→2→4→5 個 PR。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：第 2 個 PR：簡單規則下自動加待避線、自動配車，用決策 204 的 `PassingLoopPlan`；寫實規則下，#736 的提早折返（決策 255）發生時，路線卡說明「在 A 提早折返」，站長多一個「在這裡加待避線」按鈕（同一個 `PassingLoopPlan`）；不改 `Deadlock.swift`。第 4 個 PR：教學、關卡、「進階」只留一個狀態——解鎖狀態決定有沒有工具；教學的步驟引擎與 `TutorialCardPlacement` 變成第 1、2 關的引導，舊的教學入口收掉；「進階」只在已解鎖的工具裡替手機再收一層；自由模式與沙盒全部解鎖 | 否 | 第 2 個要等 #736 合併；第 6 個（關卡判定進 GameCore）先不做 |
+| 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | #725 已合併（決策 258）；第 2 個 PR `claude/auto-staffing`（決策 264）。69.1 發版前收工：第 2 個 PR 合併後先停，第 4 個 PR 等發版後由遊戲規劃再派 | 決策 254 §7 的第 1→2→4→5 個 PR。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：第 2 個 PR：簡單規則下自動加待避線、自動配車，用決策 204 的 `PassingLoopPlan`；寫實規則下，#736 的提早折返（決策 255）發生時，路線卡說明「在 A 提早折返」，站長多一個「在這裡加待避線」按鈕（同一個 `PassingLoopPlan`）；不改 `Deadlock.swift`。第 4 個 PR：教學、關卡、「進階」只留一個狀態——解鎖狀態決定有沒有工具；教學的步驟引擎與 `TutorialCardPlacement` 變成第 1、2 關的引導，舊的教學入口收掉；「進階」只在已解鎖的工具裡替手機再收一層；自由模式與沙盒全部解鎖 | 否 | 第 2 個 PR 的內容與留下的事見決策 264「下一步」：教學那一局仍手動配車，第 4 個 PR 搬進關卡時再改；同一條線 3 列以上時，每次加開只蓋一處待避線。第 4 個 PR 開工時：關卡目標天數用 `Policy`（決策 261）量；關卡、教學、「進階」照上面的合併方式只留一個狀態。第 6 個（關卡判定進 GameCore）先不做 |
 | 核心玩法：回饋 → 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | #724（決策 256）；`claude/game-sim`，#740（決策 260） | 回饋第一批做完後接開發工具（NEXT_PRIORITIES §16）：`GameSim` → `Policy` → 文件數字檢查。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：`Policy` 不另寫開局腳本，從 `BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests` 抽出來，四支改用它、數字一字不差；保留各自長處（經濟指標、三種玩法並列、規則組合比較、實景擴張），任何玩法 × 任何規則 × 任何地圖，同一種報告表格，`GameSim` 用名字跑；文件數字檢查先放進 `tools/golden-checks/` 或 `.github/scripts/` | 否（`GameSim` 加 executable target，CI 跑完整 tier） | 關卡的目標天數用 `Policy` 量 |
 | 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | #734 已合併（決策 259）；`claude/map3d-streets-arcades`，#745（決策 263） | 行人與機車（完成）→ 種子道路、軌道優先、透天厝沿街排（#745）→ 騎樓貨物、雨遮、曬衣、水塔（第 2b 步，**69.1 發版後才開**）→ 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 做到哪與下一步見第 4.4 節 |
 | 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」；2026-10-16 作者本人在那個 session 回「四方決定要不要繼續」，結論是繼續（派工 session 確認） |
@@ -576,6 +576,7 @@
 | 高鐵示範快轉只有約八成速度（一個 tick 123 ms，間隔 100 ms） | 決策 248、#709 | 排在核心玩法之後 |
 | 高鐵的長進路／閉塞區間死結、台南—左營交會 | #669，機廠 session session_01YNBmv76sfS8gJUnyRKEqHV（不再接新工作） | 沒有人接。機廠出庫已由 #678 處理；B 方案（`claude/hsr-depot-exit-priority`）量測失敗、放棄，紀錄在 #685。決策 255（單線提早折返）**沒有**解這一項：高鐵是單向的班次（決策 133），時刻表不會回到同一站，不會用到折返 |
 | §15.3 的內容：觀光列車、支線劇本、掛機模式、「這版新增」卡片、台灣節慶、各站到站鈴、3D 拉近傾斜與駕駛艙視角、花錢的地方＋新台幣＋分時電價＋車站容量、股票 | NEXT_PRIORITIES §15 | 排在核心玩法之後；各站到站鈴等測試者回報 |
+| 台灣以外的實景地圖沒有人口、地點、分區、水域、陡坡、建物覆蓋率與真實鐵路：新車站一律 10,000 人次、住宅區（決策 262 加了 127 個城市，`Ci/` 的 53 座本來就是這樣）。要補就照 `tools/real-world-population/README.md` 的工具，換成各國的 WorldPop 與 OSM 整包檔，一個國家一份資料 | 決策 262 | 沒有人接 |
 | 3D：擋住列車的建物變透明、深度閃爍、道具穿模、真的台灣車與站房 | F 台灣版＋「定案前要補」 | 3D 生活感那條線之後 |
 
 ## 6. 留在遠端、沒有合併的 branch
