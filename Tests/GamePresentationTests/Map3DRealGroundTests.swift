@@ -162,6 +162,9 @@ final class Map3DRealGroundTests: XCTestCase {
         XCTAssertTrue(Map3DScene.Builder.sidewalkLift < Map3DScene.Builder.lift(of: .service))
         XCTAssertTrue(Map3DScene.Builder.lift(of: .motorway) < Map3DScene.Builder.centreLineLift)
         XCTAssertTrue(Map3DScene.Builder.centreLineLift < Map3DShadow.lift)
+        // ...and all of them under the track's bed, which they would
+        // otherwise paint over where track crosses a road or a park.
+        XCTAssertLessThan(Map3DShadow.lift, Map3DScene.railLift - Map3DScene.Builder.bedDrop)
         // Parks and ponds the city's own open lots also have.
         XCTAssertTrue(painted.isSuperset(of: [Map3DPalette.cover(.park), Map3DPalette.cover(.water)]))
         // The real streets take most of the city's lots round the station:

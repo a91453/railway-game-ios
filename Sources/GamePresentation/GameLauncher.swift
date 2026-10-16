@@ -386,16 +386,21 @@ public final class GameLauncher {
     /// Whether ``openHighSpeedDemo(railways:)`` is building its game.
     public private(set) var isOpeningHighSpeedDemo = false
 
+    /// Whether either demo is being built: one at a time, so the one that
+    /// opens is the one the player chose.
+    public var isOpeningADemo: Bool { isOpeningHighSpeedDemo || isOpeningTRADemo }
+
     /// Opens ``HighSpeedDemo`` (decision 170): the Taiwan High Speed Rail,
     /// Nangang to Zuoying, built on its real alignment over the whole of
     /// Taiwan and running. It is the heaviest game to start (350 km of
     /// track, the land round twelve stations, the sets sent out), so it is
     /// built off the main actor, with the start screen showing meanwhile
     /// (``isOpeningHighSpeedDemo``). Returns the task, or `nil` while one
-    /// is being built already. A game the player starts meanwhile stays.
+    /// is being built already (either demo). A game the player starts
+    /// meanwhile stays.
     @discardableResult
     public func openHighSpeedDemo(railways: RealRailways) -> Task<Void, Never>? {
-        guard !isOpeningHighSpeedDemo else { return nil }
+        guard !isOpeningADemo else { return nil }
         isOpeningHighSpeedDemo = true
         let (language, population, places, water, coverage) = (language, population, places, water, coverage)
         return Task {
@@ -426,11 +431,11 @@ public final class GameLauncher {
     /// Su'aoxin, running a weekday's real trains. Built off the main actor
     /// as the high-speed demo is (``openHighSpeedDemo(railways:)``), with
     /// the start screen showing meanwhile (``isOpeningTRADemo``). Returns
-    /// the task, or `nil` while one is being built already. A game the
-    /// player starts meanwhile stays.
+    /// the task, or `nil` while one is being built already (either demo).
+    /// A game the player starts meanwhile stays.
     @discardableResult
     public func openTRADemo(railways: RealRailways) -> Task<Void, Never>? {
-        guard !isOpeningTRADemo else { return nil }
+        guard !isOpeningADemo else { return nil }
         isOpeningTRADemo = true
         let (language, population, places, water, coverage) = (language, population, places, water, coverage)
         return Task {

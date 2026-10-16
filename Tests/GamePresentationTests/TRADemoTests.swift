@@ -47,7 +47,7 @@ final class TRADemoTests: XCTestCase {
         let world = try Self.built.get().world
         XCTAssertEqual(
             world.stations.filter { !$0.isDepot }.map(\.name),
-            ["Toucheng", "Dingpu", "Jiaoxi", "Sicheng", "Yilan", "Erjie", "Zhongli_Yilan", "Luodong", "Dongshan", "Su'aoxin"]
+            ["Toucheng", "Dingpu", "Jiaoxi", "Sicheng", "Yilan", "Erjie", "Zhongli (Yilan)", "Luodong", "Dongshan", "Su'aoxin"]
         )
         XCTAssertEqual(world.stations.filter(\.isDepot).map(\.name), ["North End Sidings", "Yilan Sidings", "Su'aoxin Sidings"])
     }
@@ -223,6 +223,10 @@ final class TRADemoTests: XCTestCase {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         let task = launcher.openTRADemo(railways: railways)
         XCTAssertNil(launcher.openTRADemo(railways: railways), "one build at a time")
+        // Nor the other demo meanwhile: the one tapped first would open,
+        // or the other, whichever is built first.
+        XCTAssertNil(launcher.openHighSpeedDemo(railways: railways), "one demo at a time")
+        XCTAssertFalse(launcher.isOpeningHighSpeedDemo)
         XCTAssertTrue(launcher.isOpeningTRADemo)
         XCTAssertNil(launcher.session, "still on the start screen")
         await task?.value

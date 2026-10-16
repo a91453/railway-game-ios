@@ -846,6 +846,9 @@ public final class GameSession {
         if followedTrainID != nil, followedTrain == nil {
             followedTrainID = nil
         }
+        // Every edit ends here: one that stops the followed train's service
+        // or ends following brings the music back now, not at the next step.
+        updateMusicDuck()
     }
 
     /// Estimates the 800-metre walking catchment population of station `id`

@@ -58,7 +58,7 @@ extension Map3DScene.Builder {
             }
             // The area's corners: none of it in the scene, nothing to read.
             let corners = [CityTileArea.Point(x: area.minX, z: area.minZ), CityTileArea.Point(x: area.maxX, z: area.maxZ)].map(world)
-            guard corners[0].x <= region.maxX, corners[1].x >= region.minX, corners[1].y <= region.maxY, corners[0].y >= region.minY else { continue }
+            guard corners[0].x <= region.maxX, corners[1].x >= region.minX, corners[0].y <= region.maxY, corners[1].y >= region.minY else { continue }
             for building in area.buildings {
                 let polygons = building.polygons.map { $0.map { $0.map(world) } }
                 let points = polygons.flatMap { $0.first ?? [] }
@@ -88,8 +88,11 @@ extension Map3DScene.Builder {
     /// outline then its holes) raised `height` metres from `ground`.
     mutating func addRealBuilding(_ polygons: [[[Map3DPoint]]], ground: Float, height: Float, storeys: Int, kind: RealKind) {
         guard let outline = polygons.first?.first, outline.count >= 3 else { return }
-        let first = outline[0]
-        let seed = (Int32(truncatingIfNeeded: Int((first.x * 10).rounded())), Int32(truncatingIfNeeded: Int((first.z * 10).rounded())))
+        // Seeded from where it stands on the map, not in the scene: the
+        // scene's origin moves as track is laid, and the building must not.
+        let first = outline[0], metre = Double(WorldCoordinate.unitsPerMetre)
+        let east = originX / metre + Double(first.x), south = originY / metre + Double(first.z)
+        let seed = (Int32(truncatingIfNeeded: Int((east * 10).rounded())), Int32(truncatingIfNeeded: Int((south * 10).rounded())))
         let r = { (salt: Int32) in map3DRandom(seed.0, seed.1, salt: salt) }
         let box = Self.orientedBox(outline)
         let centre = Map3DPoint(box.centre.x, ground, box.centre.z)

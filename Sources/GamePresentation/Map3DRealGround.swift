@@ -368,12 +368,16 @@ extension Map3DScene.Builder {
             }
             return false
         }
+        let east = originX / Double(WorldCoordinate.unitsPerMetre), south = originY / Double(WorldCoordinate.unitsPerMetre)
         for road in map.roads where !road.isRamp && road.points.count >= 2 {
             let rules = Self.propRules(road.kind)
             guard !rules.isEmpty else { continue }
             let width = Double(road.kind.width(ramp: false))
             let start = road.points[0]
-            let phase = Double(map3DRandom(Int32(truncatingIfNeeded: Int(start.x.rounded())), Int32(truncatingIfNeeded: Int(start.z.rounded())), salt: 70))
+            // Seeded from the map, not the scene, whose origin moves as
+            // track is laid (as a real building is).
+            let phase = Double(map3DRandom(Int32(truncatingIfNeeded: Int((start.x + east).rounded())),
+                                           Int32(truncatingIfNeeded: Int((start.z + south).rounded())), salt: 70))
             var travelled = 0.0
             for index in 1..<road.points.count {
                 let a = road.points[index - 1], b = road.points[index]
@@ -398,7 +402,7 @@ extension Map3DScene.Builder {
                         for side: Double in rule.bothSides ? [1, -1] : [number % 2 == 0 ? 1 : -1] {
                             let out = rule.offset(width) * side
                             let x = centre.x + left.x * out, z = centre.z + left.z * out
-                            let seed = (Int32(truncatingIfNeeded: Int((x * 2).rounded())), Int32(truncatingIfNeeded: Int((z * 2).rounded())))
+                            let seed = (Int32(truncatingIfNeeded: Int(((x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((z + south) * 2).rounded())))
                             // Now and then a gap, as a real street has.
                             guard map3DRandom(seed.0, seed.1, salt: 71) >= (rule.prop == .tree ? 0.18 : 0.08), !nearJunction(x, z),
                                   let model = Self.propModels[rule.prop] else { continue }

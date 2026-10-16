@@ -149,6 +149,11 @@ struct ContentView: View {
     }
 
     /// Hands the device's secretary settings to the session.
+    /// Decision 226: un-fades the tools; written only when they are faded.
+    private func endDrawingUnderTools() {
+        if screen.isDrawingUnderTools { screen.isDrawingUnderTools = false }
+    }
+
     private func syncSecretarySettings() {
         session.pausesForImportantEvents = pausesForImportantEvents
         session.monthlyReportMode = MonthlyReportMode(rawValue: monthlyReportMode) ?? .openAndPause
@@ -388,6 +393,10 @@ struct ContentView: View {
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.toolsFrame = $0 }
                     .opacity(screen.isDrawingUnderTools ? 0.4 : 1)
                     .animation(.easeInOut(duration: 0.15), value: screen.isDrawingUnderTools)
+                    // A drag whose end the map never sees (the tool or the
+                    // panel changed under the finger) must not leave them faded.
+                    .onChange(of: session.tool) { _, _ in endDrawingUnderTools() }
+                    .onChange(of: screen.panel) { _, _ in endDrawingUnderTools() }
                     .padding([.leading, .bottom], margin)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     .padding(.bottom, strip)
