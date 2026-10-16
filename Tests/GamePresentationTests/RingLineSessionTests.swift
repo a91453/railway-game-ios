@@ -1,5 +1,5 @@
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Ring lines in the line panel (decision 49): the switch, what the panel
@@ -39,6 +39,8 @@ final class RingLineSessionTests: XCTestCase {
     func testTheSwitchMakesALineARingAndBack() async throws {
         await MainActor.run {
             let session = GameSession(world: DemoWorld.make(in: .english))
+            // Decision 260: the new line below staffed by hand, as before.
+            session.staffsLinesByHand = true
             let line = session.world.lines[0].id
             session.selectLine(line)
             session.setSelectedLineRing(true)

@@ -485,6 +485,10 @@ public final class GameSession {
     public internal(set) var tutorial: Tutorial? {
         didSet { noteTutorialStepToResume() }
     }
+    /// Whether new lines wait for the player to buy their trains, under
+    /// simple rules too (decision 260): the tutorial's game, which teaches
+    /// it. Never saved.
+    public internal(set) var staffsLinesByHand = false
     /// The tutorial the player skipped, kept to be taken up again at the
     /// same step from the game menu (``resumeTutorial()``; decision 188,
     /// later fix, TestFlight 54.1), or `nil`. Never saved; the launcher
@@ -1841,7 +1845,22 @@ public final class GameSession {
         let real = realLine(calling: stops).flatMap { match in
             realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
         }
-        let made = perform(.createLine(name: Self.suggestedLineName(for: world, in: language), stops: stops, targets: real?.targets)) { outcome, _, _ in
+        // Decision 260: under simple rules the line comes with its first
+        // train, and the passing loop its single track needs.
+        let name = Self.suggestedLineName(for: world, in: language)
+        if runsLinesForThePlayer, let plan = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {
+            let balance = world.economy.balance
+            let made = perform(.autoService(plan)) { outcome, _, world in
+                guard let id = outcome.line?.id else { return "" }
+                return Self.autoServiceText(plan, outcome: outcome, line: id, cost: Money(balance.amount - world.economy.balance.amount), in: world, language: language)
+            }
+            if let created = made?.line?.id {
+                selectedLineID = created
+                clearLineDraft()
+            }
+            return
+        }
+        let made = perform(.createLine(name: name, stops: stops, targets: real?.targets)) { outcome, _, _ in
             let name = outcome.line?.name ?? ""
             var detail = ""
             if let real {

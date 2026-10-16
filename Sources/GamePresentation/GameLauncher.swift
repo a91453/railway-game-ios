@@ -550,6 +550,8 @@ public final class GameLauncher {
         // Decision 183: nor does the city ask it for anything.
         world.setCityRequests(seed: nil)
         guard begin(world, keepingAutosave: true) else { return }
+        // Decision 260: the tutorial teaches staffing a line by hand.
+        session?.staffsLinesByHand = true
         session?.startTutorial()
     }
 

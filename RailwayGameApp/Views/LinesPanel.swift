@@ -1160,6 +1160,23 @@ struct LinesPanel: View {
             Text(verbatim: language.text("Now: ", "目前：") + memo.trainsRowText(line.id, of: session))
                 .font(.subheadline.monospacedDigit())
                 .accessibilityIdentifier("line.headway.now")
+            // Decision 260: under simple rules, one more train in one tap,
+            // with the passing loop it needs.
+            if session.runsLinesForThePlayer {
+                Button {
+                    session.addTrainToSelectedLine()
+                } label: {
+                    Label {
+                        Text(verbatim: language.text("Add a Train", "加開一列車"))
+                    } icon: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(ThemeProminentButtonStyle())
+                .accessibilityIdentifier("line.addTrain")
+            }
             if let shortfall {
                 Label {
                     Text(verbatim: shortfall.warning(in: language))

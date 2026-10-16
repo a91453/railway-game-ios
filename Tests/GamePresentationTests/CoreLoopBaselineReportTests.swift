@@ -25,6 +25,7 @@ import XCTest
 ///    town (on the far side of the first), curving on from the first
 ///    line's track, and a second line calls at all three with a train of
 ///    its own, so the two share the first line's single track.
+@MainActor
 final class CoreLoopBaselineReportTests: XCTestCase {
     func testANewPlayersOpening() throws {
         guard let value = ProcessInfo.processInfo.environment["CORE_LOOP_REPORT"] else {
@@ -55,11 +56,14 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         case noTrafficControl = "Simple and − traffic control (32)"
         /// Decision 258: the app's default, ``NewGameRules/simple``.
         case simpleRules = "Simple rules (258): − 207, 212, 217, 169, 180, 156, weather"
+        /// Decision 260: simple rules, the lines opened as the app opens
+        /// them, each with its train and the passing loop it needs.
+        case autoService = "Simple rules, lines opened with their trains and loops (260)"
 
         func apply(to world: inout GameWorld) throws {
             switch self {
             case .newGame: break
-            case .simpleRules: NewGameRules.simple.apply(to: &world)
+            case .simpleRules, .autoService: NewGameRules.simple.apply(to: &world)
             case .noCurveLimits: world.setCurveSpeedLimits(false)
             case .noBlockSections: world.setBlockSections(false)
             case .noRealisticOperation: world.setRealisticOperation(false)
@@ -81,7 +85,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         try preset.apply(to: &world)
         let start = world.economy.balance.amount
         let towns = Land.townCentres(seed: 1, in: world.bounds)
-        var script = Script()
+        var script = Script(auto: preset == .autoService)
         try script.openFirstLine(&world, from: towns[0], to: towns[1])
         var firstFare: Int64?
         var balances: [Int64: Int64] = [:]
@@ -121,7 +125,11 @@ final class CoreLoopBaselineReportTests: XCTestCase {
 
     /// The player's commands, counted: each call to the world a tap or a
     /// confirmation would make.
+    @MainActor
     private struct Script {
+        /// Decision 260: the lines opened through the session, as the app's
+        /// line panel opens them under simple rules.
+        let auto: Bool
         var commands = 0
         var edges: [TrackEdgeID] = []
         var stations: [StationID] = []
@@ -179,6 +187,17 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         /// A line calling at `stops`, all day, one train of four cars whose
         /// head is at the far end of the first stop's platform on `traversal`.
         mutating func openLine(_ world: inout GameWorld, stops: [StationID], on traversal: TrackTraversal) throws {
+            if auto {
+                let session = GameSession(world: world)
+                for stop in stops {
+                    session.selectStation(stop)
+                    try command { session.addSelectedStationToLineDraft() }
+                }
+                try command { session.createLineFromDraft() }
+                try command { session.setSelectedLineAllDay(true) }
+                world = session.world
+                return
+            }
             let platform = Self.platform
             let line = try command { try world.createLine(named: "Line \(world.lines.count + 1)", stops: stops).id }
             try command { try world.setLineServiceWindow(line, to: .allDay) }

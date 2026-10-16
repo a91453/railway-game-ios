@@ -1,0 +1,165 @@
+import Foundation
+import GameCore
+@testable import GamePresentation
+import XCTest
+
+/// ARCHITECTURE decision 260: simple rules' service. A new line gets its
+/// first train, "Add a Train" puts one more on in one tap, and single track
+/// carrying more trains than it has places to pass gets a passing loop that
+/// becomes a stop of every line through it; each one command, one Undo.
+@MainActor
+final class AutoServiceTests: XCTestCase {
+    /// The first town to the second (seed 1), one straight edge with a
+    /// platform at each end, and on from the first town's end to a third
+    /// station 4 km further: stations A, B and C (C beyond A), no line.
+    private func stations(rules: NewGameRules = .simple) throws -> (world: GameWorld, a: StationID, b: StationID, c: StationID) {
+        var world = GameWorld.newGame(rules: rules)
+        world.setTourism(nil)
+        let towns = Land.townCentres(seed: 1, in: world.bounds)
+        let from = towns[0], to = towns[1]
+        let platform = Int64(4) * world.platformCarLength
+        let dx = Double(to.x - from.x), dy = Double(to.y - from.y)
+        let span = (dx * dx + dy * dy).squareRoot()
+        func along(_ point: PlanPoint, _ metres: Double) -> WorldCoordinate {
+            WorldCoordinate(x: point.x + Int64(dx / span * metres), y: point.y + Int64(dy / span * metres))
+        }
+        let start = try world.buildTrackNode(at: along(from, -Double(platform)))
+        let end = try world.buildTrackNode(at: along(to, Double(platform)))
+        let main = try world.buildTrackEdge(from: start, to: end)
+        let length = world.trackEdge(main)?.length ?? 0
+        let a = try world.buildStation(named: "A", at: from).id
+        try world.addTrackPlatform(a, on: main, from: platform / 2, to: platform + platform / 2)
+        let b = try world.buildStation(named: "B", at: to).id
+        try world.addTrackPlatform(b, on: main, from: length - platform - platform / 2, to: length - platform / 2)
+        let reach = Double(4_000 * WorldCoordinate.unitsPerMetre)
+        let far = try world.buildTrackNode(at: along(from, -reach))
+        let branch = try world.buildTrackEdge(from: far, to: start)
+        let c = try world.buildStation(named: "C", at: PlanPoint(x: along(from, -reach + Double(platform)).x, y: along(from, -reach + Double(platform)).y)).id
+        try world.addTrackPlatform(c, on: branch, from: platform / 2, to: platform + platform / 2)
+        return (world, a, b, c)
+    }
+
+    private func draftLine(_ stops: [StationID], in session: GameSession) {
+        for stop in stops {
+            session.selectStation(stop)
+            session.addSelectedStationToLineDraft()
+        }
+        session.createLineFromDraft()
+    }
+
+    func testANewLineComesWithItsFirstTrainAndOneUndoTakesItBack() throws {
+        let (world, a, b, _) = try stations()
+        let session = GameSession(world: world)
+        XCTAssertTrue(session.runsLinesForThePlayer)
+        let before = session.world
+        draftLine([a, b], in: session)
+        let line = try XCTUnwrap(session.world.lines.first)
+        XCTAssertEqual(line.stops.first, a)
+        XCTAssertEqual(line.stops.last, b)
+        XCTAssertEqual(line.trains.count, 1, "the first train comes with the line")
+        let train = try XCTUnwrap(session.world.train(id: line.trains[0]))
+        XCTAssertNotNil(train.position, "placed where the line's trips start")
+        XCTAssertEqual(train.cars, AutoService.maximumCars, "four cars fit its platforms")
+        XCTAssertNotNil(line.targetHeadways.peak)
+        XCTAssertEqual(line.stops.count, 3, "ready for a second train: a passing loop between A and B")
+        let loop = try XCTUnwrap(session.world.station(id: line.stops[1]))
+        XCTAssertEqual(loop.operationMode, .closed)
+        XCTAssertEqual(session.world.trackPlatforms(of: loop.id).count, 2)
+        XCTAssertTrue(session.message?.text.contains("passing loop") == true, session.message?.text ?? "")
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertTrue(session.message?.text.contains("and a train") == true, session.message?.text ?? "")
+
+        session.undo()
+        XCTAssertEqual(session.world.lines, before.lines)
+        XCTAssertEqual(session.world.trains, before.trains)
+        XCTAssertEqual(session.world.economy.balance, before.economy.balance)
+    }
+
+    /// The loop the line came with lets "Add a Train" put a second train on
+    /// in one tap; a third needs another loop, which cannot go in under the
+    /// trains running there, and the message says so.
+    func testAddATrainPutsASecondTrainOnAndOneUndoTakesItBack() throws {
+        let (world, a, b, _) = try stations()
+        let session = GameSession(world: world)
+        draftLine([a, b], in: session)
+        let before = session.world
+        let line = try XCTUnwrap(session.world.lines.first)
+        XCTAssertGreaterThanOrEqual(session.world.lineMaximumTrains(line.id) ?? 0, 2)
+        session.addTrainToSelectedLine()
+        let after = try XCTUnwrap(session.world.line(id: line.id))
+        XCTAssertEqual(after.trains.count, 2, session.message?.text ?? "")
+        XCTAssertEqual(after.stops, line.stops, "no other loop")
+        XCTAssertTrue(after.trains.allSatisfy { session.world.train(id: $0)?.position != nil }, "both on the track")
+        XCTAssertTrue(session.message?.text.contains("now runs 2 trains") == true, session.message?.text ?? "")
+
+        session.undo()
+        XCTAssertEqual(session.world.lines, before.lines)
+        XCTAssertEqual(session.world.trains, before.trains)
+        XCTAssertEqual(session.world.economy.balance, before.economy.balance)
+    }
+
+    /// CORE_LOOP §1.2: a second line from C over the first's single track
+    /// gets a loop on the shared track, a stop of both lines.
+    func testASecondLineOverTheFirstsSingleTrackGetsALoopBothLinesStopAt() throws {
+        let (world, a, b, c) = try stations()
+        let session = GameSession(world: world)
+        draftLine([a, b], in: session)
+        draftLine([c, a, b], in: session)
+        XCTAssertEqual(session.world.lines.count, 2, session.message?.text ?? "")
+        let loops = session.world.stations.filter { $0.operationMode == .closed }
+        XCTAssertEqual(loops.count, 1)
+        let loop = try XCTUnwrap(loops.first)
+        for line in session.world.lines {
+            XCTAssertEqual(line.trains.count, 1)
+            XCTAssertTrue(line.stops.contains(loop.id), line.name)
+        }
+        XCTAssertEqual(session.world.lines[0].stops, [a, loop.id, b])
+        XCTAssertEqual(session.world.lines[1].stops, [c, a, loop.id, b])
+    }
+
+    /// Over the demo's Line 1, whose trains stand at both its ends, a new
+    /// line still opens; its train waits off the track, and the message
+    /// says why.
+    func testALineWhoseEndsAreTakenStillOpens() throws {
+        let session = GameSession(world: DemoWorld.make(in: .english))
+        XCTAssertTrue(session.runsLinesForThePlayer)
+        let line1 = session.world.lines[0]
+        let lines = session.world.lines.count
+        draftLine([line1.stops[0], line1.stops[2]], in: session)
+        XCTAssertEqual(session.world.lines.count, lines + 1)
+        XCTAssertEqual(session.message?.kind, .success)
+        XCTAssertTrue(session.message?.text.contains("waits off the track") == true, session.message?.text ?? "")
+    }
+
+    /// Realistic rules and the tutorial ask the player, as before.
+    func testRealisticRulesAndTheTutorialLeaveTheTrainsToThePlayer() throws {
+        let (world, a, b, _) = try stations(rules: .realistic)
+        let session = GameSession(world: world)
+        XCTAssertFalse(session.runsLinesForThePlayer)
+        draftLine([a, b], in: session)
+        XCTAssertEqual(session.world.lines.first?.trains, [])
+
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("AutoServiceTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        launcher.startTutorial()
+        let tutorial = try XCTUnwrap(launcher.session)
+        XCTAssertFalse(tutorial.runsLinesForThePlayer)
+        tutorial.skipTutorial()
+        XCTAssertFalse(tutorial.runsLinesForThePlayer, "the tutorial's game stays as it teaches")
+    }
+
+    /// The command log keeps it, and a replay makes it again.
+    func testTheCommandIsWrittenAndReadBack() throws {
+        let (world, a, b, _) = try stations()
+        let session = GameSession(world: world)
+        let plan = try XCTUnwrap(session.autoServicePlan(creating: "Line 1", stops: [a, b], targets: nil))
+        XCTAssertEqual(plan.loops.count, 1)
+        XCTAssertEqual(plan.trains, 1)
+        let command = PlayerCommand.autoService(plan)
+        let read = try JSONDecoder().decode(PlayerCommand.self, from: JSONEncoder().encode(command))
+        XCTAssertEqual(read, command)
+        XCTAssertEqual(command.name, "autoService")
+        XCTAssertEqual(command.actionText(in: .traditionalChinese), "開這條線並配一列車")
+    }
+}

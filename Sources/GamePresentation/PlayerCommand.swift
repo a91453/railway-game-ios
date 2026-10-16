@@ -56,6 +56,10 @@ public enum PlayerCommand: Hashable, Sendable {
     /// (``GameSession/planDoubleChain(main:run:parallel:platforms:wantsCrossover:in:)``),
     /// all of it or none.
     case buildDoubleTrackChain(main: [TrackStretch], parallel: [TrackStretch], platforms: [ChainPlatform], crossovers: [TrackStretch])
+    /// Simple rules' service (decision 260, ``GameSession/addTrainToSelectedLine()``):
+    /// a line made or one already there, the passing loops it needs, and
+    /// its trains, all or none.
+    case autoService(AutoService)
 
     /// A stretch of track as the network tool lays it: a node for each new
     /// end (splitting an edge for an end on one), then the edge, with the
@@ -186,6 +190,7 @@ public enum PlayerCommand: Hashable, Sendable {
         case .edit(let edit): edit.name
         case .buildTrackChain: "buildTrackChain"
         case .buildDoubleTrackChain: "buildDoubleTrackChain"
+        case .autoService: "autoService"
         }
     }
 }
@@ -261,6 +266,8 @@ extension GameSession {
             for crossover in crossovers {
                 _ = try crossover.build(in: &world, heights: heights)
             }
+        case .autoService(let plan):
+            return try apply(plan, to: &world)
         case .removeTrack(let id):
             guard let edge = world.network.edge(id) else { throw .unknownTrackEdge(id) }
             try world.removeTrackEdge(id)
@@ -319,6 +326,8 @@ extension PlayerCommand: Codable {
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
         var passingLoop: PassingLoopPlan?
+        /// Decision 260.
+        var autoService: AutoService?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
         /// The double track's parallel, as a `buildTrack` of its own.
@@ -422,6 +431,9 @@ extension PlayerCommand: Codable {
         case "buildDepotYard":
             guard let plan = record.depotYard else { throw invalid("a depot's sidings need their plan") }
             self = .buildDepotYard(plan)
+        case "autoService":
+            guard let plan = record.autoService else { throw invalid("simple rules' service needs its plan") }
+            self = .autoService(plan)
         case "edit":
             guard let edit = record.edit else { throw invalid("an edit needs its value") }
             self = .edit(edit)
@@ -517,6 +529,8 @@ extension PlayerCommand: Codable {
             record.parallelChain = parallel.map(PlayerCommand.buildTrack)
             record.platforms = platforms.isEmpty ? nil : platforms
             record.crossovers = crossovers.isEmpty ? nil : crossovers.map(PlayerCommand.buildTrack)
+        case .autoService(let plan):
+            record.autoService = plan
         }
         try record.encode(to: encoder)
     }
@@ -557,6 +571,8 @@ extension PlayerCommand {
             language.text("build this passing loop", "建這條待避線")
         case .buildDepotYard:
             language.text("build this depot", "建這座機廠")
+        case .autoService(let plan):
+            plan.newLine == nil ? language.text("add a train", "加開一列車") : language.text("open this line with a train", "開這條線並配一列車")
         case .removePlatform, .removeTrack:
             nil
         case .edit(let edit):
