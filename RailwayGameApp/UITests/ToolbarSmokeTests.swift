@@ -672,26 +672,25 @@ final class ShellLayoutUITests: XCTestCase {
             let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
             from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
-        let due = Date().addingTimeInterval(5)
-        while !time.exists, Date() < due {
-            Thread.sleep(forTimeInterval: 0.5)
-        }
         // Whether a train is due at the station just then depends on how the
-        // demo's trains run: at 07:17 its board listed one, at 07:20 in the
-        // next run none (runs 38871334760, 38873835534). With none, time runs
-        // again, the board in view, until one is due, and pauses then.
-        if !time.exists, resume.exists {
-            resume.tap()
-            let running = Date().addingTimeInterval(90)
-            while !time.exists, Date() < running {
-                Thread.sleep(forTimeInterval: 0.25)
+        // demo's trains run: at 07:17 its board listed one, at 07:20 and at
+        // 07:27 in other runs none (runs 38871334760, 38873835534, main
+        // 878adaf's full lane 38878787559). So, the board in view, time runs
+        // three seconds at a time (half an hour of the game), paused between,
+        // until the board lists a train. A single look and one long run
+        // missed it: the look saw a row for a moment, and the run was skipped.
+        var listed = false
+        let looking = Date().addingTimeInterval(150)
+        repeat {
+            Thread.sleep(forTimeInterval: 1)
+            if time.exists {
+                listed = true
+                break
             }
+            if resume.exists { resume.tap() }
+            Thread.sleep(forTimeInterval: 3)
             if pause.exists { pause.tap() }
-        }
-        // Not dragged into view: a label inside a row read as one is never
-        // hittable, and the drag would hunt for it (the sixth run). The
-        // board's head is in view, and its first trains under it.
-        let listed = time.exists
+        } while Date() < looking
         if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
         // A time or a count of minutes on one line is wider than tall and a
