@@ -10325,7 +10325,14 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 2. 它的時刻表之後會再回到這一站，而且中間有一站是折返的（來回，不是繞一圈）；這一站不是時刻表的第一站，回來的那一站也不是最後一站（不然就是整趟取消，不是跳過走不到的站；也因此行車控制的對照模型的 campaign 裡三站的來回時刻表不受影響）；
 3. 折返後從這一站開往下一站的路現在就取得到，而且它開走之後，死結裡另一台列車就不再卡住。
 
-折返的列車轉向，改成「在這一站的下一個同站停靠」等著（像已經從遠端回來了），中間的停靠跳過；照一般的停站停留、上下客，到出發時間再照一般規則出發。車上要去被跳過的站的乘客在這裡下車，算放棄（同「乘客的方向在這裡結束」的規則，`abandonStrandedRiders()`）。行程紀錄（決策 223）記一次在這站的出發與再到站。
+折返的列車轉向，改成「在這一站的下一個同站停靠」等著（像已經從遠端回來了），中間的停靠跳過。車門立刻再開，照一般停靠的上下客（`exchangePassengers`）：
+- 車上要去被跳過車站的乘客在這裡下車，算放棄，也算進這一站的下車人次（站流量、車站商業）。
+- 在這一站等回程的乘客上車。
+- 交換時間照一般規則：開門 8 秒，加上下車人數算出的秒數。
+
+`exchangePassengers` 多了一條：目的地不在之後停靠站裡的乘客在這裡下車、算放棄。其他時候車上每個人的目的地都在之後的停靠站裡（`riderProblem()`），所以這一條只在折返時有作用。
+
+折返沒有行駛，所以不算一次離站：公司與路線帳的離站數、行駛距離、載客與座位都不加；真正從這站開出時才算。行程紀錄（決策 223）記一次在這站的出發與再到站。之後到出發時間，再照一般規則出發。
 
 **沒做的**：
 - 事前避免（單線區間一次只讓一個方向進入）：這個開局裡，第二列車就算在 C 等，進 A 之後還是一樣，因為它根本過不了區間車。事前避免要等時刻表交會推估（決策 58 的 Deferred），不在這個修正。
@@ -10350,7 +10357,7 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 - 高鐵的長進路／閉塞區間死結（#669）不在這裡：班次是單向的，用不到折返。
 - 決策 254 方向 2 的自動加待避線，才能讓第二條線全程跑到 B。
 
-**驗證**：VERIFIED（Linux，Swift 6.4）：`SharedSingleTrackTests`（main 上失敗：第 6 分鐘起死結；修正後一天內不卡，兩列車都繼續停靠）、`DeadlockTests`、`DeadlockPropertyTests`、`IdleTrainDeadlockTests`、`FollowerDeadlockTests`、`SingleTrackCapacityTests`、`GoldenScenarioTests`、`SavedGameTests`、`ReplayFixtureTests`；`CoreLoopBaselineReportTests` 的數字見 CORE_LOOP §1.2 的補記。
+**驗證**：VERIFIED（Linux，Swift 6.4）：`SharedSingleTrackTests`（4 個。main 上失敗：第 4 分鐘起死結。修正後一天內每三小時兩列車各至少停靠 4 次；折返前存檔，載入後逐分鐘和原世界一樣；折返站的下車人次、放棄、交換時間都有記，帳上不多一次離站。後兩項是 Codex 審查（#736）找到的，修正前的程式會失敗）、`DeadlockTests`、`DeadlockPropertyTests`、`IdleTrainDeadlockTests`、`FollowerDeadlockTests`、`SingleTrackCapacityTests`、`GoldenScenarioTests`、`SavedGameTests`、`ReplayFixtureTests`；`CoreLoopBaselineReportTests` 的數字見 CORE_LOOP §1.2 的補記。
 
 ### 256. 每個動作都有回報（第一批）：站上的車資、目標打勾與旋律、城鎮長大的環
 

@@ -171,6 +171,10 @@ extension GameWorld {
         // Decision 222: those who wait here for their next train.
         var changing: Int64 = 0
         if let slot = riders.firstIndex(where: { $0.train == train.id }) {
+            // Decision 255: a train turned back short no longer calls where
+            // some ride to; they leave it here too. Anywhere else everyone
+            // aboard rides to a call ahead (see ``riderProblem()``).
+            let ahead = isLast ? [] : Set(callsAhead(of: train, leaving: stop).map { train.timetable[$0].station })
             var kept: [RidingGroup] = []
             for group in riders[slot].groups {
                 if group.destination == entry.station && isOpen {
@@ -181,7 +185,7 @@ extension GameWorld {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                     }
                     alighted += group.count
-                } else if group.destination == entry.station || isLast || stop == directionEnd(of: train, from: stop) {
+                } else if group.destination == entry.station || isLast || stop == directionEnd(of: train, from: stop) || !ahead.contains(group.destination) {
                     passengers[passengerIndex(of: group.origin)].abandoned += group.count
                     alighted += group.count
                 } else {
