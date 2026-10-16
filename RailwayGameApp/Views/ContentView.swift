@@ -57,6 +57,11 @@ struct ContentView: View {
             .sheet(item: presentedPanel) { panel in
                 panelSheet(panel)
             }
+            // Decision 229, later: this game's 3D map, from the map's own
+            // button (``Map3DShortcut``).
+            .fullScreenCover(isPresented: $screen.showsMap3D) {
+                Map3DPreviewScreen(session: session, close: { screen.showsMap3D = false })
+            }
             .environment(screen)
             .onAppear(perform: syncSecretarySettings)
             .onChange(of: pausesForImportantEvents) { _, _ in syncSecretarySettings() }
@@ -228,6 +233,9 @@ struct ContentView: View {
             HelpView(language: session.language)
         case .postcard:
             PostcardSheet(session: session)
+        case .achievements:
+            AchievementsSheet(session: session, records: launcher.achievements)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -951,6 +959,9 @@ final class GameScreenState {
         case help
         /// The network postcard (decision 215), from the game menu.
         case postcard
+        /// The achievements (decision 181), from the game menu's first
+        /// level (decision 226, later).
+        case achievements
 
         var id: Self { self }
 
@@ -959,12 +970,15 @@ final class GameScreenState {
         var isBesideMap: Bool {
             switch self {
             case .lines, .station, .economy: true
-            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard: false
+            case .timetable, .fleet, .mapLayers, .dataSources, .settings, .yearEnd, .goals, .tourism, .news, .monthEnd, .help, .postcard, .achievements: false
             }
         }
     }
 
     var panel: Panel?
+    /// Decision 229, later: whether this game's 3D map is open, from the
+    /// map's 3D button.
+    var showsMap3D = false
     /// Whether the station panel, as it opens, puts up its rename alert
     /// at once: the station tag's pencil (TestFlight 60.1, renaming took
     /// three taps before a letter could be typed).
