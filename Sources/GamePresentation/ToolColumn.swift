@@ -18,10 +18,6 @@ public enum ToolColumn {
     public static let tilePadding: Double = 4
     /// The space between the buttons of a group.
     public static let buttonSpacing: Double = 4
-    /// How small a name in the column may shrink to fit its button. The
-    /// Chinese names fit whole at every text size the app takes; the longest
-    /// English ones ("Buildings", "Network") need about half at the largest.
-    public static let minimumNameScale: Double = 0.45
     /// The column's width, and the building tools' beside the map: a
     /// button and the glass either side of it.
     public static var width: Double { buttonWidth + 2 * tilePadding }

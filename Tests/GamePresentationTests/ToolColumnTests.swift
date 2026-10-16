@@ -12,16 +12,6 @@ final class ToolColumnTests: XCTestCase {
         XCTAssertEqual(ToolColumn.buttonWidth + 2 * ToolColumn.tilePadding, ToolColumn.width)
     }
 
-    func testTheLongestNamesFitTheButtonShrunkRatherThanCut() {
-        // A name has the button less 4 points either side. At the largest
-        // text the app takes, captions are 17 points: two Chinese characters
-        // take 34 and fit whole; "Buildings" in bold, the widest English
-        // name, about 78, which fits once shrunk to the least scale.
-        let room = ToolColumn.buttonWidth - 8
-        XCTAssertLessThanOrEqual(2 * 17, room)
-        XCTAssertLessThanOrEqual(78 * ToolColumn.minimumNameScale, room)
-    }
-
     func testTheColumnStopsAGapBelowTheLayerStrip() {
         // An iPhone 17 Pro on its side, 382 points inside the safe area:
         // the board's foot at 54, the strip 36 high under it after a gap of
