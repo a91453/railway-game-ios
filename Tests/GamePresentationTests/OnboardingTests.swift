@@ -226,8 +226,12 @@ final class OnboardingTests: XCTestCase {
 
     // MARK: - New game options
 
-    func testTheDefaultOptionsAreTheNewGameAsItWas() {
-        let options = NewGameOptions()
+    /// Decision 256: realistic rules are the new game as it was; the
+    /// default is simple (``SimpleRulesTests``).
+    func testTheDefaultOptionsWithRealisticRulesAreTheNewGameAsItWas() {
+        var options = NewGameOptions()
+        XCTAssertEqual(options.rules, .simple)
+        options.rules = .realistic
         XCTAssertEqual(options.startingBalance, GameWorld.startingBalance)
         XCTAssertEqual(options.disruption, .light)
         var world = GameWorld.newGame(eventSeed: 7, buysMap: true)
@@ -253,6 +257,8 @@ final class OnboardingTests: XCTestCase {
         XCTAssertEqual(world.economy.balance, Money(500_000_000))
         var hard = NewGameOptions()
         hard.difficulty = .expert
+        // Decision 256: realistic rules keep the weather drawn from the seed.
+        hard.rules = .realistic
         var strict = GameWorld.newGame(eventSeed: 7)
         hard.apply(to: &strict)
         XCTAssertEqual(strict.disruptions?.level, .standard)
@@ -286,6 +292,8 @@ final class OnboardingTests: XCTestCase {
     func testTheSummarySaysWhatChanged() {
         var options = NewGameOptions()
         XCTAssertTrue(options.summary(in: .english).hasPrefix("Starts with $ 3,000,000."))
+        // Decision 256: materials are an option of realistic rules only.
+        options.rules = .realistic
         options.buildingMaterials = false
         XCTAssertTrue(options.summary(in: .english).contains("Changed: towns grow without building materials"))
         XCTAssertTrue(options.summary(in: .traditionalChinese).contains("已更改：城市不需要建材就能成長"))

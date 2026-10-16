@@ -183,7 +183,19 @@ struct SettingsView: View {
         // with them on keeps them, and its result is not kept).
         let fixed = session.eventsAreFixed
         let levels: [DisruptionLevel?] = fixed ? [current] : [nil, .light, .standard]
+        // Decision 256: the rules the game began with, which stay.
+        let rules = NewGameRules(of: session.world)
         return Section {
+            LabeledContent {
+                Text(verbatim: language.text("\(rules.title(in: language)) rules", "\(rules.title(in: language))規則"))
+            } label: {
+                Label {
+                    Text(verbatim: language.text("Rules", "規則"))
+                } icon: {
+                    Image(systemName: "list.bullet.rectangle")
+                }
+            }
+            .accessibilityIdentifier("settings.rules")
             // Decision 184, later: a menu the ticks leave alone.
             TickStable(StableKey(current, levels, language)) {
                 Picker(selection: Binding(get: { current }, set: { session.setDisruptionLevel($0) })) {

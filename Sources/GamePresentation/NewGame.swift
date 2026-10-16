@@ -43,9 +43,13 @@ extension GameWorld {
     /// middle one, the usual map with the same towns, and buys the others
     /// as its railway grows, each growing towns of its own from
     /// `eventSeed`.
+    ///
+    /// Decision 256: its `rules` are realistic, every rule below on, unless
+    /// simple (``NewGameRules``), as the app's new games are.
     public static func newGame(
         anchor: GeoAnchor? = nil, bounds: WorldBounds = newGameBounds, balance: Money = startingBalance, eventSeed: UInt32 = 1,
-        land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = [], buysMap: Bool = false
+        land: [LandCell]? = nil, water: [CellPosition] = [], steep: [CellPosition] = [], buysMap: Bool = false,
+        rules: NewGameRules = .realistic
     ) -> GameWorld {
         precondition(!buysMap || (anchor == nil && bounds == newGameBounds), "Only a blank map of the usual size buys its map (decision 160).")
         let bounds = buysMap ? buyingMapBounds : bounds
@@ -159,6 +163,7 @@ extension GameWorld {
             // the map, its sights and its freight are set: the first offers
             // come at once.
             world.setCityRequests(seed: eventSeed)
+            rules.apply(to: &world)
             return world
         } catch {
             // An empty world has no trains to share track, and land and
@@ -449,6 +454,70 @@ public enum DemoWorld {
     }
 }
 
+/// The rules a new game plays by (ARCHITECTURE decision 256, after decision
+/// 254): simple, the app's default, or realistic, every rule a new game has.
+///
+/// Simple turns off what a new player need not learn first, as the tutorial
+/// and the challenges do: block sections (decision 212), curve speed
+/// limits (217), realistic operation (207), crowding at the doors (169),
+/// rolling stock economics (180), building materials (156) and the weather,
+/// typhoons and fuel spells (162), keeping the public holidays (154).
+/// Traffic control, flexible dispatch, keeping left, real car lengths, the
+/// sights and the city's requests stay on. Every one of them is a switch
+/// the world already has and keeps in its saves, so a game keeps the rules
+/// it began with, and nothing changes them during play.
+public enum NewGameRules: String, CaseIterable, Codable, Sendable {
+    case simple, realistic
+
+    /// Turns `world`'s rules to these: simple turns the realistic ones off;
+    /// realistic leaves them as they are. Free.
+    public func apply(to world: inout GameWorld) {
+        guard self == .simple else { return }
+        world.setBlockSections(false)
+        world.setCurveSpeedLimits(false)
+        world.setRealisticOperation(false)
+        world.setDoorCrowding(false)
+        world.setRollingStockEconomics(false)
+        world.setBuildingMaterials(false)
+        // Decision 162: the holidays without the weather drawn from the seed.
+        if let disruptions = world.disruptions, disruptions.seed != nil {
+            world.setDisruptions(Disruptions(level: disruptions.level, country: disruptions.country))
+        }
+    }
+
+    /// The rules `world` plays by: simple when the rules simple turns off
+    /// that only a realistic game has are all off (the tutorial's, the
+    /// challenges' and saves from before them too), realistic otherwise.
+    public init(of world: GameWorld) {
+        let realistic = world.blockSections || world.curveSpeedLimits || world.realisticOperation
+            || world.doorCrowding || world.rollingStockEconomics
+        self = realistic ? .realistic : .simple
+    }
+
+    public func title(in language: DisplayLanguage) -> String {
+        switch self {
+        case .simple: language.text("Simple", "簡單")
+        case .realistic: language.text("Realistic", "寫實")
+        }
+    }
+
+    /// What the rules mean for the player, in a sentence or two.
+    public func explanation(in language: DisplayLanguage) -> String {
+        switch self {
+        case .simple:
+            language.text(
+                "Trains keep their speed through curves, every train costs the same, and there is no weather or building materials.",
+                "列車過彎不減速，每種車價錢一樣，沒有天氣與建材。"
+            )
+        case .realistic:
+            language.text(
+                "Block signals, curve speed limits, punctuality, crowded doors, train prices, building materials and weather all count.",
+                "閉塞號誌、彎道限速、準點率、車門擁擠、車價、建材與天氣都會影響營運。"
+            )
+        }
+    }
+}
+
 /// What a new game is set up with (ARCHITECTURE decision 177), after A-Train's
 /// difficulty choice (やさしい／標準／達人): the starting cash, how much the
 /// holidays, weather and typhoons disturb the traffic, and the rules a new
@@ -553,6 +622,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     public var ground = Ground.real
     /// Decision 200: standard unless chosen unlimited.
     public var funds = Funds.standard
+    /// Decision 256: simple unless chosen realistic, options kept from
+    /// before it included.
+    public var rules = NewGameRules.simple
 
     public init() {}
 
@@ -570,6 +642,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         seed = try container.decodeIfPresent(UInt32.self, forKey: .seed)
         ground = try container.decodeIfPresent(Ground.self, forKey: .ground) ?? standard.ground
         funds = try container.decodeIfPresent(Funds.self, forKey: .funds) ?? standard.funds
+        rules = try container.decodeIfPresent(NewGameRules.self, forKey: .rules) ?? standard.rules
     }
 
     public var startingBalance: Money { difficulty.startingBalance }
@@ -582,8 +655,9 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     }
 
     /// Turns `world`'s disruptions, building materials, outside
-    /// connections and funds to these options. Free, and nothing else
-    /// changes.
+    /// connections, funds and rules (decision 256: simple rules have no
+    /// weather or building materials, whatever the options say) to these
+    /// options. Free, and nothing else changes.
     public func apply(to world: inout GameWorld) {
         switch disruption {
         case .off:
@@ -597,6 +671,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
         world.setBuildingMaterials(buildingMaterials)
         if !outsideConnections { world.setOutsideConnections(false) }
         world.setUnlimitedFunds(funds == .unlimited)
+        rules.apply(to: &world)
     }
 
     /// The seed as typed: digits only, up to ``UInt32/max``; `nil` for
@@ -609,13 +684,16 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
     /// game, shown under the options.
     public func summary(in language: DisplayLanguage) -> String {
         let cash = funds == .unlimited ? "∞" : startingBalance.moneyText
-        let disruptions = switch disruption {
-        case .off: language.text("No holidays, weather or typhoons disturb the traffic.", "假日、天氣與颱風不影響客流。")
-        case .light: language.text("Holidays, weather and typhoons disturb the traffic gently.", "假日、天氣與颱風對客流的影響較輕。")
-        case .standard: language.text("Holidays, weather and typhoons disturb the traffic in full.", "假日、天氣與颱風對客流的影響完整。")
+        let disruptions = switch (disruption, self.rules) {
+        case (.off, _): language.text("No holidays, weather or typhoons disturb the traffic.", "假日、天氣與颱風不影響客流。")
+        case (.light, .realistic): language.text("Holidays, weather and typhoons disturb the traffic gently.", "假日、天氣與颱風對客流的影響較輕。")
+        case (.standard, .realistic): language.text("Holidays, weather and typhoons disturb the traffic in full.", "假日、天氣與颱風對客流的影響完整。")
+        case (.light, .simple): language.text("Holidays raise the traffic gently; no weather or typhoons.", "假日讓客流稍微增加；沒有天氣與颱風。")
+        case (.standard, .simple): language.text("Holidays raise the traffic in full; no weather or typhoons.", "假日讓客流完整增加；沒有天氣與颱風。")
         }
         var rules: [String] = []
-        if !buildingMaterials { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
+        // Decision 256: simple rules have none, which their explanation says.
+        if !buildingMaterials && self.rules == .realistic { rules.append(language.text("towns grow without building materials", "城市不需要建材就能成長")) }
         if !outsideConnections { rules.append(language.text("no riders from beyond the map's edge", "地圖邊緣外沒有旅客")) }
         if !buysMap { rules.append(language.text("a fixed 16 km map", "固定 16 公里的地圖")) }
         if ground == .flat { rules.append(language.text("flat ground on real-world maps", "實景地圖地形平坦")) }
@@ -623,9 +701,12 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
             rules.append(language.text("unlimited funds, no achievements", "資金無限，不計成就"))
         }
         let rule = rules.isEmpty
-            ? language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。")
+            ? (self.rules == .simple
+                ? language.text("Outside connections and map purchase are on.", "外部連接與地圖購買都開啟。")
+                : language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。"))
             : language.text("Changed: \(rules.joined(separator: ", ")).", "已更改：\(rules.joined(separator: "、"))。")
         let seedText = seed.map { language.text("Seed \($0).", "種子 \($0)。") } ?? language.text("A random map each game.", "每局隨機地圖。")
-        return language.text("Starts with \(cash). ", "起始資金 \(cash)。") + disruptions + " " + rule + " " + seedText
+        return language.text("Starts with \(cash). ", "起始資金 \(cash)。") + self.rules.explanation(in: language) + " "
+            + disruptions + " " + rule + " " + seedText
     }
 }

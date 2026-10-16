@@ -3,6 +3,7 @@ import GamePresentation
 import SwiftUI
 
 /// The new game's options (decision 177), after A-Train's difficulty choice:
+/// the rules, simple or realistic (decision 256);
 /// easy, standard or expert, with the cash each starts with; how much the
 /// holidays and weather disturb the traffic; whether building materials,
 /// the towns beyond the map's edge and buying the map are on; a real-world
@@ -42,6 +43,23 @@ struct NewGameOptionsView: View {
                 } header: {
                     Text(verbatim: language.text("Difficulty", "難度"))
                 }
+                // Decision 256: simple rules unless chosen realistic.
+                Section {
+                    Picker(selection: options.rules) {
+                        ForEach(NewGameRules.allCases, id: \.self) { rules in
+                            Text(verbatim: rules.title(in: language)).tag(rules)
+                        }
+                    } label: {
+                        Text(verbatim: language.text("Rules", "規則"))
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("newGameOptions.rules")
+                } header: {
+                    Text(verbatim: language.text("Rules", "規則"))
+                } footer: {
+                    Text(verbatim: launcher.newGameOptions.rules.explanation(in: language)
+                        + " " + language.text("A game keeps its rules to the end.", "開始後不能更改。"))
+                }
                 // Decision 200: a managed game that pays for nothing.
                 Section {
                     Picker(selection: options.funds) {
@@ -80,15 +98,17 @@ struct NewGameOptionsView: View {
                     ))
                 }
                 Section {
+                    // Decision 256: simple rules have none.
                     Toggle(language.text("Building materials", "建材供應"), isOn: toggle(\.buildingMaterials))
+                        .disabled(launcher.newGameOptions.rules == .simple)
                     Toggle(language.text("Outside connections", "外部連接"), isOn: toggle(\.outsideConnections))
                     Toggle(language.text("Buy the map tile by tile", "分區購買地圖"), isOn: toggle(\.buysMap))
                 } header: {
-                    Text(verbatim: language.text("Rules", "規則"))
+                    Text(verbatim: language.text("More rules", "其他規則"))
                 } footer: {
                     Text(verbatim: language.text(
-                        "Materials: towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Buying the map applies to a blank map; real-world maps decide for themselves.",
-                        "建材：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。分區購買只適用於空白地圖，實景地圖有自己的規則。"
+                        "Materials (realistic rules only): towns need them to grow. Outside connections: riders arrive from beyond the map's edge. Buying the map applies to a blank map; real-world maps decide for themselves.",
+                        "建材（只有寫實規則）：城市要有建材才能成長。外部連接：地圖邊緣外的旅客會進來。分區購買只適用於空白地圖，實景地圖有自己的規則。"
                     ))
                 }
                 Section {

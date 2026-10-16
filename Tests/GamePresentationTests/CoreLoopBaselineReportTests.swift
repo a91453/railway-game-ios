@@ -53,10 +53,13 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         case noFlexDispatch = "− flexible dispatch (172)"
         case simple = "Simple: − 207, 212, 217, 172, 169, 180"
         case noTrafficControl = "Simple and − traffic control (32)"
+        /// Decision 256: the app's default, ``NewGameRules/simple``.
+        case simpleRules = "Simple rules (256): − 207, 212, 217, 169, 180, 156, weather"
 
         func apply(to world: inout GameWorld) throws {
             switch self {
             case .newGame: break
+            case .simpleRules: NewGameRules.simple.apply(to: &world)
             case .noCurveLimits: world.setCurveSpeedLimits(false)
             case .noBlockSections: world.setBlockSections(false)
             case .noRealisticOperation: world.setRealisticOperation(false)
