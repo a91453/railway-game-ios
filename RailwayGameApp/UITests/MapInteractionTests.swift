@@ -1195,12 +1195,22 @@ final class MapInteractionTests: XCTestCase {
                 if !next.identifier.isEmpty { marks.append(next.identifier) }
                 queue.append(contentsOf: next.children)
             }
-            if layout == "none" { layout = "none(\(snapshot.elementType.rawValue) \(marks.prefix(8).joined(separator: ",")))" }
+            // In the whole layout the card's only child is its ScrollView,
+            // and the card's own identifier ("details.card") takes the place
+            // of "details.scroll.whole": the element found is the scroll view
+            // itself (main 45fcde4's full lane, run 38933058668: all 24
+            // snapshots of type 46, scrollView). The layout is then the
+            // card's type; what it holds (the "On time" capsule's checkmark,
+            // the stop button) comes and goes with the train, and is kept
+            // for the failure message only.
+            if layout == "none" {
+                layout = snapshot.elementType == .scrollView ? "details.card(scrollView)" : "none(\(snapshot.elementType.rawValue))"
+            }
             layouts[layout, default: 0] += 1
             let kind = summary.contains("Stopped at") ? "stopped" : summary.contains("running") ? "running" : "other"
             if kind == "stopped" { stopped += 1 }
             if kind == "running" { running += 1 }
-            samples.append("\(layout.prefix(24))/\(kind)/\(Int(snapshot.frame.height))")
+            samples.append("\(layout.prefix(24))/\(kind)/\(Int(snapshot.frame.height))/\(marks.prefix(4).joined(separator: ","))")
             summaries.insert(summary.replacingOccurrences(of: "[0-9]+", with: "#", options: .regularExpression))
             Thread.sleep(forTimeInterval: 0.1)
         }
