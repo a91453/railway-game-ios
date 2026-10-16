@@ -56,9 +56,9 @@ final class CoreLoopBaselineReportTests: XCTestCase {
         case noTrafficControl = "Simple and − traffic control (32)"
         /// Decision 258: the app's default, ``NewGameRules/simple``.
         case simpleRules = "Simple rules (258): − 207, 212, 217, 169, 180, 156, weather"
-        /// Decision 260: simple rules, the lines opened as the app opens
+        /// Decision 264: simple rules, the lines opened as the app opens
         /// them, each with its train and the passing loop it needs.
-        case autoService = "Simple rules, lines opened with their trains and loops (260)"
+        case autoService = "Simple rules, lines opened with their trains and loops (264)"
 
         func apply(to world: inout GameWorld) throws {
             switch self {
@@ -127,7 +127,7 @@ final class CoreLoopBaselineReportTests: XCTestCase {
     /// confirmation would make.
     @MainActor
     private struct Script {
-        /// Decision 260: the lines opened through the session, as the app's
+        /// Decision 264: the lines opened through the session, as the app's
         /// line panel opens them under simple rules.
         let auto: Bool
         var commands = 0

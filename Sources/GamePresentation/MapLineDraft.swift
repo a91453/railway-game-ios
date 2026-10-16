@@ -17,7 +17,7 @@ public struct MapLineDraft: Equatable, Sendable {
     public let caption: String
     /// Whether the ✓ can create the line: two stops or more.
     public let canCreate: Bool
-    /// Decision 260: what opening it costs and brings under simple rules.
+    /// Decision 264: what opening it costs and brings under simple rules.
     public var opening: LineOpeningPreview? = nil
 }
 

@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// ARCHITECTURE decision 260: simple rules' service. A new line gets its
+/// ARCHITECTURE decision 264: simple rules' service. A new line gets its
 /// first train, "Add a Train" puts one more on in one tap, and single track
 /// carrying more trains than it has places to pass gets a passing loop that
 /// becomes a stop of every line through it; each one command, one Undo.
@@ -170,6 +170,50 @@ final class AutoServiceTests: XCTestCase {
         XCTAssertEqual(session.world.lines.count, lines + 1)
         XCTAssertEqual(session.message?.kind, .success)
         XCTAssertTrue(session.message?.text.contains("waits off the track") == true, session.message?.text ?? "")
+    }
+
+    /// Realistic rules: two lines over the same single track with no place
+    /// to pass (CORE_LOOP §1.2, where decision 255 turns a train back
+    /// early). The station master and the line card say so, and the card's
+    /// button builds the loop under the trains standing there, a stop of
+    /// both lines, the trains back at their lines' starts; one Undo.
+    func testRealisticRulesOfferAPassingLoopWhereTwoLinesCannotPass() throws {
+        let (world, a, b, c) = try stations(rules: .realistic)
+        let session = GameSession(world: world)
+        draftLine([a, b], in: session)
+        session.staffSelectedLine(headway: 60)
+        draftLine([c, a, b], in: session)
+        session.staffSelectedLine(headway: 60)
+        let lines = session.world.lines.map(\.id)
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(session.world.lines.allSatisfy { $0.trains.count == 1 }, session.message?.text ?? "")
+        XCTAssertNotNil(session.world.sharedSingleTrackShortfall(of: lines[1]))
+        XCTAssertEqual(
+            StationMasterAdvice(world: session.world, worstLosingLine: { nil }),
+            .noPlaceToPass(line: lines[0], name: session.world.lines[0].name)
+        )
+        session.selectLine(lines[1])
+        let shortfall = try XCTUnwrap(session.selectedLinePassingShortfall)
+        XCTAssertEqual(shortfall.others, [lines[0]])
+        XCTAssertTrue(session.passingShortfallText(shortfall).contains("between A and B"), session.passingShortfallText(shortfall))
+
+        let before = session.world
+        session.addPassingLoopToSelectedLine()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        let loop = try XCTUnwrap(session.world.stations.first { $0.operationMode == .closed })
+        XCTAssertEqual(session.world.line(id: lines[0])?.stops, [a, loop.id, b])
+        XCTAssertEqual(session.world.line(id: lines[1])?.stops, [c, a, loop.id, b])
+        for line in session.world.lines {
+            XCTAssertEqual(line.trains.count, 1, line.name)
+            XCTAssertNotNil(session.world.train(id: line.trains[0])?.position, line.name)
+        }
+        XCTAssertNil(session.world.sharedSingleTrackShortfall(of: lines[1]))
+        XCTAssertNil(session.selectedLinePassingShortfall)
+
+        session.undo()
+        XCTAssertEqual(session.world.lines, before.lines)
+        XCTAssertEqual(session.world.stations, before.stations)
+        XCTAssertEqual(session.world.trains, before.trains)
     }
 
     /// Realistic rules and the tutorial ask the player, as before.

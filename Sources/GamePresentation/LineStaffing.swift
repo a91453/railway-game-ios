@@ -178,7 +178,7 @@ extension GameSession {
     /// many because they were too long (decision 194, later: the line
     /// card's "run more trains" buys only those its headway lacks).
     ///
-    /// Decision 260: `orAtTheFarEnd`, a train whose berth is held is placed
+    /// Decision 264: `orAtTheFarEnd`, a train whose berth is held is placed
     /// where the line's trips start the other way, at its last stop, when
     /// that is free: flexible dispatch (decision 172) sends it out from
     /// there.
@@ -235,7 +235,7 @@ extension GameSession {
     }
 
     /// Line `id`'s journey the other way round, from its last stop: where a
-    /// train starts its trips from that end (decision 260). `nil` for a ring.
+    /// train starts its trips from that end (decision 264). `nil` for a ring.
     static func farEndJourney(of id: LineID, in world: GameWorld) -> LineJourney? {
         guard world.line(id: id)?.isRing == false else { return nil }
         var reversed = world

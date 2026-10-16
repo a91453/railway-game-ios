@@ -10429,6 +10429,52 @@ swift run GameSim --state /tmp/game.json load report.json then apply report.json
 - `Policy` 腳本化試玩：在 `HeadlessGame` 上跑固定的玩法 N 天，列出死結、零旅次、破產、列車停住。給關卡 session 量目標天數。
 - 文件數字一致性檢查。
 
+### 264. 開線自動配車、自動交會；寫實規則的一鍵待避線
+
+2026-10-16，決策 254 §7 的第 2 個 PR（CORE_LOOP §3.1 的「配車」「交會」兩列），接在決策 258（簡單規則）與 255（提早折返）之後。號碼依工作登記 #231：main 上最大 260，還沒釋出的登記到 263，取 264。GameCore、存檔版本、golden schema、SaveFixtures、ReplayFixtures 都不動：每一步都是現有的 `GameWorld` 指令，合成 GamePresentation 的一個 `PlayerCommand.autoService(AutoService)`，所以一次 Undo 全部退回，指令記錄也記得它（`Sources/GamePresentation/AutoService.swift`，Linux 測試 `AutoServiceTests`）。
+
+**簡單規則**（`GameSession.runsLinesForThePlayer`：公司經營、簡單規則、不是教學那一局）：
+1. **開線就有車**：`createLineFromDraft()` 建線後馬上買一列車、放在第一站、配屬，目標班距＝一趟來回（`autoServicePlan(creating:stops:targets:)`）。
+   - 節數：最短那一站的月台放得下幾節就幾節，1 到 4 節（`AutoService.maximumCars`）。
+   - 第一站被占用時，改放在最後一站往回開（`LineStaffing.addTrains(…orAtTheFarEnd:)`），彈性派車（172）會從那裡發車；兩端都占用時，車買了先不上線，訊息說明。
+2. **開線時先蓋待避線**：單線段夠長（`AutoService.shortestLoopLeg`，2 公里）、而且沒有地方讓兩列車交會時，在最長的那一段中點用決策 204 的 `PassingLoopPlan` 蓋待避線，號誌站加進每一條經過它的路線。
+   - 不等到加開第二列車才蓋，原因是 GameCore 的 `splitTrackEdge` 不切開有列車停著或預約著的軌道，而路線的車一直在自己的軌道上。
+   - 新路線經過已經有的號誌站，就直接把它加進停靠站。
+   - 2 公里以下的短線不蓋：列車大多停在站上，蓋了也幾乎用不到。要的話，按「加開一列車」時再蓋。
+3. **「加開一列車」**（路線卡）：一鍵加一列車。單線的交會處不夠時，先加一處待避線。
+4. **價錢看得到**：路線草稿與地圖上的 ✓ 會寫「含一列車與一處待避線 · $…」（`lineOpeningPreview`，和建線時同一套算法，用 `priced` 算）。錢不夠蓋待避線時，先只開線、配車。
+5. 教學那一局（`staffsLinesByHand`）照舊讓玩家自己配車：教學的步驟教的就是這件事。等第 4 個 PR 把教學搬進關卡時再改。
+
+**兩種規則都有**（寫實規則的保底，接在決策 255 之後）：
+6. **沒有地方交會**（`GameWorld.sharedSingleTrackShortfall(of:)`）：一條線和別條線的列車共用單線，交會處少於列車數減一。這就是決策 255 會讓列車提早折返的情形。
+   - 站長說「和別條線共用單線，列車沒有地方交會。點一下加待避線。」（`StationMasterAdvice.noPlaceToPass`），點了打開那條線的路線卡。
+   - 路線卡寫出是哪兩站之間、和哪幾條線共用，並有「在這裡加待避線」按鈕（`addPassingLoopToSelectedLine()`）。
+7. **蓋在列車底下**：擋在那段軌道上的列車，先從路線與軌道取下，蓋好後放回各自路線的起點（第一站被占用時放終點）、重新配屬，和決策 180 改編路線時的做法一樣。訊息會說「有 N 列車擋在那段軌道上，已經回到路線起點」。
+
+**判斷交會處夠不夠**：
+- 一條線的單線段上，跑的是自己的車加上所有經過同一段單線的其他線的車。
+- 單線上的列車只能在「有兩條軌道的停靠站」交會，`n` 列車需要 `n − 1` 處。
+- 不夠時，一次加一處，優先蓋在和別條線共用的那一段，否則蓋在最長的那一段。
+- 環狀線交給玩家自己處理。
+
+**量到的**（`CoreLoopBaselineReportTests` 的「Simple rules, lines opened with their trains and loops (264)」，種子 1，14 天）：見 PR 與 CORE_LOOP §1.2 的補記。
+
+**四方**：
+- 玩家：開線就有車在跑；第二列車不會再卡在單線上；錢花在哪裡，開線前就看得到。寫實規則卡住時，站長說原因，一鍵就能解。
+- 開發：全是現有的 `GameWorld` 指令與決策 204 的待避線工具，合成一個可 Undo、可重播的指令；GameCore 與決策 255 的程式都不動。
+- 美術：號誌站與待避線照決策 204 的畫法出現在地圖上，玩家看得出列車在哪裡交會；按鈕用現有樣式與 SF Symbols。
+- 音樂：蓋好時用現有的建造聲，不另外加。
+
+**沒有採用**：
+- 加開第二列車時才蓋待避線：軌道上有車，GameCore 不切開。
+- 每段單線都蓋待避線：太花錢，大部分用不到。
+- 寫實規則也自動蓋：寫實規則把選擇留給玩家，只給說明與一鍵按鈕。
+- 關掉行車控制讓車互相穿過：列車會疊在一起（決策 254）。
+
+**下一步**（也寫在 `docs/HANDOFF.md` 第 2 節）：
+- 教學那一局仍然手動配車，第 4 個 PR 把教學搬進第 1、2 關時，改成照新的開線流程。
+- 3 列以上的同一條線：每次加開只蓋一處，交會處不夠時，下一次加開才會再蓋。
+
 ## 目前規則摘要
 
 - 世界的範圍：`WorldBounds`，世界單位的寬與高，每邊 `1...WorldBounds.maximumSide`（2^25 單位，524,288 公尺，決策 88；之前是 2^20，16,384 公尺，E1 起是新遊戲的大小，現在叫 `WorldBounds.standard`）；點在世界裡是 `0 <= x < width`、`0 <= y < height`。世界沒有格子：鐵軌只在路網上、車站在點上（決策 48、51、54）。

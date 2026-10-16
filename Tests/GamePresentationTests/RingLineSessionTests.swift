@@ -39,7 +39,7 @@ final class RingLineSessionTests: XCTestCase {
     func testTheSwitchMakesALineARingAndBack() async throws {
         await MainActor.run {
             let session = GameSession(world: DemoWorld.make(in: .english))
-            // Decision 260: the new line below staffed by hand, as before.
+            // Decision 264: the new line below staffed by hand, as before.
             session.staffsLinesByHand = true
             let line = session.world.lines[0].id
             session.selectLine(line)

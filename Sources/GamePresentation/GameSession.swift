@@ -96,9 +96,11 @@ public final class GameSession {
     @ObservationIgnored var networkPreviewMemo: NetworkPreviewMemo?
     /// The passing loop at the picked place, kept as the track preview is.
     @ObservationIgnored var passingLoopMemo: PassingLoopMemo?
-    /// Decision 260: what opening the drafted line costs, worked out once
+    /// Decision 264: what opening the drafted line costs, worked out once
     /// for each draft and world.
     @ObservationIgnored var lineOpeningMemo: LineOpeningMemo?
+    /// Decision 264: the selected line's shortfall of places to pass.
+    @ObservationIgnored var passingShortfallMemo: PassingShortfallMemo?
     /// The depot's sidings at the picked end, kept likewise.
     @ObservationIgnored var depotYardMemo: DepotYardMemo?
     /// The levelling of the platform's stretch, kept likewise (see
@@ -495,7 +497,7 @@ public final class GameSession {
         didSet { noteTutorialStepToResume() }
     }
     /// Whether new lines wait for the player to buy their trains, under
-    /// simple rules too (decision 260): the tutorial's game, which teaches
+    /// simple rules too (decision 264): the tutorial's game, which teaches
     /// it. Never saved.
     public internal(set) var staffsLinesByHand = false
     /// The tutorial the player skipped, kept to be taken up again at the
@@ -1866,7 +1868,7 @@ public final class GameSession {
         let real = realLine(calling: stops).flatMap { match in
             realTargetHeadways(of: match.line, inSystem: match.system).map { (name: match.line.name, targets: $0) }
         }
-        // Decision 260: under simple rules the line comes with its first
+        // Decision 264: under simple rules the line comes with its first
         // train, and the passing loop its single track needs.
         let name = Self.suggestedLineName(for: world, in: language)
         if runsLinesForThePlayer, let plan = autoServicePlan(creating: name, stops: stops, targets: real?.targets).flatMap(feasible) {

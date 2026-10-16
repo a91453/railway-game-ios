@@ -56,7 +56,7 @@ public enum PlayerCommand: Hashable, Sendable {
     /// (``GameSession/planDoubleChain(main:run:parallel:platforms:wantsCrossover:in:)``),
     /// all of it or none.
     case buildDoubleTrackChain(main: [TrackStretch], parallel: [TrackStretch], platforms: [ChainPlatform], crossovers: [TrackStretch])
-    /// Simple rules' service (decision 260, ``GameSession/addTrainToSelectedLine()``):
+    /// Simple rules' service (decision 264, ``GameSession/addTrainToSelectedLine()``):
     /// a line made or one already there, the passing loops it needs, and
     /// its trains, all or none.
     case autoService(AutoService)
@@ -326,7 +326,7 @@ extension PlayerCommand: Codable {
         var crossover: ScissorsPlan?
         var platformTrack: PlatformTrackPlan?
         var passingLoop: PassingLoopPlan?
-        /// Decision 260.
+        /// Decision 264.
         var autoService: AutoService?
         var depotYard: DepotYardPlan?
         var levelling: PlatformLevelling?
