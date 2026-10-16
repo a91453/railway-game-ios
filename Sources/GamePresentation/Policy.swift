@@ -498,6 +498,8 @@ public enum RulePreset: String, CaseIterable, Sendable {
     case noFlexDispatch = "no-flex-dispatch"
     case simple
     case noTrafficControl = "no-traffic-control"
+    /// Decision 258: the app's default, ``NewGameRules/simple``.
+    case simpleRules = "simple-rules"
 
     /// How the comparison table names it.
     public var title: String {
@@ -509,6 +511,7 @@ public enum RulePreset: String, CaseIterable, Sendable {
         case .noFlexDispatch: "− flexible dispatch (172)"
         case .simple: "Simple: − 207, 212, 217, 172, 169, 180"
         case .noTrafficControl: "Simple and − traffic control (32)"
+        case .simpleRules: "Simple rules (258): − 207, 212, 217, 169, 180, 156, weather"
         }
     }
 
@@ -516,6 +519,7 @@ public enum RulePreset: String, CaseIterable, Sendable {
     public func apply(to world: inout GameWorld) throws {
         switch self {
         case .newGame: break
+        case .simpleRules: NewGameRules.simple.apply(to: &world)
         case .noCurveLimits: world.setCurveSpeedLimits(false)
         case .noBlockSections: world.setBlockSections(false)
         case .noRealisticOperation: world.setRealisticOperation(false)
