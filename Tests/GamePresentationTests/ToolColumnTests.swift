@@ -13,7 +13,7 @@ final class ToolColumnTests: XCTestCase {
     }
 
     func testTheBuildingToolsBesideTheMapKeep66_1sWidth() {
-        // The rail beside the map (an iPad, a phone held upright) was 72
+        // The rail beside the map (an iPad's) was 72
         // points on 66.1, and stays so: its buttons are 64.
         XCTAssertEqual(ToolColumn.railWidth, 72)
         XCTAssertEqual(ToolColumn.railButtonWidth + 2 * ToolColumn.tilePadding, ToolColumn.railWidth)

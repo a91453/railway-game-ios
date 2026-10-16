@@ -21,8 +21,9 @@ public enum ToolColumn {
     public static let buttonSpacing: Double = 4
     /// The column's width: a button and the glass either side of it.
     public static var width: Double { buttonWidth + 2 * tilePadding }
-    /// Every button's width in the building tools beside the map (an iPad,
-    /// or a phone held upright): 66.1's rail, 72 points, less its glass.
+    /// Every button's width in the building tools beside the map, on an
+    /// iPad (a phone is only held sideways, where the tools are in the
+    /// column): 66.1's rail, 72 points, less its glass.
     /// The map has room to spare there, and the longest English names fit.
     public static let railButtonWidth: Double = 64
     /// The width of the building tools beside the map.
