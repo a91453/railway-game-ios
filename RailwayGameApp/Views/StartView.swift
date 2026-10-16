@@ -153,15 +153,16 @@ struct StartView: View {
             // Stable across localizations for the UI smoke tests.
             .accessibilityIdentifier("start.newGame")
             // Decision 177: the difficulty, the cash and the rules of the
-            // new game, kept from one game to the next.
+            // new game (decision 258: simple or realistic), kept from one
+            // game to the next.
             Button {
                 showsNewGameOptions = true
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "slider.horizontal.3")
                     Text(verbatim: launcher.language.text(
-                        "New Game Options · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)",
-                        "新遊戲選項 · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)"
+                        "New Game Options · \(launcher.newGameOptions.rules.title(in: launcher.language)) · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)",
+                        "新遊戲選項 · \(launcher.newGameOptions.rules.title(in: launcher.language))規則 · \(launcher.newGameOptions.difficulty.title(in: launcher.language)) · \(launcher.newGameOptions.startingBalance.moneyText)"
                     ))
                 }
                 .font(.footnote.weight(.semibold))
