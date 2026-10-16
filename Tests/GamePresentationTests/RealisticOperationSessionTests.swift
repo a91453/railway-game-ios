@@ -20,6 +20,12 @@ final class RealisticOperationSessionTests: XCTestCase {
         let directory = Self.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        // Decision 258: under the realistic rules; the default simple ones
+        // keep it off.
+        launcher.startNewGame()
+        XCTAssertEqual(launcher.session?.world.realisticOperation, false)
+        launcher.returnToStart()
+        launcher.newGameOptions.rules = .realistic
         launcher.startNewGame()
         XCTAssertEqual(launcher.session?.world.realisticOperation, true)
     }
