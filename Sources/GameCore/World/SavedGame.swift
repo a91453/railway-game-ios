@@ -320,9 +320,19 @@
 ///     build would have read it as its own and dropped every depot of a
 ///     line after the first. From 61 a build before it says the save is
 ///     newer instead.
+/// 62. Real car lengths (decision 227): a world can have
+///     `"realCarLengths": true`, and a train its `"carPitch"`. A build that
+///     reads only an earlier version would read every car at 16 m, so it
+///     says the save is newer than it instead.
+/// 63. Spacing allowances (decision 248): a world saved within a minute
+///     can have its `"spacingAllowances"`, how far each train of a line
+///     with real runs may still go before the minute ends. A build that
+///     reads only an earlier version would drop them, and its trains would
+///     run up to each other again until the minute ends, so it says the
+///     save is newer than it instead.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 62
+    public static let currentVersion = 63
 
     public let world: GameWorld
 
@@ -485,6 +495,8 @@ extension SavedGame: Codable {
         // may carry a line's `"depots"`.
         // Version 61 to 62: a world without `"realCarLengths"` buys trains
         // of 16 m cars, and a train without `"carPitch"` has them.
+        // Version 62 to 63: a world without `"spacingAllowances"` gives its
+        // trains theirs as it goes on (at a whole minute it has none).
         // Later versions add their steps here.
         world = try GameWorld(from: container.superDecoder(forKey: .world), madeBeforeSpacing: version < 5)
     }
