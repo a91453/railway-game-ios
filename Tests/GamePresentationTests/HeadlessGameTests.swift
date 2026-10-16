@@ -132,7 +132,7 @@ final class HeadlessGameTests: XCTestCase {
                 return error.description
             }
         }
-        XCTAssertEqual(refusal(["new-game", "--speed", "2"]), "new-game does not take --speed; it takes --buys-map, --rules, --seed")
+        XCTAssertEqual(refusal(["new-game", "--speed", "2"]), "new-game does not take --speed; it takes --buys-map, --place, --preset, --rules, --seed")
         XCTAssertEqual(refusal(["advance", "--weeks", "2"]), "advance does not take --weeks; it takes --days, --hours, --minutes, --seconds")
         XCTAssertTrue(refusal(["fly"]).hasPrefix("unknown operation fly; known: new-game, load"))
         XCTAssertEqual(refusal(["load"]), "load needs a file")
