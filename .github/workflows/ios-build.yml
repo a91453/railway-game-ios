@@ -117,8 +117,12 @@ permissions:
 # MapInteractionTests 837 s, RealWorldMapUITests 679 s of 2,982), so the
 # halves end about level: the build job keeps the other 24 minutes, the
 # project and translation checks; the second half builds for itself.
+# SettingsUITests joined them on 2026-10-16 (decision 265): in the ten full
+# lanes after the split the build job took 35 to 44 minutes and the second
+# half 25 to 38 (the build job's own checks and its slower Simulator boot
+# are some 5 minutes more), and SettingsUITests is 279 to 349 s.
 env:
-  FULL_LANE_SECOND_JOB: "MapInteractionTests RealWorldMapUITests"
+  FULL_LANE_SECOND_JOB: "MapInteractionTests RealWorldMapUITests SettingsUITests"
 
 # A newer push to a pull request cancels its older run. Every other run (the
 # full lane: started after a merge, nightly or by hand) has its own group
@@ -589,7 +593,13 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      # The Traditional Chinese translations, on every lane. It runs after the
+      # The Traditional Chinese translations, on a pull request and the full
+      # lane; not on a run by hand of named UI tests (only_testing), which
+      # is there to fix a test: the pull request and the full lane still
+      # check them, and on 2026-10-16 the 94 runs by hand spent 283 macOS
+      # minutes on the export, as much as on their UI tests, and one (run
+      # 38929483452) went red when its export passed 15 minutes on a slow
+      # runner (decision 265). It runs after the
       # UI tests, and also when they failed, so each reports on its own. The
       # export builds with SWIFT_EMIT_LOC_STRINGS into its own derived data,
       # leaving the tested build alone. It cannot reuse the tested build:
@@ -599,7 +609,7 @@ jobs:
       # (run 38111831569, 86 s against 97 s before).
       - name: Test the localization checker
         id: localization-selftest
-        if: ${{ !cancelled() && steps.app-build.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.app-build.outcome == 'success' && !inputs.only_testing }}
         run: python3 .github/scripts/check-localization-selftest.py
 
       - name: Export Swift strings with Xcode
