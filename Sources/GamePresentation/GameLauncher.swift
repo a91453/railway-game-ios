@@ -515,11 +515,13 @@ public final class GameLauncher {
 
     /// Starts the tutorial's game at step `id` (Debug builds'
     /// `-tutorial-step`, for the UI tests of a later step's screen): from
-    /// the line chapter on, with what the steps before it have the player
+    /// `build.done` on, with what the steps before it have the player
     /// build near the middle of the map: a stretch of track with a station
-    /// near each end (nothing left picked), and from `line.create` the two
-    /// stations picked for the line, from `line.staff` the line, from
-    /// `build.done` its trains. The network tool is left chosen.
+    /// near each end (nothing left picked, the network tool left chosen),
+    /// and from `line.open` the tools put away (decision 226, later: Done
+    /// comes before the line), from `line.create` the two stations picked
+    /// for the line, from `line.staff` the line, from `time.play` its
+    /// trains.
     public func startTutorial(atStep id: String) {
         startTutorial()
         guard let session else { return }
@@ -528,7 +530,7 @@ public final class GameLauncher {
             guard let index = steps.firstIndex(of: id), let first = steps.firstIndex(of: step) else { return false }
             return index >= first
         }
-        if reaches("line.open") {
+        if reaches("build.done") {
             let tile: Int64 = 1_024
             let reach: Int64 = 512
             let bounds = session.world.bounds
@@ -547,6 +549,7 @@ public final class GameLauncher {
             session.networkStart = nil
             session.networkEnd = nil
             session.networkEdgePoint = nil
+            if reaches("line.open") { session.selectTool(.select) }
             if reaches("line.create") {
                 for station in session.world.stations.suffix(2) {
                     session.selectStation(station.id)
@@ -554,7 +557,7 @@ public final class GameLauncher {
                 }
             }
             if reaches("line.staff") { session.createLineFromDraft() }
-            if reaches("build.done") { session.staffSelectedLine(headway: 10) }
+            if reaches("time.play") { session.staffSelectedLine(headway: 10) }
         }
         session.startTutorial(atStep: id)
     }

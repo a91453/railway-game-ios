@@ -16,8 +16,8 @@ final class TutorialSessionTests: XCTestCase {
     private static let stepIDs = [
         "build.network", "map.move", "track.draw", "track.build",
         "station.mode", "station.first.site", "station.first.build", "station.second.site", "station.second.build",
-        "line.open", "line.stations", "line.create",
-        "line.staff", "build.done", "time.play", "first.fare", "line.card.open", "line.card.read",
+        "build.done", "line.open", "line.stations", "line.create",
+        "line.staff", "time.play", "first.fare", "line.card.open", "line.card.read",
         "station.select", "station.ridership", "end",
     ]
 
@@ -72,6 +72,54 @@ final class TutorialSessionTests: XCTestCase {
                 XCTAssertNil(session.tutorial, "Finish ends it")
                 XCTAssertTrue(finished)
             }
+        }
+    }
+
+    /// Decision 226, later (TestFlight, 2026-10-16): the tutorial uses the
+    /// game's own tools. Each step, as a player reaches it, points only at
+    /// tools the screen shows then, on a phone held sideways (the building
+    /// tools take Lines' place in its column) and on an iPad: its first
+    /// step had pointed at Network, which shows only once Build is tapped,
+    /// and Lines was asked for while building.
+    func testEveryStepPointsAtToolsTheScreenShows() async {
+        await MainActor.run {
+            let session = GameSession(world: .newGame(), language: .english)
+            session.startTutorial()
+            var visited: [String] = []
+            while let tutorial = session.tutorial, visited.count < Self.stepIDs.count {
+                let step = tutorial.step
+                visited.append(step.id)
+                for compactHeight in [true, false] {
+                    let shown = ScreenTools.shownTargets(tool: session.tool, compactHeight: compactHeight)
+                    for target in step.targets where ScreenTools.toolTargets.contains(target) {
+                        XCTAssertTrue(shown.contains(target), "\(step.id) points at \(target.rawValue) with \(session.tool) chosen, compact height \(compactHeight)")
+                    }
+                }
+                Self.carryOut(step.id, in: session)
+                session.showNextTutorialStep()
+            }
+            XCTAssertEqual(visited.first, "build.network")
+            XCTAssertEqual(visited.last, "end")
+            XCTAssertEqual(Tutorial.standardSteps.first?.targets, [.buildEntry], "the first step points at Build")
+        }
+    }
+
+    /// Done stands beside the network tool, as in the game: a player who
+    /// puts the tools away during the track or station steps is told how to
+    /// get them back.
+    func testTheBuildingStepsSayHowToGetTheToolsBack() async {
+        await MainActor.run {
+            let session = GameSession(world: .newGame(), language: .english)
+            session.startTutorial()
+            Self.walk(session, to: "track.draw")
+            XCTAssertNil(session.tutorialHint)
+            session.selectTool(.select)
+            XCTAssertEqual(session.tutorialHint?.text, "Tap Build to get the network tool back.")
+            session.selectTool(.network)
+            XCTAssertNil(session.tutorialHint)
+            Self.walk(session, to: "station.mode")
+            session.selectTool(.train)
+            XCTAssertEqual(session.tutorialHint?.text, "Tap Build to get the network tool back.")
         }
     }
 
@@ -279,7 +327,7 @@ final class TutorialSessionTests: XCTestCase {
             }
             XCTAssertEqual(session.world.stations.count, 2)
             session.showNextTutorialStep()
-            XCTAssertEqual(session.tutorial?.step.id, "line.open")
+            XCTAssertEqual(session.tutorial?.step.id, "build.done")
         }
     }
 
@@ -470,6 +518,9 @@ final class TutorialSessionTests: XCTestCase {
             session.showNextTutorialStep()
             session.showNextTutorialStep()
             session.showNextTutorialStep()
+            XCTAssertEqual(session.tutorial?.step.id, "build.done", "the tools are still out")
+            session.selectTool(.select)
+            session.showNextTutorialStep()
             XCTAssertEqual(session.tutorial?.step.id, "line.open", "the line chapter asks for a new line")
             XCTAssertFalse(session.isTutorialStepDone)
             launcher.returnToStart()
@@ -546,7 +597,7 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertEqual(session.world.stations.count, 2)
             XCTAssertEqual(session.world.network.edges.count, 1, "one stretch")
             XCTAssertNil(session.networkEdgePoint, "no bubble left on a station")
-            XCTAssertEqual(session.tool, .network)
+            XCTAssertEqual(session.tool, .select, "Done came before the line (decision 226, later)")
             XCTAssertFalse(session.isTutorialStepDone)
             session.startPickingLineStops(announces: false)
             XCTAssertTrue(session.isTutorialStepDone)
@@ -577,8 +628,15 @@ final class TutorialSessionTests: XCTestCase {
             launcher.startTutorial(atStep: "build.done")
             session = try XCTUnwrap(launcher.session)
             XCTAssertEqual(session.tutorial?.step.id, "build.done")
-            XCTAssertFalse(session.world.trains.isEmpty)
+            XCTAssertEqual(session.world.stations.count, 2)
+            XCTAssertTrue(session.world.lines.isEmpty, "Done comes before the line")
             XCTAssertFalse(session.isTutorialStepDone, "the network tool is still chosen")
+
+            launcher.startTutorial(atStep: "time.play")
+            session = try XCTUnwrap(launcher.session)
+            XCTAssertEqual(session.tutorial?.step.id, "time.play")
+            XCTAssertEqual(session.tool, .select)
+            XCTAssertFalse(session.world.trains.isEmpty, "the line has its trains")
 
             launcher.startTutorial(atStep: "no.such.step")
             XCTAssertEqual(launcher.session?.tutorial?.index, 0)
@@ -592,7 +650,7 @@ final class TutorialSessionTests: XCTestCase {
         let names = TutorialTarget.allCases.map(\.rawValue)
         XCTAssertEqual(Set(names).count, names.count)
         XCTAssertEqual(names, [
-            "tool.select", "tool.network", "tool.train", "tool.building", "train.buy", "line.staff.start", "network.modes",
+            "tool.select", "tool.network", "tool.train", "tool.building", "dock.build", "train.buy", "line.staff.start", "network.modes",
             "panel.action", "map", "map.zoom", "hud.lines", "hud.speed", "hud.cash", "hud.menu", "line.draft.pick",
             "line.draft.create", "panel.details", "panel.side", "map.build.confirm", "inspector.ridership", "line.loss",
             "line.loss.fix",
@@ -621,28 +679,29 @@ final class TutorialSessionTests: XCTestCase {
         XCTAssertEqual(steps.map(\.id), Self.stepIDs)
         XCTAssertEqual(Set(steps.map(\.id)).count, steps.count)
         XCTAssertEqual(steps.map { $0.title(in: .english) }, [
-            "Tap Network", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
+            "Tap Build", "Zoom out to see the town", "Tap the start, then the end", "Tap ✓ to build the track",
             "Tap Platform", "Tap your track near one end", "Tap ✓ to build the station", "Tap the track near the other end",
-            "Tap ✓ for the second station",
+            "Tap ✓ for the second station", "Tap Done to stop building",
             "Tap Lines", "Tap one station, then the other", "Tap ✓ to create the line",
-            "Tap Buy … and Start Service", "Tap Done to stop building", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
+            "Tap Buy … and Start Service", "Tap \u{25B6}\u{FE0E} to run time", "Wait for your first fares",
             "Tap Lines to check your line", "Read your line's card",
             "Tap one of your stations", "Tap Ridership to see who rides", "That's the tour",
         ])
         XCTAssertEqual(steps.map { $0.title(in: .traditionalChinese) }, [
-            "點「路網」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
+            "點「建設」", "縮小地圖看看城鎮", "點起點，再點終點", "按 ✓ 蓋好軌道",
             "點「月台」", "點軌道靠近一端的地方", "按 ✓ 蓋車站", "點軌道另一端的地方", "按 ✓ 蓋第二座車站",
+            "點「完成」結束建造",
             "點「路線」", "點一座車站，再點另一座", "按 ✓ 建立路線",
-            "按「購買…列並開始營運」", "點「完成」結束建造", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
+            "按「購買…列並開始營運」", "按 \u{25B6}\u{FE0E} 讓時間走", "等第一筆車資進帳",
             "點「路線」看營運收支", "看懂路線卡",
             "點你的一座車站", "點「客源」看誰在搭車", "導覽結束",
         ])
         XCTAssertEqual(steps.map(\.chapter), [
-            .track, .track, .track, .track, .stations, .stations, .stations, .stations, .stations,
-            .line, .line, .line, .service, .service, .service, .service, .service, .service,
+            .track, .track, .track, .track, .stations, .stations, .stations, .stations, .stations, .stations,
+            .line, .line, .line, .service, .service, .service, .service, .service,
             .passengers, .passengers, .passengers,
         ])
-        XCTAssertEqual(steps[0].body(in: .traditionalChinese), "目標：蓋一條賺到第一筆車資的路線。軌道和車站都用「路網」蓋。")
+        XCTAssertEqual(steps[0].body(in: .traditionalChinese), "目標：蓋一條賺到第一筆車資的路線。軌道和車站都在「建設」裡蓋。")
         XCTAssertTrue(steps[2].body(in: .english).contains("at least \(Tutorial.minimumTrackMetres) m"))
         for language in [DisplayLanguage.english, .traditionalChinese] {
             XCTAssertEqual(Set(steps.map { $0.title(in: language) }).count, steps.count, "titles are unique")
@@ -688,8 +747,9 @@ final class TutorialSessionTests: XCTestCase {
     }
 
     /// Done resumes the clock the network tool paused (decision 99), and
-    /// the time step is passed; time paused by hand shows it, and it waits
-    /// for time to run. Pausing again undoes it.
+    /// the time step, after the line's trains (decision 226, later), is
+    /// passed; time paused by hand shows it, and it waits for time to run.
+    /// Pausing again undoes it.
     func testTheTimeStepWaitsForTimeToRunAndIsPassedWhenItDoes() async throws {
         await MainActor.run {
             let session = GameSession(world: .newGame(), language: .english)
@@ -700,7 +760,9 @@ final class TutorialSessionTests: XCTestCase {
             session.setSpeed(.paused)
             session.selectTool(.select)
             session.showNextTutorialStep()
-            XCTAssertEqual(session.tutorial?.step.id, "time.play")
+            XCTAssertEqual(session.tutorial?.step.id, "line.open")
+            XCTAssertTrue(session.world.clock.isPaused, "Done left the speed the player chose")
+            Self.walk(session, to: "time.play")
             XCTAssertFalse(session.isTutorialStepDone)
             session.togglePause()
             XCTAssertTrue(session.isTutorialStepDone, "resumed")
@@ -722,8 +784,10 @@ final class TutorialSessionTests: XCTestCase {
             await MainActor.run { [world] in
                 let session = GameSession(world: world, language: .english)
                 session.startTutorial()
-                Self.walk(session, to: "build.done")
-                session.selectTool(.select)
+                Self.walk(session, to: "line.staff")
+                session.staffSelectedLine(headway: 10)
+                // Done set time running before the line: the time step is
+                // passed.
                 session.showNextTutorialStep()
                 guard charges else {
                     XCTAssertEqual(session.tutorial?.step.id, "line.card.open", "nothing to wait for")
@@ -1002,6 +1066,7 @@ final class TutorialSessionTests: XCTestCase {
             launcher.startTutorial(atStep: "line.open")
             let lines = try XCTUnwrap(launcher.session)
             let bounds = lines.world.bounds
+            lines.selectTool(.network)
             lines.setNetworkMode(.build)
             lines.tapNetwork(at: PlanPoint(x: bounds.width / 2 - 6 * Self.tile, y: bounds.height / 2 + 4 * Self.tile), reach: Self.reach)
             lines.tapNetwork(at: PlanPoint(x: bounds.width / 2 + 6 * Self.tile, y: bounds.height / 2 + 4 * Self.tile), reach: Self.reach)
@@ -1022,11 +1087,9 @@ final class TutorialSessionTests: XCTestCase {
             XCTAssertEqual(lines.tutorialHint?.text, "Tap Lines to pick stations again.")
 
             // Time paused while waiting for fares.
-            launcher.startTutorial(atStep: "build.done")
+            launcher.startTutorial(atStep: "time.play")
             let fares = try XCTUnwrap(launcher.session)
-            fares.selectTool(.select)
             fares.setSpeed(.paused)
-            fares.showNextTutorialStep()
             fares.togglePause()
             fares.showNextTutorialStep()
             XCTAssertEqual(fares.tutorial?.step.id, "first.fare")
@@ -1042,7 +1105,7 @@ final class TutorialSessionTests: XCTestCase {
         let steps = Tutorial.standardSteps
         XCTAssertEqual(steps.filter(\.usesDetailsCard).map(\.id), ["station.mode", "station.ridership"])
         XCTAssertEqual(steps.filter { $0.panel == .lines }.map(\.id), ["line.stations", "line.create", "line.staff", "line.card.read"])
-        XCTAssertEqual(steps.filter { $0.panel == .closed }.map(\.id), ["build.network", "build.done", "station.select"])
+        XCTAssertEqual(steps.filter { $0.panel == .closed }.map(\.id), ["build.network", "build.done", "time.play", "first.fare", "station.select"])
         XCTAssertEqual(steps.filter(\.picksLineStops).map(\.id), ["line.open", "line.stations"])
         XCTAssertEqual(steps.compactMap(\.revealsInPanel), [.staffLine, .lineLoss], "the line is created on the map (decision 100, later)")
         XCTAssertEqual(steps.map(\.skipOfferSeconds).filter { $0 != 20 }, [90])

@@ -338,6 +338,16 @@ extension GameSession {
         guard let tutorial, !isTutorialStepDone else { return nil }
         let before = tutorial.snapshot(forChapterOf: tutorial.index) ?? Tutorial.Snapshot(of: world)
         let goal = tutorial.step.goal
+        // Decision 226, later: Done stands beside the network tool, as in
+        // the game; left early, the track and station steps say how back.
+        switch goal {
+        case .drawTrack, .buildTrack, .chooseNetworkMode, .pickPlatformSite, .buildStation:
+            if tool != .network {
+                return TutorialHint(language.text("Tap Build to get the network tool back.", "點「建設」拿回路網工具。"))
+            }
+        default:
+            break
+        }
         switch goal {
         case .drawTrack, .buildTrack:
             let built = newTrackLength(since: before)
