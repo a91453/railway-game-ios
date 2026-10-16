@@ -1127,10 +1127,13 @@ final class MapInteractionTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-demo-layout", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        // At 06:30, its trains running: opened at midnight, Train 1 set off
+        // only some 36 seconds into the test, of the 60 it watches for.
+        app.launchArguments = ["-ui-testing", "-demo-layout", "-demo-at", "06:30", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 10))
+        // The demo runs on to 06:30 before the map opens.
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 60))
         XCTAssertTrue(app.buttons["Pause"].appears(within: 10), "The clock must run")
         app.buttons["dock.build"].tap()
         let trainTool = app.buttons["tool.train"]
@@ -1168,11 +1171,15 @@ final class MapInteractionTests: XCTestCase {
         var samples: [String] = []
         // Until the train has been seen stopped and running three times
         // each: a snapshot of the demo's card takes a second or two, and in
-        // one run 20 seconds held no stop (run 38332921819).
+        // one run 20 seconds held no stop (run 38332921819, the demo opened
+        // at midnight then).
         var stopped = 0, running = 0
         let deadline = Date().addingTimeInterval(60)
         while Date() < deadline, stopped < 3 || running < 3 {
-            guard let snapshot = try? card.snapshot() else { continue }
+            guard let snapshot = try? card.snapshot() else {
+                Thread.sleep(forTimeInterval: 0.1)
+                continue
+            }
             var layout = "none", summary = "", marks: [String] = []
             var queue = [snapshot]
             while let next = queue.popLast() {
