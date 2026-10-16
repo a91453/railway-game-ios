@@ -155,7 +155,7 @@
 | 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | `claude/simple-rules`，#725（決策 258） | 決策 254 §7 的第 1→2→4→5 個 PR：簡單規則當預設 → 開線自動配車＋自動交會 → 關卡框架與第 1–3 關 → 第 4–10 關 | 否 | 第 2 個要等死結修正合併；第 6 個（關卡判定進 GameCore）先不做，第 5 個合併後由遊戲規劃判斷 |
 | 核心玩法：回饋 | session_011Z9h1X1GcZZ3i1EKEEjDZj | `claude/core-loop-feedback`，#724（決策 256） | 決策 254 §7 的第 3 個 PR：站上的「+$12」、目標打勾、城鎮長大的環、目標旋律 | 否 | 照 `motion` skill 與三條音量 |
 | 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
-| 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」，2026-10-16 派工 session 再問，作者交給四個角度決定，決定繼續 |
+| 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」，2026-10-16 派工 session 再問，作者交給四個角度決定，決定繼續 |
 | 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
 
 ## 3. 作者說過的話、還在等作者的事、遊戲規劃代為決定的事
