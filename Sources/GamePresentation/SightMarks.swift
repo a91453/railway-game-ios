@@ -56,3 +56,14 @@ public enum SightFocus {
         return sight
     }
 }
+
+extension GameSession {
+    /// Whether the map's sight marks take touches (decision 250, later):
+    /// with the Select tool, but not while choosing a tile to buy, when a
+    /// tap on the map chooses the tile under it, sight or not; the marks
+    /// show faint then, as while building. A map bought tile by tile has
+    /// sights in every tile.
+    public var sightMarksTakeTouches: Bool {
+        tool == .select && !isChoosingMapTile
+    }
+}

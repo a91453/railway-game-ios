@@ -1302,8 +1302,16 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(newGame.appears(within: 10))
         app.bringStartButtonIntoView(newGame)
         newGame.tap()
-        // A new blank map has three to five sights; the last one marked.
+        // A new blank map has three to five sights in each tile, anywhere
+        // in it: the opening, framed on the towns, may show none (main
+        // 878adaf's full lane, run 38878787559), so the map is drawn back
+        // until one is marked.
         let marks = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'map.sight.'"))
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.appears(within: 30))
+        for _ in 0..<5 where !marks.firstMatch.appears(within: 3) && zoomOut.isEnabled {
+            zoomOut.tap()
+        }
         XCTAssertTrue(marks.firstMatch.appears(within: 10), "No sight is marked on the map")
         let mark = marks.element(boundBy: marks.count - 1)
         let id = mark.identifier.replacingOccurrences(of: "map.sight.", with: "")
