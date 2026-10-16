@@ -286,6 +286,13 @@ set -euo pipefail
 # CLASS_WEIGHTS (about 620 s; a single run's job times swing by minutes). HighSpeedDemoBatchTests, which checks
 # that, opens the same demo as HighSpeedDemoTests, so it goes with it to
 # campaigns-11 (8m42s with it on run 38822987126).
+# 2026-10-16 (the #685–#711 review): after decision 248 (#702) the
+# high-speed day is fast again, and campaigns-16 the shortest job (median
+# 9.8 min of main's last ten full push runs, 38856199600–38878358538),
+# while campaigns-12 ended last in nine of them (median 17.8: its test step
+# 14.4, TRADemoDayTests 2.8 of it) and campaigns-14 next (16.6,
+# HighSpeedDemoBatchTests 1.5). Both demo classes go to campaigns-16 (about
+# 14 min with them); rest (15.7) is then the longest.
 classes_of() {
   case "$1" in
     campaigns-1) echo "ServiceRepeatingPropertyTests ScheduledTrafficPropertyTests WorldStateMachineTests" ;;
@@ -299,11 +306,11 @@ classes_of() {
     campaigns-9) echo "SaveMutationTests EconomySecondHalfPropertyTests" ;;
     campaigns-10) echo "PassengerPlanKeyTests ReservationShortcutTests NetworkPostcardTests StationCommerceCardTests LineLossDiagnosisTests" ;;
     campaigns-11) echo "ScheduledTrafficSecondHalfPropertyTests HighSpeedDemoTests TRADemoTests" ;;
-    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests TRADemoDayTests" ;;
+    campaigns-12) echo "TrafficControlPropertyTests ScheduledOvertakeTrackFinalPropertyTests RealWorldDemoGroundTests RealWorldDataLoadTests MonthlyReportTests" ;;
     campaigns-13) echo "BoardingPropertyTests TurnbackPropertyTests" ;;
-    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests HighSpeedDemoBatchTests" ;;
+    campaigns-14) echo "ServiceLinePropertyTests OnboardingTests CommandLogTests ScheduledTrafficTests TurnbackTests" ;;
     campaigns-15) echo "TrafficFollowingPropertyTests ScheduledOvertakeTrackLastPropertyTests NewGameSavePropertyTests RealWorldDemoTests" ;;
-    campaigns-16) echo "HighSpeedDemoDayTests" ;;
+    campaigns-16) echo "HighSpeedDemoDayTests TRADemoDayTests HighSpeedDemoBatchTests" ;;
     *) return 1 ;;
   esac
 }
