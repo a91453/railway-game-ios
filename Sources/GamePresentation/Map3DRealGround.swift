@@ -67,27 +67,35 @@ extension Map3DScene.Builder {
             addStrip(waterway.points, bounds: waterway.bounds, width: waterway.kind.width,
                      lift: Self.lift(of: .water), color: Map3DPalette.water, paint: nil, taking: &taken)
         }
+        addRoads(map.roads, taking: &taken)
+        return taken
+    }
+
+    /// Decision 241: `roads` on the ground, each with its sidewalks and
+    /// centre line, then (decision 244) their street furniture and
+    /// (decision 259) their traffic and pavements' people: a real map's
+    /// roads, or (decision 263) the seeded streets of a map without one.
+    mutating func addRoads(_ roads: [Map3DBaseMap.Road], taking taken: inout Set<Map3DScene.ChunkKey>) {
         // Decision 241: the sidewalks first, a strip wider than the road
         // under it, so both edges show and they close at the junctions.
-        for road in map.roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
+        for road in roads where Self.sidewalk(of: road.kind) > 0 && !road.isRamp {
             addStrip(road.points, bounds: road.bounds, width: road.kind.width(ramp: false) + 2 * Self.sidewalk(of: road.kind),
                      lift: Self.sidewalkLift, color: Map3DPalette.sidewalk, paint: Self.paving, taking: &taken)
         }
         for kind in Map3DBaseMap.RoadKind.allCases {
-            for road in map.roads where road.kind == kind {
+            for road in roads where road.kind == kind {
                 addStrip(road.points, bounds: road.bounds, width: kind.width(ramp: road.isRamp), lift: Self.lift(of: kind),
                          color: Map3DPalette.road(kind), paint: nil, taking: &taken)
             }
         }
         var lines = Set<Map3DScene.ChunkKey>()
-        for road in map.roads where Self.hasCentreLine(road) {
+        for road in roads where Self.hasCentreLine(road) {
             addStrip(road.points, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: Map3DPalette.centreLine, paint: nil,
                      taking: &lines)
         }
-        addStreetProps(map)
+        addStreetProps(roads)
         // Decision 259: their traffic and their pavements' people.
-        for road in map.roads where road.points.count >= 2 { addStreetLife(road) }
-        return taken
+        for road in roads where road.points.count >= 2 { addStreetLife(road) }
     }
 
     // MARK: Cover
@@ -387,8 +395,8 @@ extension Map3DScene.Builder {
     /// Trees, lights and poles along `map`'s roads (not on ramps, nor
     /// within 9 m of a junction, where they would stand in the other
     /// road), each tile's share on its own ground, the same every time.
-    mutating func addStreetProps(_ map: Map3DBaseMap) {
-        let junctions = Self.junctions(of: map.roads)
+    mutating func addStreetProps(_ roads: [Map3DBaseMap.Road]) {
+        let junctions = Self.junctions(of: roads)
         func nearJunction(_ x: Double, _ z: Double) -> Bool {
             let column = Int((x / 32).rounded(.down)), row = Int((z / 32).rounded(.down))
             for dr in -1...1 {
@@ -401,7 +409,7 @@ extension Map3DScene.Builder {
             return false
         }
         let east = originX / Double(WorldCoordinate.unitsPerMetre), south = originY / Double(WorldCoordinate.unitsPerMetre)
-        for road in map.roads where !road.isRamp && road.points.count >= 2 {
+        for road in roads where !road.isRamp && road.points.count >= 2 {
             let rules = Self.propRules(road.kind)
             guard !rules.isEmpty else { continue }
             let width = Double(road.kind.width(ramp: false))
