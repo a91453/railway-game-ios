@@ -446,3 +446,4 @@ iPhone／iPad 的鐵路與城市經營遊戲。目標是《A列車》等級的�
 | 259 | 3D 地圖的行人、機車、汽車：拉近才出現（人 500 m、車 1,300 m 內），月台人數照候車、站前照一天的旅次、街上照城鎮人口；實例化繪製最多多 6 次 draw call，舊機型與掉幀時降級（`Map3DStreetLife`，存檔不動；預覽 `docs/art/map3d-street-life-2026-10-16/`） |
 | 260 | 沒有畫面的遊戲：`swift run GameSim`（new-game、load、apply、advance、dump、save，用 `then` 串，每步一行 JSON 收據，不認得的選項就拒絕）；`HeadlessGame`、`HeadlessSummary`（GamePresentation），測試的指令紀錄重播也改用它（存檔不動） |
 | 261 | 腳本化試玩：`Policy`、`PolicyPlayer`、`RulePreset`、`PolicyMap`、`PlayReport`（GamePresentation），四支報告測試共用，原本的數字一字不差，另外多一張相同指標的表；異常清單（死結、零旅次、現金負、挑戰失敗、列車停住）；`GameSim new-game --preset/--place`、`play --policy`（存檔不動） |
+| 263 | 空白地圖的道路用種子產生：主要道路每 4–6 格一條、其餘街或巷、少數地塊合成街廓；軌道優先（地面上越過畫平交道，高架下照常畫、避開橋墩，避開路堤、路塹與月台）；透天厝沿街排、正面朝街（存檔不動；預覽 `docs/art/map3d-seeded-streets-2026-10-16/`） |

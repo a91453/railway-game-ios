@@ -69,6 +69,8 @@ public struct Map3DScene: Sendable {
     public let chunks: [Chunk]
     /// Decision 259: where its people walk and its vehicles drive.
     public let streetLife: Map3DStreetLife
+    /// Decision 263: where its seeded streets cross the track.
+    let levelCrossings: [Map3DLevelCrossing]
 
     public var triangleCount: Int { chunks.reduce(0) { $0 + $1.mesh.triangleCount } }
 
@@ -128,14 +130,18 @@ public struct Map3DScene: Sendable {
         builder.addGround(water: real == nil)
         let taken = real.map { builder.addBaseMap($0) } ?? []
         let cleared = builder.addTrack(snapshot)
-        // Decision 244: no street furniture where the track runs.
-        builder.removeProps(on: cleared)
-        // Decision 229 續: the street lights' pools, seen at night.
-        builder.addLampPools()
         builder.addPlatforms(snapshot)
         builder.addPortals(snapshot)
         // Decision 238: the city twice, in full and simplified for afar.
         let city = skyline ?? CitySkyline(world: world)
+        // Decision 263: on a map not of the real world, seeded streets
+        // between the lots, clear of the track and the platforms but where
+        // they cross it.
+        if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
+        // Decision 244: no street furniture where the track runs.
+        builder.removeProps(on: cleared)
+        // Decision 229 續: the street lights' pools, seen at night.
+        builder.addLampPools()
         // Decision 239: on a real-world map, the real buildings round
         // Kaohsiung and Taichung Stations, and no city lot where they
         // stand.
@@ -143,8 +149,6 @@ public struct Map3DScene: Sendable {
         builder.target = .near
         let standing = frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: cleared) } ?? []
         builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
-        // Decision 259: with no base map, the streets between the lots.
-        if real == nil { builder.addGridStreets(builder.builtLots, clearOf: cleared) }
         builder.target = .far
         if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: cleared) }
         builder.addCity(city, clearOf: cleared, takenBy: taken.union(standing))
@@ -152,6 +156,7 @@ public struct Map3DScene: Sendable {
         builder.addPlacedBuildings()
         chunks = builder.chunks()
         streetLife = builder.streetLife
+        levelCrossings = builder.crossings
     }
 }
 
@@ -316,10 +321,16 @@ extension Map3DScene {
         var target = Target.base
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
-        /// Decision 259: where people walk and vehicles drive, and the
-        /// city's built lots (by 64 m cell) and their density.
+        /// Decision 259: where people walk and vehicles drive.
         var streetLife = Map3DStreetLife()
-        var builtLots: [ChunkKey: Int] = [:]
+        /// Decision 263: the track as laid (its centre line at the rails'
+        /// height, by section), the platforms' lines, the seeded streets
+        /// kept and the level crossings.
+        var trackLines: [(points: [Map3DPoint], kind: TrackSectionKind)] = []
+        var platformLines: [[Map3DPoint]] = []
+        var piers: [Map3DPoint] = []
+        var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
+        var crossings: [Map3DLevelCrossing] = []
         var nearMeshes: [ChunkKey: Map3DMesh] = [:]
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Whether what is being built is the simplified city.
@@ -535,6 +546,7 @@ extension Map3DScene {
                     }
                     guard line.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
                     let points = line.map { point($0) + Self.lifted }
+                    trackLines.append((points, span.kind))
                     for piece in Self.pieces(of: points) {
                         addTrackPiece(piece, kind: span.kind)
                     }
@@ -594,6 +606,7 @@ extension Map3DScene {
                 let deckColor = kind == .bridge ? Map3DPalette.bridge : Map3DPalette.concrete
                 let grounds = line.map { ground(at: $0) }
                 addDeckShadow(line, grounds: grounds)
+                var standing: [Map3DPoint] = []
                 mesh(at: middle) { mesh in
                     mesh.addRibbon(along: line, width: Self.deckWidth, lift: -Self.bedDrop, depth: Self.girderDepth, top: Map3DPalette.ballast, side: deckColor,
                                    topPaint: Self.ballast, sidePaint: Self.concrete)
@@ -608,6 +621,7 @@ extension Map3DScene {
                             let foot = grounds[index - 1] + (grounds[index] - grounds[index - 1]) * share
                             let height = top.y - Self.bedDrop - Self.girderDepth - foot
                             if height > 0.5 {
+                                standing.append(Map3DPoint(top.x, foot, top.z))
                                 mesh.addBox(base: Map3DPoint(top.x, foot, top.z), forward: b - a, length: Self.pierAlong, width: Self.pierAcross,
                                             height: height, top: deckColor, side: deckColor, frontPaint: Self.concrete, flankPaint: Self.concrete)
                             }
@@ -616,6 +630,8 @@ extension Map3DScene {
                         travelled += step
                     }
                 }
+                // Decision 263: where they stand, for the streets under it.
+                piers += standing
             case .surface, .embankment, .cutting:
                 let lifts = line.map { $0.y - ground(at: $0) }
                 let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)
@@ -687,6 +703,7 @@ extension Map3DScene {
                     if blocked(-1), !blocked(1) { side = 1 }
                 }
                 let offset = side * (Self.platformEdge + width / 2)
+                platformLines.append(line) // Decision 263: no street over it.
                 // Decision 259: its waiting crowd, and the station's
                 // passengers outside.
                 addStationLife(line: line, offset: offset, width: width, station: platform.platform.station)
@@ -765,11 +782,11 @@ extension Map3DScene {
                     }
                     continue
                 }
-                if target == .near { builtLots[ChunkKey(column: lot.column, row: lot.row)] = lot.density }
                 switch lot.use {
                 case .residential, .commercial:
                     if lot.density <= 2 {
-                        addRowHouses(base: base, side: side, density: lot.density, shops: lot.use == .commercial, seed: seed)
+                        addRowHouses(base: base, side: side, density: lot.density, shops: lot.use == .commercial, seed: seed,
+                                     fronts: streetFronts(column: lot.column, row: lot.row))
                     } else {
                         addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), facade: .flatWindows, seed: seed)
                     }
@@ -824,26 +841,56 @@ extension Map3DScene {
             }
         }
 
+        /// Decision 263: where a lot's rows of houses stand, from its middle,
+        /// metres: each row's front (north, south: `nil` with no street on
+        /// that side), and the rows' west and east ends.
+        struct RowFronts {
+            let north: Float?
+            let south: Float?
+            let west: Float
+            let east: Float
+        }
+
+        /// The fronts on the seeded streets round cell (`column`, `row`), or
+        /// `nil` on a map without them.
+        func streetFronts(column: Int, row: Int) -> RowFronts? {
+            guard !streetEdges.isEmpty else { return nil }
+            let half = Float(Double(Land.cellLength) / Self.metre / 2)
+            func clear(_ horizontal: Bool, _ line: Int, _ along: Int) -> Float? {
+                streetEdges[Map3DSeededStreets.Edge(horizontal: horizontal, line: line, along: along)].map { Map3DSeededStreets.clearance($0) + 0.3 }
+            }
+            return RowFronts(north: clear(true, row, column).map { half - $0 }, south: clear(true, row + 1, column).map { half - $0 },
+                             west: -half + (clear(false, column, row) ?? 2), east: half - (clear(false, column + 1, row) ?? 2))
+        }
+
         /// Two rows of 透天厝 back to back on the lot, facing north and
         /// south, each house 4.4–6.6 m wide (a block of flats 6.5–12.5 m at
         /// density 2) with an arcade (騎樓) on most shops, a parapet and a
         /// water tank on many roofs (`city_world_reference` `pickType`,
         /// `floorsFor`, `widthFor`, `waterTank`).
-        mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops: Bool, seed: (Int32, Int32)) {
-            let depth = min(16, side / 2 - 1)
+        mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops: Bool, seed: (Int32, Int32), fronts: RowFronts? = nil) {
+            var depth = min(16, side / 2 - 1)
+            // Decision 263: on seeded streets, each row's front at its
+            // street's pavement (back to back where it has none), from the
+            // side street's pavement to the other's.
+            let span = fronts.map { ($0.west, $0.east) } ?? (-side / 2 + 0.5, side / 2)
+            func frontAt(_ facing: Float) -> Float {
+                (facing > 0 ? fronts?.south : fronts?.north) ?? depth + 0.5
+            }
+            if let fronts { depth = min(depth, [fronts.north, fronts.south].compactMap { $0 }.map { $0 - 0.5 }.min() ?? depth) }
             guard depth > 4 else { return }
             let flats = density >= 2
             let far = isFar
             mesh(at: base) { mesh in
                 for facing: Float in [-1, 1] {
                     // From the west end along the row.
-                    var x = -side / 2 + 0.5
+                    var x = span.0
                     var number: Int32 = 0
-                    while x < side / 2 - 3.2 {
+                    while x < span.1 - 3.2 {
                         let salt = Int32(facing > 0 ? 100 : 300) + number * 7
                         let r = { (extra: Int32) in map3DRandom(seed.0, seed.1, salt: salt + extra) }
                         var width = flats ? 6.5 + r(1) * 6 : 4.4 + r(1) * 2.2
-                        width = min(width, side / 2 - 0.5 - x)
+                        width = min(width, span.1 - x)
                         guard width >= 3.2 else { break }
                         let floors: Float = flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4)
                         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
@@ -852,7 +899,7 @@ extension Map3DScene {
                         let wall = Self.pickWall((seed.0 &+ salt, seed.1))
                         let middleX = x + width / 2
                         let front = Map3DPoint(0, 0, facing) // the way the house faces
-                        let rowMiddle = base + Map3DPoint(middleX, 0, facing * (depth / 2 + 0.5))
+                        let rowMiddle = base + Map3DPoint(middleX, 0, facing * (frontAt(facing) - depth / 2))
                         let arcade = shops && r(5) < 0.8
                         // Decision 231: the ground floor a shop or a
                         // rolling shutter, the floors above windows (a
@@ -913,13 +960,16 @@ extension Map3DScene {
                     }
                 }
             }
-            // Decision 232: one shadow round both rows.
-            addShadow(centre: base, forward: Map3DPoint(1, 0, 0), length: side - 1, width: 2 * depth + 1, spread: 3, darkness: 0.3)
+            // Decision 232: a shadow round each row.
+            for facing: Float in [-1, 1] {
+                addShadow(centre: base + Map3DPoint((span.0 + span.1) / 2, 0, facing * (frontAt(facing) - depth / 2)), forward: Map3DPoint(1, 0, 0),
+                          length: span.1 - span.0, width: depth + 0.5, spread: 3, darkness: 0.3)
+            }
             // Decision 259: shoppers along the shops' fronts.
             if shops {
                 for facing: Float in [-1, 1] {
-                    let out = facing * (depth + 1.7)
-                    addShopLife(from: base + Map3DPoint(-side / 2 + 1, 0.05, out), to: base + Map3DPoint(side / 2 - 1, 0.05, out), density: density)
+                    let out = facing * (frontAt(facing) + 1.2)
+                    addShopLife(from: base + Map3DPoint(span.0 + 0.5, 0.05, out), to: base + Map3DPoint(span.1 - 0.5, 0.05, out), density: density)
                 }
             }
         }

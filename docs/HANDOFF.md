@@ -154,7 +154,7 @@
 | 單線對頭永遠卡死 | session_0162V1LTnnJubXXTaNkZUKQx | `claude/single-line-deadlock-fix` | 兩條線共用單線、沒有待避處時，行車控制下兩列車對頭永遠卡死（`CORE_LOOP_2026-10-16.md` §1.2 的種子 1）。先寫會失敗的測試，再修根因。golden、SaveFixtures、ReplayFixtures 不動 | 是 | 決策 255。CI 名額向合併協調拿 |
 | 核心玩法：規則、配車、關卡 | session_01Q48iRY9H6EmeUL8NPyfiDW | #725 已合併（決策 258）；第 2 個 PR 待開 | 決策 254 §7 的第 1→2→4→5 個 PR。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：第 2 個 PR：簡單規則下自動加待避線、自動配車，用決策 204 的 `PassingLoopPlan`；寫實規則下，#736 的提早折返（決策 255）發生時，路線卡說明「在 A 提早折返」，站長多一個「在這裡加待避線」按鈕（同一個 `PassingLoopPlan`）；不改 `Deadlock.swift`。第 4 個 PR：教學、關卡、「進階」只留一個狀態——解鎖狀態決定有沒有工具；教學的步驟引擎與 `TutorialCardPlacement` 變成第 1、2 關的引導，舊的教學入口收掉；「進階」只在已解鎖的工具裡替手機再收一層；自由模式與沙盒全部解鎖 | 否 | 第 2 個要等 #736 合併；第 6 個（關卡判定進 GameCore）先不做 |
 | 核心玩法：回饋 → 開發工具 | session_011Z9h1X1GcZZ3i1EKEEjDZj | #724（決策 256）、#740（決策 260）已合併；`claude/scripted-play`（決策 261）開 PR；文件數字檢查：**69.1 發版之後**再開 PR（遊戲規劃 2026-10-16）。草稿 `tools/golden-checks/doc_numbers.py` 只在那個 session 的本機（`claude/doc-numbers`），session 結束就沒了；重寫時照這個做：只用 Python 標準函式庫，比對 OVERVIEW §2 與程式（`SavedGame.currentVersion`、`SaveFixtures/` 的 JSON 個數、`GoldenScenario.schemaVersion`、`GoldenScenarios/` 的 JSON 個數、`ReplayFixtures/` 的 JSON 個數、ARCHITECTURE 最大的 `### N.`），再查每個決策只出現一次、都在 §9 索引；順序不對只列出來，不算失敗；`--check` 有差異時 exit 1，附 `--selftest`。放 `tools/golden-checks/`，因為放 `.github/scripts/` 一改就跑完整 tier | 回饋第一批做完後接開發工具（NEXT_PRIORITIES §16）：`GameSim` → `Policy` → 文件數字檢查。**合併方式（遊戲規劃 2026-10-16，作者同意「好」）**：`Policy` 不另寫開局腳本，從 `BalanceReportTests`、`ChallengeReportTests`、`CoreLoopBaselineReportTests`、`RealWorldExpansionReportTests` 抽出來，四支改用它、數字一字不差；保留各自長處（經濟指標、三種玩法並列、規則組合比較、實景擴張），任何玩法 × 任何規則 × 任何地圖，同一種報告表格，`GameSim` 用名字跑；文件數字檢查先放進 `tools/golden-checks/` 或 `.github/scripts/` | 否（`GameSim` 加 executable target，CI 跑完整 tier） | 關卡的目標天數用 `Policy` 量；`Policy` 合併後告訴 session_01Q48iRY9H6EmeUL8NPyfiDW 怎麼用（`swift run GameSim new-game … then play --policy …`、報告的 `PLAY_PRESET`／`PLAY_BY_MINUTE`） |
-| 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | `claude/map3d-crowds-traffic`（決策 259） | 行人與機車 → 騎樓、雨遮、曬衣 → 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 目標畫面與交接見第 4 節 |
+| 3D 生活感 | session_01EPkWLr5a25LyJvCuvh1U3R | #734 已合併（決策 259）；`claude/map3d-streets-arcades`，#745（決策 263） | 行人與機車（完成）→ 種子道路、軌道優先、透天厝沿街排（#745）→ 騎樓貨物、雨遮、曬衣、水塔（第 2b 步，**69.1 發版後才開**）→ 廟埕與牌樓 → 主地圖拉近就傾斜 | 否 | 做到哪與下一步見第 4.4 節 |
 | 語言選單 | session_01UUcjVERB4CaVtdcbR3BWgJ | `claude/in-app-language`，#727（決策 257） | 開始畫面的「Language」改成 App 內選單（跟隨 iPhone／English／繁體中文）。裝置只設一種語言時，設定裡沒有語言列 | 否 | 作者原本說「先不要動」；2026-10-16 作者本人在那個 session 回「四方決定要不要繼續」，結論是繼續（派工 session 確認） |
 | 審查回報的清理 | session_01FUXNvfnNmoSMf58pgakpsF | 各項各自一個小 PR | `docs/archive/PR685_711_REVIEW_HANDOFF.md` 第四節，加前兩輪剩下的，共 19 項：逐項在 main 確認，小的現在修（先寫在 main 會失敗的測試），大的寫成「延後」清單 | 視項目 | 派工 session 開出 |
 
@@ -523,6 +523,48 @@
 - `ftwplus-phone.jpg`：手機上的實際大小；
 - `ftwplus-street-night.jpg`：夜晚；
 - `compare-ftw-ftwplus.jpg`：有人車和沒人車的對照。
+
+### 4.4 3D 生活感這條線做到哪（session_01EPkWLr5a25LyJvCuvh1U3R，2026-10-16 收工）
+
+遊戲規劃 session 派的四步，對照作者的目標畫面（本節開頭）。69.1 發版前收工。
+
+**做完的**：
+- **第 1 步：行人與車輛**（決策 259，#734）。
+  - 方塊人、機車（一人或兩人）、轎車、廂型車，用 instancing 畫，只在拉近時出現。
+  - 月台人數照候車，站前照一天的旅次，街上照城鎮人口；晚上店面與人行道的人少一半。
+  - 依 GPU 決定份量，掉幀時再降一級；右上角細節顯示人數、車數、份量。
+- **第 2a 步：空白地圖的種子道路**（決策 263，#745）。
+  - 主要道路、街、巷照種子分配，和實景地圖共用 `addRoads`。
+  - 軌道優先：地面上越過的畫平交道，高架下避開橋墩，路堤、路塹、月台旁邊不畫。只有主要道路與一半的街越過鐵路。
+  - 透天厝沿街排、正面朝街。
+
+**下一步，照順序，一次一個 PR**：
+1. **第 2b 步：騎樓與生活細節**（69.1 發版後才開）。
+   - 一樓做成真的騎樓：退縮 2–2.5 m 留出陰影、柱子 0.4×0.4。
+   - 店面陳列：櫃台與三箱彩色貨物、低遮雨棚。
+   - 樓上：每扇窗的鐵皮雨遮、45% 的樓層曬衣、水塔改成藍色圓柱。
+   - 尺寸與配色照第 4.3 節（F 台灣版＋的參數），只在近版畫。
+   - 現在的立面細節在 `Map3DBuildings.swift` 的 `addFrontDetail`；透天厝在 `Map3DScene.swift` 的 `addRowHouses`，決策 263 起已沿街排。
+2. **第 3 步：廟埕與牌樓**。
+   - 廟改成面向最近的街，前面留廟埕鋪面、街邊放牌樓、燈籠晚上亮。
+   - 廟埕的人：決策 259 的 `addTempleLife` 現在只放 12 人在台基前，要加多。
+   - 遊戲規劃要求順便放行道樹與小綠地，現在畫面整片淺灰。
+3. **第 4 步：主地圖拉近就變成傾斜的 3D**。
+   - 把 `Map3DCamera` 接進 `MapView` 的縮放。
+   - 調整傾斜曲線（`Map3DCamera.tilt(atDistance:)`），讓 150–200 m 時接近 35–40°。目標畫面是這個角度；現在 170 m 是 55°。
+   - 2D 拉近到看得見建物的那一級時，也畫同一份種子道路（遊戲規劃傾向這樣做，照四方決定）。現在空白地圖的 2D 沒有任何道路。
+4. **配色**：第 2b 步做完後，拿 `docs/art/3d-style-2026-10-13/ftwplus-street.jpg` 並排出兩三個亮度方案，照四方決定。決策 241 的地圖色系不要整個推翻。
+
+**留下的缺口**（決策 259、263 的缺口一節有完整清單）：
+- 車流：沒有跟車、紅綠燈、路口轉彎，車到道路端點就縮小消失；底圖沒有 oneway，所以單行道也畫成雙向。
+- 人車沒有影子，車燈不照在路面。
+- 平交道的柵欄不會隨列車放下，警示燈不閃，也沒有噹噹聲。
+- 路在路堤、路塹處斷開，沒有地下道或陸橋；主要道路的路口沒有號誌。
+- 實機都還沒驗證：人車的幀數、舊機型降級、場景建構時間。除錯版的建構時間從 1.2 秒變 2.5 秒，三角形從 26 萬到 45 萬，多的大多是拉長的透天厝。
+
+**預覽工具**（`tools/map3d-preview/README.md`）：
+- `MAP3D_LIFE=x:z:距離` 畫人車；`MAP3D_BUSY=1` 把每站當作很忙；`MAP3D_LIFE_DETAIL=reduced` 畫舊機型的份量。
+- 要知道平交道在哪：暫時在 dump 測試裡印 `scene.levelCrossings`，用完刪掉。
 
 ## 5. 已知、還沒派的待辦
 
