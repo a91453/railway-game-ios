@@ -586,8 +586,17 @@ extension GameSession {
         } else {
             to = networkDragFinger.map { WorldCoordinate(x: $0.x, y: $0.y, z: 0) }
         }
-        guard let to, let way = tracedWay(from: from, to: to, reach: Self.traceReach(NetworkBuilding.minimumSpacing * 2)) else { return [] }
-        return way.dropFirst().dropLast().map { WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: 0) }
+        guard let to, let frame = RealWorldFrame(world: world) else { return [] }
+        // Worked out once for each pair of points: the map reads it at
+        // every redraw, and it is a shortest path along the real lines.
+        let key = TracedWayKey(lines: RealRailwayTracesKey(frame: frame, bounds: world.bounds), from: from, to: to)
+        if let memo = tracedWayMemo, memo.key == key { return memo.way }
+        tracedWaysWorkedOut += 1
+        let way = tracedWay(from: from, to: to, reach: Self.traceReach(NetworkBuilding.minimumSpacing * 2)).map {
+            $0.dropFirst().dropLast().map { WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: 0) }
+        } ?? []
+        tracedWayMemo = (key, way)
+        return way
     }
 
     /// Every real line on the map that the tool can trace, in world
@@ -604,6 +613,13 @@ extension GameSession {
 struct RealRailwayTracesKey: Equatable {
     let frame: RealWorldFrame
     let bounds: WorldBounds
+}
+
+/// What ``GameSession/networkTracedWay`` was worked out for.
+struct TracedWayKey: Equatable {
+    let lines: RealRailwayTracesKey
+    let from: WorldCoordinate
+    let to: WorldCoordinate
 }
 
 extension PlayerCommand.TrackStretch {

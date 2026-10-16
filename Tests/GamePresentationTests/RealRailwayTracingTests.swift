@@ -161,6 +161,27 @@ final class RealRailwayTracingTests: XCTestCase {
         XCTAssertFalse(session.networkDragDraws(from: taipei, reach: reach))
     }
 
+    /// Handoff §7.1 (PR526_626 §5, U7): the map reads the traced way at
+    /// every redraw, and each read ran a shortest path along the real
+    /// lines. It is worked out once for each pair of points.
+    func testTheTracedWayIsWorkedOutOnceForEachPairOfPoints() throws {
+        let (session, taipei, banqiao) = try taipei()
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tapNetwork(at: banqiao, reach: reach)
+        let way = session.networkTracedWay
+        XCTAssertFalse(way.isEmpty)
+        XCTAssertEqual(session.networkTracedWay, way)
+        XCTAssertEqual(session.networkOverlay?.tracedWay ?? way, way)
+        XCTAssertEqual(session.tracedWaysWorkedOut, 1, "read three times, worked out once")
+
+        session.clearNetworkDraft()
+        session.tapNetwork(at: taipei, reach: reach)
+        let halfway = PlanPoint(x: (taipei.x + banqiao.x) / 2, y: (taipei.y + banqiao.y) / 2)
+        session.dragNetwork(from: taipei, to: halfway, reach: reach)
+        _ = session.networkTracedWay
+        XCTAssertEqual(session.tracedWaysWorkedOut, 2, "the finger is a new end")
+    }
+
     func testTheTightestRadiusOfAnEdge() {
         func stretch(_ curve: TrackCurve, to: PlanPoint) -> PlayerCommand.TrackStretch {
             PlayerCommand.TrackStretch(
