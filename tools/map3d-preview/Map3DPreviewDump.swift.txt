@@ -43,7 +43,11 @@ final class Map3DPreviewDump: XCTestCase {
             ? try ["kaohsiung", "taichung"].map { area in
                 try CityTileArea(manifest: resource("BaseMap/city/\(area)/manifest.json")) { try? resource("BaseMap/city/\(area)/\($0)") }
             } : []
-        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles)
+        // MAP3D_HEIGHTS=1: the heights file's ground where the world has
+        // not read its own, as the app passes it.
+        let heights = ProcessInfo.processInfo.environment["MAP3D_HEIGHTS"] == "1"
+            ? try HeightGrid(data: resource("RealWorld/taiwan_heights.dat")) : nil
+        let scene = Map3DScene(world: world, baseMap: tiles, cityTiles: cityTiles, heights: heights)
         let crop = ProcessInfo.processInfo.environment["MAP3D_CROP"].map { $0.split(separator: ":").map { Float(String($0))! } }
         let chunks = scene.chunks.filter { chunk in
             guard let crop else { return true }
@@ -110,20 +114,16 @@ final class Map3DPreviewDump: XCTestCase {
                 return ["x": p.x, "z": p.z, "d": lot.density, "shop": lot.use == .commercial]
             }
         // Uniforms as Map3DMetalView.uniformValues writes them, for a few
-        // cameras at noon.
-        let lighting = Map3DLighting(minute: 14 * 60)
+        // cameras at MAP3D_MINUTE of the day (14:00 unless set).
+        let lighting = Map3DLighting(minute: ProcessInfo.processInfo.environment["MAP3D_MINUTE"].flatMap(Double.init) ?? 14 * 60)
         func rgb(_ c: PopTravel.RGB) -> (Float, Float, Float) { (Float(c.red) / 255, Float(c.green) / 255, Float(c.blue) / 255) }
+        func padded(_ light: SIMD3<Float>) -> [Float] { [light.x, light.y, light.z, 0] }
         func uniforms(_ camera: Map3DCamera) -> [Float] {
-            let sun = rgb(lighting.sun), sky = rgb(lighting.sky), ground = rgb(lighting.ground)
-            let sunScale = lighting.sunStrength * 0.16, ambient = lighting.ambient * 0.5
-            func tinted(_ c: (Float, Float, Float), _ share: Float, _ scale: Float) -> [Float] {
-                [(1 + (c.0 - 1) * share) * scale, (1 + (c.1 - 1) * share) * scale, (1 + (c.2 - 1) * share) * scale, 0]
-            }
+            let sky = rgb(lighting.sky)
             let eye = camera.eye, far = camera.depthRange.far
             return camera.viewProjection.columns
                 + [lighting.sunDirection.x, lighting.sunDirection.y, lighting.sunDirection.z, 0]
-                + [sun.0 * sunScale, sun.1 * sunScale, sun.2 * sunScale, 0]
-                + tinted(sky, 0.3, ambient) + tinted(ground, 0.5, ambient * 0.8)
+                + padded(lighting.sunLight) + padded(lighting.skyLight) + padded(lighting.groundLight)
                 + [sky.0, sky.1, sky.2, 0] + [eye.x, eye.y, eye.z, 1] + [camera.distance * 1.6, far * 0.9, 0, 0]
                 + [Map3DShadow.strength(lighting), 0, 0, 0]
         }

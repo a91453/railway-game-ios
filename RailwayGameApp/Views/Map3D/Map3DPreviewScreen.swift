@@ -63,8 +63,11 @@ struct Map3DPreviewScreen: View {
             }
             .padding()
         }
-        .task(id: Map3DSceneKey(world: session.world)) {
+        .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil)) {
             let world = session.world
+            // The ground the world has not read yet, from the heights file,
+            // so the blocks it has read do not stand up as cliffs.
+            let heights = session.heights
             // Decision 234: on a real-world map, the base map's roads, rivers
             // and cover, read from the file the 2D map draws.
             let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
@@ -73,7 +76,8 @@ struct Map3DPreviewScreen: View {
             let city = world.geoAnchor == nil ? nil : BaseMapFiles.city
             let built = await Task.detached(priority: .userInitiated) {
                 let baseMap = tiles.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0) }
-                return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [])
+                return Map3DScene(world: world, baseMap: baseMap, cityTiles: city.map(CityTileArea.areas(in:)) ?? [],
+                                  heights: heights)
             }.value
             scene = built
             sceneVersion &+= 1
@@ -102,15 +106,18 @@ struct Map3DPreviewScreen: View {
 }
 
 /// What makes the still scene change: track, platforms, the player's
-/// buildings, and the city, which grows by night, each week.
+/// buildings, and the city, which grows by night, each week; and the
+/// heights file, which can arrive after the game opened.
 private struct Map3DSceneKey: Hashable {
+    let hasHeights: Bool
     let edges: Int
     let lastEdge: TrackEdgeID?
     let platforms: Int
     let buildings: Int
     let week: Int64
 
-    init(world: GameWorld) {
+    init(world: GameWorld, hasHeights: Bool) {
+        self.hasHeights = hasHeights
         edges = world.network.edges.count
         lastEdge = world.network.edges.last?.id
         platforms = world.network.platforms.count
