@@ -164,7 +164,7 @@ Session：https://claude.ai/code/session_01AZENQFLiGrxko8ouYVPoTv（2026-10-15�
 - 建置步驟每個 job 1.0 → 2.3 分，17 個 job 各建一次，約 36 job 分鐘。
 - 一週前 25 個 job、排隊中位數 4 分；現在 17 個 job、幾乎不排隊，所以總時間沒變。
 - shard 之間差不到 ±5%（最長 campaigns-8 732 秒，`GoldenScenarioTests` 一個 358 秒），重新平衡最多省 15 秒，所以**沒有改 `classes_of`**（改 CI 腳本要跑完整 tier，不划算）。真正的下限是 `BoardingPropertyTests`（668 秒，自己一個 shard）和 `LineDispatchPropertyTests`（608 秒），要再快得把它們拆半。
-- 這裡的 GameCore 修正（#687）讓 `campaigns-16` 變長（本機 950 秒，估計 CI 約 740 秒、job 15–16 分），批次測試放 `campaigns-11`，兩個 shard 約一樣長。
+- 這裡的 GameCore 修正（#687）讓兩個示範的一天變長，CI 和本機 debug 差不多快：高鐵、台鐵兩天放在 `campaigns-16` 超過 20 分被取消（run 38822987126）；台鐵一天移到 `campaigns-12` 時那個 job 18 分 11 秒，再移到最短的 `campaigns-8`；`campaigns-16` 只剩高鐵一天（job 16 分 59 秒）。批次測試放 `campaigns-11`，和 `HighSpeedDemoTests` 共用開好的示範。
 - PR 的 tier：25 個 10-15 的 PR run 都照決策 185，沒有多跑。
 
 **iOS 完整 lane 變慢了**：iPhone 的 UI 測試步驟中位數 20.1 → 44.4 分（最多 55 分，上限 75），job 26.2 → 56.5 分；原因是 UI 測試 27 → 63 個（每個平均 37 → 47 秒）。PR 的 gate 沒變（7.0 → 7.2 分）。
@@ -181,8 +181,10 @@ Session：https://claude.ai/code/session_01AZENQFLiGrxko8ouYVPoTv（2026-10-15�
   - 修正後通過：`RealRailwayGameplayTests`、`SoundCueTests`、`PassingLoopSessionTests`、`Map3D*Tests`（67 個）、`TRADemoTests`、`RealWorldDemoTests`、`NearestStationNamingTests`、`PlaceNamingTests`。
   - 第 3 項：在修正前的 `PassingLoop.swift` 上 6144 ≠ 7680，失敗。
   - core（#687）：golden、replay、存檔與班次相關的 177 個測試通過、值沒有變；合併 #684 之後 `campaigns-16`（1062 秒）、`campaigns-11`（769 秒）通過。
+  - `ios-build.yml` 的 `only_testing`：`MapInteractionTests/testTheLinePanelTicksALinesDepot`（第 9 項）綠（run 38825021657）。
   - `swift-shards-selftest.sh` 通過。
-- **UNVERIFIED LOCALLY — requires macOS/Xcode CI**：`ContentView.swift`（第 8 項）、`MapInteractionTests`（第 9 項）、`Localizable.xcstrings`（第 10 項）、3D 地圖在裝置上的樣子（第 4–7 項）。
+- **VERIFIED（GitHub Actions）**：#688 的 iOS 建置、UI 測試 gate、翻譯檢查（第 8、10、13 項編譯、xcstrings 沒有漏）；#687 的完整 Swift tier。
+- **UNVERIFIED — 要在裝置上看**：3D 地圖的樣子（第 4–7 項）、第 8、13 項的實際操作。
 - 其餘交給 CI。
 
 ## 總表
