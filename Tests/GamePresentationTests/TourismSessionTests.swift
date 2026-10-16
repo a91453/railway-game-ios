@@ -153,6 +153,22 @@ final class TourismSessionTests: XCTestCase {
         XCTAssertEqual(SightMarks.shown([]), [])
     }
 
+    /// Decision 250, later: the sight marks take touches with the Select
+    /// tool, but not while a tile to buy is chosen (a tap there chooses
+    /// the tile, and a map bought tile by tile has sights in every tile),
+    /// nor while building.
+    func testTheSightMarksGiveWayToChoosingATile() {
+        let session = GameSession(world: GameWorld.newGame(eventSeed: 1, buysMap: true))
+        XCTAssertTrue(session.sightMarksTakeTouches)
+        session.startChoosingMapTile()
+        XCTAssertTrue(session.isChoosingMapTile)
+        XCTAssertFalse(session.sightMarksTakeTouches, "a tap chooses the tile")
+        session.stopChoosingMapTile()
+        XCTAssertTrue(session.sightMarksTakeTouches)
+        session.selectTool(.network)
+        XCTAssertFalse(session.sightMarksTakeTouches, "building")
+    }
+
     /// Decision 250 (a player's report): the panel opened from a sight's
     /// mark goes to that sight's row; from the menu, or for a sight gone,
     /// to none.

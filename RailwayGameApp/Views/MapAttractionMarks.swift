@@ -22,7 +22,7 @@ struct MapAttractionMarks: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if (session.tool == .select) != isPassive, let sights = session.world.tourism?.attractions {
+            if session.sightMarksTakeTouches != isPassive, let sights = session.world.tourism?.attractions {
                 // Decision 250: a mark that would lie on a better-rated
                 // one waits until the map is brought closer.
                 let shown = SightMarks.shown(sights.compactMap { sight -> SightMarks.Mark? in

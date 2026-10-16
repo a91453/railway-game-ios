@@ -10002,6 +10002,11 @@ Taiwan.md 只當線索。每一項都另外查過原始或官方資料，Taiwan.
 7. **地圖上的景點標記避讓**（`SightMarks.shown`，GamePresentation；App 的 `MapAttractionMarks`）：拉遠時，會疊在一起的標記只留星等高的（同星等留編號小的），拉近就全部出現。全台灣 214 個、台北市區十幾個，拉遠時不會疊成一團。
 8. **點景點就跳到那一列**（作者回報，規劃 session 併進這個 PR）：以前點地圖上的景點星章只打開觀光面板、停在最上面。現在點星章（或「這個景點沒有車站」的提醒泡泡），面板打開就捲到那個景點那一列，背景亮 2 秒（`SightFocus.highlightSeconds`）；iPhone、iPad 一樣。從選單打開照舊停在最上面。要跳到哪一個是畫面狀態 `GameScreenState.sightFocus`（不是 `GameWorld`）；判斷「這一列還在不在面板裡」的是 GamePresentation 的 `SightFocus.row(for:in:)`（Linux 測試 `testTheSightsPanelOpensAtTheSightTapped`）。UI 測試 `MapInteractionTests.testASightTappedOnTheMapOpensItsRow` 放 full lane（決策 199：邏輯在 Linux，UI 測試只問那一列點得到）。
 
+9. **後來（main 878adaf 的 full lane 紅）**：
+   - 選要買的那一格時，景點標記也會吃掉點擊。買地的空白大地圖每一格都有景點，所以點選某一格時，常常剛好點到景點、打開觀光面板，那一格沒選到（`testTheMapExpansionIsNotMistakenForBuilding`）。
+   - 現在選格子時，景點標記和建造時一樣變淡、不吃點擊（`GameSession.sightMarksTakeTouches`，Linux 測試 `testTheSightMarksGiveWayToChoosingATile`）。
+   - 新的 UI 測試 `testASightTappedOnTheMapOpensItsRow` 原本假設開局畫面一定看得到景點，但開局的鏡頭對著城鎮，景點可能在畫面外。現在改成先縮小地圖，直到出現景點標記為止。
+
 **四方**：
 - 玩家：一般 16 km 實景地圖從「通常沒有景點」變成「通常 2–5 個」，蓋線時有觀光的目標；全台灣地圖每個縣市都有自己的景點；空白大地圖每一格都有景點、名字不重複。拉遠時標記不疊在一起。點地圖上的景點直接看到那個景點的那一列，景點多了不用在長清單裡找。
 - 開發：只加資料列和一個常數，規則（潛在人數、係數、名產店）一個都不動；空白一般地圖的抽籤鍵不變，golden、SaveFixtures、ReplayFixtures 都不動；GameCore 只動 `Tourism.swift` 一個檔。
