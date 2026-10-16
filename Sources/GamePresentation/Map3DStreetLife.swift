@@ -620,9 +620,10 @@ extension Map3DScene.Builder {
         }
     }
 
-    /// A point on the drawn ground `lift` over it.
+    /// A point on the drawn ground `lift` over it, and (decision 263) over
+    /// a level crossing's deck where one is.
     mutating func groundPoint(x: Double, z: Double, lift: Float) -> Map3DPoint {
-        Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + lift, Float(z))
+        Map3DPoint(Float(x), drawnGround(x: Float(x), z: Float(z)) + lift + crossingLift(x: Float(x), z: Float(z)), Float(z))
     }
 
     /// How fast a road's vehicles go (`traffic.js`: its limit, 0.8 of it
@@ -639,90 +640,6 @@ extension Map3DScene.Builder {
         case .tertiary: return (speed(50, minor: false), 2.4)
         case .minor: return (speed(40, minor: true), 1.2)
         case .service: return nil
-        }
-    }
-
-    /// Decision 259: the streets between the city's lots: how far over the
-    /// ground they lie (a tertiary road's, ``lift(of:)``) and how wide.
-    static let gridRoadLift: Float = 0.32
-    static let gridRoadWidth: Float = 7
-
-    /// Decision 259: on a map with no base map, the streets between the
-    /// city's lots: along each 64 m grid line, the runs beside a built lot
-    /// clear of the track, with traffic and pavements by the lots' density.
-    mutating func addGridStreets(_ built: [Map3DScene.ChunkKey: Int], clearOf cleared: Set<Map3DScene.ChunkKey>) {
-        guard !built.isEmpty else { return }
-        // For each grid line, horizontal (between rows) or vertical
-        // (between columns): the cells along it and the density beside.
-        for horizontal in [true, false] {
-            var lines: [Int: [Int: Int]] = [:]
-            for (key, density) in built {
-                let (line, along) = horizontal ? (key.row, key.column) : (key.column, key.row)
-                for edge in [line, line + 1] {
-                    let other = horizontal ? Map3DScene.ChunkKey(column: key.column, row: edge == line ? line - 1 : line + 1)
-                        : Map3DScene.ChunkKey(column: edge == line ? line - 1 : line + 1, row: key.row)
-                    guard !cleared.contains(other), !cleared.contains(key) else { continue }
-                    lines[edge, default: [:]][along] = max(lines[edge]?[along] ?? 0, density)
-                }
-            }
-            for (line, cells) in lines.sorted(by: { $0.key < $1.key }) {
-                // Runs of cells next to one another.
-                var run: [(Int, Int)] = []
-                for along in cells.keys.sorted() {
-                    if let last = run.last, last.0 + 1 != along {
-                        addGridStreet(run, line: line, horizontal: horizontal)
-                        run = []
-                    }
-                    run.append((along, cells[along] ?? 0))
-                }
-                addGridStreet(run, line: line, horizontal: horizontal)
-            }
-        }
-    }
-
-    private mutating func addGridStreet(_ run: [(Int, Int)], line: Int, horizontal: Bool) {
-        guard let first = run.first, let last = run.last else { return }
-        let fixed = Float(horizontal ? gridLine(line, origin: originY) : gridLine(line, origin: originX))
-        let from = Float(horizontal ? gridLine(first.0, origin: originX) : gridLine(first.0, origin: originY))
-        let to = Float(horizontal ? gridLine(last.0 + 1, origin: originX) : gridLine(last.0 + 1, origin: originY))
-        var points: [Map3DPoint] = []
-        for step in 0...Int(((to - from) / 16).rounded(.up)) {
-            let at = min(from + Float(step) * 16, to)
-            let x = horizontal ? at : fixed, z = horizontal ? fixed : at
-            points.append(groundPoint(x: Double(x), z: Double(z), lift: Self.gridRoadLift + 0.02))
-            if at >= to { break }
-        }
-        guard let path = Map3DStreetLife.Path(points) else { return }
-        // The street itself, as a tertiary road is drawn on a real map
-        // (decision 241): navy, 7 m wide over a 2 m pavement each side, a
-        // yellow line down its middle, at every distance, a piece to each
-        // 16 m so it keeps to its chunk.
-        let target = self.target
-        self.target = .base
-        for index in 1..<points.count {
-            let a = points[index - 1], b = points[index]
-            mesh(at: (a + b) * 0.5) { mesh in
-                mesh.addRibbon(along: [a, b], width: Self.gridRoadWidth + 2 * Self.sidewalk(of: .tertiary), lift: Self.sidewalkLift - Self.gridRoadLift - 0.02,
-                               top: Map3DPalette.sidewalk, topPaint: Self.paving)
-                mesh.addRibbon(along: [a, b], width: Self.gridRoadWidth, lift: -0.02, top: Map3DPalette.road(.tertiary))
-                mesh.addRibbon(along: [a, b], width: 0.3, lift: Self.centreLineLift - Self.gridRoadLift - 0.02, top: Map3DPalette.centreLine)
-            }
-        }
-        self.target = target
-        let density = Float(run.map(\.1).reduce(0, +)) / Float(run.count)
-        let level = min(density / 4, 1)
-        streetLife.lanes.append(Map3DStreetLife.Lane(path: path, half: Self.gridRoadWidth / 2, twoWay: true, speed: Self.traffic(.tertiary)?.speed ?? 11,
-                                                     perHundred: 0.6 + 1.8 * level, scooters: true, seed: lifeSeed(path.points[0], salt: 259)))
-        let people = Int((path.length / 100 * (1 + 3 * level)).rounded())
-        guard people > 0 else { return }
-        for side: Float in [1, -1] {
-            // On the pavement beside the street.
-            let pavement = Self.sidewalk(of: .tertiary)
-            guard let beside = path.shifted(side * (Self.gridRoadWidth + pavement) / 2),
-                  let walk = Map3DStreetLife.Path(beside.points.map { Map3DPoint($0.x, $0.y - Self.gridRoadLift + Self.sidewalkLift, $0.z) })
-            else { continue }
-            streetLife.spots.append(Map3DStreetLife.Spot(kind: .sidewalk, path: walk, width: pavement * 0.3, people: people, station: nil,
-                                                         seed: lifeSeed(walk.points[0], salt: side > 0 ? 260 : 261)))
         }
     }
 
