@@ -137,6 +137,15 @@ public enum HelpGuide {
             keywords: "extend lengthen add stop 延伸 加站 加長"
         ),
         HelpEntry(
+            "simpleRules", .running,
+            question: ("What are simple and realistic rules?", "簡單規則和寫實規則差在哪？"),
+            answer: (
+                "Simple rules, the default: trains keep their speed through curves, every train costs the same, and there is no weather or building materials. Realistic rules add these, with block signals, punctuality and crowded doors. Choose in New Game Options; a game keeps its rules to the end, and Settings shows which it has.",
+                "簡單規則是預設：列車過彎不減速，每種車價錢一樣，也沒有天氣與建材。寫實規則把這些加回來，再加上閉塞號誌、準點率與車門擁擠。在「新遊戲選項」選；開始後不能更改，「設定」會顯示這一局用哪一種。"
+            ),
+            keywords: "simple realistic rules difficulty signals curve 簡單 寫實 規則 難度 號誌 彎道"
+        ),
+        HelpEntry(
             "startTrains", .running,
             question: ("How do I get trains running?", "如何讓列車開始運行？"),
             answer: (
