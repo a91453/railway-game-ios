@@ -164,6 +164,39 @@
   - 美術：無。
   - 音樂：無。
 
+### E. PR gate 的 UI 步驟：名單不動（PR712_754 審查交接第四節）
+
+- **交接說的**：PR gate 的 UI 步驟中位數 8.8 分，目標約 6 分。這是 #746–#753 那 5 個 PR 的數字。
+- **量了最近 15 個綠的 PR run**（Xcode build job 的 log）：
+
+| 測試 | 中位數 | 最快 | 最慢 |
+| --- | ---: | ---: | ---: |
+| `RealWorldMapUITests.testARealWorldGameStartsFromAPlaceAndIsSavedAsOne` | 88.9 秒 | 57.5 | 164.7 |
+| `StartSaveFlowSmokeTests.testAHouseBuiltOnABlankMapIsKeptBySavingAndContinuing` | 61.4 | 39.0 | 216.4 |
+| `TutorialUITests.testEnglishTutorialNavigation` | 41.8 | 31.0 | 55.2 |
+| `TutorialUITests.testBuildingTrackEnablesNextAndSkipEnds` | 32.4 | 21.8 | 39.1 |
+| `StartSaveFlowSmokeTests.testBackToStartWorksWithLargeTextWhileTheClockRuns` | 31.2 | 17.4 | 65.2 |
+| `TutorialUITests.testTheLineStepLeavesTheLinesPanelUsable` | 23.9 | 14.6 | 62.1 |
+| `ToolbarSmokeTests.testEnglishToolbar` | 18.5 | 11.2 | 47.3 |
+
+  - 一輪 7 支測試合計：中位數 5.7 分（3.3–7.5）。
+  - 第一支測試開始前，xcodebuild 安裝與啟動 test runner：中位數 1.3 分（0.7–3.5）。
+  - 所以測試本身在決策 199 的「約 6 分鐘」以內。8.8 分是那幾個 PR 碰上慢的 runner，單支測試慢到 2–3 倍。
+- **決定：名單不動**。
+- **四方**：
+  - 玩家：最慢、最不穩的實景開局測試，今晚剛抓到 #746 的錯（決策 262）。移到 full lane，這類錯又會等到合併後才發現；現在 gate 會擋合併（A），它留在 gate 才有用。
+  - 開發：省下的最多約 1.5 分，換掉的是今晚實際抓到錯的那一支。慢 runner 的變異不是名單的問題。
+  - 美術：無。
+  - 音樂：無。
+- **之後若要再縮**：交接 PR685_711 第九節「還可以做」的實景開局參數（直接打開某個地點，每支省約 10–20 秒），要改 App 的除錯參數，另開 PR。
+
+### F. 新 gate 的實測（#758）
+
+- #758 改了 `ios-build.yml`，是第一個在合併 #756 之後跑 iOS 的 PR。
+- `Swift CI (gate)` 23:27:46 開始。23:27:49 記下「iOS App Build is queued … looking again in 30 s」，之後每 30 秒查一次。
+- iOS run 38981529817 在 23:43:17 跑完（Xcode build 15.3 分、iPad 14.0 分）；gate 23:43:32 記下「iOS App Build passed」，23:43:34 才綠。
+- gate 確實等到 iOS 跑完才綠，等了約 16 分鐘。
+
 ### D. 沒有做的
 
 - **App 內容相同就沿用上一輪 full lane**：這三天一次都省不到（2.4），不值得加程式。
