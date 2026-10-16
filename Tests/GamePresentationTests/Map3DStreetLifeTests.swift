@@ -101,6 +101,14 @@ final class Map3DStreetLifeTests: XCTestCase {
         // Every station with a platform has its crowd there.
         let stations = Set(world.network.platforms.map(\.station))
         XCTAssertEqual(Set(life.spots.filter { $0.kind == .platform }.compactMap(\.station)), stations)
+        // The streets are drawn, navy, under their traffic.
+        let scene = Map3DScene(world: world)
+        let roads = scene.chunks.flatMap { $0.mesh.vertices }.filter { $0.color == Map3DPalette.road(.tertiary) }
+        XCTAssertGreaterThan(roads.count, 100)
+        let lane = try XCTUnwrap(life.lanes.first)
+        let middle = lane.path.at(lane.path.length / 2).point
+        XCTAssertTrue(roads.contains { abs($0.x - middle.x) < 4 && abs($0.z - middle.z) < 4 && abs($0.y - (middle.y - 0.02)) < 0.05 },
+                      "a road under the lane, just under the wheels")
         // Nothing but finite points.
         for spot in life.spots {
             XCTAssertTrue(spot.path.points.allSatisfy { $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
@@ -204,6 +212,14 @@ final class Map3DStreetLifeTests: XCTestCase {
                 XCTAssertGreaterThan(abs(a.0 - b.0), 8)
             }
         }
+    }
+
+    func testAPlatformsCanopyLeavesItsEndsOpen() {
+        let line = [Map3DPoint(0, 1, 0), Map3DPoint(50, 1, 0), Map3DPoint(100, 1, 0)]
+        let middle = Map3DScene.Builder.middle(of: line, share: 0.6)
+        XCTAssertEqual(middle.first?.x ?? 0, 20, accuracy: 1e-3)
+        XCTAssertEqual(middle.last?.x ?? 0, 80, accuracy: 1e-3)
+        XCTAssertEqual(middle.count, 3, "the bend in between kept")
     }
 
     func testAPathFindsItsPointsAndRight() throws {

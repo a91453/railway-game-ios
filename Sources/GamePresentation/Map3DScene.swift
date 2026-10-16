@@ -695,10 +695,22 @@ extension Map3DScene {
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete)
                     mesh.addRibbon(along: line, width: 0.3, offset: side * (Self.platformEdge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
-                    mesh.addRibbon(along: line, width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
+                    // Decision 259: the canopy over the middle three fifths,
+                    // as most of TRA's are, so the ends show who waits.
+                    mesh.addRibbon(along: Self.middle(of: line, share: 0.6), width: min(width, 3.6), offset: offset, lift: Self.canopyHeight, depth: 0.3,
                                    top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
                 }
             }
+        }
+
+        /// The middle `share` of `line`, by length.
+        static func middle(of line: [Map3DPoint], share: Float) -> [Map3DPoint] {
+            guard let path = Map3DStreetLife.Path(line) else { return line }
+            let from = path.length * (1 - share) / 2, to = path.length - from
+            var points = [path.at(from).point]
+            for (point, distance) in zip(path.points, path.distances) where distance > from && distance < to { points.append(point) }
+            points.append(path.at(to).point)
+            return points
         }
 
         // MARK: Tunnel portals
