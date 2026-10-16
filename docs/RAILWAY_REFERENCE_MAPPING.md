@@ -158,6 +158,7 @@ V1（決策 57）與 V2（決策 58），2026-10-04 唯讀檢查私有參考 rep
 | `Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js` / `MIN_TRAIN_GAP` | 既有 `RouteReservation.swift` / `followingGap`（U2） | snapshot 常數只有定義，沒有可移植的避占用選路；本次不採用其比例，U2 仍為 0.4 km × 64000 = 25600 |
 | `Railway/railway_game_reference_clean/00_READ_ME_FIRST.md`、`01_MIGRATION_MAP.md` / §7 path cost / PBS；`binary_reference/relevant_symbols_and_settings.txt` / `rail_pbs_*`、platform penalties | `RouteReservation.swift` / `reserving`、`reservingDeparture`；`ReferenceNetworkService.swift` / `distancesToBerths` | 概念與符號，沒有選路原始碼或權重數值；不猜號誌、曲線、長短月台的懲罰 |
 | （三份參考都沒有死結的偵測或解除） | `Deadlock.swift` / `waitingRoute(of:memo:)`、`deadlock(memo:)`、`deadlockedTrains()`、`passingPlace(for:in:memo:)`、`isAtPassingPlace(_:)`、`passingPlace(of:)`；`GameWorld.swift` / `resolveDeadlock(memo:)`、`goOn`；獨立 `ReferenceDeadlock.swift` | **gap**（決策 58）：經典的死結偵測（reduction）；每個整分鐘把一台服務送到途中某站的待避站；倍率同 V1（400 m） |
+| （參考庫沒有調度的折返；`Railway/site_archive_clean/rail-3d/physical/turnbacks.js` `isScheduledTurnback` 只是阿里山的排定折返站名） | `Deadlock.swift` / `shortTurn(of:in:)`；`GameWorld.swift` / `resolveDeadlock(memo:)` 的最後一步 | **gap**（決策 255）：沒有待避站與備用車時，時刻表會回到同一站的服務原地提早折返；無定點換算 |
 | `Railway/site_archive_clean/index.html` / `inferMeetPassTimes`、`planSameDirectionOvertakes`、`resolveTraTraffic` | Deferred | 參考秒 × 1 → 遊戲秒、km × 64000 → 單位；V1、V2 歷史差異（非移植閘門）事前的排定交會、待避或多輪時刻表重排 |
 
 **gap**：參考 `blocked` 是整個 resource key，Swift 改成一個 head interval 的 span / fouling 檢查與 `network.fouls`；整個車身 envelope、原子取得、先跟車再改月台、繞路 400 m 上限、精確批次喚醒、換路後的曲線與離站距離是本專案自己的規則。參考的 `maxLength` 由呼叫者決定（預設 Infinity）；本專案定為預設路加 400 m。沒有 crossover 種類及其 4 倍額外懲罰，沒有一般 penalties API。方向限制採完整計畫，沒有永久軌道方向，也不推估時刻表交會。死結的偵測與待避站解除（V2）參考完全沒有。獨立模型用 blocked run 區間及禁止方向的反向距離鬆弛與貪婪重建，死結以回合找出，不呼叫 GameCore 選路。
@@ -403,7 +404,7 @@ V4a 不新增權威存檔欄位，存檔 9／schema 31 不變。所有既有 Gol
 | `Ci` 本機草稿（`LOCAL_DRAFT_NO_FLOW_SAVE_DEBOUNCE_MS` = 1800，建造後寫入）與雲端自動存檔（`AUTOSAVE_INTERVAL_MS` = 900 × 1000） | 自動存檔 | 離開前景、回到開始畫面、每 `GameLauncher.autosaveInterval`（900 秒）寫入 `autosave.json` | 毫秒 → 秒 | 部分 faithful：間隔照雲端自動存檔；不在每次建造後存（世界每一刻都在變，整個重寫太頻繁），改在離開前景時存 |
 | `Ci` `saveUi.desktop.localSlots`、`gameMenuSave` | 本機存檔槽位、選單的「儲存」 | 玩家自己的存檔一個一個檔案、清單（讀取、刪除）；遊戲選單的「儲存遊戲」 | — | 部分 faithful：不限槽位數 |
 | `Ci` `downloadLocalSave`、`importLocalSaveFromFile`（`saveUi.desktop.export`、`import`） | 匯出、匯入 JSON 存檔 | 遊戲選單的「匯出存檔」（`ShareLink`，`SaveLibrary.exportFile`）；開始畫面的「匯入存檔」（`fileImporter`，`GameLauncher.importSave`） | — | faithful |
-| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」打開 iOS 的「設定」 | — | **改變**：iOS 的每個 App 的語言在「設定」 |
+| `Ci` `home.title`「城市设计师」、`home.language` | 首頁與介面語言 | `StartView` 的標題；「語言」是 App 內的選單（決策 257） | — | **改變**：iOS 的語系在啟動時決定，選了下次開啟才換 |
 | `Ci` 雲端存檔、加密（`metroEncryptSaveBlob`）、分享碼、`LOCAL_SAVE_MAX_IMPORT_BYTES` | 帳號、雲端與加密 | 不做 | — | 延後：沒有帳號與伺服器；iCloud 另議 |
 | `Ci` 教學的示範（上海—南京）；舊的 `DemoLayout.swift`（方格） | 示範地圖 | `DemoWorld`：路網上的兩條線，中央一座兩個月台的點車站，全天營運、每站有運量；Release 也能從開始畫面開 | 格 → 世界單位 | **gap**：參考沒有可以移植的示範地圖（它的示範是真實路線），配置是自己的 |
 

@@ -3303,6 +3303,21 @@ public struct GameWorld: Equatable, Sendable {
             trains[index].isStandingAside = lines.first(where: { assignedLine(of: aside.id) == $0.id })?.hasRuns != true
             return aside.id
         }
+        // Decision 255: with no passing place and no spare to move, a
+        // service due to leave turns back short where it waits, a call
+        // made again there, its riders for the calls it leaves out
+        // abandoned.
+        for id in stuck.keys.sorted() {
+            guard let index = trains.firstIndex(where: { $0.id == id }),
+                  case .waitingAtStop(let stop, _)? = trains[index].execution,
+                  let due = departureDue(of: trains[index]), due <= clock.now,
+                  let turned = shortTurn(of: trains[index], in: stuck)
+            else { continue }
+            setOff(index, as: turned)
+            serve(departureOf: id, from: stop, distance: 0)
+            abandonStrandedRiders()
+            return id
+        }
         return nil
     }
 
@@ -3744,7 +3759,7 @@ public struct GameWorld: Equatable, Sendable {
     /// Puts `train` where `placement` says and leaves it standing there: its
     /// path now ends where its head is (see ``TrainMovement/end``), so it
     /// stays until it is given a path.
-    private func stand(_ train: inout Train, at placement: TrainPlacement) {
+    func stand(_ train: inout Train, at placement: TrainPlacement) {
         train.position = placement.position
         train.trailEdges = placement.trailEdges
         switch placement.position {

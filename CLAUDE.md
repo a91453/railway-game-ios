@@ -166,7 +166,7 @@ needs OSM data reads the same extract.
   nightly and by hand, and its red result does not block a pull request),
   `release-archive.yml` (unsigned Release device archive; manual, nightly,
   and on PRs that change project settings, the app's entry point, the asset
-  catalog or the localized Info.plist strings), `testflight.yml`
+  catalog, the String Catalog or the localized Info.plist strings), `testflight.yml`
   (signed archive → IPA → App Store Connect; `workflow_dispatch` from `main`
   only, secrets in the `testflight` environment), `testflight-checks.yml`
   (tests of the release scripts with fake values and a macOS dry run; no

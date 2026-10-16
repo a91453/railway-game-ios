@@ -26,12 +26,30 @@ final class Map3DMetalView: MTKView {
         var gpuMilliseconds: Double
         var drawCalls: Int
         var triangles: Int
+        /// Decision 259: the figures and vehicles drawn, and how much
+        /// street life the device draws now.
+        var people: Int
+        var vehicles: Int
+        var streetDetail: Map3DStreetDetail
     }
 
     var camera = Map3DCamera()
     var lighting = Map3DLighting(minute: 12 * 60)
     /// The trains for this frame, seen from the eye given.
     var trains: (@MainActor (Map3DPoint) -> Map3DTrains.Frame)?
+    /// Decision 259: the people and vehicles for this frame, seen with the
+    /// camera given, with the city's lights on so far, at the detail given.
+    var streetLife: (@MainActor (Map3DCamera, Float, Map3DStreetDetail) -> Map3DStreetLife.Frame)?
+    /// Decision 259: three buffers of their instances, a frame's each in
+    /// turn, so none is made each frame; a frame waits for the GPU to be
+    /// done with the one it fills.
+    private var lifeBuffers: [MTLBuffer] = []
+    private var lifeBuffer = 0
+    private let lifeInFlight = DispatchSemaphore(value: 3)
+    /// Decision 259: how much street life this device draws: by its GPU to
+    /// begin with, one step less each time it cannot hold its frame rate.
+    private(set) var streetDetail = Map3DStreetDetail.off
+    private var slowWindows = 0
     /// Decision 230: the train models, and a buffer of each one's vertices.
     private var models: (pack: Map3DModelPack, buffers: [MTLBuffer])?
     var onStats: (@MainActor (Stats) -> Void)?
@@ -72,6 +90,7 @@ final class Map3DMetalView: MTKView {
     private var frames = 0
     private var lastStats = CACurrentMediaTime()
     private var lastCounts = (drawCalls: 0, triangles: 0)
+    private var lastLife = (people: 0, vehicles: 0)
 
     /// The view, or `nil` where the device has no Metal or the shaders do
     /// not load.
@@ -152,6 +171,14 @@ final class Map3DMetalView: MTKView {
         sampleCount = Self.samples
         clearDepth = 1
         preferredFramesPerSecond = 60
+        streetDetail = Map3DStreetDetail.forGPUFamily(Self.appleFamily(of: device))
+    }
+
+    /// The newest Apple GPU family `device` belongs to, as a number (9 for
+    /// `.apple9`), 0 for none.
+    private static func appleFamily(of device: MTLDevice) -> Int {
+        let families: [(MTLGPUFamily, Int)] = [(.apple9, 9), (.apple8, 8), (.apple7, 7), (.apple6, 6), (.apple5, 5), (.apple4, 4)]
+        return families.first { device.supportsFamily($0.0) }?.1 ?? 0
     }
 
     @available(*, unavailable)
@@ -278,6 +305,21 @@ final class Map3DMetalView: MTKView {
         }
     }
 
+    /// Decision 259: the most figures and vehicles a frame draws (the
+    /// fullest detail's), and the next of the three buffers for them,
+    /// once the GPU is done with it.
+    private static let lifeCapacity = Map3DStreetDetail.full.people + Map3DStreetDetail.full.vehicles
+
+    private func nextLifeBuffer() -> MTLBuffer? {
+        if lifeBuffers.isEmpty, let device {
+            lifeBuffers = (0..<3).compactMap { _ in device.makeBuffer(length: Self.lifeCapacity * Self.instanceStride, options: .storageModeShared) }
+        }
+        guard lifeBuffers.count == 3 else { return nil }
+        lifeInFlight.wait()
+        lifeBuffer = (lifeBuffer + 1) % 3
+        return lifeBuffers[lifeBuffer]
+    }
+
     private func makeBuffer<Element>(_ array: [Element]) -> MTLBuffer? {
         guard !array.isEmpty, let device else { return nil }
         return array.withUnsafeBytes { bytes in
@@ -365,6 +407,37 @@ final class Map3DMetalView: MTKView {
                 }
             }
         }
+        // Decision 259: the people and vehicles near the target, one draw
+        // call a model, every one of it an instance.
+        let life = streetLife?(camera, lighting.lights, streetDetail)
+        var lifeUsed = false
+        if let instances = life?.instances, !instances.isEmpty, let models, let buffer = nextLifeBuffer() {
+            lifeUsed = true
+            let sorted = instances.sorted { $0.model < $1.model }
+            let floats = sorted.prefix(Self.lifeCapacity).flatMap(\.floats)
+            floats.withUnsafeBytes { bytes in
+                if let base = bytes.baseAddress { buffer.contents().copyMemory(from: base, byteCount: bytes.count) }
+            }
+            do {
+                encoder.setRenderPipelineState(instancedPipeline)
+                var first = 0
+                while first < min(sorted.count, Self.lifeCapacity) {
+                    let model = sorted[first].model
+                    var last = first
+                    while last + 1 < min(sorted.count, Self.lifeCapacity), sorted[last + 1].model == model { last += 1 }
+                    let count = last - first + 1
+                    if model < models.buffers.count {
+                        encoder.setVertexBuffer(models.buffers[model], offset: 0, index: 0)
+                        encoder.setVertexBuffer(buffer, offset: first * Self.instanceStride, index: 2)
+                        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: models.pack.models[model].vertices.count,
+                                               instanceCount: count)
+                        drawCalls += 1
+                        triangles += models.pack.models[model].triangleCount * count
+                    }
+                    first = last + 1
+                }
+            }
+        }
         // Decision 244: the street furniture of the chunks drawn in full,
         // one draw call a model and chunk.
         if let models {
@@ -401,12 +474,17 @@ final class Map3DMetalView: MTKView {
         }
         encoder.endEncoding()
         let gpuTimes = gpuTimes
+        if lifeUsed {
+            let inFlight = lifeInFlight
+            commands.addCompletedHandler { @Sendable _ in inFlight.signal() }
+        }
         commands.addCompletedHandler { @Sendable buffer in
             let seconds = buffer.gpuEndTime - buffer.gpuStartTime
             if seconds > 0 { gpuTimes.withLock { $0.append(seconds) } }
         }
         commands.present(drawable)
         commands.commit()
+        lastLife = (life?.people ?? 0, life?.vehicles ?? 0)
         record(cpu: CACurrentMediaTime() - start, drawCalls: drawCalls, triangles: triangles)
     }
 
@@ -455,8 +533,19 @@ final class Map3DMetalView: MTKView {
             cpuMilliseconds: Self.median(cpuTimes) * 1_000,
             gpuMilliseconds: Self.median(gpu) * 1_000,
             drawCalls: lastCounts.drawCalls,
-            triangles: lastCounts.triangles
+            triangles: lastCounts.triangles,
+            people: lastLife.people,
+            vehicles: lastLife.vehicles,
+            streetDetail: streetDetail
         )
+        // Decision 259: a device that cannot hold its frame rate while
+        // drawing street life draws less of it.
+        let drawingLife = lastLife.people + lastLife.vehicles > 0
+        slowWindows = drawingLife && stats.framesPerSecond < Double(preferredFramesPerSecond) * 0.75 ? slowWindows + 1 : 0
+        if Map3DStreetDetail.shouldLower(framesPerSecond: stats.framesPerSecond, aim: Double(preferredFramesPerSecond), windows: slowWindows) {
+            streetDetail = streetDetail.lowered
+            slowWindows = 0
+        }
         frames = 0
         cpuTimes.removeAll()
         lastStats = now
