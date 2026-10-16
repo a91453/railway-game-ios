@@ -49,6 +49,26 @@ struct Map3DSeededStreets: Sendable {
                 edges[edge] = kind
             }
         }
+        // A main road or a street (not a lane: lanes end at the railway)
+        // goes on across a short stretch with no lot either side (the
+        // cells the track takes, a plaza): up to three edges between two of
+        // the same line's, so the track does not cut it in two; its level
+        // crossing joins it.
+        var lines: [Edge: [Int]] = [:]
+        for edge in edges.keys { lines[Edge(horizontal: edge.horizontal, line: edge.line, along: 0), default: []].append(edge.along) }
+        for (line, alongs) in lines {
+            let sorted = alongs.sorted()
+            for (a, b) in zip(sorted, sorted.dropFirst()) where b - a > 1 && b - a <= 4 {
+                let gap = (a + 1)..<b
+                let open = gap.allSatisfy { along in
+                    let (first, second) = Self.cells(beside: Edge(horizontal: line.horizontal, line: line.line, along: along))
+                    return built[first] == nil && built[second] == nil
+                }
+                let kind = Self.kind(ofLine: line.line, horizontal: line.horizontal)
+                guard open, Self.crossesTrack(line: line.line, horizontal: line.horizontal) else { continue }
+                for along in gap { edges[Edge(horizontal: line.horizontal, line: line.line, along: along)] = kind }
+            }
+        }
         self.edges = edges
     }
 
@@ -70,6 +90,16 @@ struct Map3DSeededStreets: Sendable {
         return map3DRandom(Int32(truncatingIfNeeded: line), axis, salt: 2635) < 0.55 ? .tertiary : .minor
     }
 
+    /// Whether a grid line's street goes on over the railway: every main
+    /// road, half the streets (seeded), no lane; the rest end at it.
+    static func crossesTrack(line: Int, horizontal: Bool) -> Bool {
+        switch kind(ofLine: line, horizontal: horizontal) {
+        case .primary: true
+        case .tertiary: map3DRandom(Int32(truncatingIfNeeded: line), horizontal ? 1 : 2, salt: 2636) < 0.5
+        default: false
+        }
+    }
+
     /// How far from a street's middle its pavement reaches, metres: where a
     /// house's front may stand.
     static func clearance(_ kind: Map3DBaseMap.RoadKind) -> Float {
@@ -88,9 +118,10 @@ struct Map3DLevelCrossing: Sendable {
     let kind: Map3DBaseMap.RoadKind
 
     /// Half the deck along the street (over a bed 4.6 m wide) and where
-    /// the ramps reach the road again.
+    /// the ramps reach the road again: long and gentle, about 1 in 13
+    /// over the track's raised bed (``Map3DScene/railLift``).
     static let deckHalf: Float = 2.6
-    static let rampEnd: Float = 6
+    static let rampEnd: Float = 12
     /// The deck's top over the rails' line (``Map3DScene/railLift``):
     /// just over the rail heads.
     static let deckRise: Float = 0.22
@@ -266,8 +297,20 @@ extension Map3DScene.Builder {
             case .clear: kept[edge] = kind
             case .blocked: continue
             case .crossing(let at):
+                // A lane, and half the streets, end at the railway.
+                guard Map3DSeededStreets.crossesTrack(line: edge.line, horizontal: edge.horizontal) else { continue }
                 kept[edge] = kind
                 crossingsOn[edge] = at
+            }
+        }
+        // A crossing only where the street goes on both sides of it, never
+        // a stub over the track.
+        for edge in crossingsOn.keys.sorted() {
+            let before = Map3DSeededStreets.Edge(horizontal: edge.horizontal, line: edge.line, along: edge.along - 1)
+            let after = Map3DSeededStreets.Edge(horizontal: edge.horizontal, line: edge.line, along: edge.along + 1)
+            if kept[before] == nil || kept[after] == nil {
+                kept[edge] = nil
+                crossingsOn[edge] = nil
             }
         }
         streetEdges = kept
@@ -335,6 +378,9 @@ extension Map3DScene.Builder {
         let along = crossing.along, across = Map3DPoint(-along.z, 0, along.x)
         let half = crossing.halfWidth, top = crossing.deckTop
         let road = Map3DPalette.road(crossing.kind)
+        // The deck: rubber panels over the rails, the light grey of Taiwan's
+        // crossings.
+        let deck = Self.crossingDeck
         let middle = Map3DPoint(crossing.point.x, 0, crossing.point.z)
         let base = Map3DPoint(middle.x, drawnGround(x: middle.x, z: middle.z), middle.z)
         var corners: [[Map3DPoint]] = []
@@ -347,8 +393,11 @@ extension Map3DScene.Builder {
         let saved = target
         target = .base
         mesh(at: base) { mesh in
-            mesh.addBox(base: base, forward: along, length: 2 * Map3DLevelCrossing.deckHalf, width: 2 * half, height: max(top - base.y, 0.1),
-                        top: road, side: Map3DColor.shaded(road, 0.9))
+            let deckCorners = [-1, 1].flatMap { (end: Float) in
+                [middle + along * (end * Map3DLevelCrossing.deckHalf) + across * (end * half), middle + along * (end * Map3DLevelCrossing.deckHalf) - across * (end * half)]
+            }.map { Map3DPoint($0.x, top, $0.z) }
+            let up = (deckCorners[1] - deckCorners[0]).cross(deckCorners[3] - deckCorners[0]).y > 0
+            mesh.addFacet(up ? deckCorners : deckCorners.reversed(), color: deck)
             for ramp in corners {
                 // Facing up whichever way the end lies.
                 let up = (ramp[1] - ramp[0]).cross(ramp[3] - ramp[0]).y > 0
@@ -387,6 +436,7 @@ extension Map3DScene.Builder {
     }
 
     static let stopWhite = Map3DColor.rgb(0xF4F4F0)
+    static let crossingDeck = Map3DColor.rgb(0xB4B8C2)
     static let barrierYellow = Map3DColor.rgb(0xF2C94C)
     static let barrierBlack = Map3DColor.rgb(0x2B2E34)
     static let barrierRed = Map3DColor.rgb(0xD9473F)

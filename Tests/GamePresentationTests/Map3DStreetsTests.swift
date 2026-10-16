@@ -37,6 +37,29 @@ final class Map3DStreetsTests: XCTestCase {
         XCTAssertEqual(Map3DSeededStreets(built: dense).edges.count, 2 * 12 * 13)
     }
 
+    func testAStreetGoesOnAcrossTheCellsTheTrackTakes() {
+        // Two lots on a row with two cleared cells (the track's) between.
+        let built = [Map3DScene.ChunkKey(column: 0, row: 0): 1, Map3DScene.ChunkKey(column: 3, row: 0): 1]
+        let streets = Map3DSeededStreets(built: built)
+        for line in [0, 1] {
+            let edges = (0...3).map { Map3DSeededStreets.Edge(horizontal: true, line: line, along: $0) }
+            guard streets.edges[edges[0]] != nil, streets.edges[edges[3]] != nil else { continue }
+            // A main road and half the streets go on; lanes end at it.
+            let goesOn = Map3DSeededStreets.crossesTrack(line: line, horizontal: true)
+            XCTAssertEqual(streets.edges[edges[1]] != nil, goesOn, "line \(line)")
+            XCTAssertEqual(streets.edges[edges[2]] != nil, goesOn, "line \(line)")
+        }
+        // Which lines go on: every main road, no lane, some streets.
+        let lines = (-40...40).map { (Map3DSeededStreets.kind(ofLine: $0, horizontal: true), Map3DSeededStreets.crossesTrack(line: $0, horizontal: true)) }
+        XCTAssertTrue(lines.allSatisfy { $0.0 != .primary || $0.1 })
+        XCTAssertTrue(lines.allSatisfy { $0.0 != .minor || !$0.1 })
+        XCTAssertTrue(lines.contains { $0.0 == .tertiary && $0.1 })
+        XCTAssertTrue(lines.contains { $0.0 == .tertiary && !$0.1 })
+        // Far apart, no.
+        let far = Map3DSeededStreets(built: [Map3DScene.ChunkKey(column: 0, row: 0): 1, Map3DScene.ChunkKey(column: 9, row: 0): 1])
+        XCTAssertNil(far.edges[Map3DSeededStreets.Edge(horizontal: true, line: 0, along: 4)])
+    }
+
     private func builder(track: [Map3DPoint], kind: TrackSectionKind, platform: Bool = false) -> Map3DScene.Builder {
         let world = GameWorld.newGame()
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
@@ -87,7 +110,7 @@ final class Map3DStreetsTests: XCTestCase {
         XCTAssertEqual(crossing.rise(x: 0, z: 1, road: 0.3), 1.2 + Map3DLevelCrossing.deckRise - 0.3, accuracy: 1e-5)
         XCTAssertEqual(crossing.rise(x: (Map3DLevelCrossing.deckHalf + Map3DLevelCrossing.rampEnd) / 2, z: 0, road: 0.3),
                        (1.2 + Map3DLevelCrossing.deckRise - 0.3) / 2, accuracy: 1e-4, "half way down the ramp")
-        XCTAssertEqual(crossing.rise(x: 10, z: 0, road: 0.3), 0)
+        XCTAssertEqual(crossing.rise(x: 14, z: 0, road: 0.3), 0)
         XCTAssertEqual(crossing.rise(x: 0, z: 30, road: 0.3), 0, "beside the street")
     }
 
