@@ -52,6 +52,13 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
     public static let metroC381 = PerformancePreset(listed: "metroC381")
     /// The Taiwan Railway's EMU800 and EMU900 (decision 237).
     public static let emu800 = PerformancePreset(listed: "emu800")
+    /// The Taiwan Railway's models of decision 252.
+    public static let emu100 = PerformancePreset(listed: "emu100")
+    public static let e200ChuKuang = PerformancePreset(listed: "e200ChuKuang")
+    public static let e500ChuKuang = PerformancePreset(listed: "e500ChuKuang")
+    public static let r100ChuKuang = PerformancePreset(listed: "r100ChuKuang")
+    public static let r200ChuKuang = PerformancePreset(listed: "r200ChuKuang")
+    public static let haiFeng = PerformancePreset(listed: "haiFeng")
 
     /// Its row's code.
     public var code: String { TrainPerformanceCatalog.builtIn[row].code }
@@ -86,6 +93,12 @@ public struct PerformancePreset: CaseIterable, Hashable, Sendable {
         "steam": ("Steam train", "蒸汽列車"),
         "metroC381": ("Taipei Metro C371 / C381", "北捷 C371／C381"),
         "emu800": ("EMU800 / EMU900 local", "EMU800／900 區間車"),
+        "emu100": ("EMU100 Tze-Chiang", "EMU100 自強號"),
+        "e200ChuKuang": ("Chu-Kuang, E200 locomotive", "莒光號（E200 電力機車）"),
+        "e500ChuKuang": ("Chu-Kuang, E500 locomotive", "莒光號（E500 電力機車）"),
+        "r100ChuKuang": ("Chu-Kuang, R100 diesel", "莒光號（R100 柴電機車）"),
+        "r200ChuKuang": ("Chu-Kuang, R200 diesel", "莒光號（R200 柴電機車）"),
+        "haiFeng": ("Hai-Feng sightseeing train", "海風號"),
     ]
 
     /// The first preset, in the order above, that accelerates, brakes and
