@@ -16,7 +16,11 @@ final class RealWorldMapUITests: XCTestCase {
 
         tappable(app.buttons.matching(identifier: "start.realWorld"), name: "start.realWorld").tap()
 
-        let taipei = tappable(app.buttons.matching(identifier: "place.tra-taipei"), name: "place.tra-taipei")
+        // Decision 262 put Taiwan's places under a group heading, so on a
+        // landscape iPhone Taipei's row starts below the screen (and the
+        // list makes rows only as they come near): scroll to it first.
+        let taipei = app.buttons.matching(identifier: "place.tra-taipei").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(taipei, in: app.collectionViews.firstMatch), "Missing button: place.tra-taipei")
         XCTAssertEqual(taipei.label, "Taipei", "The references' places are listed")
         taipei.tap()
 
