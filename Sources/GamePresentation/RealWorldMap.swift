@@ -102,14 +102,17 @@ public struct RealWorldFrame: Hashable, Sendable {
 ///
 /// The places are the references' own, not Apple's (Apple's map data may
 /// not be kept, Attachment 6 §2.5 of the Apple Developer Program License
-/// Agreement): the cities of `Ci/`'s `CITIES`, at its `center`, and the
+/// Agreement): the cities of `Ci/`'s `CITIES`, at its `center`, the
 /// Taiwan Railway stations of `Railway/`'s `data/tra.json`, from
-/// OpenStreetMap. A place the player finds with the map's search is not
-/// kept either: only the middle of the map the player settles on.
+/// OpenStreetMap, and the main stations of the other large cities, from
+/// Wikidata (decision 262, RealWorldStations.swift). A place the player
+/// finds with the map's search is not kept either: only the middle of the
+/// map the player settles on.
 public struct RealWorldPlace: Identifiable, Hashable, Sendable {
-    /// Where on the Earth the list groups it.
+    /// Where on the Earth it is: the list puts a place whose country has
+    /// fewer than ``countryGroupMinimum`` places in its region's group
+    /// (decision 262).
     public enum Region: CaseIterable, Hashable, Sendable {
-        case taiwan
         case asia
         case europe
         case americas
@@ -117,7 +120,6 @@ public struct RealWorldPlace: Identifiable, Hashable, Sendable {
 
         public func name(in language: DisplayLanguage) -> String {
             switch self {
-            case .taiwan: language.text("Taiwan", "台灣")
             case .asia: language.text("Asia", "亞洲")
             case .europe: language.text("Europe", "歐洲")
             case .americas: language.text("Americas", "美洲")
@@ -126,9 +128,19 @@ public struct RealWorldPlace: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// The reference's key: `Ci/`'s city key, or `tra-` and the station.
+    /// The reference's key: `Ci/`'s city key, or `tra-` and the station;
+    /// for the other cities their English name in lower case, without
+    /// spaces or accents.
     public let id: String
+    /// Its country or territory: the ISO 3166-1 alpha-2 code ("TW", "JP",
+    /// "HK").
+    public let country: String
     public let region: Region
+    /// How many people, in thousands, live in the city it is in: the
+    /// urban agglomeration of the United Nations' World Urbanization
+    /// Prospects 2025 round it, on 1 January 2025 (decision 262). The list
+    /// puts the largest first.
+    public let population: Int
     public let anchor: GeoAnchor
     let english: String
     let chinese: String
@@ -137,22 +149,22 @@ public struct RealWorldPlace: Identifiable, Hashable, Sendable {
         language.text(english, chinese)
     }
 
-    init(_ id: String, _ region: Region, _ english: String, _ chinese: String, latitude: Int64, longitude: Int64) {
+    init(_ id: String, _ country: String, _ region: Region, _ english: String, _ chinese: String, population: Int, latitude: Int64, longitude: Int64) {
         guard let anchor = GeoAnchor(latitude: latitude, longitude: longitude) else {
             preconditionFailure("\(id) is not on the Earth")
         }
         self.id = id
+        self.country = country
         self.region = region
+        self.population = population
         self.anchor = anchor
         self.english = english
         self.chinese = chinese
     }
 
-    /// Every place, by region in ``Region``'s order and within a region in
-    /// the reference's order.
-    public static let all: [RealWorldPlace] = Region.allCases.flatMap { region in
-        (taiwan + ciCities).filter { $0.region == region }
-    }
+    /// Every place, in the references' order, then the other cities'. The
+    /// list shows them by ``RealWorldPlaceGroup``.
+    public static let all: [RealWorldPlace] = taiwan + ciCities + mainStations
 
     /// Where a real-world game starts when the player picks nothing:
     /// Taipei Main Station.
@@ -162,75 +174,75 @@ public struct RealWorldPlace: Identifiable, Hashable, Sendable {
     /// name along the Taiwan Railway lines, north to south and round the
     /// east (OpenStreetMap's points, seven decimals).
     static let taiwan: [RealWorldPlace] = [
-        RealWorldPlace("tra-keelung", .taiwan, "Keelung", "基隆", latitude: 251_330_324, longitude: 1_217_392_299),
-        RealWorldPlace("tra-taipei", .taiwan, "Taipei", "臺北", latitude: 250_479_308, longitude: 1_215_170_046),
-        RealWorldPlace("tra-taoyuan", .taiwan, "Taoyuan", "桃園", latitude: 249_887_260, longitude: 1_213_137_769),
-        RealWorldPlace("tra-hsinchu", .taiwan, "Hsinchu", "新竹", latitude: 248_014_026, longitude: 1_209_716_780),
-        RealWorldPlace("tra-taichung", .taiwan, "Taichung", "臺中", latitude: 241_370_662, longitude: 1_206_868_667),
-        RealWorldPlace("tra-chiayi", .taiwan, "Chiayi", "嘉義", latitude: 234_799_042, longitude: 1_204_415_839),
-        RealWorldPlace("tra-tainan", .taiwan, "Tainan", "臺南", latitude: 229_972_146, longitude: 1_202_130_434),
-        RealWorldPlace("tra-kaohsiung", .taiwan, "Kaohsiung", "高雄", latitude: 226_395_321, longitude: 1_203_025_585),
-        RealWorldPlace("tra-yilan", .taiwan, "Yilan", "宜蘭", latitude: 247_545_601, longitude: 1_217_583_109),
-        RealWorldPlace("tra-hualien", .taiwan, "Hualien", "花蓮", latitude: 239_926_399, longitude: 1_216_009_524),
-        RealWorldPlace("tra-taitung", .taiwan, "Taitung", "臺東", latitude: 227_934_597, longitude: 1_211_224_316),
+        RealWorldPlace("tra-keelung", "TW", .asia, "Keelung", "基隆", population: 9_146, latitude: 251_330_324, longitude: 1_217_392_299),
+        RealWorldPlace("tra-taipei", "TW", .asia, "Taipei", "臺北", population: 9_146, latitude: 250_479_308, longitude: 1_215_170_046),
+        RealWorldPlace("tra-taoyuan", "TW", .asia, "Taoyuan", "桃園", population: 9_146, latitude: 249_887_260, longitude: 1_213_137_769),
+        RealWorldPlace("tra-hsinchu", "TW", .asia, "Hsinchu", "新竹", population: 696, latitude: 248_014_026, longitude: 1_209_716_780),
+        RealWorldPlace("tra-taichung", "TW", .asia, "Taichung", "臺中", population: 2_271, latitude: 241_370_662, longitude: 1_206_868_667),
+        RealWorldPlace("tra-chiayi", "TW", .asia, "Chiayi", "嘉義", population: 438, latitude: 234_799_042, longitude: 1_204_415_839),
+        RealWorldPlace("tra-tainan", "TW", .asia, "Tainan", "臺南", population: 984, latitude: 229_972_146, longitude: 1_202_130_434),
+        RealWorldPlace("tra-kaohsiung", "TW", .asia, "Kaohsiung", "高雄", population: 2_196, latitude: 226_395_321, longitude: 1_203_025_585),
+        RealWorldPlace("tra-yilan", "TW", .asia, "Yilan", "宜蘭", population: 80, latitude: 247_545_601, longitude: 1_217_583_109),
+        RealWorldPlace("tra-hualien", "TW", .asia, "Hualien", "花蓮", population: 144, latitude: 239_926_399, longitude: 1_216_009_524),
+        RealWorldPlace("tra-taitung", "TW", .asia, "Taitung", "臺東", population: 65, latitude: 227_934_597, longitude: 1_211_224_316),
     ]
 
     /// `Ci/`'s `CITIES` (`Ci/reference_snapshot/lib/app__q_c234188b7c397f91.js`),
     /// in its order: each city's `center`, four decimals. Its names are in
     /// Simplified Chinese; these are Taiwan's.
     static let ciCities: [RealWorldPlace] = [
-        RealWorldPlace("shanghai", .asia, "Shanghai", "上海", latitude: 312_304_000, longitude: 1_214_737_000),
-        RealWorldPlace("beijing", .asia, "Beijing", "北京", latitude: 399_042_000, longitude: 1_164_074_000),
-        RealWorldPlace("wuhan", .asia, "Wuhan", "武漢", latitude: 305_928_000, longitude: 1_143_055_000),
-        RealWorldPlace("guangzhou", .asia, "Guangzhou", "廣州", latitude: 231_291_000, longitude: 1_132_644_000),
-        RealWorldPlace("chengdu", .asia, "Chengdu", "成都", latitude: 305_728_000, longitude: 1_040_668_000),
-        RealWorldPlace("shenzhen", .asia, "Shenzhen", "深圳", latitude: 225_431_000, longitude: 1_140_579_000),
-        RealWorldPlace("nanjing", .asia, "Nanjing", "南京", latitude: 320_603_000, longitude: 1_187_969_000),
-        RealWorldPlace("wuxi", .asia, "Wuxi", "無錫", latitude: 314_912_000, longitude: 1_203_119_000),
-        RealWorldPlace("suzhou", .asia, "Suzhou", "蘇州", latitude: 312_989_000, longitude: 1_205_853_000),
-        RealWorldPlace("zhongshan", .asia, "Zhongshan", "中山", latitude: 225_176_000, longitude: 1_133_928_000),
-        RealWorldPlace("zhuhai", .asia, "Zhuhai", "珠海", latitude: 222_707_000, longitude: 1_135_767_000),
-        RealWorldPlace("dongguan", .asia, "Dongguan", "東莞", latitude: 230_218_000, longitude: 1_137_518_000),
-        RealWorldPlace("nanning", .asia, "Nanning", "南寧", latitude: 228_170_000, longitude: 1_083_660_000),
-        RealWorldPlace("urumqi", .asia, "Ürümqi", "烏魯木齊", latitude: 438_256_000, longitude: 876_168_000),
-        RealWorldPlace("dalian", .asia, "Dalian", "大連", latitude: 389_140_000, longitude: 1_216_147_000),
-        RealWorldPlace("shenyang", .asia, "Shenyang", "瀋陽", latitude: 418_057_000, longitude: 1_234_315_000),
-        RealWorldPlace("changchun", .asia, "Changchun", "長春", latitude: 438_160_000, longitude: 1_253_235_000),
-        RealWorldPlace("harbin", .asia, "Harbin", "哈爾濱", latitude: 457_567_000, longitude: 1_266_425_000),
-        RealWorldPlace("hangzhou", .asia, "Hangzhou", "杭州", latitude: 302_741_000, longitude: 1_201_551_000),
-        RealWorldPlace("chongqing", .asia, "Chongqing", "重慶", latitude: 294_316_000, longitude: 1_069_123_000),
-        RealWorldPlace("foshan", .asia, "Foshan", "佛山", latitude: 230_215_000, longitude: 1_131_214_000),
-        RealWorldPlace("xian", .asia, "Xi’an", "西安", latitude: 343_416_000, longitude: 1_089_398_000),
-        RealWorldPlace("tianjin", .asia, "Tianjin", "天津", latitude: 393_434_000, longitude: 1_173_616_000),
-        RealWorldPlace("xiamen", .asia, "Xiamen", "廈門", latitude: 244_798_000, longitude: 1_180_819_000),
-        RealWorldPlace("zhengzhou", .asia, "Zhengzhou", "鄭州", latitude: 347_466_000, longitude: 1_136_254_000),
-        RealWorldPlace("qingdao", .asia, "Qingdao", "青島", latitude: 360_671_000, longitude: 1_203_826_000),
-        RealWorldPlace("xianyang", .asia, "Xianyang", "咸陽", latitude: 343_296_000, longitude: 1_087_092_000),
-        RealWorldPlace("singapore", .asia, "Singapore", "新加坡", latitude: 13_521_000, longitude: 1_038_198_000),
-        RealWorldPlace("hongkong", .asia, "Hong Kong", "香港", latitude: 223_193_000, longitude: 1_141_694_000),
-        RealWorldPlace("macau", .asia, "Macau", "澳門", latitude: 221_987_000, longitude: 1_135_439_000),
-        RealWorldPlace("madrid", .europe, "Madrid", "馬德里", latitude: 404_168_000, longitude: -37_038_000),
-        RealWorldPlace("paris", .europe, "Paris", "巴黎", latitude: 488_566_000, longitude: 23_522_000),
-        RealWorldPlace("london", .europe, "London", "倫敦", latitude: 515_074_000, longitude: -1_278_000),
-        RealWorldPlace("vancouver", .americas, "Vancouver", "溫哥華", latitude: 492_827_000, longitude: -1_231_207_000),
-        RealWorldPlace("toronto", .americas, "Toronto", "多倫多", latitude: 436_532_000, longitude: -793_832_000),
-        RealWorldPlace("bayarea", .americas, "San Francisco Bay Area", "舊金山灣區", latitude: 377_749_000, longitude: -1_224_194_000),
-        RealWorldPlace("losangeles", .americas, "Los Angeles", "洛杉磯", latitude: 340_522_000, longitude: -1_182_437_000),
-        RealWorldPlace("chicago", .americas, "Chicago", "芝加哥", latitude: 418_781_000, longitude: -876_298_000),
-        RealWorldPlace("miami", .americas, "Miami", "邁阿密", latitude: 257_617_000, longitude: -801_918_000),
-        RealWorldPlace("boston", .americas, "Boston", "波士頓", latitude: 423_601_000, longitude: -710_589_000),
-        RealWorldPlace("washington", .americas, "Washington", "華盛頓", latitude: 389_072_000, longitude: -770_369_000),
-        RealWorldPlace("newyork", .americas, "New York", "紐約", latitude: 407_128_000, longitude: -740_060_000),
-        RealWorldPlace("buenosaires", .americas, "Buenos Aires", "布宜諾斯艾利斯", latitude: -346_037_000, longitude: -583_816_000),
-        RealWorldPlace("melbourne", .oceaniaAndAfrica, "Melbourne", "墨爾本", latitude: -378_136_000, longitude: 1_449_631_000),
-        RealWorldPlace("mumbai", .asia, "Mumbai", "孟買", latitude: 190_760_000, longitude: 728_777_000),
-        RealWorldPlace("lagos", .oceaniaAndAfrica, "Lagos", "拉哥斯", latitude: 65_244_000, longitude: 33_792_000),
-        RealWorldPlace("berlin", .europe, "Berlin", "柏林", latitude: 525_200_000, longitude: 134_050_000),
-        RealWorldPlace("rome", .europe, "Rome", "羅馬", latitude: 419_028_000, longitude: 124_964_000),
-        RealWorldPlace("munich", .europe, "Munich", "慕尼黑", latitude: 481_371_000, longitude: 115_754_000),
-        RealWorldPlace("milan", .europe, "Milan", "米蘭", latitude: 454_642_000, longitude: 91_900_000),
-        RealWorldPlace("copenhagen", .europe, "Copenhagen", "哥本哈根", latitude: 556_761_000, longitude: 125_683_000),
-        RealWorldPlace("stockholm", .europe, "Stockholm", "斯德哥爾摩", latitude: 593_293_000, longitude: 180_686_000),
-        RealWorldPlace("seoul", .asia, "Seoul", "首爾", latitude: 375_665_000, longitude: 1_269_780_000),
+        RealWorldPlace("shanghai", "CN", .asia, "Shanghai", "上海", population: 29_368, latitude: 312_304_000, longitude: 1_214_737_000),
+        RealWorldPlace("beijing", "CN", .asia, "Beijing", "北京", population: 16_960, latitude: 399_042_000, longitude: 1_164_074_000),
+        RealWorldPlace("wuhan", "CN", .asia, "Wuhan", "武漢", population: 7_383, latitude: 305_928_000, longitude: 1_143_055_000),
+        RealWorldPlace("guangzhou", "CN", .asia, "Guangzhou", "廣州", population: 27_458, latitude: 231_291_000, longitude: 1_132_644_000),
+        RealWorldPlace("chengdu", "CN", .asia, "Chengdu", "成都", population: 6_153, latitude: 305_728_000, longitude: 1_040_668_000),
+        RealWorldPlace("shenzhen", "CN", .asia, "Shenzhen", "深圳", population: 13_834, latitude: 225_431_000, longitude: 1_140_579_000),
+        RealWorldPlace("nanjing", "CN", .asia, "Nanjing", "南京", population: 6_800, latitude: 320_603_000, longitude: 1_187_969_000),
+        RealWorldPlace("wuxi", "CN", .asia, "Wuxi", "無錫", population: 2_613, latitude: 314_912_000, longitude: 1_203_119_000),
+        RealWorldPlace("suzhou", "CN", .asia, "Suzhou", "蘇州", population: 7_720, latitude: 312_989_000, longitude: 1_205_853_000),
+        RealWorldPlace("zhongshan", "CN", .asia, "Zhongshan", "中山", population: 1_316, latitude: 225_176_000, longitude: 1_133_928_000),
+        RealWorldPlace("zhuhai", "CN", .asia, "Zhuhai", "珠海", population: 2_194, latitude: 222_707_000, longitude: 1_135_767_000),
+        RealWorldPlace("dongguan", "CN", .asia, "Dongguan", "東莞", population: 27_458, latitude: 230_218_000, longitude: 1_137_518_000),
+        RealWorldPlace("nanning", "CN", .asia, "Nanning", "南寧", population: 3_288, latitude: 228_170_000, longitude: 1_083_660_000),
+        RealWorldPlace("urumqi", "CN", .asia, "Ürümqi", "烏魯木齊", population: 3_745, latitude: 438_256_000, longitude: 876_168_000),
+        RealWorldPlace("dalian", "CN", .asia, "Dalian", "大連", population: 2_794, latitude: 389_140_000, longitude: 1_216_147_000),
+        RealWorldPlace("shenyang", "CN", .asia, "Shenyang", "瀋陽", population: 5_711, latitude: 418_057_000, longitude: 1_234_315_000),
+        RealWorldPlace("changchun", "CN", .asia, "Changchun", "長春", population: 3_355, latitude: 438_160_000, longitude: 1_253_235_000),
+        RealWorldPlace("harbin", "CN", .asia, "Harbin", "哈爾濱", population: 4_377, latitude: 457_567_000, longitude: 1_266_425_000),
+        RealWorldPlace("hangzhou", "CN", .asia, "Hangzhou", "杭州", population: 7_437, latitude: 302_741_000, longitude: 1_201_551_000),
+        RealWorldPlace("chongqing", "CN", .asia, "Chongqing", "重慶", population: 7_085, latitude: 294_316_000, longitude: 1_069_123_000),
+        RealWorldPlace("foshan", "CN", .asia, "Foshan", "佛山", population: 27_458, latitude: 230_215_000, longitude: 1_131_214_000),
+        RealWorldPlace("xian", "CN", .asia, "Xi’an", "西安", population: 5_235, latitude: 343_416_000, longitude: 1_089_398_000),
+        RealWorldPlace("tianjin", "CN", .asia, "Tianjin", "天津", population: 7_261, latitude: 393_434_000, longitude: 1_173_616_000),
+        RealWorldPlace("xiamen", "CN", .asia, "Xiamen", "廈門", population: 1_789, latitude: 244_798_000, longitude: 1_180_819_000),
+        RealWorldPlace("zhengzhou", "CN", .asia, "Zhengzhou", "鄭州", population: 4_881, latitude: 347_466_000, longitude: 1_136_254_000),
+        RealWorldPlace("qingdao", "CN", .asia, "Qingdao", "青島", population: 3_618, latitude: 360_671_000, longitude: 1_203_826_000),
+        RealWorldPlace("xianyang", "CN", .asia, "Xianyang", "咸陽", population: 538, latitude: 343_296_000, longitude: 1_087_092_000),
+        RealWorldPlace("singapore", "SG", .asia, "Singapore", "新加坡", population: 4_944, latitude: 13_521_000, longitude: 1_038_198_000),
+        RealWorldPlace("hongkong", "HK", .asia, "Hong Kong", "香港", population: 4_756, latitude: 223_193_000, longitude: 1_141_694_000),
+        RealWorldPlace("macau", "MO", .asia, "Macau", "澳門", population: 2_194, latitude: 221_987_000, longitude: 1_135_439_000),
+        RealWorldPlace("madrid", "ES", .europe, "Madrid", "馬德里", population: 5_574, latitude: 404_168_000, longitude: -37_038_000),
+        RealWorldPlace("paris", "FR", .europe, "Paris", "巴黎", population: 9_378, latitude: 488_566_000, longitude: 23_522_000),
+        RealWorldPlace("london", "GB", .europe, "London", "倫敦", population: 10_374, latitude: 515_074_000, longitude: -1_278_000),
+        RealWorldPlace("vancouver", "CA", .americas, "Vancouver", "溫哥華", population: 1_701, latitude: 492_827_000, longitude: -1_231_207_000),
+        RealWorldPlace("toronto", "CA", .americas, "Toronto", "多倫多", population: 5_469, latitude: 436_532_000, longitude: -793_832_000),
+        RealWorldPlace("bayarea", "US", .americas, "San Francisco Bay Area", "舊金山灣區", population: 3_159, latitude: 377_749_000, longitude: -1_224_194_000),
+        RealWorldPlace("losangeles", "US", .americas, "Los Angeles", "洛杉磯", population: 12_716, latitude: 340_522_000, longitude: -1_182_437_000),
+        RealWorldPlace("chicago", "US", .americas, "Chicago", "芝加哥", population: 3_686, latitude: 418_781_000, longitude: -876_298_000),
+        RealWorldPlace("miami", "US", .americas, "Miami", "邁阿密", population: 2_903, latitude: 257_617_000, longitude: -801_918_000),
+        RealWorldPlace("boston", "US", .americas, "Boston", "波士頓", population: 1_640, latitude: 423_601_000, longitude: -710_589_000),
+        RealWorldPlace("washington", "US", .americas, "Washington", "華盛頓", population: 3_249, latitude: 389_072_000, longitude: -770_369_000),
+        RealWorldPlace("newyork", "US", .americas, "New York", "紐約", population: 13_933, latitude: 407_128_000, longitude: -740_060_000),
+        RealWorldPlace("buenosaires", "AR", .americas, "Buenos Aires", "布宜諾斯艾利斯", population: 14_010, latitude: -346_037_000, longitude: -583_816_000),
+        RealWorldPlace("melbourne", "AU", .oceaniaAndAfrica, "Melbourne", "墨爾本", population: 3_628, latitude: -378_136_000, longitude: 1_449_631_000),
+        RealWorldPlace("mumbai", "IN", .asia, "Mumbai", "孟買", population: 20_116, latitude: 190_760_000, longitude: 728_777_000),
+        RealWorldPlace("lagos", "NG", .oceaniaAndAfrica, "Lagos", "拉哥斯", population: 12_714, latitude: 65_244_000, longitude: 33_792_000),
+        RealWorldPlace("berlin", "DE", .europe, "Berlin", "柏林", population: 3_559, latitude: 525_200_000, longitude: 134_050_000),
+        RealWorldPlace("rome", "IT", .europe, "Rome", "羅馬", population: 2_376, latitude: 419_028_000, longitude: 124_964_000),
+        RealWorldPlace("munich", "DE", .europe, "Munich", "慕尼黑", population: 1_810, latitude: 481_371_000, longitude: 115_754_000),
+        RealWorldPlace("milan", "IT", .europe, "Milan", "米蘭", population: 2_599, latitude: 454_642_000, longitude: 91_900_000),
+        RealWorldPlace("copenhagen", "DK", .europe, "Copenhagen", "哥本哈根", population: 1_226, latitude: 556_761_000, longitude: 125_683_000),
+        RealWorldPlace("stockholm", "SE", .europe, "Stockholm", "斯德哥爾摩", population: 1_494, latitude: 593_293_000, longitude: 180_686_000),
+        RealWorldPlace("seoul", "KR", .asia, "Seoul", "首爾", population: 22_465, latitude: 375_665_000, longitude: 1_269_780_000),
     ]
 }

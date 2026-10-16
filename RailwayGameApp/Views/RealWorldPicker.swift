@@ -27,6 +27,8 @@ struct RealWorldPicker: View {
     @State private var middle: CLLocationCoordinate2D
     @State private var query = ""
     @State private var search = PlaceSearch()
+    /// The groups of the list that are open (decision 262).
+    @State private var expandedGroups: Set<String> = ["country-TW"]
     /// Taiwan's real railways as the map draws them, made when the picker
     /// appears (it opens once the launcher has read them).
     @State private var railwayLines: [RailwayLineDrawing] = []
@@ -127,6 +129,18 @@ struct RealWorldPicker: View {
 
     private var places: some View {
         List {
+            // Decision 262: the list's cities whose names match as the
+            // player types.
+            let cities = RealWorldPlace.matching(query)
+            if !cities.isEmpty {
+                Section {
+                    ForEach(cities.prefix(50)) { place in
+                        placeButton(place, id: "match")
+                    }
+                } header: {
+                    Text(verbatim: launcher.language.text("Cities", "城市"))
+                }
+            }
             let stations = launcher.railways?.stations(matching: query) ?? []
             if !stations.isEmpty {
                 Section("Railway Stations") {
@@ -181,30 +195,26 @@ struct RealWorldPicker: View {
                 .font(.footnote)
                 .foregroundStyle(Theme.textSecondary)
             }
-            ForEach(RealWorldPlace.Region.allCases, id: \.self) { region in
+            // Decision 262: by country where a country has many places, by
+            // region for the rest; Taiwan's open, the others closed.
+            ForEach(RealWorldPlace.groups) { group in
                 Section {
-                    ForEach(RealWorldPlace.all.filter { $0.region == region }) { place in
-                        Button {
-                            position = Self.camera(on: Self.coordinate(of: place.anchor))
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Theme.primary)
-                                Text(verbatim: place.name(in: launcher.language))
-                                    .font(.body)
-                                    .foregroundStyle(Theme.textPrimary)
-                            }
+                    DisclosureGroup(isExpanded: expansionBinding(group.id)) {
+                        ForEach(group.places) { place in
+                            placeButton(place)
                         }
-                        .accessibilityIdentifier("place.\(place.id)")
+                    } label: {
+                        Text(verbatim: launcher.language.text(
+                            "\(group.name(in: launcher.language)) (\(group.places.count))",
+                            "\(group.name(in: launcher.language))（\(group.places.count)）"
+                        ))
                     }
-                } header: {
-                    Text(verbatim: region.name(in: launcher.language))
+                    .accessibilityIdentifier("placeGroup.\(group.id)")
                 }
                 // Decision 88: one map of the whole of Taiwan, for lines from
                 // one end of it to the other, after Taiwan's places (which
                 // the UI tests tap without scrolling).
-                if region == .taiwan {
+                if group.kind == .country("TW") {
                     Section {
                         Button {
                             dismiss()
@@ -231,7 +241,7 @@ struct RealWorldPicker: View {
                         .accessibilityIdentifier("realWorld.wholeTaiwan")
                     }
                 }
-                if region == .taiwan, let railways = launcher.railways {
+                if group.kind == .country("TW"), let railways = launcher.railways {
                     Section {
                         ForEach(RealRailways.System.all) { system in
                             let stations = railways.stations.filter { $0.system == system }
@@ -253,6 +263,34 @@ struct RealWorldPicker: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    /// Moves the map to one of the list's places.
+    private func placeButton(_ place: RealWorldPlace, id prefix: String = "place") -> some View {
+        Button {
+            position = Self.camera(on: Self.coordinate(of: place.anchor))
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.primary)
+                Text(verbatim: place.name(in: launcher.language))
+                    .font(.body)
+                    .foregroundStyle(Theme.textPrimary)
+            }
+        }
+        .accessibilityIdentifier("\(prefix).\(place.id)")
+    }
+
+    /// Whether the group `id` of the list is open: only this view's, not
+    /// the game's (Taiwan's open at first).
+    private func expansionBinding(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedGroups.contains(id) },
+            set: { open in
+                if open { expandedGroups.insert(id) } else { expandedGroups.remove(id) }
+            }
+        )
     }
 
     /// Moves the map to a station of Taiwan's real railways.
