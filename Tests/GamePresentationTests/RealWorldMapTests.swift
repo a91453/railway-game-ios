@@ -146,20 +146,17 @@ final class RealWorldMapTests: XCTestCase {
     // MARK: - Places
 
     /// The references' places: the eleven Taiwan Railway stations of
-    /// `Railway/`, the 53 cities of `Ci/` and the 107 main stations of
-    /// decision 262, grouped by region.
+    /// `Railway/`, the 53 cities of `Ci/` and the 127 main stations of
+    /// decision 262.
     func testThePlacesAreTheReferences() {
         let places = RealWorldPlace.all
-        XCTAssertEqual(places.count, 171)
-        XCTAssertEqual(Set(places.map(\.id)).count, 171)
-        XCTAssertEqual(Set(places.map(\.anchor)).count, 171)
-        XCTAssertEqual(Set(places.map { $0.name(in: .english) }).count, 171)
-        XCTAssertEqual(Set(places.map { $0.name(in: .traditionalChinese) }).count, 171)
+        XCTAssertEqual(places.count, 191)
+        XCTAssertEqual(Set(places.map(\.id)).count, 191)
+        XCTAssertEqual(Set(places.map(\.anchor)).count, 191)
+        XCTAssertEqual(Set(places.map { $0.name(in: .english) }).count, 191)
+        XCTAssertEqual(Set(places.map { $0.name(in: .traditionalChinese) }).count, 191)
         XCTAssertEqual(places.filter { $0.id.hasPrefix("tra-") }.count, 11)
-        XCTAssertEqual(places.map(\.region), places.map(\.region).sorted { a, b in
-            RealWorldPlace.Region.allCases.firstIndex(of: a)! < RealWorldPlace.Region.allCases.firstIndex(of: b)!
-        }, "grouped in the regions' order")
-        XCTAssertEqual(places.first?.region, .taiwan)
+        XCTAssertEqual(places.filter { $0.country == "TW" }.map(\.id), places.filter { $0.id.hasPrefix("tra-") }.map(\.id))
         XCTAssertEqual(RealWorldPlace.standard.id, "tra-taipei")
         XCTAssertEqual(RealWorldPlace.standard.name(in: .english), "Taipei")
         XCTAssertEqual(RealWorldPlace.standard.name(in: .traditionalChinese), "臺北")
@@ -173,15 +170,86 @@ final class RealWorldMapTests: XCTestCase {
             XCTAssertNotEqual(place.name(in: .english), place.name(in: .traditionalChinese), place.id)
             // Apple's maps (Web Mercator) show up to about 85°.
             XCTAssertLessThan(abs(place.anchor.latitudeDegrees), 85, place.id)
+            XCTAssertEqual(place.country.count, 2, place.id)
+            XCTAssertEqual(place.country, place.country.uppercased(), place.id)
+            XCTAssertGreaterThan(place.population, 0, place.id)
         }
-        for id in ["tokyo", "yokohama", "osaka", "nagoya", "sapporo", "fukuoka", "kobe", "kyoto", "kawasaki", "saitama", "hiroshima",
-                   "sendai", "kitakyushu", "chiba", "okayama", "kumamoto", "niigata", "shizuoka", "hamamatsu", "kagoshima", "naha",
-                   "seoul", "busan", "incheon", "daegu", "daejeon", "gwangju", "ulsan", "suwon"] {
-            XCTAssertEqual(places.first { $0.id == id }?.region, .eastAsia, id)
-        }
+        let japan = ["tokyo", "yokohama", "osaka", "nagoya", "sapporo", "fukuoka", "kobe", "kyoto", "kawasaki", "saitama", "hiroshima",
+                     "sendai", "kitakyushu", "chiba", "okayama", "kumamoto", "niigata", "shizuoka", "hamamatsu", "kagoshima", "naha"]
+        let korea = ["seoul", "busan", "incheon", "daegu", "daejeon", "gwangju", "ulsan", "suwon"]
+        XCTAssertEqual(Set(places.filter { $0.country == "JP" }.map(\.id)), Set(japan))
+        XCTAssertEqual(Set(places.filter { $0.country == "KR" }.map(\.id)), Set(korea))
         for region in RealWorldPlace.Region.allCases {
             XCTAssertTrue(places.contains { $0.region == region }, "\(region)")
             XCTAssertNotEqual(region.name(in: .english), region.name(in: .traditionalChinese))
+        }
+    }
+
+    /// The list: a country with four places or more has a group of its
+    /// own, Taiwan, Japan, South Korea, China and the United States first,
+    /// then the others with the most places first (Brazil's and
+    /// Pakistan's four by their codes); the rest by region (decision 262).
+    func testTheListGroupsByCountryThenRegion() throws {
+        let groups = RealWorldPlace.groups
+        XCTAssertEqual(groups.map(\.id), [
+            "country-TW", "country-JP", "country-KR", "country-CN", "country-US", "country-IN", "country-BR", "country-PK",
+            "region-asia", "region-europe", "region-americas", "region-oceaniaAndAfrica",
+        ])
+        XCTAssertEqual(groups.map { $0.name(in: .traditionalChinese) }, [
+            "台灣", "日本", "韓國", "中國", "美國", "印度", "巴西", "巴基斯坦", "其他亞洲", "歐洲", "其他美洲", "大洋洲與非洲",
+        ])
+        XCTAssertEqual(groups.map { $0.name(in: .english) }, [
+            "Taiwan", "Japan", "South Korea", "China", "United States", "India", "Brazil", "Pakistan",
+            "Other Asia", "Europe", "Other Americas", "Oceania and Africa",
+        ])
+        // Every place once.
+        XCTAssertEqual(groups.flatMap(\.places).map(\.id).sorted(), RealWorldPlace.all.map(\.id).sorted())
+        for group in groups {
+            XCTAssertFalse(group.places.isEmpty, group.id)
+            if case .country(let code) = group.kind {
+                XCTAssertGreaterThanOrEqual(group.places.count, RealWorldPlace.countryGroupMinimum, group.id)
+                XCTAssertTrue(group.places.allSatisfy { $0.country == code }, group.id)
+                XCTAssertNotEqual(group.name(in: .english), code, "\(code) has a name")
+            }
+        }
+        // Taiwan north to south and round the east, as `Railway/` lists them.
+        XCTAssertEqual(groups[0].places.map(\.id), RealWorldPlace.all.filter { $0.id.hasPrefix("tra-") }.map(\.id))
+        // The others largest first; places of one city in the list's order.
+        for group in groups.dropFirst() {
+            XCTAssertEqual(group.places.map(\.population), group.places.map(\.population).sorted(by: >), group.id)
+        }
+        XCTAssertEqual(groups[1].places.prefix(6).map(\.id), ["tokyo", "yokohama", "kawasaki", "saitama", "chiba", "osaka"])
+        XCTAssertEqual(groups[3].places.first?.id, "shanghai")
+        // Hong Kong and Macau are Asia's, each its own place.
+        let asia = try XCTUnwrap(groups.first { $0.kind == .region(.asia) })
+        XCTAssertTrue(asia.places.contains { $0.id == "hongkong" })
+        XCTAssertTrue(asia.places.contains { $0.id == "macau" })
+    }
+
+    /// Typing a name finds the city in either language, whatever the
+    /// case, accents, spaces or 臺/台.
+    func testCitiesMatchTheirNames() {
+        XCTAssertEqual(RealWorldPlace.matching("").count, 0)
+        XCTAssertEqual(RealWorldPlace.matching("東京").map(\.id), ["tokyo"])
+        XCTAssertEqual(RealWorldPlace.matching("tokyo").map(\.id), ["tokyo"])
+        XCTAssertEqual(RealWorldPlace.matching("TOK").first?.id, "tokyo")
+        XCTAssertEqual(RealWorldPlace.matching("sao paulo").map(\.id), ["saopaulo"])
+        XCTAssertEqual(RealWorldPlace.matching("台北").map(\.id), ["tra-taipei"])
+        XCTAssertEqual(RealWorldPlace.matching("xi'an").map(\.id), ["xian", "xianyang"])
+        XCTAssertEqual(RealWorldPlace.matching("首爾").map(\.id), ["seoul"])
+        // Names that start with it first.
+        XCTAssertEqual(RealWorldPlace.matching("new").first?.id, "newyork")
+        XCTAssertTrue(RealWorldPlace.matching("zzz").isEmpty)
+    }
+
+    /// Every place starts a game: a new world over the Earth with its
+    /// middle at the place (decision 262).
+    func testEveryPlaceStartsAGame() throws {
+        for place in RealWorldPlace.all {
+            let world = GameWorld.newGame(anchor: place.anchor)
+            XCTAssertEqual(world.geoAnchor, place.anchor, place.id)
+            let frame = try XCTUnwrap(RealWorldFrame(world: world), place.id)
+            XCTAssertEqual(frame.anchor, place.anchor, place.id)
         }
     }
 }

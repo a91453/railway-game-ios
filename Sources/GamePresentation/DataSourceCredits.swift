@@ -79,6 +79,8 @@ public enum DataSourceCredits {
         """
     static let cc0URL = "https://creativecommons.org/publicdomain/zero/1.0/"
     static let wikidataURL = "https://www.wikidata.org"
+    static let worldUrbanizationProspectsURL = "https://population.un.org/wup/"
+    static let ccByIGOURL = "https://creativecommons.org/licenses/by/3.0/igo/"
 
     /// The short credit shown on a real-world map while Taiwan's railways
     /// are drawn on it.
@@ -271,6 +273,23 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: "Wikidata", url: wikidataURL),
                             DataSourceCredit.Link(title: "CC0 1.0", url: cc0URL),
+                        ]
+                    ),
+                    // Decision 262: which of the list's cities are largest.
+                    DataSourceCredit(
+                        id: "worldUrbanizationProspects",
+                        title: language.text("United Nations World Urbanization Prospects 2025", "聯合國《世界都市化展望》2025"),
+                        detail: language.text(
+                            "How many people live in each city of the real-world map’s list, which puts the largest first.",
+                            "實景地圖城市清單裡各城市的人口，清單依它從大排到小。"
+                        ),
+                        notice: language.text(
+                            "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision. Under the Creative Commons Attribution 3.0 IGO licence; the game rounds each city’s figure to thousands.",
+                            "聯合國經濟和社會事務部人口司（2025），《世界都市化展望：2025 年修訂版》。依創用 CC 姓名標示 3.0 IGO 授權使用；遊戲把各城市的人數四捨五入到千人。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("World Urbanization Prospects", "世界都市化展望"), url: worldUrbanizationProspectsURL),
+                            DataSourceCredit.Link(title: "CC BY 3.0 IGO", url: ccByIGOURL),
                         ]
                     ),
                     // Decision 151: Taiwan's base map, the app's own tiles
