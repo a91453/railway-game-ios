@@ -373,15 +373,16 @@ extension XCUIApplication {
 
     /// Drags vertically down `area` at `x` between two heights given as
     /// fractions of it, and holds before lifting, so a list does not fling.
-    /// Both ends are kept within `band`, the part of the list clear of its
+    /// Both ends are kept within `band`, when given, the part of the list clear of its
     /// bars and edges: on a phone on its side three quarters of the screen
     /// lies below a sheet's band, and a drag begun there fell on the scroll
     /// edge's own view and moved nothing (main 27b1dde, run 38773737363).
-    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat, within band: ClosedRange<CGFloat>) {
+    private func drag(in area: CGRect, at x: CGFloat, from: CGFloat, to: CGFloat, within band: ClosedRange<CGFloat>? = nil) {
         let origin = coordinate(withNormalizedOffset: .zero)
         let x = x - frame.minX
         func height(_ fraction: CGFloat) -> CGFloat {
-            min(max(area.minY + area.height * fraction, band.lowerBound), band.upperBound) - frame.minY
+            let y = area.minY + area.height * fraction
+            return (band.map { min(max(y, $0.lowerBound), $0.upperBound) } ?? y) - frame.minY
         }
         let start = origin.withOffset(CGVector(dx: x, dy: height(from)))
         let end = origin.withOffset(CGVector(dx: x, dy: height(to)))
