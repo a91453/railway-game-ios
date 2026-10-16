@@ -558,20 +558,23 @@ final class ShellLayoutUITests: XCTestCase {
         }
         // The demo opens at midnight and its trains start at 06:00: the
         // board lists the next three hours, so it waits for 04:00 (the
-        // second run found an empty board). The clock is the board's last
-        // "HH:MM".
-        let time = app.descendants(matching: .any)["hud.time"].firstMatch
-        XCTAssertTrue(time.appears(within: 10))
+        // second run found an empty board). The hour is the status pill's
+        // last "HH:MM".
+        let clock = app.descendants(matching: .any)["hud.time"].firstMatch
+        XCTAssertTrue(clock.appears(within: 10))
         func hour() -> Int? {
-            guard let label = try? time.snapshot().label, let colon = label.lastIndex(of: ":") else { return nil }
+            guard let label = try? clock.snapshot().label, let colon = label.lastIndex(of: ":") else { return nil }
             return Int(String(label[..<colon].reversed().prefix { $0.isNumber }.reversed()))
         }
         let morning = Date().addingTimeInterval(90)
         while !(4...20).contains(hour() ?? -1), Date() < morning {
             Thread.sleep(forTimeInterval: 1)
         }
-        XCTAssertTrue((4...20).contains(hour() ?? -1), "The clock reaches the trains' hours: \(String(describing: try? time.snapshot().label))")
-        let row = app.descendants(matching: .any).matching(identifier: "station.board.row").firstMatch
+        XCTAssertTrue((4...20).contains(hour() ?? -1), "The clock reaches the trains' hours: \(String(describing: try? clock.snapshot().label))")
+        // The board's own identifier is carried by every row under it, so
+        // each train is found by its time and its minutes, which keep theirs
+        // (the fifth run's hierarchy: rows read "station.board").
+        let time = app.staticTexts.matching(identifier: "station.board.row.time").firstMatch
         // The panel's list, beside the map on the trailing side, once it has
         // slid in (the first run looked at once and found none). With the
         // clock running, a hold was once taken for a tap: it picked the
@@ -586,41 +589,35 @@ final class ShellLayoutUITests: XCTestCase {
                 if list == nil { Thread.sleep(forTimeInterval: 0.25) }
             } while list == nil && Date() < opened
         }
-        if list == nil {
-            let hierarchy = XCTAttachment(string: app.debugDescription)
-            hierarchy.name = "No station panel after the hold"
-            hierarchy.lifetime = .keepAlways
-            add(hierarchy)
-        }
-        XCTAssertNotNil(list, "The hold opens the station's panel")
-        // The board's section first, so a failure shows what it holds (the
-        // third run dragged the whole panel and met no row).
-        let board = app.descendants(matching: .any)["station.board"].firstMatch
-        let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
         func attach(_ name: String) {
             let hierarchy = XCTAttachment(string: app.debugDescription)
             hierarchy.name = name
             hierarchy.lifetime = .keepAlways
             add(hierarchy)
         }
-        attach(boardShown ? "The station's board" : "No board in the station's panel")
+        if list == nil { attach("No station panel after the hold") }
+        XCTAssertNotNil(list, "The hold opens the station's panel")
+        let board = app.buttons["station.board"].firstMatch
+        let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
+        if !boardShown { attach("No board in the station's panel") }
         XCTAssertTrue(boardShown, "The station's panel has its board")
-        // Its trains lie just under its head: wait for one there, as the
-        // demo's first trains come at 06:00 (the fourth run dragged past
-        // the board to the panel's foot and met none).
+        // Its trains lie just under its head, from 06:00.
         let due = Date().addingTimeInterval(60)
-        while !row.exists, Date() < due {
+        while !time.exists, Date() < due {
             Thread.sleep(forTimeInterval: 1)
         }
-        let listed = row.exists && app.dragUntilWhollyOnScreen(row, in: list)
+        let listed = time.exists && app.dragUntilWhollyOnScreen(time, in: list)
         if !listed { attach("No train on the station's board") }
         XCTAssertTrue(listed, "The board lists a train")
-        let rows = app.descendants(matching: .any).matching(identifier: "station.board.row").allElementsBoundByIndex
-        for row in rows where row.exists && row.frame.height > 0 {
-            // Two lines at this size are about 50 points: the train and the
-            // minutes, then the time. A time broken a character a line
-            // stood four lines high (about 88 points).
-            XCTAssertLessThanOrEqual(row.frame.height, 66, "A train on the board takes two lines: \(row.label) \(row.frame)")
+        // A time or a count of minutes on one line is wider than tall and a
+        // line high (some 22 and 25 points at this size); broken a character
+        // a line, "1／2:／5／5" stood four lines high.
+        let times = app.staticTexts.matching(identifier: "station.board.row.time").allElementsBoundByIndex
+        let aways = app.staticTexts.matching(identifier: "station.board.row.away").allElementsBoundByIndex
+        XCTAssertFalse(times.isEmpty)
+        for label in times + aways where label.exists && label.frame.height > 0 {
+            XCTAssertLessThan(label.frame.height, 40, "\(label.label) keeps to one line: \(label.frame)")
+            XCTAssertGreaterThan(label.frame.width, label.frame.height, "\(label.label) keeps to one line: \(label.frame)")
         }
     }
 }
