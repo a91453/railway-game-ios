@@ -46,7 +46,13 @@ Session：https://claude.ai/code/session_01QVLVMib2sHjahi6BdYdK48（2026-10-16�
 
 ### 發版後的 full lane
 
-run 38949414352（f5ba673，18:42 UTC 開始）：iPad 教學綠（19:05）；兩個 iPhone job 寫這份時還在跑 UI 測試。結果見這個 PR 的最後一個 commit。
+run 38949414352（f5ba673，18:42–19:31 UTC）**全綠**：
+- iPhone 第一個 job：UI 測試 26.7 分；
+- 第二個 job：34.6 分；
+- iPad 教學：16.3 分；
+- 繁中檢查通過。
+
+f5ba673 比 69.1 的 e68f237 多的只有 #747，而它只改文件。所以 69.1 發出去的 App，等於這一輪 full lane 測過的 App。
 
 ### Swift CI 時間（`ci.yml` push，最近 12 次）
 
