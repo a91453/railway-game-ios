@@ -129,6 +129,25 @@ final class LineRoutePreferenceUITests: XCTestCase {
         bringIntoView(app.buttons["line.route.-1.0.1"], in: app)
     }
 
+    /// TEMPORARY probe (not for merge): five launches, each turning the
+    /// switch on with one tap, as the route test's first steps do.
+    func testProbeAdvancedSwitchFiveLaunches() {
+        continueAfterFailure = false
+        for _ in 0..<5 {
+            let app = XCUIApplication()
+            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+            app.launch()
+            app.openDemo("demo.realWorld")
+            let pause = app.buttons["Pause"]
+            XCTAssertTrue(pause.appears(within: 15)); pause.tap()
+            let lines = app.buttons["Lines"]
+            XCTAssertTrue(lines.appears(within: 10)); lines.tap()
+            setAdvanced(true, in: app)
+            setAdvanced(false, in: app)
+            app.terminate()
+        }
+    }
+
     /// Turns the lines panel's "Advanced" switch on or off: the choice is
     /// kept between launches, so a test sets the one it needs.
     private func setAdvanced(_ shown: Bool, in app: XCUIApplication) {
@@ -147,27 +166,19 @@ final class LineRoutePreferenceUITests: XCTestCase {
         // (main bf12187's full lane, run 38641908091: (540, 314), the switch
         // drawn at about 735).
         let control = toggle.switches.firstMatch
-        func tapSwitch() {
-            if control.exists {
-                control.tap()
-            } else {
-                toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
-            }
+        if control.exists {
+            control.tap()
+        } else {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -42, dy: 0)).tap()
         }
-        tapSwitch()
         // Twenty seconds: as a job's first test, on a cold Simulator with
         // the real-world demo, one lookup took 10 to 20 seconds, and the
         // switch's value was first read 17 seconds after the tap (run
         // 38441429093); the same steps in the next test took a second.
-        // A touch that reached the switch can still leave it as it was: one
-        // held 390 ms on the switch's own view and nothing turned (PR #659's
-        // run 38729482700, the app's trace). Not turned after ten seconds,
-        // and still not on a fresh look, the switch is tapped once more.
-        let flipped = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle) }
-        if XCTWaiter.wait(for: [flipped()], timeout: 10) != .completed, (toggle.value as? String == "1") != shown {
-            tapSwitch()
-        }
-        XCTAssertEqual(XCTWaiter.wait(for: [flipped()], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
+        // One tap: on the Simulator a press of 0.05 to 1 second turned it
+        // each time (run 38862097826).
+        let flipped = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", shown ? "1" : "0"), object: toggle)
+        XCTAssertEqual(XCTWaiter.wait(for: [flipped], timeout: 20), .completed, "The Advanced switch did not turn \(shown ? "on" : "off")")
     }
 
     /// Dismisses the status message the sheet shows at its bottom, if
@@ -623,94 +634,5 @@ final class ShellLayoutUITests: XCTestCase {
             XCTAssertLessThan(label.frame.height, 40, "\(label.label) keeps to one line: \(label.frame)")
             XCTAssertGreaterThan(label.frame.width, label.frame.height, "\(label.label) keeps to one line: \(label.frame)")
         }
-    }
-}
-
-/// TEMPORARY probe (not for merge): whether a held touch on the tutorial's
-/// folded card survives the step moving on, and how long a press on the
-/// Advanced switch may last and still turn it.
-@MainActor
-final class TapProbeUITests: XCTestCase {
-    func testProbeFoldedCardHeldAcrossAStep() {
-        var report: [String] = []
-        for round in 0..<3 {
-            let app = XCUIApplication()
-            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "map.move"]
-            app.launch()
-            let folded = app.buttons["tutorial.unfold"]
-            let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
-            guard folded.appears(within: 20) else { report.append("r\(round): no pill, card \(card.exists)"); app.terminate(); continue }
-            folded.waitUntilSettled()
-            let zoomOut = app.buttons["Zoom out"]
-            guard zoomOut.appears(within: 10) else { report.append("r\(round): no zoom"); app.terminate(); continue }
-            let start = Date()
-            zoomOut.tap()
-            let afterTap = Date().timeIntervalSince(start)
-            let before = (try? folded.snapshot())?.label ?? "gone"
-            let pressStart = Date().timeIntervalSince(start)
-            folded.press(forDuration: 2.0)
-            let opened = card.appears(within: 3)
-            let after = (try? folded.snapshot())?.label ?? "gone"
-            report.append(String(format: "r%d: zoom tap %.2fs, press at %.2fs on '%@', opened %@, pill after '%@'", round, afterTap, pressStart, before, opened ? "YES" : "NO", after))
-            app.terminate()
-        }
-        // A plain tap at different moments after the step is done.
-        for delay in [0.0, 0.3, 0.5, 0.65, 0.75, 0.85] {
-            let app = XCUIApplication()
-            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-tutorial-step", "map.move"]
-            app.launch()
-            let folded = app.buttons["tutorial.unfold"]
-            let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
-            guard folded.appears(within: 20) else { report.append("d\(delay): no pill"); app.terminate(); continue }
-            folded.waitUntilSettled()
-            let point = folded.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5))
-            let zoomOut = app.buttons["Zoom out"]
-            guard zoomOut.appears(within: 10) else { report.append("d\(delay): no zoom"); app.terminate(); continue }
-            let start = Date()
-            zoomOut.tap()
-            let afterTap = Date().timeIntervalSince(start)
-            if delay > 0 { Thread.sleep(forTimeInterval: delay) }
-            point.tap()
-            let opened = card.appears(within: 3)
-            report.append(String(format: "d%.2f: zoom tap %.2fs, opened %@", delay, afterTap, opened ? "YES" : "NO"))
-            app.terminate()
-        }
-        XCTFail("PROBE " + report.joined(separator: " | "))
-    }
-
-    func testProbeAdvancedSwitchPressLengths() {
-        let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
-        app.launch()
-        defer { app.terminate() }
-        app.openDemo("demo.realWorld")
-        let pause = app.buttons["Pause"]
-        XCTAssertTrue(pause.appears(within: 15)); pause.tap()
-        let lines = app.buttons["Lines"]
-        XCTAssertTrue(lines.appears(within: 10)); lines.tap()
-        let toggle = app.switches["lines.advanced"]
-        XCTAssertTrue(toggle.appears(within: 15))
-        let bar = app.navigationBars["Lines"].firstMatch
-        let list = bar.exists
-            ? app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
-            : nil
-        _ = app.dragUntilWhollyOnScreen(toggle, in: list, below: bar.exists ? bar.frame.maxY : nil)
-        var report: [String] = []
-        let control = toggle.switches.firstMatch
-        report.append("inner switch \(control.exists) frame \(toggle.frame) inner \(control.exists ? control.frame : .zero)")
-        for duration in [0.05, 0.2, 0.3, 0.4, 0.6, 1.0, 0.05] {
-            let before = toggle.value as? String ?? "?"
-            let start = Date()
-            if control.exists { control.press(forDuration: duration) } else { toggle.press(forDuration: duration) }
-            let took = Date().timeIntervalSince(start)
-            let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", before), object: toggle)
-            let turned = XCTWaiter.wait(for: [changed], timeout: 4) == .completed
-            report.append(String(format: "%.2fs (took %.2fs): %@ -> %@", duration, took, before, turned ? "TURNED" : "same"))
-            // Let the sections settle before the next press.
-            Thread.sleep(forTimeInterval: 1.5)
-            if !toggle.exists || !toggle.isHittable { _ = app.dragUntilWhollyOnScreen(toggle, in: list, below: bar.exists ? bar.frame.maxY : nil) }
-        }
-        // A tap right after the list was dragged.
-        XCTFail("PROBE " + report.joined(separator: " | "))
     }
 }

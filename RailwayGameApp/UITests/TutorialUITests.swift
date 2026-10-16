@@ -306,19 +306,50 @@ final class TutorialUITests: XCTestCase {
         let folded = app.buttons["tutorial.unfold"]
         XCTAssertTrue(waitForCard(card, or: folded), "No tutorial card", file: file, line: line)
         if !card.exists {
-            // A done step moves on by itself, and the next step's pill
-            // replaces this one (the card is rebuilt for each step): a touch
-            // on the pill as it is replaced is cancelled and opens nothing
-            // (main 6e86506's full lane, run 38709237236, the app's trace).
-            // Once it has come to rest, the pill is tapped again.
+            // One tap: the card is kept as a done step moves on, so a touch
+            // on it then still opens it
+            // (``testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt``).
             folded.waitUntilSettled()
             folded.tap()
-            if !card.appears(within: 3), folded.exists {
-                folded.waitUntilSettled()
-                folded.tap()
-            }
             XCTAssertTrue(card.appears(within: 10), "The folded card did not open", file: file, line: line)
         }
+    }
+
+    /// A touch on the folded card as a done step moves on opens the card.
+    /// The card was made anew for each step, and the new one cancelled a
+    /// touch on the old (main 6e86506's full lane, run 38709237236, the
+    /// app's trace: the touch began on the pill and was cancelled 170 ms
+    /// later, the card did not open). Here the step waits four seconds
+    /// before it moves on (`-tutorial-advance-ms`), and a press of six
+    /// seconds, begun before, is held across it.
+    func testATouchHeldOnTheFoldedCardAsTheStepMovesOnOpensIt() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+            "-tutorial-step", "map.move", "-tutorial-advance-ms", "4000",
+        ]
+        app.launch()
+        defer { app.terminate() }
+        let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
+        let folded = app.buttons["tutorial.unfold"]
+        XCTAssertTrue(folded.appears(within: 20), "No folded card at the map step")
+        folded.waitUntilSettled()
+        let zoomOut = app.buttons["Zoom out"]
+        XCTAssertTrue(zoomOut.becomesHittable())
+        let before = folded.frame
+        // Done: the step moves on four seconds from now.
+        zoomOut.tap()
+        XCTAssertTrue(folded.label.contains("Zoom out to see the town"), "The step moved on before the touch: \(folded.label)")
+        // Near the pill's leading end, by the station master, which stays
+        // where it is whatever the next step's title.
+        folded.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).press(forDuration: 6)
+        let progress = app.staticTexts.matching(identifier: "tutorial.progress").firstMatch
+        XCTAssertTrue(
+            card.appears(within: 5),
+            "The touch held across the step moving on did not open the card (pill \(before) then \(folded.exists ? "\(folded.frame) \(folded.label)" : "gone"))"
+        )
+        XCTAssertTrue(progress.label.hasPrefix("Step 3 of"), "Not the next step: \(progress.label)")
     }
 
     /// Waits up to 15 seconds for the tutorial's card, open or folded.

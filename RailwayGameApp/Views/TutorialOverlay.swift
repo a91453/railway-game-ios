@@ -145,7 +145,7 @@ private struct TutorialOverlay: View {
             guard session.tutorialAdvancesByItself else { return }
             let index = tutorial.index
             do {
-                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Tutorial.autoAdvanceDelay)
+                try await Task.sleep(for: voiceOverEnabled ? Duration.milliseconds(1_500) : Self.autoAdvanceDelay)
             } catch {
                 return
             }
@@ -173,6 +173,20 @@ private struct TutorialOverlay: View {
         if layerBeforeTutorial == nil { layerBeforeTutorial = popTravelModeName }
         popTravelModeName = ""
     }
+
+    /// How long a done step waits before it moves on. A UI test can make
+    /// it longer (`-tutorial-advance-ms`, Debug builds only), to hold a
+    /// touch on the card across the step moving on.
+    private static let autoAdvanceDelay: Duration = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "-tutorial-advance-ms"), arguments.indices.contains(index + 1),
+           let milliseconds = Int(arguments[index + 1]) {
+            return .milliseconds(milliseconds)
+        }
+        #endif
+        return Tutorial.autoAdvanceDelay
+    }()
 
     /// What restarts the wait before a done step moves on.
     private struct AutoAdvance: Equatable {
