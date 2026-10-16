@@ -86,6 +86,39 @@ final class RealRailwayTracingTests: XCTestCase {
         XCTAssertFalse(text.contains("edge"), text)
     }
 
+    /// Decision 245's gap: a trace a dollar short of its price. The
+    /// preview says the whole price and why it cannot be paid, building it
+    /// is refused with the same words, and nothing of it is laid.
+    func testATraceADollarShortSaysTheWholePriceAndBuildsNothing() throws {
+        let (rich, taipei, banqiao) = try taipei(in: .english)
+        rich.tapNetwork(at: taipei, reach: reach)
+        rich.tapNetwork(at: banqiao, reach: reach)
+        let cost = try XCTUnwrap(rich.networkPreview?.cost)
+        XCTAssertGreaterThan(cost, .zero)
+
+        let tra = try BundledRealData.station("臺北", in: "tra_sched")
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(tra.anchor), balance: cost - Money(1))
+        let session = GameSession(world: world, language: .english)
+        session.railways = try BundledRealData.railways()
+        session.selectTool(.network)
+        session.setNetworkMode(.build)
+        session.networkTracesRealRailway = true
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tapNetwork(at: banqiao, reach: reach)
+        let preview = try XCTUnwrap(session.networkPreview)
+        XCTAssertNotNil(preview.traced, "still traced")
+        XCTAssertEqual(preview.cost, cost, "the whole price, though the cash is short")
+        let problem = try XCTUnwrap(preview.problem)
+        let (required, _) = Money.shortfallTexts(required: cost, available: cost - Money(1))
+        XCTAssertTrue(problem.contains(required), problem)
+
+        let before = session.world
+        session.buildNetworkTrack()
+        XCTAssertEqual(session.message?.kind, .failure)
+        XCTAssertEqual(session.message?.text, problem, "refused in the preview's words")
+        XCTAssertEqual(session.world, before, "nothing of it laid")
+    }
+
     func testTheChainCodesAsItIs() throws {
         let (session, taipei, banqiao) = try taipei()
         session.tapNetwork(at: taipei, reach: reach)

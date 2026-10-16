@@ -21,7 +21,7 @@
 
 1. 在 `models.json` 加一筆：id、prompt、面數、`out`。
 2. 照 skill 的流程生成（文字或照片轉 3D、要遊戲用的低面數就用 smart topology）。`WORKSPACE` 是 `Web/CityView/data/raw/meshy/<id>/`（不提交），交付的檔案是那裡的 `<id>.glb`。花點數之前先報價、等作者同意。
-3. `node tools/meshy/meshy.mjs pack <id>`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`，更新同一個資料夾的 `index.json`；workspace 裡 CLI 的任務紀錄（任務編號、prompt、模型、點數）記進 `generated.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
+3. `node tools/meshy/meshy.mjs pack <id>`：GLB 的圖縮到 1024 px（`--size=` 可改），不透明的轉 JPEG，寫到 `models.json` 的 `out`，更新同一個資料夾的 `index.json`（那一行原本手寫的 `colour`、`ao`、`aoChannel`、`fit` 照樣保留；`node --test tools/meshy/index-entry.test.mjs` 測這件事）；workspace 裡 CLI 的任務紀錄（任務編號、prompt、模型、點數）記進 `generated.json`。GLB 的 `asset`、`extras` 原樣保留：Meshy 條款 §2.4 要求不移除輸出裡的 AI 識別資訊。
 4. `tools/procedural-city/build_city_view.sh <官網>/site/city` 重新建置官網上的頁面（決策 163），再部署官網。
 
 價格（2026-10，Meshy 7.1）：文字轉 3D 的網格 20 點、上貼圖 10 點；照片轉 3D 含 2K 貼圖 30 點；smart topology（meshy-t2）的網格 5 點。實際用掉的看任務的 `consumed_credits`。

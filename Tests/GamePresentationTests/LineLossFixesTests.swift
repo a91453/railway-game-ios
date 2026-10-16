@@ -124,8 +124,7 @@ final class LineLossFixesTests: XCTestCase {
         try world.setTrafficControl(false)
         world.economy.settle(Money(-world.economy.balance.amount))
         let fix = try XCTUnwrap(world.lineLossFix(.longHeadway, on: Self.line))
-        XCTAssertFalse(fix.isAffordable(with: world.economy.balance))
-        XCTAssertTrue(fix.isAffordable(with: fix.cost))
+        XCTAssertFalse(world.economy.canAfford(fix.cost))
         XCTAssertEqual(fix.shortOfMoneyText(in: .traditionalChinese), "錢不夠：需要 \(fix.cost.moneyText)。")
 
         let session = GameSession(world: world)

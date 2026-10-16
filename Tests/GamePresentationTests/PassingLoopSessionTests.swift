@@ -71,6 +71,22 @@ final class PassingLoopSessionTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(after)), after)
     }
 
+    /// Handoff §7.1 (PR401_525 §5): the number came from counting closed
+    /// stations, so a station the player closed, or a signal station
+    /// demolished, gave the next loop a name already in use.
+    func testTheSignalStationTakesTheNextNumberNotInUse() throws {
+        var (world, west, _) = try world()
+        let second = try world.buildStation(named: "Signal 2", at: PlanPoint(x: 9_000, y: 9_000)).id
+        try world.setStationOperationMode(second, to: .closed)
+        try world.setStationOperationMode(west, to: .closed)
+        XCTAssertEqual(session(world).signalStationName(), "Signal 3", "two closed: West and Signal 2")
+        var renamed = world
+        try renamed.setStationOperationMode(west, to: .normalFlow)
+        XCTAssertEqual(session(renamed).signalStationName(), "Signal 3", "Signal 1 was demolished; Signal 2 stands")
+        let chinese = GameSession(world: renamed, language: .traditionalChinese)
+        XCTAssertEqual(chinese.signalStationName(), "號誌站 3", "either language's names count")
+    }
+
     /// The point of it: a line from West to East keeps one train on the
     /// single track; stopping at the signal station, two (decision 61).
     func testALineThatStopsAtTheSignalStationRunsTwoTrains() throws {

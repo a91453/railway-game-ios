@@ -191,6 +191,99 @@ final class DoubleTrackUpgradeTests: XCTestCase {
         XCTAssertTrue(platforms.isEmpty)
     }
 
+    /// The review of #695: the piece picked is single track, but the run to
+    /// the switches takes in Y–Z, which already has a second track beside
+    /// it. The card says so and points to "This piece only", which builds.
+    func testARunPartlyDoubleSaysSoAndThisPieceOnlyStillBuilds() throws {
+        let (session, _, _) = try singleTrack()
+        var world = session.world
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 33_024, y: 8_192 - DoubleTrack.spacing))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 52_224, y: 8_192 - DoubleTrack.spacing))
+        try world.buildTrackEdge(from: a, to: b)
+        let doubled = GameSession(world: world, language: .english)
+        doubled.selectTool(.select)
+        doubled.tapMap(at: PlanPoint(x: 23_424, y: 8_192), reach: 16)
+        XCTAssertTrue(doubled.canDoubleSelectedTrack, "the piece picked has nothing beside it")
+
+        doubled.trackUpgradeSide = .left
+        doubled.beginTrackUpgrade(.doubleTrack)
+        let preview = try XCTUnwrap(doubled.trackUpgradePreview)
+        XCTAssertEqual(
+            preview.problem,
+            "Part of this stretch already has a second track. Choose \u{201C}This piece only\u{201D} to double the piece picked."
+        )
+        XCTAssertNil(preview.cost)
+        let before = doubled.world
+        doubled.buildTrackUpgrade()
+        XCTAssertEqual(doubled.message?.kind, .failure)
+        XCTAssertEqual(doubled.world, before, "nothing built")
+
+        doubled.trackUpgradeWholeRun = false
+        let piece = try XCTUnwrap(doubled.trackUpgradePreview)
+        XCTAssertNil(piece.problem, piece.problem ?? "")
+        doubled.buildTrackUpgrade()
+        XCTAssertEqual(doubled.message?.kind, .success, doubled.message?.text ?? "")
+    }
+
+    func testARunPartlyDoubleSaysSoInChinese() throws {
+        let (session, _, _) = try singleTrack()
+        var world = session.world
+        let a = try world.buildTrackNode(at: WorldCoordinate(x: 33_024, y: 8_192 + DoubleTrack.spacing))
+        let b = try world.buildTrackNode(at: WorldCoordinate(x: 52_224, y: 8_192 + DoubleTrack.spacing))
+        try world.buildTrackEdge(from: a, to: b)
+        let doubled = GameSession(world: world, language: .traditionalChinese)
+        doubled.selectTool(.select)
+        doubled.tapMap(at: PlanPoint(x: 23_424, y: 8_192), reach: 16)
+        doubled.beginTrackUpgrade(.doubleTrack)
+        XCTAssertEqual(doubled.trackUpgradePreview?.problem, "這段路有一部分已經是複線。請選「只有這一段」，只把點的這一段升級。")
+    }
+
+    /// The review of #695: a loop of six pieces with no switch, picked on
+    /// its south straight. The run to the switches goes all the way round;
+    /// the card says why that cannot be doubled at once, and a piece can.
+    func testALoopWithNoSwitchSaysSoAndAPieceStillBuilds() throws {
+        var world = try makeWorld(width: 65_536, height: 65_536, balance: Money(1_000_000_000), speed: .paused)
+        let r: Int64 = 9_600, l: Int64 = 25_600, x0: Int64 = 16_000, y0: Int64 = 16_000
+        let points = [
+            PlanPoint(x: x0, y: y0), PlanPoint(x: x0 + l, y: y0), PlanPoint(x: x0 + l + r, y: y0 + r),
+            PlanPoint(x: x0 + l, y: y0 + 2 * r), PlanPoint(x: x0, y: y0 + 2 * r), PlanPoint(x: x0 - r, y: y0 + r),
+        ]
+        let ways = [
+            PlanVector(dx: 1, dy: 0), PlanVector(dx: 1, dy: 0), PlanVector(dx: 0, dy: 1),
+            PlanVector(dx: -1, dy: 0), PlanVector(dx: -1, dy: 0), PlanVector(dx: 0, dy: -1),
+        ]
+        let nodes = try points.map { try world.buildTrackNode(at: WorldCoordinate(x: $0.x, y: $0.y)) }
+        for index in nodes.indices {
+            let next = (index + 1) % nodes.count
+            let curve = try XCTUnwrap(NetworkBuilding.curve(
+                from: points[index], leaving: ways[index], to: points[next], leaving: PlanVector(dx: -ways[next].dx, dy: -ways[next].dy)
+            ))
+            try world.buildTrackEdge(from: nodes[index], to: nodes[next], curve: curve)
+        }
+        let session = GameSession(world: world, language: .english)
+        session.selectTool(.select)
+        session.tapMap(at: PlanPoint(x: x0 + l / 2, y: y0), reach: 16)
+        let picked = try XCTUnwrap(session.selectedTrackEdge)
+        XCTAssertEqual(session.trackRun(from: picked, whole: true).count, 6, "all the way round")
+        XCTAssertTrue(session.canDoubleSelectedTrack)
+
+        session.beginTrackUpgrade(.doubleTrack)
+        XCTAssertEqual(
+            session.trackUpgradePreview?.problem,
+            "This track is a loop with no switch, so the second track has no ends to join. Choose \u{201C}This piece only\u{201D} to double it a piece at a time."
+        )
+        let chinese = GameSession(world: world, language: .traditionalChinese)
+        chinese.selectTool(.select)
+        chinese.tapMap(at: PlanPoint(x: x0 + l / 2, y: y0), reach: 16)
+        chinese.beginTrackUpgrade(.doubleTrack)
+        XCTAssertEqual(chinese.trackUpgradePreview?.problem, "這是沒有道岔的環線，第二條軌道沒有兩端可以接。請選「只有這一段」，一段一段升級。")
+
+        session.trackUpgradeWholeRun = false
+        XCTAssertNil(session.trackUpgradePreview?.problem, session.trackUpgradePreview?.problem ?? "")
+        session.buildTrackUpgrade()
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+    }
+
     func testOneDollarShortTheCardSaysTheWholePriceAndNothingIsBuilt() throws {
         let (rich, _, _) = try singleTrack()
         rich.beginTrackUpgrade(.doubleTrack)
