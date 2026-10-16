@@ -137,8 +137,9 @@ extension GameSession {
         let found: (preview: NetworkPreview, crossing: [WorldCoordinate])? = if let scissors = scissorsPreview() {
             scissors
         } else if let traced = tracePreview(from: start, to: end) {
-            // Decision 213: along the real line, when both ends are on one.
-            (traced, [])
+            // Decision 213: along the real line, when both ends are on one;
+            // decision 247: its second track drawn as a double track's.
+            traced
         } else {
             // The double track's parallel is drawn as the crossover's
             // middle is: a second line.
@@ -1040,6 +1041,15 @@ public struct NetworkOverlay: Hashable, Sendable {
 extension GameSession {
     /// What the map draws for the network tool; `nil` with another tool.
     public var networkOverlay: NetworkOverlay? {
+        // Decision 247: the track card's drafted upgrade, drawn as the
+        // network tool's preview.
+        if tool == .select, let draft = trackUpgradePreview {
+            var overlay = NetworkOverlay()
+            overlay.preview = draft.track.first ?? []
+            overlay.crossovers = Array(draft.track.dropFirst())
+            overlay.previewIsBuildable = draft.problem == nil
+            return overlay
+        }
         guard tool == .network else { return nil }
         var overlay = NetworkOverlay()
         switch networkMode {
