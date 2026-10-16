@@ -608,7 +608,17 @@ final class ShellLayoutUITests: XCTestCase {
         let boardShown = app.dragUntilWhollyOnScreen(board, in: list)
         if !boardShown { attach("No board in the station's panel") }
         XCTAssertTrue(boardShown, "The station's panel has its board")
-        // Its trains lie just under its head.
+        // Its trains lie under its head and the way they go, which can be
+        // all the panel shows of it (the eighth run: the head and "往 西站"
+        // at the panel's foot, the trains below not yet made). One slow drag
+        // brings the head up to the panel's top, the trains under it.
+        if let list, boardShown, board.frame.minY > list.frame.minY + 80 {
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let x = list.frame.minX + 8 - app.frame.minX
+            let from = origin.withOffset(CGVector(dx: x, dy: board.frame.minY - app.frame.minY))
+            let to = origin.withOffset(CGVector(dx: x, dy: list.frame.minY + 40 - app.frame.minY))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
         let due = Date().addingTimeInterval(15)
         while !time.exists, Date() < due {
             Thread.sleep(forTimeInterval: 1)
