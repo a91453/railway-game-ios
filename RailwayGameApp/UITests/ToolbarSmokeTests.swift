@@ -571,16 +571,21 @@ final class ShellLayoutUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 1)
         }
         XCTAssertTrue((4...20).contains(hour() ?? -1), "The clock reaches the trains' hours: \(String(describing: try? time.snapshot().label))")
-        map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 0.8)
         let row = app.descendants(matching: .any).matching(identifier: "station.board.row").firstMatch
         // The panel's list, beside the map on the trailing side, once it has
-        // slid in (the first run looked at once and found none).
+        // slid in (the first run looked at once and found none). With the
+        // clock running, a hold was once taken for a tap: it picked the
+        // station and showed its tag, and no panel came (run 38848806364).
+        // So it holds again, up to three times.
         var list: XCUIElement?
-        let opened = Date().addingTimeInterval(5)
-        repeat {
-            list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
-            if list == nil { Thread.sleep(forTimeInterval: 0.25) }
-        } while list == nil && Date() < opened
+        for _ in 0..<3 where list == nil {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: central.x, dy: central.y)).press(forDuration: 1.2)
+            let opened = Date().addingTimeInterval(5)
+            repeat {
+                list = app.collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame.minX > app.frame.midX }
+                if list == nil { Thread.sleep(forTimeInterval: 0.25) }
+            } while list == nil && Date() < opened
+        }
         if list == nil {
             let hierarchy = XCTAttachment(string: app.debugDescription)
             hierarchy.name = "No station panel after the hold"
